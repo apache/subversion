@@ -330,6 +330,14 @@ struct dir_baton
      changes to be applied to this directory. */
   apr_array_header_t *propchanges;
 
+  /* A boolean indicating whether this node or one of its children has
+     received any 'real' changes. Used to avoid tree conflicts for simple
+     entryprop changes, like lock management */
+  svn_boolean_t edited;
+
+  /* The tree conflict to install once the node is really edited */
+  svn_wc_conflict_description2_t *edit_conflict;
+
   /* The bump information for this directory. */
   struct bump_dir_info *bump_info;
 
@@ -731,6 +739,14 @@ struct file_baton
 
   /* Bump information for the directory this file lives in */
   struct bump_dir_info *bump_info;
+
+  /* A boolean indicating whether this node or one of its children has
+     received any 'real' changes. Used to avoid tree conflicts for simple
+     entryprop changes, like lock management */
+  svn_boolean_t edited;
+
+  /* The tree conflict to install once the node is really edited */
+  svn_wc_conflict_description2_t *edit_conflict;
 };
 
 
@@ -784,6 +800,63 @@ make_file_baton(struct file_baton **f_p,
   ++f->bump_info->ref_count;
 
   *f_p = f;
+  return SVN_NO_ERROR;
+}
+
+/* Called when a directory is really edited, to avoid marking a
+   tree conflict on a node for a no-change edit */
+static svn_error_t *
+mark_directory_edited(struct dir_baton *db, apr_pool_t *scratch_pool)
+{
+  if (db->edited)
+    return SVN_NO_ERROR;
+
+  if (db->parent_baton)
+    SVN_ERR(mark_directory_edited(db->parent_baton, scratch_pool));
+
+  db->edited = TRUE;
+
+  if (db->edit_conflict)
+    {
+      /* We have a (delayed) tree conflict to install */
+      SVN_ERR(svn_wc__db_op_set_tree_conflict(db->edit_baton->db,
+                                              db->local_abspath,
+                                              db->edit_conflict,
+                                              scratch_pool));
+
+      do_notification(db->edit_baton, db->local_abspath, svn_node_dir,
+                      svn_wc_notify_tree_conflict, scratch_pool);
+      db->already_notified = TRUE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Called when a file is really edited, to avoid marking a
+   tree conflict on a node for a no-change edit */
+static svn_error_t *
+mark_file_edited(struct file_baton *fb, apr_pool_t *scratch_pool)
+{
+  if (fb->edited)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(mark_directory_edited(fb->dir_baton, scratch_pool));
+
+  fb->edited = TRUE;
+
+  if (fb->edit_conflict)
+    {
+      /* We have a (delayed) tree conflict to install */
+      SVN_ERR(svn_wc__db_op_set_tree_conflict(fb->edit_baton->db,
+                                              fb->local_abspath,
+                                              fb->edit_conflict,
+                                              scratch_pool));
+
+      do_notification(fb->edit_baton, fb->local_abspath, svn_node_file,
+                      svn_wc_notify_tree_conflict, scratch_pool);
+      fb->already_notified = TRUE;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -1594,6 +1667,8 @@ delete_entry(const char *path,
 
   scratch_pool = svn_pool_create(pb->pool);
 
+  SVN_ERR(mark_directory_edited(pb, scratch_pool));
+
   SVN_ERR(check_path_under_root(pb->local_abspath, base, scratch_pool));
 
   local_abspath = svn_dirent_join(pb->local_abspath, base, scratch_pool);
@@ -1821,6 +1896,8 @@ add_directory(const char *path,
 
   if (db->skip_this)
     return SVN_NO_ERROR;
+
+  SVN_ERR(mark_directory_edited(db, pool));
 
   SVN_ERR(check_path_under_root(pb->local_abspath, db->name, pool));
 
@@ -2238,19 +2315,12 @@ open_directory(const char *path,
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, db->local_abspath,
                                 status, wc_kind, TRUE,
                                 svn_wc_conflict_action_edit, svn_node_dir,
-                                db->new_relpath, pool, pool));
+                                db->new_relpath, db->pool, pool));
 
   /* Remember the roots of any locally deleted trees. */
   if (tree_conflict != NULL)
     {
-      /* Place a tree conflict into the parent work queue.  */
-      SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db, db->local_abspath,
-                                              tree_conflict, pool));
-
-      do_notification(eb, db->local_abspath, svn_node_dir,
-                      svn_wc_notify_tree_conflict, pool);
-      db->already_notified = TRUE;
-
+      db->edit_conflict = tree_conflict;
       /* Other modifications wouldn't be a tree conflict */
       SVN_ERR_ASSERT(
                 tree_conflict->reason == svn_wc_conflict_reason_deleted ||
@@ -2286,6 +2356,9 @@ change_dir_prop(void *dir_baton,
   propchange = apr_array_push(db->propchanges);
   propchange->name = apr_pstrdup(db->pool, name);
   propchange->value = value ? svn_string_dup(value, db->pool) : NULL;
+
+  if (!db->edited && svn_property_kind(NULL, name) != svn_prop_entry_kind)
+    SVN_ERR(mark_directory_edited(db, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2651,7 +2724,7 @@ close_directory(void *dir_baton,
      happened in that case - unless the add was obstructed by a dir
      scheduled for addition without history, in which case we handle
      notification here). */
-  if (!db->already_notified && eb->notify_func)
+  if (!db->already_notified && eb->notify_func && db->edited)
     {
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action;
@@ -2698,6 +2771,8 @@ absent_node(const char *path,
 
   if (pb->skip_this)
     return SVN_NO_ERROR;
+
+  SVN_ERR(mark_directory_edited(pb, scratch_pool));
 
   local_abspath = svn_dirent_join(pb->local_abspath, name, scratch_pool);
 
@@ -2829,6 +2904,8 @@ add_file(const char *path,
 
   if (fb->skip_this)
     return SVN_NO_ERROR;
+
+  SVN_ERR(mark_file_edited(fb, pool));
 
   SVN_ERR(check_path_under_root(pb->local_abspath, fb->name, pool));
 
@@ -3216,14 +3293,12 @@ open_file(const char *path,
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
                                 status, wc_kind, TRUE,
                                 svn_wc_conflict_action_edit, svn_node_file,
-                                fb->new_relpath, scratch_pool, scratch_pool));
+                                fb->new_relpath, fb->pool, scratch_pool));
 
   /* Is this path the victim of a newly-discovered tree conflict? */
   if (tree_conflict != NULL)
     {
-      SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
-                                              fb->local_abspath,
-                                              tree_conflict, scratch_pool));
+      fb->edit_conflict = tree_conflict;
 
       /* Other modifications wouldn't be a tree conflict */
       SVN_ERR_ASSERT(
@@ -3232,10 +3307,6 @@ open_file(const char *path,
 
       /* Continue updating BASE */
       fb->shadowed = TRUE;
-
-      fb->already_notified = TRUE;
-      do_notification(eb, fb->local_abspath, svn_node_unknown,
-                      svn_wc_notify_tree_conflict, scratch_pool);
     }
 
   svn_pool_destroy(scratch_pool);
@@ -3267,6 +3338,8 @@ apply_textdelta(void *file_baton,
       *handler_baton = NULL;
       return SVN_NO_ERROR;
     }
+
+  SVN_ERR(mark_file_edited(fb, pool));
 
   /* Parse checksum or sets expected_base_checksum to NULL */
   SVN_ERR(svn_checksum_parse_hex(&expected_base_checksum, svn_checksum_md5,
@@ -3398,6 +3471,9 @@ change_file_prop(void *file_baton,
   propchange = apr_array_push(fb->propchanges);
   propchange->name = apr_pstrdup(fb->pool, name);
   propchange->value = value ? svn_string_dup(value, fb->pool) : NULL;
+
+  if (!fb->edited && svn_property_kind(NULL, name) != svn_prop_entry_kind)
+    SVN_ERR(mark_file_edited(fb, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -4182,7 +4258,7 @@ close_file(void *file_baton,
 
   /* Send a notification to the callback function.  (Skip notifications
      about files which were already notified for another reason.) */
-  if (eb->notify_func && !fb->already_notified)
+  if (eb->notify_func && !fb->already_notified && fb->edited)
     {
       const svn_string_t *mime_type;
       svn_wc_notify_t *notify;
