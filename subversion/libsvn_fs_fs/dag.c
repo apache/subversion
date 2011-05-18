@@ -1107,7 +1107,7 @@ svn_fs_fs__dag_serialize(char **data,
 
 svn_error_t *
 svn_fs_fs__dag_deserialize(void **out,
-                           const char *data,
+                           char *data,
                            apr_size_t data_len,
                            apr_pool_t *pool)
 {
