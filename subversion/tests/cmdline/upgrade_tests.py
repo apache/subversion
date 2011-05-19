@@ -354,8 +354,6 @@ def xml_entries_relocate(path, from_url, to_url):
   os.chmod(entries, 0777)
   open(entries, 'w').write(txt)
 
-  print('Relocated %s' % path)
-
   for dirent in os.listdir(path):
     item_path = os.path.join(path, dirent)
 
