@@ -677,8 +677,7 @@ static void
 initialize_group(svn_membuffer_t *cache, apr_uint32_t group_index)
 {
   unsigned char bit_mask;
-  entry_t *entry;
-  apr_uint32_t i;
+  apr_uint32_t i, j;
 
   /* range of groups to initialize due to GROUP_INIT_GRANULARITY */
   apr_uint32_t first_index =
@@ -687,13 +686,9 @@ initialize_group(svn_membuffer_t *cache, apr_uint32_t group_index)
   if (last_index > cache->group_count)
     last_index = cache->group_count;
 
-  /* initialize their entries */
-  first_index *= GROUP_SIZE;
-  last_index *= GROUP_SIZE;
-
-  entry = &cache->directory[0][0];
   for (i = first_index; i < last_index; ++i)
-    entry[i].offset = NO_OFFSET;
+    for (j = 0; j < GROUP_SIZE; j++)
+        cache->directory[i][j].offset = NO_OFFSET;
 
   /* set the "initialized" bit for these groups */
   bit_mask = 1 << ((group_index / GROUP_INIT_GRANULARITY) % 8);
