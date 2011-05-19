@@ -5628,10 +5628,12 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   working_revision.kind = svn_opt_revision_working;
 
   /* Case 1: Subtrees with explicit mergeinfo. */
-  SVN_ERR(svn_client_propget3(&subtrees_with_mergeinfo, SVN_PROP_MERGEINFO,
-                              merge_cmd_baton->target_abspath, &working_revision,
+  SVN_ERR(svn_client_propget4(&subtrees_with_mergeinfo, SVN_PROP_MERGEINFO,
+                              merge_cmd_baton->target_abspath,
+                              &working_revision,
                               &working_revision, NULL, depth, NULL,
-                              merge_cmd_baton->ctx, scratch_pool));
+                              merge_cmd_baton->ctx, scratch_pool,
+                              scratch_pool));
   
   if (subtrees_with_mergeinfo)
     {
@@ -10384,10 +10386,10 @@ merge_reintegrate_locked(const char *source,
 
   /* Find all the subtree's in TARGET_WCPATH that have explicit mergeinfo. */
   working_revision.kind = svn_opt_revision_working;
-  SVN_ERR(svn_client_propget3(&subtrees_with_mergeinfo, SVN_PROP_MERGEINFO,
+  SVN_ERR(svn_client_propget4(&subtrees_with_mergeinfo, SVN_PROP_MERGEINFO,
                               target_abspath, &working_revision,
                               &working_revision, NULL, svn_depth_infinity,
-                              NULL, ctx, scratch_pool));
+                              NULL, ctx, scratch_pool, scratch_pool));
 
   /* Open two RA sessions, one to our source and one to our target. */
   SVN_ERR(svn_wc__node_get_url(&target_url, ctx->wc_ctx, target_abspath,
