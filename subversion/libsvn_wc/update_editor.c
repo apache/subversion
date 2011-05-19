@@ -2357,7 +2357,7 @@ change_dir_prop(void *dir_baton,
   propchange->name = apr_pstrdup(db->pool, name);
   propchange->value = value ? svn_string_dup(value, db->pool) : NULL;
 
-  if (!db->edited && svn_property_kind(NULL, name) != svn_prop_entry_kind)
+  if (!db->edited && svn_property_kind(NULL, name) == svn_prop_regular_kind)
     SVN_ERR(mark_directory_edited(db, pool));
 
   return SVN_NO_ERROR;
@@ -3472,7 +3472,7 @@ change_file_prop(void *file_baton,
   propchange->name = apr_pstrdup(fb->pool, name);
   propchange->value = value ? svn_string_dup(value, fb->pool) : NULL;
 
-  if (!fb->edited && svn_property_kind(NULL, name) != svn_prop_entry_kind)
+  if (!fb->edited && svn_property_kind(NULL, name) == svn_prop_regular_kind)
     SVN_ERR(mark_file_edited(fb, scratch_pool));
 
   return SVN_NO_ERROR;
