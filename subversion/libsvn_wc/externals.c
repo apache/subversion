@@ -376,6 +376,13 @@ struct edit_baton
   /* List of incoming propchanges */
   apr_array_header_t *propchanges;
 
+  /* The last change information */
+  svn_revnum_t changed_rev;
+  apr_time_t changed_date;
+  const char *changed_author;
+
+  svn_boolean_t had_props;
+
   svn_boolean_t file_closed;
 };
 
@@ -442,12 +449,12 @@ open_file(const char *path,
                                                       file_pool));
 
   *file_baton = eb;
-  SVN_ERR(svn_wc__db_external_read(NULL, &kind, &eb->original_revision,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
-                                   &eb->original_checksum, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL,
-                                   eb->db, eb->local_abspath, eb->wri_abspath,
+  SVN_ERR(svn_wc__db_base_get_info(NULL, &kind, &eb->original_revision,
+                                   NULL, NULL, NULL, &eb->changed_rev,
+                                   &eb->changed_date, &eb->changed_author,
+                                   NULL, &eb->original_checksum, NULL, NULL,
+                                   &eb->had_props, NULL, NULL,
+                                   eb->db, eb->local_abspath,
                                    eb->pool, file_pool));
 
   if (kind != svn_wc__db_kind_file)
@@ -557,14 +564,7 @@ close_file(void *file_baton,
 
       if (actual_md5_checksum == NULL)
         {
-          SVN_ERR(svn_wc__db_external_read(NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL,
-                                           &actual_md5_checksum, NULL,
-                                           NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL, NULL,
-                                           eb->db, eb->local_abspath,
-                                           eb->wri_abspath,
-                                           pool, pool));
+          actual_md5_checksum = eb->original_checksum;
 
           if (actual_md5_checksum != NULL
               && actual_md5_checksum->kind != svn_checksum_md5)
@@ -607,41 +607,17 @@ close_file(void *file_baton,
     apr_hash_t *new_dav_props = NULL;
     const svn_checksum_t *new_checksum = NULL;
     const svn_checksum_t *original_checksum = NULL;
-    svn_revnum_t changed_rev = SVN_INVALID_REVNUM;
-    apr_time_t changed_date = 0;
-    const char *changed_author = NULL;
+    
     svn_boolean_t added = !SVN_IS_VALID_REVNUM(eb->original_revision);
     const char *repos_relpath = svn_uri_is_child(eb->repos_root_url,
                                                       eb->url, pool);
 
     if (! added)
       {
-        svn_boolean_t had_props;
-        svn_boolean_t props_mod;
+        new_checksum = eb->original_checksum;
 
-        SVN_ERR(svn_wc__db_external_read(NULL, NULL, NULL, NULL, NULL, NULL,
-                                         &changed_rev, &changed_date,
-                                         &changed_author, &original_checksum,
-                                         NULL, NULL, NULL, NULL, NULL, NULL,
-                                         NULL, NULL, NULL, &had_props,
-                                         &props_mod,
-                                         eb->db, eb->local_abspath,
-                                         eb->wri_abspath,
-                                         pool, pool));
-
-        new_checksum = original_checksum;
-
-        if (had_props)
-          SVN_ERR(svn_wc__db_external_read_pristine_props(&base_props, eb->db,
-                                                          eb->local_abspath,
-                                                          eb->wri_abspath,
-                                                          pool, pool));
-
-        if (props_mod)
-          SVN_ERR(svn_wc__db_external_read_props(&actual_props, eb->db,
-                                                 eb->local_abspath,
-                                                 eb->wri_abspath,
-                                                 pool, pool));
+        SVN_ERR(svn_wc__db_base_get_props(&actual_props, eb->db,
+                                          eb->local_abspath, pool, pool));
       }
 
     if (!base_props)
@@ -672,15 +648,15 @@ close_file(void *file_baton,
             continue; /* authz or something */
 
           if (! strcmp(prop->name, SVN_PROP_ENTRY_LAST_AUTHOR))
-            changed_author = apr_pstrdup(pool, prop->value->data);
+            eb->changed_author = apr_pstrdup(pool, prop->value->data);
           else if (! strcmp(prop->name, SVN_PROP_ENTRY_COMMITTED_REV))
             {
               apr_int64_t rev;
               SVN_ERR(svn_cstring_atoi64(&rev, prop->value->data));
-              changed_rev = (svn_revnum_t)rev;
+              eb->changed_rev = (svn_revnum_t)rev;
             }
           else if (! strcmp(prop->name, SVN_PROP_ENTRY_COMMITTED_DATE))
-            SVN_ERR(svn_time_from_cstring(&changed_date, prop->value->data,
+            SVN_ERR(svn_time_from_cstring(&eb->changed_date, prop->value->data,
                                           pool));
         }
 
@@ -807,9 +783,9 @@ close_file(void *file_baton,
                         eb->repos_uuid,
                         *eb->target_revision,
                         new_pristine_props,
-                        changed_rev,
-                        changed_date,
-                        changed_author,
+                        eb->changed_rev,
+                        eb->changed_date,
+                        eb->changed_author,
                         new_checksum,
                         new_dav_props,
                         eb->record_ancestor_abspath,
@@ -928,6 +904,8 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
   eb->recorded_repos_relpath = svn_uri_is_child(repos_root_url, recorded_url,
                                                 edit_pool);
 
+  eb->changed_rev = SVN_INVALID_REVNUM;
+
   if (recorded_peg_rev->kind == svn_opt_revision_number)
     eb->recorded_peg_revision = recorded_peg_rev->value.number;
   else
@@ -983,19 +961,21 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
   svn_revnum_t revision;
   const char *repos_root_url;
   const char *repos_relpath;
+  svn_boolean_t update_root;
 
   if (! wri_abspath)
     wri_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
-  err = svn_wc__db_external_read(NULL, &kind, &revision,
+  err = svn_wc__db_base_get_info(NULL, &kind, &revision,
                                  &repos_relpath, &repos_root_url, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, &lock, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 db, local_abspath, wri_abspath,
+                                 NULL, NULL, NULL, NULL, NULL, &lock,
+                                 NULL, &update_root, NULL,
+                                 db, local_abspath,
                                  scratch_pool, scratch_pool);
 
   if (err
-      || kind == svn_wc__db_kind_dir)
+      || kind == svn_wc__db_kind_dir
+      || !update_root)
     {
       if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
         return svn_error_return(err);
@@ -1081,13 +1061,10 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
   svn_wc__db_kind_t kind;
   svn_error_t *err;
 
-  err = svn_wc__db_external_read(&status, &kind, NULL, NULL,
-                                 defining_url ? &repos_root_url : NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, defining_abspath, defining_url,
-                                 defining_operational_revision,
+  err = svn_wc__db_external_read(&status, &kind, defining_abspath,
+                                 defining_url ? &repos_root_url : NULL, NULL,
+                                 defining_url, defining_operational_revision,
                                  defining_revision,
-                                 NULL, NULL, NULL,
                                  wc_ctx->db, local_abspath, wri_abspath,
                                  result_pool, scratch_pool);
 

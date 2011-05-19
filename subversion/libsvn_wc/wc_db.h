@@ -1012,6 +1012,8 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
 
 /* Adds (or overwrites) a file external LOCAL_ABSPATH to the working copy
    identified by WRI_ABSPATH.
+
+   It updates both EXTERNALS and NODES in one atomic step.
  */
 svn_error_t *
 svn_wc__db_external_add_file(svn_wc__db_t *db,
@@ -1103,16 +1105,6 @@ svn_wc__db_external_add_dir(svn_wc__db_t *db,
                             const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool);
 
-/* Record the specified size and timestamp for the file external LOCAL_ABSPATH
-   in the working copy identified by WRI_ABSPATH */
-svn_error_t *
-svn_wc__db_external_record_fileinfo(svn_wc__db_t *db,
-                                    const char *local_abspath,
-                                    const char *wri_abspath,
-                                    svn_filesize_t recorded_size,
-                                    apr_time_t recorded_mod_time,
-                                    apr_pool_t *scratch_pool);
-
 /* Remove a registered external LOCAL_ABSPATH from the working copy identified
    by WRI_ABSPATH.
  */
@@ -1127,7 +1119,7 @@ svn_wc__db_external_remove(svn_wc__db_t *db,
 
 /* Reads information on the external LOCAL_ABSPATH as stored in the working
    copy identified with WRI_ABSPATH (If NULL the parent directory of
-   LOCAL_ABSPATH).
+   LOCAL_ABSPATH is taken as WRI_ABSPATH).
 
    Return SVN_ERR_WC_PATH_NOT_FOUND if LOCAL_ABSPATH is not an external in
    this working copy.
@@ -1136,27 +1128,17 @@ svn_wc__db_external_remove(svn_wc__db_t *db,
       svn_wc__db_status_normal           The external is available
       svn_wc__db_status_excluded         The external is user excluded
 
-   When KIND is requested it has the kind of external
+   When KIND is requested then the value will be set to the kind of external.
 
-   If REVISION is requested, and the node is NOT a directory, then
-   the value will be set to the revision of the file external.
-
-   If REPOS_RELPATH is requested, and the node is NOT a directory, then
-   the value will be set to the repository relative path of the file external.
+   If DEFININING_ABSPATH is requested, then the value will be set to the
+   absolute path of the directory which originally defined the external.
+   (The path with the svn:externals property)
 
    If REPOS_ROOT_URL is requested, then the value will be set to the
    repository root of the external.
 
    If REPOS_UUID is requested, then the value will be set to the
    repository uuid of the external.
-
-   When any of CHANGED_REV, CHANGED_DATE, CHANGED_AUTHOR, CHECKSUM, TARGET,
-   LOCK, RECORDED_SIZE, RECORDED_MOD_TIME, CONFLICTED, HAD_PROPS or PROPS_MOD
-   is requested,  and the node is NOT a directory, their value will set like
-   how svn_wc__db_read_info() would handle the value.
-
-   If RECORD_ANCESTOR_ABSPATH is requested, then the value will be set to the
-   absolute path of the directory which originally defined the external.
 
    If RECORDED_REPOS_RELPATH is requested, then the value will be set to the
    original repository relative path inside REPOS_ROOT_URL of the external.
@@ -1173,75 +1155,20 @@ svn_wc__db_external_remove(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_external_read(svn_wc__db_status_t *status,
                          svn_wc__db_kind_t *kind,
-                         svn_revnum_t *revision,
-                         const char **repos_relpath,
+                         const char **defining_abspath,
+
                          const char **repos_root_url,
                          const char **repos_uuid,
-                         svn_revnum_t *changed_rev,
-                         apr_time_t *changed_date,
-                         const char **changed_author,
 
-                         const svn_checksum_t **checksum, /* files only */
-                         const char **target, /* symlinks only */
-
-                         /* For files and symlinks */
-                         svn_wc__db_lock_t **lock,
-
-                         /* Recorded for files present in the working copy */
-                         svn_filesize_t *recorded_size,
-                         apr_time_t *recorded_mod_time,
-
-                         /* following fields are stored as copy from the
-                            property which defined the external.
-                            (Currently only for file externals) */
-                         const char **record_ancestor_abspath,
                          const char **recorded_repos_relpath,
                          svn_revnum_t *recorded_peg_revision,
                          svn_revnum_t *recorded_revision,
-
-                         /* From ACTUAL */
-                         svn_boolean_t *conflicted,
-
-                         /* Derived (only for files) */
-                         svn_boolean_t *had_props,
-                         svn_boolean_t *props_mod,
 
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          const char *wri_abspath,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
-
-/* For file and symlink externals reads the pristine properties of
-   LOCAL_ABSPATH as stored in the working copy identified by WRI_ABSPATH
-   (If NULL the parent directory of LOCAL_ABSPATH).
-
-   Return SVN_ERR_WC_PATH_NOT_FOUND if LOCAL_ABSPATH is not an external in
-   this working copy.
- */
-svn_error_t *
-svn_wc__db_external_read_pristine_props(apr_hash_t **props,
-                                        svn_wc__db_t *db,
-                                        const char *local_abspath,
-                                        const char *wri_abspath,
-                                        apr_pool_t *result_pool,
-                                        apr_pool_t *scratch_pool);
-
-/* For file and symlink externals reads the actual properties of
-   LOCAL_ABSPATH as stored in the working copy identified by WRI_ABSPATH
-   (If NULL the parent directory of LOCAL_ABSPATH).
-
-   Return SVN_ERR_WC_PATH_NOT_FOUND if LOCAL_ABSPATH is not an external in
-   this working copy.
- */
-svn_error_t *
-svn_wc__db_external_read_props(apr_hash_t **props,
-                               svn_wc__db_t *db,
-                               const char *local_abspath,
-                               const char *wri_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
-
 
 /* @} */
 
