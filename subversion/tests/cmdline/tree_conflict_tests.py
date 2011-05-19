@@ -707,13 +707,9 @@ def merge_dir_add_onto_not_none(sbox):
 
 #----------------------------------------------------------------------
 
-@XFail()
 @Issue(3805)
 def force_del_tc_inside(sbox):
   "--force del on dir with TCs inside"
-  ### This test is currently marked XFail because we don't remove tree
-  ### conflicts upon "delete --force" yet. They linger and block
-  ### the commit.
 
   #          A/C       <-  delete with --force
   # A  +  C  A/C/dir
@@ -783,17 +779,16 @@ def force_del_tc_inside(sbox):
                      [], 'delete', C, '--force')
 
   # Verify deletion status
-  # Note: the tree conflicts are still in the status.
+  # Note: the tree conflicts are removed because we forced the delete.
   expected_status.tweak('A/C', status='D ')
-  expected_status.tweak('A/C/dir', 'A/C/file', status='! ', copied=None,
-                        wc_rev=None)
+  expected_status.remove('A/C/dir', 'A/C/file')
 
   run_and_verify_status(wc_dir, expected_status)
 
   # Commit, remove the "disarmed" tree-conflict.
   expected_output = wc.State(wc_dir, { 'A/C' : Item(verb='Deleting') })
 
-  expected_status.remove('A/C', 'A/C/dir', 'A/C/file')
+  expected_status.remove('A/C')
 
   run_and_verify_commit(wc_dir,
                         expected_output, expected_status, None,
