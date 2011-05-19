@@ -575,6 +575,8 @@ svn_cache__create_inprocess(svn_cache__t **cache_p,
 
   cache->id = apr_pstrdup(pool, id);
 
+  SVN_ERR_ASSERT(klen == APR_HASH_KEY_STRING || klen >= 1);
+
   cache->hash = apr_hash_make(pool);
   cache->klen = klen;
 
