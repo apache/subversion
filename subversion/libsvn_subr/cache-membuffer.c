@@ -734,6 +734,9 @@ find_entry(svn_membuffer_t *cache,
         {
           initialize_group(cache, group_index);
           entry = group;
+
+          /* initialize entry for the new key */
+          memcpy(entry->key, to_find, KEY_SIZE);
         }
         
       return entry;
