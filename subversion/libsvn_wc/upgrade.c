@@ -1270,7 +1270,8 @@ upgrade_to_wcng(void **dir_baton,
   /* Don't try to mess with the WC if there are old log files left. */
 
   /* Is the (first) log file present?  */
-  SVN_ERR(svn_io_check_path(logfile_path, &logfile_on_disk, scratch_pool));
+  SVN_ERR(svn_io_check_path(logfile_path, &logfile_on_disk_kind,
+                            scratch_pool));
   if (logfile_on_disk_kind == svn_node_file)
     return svn_error_create(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
                             _("Cannot upgrade with existing logs; run a "
