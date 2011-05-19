@@ -177,6 +177,25 @@ test_memcache_basic(const svn_test_opts_t *opts,
   return basic_cache_test(cache, FALSE, pool);
 }
 
+static svn_error_t *
+test_membuffer_cache_basic(apr_pool_t *pool)
+{
+  svn_cache__t *cache;
+  svn_membuffer_t *membuffer;
+
+  SVN_ERR(svn_cache__membuffer_cache_create(&membuffer, 10*1024, 1, TRUE, pool));
+
+  /* Create a cache with just one entry. */
+  SVN_ERR(svn_cache__create_membuffer_cache(&cache,
+                                            membuffer,
+                                            serialize_revnum,
+                                            deserialize_revnum,
+                                            APR_HASH_KEY_STRING,
+                                            "cache:",
+                                            pool));
+
+  return basic_cache_test(cache, FALSE, pool);
+}
 
 
 static svn_error_t *
@@ -246,5 +265,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "basic memcache svn_cache test"),
     SVN_TEST_OPTS_PASS(test_memcache_long_key,
                        "memcache svn_cache with very long keys"),
+    SVN_TEST_PASS2(test_membuffer_cache_basic,
+                   "basic membuffer svn_cache test"),
     SVN_TEST_NULL
   };
