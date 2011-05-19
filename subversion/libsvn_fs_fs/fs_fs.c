@@ -1421,8 +1421,9 @@ svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
 #define RECOVERABLE_RETRY_COUNT 10
 
 #ifdef ESTALE
+/* Do not use do-while due to the embedded 'continue'.  */
 #define RETRY_RECOVERABLE(err, filehandle, expr)                \
-  {                                                             \
+  if (1) {                                                      \
     svn_error_clear(err);                                       \
     err = (expr);                                               \
     if (err)                                                    \
@@ -1435,9 +1436,9 @@ svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
         }                                                       \
         return svn_error_return(err);                           \
       }                                                         \
-  }
+  } else
 #define IGNORE_RECOVERABLE(err, expr)                           \
-  {                                                             \
+  if (1) {                                                      \
     svn_error_clear(err);                                       \
     err = (expr);                                               \
     if (err)                                                    \
@@ -1446,7 +1447,7 @@ svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
         if ((_e != ESTALE) && (_e != EIO))                      \
           return svn_error_return(err);                         \
       }                                                         \
-  }
+  } else
 #else
 #define RETRY_RECOVERABLE(err, filehandle, expr)  SVN_ERR(expr)
 #define IGNORE_RECOVERABLE(err, expr) SVN_ERR(expr)
