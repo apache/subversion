@@ -375,12 +375,12 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
       
       opt.kind = svn_opt_revision_unspecified;
 
-      SVN_ERR(svn_client_propget3(&mergeinfo_props,
+      SVN_ERR(svn_client_propget4(&mergeinfo_props,
                                   SVN_PROP_MERGEINFO,
                                   local_abspath,
                                   &opt, &opt,
                                   NULL, svn_depth_infinity, NULL,
-                                  ctx, scratch_pool));
+                                  ctx, scratch_pool, scratch_pool));
 
       /* Convert *mergeinfo_props into a proper svn_mergeinfo_catalog_t */
       for (hi = apr_hash_first(scratch_pool, mergeinfo_props);
