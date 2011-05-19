@@ -796,16 +796,12 @@ def force_del_tc_inside(sbox):
 
 #----------------------------------------------------------------------
 
-@XFail()
 @Issue(3805)
 def force_del_tc_is_target(sbox):
   "--force del on tree-conflicted targets"
   #          A/C
   # A  +  C  A/C/dir   <-  delete with --force
   # A  +  C  A/C/file  <-  delete with --force
-  ### This test currently XFails because the tree-conflicts on dir and
-  ### file remain in the WC but were supposed to be unversioned by a commit
-  ### (because of a delete --force).
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -870,16 +866,12 @@ def force_del_tc_is_target(sbox):
                      [],
                      'delete', dir, file, '--force')
 
-  expected_status.tweak('A/C/dir', status='! ', copied=None, wc_rev=None)
-  expected_status.tweak('A/C/file', status='! ', copied=None, wc_rev=None)
+  # The rm --force now removes the nodes and the tree conflicts on them
+  expected_status.remove('A/C/dir', 'A/C/file')
   run_and_verify_status(wc_dir, expected_status)
 
   # Commit, remove the "disarmed" tree-conflict.
   expected_output = wc.State(wc_dir, {})
-
-  ### This is why this test currently XFails. We want the conflicts
-  ### in the unversioned nodes to go away.
-  expected_status.remove('A/C/dir', 'A/C/file')
 
   run_and_verify_commit(wc_dir,
                         expected_output, expected_status, None,
