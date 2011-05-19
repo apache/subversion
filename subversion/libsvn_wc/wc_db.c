@@ -5127,6 +5127,10 @@ op_revert_txn(void *baton,
   apr_int64_t op_depth;
   int affected_rows;
 
+  /* ### we shouldn't create the triggers in the first place. next round.  */
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
+                                      STMT_DROP_REVERT_LIST_TRIGGERS));
+
   /* ### Similar structure to op_revert_recursive_txn, should they be
          combined? */
 
@@ -5159,6 +5163,17 @@ op_revert_txn(void *baton,
                                      path_for_error_message(wcroot,
                                                             local_relpath,
                                                             scratch_pool));
+
+          /* The node exists purely as an ACTUAL_NODE. Thus, it is a
+             delete-delete tree-conflicted node. There are no conflict
+             files to extract from the row, but we DO want to notify
+             about this node. Insert an appropriate row.  */
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                            STMT_INSERT_REVERT_LIST_PLAIN));
+          /* ### we should be binding wc_id  */
+          SVN_ERR(svn_sqlite__bindf(stmt, "s", local_relpath));
+          SVN_ERR(svn_sqlite__step_done(stmt));
+
           return SVN_NO_ERROR;
         }
 
@@ -5174,6 +5189,13 @@ op_revert_txn(void *baton,
 
   if (op_depth > 0 && op_depth == relpath_depth(local_relpath))
     {
+      /* A NODES row is present, so leave a row in the REVERT_LIST table.
+         This will gather data from ACTUAL_NODE, if a row is available.  */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_INSERT_REVERT_LIST));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
       /* Can't do non-recursive revert if children exist */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_GE_OP_DEPTH_CHILDREN));
@@ -5207,6 +5229,17 @@ op_revert_txn(void *baton,
       /* ### This removes the lock, but what about the access baton? */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_DELETE_WC_LOCK_ORPHAN));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+  else
+    {
+      /* We have a BASE node (or we're looking at a child of an op-root),
+         but we still want to insert into REVERT_LIST because we MAY be
+         about to revert some changes on ACTUAL_NODE only. Investigate
+         the ACTUAL_NODE row, and insert into REVERT_LIST as appropriate.  */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_INSERT_REVERT_LIST_ACTUAL_ONLY));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
