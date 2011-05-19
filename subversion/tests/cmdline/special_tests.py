@@ -605,8 +605,13 @@ def replace_symlink_with_dir(sbox):
   os.chdir(was_cwd)
   expected_output = svntest.wc.State(wc_dir, {
   })
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output, 
-                                        None, None, wc_dir)
+
+  if svntest.main.is_posix_os():
+    error_re_string = '.*E145001: Entry.*has unexpectedly changed special.*'
+  else:
+    error_re_string = None
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, error_re_string, wc_dir)
 
 # test for issue #1808: svn up deletes local symlink that obstructs
 # versioned file
