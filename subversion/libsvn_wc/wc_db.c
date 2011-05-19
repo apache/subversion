@@ -5397,6 +5397,7 @@ op_revert_txn(void *baton,
     {
       SVN_ERR(svn_sqlite__reset(stmt));
 
+      /* There was no NODE row, so attempt to delete an ACTUAL_NODE row.  */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_DELETE_ACTUAL_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
@@ -5404,9 +5405,9 @@ op_revert_txn(void *baton,
       if (affected_rows)
         {
           /* Can't do non-recursive actual-only revert if actual-only
-             children exist */
+             children exist. Raise an error to cancel the transaction.  */
           SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                            STMT_SELECT_ACTUAL_CHILDREN));
+                                            STMT_ACTUAL_HAS_CHILDREN));
           SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
           SVN_ERR(svn_sqlite__step(&have_row, stmt));
           SVN_ERR(svn_sqlite__reset(stmt));

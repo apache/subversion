@@ -883,8 +883,10 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 UPDATE nodes SET repos_id = ?3, repos_path = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
--- STMT_SELECT_ACTUAL_CHILDREN
-SELECT 1 FROM actual_node WHERE wc_id = ?1 AND parent_relpath = ?2
+-- STMT_ACTUAL_HAS_CHILDREN
+SELECT 1 FROM actual_node
+WHERE wc_id = ?1 AND parent_relpath = ?2
+LIMIT 1
 
 -- STMT_INSERT_EXTERNAL
 INSERT OR REPLACE INTO externals (
