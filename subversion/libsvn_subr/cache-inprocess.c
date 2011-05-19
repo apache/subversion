@@ -47,12 +47,12 @@ typedef struct inprocess_cache_t {
   svn_cache__deserialize_func_t deserialize_func;
 
   /* Maximum number of pages that this cache instance may allocate */
-  apr_int64_t total_pages;
+  apr_uint64_t total_pages;
   /* The number of pages we're allowed to allocate before having to
    * try to reuse one. */
-  apr_int64_t unallocated_pages;
+  apr_uint64_t unallocated_pages;
   /* Number of cache entries stored on each page.  Must be at least 1. */
-  apr_int64_t items_per_page;
+  apr_uint64_t items_per_page;
 
   /* A dummy cache_page serving as the head of a circular doubly
    * linked list of cache_pages.  SENTINEL->NEXT is the most recently
@@ -66,7 +66,7 @@ typedef struct inprocess_cache_t {
   struct cache_page *partial_page;
   /* If PARTIAL_PAGE is not null, this is the number of entries
    * currently on PARTIAL_PAGE. */
-  apr_int64_t partial_page_number_filled;
+  apr_uint64_t partial_page_number_filled;
 
   /* The pool that the svn_cache__t itself, HASH, and all pages are
    * allocated in; subpools of this pool are used for the cache_entry
@@ -537,8 +537,7 @@ inprocess_cache_get_info(void *cache_void,
   info->id = apr_pstrdup(pool, cache->id);
 
   info->used_entries = apr_hash_count(cache->hash);
-  info->total_entries = (apr_size_t)(cache->items_per_page *
-      cache->total_pages);
+  info->total_entries = cache->items_per_page * cache->total_pages;
 
   info->used_size = cache->data_size;
   info->data_size = cache->data_size;
