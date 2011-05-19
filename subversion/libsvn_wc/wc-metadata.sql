@@ -571,33 +571,6 @@ CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
                                                       def_local_relpath,
                                                       local_relpath);
 
-CREATE TRIGGER externals_update_checksum_trigger
-AFTER UPDATE OF checksum ON externals
-WHEN NEW.checksum IS NOT OLD.checksum
-  /* AND (NEW.checksum IS NOT NULL OR OLD.checksum IS NOT NULL) */
-BEGIN
-  UPDATE pristine SET refcount = refcount + 1
-  WHERE checksum = NEW.checksum;
-  UPDATE pristine SET refcount = refcount - 1
-  WHERE checksum = OLD.checksum;
-END;
-
-CREATE TRIGGER externals_insert_trigger
-AFTER INSERT ON externals
-WHEN NEW.checksum IS NOT NULL
-BEGIN
-  UPDATE pristine SET refcount = refcount + 1
-  WHERE checksum = NEW.checksum;
-END;
-
-CREATE TRIGGER externals_delete_trigger
-AFTER DELETE ON externals
-WHEN OLD.checksum IS NOT NULL
-BEGIN
-  UPDATE pristine SET refcount = refcount - 1
-  WHERE checksum = OLD.checksum;
-END;
-
 /* Format 20 introduces NODES and removes BASE_NODE and WORKING_NODE */
 
 -- STMT_UPGRADE_TO_20

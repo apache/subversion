@@ -1469,12 +1469,12 @@ test_externals_store(apr_pool_t *pool)
     svn_wc__db_kind_t kind;
     const char *repos_root_url;
     const char *repos_uuid;
-    const char *record_ancestor_abspath;
+    const char *defining_abspath;
     const char *recorded_repos_relpath;
     svn_revnum_t recorded_peg_revision;
     svn_revnum_t recorded_revision;
 
-    SVN_ERR(svn_wc__db_external_read(&status, &kind, &record_ancestor_abspath,
+    SVN_ERR(svn_wc__db_external_read(&status, &kind, &defining_abspath,
                                      &repos_root_url, &repos_uuid,
                                      &recorded_repos_relpath,
                                      &recorded_peg_revision,
@@ -1487,9 +1487,9 @@ test_externals_store(apr_pool_t *pool)
     SVN_TEST_STRING_ASSERT(repos_root_url, "svn://some-repos/svn");
     SVN_TEST_STRING_ASSERT(repos_uuid, "not-a-uuid");
 #if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
-    SVN_TEST_STRING_ASSERT(record_ancestor_abspath, subdir);
+    SVN_TEST_STRING_ASSERT(defining_abspath, subdir);
 #else
-    SVN_TEST_ASSERT(record_ancestor_abspath == NULL);
+    SVN_TEST_ASSERT(defining_abspath == NULL);
 #endif
     SVN_TEST_STRING_ASSERT(recorded_repos_relpath, "some/new-location");
     SVN_TEST_ASSERT(recorded_peg_revision == 90);
@@ -1510,40 +1510,22 @@ test_externals_store(apr_pool_t *pool)
     }
 
 #if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
-    SVN_ERR(svn_wc__db_external_read(&status, &kind, &revision, &repos_relpath,
+    SVN_ERR(svn_wc__db_external_read(&status, &kind, &defining_abspath,
                                      &repos_root_url, &repos_uuid,
-                                     &changed_rev, &changed_date,
-                                     &changed_author, &checksum, &target,
-                                     &lock, &recorded_size, &recorded_mod_time,
-                                     &record_ancestor_abspath,
                                      &recorded_repos_relpath,
                                      &recorded_peg_revision,
-                                     &recorded_revision, &conflicted,
-                                     &had_props, &props_mod,
+                                     &recorded_revision,
                                      db, dir_external_path, local_abspath,
                                      pool, pool));
 
     SVN_TEST_ASSERT(status == svn_wc__db_status_normal);
     SVN_TEST_ASSERT(kind == svn_wc__db_kind_dir);
-    SVN_TEST_ASSERT(revision == SVN_INVALID_REVNUM);
-    SVN_TEST_ASSERT(repos_relpath == NULL);
     SVN_TEST_STRING_ASSERT(repos_root_url, "svn://other-repos/nsv");
     SVN_TEST_STRING_ASSERT(repos_uuid, "no-uuid-either");
-    SVN_TEST_ASSERT(changed_rev == SVN_INVALID_REVNUM);
-    SVN_TEST_ASSERT(changed_date == 0);
-    SVN_TEST_ASSERT(changed_author == NULL);
-    SVN_TEST_ASSERT(checksum == NULL);
-    SVN_TEST_ASSERT(target == NULL);
-    SVN_TEST_ASSERT(lock == NULL);
-    SVN_TEST_ASSERT(recorded_size == SVN_INVALID_FILESIZE);
-    SVN_TEST_ASSERT(recorded_mod_time == 0);
-    SVN_TEST_STRING_ASSERT(record_ancestor_abspath, subdir);
+    SVN_TEST_STRING_ASSERT(defining_abspath, subdir);
     SVN_TEST_STRING_ASSERT(recorded_repos_relpath, "some/other-location");
     SVN_TEST_ASSERT(recorded_peg_revision == 70);
     SVN_TEST_ASSERT(recorded_revision == 32);
-    SVN_TEST_ASSERT(!conflicted);
-    SVN_TEST_ASSERT(!had_props);
-    SVN_TEST_ASSERT(!props_mod);
 #endif
   }
 
