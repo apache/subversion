@@ -1261,7 +1261,7 @@ upgrade_to_wcng(void **dir_baton,
 {
   const char *logfile_path = svn_wc__adm_child(dir_abspath, ADM_LOG,
                                                scratch_pool);
-  svn_node_kind_t logfile_on_disk;
+  svn_node_kind_t logfile_on_disk_kind;
   apr_hash_t *entries;
   svn_wc_entry_t *this_dir;
   const char *old_wcroot_abspath, *dir_relpath;
@@ -1271,12 +1271,14 @@ upgrade_to_wcng(void **dir_baton,
 
   /* Is the (first) log file present?  */
   SVN_ERR(svn_io_check_path(logfile_path, &logfile_on_disk, scratch_pool));
-  if (logfile_on_disk == svn_node_file)
+  if (logfile_on_disk_kind == svn_node_file)
     return svn_error_create(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
                             _("Cannot upgrade with existing logs; run a "
                               "cleanup operation on this working copy using "
-                              "a Subversion 1.6 client, then retry the "
-                              "upgrade with the current client"));
+                              "a client version which is compatible with this "
+                              "working copy's format (such as the version "
+                              "you are upgrading from), then retry the "
+                              "upgrade with the current version"));
 
   /* Lock this working copy directory, or steal an existing lock. Do this
      BEFORE we read the entries. We don't want another process to modify the
