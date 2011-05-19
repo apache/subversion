@@ -97,7 +97,11 @@ struct cache_page {
   struct cache_page *next;
 
   /* The pool in which cache_entry structs, hash keys, and dup'd
-   * values are allocated. */
+   * values are allocated.  The CACHE_PAGE structs are allocated
+   * in CACHE_POOL and have the same lifetime as the cache itself.
+   * (The cache will never allocate more than TOTAL_PAGES page
+   * structs (inclusive of the sentinel) from CACHE_POOL.)
+   */
   apr_pool_t *page_pool;
 
   /* A singly linked list of the entries on this page; used to remove
