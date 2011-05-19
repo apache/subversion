@@ -1047,13 +1047,13 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
       c[seg].segment_count = segment_count;
 
       c[seg].group_count = group_count;
-      c[seg].directory =
-          secure_aligned_alloc(pool,
-                               group_count * sizeof(entry_group_t),
-                               FALSE);
-      c[seg].group_initialized = secure_aligned_alloc(pool, 
-                                                      group_init_size, 
-                                                      FALSE);
+      c[seg].directory = apr_pcalloc(pool,
+                                     group_count * sizeof(entry_group_t));
+
+      /* Allocate and initialize directory entries as "not initialized",
+         hence "unused" */
+      c[seg].group_initialized = apr_pcalloc(pool, group_init_size);
+
       c[seg].first = NO_INDEX;
       c[seg].last = NO_INDEX;
       c[seg].next = NO_INDEX;
@@ -1078,10 +1078,6 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
            */
           return svn_error_wrap_apr(APR_ENOMEM, _("OOM"));
         }
-
-      /* initialize directory entries as "not initialized", hence "unused"
-       */
-      memset(c[seg].group_initialized, 0, group_init_size);
 
 #if APR_HAS_THREADS
       /* A lock for intra-process synchronization to the cache, or NULL if
