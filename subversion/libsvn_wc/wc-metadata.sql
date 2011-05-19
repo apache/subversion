@@ -545,33 +545,11 @@ CREATE TABLE EXTERNALS (
   /* Repository location fields */
   repos_id  INTEGER NOT NULL REFERENCES REPOSITORY (id),
 
-  /* Always set for file and symlink externals. NULL for directory externals */
-  repos_path  TEXT,
-  revision  INTEGER,
-
   /* Either 'normal' or 'excluded' */
   presence  TEXT NOT NULL,
 
-  /* Content fields */
-
   /* the kind of the external. */
   kind  TEXT NOT NULL,
-
-  /* Variouse information (NULL for directories; see NODES for explanation) */
-  properties  BLOB,
-  checksum  TEXT REFERENCES PRISTINE (checksum),
-  symlink_target  TEXT,
-
-  /* Last-Change fields (NULL for directories; see NODES for explanation) */
-  changed_revision  INTEGER,
-  changed_date      INTEGER,
-  changed_author    TEXT,
-
-  /* Various cache fields (NULL for directories; see NODES for explanation) */
-  recorded_size  INTEGER,
-  recorded_mod_time  INTEGER,
-  dav_cache  BLOB,
-
 
   /* The local relpath of the directory NODE defining this external 
      (Defaults to the parent directory of the file external after upgrade) */

@@ -3002,64 +3002,19 @@ svn_wc__db_external_remove(svn_wc__db_t *db,
 }
 
 svn_error_t *
-svn_wc__db_external_record_fileinfo(svn_wc__db_t *db,
-                                    const char *local_abspath,
-                                    const char *wri_abspath,
-                                    svn_filesize_t recorded_size,
-                                    apr_time_t recorded_mod_time,
-                                    apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
-  int affected_rows;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_UPDATE_EXTERNAL_FILEINFO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isii", wcroot->wc_id, local_relpath,
-                            recorded_size,
-                            recorded_mod_time));
-  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
-
-  SVN_ERR_ASSERT(affected_rows == 1);
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_wc__db_external_read(svn_wc__db_status_t *status,
                          svn_wc__db_kind_t *kind,
-                         svn_revnum_t *revision,
-                         const char **repos_relpath,
+                         const char **definining_abspath,
                          const char **repos_root_url,
                          const char **repos_uuid,
-                         svn_revnum_t *changed_rev,
-                         apr_time_t *changed_date,
-                         const char **changed_author,
-                         const svn_checksum_t **checksum,
-                         const char **target,
-                         svn_wc__db_lock_t **lock,
-                         svn_filesize_t *recorded_size,
-                         apr_time_t *recorded_mod_time,
-                         const char **record_ancestor_abspath,
                          const char **recorded_repos_relpath,
                          svn_revnum_t *recorded_peg_revision,
                          svn_revnum_t *recorded_revision,
-                         svn_boolean_t *conflicted,
-                         svn_boolean_t *had_props,
-                         svn_boolean_t *props_mod,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          const char *wri_abspath,
                          apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
-{
+                         apr_pool_t *scratch_pool){
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
 #if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
@@ -3087,10 +3042,9 @@ svn_wc__db_external_read(svn_wc__db_status_t *status,
     svn_boolean_t update_root;
 
     SVN_ERR(svn_wc__db_base_get_info(&base_status, &base_kind,
-                                     revision, repos_relpath, repos_root_url,
-                                     repos_uuid, changed_rev, changed_date,
-                                     changed_author, NULL, checksum, target,
-                                     lock, had_props, &update_root, NULL,
+                                     NULL, NULL, repos_root_url, repos_uuid,
+                                     NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, &update_root, NULL,
                                      db, local_abspath,
                                      result_pool, scratch_pool));
 
@@ -3110,8 +3064,8 @@ svn_wc__db_external_read(svn_wc__db_status_t *status,
     if (kind)
       *kind = base_kind;
 
-    if (record_ancestor_abspath)
-      *record_ancestor_abspath = NULL; /* Way to expensive to find now */
+    if (definining_abspath)
+      *definining_abspath = NULL; /* Way to expensive to find now */
 
     if (recorded_repos_relpath || recorded_peg_revision || recorded_revision)
       {
@@ -3138,14 +3092,6 @@ svn_wc__db_external_read(svn_wc__db_status_t *status,
           *recorded_revision = (rev.kind == svn_opt_revision_number)
                                    ? rev.value.number : SVN_INVALID_REVNUM;
       }
-
-    if (props_mod || recorded_size || recorded_mod_time || conflicted)
-      SVN_ERR(read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                        NULL, NULL, NULL, NULL, NULL, NULL, recorded_size,
-                        recorded_mod_time, NULL, conflicted, NULL, NULL,
-                        props_mod, NULL, NULL, NULL,
-                        wcroot, local_relpath,
-                        result_pool, scratch_pool));
 
     return SVN_NO_ERROR;
   }
@@ -3267,113 +3213,6 @@ svn_wc__db_external_read(svn_wc__db_status_t *status,
 #endif
 }
 
-svn_error_t *
-svn_wc__db_external_read_pristine_props(apr_hash_t **props,
-                                        svn_wc__db_t *db,
-                                        const char *local_abspath,
-                                        const char *wri_abspath,
-                                        apr_pool_t *result_pool,
-                                        apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-#if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-  svn_error_t *err;
-#endif
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  if (! wri_abspath)
-    wri_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              wri_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  SVN_ERR_ASSERT(svn_dirent_is_ancestor(wcroot->abspath, local_abspath));
-
-  local_relpath = svn_dirent_skip_ancestor(wcroot->abspath, local_abspath);
-
-#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
-  return svn_error_return(svn_wc__db_read_pristine_props(props, db,
-                                                         local_abspath,
-                                                         result_pool,
-                                                         scratch_pool));
-#else
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_EXTERNAL_INFO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  if (have_row)
-    {
-      svn_wc__db_kind_t kind = svn_sqlite__column_token(stmt, 0, kind_map);
-
-      if (kind != svn_wc__db_kind_file
-          && kind != svn_wc__db_kind_symlink)
-        {
-          err = svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                              _("The node '%s' is not a file external."),
-                              svn_dirent_local_style(local_abspath,
-                                                     scratch_pool));
-        }
-      else
-        err = svn_sqlite__column_properties(props, stmt, 4, result_pool,
-                                            scratch_pool);
-
-      if (props && !*props)
-        *props = apr_hash_make(result_pool);
-    }
-  else
-    {
-      err = svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                              _("The node '%s' is not an external."),
-                              svn_dirent_local_style(local_abspath,
-                                                     scratch_pool));
-    }
-
-  return svn_error_return(svn_error_compose_create(err,
-                                                   svn_sqlite__reset(stmt)));
-#endif
-}
-
-svn_error_t *
-svn_wc__db_external_read_props(apr_hash_t **props,
-                               svn_wc__db_t *db,
-                               const char *local_abspath,
-                               const char *wri_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  if (! wri_abspath)
-    wri_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              wri_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  SVN_ERR_ASSERT(svn_dirent_is_ancestor(wcroot->abspath, local_abspath));
-
-  local_relpath = svn_dirent_skip_ancestor(wcroot->abspath, local_abspath);
-
-#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
-  return svn_error_return(svn_wc__db_read_props(props, db, local_abspath,
-                                                result_pool, scratch_pool));
-#else
-  /* ### Where do we store actual properties? ACTUAL? New column? */
-  SVN_ERR(svn_wc__db_external_read_pristine_props(props, db, local_abspath,
-                                                  wri_abspath,
-                                                  result_pool, scratch_pool));
-  return SVN_NO_ERROR;
-#endif
-}
 
 
 /* Helper for svn_wc__db_op_copy to handle copying from one db to
