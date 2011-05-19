@@ -276,6 +276,13 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
   SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
                              scratch_pool, scratch_pool));
 
+  if (dirent->kind != svn_node_file)
+    {
+      /* There is no file on disk, so the text is missing, not modified. */
+      *modified_p = FALSE;
+      return SVN_NO_ERROR;
+    }
+
   if (! exact_comparison)
     {
       /* We're allowed to use a heuristic to determine whether files may
