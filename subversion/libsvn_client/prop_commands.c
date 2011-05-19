@@ -864,44 +864,44 @@ get_prop_from_wc(apr_hash_t *props,
 
 /* Note: this implementation is very similar to svn_client_proplist. */
 svn_error_t *
-svn_client_propget3(apr_hash_t **props,
+svn_client_propget4(apr_hash_t **props,
                     const char *propname,
-                    const char *path_or_url,
+                    const char *target,
                     const svn_opt_revision_t *peg_revision,
                     const svn_opt_revision_t *revision,
                     svn_revnum_t *actual_revnum,
                     svn_depth_t depth,
                     const apr_array_header_t *changelists,
                     svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   svn_revnum_t revnum;
 
   SVN_ERR(error_if_wcprop_name(propname));
+  if (!svn_path_is_url(target))
+    SVN_ERR_ASSERT(svn_dirent_is_absolute(target));
 
   peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision,
-                                                        path_or_url);
+                                                        target);
   revision = svn_cl__rev_default_to_peg(revision, peg_revision);
 
-  *props = apr_hash_make(pool);
+  *props = apr_hash_make(result_pool);
 
-  if (! svn_path_is_url(path_or_url)
+  if (! svn_path_is_url(target)
       && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(peg_revision->kind)
       && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
       svn_node_kind_t kind;
       svn_boolean_t pristine;
-      const char *local_abspath;
-      svn_boolean_t added;
-
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
+      svn_error_t *err;
 
       /* If FALSE, we want the working revision. */
       pristine = (revision->kind == svn_opt_revision_committed
                   || revision->kind == svn_opt_revision_base);
 
-      SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
-                               pool));
+      SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, target, FALSE,
+                               scratch_pool));
 
       if (kind == svn_node_unknown || kind == svn_node_none)
         {
@@ -909,24 +909,25 @@ svn_client_propget3(apr_hash_t **props,
              for this function. */
           return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                                    _("'%s' is not under version control"),
-                                   svn_dirent_local_style(local_abspath,
-                                                          pool));
+                                   svn_dirent_local_style(target,
+                                                          scratch_pool));
         }
 
-      /* Get the actual_revnum; added nodes have no revision yet, and we
-       * return the mock-up revision of 0.
-       * ### TODO: get rid of this 0. */
-      SVN_ERR(svn_wc__node_is_added(&added, ctx->wc_ctx, local_abspath, pool));
-      if (added)
-        revnum = 0;
-      else
-        SVN_ERR(svn_client__get_revision_number(&revnum, NULL, ctx->wc_ctx,
-                                                local_abspath, NULL, revision,
-                                                pool));
+      err = svn_client__get_revision_number(&revnum, NULL, ctx->wc_ctx,
+                                            target, NULL, revision,
+                                            scratch_pool);
+      if (err && err->apr_err == SVN_ERR_CLIENT_BAD_REVISION)
+        {
+          svn_error_clear(err);
+          revnum = SVN_INVALID_REVNUM;
+        }
+      else if (err)
+        return svn_error_return(err);
 
-      SVN_ERR(get_prop_from_wc(*props, propname, local_abspath,
+      SVN_ERR(get_prop_from_wc(*props, propname, target,
                                pristine, kind,
-                               depth, changelists, ctx, pool, pool));
+                               depth, changelists, ctx, scratch_pool,
+                               result_pool));
     }
   else
     {
@@ -936,15 +937,15 @@ svn_client_propget3(apr_hash_t **props,
 
       /* Get an RA plugin for this filesystem object. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
-                                               &url, path_or_url, NULL,
+                                               &url, target, NULL,
                                                peg_revision,
-                                               revision, ctx, pool));
+                                               revision, ctx, scratch_pool));
 
-      SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, pool));
+      SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, scratch_pool));
 
       SVN_ERR(remote_propget(*props, propname, url, "",
                              kind, revnum, ra_session,
-                             depth, pool, pool));
+                             depth, result_pool, scratch_pool));
     }
 
   if (actual_revnum)
