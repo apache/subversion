@@ -1040,7 +1040,6 @@ def up_add_onto_add_revert(sbox):
 #----------------------------------------------------------------------
 # Regression test for issue #3525 and #3533
 #
-@XFail()
 @Issues(3525,3533)
 def lock_update_only(sbox):
   "lock status update shouldn't flag tree conflict"
@@ -1069,7 +1068,7 @@ def lock_update_only(sbox):
   expected_disk = main.greek_state.copy()
   expected_disk.remove('iota')
   expected_status = get_virginal_state(wc_dir, 1)
-  expected_status.tweak('iota', status='D ', writelocked='O')
+  expected_status.tweak('iota', status='D ', writelocked='K')
   run_and_verify_update(wc_dir,
                         None, expected_disk, expected_status,
                         None, None, None, None, None, 1,
