@@ -642,7 +642,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
    * data and len members in stringbuf. 
    */
   item->kind = SVN_RA_SVN_STRING;
-  item->u.string = (svn_string_t *)(&stringbuf->data);
+  item->u.string = svn_string_from_stringbuf(stringbuf);
 
   return SVN_NO_ERROR;
 }
