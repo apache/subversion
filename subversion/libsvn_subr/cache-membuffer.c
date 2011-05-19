@@ -346,7 +346,7 @@ struct svn_membuffer_t
   /* The dictionary, GROUP_SIZE * group_count entries long. Never NULL.
    */
   entry_group_t *directory;
-  
+
   /* Flag array with group_count / GROUP_INIT_GRANULARITY _bit_ elements.
    * Allows for efficiently marking groups as "not initialized".
    */
@@ -685,7 +685,7 @@ initialize_group(svn_membuffer_t *cache, apr_uint32_t group_index)
   apr_uint32_t last_index = group_index + GROUP_INIT_GRANULARITY;
   if (last_index > cache->group_count)
     last_index = cache->group_count;
-  
+
   /* initialize their entries */
   first_index *= GROUP_SIZE;
   last_index *= GROUP_SIZE;
@@ -738,7 +738,7 @@ find_entry(svn_membuffer_t *cache,
           /* initialize entry for the new key */
           memcpy(entry->key, to_find, KEY_SIZE);
         }
-        
+
       return entry;
     }
   
