@@ -603,11 +603,10 @@ def replace_symlink_with_dir(sbox):
   # I'd expect a failed commit here, but replacing a file locally with a
   # directory seems to make svn think the file is unchanged.
   os.chdir(was_cwd)
-  exit_code, stdout_lines, stderr_lines = svntest.main.run_svn(1, 'ci', '-m',
-                                                               'log msg',
-                                                               wc_dir)
-  if not (stdout_lines == [] or stderr_lines == []):
-    raise svntest.Failure
+  expected_output = svntest.wc.State(wc_dir, {
+  })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, 
+                                        None, None, wc_dir)
 
 # test for issue #1808: svn up deletes local symlink that obstructs
 # versioned file
