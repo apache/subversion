@@ -1604,6 +1604,67 @@ svn_client_revprop_set(const char *propname,
 }
 
 svn_error_t *
+svn_client_propget3(apr_hash_t **props,
+                    const char *propname,
+                    const char *path_or_url,
+                    const svn_opt_revision_t *peg_revision,
+                    const svn_opt_revision_t *revision,
+                    svn_revnum_t *actual_revnum,
+                    svn_depth_t depth,
+                    const apr_array_header_t *changelists,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
+{
+  const char *target;
+  apr_hash_t *temp_props;
+
+  if (svn_path_is_url(path_or_url))
+    target = path_or_url;
+  else
+    SVN_ERR(svn_dirent_get_absolute(&target, path_or_url, pool));
+
+  SVN_ERR(svn_client_propget4(&temp_props, propname, target,
+                              peg_revision, revision, actual_revnum,
+                              depth, changelists, ctx, pool, pool));
+
+  if (actual_revnum
+        && !svn_path_is_url(path_or_url)
+        && !SVN_IS_VALID_REVNUM(*actual_revnum))
+    {
+      /* Get the actual_revnum; added nodes have no revision yet, and old
+       * callers expected the mock-up revision of 0. */
+      svn_boolean_t added;
+
+      SVN_ERR(svn_wc__node_is_added(&added, ctx->wc_ctx, target, pool));
+      if (added)
+        *actual_revnum = 0;
+    }
+
+  /* We may need to fix up our hash keys for legacy callers. */
+  if (!svn_path_is_url(path_or_url) && strcmp(target, path_or_url) != 0)
+    {
+      apr_hash_index_t *hi;
+
+      *props = apr_hash_make(pool);
+      for (hi = apr_hash_first(pool, temp_props); hi;
+            hi = apr_hash_next(hi))
+        {
+          const char *abspath = svn__apr_hash_index_key(hi);
+          svn_string_t *value = svn__apr_hash_index_val(hi);
+          const char *relpath = svn_dirent_join(path_or_url,
+                                     svn_dirent_skip_ancestor(target, abspath),
+                                     pool);
+
+          apr_hash_set(*props, relpath, APR_HASH_KEY_STRING, value);
+        }
+    }
+  else
+    *props = temp_props;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_client_propget2(apr_hash_t **props,
                     const char *propname,
                     const char *target,

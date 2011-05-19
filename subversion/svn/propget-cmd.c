@@ -315,11 +315,15 @@ svn_cl__propget(apr_getopt_t *os,
           SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
                                      subpool));
 
-          SVN_ERR(svn_client_propget3(&props, pname_utf8, truepath,
+          if (!svn_path_is_url(truepath))
+            SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, subpool));
+
+          SVN_ERR(svn_client_propget4(&props, pname_utf8, truepath,
                                       &peg_revision,
                                       &(opt_state->start_revision),
                                       NULL, opt_state->depth,
-                                      opt_state->changelists, ctx, subpool));
+                                      opt_state->changelists, ctx, subpool,
+                                      subpool));
 
           /* Any time there is more than one thing to print, or where
              the path associated with a printed thing is not obvious,

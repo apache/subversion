@@ -4373,12 +4373,13 @@ svn_client_revprop_set(const char *propname,
                        apr_pool_t *pool);
 
 /**
- * Set @a *props to a hash table whose keys are `<tt>char *</tt>' paths,
- * prefixed by @a target (a working copy path or a URL), of items on
- * which property @a propname is set, and whose values are `#svn_string_t
- * *' representing the property value for @a propname at that path.
+ * Set @a *props to a hash table whose keys are absolute paths or URLs
+ * of items on which property @a propname is set, and whose values are
+ * `#svn_string_t *' representing the property value for @a propname
+ * at that path.
  *
- * Allocate @a *props, its keys, and its values in @a pool.
+ * Allocate @a *props, its keys, and its values in @a pool, use
+ * @a scratch_pool for temporary allocations.
  *
  * Don't store any path, not even @a target, if it does not have a
  * property named @a propname.
@@ -4410,8 +4411,30 @@ svn_client_revprop_set(const char *propname,
  * If error, don't touch @a *props, otherwise @a *props is a hash table
  * even if empty.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_client_propget4(apr_hash_t **props,
+                    const char *propname,
+                    const char *target,
+                    const svn_opt_revision_t *peg_revision,
+                    const svn_opt_revision_t *revision,
+                    svn_revnum_t *actual_revnum,
+                    svn_depth_t depth,
+                    const apr_array_header_t *changelists,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+/** 
+ * Similar to svn_client_propget4(), but with the following change to the
+ * output hash keys:  keys are `<tt>char *</tt>' paths, prefixed by
+ * @a target, which is a working copy path or a URL.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_propget3(apr_hash_t **props,
                     const char *propname,
