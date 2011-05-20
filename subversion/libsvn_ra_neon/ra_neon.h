@@ -483,7 +483,6 @@ svn_error_t * svn_ra_neon__get_props_resource(svn_ra_neon__resource_t **rsrc,
 svn_error_t * svn_ra_neon__get_starting_props(svn_ra_neon__resource_t **rsrc,
                                               svn_ra_neon__session_t *sess,
                                               const char *url,
-                                              const char *label,
                                               apr_pool_t *pool);
 
 /* Shared helper func: given a public URL which may not exist in HEAD,

@@ -1185,9 +1185,9 @@ static svn_error_t * commit_add_file(const char *path,
       public_url = svn_path_url_add_component2(file->cc->ras->url->data,
                                                path, workpool);
       err1 = svn_ra_neon__get_starting_props(&res, file->cc->ras,
-                                             put_target, NULL, workpool);
+                                             put_target, workpool);
       err2 = svn_ra_neon__get_starting_props(&res, file->cc->ras,
-                                             public_url, NULL, workpool);
+                                             public_url, workpool);
       if (! err1 && ! err2)
         {
           /* If the PROPFINDs succeed the file already exists */

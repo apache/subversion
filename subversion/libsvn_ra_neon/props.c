@@ -646,12 +646,11 @@ svn_error_t * svn_ra_neon__get_one_prop(const svn_string_t **propval,
 svn_error_t * svn_ra_neon__get_starting_props(svn_ra_neon__resource_t **rsrc,
                                               svn_ra_neon__session_t *sess,
                                               const char *url,
-                                              const char *label,
                                               apr_pool_t *pool)
 {
   svn_string_t *propval;
 
-  SVN_ERR(svn_ra_neon__get_props_resource(rsrc, sess, url, label,
+  SVN_ERR(svn_ra_neon__get_props_resource(rsrc, sess, url, NULL,
                                           starting_props, pool));
 
   /* Cache some of the resource information. */
@@ -738,7 +737,7 @@ svn_ra_neon__search_for_starting_props(svn_ra_neon__resource_t **rsrc,
     {
       svn_pool_clear(iterpool);
       err = svn_ra_neon__get_starting_props(rsrc, sess, path_s->data,
-                                            NULL, iterpool);
+                                            iterpool);
       if (! err)
         break;   /* found an existing, readable parent! */
 
@@ -1346,8 +1345,7 @@ svn_ra_neon__do_check_path(svn_ra_session_t *session,
                                                             pool);
 
       /* query the DAV:resourcetype of the full, assembled URL. */
-      err = svn_ra_neon__get_starting_props(&rsrc, ras, full_bc_url,
-                                            NULL, pool);
+      err = svn_ra_neon__get_starting_props(&rsrc, ras, full_bc_url, pool);
       if (! err)
         is_dir = rsrc->is_collection;
     }
