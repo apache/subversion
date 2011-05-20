@@ -32,6 +32,7 @@ ENABLE_JAVA_BINDINGS ?= no # they don't build with thread-less APR...
 USE_APR_ICONV ?= no # set to yes to use APR iconv instead of GNU iconv
 PARALLEL ?= PARALLEL=1 CLEANUP=1
 USE_HTTPV1 ?= no
+USE_AUTHZ_SHORT_CIRCUIT ?= no
 
 PWD		= $(shell pwd)
 UNAME		= $(shell uname)
@@ -1050,6 +1051,9 @@ httpd-conf:
 ifeq ($(USE_HTTPV1),yes)
 	echo "    SVNAdvertiseV2Protocol off" >> $(HTTPD_CHECK_CONF)
 endif
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo "    SVNPathAuthz short_circuit" >> $(HTTPD_CHECK_CONF)
+endif
 	echo "</Location>" >> $(HTTPD_CHECK_CONF)
 	echo "<Location /svn-test-work/local_tmp/repos>" >> $(HTTPD_CHECK_CONF)
 	echo "    DAV svn" >> $(HTTPD_CHECK_CONF)
@@ -1062,6 +1066,9 @@ endif
 ifeq ($(USE_HTTPV1),yes)
 	echo "    SVNAdvertiseV2Protocol off" >> $(HTTPD_CHECK_CONF)
 endif
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo "    SVNPathAuthz short_circuit" >> $(HTTPD_CHECK_CONF)
+endif
 	echo "</Location>" >> $(HTTPD_CHECK_CONF)
 	echo "# This Location lets you access repositories dropped in /tmp/" >> $(HTTPD_CHECK_CONF)
 	echo "<Location /svn>" >> $(HTTPD_CHECK_CONF)
@@ -1070,6 +1077,9 @@ endif
 	echo "    Allow from all" >> $(HTTPD_CHECK_CONF)
 ifeq ($(USE_HTTPV1),yes)
 	echo "    SVNAdvertiseV2Protocol off" >> $(HTTPD_CHECK_CONF)
+endif
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo "    SVNPathAuthz short_circuit" >> $(HTTPD_CHECK_CONF)
 endif
 	echo "</Location>" >> $(HTTPD_CHECK_CONF)
 	echo 'RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)$$ /svn-test-work/repositories/$$1' >> $(HTTPD_CHECK_CONF)
