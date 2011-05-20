@@ -1168,6 +1168,12 @@ svn_ra_neon__assemble_locktoken_body(svn_stringbuf_t **body,
                                      apr_pool_t *pool);
 
 
+/* Wrapper around ne_uri_unparse(). Turns a URI structure back into a string.
+ * The returned string is allocated in POOL. */
+const char *
+svn_ra_neon__uri_unparse(const ne_uri *uri,
+                         apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
