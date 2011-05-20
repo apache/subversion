@@ -950,6 +950,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
   ras->progress_baton = callbacks->progress_baton;
   ras->progress_func = callbacks->progress_func;
   ras->capabilities = apr_hash_make(ras->pool);
+  ras->supports_deadprop_count = 0;
   ras->vcc = NULL;
   ras->uuid = NULL;
   /* save config and server group in the auth parameter hash */
