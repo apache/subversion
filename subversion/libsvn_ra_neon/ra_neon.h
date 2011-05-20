@@ -127,6 +127,12 @@ typedef struct svn_ra_neon__session_t {
      constants' addresses, therefore). */
   apr_hash_t *capabilities;
 
+  /* Tri-state variable holding information about server support for
+     deadprop-count property. Zero if information still unknown,
+     positive if server support deadprop-count and negative if it
+     does not. */
+  int supports_deadprop_count;
+
   /*** HTTP v2 protocol stuff. ***
    *
    * We assume that if mod_dav_svn sends one of the special v2 OPTIONs
@@ -1172,6 +1178,15 @@ svn_ra_neon__assemble_locktoken_body(svn_stringbuf_t **body,
 const char *
 svn_ra_neon__uri_unparse(const ne_uri *uri,
                          apr_pool_t *pool);
+
+/* Sets *SUPPORTS_DEADPROP_COUNT to non-zero if server supports
+ * deadprop-count property. Uses FINAL_URL to discover this informationn
+ * if it is not already cached. */
+svn_error_t *
+svn_ra_neon__get_deadprop_count_support(svn_boolean_t *supported,
+                                        svn_ra_neon__session_t *ras,
+                                        const char *final_url,
+                                        apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

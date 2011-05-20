@@ -774,14 +774,6 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
-/* The property we need to fetch to see whether the server we are
-   connected to supports the deadprop-count property. */
-static const ne_propname deadprop_count_support_props[] =
-{
-  { SVN_DAV_PROP_NS_DAV, "deadprop-count" },
-  { NULL }
-};
-
 svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
                                   apr_hash_t **dirents,
                                   svn_revnum_t *fetched_rev,
@@ -830,15 +822,8 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
          targeted PROPFIND. */
       if (dirent_fields & SVN_DIRENT_HAS_PROPS)
         {
-          const svn_string_t *deadprop_count;
-
-          SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, ras, final_url, NULL,
-                                                  deadprop_count_support_props,
-                                                  pool));
-          deadprop_count = apr_hash_get(rsrc->propset,
-                                        SVN_RA_NEON__PROP_DEADPROP_COUNT,
-                                        APR_HASH_KEY_STRING);
-          supports_deadprop_count = (deadprop_count != NULL);
+          SVN_ERR(svn_ra_neon__get_deadprop_count_support
+            (&supports_deadprop_count, ras, final_url, pool));
         }
 
       /* if we didn't ask for the has_props field, we can get individual

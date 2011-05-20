@@ -1598,3 +1598,46 @@ svn_ra_neon__uri_unparse(const ne_uri *uri,
   /* Return string allocated in result pool. */
   return result;
 }
+
+/* Sets *SUPPORTS_DEADPROP_COUNT to non-zero if server supports
+ * deadprop-count property. */
+svn_error_t *
+svn_ra_neon__get_deadprop_count_support(svn_boolean_t *supported,
+                                        svn_ra_neon__session_t *ras,
+                                        const char *final_url,
+                                        apr_pool_t *pool)
+{
+  /* The property we need to fetch to see whether the server we are
+     connected to supports the deadprop-count property. */
+  static const ne_propname deadprop_count_support_props[] =
+  {
+    { SVN_DAV_PROP_NS_DAV, "deadprop-count" },
+    { NULL }
+  };
+
+  /* Check if we already checked deadprop_count support. */
+  if (!ras->supports_deadprop_count)
+    {
+      svn_ra_neon__resource_t *rsrc;
+      const svn_string_t *deadprop_count;
+
+      SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, ras, final_url, NULL,
+                                              deadprop_count_support_props,
+                                              pool));
+      deadprop_count = apr_hash_get(rsrc->propset,
+                                    SVN_RA_NEON__PROP_DEADPROP_COUNT,
+                                    APR_HASH_KEY_STRING);
+      if (deadprop_count != NULL)
+        {
+          ras->supports_deadprop_count = 1;
+        }
+      else
+        {
+          ras->supports_deadprop_count = -1;
+        }
+    }
+
+  *supported = (ras->supports_deadprop_count > 0);
+
+  return SVN_NO_ERROR;
+}
