@@ -1199,7 +1199,10 @@ gather_repo_children(const apr_array_header_t **children,
 }
 
 
-/* */
+/* Flush the access baton for LOCAL_ABSPATH from the access baton cache in
+ * WCROOT. This function must be called when the access baton cache goes
+ * stale, i.e. data about LOCAL_ABSPATH will need to be read again from disk.
+ * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 flush_entries(svn_wc__db_wcroot_t *wcroot,
               const char *local_abspath,
