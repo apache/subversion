@@ -796,7 +796,6 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
   apr_hash_t *resources;
   const char *final_url;
   apr_size_t final_url_n_components;
-  svn_boolean_t supports_deadprop_count;
   svn_ra_neon__session_t *ras = session->priv;
   const svn_string_t *deadprop_count;
   const char *url = svn_path_url_add_component2(ras->url->data, path, pool);
@@ -821,21 +820,23 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
         *fetched_rev = got_rev;
     }
 
-  /* For issue 2151: See if we are dealing with a server that
-     understands the deadprop-count property.  If it doesn't, we'll
-     need to do an allprop PROPFIND.  If it does, we'll execute a more
-     targeted PROPFIND. */
-  SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, ras, final_url, NULL,
-                                          deadprop_count_support_props,
-                                          pool));
-  deadprop_count = apr_hash_get(rsrc->propset,
-                                SVN_RA_NEON__PROP_DEADPROP_COUNT,
-                                APR_HASH_KEY_STRING);
-  supports_deadprop_count = (deadprop_count != NULL);
-
   if (dirents)
     {
       ne_propname *which_props;
+      svn_boolean_t supports_deadprop_count;
+
+      /* For issue 2151: See if we are dealing with a server that
+         understands the deadprop-count property.  If it doesn't, we'll
+         need to do an allprop PROPFIND.  If it does, we'll execute a more
+         targeted PROPFIND. */
+      SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, ras, final_url, NULL,
+                                              deadprop_count_support_props,
+                                              pool));
+      deadprop_count = apr_hash_get(rsrc->propset,
+                                    SVN_RA_NEON__PROP_DEADPROP_COUNT,
+                                    APR_HASH_KEY_STRING);
+      supports_deadprop_count = (deadprop_count != NULL);
+
 
       /* if we didn't ask for the has_props field, we can get individual
          properties. */
