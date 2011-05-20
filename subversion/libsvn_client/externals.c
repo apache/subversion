@@ -706,6 +706,8 @@ handle_external_item_change(const struct external_change_baton_t *eb,
   const char *old_url;
   const char *new_url;
 
+  ra_cache.kind = svn_node_unknown;
+
   local_abspath = target_abspath;
 
   SVN_ERR_ASSERT(eb->repos_root_url && parent_dir_url);
@@ -792,7 +794,7 @@ handle_external_item_change(const struct external_change_baton_t *eb,
                                  ra_cache.ra_session_url,
                                  ra_cache.ra_revnum);
 
-      ra_cache.kind_p = &kind;
+      ra_cache.kind = kind;
     }
 
   /* Not protecting against recursive externals.  Detecting them in
@@ -811,7 +813,7 @@ handle_external_item_change(const struct external_change_baton_t *eb,
            svn_wc_create_notify(local_abspath, svn_wc_notify_update_external,
                                 scratch_pool), scratch_pool);
 
-      switch (*ra_cache.kind_p)
+      switch (ra_cache.kind)
         {
         case svn_node_dir:
           /* The target dir might have multiple components.  Guarantee
@@ -972,7 +974,7 @@ handle_external_item_change(const struct external_change_baton_t *eb,
          In the latter case, the call below will try to make sure that
          the external really is a WC pointing to the correct
          URL/revision. */
-      switch (*ra_cache.kind_p)
+      switch (ra_cache.kind)
         {
         case svn_node_dir:
           SVN_ERR(switch_dir_external(local_abspath, new_url,
