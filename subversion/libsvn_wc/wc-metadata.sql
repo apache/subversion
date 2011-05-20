@@ -747,6 +747,8 @@ BEGIN
   WHERE checksum = OLD.checksum;
 END;
 
+PRAGMA user_version = 29;
+
 /* ------------------------------------------------------------------------- */
 
 /* Format YYY introduces new handling for conflict information.  */
