@@ -119,6 +119,13 @@ dump_cache_statistics(void *baton_void)
 }
 #endif /* DEBUG_CACHE_DUMP_STATS */
 
+/* This function sets / registers the required callbacks for a given
+ * not transaction-specific CACHE object in FS. 
+ * 
+ * All these svn_cache__t instances shall be handled uniformly. That 
+ * applies to the NO_HANDLER flag as well which controls whether the
+ * error handler will be sets for the cache.
+ */
 static svn_error_t *
 init_callbacks(svn_cache__t *cache,
                svn_fs_t *fs,
@@ -155,6 +162,12 @@ init_callbacks(svn_cache__t *cache,
   return SVN_NO_ERROR;
 }
 
+/* Initialize all session-local caches in FS according to the global
+ * cache settings. Use POOL for allocations.
+ * 
+ * Please note that it is permissible for this function to set some
+ * or all of these caches to NULL, regardless of any setting.
+ */
 svn_error_t *
 svn_fs_fs__initialize_caches(svn_fs_t *fs,
                              apr_pool_t *pool)
@@ -368,6 +381,10 @@ remove_txn_cache(void *baton_void)
   return  APR_SUCCESS;
 }
 
+/* This function sets / registers the required callbacks for a given
+ * transaction-specific *CACHE object. In particular, it will ensure
+ * that *CACHE gets reset to NULL upon POOL destruction latest.
+ */
 static void
 init_txn_callbacks(svn_cache__t **cache,
                    apr_pool_t *pool)
@@ -387,6 +404,13 @@ init_txn_callbacks(svn_cache__t **cache,
     }
 }
 
+/* Initialize all transaction-local caches in FS according to the global
+ * cache settings and make TXN_ID part of their key space. Use POOL for
+ * allocations.
+ * 
+ * Please note that it is permissible for this function to set some or all
+ * of these caches to NULL, regardless of any setting.
+ */
 svn_error_t *
 svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
                                  const char *txn_id,
@@ -442,6 +466,8 @@ svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Make sure all transaction-local caches in FS are reset to NULL.
+ */
 void
 svn_fs_fs__reset_txn_caches(svn_fs_t *fs)
 {
