@@ -1788,7 +1788,8 @@ static svn_cache__vtable_t membuffer_cache_vtable = {
   svn_membuffer_cache_get_info
 };
 
-/* standard serialization function for svn_stringbuf_t items
+/* standard serialization function for svn_stringbuf_t items.
+ * Implements svn_cache__serialize_func_t.
  */
 static svn_error_t *
 serialize_svn_stringbuf(char **buffer,
@@ -1804,11 +1805,12 @@ serialize_svn_stringbuf(char **buffer,
   return SVN_NO_ERROR;
 }
 
-/* standard de-serialization function for svn_stringbuf_t items
+/* standard de-serialization function for svn_stringbuf_t items.
+ * Implements svn_cache__deserialize_func_t.
  */
 static svn_error_t *
 deserialize_svn_stringbuf(void **item,
-                          const char *buffer,
+                          char *buffer,
                           apr_size_t buffer_size,
                           apr_pool_t *pool)
 {
