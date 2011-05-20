@@ -90,7 +90,7 @@ write_prop_to_stringbuf(svn_stringbuf_t **strbuf,
   namelen = strlen(name);
   svn_stringbuf_appendbytes(*strbuf, "K ", 2);
 
-  bytes_used = apr_snprintf(buf, sizeof(buf), "%d", namelen);
+  bytes_used = apr_snprintf(buf, sizeof(buf), "%" APR_SIZE_T_FMT, namelen);
   svn_stringbuf_appendbytes(*strbuf, buf, bytes_used);
   svn_stringbuf_appendbyte(*strbuf, '\n');
 
