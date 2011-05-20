@@ -95,7 +95,6 @@ typedef struct item_baton_t {
                             without dst_path as prefix. */
 
   const char *base_checksum;   /* base_checksum (from apply_textdelta) */
-  const char *text_checksum;   /* text_checksum (from close_file) */
 
   svn_boolean_t text_changed;        /* Did the file's contents change? */
   svn_boolean_t added;               /* File added? (Implies text_changed.) */
@@ -299,13 +298,6 @@ add_helper(svn_boolean_t is_dir,
 
       if (! is_dir)
         {
-          /* files have checksums */
-          svn_checksum_t *checksum;
-          SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
-                                       uc->rev_root, real_path, TRUE,
-                                       pool));
-
-          child->text_checksum = svn_checksum_to_cstring(checksum, pool);
         }
       else
         {
@@ -427,15 +419,6 @@ close_helper(svn_boolean_t is_dir, item_baton_t *baton)
                                           "<S:remove-prop name=\"%s\"/>"
                                           DEBUG_CR, qname));
         }
-    }
-
-  if (baton->text_checksum)
-    {
-      SVN_ERR(dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
-                                      "<S:prop>"
-                                      "<V:md5-checksum>%s</V:md5-checksum>"
-                                      "</S:prop>",
-                                      baton->text_checksum));
     }
 
   if (baton->added)
@@ -795,9 +778,6 @@ upd_close_file(void *file_baton, const char *text_checksum, apr_pool_t *pool)
 {
   item_baton_t *file = file_baton;
 
-  file->text_checksum = text_checksum ?
-    apr_pstrdup(file->pool, text_checksum) : NULL;
-
   /* If we are not in "send all" mode, and this file is not a new
      addition or didn't otherwise have changed text, tell the client
      to fetch it. */
@@ -809,6 +789,15 @@ upd_close_file(void *file_baton, const char *text_checksum, apr_pool_t *pool)
                file->base_checksum ? " base-checksum=\"" : "",
                file->base_checksum ? file->base_checksum : "",
                file->base_checksum ? "\"" : ""));
+    }
+
+  if (text_checksum)
+    {
+      SVN_ERR(dav_svn__brigade_printf(file->uc->bb, file->uc->output,
+                                      "<S:prop>"
+                                      "<V:md5-checksum>%s</V:md5-checksum>"
+                                      "</S:prop>",
+                                      text_checksum));
     }
 
   return close_helper(FALSE /* is_dir */, file);
