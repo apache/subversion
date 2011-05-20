@@ -146,7 +146,9 @@ extern "C" {
  * The bump to 28 converted any remaining references to MD5 checksums
  *   to SHA1 checksums. Bumped in r1095214.
  *
- * The bump to 29 will probably introduce the EXTERNALS store. Not bumped yet
+ * The bump to 29 renamed the pristine files from '<SHA1>' to
+ * '<SHA1>.svn-base' and introduced the EXTERNALS store.
+ * ### Not bumped yet
  *
  * == 1.7.x shipped with format ???
  *
