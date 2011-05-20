@@ -822,8 +822,8 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
          targeted PROPFIND. */
       if (dirent_fields & SVN_DIRENT_HAS_PROPS)
         {
-          SVN_ERR(svn_ra_neon__get_deadprop_count_support
-            (&supports_deadprop_count, ras, final_url, pool));
+          SVN_ERR(svn_ra_neon__get_deadprop_count_support(
+                    &supports_deadprop_count, ras, final_url, pool));
         }
 
       /* if we didn't ask for the has_props field, we can get individual
