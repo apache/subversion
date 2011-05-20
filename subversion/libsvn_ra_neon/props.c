@@ -994,10 +994,12 @@ svn_error_t *svn_ra_neon__get_baseline_info(const char **bc_url_p,
      semantics.  */
   if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(sess))
     {
-      svn_revnum_t youngest;
-
-      if (! SVN_IS_VALID_REVNUM(revision))
+      /* Fetch youngest revision from server only if needed to construct
+         baseline collection URL or return to caller. */
+      if (! SVN_IS_VALID_REVNUM(revision) && (bc_url_p || latest_rev))
         {
+          svn_revnum_t youngest;
+
           SVN_ERR(svn_ra_neon__exchange_capabilities(sess, NULL,
                                                      &youngest, pool));
           if (! SVN_IS_VALID_REVNUM(youngest))
