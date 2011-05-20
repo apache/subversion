@@ -1623,7 +1623,7 @@ svn_ra_neon__get_deadprop_count_support(svn_boolean_t *supported,
     }
 
   /* Check if we already checked deadprop_count support. */
-  if (!ras->supports_deadprop_count)
+  if (ras->supports_deadprop_count == svn_tristate_unknown)
     {
       svn_ra_neon__resource_t *rsrc;
       const svn_string_t *deadprop_count;
@@ -1636,15 +1636,15 @@ svn_ra_neon__get_deadprop_count_support(svn_boolean_t *supported,
                                     APR_HASH_KEY_STRING);
       if (deadprop_count != NULL)
         {
-          ras->supports_deadprop_count = 1;
+          ras->supports_deadprop_count = svn_tristate_true;
         }
       else
         {
-          ras->supports_deadprop_count = -1;
+          ras->supports_deadprop_count = svn_tristate_false;
         }
     }
 
-  *supported = (ras->supports_deadprop_count > 0);
+  *supported = (ras->supports_deadprop_count == svn_tristate_true);
 
   return SVN_NO_ERROR;
 }
