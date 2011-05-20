@@ -701,7 +701,6 @@ handle_external_item_change(const struct external_change_baton_t *eb,
                             apr_pool_t *scratch_pool)
 {
   svn_ra_session_t *ra_session;
-  svn_node_kind_t kind; /* Stored as pointer in ra_cache */
   svn_client__ra_session_from_path_results ra_cache = { 0 };
   const char *local_abspath;
   const char *old_url;
@@ -762,6 +761,8 @@ handle_external_item_change(const struct external_change_baton_t *eb,
      determine if the external is a file or directory. */
   if (new_item)
     {
+      svn_node_kind_t kind;
+
       /* Get the RA connection. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session,
                                                &ra_cache.ra_revnum,
