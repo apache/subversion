@@ -128,10 +128,8 @@ typedef struct svn_ra_neon__session_t {
   apr_hash_t *capabilities;
 
   /* Tri-state variable holding information about server support for
-     deadprop-count property. Zero if information still unknown,
-     positive if server support deadprop-count and negative if it
-     does not. */
-  int supports_deadprop_count;
+     deadprop-count property.*/
+  svn_tristate_t supports_deadprop_count;
 
   /*** HTTP v2 protocol stuff. ***
    *
