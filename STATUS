@@ -15,6 +15,13 @@ Status of 1.6.17:
 Candidate changes:
 ==================
 
+ * r1036429
+   Fix svnsync_tests 29 for issue 3641.
+   Justification:
+     Server assert using BDB.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
