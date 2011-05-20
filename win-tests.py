@@ -77,6 +77,7 @@ def _usage_exit():
   print("  --httpd-daemon         : Run Apache httpd as daemon")
   print("  --httpd-service        : Run Apache httpd as Windows service (default)")
   print("  --http-library         : dav library to use, neon (default) or serf")
+  print("  --http-short-circuit   : Use SVNPathAuthz short_circuit on HTTP server")
   print("  --disable-http-v2      : Do not advertise support for HTTPv2 on server")
   print("  --javahl               : Run the javahl tests instead of the normal tests")
   print("  --list                 : print test doc strings only")
@@ -124,7 +125,8 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                        ['release', 'debug', 'verbose', 'quiet', 'cleanup',
                         'test=', 'url=', 'svnserve-args=', 'fs-type=', 'asp.net-hack',
                         'httpd-dir=', 'httpd-port=', 'httpd-daemon',
-                        'httpd-server', 'http-library=', 'disable-http-v2', 'help',
+                        'httpd-server', 'http-library=', 'http-short-circuit',
+                        'disable-http-v2', 'help',
                         'fsfs-packing', 'fsfs-sharding=', 'javahl',
                         'list', 'enable-sasl', 'bin=', 'parallel',
                         'config-file=', 'server-minor-version=',
@@ -144,6 +146,7 @@ run_httpd = None
 httpd_port = None
 httpd_service = None
 http_library = 'neon'
+http_short_circuit = False
 advertise_httpv2 = True
 list_tests = None
 milestone_filter = None
@@ -194,6 +197,8 @@ for opt, val in opts:
     httpd_service = 1
   elif opt == '--http-library':
     http_library = val
+  elif opt == '--http-short-circuit':
+    http_short_circuit = True
   elif opt == 'disable-http-v2':
     advertise_httpv2 = False
   elif opt == '--fsfs-sharding':
@@ -418,7 +423,8 @@ class Svnserve:
 
 class Httpd:
   "Run httpd for DAV tests"
-  def __init__(self, abs_httpd_dir, abs_objdir, abs_builddir, httpd_port, service, httpv2):
+  def __init__(self, abs_httpd_dir, abs_objdir, abs_builddir, httpd_port,
+               service, httpv2, short_circuit):
     self.name = 'apache.exe'
     self.httpd_port = httpd_port
     self.httpd_dir = abs_httpd_dir
@@ -431,6 +437,11 @@ class Httpd:
     self.service = service
     self.proc_handle = None
     self.path = os.path.join(self.httpd_dir, 'bin', self.name)
+
+    if short_circuit:
+      self.path_authz_option = 'short_circuit'
+    else:
+      self.path_authz_option = 'on'
 
     if not os.path.exists(self.path):
       self.name = 'httpd.exe'
@@ -564,6 +575,7 @@ class Httpd:
       '  DAV             svn\n' \
       '  SVNParentPath   ' + self._quote(path) + '\n' \
       '  SVNAdvertiseV2Protocol ' + self.httpv2_option + '\n' \
+      '  SVNPathAuthz ' + self.path_authz_option + '\n' \
       '  AuthzSVNAccessFile ' + self._quote(self.authz_file) + '\n' \
       '  AuthType        Basic\n' \
       '  AuthName        "Subversion Repository"\n' \
@@ -654,7 +666,7 @@ if not list_tests:
 
   if run_httpd:
     daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, httpd_port,
-                   httpd_service, advertise_httpv2)
+                   httpd_service, advertise_httpv2, http_short_circuit)
 
   # Start service daemon, if any
   if daemon:
