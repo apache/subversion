@@ -209,6 +209,14 @@ svn_mergeinfo__intersect2(svn_mergeinfo_t *mergeinfo,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
+/* Translates an array SEGMENTS (of svn_location_t *), like the one
+   returned from svn_client__repos_location_segments, into a mergeinfo
+   *MERGEINFO_P, allocated in POOL. */
+svn_error_t *
+svn_mergeinfo__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
+                                       const apr_array_header_t *segments,
+                                       apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -186,12 +186,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1076730, r1078954, r1081255
-   Fix issue #3650 "log -g produces excessive duplicate output"
-   Justification:
-     Eliminates potentially massive duplication when tracing logs
-     across merge reintegrations.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3650
-   Votes:
-     +1: pburba, stsp, sbutler

@@ -1692,6 +1692,106 @@ def log_of_local_copy(sbox):
                           "differs from that on move source '%s'"
                           % (psi_moved_path, psi_path))
 
+#----------------------------------------------------------------------
+
+def merge_sensitive_log_ignores_cyclic_merges(sbox):
+  "log -g should ignore cyclic merges"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  A_path        = os.path.join(wc_dir, 'A')
+  X_path        = os.path.join(wc_dir, 'A', 'C', 'X')
+  kappa_path    = os.path.join(wc_dir, 'A', 'C', 'X', 'kappa')
+  chi_path      = os.path.join(wc_dir, 'A', 'D', 'H', 'chi')
+  A_COPY_path   = os.path.join(wc_dir, 'A_COPY')
+  mu_COPY_path  = os.path.join(wc_dir, 'A_COPY', 'mu')
+  tau_COPY_path = os.path.join(wc_dir, 'A_COPY', 'D', 'G', 'tau')
+  Z_COPY_path   = os.path.join(wc_dir, 'A_COPY', 'C', 'Z')
+  nu_COPY_path  = os.path.join(wc_dir, 'A_COPY', 'C', 'Z', 'nu')
+
+  # Make an edit on the "branch" to A_COPY/mu, commit as r7.
+  svntest.main.file_write(mu_COPY_path, "Branch edit.\n")
+  svntest.main.run_svn(None, 'ci', '-m', 'Branch edit', wc_dir)
+
+  # Make an edit on both the "trunk" and the "branch", commit as r8.
+  svntest.main.file_write(chi_path, "Trunk edit.\n")
+  svntest.main.file_write(tau_COPY_path, "Branch edit.\n")
+  svntest.main.run_svn(None, 'ci', '-m', 'Branch and trunk edits in one rev',
+                       wc_dir)
+
+  # Sync merge A to A_COPY, commit as r9
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'Sync merge A to A_COPY', wc_dir)
+
+  # Reintegrate A_COPY to A, commit as r10
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge', '--reintegrate',
+                       sbox.repo_url + '/A_COPY', A_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'Reintegrate A_COPY to A', wc_dir)
+
+  # Do a --record-only merge of r10 from A to A_COPY, commit as r11.
+  # This will allow us to continue using the branch without deleting it.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
+  svntest.main.run_svn(None, 'ci', '-m',
+                       '--record-only merge r10 from A to A_COPY', wc_dir)
+
+  # Make an edit on the "branch"; add A_COPY/C and A_COPY/C/Z/nu,
+  # commit as r12.
+  svntest.main.run_svn(None, 'mkdir', Z_COPY_path)
+  svntest.main.file_write(nu_COPY_path, "A new branch file.\n")
+  svntest.main.run_svn(None, 'add', nu_COPY_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'Branch edit: Add a subtree', wc_dir)
+
+  # Make an edit on the "trunk"; add A/C/X and A/C/X/kappa,
+  # commit as r13.
+  svntest.main.run_svn(None, 'mkdir', X_path)
+  svntest.main.file_write(kappa_path, "A new trunk file.\n")
+  svntest.main.run_svn(None, 'add', kappa_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'Trunk edit: Add a subtree', wc_dir)
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # Sync merge A to A_COPY, commit as r14
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'Sync merge A to A_COPY', wc_dir)
+
+  # Reintegrate A_COPY to A, commit as r15
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge', '--reintegrate',
+                       sbox.repo_url + '/A_COPY', A_path)
+  svntest.main.run_svn(None, 'ci', '-m', '2nd reintegrate of A_COPY to A',
+                       wc_dir)
+
+  # Run 'svn log -g A'.  We expect to see r13, r10, r6, r5, r4, and r3 only
+  # once, as part of A's own history, not as merged in from A_COPY.
+  expected_merges = {
+    15 : [],
+    14 : [15],
+    13 : [],
+    12 : [15],
+    11 : [15],
+    10 : [],
+    9  : [15,11],
+    8  : [15,11,9],
+    7  : [15,11],
+    6  : [],
+    5  : [],    
+    4  : [],
+    3  : [],
+    2  : [15,11],
+    1  : [],
+  }
+  svntest.main.run_svn(None, 'up', wc_dir)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'log', '-g',
+                                                           A_path)
+  log_chain = parse_log_output(out)
+  check_merge_results(log_chain, expected_merges)
+
 ########################################################################
 # Run the tests
 
@@ -1733,6 +1833,8 @@ test_list = [ None,
               SkipUnless(merge_sensitive_log_propmod_merge_inheriting_path,
                          server_has_mergeinfo),
               log_of_local_copy,
+              SkipUnless(merge_sensitive_log_ignores_cyclic_merges,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
