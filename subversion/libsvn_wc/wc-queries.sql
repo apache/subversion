@@ -261,8 +261,8 @@ FROM nodes
 LEFT JOIN lock ON nodes.repos_id = lock.repos_id
   AND nodes.repos_path = lock.repos_relpath
 WHERE wc_id = ?1 AND op_depth = 0
-  AND (local_relpath = ?2
-       OR ?2 = ''
+  AND (?2 = ''
+       OR local_relpath = ?2
        OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
 
 -- STMT_INSERT_WCROOT
@@ -296,16 +296,16 @@ WHERE repos_id = ?1 AND repos_relpath = ?2
 -- STMT_CLEAR_BASE_NODE_RECURSIVE_DAV_CACHE
 UPDATE nodes SET dav_cache = NULL
 WHERE dav_cache IS NOT NULL AND wc_id = ?1 AND op_depth = 0
-  AND (local_relpath = ?2
-       OR ?2 = ''
+  AND (?2 = ''
+       OR local_relpath = ?2
        OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
 
 -- STMT_RECURSIVE_UPDATE_NODE_REPO
 UPDATE nodes SET repos_id = ?4, dav_cache = NULL
 WHERE wc_id = ?1
   AND repos_id = ?3
-  AND (local_relpath = ?2
-       OR ?2 = ''
+  AND (?2 = ''
+       OR local_relpath = ?2
        OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
 
 -- STMT_UPDATE_LOCK_REPOS_ID
@@ -566,8 +566,8 @@ WHERE wc_id = ?1 AND local_relpath = ?2
 -- STMT_DELETE_NODES_RECURSIVE
 DELETE FROM nodes
 WHERE wc_id = ?1
-  AND (local_relpath = ?2
-       OR ?2 = ''
+  AND (?2 = ''
+       OR local_relpath = ?2
        OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
   AND op_depth >= ?3
 
