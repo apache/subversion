@@ -674,6 +674,27 @@ svn_error_t * svn_ra_neon__get_starting_props(svn_ra_neon__resource_t **rsrc,
         sess->uuid = apr_pstrdup(sess->pool, propval->data);
     }
 
+  if (! sess->repos_root)
+    {
+      propval = apr_hash_get((*rsrc)->propset,
+                             SVN_RA_NEON__PROP_BASELINE_RELPATH,
+                             APR_HASH_KEY_STRING);
+
+      if (propval)
+      {
+        ne_uri uri;
+        svn_stringbuf_t *urlbuf = svn_stringbuf_create(url, pool);
+
+        svn_path_remove_components(urlbuf,
+                                   svn_path_component_count(propval->data));
+
+        uri = sess->root;
+        uri.path = urlbuf->data;
+
+        sess->repos_root = svn_ra_neon__uri_unparse(&uri, sess->pool);
+      }
+    }
+
   return SVN_NO_ERROR;
 }
 
