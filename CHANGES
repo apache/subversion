@@ -188,10 +188,16 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.17
     * fixed: write-through proxy could direcly commit to slave (r917523)
     * detect a particular corruption condition in FSFS (r1100213)
     * improve error message when clients refer to unkown revisions (r939000)
+    * bugfixes and optimizations to the DAV mirroring code (r878607)
+    * fixed: locked and deleted file causes tree conflict (issue #3525)
+    * fixed: update touches locked file with svn:keywords property (issue #3471)
+    * fix svnsync handling of directory copyfrom (issue #3641)
+    * fix log -g excessive duplicate output (issue #3650)
 
   Developer-visible changes:
     * fix reporting FS-level post-commit processing errors (r1104098)
     * fix JVM recognition on OS X Snow Leopard (10.6) (r1028084)
+    * allow building on Windows with recent Expat (r1074572)
 
 
 Version 1.6.16
