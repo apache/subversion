@@ -714,7 +714,6 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
       const svn_string_t *expected_checksum = NULL;
       file_write_ctx_t fwc;
       ne_propname md5_propname = { SVN_DAV_PROP_NS_DAV, "md5-checksum" };
-      const char *hex_digest;
 
       /* Only request a checksum if we're getting the file contents. */
       /* ### We should arrange for the checksum to be returned in the
@@ -755,6 +754,7 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
 
       if (fwc.do_checksum)
         {
+          const char *hex_digest;
           svn_checksum_t *checksum;
 
           SVN_ERR(svn_checksum_final(&checksum, fwc.checksum_ctx, pool));
