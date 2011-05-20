@@ -4753,15 +4753,6 @@ def mixed_rev_copy_del(sbox):
                         entry_status=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # This test currently fails above, as both alpha and beta disappear
-  # from status, what should happen is unclear.  In 1.6 both names
-  # remained in status 'D'.
-
-  # The commit doesn't work either, it should not delete alpha but
-  # must delete beta.  In 1.6 both alpha and beta were deleted and the
-  # commit failed.  It's not clear how the client can determine that
-  # alpha and beta should be treated differently.
-  # See issue 3314
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/E_copy'      : Item(verb='Adding'),
     'A/B/E_copy/beta' : Item(verb='Deleting'),
@@ -4773,6 +4764,7 @@ def mixed_rev_copy_del(sbox):
                                         expected_status,
                                         None,
                                         wc_dir)
+
 def copy_delete_undo(sbox, use_revert):
   "copy, delete child, undo"
 
@@ -5163,6 +5155,23 @@ def deleted_file_with_case_clash(sbox):
                        }
   svntest.actions.run_and_verify_info([expected_info_IOTA], IOTA_path)
 
+def copy_base_of_deleted(sbox):
+  """copy -rBASE deleted"""
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', sbox.ospath('A/mu'))
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '-rBASE',
+                                     sbox.ospath('A/mu'), sbox.ospath('A/mu2'))
+  expected_status.add({
+    'A/mu2' : Item(status='A ', copied='+', wc_rev='-'),
+    })
+
 
 ########################################################################
 # Run the tests
@@ -5270,6 +5279,7 @@ test_list = [ None,
               copy_wc_url_with_absent,
               copy_url_shortcut,
               deleted_file_with_case_clash,
+              copy_base_of_deleted,
              ]
 
 if __name__ == '__main__':
