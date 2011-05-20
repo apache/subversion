@@ -296,10 +296,7 @@ add_helper(svn_boolean_t is_dir,
       const char *elt;
       const char *real_path = get_real_fs_path(child, pool);
 
-      if (! is_dir)
-        {
-        }
-      else
+      if (is_dir)
         {
           /* we send baseline-collection urls when we add a directory */
           svn_revnum_t revision;
