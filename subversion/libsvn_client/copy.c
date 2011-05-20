@@ -2224,14 +2224,13 @@ try_copy(const apr_array_header_t *sources,
                                                   NULL,
                                                   ctx->wc_ctx,
                                                   pair->src_abspath_or_url,
-                                                  FALSE, iterpool, iterpool));
+                                                  TRUE, iterpool, iterpool));
 
                   if (copyfrom_repos_relpath)
                     url = svn_path_url_add_component2(copyfrom_repos_root_url,
                                                       copyfrom_repos_relpath,
                                                       pool);
-
-                  if (url == NULL)
+                  else
                     return svn_error_createf
                       (SVN_ERR_ENTRY_MISSING_URL, NULL,
                        _("'%s' does not have a URL associated with it"),
