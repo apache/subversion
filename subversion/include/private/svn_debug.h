@@ -85,5 +85,9 @@ svn_dbg__printf(const char *fmt, ...)
 }
 #endif /* __cplusplus */
 
+#else /* SVN_DEBUG */
+
+#define SVN_DBG(ARGS) (void)
+
 #endif /* SVN_DEBUG */
 #endif /* SVN_DEBUG_H */
