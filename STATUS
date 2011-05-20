@@ -186,24 +186,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r962377, r962378, r1036978, r1037762, r1063572, r1063573, r1063592
-   Fix issue #3641 svnsync handling of directory copyfrom.
-   Justification:
-     Could lead to sync'd repositories being different from the master.
-   Concerns:
-     http://article.gmane.org/gmane.comp.version-control.subversion.devel/120590
-   Branch:
-     ^/subversion/branches/1.6.x-issue3641
-     All the revisions merge cleanly, the branch is only needed for a slight
-     tweak to the expected dump file for svnsync test 29, to account for the
-     differences in how 1.6 prints property hashes and how 1.7 does it, see
-     r966458.
-   Notes:
-     See also the r1036429 group.
-   Votes:
-     +1: pburba, cmpilato, philip
-     -0: danielsh (authz concerns on the original fix)
-
  * r1076730, r1078954, r1081255
    Fix issue #3650 "log -g produces excessive duplicate output"
    Justification:
