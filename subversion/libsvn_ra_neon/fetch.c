@@ -797,7 +797,6 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
   const char *final_url;
   apr_size_t final_url_n_components;
   svn_ra_neon__session_t *ras = session->priv;
-  const svn_string_t *deadprop_count;
   const char *url = svn_path_url_add_component2(ras->url->data, path, pool);
 
   /* If the revision is invalid (HEAD), then we're done -- just fetch
@@ -824,6 +823,7 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
     {
       ne_propname *which_props;
       svn_boolean_t supports_deadprop_count;
+      const svn_string_t *deadprop_count;
 
       /* For issue 2151: See if we are dealing with a server that
          understands the deadprop-count property.  If it doesn't, we'll
