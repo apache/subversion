@@ -286,7 +286,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   apr_uri_t repos_URI;
   apr_status_t apr_err;
 #ifdef CHOOSABLE_DAV_MODULE
-  const char *http_library = "serf";
+  const char *http_library = DEFAULT_HTTP_LIBRARY;
 #endif
   /* Auth caching parameters. */
   svn_boolean_t store_passwords = SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS;
@@ -412,7 +412,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
             = svn_config_get_server_setting(servers,
                                             server_group, /* NULL is OK */
                                             SVN_CONFIG_OPTION_HTTP_LIBRARY,
-                                            "serf");
+                                            DEFAULT_HTTP_LIBRARY);
 
           if (strcmp(http_library, "neon") != 0 &&
               strcmp(http_library, "serf") != 0)
