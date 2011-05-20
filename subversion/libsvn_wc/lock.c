@@ -83,23 +83,6 @@ static const svn_wc_adm_access_t missing = { 0 };
 #define svn_wc__db_is_closed(db) FALSE
 
 
-
-/* ### these functions are here for forward references. generally, they're
-   ### here to avoid the code churn from moving the definitions.  */
-
-static svn_error_t *
-do_close(svn_wc_adm_access_t *adm_access, svn_boolean_t preserve_lock,
-         apr_pool_t *scratch_pool);
-
-static svn_error_t *
-add_to_shared(svn_wc_adm_access_t *lock, apr_pool_t *scratch_pool);
-
-static svn_error_t *
-close_single(svn_wc_adm_access_t *adm_access,
-             svn_boolean_t preserve_lock,
-             apr_pool_t *scratch_pool);
-
-
 svn_error_t *
 svn_wc__internal_check_wc(int *wc_format,
                           svn_wc__db_t *db,
@@ -213,6 +196,100 @@ svn_wc_check_wc2(int *wc_format,
   return svn_error_return(
     svn_wc__internal_check_wc(wc_format, wc_ctx->db, local_abspath, FALSE,
                               scratch_pool));
+}
+
+
+/* */
+static svn_error_t *
+add_to_shared(svn_wc_adm_access_t *lock, apr_pool_t *scratch_pool)
+{
+  /* ### sometimes we replace &missing with a now-valid lock.  */
+  {
+    svn_wc_adm_access_t *prior = svn_wc__db_temp_get_access(lock->db,
+                                                            lock->abspath,
+                                                            scratch_pool);
+    if (IS_MISSING(prior))
+      SVN_ERR(svn_wc__db_temp_close_access(lock->db, lock->abspath,
+                                           prior, scratch_pool));
+  }
+
+  svn_wc__db_temp_set_access(lock->db, lock->abspath, lock,
+                             scratch_pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* */
+static svn_wc_adm_access_t *
+get_from_shared(const char *abspath,
+                svn_wc__db_t *db,
+                apr_pool_t *scratch_pool)
+{
+  /* We closed the DB when it became empty. ABSPATH is not present.  */
+  if (db == NULL)
+    return NULL;
+  return svn_wc__db_temp_get_access(db, abspath, scratch_pool);
+}
+
+
+/* */
+static svn_error_t *
+close_single(svn_wc_adm_access_t *adm_access,
+             svn_boolean_t preserve_lock,
+             apr_pool_t *scratch_pool)
+{
+  svn_boolean_t locked;
+
+  if (adm_access->closed)
+    return SVN_NO_ERROR;
+
+  /* Physically unlock if required */
+  SVN_ERR(svn_wc__db_wclock_owns_lock(&locked, adm_access->db,
+                                      adm_access->abspath, TRUE,
+                                      scratch_pool));
+  if (locked)
+    {
+      if (!preserve_lock)
+        {
+          /* Remove the physical lock in the admin directory for
+             PATH. It is acceptable for the administrative area to
+             have disappeared, such as when the directory is removed
+             from the working copy.  It is an error for the lock to
+             have disappeared if the administrative area still exists. */
+
+          svn_error_t *err = svn_wc__db_wclock_release(adm_access->db,
+                                                       adm_access->abspath,
+                                                       scratch_pool);
+          if (err)
+            {
+              if (svn_wc__adm_area_exists(adm_access->abspath, scratch_pool))
+                return err;
+              svn_error_clear(err);
+            }
+        }
+    }
+
+  /* Reset to prevent further use of the lock. */
+  adm_access->closed = TRUE;
+
+  /* Detach from set */
+  SVN_ERR(svn_wc__db_temp_close_access(adm_access->db, adm_access->abspath,
+                                       adm_access, scratch_pool));
+
+  /* Possibly close the underlying wc_db. */
+  if (!adm_access->db_provided)
+    {
+      apr_hash_t *opened = svn_wc__db_temp_get_all_access(adm_access->db,
+                                                          scratch_pool);
+      if (apr_hash_count(opened) == 0)
+        {
+          SVN_ERR(svn_wc__db_close(adm_access->db));
+          adm_access->db = NULL;
+        }
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -415,40 +492,6 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
 
 /* */
 static svn_error_t *
-add_to_shared(svn_wc_adm_access_t *lock, apr_pool_t *scratch_pool)
-{
-  /* ### sometimes we replace &missing with a now-valid lock.  */
-  {
-    svn_wc_adm_access_t *prior = svn_wc__db_temp_get_access(lock->db,
-                                                            lock->abspath,
-                                                            scratch_pool);
-    if (IS_MISSING(prior))
-      SVN_ERR(svn_wc__db_temp_close_access(lock->db, lock->abspath,
-                                           prior, scratch_pool));
-  }
-
-  svn_wc__db_temp_set_access(lock->db, lock->abspath, lock,
-                             scratch_pool);
-
-  return SVN_NO_ERROR;
-}
-
-
-/* */
-static svn_wc_adm_access_t *
-get_from_shared(const char *abspath,
-                svn_wc__db_t *db,
-                apr_pool_t *scratch_pool)
-{
-  /* We closed the DB when it became empty. ABSPATH is not present.  */
-  if (db == NULL)
-    return NULL;
-  return svn_wc__db_temp_get_access(db, abspath, scratch_pool);
-}
-
-
-/* */
-static svn_error_t *
 probe(svn_wc__db_t *db,
       const char **dir,
       const char *path,
@@ -536,65 +579,6 @@ open_single(svn_wc_adm_access_t **adm_access,
   return SVN_NO_ERROR;
 }
 
-
-/* */
-static svn_error_t *
-close_single(svn_wc_adm_access_t *adm_access,
-             svn_boolean_t preserve_lock,
-             apr_pool_t *scratch_pool)
-{
-  svn_boolean_t locked;
-
-  if (adm_access->closed)
-    return SVN_NO_ERROR;
-
-  /* Physically unlock if required */
-  SVN_ERR(svn_wc__db_wclock_owns_lock(&locked, adm_access->db,
-                                      adm_access->abspath, TRUE,
-                                      scratch_pool));
-  if (locked)
-    {
-      if (!preserve_lock)
-        {
-          /* Remove the physical lock in the admin directory for
-             PATH. It is acceptable for the administrative area to
-             have disappeared, such as when the directory is removed
-             from the working copy.  It is an error for the lock to
-             have disappeared if the administrative area still exists. */
-
-          svn_error_t *err = svn_wc__db_wclock_release(adm_access->db,
-                                                       adm_access->abspath,
-                                                       scratch_pool);
-          if (err)
-            {
-              if (svn_wc__adm_area_exists(adm_access->abspath, scratch_pool))
-                return err;
-              svn_error_clear(err);
-            }
-        }
-    }
-
-  /* Reset to prevent further use of the lock. */
-  adm_access->closed = TRUE;
-
-  /* Detach from set */
-  SVN_ERR(svn_wc__db_temp_close_access(adm_access->db, adm_access->abspath,
-                                       adm_access, scratch_pool));
-
-  /* Possibly close the underlying wc_db. */
-  if (!adm_access->db_provided)
-    {
-      apr_hash_t *opened = svn_wc__db_temp_get_all_access(adm_access->db,
-                                                          scratch_pool);
-      if (apr_hash_count(opened) == 0)
-        {
-          SVN_ERR(svn_wc__db_close(adm_access->db));
-          adm_access->db = NULL;
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
 
 /* Retrieves the KIND of LOCAL_ABSPATH and whether its administrative data is
    available in the working copy.

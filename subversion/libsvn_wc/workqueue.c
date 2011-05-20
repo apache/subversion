@@ -69,19 +69,6 @@ struct work_item_dispatch {
 };
 
 
-/* ### forward declaration for this. Temporary hack so that a work item
-   ### can be constructed within another handler and dispatched
-   ### immediately. in most normal cases, appending a work item to the
-   ### queue should be fine. but for now... not so much. */
-static svn_error_t *
-dispatch_work_item(svn_wc__db_t *db,
-                   const char *wri_abspath,
-                   const svn_skel_t *work_item,
-                   svn_cancel_func_t cancel_func,
-                   void *cancel_baton,
-                   apr_pool_t *scratch_pool);
-
-
 static svn_error_t *
 get_and_record_fileinfo(svn_wc__db_t *db,
                         const char *local_abspath,
@@ -208,10 +195,10 @@ remove_base_node(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+
 /* Process the OP_REMOVE_BASE work item WORK_ITEM.
  * See svn_wc__wq_build_remove_base() which generates this work item.
  * Implements (struct work_item_dispatch).func. */
-
 static svn_error_t *
 run_base_remove(svn_wc__db_t *db,
                 const svn_skel_t *work_item,
@@ -582,9 +569,10 @@ run_postupgrade(svn_wc__db_t *db,
                                    scratch_pool);
 
   /* Write the 'format' and 'entries' files.
+
      ### The order may matter for some sufficiently old clients.. but
-         this code only runs during upgrade after the files had been
-         removed earlier during the upgrade. */
+     ### this code only runs during upgrade after the files had been
+     ### removed earlier during the upgrade. */
   SVN_ERR(svn_io_write_unique(&temp_path, adm_path, SVN_WC__NON_ENTRIES_STRING,
                               sizeof(SVN_WC__NON_ENTRIES_STRING),
                               svn_io_file_del_none, scratch_pool));
@@ -1016,10 +1004,6 @@ svn_wc__wq_build_file_copy_translated(svn_skel_t **work_item,
                              _("'%s' not found"),
                              svn_dirent_local_style(src_abspath,
                                                     scratch_pool));
-
-  /* ### Once we move to a central DB we should try making
-     ### src_abspath, dst_abspath and info_abspath relative from
-     ### the WCROOT of info_abspath. */
 
   SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath, dst_abspath,
                                 result_pool, scratch_pool));
