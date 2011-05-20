@@ -32,6 +32,7 @@
 #include "svn_cache_config.h"
 
 #include "svn_private_config.h"
+#include "private/svn_debug.h"
 
 /* Return a memcache in *MEMCACHE_P for FS if it's configured to use
    memcached, or NULL otherwise.  Also, sets *FAIL_STOP to a boolean
@@ -87,6 +88,8 @@ dump_cache_statistics(void *baton_void)
   apr_status_t result = APR_SUCCESS;
   svn_cache__info_t info;
   svn_string_t *text_stats;
+  apr_array_header_t *lines;
+  int i;
 
   svn_error_t *err = svn_cache__get_info(baton->cache,
                                          &info,
@@ -96,7 +99,13 @@ dump_cache_statistics(void *baton_void)
   if (! err)
     {
       text_stats = svn_cache__format_info(&info, baton->pool);
-      err = svn_cmdline_printf(baton->pool, "%s\n", text_stats->data);
+      lines = svn_cstring_split(text_stats->data, "\n", FALSE, baton->pool);
+      
+      for (i = 0; i < lines->nelts; ++i)
+        {
+          const char *line = APR_ARRAY_IDX(lines, i, const char *);
+          SVN_DBG(("%s\n", line));
+        }
     }
 
   /* process error returns */
