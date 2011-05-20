@@ -330,6 +330,11 @@ def get_fsfs_format_file_path(repo_dir):
 
   return os.path.join(repo_dir, "db", "format")
 
+def filter_dbg(lines):
+  for line in lines:
+    if not line.startswith('DBG:'):
+      yield line
+
 # Run any binary, logging the command line and return code
 def run_command(command, error_expected, binary_mode=0, *varargs):
   """Run COMMAND with VARARGS. Return exit code as int; stdout, stderr
@@ -874,7 +879,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
 
   load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
   expect_revision = 1
-  for load_line in load_stdout:
+  for load_line in filter_dbg(load_stdout):
     match = load_re.match(load_line)
     if match:
       if match.group(1) != str(expect_revision):
