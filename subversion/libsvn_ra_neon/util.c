@@ -1615,6 +1615,13 @@ svn_ra_neon__get_deadprop_count_support(svn_boolean_t *supported,
     { NULL }
   };
 
+  if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras))
+    {
+      /* HTTPv2 enabled servers always supports deadprop-count property. */
+      *supported = TRUE;
+      return SVN_NO_ERROR;
+    }
+
   /* Check if we already checked deadprop_count support. */
   if (!ras->supports_deadprop_count)
     {
