@@ -1514,7 +1514,8 @@ typedef svn_error_t * (*svn_io_walk_func_t)(void *baton,
  * on the directory itself before invoking it on any children thereof.
  *
  * Deliver to @a walk_func the information specified by @a wanted,
- * plus the items specified by @c APR_FINFO_TYPE and @c APR_FINFO_NAME.
+ * which is a combination of @c APR_FINFO_* flags, plus the
+ * information specified by @c APR_FINFO_TYPE and @c APR_FINFO_NAME.
  *
  * Use @a pool for all allocations.
  *
