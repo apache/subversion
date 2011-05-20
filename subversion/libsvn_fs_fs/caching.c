@@ -104,7 +104,9 @@ dump_cache_statistics(void *baton_void)
       for (i = 0; i < lines->nelts; ++i)
         {
           const char *line = APR_ARRAY_IDX(lines, i, const char *);
+#ifdef SVN_DEBUG
           SVN_DBG(("%s\n", line));
+#endif
         }
     }
 
