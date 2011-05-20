@@ -5127,12 +5127,13 @@ def copy_url_shortcut(sbox):
 def deleted_file_with_case_clash(sbox):
   """address a deleted file hidden by case clash"""
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   
   iota_path = os.path.join(wc_dir, 'iota')
   iota2_path = os.path.join(wc_dir, 'iota2')
   IOTA_path = os.path.join(wc_dir, 'IOTA')
+  iota_url = sbox.repo_url + '/iota'
   
   # Perform a case-only rename in two steps.
   svntest.main.run_svn(None, 'move', iota_path, iota2_path)
@@ -5146,13 +5147,21 @@ def deleted_file_with_case_clash(sbox):
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Perform an 'info' call, where we expect to be able to see the 
-  # deleted file (which is hidden by the on-disk case-clashing file).
-  expected_info = {'Path' : re.escape(iota_path),
-                   'Schedule' : 'delete',
-                  }
-                  
-  svntest.actions.run_and_verify_info([expected_info], iota_path)
+  # Perform 'info' calls on both the deleted and added paths, to see if 
+  # we get the correct information. The deleted path is not on disk and
+  # hidden by the on-disk case-clashing file, but we should be able to
+  # target it explicitly because it's in the wc-db.
+  expected_info_iota = {'Path' : re.escape(iota_path),
+                        'Schedule' : 'delete',
+                        'Copied From URL': None,
+                       }
+  svntest.actions.run_and_verify_info([expected_info_iota], iota_path)
+
+  expected_info_IOTA = {'Path' : re.escape(IOTA_path),
+                        'Schedule' : 'add',
+                        'Copied From URL': iota_url, 
+                       }
+  svntest.actions.run_and_verify_info([expected_info_IOTA], IOTA_path)
 
 
 ########################################################################
