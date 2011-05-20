@@ -15,13 +15,6 @@ Status of 1.6.17:
 Candidate changes:
 ==================
 
- * r1036429
-   Fix svnsync_tests 29 for issue 3641.
-   Justification:
-     Server assert using BDB.
-   Votes:
-     +1: philip
-
 Veto-blocked changes:
 =====================
 
@@ -171,6 +164,9 @@ Veto-blocked changes:
      -1: hwright (I'm not sure we need this: the merge conflicts, and the
                   assert isn't even in 1.6.x.  I'm happy to remove this veto
                   if a proper backport branch is provided.)
+                 (It merges cleanly when I try it. This change is needed now
+                  that the issue 3641 branch has been merged, probably that
+                  dependency was not clear.  philip)
 
 
  * r879766
