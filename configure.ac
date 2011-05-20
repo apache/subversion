@@ -1232,6 +1232,10 @@ DEFAULT_FS_TYPE="fsfs"
 AC_DEFINE_UNQUOTED(DEFAULT_FS_TYPE, "$DEFAULT_FS_TYPE",
                    [The fs type to use by default])
 
+DEFAULT_HTTP_LIBRARY="serf"
+AC_DEFINE_UNQUOTED(DEFAULT_HTTP_LIBRARY, "$DEFAULT_HTTP_LIBRARY",
+                   [The http library to use by default])
+
 # BSD/OS (BSDi) needs to use a different include syntax in Makefile
 INCLUDE_OUTPUTS="include \$(top_srcdir)/build-outputs.mk"
 case "$host" in
