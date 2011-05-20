@@ -82,7 +82,8 @@ write_prop_to_stringbuf(svn_stringbuf_t **strbuf,
                         const char *name,
                         const svn_string_t *value)
 {
-  int bytes_used, namelen;
+  int bytes_used;
+  size_t namelen;
   char buf[SVN_KEYLINE_MAXLEN];
 
   /* Output name length, then name. */
@@ -112,13 +113,14 @@ write_prop_to_stringbuf(svn_stringbuf_t **strbuf,
 static svn_boolean_t
 ary_prefix_match(const apr_array_header_t *pfxlist, const char *path)
 {
-  int i, pfx_len, path_len = strlen(path);
-  const char *pfx;
+  int i;
+  size_t path_len = strlen(path);
 
   for (i = 0; i < pfxlist->nelts; i++)
     {
-      pfx = APR_ARRAY_IDX(pfxlist, i, const char *);
-      pfx_len = strlen(pfx);
+      const char *pfx = APR_ARRAY_IDX(pfxlist, i, const char *);
+      size_t pfx_len = strlen(pfx);
+
       if (path_len < pfx_len)
         continue;
       if (strncmp(path, pfx, pfx_len) == 0
