@@ -225,13 +225,10 @@ parse_capabilities(ne_request *req,
     }
   if ((val = ne_get_response_header(req, SVN_DAV_ROOT_URI_HEADER)))
     {
-      ne_uri root = ras->root;
-      char *root_uri;
+      ne_uri root_uri = ras->root;
 
-      root.path = (char *)val;
-      root_uri = ne_uri_unparse(&root);
-      ras->repos_root = apr_pstrdup(ras->pool, root_uri);
-      free(root_uri);
+      root_uri.path = (char *)val;
+      ras->repos_root = svn_ra_neon__uri_unparse(&root_uri, ras->pool);
     }
 
   /* HTTP v2 stuff */

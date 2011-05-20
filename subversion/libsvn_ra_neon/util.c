@@ -1578,3 +1578,23 @@ svn_ra_neon__request_get_location(svn_ra_neon__request_t *request,
   const char *val = ne_get_response_header(request->ne_req, "Location");
   return val ? svn_urlpath__canonicalize(val, pool) : NULL;
 }
+
+const char *
+svn_ra_neon__uri_unparse(const ne_uri *uri,
+                         apr_pool_t *pool)
+{
+  char *unparsed_uri;
+  const char *result;
+
+  /* Unparse uri. */
+  unparsed_uri = ne_uri_unparse(uri);
+
+  /* Copy string to result pool. */
+  result = apr_pstrdup(pool, unparsed_uri);
+
+  /* Free neon's allocated copy. */
+  ne_free(unparsed_uri);
+
+  /* Return string allocated in result pool. */
+  return result;
+}
