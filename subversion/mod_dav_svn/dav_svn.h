@@ -313,6 +313,12 @@ svn_boolean_t dav_svn__get_v2_protocol_flag(request_rec *r);
 /* for the repository referred to by this request, are subrequests active? */
 svn_boolean_t dav_svn__get_pathauthz_flag(request_rec *r);
 
+/* for the repository referred to by this request, is txdelta caching active? */
+svn_boolean_t dav_svn__get_txdelta_cache_flag(request_rec *r);
+
+/* for the repository referred to by this request, is fulltext caching active? */
+svn_boolean_t dav_svn__get_fulltext_cache_flag(request_rec *r);
+
 /* for the repository referred to by this request, are subrequests bypassed?
  * A function pointer if yes, NULL if not.
  */

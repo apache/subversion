@@ -1931,6 +1931,7 @@ get_resource(request_rec *r,
   dav_locktoken_list *ltl;
   struct cleanup_fs_access_baton *cleanup_baton;
   void *userdata;
+  apr_hash_t *fs_config;
 
   repo_name = dav_svn__get_repo_name(r);
   xslt_uri = dav_svn__get_xslt_uri(r);
@@ -2132,7 +2133,19 @@ get_resource(request_rec *r,
   repos->repos = userdata;
   if (repos->repos == NULL)
     {
-      serr = svn_repos_open2(&(repos->repos), fs_path, NULL, 
+      /* construct FS configuration parameters */
+      fs_config = apr_hash_make(r->connection->pool);
+      apr_hash_set(fs_config, 
+                   SVN_FS_CONFIG_FSFS_CACHE_DELTAS, 
+                   APR_HASH_KEY_STRING, 
+                   dav_svn__get_txdelta_cache_flag(r) ? "1" : "0");
+      apr_hash_set(fs_config, 
+                   SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS, 
+                   APR_HASH_KEY_STRING, 
+                   dav_svn__get_fulltext_cache_flag(r) ? "1" : "0");
+      
+      /* open the FS */
+      serr = svn_repos_open2(&(repos->repos), fs_path, fs_config, 
                              r->connection->pool);
       if (serr != NULL)
         {
