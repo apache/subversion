@@ -29,6 +29,23 @@ my $VIM = 'vim';
 my $STATUS = './STATUS';
 my $BRANCHES = '^/subversion/branches';
 
+sub usage {
+  my $basename = $0;
+  $basename =~ s#.*/##;
+  print <<EOF;
+Run this from the root of your release branch (e.g., 1.6.x) working copy.
+
+For each entry in STATUS, you will be prompted whether to merge it.
+
+WARNING:
+If you accept the prompt, $basename will revert all local changes and will
+commit the merge immediately.
+
+The 'svn' binary defined by the environment variable \$SVN, or otherwise the
+'svn' found in \$PATH, will be used to manage the working copy.
+EOF
+}
+
 sub prompt {
   local $\; # disable 'perl -l' effects
   print "Go ahead? ";
@@ -146,6 +163,7 @@ sub handle_entry {
 
 sub main {
   @ARGV = $STATUS;
+  usage, exit 1 unless -r $STATUS;
   while (<>) {
     my @lines = split /\n/;
 
