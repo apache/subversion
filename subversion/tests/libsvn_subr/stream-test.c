@@ -522,6 +522,38 @@ test_readonly(apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+test_stream_compressed_empty_file(apr_pool_t *pool)
+{
+#define TEST_BUF_SIZE 10
+
+  svn_stream_t *stream, *empty_file_stream;
+  svn_stringbuf_t *origbuf, *inbuf, *outbuf;
+  char buf[TEST_BUF_SIZE];
+  apr_size_t len;
+
+  origbuf = svn_stringbuf_create("", pool);
+  inbuf = svn_stringbuf_create("", pool);
+  outbuf = svn_stringbuf_create("", pool);
+
+  /* Reading an empty file with a compressed stream should not error. */
+  SVN_ERR(svn_stream_open_unique(&empty_file_stream, NULL, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 pool, pool));
+  stream = svn_stream_compressed(empty_file_stream, pool);
+  len = TEST_BUF_SIZE;
+  SVN_ERR(svn_stream_read(stream, buf, &len));
+  if (len > 0)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Got unexpected result.");
+
+  SVN_ERR(svn_stream_close(stream));
+
+#undef TEST_BUF_SIZE
+
+  return SVN_NO_ERROR;
+}
 
 /* The test table.  */
 
@@ -542,5 +574,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test stream seeking for translated streams"),
     SVN_TEST_PASS2(test_readonly,
                    "test setting a file readonly"),
+    SVN_TEST_XFAIL2(test_stream_compressed_empty_file,
+                   "test compressed streams with empty files"),
     SVN_TEST_NULL
   };
