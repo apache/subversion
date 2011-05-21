@@ -334,7 +334,20 @@ svn_repos_find_root_path(const char *path,
  * Acquires a shared lock on the repository, and attaches a cleanup
  * function to @a pool to remove the lock.  If no lock can be acquired,
  * returns error, with undefined effect on @a *repos_p.  If an exclusive
- * lock is present, this blocks until it's gone.
+ * lock is present, this blocks until it's gone.  @a fs_config will be
+ * passed to the filesystem initialization function and may be @c NULL.
+ * 
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_repos_open2(svn_repos_t **repos_p,
+                const char *path,
+                apr_hash_t *fs_config,
+                apr_pool_t *pool);
+
+/** Similar to @ref svn_repos_open2 with @a fs_config set to NULL.
+ * 
+ * @deprecated Provided for backward compatibility with 1.6 API.
  */
 svn_error_t *
 svn_repos_open(svn_repos_t **repos_p,

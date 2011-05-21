@@ -108,7 +108,7 @@ open_repos(svn_repos_t **repos,
            const char *path,
            apr_pool_t *pool)
 {
-  SVN_ERR(svn_repos_open(repos, path, pool));
+  SVN_ERR(svn_repos_open2(repos, path, NULL, pool));
   svn_fs_set_warning_func(svn_repos_fs(*repos), warning_func, NULL);
   return SVN_NO_ERROR;
 }

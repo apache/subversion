@@ -2998,7 +2998,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
                              "No repository found in '%s'", url);
 
   /* Open the repository and fill in b with the resulting information. */
-  SVN_ERR(svn_repos_open(&b->repos, repos_root, pool));
+  SVN_ERR(svn_repos_open2(&b->repos, repos_root, NULL, pool));
   SVN_ERR(svn_repos_remember_client_capabilities(b->repos, capabilities));
   b->fs = svn_repos_fs(b->repos);
   fs_path = full_path + strlen(repos_root);

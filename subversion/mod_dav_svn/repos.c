@@ -2132,10 +2132,11 @@ get_resource(request_rec *r,
   repos->repos = userdata;
   if (repos->repos == NULL)
     {
-      serr = svn_repos_open(&(repos->repos), fs_path, r->connection->pool);
+      serr = svn_repos_open2(&(repos->repos), fs_path, NULL, 
+                             r->connection->pool);
       if (serr != NULL)
         {
-          /* The error returned by svn_repos_open might contain the
+          /* The error returned by svn_repos_open2 might contain the
              actual path to the failed repository.  We don't want to
              leak that path back to the client, because that would be
              a security risk, but we do want to log the real error on
