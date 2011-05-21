@@ -223,7 +223,7 @@ svn_test__create_repos(svn_repos_t **repos_p,
                                   pool));
   if (must_reopen)
     {
-      SVN_ERR(svn_repos_open(&repos, name, pool));
+      SVN_ERR(svn_repos_open2(&repos, name, NULL, pool));
       svn_fs_set_warning_func(svn_repos_fs(repos), fs_warning_handler, NULL);
     }
 

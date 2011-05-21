@@ -136,6 +136,15 @@ svn_repos_get_commit_editor(const svn_delta_editor_t **editor,
                                       callback_baton, pool);
 }
 
+svn_error_t *
+svn_repos_open(svn_repos_t **repos_p,
+               const char *path,
+               apr_pool_t *pool)
+{
+  return svn_repos_open2(repos_p, path, NULL, pool);
+}
+
+
 /*** From repos.c ***/
 struct recover_baton
 {

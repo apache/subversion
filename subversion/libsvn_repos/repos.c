@@ -1352,6 +1352,7 @@ get_repos(svn_repos_t **repos_p,
           svn_boolean_t exclusive,
           svn_boolean_t nonblocking,
           svn_boolean_t open_fs,
+          apr_hash_t *fs_config,
           apr_pool_t *pool)
 {
   svn_repos_t *repos;
@@ -1370,7 +1371,7 @@ get_repos(svn_repos_t **repos_p,
 
   /* Open up the filesystem only after obtaining the lock. */
   if (open_fs)
-    SVN_ERR(svn_fs_open(&repos->fs, repos->db_path, NULL, pool));
+    SVN_ERR(svn_fs_open(&repos->fs, repos->db_path, fs_config, pool));
 
   *repos_p = repos;
   return SVN_NO_ERROR;
@@ -1408,14 +1409,15 @@ svn_repos_find_root_path(const char *path,
 
 
 svn_error_t *
-svn_repos_open(svn_repos_t **repos_p,
-               const char *path,
-               apr_pool_t *pool)
+svn_repos_open2(svn_repos_t **repos_p,
+                const char *path,
+                apr_hash_t *fs_config,
+                apr_pool_t *pool)
 {
   /* Fetch a repository object initialized with a shared read/write
      lock on the database. */
 
-  return get_repos(repos_p, path, FALSE, FALSE, TRUE, pool);
+  return get_repos(repos_p, path, FALSE, FALSE, TRUE, fs_config, pool);
 }
 
 
@@ -1436,7 +1438,7 @@ svn_repos_upgrade2(const char *path,
      least prevent others from trying to read or write to it while we
      run recovery. (Other backends should do their own locking; see
      lock_repos.) */
-  SVN_ERR(get_repos(&repos, path, TRUE, nonblocking, FALSE, subpool));
+  SVN_ERR(get_repos(&repos, path, TRUE, nonblocking, FALSE, NULL, subpool));
 
   if (notify_func)
     {
@@ -1615,6 +1617,7 @@ svn_repos_recover4(const char *path,
      lock_repos.) */
   SVN_ERR(get_repos(&repos, path, TRUE, nonblocking,
                     FALSE,    /* don't try to open the db yet. */
+                    NULL,
                     subpool));
 
   if (notify_func)
@@ -1649,6 +1652,7 @@ svn_error_t *svn_repos_db_logfiles(apr_array_header_t **logfiles,
   SVN_ERR(get_repos(&repos, path,
                     FALSE, FALSE,
                     FALSE,     /* Do not open fs. */
+                    NULL,
                     pool));
 
   SVN_ERR(svn_fs_berkeley_logfiles(logfiles,
@@ -1762,6 +1766,7 @@ svn_repos_hotcopy(const char *src_path,
   SVN_ERR(get_repos(&src_repos, src_path,
                     FALSE, FALSE,
                     FALSE,    /* don't try to open the db yet. */
+                    NULL,
                     pool));
 
   /* If we are going to clean logs, then get an exclusive lock on

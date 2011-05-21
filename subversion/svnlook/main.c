@@ -1872,7 +1872,8 @@ get_ctxt_baton(svnlook_ctxt_t **baton_p,
 {
   svnlook_ctxt_t *baton = apr_pcalloc(pool, sizeof(*baton));
 
-  SVN_ERR(svn_repos_open(&(baton->repos), opt_state->repos_path, pool));
+  SVN_ERR(svn_repos_open2(&(baton->repos), opt_state->repos_path, NULL, 
+                          pool));
   baton->fs = svn_repos_fs(baton->repos);
   svn_fs_set_warning_func(baton->fs, warning_func, NULL);
   baton->show_ids = opt_state->show_ids;
