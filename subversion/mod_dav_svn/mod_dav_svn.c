@@ -89,6 +89,8 @@ typedef struct dir_conf_t {
   const char *root_dir;              /* our top-level directory */
   const char *master_uri;            /* URI to the master SVN repos */
   const char *activities_db;         /* path to activities database(s) */
+  enum conf_flag txdelta_cache;      /* whether to enable txdelta caching */
+  enum conf_flag fulltext_cache;     /* whether to enable fulltext caching */
 } dir_conf_t;
 
 
@@ -211,6 +213,8 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->v2_protocol = INHERIT_VALUE(parent, child, v2_protocol);
   newconf->path_authz_method = INHERIT_VALUE(parent, child, path_authz_method);
   newconf->list_parentpath = INHERIT_VALUE(parent, child, list_parentpath);
+  newconf->txdelta_cache = INHERIT_VALUE(parent, child, txdelta_cache);
+  newconf->fulltext_cache = INHERIT_VALUE(parent, child, fulltext_cache);
   /* Prefer our parent's value over our new one - hence the swap. */
   newconf->root_dir = INHERIT_VALUE(child, parent, root_dir);
 
@@ -420,6 +424,32 @@ SVNSpecialURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
   conf = ap_get_module_config(cmd->server->module_config,
                               &dav_svn_module);
   conf->special_uri = uri;
+
+  return NULL;
+}
+
+static const char *
+SVNCacheTextDeltas_cmd(cmd_parms *cmd, void *config, int arg)
+{
+  dir_conf_t *conf = config;
+
+  if (arg)
+    conf->txdelta_cache = CONF_FLAG_ON;
+  else
+    conf->txdelta_cache = CONF_FLAG_OFF;
+
+  return NULL;
+}
+
+static const char *
+SVNCacheFullTexts_cmd(cmd_parms *cmd, void *config, int arg)
+{
+  dir_conf_t *conf = config;
+
+  if (arg)
+    conf->fulltext_cache = CONF_FLAG_ON;
+  else
+    conf->fulltext_cache = CONF_FLAG_OFF;
 
   return NULL;
 }
@@ -719,6 +749,26 @@ dav_svn__get_activities_db(request_rec *r)
 }
 
 
+svn_boolean_t
+dav_svn__get_txdelta_cache_flag(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  return conf->txdelta_cache == CONF_FLAG_ON;
+}
+
+
+svn_boolean_t
+dav_svn__get_fulltext_cache_flag(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  return conf->fulltext_cache == CONF_FLAG_ON;
+}
+
+
 int
 dav_svn__get_compression_level(void)
 {
@@ -927,6 +977,20 @@ static const command_rec cmds[] =
                ACCESS_CONF|RSRC_CONF,
                "enables server advertising of support for version 2 of "
                "Subversion's HTTP protocol (default values is On)."),
+
+  /* per directory/location */
+  AP_INIT_FLAG("SVNCacheTextDeltas", SVNCacheTextDeltas_cmd, NULL,
+               ACCESS_CONF|RSRC_CONF, 
+               "speeds up data access to older revisions by caching "
+               "delta information if sufficient in-memory cache is "
+               "available (default is Off)."),
+
+  /* per directory/location */
+  AP_INIT_FLAG("SVNCacheFullTexts", SVNCacheFullTexts_cmd, NULL,
+               ACCESS_CONF|RSRC_CONF,
+               "speeds up data access by caching full file content "
+               "if sufficient in-memory cache is available "
+               "(default is Off)."),
 
   /* per server */
   AP_INIT_TAKE1("SVNInMemoryCacheSize", SVNInMemoryCacheSize_cmd, NULL,
