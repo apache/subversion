@@ -565,7 +565,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test stream seeking for translated streams"),
     SVN_TEST_PASS2(test_readonly,
                    "test setting a file readonly"),
-    SVN_TEST_XFAIL2(test_stream_compressed_empty_file,
+    SVN_TEST_PASS2(test_stream_compressed_empty_file,
                    "test compressed streams with empty files"),
     SVN_TEST_NULL
   };
