@@ -651,41 +651,25 @@ static svn_error_t *
 get_bool(svn_boolean_t *boolp, const char *input, svn_boolean_t default_value,
          const char *section, const char *option)
 {
-  if (input == NULL)
-    {
-      *boolp = default_value;
-    }
-  else if (0 == svn_cstring_casecmp(input, SVN_CONFIG_TRUE)
-           || 0 == svn_cstring_casecmp(input, "yes")
-           || 0 == svn_cstring_casecmp(input, "on")
-           || 0 == strcmp(input, "1"))
-    {
-      *boolp = TRUE;
-    }
-  else if (0 == svn_cstring_casecmp(input, SVN_CONFIG_FALSE)
-           || 0 == svn_cstring_casecmp(input, "no")
-           || 0 == svn_cstring_casecmp(input, "off")
-           || 0 == strcmp(input, "0"))
-    {
-      *boolp = FALSE;
-    }
-  else  /* unrecognized value */
-    {
-      if (section)
-        {
-          return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
-                                   _("Config error: invalid boolean "
-                                     "value '%s' for '[%s] %s'"),
-                                   input, section, option);
-        }
-      else
-        {
-          return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
-                                   _("Config error: invalid boolean "
-                                     "value '%s' for '%s'"),
-                                   input, option);
-        }
-    }
+  svn_tristate_t value = svn_tristate_from_word(input);
+  
+  if (value == svn_tristate_true)
+    *boolp = TRUE;
+  else if (value == svn_tristate_false)
+    *boolp = FALSE;
+  else if (input == NULL) /* no value provided */
+    *boolp = default_value;
+
+  else if (section) /* unrecognized value */
+    return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                             _("Config error: invalid boolean "
+                               "value '%s' for '[%s] %s'"),
+                             input, section, option);
+  else
+    return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                             _("Config error: invalid boolean "
+                               "value '%s' for '%s'"),
+                             input, option);
 
   return SVN_NO_ERROR;
 }

@@ -200,9 +200,15 @@ svn_tristate_from_word(const char *word)
 {
   if (word == NULL)
     return svn_tristate_unknown;
-  else if (strcmp(word, "true") == 0)
+  else if (0 == svn_cstring_casecmp(word, "true")
+           || 0 == svn_cstring_casecmp(word, "yes")
+           || 0 == svn_cstring_casecmp(word, "on")
+           || 0 == strcmp(word, "1"))
     return svn_tristate_true;
-  else if (strcmp(word, "false") == 0)
+  else if (0 == svn_cstring_casecmp(word, "false")
+           || 0 == svn_cstring_casecmp(word, "no")
+           || 0 == svn_cstring_casecmp(word, "off")
+           || 0 == strcmp(word, "0"))
     return svn_tristate_false;
 
   return svn_tristate_unknown;
