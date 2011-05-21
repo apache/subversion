@@ -221,7 +221,7 @@ test_stream_compressed(apr_pool_t *pool)
 
 #undef NUM_TEST_STRINGS
 #undef TEST_BUF_SIZE
-#undef GENEREATED_SIZE
+#undef GENERATED_SIZE
 
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
