@@ -67,7 +67,7 @@ Veto-blocked changes:
    Fixes failing commmits (with vague error messages) seen on client
    side for WebDAV proxy configurations such as the following (note
    the trailing slash at the end of '/svn/'):
-
+   
       <Location /svn/>
          DAV svn
          SVNParentPath /repositories
@@ -75,14 +75,14 @@ Veto-blocked changes:
          SVNMasterURI http://master/svn/
          SVNAdvertiseV2Protocol Off
       </Location>
-
+   
    Error message shows up like so:
-
+   
       svn: Commit failed (details follow):
       svn: MKACTIVITY of '/svn/demujin/!svn/act/4b6d547c-018d-4e02-9d3f-2b28\
       3076cc06': Could not read status line: connection was closed by server\
        (http://localhost)
-
+   
    Notes:
      Depends on the r878590 group for a conflict-free backport.
    Justification:
