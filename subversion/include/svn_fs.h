@@ -73,6 +73,18 @@ typedef struct svn_fs_t svn_fs_t;
 #define SVN_FS_CONFIG_BDB_TXN_NOSYNC            "bdb-txn-nosync"
 #define SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE        "bdb-log-autoremove"
 
+/** Enable / disable text delta caching for a FSFS repository.
+ *
+ * @since New in 1.7.
+ */
+#define SVN_FS_CONFIG_FSFS_CACHE_DELTAS         "fsfs-cache-deltas"
+
+/** Enable / disable full-text caching for a FSFS repository.
+ *
+ * @since New in 1.7.
+ */
+#define SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS      "fsfs-cache-fulltexts"
+
 /* See also svn_fs_type(). */
 /** @since New in 1.1. */
 #define SVN_FS_CONFIG_FS_TYPE                   "fs-type"
@@ -214,7 +226,7 @@ svn_fs_create(svn_fs_t **fs_p,
  * they open separate filesystem objects.
  *
  * @note You probably don't want to use this directly.  Take a look at
- * svn_repos_open() instead.
+ * svn_repos_open2() instead.
  *
  * @since New in 1.1.
  */
