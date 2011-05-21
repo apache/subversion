@@ -32,6 +32,7 @@
 #include "svn_cache_config.h"
 
 #include "svn_private_config.h"
+#include "svn_hash.h"
 #include "private/svn_debug.h"
 
 /* Return a memcache in *MEMCACHE_P for FS if it's configured to use
@@ -42,6 +43,8 @@
 static svn_error_t *
 read_config(svn_memcache_t **memcache_p,
             svn_boolean_t *fail_stop,
+            svn_boolean_t *cache_txdeltas,
+            svn_boolean_t *cache_fulltexts,
             svn_fs_t *fs,
             apr_pool_t *pool)
 {
@@ -49,6 +52,16 @@ read_config(svn_memcache_t **memcache_p,
 
   SVN_ERR(svn_cache__make_memcache_from_config(memcache_p, ffd->config,
                                               fs->pool));
+    
+  *cache_txdeltas 
+    = svn_hash_get_bool(fs->config, 
+                        SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
+                        svn_get_cache_config()->cache_txdeltas);
+  *cache_fulltexts 
+    = svn_hash_get_bool(fs->config,
+                        SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
+                        svn_get_cache_config()->cache_fulltexts);
+
   return svn_config_get_bool(ffd->config, fail_stop,
                              CONFIG_SECTION_CACHES, CONFIG_OPTION_FAIL_STOP,
                              FALSE);
@@ -181,8 +194,16 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                                    (char *)NULL);
   svn_memcache_t *memcache;
   svn_boolean_t no_handler;
-
-  SVN_ERR(read_config(&memcache, &no_handler, fs, pool));
+  svn_boolean_t cache_txdeltas;
+  svn_boolean_t cache_fulltexts;
+  
+  /* Evaluating the cache configuration. */
+  SVN_ERR(read_config(&memcache, 
+                      &no_handler, 
+                      &cache_txdeltas,
+                      &cache_fulltexts,
+                      fs, 
+                      pool));
 
   /* Make the cache for revision roots.  For the vast majority of
    * commands, this is only going to contain a few entries (svnadmin
@@ -282,39 +303,35 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   SVN_ERR(init_callbacks(ffd->packed_offset_cache, fs, no_handler, pool));
 
   /* initialize fulltext cache as configured */
-  if (memcache)
-    {
-      SVN_ERR(svn_cache__create_memcache(&(ffd->fulltext_cache),
-                                         memcache,
-                                         /* Values are svn_string_t */
-                                         NULL, NULL,
-                                         APR_HASH_KEY_STRING,
-                                         apr_pstrcat(pool, prefix, "TEXT",
-                                                     (char *)NULL),
-                                         fs->pool));
-    }
-  else if (svn_cache__get_global_membuffer_cache() && 
-           svn_get_cache_config()->cache_fulltexts)
-    {
-      SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->fulltext_cache),
-                                                svn_cache__get_global_membuffer_cache(),
-                                                /* Values are svn_string_t */
-                                                NULL, NULL,
-                                                APR_HASH_KEY_STRING,
-                                                apr_pstrcat(pool, prefix, "TEXT",
-                                                            (char *)NULL),
-                                                fs->pool));
-    }
-  else
-    {
-      ffd->fulltext_cache = NULL;
-    }
+  ffd->fulltext_cache = NULL;
+  if (cache_txdeltas)
+    if (memcache)
+      {
+        SVN_ERR(svn_cache__create_memcache(&(ffd->fulltext_cache),
+                                           memcache,
+                                           /* Values are svn_string_t */
+                                           NULL, NULL,
+                                           APR_HASH_KEY_STRING,
+                                           apr_pstrcat(pool, prefix, "TEXT",
+                                                       (char *)NULL),
+                                           fs->pool));
+      }
+    else if (svn_cache__get_global_membuffer_cache())
+      {
+        SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->fulltext_cache),
+                                                  svn_cache__get_global_membuffer_cache(),
+                                                  /* Values are svn_string_t */
+                                                  NULL, NULL,
+                                                  APR_HASH_KEY_STRING,
+                                                  apr_pstrcat(pool, prefix, "TEXT",
+                                                              (char *)NULL),
+                                                  fs->pool));
+      }
 
   SVN_ERR(init_callbacks(ffd->fulltext_cache, fs, no_handler, pool));
 
   /* initialize txdelta window cache, if that has been enabled */
-  if (svn_cache__get_global_membuffer_cache() &&
-      svn_get_cache_config()->cache_txdeltas)
+  if (svn_cache__get_global_membuffer_cache() && cache_txdeltas)
     {
       SVN_ERR(svn_cache__create_membuffer_cache
                 (&(ffd->txdelta_window_cache),
