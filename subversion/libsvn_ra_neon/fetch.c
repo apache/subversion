@@ -660,6 +660,13 @@ static const ne_propname restype_props[] =
   { NULL }
 };
 
+static const ne_propname restype_checksum_props[] =
+{
+  { "DAV:", "resourcetype" },
+  { SVN_DAV_PROP_NS_DAV, "md5-checksum" },
+  { NULL }
+};
+
 svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
                                    const char *path,
                                    svn_revnum_t revision,
@@ -672,6 +679,7 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
   const char *final_url;
   svn_ra_neon__session_t *ras = session->priv;
   const char *url = svn_path_url_add_component2(ras->url->data, path, pool);
+  const ne_propname *which_props;
 
   /* If the revision is invalid (head), then we're done.  Just fetch
      the public URL, because that will always get HEAD. */
@@ -692,10 +700,25 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
         *fetched_rev = got_rev;
     }
 
-  SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, ras, final_url,
-                                          NULL,
-                                          props ? NULL : restype_props,
-                                          pool));
+  if (props)
+    {
+      /* Request all properties if caller requested them. */
+      which_props = NULL;
+    }
+  else if (stream)
+    {
+      /* Request md5 checksum and resource type properties if caller
+         requested file contents. */
+      which_props = restype_checksum_props;
+    }
+  else
+    {
+      /* Request only resource type on other cases. */
+      which_props = restype_props;
+    }
+
+  SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, ras, final_url, NULL,
+                                          which_props, pool));
   if (rsrc->is_collection)
     {
       return svn_error_create(SVN_ERR_FS_NOT_FILE, NULL,
@@ -710,35 +733,25 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
 
   if (stream)
     {
-      svn_error_t *err;
-      const svn_string_t *expected_checksum = NULL;
+      const svn_string_t *expected_checksum;
       file_write_ctx_t fwc;
-      ne_propname md5_propname = { SVN_DAV_PROP_NS_DAV, "md5-checksum" };
 
-      /* Only request a checksum if we're getting the file contents. */
-      /* ### We should arrange for the checksum to be returned in the
-         svn_ra_neon__get_baseline_info() call above; that will prevent
-         the extra round trip, at least some of the time. */
-      err = svn_ra_neon__get_one_prop(&expected_checksum,
-                                      ras,
-                                      final_url,
-                                      NULL,
-                                      &md5_propname,
-                                      pool);
+      expected_checksum = apr_hash_get(rsrc->propset,
+                                       SVN_RA_NEON__PROP_MD5_CHECKSUM,
+                                       APR_HASH_KEY_STRING);
 
-      /* Older servers don't serve this prop, but that's okay. */
+      /* Older servers don't serve checksum prop, but that's okay. */
       /* ### temporary hack for 0.17. if the server doesn't have the prop,
          ### then __get_one_prop returns an empty string. deal with it.  */
-      if ((err && (err->apr_err == SVN_ERR_RA_DAV_PROPS_NOT_FOUND))
-          || (expected_checksum && (*expected_checksum->data == '\0')))
+      if (!expected_checksum
+          || (expected_checksum && expected_checksum->data[0] == '\0'))
         {
           fwc.do_checksum = FALSE;
-          svn_error_clear(err);
         }
-      else if (err)
-        return err;
       else
-        fwc.do_checksum = TRUE;
+        {
+          fwc.do_checksum = TRUE;
+        }
 
       fwc.stream = stream;
 
