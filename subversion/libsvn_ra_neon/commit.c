@@ -1178,16 +1178,21 @@ static svn_error_t * commit_add_file(const char *path,
   if ((! parent->created)
       && (! apr_hash_get(file->cc->valid_targets, path, APR_HASH_KEY_STRING)))
     {
+      static const ne_propname restype_props[] =
+      {
+        { "DAV:", "resourcetype" },
+        { NULL }
+      };
       svn_ra_neon__resource_t *res;
       const char *public_url;
       svn_error_t *err1, *err2;
 
       public_url = svn_path_url_add_component2(file->cc->ras->url->data,
                                                path, workpool);
-      err1 = svn_ra_neon__get_starting_props(&res, file->cc->ras,
-                                             put_target, workpool);
-      err2 = svn_ra_neon__get_starting_props(&res, file->cc->ras,
-                                             public_url, workpool);
+      err1 = svn_ra_neon__get_props_resource(&res, parent->cc->ras, put_target,
+                                             NULL, restype_props, workpool);
+      err2 = svn_ra_neon__get_props_resource(&res, parent->cc->ras, public_url,
+                                             NULL, restype_props, workpool);
       if (! err1 && ! err2)
         {
           /* If the PROPFINDs succeed the file already exists */
