@@ -90,7 +90,13 @@ $VIM -e -s -n -N -i NONE -u NONE -c '/^ [*] r$entry{revisions}->[0]/normal! dap'
 $SVN commit -F $logmsg_filename
 EOF
 
-  open SHELL, '|-', qw#/bin/sh -x# or die $!;
+  $script .= <<"EOF" if $entry{branch};
+reinteg_rev=\`$SVN info $STATUS | sed -ne 's/Last Changed Rev: //p'\`
+$SVN rm $BRANCHES/$entry{branch}\
+        -m "Remove the '$entry{branch}' branch, reintegrated in r\$reinteg_rev."
+EOF
+
+  open SHELL, '|-', qw#/bin/cat# or die $!;
   print SHELL $script;
   close SHELL or warn "$0: sh($?): $!";
 
