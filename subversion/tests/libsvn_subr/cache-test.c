@@ -182,8 +182,16 @@ test_membuffer_cache_basic(apr_pool_t *pool)
 {
   svn_cache__t *cache;
   svn_membuffer_t *membuffer;
+  svn_boolean_t thread_safe;
 
-  SVN_ERR(svn_cache__membuffer_cache_create(&membuffer, 10*1024, 1, TRUE, pool));
+#if APR_HAS_THREADS
+  thread_safe = TRUE;
+#else
+  thread_safe = FALSE;
+#endif
+
+  SVN_ERR(svn_cache__membuffer_cache_create(&membuffer, 10*1024, 1,
+                                            thread_safe, pool));
 
   /* Create a cache with just one entry. */
   SVN_ERR(svn_cache__create_membuffer_cache(&cache,
@@ -265,12 +273,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "basic memcache svn_cache test"),
     SVN_TEST_OPTS_PASS(test_memcache_long_key,
                        "memcache svn_cache with very long keys"),
-#if APR_HAS_THREADS
     SVN_TEST_PASS2(test_membuffer_cache_basic,
                    "basic membuffer svn_cache test"),
-#else
-    SVN_TEST_XFAIL2(test_membuffer_cache_basic,
-                   "basic membuffer svn_cache test"),
-#endif
     SVN_TEST_NULL
   };
