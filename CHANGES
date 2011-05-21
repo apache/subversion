@@ -192,7 +192,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.17
     * fixed: locked and deleted file causes tree conflict (issue #3525)
     * fixed: update touches locked file with svn:keywords property (issue #3471)
     * fix svnsync handling of directory copyfrom (issue #3641)
-    * fix log -g excessive duplicate output (issue #3650)
+    * fix 'log -g' excessive duplicate output (issue #3650)
 
   Developer-visible changes:
     * fix reporting FS-level post-commit processing errors (r1104098)
