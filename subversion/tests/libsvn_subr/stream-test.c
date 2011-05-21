@@ -529,13 +529,8 @@ test_stream_compressed_empty_file(apr_pool_t *pool)
 #define TEST_BUF_SIZE 10
 
   svn_stream_t *stream, *empty_file_stream;
-  svn_stringbuf_t *origbuf, *inbuf, *outbuf;
   char buf[TEST_BUF_SIZE];
   apr_size_t len;
-
-  origbuf = svn_stringbuf_create("", pool);
-  inbuf = svn_stringbuf_create("", pool);
-  outbuf = svn_stringbuf_create("", pool);
 
   /* Reading an empty file with a compressed stream should not error. */
   SVN_ERR(svn_stream_open_unique(&empty_file_stream, NULL, NULL,
