@@ -349,6 +349,7 @@ svn_repos_open2(svn_repos_t **repos_p,
  * 
  * @deprecated Provided for backward compatibility with 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_open(svn_repos_t **repos_p,
                const char *path,
