@@ -162,8 +162,10 @@ sub handle_entry {
 }
 
 sub main {
-  @ARGV = $STATUS;
+  usage, exit 0 if @ARGV;
   usage, exit 1 unless -r $STATUS;
+
+  @ARGV = $STATUS;
   while (<>) {
     my @lines = split /\n/;
 
