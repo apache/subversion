@@ -96,7 +96,7 @@ $SVN rm $BRANCHES/$entry{branch}\
         -m "Remove the '$entry{branch}' branch, reintegrated in r\$reinteg_rev."
 EOF
 
-  open SHELL, '|-', qw#/bin/cat# or die $!;
+  open SHELL, '|-', qw#/bin/sh -x# or die $!;
   print SHELL $script;
   close SHELL or warn "$0: sh($?): $!";
 
