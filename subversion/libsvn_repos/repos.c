@@ -32,6 +32,7 @@
 #include "svn_fs.h"
 #include "svn_ra.h"  /* for SVN_RA_CAPABILITY_* */
 #include "svn_repos.h"
+#include "svn_hash.h"
 #include "private/svn_repos_private.h"
 #include "svn_private_config.h" /* for SVN_TEMPLATE_ROOT_DIR */
 
@@ -1224,17 +1225,10 @@ svn_repos_create(svn_repos_t **repos_p,
   repos->format = SVN_REPOS__FORMAT_NUMBER;
 
   /* Discover the type of the filesystem we are about to create. */
-  if (fs_config)
-    {
-      repos->fs_type = apr_hash_get(fs_config, SVN_FS_CONFIG_FS_TYPE,
-                                    APR_HASH_KEY_STRING);
-      if (apr_hash_get(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                       APR_HASH_KEY_STRING))
-        repos->format = SVN_REPOS__FORMAT_NUMBER_LEGACY;
-    }
-
-  if (! repos->fs_type)
-    repos->fs_type = DEFAULT_FS_TYPE;
+  repos->fs_type = svn_hash_get_cstring(fs_config, SVN_FS_CONFIG_FS_TYPE, 
+                                        DEFAULT_FS_TYPE);
+  if (svn_hash_get_bool(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE, FALSE))
+    repos->format = SVN_REPOS__FORMAT_NUMBER_LEGACY;
 
   /* Don't create a repository inside another repository. */
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
