@@ -1156,6 +1156,13 @@ read_handler_gz(void *baton, char *buffer, apr_size_t *len)
                                  &btn->in->avail_in, &btn->read_flush));
         }
 
+      /* Short read means underlying stream has run out. */
+      if (btn->in->avail_in == 0)
+        {
+          *len = 0;
+          return SVN_NO_ERROR;
+        }
+
       zerr = inflate(btn->in, btn->read_flush);
       if (zerr == Z_STREAM_END)
         break;
