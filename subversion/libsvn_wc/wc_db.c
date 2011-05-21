@@ -1209,7 +1209,7 @@ is_immediate_child_path(const char *parent_abspath,
 {
   return (svn_dirent_is_ancestor(parent_abspath, child_abspath) &&
             parent_component_count ==
-            svn_path_component_count(child_abspath) + 1);
+            svn_path_component_count(child_abspath) - 1);
 }
 
 
