@@ -526,10 +526,8 @@ test_readonly(apr_pool_t *pool)
 static svn_error_t *
 test_stream_compressed_empty_file(apr_pool_t *pool)
 {
-#define TEST_BUF_SIZE 10
-
   svn_stream_t *stream, *empty_file_stream;
-  char buf[TEST_BUF_SIZE];
+  char buf[1];
   apr_size_t len;
 
   /* Reading an empty file with a compressed stream should not error. */
@@ -537,15 +535,13 @@ test_stream_compressed_empty_file(apr_pool_t *pool)
                                  svn_io_file_del_on_pool_cleanup,
                                  pool, pool));
   stream = svn_stream_compressed(empty_file_stream, pool);
-  len = TEST_BUF_SIZE;
+  len = sizeof(buf);
   SVN_ERR(svn_stream_read(stream, buf, &len));
   if (len > 0)
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "Got unexpected result.");
 
   SVN_ERR(svn_stream_close(stream));
-
-#undef TEST_BUF_SIZE
 
   return SVN_NO_ERROR;
 }
