@@ -265,7 +265,12 @@ struct svn_test_descriptor_t test_funcs[] =
                        "basic memcache svn_cache test"),
     SVN_TEST_OPTS_PASS(test_memcache_long_key,
                        "memcache svn_cache with very long keys"),
+#if APR_HAS_THREADS
     SVN_TEST_PASS2(test_membuffer_cache_basic,
                    "basic membuffer svn_cache test"),
+#else
+    SVN_TEST_XFAIL2(test_membuffer_cache_basic,
+                   "basic membuffer svn_cache test"),
+#endif
     SVN_TEST_NULL
   };
