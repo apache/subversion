@@ -1199,13 +1199,16 @@ gather_repo_children(const apr_array_header_t **children,
 }
 
 
-/* Return TRUE if CHILD_ABSPATH is an immediate child of PARENT_ABSPATH.
+/* Return TRUE if CHILD_ABSPATH is an immediate child of PARENT_ABSPATH
+ * which has PARENT_COMPONENT_COUNT path components.
  * Else, return FALSE. */
 static svn_boolean_t
-is_immediate_child_path(const char *parent_abspath, const char *child_abspath)
+is_immediate_child_path(const char *parent_abspath,
+                        apr_size_t parent_component_count,
+                        const char *child_abspath)
 {
   return (svn_dirent_is_ancestor(parent_abspath, child_abspath) &&
-            svn_path_component_count(parent_abspath) ==
+            parent_component_count ==
             svn_path_component_count(child_abspath) + 1);
 }
 
@@ -1247,6 +1250,7 @@ flush_entries(svn_wc__db_wcroot_t *wcroot,
   if (depth > svn_depth_empty)
     {
       apr_hash_index_t *hi;
+      apr_size_t component_count = svn_path_component_count(local_abspath);
 
       /* Flush access batons of children within the specified depth. */
       for (hi = apr_hash_first(scratch_pool, wcroot->access_cache);
@@ -1256,7 +1260,8 @@ flush_entries(svn_wc__db_wcroot_t *wcroot,
           const char *item_abspath = svn__apr_hash_index_key(hi);
 
           if ((depth == svn_depth_files || depth == svn_depth_immediates) &&
-              is_immediate_child_path(local_abspath, item_abspath))
+              is_immediate_child_path(local_abspath, component_count,
+                                      item_abspath))
             {
               remove_from_access_cache(wcroot->access_cache, item_abspath);
             }
