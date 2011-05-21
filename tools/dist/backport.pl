@@ -76,6 +76,8 @@ EOF
   open SHELL, '|-', qw#/bin/sh -x# or die $!;
   print SHELL $script;
   close SHELL or warn "$0: sh($?): $!";
+
+  unlink $logmsg_filename unless $? or $!;
 }
 
 # TODO: may need to parse other headers too?
