@@ -54,12 +54,6 @@ typedef struct svn_cache_config_t
   /** maximum number of files kept open */
   apr_size_t file_handle_count;
 
-  /** shall fulltexts be cached? */
-  svn_boolean_t cache_fulltexts;
-
-  /** shall text deltas be cached? */
-  svn_boolean_t cache_txdeltas;
-
   /** is this application guaranteed to be single-threaded? */
   svn_boolean_t single_threaded;
 } svn_cache_config_t;

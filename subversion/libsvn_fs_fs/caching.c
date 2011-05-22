@@ -53,14 +53,27 @@ read_config(svn_memcache_t **memcache_p,
   SVN_ERR(svn_cache__make_memcache_from_config(memcache_p, ffd->config,
                                               fs->pool));
     
+  /* don't cache text deltas by default.
+   * Once we reconstructed the fulltexts from the deltas,
+   * these deltas are rarely re-used. Therefore, only tools
+   * like svnadmin will activate this to speed up operations
+   * dump and verify.
+   */
   *cache_txdeltas 
     = svn_hash_get_bool(fs->config, 
                         SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
-                        svn_get_cache_config()->cache_txdeltas);
+                        FALSE);
+  /* by default, cache fulltexts.
+   * Most SVN tools care about reconstructed file content.
+   * Thus, this is a reasonable default.
+   * SVN admin tools may set that to FALSE because fulltexts
+   * won't be re-used rendering the cache less effective
+   * by squeezing wanted data out.
+   */
   *cache_fulltexts 
     = svn_hash_get_bool(fs->config,
                         SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
-                        svn_get_cache_config()->cache_fulltexts);
+                        TRUE);
 
   return svn_config_get_bool(ffd->config, fail_stop,
                              CONFIG_SECTION_CACHES, CONFIG_OPTION_FAIL_STOP,
