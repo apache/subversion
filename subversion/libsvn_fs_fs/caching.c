@@ -304,29 +304,31 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
   /* initialize fulltext cache as configured */
   ffd->fulltext_cache = NULL;
-  if (cache_txdeltas)
-    if (memcache)
-      {
-        SVN_ERR(svn_cache__create_memcache(&(ffd->fulltext_cache),
-                                           memcache,
-                                           /* Values are svn_string_t */
-                                           NULL, NULL,
-                                           APR_HASH_KEY_STRING,
-                                           apr_pstrcat(pool, prefix, "TEXT",
-                                                       (char *)NULL),
-                                           fs->pool));
-      }
-    else if (svn_cache__get_global_membuffer_cache())
-      {
-        SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->fulltext_cache),
-                                                  svn_cache__get_global_membuffer_cache(),
-                                                  /* Values are svn_string_t */
-                                                  NULL, NULL,
-                                                  APR_HASH_KEY_STRING,
-                                                  apr_pstrcat(pool, prefix, "TEXT",
-                                                              (char *)NULL),
-                                                  fs->pool));
-      }
+  if (cache_fulltexts)
+    {
+      if (memcache)
+        {
+          SVN_ERR(svn_cache__create_memcache(&(ffd->fulltext_cache),
+                                            memcache,
+                                            /* Values are svn_string_t */
+                                            NULL, NULL,
+                                            APR_HASH_KEY_STRING,
+                                            apr_pstrcat(pool, prefix, "TEXT",
+                                                        (char *)NULL),
+                                            fs->pool));
+        }
+      else if (svn_cache__get_global_membuffer_cache())
+        {
+          SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->fulltext_cache),
+                                                    svn_cache__get_global_membuffer_cache(),
+                                                    /* Values are svn_string_t */
+                                                    NULL, NULL,
+                                                    APR_HASH_KEY_STRING,
+                                                    apr_pstrcat(pool, prefix, "TEXT",
+                                                                (char *)NULL),
+                                                    fs->pool));
+        }
+    }
 
   SVN_ERR(init_callbacks(ffd->fulltext_cache, fs, no_handler, pool));
 
