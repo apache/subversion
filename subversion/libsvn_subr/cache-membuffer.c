@@ -68,12 +68,13 @@
  * next used entry is known, properly sorted insertion is possible.
  *
  * To make the cache perform robustly in a wide range of usage scenarios,
- * a randomized variant of LFU is used. Every item holds a read hit counter
- * and there is a global read hit counter. The more hits an entry has in
- * relation to the average, the more it is likely to be kept using a rand()-
- * based condition. The test is applied only to the entry following the
- * insertion window. If it doesn't get evicted, it is moved to the begin of
- * that window and the window is moved.
+ * a randomized variant of LFU is used (see ensure_data_insertable for 
+ * details). Every item holds a read hit counter and there is a global read 
+ * hit counter. The more hits an entry has in relation to the average, the
+ * more it is likely to be kept using a rand()-based condition. The test is
+ * applied only to the entry following the insertion window. If it doesn't
+ * get evicted, it is moved to the begin of that window and the window is
+ * moved.
  *
  * Moreover, the entry's hits get halfed to make that entry more likely to
  * be removed the next time the sliding insertion / removal window comes by.
@@ -845,14 +846,14 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
   apr_size_t drop_size = 0;
 
   /* This loop will eventually terminate because every cache entry
-   * will get dropped eventually:
+   * would get dropped eventually:
    * - hit counts become 0 after the got kept for 32 full scans
    * - larger elements get dropped as soon as their hit count is 0
    * - smaller and smaller elements get removed as the average
    *   entry size drops (average drops by a factor of 8 per scan)
    * - after no more than 43 full scans, all elements would be removed
    *
-   * Since size is < 16th of the cache size and about 50% of all
+   * Since size is < 4th of the cache size and about 50% of all
    * entries get removed by a scan, it is very unlikely that more
    * than a fractional scan will be necessary.
    */
@@ -872,10 +873,10 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
       /* Don't be too eager to cache data. Smaller items will fit into
        * the cache after dropping a single item. Of the larger ones, we
        * will only accept about 50%. They are also likely to get evicted
-       * soon due to their notorious low hit counts.
+       * soon due to their notoriously low hit counts.
        *
        * As long as enough similarly or even larger sized entries already
-       * exist in the cache, a lot less of insert requests will be rejected.
+       * exist in the cache, much less insert requests will be rejected.
        */
       if (2 * drop_size > size)
         return FALSE;
@@ -896,8 +897,8 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
         {
           entry = get_entry(cache, cache->next);
 
-          /* Keep that are very small. Those are likely to be data headers
-           * or similar management structures. So, they are probably
+          /* Keep entries that are very small. Those are likely to be data 
+           * headers or similar management structures. So, they are probably
            * important while not occupying much space.
            * But keep them only as long as they are a minority.
            */
