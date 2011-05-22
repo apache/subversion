@@ -136,15 +136,17 @@ void winservice_notify_stop(void)
  * APR requires that options without abbreviations
  * have codes greater than 255.
  */
-#define SVNSERVE_OPT_LISTEN_PORT 256
-#define SVNSERVE_OPT_LISTEN_HOST 257
-#define SVNSERVE_OPT_FOREGROUND  258
-#define SVNSERVE_OPT_TUNNEL_USER 259
-#define SVNSERVE_OPT_VERSION     260
-#define SVNSERVE_OPT_PID_FILE    261
-#define SVNSERVE_OPT_SERVICE     262
-#define SVNSERVE_OPT_CONFIG_FILE 263
-#define SVNSERVE_OPT_LOG_FILE 264
+#define SVNSERVE_OPT_LISTEN_PORT     256
+#define SVNSERVE_OPT_LISTEN_HOST     257
+#define SVNSERVE_OPT_FOREGROUND      258
+#define SVNSERVE_OPT_TUNNEL_USER     259
+#define SVNSERVE_OPT_VERSION         260
+#define SVNSERVE_OPT_PID_FILE        261
+#define SVNSERVE_OPT_SERVICE         262
+#define SVNSERVE_OPT_CONFIG_FILE     263
+#define SVNSERVE_OPT_LOG_FILE        264
+#define SVNSERVE_OPT_CACHE_TXDELTAS  265
+#define SVNSERVE_OPT_CACHE_FULLTEXTS 266
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -203,6 +205,20 @@ static const apr_getopt_option_t svnserve__options[] =
         "Default is 128 for threaded and 16 for non-\n"
         "                             "
         "threaded mode.\n"
+        "                             "
+        "[used for FSFS repositories only]")},
+    {"cache-txdeltas", SVNSERVE_OPT_CACHE_TXDELTAS, 1, 
+     N_("enable or disable caching of deltas between older\n"
+        "                             "
+        "revisions.\n"
+        "                             "
+        "Default is no.\n"
+        "                             "
+        "[used for FSFS repositories only]")},
+    {"cache-fulltexts", SVNSERVE_OPT_CACHE_FULLTEXTS, 1, 
+     N_("enable or disable caching of file contents\n"
+        "                             "
+        "Default is yes.\n"
         "                             "
         "[used for FSFS repositories only]")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
@@ -457,6 +473,8 @@ int main(int argc, const char *argv[])
   params.log_file = NULL;
   params.username_case = CASE_ASIS;
   params.memory_cache_size = (apr_uint64_t)-1;
+  params.cache_fulltexts = TRUE;
+  params.cache_txdeltas = FALSE;
 
   while (1)
     {
@@ -579,6 +597,16 @@ int main(int argc, const char *argv[])
 
         case 'M':
           params.memory_cache_size = 0x100000 * apr_strtoi64(arg, NULL, 0);
+          break;
+          
+        case SVNSERVE_OPT_CACHE_TXDELTAS:
+          params.cache_txdeltas 
+             = svn_tristate_from_word(arg) == svn_tristate_true;
+          break;
+
+        case SVNSERVE_OPT_CACHE_FULLTEXTS:
+          params.cache_fulltexts
+             = svn_tristate_from_word(arg) == svn_tristate_true;
           break;
 
 #ifdef WIN32
@@ -845,10 +873,7 @@ int main(int argc, const char *argv[])
     if (params.memory_cache_size != -1)
       settings.cache_size = params.memory_cache_size;
 
-    settings.cache_fulltexts = TRUE;
-    settings.cache_txdeltas = FALSE;
     settings.single_threaded = TRUE;
-
     if (handling_mode == connection_mode_thread)
       {
 #ifdef APR_HAS_THREADS

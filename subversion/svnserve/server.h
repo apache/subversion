@@ -49,6 +49,7 @@ typedef struct server_baton_t {
   const char *realm;       /* Authentication realm */
   const char *repos_url;   /* URL to base of repository */
   svn_stringbuf_t *fs_path;/* Decoded base in-repos path (w/ leading slash) */
+  apr_hash_t *fs_config;   /* Additional FS configuration parameters */
   const char *user;        /* Authenticated username of the user */
   enum username_case_type username_case; /* Case-normalize the username? */
   const char *authz_user;  /* Username for authz ('user' + 'username_case') */
@@ -109,6 +110,12 @@ typedef struct serve_params_t {
   /* Username case normalization style. */
   enum username_case_type username_case;
 
+  /* Enable text delta caching for all FSFS repositories. */
+  svn_boolean_t cache_txdeltas;
+
+  /* Enable full-text caching for all FSFS repositories. */
+  svn_boolean_t cache_fulltexts;
+  
   /* Size of the in-memory cache (used by FSFS only). */
   apr_uint64_t memory_cache_size;
 
