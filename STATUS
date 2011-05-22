@@ -15,6 +15,18 @@ Status of 1.6.17:
 Candidate changes:
 ==================
 
+ * r1125983
+   Fix issue #3895, "repos layer does not verify mergeinfo syntax".
+   Justification:
+     Clients can virtually break some client operations (e.g. update,
+     merge, and diff, for affected revisions) by committing syntactically
+     invalid mergeinfo properties directly over the RA API.
+   Notes:
+     See also issue #3896, "mergeinfo syntax errors should be treated
+     gracefully".
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
