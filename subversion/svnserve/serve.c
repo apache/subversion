@@ -2998,7 +2998,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
                              "No repository found in '%s'", url);
 
   /* Open the repository and fill in b with the resulting information. */
-  SVN_ERR(svn_repos_open2(&b->repos, repos_root, NULL, pool));
+  SVN_ERR(svn_repos_open2(&b->repos, repos_root, b->fs_config, pool));
   SVN_ERR(svn_repos_remember_client_capabilities(b->repos, capabilities));
   b->fs = svn_repos_fs(b->repos);
   fs_path = full_path + strlen(repos_root);
@@ -3096,6 +3096,13 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.pool = pool;
   b.use_sasl = FALSE;
 
+  /* construct FS configuration parameters */
+  b.fs_config = apr_hash_make(pool);
+  apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS, 
+               APR_HASH_KEY_STRING, params->cache_txdeltas ? "1" : "0");
+  apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS, 
+               APR_HASH_KEY_STRING, params->cache_fulltexts ? "1" : "0");
+  
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */
   if (params->compression_level > 0)
