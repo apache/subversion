@@ -549,14 +549,14 @@ verify_mergeinfo(const svn_string_t *value,
   /* Mergeinfo is UTF-8 encoded so the number of bytes returned by strlen()
    * should match VALUE->LEN. Prevents trailing garbage in the property. */
   if (strlen(value->data) != value->len)
-    return svn_error_createf(err, err->apr_err,
+    return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
                              _("Commit rejected because mergeinfo on '%s' "
                                "contains unexpected string terminator"),
                              path);
 
   err = svn_mergeinfo_parse(&mergeinfo, value->data, scratch_pool);
   if (err)
-    return svn_error_createf(err, err->apr_err,
+    return svn_error_createf(err->apr_err, err,
                              _("Commit rejected because mergeinfo on '%s' "
                                "is syntactically invalid"),
                              path);
