@@ -36,6 +36,7 @@
 #include "svn_repos.h"
 #include "svn_checksum.h"
 #include "svn_props.h"
+#include "svn_mergeinfo.h"
 #include "repos.h"
 #include "svn_private_config.h"
 #include "private/svn_fspath.h"
@@ -530,6 +531,27 @@ open_file(const char *path,
 }
 
 
+/* Verify the mergeinfo property value VALUE and return an error if it
+ * is invalid. Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+verify_mergeinfo(const svn_string_t *value, apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  svn_mergeinfo_t mergeinfo;
+
+  /* Mergeinfo is UTF-8 encoded so the number of bytes returned by strlen()
+   * should match VALUE->LEN. Prevents trailing garbage in the property. */
+  if (strlen(value->data) != value->len)
+    return svn_error_quick_wrap(err, _("Commit rejected because mergeinfo "
+                                "contains unexpected string terminator"));
+
+  err = svn_mergeinfo_parse(&mergeinfo, value->data, scratch_pool);
+  if (err)
+    return svn_error_quick_wrap(err, _("Commit rejected because of mergeinfo "
+                                       "syntax error"));
+  return SVN_NO_ERROR;
+}
+
 
 static svn_error_t *
 change_file_prop(void *file_baton,
@@ -543,6 +565,9 @@ change_file_prop(void *file_baton,
   /* Check for write authorization. */
   SVN_ERR(check_authz(eb, fb->path, eb->txn_root,
                       svn_authz_write, pool));
+
+  if (value && strcmp(name, SVN_PROP_MERGEINFO) == 0)
+    SVN_ERR(verify_mergeinfo(value, pool));
 
   return svn_repos_fs_change_node_prop(eb->txn_root, fb->path,
                                        name, value, pool);
@@ -601,6 +626,9 @@ change_dir_prop(void *dir_baton,
       if (db->base_rev < created_rev)
         return out_of_date(db->path, svn_node_dir);
     }
+
+  if (value && strcmp(name, SVN_PROP_MERGEINFO) == 0)
+    SVN_ERR(verify_mergeinfo(value, pool));
 
   return svn_repos_fs_change_node_prop(eb->txn_root, db->path,
                                        name, value, pool);
