@@ -108,7 +108,15 @@ open_repos(svn_repos_t **repos,
            const char *path,
            apr_pool_t *pool)
 {
-  SVN_ERR(svn_repos_open2(repos, path, NULL, pool));
+  /* construct FS configuration parameters: enable all available caches */
+  apr_hash_t *fs_config = apr_hash_make(pool);
+  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS, 
+               APR_HASH_KEY_STRING, "1");
+  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS, 
+               APR_HASH_KEY_STRING, "1");
+
+  /* now, open the requested repository */
+  SVN_ERR(svn_repos_open2(repos, path, fs_config, pool));
   svn_fs_set_warning_func(svn_repos_fs(*repos), warning_func, NULL);
   return SVN_NO_ERROR;
 }
@@ -1946,8 +1954,6 @@ main(int argc, const char *argv[])
     svn_cache_config_t settings = *svn_get_cache_config();
 
     settings.cache_size = opt_state.memory_cache_size;
-    settings.cache_fulltexts = subcommand->cmd_func == subcommand_load;
-    settings.cache_txdeltas = TRUE;
     settings.single_threaded = TRUE;
 
     svn_set_cache_config(&settings);
