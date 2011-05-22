@@ -24,7 +24,6 @@ Candidate changes:
    Notes:
      See also issue #3896, "mergeinfo syntax errors should be treated
      gracefully".
-   Notes:
      r1125998 adds %s to the error messages.
      r1126007 fixes bugs in the svn_error_createf() invocations.
    Votes:
