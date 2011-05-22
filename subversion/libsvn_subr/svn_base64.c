@@ -91,7 +91,7 @@ encode_bytes(svn_stringbuf_t *str, const void *data, apr_size_t len,
       *linelen += 4;
       if (break_lines && *linelen == BASE64_LINELEN)
         {
-          svn_stringbuf_appendcstr(str, "\n");
+          svn_stringbuf_appendbyte(str, '\n');
           *linelen = 0;
         }
     }
@@ -122,7 +122,7 @@ encode_partial_group(svn_stringbuf_t *str, const unsigned char *extra,
       linelen += 4;
     }
   if (break_lines && linelen > 0)
-    svn_stringbuf_appendcstr(str, "\n");
+    svn_stringbuf_appendbyte(str, '\n');
 }
 
 
