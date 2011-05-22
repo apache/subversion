@@ -25,7 +25,7 @@ Candidate changes:
      See also issue #3896, "mergeinfo syntax errors should be treated
      gracefully".
    Votes:
-     +1: stsp
+     +1: stsp, danielsh
 
 Veto-blocked changes:
 =====================
