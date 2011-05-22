@@ -48,7 +48,7 @@ struct encode_baton {
   unsigned char buf[3];         /* Bytes waiting to be encoded */
   int buflen;                   /* Number of bytes waiting */
   int linelen;                  /* Bytes output so far on this line */
-  apr_pool_t *pool;
+  apr_pool_t *scratch_pool;
 };
 
 
@@ -131,8 +131,7 @@ static svn_error_t *
 encode_data(void *baton, const char *data, apr_size_t *len)
 {
   struct encode_baton *eb = baton;
-  apr_pool_t *subpool = svn_pool_create(eb->pool);
-  svn_stringbuf_t *encoded = svn_stringbuf_create("", subpool);
+  svn_stringbuf_t *encoded = svn_stringbuf_create("", eb->scratch_pool);
   apr_size_t enclen;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -141,7 +140,7 @@ encode_data(void *baton, const char *data, apr_size_t *len)
   enclen = encoded->len;
   if (enclen != 0)
     err = svn_stream_write(eb->output, encoded->data, &enclen);
-  svn_pool_destroy(subpool);
+  svn_pool_clear(eb->scratch_pool);
   return err;
 }
 
@@ -151,7 +150,7 @@ static svn_error_t *
 finish_encoding_data(void *baton)
 {
   struct encode_baton *eb = baton;
-  svn_stringbuf_t *encoded = svn_stringbuf_create("", eb->pool);
+  svn_stringbuf_t *encoded = svn_stringbuf_create("", eb->scratch_pool);
   apr_size_t enclen;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -164,7 +163,7 @@ finish_encoding_data(void *baton)
   /* Pass on the close request and clean up the baton.  */
   if (err == SVN_NO_ERROR)
     err = svn_stream_close(eb->output);
-  svn_pool_destroy(eb->pool);
+  svn_pool_destroy(eb->scratch_pool);
   return err;
 }
 
@@ -172,14 +171,13 @@ finish_encoding_data(void *baton)
 svn_stream_t *
 svn_base64_encode(svn_stream_t *output, apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create(pool);
-  struct encode_baton *eb = apr_palloc(subpool, sizeof(*eb));
+  struct encode_baton *eb = apr_palloc(pool, sizeof(*eb));
   svn_stream_t *stream;
 
   eb->output = output;
   eb->buflen = 0;
   eb->linelen = 0;
-  eb->pool = subpool;
+  eb->scratch_pool = svn_pool_create(pool);
   stream = svn_stream_create(eb, pool);
   svn_stream_set_write(stream, encode_data);
   svn_stream_set_close(stream, finish_encoding_data);
@@ -221,7 +219,7 @@ struct decode_baton {
   unsigned char buf[4];         /* Bytes waiting to be decoded */
   int buflen;                   /* Number of bytes waiting */
   svn_boolean_t done;           /* True if we already saw an '=' */
-  apr_pool_t *pool;
+  apr_pool_t *scratch_pool;
 };
 
 
@@ -311,21 +309,19 @@ static svn_error_t *
 decode_data(void *baton, const char *data, apr_size_t *len)
 {
   struct decode_baton *db = baton;
-  apr_pool_t *subpool;
   svn_stringbuf_t *decoded;
   apr_size_t declen;
   svn_error_t *err = SVN_NO_ERROR;
 
   /* Decode this block of data.  */
-  subpool = svn_pool_create(db->pool);
-  decoded = svn_stringbuf_create("", subpool);
+  decoded = svn_stringbuf_create("", db->scratch_pool);
   decode_bytes(decoded, data, *len, db->buf, &db->buflen, &db->done);
 
   /* Write the output, clean up, go home.  */
   declen = decoded->len;
   if (declen != 0)
     err = svn_stream_write(db->output, decoded->data, &declen);
-  svn_pool_destroy(subpool);
+  svn_pool_clear(db->scratch_pool);
   return err;
 }
 
@@ -339,7 +335,7 @@ finish_decoding_data(void *baton)
 
   /* Pass on the close request and clean up the baton.  */
   err = svn_stream_close(db->output);
-  svn_pool_destroy(db->pool);
+  svn_pool_destroy(db->scratch_pool);
   return err;
 }
 
@@ -347,14 +343,13 @@ finish_decoding_data(void *baton)
 svn_stream_t *
 svn_base64_decode(svn_stream_t *output, apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create(pool);
-  struct decode_baton *db = apr_palloc(subpool, sizeof(*db));
+  struct decode_baton *db = apr_palloc(pool, sizeof(*db));
   svn_stream_t *stream;
 
   db->output = output;
   db->buflen = 0;
   db->done = FALSE;
-  db->pool = subpool;
+  db->scratch_pool = svn_pool_create(pool);
   stream = svn_stream_create(db, pool);
   svn_stream_set_write(stream, decode_data);
   svn_stream_set_close(stream, finish_decoding_data);
