@@ -15,7 +15,7 @@ Status of 1.6.17:
 Candidate changes:
 ==================
 
- * r1125983, r1125998
+ * r1125983, r1125998, r1126007
    Fix issue #3895, "repos layer does not verify mergeinfo syntax".
    Justification:
      Clients can virtually break some client operations (e.g. update,
@@ -24,8 +24,11 @@ Candidate changes:
    Notes:
      See also issue #3896, "mergeinfo syntax errors should be treated
      gracefully".
+   Notes:
+     r1125998 adds %s to the error messages.
+     r1126007 fixes bugs in the svn_error_createf() invocations.
    Votes:
-     +1: stsp (r1125983 only), danielsh
+     +1: stsp, danielsh
 
 Veto-blocked changes:
 =====================
