@@ -1706,6 +1706,8 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             void *cancel_baton,
                             apr_pool_t *scratch_pool)
 {
+  SVN_ERR_ASSERT(receiver_func);
+
   switch (depth)
     {
     case svn_depth_empty:
@@ -1720,7 +1722,7 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
           SVN_ERR(svn_wc__db_read_props(&props, wc_ctx->db, local_abspath,
                                         scratch_pool, scratch_pool));
 
-        if (receiver_func && props && apr_hash_count(props) > 0)
+        if (props && apr_hash_count(props) > 0)
           SVN_ERR((*receiver_func)(receiver_baton, local_abspath, props,
                                    scratch_pool));
       }
