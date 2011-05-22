@@ -52,19 +52,6 @@ static svn_cache_config_t cache_settings =
                   * has little impact on performance and a more modest
                   * value (< 100) may be more suitable.
                   */
-    TRUE,        /* cache fulltexts.
-                  * Most SVN tools care about reconstructed file content.
-                  * Thus, this is a reasonable default.
-                  * SVN admin tools may set that to FALSE because fulltexts
-                  * won't be re-used rendering the cache less effective
-                  * by squeezing wanted data out.
-                  */
-    FALSE,       /* don't cache text deltas.
-                  * Once we reconstructed the fulltexts from the deltas,
-                  * these deltas are rarely re-used. Therefore, only tools
-                  * like svnadmin will activate this to speed up operations
-                  * dump and verify.
-                  */
 #ifdef APR_HAS_THREADS
     FALSE        /* assume multi-threaded operation.
                   * Because this simply activates proper synchronization
