@@ -532,23 +532,34 @@ open_file(const char *path,
 
 
 /* Verify the mergeinfo property value VALUE and return an error if it
- * is invalid. Use SCRATCH_POOL for temporary allocations. */
+ * is invalid. The PATH on which that property is set is used for error
+ * messages only.  Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-verify_mergeinfo(const svn_string_t *value, apr_pool_t *scratch_pool)
+verify_mergeinfo(const svn_string_t *value,
+                 const char *path,
+                 apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   svn_mergeinfo_t mergeinfo;
 
+  /* It's okay to delete svn:mergeinfo. */
+  if (value == NULL)
+    return SVN_NO_ERROR;
+
   /* Mergeinfo is UTF-8 encoded so the number of bytes returned by strlen()
    * should match VALUE->LEN. Prevents trailing garbage in the property. */
   if (strlen(value->data) != value->len)
-    return svn_error_quick_wrap(err, _("Commit rejected because mergeinfo "
-                                "contains unexpected string terminator"));
+    return svn_error_createf(err, err->apr_err,
+                             _("Commit rejected because mergeinfo on '%s' "
+                               "contains unexpected string terminator"),
+                             path);
 
   err = svn_mergeinfo_parse(&mergeinfo, value->data, scratch_pool);
   if (err)
-    return svn_error_quick_wrap(err, _("Commit rejected because of mergeinfo "
-                                       "syntax error"));
+    return svn_error_createf(err, err->apr_err,
+                             _("Commit rejected because mergeinfo on '%s' "
+                               "is syntactically invalid"),
+                             path);
   return SVN_NO_ERROR;
 }
 
@@ -567,7 +578,7 @@ change_file_prop(void *file_baton,
                       svn_authz_write, pool));
 
   if (value && strcmp(name, SVN_PROP_MERGEINFO) == 0)
-    SVN_ERR(verify_mergeinfo(value, pool));
+    SVN_ERR(verify_mergeinfo(value, fb->path, pool));
 
   return svn_repos_fs_change_node_prop(eb->txn_root, fb->path,
                                        name, value, pool);
@@ -628,7 +639,7 @@ change_dir_prop(void *dir_baton,
     }
 
   if (value && strcmp(name, SVN_PROP_MERGEINFO) == 0)
-    SVN_ERR(verify_mergeinfo(value, pool));
+    SVN_ERR(verify_mergeinfo(value, db->path, pool));
 
   return svn_repos_fs_change_node_prop(eb->txn_root, db->path,
                                        name, value, pool);
