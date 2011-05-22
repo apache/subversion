@@ -79,6 +79,17 @@ encode_bytes(svn_stringbuf_t *str, const void *data, apr_size_t len,
 {
   char group[4];
   const char *p = data, *end = p + len;
+  apr_size_t buflen;
+
+  /* Resize the stringbuf to make room for the (approximate) size of
+     output, to avoid repeated resizes later. */
+  buflen = len * 4 / 3 + 4;
+  if (break_lines)
+    {
+      /* Add an extra space for line breaks. */
+      buflen = buflen + buflen / BASE64_LINELEN;
+    }
+  svn_stringbuf_ensure(str, buflen);
 
   /* Keep encoding three-byte groups until we run out.  */
   while (*inbuflen + (end - p) >= 3)
