@@ -290,9 +290,8 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
     {
       const char *repos_root = svn__apr_hash_index_key(hi);
       svn_ra_session_t *ra_session = svn__apr_hash_index_val(hi);
-      const apr_array_header_t *relpaths_list = apr_hash_get(relpaths,
-                                                         repos_root,
-                                                         APR_HASH_KEY_STRING);
+      const apr_array_header_t *relpaths_list =
+        apr_hash_get(relpaths, repos_root, APR_HASH_KEY_STRING);
 
       SVN_ERR(single_repos_delete(ra_session, repos_root, relpaths_list,
                                   revprop_table, commit_callback,
