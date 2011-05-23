@@ -193,7 +193,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.17
     * fixed: update touches locked file with svn:keywords property (issue #3471)
     * fix svnsync handling of directory copyfrom (issue #3641)
     * fix 'log -g' excessive duplicate output (issue #3650)
-    * fix svnsync copyfrom hanlding bug with BDB (r1036429)
+    * fix svnsync copyfrom handling bug with BDB (r1036429)
     * server-side validation of svn:mergeinfo syntax during commit (issue #3895)
 
   Developer-visible changes:
