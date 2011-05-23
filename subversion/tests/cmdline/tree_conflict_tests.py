@@ -37,6 +37,7 @@ from svntest.actions import run_and_verify_update
 from svntest.actions import run_and_verify_status
 from svntest.actions import run_and_verify_info
 from svntest.actions import get_virginal_state
+import shutil
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -1092,6 +1093,284 @@ def at_directory_external(sbox):
   svntest.main.run_svn(None, "merge", '-c', merge_rev, '^/A/B', wc_dir)
   svntest.main.run_svn(None, "merge", '-c', merge_rev2, '^/A/B', wc_dir)
 
+#----------------------------------------------------------------------
+@Issue(3779)
+### This test currently passes on the current behaviour.
+### However in many cases it is unclear whether the current behaviour is
+### correct. Review is still required.
+def actual_only_node_behaviour(sbox):
+  "test behaviour with actual-only nodes"
+
+  sbox.build()
+  A_url = sbox.repo_url + '/A'
+  A_copy_url = sbox.repo_url + '/A_copy'
+  wc_dir = sbox.wc_dir
+  foo_path = sbox.ospath('A/foo', wc_dir)
+
+  # r2: copy ^/A -> ^/A_copy
+  sbox.simple_repo_copy('A', 'A_copy')
+
+  # r3: add a file foo on ^/A_copy branch
+  wc2_dir = sbox.add_wc_path('wc2')
+  foo2_path = sbox.ospath('foo', wc2_dir)
+  svntest.main.run_svn(None, "checkout", A_copy_url, wc2_dir)
+  svntest.main.file_write(foo2_path, "This is initially file foo.\n")
+  svntest.main.run_svn(None, "add", foo2_path)
+  svntest.main.run_svn(None, "commit", '-m', svntest.main.make_log_msg(),
+                       foo2_path)
+
+  # r4: make a change to foo
+  svntest.main.file_append(foo2_path, "This is a new line in file foo.\n")
+  svntest.main.run_svn(None, "commit", '-m', svntest.main.make_log_msg(),
+                       wc2_dir)
+
+  # cherry-pick r4 to ^/A -- the resulting tree conflict creates
+  # an actual-only node for 'A/foo'
+  sbox.simple_update()
+  svntest.main.run_svn(None, "merge", '-c', '4', A_copy_url,
+                       os.path.join(wc_dir, 'A'))
+
+  # Attempt running various commands on foo and verify expected behavior
+
+  # add
+  expected_stdout = None
+  expected_stderr = ".*foo.*not found.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "add", foo_path)
+
+  # blame (praise, annotate, ann)
+  expected_stdout = None
+  expected_stderr = ".*foo.*not found.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "blame", foo_path)
+
+  # cat
+  expected_stdout = None
+  expected_stderr = ".*foo.*not under version control.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "cat", foo_path)
+  # changelist (cl)
+  ### this does not error out -- needs review
+  expected_stdout = None
+  expected_stderr = []
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "changelist", "my_changelist", foo_path)
+
+  # checkout (co)
+  ### this does not error out -- needs review
+  expected_stdout = None
+  expected_stderr = []
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "checkout", A_copy_url, foo_path)
+  ### for now, ignore the fact that checkout succeeds and remove the nested
+  ### working copy so we can test more commands
+  shutil.rmtree(foo_path)
+
+  # cleanup
+  expected_stdout = None
+  expected_stderr = ".*foo.*is not a working copy directory"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "cleanup", foo_path)
+  # commit (ci)
+  expected_stdout = None
+  expected_stderr = ".*foo.*remains in conflict.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "commit", foo_path)
+  # copy (cp)
+  expected_stdout = None
+  expected_stderr = ".*foo.*does not exist.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "copy", foo_path, foo_path + ".copy")
+
+  # delete (del, remove, rm)
+  expected_stdout = None
+  expected_stderr = ".*foo.*is not under version control.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "delete", foo_path)
+
+  # diff (di)
+  expected_stdout = None
+  expected_stderr = ".*foo.*is not under version control.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "diff", foo_path)
+  # export
+  expected_stdout = None
+  expected_stderr = ".*foo.*was not found.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "export", foo_path, sbox.get_tempname())
+  # import
+  expected_stdout = None
+  expected_stderr = ".*foo.*does not exist.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "import", '-m', svntest.main.make_log_msg(),
+                     foo_path, sbox.repo_url + '/foo_imported')
+
+  # info
+  expected_info = {
+    'Tree conflict': 'local missing, incoming edit upon merge.*',
+    'Name': 'foo',
+    'Schedule': 'normal',
+    'Node Kind': 'none',
+    'Depth': 'empty', ### is this right?
+    'Copied From Rev': '0',
+    'Path': sbox.ospath('A/foo'),
+  }
+  run_and_verify_info([expected_info], foo_path)
+
+  # list (ls)
+  expected_stdout = None
+  expected_stderr = ".*foo.*was not found.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "list", foo_path)
+
+  # lock
+  expected_stdout = None
+  expected_stderr = ".*foo.*was not found.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "lock", foo_path)
+  # log
+  expected_stdout = None
+  expected_stderr = ".*foo.*was not found.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "log", foo_path)
+  # merge
+  # note: this is intentionally a no-op merge that does not record mergeinfo
+  expected_stdout = None
+  expected_stderr = ".*foo.*does not exist.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "merge", '--ignore-ancestry', '-c', '4',
+                     '^/trunk/alpha', foo_path)
+
+  # mergeinfo
+  expected_stdout = None
+  expected_stderr = ".*foo.*was not found.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "mergeinfo", A_copy_url + '/foo', foo_path)
+  # mkdir
+  ### this does not error out -- needs review
+  expected_stdout = None
+  expected_stderr = []
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "mkdir", foo_path)
+  ### for now, ignore the fact that mkdir succeeds, revert the entire
+  ### working copy, and repeat the merge so we can test more commands
+  svntest.main.run_svn(None, "revert", "-R", wc_dir)
+  os.rmdir(foo_path) # remove obstruction
+  svntest.main.run_svn(None, "merge", '-c', '4', A_copy_url,
+                       os.path.join(wc_dir, 'A'))
+
+  # move (mv, rename, ren)
+  expected_stdout = None
+  expected_stderr = ".*foo.*does not exist.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "move", foo_path, foo_path + ".moved")
+  # patch
+  expected_stdout = None
+  expected_stderr = ".*foo.*does not exist.*"
+  patch_path = sbox.get_tempname()
+  f = open(patch_path, 'w')
+  patch_data = [
+    "--- foo	(revision 2)\n"
+    "+++ foo	(working copy)\n"
+    "@@ -1 +1,2 @@\n"
+    " foo\n"
+    " +foo\n"
+  ]
+  for line in patch_data:
+    f.write(line)
+  f.close()
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "patch", patch_path, sbox.ospath("A/foo"))
+
+  # propdel (pdel, pd)
+  expected_stdout = None
+  expected_stderr = ".*foo.*was not found.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "propdel", "svn:eol-style", foo_path)
+
+  # propget (pget, pg)
+  expected_stdout = None
+  expected_stderr = ".*foo.*is not under version control.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "propget", "svn:eol-style", foo_path)
+
+  # proplist (plist, pl)
+  ### proplist does exit(0) -- is that expected?
+  expected_stdout = None
+  expected_stderr = ".*foo.*is not under version control.*"
+  svntest.actions.run_and_verify_svn2(None, expected_stdout, expected_stderr,
+                                      0, "proplist", foo_path)
+
+  # propset (pset, ps)
+  expected_stdout = None
+  expected_stderr = ".*foo.*was not found.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "propset", "svn:eol-style", "native", foo_path)
+
+  # relocate
+  expected_stdout = None
+  expected_stderr = ".*foo.*was not found.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "relocate", "^/A_copy/foo", foo_path)
+
+  # resolve
+  expected_stdout = "Resolved conflicted state of.*foo.*"
+  expected_stderr = []
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "resolve", "--accept", "working", foo_path)
+
+  # revert the entire working copy and repeat the merge so we can test
+  # more commands
+  svntest.main.run_svn(None, "revert", "-R", wc_dir)
+  svntest.main.run_svn(None, "merge", '-c', '4', A_copy_url,
+                       os.path.join(wc_dir, 'A'))
+
+  # revert
+  expected_stdout = "Reverted.*foo.*"
+  expected_stderr = []
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "revert", foo_path)
+
+  # revert the entire working copy and repeat the merge so we can test
+  # more commands
+  svntest.main.run_svn(None, "revert", "-R", wc_dir)
+  svntest.main.run_svn(None, "merge", '-c', '4', A_copy_url,
+                       os.path.join(wc_dir, 'A'))
+
+  # status (stat, st)
+  expected_status = wc.State(foo_path, {
+    '' : Item(status='! ', treeconflict='C'),
+  })
+  run_and_verify_status(foo_path, expected_status)
+
+  # switch (sw)
+  expected_stdout = None
+  expected_stderr = ".*foo.*was not found.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "switch", "^/A_copy/foo", foo_path)
+
+  # unlock
+  expected_stdout = None
+  expected_stderr = ".*foo.*was not found.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "unlock", foo_path)
+
+  # update (up)
+  ### update does not fail at all -- needs review
+  expected_stdout = [
+   "Updating '%s':\n" % sbox.ospath('A/foo'),
+   "At revision 4.\n",
+  ]
+  expected_stderr = []
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "update", foo_path)
+
+  # upgrade
+  expected_stdout = None
+  expected_stderr = ".*Cannot upgrade.*foo.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "upgrade", foo_path)
+
 #######################################################################
 # Run the tests
 
@@ -1120,6 +1399,7 @@ test_list = [ None,
               up_add_onto_add_revert,
               lock_update_only,
               at_directory_external,
+              actual_only_node_behaviour,
              ]
 
 if __name__ == '__main__':
