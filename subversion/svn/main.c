@@ -346,31 +346,7 @@ const apr_getopt_option_t svn_cl__options[] =
    * other option (whose description should probably mention its aliases).
   */
 
-  {"sd",            opt_set_depth, 1, NULL},
-  {"enc",           opt_encoding, 1, NULL},
-  {"soc",           opt_stop_on_copy, 0, NULL},
-  {"nac",           opt_no_auth_cache, 0, NULL},
-  {"dry",           opt_dry_run, 0, NULL},
-  {"ndd",           opt_no_diff_deleted, 0, NULL},
-  {"na",            opt_notice_ancestry, 0, NULL},
-  {"ia",            opt_ignore_ancestry, 0, NULL},
-  {"ie",            opt_ignore_externals, 0, NULL},
-  {"rd",            opt_reverse_diff, 0, NULL},
-  {"ro",            opt_record_only, 0, NULL},
-  {"cd",            opt_config_dir, 1, NULL},
   {"cl",            opt_changelist, 1, NULL},
-  {"kl",            opt_keep_local, 0, NULL},
-  {"sr",            opt_show_revs, 1, NULL},
-  {"ri",            opt_reintegrate, 0, NULL},
-  {"sca",           opt_show_copies_as_adds, 0, NULL},
-  {"ik",            opt_ignore_keywords, 0, NULL},
-  {"iw",            opt_ignore_whitespace, 0, NULL},
-  {"idiff",         opt_internal_diff, 0, NULL},
-  {"keep-locks",    opt_no_unlock, 0, NULL},
-  {"keep-cl",       opt_keep_changelists, 0, NULL},
-  {"ed",            opt_editor_cmd, 1, NULL},
-  {"vi-cmd",        opt_editor_cmd, 1, NULL},
-  {"emacs-cmd",     opt_editor_cmd, 1, NULL},
 
   {0,               0, 0, 0},
 };
