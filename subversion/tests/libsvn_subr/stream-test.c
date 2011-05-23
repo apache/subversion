@@ -25,6 +25,7 @@
 #include "svn_pools.h"
 #include "svn_io.h"
 #include "svn_subst.h"
+#include "svn_base64.h"
 #include <apr_general.h>
 
 #include "private/svn_io_private.h"
@@ -545,7 +546,41 @@ test_stream_compressed_empty_file(apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
-
+
+static svn_error_t *
+test_stream_base64(apr_pool_t *pool)
+{
+  svn_stream_t *stream;
+  svn_stringbuf_t *actual = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *expected = svn_stringbuf_create("", pool);
+  int i;
+  static const char *strings[] = {
+    "fairly boring test data... blah blah",
+    "A",
+    "abc",
+    "012345679",
+    NULL
+  };
+
+  stream = svn_stream_from_stringbuf(actual, pool);
+  stream = svn_base64_decode(stream, pool);
+  stream = svn_base64_encode(stream, pool);
+
+  for (i = 0; strings[i]; i++)
+    {
+      apr_size_t len = strlen(strings[i]);
+
+      svn_stringbuf_appendbytes(expected, strings[i], len);
+      SVN_ERR(svn_stream_write(stream, strings[i], &len));
+    }
+
+  SVN_ERR(svn_stream_close(stream));
+
+  SVN_TEST_STRING_ASSERT(actual->data, expected->data);
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -567,5 +602,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test setting a file readonly"),
     SVN_TEST_PASS2(test_stream_compressed_empty_file,
                    "test compressed streams with empty files"),
+    SVN_TEST_PASS2(test_stream_base64,
+                   "test base64 encoding/decoding streams"),
     SVN_TEST_NULL
   };
