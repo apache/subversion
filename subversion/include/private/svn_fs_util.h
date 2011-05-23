@@ -33,8 +33,6 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 
-#include "svn_private_config.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
