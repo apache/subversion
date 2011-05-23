@@ -1096,16 +1096,11 @@ svn_error_t *svn_ra_neon__change_rev_prop(svn_ra_session_t *session,
                                           apr_pool_t *pool)
 {
   svn_ra_neon__session_t *ras = session->priv;
-  svn_ra_neon__resource_t *baseline;
   svn_error_t *err;
   apr_hash_t *prop_changes = NULL;
   apr_array_header_t *prop_deletes = NULL;
   apr_hash_t *prop_old_values = NULL;
-  static const ne_propname wanted_props[] =
-    {
-      { "DAV:", "auto-version" },
-      { NULL }
-    };
+  const char *proppatch_target;
 
   if (old_value_p)
     {
@@ -1134,18 +1129,32 @@ svn_error_t *svn_ra_neon__change_rev_prop(svn_ra_session_t *session,
      mod_dav_svn just changes the baseline destructively.
   */
 
-  /* Get the baseline resource. */
-  SVN_ERR(svn_ra_neon__get_baseline_props(NULL, &baseline,
-                                          ras,
-                                          ras->url->data,
-                                          rev,
-                                          wanted_props, /* DAV:auto-version */
-                                          pool));
+  if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras))
+    {
+      proppatch_target = apr_psprintf(pool, "%s/%ld", ras->rev_stub, rev);
+    }
+  else
+    {
+      svn_ra_neon__resource_t *baseline;
+      static const ne_propname wanted_props[] =
+        {
+          { "DAV:", "auto-version" },
+          { NULL }
+        };
+      /* Get the baseline resource. */
+      SVN_ERR(svn_ra_neon__get_baseline_props(NULL, &baseline,
+                                              ras,
+                                              ras->url->data,
+                                              rev,
+                                              wanted_props, /* DAV:auto-version */
+                                              pool));
+      /* ### TODO: if we got back some value for the baseline's
+             'DAV:auto-version' property, interpret it.  We *don't* want
+             to attempt the PROPPATCH if the deltaV server is going to do
+             auto-versioning and create a new baseline! */
 
-  /* ### TODO: if we got back some value for the baseline's
-         'DAV:auto-version' property, interpret it.  We *don't* want
-         to attempt the PROPPATCH if the deltaV server is going to do
-         auto-versioning and create a new baseline! */
+      proppatch_target = baseline->url;
+    }
 
   if (old_value_p)
     {
@@ -1172,7 +1181,7 @@ svn_error_t *svn_ra_neon__change_rev_prop(svn_ra_session_t *session,
         }
     }
 
-  err = svn_ra_neon__do_proppatch(ras, baseline->url, prop_changes,
+  err = svn_ra_neon__do_proppatch(ras, proppatch_target, prop_changes,
                                   prop_deletes, prop_old_values, NULL, pool);
   if (err)
     return
