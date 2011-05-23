@@ -1587,6 +1587,7 @@ insert_actual_node(svn_sqlite__db_t *sdb,
 struct write_baton {
   db_base_node_t *base;
   db_working_node_t *work;
+  db_working_node_t *below_work;
 };
 
 
@@ -1733,6 +1734,8 @@ write_entry(struct write_baton **entry_node,
         working_node = MAYBE_ALLOC(working_node, result_pool);
         if (parent_node->base)
           base_node = MAYBE_ALLOC(base_node, result_pool);
+        if (parent_node->work)
+          below_working_node = MAYBE_ALLOC(below_working_node, result_pool);
         break;
 
       case svn_wc_schedule_replace:
@@ -1748,7 +1751,7 @@ write_entry(struct write_baton **entry_node,
         if (parent_node->base)
           base_node = MAYBE_ALLOC(base_node, result_pool);
         else
-          below_working_node = MAYBE_ALLOC(below_working_node, scratch_pool);
+          below_working_node = MAYBE_ALLOC(below_working_node, result_pool);
         break;
     }
 
@@ -2030,17 +2033,22 @@ write_entry(struct write_baton **entry_node,
 
   if (below_working_node)
     {
+      db_working_node_t *work
+        = parent_node->below_work ? parent_node->below_work : parent_node->work;
+
       below_working_node->wc_id = wc_id;
       below_working_node->local_relpath = local_relpath;
-      below_working_node->op_depth = parent_node->work->op_depth;
+      below_working_node->op_depth = work->op_depth;
       below_working_node->parent_relpath = parent_relpath;
       below_working_node->presence = svn_wc__db_status_normal;
-      below_working_node->kind = svn_node_file;
-      below_working_node->copyfrom_repos_id
-        = parent_node->work->copyfrom_repos_id;
-      below_working_node->copyfrom_repos_path
-        = svn_relpath_join(parent_node->work->copyfrom_repos_path, entry->name,
-                           scratch_pool);
+      below_working_node->kind = entry->kind;
+      below_working_node->copyfrom_repos_id = work->copyfrom_repos_id;
+      if (work->copyfrom_repos_path)
+        below_working_node->copyfrom_repos_path
+          = svn_relpath_join(work->copyfrom_repos_path, entry->name,
+                             result_pool);
+      else
+        below_working_node->copyfrom_repos_path = NULL;
       below_working_node->copyfrom_revnum
         = parent_node->work->copyfrom_revnum;
       below_working_node->moved_here = FALSE;
@@ -2053,8 +2061,12 @@ write_entry(struct write_baton **entry_node,
       below_working_node->checksum = NULL;
       if (text_base_info)
         {
-          below_working_node->checksum =
-             text_base_info->revert_base.sha1_checksum;
+          if (entry->schedule == svn_wc_schedule_delete)
+            below_working_node->checksum =
+              text_base_info->normal_base.sha1_checksum;
+          else
+            below_working_node->checksum =
+              text_base_info->revert_base.sha1_checksum;
         }
       below_working_node->translated_size = 0;
       below_working_node->changed_rev = SVN_INVALID_REVNUM;
@@ -2131,16 +2143,7 @@ write_entry(struct write_baton **entry_node,
             }
           else
             {
-              /* If the entry is part of a COPIED (not REPLACED) subtree,
-                 then the deletion is referring to the WORKING node, not
-                 the BASE node. */
-              if (!base_node
-                  || entry->copied
-                  || (this_dir->copied
-                      && this_dir->schedule == svn_wc_schedule_add))
-                working_node->presence = svn_wc__db_status_not_present;
-              else
-                working_node->presence = svn_wc__db_status_base_deleted;
+              working_node->presence = svn_wc__db_status_base_deleted;
             }
 
           /* ### should be svn_node_unknown, but let's store what we have. */
@@ -2170,7 +2173,13 @@ write_entry(struct write_baton **entry_node,
       working_node->changed_date = entry->cmt_date;
       working_node->changed_author = entry->cmt_author;
 
-      if (!entry->copied)
+      if (entry->schedule == svn_wc_schedule_delete
+          && parent_node->work
+          && parent_node->work->presence == svn_wc__db_status_base_deleted)
+        {
+          working_node->op_depth = parent_node->work->op_depth;
+        }
+      else if (!entry->copied)
         {
           working_node->op_depth
             = svn_wc__db_op_depth_for_upgrade(local_relpath);
@@ -2196,6 +2205,7 @@ write_entry(struct write_baton **entry_node,
       *entry_node = apr_palloc(result_pool, sizeof(**entry_node));
       (*entry_node)->base = base_node;
       (*entry_node)->work = working_node;
+      (*entry_node)->below_work = below_working_node;
     }
 
   return SVN_NO_ERROR;
