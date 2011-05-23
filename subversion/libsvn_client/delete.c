@@ -250,9 +250,7 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
               relpaths_list = apr_hash_get(relpaths, repos_root,
                                            APR_HASH_KEY_STRING);
 
-              APR_ARRAY_PUSH(relpaths_list, const char *) =
-                                    svn_path_uri_decode(repos_relpath, pool);
-
+              APR_ARRAY_PUSH(relpaths_list, const char *) = repos_relpath;
               break;
             }
         }
@@ -273,8 +271,7 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
           relpaths_list = apr_array_make(pool, 1, sizeof(const char *));
           apr_hash_set(relpaths, repos_root, APR_HASH_KEY_STRING,
                        relpaths_list);
-          APR_ARRAY_PUSH(relpaths_list, const char *) =
-                                    svn_path_uri_decode(repos_relpath, pool);
+          APR_ARRAY_PUSH(relpaths_list, const char *) = repos_relpath;
         }
 
       /* Now, test to see if the thing actually exists. */
