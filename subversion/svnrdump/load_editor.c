@@ -51,11 +51,19 @@
  */
 struct parse_baton
 {
+  /* Commit editor and baton used to transfer loaded revisions to
+     the target repository. */
   const svn_delta_editor_t *commit_editor;
   void *commit_edit_baton;
+
+  /* RA session(s) for committing to the target repository. */
   svn_ra_session_t *session;
   svn_ra_session_t *aux_session;
+
+  /* UUID found in the dumpstream, if any; NULL otherwise. */
   const char *uuid;
+
+  /* Root URL of the target repository. */
   const char *root_url;
 };
 
