@@ -1706,7 +1706,18 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             void *cancel_baton,
                             apr_pool_t *scratch_pool)
 {
+  svn_wc__proplist_receiver_t receiver = receiver_func;
+  void *baton = receiver_baton;
+  struct propname_filter_baton_t pfb = { receiver_func, receiver_baton,
+                                         propname };
+
   SVN_ERR_ASSERT(receiver_func);
+
+  if (propname)
+    {
+      baton = &pfb;
+      receiver = propname_filter_receiver;
+    }
 
   switch (depth)
     {
@@ -1723,26 +1734,13 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                                         scratch_pool, scratch_pool));
 
         if (props && apr_hash_count(props) > 0)
-          SVN_ERR((*receiver_func)(receiver_baton, local_abspath, props,
-                                   scratch_pool));
+          SVN_ERR(receiver(baton, local_abspath, props, scratch_pool));
       }
       break;
     case svn_depth_files:
     case svn_depth_immediates:
     case svn_depth_infinity:
       {
-        svn_wc__proplist_receiver_t receiver = receiver_func;
-        void *baton = receiver_baton;
-
-        struct propname_filter_baton_t pfb = { receiver_func, receiver_baton,
-                                               propname };
-
-        if (propname)
-          {
-            baton = &pfb;
-            receiver = propname_filter_receiver;
-          }
-
         SVN_ERR(svn_wc__db_read_props_streamily(wc_ctx->db, local_abspath,
                                                 depth, base_props, pristine,
                                                 receiver, baton,
