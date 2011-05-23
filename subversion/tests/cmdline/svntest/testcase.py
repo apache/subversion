@@ -84,7 +84,7 @@ class TestCase:
 
     DOC is ...
 
-    WIP is ...
+    WIP is a string describing the reason for the work-in-progress
     """
     assert hasattr(cond_func, '__call__')
 
@@ -279,12 +279,15 @@ def XFail_deco(cond_func = lambda: True):
   return _second
 
 
-def Wimp_deco(func):
-  if isinstance(func, TestCase):
-    return _Wimp(func, issues=func.issues)
-  else:
-    return _Wimp(func)
+def Wimp_deco(wip, cond_func = lambda: True):
+  def _second(func):
+    if isinstance(func, TestCase):
+      return _Wimp(wip, func, cond_func, issues=func.issues)
+    else:
+      return _Wimp(wip, func, cond_func)
 
+  return _second
+  
 
 def Skip_deco(cond_func = lambda: True):
   def _second(func):
