@@ -46,8 +46,8 @@ static const char base64tab[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 struct encode_baton {
   svn_stream_t *output;
   unsigned char buf[3];         /* Bytes waiting to be encoded */
-  int buflen;                   /* Number of bytes waiting */
-  int linelen;                  /* Bytes output so far on this line */
+  size_t buflen;                /* Number of bytes waiting */
+  size_t linelen;               /* Bytes output so far on this line */
   apr_pool_t *scratch_pool;
 };
 
@@ -74,7 +74,7 @@ encode_group(const unsigned char *in, char *out)
    STR.  Include newlines every so often if BREAK_LINES is true. */
 static void
 encode_bytes(svn_stringbuf_t *str, const void *data, apr_size_t len,
-             unsigned char *inbuf, int *inbuflen, int *linelen,
+             unsigned char *inbuf, size_t *inbuflen, size_t *linelen,
              svn_boolean_t break_lines)
 {
   char group[4];
@@ -118,7 +118,7 @@ encode_bytes(svn_stringbuf_t *str, const void *data, apr_size_t len,
    LEN must be in the range 0..2.  */
 static void
 encode_partial_group(svn_stringbuf_t *str, const unsigned char *extra,
-                     int len, int linelen, svn_boolean_t break_lines)
+                     size_t len, size_t linelen, svn_boolean_t break_lines)
 {
   unsigned char ingroup[3];
   char outgroup[4];
@@ -204,7 +204,8 @@ svn_base64_encode_string2(const svn_string_t *str,
   svn_stringbuf_t *encoded = svn_stringbuf_create("", pool);
   svn_string_t *retval = apr_pcalloc(pool, sizeof(*retval));
   unsigned char ingroup[3];
-  int ingrouplen = 0, linelen = 0;
+  size_t ingrouplen = 0;
+  size_t linelen = 0;
 
   encode_bytes(encoded, str->data, str->len, ingroup, &ingrouplen, &linelen,
                break_lines);
@@ -396,7 +397,8 @@ base64_from_checksum(const svn_checksum_t *checksum, apr_pool_t *pool)
 {
   svn_stringbuf_t *checksum_str;
   unsigned char ingroup[3];
-  int ingrouplen = 0, linelen = 0;
+  size_t ingrouplen = 0;
+  size_t linelen = 0;
   checksum_str = svn_stringbuf_create("", pool);
 
   encode_bytes(checksum_str, checksum->digest,
