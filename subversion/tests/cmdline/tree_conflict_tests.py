@@ -1239,7 +1239,7 @@ def actual_only_node_behaviour(sbox):
   expected_stderr = ".*foo.*does not exist.*"
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "merge", '--ignore-ancestry', '-c', '4',
-                     '^/trunk/alpha', foo_path)
+                     A_copy_url + '/mu', foo_path)
 
   # mergeinfo
   expected_stdout = None
@@ -1311,7 +1311,7 @@ def actual_only_node_behaviour(sbox):
   expected_stdout = None
   expected_stderr = ".*foo.*was not found.*"
   run_and_verify_svn(None, expected_stdout, expected_stderr,
-                     "relocate", "^/A_copy/foo", foo_path)
+                     "relocate", A_copy_url + "/foo", foo_path)
 
   # resolve
   expected_stdout = "Resolved conflicted state of.*foo.*"
@@ -1347,7 +1347,7 @@ def actual_only_node_behaviour(sbox):
   expected_stdout = None
   expected_stderr = ".*foo.*was not found.*"
   run_and_verify_svn(None, expected_stdout, expected_stderr,
-                     "switch", "^/A_copy/foo", foo_path)
+                     "switch", A_copy_url + "/foo", foo_path)
 
   # unlock
   expected_stdout = None
