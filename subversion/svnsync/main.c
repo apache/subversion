@@ -906,14 +906,17 @@ open_source_session(svn_ra_session_t **from_session,
                     void *baton,
                     apr_pool_t *pool)
 {
+  apr_hash_t *props;
   svn_string_t *from_url_str, *from_uuid_str;
 
-  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
-                          &from_url_str, pool));
-  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_UUID,
-                          &from_uuid_str, pool));
-  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_LAST_MERGED_REV,
-                          last_merged_rev, pool));
+  SVN_ERR(svn_ra_rev_proplist(to_session, 0, &props, pool));
+
+  from_url_str = apr_hash_get(props, SVNSYNC_PROP_FROM_URL,
+                              APR_HASH_KEY_STRING);
+  from_uuid_str = apr_hash_get(props, SVNSYNC_PROP_FROM_UUID,
+                               APR_HASH_KEY_STRING);
+  *last_merged_rev = apr_hash_get(props, SVNSYNC_PROP_LAST_MERGED_REV,
+                                  APR_HASH_KEY_STRING);
 
   if (! from_url_str || ! from_uuid_str || ! *last_merged_rev)
     return svn_error_create
