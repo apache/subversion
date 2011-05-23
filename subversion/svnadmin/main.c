@@ -41,7 +41,6 @@
 #include "svn_time.h"
 #include "svn_user.h"
 
-#include "private/svn_cmdline_private.h"
 #include "private/svn_opt_private.h"
 
 #include "svn_private_config.h"
@@ -177,7 +176,6 @@ enum svnadmin__cmdline_options_t
     svnadmin__bdb_txn_nosync,
     svnadmin__bdb_log_keep,
     svnadmin__config_dir,
-    svnadmin__config_option,
     svnadmin__bypass_hooks,
     svnadmin__bypass_prop_validation,
     svnadmin__use_pre_commit_hook,
@@ -245,14 +243,6 @@ static const apr_getopt_option_t options_table[] =
 
     {"config-dir",    svnadmin__config_dir, 1,
      N_("read user configuration files from directory ARG")},
-    {"config-option",  svnadmin__config_option, 1,
-     N_("set user configuration option in the format:\n"
-        "                             "
-        "    FILE:SECTION:OPTION=[VALUE]\n"
-        "                             "
-        "For example:\n"
-        "                             "
-        "    servers:global:http-library=serf")},
 
     {"clean-logs",    svnadmin__clean_logs, 0,
      N_("remove redundant Berkeley DB log files\n"
@@ -314,8 +304,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    ("usage: svnadmin create REPOS_PATH\n\n"
     "Create a new, empty repository at REPOS_PATH.\n"),
    {svnadmin__bdb_txn_nosync, svnadmin__bdb_log_keep,
-    svnadmin__config_dir, svnadmin__config_option,
-    svnadmin__fs_type, svnadmin__pre_1_4_compatible,
+    svnadmin__config_dir, svnadmin__fs_type, svnadmin__pre_1_4_compatible,
     svnadmin__pre_1_5_compatible, svnadmin__pre_1_6_compatible,
     svnadmin__pre_1_7_compatible} },
 
@@ -491,7 +480,6 @@ struct svnadmin_opt_state
   const char *parent_dir;
 
   const char *config_dir;    /* Overriding Configuration Directory */
-  apr_array_header_t *config_options; /* Overriding specific options */
 };
 
 
@@ -585,7 +573,6 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
-  apr_hash_t *config;
   apr_hash_t *fs_config = apr_hash_make(pool);
 
   /* Expect no more arguments. */
@@ -624,12 +611,8 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                  APR_HASH_KEY_STRING,
                  "1");
 
-  SVN_ERR(svn_config_get_config(&config, opt_state->config_dir, pool));
-  SVN_ERR(svn_cmdline__apply_config_options(config, opt_state->config_options,
-                                            "svnadmin: ", "--config-option"));
   SVN_ERR(svn_repos_create(&repos, opt_state->repository_path,
-                           NULL, NULL,
-                           config, fs_config, pool));
+                           NULL, NULL, NULL, fs_config, pool));
   svn_fs_set_warning_func(svn_repos_fs(repos), warning_func, NULL);
   return SVN_NO_ERROR;
 }
@@ -1660,8 +1643,6 @@ main(int argc, const char *argv[])
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
   opt_state.memory_cache_size = svn_get_cache_config()->cache_size;
-  opt_state.config_options 
-            = apr_array_make(pool, 0, sizeof(svn_cmdline__config_argument_t*));
 
   /* Parse options. */
   err = svn_cmdline__getopt_init(&os, argc, argv, pool);
@@ -1798,14 +1779,6 @@ main(int argc, const char *argv[])
           return svn_cmdline_handle_exit_error(err, pool, "svnadmin: ");
         opt_state.config_dir =
             apr_pstrdup(pool, svn_dirent_canonicalize(utf8_opt_arg, pool));
-        break;
-      case svnadmin__config_option:
-        err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
-        if (!err)
-          err = svn_cmdline__parse_config_option(opt_state.config_options,
-                                                 utf8_opt_arg, pool);
-        if (err)
-          return svn_cmdline_handle_exit_error(err, pool, "svnadmin: ");
         break;
       case svnadmin__wait:
         opt_state.wait = TRUE;
