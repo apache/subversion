@@ -957,12 +957,8 @@ svn_error_t *svn_ra_neon__get_baseline_props(svn_string_t *bc_relative,
   else
     {
       /* Fetch a specific revision */
-
-      char label[20];
-
       /* ### send Label hdr, get DAV:baseline-collection [from the baseline] */
-
-      apr_snprintf(label, sizeof(label), "%ld", revision);
+      const char *label = apr_ltoa(pool, revision);
 
       /* ### do we want to optimize the props we fetch, based on what the
          ### user asked for? i.e. omit version-name if latest_rev is NULL */
