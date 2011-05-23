@@ -882,21 +882,24 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       /* Close the stream to calculate HB->actual_source_md5_checksum. */
       svn_error_t *err2 = svn_stream_close(hb->source_checksum_stream);
 
-      SVN_ERR_ASSERT(hb->expected_source_checksum->kind ==
-                    hb->actual_source_checksum->kind);
-
-      if (!err2 && !svn_checksum_match(hb->expected_source_checksum,
-                                       hb->actual_source_checksum))
+      if (!err2)
         {
-          err = svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, err,
-                    _("Checksum mismatch while updating '%s':\n"
-                      "   expected:  %s\n"
-                      "     actual:  %s\n"),
-                    svn_dirent_local_style(fb->local_abspath, hb->pool),
-                    svn_checksum_to_cstring(hb->expected_source_checksum,
-                                            hb->pool),
-                    svn_checksum_to_cstring(hb->actual_source_checksum,
-                                            hb->pool));
+          SVN_ERR_ASSERT(hb->expected_source_checksum->kind ==
+                        hb->actual_source_checksum->kind);
+
+          if (!svn_checksum_match(hb->expected_source_checksum,
+                                  hb->actual_source_checksum))
+            {
+              err = svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, err,
+                        _("Checksum mismatch while updating '%s':\n"
+                          "   expected:  %s\n"
+                          "     actual:  %s\n"),
+                        svn_dirent_local_style(fb->local_abspath, hb->pool),
+                        svn_checksum_to_cstring(hb->expected_source_checksum,
+                                                hb->pool),
+                        svn_checksum_to_cstring(hb->actual_source_checksum,
+                                                hb->pool));
+            }
         }
 
       err = svn_error_compose_create(err, err2);
