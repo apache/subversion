@@ -186,9 +186,6 @@ single_repos_delete(svn_ra_session_t *ra_session,
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            log_msg, ctx, pool));
 
-  /* Reparent the RA_session to the repos_root. */
-  SVN_ERR(svn_ra_reparent(ra_session, repos_root, pool));
-
   /* Fetch RA commit editor */
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
@@ -264,6 +261,7 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
                                                        NULL, NULL, FALSE,
                                                        TRUE, ctx, pool));
           SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
+          SVN_ERR(svn_ra_reparent(ra_session, repos_root, pool));
 
           apr_hash_set(sessions, repos_root, APR_HASH_KEY_STRING, ra_session);
           repos_relpath = svn_uri_is_child(repos_root, uri, pool);
@@ -275,9 +273,8 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
         }
 
       /* Now, test to see if the thing actually exists. */
-      SVN_ERR(svn_ra_reparent(ra_session, uri, pool));
-      SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
-                                pool));
+      SVN_ERR(svn_ra_check_path(ra_session, repos_relpath, SVN_INVALID_REVNUM,
+                                &kind, pool));
       if (kind == svn_node_none)
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                                  "URL '%s' does not exist", uri);
