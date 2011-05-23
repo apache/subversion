@@ -73,6 +73,9 @@
 
 /* New pristine location */
 #define PRISTINE_STORAGE_RELPATH "pristine"
+#define PRISTINE_STORAGE_EXT ".svn-base"
+/* Number of characters in a pristine file basename, in WC format <= 28. */
+#define PRISTINE_BASENAME_OLD_LEN 40
 #define SDB_FILE  "wc.db"
 
 
@@ -1213,7 +1216,9 @@ bump_to_28(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
-/* If FINFO indicates that PATH names a file, rename it to '<PATH>.svn-base'.
+/* If FINFO indicates that ABSPATH names a file, rename it to
+ * '<ABSPATH>.svn-base'.
+ *
  * Ignore any file whose name is not the expected length, in order to make
  * life easier for any developer who runs this code twice or has some
  * non-standard files in the pristine directory.
@@ -1221,17 +1226,18 @@ bump_to_28(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
  * A callback for bump_to_29(), implementing #svn_io_walk_func_t. */
 static svn_error_t *
 rename_pristine_file(void *baton,
-                     const char *path,
+                     const char *abspath,
                      const apr_finfo_t *finfo,
                      apr_pool_t *pool)
 {
-  const char *new_path;
-
-  /* The old pristine file name was 40 hex digits. */
-  if (finfo->filetype == APR_REG && strlen(path) == 40)
+  if (finfo->filetype == APR_REG
+      && (strlen(svn_dirent_basename(abspath, pool))
+          == PRISTINE_BASENAME_OLD_LEN))
     {
-      new_path = apr_pstrcat(pool, path, ".svn-base", (char *)NULL);
-      SVN_ERR(svn_io_file_rename(path, new_path, pool));
+      const char *new_abspath
+        = apr_pstrcat(pool, abspath, PRISTINE_STORAGE_EXT, (char *)NULL);
+
+      SVN_ERR(svn_io_file_rename(abspath, new_abspath, pool));
     }
   return SVN_NO_ERROR;
 }
@@ -1240,17 +1246,17 @@ static svn_error_t *
 bump_to_29(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   const char *wcroot_abspath = ((struct bump_baton *)baton)->wcroot_abspath;
-  const char *pristine_dir;
+  const char *pristine_dir_abspath;
 
   /* ### Before enabling this code we should be able to upgrade existing
      ### file externals to their new location */
   SVN_ERR_MALFUNCTION();
 
   /* Rename all pristine files, adding a ".svn-base" suffix. */
-  pristine_dir = svn_dirent_join_many(scratch_pool, wcroot_abspath,
-                                      svn_wc_get_adm_dir(scratch_pool),
-                                      PRISTINE_STORAGE_RELPATH, NULL);
-  SVN_ERR(svn_io_dir_walk2(pristine_dir, APR_FINFO_MIN,
+  pristine_dir_abspath = svn_dirent_join_many(scratch_pool, wcroot_abspath,
+                                              svn_wc_get_adm_dir(scratch_pool),
+                                              PRISTINE_STORAGE_RELPATH, NULL);
+  SVN_ERR(svn_io_dir_walk2(pristine_dir_abspath, APR_FINFO_MIN,
                            rename_pristine_file, NULL, scratch_pool));
 
   /* Externals */
