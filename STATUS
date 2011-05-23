@@ -101,7 +101,7 @@ Veto-blocked changes:
          Problem #3: I tried to create a backport branch to address the
          conflicts and makes use of svn_path_canonicalize instead of
          svn_uri_canonicalize.  Unfortunately I cannot replicate the error
-         described in the log message for r878590 - see
+         described in the log message for r916286 - see
          http://svn.haxx.se/dev/archive-2011-05/0545.shtml)
 
  * r933194
