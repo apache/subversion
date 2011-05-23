@@ -1633,6 +1633,7 @@ info_cmd(apr_getopt_t *os, void *b, apr_pool_t * pool)
   apr_array_header_t *targets;
   subcommand_baton_t *baton;
   const char *to_url;
+  apr_hash_t *props;
   svn_string_t *from_url, *from_uuid, *last_merged_rev;
 
   SVN_ERR(svn_opt__args_to_target_array(&targets, os,
@@ -1654,19 +1655,20 @@ info_cmd(apr_getopt_t *os, void *b, apr_pool_t * pool)
   baton = make_subcommand_baton(opt_baton, to_url, NULL, 0, 0, pool);
   SVN_ERR(open_target_session(&to_session, baton, pool));
 
-  /* Verify that the repos has been initialized for synchronization. */
-  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
-                          &from_url, pool));
+  SVN_ERR(svn_ra_rev_proplist(to_session, 0, &props, pool));
+
+  from_url = apr_hash_get(props, SVNSYNC_PROP_FROM_URL,
+                          APR_HASH_KEY_STRING);
+  
   if (! from_url)
     return svn_error_createf
       (SVN_ERR_BAD_URL, NULL,
        _("Repository '%s' is not initialized for synchronization"), to_url);
 
-  /* Fetch more of the magic properties, which are the source of our info. */
-  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_UUID,
-                          &from_uuid, pool));
-  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_LAST_MERGED_REV,
-                          &last_merged_rev, pool));
+  from_uuid = apr_hash_get(props, SVNSYNC_PROP_FROM_UUID,
+                           APR_HASH_KEY_STRING);
+  last_merged_rev = apr_hash_get(props, SVNSYNC_PROP_LAST_MERGED_REV,
+                                 APR_HASH_KEY_STRING);
 
   /* Print the info. */
   SVN_ERR(svn_cmdline_printf(pool, _("Source URL: %s\n"), from_url->data));
