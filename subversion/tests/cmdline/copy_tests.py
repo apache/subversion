@@ -5173,6 +5173,48 @@ def copy_base_of_deleted(sbox):
     })
 
 
+# Regression test for issue #3702: "svn ren TODO todo" not work on windows
+# (i.e. case-only rename on Windows)
+@XFail(svntest.main.is_fs_case_insensitive)
+@Issue(3702)
+def case_only_rename(sbox):
+  """case-only rename"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  iota_path = os.path.join(wc_dir, 'iota')
+  IoTa_path = os.path.join(wc_dir, 'IoTa')
+  B_path = os.path.join(wc_dir, 'A/B')
+  b_path = os.path.join(wc_dir, 'A/b')
+
+  # Perform a couple of case-only renames.
+  svntest.main.run_svn(None, 'move', iota_path, IoTa_path)
+  svntest.main.run_svn(None, 'move', B_path, b_path)
+  
+  # Create expected status.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'iota'              : Item(status='D ', wc_rev=1),
+    'IoTa'              : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B'               : Item(status='D ', wc_rev='1'),
+    'A/B/lambda'        : Item(status='D ', wc_rev='1'),
+    'A/B/E'             : Item(status='D ', wc_rev='1'),
+    'A/B/E/alpha'       : Item(status='D ', wc_rev='1'),
+    'A/B/E/beta'        : Item(status='D ', wc_rev='1'),
+    'A/B/F'             : Item(status='D ', wc_rev='1'),
+    'A/b'               : Item(status='A ', copied='+', wc_rev='-'),
+    'A/b/E'             : Item(status='  ', copied='+', wc_rev='-'),
+    'A/b/E/beta'        : Item(status='  ', copied='+', wc_rev='-'),
+    'A/b/E/alpha'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A/b/F'             : Item(status='  ', copied='+', wc_rev='-'),
+    'A/b/lambda'        : Item(status='  ', copied='+', wc_rev='-'),
+    })
+
+  # Test that the necessary deletes and adds are present in status.
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  
+
 ########################################################################
 # Run the tests
 
@@ -5280,6 +5322,7 @@ test_list = [ None,
               copy_url_shortcut,
               deleted_file_with_case_clash,
               copy_base_of_deleted,
+              case_only_rename,
              ]
 
 if __name__ == '__main__':
