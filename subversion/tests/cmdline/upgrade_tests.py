@@ -760,6 +760,7 @@ def upgrade_tree_conflict_data(sbox):
   # no_actual_node(sbox, 'A/D/G')  ### not removed but should be?
 
 
+@Issue(3898)
 def delete_in_copy_upgrade(sbox):
   "upgrade a delete within a copy"
 
@@ -769,10 +770,6 @@ def delete_in_copy_upgrade(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'upgrade', sbox.wc_dir)
-
-  # This doesn't fail with SVN_WC__OP_DEPTH but doesn't do the right
-  # thing either: B-copied looks like a copy where E and F are
-  # not-present rather than deleted.
 
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   expected_status.add({
@@ -784,6 +781,19 @@ def delete_in_copy_upgrade(sbox):
       'A/B-copied/F'       : Item(status='  ', copied='+', wc_rev='-'),
       })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, 'Reverted.*', [], 'revert', '-R',
+                                     sbox.ospath('A/B-copied/E'))
+
+  expected_status.tweak('A/B-copied/E',
+                        'A/B-copied/E/alpha',
+                        'A/B-copied/E/beta',
+                        status='  ')
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+  simple_checksum_verify([[sbox.ospath('A/B-copied/E/alpha'),
+                           'b347d1da69df9a6a70433ceeaa0d46c8483e8c03']])
+
 
 def replaced_files(sbox):
   "upgrade with base and working replaced files"
