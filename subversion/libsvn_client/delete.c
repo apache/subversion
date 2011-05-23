@@ -141,36 +141,22 @@ path_driver_cb_func(void **dir_baton,
   return editor->delete_entry(path, SVN_INVALID_REVNUM, parent_baton, pool);
 }
 
-
 static svn_error_t *
-delete_urls(const apr_array_header_t *paths,
-            const apr_hash_t *revprop_table,
-            svn_commit_callback2_t commit_callback,
-            void *commit_baton,
-            svn_client_ctx_t *ctx,
-            apr_pool_t *pool)
+single_repos_delete(svn_ra_session_t *ra_session,
+                    const char *repos_root,
+                    const apr_array_header_t *relpaths,
+                    const apr_hash_t *revprop_table,
+                    svn_commit_callback2_t commit_callback,
+                    void *commit_baton,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
 {
-  svn_ra_session_t *ra_session = NULL;
   const svn_delta_editor_t *editor;
+  apr_hash_t *commit_revprops;
   void *edit_baton;
   const char *log_msg;
-  svn_node_kind_t kind;
-  apr_array_header_t *targets;
-  apr_hash_t *commit_revprops;
-  svn_error_t *err;
-  const char *common_url;
   int i;
-  apr_pool_t *iterpool = svn_pool_create(pool);
-
-  /* Condense our list of deletion targets. */
-  SVN_ERR(svn_uri_condense_targets(&common_url, &targets, paths, TRUE,
-                                   pool, iterpool));
-  if (! targets->nelts)
-    {
-      const char *bname;
-      svn_uri_split(&common_url, &bname, common_url, pool);
-      APR_ARRAY_PUSH(targets, const char *) = bname;
-    }
+  svn_error_t *err;
 
   /* Create new commit items and add them to the array. */
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
@@ -178,24 +164,21 @@ delete_urls(const apr_array_header_t *paths,
       svn_client_commit_item3_t *item;
       const char *tmp_file;
       apr_array_header_t *commit_items
-        = apr_array_make(pool, targets->nelts, sizeof(item));
+        = apr_array_make(pool, relpaths->nelts, sizeof(item));
 
-      for (i = 0; i < targets->nelts; i++)
+      for (i = 0; i < relpaths->nelts; i++)
         {
-          const char *relpath = APR_ARRAY_IDX(targets, i, const char *);
+          const char *relpath = APR_ARRAY_IDX(relpaths, i, const char *);
 
           item = svn_client_commit_item3_create(pool);
-          item->url = svn_path_url_add_component2(common_url, relpath, pool);
+          item->url = svn_path_url_add_component2(repos_root, relpath, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
         }
       SVN_ERR(svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
                                       ctx, pool));
       if (! log_msg)
-        {
-          svn_pool_destroy(iterpool);
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
     }
   else
     log_msg = "";
@@ -203,30 +186,8 @@ delete_urls(const apr_array_header_t *paths,
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            log_msg, ctx, pool));
 
-  /* Open ra session to the common parent of our deletes */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
-                                               common_url, NULL, NULL,
-                                               FALSE, TRUE, ctx, pool));
-
-  /* Verify that each thing to be deleted actually exists (to prevent
-     the creation of a revision that has no changes, since the
-     filesystem allows for no-op deletes).  */
-  for (i = 0; i < targets->nelts; i++)
-    {
-      const char *relpath = APR_ARRAY_IDX(targets, i, const char *);
-
-      svn_pool_clear(iterpool);
-
-      SVN_ERR(svn_ra_check_path(ra_session, relpath, SVN_INVALID_REVNUM,
-                                &kind, iterpool));
-      if (kind == svn_node_none)
-        {
-          return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                                   _("URL '%s' does not exist"), 
-                                   svn_path_url_add_component2(common_url,
-                                                               relpath, pool));
-        }
-    }
+  /* Reparent the RA_session to the repos_root. */
+  SVN_ERR(svn_ra_reparent(ra_session, repos_root, pool));
 
   /* Fetch RA commit editor */
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
@@ -238,10 +199,9 @@ delete_urls(const apr_array_header_t *paths,
 
   /* Call the path-based editor driver. */
   err = svn_delta_path_driver(editor, edit_baton, SVN_INVALID_REVNUM,
-                              targets, path_driver_cb_func,
-                              (void *)editor, iterpool);
+                              relpaths, path_driver_cb_func,
+                              (void *)editor, pool);
 
-  svn_pool_destroy(iterpool);
   if (err)
     {
       return svn_error_return(
@@ -251,6 +211,100 @@ delete_urls(const apr_array_header_t *paths,
 
   /* Close the edit. */
   return svn_error_return(editor->close_edit(edit_baton, pool));
+}
+
+static svn_error_t *
+delete_urls_multi_repos(const apr_array_header_t *uris,
+                        const apr_hash_t *revprop_table,
+                        svn_commit_callback2_t commit_callback,
+                        void *commit_baton,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *pool)
+{
+  apr_hash_t *sessions = apr_hash_make(pool);
+  apr_hash_t *relpaths = apr_hash_make(pool);
+  apr_hash_index_t *hi;
+  int i;
+
+  /* Create a hash of repos_root -> ra_session maps and repos_root -> relpaths
+     maps, used to group the various targets. */
+  for (i = 0; i < uris->nelts; i++)
+    {
+      const char *uri = APR_ARRAY_IDX(uris, i, const char *);
+      svn_ra_session_t *ra_session = NULL;
+      const char *repos_root = NULL;
+      const char *repos_relpath = NULL;
+      apr_array_header_t *relpaths_list;
+      svn_node_kind_t kind;
+
+      for (hi = apr_hash_first(pool, sessions); hi; hi = apr_hash_next(hi))
+        {
+          repos_root = svn__apr_hash_index_key(hi);
+          repos_relpath = svn_uri_is_child(repos_root, uri, pool);
+
+          if (repos_relpath)
+            {
+              /* Great!  We've found another uri underneath this session,
+                 store it and move on. */
+              ra_session = svn__apr_hash_index_val(hi);
+              relpaths_list = apr_hash_get(relpaths, repos_root,
+                                           APR_HASH_KEY_STRING);
+
+              APR_ARRAY_PUSH(relpaths_list, const char *) =
+                                    svn_path_uri_decode(repos_relpath, pool);
+
+              break;
+            }
+        }
+
+      if (!ra_session)
+        {
+          /* If we haven't found a session yet, we need to open one up.
+             Note that we don't have a local directory, nor a place
+             to put temp files. */
+          SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, uri,
+                                                       NULL, NULL, FALSE,
+                                                       TRUE, ctx, pool));
+          SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
+
+          apr_hash_set(sessions, repos_root, APR_HASH_KEY_STRING, ra_session);
+          repos_relpath = svn_uri_is_child(repos_root, uri, pool);
+
+          relpaths_list = apr_array_make(pool, 1, sizeof(const char *));
+          apr_hash_set(relpaths, repos_root, APR_HASH_KEY_STRING,
+                       relpaths_list);
+          APR_ARRAY_PUSH(relpaths_list, const char *) =
+                                    svn_path_uri_decode(repos_relpath, pool);
+        }
+
+      /* Now, test to see if the thing actually exists. */
+      SVN_ERR(svn_ra_reparent(ra_session, uri, pool));
+      SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
+                                pool));
+      if (kind == svn_node_none)
+        return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                                 "URL '%s' does not exist", uri);
+    }
+
+  /* At this point, we should have two hashs:
+      SESSIONS maps repos_roots to ra_sessions.
+      RELPATHS maps repos_roots to a list of decoded relpaths for that root.
+      
+     Now we iterate over the collection of sessions and do a commit for each
+     one with the collected relpaths. */
+  for (hi = apr_hash_first(pool, sessions); hi; hi = apr_hash_next(hi))
+    {
+      const char *repos_root = svn__apr_hash_index_key(hi);
+      svn_ra_session_t *ra_session = svn__apr_hash_index_val(hi);
+      apr_array_header_t *relpaths_list = apr_hash_get(relpaths, repos_root,
+                                                       APR_HASH_KEY_STRING);
+
+      SVN_ERR(single_repos_delete(ra_session, repos_root, relpaths_list,
+                                  revprop_table, commit_callback,
+                                  commit_baton, ctx, pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -327,8 +381,8 @@ svn_client_delete4(const apr_array_header_t *paths,
 
   if (is_url)
     {
-      SVN_ERR(delete_urls(paths, revprop_table, commit_callback, commit_baton,
-                          ctx, pool));
+      SVN_ERR(delete_urls_multi_repos(paths, revprop_table, commit_callback,
+                                      commit_baton, ctx, pool));
     }
   else
     {
