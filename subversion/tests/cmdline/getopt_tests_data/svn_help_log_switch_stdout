@@ -53,7 +53,7 @@ Valid options:
                              history
   -c [--change] ARG        : the change made in revision ARG
   --targets ARG            : pass contents of file ARG as additional args
-  --stop-on-copy [--soc]   : do not cross copies while traversing history
+  --stop-on-copy           : do not cross copies while traversing history
   --incremental            : give output suitable for concatenation
   --xml                    : output in XML
   -l [--limit] ARG         : maximum number of log entries
@@ -64,7 +64,7 @@ Valid options:
                              'immediates', or 'infinity')
   --diff                   : produce diff output
   --diff-cmd ARG           : use ARG as diff command
-  --internal-diff [--idiff] : override diff-cmd specified in config file
+  --internal-diff          : override diff-cmd specified in config file
   -x [--extensions] ARG    : Default: '-u'. When Subversion is invoking an
                              external diff program, ARG is simply passed along
                              to the program. But when Subversion is using its
@@ -85,11 +85,11 @@ Valid options:
 Global options:
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG
-  --no-auth-cache [--nac]  : do not cache authentication tokens
+  --no-auth-cache          : do not cache authentication tokens
   --non-interactive        : do no interactive prompting
   --trust-server-cert      : accept unknown SSL server certificates without
                              prompting (but only with '--non-interactive')
-  --config-dir [--cd] ARG  : read user configuration files from directory ARG
+  --config-dir ARG         : read user configuration files from directory ARG
   --config-option ARG      : set user configuration option in the format:
                                  FILE:SECTION:OPTION=[VALUE]
                              For example:
@@ -147,13 +147,13 @@ Valid options:
   -N [--non-recursive]     : obsolete; try --depth=files or --depth=immediates
   --depth ARG              : limit operation by depth ARG ('empty', 'files',
                              'immediates', or 'infinity')
-  --set-depth [--sd] ARG   : set new working copy depth to ARG ('exclude',
+  --set-depth ARG          : set new working copy depth to ARG ('exclude',
                              'empty', 'files', 'immediates', or 'infinity')
   -q [--quiet]             : print nothing, or only summary information
   --diff3-cmd ARG          : use ARG as merge command
   --relocate               : relocate via URL-rewriting
-  --ignore-externals [--ie] : ignore externals definitions
-  --ignore-ancestry [--ia] : ignore ancestry when calculating merges
+  --ignore-externals       : ignore externals definitions
+  --ignore-ancestry        : ignore ancestry when calculating merges
   --force                  : force operation to run
   --accept ARG             : specify automatic conflict resolution action
                              ('postpone', 'base', 'mine-conflict',
@@ -163,11 +163,11 @@ Valid options:
 Global options:
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG
-  --no-auth-cache [--nac]  : do not cache authentication tokens
+  --no-auth-cache          : do not cache authentication tokens
   --non-interactive        : do no interactive prompting
   --trust-server-cert      : accept unknown SSL server certificates without
                              prompting (but only with '--non-interactive')
-  --config-dir [--cd] ARG  : read user configuration files from directory ARG
+  --config-dir ARG         : read user configuration files from directory ARG
   --config-option ARG      : set user configuration option in the format:
                                  FILE:SECTION:OPTION=[VALUE]
                              For example:
