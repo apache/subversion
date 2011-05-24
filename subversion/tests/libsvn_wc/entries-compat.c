@@ -333,13 +333,13 @@ create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
 {
   const char *root;
   const char *dirpath;
-  const char * const *my_statements; /*[] = {
+  const char * const my_statements[] = {
     statements[STMT_CREATE_SCHEMA],
     statements[STMT_CREATE_NODES],
     statements[STMT_CREATE_NODES_TRIGGERS],
     TESTING_DATA,
     NULL
-  };*/
+  };
   const char * const M_statements[] = {
     statements[STMT_CREATE_SCHEMA],
     statements[STMT_CREATE_NODES],
@@ -347,14 +347,6 @@ create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
     M_TESTING_DATA,
     NULL
   };
-
-  apr_array_header_t *a = apr_array_make(scratch_pool, 10, sizeof(const char *));
-  APR_ARRAY_PUSH(a, const char *) = statements[STMT_CREATE_SCHEMA];
-  APR_ARRAY_PUSH(a, const char *) = statements[STMT_CREATE_NODES];
-  APR_ARRAY_PUSH(a, const char *) = statements[STMT_CREATE_NODES_TRIGGERS];
-  svn_cstring_split_append(a, TESTING_DATA, ";", TRUE /* chop_whitespace */, scratch_pool);
-  APR_ARRAY_PUSH(a, const char *) = NULL;
-  my_statements = (const char **)a->elts;
 
   root = svn_dirent_join("fake-wc", subdir, scratch_pool);
 
