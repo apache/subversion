@@ -156,6 +156,8 @@ static svn_error_t *
 move_page_to_front(inprocess_cache_t *cache,
                    struct cache_page *page)
 {
+  /* This function is called whilst CACHE is locked. */
+
   SVN_ERR_ASSERT(page != cache->sentinel);
 
   if (! page->next)
