@@ -3174,7 +3174,7 @@ svn_client_diff_summarize_peg(const char *path,
  * feedback is provided, but the working copy is not modified.
  *
  * If allow_mixed_rev is @c FALSE, and @a merge_target is a mixed-revision
- * working copy, raise @c SVN_ERR_CLIENT_NOT_READY_TO_MERGE.
+ * working copy, raise @c SVN_ERR_CLIENT_MERGE_UPDATE_REQUIRED.
  * Because users rarely intend to merge into mixed-revision working copies,
  * it is recommended to set this parameter to FALSE by default unless the
  * user has explicitly requested a merge into a mixed-revision working copy.
