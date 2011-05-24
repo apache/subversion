@@ -235,8 +235,13 @@ update_internal(svn_revnum_t *result_rev,
                                     pool));
 
   /* It does not make sense to update tree-conflict victims. */
-  SVN_ERR(svn_wc_conflicted_p3(NULL, NULL, &tree_conflicted,
-                               ctx->wc_ctx, local_abspath, pool));
+  err = svn_wc_conflicted_p3(NULL, NULL, &tree_conflicted,
+                             ctx->wc_ctx, local_abspath, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      tree_conflicted = FALSE;
+    }
 
   if (!SVN_IS_VALID_REVNUM(revnum) || tree_conflicted)
     {
