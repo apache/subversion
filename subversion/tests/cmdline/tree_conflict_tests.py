@@ -1364,7 +1364,6 @@ def actual_only_node_behaviour(sbox):
                      "unlock", foo_path)
 
   # update (up)
-  ### update does not fail at all -- needs review
   expected_stdout = [
    "Skipped '%s'\n" % sbox.ospath('A/foo'),
    "Summary of conflicts:\n",
