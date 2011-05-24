@@ -206,6 +206,7 @@ update_internal(svn_revnum_t *result_rev,
   svn_client__external_func_baton_t efb;
   struct svn_client__dirent_fetcher_baton_t dfb;
   svn_boolean_t server_supports_depth;
+  svn_boolean_t tree_conflicted;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
@@ -233,14 +234,20 @@ update_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_wc__node_get_base_rev(&revnum, ctx->wc_ctx, anchor_abspath,
                                     pool));
 
-  if (!SVN_IS_VALID_REVNUM(revnum))
+  /* It does not make sense to update tree-conflict victims. */
+  SVN_ERR(svn_wc_conflicted_p3(NULL, NULL, &tree_conflicted,
+                               ctx->wc_ctx, local_abspath, pool));
+
+  if (!SVN_IS_VALID_REVNUM(revnum) || tree_conflicted)
     {
       if (ctx->notify_func2)
         {
           svn_wc_notify_t *nt;
 
           nt = svn_wc_create_notify(local_abspath,
-                                    svn_wc_notify_update_skip_working_only,
+                                    tree_conflicted
+                                      ? svn_wc_notify_skip
+                                      : svn_wc_notify_update_skip_working_only,
                                     pool);
 
           ctx->notify_func2(ctx->notify_baton2, nt, pool);
