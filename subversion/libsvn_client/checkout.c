@@ -168,6 +168,19 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
 
   if (kind == svn_node_none)
     {
+      svn_boolean_t tree_conflicted;
+
+      /* Make sure we're not checking out into a path that's missing on
+       * disk but is conflicted in some other working copy. */
+      err = svn_wc_conflicted_p3(NULL, NULL, &tree_conflicted,
+                                 ctx->wc_ctx, local_abspath, pool);
+      if (err)
+        svn_error_clear(err);
+      else if (tree_conflicted)
+        return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                                 _("'%s' is an existing item in conflict"),
+                                 svn_dirent_local_style(local_abspath, pool));
+
       /* Bootstrap: create an incomplete working-copy root dir.  Its
          entries file should only have an entry for THIS_DIR with a
          URL, revnum, and an 'incomplete' flag.  */

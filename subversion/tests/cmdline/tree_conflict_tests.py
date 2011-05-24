@@ -1172,14 +1172,10 @@ def actual_only_node_behaviour(sbox):
                      "changelist", "my_changelist", foo_path)
 
   # checkout (co)
-  ### this does not error out -- needs review
   expected_stdout = None
-  expected_stderr = []
+  expected_stderr = ".*foo.*is an existing item in conflict.*"
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "checkout", A_copy_url, foo_path)
-  ### for now, ignore the fact that checkout succeeds and remove the nested
-  ### working copy so we can test more commands
-  shutil.rmtree(foo_path)
 
   # cleanup
   expected_stdout = None
