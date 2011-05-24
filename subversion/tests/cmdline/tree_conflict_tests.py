@@ -1366,8 +1366,9 @@ def actual_only_node_behaviour(sbox):
   # update (up)
   ### update does not fail at all -- needs review
   expected_stdout = [
-   "Updating '%s':\n" % sbox.ospath('A/foo'),
-   "At revision 4.\n",
+   "Skipped '%s'\n" % sbox.ospath('A/foo'),
+   "Summary of conflicts:\n",
+   "  Skipped paths: 1\n",
   ]
   expected_stderr = []
   run_and_verify_svn(None, expected_stdout, expected_stderr,
