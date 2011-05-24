@@ -1165,6 +1165,7 @@ def actual_only_node_behaviour(sbox):
                      "cat", "-r", "BASE", foo_path)
   # changelist (cl)
   ### this does not error out -- needs review
+  ### the item does not end up in the changelist so this is a cosmetic problem
   expected_stdout = None
   expected_stderr = []
   run_and_verify_svn(None, expected_stdout, expected_stderr,
