@@ -849,10 +849,12 @@ check_can_add_node(svn_node_kind_t *kind_p,
      adding the new node; if not, return an error. */
   {
     svn_wc__db_status_t status;
+    svn_boolean_t conflicted;
     svn_error_t *err
       = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
+                             &conflicted,
                              NULL, NULL, NULL, NULL, NULL, NULL,
                              db, local_abspath,
                              scratch_pool, scratch_pool);
@@ -870,6 +872,16 @@ check_can_add_node(svn_node_kind_t *kind_p,
       {
         is_wc_root = FALSE;
         exists = TRUE;
+
+        /* Note that the node may be in conflict even if it does not
+         * exist on disk (certain tree conflict scenarios). */
+        if (conflicted)
+          return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                                   _("'%s' is an existing item in conflict; "
+                                   "please mark the conflict as resolved "
+                                   "before adding a new item here"),
+                                   svn_dirent_local_style(local_abspath,
+                                                          scratch_pool));
         switch (status)
           {
             case svn_wc__db_status_not_present:
