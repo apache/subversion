@@ -3943,7 +3943,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
           SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, child->abspath,
                                        scratch_pool, scratch_pool));
           if (strcmp(start_url, url) == 0)
-            return svn_error_create(SVN_ERR_CLIENT_MERGE_UPDATEREQUIRED, NULL,
+            return svn_error_create(SVN_ERR_CLIENT_MERGE_UPDATE_REQUIRED, NULL,
                                     _("Cannot reverse-merge a range from a "
                                       "path's own future history; try "
                                       "updating first"));
@@ -9017,7 +9017,7 @@ ensure_wc_is_suitable_merge_target(const char *target_abspath,
         }
 
       if (min_rev != max_rev)
-        return svn_error_createf(SVN_ERR_CLIENT_MERGE_UPDATEREQUIRED, NULL,
+        return svn_error_createf(SVN_ERR_CLIENT_MERGE_UPDATE_REQUIRED, NULL,
                                  _("Cannot merge into mixed-revision working "
                                    "copy [%lu:%lu]; try updating first"),
                                    min_rev, max_rev);

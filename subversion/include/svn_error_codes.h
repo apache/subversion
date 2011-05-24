@@ -1197,7 +1197,7 @@ SVN_ERROR_START
              "Detected a cycle while processing the operation")
 
   /** @since New in 1.7. */
-  SVN_ERRDEF(SVN_ERR_CLIENT_MERGE_UPDATEREQUIRED,
+  SVN_ERRDEF(SVN_ERR_CLIENT_MERGE_UPDATE_REQUIRED,
              SVN_ERR_CLIENT_CATEGORY_START + 20,
              "Working copy and merge source not ready for reintegration")
 
