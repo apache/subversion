@@ -1938,7 +1938,7 @@ svn_client_update3(apr_array_header_t **result_revs,
 {
   return svn_client_update4(result_revs, paths, revision,
                             depth, depth_is_sticky, ignore_externals,
-                            allow_unver_obstructions, TRUE, FALSE, FALSE,
+                            allow_unver_obstructions, TRUE, FALSE,
                             ctx, pool);
 }
 
@@ -1993,7 +1993,7 @@ svn_client_switch2(svn_revnum_t *result_rev,
 {
   return svn_client_switch3(result_rev, path, switch_url, peg_revision,
                             revision, depth, depth_is_sticky, ignore_externals,
-                            allow_unver_obstructions, TRUE, FALSE, ctx, pool);
+                            allow_unver_obstructions, TRUE, ctx, pool);
 }
 
 svn_error_t *
