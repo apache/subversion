@@ -1163,6 +1163,12 @@ def actual_only_node_behaviour(sbox):
   expected_stderr = ".*foo.*not under version control.*"
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "cat", foo_path)
+
+  # cat -rBASE
+  expected_stdout = None
+  expected_stderr = ".*foo.*not under version control.*"
+  run_and_verify_svn(None, expected_stdout, expected_stderr,
+                     "cat", "-r", "BASE", foo_path)
   # changelist (cl)
   ### this does not error out -- needs review
   expected_stdout = None
