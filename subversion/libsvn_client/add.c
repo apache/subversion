@@ -537,10 +537,29 @@ add(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
   else if (kind == svn_node_file)
     err = add_file(b->local_abspath, b->ctx, scratch_pool);
   else if (kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("'%s' not found"),
-                             svn_dirent_local_style(b->local_abspath,
-                                                    scratch_pool));
+    {
+      svn_boolean_t tree_conflicted;
+
+      /* Provide a meaningful error message if the node does not exist
+       * on disk but is a tree conflict victim. */
+      err = svn_wc_conflicted_p3(NULL, NULL, &tree_conflicted,
+                                 b->ctx->wc_ctx, b->local_abspath,
+                                 scratch_pool);
+      if (err)
+        svn_error_clear(err);
+      else if (tree_conflicted)
+        return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                                 _("'%s' is an existing item in conflict; "
+                                   "please mark the conflict as resolved "
+                                   "before adding a new item here"),
+                                 svn_dirent_local_style(b->local_abspath,
+                                                        scratch_pool));
+        
+      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                               _("'%s' not found"),
+                               svn_dirent_local_style(b->local_abspath,
+                                                      scratch_pool));
+    }
   else
     return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                              _("Unsupported node kind for path '%s'"),

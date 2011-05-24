@@ -1134,23 +1134,17 @@ def actual_only_node_behaviour(sbox):
 
   # add
   expected_stdout = None
-  expected_stderr = ".*foo.*not found.*"
+  expected_stderr = ".*foo.*is an existing item in conflict.*"
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "add", foo_path)
 
   # add (with an existing obstruction of foo)
-  ### this does not error out -- needs review
   svntest.main.file_write(foo_path, "This is an obstruction of foo.\n")
-  expected_stdout = "A.*foo"
-  expected_stderr = []
+  expected_stdout = None
+  expected_stderr = ".*foo.*is an existing item in conflict.*"
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "add", foo_path)
-  ### for now, ignore the fact that add succeeds, revert the entire
-  ### working copy, and repeat the merge so we can test more commands
-  svntest.main.run_svn(None, "revert", "-R", wc_dir)
   os.remove(foo_path) # remove obstruction
-  svntest.main.run_svn(None, "merge", '-c', '4', A_copy_url,
-                       os.path.join(wc_dir, 'A'))
 
   # blame (praise, annotate, ann)
   expected_stdout = None
@@ -1267,17 +1261,10 @@ def actual_only_node_behaviour(sbox):
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "mergeinfo", A_copy_url + '/foo', foo_path)
   # mkdir
-  ### this does not error out -- needs review
   expected_stdout = None
-  expected_stderr = []
+  expected_stderr = ".*foo.*is an existing item in conflict.*"
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "mkdir", foo_path)
-  ### for now, ignore the fact that mkdir succeeds, revert the entire
-  ### working copy, and repeat the merge so we can test more commands
-  svntest.main.run_svn(None, "revert", "-R", wc_dir)
-  os.rmdir(foo_path) # remove obstruction
-  svntest.main.run_svn(None, "merge", '-c', '4', A_copy_url,
-                       os.path.join(wc_dir, 'A'))
 
   # move (mv, rename, ren)
   expected_stdout = None
