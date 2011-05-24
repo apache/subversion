@@ -175,7 +175,7 @@ switch_dir_external(const char *local_abspath,
               SVN_ERR(svn_client__update_internal(NULL, local_abspath,
                                                   revision, svn_depth_unknown,
                                                   FALSE, FALSE, FALSE, TRUE,
-                                                  FALSE, FALSE, TRUE,
+                                                  FALSE, TRUE,
                                                   timestamp_sleep,
                                                   ctx, subpool));
               svn_pool_destroy(subpool);
@@ -223,7 +223,7 @@ switch_dir_external(const char *local_abspath,
                                                   peg_revision, revision,
                                                   svn_depth_infinity,
                                                   TRUE, FALSE, FALSE,
-                                                  FALSE, TRUE, TRUE,
+                                                  TRUE, TRUE,
                                                   timestamp_sleep,
                                                   ctx, subpool));
 

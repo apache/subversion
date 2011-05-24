@@ -1590,7 +1590,6 @@ def update_modify_file_external(sbox):
 
 # Test for issue #2267
 @Issue(2267)
-@XFail() # Needs new commandline option
 def update_external_on_locally_added_dir(sbox):
   "update an external on a locally added dir"
 
@@ -1631,7 +1630,6 @@ def update_external_on_locally_added_dir(sbox):
 
 # Test for issue #2267
 @Issue(2267)
-@XFail() # Needs new commandline option
 def switch_external_on_locally_added_dir(sbox):
   "switch an external on a locally added dir"
 
@@ -1698,6 +1696,7 @@ def file_external_in_sibling(sbox):
                             [], 'update')
 
 @Issue(3823)
+@XFail()
 def file_external_update_without_commit(sbox):
   "update a file external without committing target"
 

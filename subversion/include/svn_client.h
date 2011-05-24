@@ -1217,10 +1217,6 @@ svn_client_checkout(svn_revnum_t *result_rev,
  * files restored from text-base.  If @a ctx->cancel_func is non-NULL, invoke
  * it passing @a ctx->cancel_baton at various places during the update.
  *
- * If @a apply_local_external_modifications is TRUE, local versions of the
- * svn:externals property are processed during update instead of their
- * committed version.
- *
  * Use @a pool for any temporary allocation.
  *
  *  @todo  Multiple Targets
@@ -1245,15 +1241,13 @@ svn_client_update4(apr_array_header_t **result_revs,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
                    svn_boolean_t adds_as_modification,
-                   svn_boolean_t apply_local_external_modifications,
                    svn_boolean_t make_parents,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 /**
  * Similar to svn_client_update4() but with @a make_parents always set
- * to FALSE, @a adds_as_modification set to TRUE, and
- * @a apply_local_external_modifications set to FALSE.
+ * to FALSE and @a adds_as_modification set to TRUE.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  * @since New in 1.5.
@@ -1356,10 +1350,6 @@ svn_client_update(svn_revnum_t *result_rev,
  *              and returning #SVN_ERR_CLIENT_UNRELATED_RESOURCES if they
  *              do not. If @c TRUE, no such sanity checks are performed.
  *
- * @param [in] apply_local_external_modifications  If @c TRUE, local versions
- *              of the svn:externals property are processed during switch
- *              instead of their committed version.
- *
  * @param[in] ctx   The standard client context, used for authentication and
  *              notification.  The notifier is invoked for paths affected by
  *              the switch, and also for files which may be restored from the
@@ -1390,14 +1380,13 @@ svn_client_switch3(svn_revnum_t *result_rev,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
                    svn_boolean_t ignore_ancestry,
-                   svn_boolean_t apply_local_external_modifications,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 
 /**
  * Similar to svn_client_switch3() but with @a ignore_ancestry always
- * set to TRUE and @a apply_local_external_modifications set to FALSE.
+ * set to TRUE.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.4 API.

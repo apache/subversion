@@ -179,7 +179,6 @@ update_internal(svn_revnum_t *result_rev,
                 svn_boolean_t ignore_externals,
                 svn_boolean_t allow_unver_obstructions,
                 svn_boolean_t adds_as_modification,
-                svn_boolean_t apply_local_external_modifications,
                 svn_boolean_t innerupdate,
                 svn_boolean_t *timestamp_sleep,
                 svn_boolean_t notify_summary,
@@ -415,8 +414,7 @@ update_internal(svn_revnum_t *result_rev,
      the primary operation.  */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     {
-      if (apply_local_external_modifications)
-        SVN_ERR(svn_client__gather_local_external_changes(
+      SVN_ERR(svn_client__gather_local_external_changes(
                   efb.externals_new, efb.ambient_depths, local_abspath,
                   depth, ctx, pool));
       SVN_ERR(svn_client__handle_externals(efb.externals_old,
@@ -461,7 +459,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t adds_as_modification,
                             svn_boolean_t make_parents,
-                            svn_boolean_t apply_local_external_modifications,
                             svn_boolean_t innerupdate,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
@@ -514,7 +511,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                 &peg_revision, svn_depth_empty, FALSE,
                                 ignore_externals, allow_unver_obstructions,
                                 adds_as_modification,
-                                apply_local_external_modifications,
                                 innerupdate, timestamp_sleep,
                                 FALSE, ctx, pool);
           if (err)
@@ -540,7 +536,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                         &peg_revision, depth, depth_is_sticky,
                         ignore_externals, allow_unver_obstructions,
                         adds_as_modification,
-                        apply_local_external_modifications,
                         innerupdate,
                         timestamp_sleep,
                         TRUE, ctx, pool);
@@ -562,7 +557,6 @@ svn_client_update4(apr_array_header_t **result_revs,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
                    svn_boolean_t adds_as_modification,
-                   svn_boolean_t apply_local_external_modifications,
                    svn_boolean_t make_parents,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
@@ -603,7 +597,6 @@ svn_client_update4(apr_array_header_t **result_revs,
                                         allow_unver_obstructions,
                                         adds_as_modification,
                                         make_parents,
-                                        apply_local_external_modifications,
                                         FALSE, &sleep,
                                         ctx, subpool);
 

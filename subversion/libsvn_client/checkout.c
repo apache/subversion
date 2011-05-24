@@ -219,7 +219,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                                         allow_unver_obstructions,
                                         TRUE /* adds_as_modification */,
                                         FALSE, FALSE,
-                                        FALSE, use_sleep, ctx, pool);
+                                        use_sleep, ctx, pool);
     }
 
   if (err)
