@@ -3824,7 +3824,7 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
                         src_wcroot->wc_id, src_relpath,
                         dst_relpath,
                         dst_op_depth,
-                        svn_relpath_basename(dst_relpath, iterpool),
+                        svn_relpath_dirname(dst_relpath, iterpool),
                         presence_map, dst_presence));
 
       if (src_op_depth > 0)
