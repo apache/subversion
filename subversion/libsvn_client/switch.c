@@ -67,7 +67,6 @@ switch_internal(svn_revnum_t *result_rev,
                 svn_boolean_t ignore_externals,
                 svn_boolean_t allow_unver_obstructions,
                 svn_boolean_t ignore_ancestry,
-                svn_boolean_t apply_local_external_modifications,
                 svn_boolean_t innerswitch,
                 svn_boolean_t *timestamp_sleep,
                 svn_client_ctx_t *ctx,
@@ -288,8 +287,7 @@ switch_internal(svn_revnum_t *result_rev,
      the primary operation. */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     {
-      if (apply_local_external_modifications)
-        SVN_ERR(svn_client__gather_local_external_changes(
+      SVN_ERR(svn_client__gather_local_external_changes(
                 efb.externals_new, efb.ambient_depths, local_abspath,
                 depth, ctx, pool));
 
@@ -339,7 +337,6 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             svn_boolean_t depth_is_sticky,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
-                            svn_boolean_t apply_local_external_modifications,
                             svn_boolean_t ignore_ancestry,
                             svn_boolean_t innerswitch,
                             svn_boolean_t *timestamp_sleep,
@@ -370,8 +367,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                          depth, depth_is_sticky,
                          ignore_externals,
                          allow_unver_obstructions, ignore_ancestry,
-                         apply_local_external_modifications, innerswitch,
-                         timestamp_sleep, ctx, pool);
+                         innerswitch, timestamp_sleep, ctx, pool);
 
   if (acquired_lock)
     err2 = svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, pool);
@@ -392,7 +388,6 @@ svn_client_switch3(svn_revnum_t *result_rev,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
                    svn_boolean_t ignore_ancestry,
-                   svn_boolean_t apply_local_external_modifications,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -404,7 +399,6 @@ svn_client_switch3(svn_revnum_t *result_rev,
                                      peg_revision, revision, depth,
                                      depth_is_sticky, ignore_externals,
                                      allow_unver_obstructions,
-                                     apply_local_external_modifications,
                                      ignore_ancestry,
                                      FALSE, NULL, ctx, pool);
 }

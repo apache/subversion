@@ -167,7 +167,6 @@ svn_cl__update(apr_getopt_t *os,
                              depth, depth_is_sticky,
                              opt_state->ignore_externals,
                              opt_state->force, TRUE /* adds_as_modification */,
-                             FALSE /* apply_local_external_modifications */,
                              opt_state->parents,
                              ctx, scratch_pool));
 

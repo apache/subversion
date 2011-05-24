@@ -177,7 +177,6 @@ svn_cl__switch(apr_getopt_t *os,
                            &(opt_state->start_revision), depth,
                            depth_is_sticky, opt_state->ignore_externals,
                            opt_state->force, opt_state->ignore_ancestry,
-                           FALSE /* apply_local_external_modifications */,
                            ctx, scratch_pool);
   if (err)
     {
