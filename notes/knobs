@@ -86,7 +86,16 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Default:   "fsfs"
   Suggested: "fsfs"
 
-3.2 MAX_SECS_TO_LINGER
+3.2 DEFAULT_HTTP_LIBRARY
+
+  Scope:     (global)
+  Purpose:   selects the default http library to be used for accessing
+             remote repositories using http/https protocol
+  Range:     strings "serf", "neon"
+  Default:   "serf"
+  Suggested: "serf"
+
+3.3 MAX_SECS_TO_LINGER
 
   Scope:     svn protocol
   Purpose:   
@@ -94,7 +103,7 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Default:   30
   Suggested: 
 
-3.3 SUFFIX_LINES_TO_KEEP
+3.4 SUFFIX_LINES_TO_KEEP
 
   Scope:     libsvn_diff
   Purpose:   control the identical prefix / identical suffix diff(blame)
@@ -103,7 +112,7 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Default:   50
   Suggested: 0, 1, 999999
 
-3.4 SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR
+3.5 SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR
 
   Scope:     libsvn_fs_fs
   Purpose:   set fsfs default shard size
@@ -111,7 +120,7 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Range:     natural integers
   Suggested: 1, 2, 3, 4, 5, 7, 11
 
-3.5 SVN_UNALIGNED_ACCESS_IS_OK
+3.6 SVN_UNALIGNED_ACCESS_IS_OK
 
   Scope:     (global)
   Purpose:   enable data accesss optimizations.
