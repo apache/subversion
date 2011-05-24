@@ -341,7 +341,7 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
                                    ignoreExternals,
                                    allowUnverObstructions,
                                    TRUE /* adds_as_modification */,
-                                   FALSE, makeParents,
+                                   makeParents,
                                    ctx, requestPool.pool()),
                 NULL);
 
@@ -543,7 +543,6 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
                                    ignoreExternals,
                                    allowUnverObstructions,
                                    ignoreAncestry,
-                                   FALSE,
                                    ctx,
                                    requestPool.pool()),
                 -1);

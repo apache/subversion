@@ -969,7 +969,7 @@ svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
          the performance penalty.
        */
 
-      path = svn_path_internal_style(path, pool);
+      path = svn_dirent_internal_style(path, pool);
 
       /* For kicks and giggles, let's absolutize it. */
       SVN_ERR(svn_dirent_get_absolute(&path, path, pool));
