@@ -78,6 +78,9 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
   return svn_error_quick_wrap(err, _("Couldn't open rep-cache database"));
 }
 
+/* This function's caller ignores most errors it returns.
+   If you extend this function, check the callsite to see if you have
+   to make it not-ignore additional error codes.  */
 svn_error_t *
 svn_fs_fs__get_rep_reference(representation_t **rep,
                              svn_fs_t *fs,

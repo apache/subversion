@@ -5735,16 +5735,10 @@ rep_write_contents_close(void *baton)
       err = svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->sha1_checksum,
                                          b->parent_pool);
       /* ### Other error codes that we shouldn't mask out? */
-      if (err && err->apr_err != SVN_ERR_FS_CORRUPT)
-        {
-          /* Something's wrong with the rep-sharing index.  We can continue
-             without rep-sharing, but warn.
-           */
-          (b->fs->warning)(b->fs->warning_baton, err);
-          svn_error_clear(err);
-          old_rep = NULL;
-        }
-      else
+      if (err == SVN_NO_ERROR
+          || err->apr_err == SVN_ERR_FS_CORRUPT
+          || SVN_ERROR_IN_CATEGORY(err->apr_err,
+                                   SVN_ERR_MALFUNC_CATEGORY_START))
         {
           /* Fatal error; don't mask it.
            
@@ -5754,6 +5748,15 @@ rep_write_contents_close(void *baton)
              commits), the rep-cache would be invalid.
            */
           SVN_ERR(err);
+        }
+      else
+        {
+          /* Something's wrong with the rep-sharing index.  We can continue
+             without rep-sharing, but warn.
+           */
+          (b->fs->warning)(b->fs->warning_baton, err);
+          svn_error_clear(err);
+          old_rep = NULL;
         }
     }
   else
