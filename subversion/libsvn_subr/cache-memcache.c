@@ -173,7 +173,7 @@ memcache_get(void **value_p,
              svn_boolean_t *found,
              void *cache_void,
              const void *key,
-             apr_pool_t *pool)
+             apr_pool_t *result_pool)
 {
   memcache_t *cache = cache_void;
   char *data;
@@ -183,18 +183,19 @@ memcache_get(void **value_p,
                                 found,
                                 cache_void,
                                 key,
-                                pool));
+                                result_pool));
 
   /* If we found it, de-serialize it. */
   if (*found)
     {
       if (cache->deserialize_func)
         {
-          SVN_ERR((cache->deserialize_func)(value_p, data, data_len, pool));
+          SVN_ERR((cache->deserialize_func)(value_p, data, data_len, 
+                                            result_pool));
         }
       else
         {
-          svn_string_t *value = apr_pcalloc(pool, sizeof(*value));
+          svn_string_t *value = apr_pcalloc(result_pool, sizeof(*value));
           value->data = data;
           value->len = data_len;
           *value_p = value;
@@ -213,13 +214,13 @@ memcache_internal_set(void *cache_void,
                       const void *key,
                       const char *data,
                       apr_size_t len,
-                      apr_pool_t *pool)
+                      apr_pool_t *scratch_pool)
 {
   memcache_t *cache = cache_void;
   const char *mc_key;
   apr_status_t apr_err;
 
-  SVN_ERR(build_key(&mc_key, cache, key, pool));
+  SVN_ERR(build_key(&mc_key, cache, key, scratch_pool));
   apr_err = apr_memcache_set(cache->memcache, mc_key, (char *)data, len, 0, 0);
 
   /* ### Maybe write failures should be ignored (but logged)? */
@@ -235,10 +236,10 @@ static svn_error_t *
 memcache_set(void *cache_void,
              const void *key,
              void *value,
-             apr_pool_t *pool)
+             apr_pool_t *scratch_pool)
 {
   memcache_t *cache = cache_void;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
   char *data;
   apr_size_t data_len;
   svn_error_t *err;
@@ -267,7 +268,7 @@ memcache_get_partial(void **value_p,
                      const void *key,
                      svn_cache__partial_getter_func_t func,
                      void *baton,
-                     apr_pool_t *pool)
+                     apr_pool_t *result_pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -278,11 +279,11 @@ memcache_get_partial(void **value_p,
                                 found,
                                 cache_void,
                                 key,
-                                pool));
+                                result_pool));
 
   /* If we found it, de-serialize it. */
   return *found
-    ? func(value_p, data, size, baton, pool)
+    ? func(value_p, data, size, baton, result_pool)
     : err;
 }
 
@@ -292,7 +293,7 @@ memcache_set_partial(void *cache_void,
                      const void *key,
                      svn_cache__partial_setter_func_t func,
                      void *baton,
-                     apr_pool_t *pool)
+                     apr_pool_t *scratch_pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -300,13 +301,13 @@ memcache_set_partial(void *cache_void,
   apr_size_t size;
   svn_boolean_t found = FALSE;
 
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
   SVN_ERR(memcache_internal_get(&data,
                                 &size,
                                 &found,
                                 cache_void,
                                 key,
-                                pool));
+                                subpool));
 
   /* If we found it, modify it and write it back to cache */
   if (found)
@@ -325,7 +326,7 @@ memcache_iter(svn_boolean_t *completed,
               void *cache_void,
               svn_iter_apr_hash_cb_t user_cb,
               void *user_baton,
-              apr_pool_t *pool)
+              apr_pool_t *scratch_pool)
 {
   return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                           _("Can't iterate a memcached cache"));
@@ -346,11 +347,11 @@ static svn_error_t *
 memcache_get_info(void *cache_void,
                   svn_cache__info_t *info,
                   svn_boolean_t reset,
-                  apr_pool_t *pool)
+                  apr_pool_t *result_pool)
 {
   memcache_t *cache = cache_void;
 
-  info->id = apr_pstrdup(pool, cache->prefix);
+  info->id = apr_pstrdup(result_pool, cache->prefix);
 
   /* we don't have any memory allocation info */
 

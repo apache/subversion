@@ -222,7 +222,7 @@ inprocess_cache_get(void **value_p,
                     svn_boolean_t *found,
                     void *cache_void,
                     const void *key,
-                    apr_pool_t *pool)
+                    apr_pool_t *result_pool)
 {
   inprocess_cache_t *cache = cache_void;
   svn_error_t *err = NULL;
@@ -241,7 +241,7 @@ inprocess_cache_get(void **value_p,
   SVN_ERR(move_page_to_front(cache, entry->page));
 
   /* duplicate the buffer entry */
-  buffer = apr_palloc(pool, entry->size);
+  buffer = apr_palloc(result_pool, entry->size);
   memcpy(buffer, entry->value, entry->size);
 
   /* the cache is no longer being accessed */
@@ -252,7 +252,7 @@ inprocess_cache_get(void **value_p,
    */
   *found = TRUE;
   if (entry->value)
-    err = cache->deserialize_func(value_p, buffer, entry->size, pool);
+    err = cache->deserialize_func(value_p, buffer, entry->size, result_pool);
   else
     *value_p = NULL;
 
@@ -295,7 +295,7 @@ static svn_error_t *
 inprocess_cache_set(void *cache_void,
                     const void *key,
                     void *value,
-                    apr_pool_t *pool)
+                    apr_pool_t *scratch_pool)
 {
   inprocess_cache_t *cache = cache_void;
   struct cache_entry *existing_entry;
@@ -448,7 +448,7 @@ inprocess_cache_iter(svn_boolean_t *completed,
                      void *cache_void,
                      svn_iter_apr_hash_cb_t user_cb,
                      void *user_baton,
-                     apr_pool_t *pool)
+                     apr_pool_t *scratch_pool)
 {
   inprocess_cache_t *cache = cache_void;
   struct cache_iter_baton b;
@@ -458,7 +458,7 @@ inprocess_cache_iter(svn_boolean_t *completed,
   SVN_ERR(lock_cache(cache));
   return unlock_cache(cache,
                       svn_iter_apr_hash(completed, cache->hash, iter_cb, &b,
-                                        pool));
+                                        scratch_pool));
 }
 
 static svn_error_t *
@@ -468,7 +468,7 @@ inprocess_cache_get_partial(void **value_p,
                             const void *key,
                             svn_cache__partial_getter_func_t func,
                             void *baton,
-                            apr_pool_t *pool)
+                            apr_pool_t *result_pool)
 {
   inprocess_cache_t *cache = cache_void;
   struct cache_entry *entry;
@@ -486,7 +486,8 @@ inprocess_cache_get_partial(void **value_p,
 
   *found = TRUE;
   return unlock_cache(cache,
-                      func(value_p, entry->value, entry->size, baton, pool));
+                      func(value_p, entry->value, entry->size, baton, 
+                           result_pool));
 }
 
 static svn_error_t *
@@ -494,7 +495,7 @@ inprocess_cache_set_partial(void *cache_void,
                             const void *key,
                             svn_cache__partial_setter_func_t func,
                             void *baton,
-                            apr_pool_t *pool)
+                            apr_pool_t *scratch_pool)
 {
   inprocess_cache_t *cache = cache_void;
   struct cache_entry *entry;
@@ -534,13 +535,13 @@ static svn_error_t *
 inprocess_cache_get_info(void *cache_void,
                          svn_cache__info_t *info,
                          svn_boolean_t reset,
-                         apr_pool_t *pool)
+                         apr_pool_t *result_pool)
 {
   inprocess_cache_t *cache = cache_void;
 
   SVN_ERR(lock_cache(cache));
 
-  info->id = apr_pstrdup(pool, cache->id);
+  info->id = apr_pstrdup(result_pool, cache->id);
 
   info->used_entries = apr_hash_count(cache->hash);
   info->total_entries = cache->items_per_page * cache->total_pages;
