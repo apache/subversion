@@ -147,7 +147,7 @@ typedef struct insert_base_baton_t {
   const char *repos_relpath;
   svn_revnum_t revision;
 
-  /* Only used when repos_id == -1 */
+  /* Only used when repos_id == INVALID_REPOS_ID */
   const char *repos_root_url;
   const char *repos_uuid;
 
@@ -233,7 +233,7 @@ typedef struct insert_external_baton_t {
   const char *repos_relpath;
   svn_revnum_t revision;
 
-  /* Only used when repos_id == -1 */
+  /* Only used when repos_id == INVALID_REPOS_ID */
   const char *repos_root_url;
   const char *repos_uuid;
 
@@ -659,7 +659,7 @@ blank_ibb(insert_base_baton_t *pibb)
   pibb->revision = SVN_INVALID_REVNUM;
   pibb->changed_rev = SVN_INVALID_REVNUM;
   pibb->depth = svn_depth_infinity;
-  pibb->repos_id = -1;
+  pibb->repos_id = INVALID_REPOS_ID;
 }
 
 
@@ -781,7 +781,7 @@ insert_base_node(void *baton,
     (*local_relpath == '\0') ? NULL
     : svn_relpath_dirname(local_relpath, scratch_pool);
 
-  if (pibb->repos_id == -1)
+  if (pibb->repos_id == INVALID_REPOS_ID)
     SVN_ERR(create_repos_id(&repos_id, pibb->repos_root_url, pibb->repos_uuid,
                             wcroot->sdb, scratch_pool));
 
@@ -8739,7 +8739,7 @@ bump_revisions_post_update(void *baton,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   svn_error_t *err;
-  apr_int64_t new_repos_id = -1;
+  apr_int64_t new_repos_id = INVALID_REPOS_ID;
 
   err = base_get_info(&status, &kind, NULL, NULL, NULL, NULL, NULL, NULL,
                       NULL, NULL, NULL, NULL, NULL, NULL, NULL,
