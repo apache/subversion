@@ -27,7 +27,7 @@ svn_error_t *
 svn_cache__set_error_handler(svn_cache__t *cache,
                              svn_cache__error_handler_t handler,
                              void *baton,
-                             apr_pool_t *pool)
+                             apr_pool_t *scratch_pool)
 {
   cache->error_handler = handler;
   cache->error_baton = baton;
@@ -68,7 +68,7 @@ svn_cache__get(void **value_p,
                svn_boolean_t *found,
                svn_cache__t *cache,
                const void *key,
-               apr_pool_t *pool)
+               apr_pool_t *result_pool)
 {
   svn_error_t *err;
 
@@ -82,8 +82,8 @@ svn_cache__get(void **value_p,
                                           found,
                                           cache->cache_internal,
                                           key,
-                                          pool),
-                     pool);
+                                          result_pool),
+                     result_pool);
 
   if (*found)
     cache->hits++;
@@ -95,15 +95,15 @@ svn_error_t *
 svn_cache__set(svn_cache__t *cache,
                const void *key,
                void *value,
-               apr_pool_t *pool)
+               apr_pool_t *scratch_pool)
 {
   cache->writes++;
   return handle_error(cache,
                       (cache->vtable->set)(cache->cache_internal,
                                            key,
                                            value,
-                                           pool),
-                      pool);
+                                           scratch_pool),
+                      scratch_pool);
 }
 
 
@@ -112,13 +112,13 @@ svn_cache__iter(svn_boolean_t *completed,
                 svn_cache__t *cache,
                 svn_iter_apr_hash_cb_t user_cb,
                 void *user_baton,
-                apr_pool_t *pool)
+                apr_pool_t *scratch_pool)
 {
   return (cache->vtable->iter)(completed,
                                cache->cache_internal,
                                user_cb,
                                user_baton,
-                               pool);
+                               scratch_pool);
 }
 
 svn_error_t *
@@ -128,7 +128,7 @@ svn_cache__get_partial(void **value,
                        const void *key,
                        svn_cache__partial_getter_func_t func,
                        void *baton,
-                       apr_pool_t *scratch_pool)
+                       apr_pool_t *result_pool)
 {
   svn_error_t *err;
 
@@ -144,8 +144,8 @@ svn_cache__get_partial(void **value,
                                                   key,
                                                   func,
                                                   baton,
-                                                  scratch_pool),
-                     scratch_pool);
+                                                  result_pool),
+                     result_pool);
 
   if (*found)
     cache->hits++;
@@ -174,7 +174,7 @@ svn_error_t *
 svn_cache__get_info(svn_cache__t *cache,
                     svn_cache__info_t *info,
                     svn_boolean_t reset,
-                    apr_pool_t *pool)
+                    apr_pool_t *result_pool)
 {
   /* write general statistics */
 
@@ -190,7 +190,7 @@ svn_cache__get_info(svn_cache__t *cache,
   SVN_ERR((cache->vtable->get_info)(cache->cache_internal,
                                     info,
                                     reset,
-                                    pool));
+                                    result_pool));
 
   /* reset statistics */
 
@@ -207,7 +207,7 @@ svn_cache__get_info(svn_cache__t *cache,
 
 svn_string_t *
 svn_cache__format_info(const svn_cache__info_t *info,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool)
 {
   enum { _1MB = 1024 * 1024 };
 
@@ -221,7 +221,7 @@ svn_cache__format_info(const svn_cache__info_t *info,
   double data_entry_rate = (100.0 * info->used_entries)
                          / (info->total_entries ? info->total_entries : 1);
 
-  return svn_string_createf(pool,
+  return svn_string_createf(result_pool,
 
                             "prefix  : %s\n"
                             "gets    : %" APR_UINT64_T_FMT

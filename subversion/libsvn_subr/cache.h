@@ -35,18 +35,18 @@ typedef struct svn_cache__vtable_t {
                       svn_boolean_t *found,
                       void *cache_implementation,
                       const void *key,
-                      apr_pool_t *pool);
+                      apr_pool_t *result_pool);
 
   svn_error_t *(*set)(void *cache_implementation,
                       const void *key,
                       void *value,
-                      apr_pool_t *pool);
+                      apr_pool_t *scratch_pool);
 
   svn_error_t *(*iter)(svn_boolean_t *completed,
                        void *cache_implementation,
                        svn_iter_apr_hash_cb_t func,
                        void *baton,
-                       apr_pool_t *pool);
+                       apr_pool_t *scratch_pool);
 
   svn_boolean_t (*is_cachable)(void *cache_implementation,
                                apr_size_t size);
@@ -57,7 +57,7 @@ typedef struct svn_cache__vtable_t {
                               const void *key,
                               svn_cache__partial_getter_func_t func,
                               void *baton,
-                              apr_pool_t *pool);
+                              apr_pool_t *result_pool);
   svn_error_t *(*set_partial)(void *cache_implementation,
                               const void *key,
                               svn_cache__partial_setter_func_t func,
@@ -67,7 +67,7 @@ typedef struct svn_cache__vtable_t {
   svn_error_t *(*get_info)(void *cache_implementation,
                            svn_cache__info_t *info,
                            svn_boolean_t reset,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool);
 } svn_cache__vtable_t;
 
 struct svn_cache__t {

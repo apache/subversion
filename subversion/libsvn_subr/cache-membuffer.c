@@ -1120,7 +1120,7 @@ membuffer_cache_set(svn_membuffer_t *cache,
                     void *item,
                     svn_cache__serialize_func_t serializer,
                     DEBUG_CACHE_MEMBUFFER_TAG_ARG
-                    apr_pool_t *pool)
+                    apr_pool_t *scratch_pool)
 {
   apr_uint32_t group_index;
   unsigned char to_find[KEY_SIZE];
@@ -1130,14 +1130,14 @@ membuffer_cache_set(svn_membuffer_t *cache,
 
   /* find the entry group that will hold the key.
    */
-  group_index = get_group_index(&cache, key, key_len, to_find, pool);
+  group_index = get_group_index(&cache, key, key_len, to_find, scratch_pool);
   if (group_index == NO_INDEX)
     return SVN_NO_ERROR;
 
   /* Serialize data data.
    */
   if (item)
-    SVN_ERR(serializer(&buffer, &size, item, pool));
+    SVN_ERR(serializer(&buffer, &size, item, scratch_pool));
 
   /* The actual cache data access needs to sync'ed
    */
@@ -1161,7 +1161,7 @@ membuffer_cache_set(svn_membuffer_t *cache,
 
       /* Remember original content, type and key (hashes)
        */
-      SVN_ERR(store_content_part(tag, buffer, size, pool));
+      SVN_ERR(store_content_part(tag, buffer, size, scratch_pool));
       memcpy(&entry->tag, tag, sizeof(*tag));
 
 #endif
@@ -1200,7 +1200,7 @@ membuffer_cache_get(svn_membuffer_t *cache,
                     void **item,
                     svn_cache__deserialize_func_t deserializer,
                     DEBUG_CACHE_MEMBUFFER_TAG_ARG
-                    apr_pool_t *pool)
+                    apr_pool_t *result_pool)
 {
   apr_uint32_t group_index;
   unsigned char to_find[KEY_SIZE];
@@ -1210,7 +1210,7 @@ membuffer_cache_get(svn_membuffer_t *cache,
 
   /* find the entry group that will hold the key.
    */
-  group_index = get_group_index(&cache, key, key_len, to_find, pool);
+  group_index = get_group_index(&cache, key, key_len, to_find, result_pool);
   if (group_index == NO_INDEX)
     {
       /* Some error occured, return "item not found".
@@ -1234,7 +1234,7 @@ membuffer_cache_get(svn_membuffer_t *cache,
     }
 
   size = ALIGN_VALUE(entry->size);
-  buffer = ALIGN_POINTER(apr_palloc(pool, size + ITEM_ALIGNMENT-1));
+  buffer = ALIGN_POINTER(apr_palloc(result_pool, size + ITEM_ALIGNMENT-1));
   memcpy(buffer, (const char*)cache->data + entry->offset, size);
 
 #ifdef DEBUG_CACHE_MEMBUFFER
@@ -1247,7 +1247,7 @@ membuffer_cache_get(svn_membuffer_t *cache,
 
   /* Compare original content, type and key (hashes)
    */
-  SVN_ERR(store_content_part(tag, buffer, entry->size, pool));
+  SVN_ERR(store_content_part(tag, buffer, entry->size, result_pool));
   SVN_ERR(assert_equal_tags(&entry->tag, tag));
 
 #endif
@@ -1262,7 +1262,7 @@ membuffer_cache_get(svn_membuffer_t *cache,
 
   /* re-construct the original data object from its serialized form.
    */
-  return deserializer(item, buffer, entry->size, pool);
+  return deserializer(item, buffer, entry->size, result_pool);
 }
 
 /* Look for the cache entry identified by KEY and KEY_LEN. FOUND indicates
@@ -1280,14 +1280,14 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
                             svn_cache__partial_getter_func_t deserializer,
                             void *baton,
                             DEBUG_CACHE_MEMBUFFER_TAG_ARG
-                            apr_pool_t *pool)
+                            apr_pool_t *result_pool)
 {
   apr_uint32_t group_index;
   unsigned char to_find[KEY_SIZE];
   entry_t *entry;
   svn_error_t *err = SVN_NO_ERROR;
 
-  group_index = get_group_index(&cache, key, key_len, to_find, pool);
+  group_index = get_group_index(&cache, key, key_len, to_find, result_pool);
 
   SVN_ERR(lock_cache(cache));
 
@@ -1319,7 +1319,7 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
       SVN_ERR(store_content_part(tag,
                                  (const char*)cache->data + entry->offset,
                                  entry->size,
-                                 pool));
+                                 result_pool));
       SVN_ERR(assert_equal_tags(&entry->tag, tag));
 
 #endif
@@ -1328,7 +1328,7 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
                          (const char*)cache->data + entry->offset,
                          entry->size,
                          baton,
-                         pool);
+                         result_pool);
     }
 
   /* done here -> unlock the cache
@@ -1348,7 +1348,7 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
                             svn_cache__partial_setter_func_t func,
                             void *baton,
                             DEBUG_CACHE_MEMBUFFER_TAG_ARG
-                            apr_pool_t *pool)
+                            apr_pool_t *scratch_pool)
 {
   apr_uint32_t group_index;
   unsigned char to_find[KEY_SIZE];
@@ -1357,7 +1357,7 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
 
   /* cache item lookup
    */
-  group_index = get_group_index(&cache, key, key_len, to_find, pool);
+  group_index = get_group_index(&cache, key, key_len, to_find, scratch_pool);
 
   SVN_ERR(lock_cache(cache));
 
@@ -1387,14 +1387,14 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
 
       /* Compare original content, type and key (hashes)
        */
-      SVN_ERR(store_content_part(tag, data, size, pool));
+      SVN_ERR(store_content_part(tag, data, size, scratch_pool));
       SVN_ERR(assert_equal_tags(&entry->tag, tag));
 
 #endif
 
       /* modify it, preferrably in-situ.
        */
-      err = func(&data, &size, baton, pool);
+      err = func(&data, &size, baton, scratch_pool);
 
       if (err)
         {
@@ -1432,7 +1432,7 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
 
                   /* Remember original content, type and key (hashes)
                    */
-                  SVN_ERR(store_content_part(tag, data, size, pool));
+                  SVN_ERR(store_content_part(tag, data, size, scratch_pool));
                   memcpy(&entry->tag, tag, sizeof(*tag));
 
 #endif
@@ -1547,7 +1547,7 @@ svn_membuffer_cache_get(void **value_p,
                         svn_boolean_t *found,
                         void *cache_void,
                         const void *key,
-                        apr_pool_t *pool)
+                        apr_pool_t *result_pool)
 {
   svn_membuffer_cache_t *cache = cache_void;
 
@@ -1565,7 +1565,7 @@ svn_membuffer_cache_get(void **value_p,
               cache->key_len,
               &full_key,
               &full_key_len,
-              pool);
+              cache->pool);
 
   /* Look the item up. */
   SVN_ERR(membuffer_cache_get(cache->membuffer,
@@ -1574,7 +1574,7 @@ svn_membuffer_cache_get(void **value_p,
                               value_p,
                               cache->deserializer,
                               DEBUG_CACHE_MEMBUFFER_TAG
-                              pool));
+                              result_pool));
 
   /* We don't need more the key anymore.
    * But since we allocate only small amounts of data per get() call and
@@ -1659,7 +1659,7 @@ svn_membuffer_cache_get_partial(void **value_p,
                                 const void *key,
                                 svn_cache__partial_getter_func_t func,
                                 void *baton,
-                                apr_pool_t *pool)
+                                apr_pool_t *result_pool)
 {
   svn_membuffer_cache_t *cache = cache_void;
 
@@ -1674,7 +1674,7 @@ svn_membuffer_cache_get_partial(void **value_p,
               cache->key_len,
               &full_key,
               &full_key_len,
-              pool);
+              cache->pool);
 
   SVN_ERR(membuffer_cache_get_partial(cache->membuffer,
                                       full_key,
@@ -1684,7 +1684,7 @@ svn_membuffer_cache_get_partial(void **value_p,
                                       func,
                                       baton,
                                       DEBUG_CACHE_MEMBUFFER_TAG
-                                      pool));
+                                      result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1694,7 +1694,7 @@ svn_membuffer_cache_set_partial(void *cache_void,
                                 const void *key,
                                 svn_cache__partial_setter_func_t func,
                                 void *baton,
-                                apr_pool_t *pool)
+                                apr_pool_t *scratch_pool)
 {
   svn_membuffer_cache_t *cache = cache_void;
 
@@ -1709,7 +1709,7 @@ svn_membuffer_cache_set_partial(void *cache_void,
               cache->key_len,
               &full_key,
               &full_key_len,
-              pool);
+              scratch_pool);
 
   SVN_ERR(membuffer_cache_set_partial(cache->membuffer,
                                       full_key,
@@ -1717,7 +1717,7 @@ svn_membuffer_cache_set_partial(void *cache_void,
                                       func,
                                       baton,
                                       DEBUG_CACHE_MEMBUFFER_TAG
-                                      pool));
+                                      scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1738,14 +1738,14 @@ static svn_error_t *
 svn_membuffer_cache_get_info(void *cache_void,
                              svn_cache__info_t *info,
                              svn_boolean_t reset,
-                             apr_pool_t *pool)
+                             apr_pool_t *result_pool)
 {
   svn_membuffer_cache_t *cache = cache_void;
   apr_uint32_t i;
 
   /* cache frontend specific data */
 
-  info->id = apr_pstrdup(pool, cache->full_prefix);
+  info->id = apr_pstrdup(result_pool, cache->full_prefix);
 
   /* collect info from shared cache backend */
 
@@ -1796,7 +1796,7 @@ static svn_error_t *
 serialize_svn_stringbuf(char **buffer,
                         apr_size_t *buffer_size,
                         void *item,
-                        apr_pool_t *pool)
+                        apr_pool_t *result_pool)
 {
   svn_stringbuf_t *value_str = item;
 
@@ -1813,9 +1813,9 @@ static svn_error_t *
 deserialize_svn_stringbuf(void **item,
                           char *buffer,
                           apr_size_t buffer_size,
-                          apr_pool_t *pool)
+                          apr_pool_t *result_pool)
 {
-  svn_string_t *value_str = apr_palloc(pool, sizeof(svn_string_t));
+  svn_string_t *value_str = apr_palloc(result_pool, sizeof(svn_string_t));
 
   value_str->data = buffer;
   value_str->len = buffer_size-1;
