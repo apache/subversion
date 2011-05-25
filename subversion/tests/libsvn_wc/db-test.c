@@ -914,15 +914,15 @@ test_pdh(apr_pool_t *pool)
      debugging wc_db to ensure it manages per-directory handles properly.  */
 
   SVN_ERR(svn_wc__db_base_add_absent_node(
-            db, svn_dirent_join(local_abspath, "sub/A/B", pool),
-            "sub/A/B", ROOT_ONE, UUID_ONE, 1,
+            db, svn_dirent_join(local_abspath, "sub", pool),
+            "sub", ROOT_ONE, UUID_ONE, 1,
             svn_wc__db_kind_file, svn_wc__db_status_absent,
             NULL, NULL,
             pool));
 
   SVN_ERR(svn_wc__db_base_add_absent_node(
-            db, svn_dirent_join(local_abspath, "sub/A/B/C/D", pool),
-            "sub/A/B/C/D", ROOT_ONE, UUID_ONE, 1,
+            db, svn_dirent_join(local_abspath, "sub/A", pool),
+            "sub/A", ROOT_ONE, UUID_ONE, 1,
             svn_wc__db_kind_file, svn_wc__db_status_absent,
             NULL, NULL,
             pool));
