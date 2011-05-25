@@ -968,7 +968,6 @@ def upgrade_from_format_28(sbox):
   assert not os.path.exists(old_pristine_path)
   assert os.path.exists(new_pristine_path)
 
-@XFail()
 @Issue(3901)
 def depth_exclude(sbox):
   "upgrade 1.6.x wc that has depth=exclude"
