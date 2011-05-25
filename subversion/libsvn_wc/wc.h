@@ -348,20 +348,6 @@ svn_wc__prop_array_to_hash(const apr_array_header_t *props,
                            apr_pool_t *result_pool);
 
 
-/* Baton for svn_wc__compat_call_notify_func below. */
-typedef struct svn_wc__compat_notify_baton_t {
-  /* Wrapped func/baton. */
-  svn_wc_notify_func_t func;
-  void *baton;
-} svn_wc__compat_notify_baton_t;
-
-/* Implements svn_wc_notify_func2_t.  Call BATON->func (BATON is of type
-   svn_wc__compat_notify_baton_t), passing BATON->baton and the appropriate
-   arguments from NOTIFY. */
-void svn_wc__compat_call_notify_func(void *baton,
-                                     const svn_wc_notify_t *notify,
-                                     apr_pool_t *pool);
-
 /* Set *MODIFIED_P to non-zero if LOCAL_ABSPATH's text is modified with
  * regard to the base revision, else set *MODIFIED_P to zero.
  *
@@ -742,8 +728,8 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
-;
+                           apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }
