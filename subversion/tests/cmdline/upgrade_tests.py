@@ -968,6 +968,24 @@ def upgrade_from_format_28(sbox):
   assert not os.path.exists(old_pristine_path)
   assert os.path.exists(new_pristine_path)
 
+@XFail()
+@Issue(3901)
+def depth_exclude(sbox):
+  "upgrade 1.6.x wc that has depth=exclude"
+  
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'depth_exclude.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''                  : Item(status='  ', wc_rev='1'),
+      'A'                 : Item(status='  ', wc_rev='1'),
+      'X'                 : Item(status='A ', copied='+', wc_rev='-'),
+    })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -1010,6 +1028,7 @@ test_list = [ None,
               tree_replace1,
               tree_replace2,
               upgrade_from_format_28,
+              depth_exclude,
              ]
 
 
