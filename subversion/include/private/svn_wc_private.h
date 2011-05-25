@@ -170,12 +170,6 @@ svn_wc__get_all_tree_conflicts(apr_hash_t **tree_conflicts,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/** Return a duplicate of @a conflict, allocated in @a pool.
- * A deep copy of all members, except the adm_access member, will be made.
- */
-svn_wc_conflict_description_t *
-svn_wc__conflict_description_dup(const svn_wc_conflict_description_t *conflict,
-                                 apr_pool_t *pool);
 
 /** Like svn_wc_is_wc_root(), but it doesn't consider switched subdirs or
  * deleted entries as working copy roots.
@@ -195,21 +189,16 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
 
 
 /*
- * Convert from svn_wc_conflict_description2_t to svn_wc_conflict_description_t.
+ * Convert from svn_wc_conflict_description2_t to
+ * svn_wc_conflict_description_t. This is needed by some backwards-compat
+ * code in libsvn_client/ctx.c
+ *
  * Allocate the result in RESULT_POOL.
  */
 svn_wc_conflict_description_t *
 svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
                   apr_pool_t *result_pool);
 
-
-/*
- * Convert from svn_wc_conflict_description_t to svn_wc_conflict_description2_t.
- * Allocate the result in RESULT_POOL.
- */
-svn_wc_conflict_description2_t *
-svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
-                  apr_pool_t *result_pool);
 
 /*
  * Convert from svn_wc_status3_t to svn_wc_status2_t.
