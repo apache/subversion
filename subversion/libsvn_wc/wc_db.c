@@ -9541,7 +9541,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 
   SVN_ERR(scan_deletion(&base_del_relpath, &moved_to_relpath,
                         &work_del_relpath, wcroot,
-                        local_relpath, result_pool, scratch_pool));
+                        local_relpath, scratch_pool, scratch_pool));
 
   if (base_del_abspath)
     {
