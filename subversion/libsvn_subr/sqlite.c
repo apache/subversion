@@ -875,6 +875,38 @@ close_apr(void *data)
   return APR_SUCCESS;
 }
 
+
+/* An SQLite application defined function that allows SQL queries to
+   use "relpath_depth(local_relpath)".  This has to be installed before
+   the statements are prepared, so before the first call to
+   svn_sqlite__get_statement.
+
+   Should we have a way of allowing the caller of svn_sqlite__open to
+   pass in an array of function pointers?  Would the caller have to
+   use the SQLite types or would we wrap them all? */
+static void relpath_depth(sqlite3_context *context, int argc, sqlite3_value **val)
+{
+  const unsigned char *path = NULL;
+  sqlite3_int64 depth;
+
+  if (argc == 1 && sqlite3_value_type(val[0]) == SQLITE_TEXT)
+    path = sqlite3_value_text(val[0]);
+  if (!path)
+    {
+      sqlite3_result_null(context);
+      return;
+    }
+
+  depth = *path ? 1 : 0;
+  while (*path)
+    {
+      if (*path == '/')
+        ++depth;
+      ++path;
+    }
+  sqlite3_result_int(context, depth);
+}
+
 svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  svn_sqlite__mode_t mode, const char * const statements[],
@@ -930,6 +962,10 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   /* Validate the schema, upgrading if necessary. */
   if (upgrade_sql != NULL)
     SVN_ERR(check_format(*db, latest_schema, upgrade_sql, scratch_pool));
+
+  SQLITE_ERR(sqlite3_create_function((*db)->db3, "relpath_depth",
+                                     1, SQLITE_UTF8, NULL,
+                                     relpath_depth, NULL, NULL), *db);
 
   /* Store the provided statements. */
   if (statements)
