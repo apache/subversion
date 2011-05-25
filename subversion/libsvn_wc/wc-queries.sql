@@ -920,16 +920,6 @@ WHERE wc_id = ?1 AND local_relpath = ?2
 
 /* these are used in entries.c  */
 
--- STMT_INSERT_BASE_NODE_FOR_ENTRY
-/* The BASE tree has a fixed op_depth '0' */
-INSERT OR REPLACE INTO nodes (
-  wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
-  revision, presence, kind, checksum,
-  changed_revision, changed_date, changed_author, depth, properties,
-  translated_size, last_mod_time )
-VALUES (?1, ?2, 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13,
-       ?14, ?15, ?16 )
-
 -- STMT_INSERT_ACTUAL_NODE
 INSERT OR REPLACE INTO actual_node (
   wc_id, local_relpath, parent_relpath, properties, conflict_old,
