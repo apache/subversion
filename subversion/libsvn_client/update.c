@@ -145,12 +145,16 @@ is_empty_wc(svn_boolean_t *clean_checkout,
             }
         }
     }
-  
+
   if (err)
     {
-      /* There was some issue reading the folder content.
-       * We better disable optimizations in that case. */
-      *clean_checkout = FALSE;
+      if (! APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          /* There was some issue reading the folder content.
+           * We better disable optimizations in that case. */
+          *clean_checkout = FALSE;
+        }
+
       svn_error_clear(err);
     }
 
