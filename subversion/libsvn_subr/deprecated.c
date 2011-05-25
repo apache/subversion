@@ -634,10 +634,17 @@ svn_io_file_create(const char *file,
                    const char *contents,
                    apr_pool_t *pool)
 {
-  const svn_string_t *contents_string;
-
-  contents_string = (contents ? svn_string_create(contents, pool) : NULL);
-  return svn_io_file_create2(file, contents_string, pool);
+  if (contents && *contents)
+    { 
+      svn_string_t contents_string;
+      contents_string.data = contents;
+      contents_string.len = strlen(contents);
+      return svn_io_file_create2(file, &contents_string, pool);
+    }
+  else
+    {
+      return svn_io_file_create2(file, NULL, pool);
+    }
 }
 
 svn_error_t *
