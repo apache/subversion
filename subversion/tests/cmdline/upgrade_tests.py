@@ -871,7 +871,6 @@ def upgrade_with_scheduled_change(sbox):
       })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
-@XFail()
 @Issue(3777)
 def tree_replace1(sbox):
   "upgrade 1.6 with tree replaced"
@@ -881,44 +880,22 @@ def tree_replace1(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
 
-  ### Check status (once upgrade no longer asserts)
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''      : Item(status=' M', wc_rev=17),
+      'B'     : Item(status='R ', copied='+', wc_rev='-'),
+      'B/f'   : Item(status='R ', copied='+', wc_rev='-'),
+      'B/g'   : Item(status='D ', wc_rev=17),
+      'B/h'   : Item(status='A ', copied='+', wc_rev='-'),
+      'B/C'   : Item(status='R ', copied='+', wc_rev='-'),
+      'B/C/f' : Item(status='R ', copied='+', wc_rev='-'),
+      'B/D'   : Item(status='D ', wc_rev=17),
+      'B/D/f' : Item(status='D ', wc_rev=17),
+      'B/E'   : Item(status='A ', copied='+', wc_rev='-'),
+      'B/E/f' : Item(status='A ', copied='+', wc_rev='-'),
+    })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
-  # The working copy contains a tree B that is deleted and replaced by a
-  # an another tree:
-  #
-  #  deleted            replaced by
-  #   B                  B
-  #   B/f                B/f
-  #   B/g
-  #                      B/h
-  #   B/C                B/C
-  #   B/C/f              B/C/f
-  #   B/D
-  #   B/D/f
-  #                      B/E
-  #                      B/E/f
-
-  # 1.6 status:
-  #  M      wc
-  # R  +    wc/B
-  # R  +    wc/B/C
-  # R  +    wc/B/C/f
-  # D  +    wc/B/D
-  # D  +    wc/B/D/f
-  # A  +    wc/B/E
-  # A  +    wc/B/E/f
-  # R  +    wc/B/f
-  # D  +    wc/B/g
-  # A  +    wc/B/h
-
-  # 1.7 status:
-  #  M      wc
-  # R  +    wc/B
-  # D       wc/B/D
-  # D       wc/B/D/f
-  # D       wc/B/g
-
-@XFail()
 @Issue(3777)
 def tree_replace2(sbox):
   "upgrade 1.6 with tree replaced (2)"
@@ -928,22 +905,21 @@ def tree_replace2(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
 
-  ### Check status (once upgrade no longer asserts)
-
-  # The working copy contains two trees B and C that have replaced
-  # each other
-
-  #  deleted             replaced by
-  #   B                   B
-  #   B/f
-  #   B/D
-  #                       B/g
-  #                       B/E
-  #   C                   C
-  #                       C/f
-  #                       C/D
-  #   C/g
-  #   C/E
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''      : Item(status=' M', wc_rev=12),
+      'B'     : Item(status='R ', copied='+', wc_rev='-'),
+      'B/f'   : Item(status='D ', wc_rev=12),
+      'B/D'   : Item(status='D ', wc_rev=12),
+      'B/g'   : Item(status='A ', copied='+', wc_rev='-'),
+      'B/E'   : Item(status='A ', copied='+', wc_rev='-'),
+      'C'     : Item(status='R ', copied='+', wc_rev='-'),
+      'C/f'   : Item(status='A ', copied='+', wc_rev='-'),
+      'C/D'   : Item(status='A ', copied='+', wc_rev='-'),
+      'C/g'   : Item(status='D ', wc_rev=12),
+      'C/E'   : Item(status='D ', wc_rev=12),
+    })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
 @XFail()  # Requires WC format >= 29.
 def upgrade_from_format_28(sbox):
