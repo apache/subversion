@@ -50,18 +50,18 @@ extern "C" {
 
 /**
  * A function type for deserializing an object @a *out from the string
- * @a data of length @a data_len in the pool @a pool. It is legal and
+ * @a data of length @a data_len into @a result_pool. It is legal and
  * generally suggested that the deserialization will be done in-place,
  * i.e. modify @a data directly and return it in @a *out.
  */
 typedef svn_error_t *(*svn_cache__deserialize_func_t)(void **out,
                                                       char *data,
                                                       apr_size_t data_len,
-                                                      apr_pool_t *pool);
+                                                      apr_pool_t *result_pool);
 
 /**
  * A function type for deserializing an object @a *out from the string
- * @a data of length @a data_len in the pool @a pool. The extra information
+ * @a data of length @a data_len into @a result_pool. The extra information
  * @a baton passed into can be used to deserialize only a specific part or
  * sub-structure or to perform any other non-modifying operation that may
  * not require the whole structure to be processed.
@@ -70,7 +70,7 @@ typedef svn_error_t *(*svn_cache__partial_getter_func_t)(void **out,
                                                          const char *data,
                                                          apr_size_t data_len,
                                                          void *baton,
-                                                         apr_pool_t *pool);
+                                                         apr_pool_t *result_pool);
 
 /**
  * A function type for modifying an already deserialized in the @a *data
@@ -78,30 +78,30 @@ typedef svn_error_t *(*svn_cache__partial_getter_func_t)(void **out,
  * to do will be provided in @a baton. The function may change the size of
  * data buffer and may re-allocate it if necessary. In that case, the new
  * values must be passed back in @a *data_len and @a *data, respectively.
- * Allocations will be done from @a pool.
+ * Allocations will be done from @a result_pool.
  */
 typedef svn_error_t *(*svn_cache__partial_setter_func_t)(char **data,
                                                          apr_size_t *data_len,
                                                          void *baton,
-                                                         apr_pool_t *pool);
+                                                         apr_pool_t *result_pool);
 
 /**
  * A function type for serializing an object @a in into bytes.  The
- * function should allocate the serialized value in @a pool, set
+ * function should allocate the serialized value in @a result_pool, set
  * @a *data to the serialized value, and set @a *data_len to its length.
  */
 typedef svn_error_t *(*svn_cache__serialize_func_t)(char **data,
                                                     apr_size_t *data_len,
                                                     void *in,
-                                                    apr_pool_t *pool);
+                                                    apr_pool_t *result_pool);
 
 /**
- * A function type for transforming or ignoring errors.  @a pool may
+ * A function type for transforming or ignoring errors.  @a scratch_pool may
  * be used for temporary allocations.
  */
 typedef svn_error_t *(*svn_cache__error_handler_t)(svn_error_t *err,
                                                    void *baton,
-                                                   apr_pool_t *pool);
+                                                   apr_pool_t *scratch_pool);
 
 /**
  * A wrapper around apr_memcache_t, provided essentially so that the
@@ -212,6 +212,7 @@ svn_cache__create_inprocess(svn_cache__t **cache_p,
                             svn_boolean_t thread_safe,
                             const char *id,
                             apr_pool_t *pool);
+
 /**
  * Creates a new cache in @a *cache_p, communicating to a memcached
  * process via @a memcache.  The elements in the cache will be indexed
@@ -220,7 +221,7 @@ svn_cache__create_inprocess(svn_cache__t **cache_p,
  * serialize_func and deserialized using @a deserialize_func.  Because
  * the same memcached server may cache many different kinds of values,
  * @a prefix should be specified to differentiate this cache from
- * other caches.  @a *cache_p will be allocated in @a pool.
+ * other caches.  @a *cache_p will be allocated in @a result_pool.
  *
  * If @a deserialize_func is NULL, then the data is returned as an
  * svn_string_t; if @a serialize_func is NULL, then the data is
@@ -240,11 +241,11 @@ svn_cache__create_memcache(svn_cache__t **cache_p,
                            svn_cache__deserialize_func_t deserialize_func,
                            apr_ssize_t klen,
                            const char *prefix,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool);
 
 /**
  * Given @a config, returns an APR memcached interface in @a
- * *memcache_p allocated in @a pool if @a config contains entries in
+ * *memcache_p allocated in @a result_pool if @a config contains entries in
  * the SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS section describing
  * memcached servers; otherwise, sets @a *memcache_p to NULL.
  *
@@ -255,7 +256,7 @@ svn_cache__create_memcache(svn_cache__t **cache_p,
 svn_error_t *
 svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
                                      svn_config_t *config,
-                                     apr_pool_t *pool);
+                                     apr_pool_t *result_pool);
 
 /**
  * Creates a new membuffer cache object in @a *cache. It will contain
@@ -271,14 +272,14 @@ svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
  * If access to the resulting cache object is guranteed to be serialized,
  * @a thread_safe may be set to @a FALSE for maximum performance.
  *
- * Allocations will be made in @a pool, in particular the data buffers.
+ * Allocations will be made in @a result_pool, in particular the data buffers.
  */
 svn_error_t *
 svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                                   apr_size_t total_size,
                                   apr_size_t directory_size,
                                   svn_boolean_t thread_safe,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *result_pool);
 
 /**
  * Creates a new cache in @a *cache_p, storing the data in a potentially
@@ -288,7 +289,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
  * serialize_func and deserialized using @a deserialize_func.  Because
  * the same memcache object may cache many different kinds of values
  * form multiple caches, @a prefix should be specified to differentiate 
- * this cache from other caches.  @a *cache_p will be allocated in @a pool.
+ * this cache from other caches.  @a *cache_p will be allocated in @a result_pool.
  *
  * If @a deserialize_func is NULL, then the data is returned as an
  * svn_string_t; if @a serialize_func is NULL, then the data is
@@ -306,7 +307,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                                   svn_cache__deserialize_func_t deserialize,
                                   apr_ssize_t klen,
                                   const char *prefix,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *result_pool);
 
 /**
  * Sets @a handler to be @a cache's error handling routine.  If any
@@ -314,14 +315,14 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
  * handler will be called with @a baton and the error, and the
  * original function will return whatever error @a handler returns
  * instead (possibly SVN_NO_ERROR); @a handler will receive the pool
- * passed to the svn_cache__* function.  @a pool is used for temporary
+ * passed to the svn_cache_* function.  @a scratch_pool is used for temporary
  * allocations.
  */
 svn_error_t *
 svn_cache__set_error_handler(svn_cache__t *cache,
                              svn_cache__error_handler_t handler,
                              void *baton,
-                             apr_pool_t *pool);
+                             apr_pool_t *scratch_pool);
 
 /**
  * Returns @c TRUE if the @a cache supports objects of the given @a size.
@@ -339,19 +340,20 @@ svn_cache__is_cachable(svn_cache__t *cache,
 /**
  * Fetches a value indexed by @a key from @a cache into @a *value,
  * setting @a *found to TRUE iff it is in the cache and FALSE if it is
- * not found.  The value is copied into @a pool using the copy
+ * not found.  The value is copied into @a result_pool using the copy
  * function provided to the cache's constructor.
+ * ### what copy function? there are serialize/deserialize functions, no copy functions
  */
 svn_error_t *
 svn_cache__get(void **value,
                svn_boolean_t *found,
                svn_cache__t *cache,
                const void *key,
-               apr_pool_t *pool);
+               apr_pool_t *result_pool);
 
 /**
- * Stores the value @a value under the key @a key in @a cache.  @a pool
- * is used only for temporary allocations.  The cache makes copies of
+ * Stores the value @a value under the key @a key in @a cache.  Uses @a
+ * scratch_pool for temporary allocations.  The cache makes copies of
  * @a key and @a value if necessary (that is, @a key and @a value may
  * have shorter lifetimes than the cache).
  *
@@ -365,12 +367,12 @@ svn_error_t *
 svn_cache__set(svn_cache__t *cache,
                const void *key,
                void *value,
-               apr_pool_t *pool);
+               apr_pool_t *scratch_pool);
 
 /**
  * Iterates over the elements currently in @a cache, calling @a func
  * for each one until there are no more elements or @a func returns an
- * error.  Uses @a pool for temporary allocations.
+ * error.  Uses @a scratch_pool for temporary allocations.
  *
  * If @a completed is not NULL, then on return - if @a func returns no
  * errors - @a *completed will be set to @c TRUE.
@@ -392,7 +394,7 @@ svn_cache__iter(svn_boolean_t *completed,
                 svn_cache__t *cache,
                 svn_iter_apr_hash_cb_t func,
                 void *baton,
-                apr_pool_t *pool);
+                apr_pool_t *scratch_pool);
 
 /**
  * Similar to @ref svn_cache__set but will call a specific de-serialization
@@ -407,7 +409,7 @@ svn_cache__get_partial(void **value,
                        const void *key,
                        svn_cache__partial_getter_func_t func,
                        void *baton,
-                       apr_pool_t *scratch_pool);
+                       apr_pool_t *result_pool);
 
 /**
  * Find the item identified by @a key in the @a cache. If it has been found,
@@ -427,21 +429,21 @@ svn_cache__set_partial(svn_cache__t *cache,
  * Collect all available usage statistics on the cache instance @a cache
  * and write the data into @a info. If @a reset has been set, access
  * counters will be reset right after copying the statistics info.
- * @a pool will be used for allocations.
+ * @a result_pool will be used for allocations.
  */
 svn_error_t *
 svn_cache__get_info(svn_cache__t *cache,
                     svn_cache__info_t *info,
                     svn_boolean_t reset,
-                    apr_pool_t *pool);
+                    apr_pool_t *result_pool);
 
 /**
  * Return the information given in @a info formatted as a multi-line string.
- * Allocations take place in @a pool.
+ * Allocations take place in @a result_pool.
  */
 svn_string_t *
 svn_cache__format_info(const svn_cache__info_t *info,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool);
 
 /* Access the process-global (singleton) membuffer cache. The first call
  * will automatically allocate the cache using the current cache config.
