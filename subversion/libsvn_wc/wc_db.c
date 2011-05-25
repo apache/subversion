@@ -1161,9 +1161,8 @@ gather_children(const apr_array_header_t **children,
 
 
 /* Set *CHILDREN to a new array of (const char *) names of the children of
-   the repository directory corresponding to the (working) path
-   WCROOT:LOCAL_RELPATH - that is, only the children that are at the same
-   op-depth as their parent. */
+   the repository directory corresponding to WCROOT:LOCAL_RELPATH:OP_DEPTH -
+   that is, only the children that are at the same op-depth as their parent. */
 static svn_error_t *
 gather_repo_children(const apr_array_header_t **children,
                      svn_wc__db_wcroot_t *wcroot,
