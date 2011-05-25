@@ -1668,6 +1668,12 @@ svn_membuffer_cache_get_partial(void **value_p,
 
   DEBUG_CACHE_MEMBUFFER_INIT_TAG
 
+  if (++cache->alloc_counter > ALLOCATIONS_PER_POOL_CLEAR)
+    {
+      apr_pool_clear(cache->pool);
+      cache->alloc_counter = 0;
+    }
+    
   combine_key(cache->prefix,
               sizeof(cache->prefix),
               key,
