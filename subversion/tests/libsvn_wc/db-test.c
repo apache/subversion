@@ -305,15 +305,6 @@ static const char * const TESTING_DATA = (
    "insert into actual_node values ("
    "  1, 'G', '', null, null, null, null, null, null, null, "
    "  '" G_TC_DATA "', null, null, null, null);"
-   "  "
-   "insert into nodes values ("
-   "  1, 'M', 0, '', 1, 'M', null, 'normal', "
-   "  1, null, 'dir', '()', null, null, null, 1, " TIME_1s ", '" AUTHOR_1 "',"
-   "  null, null, null, null);"
-   "insert into nodes values ("
-   "  1, 'M/M-a', 1, 'M', null, null, null, 'not-present', "
-   "  null, null, 'file', '()', null, null, null, null, null, null,"
-   "  null, 0, null, null);"
    );
 
 WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
@@ -792,7 +783,7 @@ test_children(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_base_get_children(&children,
                                        db, local_abspath,
                                        pool, pool));
-  SVN_TEST_ASSERT(children->nelts == 12);
+  SVN_TEST_ASSERT(children->nelts == 11);
   for (i = children->nelts; i--; )
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
@@ -804,7 +795,7 @@ test_children(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_read_children(&children,
                                    db, local_abspath,
                                    pool, pool));
-  SVN_TEST_ASSERT(children->nelts == 13);
+  SVN_TEST_ASSERT(children->nelts == 12);
   for (i = children->nelts; i--; )
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
@@ -1221,18 +1212,6 @@ test_scan_deletion(apr_pool_t *pool)
   SVN_TEST_ASSERT(base_del_abspath == NULL);
   SVN_TEST_ASSERT(moved_to_abspath == NULL);
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "L/L-a",
-                                   work_del_abspath, pool));
-
-  /* Root of delete, parent converted to BASE during post-commit. */
-  SVN_ERR(svn_wc__db_scan_deletion(
-            &base_del_abspath,
-            &moved_to_abspath,
-            &work_del_abspath,
-            db, svn_dirent_join(local_abspath, "M/M-a", pool),
-            pool, pool));
-  SVN_TEST_ASSERT(base_del_abspath == NULL);
-  SVN_TEST_ASSERT(moved_to_abspath == NULL);
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "M/M-a",
                                    work_del_abspath, pool));
 
   return SVN_NO_ERROR;
