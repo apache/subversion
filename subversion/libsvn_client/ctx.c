@@ -59,9 +59,9 @@ call_conflict_func(svn_wc_conflict_result_t **result,
 
   if (ctx->conflict_func)
     {
-      svn_wc_conflict_description_t *cd = svn_wc__cd2_to_cd(conflict,
-                                                        scratch_pool);
+      const svn_wc_conflict_description_t *cd;
 
+      cd = svn_wc__cd2_to_cd(conflict, scratch_pool);
       SVN_ERR(ctx->conflict_func(result, cd, ctx->conflict_baton,
                                  result_pool));
     }
