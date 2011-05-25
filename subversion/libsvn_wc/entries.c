@@ -1627,8 +1627,11 @@ write_entry(struct write_baton **entry_node,
                        || (parent_node->base && !parent_node->work
                            && !entry->copied)
                        || (!parent_node->base && parent_node->work
-                           && entry->copied));
-        if (entry->copied)
+                           && (entry->copied ||
+                               entry->depth == svn_depth_exclude)));
+        if (entry->copied ||
+            (entry->depth == svn_depth_exclude && parent_node &&
+             parent_node->work))
           working_node = MAYBE_ALLOC(working_node, result_pool);
         else
           base_node = MAYBE_ALLOC(base_node, result_pool);
@@ -2036,44 +2039,45 @@ write_entry(struct write_baton **entry_node,
 #endif
         }
 
-      /* All subdirs start of incomplete, and stop being incomplete
-         when the entries file in the subdir is upgraded. */
-      if (entry->kind == svn_node_dir
-          && strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR))
+      working_node->kind = entry->kind;
+      if (working_node->presence != svn_wc__db_status_excluded)
         {
-          working_node->presence = svn_wc__db_status_incomplete;
-          working_node->kind = svn_node_dir;
-        }
-      else if (entry->schedule == svn_wc_schedule_delete)
-        {
-          if (entry->incomplete)
+          /* All subdirs start of incomplete, and stop being incomplete
+             when the entries file in the subdir is upgraded. */
+          if (entry->kind == svn_node_dir
+              && strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR))
             {
-              /* A transition from a schedule-delete state to incomplete
-                 is most likely caused by svn_wc_remove_from_revision_control.
-                 By setting this node's presence to 'incomplete', we will
-                 lose the scheduling information, but this directory is
-                 being deleted (by the logs) ... we won't need the state.  */
               working_node->presence = svn_wc__db_status_incomplete;
+              working_node->kind = svn_node_dir;
+            }
+          else if (entry->schedule == svn_wc_schedule_delete)
+            {
+              if (entry->incomplete)
+                {
+                  /* A transition from a schedule-delete state to incomplete
+                     is most likely caused by svn_wc_remove_from_revision_control.
+                     By setting this node's presence to 'incomplete', we will
+                     lose the scheduling information, but this directory is
+                     being deleted (by the logs) ... we won't need the state.  */
+                  working_node->presence = svn_wc__db_status_incomplete;
+                }
+              else
+                {
+                  working_node->presence = svn_wc__db_status_base_deleted;
+                }
             }
           else
             {
-              working_node->presence = svn_wc__db_status_base_deleted;
-            }
+              /* presence == normal  */
+              working_node->kind = entry->kind;
 
-          /* ### should be svn_node_unknown, but let's store what we have. */
-          working_node->kind = entry->kind;
-        }
-      else
-        {
-          /* presence == normal  */
-          working_node->kind = entry->kind;
-
-          if (entry->incomplete)
-            {
-              /* We shouldn't be overwriting another status.  */
-              SVN_ERR_ASSERT(working_node->presence
-                             == svn_wc__db_status_normal);
-              working_node->presence = svn_wc__db_status_incomplete;
+              if (entry->incomplete)
+                {
+                  /* We shouldn't be overwriting another status.  */
+                  SVN_ERR_ASSERT(working_node->presence
+                                 == svn_wc__db_status_normal);
+                  working_node->presence = svn_wc__db_status_incomplete;
+                }
             }
         }
 
