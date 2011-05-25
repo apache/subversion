@@ -659,10 +659,21 @@ display_prop_diffs(const apr_array_header_t *propchanges,
         {
           const char *orig = original_value ? original_value->data : NULL;
           const char *val = propchange->value ? propchange->value->data : NULL;
+          svn_error_t *err = display_mergeinfo_diff(orig, val, encoding,
+                                                    file, pool);
 
-          SVN_ERR(display_mergeinfo_diff(orig, val, encoding, file, pool));
-
-          continue;
+          /* Issue #3896: If we can't pretty-print mergeinfo differences
+             because invalid mergeinfo is present, then don't let the diff
+             fail, just print the diff as any other property. */
+          if (err && err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+            {
+              svn_error_clear(err);
+            }
+          else
+            {
+              SVN_ERR(err);
+              continue;
+            }
         }
 
       {
