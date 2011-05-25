@@ -959,6 +959,22 @@ def depth_exclude(sbox):
       'A'                 : Item(status='  ', wc_rev='1'),
       'X'                 : Item(status='A ', copied='+', wc_rev='-'),
     })
+
+@XFail()
+@Issue(3901)
+def depth_exclude_2(sbox):
+  "1.6.x wc that has depth=exclude inside a delete"
+  
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'depth_exclude_2.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''                  : Item(status='  ', wc_rev='1'),
+      'A'                 : Item(status='D ', wc_rev='1'),
+    })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
 ########################################################################
@@ -1004,6 +1020,7 @@ test_list = [ None,
               tree_replace2,
               upgrade_from_format_28,
               depth_exclude,
+              depth_exclude_2,
              ]
 
 
