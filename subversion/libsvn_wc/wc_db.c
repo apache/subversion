@@ -9362,15 +9362,9 @@ scan_deletion_txn(void *baton,
           /* No row means no WORKING node at this path, which means we just
              fell off the top of the WORKING tree.
 
-             If the child was not-present this implies the root of the
-             (added) WORKING subtree was deleted.  This can occur
-             during post-commit processing when the copied parent that
-             was in the WORKING tree has been moved to the BASE tree. */
-          if (sd_baton->work_del_relpath != NULL
-              && child_presence == svn_wc__db_status_not_present
-              && *sd_baton->work_del_relpath == NULL)
-            *sd_baton->work_del_relpath = apr_pstrdup(sd_baton->result_pool,
-                                                      child_relpath);
+             The child cannot be not-present, as that would imply the
+             root of the (added) WORKING subtree was deleted.  */
+          SVN_ERR_ASSERT(child_presence != svn_wc__db_status_not_present);
 
           /* If the child did not have a BASE node associated with it, then
              we're looking at a deletion that occurred within an added tree.
