@@ -1816,18 +1816,17 @@ write_entry(struct write_baton **entry_node,
         {
           base_node->kind = entry->kind;
 
-          /* All subdirs are initially incomplete, they stop being
-             incomplete when the entries file in the subdir is
-             upgraded and remain incomplete if that doesn't happen. */
-          if (entry->kind == svn_node_dir
-              && strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR))
+          if (base_node->presence != svn_wc__db_status_excluded)
             {
-              base_node->presence = svn_wc__db_status_incomplete;
-            }
-          else
-            {
-
-              if (entry->incomplete)
+              /* All subdirs are initially incomplete, they stop being
+                 incomplete when the entries file in the subdir is
+                 upgraded and remain incomplete if that doesn't happen. */
+              if (entry->kind == svn_node_dir
+                  && strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR))
+                {
+                  base_node->presence = svn_wc__db_status_incomplete;
+                }
+              else if (entry->incomplete)
                 {
                   /* ### nobody should have set the presence.  */
                   SVN_ERR_ASSERT(base_node->presence
