@@ -723,7 +723,6 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
                                      sbox.repo_url)
 
 #----------------------------------------------------------------------
-@XFail()
 @Issue(3890)
 def svnrdump_load_partial_incremental_dump(sbox):
   "svnrdump load partial incremental dump"
