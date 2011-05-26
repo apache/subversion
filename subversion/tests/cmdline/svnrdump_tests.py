@@ -709,19 +709,19 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   svntest.actions.run_and_verify_svnrdump(dump_fp.readlines(),
                                           svntest.verify.AnyOutput,
                                           [], 0, '-q', 'load',
-                                          sbox.repo_url + 'Projects/Project-X')
+                                          sbox.repo_url + '/Projects/Project-X')
   dump_fp.close()
   dump_fp = open(dump_file_r11_13, 'rb')
   svntest.actions.run_and_verify_svnrdump(dump_fp.readlines(),
                                           svntest.verify.AnyOutput,
                                           [], 0, '-q', 'load',
-                                          sbox.repo_url + 'Projects/Project-X')
+                                          sbox.repo_url + '/Projects/Project-X')
   dump_fp.close()
   dump_fp = open(dump_file_r14_15, 'rb')
   svntest.actions.run_and_verify_svnrdump(dump_fp.readlines(),
                                           svntest.verify.AnyOutput,
                                           [], 0, '-q', 'load',
-                                          sbox.repo_url + 'Projects/Project-X')
+                                          sbox.repo_url + '/Projects/Project-X')
   dump_fp.close()
 
   # Check the resulting mergeinfo.  We expect the exact same results
