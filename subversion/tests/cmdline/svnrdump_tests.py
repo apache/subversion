@@ -205,7 +205,6 @@ def sparse_propchanges_dump(sbox):
   "dump: sparse file/dir propchanges"
   run_dump_test(sbox, "sparse-propchanges.dump")
 
-@XFail()
 @Issue(3902)
 def sparse_propchanges_load(sbox):
   "load: sparse file/dir propchanges"
