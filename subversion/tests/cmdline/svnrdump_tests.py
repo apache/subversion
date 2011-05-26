@@ -201,6 +201,16 @@ def skeleton_load(sbox):
   "load: skeleton repository"
   run_load_test(sbox, "skeleton.dump")
 
+def sparse_propchanges_dump(sbox):
+  "dump: sparse file/dir propchanges"
+  run_dump_test(sbox, "sparse-propchanges.dump")
+
+@XFail()
+@Issue(3902)
+def sparse_propchanges_load(sbox):
+  "load: sparse file/dir propchanges"
+  run_load_test(sbox, "sparse-propchanges.dump")
+
 def copy_and_modify_dump(sbox):
   "dump: copy and modify"
   run_dump_test(sbox, "copy-and-modify.dump")
@@ -778,6 +788,8 @@ test_list = [ None,
               revision_0_load,
               skeleton_dump,
               skeleton_load,
+              sparse_propchanges_dump,
+              sparse_propchanges_load,
               copy_and_modify_dump,
               copy_and_modify_load,
               copy_from_previous_version_and_modify_dump,
