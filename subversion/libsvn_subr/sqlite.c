@@ -94,6 +94,16 @@ struct svn_sqlite__stmt_t
   svn_boolean_t needs_reset;
 };
 
+struct svn_sqlite__context_t
+{
+  sqlite3_context *context;
+};
+
+struct svn_sqlite__value_t
+{
+  sqlite3_value *value;
+};
+
 
 /* Convert SQLite error codes to SVN. Evaluates X multiple times */
 #define SQLITE_ERROR_CODE(x) ((x) == SQLITE_READONLY       \
@@ -876,37 +886,6 @@ close_apr(void *data)
 }
 
 
-/* An SQLite application defined function that allows SQL queries to
-   use "relpath_depth(local_relpath)".  This has to be installed before
-   the statements are prepared, so before the first call to
-   svn_sqlite__get_statement.
-
-   Should we have a way of allowing the caller of svn_sqlite__open to
-   pass in an array of function pointers?  Would the caller have to
-   use the SQLite types or would we wrap them all? */
-static void relpath_depth(sqlite3_context *context, int argc, sqlite3_value **val)
-{
-  const unsigned char *path = NULL;
-  sqlite3_int64 depth;
-
-  if (argc == 1 && sqlite3_value_type(val[0]) == SQLITE_TEXT)
-    path = sqlite3_value_text(val[0]);
-  if (!path)
-    {
-      sqlite3_result_null(context);
-      return;
-    }
-
-  depth = *path ? 1 : 0;
-  while (*path)
-    {
-      if (*path == '/')
-        ++depth;
-      ++path;
-    }
-  sqlite3_result_int(context, depth);
-}
-
 svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  svn_sqlite__mode_t mode, const char * const statements[],
@@ -962,10 +941,6 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   /* Validate the schema, upgrading if necessary. */
   if (upgrade_sql != NULL)
     SVN_ERR(check_format(*db, latest_schema, upgrade_sql, scratch_pool));
-
-  SQLITE_ERR(sqlite3_create_function((*db)->db3, "relpath_depth",
-                                     1, SQLITE_UTF8, NULL,
-                                     relpath_depth, NULL, NULL), *db);
 
   /* Store the provided statements. */
   if (statements)
@@ -1190,4 +1165,89 @@ svn_sqlite__hotcopy(const char *src_path,
   SVN_ERR(svn_sqlite__close(src_db));
 
   return SVN_NO_ERROR;
+}
+
+struct function_wrapper_baton_t
+{
+  svn_sqlite__func_t func;
+  void *baton;
+
+  apr_pool_t *scratch_pool;
+};
+
+static void
+wrapped_func(sqlite3_context *context,
+             int argc,
+             sqlite3_value *values[])
+{
+  struct function_wrapper_baton_t *fwb = sqlite3_user_data(context);
+  svn_sqlite__context_t sctx = { context };
+  svn_sqlite__value_t **local_vals =
+                            apr_palloc(fwb->scratch_pool,
+                                       sizeof(svn_sqlite__value_t *) * argc);
+  svn_error_t *err;
+  int i;
+
+  for (i = 0; i < argc; i++)
+    {
+      local_vals[i] = apr_palloc(fwb->scratch_pool, sizeof(*local_vals[i]));
+      local_vals[i]->value = values[i];
+    }
+
+  err = fwb->func(&sctx, argc, local_vals, fwb->scratch_pool);
+  svn_pool_clear(fwb->scratch_pool);
+
+  if (err)
+    {
+      char buf[256];
+      sqlite3_result_error(context,
+                           svn_err_best_message(err, buf, sizeof(buf)),
+                           -1);
+      svn_error_clear(err);
+    }
+}
+
+svn_error_t *
+svn_sqlite__create_scalar_function(svn_sqlite__db_t *db,
+                                   const char *func_name,
+                                   int argc,
+                                   svn_sqlite__func_t func,
+                                   void *baton)
+{
+  struct function_wrapper_baton_t *fwb = apr_pcalloc(db->state_pool,
+                                                     sizeof(*fwb));
+
+  fwb->scratch_pool = svn_pool_create(db->state_pool);
+  fwb->func = func;
+  fwb->baton = baton;
+  
+  SQLITE_ERR(sqlite3_create_function(db->db3, func_name, argc, SQLITE_ANY,
+                                     fwb, wrapped_func, NULL, NULL),
+             db);
+
+  return SVN_NO_ERROR;
+}
+
+int
+svn_sqlite__value_type(svn_sqlite__value_t *val)
+{
+  return sqlite3_value_type(val->value);
+}
+
+const char *
+svn_sqlite__value_text(svn_sqlite__value_t *val)
+{
+  return (const char *) sqlite3_value_text(val->value);
+}
+
+void
+svn_sqlite__result_null(svn_sqlite__context_t *sctx)
+{
+  sqlite3_result_null(sctx->context);
+}
+
+void
+svn_sqlite__result_int64(svn_sqlite__context_t *sctx, apr_int64_t val)
+{
+  sqlite3_result_int64(sctx->context, val);
 }
