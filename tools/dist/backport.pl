@@ -64,6 +64,7 @@ sub merge {
   my $mergeargs;
 
   my $backupfile = "backport_pl.$$.tmp";
+
   if ($entry{branch}) {
     $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
     print $logmsg_fh "Reintergrate the $BRANCHES/$entry{branch} branch:";
@@ -102,7 +103,7 @@ EOF
   print SHELL $script;
   close SHELL or warn "$0: sh($?): $!";
 
-  unlink $backupfile if -z $backupfile.
+  unlink $backupfile if -z $backupfile;
   unlink $logmsg_filename unless $? or $!;
 }
 
