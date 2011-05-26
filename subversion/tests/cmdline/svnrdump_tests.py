@@ -359,7 +359,6 @@ def multi_prop_edit_load(sbox):
 # This test replicates svnadmin_tests.py 16 'reflect dropped renumbered
 # revs in svn:mergeinfo' but uses 'svnrdump load' in place of
 # 'svnadmin load'.
-@XFail()
 @Issue(3890)
 def reflect_dropped_renumbered_revs(sbox):
   "svnrdump renumbers dropped revs in mergeinfo"
@@ -397,7 +396,7 @@ def reflect_dropped_renumbered_revs(sbox):
   # Verify the svn:mergeinfo properties
   url = sbox.repo_url
   expected_output = svntest.verify.UnorderedOutput([
-    url + "/trunk - /branch1:5-9\n",
+    url + "/trunk - /branch1:4-8\n",
     url + "/toplevel/trunk - /toplevel/branch1:14-18\n",
     ])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
