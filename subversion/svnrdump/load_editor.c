@@ -35,6 +35,7 @@
 #include "private/svn_repos_private.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_fspath.h"
 
 #include "svnrdump.h"
 
@@ -67,6 +68,12 @@ struct parse_baton
 
   /* Root URL of the target repository. */
   const char *root_url;
+
+  /* The "parent directory" of the target repository in which to load.
+     (This is essentially the difference between ROOT_URL and
+     SESSION's url, and roughly equivalent to the 'svnadmin load
+     --parent-dir' option.) */
+  const char *parent_dir;
 
   /* A mapping of svn_revnum_t * dump stream revisions to their
      corresponding svn_revnum_t * target repository revisions. */
@@ -148,6 +155,40 @@ add_revision_mapping(apr_hash_t *rev_map,
 }
                      
 
+/* Prepend the mergeinfo source paths in MERGEINFO_ORIG with
+   PARENT_DIR, and return it in *MERGEINFO_VAL. */
+/* ### FIXME:  Consider somehow sharing code with
+   ### libsvn_repos/load-fs-vtable.c:prefix_mergeinfo_paths() */
+static svn_error_t *
+prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
+                       const svn_string_t *mergeinfo_orig,
+                       const char *parent_dir,
+                       apr_pool_t *pool)
+{
+  apr_hash_t *prefixed_mergeinfo, *mergeinfo;
+  apr_hash_index_t *hi;
+  void *rangelist;
+
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_orig->data, pool));
+  prefixed_mergeinfo = apr_hash_make(pool);
+  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      const char *path, *merge_source;
+
+      apr_hash_this(hi, &key, NULL, &rangelist);
+      merge_source = svn_relpath_canonicalize(key, pool);
+
+      /* The svn:mergeinfo property syntax demands a repos abspath */
+      path = svn_fspath__canonicalize(svn_relpath_join(parent_dir,
+                                                       merge_source, pool),
+                                      pool);
+      apr_hash_set(prefixed_mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
+    }
+  return svn_mergeinfo_to_string(mergeinfo_val, prefixed_mergeinfo, pool);
+}
+
+
 /* Examine the mergeinfo in INITIAL_VAL, renumber revisions in rangelists
    as appropriate, and return the (possibly new) mergeinfo in *FINAL_VAL
    (allocated from POOL). */
@@ -192,15 +233,14 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
 
   for (hi = apr_hash_first(subpool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      const char *merge_source;
       apr_array_header_t *rangelist;
       struct parse_baton *pb = rb->pb;
       int i;
-      const void *key;
+      const void *path;
+      apr_ssize_t pathlen;
       void *val;
 
-      apr_hash_this(hi, &key, NULL, &val);
-      merge_source = key;
+      apr_hash_this(hi, &path, &pathlen, &val);
       rangelist = val;
 
       /* Possibly renumber revisions in merge source's rangelist. */
@@ -253,13 +293,14 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
           if (rev_from_map && SVN_IS_VALID_REVNUM(*rev_from_map))
             range->end = *rev_from_map;
         }
-      apr_hash_set(final_mergeinfo, merge_source,
-                   APR_HASH_KEY_STRING, rangelist);
+      apr_hash_set(final_mergeinfo, path, pathlen, rangelist);
     }
 
   if (predates_stream_mergeinfo)
+    {
       SVN_ERR(svn_mergeinfo_merge(final_mergeinfo, predates_stream_mergeinfo,
                                   subpool));
+    }
 
   SVN_ERR(svn_mergeinfo_sort(final_mergeinfo, subpool));
 
@@ -508,10 +549,7 @@ new_node_record(void **node_baton,
       if (strcmp(hname, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV) == 0)
         nb->copyfrom_rev = atoi(hval);
       if (strcmp(hname, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH) == 0)
-        nb->copyfrom_path =
-          svn_path_url_add_component2(rb->pb->root_url,
-                                      apr_pstrdup(rb->pool, hval),
-                                      rb->pool);
+        nb->copyfrom_path = apr_pstrdup(rb->pool, hval);
     }
 
   nb_dirname = svn_relpath_dirname(nb->path, pool);
@@ -568,8 +606,10 @@ new_node_record(void **node_baton,
         }
     }
 
-  /* Fix up the copyfrom revision with our revision mapping. */
-  if (SVN_IS_VALID_REVNUM(nb->copyfrom_rev))
+  /* Fix up the copyfrom information in light of mapped revisions and
+     non-root load targets, and convert copyfrom path into a full
+     URL. */
+  if (nb->copyfrom_path && SVN_IS_VALID_REVNUM(nb->copyfrom_rev))
     {
       svn_revnum_t copyfrom_rev = nb->copyfrom_rev - rb->rev_offset;
       svn_revnum_t *src_rev_from_map;
@@ -584,7 +624,15 @@ new_node_record(void **node_baton,
                                    " available in current repository"),
                                  copyfrom_rev);
       nb->copyfrom_rev = copyfrom_rev;
+
+      if (rb->pb->parent_dir)
+        nb->copyfrom_path = svn_relpath_join(rb->pb->parent_dir,
+                                             nb->copyfrom_path, rb->pool);
+      nb->copyfrom_path = svn_path_url_add_component2(rb->pb->root_url,
+                                                      nb->copyfrom_path,
+                                                      rb->pool);
     }
+
 
   switch (nb->action)
     {
@@ -720,6 +768,16 @@ set_node_property(void *baton,
       SVN_ERR(renumber_mergeinfo_revs(&renumbered_mergeinfo, prop_val,
                                       nb->rb, pool));
       value = renumbered_mergeinfo;
+
+      if (nb->rb->pb->parent_dir)
+        {
+          /* Prefix the merge source paths with PB->parent_dir. */
+          /* ASSUMPTION: All source paths are included in the dump stream. */
+          svn_string_t *mergeinfo_val;
+          SVN_ERR(prefix_mergeinfo_paths(&mergeinfo_val, value,
+                                         nb->rb->pb->parent_dir, pool));
+          value = mergeinfo_val;
+        }
     }
 
   SVN_ERR(svn_repos__validate_prop(name, value, pool));
@@ -948,13 +1006,16 @@ svn_rdump__load_dumpstream(svn_stream_t *stream,
   const svn_string_t *lock_string;
   svn_boolean_t be_atomic;
   svn_error_t *err;
-  const char *root_url;
+  const char *session_url, *root_url, *parent_dir;
 
   SVN_ERR(svn_ra_has_capability(session, &be_atomic,
                                 SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                                 pool));
   SVN_ERR(get_lock(&lock_string, session, cancel_func, cancel_baton, pool));
   SVN_ERR(svn_ra_get_repos_root2(session, &root_url, pool));
+  SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
+  SVN_ERR(svn_ra_get_path_relative_to_root(session, &parent_dir,
+                                           session_url, pool));
 
   parser = apr_pcalloc(pool, sizeof(*parser));
   parser->new_revision_record = new_revision_record;
@@ -973,6 +1034,7 @@ svn_rdump__load_dumpstream(svn_stream_t *stream,
   parse_baton->session = session;
   parse_baton->aux_session = aux_session;
   parse_baton->root_url = root_url;
+  parse_baton->parent_dir = parent_dir;
   parse_baton->rev_map = apr_hash_make(pool);
   parse_baton->last_rev_mapped = SVN_INVALID_REVNUM;
   parse_baton->oldest_dumpstream_rev = SVN_INVALID_REVNUM;
