@@ -1292,8 +1292,6 @@ revert_restore(svn_wc__db_t *db,
         SVN_ERR(svn_wc__db_revert_list_notify(notify_func, notify_baton,
                                               db, local_abspath,
                                               scratch_pool));
-      /* ### else: Delete the list */
-
       return SVN_NO_ERROR;
     }
   else if (err)
@@ -1524,8 +1522,6 @@ revert_restore(svn_wc__db_t *db,
   if (notify_func)
     SVN_ERR(svn_wc__db_revert_list_notify(notify_func, notify_baton,
                                           db, local_abspath, scratch_pool));
-  /* ### else: Delete the list */
-
   return SVN_NO_ERROR;
 }
 
@@ -1543,6 +1539,8 @@ new_revert_internal(svn_wc__db_t *db,
                     void *notify_baton,
                     apr_pool_t *scratch_pool)
 {
+  svn_error_t *err;
+
   SVN_ERR_ASSERT(depth == svn_depth_empty || depth == svn_depth_infinity);
 
   /* We should have a write lock on the parent of local_abspath, except
@@ -1559,16 +1557,22 @@ new_revert_internal(svn_wc__db_t *db,
     SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
   }
 
-  SVN_ERR(svn_wc__db_op_revert(db, local_abspath, depth,
-                               scratch_pool, scratch_pool));
+  err = svn_wc__db_op_revert(db, local_abspath, depth,
+                             scratch_pool, scratch_pool);
 
-  SVN_ERR(revert_restore(db, local_abspath, depth,
+  if (!err)
+    err = revert_restore(db, local_abspath, depth,
                          use_commit_times,
                          cancel_func, cancel_baton,
                          notify_func, notify_baton,
-                         scratch_pool));
+                         scratch_pool);
 
-  return SVN_NO_ERROR;
+  err = svn_error_compose_create(err,
+                                 svn_wc__db_revert_list_done(db,
+                                                             local_abspath,
+                                                             scratch_pool));
+
+  return err;
 }
 
 

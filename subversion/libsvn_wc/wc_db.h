@@ -1508,6 +1508,13 @@ svn_wc__db_revert_list_notify(svn_wc_notify_func2_t notify_func,
                               const char *local_abspath,
                               apr_pool_t *scratch_pool);
 
+/* Clean up after svn_wc__db_op_revert by removing the revert list.
+ */
+svn_error_t *
+svn_wc__db_revert_list_done(svn_wc__db_t *db,
+                            const char *local_abspath,
+                            apr_pool_t *scratch_pool);
+
 
 /* Return a hash @a *tree_conflicts of all the children of @a
  * local_abspath that are in tree conflicts.  The hash maps local
