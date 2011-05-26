@@ -38,11 +38,13 @@
 #include "svn_pools.h"
 #include "svn_wc.h"
 
-#include "../../include/private/svn_sqlite.h"
+#include "private/svn_sqlite.h"
 
 #include "../../libsvn_wc/wc.h"
 #include "../../libsvn_wc/wc-queries.h"
 #include "../../libsvn_wc/wc_db.h"
+#define SVN_WC__I_AM_WC_DB
+#include "../../libsvn_wc/wc_db_private.h"
 
 #include "../svn_test.h"
 
@@ -304,19 +306,22 @@ WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
 
 
 static svn_error_t *
-make_one_db(const char *dirpath,
+make_one_db(const char *wc_abspath,
             const char * const my_statements[],
             apr_pool_t *scratch_pool)
 {
-  const char *dbpath = svn_dirent_join(dirpath, "wc.db", scratch_pool);
+  const char *dotsvn_abspath = svn_dirent_join(wc_abspath, ".svn",
+                                               scratch_pool);
+  const char *db_abspath = svn_dirent_join(dotsvn_abspath, "wc.db",
+                                           scratch_pool);
   svn_sqlite__db_t *sdb;
   int i;
 
   /* Create fake-wc/SUBDIR/.svn/ for placing the metadata. */
-  SVN_ERR(svn_io_make_dir_recursively(dirpath, scratch_pool));
+  SVN_ERR(svn_io_make_dir_recursively(dotsvn_abspath, scratch_pool));
 
-  svn_error_clear(svn_io_remove_file(dbpath, scratch_pool));
-  SVN_ERR(svn_sqlite__open(&sdb, dbpath, svn_sqlite__mode_rwcreate,
+  svn_error_clear(svn_io_remove_file(db_abspath, scratch_pool));
+  SVN_ERR(svn_sqlite__open(&sdb, db_abspath, svn_sqlite__mode_rwcreate,
                            my_statements,
                            0, NULL,
                            scratch_pool, scratch_pool));
@@ -332,7 +337,7 @@ static svn_error_t *
 create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
 {
   const char *root;
-  const char *dirpath;
+  const char *wc_abspath;
   const char * const my_statements[] = {
     statements[STMT_CREATE_SCHEMA],
     statements[STMT_CREATE_NODES],
@@ -352,11 +357,11 @@ create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
 
   SVN_ERR(svn_io_remove_dir2(root, TRUE, NULL, NULL, scratch_pool));
 
-  dirpath = svn_dirent_join(root, ".svn", scratch_pool);
-  SVN_ERR(make_one_db(dirpath, my_statements, scratch_pool));
+  SVN_ERR(svn_dirent_get_absolute(&wc_abspath, root, scratch_pool));
+  SVN_ERR(make_one_db(wc_abspath, my_statements, scratch_pool));
 
-  dirpath = svn_dirent_join_many(scratch_pool, root, "M", ".svn", NULL);
-  SVN_ERR(make_one_db(dirpath, M_statements, scratch_pool));
+  wc_abspath = svn_dirent_join(wc_abspath, "M", scratch_pool);
+  SVN_ERR(make_one_db(wc_abspath, M_statements, scratch_pool));
 
   return SVN_NO_ERROR;
 }
