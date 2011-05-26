@@ -4037,7 +4037,7 @@ catch_copy_of_absent(svn_wc__db_wcroot_t *wcroot,
   const char *absent_relpath;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_ABSENT_NODES));
+                                    STMT_HAS_ABSENT_NODES));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss",
                             wcroot->wc_id,
                             local_relpath,
@@ -6082,7 +6082,7 @@ op_delete_txn(void *baton,
   like_arg = construct_like_arg(local_relpath, scratch_pool);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_ABSENT_NODES));
+                                    STMT_HAS_ABSENT_NODES));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss",
                             wcroot->wc_id, local_relpath, like_arg));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
