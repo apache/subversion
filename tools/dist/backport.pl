@@ -63,6 +63,7 @@ sub merge {
   my ($logmsg_fh, $logmsg_filename) = tempfile();
   my $mergeargs;
 
+  my $backupfile = "backport_pl.$$.tmp";
   if ($entry{branch}) {
     $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
     print $logmsg_fh "Reintergrate the $BRANCHES/$entry{branch} branch:";
@@ -83,6 +84,7 @@ sub merge {
   my $script = <<"EOF";
 #!/bin/sh
 set -e
+$SVN diff > $backupfile
 $SVN revert -R .
 $SVN up
 $SVN merge $mergeargs
@@ -100,6 +102,7 @@ EOF
   print SHELL $script;
   close SHELL or warn "$0: sh($?): $!";
 
+  unlink $backupfile if -z $backupfile.
   unlink $logmsg_filename unless $? or $!;
 }
 
