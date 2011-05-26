@@ -990,20 +990,39 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
 
       else
         {
+          svn_boolean_t merged_prop = FALSE;
+
           /* The WC difference doesn't match the new value.
            We only merge mergeinfo;  other props conflict */
           if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
             {
               const svn_string_t *merged_val;
+              svn_error_t *err = combine_mergeinfo_props(&merged_val,
+                                                         working_val,
+                                                         new_val,
+                                                         result_pool,
+                                                         scratch_pool);
 
-              SVN_ERR(combine_mergeinfo_props(&merged_val, working_val,
-                                              new_val, result_pool,
-                                              scratch_pool));
-              apr_hash_set(working_props, propname,
-                           APR_HASH_KEY_STRING, merged_val);
-              set_prop_merge_state(state, svn_wc_notify_state_merged);
+              /* Issue #3896 'mergeinfo syntax errors should be treated
+                 gracefully': If bogus mergeinfo is present we can't
+                 merge intelligently, so raise a conflict instead. */
+              if (err)
+                {
+                  if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+                    svn_error_clear(err);
+                  else
+                    return svn_error_return(err);
+                  }
+              else
+                {
+                  merged_prop = TRUE;
+                  apr_hash_set(working_props, propname,
+                               APR_HASH_KEY_STRING, merged_val);
+                  set_prop_merge_state(state, svn_wc_notify_state_merged);
+                }
             }
-          else
+
+          if (!merged_prop)
             {
               SVN_ERR(maybe_generate_propconflict(conflict_remains,
                                                   db, local_abspath,
@@ -1343,6 +1362,8 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
+  svn_boolean_t merged_prop = FALSE;
+
   *conflict_remains = FALSE;
 
   /* Note: The purpose is to apply the change (old_val -> new_val) onto
@@ -1354,20 +1375,42 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
      the property. */
   if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
     {
-      /* We know how to merge any mergeinfo property change. */
+      /* We know how to merge any mergeinfo property change...
 
-      SVN_ERR(apply_single_mergeinfo_prop_change(state, conflict_remains,
-                                                 db, local_abspath,
-                                                 left_version, right_version,
-                                                 is_dir,
-                                                 working_props,
-                                                 propname, base_val, old_val,
-                                                 new_val,
-                                                 conflict_func, conflict_baton,
-                                                 dry_run,
-                                                 result_pool, scratch_pool));
+         ...But Issue #3896 'mergeinfo syntax errors should be treated
+         gracefully' might thwart us.  If bogus mergeinfo is present we
+         can't merge intelligently, so let the standard method deal with
+         it instead. */
+      svn_error_t *err = apply_single_mergeinfo_prop_change(state,
+                                                            conflict_remains,
+                                                            db, local_abspath,
+                                                            left_version,
+                                                            right_version,
+                                                            is_dir,
+                                                            working_props,
+                                                            propname,
+                                                            base_val,
+                                                            old_val,
+                                                            new_val,
+                                                            conflict_func,
+                                                            conflict_baton,
+                                                            dry_run,
+                                                            result_pool,
+                                                            scratch_pool);
+       if (err)
+         {
+           if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+             svn_error_clear(err);
+           else
+             return svn_error_return(err);
+           }
+       else
+         {
+           merged_prop = TRUE;
+         }
     }
-  else
+
+  if (!merged_prop)
     {
       /* The standard method: perform a simple update automatically, but
          pass any other kind of merge to maybe_generate_propconflict(). */
