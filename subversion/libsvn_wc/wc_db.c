@@ -6093,7 +6093,7 @@ op_delete_txn(void *baton,
         
       return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
                                svn_sqlite__reset(stmt),
-                           _("Cannot delete '%s' as '%s'is excluded by server"),
+                          _("Cannot delete '%s' as '%s' is excluded by server"),
                                svn_dirent_local_style(local_relpath,
                                                       scratch_pool),
                                absent_path);
