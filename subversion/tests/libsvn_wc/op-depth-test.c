@@ -408,7 +408,7 @@ check_db_rows(svn_test__sandbox_t *b,
   svn_sqlite__db_t *sdb;
   int i;
   svn_sqlite__stmt_t *stmt;
-  const char *const statements[] = {
+  static const char *const statements[] = {
     "SELECT op_depth, presence, local_relpath, revision, repos_path "
       "FROM nodes "
       "WHERE local_relpath = ?1 OR local_relpath LIKE ?2",
@@ -1151,7 +1151,7 @@ insert_dirs(svn_test__sandbox_t *b,
 {
   svn_sqlite__db_t *sdb;
   svn_sqlite__stmt_t *stmt;
-  const char * const statements[] = {
+  static const char * const statements[] = {
     "DELETE FROM nodes;",
     "INSERT INTO nodes (local_relpath, op_depth, presence, repos_path,"
     "                   revision, wc_id, repos_id, kind, depth)"
@@ -1941,7 +1941,7 @@ insert_actual(svn_test__sandbox_t *b,
 {
   svn_sqlite__db_t *sdb;
   svn_sqlite__stmt_t *stmt;
-  const char * const statements[] = {
+  static const char * const statements[] = {
     "DELETE FROM actual_node;",
     "INSERT INTO actual_node (local_relpath, changelist, wc_id)"
     "                 VALUES (?1, ?2, 1)",
@@ -1996,7 +1996,7 @@ check_db_actual(svn_test__sandbox_t* b, actual_row_t *rows)
 {
   svn_sqlite__db_t *sdb;
   svn_sqlite__stmt_t *stmt;
-  const char * const statements[] = {
+  static const char * const statements[] = {
     "SELECT local_relpath FROM actual_node WHERE wc_id = 1;",
     NULL,
   };
