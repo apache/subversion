@@ -49,3 +49,16 @@ BEGIN
   SELECT RAISE(FAIL, 'WC DB validity check 02 failed');
 END;
 
+/* Verify: on every NODES row: it is an op-root or its op-root row exists. */
+CREATE TRIGGER validation_03 BEFORE INSERT ON NODES
+WHEN NOT (
+    (new.op_depth = relpath_depth(new.local_relpath))
+    OR
+    ((SELECT COUNT(*) FROM nodes
+      WHERE wc_id = new.wc_id AND op_depth = new.op_depth
+        AND local_relpath = new.parent_relpath) == 1)
+  )
+BEGIN
+  SELECT RAISE(FAIL, 'WC DB validity check 03 failed');
+END;
+

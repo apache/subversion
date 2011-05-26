@@ -11018,25 +11018,6 @@ make_copy_txn(void *baton,
   else
     SVN_ERR(svn_sqlite__reset(stmt));
 
-  /* Get the BASE children, as WORKING children don't need modifications */
-  SVN_ERR(gather_repo_children(&children, wcroot, local_relpath,
-                               0, scratch_pool, iterpool));
-
-  for (i = 0; i < children->nelts; i++)
-    {
-      const char *name = APR_ARRAY_IDX(children, i, const char *);
-      struct make_copy_baton_t cbt;
-      const char *copy_relpath;
-
-      svn_pool_clear(iterpool);
-
-      copy_relpath = svn_relpath_join(local_relpath, name, iterpool);
-
-      cbt.op_depth = mcb->op_depth;
-
-      SVN_ERR(make_copy_txn(&cbt, wcroot, copy_relpath, iterpool));
-    }
-
   if (remove_working)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -11060,6 +11041,25 @@ make_copy_txn(void *baton,
       SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id, local_relpath,
                                 mcb->op_depth));
       SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  /* Get the BASE children, as WORKING children don't need modifications */
+  SVN_ERR(gather_repo_children(&children, wcroot, local_relpath,
+                               0, scratch_pool, iterpool));
+
+  for (i = 0; i < children->nelts; i++)
+    {
+      const char *name = APR_ARRAY_IDX(children, i, const char *);
+      struct make_copy_baton_t cbt;
+      const char *copy_relpath;
+
+      svn_pool_clear(iterpool);
+
+      copy_relpath = svn_relpath_join(local_relpath, name, iterpool);
+
+      cbt.op_depth = mcb->op_depth;
+
+      SVN_ERR(make_copy_txn(&cbt, wcroot, copy_relpath, iterpool));
     }
 
   SVN_ERR(flush_entries(wcroot, svn_dirent_join(wcroot->abspath, local_relpath,
