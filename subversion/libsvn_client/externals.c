@@ -1006,7 +1006,8 @@ handle_external_item_change(const struct external_change_baton_t *eb,
 }
 
 static svn_error_t *
-wrap_external_error(const char *target_abspath,
+wrap_external_error(const struct external_change_baton_t *eb,
+                    const char *target_abspath,
                     svn_error_t *err,
                     apr_pool_t *scratch_pool)
 {
@@ -1117,7 +1118,7 @@ handle_externals_change(const struct external_change_baton_t *eb,
                               APR_HASH_KEY_STRING);
 
       SVN_ERR(wrap_external_error(
-                      target_abspath,
+                      eb, target_abspath,
                       handle_external_item_change(eb, local_abspath, url,
                                                   target_abspath,
                                                   old_item, new_item,
@@ -1145,7 +1146,7 @@ handle_externals_change(const struct external_change_baton_t *eb,
       if (apr_hash_get(old_desc_hash, target_abspath, APR_HASH_KEY_STRING))
         {
           SVN_ERR(wrap_external_error(
-                          target_abspath,
+                          eb, target_abspath,
                           handle_external_item_change(eb, local_abspath, url,
                                                       target_abspath,
                                                       item, NULL,
@@ -1297,7 +1298,7 @@ svn_client__export_externals(apr_hash_t *externals,
                                          sub_iterpool);
 
           SVN_ERR(wrap_external_error(
-                          item_abspath,
+                          &eb, item_abspath,
                           handle_external_item_change(&eb, local_abspath,
                                                       dir_url, item_abspath,
                                                       NULL, item,
