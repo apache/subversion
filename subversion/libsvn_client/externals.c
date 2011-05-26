@@ -1058,7 +1058,7 @@ handle_externals_change(const struct external_change_baton_t *eb,
                         apr_pool_t *scratch_pool)
 {
   apr_array_header_t *old_desc, *new_desc;
-  apr_hash_t *new_desc_hash;
+  apr_hash_t *old_desc_hash;
   int i;
   apr_pool_t *iterpool;
   const char *url;
@@ -1089,18 +1089,21 @@ handle_externals_change(const struct external_change_baton_t *eb,
   else
     new_desc = NULL;
 
-  new_desc_hash = apr_hash_make(scratch_pool);
+  old_desc_hash = apr_hash_make(scratch_pool);
 
   /* Create a hash of our new item array so that we can efficiently generate
      a diff for them. */
-  for (i = 0; new_desc && (i < new_desc->nelts); i++)
+  for (i = 0; old_desc && (i < old_desc->nelts); i++)
     {
       svn_wc_external_item2_t *item;
+      const char *target_abspath;
 
-      item = APR_ARRAY_IDX(new_desc, i, svn_wc_external_item2_t *);
+      item = APR_ARRAY_IDX(old_desc, i, svn_wc_external_item2_t *);
 
-      apr_hash_set(new_desc_hash, item->target_dir,
-                   APR_HASH_KEY_STRING, item);
+      target_abspath = svn_dirent_join(local_abspath, item->target_dir,
+                                       scratch_pool);
+
+      apr_hash_set(old_desc_hash, target_abspath, APR_HASH_KEY_STRING, item);
     }
 
   SVN_ERR(svn_wc__node_get_url(&url, eb->ctx->wc_ctx, local_abspath,
@@ -1108,20 +1111,20 @@ handle_externals_change(const struct external_change_baton_t *eb,
 
   SVN_ERR_ASSERT(url);
 
-  for (i = 0; old_desc && (i < old_desc->nelts); i++)
+  for (i = 0; new_desc && (i < new_desc->nelts); i++)
     {
       svn_wc_external_item2_t *old_item;
       svn_wc_external_item2_t *new_item;
       const char *target_abspath;
 
-      old_item = APR_ARRAY_IDX(old_desc, i, svn_wc_external_item2_t *);
+      new_item = APR_ARRAY_IDX(new_desc, i, svn_wc_external_item2_t *);
 
       svn_pool_clear(iterpool);
 
-      target_abspath = svn_dirent_join(local_abspath, old_item->target_dir,
+      target_abspath = svn_dirent_join(local_abspath, new_item->target_dir,
                                        iterpool);
 
-      new_item = apr_hash_get(new_desc_hash, old_item->target_dir,
+      old_item = apr_hash_get(old_desc_hash, target_abspath,
                               APR_HASH_KEY_STRING);
 
       SVN_ERR(handle_external_item_change_wrapper(eb, local_abspath, url,
@@ -1129,29 +1132,29 @@ handle_externals_change(const struct external_change_baton_t *eb,
                                                   old_item, new_item,
                                                   iterpool));
 
-      /* And remove already processed items from the hash */
-      if (new_item)
-        apr_hash_set(new_desc_hash, new_item->target_dir,
+      /* And remove already processed items from the to-remove hash */
+      if (old_item)
+        apr_hash_set(old_desc_hash, target_abspath,
                      APR_HASH_KEY_STRING, NULL);
     }
-  for (i = 0; new_desc && (i < new_desc->nelts); i++)
+  for (i = 0; old_desc && (i < old_desc->nelts); i++)
     {
-      svn_wc_external_item2_t *new_item;
-      new_item = APR_ARRAY_IDX(new_desc, i, svn_wc_external_item2_t *);
+      svn_wc_external_item2_t *item;
+      const char *target_abspath;
+
+      item = APR_ARRAY_IDX(old_desc, i, svn_wc_external_item2_t *);
 
       svn_pool_clear(iterpool);
 
-      /* Only if the item is still in the hash, we should process it */
-      if (apr_hash_get(new_desc_hash, new_item->target_dir,
-                       APR_HASH_KEY_STRING))
-        {
-          const char *target_abspath = svn_dirent_join(local_abspath,
-                                                       new_item->target_dir,
-                                                       iterpool);
+      target_abspath = svn_dirent_join(local_abspath, item->target_dir,
+                                       iterpool);
 
+      /* Only if the item is still in the hash, we should process it */
+      if (apr_hash_get(old_desc_hash, target_abspath, APR_HASH_KEY_STRING))
+        {
           SVN_ERR(handle_external_item_change_wrapper(eb, local_abspath, url,
                                                       target_abspath,
-                                                      NULL, new_item,
+                                                      item, NULL,
                                                       iterpool));
         }
     }
