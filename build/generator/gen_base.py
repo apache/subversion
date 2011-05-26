@@ -215,7 +215,6 @@ class GeneratorBase:
 
     import transform_sql
     for hdrfile, sqlfile in self.graph.get_deps(DT_SQLHDR):
-      assert len(sqlfile) == 1
       transform_sql.main(sqlfile[0], open(hdrfile, 'w'))
 
 
@@ -764,6 +763,7 @@ class TargetSQLHeader(Target):
     Target.__init__(self, name, options, gen_obj)
     self.sources = options.get('sources')
 
+  _re_sql_include = re.compile('-- *include: *([-a-z]+)')
   def add_dependencies(self):
 
     sources = _collect_paths(self.sources, self.path)
@@ -777,6 +777,13 @@ class TargetSQLHeader(Target):
 
     self.gen_obj.graph.add(DT_SQLHDR, output, source)
 
+    for line in fileinput.input(source):
+      match = self._re_sql_include.match(line)
+      if not match:
+        continue
+      file = match.group(1)
+      self.gen_obj.graph.add(DT_SQLHDR, output,
+                             os.path.join(os.path.dirname(source), file + '.sql'))
 
 _build_types = {
   'exe' : TargetExe,
