@@ -510,19 +510,8 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
                                           svntest.verify.AnyOutput,
                                           [], 0, '-q', 'load',
                                           sbox.repo_url)
+
   # Check that the mergeinfo is as expected.
-  #
-  # Currently this fails as the following mergeinfo is created:
-  #
-  #   >svn pg svn:mergeinfo -vR ^/svnrdump_tests-41
-  #   Properties on '^/branches':
-  #     svn:mergeinfo
-  #       /branches/B2:11-12
-  #       /trunk:6,9
-  #   Properties on '^/branches/B1/B':
-  #     svn:mergeinfo
-  #       /branches/B2/B/E:11-12
-  #       /trunk/B/E:5-6,8-9
   url = sbox.repo_url + '/branches/'
   expected_output = svntest.verify.UnorderedOutput([
     url + "B1 - /branches/B2:11-12\n",
@@ -534,7 +523,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
-  # PART 2: Load a a series of incremental dumps to an empty repository.
+  # PART 2: Load a series of incremental dumps to an empty repository.
   #
   # Incrementally dump the repository into three dump files:
   dump_file_r1_10 = svntest.main.temp_dir + "-r1-10.dump"
@@ -562,8 +551,6 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
                                                    [], 0, '-q', 'dump',
                                                    '--incremental', '-r14:15',
                                                    sbox.repo_url)
-
-  
   dump_fp = open(dump_file_r14_15, 'wb')
   dump_fp.writelines(output)
   dump_fp.close()
@@ -597,8 +584,6 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   # Check the mergeinfo, we use the same expected output as before,
   # as it (duh!) should be exactly the same as when we loaded the
   # repos in one shot.
-  #
-  # Currently this fails the same as part 1.
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
@@ -635,26 +620,6 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
                                           sbox.repo_url)
   
   # Load 'svnadmin_tests_data/mergeinfo_included_full.dump' in one shot:
-  #
-  # This currently fails with this error:
-  #   >svnrdump -q load file:///C:/SVN/src-trunk/Debug/subversion/tests/
-  #     cmdline/svn-test-work/repositories/svnrdump_tests-41/Projects/Project-X
-  #     < C:\SVN\src-trunk\subversion\tests\cmdline\svnrdump_tests_data\
-  #     mergeinfo_included_full.dump
-  #   * Loaded revision 0.
-  #   * Loaded revision 7.
-  #   * Loaded revision 8.
-  #   * Loaded revision 9.
-  #   ..\..\..\subversion\svnrdump\svnrdump.c:451: (apr_err=160013)
-  #   ..\..\..\subversion\libsvn_repos\load.c:521: (apr_err=160013)
-  #   ..\..\..\subversion\svnrdump\load_editor.c:391: (apr_err=160013)
-  #   ..\..\..\subversion\libsvn_repos\commit.c:269: (apr_err=160013)
-  #   ..\..\..\subversion\libsvn_fs_fs\tree.c:1997: (apr_err=160013)
-  #   ..\..\..\subversion\libsvn_fs_fs\tree.c:1997: (apr_err=160013)
-  #   ..\..\..\subversion\libsvn_fs_fs\tree.c:1997: (apr_err=160013)
-  #   ..\..\..\subversion\libsvn_fs_fs\tree.c:825: (apr_err=160013)
-  #   ..\..\..\subversion\libsvn_fs_fs\tree.c:667: (apr_err=160013)
-  #   svnrdump: E160013: File not found: revision 3, path '/trunk'
   svntest.actions.run_and_verify_svnrdump(dumpfile_full,
                                           svntest.verify.AnyOutput,
                                           [], 0, '-q', 'load',
@@ -756,21 +721,6 @@ def svnrdump_load_partial_incremental_dump(sbox):
                    'rb')
   svnrdump_dumpfile = dump_file.readlines()
   dump_file.close()
-  # This fails with the following error:
-  #
-  #   >svnrdump load file:///C:/SVN/src-trunk/Debug/subversion/tests/cmdline
-  #   /svn-test-work/repositories/svnrdump_tests-42 < partial_incremental.dump
-  #   * Loaded revision 2.
-  #   ..\..\..\subversion\svnrdump\svnrdump.c:451: (apr_err=160006)
-  #   ..\..\..\subversion\libsvn_repos\load.c:506: (apr_err=160006)
-  #   ..\..\..\subversion\svnrdump\load_editor.c:644: (apr_err=160006)
-  #   ..\..\..\subversion\libsvn_repos\fs-wrap.c:302: (apr_err=160006)
-  #   ..\..\..\subversion\libsvn_fs_fs\fs_fs.c:7547: (apr_err=160006)
-  #   ..\..\..\subversion\libsvn_fs_fs\fs_fs.c:7547: (apr_err=160006)
-  #   ..\..\..\subversion\libsvn_fs_fs\fs_fs.c:3165: (apr_err=160006)
-  #   ..\..\..\subversion\libsvn_fs_fs\fs_fs.c:3069: (apr_err=160006)
-  #   ..\..\..\subversion\libsvn_fs_fs\fs_fs.c:1886: (apr_err=160006)
-  #   svnrdump: E160006: No such revision 5
   svntest.actions.run_and_verify_svnrdump(svnrdump_dumpfile,
                                           svntest.verify.AnyOutput,
                                           [], 0, '-q', 'load',
