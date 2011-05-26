@@ -1620,18 +1620,16 @@ write_entry(struct write_baton **entry_node,
      replace+copied   replace+copied     [base|work]+work  [base|work]+work
   */
 
+  SVN_ERR_ASSERT(parent_node || entry->schedule == svn_wc_schedule_normal);
+  SVN_ERR_ASSERT(!parent_node || parent_node->base
+                 || parent_node->below_work || parent_node->work);
+
   switch (entry->schedule)
     {
       case svn_wc_schedule_normal:
-        SVN_ERR_ASSERT(!parent_node
-                       || (parent_node->base && !parent_node->work
-                           && !entry->copied)
-                       || (!parent_node->base && parent_node->work
-                           && (entry->copied ||
-                               entry->depth == svn_depth_exclude)));
         if (entry->copied ||
-            (entry->depth == svn_depth_exclude && parent_node &&
-             parent_node->work))
+            (entry->depth == svn_depth_exclude
+             && parent_node && !parent_node->base && parent_node->work))
           working_node = MAYBE_ALLOC(working_node, result_pool);
         else
           base_node = MAYBE_ALLOC(base_node, result_pool);
