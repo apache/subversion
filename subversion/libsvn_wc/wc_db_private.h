@@ -155,12 +155,20 @@ svn_wc__db_util_fetch_wc_id(apr_int64_t *wc_id,
                             svn_sqlite__db_t *sdb,
                             apr_pool_t *scratch_pool);
 
-/* */
+/* Open a connection in *SDB to the WC database found in the WC metadata
+ * directory inside DIR_ABSPATH, having the filename SDB_FNAME.
+ *
+ * SMODE is passed to svn_sqlite__open().
+ *
+ * Register MY_STATEMENTS, or if that is null, the default set of WC DB
+ * statements, as the set of statements to be prepared now and
+ * executed later.  See svn_sqlite__open() for details. */
 svn_error_t *
 svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
                         const char *dir_abspath,
                         const char *sdb_fname,
                         svn_sqlite__mode_t smode,
+                        const char *const *my_statements,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 

@@ -321,10 +321,9 @@ make_one_db(const char *wc_abspath,
   SVN_ERR(svn_io_make_dir_recursively(dotsvn_abspath, scratch_pool));
 
   svn_error_clear(svn_io_remove_file(db_abspath, scratch_pool));
-  SVN_ERR(svn_sqlite__open(&sdb, db_abspath, svn_sqlite__mode_rwcreate,
-                           my_statements,
-                           0, NULL,
-                           scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_util_open_db(&sdb, wc_abspath, "wc.db",
+                                  svn_sqlite__mode_rwcreate, my_statements,
+                                  scratch_pool, scratch_pool));
 
   for (i = 0; my_statements[i] != NULL; i++)
     SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ i));

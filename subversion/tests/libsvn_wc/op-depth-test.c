@@ -42,6 +42,8 @@
 #include "private/svn_sqlite.h"
 #include "../../libsvn_wc/wc.h"
 #include "../../libsvn_wc/wc_db.h"
+#define SVN_WC__I_AM_WC_DB
+#include "../../libsvn_wc/wc_db_private.h"
 
 #include "../svn_test.h"
 
@@ -73,12 +75,9 @@ open_wc_db(svn_sqlite__db_t **sdb,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
 {
-  const char *dbpath = svn_dirent_join_many(scratch_pool,
-                                            wc_root_abspath, ".svn", "wc.db",
-                                            NULL);
-  SVN_ERR(svn_sqlite__open(sdb, dbpath, svn_sqlite__mode_readonly,
-                           my_statements, 0, NULL,
-                           result_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_util_open_db(sdb, wc_root_abspath, "wc.db",
+                                  svn_sqlite__mode_readonly, my_statements,
+                                  result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }
 
