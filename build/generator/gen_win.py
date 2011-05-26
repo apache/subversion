@@ -288,7 +288,7 @@ class WinGeneratorBase(GeneratorBase):
     #Make the project files directory if it doesn't exist
     #TODO win32 might not be the best path as win64 stuff will go here too
     self.projfilesdir=os.path.join("build","win32",subdir)
-    self.rootpath = ".." + "\\.." * self.projfilesdir.count(os.sep)
+    self.rootpath = self.find_rootpath()
     if not os.path.exists(self.projfilesdir):
       os.makedirs(self.projfilesdir)
 
@@ -331,6 +331,10 @@ class WinGeneratorBase(GeneratorBase):
         swig.Generator(self.conf, self.swig_exe).write()
     else:
       print("%s not found; skipping SWIG file generation..." % self.swig_exe)
+      
+  def find_rootpath(self):
+    "Gets the root path as understand by the project system"
+    return ".." + "\\.." * self.projfilesdir.count(os.sep)
 
   def makeguid(self, data):
     "Generate a windows style GUID"
