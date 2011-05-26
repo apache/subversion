@@ -1289,3 +1289,4 @@ WHERE wc_id == ?1
 /* Grab all the statements related to the schema.  */
 
 -- include: wc-metadata
+-- include: wc-checks

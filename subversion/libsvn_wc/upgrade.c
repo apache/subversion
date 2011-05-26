@@ -1261,6 +1261,7 @@ bump_to_29(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   /* Externals */
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_CREATE_EXTERNALS));
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_VERIFICATION_TRIGGERS));
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_29));
   return SVN_NO_ERROR;
 }
