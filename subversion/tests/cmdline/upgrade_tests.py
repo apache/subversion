@@ -960,7 +960,6 @@ def depth_exclude(sbox):
       'X'                 : Item(status='A ', copied='+', wc_rev='-'),
     })
 
-@XFail()
 @Issue(3901)
 def depth_exclude_2(sbox):
   "1.6.x wc that has depth=exclude inside a delete"
