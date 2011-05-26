@@ -469,7 +469,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
          we're caching database handles, it make sense to be as permissive
          as the filesystem allows. */
       err = svn_wc__db_util_open_db(&sdb, local_abspath, SDB_FILE,
-                                    svn_sqlite__mode_readwrite,
+                                    svn_sqlite__mode_readwrite, NULL,
                                     db->state_pool, scratch_pool);
       if (err == NULL)
         break;

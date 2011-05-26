@@ -42,6 +42,8 @@
 #include "../../libsvn_wc/wc.h"
 #include "../../libsvn_wc/wc_db.h"
 #include "../../libsvn_wc/wc-queries.h"
+#define SVN_WC__I_AM_WC_DB
+#include "../../libsvn_wc/wc_db_private.h"
 
 #include "private/svn_wc_private.h"
 
@@ -330,10 +332,9 @@ create_fake_wc(const char *subdir_abspath, apr_pool_t *scratch_pool)
 
   SVN_ERR(svn_io_make_dir_recursively(dotsvn_abspath, scratch_pool));
   svn_error_clear(svn_io_remove_file(db_abspath, scratch_pool));
-  SVN_ERR(svn_sqlite__open(&sdb, db_abspath, svn_sqlite__mode_rwcreate,
-                           my_statements,
-                           0, NULL,
-                           scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_util_open_db(&sdb, subdir_abspath, "wc.db",
+                                  svn_sqlite__mode_rwcreate, my_statements,
+                                  scratch_pool, scratch_pool));
 
   for (i = 0; my_statements[i] != NULL; i++)
     SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ i));
