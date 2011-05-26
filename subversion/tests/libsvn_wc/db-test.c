@@ -311,11 +311,12 @@ WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
 
 
 static svn_error_t *
-create_fake_wc(const char *subdir, apr_pool_t *scratch_pool)
+create_fake_wc(const char *subdir_abspath, apr_pool_t *scratch_pool)
 {
-  const char *dirpath = svn_dirent_join_many(scratch_pool,
-                                             "fake-wc", subdir, ".svn", NULL);
-  const char *dbpath = svn_dirent_join(dirpath, "wc.db", scratch_pool);
+  const char *dotsvn_abspath = svn_dirent_join(subdir_abspath, ".svn",
+                                               scratch_pool);
+  const char *db_abspath = svn_dirent_join(dotsvn_abspath, "wc.db",
+                                           scratch_pool);
   svn_sqlite__db_t *sdb;
   const char * const my_statements[] = {
     statements[STMT_CREATE_SCHEMA],
@@ -327,9 +328,9 @@ create_fake_wc(const char *subdir, apr_pool_t *scratch_pool)
   };
   int i;
 
-  SVN_ERR(svn_io_make_dir_recursively(dirpath, scratch_pool));
-  svn_error_clear(svn_io_remove_file(dbpath, scratch_pool));
-  SVN_ERR(svn_sqlite__open(&sdb, dbpath, svn_sqlite__mode_rwcreate,
+  SVN_ERR(svn_io_make_dir_recursively(dotsvn_abspath, scratch_pool));
+  svn_error_clear(svn_io_remove_file(db_abspath, scratch_pool));
+  SVN_ERR(svn_sqlite__open(&sdb, db_abspath, svn_sqlite__mode_rwcreate,
                            my_statements,
                            0, NULL,
                            scratch_pool, scratch_pool));
@@ -347,12 +348,11 @@ create_open(svn_wc__db_t **db,
             const char *subdir,
             apr_pool_t *pool)
 {
-  SVN_ERR(create_fake_wc(subdir, pool));
-
   SVN_ERR(svn_dirent_get_absolute(local_abspath,
                                   svn_dirent_join("fake-wc", subdir, pool),
                                   pool));
   SVN_ERR(svn_wc__db_open(db, NULL, TRUE, TRUE, pool, pool));
+  SVN_ERR(create_fake_wc(*local_abspath, pool));
 
   return SVN_NO_ERROR;
 }
