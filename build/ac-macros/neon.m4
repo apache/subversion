@@ -90,11 +90,6 @@ dnl Configure neon --------------------------
             args="--disable-shared"
           fi
 
-          # If we have apr-util and its bundled expat, we can point neon
-          # there, otherwise, neon is on its own to find expat. 
-          if test -f "$abs_builddir/apr-util/xml/expat/lib/expat.h" ; then
-            args="$args --with-expat='$abs_builddir/apr-util/xml/expat/lib/libexpat.la'"
-          fi
           SVN_EXTERNAL_PROJECT([neon], [$args])
 
           if test -f "$abs_builddir/neon/neon-config" ; then
