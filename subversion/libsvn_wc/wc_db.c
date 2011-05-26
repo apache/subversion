@@ -2660,9 +2660,9 @@ insert_external_node(void *baton,
 
   /* And the file external info skel */
   {
-    svn_sqlite__stmt_t *stmt;
     const char *serialized;
 #if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
+    svn_sqlite__stmt_t *stmt;
     svn_opt_revision_t peg_rev;
     svn_opt_revision_t rev;
 
