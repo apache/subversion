@@ -280,7 +280,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
       /* Mergeinfo may be inherited. */
       if (wc_mergeinfo)
         {
-          *inherited = (wc_mergeinfo != NULL);
+          *inherited = TRUE;
           *mergeinfo = apr_hash_make(result_pool);
           SVN_ERR(svn_client__adjust_mergeinfo_source_paths(*mergeinfo,
                                                             walk_relpath,
@@ -299,7 +299,8 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
 
   /* Remove non-inheritable mergeinfo and paths mapped to empty ranges
      which may occur if WCPATH's mergeinfo is not explicit. */
-  if (*inherited)
+  if (*inherited
+      && apr_hash_count(*mergeinfo)) /* Nothing to do for empty mergeinfo. */
     {
       SVN_ERR(svn_mergeinfo_inheritable(mergeinfo, *mergeinfo, NULL,
               SVN_INVALID_REVNUM, SVN_INVALID_REVNUM, result_pool));
