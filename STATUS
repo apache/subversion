@@ -15,6 +15,17 @@ Status of 1.6.17:
 Candidate changes:
 ==================
 
+ * r966167
+   Allow passing --with-jdk to gen-make.py
+   Backport branch in:
+     ^/subversion/branches/1.6.x-r966167
+   Justification:
+     On 64 bit windows, looking in the registry will not always return the
+     right jdk to compile Subversion with. This patch allows specifying
+     a specific jdk.
+     (Which then fixes building 1.6.x on the Windows buildbots)
+   Votes:
+     +1: rhuijben     
 
 Veto-blocked changes:
 =====================
