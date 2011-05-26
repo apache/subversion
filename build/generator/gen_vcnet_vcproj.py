@@ -137,6 +137,7 @@ class Generator(gen_win.WinGeneratorBase):
                                    key=lambda t: t[0]):
       sql.append(_eztdata(header=hdrfile.replace('/', '\\'),
                           source=sqlfile[0].replace('/', '\\'),
+                          dependencies=[x.replace('/', '\\') for x in sqlfile[1:]],
                           svn_python=sys.executable))
 
     # apr doesn't supply vcproj files, the user must convert them
