@@ -390,25 +390,6 @@ def reflect_dropped_renumbered_revs(sbox):
   svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 10.\n'],
                                     [], "mkdir", sbox.repo_url + "/toplevel",
                                      "-m", "Create toplevel dir to load into")
-  # This currently fails with this error:
-  #
-  #   >svnrdump load file:///C:/SVN/src-trunk/Debug/subversion/tests/cmdline
-  #   /svn-test-work/repositories/svnrdump_tests-40/toplevel < with_merges.dump
-  #   * Loaded revision 0.
-  #   * Loaded revision 11.
-  #   * Loaded revision 12.
-  #   * Loaded revision 13.
-  #   * Loaded revision 14.
-  #   * Loaded revision 15.
-  #   * Loaded revision 16.
-  #   * Loaded revision 17.
-  #   * Loaded revision 18.
-  #   ..\..\..\subversion\svnrdump\svnrdump.c:451: (apr_err=160028)
-  #   ..\..\..\subversion\libsvn_repos\load.c:585: (apr_err=160028)
-  #   ..\..\..\subversion\libsvn_repos\load.c:254: (apr_err=160028)
-  #   ..\..\..\subversion\svnrdump\load_editor.c:475: (apr_err=160028)
-  #   ..\..\..\subversion\libsvn_repos\commit.c:132: (apr_err=160028)
-  #   svnrdump: E160028: Directory '/toplevel' is out of date
   svntest.actions.run_and_verify_svnrdump(svnrdump_dumpfile,
                                           svntest.verify.AnyOutput,
                                           [], 0, '-q', 'load',
