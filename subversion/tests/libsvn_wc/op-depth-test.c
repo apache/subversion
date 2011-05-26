@@ -66,17 +66,10 @@ strcmp_null(const char *s1, const char *s2)
 /* ---------------------------------------------------------------------- */
 /* Reading the WC DB */
 
-static const char *const my_statements[] = {
-  "SELECT op_depth, presence, local_relpath, revision, repos_path "
-    "FROM nodes "
-    "WHERE local_relpath = ?1 OR local_relpath LIKE ?2",
-  NULL };
-
-#define STMT_SELECT_NODES_INFO 0
-
 static svn_error_t *
 open_wc_db(svn_sqlite__db_t **sdb,
            const char *wc_root_abspath,
+           const char *const *my_statements,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
 {
@@ -416,6 +409,13 @@ check_db_rows(svn_test__sandbox_t *b,
   svn_sqlite__db_t *sdb;
   int i;
   svn_sqlite__stmt_t *stmt;
+  const char *const statements[] = {
+    "SELECT op_depth, presence, local_relpath, revision, repos_path "
+      "FROM nodes "
+      "WHERE local_relpath = ?1 OR local_relpath LIKE ?2",
+    NULL };
+#define STMT_SELECT_NODES_INFO 0
+
   svn_boolean_t have_row;
   apr_hash_t *found_hash = apr_hash_make(b->pool);
   apr_hash_t *expected_hash = apr_hash_make(b->pool);
@@ -423,7 +423,7 @@ check_db_rows(svn_test__sandbox_t *b,
     = { expected_hash, found_hash, b->pool, NULL };
 
   /* Fill ACTUAL_HASH with data from the WC DB. */
-  SVN_ERR(open_wc_db(&sdb, b->wc_abspath, b->pool, b->pool));
+  SVN_ERR(open_wc_db(&sdb, b->wc_abspath, statements, b->pool, b->pool));
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_NODES_INFO));
   SVN_ERR(svn_sqlite__bindf(stmt, "ss", base_relpath,
                             (base_relpath[0]
@@ -1152,9 +1152,6 @@ insert_dirs(svn_test__sandbox_t *b,
 {
   svn_sqlite__db_t *sdb;
   svn_sqlite__stmt_t *stmt;
-  const char *dbpath = svn_dirent_join_many(b->pool,
-                                            b->wc_abspath, ".svn", "wc.db",
-                                            NULL);
   const char * const statements[] = {
     "DELETE FROM nodes;",
     "INSERT INTO nodes (local_relpath, op_depth, presence, repos_path,"
@@ -1166,9 +1163,7 @@ insert_dirs(svn_test__sandbox_t *b,
     NULL,
   };
 
-  SVN_ERR(svn_sqlite__open(&sdb, dbpath, svn_sqlite__mode_readwrite,
-                           statements, 0, NULL,
-                           b->pool, b->pool));
+  SVN_ERR(open_wc_db(&sdb, b->wc_abspath, statements, b->pool, b->pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 0));
   SVN_ERR(svn_sqlite__step_done(stmt));
@@ -1947,9 +1942,6 @@ insert_actual(svn_test__sandbox_t *b,
 {
   svn_sqlite__db_t *sdb;
   svn_sqlite__stmt_t *stmt;
-  const char *dbpath = svn_dirent_join_many(b->pool,
-                                            b->wc_abspath, ".svn", "wc.db",
-                                            NULL);
   const char * const statements[] = {
     "DELETE FROM actual_node;",
     "INSERT INTO actual_node (local_relpath, changelist, wc_id)"
@@ -1963,9 +1955,7 @@ insert_actual(svn_test__sandbox_t *b,
   if (!actual)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_sqlite__open(&sdb, dbpath, svn_sqlite__mode_readwrite,
-                           statements, 0, NULL,
-                           b->pool, b->pool));
+  SVN_ERR(open_wc_db(&sdb, b->wc_abspath, statements, b->pool, b->pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 0));
   SVN_ERR(svn_sqlite__step_done(stmt));
@@ -2007,9 +1997,6 @@ check_db_actual(svn_test__sandbox_t* b, actual_row_t *rows)
 {
   svn_sqlite__db_t *sdb;
   svn_sqlite__stmt_t *stmt;
-  const char *dbpath = svn_dirent_join_many(b->pool,
-                                            b->wc_abspath, ".svn", "wc.db",
-                                            NULL);
   const char * const statements[] = {
     "SELECT local_relpath FROM actual_node WHERE wc_id = 1;",
     NULL,
@@ -2027,9 +2014,7 @@ check_db_actual(svn_test__sandbox_t* b, actual_row_t *rows)
       ++rows;
     }
 
-  SVN_ERR(svn_sqlite__open(&sdb, dbpath, svn_sqlite__mode_readwrite,
-                           statements, 0, NULL,
-                           b->pool, b->pool));
+  SVN_ERR(open_wc_db(&sdb, b->wc_abspath, statements, b->pool, b->pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 0));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
