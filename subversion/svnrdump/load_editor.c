@@ -743,7 +743,7 @@ set_node_property(void *baton,
   const struct svn_delta_editor_t *commit_editor = nb->rb->pb->commit_editor;
   apr_pool_t *pool = nb->rb->pool;
 
-  if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
+  if (value && strcmp(name, SVN_PROP_MERGEINFO) == 0)
     {
       svn_string_t *renumbered_mergeinfo;
       svn_string_t *prop_val = (svn_string_t *)value;
