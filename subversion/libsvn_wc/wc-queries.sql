@@ -1134,6 +1134,9 @@ ORDER BY local_relpath
 DELETE FROM revert_list
 WHERE local_relpath = ?1 OR local_relpath LIKE ?2 ESCAPE '#'
 
+-- STMT_DROP_REVERT_LIST
+DROP TABLE IF EXISTS revert_list
+
 -- STMT_CREATE_DELETE_LIST
 DROP TABLE IF EXISTS delete_list;
 CREATE TEMPORARY TABLE delete_list (
