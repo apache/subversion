@@ -65,13 +65,13 @@ NEON_VER	= 0.29.6
 SERF_VER	= 0.7.x
 SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.23
-SQLITE_VER	= 3.7.3
+SQLITE_VER	= 3070603
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
 GNU_ICONV_DIST	= libiconv-$(GNU_ICONV_VER).tar.gz
 NEON_DIST	= neon-$(NEON_VER).tar.gz
-SQLITE_DIST	= sqlite-$(SQLITE_VER).tar.gz
+SQLITE_DIST	= sqlite-autoconf-$(SQLITE_VER).tar.gz
 CYRUS_SASL_DIST	= cyrus-sasl-$(CYRUS_SASL_VER).tar.gz
 HTTPD_DIST	= httpd-$(HTTPD_VER).tar.bz2
 
@@ -108,7 +108,7 @@ HTTPD_SRCDIR	= $(SRCDIR)/httpd-$(HTTPD_VER)
 NEON_SRCDIR	= $(SRCDIR)/neon-$(NEON_VER)
 SERF_SRCDIR	= $(SRCDIR)/serf-$(SERF_VER)
 SERF_OLD_SRCDIR	= $(SRCDIR)/serf-$(SERF_OLD_VER)
-SQLITE_SRCDIR	= $(SRCDIR)/sqlite-$(SQLITE_VER)
+SQLITE_SRCDIR	= $(SRCDIR)/sqlite-autoconf-$(SQLITE_VER)
 CYRUS_SASL_SRCDIR	= $(SRCDIR)/cyrus-sasl-$(CYRUS_SASL_VER)
 SVN_SRCDIR	= $(SVN_WC)
 
