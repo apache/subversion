@@ -1006,23 +1006,13 @@ handle_external_item_change(const struct external_change_baton_t *eb,
 }
 
 static svn_error_t *
-handle_external_item_change_wrapper(const struct external_change_baton_t *eb,
-                                    const char *parent_dir_abspath,
-                                    const char *parent_dir_url,
-                                    const char *target_abspath,
-                                    const svn_wc_external_item2_t *old_item,
-                                    const svn_wc_external_item2_t *new_item,
-                                    apr_pool_t *scratch_pool)
+wrap_external_error(const char *target_abspath,
+                    svn_error_t *err,
+                    apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
-
-  err = handle_external_item_change(eb, parent_dir_abspath, parent_dir_url,
-                                    target_abspath,
-                                    old_item, new_item, scratch_pool);
-
-  /* ### This #ifndef should probably be removed once the externals handling
-         has stabilized, but currently it catches some errors in the test suite
-         that are ignored if this code is enabled */
+  /* In maintainer mode we prefer to fail on external processing errors, instead
+     of just notifying them as a warning. (The warnings would be skipped
+     by the test suite) */
 #ifndef SVN_DEBUG
   if (err && err->apr_err != SVN_ERR_CANCELLED)
     {
@@ -1041,7 +1031,7 @@ handle_external_item_change_wrapper(const struct external_change_baton_t *eb,
     }
 #endif
 
-  return svn_error_return(err);
+  return err;
 }
 
 /* This implements the 'svn_hash_diff_func_t' interface.
@@ -1063,7 +1053,6 @@ handle_externals_change(const struct external_change_baton_t *eb,
   apr_pool_t *iterpool;
   const char *url;
 
-  /* The apr hash function doesn't hand us an iterpool, so we manage our own.*/
   iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -1127,10 +1116,13 @@ handle_externals_change(const struct external_change_baton_t *eb,
       old_item = apr_hash_get(old_desc_hash, target_abspath,
                               APR_HASH_KEY_STRING);
 
-      SVN_ERR(handle_external_item_change_wrapper(eb, local_abspath, url,
+      SVN_ERR(wrap_external_error(
+                      target_abspath,
+                      handle_external_item_change(eb, local_abspath, url,
                                                   target_abspath,
                                                   old_item, new_item,
-                                                  iterpool));
+                                                  iterpool),
+                      iterpool));
 
       /* And remove already processed items from the to-remove hash */
       if (old_item)
@@ -1152,10 +1144,13 @@ handle_externals_change(const struct external_change_baton_t *eb,
       /* Only if the item is still in the hash, we should process it */
       if (apr_hash_get(old_desc_hash, target_abspath, APR_HASH_KEY_STRING))
         {
-          SVN_ERR(handle_external_item_change_wrapper(eb, local_abspath, url,
+          SVN_ERR(wrap_external_error(
+                          target_abspath,
+                          handle_external_item_change(eb, local_abspath, url,
                                                       target_abspath,
                                                       item, NULL,
-                                                      iterpool));
+                                                      iterpool),
+                    iterpool));
         }
     }
 
@@ -1301,10 +1296,13 @@ svn_client__export_externals(apr_hash_t *externals,
           item_abspath = svn_dirent_join(local_abspath, item->target_dir,
                                          sub_iterpool);
 
-          SVN_ERR(handle_external_item_change_wrapper(&eb, local_abspath,
+          SVN_ERR(wrap_external_error(
+                          item_abspath,
+                          handle_external_item_change(&eb, local_abspath,
                                                       dir_url, item_abspath,
                                                       NULL, item,
-                                                      sub_iterpool));
+                                                      sub_iterpool),
+                          sub_iterpool));
         }
     }
 
