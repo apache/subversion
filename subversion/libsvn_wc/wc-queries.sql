@@ -811,7 +811,6 @@ WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3
 SELECT 1 FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2
 LIMIT 1
 
-/* ### This doesn't select all absent nodes, it only selects one of them. */
 -- STMT_HAS_ABSENT_NODES
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
