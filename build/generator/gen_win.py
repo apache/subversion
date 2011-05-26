@@ -50,6 +50,7 @@ class GeneratorBase(gen_base.GeneratorBase):
     self.libintl_path = None
     self.zlib_path = 'zlib'
     self.openssl_path = None
+    self.jdk_path = None
     self.junit_path = None
     self.swig_path = None
     self.vsnet_version = '7.00'
@@ -95,6 +96,8 @@ class GeneratorBase(gen_base.GeneratorBase):
       elif opt == '--with-libintl':
         self.libintl_path = val
         self.enable_nls = 1
+      elif opt == '--with-jdk':
+        self.jdk_path = val
       elif opt == '--with-junit':
         self.junit_path = val
       elif opt == '--with-zlib':
@@ -1173,35 +1176,38 @@ class WinGeneratorBase(GeneratorBase):
       pass
 
   def _find_jdk(self):
-    self.jdk_path = None
-    jdk_ver = None
-    try:
-      import _winreg
-      key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE,
-                            r"SOFTWARE\JavaSoft\Java Development Kit")
-      # Find the newest JDK version.
-      num_values = _winreg.QueryInfoKey(key)[1]
-      for i in range(num_values):
-        (name, value, key_type) = _winreg.EnumValue(key, i)
-        if name == "CurrentVersion":
-          jdk_ver = value
-          break
-
-      # Find the JDK path.
-      if jdk_ver is not None:
-        key = _winreg.OpenKey(key, jdk_ver)
+    if not self.jdk_path:
+      self.jdk_path = None
+      jdk_ver = None
+      try:
+        import _winreg
+        key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE,
+                              r"SOFTWARE\JavaSoft\Java Development Kit")
+        # Find the newest JDK version.
         num_values = _winreg.QueryInfoKey(key)[1]
         for i in range(num_values):
           (name, value, key_type) = _winreg.EnumValue(key, i)
-          if name == "JavaHome":
-            self.jdk_path = value
+          if name == "CurrentVersion":
+            jdk_ver = value
             break
-      _winreg.CloseKey(key)
-    except (ImportError, EnvironmentError):
-      pass
-    if self.jdk_path:
-      sys.stderr.write("Found JDK version %s in %s\n"
-                       % (jdk_ver, self.jdk_path))
+
+        # Find the JDK path.
+        if jdk_ver is not None:
+          key = _winreg.OpenKey(key, jdk_ver)
+          num_values = _winreg.QueryInfoKey(key)[1]
+          for i in range(num_values):
+            (name, value, key_type) = _winreg.EnumValue(key, i)
+            if name == "JavaHome":
+              self.jdk_path = value
+              break
+        _winreg.CloseKey(key)
+      except (ImportError, EnvironmentError):
+        pass
+      if self.jdk_path:
+        sys.stderr.write("Found JDK version %s in %s\n"
+                         % (jdk_ver, self.jdk_path))
+    else:
+      print("Using JDK in %s\n" % (self.jdk_path))
 
   def _find_swig(self):
     # Require 1.3.24. If not found, assume 1.3.25.

@@ -146,6 +146,9 @@ def _usage_exit():
   print("           tell neon to look for ZLib headers and")
   print("           libs in DIR")
   print("")
+  print("  --with-jdk=DIR")
+  print("           look for the java development kit here")
+  print("")
   print("  --with-junit=DIR")
   print("           look for the junit jar here")
   print("           junit is for testing the java bindings")
@@ -220,6 +223,7 @@ if __name__ == '__main__':
                             'with-libintl=',
                             'with-openssl=',
                             'with-zlib=',
+                            'with-jdk=',
                             'with-junit=',
                             'with-swig=',
                             'with-sqlite=',
