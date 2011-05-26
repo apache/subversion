@@ -678,14 +678,20 @@ new_node_record(void **node_baton,
       switch (nb->kind)
         {
         case svn_node_file:
-          /* open_file to set the file_baton so we can apply props,
-             txdelta to it */
           SVN_ERR(commit_editor->open_file(nb->path, rb->db->baton,
                                            SVN_INVALID_REVNUM, rb->pool,
                                            &(nb->file_baton)));
           break;
         default:
-          /* The directory baton has already been set */
+          SVN_ERR(commit_editor->open_directory(nb->path, rb->db->baton,
+                                                rb->rev - rb->rev_offset - 1,
+                                                rb->pool, &child_baton));
+          child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
+          child_db->baton = child_baton;
+          child_db->depth = rb->db->depth + 1;
+          child_db->relpath = apr_pstrdup(rb->pool, nb->path);
+          child_db->parent = rb->db;
+          rb->db = child_db;
           break;
         }
       break;
