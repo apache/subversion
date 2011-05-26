@@ -1261,10 +1261,8 @@ def revert_nested_add_depth_immediates(sbox):
   expected_status.remove('A/X', 'A/X/Y')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-
-@Issue(3859)
-def revert_empty_actual(sbox):
-  "revert with superfluous actual node"
+def create_superflous_actual_node(sbox):
+  "create a superfluous actual node"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1298,17 +1296,40 @@ def revert_empty_actual(sbox):
   os.remove(sbox.ospath('alpha.merge-right.r2'))
   os.remove(sbox.ospath('alpha.working'))
 
-  # XFail here: revert removes the NODES row so notification should
-  # occur but the superfluous ACTUAL node suppresses it
   expected_status.tweak('alpha', status='A ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@Issue(3859)
+def revert_empty_actual(sbox):
+  "revert with superfluous actual node"
+
+  create_superflous_actual_node(sbox)
+  wc_dir = sbox.wc_dir
+
+  # Non-recursive code path works
   svntest.actions.run_and_verify_svn(None,
                                      ["Reverted '%s'\n" % sbox.ospath('alpha')],
                                      [],
                                      'revert', sbox.ospath('alpha'))
 
-  expected_status.remove('alpha')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+@XFail()
+@Issue(3859)
+def revert_empty_actual_recursive(sbox):
+  "recusive revert with superfluous actual node"
+
+  create_superflous_actual_node(sbox)
+  wc_dir = sbox.wc_dir
+
+  # Recursive code path fails, the superfluous actual node suppresses the
+  # notification
+  svntest.actions.run_and_verify_svn(None,
+                                     ["Reverted '%s'\n" % sbox.ospath('alpha')],
+                                     [],
+                                     'revert', '-R', sbox.ospath('alpha'))
+
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 @Issue(3879)
@@ -1506,6 +1527,7 @@ test_list = [ None,
               revert_nested_add_depth_immediates,
               revert_empty_actual,
               revert_tree_conflicts_with_replacements,
+              revert_empty_actual_recursive,
              ]
 
 if __name__ == '__main__':
