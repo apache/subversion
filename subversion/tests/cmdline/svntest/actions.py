@@ -2588,9 +2588,15 @@ def deep_trees_skipping_on_update(sbox, test_case, skip_paths,
   # This time, cd to the subdir before updating it.
   was_cwd = os.getcwd()
   for path, skipped in chdir_skip_paths:
+    if isinstance(skipped, list):
+      expected_skip = {}
+      for p in skipped:
+        expected_skip[p] = Item(verb='Skipped')
+    else:
+      expected_skip = {skipped : Item(verb='Skipped')}
     p = j(base, path)
     run_and_verify_update(p,
-                          wc.State(p, {skipped : Item(verb='Skipped')}),
+                          wc.State(p, expected_skip),
                           None, None)
   os.chdir(was_cwd)
 
