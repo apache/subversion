@@ -632,9 +632,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
 
   switch (status)
     {
-      /* ### Move this check into svn_wc__db_op_delete so that we
-             check the whole tree? */
-      case svn_wc__db_status_absent:
+      /* svn_wc__db_status_absent handled by svn_wc__db_op_delete */
       case svn_wc__db_status_excluded:
       case svn_wc__db_status_not_present:
         return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,

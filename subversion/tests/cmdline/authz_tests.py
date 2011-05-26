@@ -1206,6 +1206,38 @@ def authz_tree_conflict(sbox):
                                         None, None, None, None, 0,
                                         '-r', '1', wc_dir)
   
+@Issue(3900)
+@Skip(svntest.main.is_ra_type_file)
+def wc_delete(sbox):
+  "wc delete with absent nodes"
+
+  sbox.build(create_wc = False)
+  local_dir = sbox.wc_dir
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  write_authz_file(sbox, {'/'       : '* = r',
+                          '/A/B/E'  : '* =', })
+
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = local_dir
+  expected_output.tweak(status='A ', contents=None)
+  expected_output.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+  expected_wc = svntest.main.greek_state.copy()
+  expected_wc.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+
+  svntest.actions.run_and_verify_checkout(sbox.repo_url, local_dir,
+                                          expected_output,
+                                          expected_wc)
+
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+
+  expected_err = ".*svn: E155035: .*excluded by server*"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'rm', sbox.ospath('A/B/E'))
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'rm', sbox.ospath('A'))
+
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
 
 
 ########################################################################
@@ -1234,6 +1266,7 @@ test_list = [ None,
               authz_recursive_ls,
               case_sensitive_authz,
               authz_tree_conflict,
+              wc_delete,
              ]
 serial_only = True
 

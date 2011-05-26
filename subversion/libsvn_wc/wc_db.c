@@ -6057,7 +6057,7 @@ op_delete_txn(void *baton,
 {
   struct op_delete_baton_t *b = baton;
   svn_wc__db_status_t status;
-  svn_boolean_t op_root;
+  svn_boolean_t have_row, op_root;
   svn_boolean_t add_work = FALSE;
   svn_sqlite__stmt_t *stmt;
   const char *like_arg;
@@ -6077,6 +6077,28 @@ op_delete_txn(void *baton,
   if (status == svn_wc__db_status_deleted
       || status == svn_wc__db_status_not_present)
     return SVN_NO_ERROR;
+
+  like_arg = construct_like_arg(local_relpath, scratch_pool);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_ABSENT_NODES));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss",
+                            wcroot->wc_id, local_relpath, like_arg));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    {
+      const char *absent_path
+        = svn_dirent_local_style(svn_sqlite__column_text(stmt, 0, scratch_pool),
+                                 scratch_pool);
+        
+      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
+                               svn_sqlite__reset(stmt),
+                           _("Cannot delete '%s' as '%s'is excluded by server"),
+                               svn_dirent_local_style(local_relpath,
+                                                      scratch_pool),
+                               absent_path);
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
 
   if (op_root)
     {
@@ -6103,8 +6125,6 @@ op_delete_txn(void *baton,
       add_work = TRUE;
       SVN_ERR(op_depth_of(&select_depth, wcroot, local_relpath));
     }
-
-  like_arg = construct_like_arg(local_relpath, scratch_pool);
 
   /* ### Put actual-only nodes into the list? */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
