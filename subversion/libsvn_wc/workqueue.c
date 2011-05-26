@@ -574,12 +574,12 @@ run_postupgrade(svn_wc__db_t *db,
      ### this code only runs during upgrade after the files had been
      ### removed earlier during the upgrade. */
   SVN_ERR(svn_io_write_unique(&temp_path, adm_path, SVN_WC__NON_ENTRIES_STRING,
-                              sizeof(SVN_WC__NON_ENTRIES_STRING),
+                              sizeof(SVN_WC__NON_ENTRIES_STRING) - 1,
                               svn_io_file_del_none, scratch_pool));
   SVN_ERR(svn_io_file_rename(temp_path, format_path, scratch_pool));
 
   SVN_ERR(svn_io_write_unique(&temp_path, adm_path, SVN_WC__NON_ENTRIES_STRING,
-                              sizeof(SVN_WC__NON_ENTRIES_STRING),
+                              sizeof(SVN_WC__NON_ENTRIES_STRING) - 1,
                               svn_io_file_del_none, scratch_pool));
   SVN_ERR(svn_io_file_rename(temp_path, entries_path, scratch_pool));
 
