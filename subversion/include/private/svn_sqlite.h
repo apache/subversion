@@ -39,12 +39,20 @@ extern "C" {
 
 typedef struct svn_sqlite__db_t svn_sqlite__db_t;
 typedef struct svn_sqlite__stmt_t svn_sqlite__stmt_t;
+typedef struct svn_sqlite__context_t svn_sqlite__context_t;
+typedef struct svn_sqlite__value_t svn_sqlite__value_t;
 
 typedef enum svn_sqlite__mode_e {
     svn_sqlite__mode_readonly,   /* open the database read-only */
     svn_sqlite__mode_readwrite,  /* open the database read-write */
     svn_sqlite__mode_rwcreate    /* open/create the database read-write */
 } svn_sqlite__mode_t;
+
+/* The type used for callback functions. */
+typedef svn_error_t *(*svn_sqlite__func_t)(svn_sqlite__context_t *sctx,
+                                           int argc,
+                                           svn_sqlite__value_t *values[],
+                                           apr_pool_t *scatch_pool);
 
 
 /* Step the given statement; if it returns SQLITE_DONE, reset the statement.
@@ -121,6 +129,15 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *repos_path,
 /* Explicitly close the connection in DB. */
 svn_error_t *
 svn_sqlite__close(svn_sqlite__db_t *db);
+
+/* Add a custom function to be used with this database connection.  The data
+   in BATON should live at least as long as the connection in DB. */
+svn_error_t *
+svn_sqlite__create_scalar_function(svn_sqlite__db_t *db,
+                                   const char *func_name,
+                                   int argc,
+                                   svn_sqlite__func_t func,
+                                   void *baton);
 
 /* Execute the (multiple) statements in the STATEMENTS[STMT_IDX] string.  */
 svn_error_t *
@@ -289,6 +306,33 @@ svn_sqlite__column_is_null(svn_sqlite__stmt_t *stmt, int column);
    0 for NULL columns. */
 int
 svn_sqlite__column_bytes(svn_sqlite__stmt_t *stmt, int column);
+
+
+/* --------------------------------------------------------------------- */
+
+#define SVN_SQLITE__INTEGER  1
+#define SVN_SQLITE__FLOAT    2
+#define SVN_SQLITE__TEXT     3
+#define SVN_SQLITE__BLOB     4
+#define SVN_SQLITE__NULL     5
+
+/* */
+int
+svn_sqlite__value_type(svn_sqlite__value_t *val);
+
+/* */
+const char *
+svn_sqlite__value_text(svn_sqlite__value_t *val);
+
+
+/* --------------------------------------------------------------------- */
+
+/* */
+void
+svn_sqlite__result_null(svn_sqlite__context_t *sctx);
+
+void
+svn_sqlite__result_int64(svn_sqlite__context_t *sctx, apr_int64_t val);
 
 
 /* --------------------------------------------------------------------- */

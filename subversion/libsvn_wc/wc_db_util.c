@@ -38,6 +38,7 @@
 #define SVN_WC__I_AM_WC_DB
 
 #include "svn_dirent_uri.h"
+#include "private/svn_sqlite.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -75,6 +76,39 @@ svn_wc__db_util_fetch_wc_id(apr_int64_t *wc_id,
 
 
 
+
+/* An SQLite application defined function that allows SQL queries to
+   use "relpath_depth(local_relpath)".  */
+static svn_error_t *
+relpath_depth(svn_sqlite__context_t *sctx,
+              int argc,
+              svn_sqlite__value_t *values[],
+              apr_pool_t *scratch_pool)
+{
+  const char *path = NULL;
+  apr_int64_t depth;
+
+  if (argc == 1 && svn_sqlite__value_type(values[0]) == SVN_SQLITE__TEXT)
+    path = svn_sqlite__value_text(values[0]);
+  if (!path)
+    {
+      svn_sqlite__result_null(sctx);
+      return SVN_NO_ERROR;
+    }
+
+  depth = *path ? 1 : 0;
+  while (*path)
+    {
+      if (*path == '/')
+        ++depth;
+      ++path;
+    }
+  svn_sqlite__result_int64(sctx, depth);
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
                         const char *dir_abspath,
@@ -86,10 +120,13 @@ svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
   const char *sdb_abspath = svn_wc__adm_child(dir_abspath, sdb_fname,
                                               scratch_pool);
 
-  return svn_error_return(svn_sqlite__open(sdb, sdb_abspath,
-                                           smode, statements,
-                                           0, NULL,
-                                           result_pool, scratch_pool));
+  SVN_ERR(svn_sqlite__open(sdb, sdb_abspath, smode, statements,
+                           0, NULL, result_pool, scratch_pool));
+
+  SVN_ERR(svn_sqlite__create_scalar_function(*sdb, "relpath_depth", 1,
+                                             relpath_depth, NULL));
+
+  return SVN_NO_ERROR;
 }
 
 
