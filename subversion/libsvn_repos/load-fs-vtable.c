@@ -67,6 +67,8 @@ struct parse_baton
      (svn_revnum_t *) in the dump stream to their corresponding revisions
      (svn_revnum_t *) in the loaded repository.  The hash and its
      contents are allocated in POOL. */
+  /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=3903
+     ### for discussion about improving the memory costs of this mapping. */
   apr_hash_t *rev_map;
 
   /* The most recent (youngest) revision from the dump stream mapped in
