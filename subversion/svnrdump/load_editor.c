@@ -80,6 +80,8 @@ struct parse_baton
 
   /* A mapping of svn_revnum_t * dump stream revisions to their
      corresponding svn_revnum_t * target repository revisions. */
+  /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=3903
+     ### for discussion about improving the memory costs of this mapping. */
   apr_hash_t *rev_map;
 
   /* The most recent (youngest) revision from the dump stream mapped in
