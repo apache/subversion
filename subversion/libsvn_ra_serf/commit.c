@@ -714,8 +714,8 @@ derive_old_val(svn_boolean_t *have_old_val,
 
 static svn_error_t *
 proppatch_walker(void *baton,
-                 const char *ns, apr_ssize_t ns_len,
-                 const char *name, apr_ssize_t name_len,
+                 const char *ns,
+                 const char *name,
                  const svn_string_t *val,
                  apr_pool_t *pool)
 {

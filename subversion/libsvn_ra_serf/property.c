@@ -684,20 +684,19 @@ svn_ra_serf__walk_all_props(apr_hash_t *props,
     {
       void *ns_val;
       const void *ns_name;
-      apr_ssize_t ns_len;
       apr_hash_index_t *name_hi;
-      apr_hash_this(ns_hi, &ns_name, &ns_len, &ns_val);
+
+      apr_hash_this(ns_hi, &ns_name, NULL, &ns_val);
+
       for (name_hi = apr_hash_first(pool, ns_val); name_hi;
            name_hi = apr_hash_next(name_hi))
         {
           void *prop_val;
           const void *prop_name;
-          apr_ssize_t prop_len;
 
-          apr_hash_this(name_hi, &prop_name, &prop_len, &prop_val);
+          apr_hash_this(name_hi, &prop_name, NULL, &prop_val);
           /* use a subpool? */
-          SVN_ERR(walker(baton, ns_name, ns_len, prop_name, prop_len,
-                         prop_val, pool));
+          SVN_ERR(walker(baton, ns_name, prop_name, prop_val, pool));
         }
     }
 
@@ -758,9 +757,10 @@ svn_ra_serf__walk_all_paths(apr_hash_t *props,
 
 
 svn_error_t *
-svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
-                             const char *ns, apr_ssize_t ns_len,
-                             const char *name, apr_ssize_t name_len,
+svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop,
+                             void *baton,
+                             const char *ns,
+                             const char *name,
                              const svn_string_t *val,
                              apr_pool_t *pool)
 {
@@ -819,19 +819,19 @@ set_hash_props(void *baton,
 
 svn_error_t *
 svn_ra_serf__set_flat_props(void *baton,
-                            const char *ns, apr_ssize_t ns_len,
-                            const char *name, apr_ssize_t name_len,
+                            const char *ns,
+                            const char *name,
                             const svn_string_t *val,
                             apr_pool_t *pool)
 {
   return svn_ra_serf__set_baton_props(set_hash_props, baton,
-                                      ns, ns_len, name, name_len, val, pool);
+                                      ns, name, val, pool);
 }
 
 svn_error_t *
 svn_ra_serf__set_bare_props(void *baton,
-                            const char *ns, apr_ssize_t ns_len,
-                            const char *name, apr_ssize_t name_len,
+                            const char *ns,
+                            const char *name,
                             const svn_string_t *val,
                             apr_pool_t *pool)
 {

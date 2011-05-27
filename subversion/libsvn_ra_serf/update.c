@@ -438,42 +438,41 @@ push_state(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 set_file_props(void *baton,
-               const char *ns, apr_ssize_t ns_len,
-               const char *name, apr_ssize_t name_len,
+               const char *ns,
+               const char *name,
                const svn_string_t *val,
                apr_pool_t *pool)
 {
   report_info_t *info = baton;
   const svn_delta_editor_t *editor = info->dir->update_editor;
 
-  if (name_len == 12
-      && ns_len == 39
-      && strcmp(name, "md5-checksum") == 0
+  if (strcmp(name, "md5-checksum") == 0
       && strcmp(ns, SVN_DAV_PROP_NS_DAV) == 0)
     info->final_checksum = apr_pstrdup(info->pool, val->data);
 
   return svn_ra_serf__set_baton_props(editor->change_file_prop,
                                       info->file_baton,
-                                      ns, ns_len, name, name_len, val, pool);
+                                      ns, name, val, pool);
 }
 
 static svn_error_t *
 set_dir_props(void *baton,
-              const char *ns, apr_ssize_t ns_len,
-              const char *name, apr_ssize_t name_len,
+              const char *ns,
+              const char *name,
               const svn_string_t *val,
               apr_pool_t *pool)
 {
   report_dir_t *dir = baton;
+
   return svn_ra_serf__set_baton_props(dir->update_editor->change_dir_prop,
                                       dir->dir_baton,
-                                      ns, ns_len, name, name_len, val, pool);
+                                      ns, name, val, pool);
 }
 
 static svn_error_t *
 remove_file_props(void *baton,
-                  const char *ns, apr_ssize_t ns_len,
-                  const char *name, apr_ssize_t name_len,
+                  const char *ns,
+                  const char *name,
                   const svn_string_t *val,
                   apr_pool_t *pool)
 {
@@ -482,20 +481,21 @@ remove_file_props(void *baton,
 
   return svn_ra_serf__set_baton_props(editor->change_file_prop,
                                       info->file_baton,
-                                      ns, ns_len, name, name_len, NULL, pool);
+                                      ns, name, NULL, pool);
 }
 
 static svn_error_t *
 remove_dir_props(void *baton,
-                 const char *ns, apr_ssize_t ns_len,
-                 const char *name, apr_ssize_t name_len,
+                 const char *ns,
+                 const char *name,
                  const svn_string_t *val,
                  apr_pool_t *pool)
 {
   report_dir_t *dir = baton;
+
   return svn_ra_serf__set_baton_props(dir->update_editor->change_dir_prop,
                                       dir->dir_baton,
-                                      ns, ns_len, name, name_len, NULL, pool);
+                                      ns, name, NULL, pool);
 }
 
 
@@ -1199,7 +1199,6 @@ fetch_file(report_context_t *ctx, report_info_t *info)
                                          info->target_rev, "0", all_props,
                                          &ctx->done_propfinds,
                                          info->dir->pool));
-
       SVN_ERR_ASSERT(info->propfind);
 
       ctx->active_propfinds++;
@@ -1759,7 +1758,6 @@ end_report(svn_ra_serf__xml_parser_t *parser,
                                              all_props,
                                              &ctx->done_propfinds,
                                              info->dir->pool));
-
           SVN_ERR_ASSERT(info->dir->propfind);
 
           ctx->active_propfinds++;
@@ -2773,7 +2771,8 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
       *props = apr_hash_make(pool);
 
       SVN_ERR(svn_ra_serf__walk_all_props(fetch_props, fetch_url, revision,
-                                          svn_ra_serf__set_flat_props, *props, pool));
+                                          svn_ra_serf__set_flat_props, *props,
+                                          pool));
     }
 
   if (stream)
