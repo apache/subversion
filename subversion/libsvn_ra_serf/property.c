@@ -542,7 +542,8 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
 {
   svn_ra_serf__propfind_context_t *new_prop_ctx;
 
-  if (!*prop_ctx)
+  SVN_ERR_ASSERT(*prop_ctx == NULL);
+
     {
       svn_ra_serf__handler_t *handler;
       svn_ra_serf__xml_parser_t *parser_ctx;
@@ -601,22 +602,6 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
       handler->response_baton = parser_ctx;
 
       *prop_ctx = new_prop_ctx;
-    }
-  else
-    {
-      /* If we're re-using PROP_CTX, we'll do our caller a favor and
-         verify that the path and revision are as expected. */
-      SVN_ERR_ASSERT(strcmp((*prop_ctx)->path, path) == 0);
-      if (SVN_IS_VALID_REVNUM(rev))
-        {
-          SVN_ERR_ASSERT(((*prop_ctx)->label)
-                         && (strcmp((*prop_ctx)->label,
-                                    apr_ltoa(pool, rev)) == 0));
-        }
-      else
-        {
-          SVN_ERR_ASSERT((*prop_ctx)->label == NULL);
-        }
     }
 
   /* create request */
@@ -788,31 +773,6 @@ svn_ra_serf__walk_all_paths(apr_hash_t *props,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-set_bare_props(svn_ra_serf__prop_set_t setprop, void *baton,
-               const char *ns, apr_ssize_t ns_len,
-               const char *name, apr_ssize_t name_len,
-               const svn_string_t *val,
-               apr_pool_t *pool)
-{
-  const char *prop_name;
-
-  if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
-    prop_name = name;
-  else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
-    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, (char *)NULL);
-  else if (strcmp(ns, SVN_PROP_PREFIX) == 0)
-    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, (char *)NULL);
-  else if (strcmp(ns, "") == 0)
-    prop_name = name;
-  else
-    {
-      /* do nothing for now? */
-      return SVN_NO_ERROR;
-    }
-
-  return setprop(baton, prop_name, val, pool);
-}
 
 svn_error_t *
 svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
@@ -859,6 +819,8 @@ svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
   return setprop(baton, prop_name, val, pool);
 }
 
+
+/* Conforms to delta_editor.change_*_prop  */
 static svn_error_t *
 set_hash_props(void *baton,
                const char *name,
@@ -890,8 +852,30 @@ svn_ra_serf__set_bare_props(void *baton,
                             const svn_string_t *val,
                             apr_pool_t *pool)
 {
-  return set_bare_props(set_hash_props, baton,
-                        ns, ns_len, name, name_len, val, pool);
+  apr_hash_t *props = baton;
+  apr_pool_t *result_pool = apr_hash_pool_get(props);
+  const char *prop_name;
+
+  /* ### copy NAME into the RESULT_POOL?  */
+  /* ### copy VAL into the RESULT_POOL?  */
+
+  if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
+    prop_name = name;
+  else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
+    prop_name = apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
+  else if (strcmp(ns, SVN_PROP_PREFIX) == 0)
+    prop_name = apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
+  else if (strcmp(ns, "") == 0)
+    prop_name = name;
+  else
+    {
+      /* do nothing for now? */
+      return SVN_NO_ERROR;
+    }
+
+  apr_hash_set(props, prop_name, APR_HASH_KEY_STRING, val);
+
+  return SVN_NO_ERROR;
 }
 
 
