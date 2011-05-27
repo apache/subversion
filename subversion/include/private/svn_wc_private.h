@@ -174,7 +174,7 @@ svn_wc__external_register(svn_wc_context_t *wc_ctx,
    If not NULL, call CANCEL_FUNC with CANCEL_BATON to allow canceling while
    removing the working copy files.
 
-   ### This function wraps svn_wc_remove_from_version_control2.
+   ### This function wraps svn_wc_remove_from_revision_control2().
  */
 svn_error_t *
 svn_wc__external_remove(svn_wc_context_t *wc_ctx,
