@@ -452,6 +452,10 @@ new_revision_record(void **revision_baton,
      It might be positive or negative. */
   rb->rev_offset = (apr_int32_t) (rb->rev) - (head_rev + 1);
 
+  /* Stash the oldest (non-zero) dumpstream revision seen. */
+  if ((rb->rev > 0) && (!SVN_IS_VALID_REVNUM(pb->oldest_dumpstream_rev)))
+    pb->oldest_dumpstream_rev = rb->rev;
+
   /* Set the commit_editor/ commit_edit_baton to NULL and wait for
      them to be created in new_node_record */
   rb->pb->commit_editor = NULL;

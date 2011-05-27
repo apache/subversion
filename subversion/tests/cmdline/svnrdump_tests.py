@@ -421,7 +421,6 @@ def reflect_dropped_renumbered_revs(sbox):
 # This test replicates svnadmin_tests.py 20 'don't filter mergeinfo revs
 # from incremental dump' but uses 'svnrdump [dump|load]' in place of
 # 'svnadmin [dump|load]'.
-@XFail()
 @Issue(3890)
 def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   "don't drop mergeinfo revs in incremental svnrdump"
