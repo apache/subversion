@@ -63,6 +63,9 @@ struct parse_baton
   svn_ra_session_t *session;
   svn_ra_session_t *aux_session;
 
+  /* To bleep, or not to bleep?  (What kind of question is that?) */
+  svn_boolean_t quiet;
+
   /* UUID found in the dumpstream, if any; NULL otherwise. */
   const char *uuid;
 
@@ -338,8 +341,9 @@ commit_callback(const svn_commit_info_t *commit_info,
   struct parse_baton *pb = rb->pb;
 
   /* ### Don't print directly; generate a notification. */
-  SVN_ERR(svn_cmdline_printf(pool, "* Loaded revision %ld.\n",
-                             commit_info->revision));
+  if (! pb->quiet)
+    SVN_ERR(svn_cmdline_printf(pool, "* Loaded revision %ld.\n",
+                               commit_info->revision));
 
   /* Add the mapping of the dumpstream revision to the committed revision. */
   set_revision_mapping(pb->rev_map, rb->rev, commit_info->revision);
@@ -939,7 +943,8 @@ close_revision(void *baton)
   if (rb->rev == 0)
     {
       /* ### Don't print directly; generate a notification. */
-      SVN_ERR(svn_cmdline_printf(rb->pool, "* Loaded revision 0.\n"));
+      if (! rb->pb->quiet)
+        SVN_ERR(svn_cmdline_printf(rb->pool, "* Loaded revision 0.\n"));
     }
   else if (commit_editor)
     {
@@ -1012,6 +1017,7 @@ svn_error_t *
 svn_rdump__load_dumpstream(svn_stream_t *stream,
                            svn_ra_session_t *session,
                            svn_ra_session_t *aux_session,
+                           svn_boolean_t quiet,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            apr_pool_t *pool)
@@ -1048,6 +1054,7 @@ svn_rdump__load_dumpstream(svn_stream_t *stream,
   parse_baton = apr_pcalloc(pool, sizeof(*parse_baton));
   parse_baton->session = session;
   parse_baton->aux_session = aux_session;
+  parse_baton->quiet = quiet;
   parse_baton->root_url = root_url;
   parse_baton->parent_dir = parent_dir;
   parse_baton->rev_map = apr_hash_make(pool);
