@@ -473,8 +473,7 @@ typedef struct svn_ra_serf__handler_t {
 /*
  * Helper function to queue a request in the @a handler's connection.
  */
-serf_request_t*
-svn_ra_serf__request_create(svn_ra_serf__handler_t *handler);
+void svn_ra_serf__request_create(svn_ra_serf__handler_t *handler);
 
 /* XML helper callbacks. */
 
