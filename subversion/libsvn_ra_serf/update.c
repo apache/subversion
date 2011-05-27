@@ -2521,8 +2521,10 @@ make_update_reporter(svn_ra_session_t *ra_session,
                      svn_boolean_t send_copyfrom_args,
                      const svn_delta_editor_t *update_editor,
                      void *update_baton,
-                     apr_pool_t *pool)
+                     apr_pool_t *result_pool)
 {
+  /* ### would be nice to get a SCRATCH_POOL passed to us.  */
+  apr_pool_t *scratch_pool = svn_pool_create(result_pool);
   report_context_t *report;
   const svn_delta_editor_t *filter_editor;
   void *filter_baton;
@@ -2532,7 +2534,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
   svn_stringbuf_t *buf = NULL;
 
   SVN_ERR(svn_ra_serf__has_capability(ra_session, &server_supports_depth,
-                                      SVN_RA_CAPABILITY_DEPTH, pool));
+                                      SVN_RA_CAPABILITY_DEPTH, scratch_pool));
   /* We can skip the depth filtering when the user requested
      depth_files or depth_infinity because the server will
      transmit the right stuff anyway. */
@@ -2550,15 +2552,15 @@ make_update_reporter(svn_ra_session_t *ra_session,
       update_baton = filter_baton;
     }
 
-  report = apr_pcalloc(pool, sizeof(*report));
-  report->pool = pool;
+  report = apr_pcalloc(result_pool, sizeof(*report));
+  report->pool = result_pool;
   report->sess = sess;
   report->conn = report->sess->conns[0];
   report->target_rev = revision;
   report->ignore_ancestry = ignore_ancestry;
   report->send_copyfrom_args = send_copyfrom_args;
   report->text_deltas = text_deltas;
-  report->lock_path_tokens = apr_hash_make(pool);
+  report->lock_path_tokens = apr_hash_make(report->pool);
 
   report->source = src_path;
   report->destination = dest_path;
@@ -2573,52 +2575,55 @@ make_update_reporter(svn_ra_session_t *ra_session,
 
   SVN_ERR(svn_io_open_unique_file3(&report->body_file, NULL, NULL,
                                    svn_io_file_del_on_pool_cleanup,
-                                   report->pool, pool));
+                                   report->pool, scratch_pool));
 
-  svn_xml_make_open_tag(&buf, pool, svn_xml_normal, "S:update-report",
+  svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal, "S:update-report",
                         "xmlns:S", SVN_XML_NAMESPACE,
                         NULL);
 
-  make_simple_xml_tag(&buf, "S:src-path", report->source, pool);
+  make_simple_xml_tag(&buf, "S:src-path", report->source, scratch_pool);
 
   if (SVN_IS_VALID_REVNUM(report->target_rev))
     {
       make_simple_xml_tag(&buf, "S:target-revision",
-                          apr_ltoa(pool, report->target_rev), pool);
+                          apr_ltoa(scratch_pool, report->target_rev),
+                          scratch_pool);
     }
 
   if (report->destination && *report->destination)
     {
-      make_simple_xml_tag(&buf, "S:dst-path", report->destination, pool);
+      make_simple_xml_tag(&buf, "S:dst-path", report->destination,
+                          scratch_pool);
     }
 
   if (report->update_target && *report->update_target)
     {
       make_simple_xml_tag(&buf, "S:update-target", report->update_target,
-                          pool);
+                          scratch_pool);
     }
 
   if (report->ignore_ancestry)
     {
-      make_simple_xml_tag(&buf, "S:ignore-ancestry", "yes", pool);
+      make_simple_xml_tag(&buf, "S:ignore-ancestry", "yes", scratch_pool);
     }
 
   if (report->send_copyfrom_args)
     {
-      make_simple_xml_tag(&buf, "S:send-copyfrom-args", "yes", pool);
+      make_simple_xml_tag(&buf, "S:send-copyfrom-args", "yes", scratch_pool);
     }
 
   /* Old servers know "recursive" but not "depth"; help them DTRT. */
   if (depth == svn_depth_files || depth == svn_depth_empty)
     {
-      make_simple_xml_tag(&buf, "S:recursive", "no", pool);
+      make_simple_xml_tag(&buf, "S:recursive", "no", scratch_pool);
     }
 
-  make_simple_xml_tag(&buf, "S:depth", svn_depth_to_word(depth), pool);
+  make_simple_xml_tag(&buf, "S:depth", svn_depth_to_word(depth), scratch_pool);
 
   SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
-                                 NULL, pool));
+                                 NULL, scratch_pool));
 
+  svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
 

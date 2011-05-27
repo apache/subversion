@@ -370,7 +370,7 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
 svn_error_t *
 svn_ra_serf__context_run_wait(svn_boolean_t *done,
                               svn_ra_serf__session_t *sess,
-                              apr_pool_t *pool);
+                              apr_pool_t *scratch_pool);
 
 /* Callback for response handlers */
 typedef svn_error_t *
