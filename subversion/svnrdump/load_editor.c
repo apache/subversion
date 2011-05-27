@@ -142,7 +142,7 @@ struct revision_baton
 /* Record the mapping of FROM_REV to TO_REV in REV_MAP, ensuring that
    anything added to the hash is allocated in the hash's pool. */
 static void
-add_revision_mapping(apr_hash_t *rev_map,
+set_revision_mapping(apr_hash_t *rev_map,
                      svn_revnum_t from_rev,
                      svn_revnum_t to_rev)
 {
@@ -154,6 +154,17 @@ add_revision_mapping(apr_hash_t *rev_map,
                sizeof(svn_revnum_t), mapped_revs + 1);
 }
                      
+/* Return the revision to which FROM_REV maps in REV_MAP, or
+   SVN_INVALID_REVNUM if no such mapping exists. */
+static svn_revnum_t
+get_revision_mapping(apr_hash_t *rev_map,
+                     svn_revnum_t from_rev)
+{
+  svn_revnum_t *to_rev = apr_hash_get(rev_map, &from_rev,
+                                      sizeof(from_rev));
+  return to_rev ? *to_rev : SVN_INVALID_REVNUM;
+}
+
 
 /* Prepend the mergeinfo source paths in MERGEINFO_ORIG with
    PARENT_DIR, and return it in *MERGEINFO_VAL. */
@@ -215,16 +226,17 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
   if (rb->pb->oldest_dumpstream_rev > 1)
     {
       SVN_ERR(svn_mergeinfo__filter_mergeinfo_by_ranges(
-        &predates_stream_mergeinfo, mergeinfo,
-        rb->pb->oldest_dumpstream_rev - 1, 0,
-        TRUE, subpool, subpool));
+                  &predates_stream_mergeinfo, mergeinfo,
+                  rb->pb->oldest_dumpstream_rev - 1, 0,
+                  TRUE, subpool, subpool));
       SVN_ERR(svn_mergeinfo__filter_mergeinfo_by_ranges(
-        &mergeinfo, mergeinfo,
-        rb->pb->oldest_dumpstream_rev - 1, 0,
-        FALSE, subpool, subpool));
+                  &mergeinfo, mergeinfo,
+                  rb->pb->oldest_dumpstream_rev - 1, 0,
+                  FALSE, subpool, subpool));
       SVN_ERR(svn_mergeinfo__adjust_mergeinfo_rangelists(
-        &predates_stream_mergeinfo, predates_stream_mergeinfo,
-        -rb->rev_offset, subpool, subpool));
+                  &predates_stream_mergeinfo,
+                  predates_stream_mergeinfo,
+                  -rb->rev_offset, subpool, subpool));
     }
   else
     {
@@ -246,14 +258,13 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
       /* Possibly renumber revisions in merge source's rangelist. */
       for (i = 0; i < rangelist->nelts; i++)
         {
-          svn_revnum_t *rev_from_map;
+          svn_revnum_t rev_from_map;
           svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
                                                    svn_merge_range_t *);
-          rev_from_map = apr_hash_get(pb->rev_map, &range->start,
-                                      sizeof(svn_revnum_t));
-          if (rev_from_map && SVN_IS_VALID_REVNUM(*rev_from_map))
+          rev_from_map = get_revision_mapping(pb->rev_map, range->start);
+          if (SVN_IS_VALID_REVNUM(rev_from_map))
             {
-              range->start = *rev_from_map;
+              range->start = rev_from_map;
             }
           else if (range->start == pb->oldest_dumpstream_rev - 1)
             {
@@ -269,11 +280,10 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
                  If that is what we have here, then find the mapping for the
                  oldest rev from the load stream and subtract 1 to get the
                  renumbered, non-inclusive, start revision. */
-              rev_from_map = apr_hash_get(pb->rev_map,
-                                          &pb->oldest_dumpstream_rev,
-                                          sizeof(svn_revnum_t));
-              if (rev_from_map && SVN_IS_VALID_REVNUM(*rev_from_map))
-                range->start = *rev_from_map - 1;
+              rev_from_map = get_revision_mapping(pb->rev_map,
+                                                  pb->oldest_dumpstream_rev);
+              if (SVN_IS_VALID_REVNUM(rev_from_map))
+                range->start = rev_from_map - 1;
             }
           else
             {
@@ -288,10 +298,9 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
               continue;
             }
 
-          rev_from_map = apr_hash_get(pb->rev_map, &range->end,
-                                      sizeof(svn_revnum_t));
-          if (rev_from_map && SVN_IS_VALID_REVNUM(*rev_from_map))
-            range->end = *rev_from_map;
+          rev_from_map = get_revision_mapping(pb->rev_map, range->end);
+          if (SVN_IS_VALID_REVNUM(rev_from_map))
+            range->end = rev_from_map;
         }
       apr_hash_set(final_mergeinfo, path, pathlen, rangelist);
     }
@@ -333,7 +342,7 @@ commit_callback(const svn_commit_info_t *commit_info,
                              commit_info->revision));
 
   /* Add the mapping of the dumpstream revision to the committed revision. */
-  add_revision_mapping(pb->rev_map, rb->rev, commit_info->revision);
+  set_revision_mapping(pb->rev_map, rb->rev, commit_info->revision);
 
   /* If the incoming dump stream has non-contiguous revisions (e.g. from
      using svndumpfilter --drop-empty-revs without --renumber-revs) then
@@ -347,7 +356,7 @@ commit_callback(const svn_commit_info_t *commit_info,
 
       for (i = pb->last_rev_mapped + 1; i < rb->rev; i++)
         {
-          add_revision_mapping(pb->rev_map, i, pb->last_rev_mapped);
+          set_revision_mapping(pb->rev_map, i, pb->last_rev_mapped);
         }
     }
 
@@ -611,18 +620,20 @@ new_node_record(void **node_baton,
      URL. */
   if (nb->copyfrom_path && SVN_IS_VALID_REVNUM(nb->copyfrom_rev))
     {
-      svn_revnum_t copyfrom_rev = nb->copyfrom_rev - rb->rev_offset;
-      svn_revnum_t *src_rev_from_map;
+      svn_revnum_t copyfrom_rev;
 
-      if ((src_rev_from_map = apr_hash_get(rb->pb->rev_map, &nb->copyfrom_rev,
-                                           sizeof(nb->copyfrom_rev))))
-        copyfrom_rev = *src_rev_from_map;
+      /* Try to find the copyfrom revision in the revision map;
+         failing that, fall back to the revision offset approach. */
+      copyfrom_rev = get_revision_mapping(rb->pb->rev_map, nb->copyfrom_rev);
+      if (! SVN_IS_VALID_REVNUM(copyfrom_rev))
+        copyfrom_rev = nb->copyfrom_rev - rb->rev_offset;
 
       if (! SVN_IS_VALID_REVNUM(copyfrom_rev))
         return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                                  _("Relative source revision %ld is not"
                                    " available in current repository"),
                                  copyfrom_rev);
+
       nb->copyfrom_rev = copyfrom_rev;
 
       if (rb->pb->parent_dir)
@@ -971,9 +982,7 @@ close_revision(void *baton)
      a non-empty repository.  */
   if (rb->rev > 0)
     {
-      svn_revnum_t *rev_from_map =
-        apr_hash_get(rb->pb->rev_map, &rb->rev, sizeof(rb->rev));
-      committed_rev = *rev_from_map;
+      committed_rev = get_revision_mapping(rb->pb->rev_map, rb->rev);
     }
   else if (rb->rev_offset == -1)
     {
