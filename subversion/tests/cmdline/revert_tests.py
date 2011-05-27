@@ -1492,6 +1492,62 @@ def revert_tree_conflicts_with_replacements(sbox):
     })
   svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
 
+def create_no_text_change_conflict(sbox):
+  "create conflict with no text change"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.file_append(sbox.ospath('A/B/E/alpha'), 'their text\n')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Update to create a conflict
+  svntest.main.file_append(sbox.ospath('A/B/E/alpha'), 'my text\n')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '-r1', '--accept', 'postpone',
+                                     wc_dir)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E/alpha', status='C ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Reset the text with the file still marked as a conflict
+  os.remove(sbox.ospath('A/B/E/alpha'))
+  svntest.main.file_append(sbox.ospath('A/B/E/alpha'),
+                           "This is the file 'alpha'.\n")
+
+@XFail()
+@Issue(3859)
+def revert_no_text_change_conflict(sbox):
+  "revert conflict with no text change"
+
+  create_no_text_change_conflict(sbox)
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ["Reverted '%s'\n"
+                                      % sbox.ospath('A/B/E/alpha')],
+                                     [],
+                                     'revert', sbox.ospath('A/B/E/alpha'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+@Issue(3859)
+def revert_no_text_change_conflict_recursive(sbox):
+  "revert -R conflict with no text change"
+
+  create_no_text_change_conflict(sbox)
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ["Reverted '%s'\n"
+                                      % sbox.ospath('A/B/E/alpha')],
+                                     [],
+                                     'revert', '-R', wc_dir)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 ########################################################################
 # Run the tests
@@ -1528,6 +1584,8 @@ test_list = [ None,
               revert_empty_actual,
               revert_tree_conflicts_with_replacements,
               revert_empty_actual_recursive,
+              revert_no_text_change_conflict,
+              revert_no_text_change_conflict_recursive,
              ]
 
 if __name__ == '__main__':
