@@ -961,12 +961,6 @@ svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop,
                              const svn_string_t *val,
                              apr_pool_t *pool);
 
-svn_error_t *
-svn_ra_serf__set_flat_props(void *baton,
-                            const char *ns,
-                            const char *name,
-                            const svn_string_t *val,
-                            apr_pool_t *pool);
 
 svn_error_t *
 svn_ra_serf__set_bare_props(void *baton,
@@ -974,6 +968,28 @@ svn_ra_serf__set_bare_props(void *baton,
                             const char *name,
                             const svn_string_t *val,
                             apr_pool_t *pool);
+
+
+/* PROPS is nested hash tables mapping REV -> PATH -> NS -> NAME -> VALUE.
+   This function takes the tree of tables identified by PATH and REVISION
+   (resulting in NS:NAME:VALUE hashes) and flattens them into a set of
+   names to VALUE. The names are composed of NS:NAME, with specific
+   rewrite from wire names (DAV) to SVN names. This mapping is managed
+   by the svn_ra_serf__set_baton_props() function.
+
+   FLAT_PROPS is allocated in RESULT_POOL.
+   ### right now, we do a shallow copy from PROPS to FLAT_PROPS. therefore,
+   ### the names and values in PROPS must be in the proper pool.
+
+   Temporary allocations are made in SCRATCH_POOL.  */
+svn_error_t *
+svn_ra_serf__flatten_props(apr_hash_t **flat_props,
+                           apr_hash_t *props,
+                           const char *path,
+                           svn_revnum_t revision,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
 
 /* Return the property value for PATH at REV revision with a NS:NAME.
  * PROPS is a four-level nested hash: (svn_revnum_t => char *path =>

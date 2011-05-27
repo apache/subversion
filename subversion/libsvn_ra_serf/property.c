@@ -817,16 +817,35 @@ set_hash_props(void *baton,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_ra_serf__set_flat_props(void *baton,
-                            const char *ns,
-                            const char *name,
-                            const svn_string_t *val,
-                            apr_pool_t *pool)
+static svn_error_t *
+set_flat_props(void *baton,
+               const char *ns,
+               const char *name,
+               const svn_string_t *val,
+               apr_pool_t *pool)
 {
   return svn_ra_serf__set_baton_props(set_hash_props, baton,
                                       ns, name, val, pool);
 }
+
+
+svn_error_t *
+svn_ra_serf__flatten_props(apr_hash_t **flat_props,
+                           apr_hash_t *props,
+                           const char *path,
+                           svn_revnum_t revision,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  *flat_props = apr_hash_make(result_pool);
+
+  return svn_error_return(svn_ra_serf__walk_all_props(
+                            props, path, revision,
+                            set_flat_props,
+                            *flat_props /* baton */,
+                            result_pool));
+}
+
 
 svn_error_t *
 svn_ra_serf__set_bare_props(void *baton,
