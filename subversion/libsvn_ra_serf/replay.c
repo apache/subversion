@@ -757,7 +757,6 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
          requests to MAX_OUTSTANDING_REQUESTS. */
       if (rev <= end_revision  && active_reports < MAX_OUTSTANDING_REQUESTS)
         {
-          svn_ra_serf__propfind_context_t *prop_ctx = NULL;
           svn_ra_serf__handler_t *handler;
           svn_ra_serf__xml_parser_t *parser_ctx;
           apr_pool_t *ctx_pool = svn_pool_create(pool);
@@ -789,7 +788,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
               replay_ctx->revprop_rev = rev;
             }
 
-          SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx,
+          SVN_ERR(svn_ra_serf__deliver_props(&replay_ctx->prop_ctx,
                                              replay_ctx->revs_props, session,
                                              session->conns[0],
                                              replay_ctx->revprop_target,
@@ -797,8 +796,6 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
                                              "0", all_props,
                                              NULL,
                                              replay_ctx->src_rev_pool));
-
-          replay_ctx->prop_ctx = prop_ctx;
 
           /* Send the replay report request. */
           handler = apr_pcalloc(replay_ctx->src_rev_pool, sizeof(*handler));

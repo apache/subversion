@@ -494,7 +494,6 @@ get_version_url(const char **checked_in_url,
 
       props = apr_hash_make(pool);
 
-      propfind_ctx = NULL;
       if (SVN_IS_VALID_REVNUM(base_revision))
         {
           const char *bc_url, *bc_relpath;
@@ -515,10 +514,10 @@ get_version_url(const char **checked_in_url,
           propfind_url = session->session_url.path;
         }
 
+      /* ### switch to svn_ra_serf__retrieve_props  */
       SVN_ERR(svn_ra_serf__deliver_props(&propfind_ctx, props, session, conn,
                                          propfind_url, base_revision, "0",
                                          checked_in_props, NULL, pool));
-
       SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, session, pool));
 
       /* We wouldn't get here if the url wasn't found (404), so the checked-in
@@ -2374,7 +2373,6 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
                              apr_pool_t *pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
-  svn_ra_serf__propfind_context_t *propfind_ctx;
   proppatch_context_t *proppatch_ctx;
   commit_context_t *commit;
   const char *vcc_url, *proppatch_target, *ns;
@@ -2405,16 +2403,17 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
     }
   else
     {
+      svn_ra_serf__propfind_context_t *propfind_ctx;
+
       SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, commit->session,
                                         commit->conn, pool));
 
       props = apr_hash_make(pool);
 
-      propfind_ctx = NULL;
+      /* ### switch to svn_ra_serf__retrieve_props  */
       SVN_ERR(svn_ra_serf__deliver_props(&propfind_ctx, props, commit->session,
                                          commit->conn, vcc_url, rev, "0",
                                          checked_in_props, NULL, pool));
-
       SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, commit->session, pool));
 
       proppatch_target = svn_ra_serf__get_ver_prop(props, vcc_url, rev,
