@@ -1279,9 +1279,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       if (!rev)
         {
-          return svn_error_create
-            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-             _("Missing revision attr in target-revision element"));
+          return svn_error_create(
+            SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+            _("Missing revision attr in target-revision element"));
         }
 
       SVN_ERR(ctx->update_editor->set_target_revision(ctx->update_baton,
@@ -1297,9 +1297,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       if (!rev)
         {
-          return svn_error_create
-            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-             _("Missing revision attr in open-directory element"));
+          return svn_error_create(
+            SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+            _("Missing revision attr in open-directory element"));
         }
 
       info = push_state(parser, ctx, OPEN_DIR);
@@ -1333,18 +1333,18 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       if (!rev)
         {
-          return svn_error_create
-            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-             _("Missing revision attr in open-directory element"));
+          return svn_error_create(
+            SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+            _("Missing revision attr in open-directory element"));
         }
 
       dirname = svn_xml_get_attr_value("name", attrs);
 
       if (!dirname)
         {
-          return svn_error_create
-            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-             _("Missing name attr in open-directory element"));
+          return svn_error_create(
+            SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+            _("Missing name attr in open-directory element"));
         }
 
       info = push_state(parser, ctx, OPEN_DIR);
@@ -1377,9 +1377,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       dir_name = svn_xml_get_attr_value("name", attrs);
       if (!dir_name)
         {
-          return svn_error_create
-            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-             _("Missing name attr in add-directory element"));
+          return svn_error_create(
+            SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+            _("Missing name attr in add-directory element"));
         }
       cf = svn_xml_get_attr_value("copyfrom-path", attrs);
       cr = svn_xml_get_attr_value("copyfrom-rev", attrs);
@@ -1417,18 +1417,18 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       if (!file_name)
         {
-          return svn_error_create
-            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-             _("Missing name attr in open-file element"));
+          return svn_error_create(
+            SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+            _("Missing name attr in open-file element"));
         }
 
       rev = svn_xml_get_attr_value("rev", attrs);
 
       if (!rev)
         {
-          return svn_error_create
-            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-             _("Missing revision attr in open-file element"));
+          return svn_error_create(
+            SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+            _("Missing revision attr in open-file element"));
         }
 
       info = push_state(parser, ctx, OPEN_FILE);
@@ -1452,9 +1452,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       if (!file_name)
         {
-          return svn_error_create
-            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-             _("Missing name attr in add-file element"));
+          return svn_error_create(
+            SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+            _("Missing name attr in add-file element"));
         }
 
       info = push_state(parser, ctx, ADD_FILE);
@@ -1482,9 +1482,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       if (!file_name)
         {
-          return svn_error_create
-            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-             _("Missing name attr in delete-entry element"));
+          return svn_error_create(
+            SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+            _("Missing name attr in delete-entry element"));
         }
 
       info = parser->state->private;
@@ -1513,9 +1513,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       if (!file_name)
         {
-          return svn_error_create
-            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-             _("Missing name attr in absent-directory element"));
+          return svn_error_create(
+            SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+            _("Missing name attr in absent-directory element"));
         }
 
       info = parser->state->private;
@@ -1536,9 +1536,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       if (!file_name)
         {
-          return svn_error_create
-            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-             _("Missing name attr in absent-file element"));
+          return svn_error_create(
+            SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+            _("Missing name attr in absent-file element"));
         }
 
       info = parser->state->private;
