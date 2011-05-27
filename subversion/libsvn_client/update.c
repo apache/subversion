@@ -438,7 +438,7 @@ update_internal(svn_revnum_t *result_rev,
       SVN_ERR(svn_client__handle_externals(efb.externals_old,
                                            efb.externals_new,
                                            efb.ambient_depths,
-                                           repos_root,
+                                           repos_root, local_abspath,
                                            depth, use_sleep,
                                            ctx, pool));
     }

@@ -894,6 +894,7 @@ svn_client__do_commit(const char *base_url,
    subdir, or call svn_wc_remove_from_revision_control() on an
    existing one, or both.
 
+   TARGET_ABSPATH is the root of the driving operation and
    REQUESTED_DEPTH is the requested depth of the driving operation
    (e.g., update, switch, etc).  If it is neither svn_depth_infinity
    nor svn_depth_unknown, then changes to svn:externals will have no
@@ -917,6 +918,7 @@ svn_client__handle_externals(apr_hash_t *externals_old,
                              apr_hash_t *externals_new,
                              apr_hash_t *ambient_depths,
                              const char *repos_root_url,
+                             const char *target_abspath,
                              svn_depth_t requested_depth,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
