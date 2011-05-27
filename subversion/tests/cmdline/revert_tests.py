@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import re, os, stat
+import re, os, stat, shutil
 
 # Our testing module
 import svntest
@@ -1498,7 +1498,7 @@ def create_no_text_change_conflict(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  r1_content = open(sbox.ospath('A/B/E/alpha'), 'r').read()
+  shutil.copyfile(sbox.ospath('A/B/E/alpha'), sbox.ospath('A/B/E/alpha-copy'))
   svntest.main.file_append(sbox.ospath('A/B/E/alpha'), 'their text\n')
   sbox.simple_commit()
   sbox.simple_update()
@@ -1514,7 +1514,7 @@ def create_no_text_change_conflict(sbox):
 
   # Reset the text with the file still marked as a conflict
   os.remove(sbox.ospath('A/B/E/alpha'))
-  svntest.main.file_append(sbox.ospath('A/B/E/alpha'), r1_content)
+  shutil.move(sbox.ospath('A/B/E/alpha-copy'), sbox.ospath('A/B/E/alpha'))
 
 @XFail()
 @Issue(3859)
