@@ -636,20 +636,23 @@ svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
  * This is a blocking version of deliver_props.
  */
 svn_error_t *
-svn_ra_serf__retrieve_props(apr_hash_t *prop_vals,
+svn_ra_serf__retrieve_props(apr_hash_t **results,
                             svn_ra_serf__session_t *sess,
                             svn_ra_serf__connection_t *conn,
                             const char *url,
                             svn_revnum_t rev,
                             const char *depth,
                             const svn_ra_serf__dav_props_t *props,
-                            apr_pool_t *pool)
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
   svn_ra_serf__propfind_context_t *prop_ctx;
 
-  SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx, prop_vals, sess, conn, url,
-                                     rev, depth, props, NULL, pool));
-  SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, sess, pool));
+  *results = apr_hash_make(result_pool);
+
+  SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx, *results, sess, conn, url,
+                                     rev, depth, props, NULL, result_pool));
+  SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, sess, result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -900,13 +903,14 @@ retrieve_baseline_info(svn_revnum_t *actual_revision,
                        svn_revnum_t revision,
                        apr_pool_t *pool)
 {
-  apr_hash_t *props = apr_hash_make(pool);
+  apr_hash_t *props;
   const char *basecoll_url;
   const char *version_name;
 
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, conn,
+  SVN_ERR(svn_ra_serf__retrieve_props(&props, session, conn,
                                       baseline_url, revision, "0",
-                                      baseline_props, pool));
+                                      baseline_props,
+                                      pool, pool));
 
   basecoll_url = svn_ra_serf__get_ver_prop(props, baseline_url, revision,
                                            "DAV:", "baseline-collection");
@@ -948,7 +952,6 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                                apr_pool_t *pool)
 {
   const char *vcc_url, *relative_url, *basecoll_url, *baseline_url;
-  apr_hash_t *props = apr_hash_make(pool);
 
   /* No URL?  No sweat.  We'll use the session URL. */
   if (! url)
@@ -1019,11 +1022,13 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
         }
       else
         {
+          apr_hash_t *props;
           svn_revnum_t actual_revision;
 
-          SVN_ERR(svn_ra_serf__retrieve_props(props, session, conn,
+          SVN_ERR(svn_ra_serf__retrieve_props(&props, session, conn,
                                               vcc_url, revision, "0",
-                                              checked_in_props, pool));
+                                              checked_in_props,
+                                              pool, pool));
           baseline_url = svn_ra_serf__get_ver_prop(props, vcc_url, revision,
                                                    "DAV:", "checked-in");
           if (!baseline_url)

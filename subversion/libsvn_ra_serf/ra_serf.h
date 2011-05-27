@@ -892,18 +892,25 @@ svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
                             svn_ra_serf__session_t *sess,
                             apr_pool_t *pool);
 
-/*
- * This is a blocking version of deliver_props.
- */
+/* This is a blocking version of deliver_props.
+
+   The properties are fetched and placed into RESULTS, allocated in
+   RESULT_POOL.
+
+   ### more docco about the other params.
+
+   Temporary allocations are made in SCRATCH_POOL.
+*/
 svn_error_t *
-svn_ra_serf__retrieve_props(apr_hash_t *prop_vals,
+svn_ra_serf__retrieve_props(apr_hash_t **results,
                             svn_ra_serf__session_t *sess,
                             svn_ra_serf__connection_t *conn,
                             const char *url,
                             svn_revnum_t rev,
                             const char *depth,
                             const svn_ra_serf__dav_props_t *props,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* Set PROPS for PATH at REV revision with a NS:NAME VAL.
  *

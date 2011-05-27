@@ -1651,8 +1651,9 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
                           svn_ra_serf__connection_t *conn,
                           apr_pool_t *pool)
 {
-  apr_hash_t *props;
-  const char *path, *relative_path, *uuid;
+  const char *path;
+  const char *relative_path;
+  const char *uuid;
 
   /* If we've already got the information our caller seeks, just return it.  */
   if (session->vcc_url && session->repos_root_str)
@@ -1667,16 +1668,18 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
       conn = session->conns[0];
     }
 
-  props = apr_hash_make(pool);
   path = session->session_url.path;
   *vcc_url = NULL;
   uuid = NULL;
 
   do
     {
-      svn_error_t *err = svn_ra_serf__retrieve_props(props, session, conn,
-                                                     path, SVN_INVALID_REVNUM,
-                                                     "0", base_props, pool);
+      apr_hash_t *props;
+      svn_error_t *err;
+
+      err = svn_ra_serf__retrieve_props(&props, session, conn,
+                                        path, SVN_INVALID_REVNUM,
+                                        "0", base_props, pool, pool);
       if (! err)
         {
           *vcc_url =
