@@ -665,8 +665,8 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
 
 static svn_error_t *
 dirent_walker(void *baton,
-              const char *ns, apr_ssize_t ns_len,
-              const char *name, apr_ssize_t name_len,
+              const char *ns,
+              const char *name,
               const svn_string_t *val,
               apr_pool_t *pool)
 {
@@ -766,7 +766,7 @@ path_dirent_walker(void *baton,
       apr_hash_set(dirents->base_paths, base_name, APR_HASH_KEY_STRING, entry);
     }
 
-  return dirent_walker(entry, ns, ns_len, name, name_len, val, pool);
+  return dirent_walker(entry, ns, name, val, pool);
 }
 
 static const svn_ra_serf__dav_props_t *
@@ -968,7 +968,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
                                           path, revision, "0", all_props,
                                           pool));
       /* Check if the path is really a directory. */
-      SVN_ERR(resource_is_directory (props, path, revision));
+      SVN_ERR(resource_is_directory(props, path, revision));
 
       SVN_ERR(svn_ra_serf__walk_all_props(props, path, revision,
                                           svn_ra_serf__set_flat_props,
