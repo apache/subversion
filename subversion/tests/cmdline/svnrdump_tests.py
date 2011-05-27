@@ -144,8 +144,7 @@ def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
 
   svntest.actions.run_and_verify_svnrdump(svnrdump_dumpfile,
                                           svntest.verify.AnyOutput,
-                                          [], 0, '-q', 'load',
-                                          sbox.repo_url)
+                                          [], 0, 'load', sbox.repo_url)
 
   # Create a dump file using svnadmin dump
   svnadmin_dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir,
@@ -381,8 +380,7 @@ def reflect_dropped_renumbered_revs(sbox):
   # svnrdump load the dump file.
   svntest.actions.run_and_verify_svnrdump(svnrdump_dumpfile,
                                           svntest.verify.AnyOutput,
-                                          [], 0, '-q', 'load',
-                                          sbox.repo_url)
+                                          [], 0, 'load', sbox.repo_url)
 
   # Create the 'toplevel' directory in repository and then load the same
   # dumpfile into that subtree.
@@ -391,7 +389,7 @@ def reflect_dropped_renumbered_revs(sbox):
                                      "-m", "Create toplevel dir to load into")
   svntest.actions.run_and_verify_svnrdump(svnrdump_dumpfile,
                                           svntest.verify.AnyOutput,
-                                          [], 0, '-q', 'load',
+                                          [], 0, 'load',
                                           sbox.repo_url + "/toplevel")
   # Verify the svn:mergeinfo properties
   url = sbox.repo_url
@@ -488,8 +486,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
 
   svntest.actions.run_and_verify_svnrdump(dumpfile_full,
                                           svntest.verify.AnyOutput,
-                                          [], 0, '-q', 'load',
-                                          sbox.repo_url)
+                                          [], 0, 'load', sbox.repo_url)
 
   # Check that the mergeinfo is as expected.
   url = sbox.repo_url + '/branches/'
@@ -545,20 +542,17 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   dump_fp = open(dump_file_r1_10, 'rb')
   svntest.actions.run_and_verify_svnrdump(dump_fp.readlines(),
                                           svntest.verify.AnyOutput,
-                                          [], 0, '-q', 'load',
-                                          sbox.repo_url)
+                                          [], 0, 'load', sbox.repo_url)
   dump_fp.close()
   dump_fp = open(dump_file_r11_13, 'rb')
   svntest.actions.run_and_verify_svnrdump(dump_fp.readlines(),
                                           svntest.verify.AnyOutput,
-                                          [], 0, '-q', 'load',
-                                          sbox.repo_url)
+                                          [], 0, 'load', sbox.repo_url)
   dump_fp.close()
   dump_fp = open(dump_file_r14_15, 'rb')
   svntest.actions.run_and_verify_svnrdump(dump_fp.readlines(),
                                           svntest.verify.AnyOutput,
-                                          [], 0, '-q', 'load',
-                                          sbox.repo_url)
+                                          [], 0, 'load', sbox.repo_url)
   dump_fp.close()
 
   # Check the mergeinfo, we use the same expected output as before,
@@ -596,13 +590,12 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   dump_fp.close()
   svntest.actions.run_and_verify_svnrdump(dumpfile_skeleton,
                                           svntest.verify.AnyOutput,
-                                          [], 0, '-q', 'load',
-                                          sbox.repo_url)
+                                          [], 0, 'load', sbox.repo_url)
   
   # Load 'svnadmin_tests_data/mergeinfo_included_full.dump' in one shot:
   svntest.actions.run_and_verify_svnrdump(dumpfile_full,
                                           svntest.verify.AnyOutput,
-                                          [], 0, '-q', 'load',
+                                          [], 0, 'load',
                                           sbox.repo_url + '/Projects/Project-X')
 
   # Check that the mergeinfo is as expected.  This is exactly the
@@ -644,8 +637,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   # Load the skeleton repos into the empty target:
   svntest.actions.run_and_verify_svnrdump(dumpfile_skeleton,
                                           svntest.verify.AnyOutput,
-                                          [], 0, '-q', 'load',
-                                          sbox.repo_url)
+                                          [], 0, 'load', sbox.repo_url)
 
   # Load the three incremental dump files in sequence.
   #
@@ -653,19 +645,19 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   dump_fp = open(dump_file_r1_10, 'rb')
   svntest.actions.run_and_verify_svnrdump(dump_fp.readlines(),
                                           svntest.verify.AnyOutput,
-                                          [], 0, '-q', 'load',
+                                          [], 0, 'load',
                                           sbox.repo_url + '/Projects/Project-X')
   dump_fp.close()
   dump_fp = open(dump_file_r11_13, 'rb')
   svntest.actions.run_and_verify_svnrdump(dump_fp.readlines(),
                                           svntest.verify.AnyOutput,
-                                          [], 0, '-q', 'load',
+                                          [], 0, 'load',
                                           sbox.repo_url + '/Projects/Project-X')
   dump_fp.close()
   dump_fp = open(dump_file_r14_15, 'rb')
   svntest.actions.run_and_verify_svnrdump(dump_fp.readlines(),
                                           svntest.verify.AnyOutput,
-                                          [], 0, '-q', 'load',
+                                          [], 0, 'load',
                                           sbox.repo_url + '/Projects/Project-X')
   dump_fp.close()
 
@@ -703,8 +695,7 @@ def svnrdump_load_partial_incremental_dump(sbox):
   dump_file.close()
   svntest.actions.run_and_verify_svnrdump(svnrdump_dumpfile,
                                           svntest.verify.AnyOutput,
-                                          [], 0, '-q', 'load',
-                                          sbox.repo_url)
+                                          [], 0, 'load', sbox.repo_url)
 
   ########################################################################
 # Run the tests
