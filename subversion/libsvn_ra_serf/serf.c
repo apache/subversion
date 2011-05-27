@@ -588,8 +588,6 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
 
   props = apr_hash_make(pool);
 
-  prop_ctx = NULL;
-
   /* If we were given a specific revision, we have to fetch the VCC and
    * do a PROPFIND off of that.
    */
@@ -612,7 +610,6 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
        * technically an unversioned resource because we are accessing
        * the revision's baseline-collection.
        */
-      prop_ctx = NULL;
       path = svn_path_url_add_component2(basecoll_url, relative_url, pool);
       revision = SVN_INVALID_REVNUM;
       SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx, props, session,
@@ -621,10 +618,8 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
                                          pool));
     }
 
-  if (prop_ctx)
-    {
-      SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
-    }
+  /* ### switch to svn_ra_serf__retrieve_props?  */
+  SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
 
   *ret_path = path;
   *ret_prop_ctx = prop_ctx;

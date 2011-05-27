@@ -518,16 +518,7 @@ create_propfind_body(serf_bucket_t **bkt,
   return SVN_NO_ERROR;
 }
 
-/*
- * This function will deliver a PROP_CTX PROPFIND request in the SESS
- * serf context for the properties listed in LOOKUP_PROPS at URL for
- * DEPTH ("0","1","infinity").
- *
- * This function will not block waiting for the response.  If the
- * request can be satisfied from a local cache, set PROP_CTX to NULL
- * as a signal to callers of that fact.  Otherwise, callers are
- * expected to call svn_ra_serf__wait_for_props().
- */
+
 svn_error_t *
 svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
                            apr_hash_t *ret_props,
@@ -541,71 +532,66 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
                            apr_pool_t *pool)
 {
   svn_ra_serf__propfind_context_t *new_prop_ctx;
+  svn_ra_serf__handler_t *handler;
+  svn_ra_serf__xml_parser_t *parser_ctx;
 
-  SVN_ERR_ASSERT(*prop_ctx == NULL);
+  new_prop_ctx = apr_pcalloc(pool, sizeof(*new_prop_ctx));
 
+  new_prop_ctx->pool = apr_hash_pool_get(ret_props);
+  new_prop_ctx->path = path;
+  new_prop_ctx->find_props = find_props;
+  new_prop_ctx->ret_props = ret_props;
+  new_prop_ctx->depth = depth;
+  new_prop_ctx->done = FALSE;
+  new_prop_ctx->sess = sess;
+  new_prop_ctx->conn = conn;
+  new_prop_ctx->rev = rev;
+  new_prop_ctx->done_list = done_list;
+
+  if (SVN_IS_VALID_REVNUM(rev))
     {
-      svn_ra_serf__handler_t *handler;
-      svn_ra_serf__xml_parser_t *parser_ctx;
-
-      new_prop_ctx = apr_pcalloc(pool, sizeof(*new_prop_ctx));
-
-      new_prop_ctx->pool = apr_hash_pool_get(ret_props);
-      new_prop_ctx->path = path;
-      new_prop_ctx->find_props = find_props;
-      new_prop_ctx->ret_props = ret_props;
-      new_prop_ctx->depth = depth;
-      new_prop_ctx->done = FALSE;
-      new_prop_ctx->sess = sess;
-      new_prop_ctx->conn = conn;
-      new_prop_ctx->rev = rev;
-      new_prop_ctx->done_list = done_list;
-
-      if (SVN_IS_VALID_REVNUM(rev))
-        {
-          new_prop_ctx->label = apr_ltoa(pool, rev);
-        }
-      else
-        {
-          new_prop_ctx->label = NULL;
-        }
-
-      handler = apr_pcalloc(pool, sizeof(*handler));
-
-      handler->method = "PROPFIND";
-      handler->path = path;
-      handler->body_delegate = create_propfind_body;
-      handler->body_type = "text/xml";
-      handler->body_delegate_baton = new_prop_ctx;
-      handler->header_delegate = setup_propfind_headers;
-      handler->header_delegate_baton = new_prop_ctx;
-
-      handler->session = new_prop_ctx->sess;
-      handler->conn = new_prop_ctx->conn;
-
-      new_prop_ctx->handler = handler;
-
-      parser_ctx = apr_pcalloc(pool, sizeof(*new_prop_ctx->parser_ctx));
-      parser_ctx->pool = pool;
-      parser_ctx->user_data = new_prop_ctx;
-      parser_ctx->start = start_propfind;
-      parser_ctx->end = end_propfind;
-      parser_ctx->cdata = cdata_propfind;
-      parser_ctx->status_code = &new_prop_ctx->status_code;
-      parser_ctx->done = &new_prop_ctx->done;
-      parser_ctx->done_list = new_prop_ctx->done_list;
-      parser_ctx->done_item = &new_prop_ctx->done_item;
-
-      new_prop_ctx->parser_ctx = parser_ctx;
-
-      handler->response_handler = svn_ra_serf__handle_xml_parser;
-      handler->response_baton = parser_ctx;
-
-      *prop_ctx = new_prop_ctx;
+      new_prop_ctx->label = apr_ltoa(pool, rev);
+    }
+  else
+    {
+      new_prop_ctx->label = NULL;
     }
 
+  handler = apr_pcalloc(pool, sizeof(*handler));
+
+  handler->method = "PROPFIND";
+  handler->path = path;
+  handler->body_delegate = create_propfind_body;
+  handler->body_type = "text/xml";
+  handler->body_delegate_baton = new_prop_ctx;
+  handler->header_delegate = setup_propfind_headers;
+  handler->header_delegate_baton = new_prop_ctx;
+
+  handler->session = new_prop_ctx->sess;
+  handler->conn = new_prop_ctx->conn;
+
+  new_prop_ctx->handler = handler;
+
+  parser_ctx = apr_pcalloc(pool, sizeof(*new_prop_ctx->parser_ctx));
+  parser_ctx->pool = pool;
+  parser_ctx->user_data = new_prop_ctx;
+  parser_ctx->start = start_propfind;
+  parser_ctx->end = end_propfind;
+  parser_ctx->cdata = cdata_propfind;
+  parser_ctx->status_code = &new_prop_ctx->status_code;
+  parser_ctx->done = &new_prop_ctx->done;
+  parser_ctx->done_list = new_prop_ctx->done_list;
+  parser_ctx->done_item = &new_prop_ctx->done_item;
+
+  new_prop_ctx->parser_ctx = parser_ctx;
+
+  handler->response_handler = svn_ra_serf__handle_xml_parser;
+  handler->response_baton = parser_ctx;
+
   /* create request */
-  svn_ra_serf__request_create((*prop_ctx)->handler);
+  svn_ra_serf__request_create(new_prop_ctx->handler);
+
+  *prop_ctx = new_prop_ctx;
 
   return SVN_NO_ERROR;
 }
@@ -659,14 +645,11 @@ svn_ra_serf__retrieve_props(apr_hash_t *prop_vals,
                             const svn_ra_serf__dav_props_t *props,
                             apr_pool_t *pool)
 {
-  svn_ra_serf__propfind_context_t *prop_ctx = NULL;
+  svn_ra_serf__propfind_context_t *prop_ctx;
 
   SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx, prop_vals, sess, conn, url,
                                      rev, depth, props, NULL, pool));
-  if (prop_ctx)
-    {
-      SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, sess, pool));
-    }
+  SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, sess, pool));
 
   return SVN_NO_ERROR;
 }
