@@ -113,8 +113,9 @@ svn_sqlite__set_schema_version(svn_sqlite__db_t *db,
    temporary allocations are made in SCRATCH_POOL.
 
    STATEMENTS is an array of strings which may eventually be executed, the
-   last element of which should be NULL.  These strings are not duplicated
-   internally, and should have a lifetime at least as long as RESULT_POOL.
+   last element of which should be NULL.  These strings and the array itself
+   are not duplicated internally, and should have a lifetime at least as long
+   as RESULT_POOL.
    STATEMENTS itself may be NULL, in which case it has no impact.
    See svn_sqlite__get_statement() for how these strings are used.
 
