@@ -1299,6 +1299,7 @@ def create_superflous_actual_node(sbox):
   expected_status.tweak('alpha', status='A ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@XFail()
 @Issue(3859)
 def revert_empty_actual(sbox):
   "revert with superfluous actual node"
@@ -1517,7 +1518,6 @@ def create_no_text_change_conflict(sbox):
   os.remove(sbox.ospath('A/B/E/alpha'))
   shutil.move(sbox.ospath('A/B/E/alpha-copy'), sbox.ospath('A/B/E/alpha'))
 
-@XFail()
 @Issue(3859)
 def revert_no_text_change_conflict(sbox):
   "revert conflict with no text change"
