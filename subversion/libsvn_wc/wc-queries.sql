@@ -1047,7 +1047,6 @@ DROP TABLE IF EXISTS temp__node_props_cache;
 -- STMT_CREATE_REVERT_LIST
 DROP TABLE IF EXISTS revert_list;
 CREATE TEMPORARY TABLE revert_list (
-   /* ### need wc_id  */
    local_relpath TEXT PRIMARY KEY,
    conflict_old TEXT,
    conflict_new TEXT,
@@ -1090,30 +1089,6 @@ BEGIN
           WHEN OLD.properties IS NOT NULL OR OLD.tree_conflict_data IS NOT NULL
           THEN 1 ELSE NULL END;
 END
-
--- STMT_INSERT_REVERT_LIST
-INSERT OR REPLACE INTO revert_list(local_relpath, notify, conflict_old,
-                                   conflict_new, conflict_working, prop_reject)
-SELECT nodes.local_relpath, 1,
-       conflict_old, conflict_new, conflict_working, prop_reject
-FROM nodes
-LEFT OUTER JOIN actual_node
-ON    nodes.wc_id = ?1       AND nodes.local_relpath = ?2
-  AND actual_node.wc_id = ?1 AND actual_node.local_relpath = ?2
-WHERE nodes.wc_id = ?1       AND nodes.local_relpath = ?2
-
--- STMT_INSERT_REVERT_LIST_PLAIN
-INSERT OR REPLACE INTO revert_list(local_relpath, notify)
-VALUES (?1, 1)
-
--- STMT_INSERT_REVERT_LIST_ACTUAL_ONLY
-INSERT OR REPLACE INTO revert_list(local_relpath, notify, conflict_old,
-                                   conflict_new, conflict_working, prop_reject)
-SELECT local_relpath, 1,
-       conflict_old, conflict_new, conflict_working, prop_reject
-FROM actual_node
-WHERE wc_id = ?1 AND local_relpath = ?2
-  AND (properties IS NOT NULL OR tree_conflict_data IS NOT NULL)
 
 -- STMT_DROP_REVERT_LIST_TRIGGERS
 DROP TRIGGER IF EXISTS trigger_revert_list_nodes;
