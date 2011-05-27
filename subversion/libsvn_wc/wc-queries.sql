@@ -1047,28 +1047,31 @@ DROP TABLE IF EXISTS temp__node_props_cache;
 -- STMT_CREATE_REVERT_LIST
 DROP TABLE IF EXISTS revert_list;
 CREATE TEMPORARY TABLE revert_list (
-   local_relpath TEXT PRIMARY KEY,
+   /* need wc_id if/when revert spans multiple working copies */
+   local_relpath TEXT,
+   actual INTEGER,         /* 1 if an actual row, 0 if a nodes row */
    conflict_old TEXT,
    conflict_new TEXT,
    conflict_working TEXT,
    prop_reject TEXT,
-   notify INTEGER
+   notify INTEGER,         /* 1 if an actual row had props or tree conflict */
+   PRIMARY KEY (local_relpath, actual)
    );
 DROP TRIGGER IF EXISTS   trigger_revert_list_nodes;
 CREATE TEMPORARY TRIGGER trigger_revert_list_nodes
 BEFORE DELETE ON nodes
 BEGIN
-   INSERT OR REPLACE INTO revert_list(local_relpath, notify)
-   SELECT OLD.local_relpath, 1;
+   INSERT OR REPLACE INTO revert_list(local_relpath, actual)
+   SELECT OLD.local_relpath, 0;
 END;
 DROP TRIGGER IF EXISTS   trigger_revert_list_actual_delete;
 CREATE TEMPORARY TRIGGER trigger_revert_list_actual_delete
 BEFORE DELETE ON actual_node
 BEGIN
-   INSERT OR REPLACE INTO revert_list(local_relpath, conflict_old,
+   INSERT OR REPLACE INTO revert_list(local_relpath, actual, conflict_old,
                                        conflict_new, conflict_working,
                                        prop_reject, notify)
-   SELECT OLD.local_relpath,
+   SELECT OLD.local_relpath, 1,
           OLD.conflict_old, OLD.conflict_new, OLD.conflict_working,
           OLD.prop_reject,
           CASE
@@ -1079,10 +1082,10 @@ DROP TRIGGER IF EXISTS   trigger_revert_list_actual_update;
 CREATE TEMPORARY TRIGGER trigger_revert_list_actual_update
 BEFORE UPDATE ON actual_node
 BEGIN
-   INSERT OR REPLACE INTO revert_list(local_relpath, conflict_old,
+   INSERT OR REPLACE INTO revert_list(local_relpath, actual, conflict_old,
                                        conflict_new, conflict_working,
                                        prop_reject, notify)
-   SELECT OLD.local_relpath,
+   SELECT OLD.local_relpath, 1,
           OLD.conflict_old, OLD.conflict_new, OLD.conflict_working,
           OLD.prop_reject,
           CASE
@@ -1096,17 +1099,19 @@ DROP TRIGGER IF EXISTS trigger_revert_list_actual_delete;
 DROP TRIGGER IF EXISTS trigger_revert_list_actual_update
 
 -- STMT_SELECT_REVERT_LIST
-SELECT conflict_old, conflict_new, conflict_working, prop_reject, notify
+SELECT conflict_old, conflict_new, conflict_working, prop_reject, notify, actual
 FROM revert_list
 WHERE local_relpath = ?1
+ORDER BY actual DESC
 
 -- STMT_DELETE_REVERT_LIST
 DELETE FROM revert_list WHERE local_relpath = ?1
 
 -- STMT_SELECT_REVERT_LIST_RECURSIVE
-SELECT local_relpath, notify
+SELECT DISTINCT local_relpath
 FROM revert_list
-WHERE local_relpath = ?1 or local_relpath LIKE ?2 ESCAPE '#'
+WHERE (local_relpath = ?1 OR local_relpath LIKE ?2 ESCAPE '#')
+  AND (notify OR actual = 0)
 ORDER BY local_relpath
 
 -- STMT_DELETE_REVERT_LIST_RECURSIVE

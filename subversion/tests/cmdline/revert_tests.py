@@ -1299,7 +1299,6 @@ def create_superflous_actual_node(sbox):
   expected_status.tweak('alpha', status='A ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@XFail()
 @Issue(3859)
 def revert_empty_actual(sbox):
   "revert with superfluous actual node"
@@ -1316,7 +1315,6 @@ def revert_empty_actual(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@XFail()
 @Issue(3859)
 def revert_empty_actual_recursive(sbox):
   "recusive revert with superfluous actual node"
