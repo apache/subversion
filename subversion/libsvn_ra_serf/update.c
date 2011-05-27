@@ -2768,11 +2768,8 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   /* TODO Filter out all of our props into a usable format. */
   if (props)
     {
-      *props = apr_hash_make(pool);
-
-      SVN_ERR(svn_ra_serf__walk_all_props(fetch_props, fetch_url, revision,
-                                          svn_ra_serf__set_flat_props, *props,
-                                          pool));
+      SVN_ERR(svn_ra_serf__flatten_props(props, fetch_props, fetch_url,
+                                         revision, pool, pool));
     }
 
   if (stream)

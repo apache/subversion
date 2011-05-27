@@ -909,8 +909,6 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       path = svn_path_url_add_component2(path, rel_path, pool);
     }
 
-  props = apr_hash_make(pool);
-
   /* If the user specified a peg revision other than HEAD, we have to fetch
      the baseline collection url for that revision. If not, we can use the
      public url. */
@@ -931,6 +929,8 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
     {
       struct path_dirent_visitor_t dirent_walk;
 
+      props = apr_hash_make(pool);
+
       /* Always request node kind to check that path is really a
        * directory.
        */
@@ -942,7 +942,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
                                           pool));
 
       /* Check if the path is really a directory. */
-      SVN_ERR(resource_is_directory (props, path, revision));
+      SVN_ERR(resource_is_directory(props, path, revision));
 
       /* We're going to create two hashes to help the walker along.
        * We're going to return the 2nd one back to the caller as it
@@ -962,7 +962,6 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
   if (ret_props)
     {
       props = apr_hash_make(pool);
-      *ret_props = apr_hash_make(pool);
 
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
                                           path, revision, "0", all_props,
@@ -970,9 +969,8 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       /* Check if the path is really a directory. */
       SVN_ERR(resource_is_directory(props, path, revision));
 
-      SVN_ERR(svn_ra_serf__walk_all_props(props, path, revision,
-                                          svn_ra_serf__set_flat_props,
-                                          *ret_props, pool));
+      SVN_ERR(svn_ra_serf__flatten_props(ret_props, props, path, revision,
+                                         pool, pool));
     }
 
   return SVN_NO_ERROR;
