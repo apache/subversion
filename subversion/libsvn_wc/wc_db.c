@@ -2581,12 +2581,13 @@ insert_external_node(void *baton,
 {
   const insert_external_baton_t *ieb = baton;
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
   svn_error_t *err;
   svn_boolean_t update_root;
   apr_int64_t repos_id;
 #if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
   svn_sqlite__stmt_t *stmt;
+#else
+  svn_wc__db_kind_t kind;
 #endif
 
   if (ieb->repos_id != INVALID_REPOS_ID)
@@ -2595,6 +2596,7 @@ insert_external_node(void *baton,
     SVN_ERR(create_repos_id(&repos_id, ieb->repos_root_url, ieb->repos_uuid,
                             wcroot->sdb, scratch_pool));
 
+#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
   /* Currently externals can only be added under an existing directory */
   SVN_ERR(read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -2605,6 +2607,7 @@ insert_external_node(void *baton,
   if ((status != svn_wc__db_status_normal && status != svn_wc__db_status_added)
       || kind != svn_wc__db_kind_dir)
     return svn_error_create(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL, NULL);
+#endif
 
   /* And there must be no existing BASE node or it must be a file external */
   err = base_get_info(&status, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
