@@ -448,7 +448,7 @@ load_revisions(svn_ra_session_t *session,
   stdin_stream = svn_stream_from_aprfile2(stdin_file, FALSE, pool);
 
   SVN_ERR(svn_rdump__load_dumpstream(stdin_stream, session, aux_session, 
-                                     check_cancel, NULL, pool));
+                                     quiet, check_cancel, NULL, pool));
 
   SVN_ERR(svn_stream_close(stdin_stream));
 
