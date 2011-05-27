@@ -1498,6 +1498,7 @@ def create_no_text_change_conflict(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
+  r1_content = open(sbox.ospath('A/B/E/alpha'), 'r').read()
   svntest.main.file_append(sbox.ospath('A/B/E/alpha'), 'their text\n')
   sbox.simple_commit()
   sbox.simple_update()
@@ -1513,8 +1514,7 @@ def create_no_text_change_conflict(sbox):
 
   # Reset the text with the file still marked as a conflict
   os.remove(sbox.ospath('A/B/E/alpha'))
-  svntest.main.file_append(sbox.ospath('A/B/E/alpha'),
-                           "This is the file 'alpha'.\n")
+  svntest.main.file_append(sbox.ospath('A/B/E/alpha'), r1_content)
 
 @XFail()
 @Issue(3859)
