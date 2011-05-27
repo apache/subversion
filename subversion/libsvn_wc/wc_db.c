@@ -2963,7 +2963,6 @@ svn_wc__db_external_add_dir(svn_wc__db_t *db,
                                 &ieb, scratch_pool));
 }
 
-#if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
 static svn_error_t *
 db_external_remove(void *baton, svn_wc__db_wcroot_t *wcroot,
                    const char *local_relpath, apr_pool_t *scratch_pool)
@@ -2975,10 +2974,11 @@ db_external_remove(void *baton, svn_wc__db_wcroot_t *wcroot,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+  SVN_ERR(add_work_items(wcroot->sdb, baton, scratch_pool));
+
   /* ### What about actual? */
   return SVN_NO_ERROR;
 }
-#endif
 
 svn_error_t *
 svn_wc__db_external_remove(svn_wc__db_t *db,
@@ -3003,17 +3003,10 @@ svn_wc__db_external_remove(svn_wc__db_t *db,
 
   local_relpath = svn_dirent_skip_ancestor(wcroot->abspath, local_abspath);
 
-#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_base_remove, NULL,
-                              scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_external_remove,
+                              work_items, scratch_pool));
 
   return SVN_NO_ERROR;
-#else
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_external_remove, NULL,
-                              scratch_pool));
-
-  return SVN_NO_ERROR;
-#endif
 }
 
 svn_error_t *
@@ -3068,10 +3061,15 @@ svn_wc__db_external_read(svn_wc__db_status_t *status,
         || base_status != svn_wc__db_status_normal
         || base_kind == svn_wc__db_kind_dir)
       {
-        return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                                 _("The node '%s' is not an external"),
-                                 svn_dirent_local_style(local_abspath,
-                                                        scratch_pool));
+        svn_boolean_t is_root;
+        SVN_ERR(svn_wc__db_is_wcroot(&is_root, db, local_abspath,
+                                     scratch_pool));
+
+        if (!is_root)
+          return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                   _("The node '%s' is not an external"),
+                                   svn_dirent_local_style(local_abspath,
+                                                          scratch_pool));
       }
 
     if (status)

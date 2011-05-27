@@ -1187,3 +1187,41 @@ svn_wc__external_register(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 #endif
 }
+
+svn_error_t *
+svn_wc__external_remove(svn_wc_context_t *wc_ctx,
+                        const char *wri_abspath,
+                        const char *local_abspath,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+
+  SVN_ERR(svn_wc__db_external_read(&status, &kind, NULL, NULL, NULL, NULL,
+                                   NULL, NULL,
+                                   wc_ctx->db, local_abspath, wri_abspath,
+                                   scratch_pool, scratch_pool));
+
+#if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
+  SVN_ERR(svn_wc__db_external_remove(wc_ctx->db, local_abspath, wri_abspath,
+                                     NULL, scratch_pool));
+#endif
+
+  if (kind == svn_wc__db_kind_dir)
+    SVN_ERR(svn_wc_remove_from_revision_control2(wc_ctx, local_abspath,
+                                                 TRUE, FALSE,
+                                                 cancel_func, cancel_baton,
+                                                 scratch_pool));
+  else
+    {
+#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
+      SVN_ERR(svn_wc__db_base_remove(wc_ctx->db, local_abspath, scratch_pool));
+#endif
+      SVN_ERR(svn_io_remove_file2(local_abspath, TRUE, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
