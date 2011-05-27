@@ -334,7 +334,7 @@ class WinGeneratorBase(GeneratorBase):
       
   def find_rootpath(self):
     "Gets the root path as understand by the project system"
-    return ".." + "\\.." * self.projfilesdir.count(os.sep)
+    return ".." + "\\.." * self.projfilesdir.count(os.sep) + "\\"
 
   def makeguid(self, data):
     "Generate a windows style GUID"
@@ -352,7 +352,7 @@ class WinGeneratorBase(GeneratorBase):
 
   def path(self, *paths):
     """Convert build path to msvc path and prepend root"""
-    return msvc_path_join(self.rootpath, *list(map(msvc_path, paths)))
+    return self.rootpath + msvc_path_join(*list(map(msvc_path, paths)))
 
   def apath(self, path, *paths):
     """Convert build path to msvc path and prepend root if not absolute"""
@@ -361,8 +361,8 @@ class WinGeneratorBase(GeneratorBase):
     if os.path.isabs(path):
       return msvc_path_join(msvc_path(path), *list(map(msvc_path, paths)))
     else:
-      return msvc_path_join(self.rootpath, msvc_path(path),
-                            *list(map(msvc_path, paths)))
+      return self.rootpath + msvc_path_join(msvc_path(path),
+                                            *list(map(msvc_path, paths)))
 
   def get_install_targets(self):
     "Generate the list of targets"
