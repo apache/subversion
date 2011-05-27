@@ -168,6 +168,22 @@ svn_wc__external_register(svn_wc_context_t *wc_ctx,
                           svn_revnum_t revision,
                           apr_pool_t *scratch_pool);
 
+/* Remove the external at LOCAL_ABSPATH from the working copy identified by
+   WRI_ABSPATH using WC_CTX.
+
+   If not NULL, call CANCEL_FUNC with CANCEL_BATON to allow canceling while
+   removing the working copy files.
+
+   ### This function wraps svn_wc_remove_from_version_control2.
+ */
+svn_error_t *
+svn_wc__external_remove(svn_wc_context_t *wc_ctx,
+                        const char *wri_abspath,
+                        const char *local_abspath,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *scratch_pool);
+
 
 /** Set @a *tree_conflict to a newly allocated @c
  * svn_wc_conflict_description_t structure describing the tree

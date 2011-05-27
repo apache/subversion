@@ -72,6 +72,7 @@ struct external_change_baton_t
  */
 static svn_error_t *
 relegate_dir_external(svn_wc_context_t *wc_ctx,
+                      const char *wri_abspath,
                       const char *local_abspath,
                       svn_cancel_func_t cancel_func,
                       void *cancel_baton,
@@ -79,10 +80,8 @@ relegate_dir_external(svn_wc_context_t *wc_ctx,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
-  err = svn_wc_remove_from_revision_control2(wc_ctx, local_abspath,
-                                             TRUE, FALSE,
-                                             cancel_func, cancel_baton,
-                                             scratch_pool);
+  err = svn_wc__external_remove(wc_ctx, wri_abspath, local_abspath,
+                                cancel_func, cancel_baton, scratch_pool);
   if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
     {
       const char *parent_dir;
@@ -274,7 +273,8 @@ switch_dir_external(const char *local_abspath,
       SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, local_abspath,
                                          FALSE, pool, pool));
 
-      SVN_ERR(relegate_dir_external(ctx->wc_ctx, local_abspath,
+      SVN_ERR(relegate_dir_external(ctx->wc_ctx, defining_abspath,
+                                    local_abspath,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     pool));
     }
@@ -747,6 +747,7 @@ resolve_relative_external_url(const char **resolved_url,
 
 static svn_error_t *
 handle_external_item_removal(const struct external_change_baton_t *eb,
+                             const char *wri_abspath,
                              const char *local_abspath,
                              const char *old_url,
                              apr_pool_t *scratch_pool)
@@ -782,10 +783,9 @@ handle_external_item_removal(const struct external_change_baton_t *eb,
      nothing else in this externals description (at least) is
      going to need this directory, and therefore it's better to
      leave stuff where the user expects it. */
-  err = svn_wc_remove_from_revision_control2(
-                    eb->ctx->wc_ctx, local_abspath, TRUE, FALSE,
-                    eb->ctx->cancel_func, eb->ctx->cancel_baton,
-                    scratch_pool);
+  err = svn_wc__external_remove(eb->ctx->wc_ctx, wri_abspath, local_abspath,
+                                eb->ctx->cancel_func, eb->ctx->cancel_baton,
+                                scratch_pool);
 
   if (eb->ctx->notify_func2)
     {
@@ -1317,7 +1317,8 @@ svn_client__handle_externals(apr_hash_t *externals_old,
 
       SVN_ERR(wrap_external_error(
                           &eb, item_abspath,
-                          handle_external_item_removal(&eb, item_abspath,
+                          handle_external_item_removal(&eb, target_abspath,
+                                                       item_abspath,
                                                        old_url, iterpool),
                           iterpool));
     }
