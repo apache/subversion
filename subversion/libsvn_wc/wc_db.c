@@ -5470,48 +5470,53 @@ revert_list_read(void *baton,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
+  *(b->reverted) = FALSE;
+  *(b->conflict_new) = *(b->conflict_old) = *(b->conflict_working) = NULL;
+  *(b->prop_reject) = NULL;
+
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_REVERT_LIST));
   SVN_ERR(svn_sqlite__bindf(stmt, "s", local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     {
-      *(b->reverted) = !svn_sqlite__column_is_null(stmt, 4);
-      if (svn_sqlite__column_is_null(stmt, 0))
-        *(b->conflict_new) = NULL;
+      svn_boolean_t another_row;
+
+      if (svn_sqlite__column_int64(stmt, 5))
+        {
+          if (!svn_sqlite__column_is_null(stmt, 4))
+            *(b->reverted) = TRUE;
+        
+          if (!svn_sqlite__column_is_null(stmt, 0))
+            *(b->conflict_new)
+              = svn_dirent_join(wcroot->abspath,
+                                svn_sqlite__column_text(stmt, 0, NULL),
+                                b->result_pool);
+
+          if (!svn_sqlite__column_is_null(stmt, 1))
+            *(b->conflict_old)
+              = svn_dirent_join(wcroot->abspath,
+                                svn_sqlite__column_text(stmt, 1, NULL),
+                                b->result_pool);
+
+          if (!svn_sqlite__column_is_null(stmt, 2))
+            *(b->conflict_working)
+              = svn_dirent_join(wcroot->abspath,
+                                svn_sqlite__column_text(stmt, 2, NULL),
+                                b->result_pool);
+
+          if (!svn_sqlite__column_is_null(stmt, 3))
+            *(b->prop_reject)
+              = svn_dirent_join(wcroot->abspath,
+                                svn_sqlite__column_text(stmt, 3, NULL),
+                                b->result_pool);
+
+          SVN_ERR(svn_sqlite__step(&another_row, stmt));
+          if (another_row)
+            *(b->reverted) = TRUE;
+        }
       else
-        *(b->conflict_new) = svn_dirent_join(wcroot->abspath,
-                                             svn_sqlite__column_text(stmt, 0,
-                                                                     NULL),
-                                             b->result_pool);
-      if (svn_sqlite__column_is_null(stmt, 1))
-        *(b->conflict_old) = NULL;
-      else
-        *(b->conflict_old) = svn_dirent_join(wcroot->abspath,
-                                             svn_sqlite__column_text(stmt, 1,
-                                                                     NULL),
-                                             b->result_pool);
-      if (svn_sqlite__column_is_null(stmt, 2))
-        *(b->conflict_working) = NULL;
-      else
-        *(b->conflict_working) = svn_dirent_join(wcroot->abspath,
-                                                 svn_sqlite__column_text(stmt,
-                                                                         2,
-                                                                         NULL),
-                                                 b->result_pool);
-      if (svn_sqlite__column_is_null(stmt, 3))
-        *(b->prop_reject) = NULL;
-      else
-        *(b->prop_reject) = svn_dirent_join(wcroot->abspath,
-                                            svn_sqlite__column_text(stmt, 3,
-                                                                    NULL),
-                                            b->result_pool);
-    }
-  else
-    {
-      *(b->reverted) = FALSE;
-      *(b->conflict_new) = *(b->conflict_old) = *(b->conflict_working) = NULL;
-      *(b->prop_reject) = NULL;
+        *(b->reverted) = TRUE;
     }
   SVN_ERR(svn_sqlite__reset(stmt));
 
@@ -5583,19 +5588,14 @@ svn_wc__db_revert_list_notify(svn_wc_notify_func2_t notify_func,
 
       svn_pool_clear(iterpool);
 
-      if (svn_sqlite__column_int64(stmt, 1))
-        {
-          const char *notify_abspath = svn_dirent_join(wcroot->abspath,
+      notify_func(notify_baton,
+                  svn_wc_create_notify(svn_dirent_join(wcroot->abspath,
                                                        notify_relpath,
-                                                       iterpool);
-          notify_func(notify_baton,
-                      svn_wc_create_notify(notify_abspath,
-                                           svn_wc_notify_revert,
-                                           iterpool),
-                      iterpool);
+                                                       iterpool),
+                                       svn_wc_notify_revert,
+                                       iterpool),
+                  iterpool);
 
-          /* ### Need cancel_func? */
-        }
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
   SVN_ERR(svn_sqlite__reset(stmt));
