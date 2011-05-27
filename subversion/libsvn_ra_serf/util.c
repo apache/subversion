@@ -1638,10 +1638,12 @@ setup_request_cb(serf_request_t *request,
   return APR_SUCCESS;
 }
 
-serf_request_t *
+void
 svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
 {
-  return serf_connection_request_create(handler->conn->conn,
+  /* ### do we need to hold onto the returned request object, or just
+     ### not worry about it (the serf ctx will manage it).  */
+  (void) serf_connection_request_create(handler->conn->conn,
                                         setup_request_cb, handler);
 }
 
