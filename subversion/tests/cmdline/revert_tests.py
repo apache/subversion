@@ -1330,6 +1330,7 @@ def revert_empty_actual_recursive(sbox):
                                      [],
                                      'revert', '-R', sbox.ospath('alpha'))
 
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 @Issue(3879)
