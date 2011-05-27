@@ -113,6 +113,32 @@ struct node_baton
 
 /*----------------------------------------------------------------------*/
 
+/* Record the mapping of FROM_REV to TO_REV in REV_MAP, ensuring that
+   anything added to the hash is allocated in the hash's pool. */
+static void
+set_revision_mapping(apr_hash_t *rev_map,
+                     svn_revnum_t from_rev,
+                     svn_revnum_t to_rev)
+{
+  svn_revnum_t *mapped_revs = apr_palloc(apr_hash_pool_get(rev_map),
+                                         sizeof(svn_revnum_t) * 2);
+  mapped_revs[0] = from_rev;
+  mapped_revs[1] = to_rev;
+  apr_hash_set(rev_map, mapped_revs,
+               sizeof(svn_revnum_t), mapped_revs + 1);
+}
+                     
+/* Return the revision to which FROM_REV maps in REV_MAP, or
+   SVN_INVALID_REVNUM if no such mapping exists. */
+static svn_revnum_t
+get_revision_mapping(apr_hash_t *rev_map,
+                     svn_revnum_t from_rev)
+{
+  svn_revnum_t *to_rev = apr_hash_get(rev_map, &from_rev,
+                                      sizeof(from_rev));
+  return to_rev ? *to_rev : SVN_INVALID_REVNUM;
+}
+
 
 /* Change revision property NAME to VALUE for REVISION in REPOS.  If
    VALIDATE_PROPS is set, use functions which perform validation of
@@ -239,14 +265,13 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
       /* Possibly renumber revisions in merge source's rangelist. */
       for (i = 0; i < rangelist->nelts; i++)
         {
-          svn_revnum_t *rev_from_map;
+          svn_revnum_t rev_from_map;
           svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
                                                    svn_merge_range_t *);
-          rev_from_map = apr_hash_get(pb->rev_map, &range->start,
-                                      sizeof(svn_revnum_t));
-          if (rev_from_map && SVN_IS_VALID_REVNUM(*rev_from_map))
+          rev_from_map = get_revision_mapping(pb->rev_map, range->start);
+          if (SVN_IS_VALID_REVNUM(rev_from_map))
             {
-              range->start = *rev_from_map;
+              range->start = rev_from_map;
             }
           else if (range->start == pb->oldest_old_rev - 1)
             {
@@ -262,10 +287,10 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
                  If that is what we have here, then find the mapping for the
                  oldest rev from the load stream and subtract 1 to get the
                  renumbered, non-inclusive, start revision. */
-              rev_from_map = apr_hash_get(pb->rev_map, &pb->oldest_old_rev,
-                                          sizeof(svn_revnum_t));
-              if (rev_from_map && SVN_IS_VALID_REVNUM(*rev_from_map))
-                range->start = *rev_from_map - 1;
+              rev_from_map = get_revision_mapping(pb->rev_map, 
+                                                  pb->oldest_old_rev);
+              if (SVN_IS_VALID_REVNUM(rev_from_map))
+                range->start = rev_from_map - 1;
             }
           else
             {
@@ -280,10 +305,9 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
               continue;
             }
 
-          rev_from_map = apr_hash_get(pb->rev_map, &range->end,
-                                      sizeof(svn_revnum_t));
-          if (rev_from_map && SVN_IS_VALID_REVNUM(*rev_from_map))
-            range->end = *rev_from_map;
+          rev_from_map = get_revision_mapping(pb->rev_map, range->end);
+          if (SVN_IS_VALID_REVNUM(rev_from_map))
+            range->end = rev_from_map;
         }
       apr_hash_set(final_mergeinfo, merge_source,
                    APR_HASH_KEY_STRING, rangelist);
@@ -496,19 +520,21 @@ maybe_add_with_history(struct node_baton *nb,
     {
       /* Hunt down the source revision in this fs. */
       svn_fs_root_t *copy_root;
-      svn_revnum_t src_rev = nb->copyfrom_rev - rb->rev_offset;
-      svn_revnum_t *src_rev_from_map;
-      if ((src_rev_from_map = apr_hash_get(pb->rev_map, &nb->copyfrom_rev,
-                                           sizeof(nb->copyfrom_rev))))
-        src_rev = *src_rev_from_map;
+      svn_revnum_t copyfrom_rev;
 
-      if (! SVN_IS_VALID_REVNUM(src_rev))
+      /* Try to find the copyfrom revision in the revision map;
+         failing that, fall back to the revision offset approach. */
+      copyfrom_rev = get_revision_mapping(rb->pb->rev_map, nb->copyfrom_rev);
+      if (! SVN_IS_VALID_REVNUM(copyfrom_rev))
+        copyfrom_rev = nb->copyfrom_rev - rb->rev_offset;
+
+      if (! SVN_IS_VALID_REVNUM(copyfrom_rev))
         return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                                  _("Relative source revision %ld is not"
                                    " available in current repository"),
-                                 src_rev);
+                                 copyfrom_rev);
 
-      SVN_ERR(svn_fs_revision_root(&copy_root, pb->fs, src_rev, pool));
+      SVN_ERR(svn_fs_revision_root(&copy_root, pb->fs, copyfrom_rev, pool));
 
       if (nb->copy_source_checksum)
         {
@@ -520,7 +546,7 @@ maybe_add_with_history(struct node_baton *nb,
                       checksum, pool,
                       _("Copy source checksum mismatch on copy from '%s'@%ld\n"
                         "to '%s' in rev based on r%ld"),
-                      nb->copyfrom_path, src_rev, nb->path, rb->rev);
+                      nb->copyfrom_path, copyfrom_rev, nb->path, rb->rev);
         }
 
       SVN_ERR(svn_fs_copy(copy_root, nb->copyfrom_path,
@@ -804,16 +830,11 @@ close_revision(void *baton)
   struct revision_baton *rb = baton;
   struct parse_baton *pb = rb->pb;
   const char *conflict_msg = NULL;
-  svn_revnum_t *old_rev, *new_rev;
+  svn_revnum_t committed_rev;
   svn_error_t *err;
 
   if (rb->rev <= 0)
     return SVN_NO_ERROR;
-
-  /* Prepare memory for saving dump-rev -> in-repos-rev mapping. */
-  old_rev = apr_palloc(pb->pool, sizeof(*old_rev) * 2);
-  new_rev = old_rev + 1;
-  *old_rev = rb->rev;
 
   /* Run the pre-commit hook, if so commanded. */
   if (pb->use_pre_commit_hook)
@@ -830,13 +851,13 @@ close_revision(void *baton)
     }
 
   /* Commit. */
-  err = svn_fs_commit_txn(&conflict_msg, new_rev, rb->txn, rb->pool);
-  if (SVN_IS_VALID_REVNUM(*new_rev))
+  err = svn_fs_commit_txn(&conflict_msg, &committed_rev, rb->txn, rb->pool);
+  if (SVN_IS_VALID_REVNUM(committed_rev))
     {
       if (err)
         {
           /* ### Log any error, but better yet is to rev
-             ### close_revision()'s API to allow both new_rev and err
+             ### close_revision()'s API to allow both committed_rev and err
              ### to be returned, see #3768. */
           svn_error_clear(err);
         }
@@ -853,7 +874,8 @@ close_revision(void *baton)
   /* Run post-commit hook, if so commanded.  */
   if (pb->use_post_commit_hook)
     {
-      if ((err = svn_repos__hooks_post_commit(pb->repos, *new_rev, rb->pool)))
+      if ((err = svn_repos__hooks_post_commit(pb->repos, committed_rev,
+                                              rb->pool)))
         return svn_error_create
           (SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err,
            _("Commit succeeded, but post-commit hook failed"));
@@ -862,35 +884,29 @@ close_revision(void *baton)
   /* After a successful commit, must record the dump-rev -> in-repos-rev
      mapping, so that copyfrom instructions in the dump file can look up the
      correct repository revision to copy from. */
-  apr_hash_set(pb->rev_map, old_rev, sizeof(svn_revnum_t), new_rev);
+  set_revision_mapping(pb->rev_map, rb->rev, committed_rev);
 
   /* If the incoming dump stream has non-contiguous revisions (e.g. from
      using svndumpfilter --drop-empty-revs without --renumber-revs) then
      we must account for the missing gaps in PB->REV_MAP.  Otherwise we
      might not be able to map all mergeinfo source revisions to the correct
      revisions in the target repos. */
-  if (pb->last_rev_mapped != SVN_INVALID_REVNUM
-      && *old_rev != pb->last_rev_mapped + 1)
+  if ((pb->last_rev_mapped != SVN_INVALID_REVNUM)
+      && (rb->rev != pb->last_rev_mapped + 1))
     {
       svn_revnum_t i;
 
-      /* Map all dropped revisions between PB->LAST_REV_MAPPED and OLD_REV. */
-      for (i = pb->last_rev_mapped + 1; i < *old_rev; i++)
+      for (i = pb->last_rev_mapped + 1; i < rb->rev; i++)
         {
-          svn_revnum_t *gap_rev_old = apr_palloc(pb->pool,
-                                                 sizeof(*gap_rev_old));
-          svn_revnum_t *gap_rev_new = apr_palloc(pb->pool,
-                                                 sizeof(*gap_rev_new));
-          *gap_rev_old = i;
-          *gap_rev_new = pb->last_rev_mapped;
-          apr_hash_set(pb->rev_map, gap_rev_old, sizeof(svn_revnum_t),
-                       gap_rev_new);
+          set_revision_mapping(pb->rev_map, i, pb->last_rev_mapped);
         }
     }
-  pb->last_rev_mapped = *old_rev;
+
+  /* Update our "last revision mapped". */
+  pb->last_rev_mapped = rb->rev;
 
   /* Deltify the predecessors of paths changed in this revision. */
-  SVN_ERR(svn_fs_deltify_revision(pb->fs, *new_rev, rb->pool));
+  SVN_ERR(svn_fs_deltify_revision(pb->fs, committed_rev, rb->pool));
 
   /* Grrr, svn_fs_commit_txn rewrites the datestamp property to the
      current clock-time.  We don't want that, we want to preserve
@@ -898,14 +914,14 @@ close_revision(void *baton)
      Note that if rb->datestamp is NULL, that's fine -- if the dump
      data doesn't carry a datestamp, we want to preserve that fact in
      the load. */
-  SVN_ERR(change_rev_prop(pb->repos, *new_rev, SVN_PROP_REVISION_DATE,
+  SVN_ERR(change_rev_prop(pb->repos, committed_rev, SVN_PROP_REVISION_DATE,
                           rb->datestamp, pb->validate_props, rb->pool));
 
   if (pb->notify_func)
     {
       pb->notify->action = svn_repos_notify_load_txn_committed;
-      pb->notify->new_revision = *new_rev;
-      pb->notify->old_revision = ((*new_rev == rb->rev)
+      pb->notify->new_revision = committed_rev;
+      pb->notify->old_revision = ((committed_rev == rb->rev)
                                     ? SVN_INVALID_REVNUM
                                     : rb->rev);
       pb->notify_func(pb->notify_baton, pb->notify, rb->pool);
