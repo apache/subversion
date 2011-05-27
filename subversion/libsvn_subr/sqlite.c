@@ -139,8 +139,9 @@ exec_sql(svn_sqlite__db_t *db, const char *sql)
 
   if (sqlite_err != SQLITE_OK)
     {
-      svn_error_t *err = svn_error_create(SQLITE_ERROR_CODE(sqlite_err), NULL,
-                                          err_msg);
+      svn_error_t *err = svn_error_createf(SQLITE_ERROR_CODE(sqlite_err), NULL,
+                                           _("%s, executing statement '%s'"),
+                                           err_msg, sql);
       sqlite3_free(err_msg);
       return err;
     }
