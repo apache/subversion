@@ -3029,7 +3029,8 @@ svn_wc__db_external_read(svn_wc__db_status_t *status,
                          const char *local_abspath,
                          const char *wri_abspath,
                          apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool){
+                         apr_pool_t *scratch_pool)
+{
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
 #if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
@@ -3167,7 +3168,56 @@ svn_wc__db_external_read(svn_wc__db_status_t *status,
 #endif
 }
 
+svn_error_t *
+svn_wc__db_externals_defined_below(apr_hash_t **externals,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  svn_sqlite__stmt_t *stmt;
+  const char *local_relpath;
+#if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
+  svn_boolean_t have_row;
+#endif
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_EXTERNALS_DEFINED));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+
+#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
+  *externals = NULL;
+#else
+  *externals = apr_hash_make(result_pool);
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  while (have_row)
+    {
+      const char *def_local_relpath;
+
+      local_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      def_local_relpath = svn_sqlite__column_text(stmt, 1, NULL);
+
+      apr_hash_set(*externals,
+                   svn_dirent_join(wcroot->abspath, local_relpath,
+                                   result_pool),
+                   APR_HASH_KEY_STRING,
+                   svn_dirent_join(wcroot->abspath, def_local_relpath,
+                                   result_pool));
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+#endif
+  return svn_error_return(svn_sqlite__reset(stmt));
+}
 
 /* Helper for svn_wc__db_op_copy to handle copying from one db to
    another */

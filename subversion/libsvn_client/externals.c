@@ -42,6 +42,7 @@
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
+/* #define USE_EXTERNALS_STORE */
 
 /* Closure for handle_external_item_change. */
 struct external_change_baton_t
@@ -134,6 +135,7 @@ switch_dir_external(const char *local_abspath,
                     const char *url,
                     const svn_opt_revision_t *revision,
                     const svn_opt_revision_t *peg_revision,
+                    const char *defining_abspath,
                     svn_boolean_t *timestamp_sleep,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
@@ -227,6 +229,31 @@ switch_dir_external(const char *local_abspath,
                                                   timestamp_sleep,
                                                   ctx, subpool));
 
+              {
+                const char *repos_root_url;
+                const char *repos_uuid;
+                const char *repos_relpath;
+
+                SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url,
+                                                    &repos_uuid,
+                                                    ctx->wc_ctx, local_abspath,
+                                                    subpool, subpool));
+
+                SVN_ERR(svn_wc__node_get_repos_relpath(&repos_relpath,
+                                                       ctx->wc_ctx,
+                                                       local_abspath,
+                                                       subpool, subpool));
+
+                SVN_ERR(svn_wc__external_register(ctx->wc_ctx,
+                                                  defining_abspath,
+                                                  local_abspath, svn_node_dir,
+                                                  repos_root_url, repos_uuid,
+                                                  repos_relpath,
+                                                  SVN_INVALID_REVNUM,
+                                                  SVN_INVALID_REVNUM,
+                                                  subpool));
+              }
+
               svn_pool_destroy(subpool);
               return SVN_NO_ERROR;
             }
@@ -260,10 +287,37 @@ switch_dir_external(const char *local_abspath,
     }
 
   /* ... Hello, new hotness. */
-  return svn_client__checkout_internal(NULL, url, local_abspath, peg_revision,
-                                       revision, NULL, svn_depth_infinity,
-                                       FALSE, FALSE, TRUE, timestamp_sleep,
-                                       ctx, pool);
+  SVN_ERR(svn_client__checkout_internal(NULL, url, local_abspath, peg_revision,
+                                        revision, NULL, svn_depth_infinity,
+                                        FALSE, FALSE, TRUE, timestamp_sleep,
+                                        ctx, pool));
+
+  {
+    const char *repos_root_url;
+    const char *repos_uuid;
+    const char *repos_relpath;
+
+    SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url,
+                                        &repos_uuid,
+                                        ctx->wc_ctx, local_abspath,
+                                        pool, pool));
+
+    SVN_ERR(svn_wc__node_get_repos_relpath(&repos_relpath,
+                                           ctx->wc_ctx,
+                                           local_abspath,
+                                           pool, pool));
+
+    SVN_ERR(svn_wc__external_register(ctx->wc_ctx,
+                                      defining_abspath,
+                                      local_abspath, svn_node_dir,
+                                      repos_root_url, repos_uuid,
+                                      repos_relpath,
+                                      SVN_INVALID_REVNUM,
+                                      SVN_INVALID_REVNUM,
+                                      pool));
+  }
+
+  return SVN_NO_ERROR;
 }
 
 /* Try to update a file external at LOCAL_ABSPATH to URL at REVISION using a
@@ -904,11 +958,11 @@ handle_external_item_change(const struct external_change_baton_t *eb,
                                        eb->native_eol,
                                        eb->ctx, scratch_pool));
           else
-            SVN_ERR(svn_client__checkout_internal(
-                     NULL, new_url, local_abspath,
+            SVN_ERR(switch_dir_external(
+                     local_abspath, new_url,
                      &(new_item->peg_revision), &(new_item->revision),
-                     &ra_cache, svn_depth_infinity, FALSE, FALSE, TRUE,
-                     eb->timestamp_sleep, eb->ctx, scratch_pool));
+                     parent_abspath, eb->timestamp_sleep, eb->ctx,
+                     scratch_pool));
           break;
         case svn_node_file:
           if (eb->is_export)
@@ -965,6 +1019,7 @@ handle_external_item_change(const struct external_change_baton_t *eb,
           SVN_ERR(switch_dir_external(local_abspath, new_url,
                                       &(new_item->revision),
                                       &(new_item->peg_revision),
+                                      parent_dir_abspath,
                                       eb->timestamp_sleep, eb->ctx,
                                       scratch_pool));
           break;
@@ -1134,6 +1189,32 @@ svn_client__handle_externals(apr_hash_t *externals_old,
 
   /* Parse the old externals. This part will be replaced by reading EXTERNALS
      from the DB. */
+#ifdef USE_EXTERNALS_STORE
+  {
+    apr_hash_t *external_defs;
+    SVN_ERR(svn_wc__externals_defined_below(&external_defs,
+                                            ctx->wc_ctx, target_abspath,
+                                            scratch_pool, iterpool));
+
+    for (hi = apr_hash_first(scratch_pool, external_defs);
+         hi;
+         hi = apr_hash_next(hi))
+      {
+        const char *old_url;
+        const char *item_abspath = svn__apr_hash_index_key(hi);
+
+        /* This should be moved into the external processing code once
+           the EXTERNALS store is in place */
+        SVN_ERR(svn_wc__read_external_info(NULL, NULL, &old_url, NULL, NULL,
+                                           ctx->wc_ctx, target_abspath,
+                                           item_abspath, FALSE,
+                                           scratch_pool, iterpool));
+
+        apr_hash_set(old_external_urls, item_abspath,
+                     APR_HASH_KEY_STRING, old_url);
+      }
+  }
+#else
   if (externals_old)
     {
       for (hi = apr_hash_first(scratch_pool, externals_old);
@@ -1163,11 +1244,11 @@ svn_client__handle_externals(apr_hash_t *externals_old,
           for (i = 0; old_desc && (i < old_desc->nelts); i++)
             {
               svn_wc_external_item2_t *item;
-              const char *target_abspath;
+              const char *item_abspath;
               const char *old_url;
 
               item = APR_ARRAY_IDX(old_desc, i, svn_wc_external_item2_t *);
-              target_abspath = svn_dirent_join(def_abspath, item->target_dir,
+              item_abspath = svn_dirent_join(def_abspath, item->target_dir,
                                                scratch_pool);
 
               SVN_ERR(resolve_relative_external_url(&old_url, item,
@@ -1175,11 +1256,12 @@ svn_client__handle_externals(apr_hash_t *externals_old,
                                                     url, scratch_pool,
                                                     iterpool));
 
-              apr_hash_set(old_external_urls, target_abspath,
+              apr_hash_set(old_external_urls, item_abspath,
                            APR_HASH_KEY_STRING, old_url);
             }
          }
     }
+#endif
 
   for (hi = apr_hash_first(scratch_pool, combined);
        hi;
@@ -1225,17 +1307,17 @@ svn_client__handle_externals(apr_hash_t *externals_old,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *target_abspath;
+      const char *item_abspath;
       const char *old_url;
 
       svn_pool_clear(iterpool);
 
-      target_abspath = svn__apr_hash_index_key(hi);
+      item_abspath = svn__apr_hash_index_key(hi);
       old_url = svn__apr_hash_index_val(hi);
 
       SVN_ERR(wrap_external_error(
-                          &eb, target_abspath,
-                          handle_external_item_removal(&eb, target_abspath,
+                          &eb, item_abspath,
+                          handle_external_item_removal(&eb, item_abspath,
                                                        old_url, iterpool),
                           iterpool));
     }
