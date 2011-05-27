@@ -655,10 +655,11 @@ svn_io_file_create2(const char *file,
 
 /** Like svn_io_file_create2(), but with a C string instead
  * of an #svn_string_t.
- * 
- * @deprecated Provided for backward compatibility with the 1.6 API.
+ *
+ * @see svn_io_file_create2()
+ *
+ * @note This API is not considered @c deprecated.
  */
-SVN_DEPRECATED
 svn_error_t *
 svn_io_file_create(const char *file,
                    const char *contents,
