@@ -1023,7 +1023,6 @@ write_format(const char *path, int format, int max_files_per_dir,
              svn_boolean_t overwrite, apr_pool_t *pool)
 {
   svn_stringbuf_t *sb;
-  svn_string_t *contents;
 
   SVN_ERR_ASSERT(1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER);
 
@@ -1038,15 +1037,13 @@ write_format(const char *path, int format, int max_files_per_dir,
         svn_stringbuf_appendcstr(sb, "layout linear\n");
     }
 
-  contents = svn_string_create_from_buf(sb, pool);
-
   /* svn_io_write_version_file() does a load of magic to allow it to
      replace version files that already exist.  We only need to do
      that when we're allowed to overwrite an existing file. */
   if (! overwrite)
     {
       /* Create the file */
-      SVN_ERR(svn_io_file_create(path, contents->data, pool));
+      SVN_ERR(svn_io_file_create(path, sb->data, pool));
     }
   else
     {
@@ -1054,7 +1051,7 @@ write_format(const char *path, int format, int max_files_per_dir,
 
       SVN_ERR(svn_io_write_unique(&path_tmp,
                                   svn_dirent_dirname(path, pool),
-                                  contents->data, contents->len,
+                                  sb->data, sb->len,
                                   svn_io_file_del_none, pool));
 
       /* rename the temp file as the real destination */
