@@ -920,7 +920,6 @@ handle_external_item_change(const struct external_change_baton_t *eb,
   if (! old_url)
     {
       /* This branch is only used during a checkout or an export. */
-      const char *parent_abspath;
 
       /* First notify that we're about to handle an external. */
       if (eb->ctx->notify_func2)
@@ -934,8 +933,9 @@ handle_external_item_change(const struct external_change_baton_t *eb,
         case svn_node_dir:
           /* The target dir might have multiple components.  Guarantee
              the path leading down to the last component. */
-          parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-          SVN_ERR(svn_io_make_dir_recursively(parent_abspath, scratch_pool));
+          SVN_ERR(svn_io_make_dir_recursively(svn_dirent_dirname(local_abspath,
+                                                                 scratch_pool),
+                                              scratch_pool));
 
           /* If we were handling renames the fancy way, then before
              checking out a new subdir here, we would somehow learn if
@@ -961,7 +961,7 @@ handle_external_item_change(const struct external_change_baton_t *eb,
             SVN_ERR(switch_dir_external(
                      local_abspath, new_url,
                      &(new_item->peg_revision), &(new_item->revision),
-                     parent_abspath, eb->timestamp_sleep, eb->ctx,
+                     parent_dir_abspath, eb->timestamp_sleep, eb->ctx,
                      scratch_pool));
           break;
         case svn_node_file:
