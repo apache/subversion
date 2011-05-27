@@ -1070,7 +1070,7 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
 
   if (err)
     {
-      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND || !ignore_enoent)
         return svn_error_return(err);
 
       svn_error_clear(err);
@@ -1145,3 +1145,45 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__externals_defined_below(apr_hash_t **externals,
+                                svn_wc_context_t *wc_ctx,
+                                const char *local_abspath,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
+{
+  return svn_error_return(
+            svn_wc__db_externals_defined_below(externals,
+                                               wc_ctx->db, local_abspath,
+                                               result_pool, scratch_pool));
+}
+
+svn_error_t *
+svn_wc__external_register(svn_wc_context_t *wc_ctx,
+                          const char *defining_abspath,
+                          const char *local_abspath,
+                          svn_node_kind_t kind,
+                          const char *repos_root_url,
+                          const char *repos_uuid,
+                          const char *repos_relpath,
+                          svn_revnum_t operational_revision,
+                          svn_revnum_t revision,
+                          apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(kind == svn_node_dir);
+#if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
+  return svn_error_return(
+            svn_wc__db_external_add_dir(wc_ctx->db, local_abspath,
+                                        defining_abspath,
+                                        repos_root_url,
+                                        repos_uuid,
+                                        defining_abspath,
+                                        repos_relpath,
+                                        operational_revision,
+                                        revision,
+                                        NULL,
+                                        scratch_pool));
+#else
+  return SVN_NO_ERROR;
+#endif
+}

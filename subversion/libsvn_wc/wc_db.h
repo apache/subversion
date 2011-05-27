@@ -1170,6 +1170,21 @@ svn_wc__db_external_read(svn_wc__db_status_t *status,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+/* Gets a mapping from const char * local abspaths of externals to the const
+   char * local abspath of where they are defined for all externals defined
+   at or below LOCAL_ABSPATH.
+
+   ### Returns NULL in *EXTERNALS until we bumped to format 29.
+
+   Allocate the result in RESULT_POOL and perform temporary allocations in
+   SCRATCH_POOL. */
+svn_error_t *
+svn_wc__db_externals_defined_below(apr_hash_t **externals,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
+
 /* @} */
 
 /* @defgroup svn_wc__db_op  Operations on WORKING tree

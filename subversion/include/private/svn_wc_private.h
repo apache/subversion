@@ -123,6 +123,51 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
+/* Gets a mapping from const char * local abspaths of externals to the const
+   char * local abspath of where they are defined for all externals defined
+   at or below LOCAL_ABSPATH.
+
+   ### Returns NULL in *EXTERNALS until we bumped to format 29.
+
+   Allocate the result in RESULT_POOL and perform temporary allocations in
+   SCRATCH_POOL. */
+svn_error_t *
+svn_wc__externals_defined_below(apr_hash_t **externals,
+                                svn_wc_context_t *wc_ctx,
+                                const char *local_abspath,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
+
+
+/* Registers a new external at LOCAL_ABSPATH in the working copy containing
+   DEFINING_ABSPATH.
+
+   The node is registered as defined on DEFINING_ABSPATH (must be an ancestor
+   of LOCAL_ABSPATH) of kind KIND.
+
+   The external is registered as from repository REPOS_ROOT_URL with uuid
+   REPOS_UUID and the defining relative path REPOS_RELPATH.
+
+   If the revision of the node is locked OPERATIONAL_REVISION and REVISION
+   are the peg and normal revision; otherwise their value is
+   SVN_INVALID_REVNUM.
+
+   ### Only KIND svn_node_dir is supported.
+
+   Perform temporary allocations in SCRATCH_POOL.
+ */
+svn_error_t *
+svn_wc__external_register(svn_wc_context_t *wc_ctx,
+                          const char *defining_abspath,
+                          const char *local_abspath,
+                          svn_node_kind_t kind,
+                          const char *repos_root_url,
+                          const char *repos_uuid,
+                          const char *repos_relpath,
+                          svn_revnum_t operational_revision,
+                          svn_revnum_t revision,
+                          apr_pool_t *scratch_pool);
+
 
 /** Set @a *tree_conflict to a newly allocated @c
  * svn_wc_conflict_description_t structure describing the tree
