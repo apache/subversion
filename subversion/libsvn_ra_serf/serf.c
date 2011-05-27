@@ -517,9 +517,6 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
   apr_hash_t *props;
   const char *propfind_path;
 
-  props = apr_hash_make(pool);
-  *ret_props = apr_hash_make(pool);
-
   if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
     {
       propfind_path = apr_psprintf(pool, "%s/%ld", session->rev_stub, rev);
@@ -536,9 +533,11 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__discover_vcc(&propfind_path, session, NULL, pool));
     }
 
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+  SVN_ERR(svn_ra_serf__retrieve_props(&props, session, session->conns[0],
                                       propfind_path, rev, "0", all_props,
-                                      pool));
+                                      pool, pool));
+
+  *ret_props = apr_hash_make(pool);
 
   SVN_ERR(svn_ra_serf__walk_all_props(props, propfind_path, rev,
                                       svn_ra_serf__set_bare_props, *ret_props,
@@ -898,7 +897,6 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
                      apr_pool_t *pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
-  apr_hash_t *props;
   const char *path;
 
   path = session->session_url.path;
@@ -928,18 +926,17 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
   if (dirents)
     {
       struct path_dirent_visitor_t dirent_walk;
-
-      props = apr_hash_make(pool);
+      apr_hash_t *props;
 
       /* Always request node kind to check that path is really a
        * directory.
        */
       dirent_fields |= SVN_DIRENT_KIND;
-      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+      SVN_ERR(svn_ra_serf__retrieve_props(&props, session, session->conns[0],
                                           path, revision, "1",
                                           get_dirent_props(dirent_fields,
                                                            pool),
-                                          pool));
+                                          pool, pool));
 
       /* Check if the path is really a directory. */
       SVN_ERR(resource_is_directory(props, path, revision));
@@ -961,11 +958,11 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
   /* If we're asked for the directory properties, fetch them too. */
   if (ret_props)
     {
-      props = apr_hash_make(pool);
+      apr_hash_t *props;
 
-      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+      SVN_ERR(svn_ra_serf__retrieve_props(&props, session, session->conns[0],
                                           path, revision, "0", all_props,
-                                          pool));
+                                          pool, pool));
       /* Check if the path is really a directory. */
       SVN_ERR(resource_is_directory(props, path, revision));
 

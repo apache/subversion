@@ -2731,7 +2731,6 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   conn = session->conns[session->cur_conn];
 
   /* Fetch properties. */
-  fetch_props = apr_hash_make(pool);
 
   fetch_url = svn_path_url_add_component2(session->session_url.path, path, pool);
 
@@ -2751,10 +2750,10 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
       revision = SVN_INVALID_REVNUM;
     }
 
-  SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn, fetch_url,
+  SVN_ERR(svn_ra_serf__retrieve_props(&fetch_props, session, conn, fetch_url,
                                       revision, "0",
                                       props ? all_props : check_path_props,
-                                      pool));
+                                      pool, pool));
 
   /* Verify that resource type is not colelction. */
   SVN_ERR(svn_ra_serf__get_resource_type(&res_kind, fetch_props, fetch_url,
