@@ -919,6 +919,20 @@ WHERE wc_id = ?1 AND local_relpath = ?2
 DELETE FROM externals
 WHERE wc_id = ?1 AND local_relpath = ?2
 
+-- STMT_SELECT_EXTERNAL_PROPERTIES
+SELECT IFNULL((SELECT properties FROM actual_node a
+               WHERE a.wc_id = ?1 AND A.local_relpath = n.local_relpath),
+              properties),
+       local_relpath, depth
+FROM nodes n
+WHERE wc_id = ?1
+  AND (?2 = ''
+       OR local_relpath = ?2
+       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+  AND kind = 'dir' AND presence='normal'
+  AND op_depth=(SELECT MAX(op_depth) FROM nodes o
+                WHERE o.wc_id = ?1 AND o.local_relpath = n.local_relpath)
+
 /* ------------------------------------------------------------------------- */
 
 /* these are used in entries.c  */

@@ -1185,6 +1185,23 @@ svn_wc__db_externals_defined_below(apr_hash_t **externals,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
 
+/* Gather all svn:externals property values from the actual properties on
+   directories below LOCAL_ABSPATH as a mapping of const char *local_abspath
+   to const char * property values.
+
+   If DEPTHS is not NULL, set *depths to an apr_hash_t* mapping the same
+   local_abspaths to the const char * ambient depth of the node.
+
+   Allocate the result in RESULT_POOL and perform temporary allocations in
+   SCRATCH_POOL. */
+svn_error_t *
+svn_wc__db_externals_gather_definitions(apr_hash_t **externals,
+                                        apr_hash_t **depths,
+                                        svn_wc__db_t *db,
+                                        const char *local_abspath,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool);
+
 /* @} */
 
 /* @defgroup svn_wc__db_op  Operations on WORKING tree

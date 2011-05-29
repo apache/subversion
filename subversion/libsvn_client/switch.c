@@ -287,14 +287,20 @@ switch_internal(svn_revnum_t *result_rev,
      the primary operation. */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     {
-      SVN_ERR(svn_client__gather_local_external_changes(
-                efb.externals_new, efb.ambient_depths, local_abspath,
-                depth, ctx, pool));
+      apr_hash_t *new_externals;
+      apr_hash_t *new_depths;
+      SVN_ERR(svn_wc__externals_gather_definitions(&new_externals,
+                                                   &new_depths,
+                                                   ctx->wc_ctx, local_abspath,
+                                                   depth, pool, pool));
 
-      err = svn_client__handle_externals(efb.externals_old,
-                                         efb.externals_new, efb.ambient_depths,
-                                         source_root, local_abspath,
-                                         depth, use_sleep, ctx, pool);
+      new_depths = apr_hash_overlay(pool, new_depths, efb.ambient_depths);
+      SVN_ERR(svn_client__handle_externals(efb.externals_old,
+                                           new_externals,
+                                           new_depths,
+                                           source_root, local_abspath,
+                                           depth, use_sleep,
+                                           ctx, pool));
     }
 
   /* Sleep to ensure timestamp integrity (we do this regardless of

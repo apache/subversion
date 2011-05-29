@@ -184,6 +184,27 @@ svn_wc__external_remove(svn_wc_context_t *wc_ctx,
                         void *cancel_baton,
                         apr_pool_t *scratch_pool);
 
+/* Gather all svn:externals property values from the actual properties on
+   directories below LOCAL_ABSPATH as a mapping of const char *local_abspath
+   to const char * values.
+
+   Use DEPTH as how it would be used to limit the externals property results
+   on update. (So any depth < infinity will only read svn:externals on
+   LOCAL_ABSPATH itself)
+
+   If DEPTHS is not NULL, set *depths to an apr_hash_t* mapping the same
+   local_abspaths to the const char * ambient depth of the node.
+
+   Allocate the result in RESULT_POOL and perform temporary allocations in
+   SCRATCH_POOL. */
+svn_error_t *
+svn_wc__externals_gather_definitions(apr_hash_t **externals,
+                                     apr_hash_t **ambient_depths,
+                                     svn_wc_context_t *wc_ctx,
+                                     const char *local_abspath,
+                                     svn_depth_t depth,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
 
 /** Set @a *tree_conflict to a newly allocated @c
  * svn_wc_conflict_description_t structure describing the tree
