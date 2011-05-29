@@ -960,6 +960,7 @@ send_unversioned_item(const struct walk_status_baton *wb,
   return SVN_NO_ERROR;
 }
 
+#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
 /* Helper for get_dir_status. If LOCAL_ABSPATH has "svn:externals" property
    set on it, send the name and value to WB->external_func, along with
    this directory's depth, but skip this step if LOCAL_ABSPATH is the anchor
@@ -1001,6 +1002,7 @@ handle_externals(const struct walk_status_baton *wb,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 
 /* Send svn_wc_status3_t * structures for the directory LOCAL_ABSPATH and
@@ -1127,12 +1129,14 @@ get_dir_status(const struct walk_status_baton *wb,
       apr_hash_set(all_children, selected, APR_HASH_KEY_STRING, selected);
     }
 
+#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
   /* If "this dir" has "svn:externals" property set on it, send the name and
      value to wc->external_func along with this directory's depth. (Also,
      we want to track the externals internally so we can report status more
      accurately.) */
   if (dir_info->had_props)
     SVN_ERR(handle_externals(wb, local_abspath, dir_info->depth, iterpool));
+#endif
 
   if (!selected)
     {
@@ -2240,9 +2244,16 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
   eb->wb.db               = wc_ctx->db;
   eb->wb.target_abspath   = eb->target_abspath;
   eb->wb.ignore_text_mods = FALSE;
-  eb->wb.externals        = apr_hash_make(result_pool);
   eb->wb.repos_locks      = NULL;
   eb->wb.repos_root       = NULL;
+
+#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
+  eb->wb.externals = apr_hash_make(result_pool);
+#else
+  SVN_ERR(svn_wc__db_externals_defined_below(&eb->wb.externals,
+                                             wc_ctx->db, eb->target_abspath,
+                                             result_pool, scratch_pool));
+#endif
 
   /* Use the caller-provided ignore patterns if provided; the build-time
      configured defaults otherwise. */
@@ -2327,9 +2338,15 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
   wb.db = db;
   wb.target_abspath = local_abspath;
   wb.ignore_text_mods = ignore_text_mods;
-  wb.externals = apr_hash_make(scratch_pool);
   wb.repos_root = NULL;
   wb.repos_locks = NULL;
+
+#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
+  wb.externals = apr_hash_make(scratch_pool);
+#else
+  SVN_ERR(svn_wc__db_externals_defined_below(&wb.externals, db, local_abspath,
+                                             scratch_pool, scratch_pool));
+#endif
 
   /* Use the caller-provided ignore patterns if provided; the build-time
      configured defaults otherwise. */
