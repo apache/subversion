@@ -302,9 +302,6 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
                                   apr_uint32_t dirent_fields,
                                   apr_pool_t *pool);
 
-svn_error_t * svn_ra_neon__abort_commit(void *session_baton,
-                                        void *edit_baton);
-
 svn_error_t * svn_ra_neon__get_mergeinfo(
   svn_ra_session_t *session,
   apr_hash_t **mergeinfo,
