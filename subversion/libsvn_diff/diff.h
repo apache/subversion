@@ -88,6 +88,14 @@ typedef enum svn_diff__normalize_state_t
 } svn_diff__normalize_state_t;
 
 
+/*
+ * Calculate the Longest Common Subsequence (LCS) between two datasources,
+ * POSITION_LIST1 and POSITION_LIST2. From the beginning of each list, 
+ * PREFIX_LINES lines will be assumed to be equal and be excluded from the 
+ * comparison process. Similarly, SUFFIX_LINES at the end of both sequences
+ * will be skipped. The resulting lcs structure will be the return value
+ * of this function. Allocations will be made from POOL.
+ */
 svn_diff__lcs_t *
 svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
               svn_diff__position_t *position_list2, /* pointer to tail (ring) */
