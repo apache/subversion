@@ -560,9 +560,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
                                        TRUE /* no_ignore */,
                                        FALSE /* ignore_text_mods */,
                                        NULL /* ignore_patterns */,
-                                       diff_status_callback,
-                                       &eb,
-                                       NULL, NULL, /* external func & baton */
+                                       diff_status_callback, &eb,
                                        cancel_func, cancel_baton,
                                        scratch_pool));
 

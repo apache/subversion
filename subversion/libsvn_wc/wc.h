@@ -542,8 +542,6 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
                              const apr_array_header_t *ignore_patterns,
                              svn_wc_status_func4_t status_func,
                              void *status_baton,
-                             svn_wc_external_update_t external_func,
-                             void *external_baton,
                              svn_cancel_func_t cancel_func,
                              void *cancel_baton,
                              apr_pool_t *scratch_pool);

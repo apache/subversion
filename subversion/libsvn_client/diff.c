@@ -1920,9 +1920,10 @@ diff_repos_wc(const char *path1,
   SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, abspath2,
                                   reporter, reporter_baton,
                                   FALSE, depth, TRUE, (! server_supports_depth),
-                                  FALSE, NULL, NULL, /* notification is N/A */
+                                  FALSE,
                                   ctx->cancel_func, ctx->cancel_baton,
-                                  NULL, NULL, pool));
+                                  NULL, NULL, /* notification is N/A */
+                                  pool));
 
   return SVN_NO_ERROR;
 }

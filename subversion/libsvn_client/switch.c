@@ -244,7 +244,7 @@ switch_internal(svn_revnum_t *result_rev,
                                     diff3_cmd, preserved_exts,
                                     svn_client__dirent_fetcher, &dfb,
                                     ctx->conflict_func2, ctx->conflict_baton2,
-                                    svn_client__external_info_gatherer, &efb,
+                                    NULL, NULL,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     pool, pool));
@@ -256,6 +256,11 @@ switch_internal(svn_revnum_t *result_rev,
                             depth_is_sticky ? depth : svn_depth_unknown,
                             switch_rev_url,
                             switch_editor, switch_edit_baton, pool));
+
+  SVN_ERR(svn_wc__externals_gather_definitions(&efb.externals_old,
+                                               &efb.ambient_depths,
+                                               ctx->wc_ctx, local_abspath,
+                                               depth, pool, pool));
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the update_editor
@@ -269,7 +274,6 @@ switch_internal(svn_revnum_t *result_rev,
                                 report_baton, TRUE, depth, (! depth_is_sticky),
                                 (! server_supports_depth),
                                 use_commit_times,
-                                svn_client__external_info_gatherer, &efb,
                                 ctx->cancel_func, ctx->cancel_baton,
                                 ctx->notify_func2, ctx->notify_baton2, pool);
 

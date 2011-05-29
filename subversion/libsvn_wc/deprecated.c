@@ -104,6 +104,57 @@ traversal_info_update(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Helper for functions that used to gather traversal_info */
+svn_error_t *
+gather_traversal_info(svn_wc_context_t *wc_ctx,
+                      const char *local_abspath,
+                      const char *path,
+                      svn_depth_t depth,
+                      struct svn_wc_traversal_info_t *traversal_info,
+                      svn_boolean_t gather_as_old,
+                      svn_boolean_t gather_as_new,
+                      apr_pool_t *scratch_pool)
+{
+  apr_hash_t *externals;
+  apr_hash_t *ambient_depths;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_wc__externals_gather_definitions(&externals, &ambient_depths,
+                                               wc_ctx, local_abspath,
+                                               depth,
+                                               scratch_pool, scratch_pool));
+
+  for (hi = apr_hash_first(scratch_pool, externals);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *node_abspath = svn__apr_hash_index_key(hi);
+      const char *relpath;
+
+      relpath = svn_dirent_join(path,
+                                svn_dirent_skip_ancestor(local_abspath,
+                                                         node_abspath),
+                                traversal_info->pool);
+
+      if (gather_as_old)
+        apr_hash_set(traversal_info->externals_old,
+                     relpath, APR_HASH_KEY_STRING,
+                     svn__apr_hash_index_val(hi));
+
+      if (gather_as_new)
+        apr_hash_set(traversal_info->externals_new,
+                     relpath, APR_HASH_KEY_STRING,
+                     svn__apr_hash_index_val(hi));
+
+      apr_hash_set(traversal_info->depths,
+                   relpath, APR_HASH_KEY_STRING,
+                   apr_hash_get(ambient_depths, node_abspath,
+                                APR_HASH_KEY_STRING));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /*** From adm_crawler.c ***/
 
@@ -125,20 +176,9 @@ svn_wc_crawl_revisions4(const char *path,
   svn_wc_context_t *wc_ctx;
   svn_wc__db_t *wc_db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath;
-  svn_wc_external_update_t external_func = NULL;
-  struct traversal_info_update_baton *eb = NULL;
 
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, wc_db, pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  if (traversal_info)
-    {
-      eb = apr_palloc(pool, sizeof(*eb));
-      eb->traversal = traversal_info;
-      eb->db = wc_db;
-
-      external_func = traversal_info_update;
-    }
 
   SVN_ERR(svn_wc_crawl_revisions5(wc_ctx,
                                   local_abspath,
@@ -149,13 +189,15 @@ svn_wc_crawl_revisions4(const char *path,
                                   honor_depth_exclude,
                                   depth_compatibility_trick,
                                   use_commit_times,
-                                  external_func,
-                                  eb,
                                   NULL /* cancel_func */,
                                   NULL /* cancel_baton */,
                                   notify_func,
                                   notify_baton,
                                   pool));
+
+  if (traversal_info)
+    SVN_ERR(gather_traversal_info(wc_ctx, local_abspath, path, depth,
+                                  traversal_info, TRUE, FALSE, pool));
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
@@ -2563,8 +2605,6 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
   struct status4_wrapper_baton *swb = apr_palloc(pool, sizeof(*swb));
   svn_wc__db_t *wc_db;
   svn_wc_context_t *wc_ctx;
-  svn_wc_external_update_t external_func = NULL;
-  struct traversal_info_update_baton *eb = NULL;
   const char *anchor_abspath;
 
   swb->old_func = status_func;
@@ -2590,15 +2630,6 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
       swb->anchor_relpath = NULL;
     }
 
-  if (traversal_info)
-    {
-      eb = apr_palloc(pool, sizeof(*eb));
-      eb->traversal = traversal_info;
-      eb->db = wc_db;
-
-      external_func = traversal_info_update;
-    }
-
   SVN_ERR(svn_wc_get_status_editor5(editor, edit_baton, set_locks_baton,
                                     edit_revision, wc_ctx, anchor_abspath,
                                     target, depth, get_all,
@@ -2606,9 +2637,23 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
                                     FALSE /* server_performs_filtering */,
                                     ignore_patterns,
                                     status4_wrapper_func, swb,
-                                    external_func, eb,
                                     cancel_func, cancel_baton,
                                     pool, pool));
+
+  if (traversal_info)
+    {
+      const char *local_path = svn_wc_adm_access_path(anchor);
+      const char *local_abspath = anchor_abspath;
+      if (*target)
+        {
+          local_path = svn_dirent_join(local_path, target, pool);
+          local_abspath = svn_dirent_join(local_abspath, target, pool);
+        }
+
+      SVN_ERR(gather_traversal_info(wc_ctx, local_abspath, local_path, depth,
+                                    traversal_info, TRUE, TRUE,
+                                    pool));
+    }
 
   /* We can't destroy wc_ctx here, because the editor needs it while it's
      driven. */

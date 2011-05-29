@@ -1183,7 +1183,6 @@ node_has_local_mods(svn_boolean_t *modified,
                                      svn_depth_infinity,
                                      FALSE, FALSE, FALSE, NULL,
                                      modcheck_callback, &modcheck_baton,
-                                     NULL, NULL,
                                      cancel_func, cancel_baton,
                                      scratch_pool);
 
