@@ -182,21 +182,18 @@ def relocate_beyond_repos_root(sbox):
   # This tests for issue #2380.
   svntest.actions.run_and_verify_svn(None, None,
                                      ".*Invalid relocation destination.*",
-                                     'switch', '--relocate',
-                                     '--ignore-ancestry',
+                                     'relocate',
                                      A_url, other_B_url, A_wc_dir)
 
   # Another way of trying to change the fs path, leading to an invalid
   # repository root.
   svntest.actions.run_and_verify_svn(None, None,
                                      ".*is not the root.*",
-                                     'switch', '--relocate',
-                                     '--ignore-ancestry',
+                                     'relocate',
                                      repo_url, other_B_url, A_wc_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'switch', '--relocate',
-                                     '--ignore-ancestry',
+                                     'relocate',
                                      A_url, other_A_url, A_wc_dir)
 
   # Check that we can contact the repository, meaning that the
@@ -243,8 +240,7 @@ def relocate_and_propset(sbox):
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
   svntest.main.safe_rmtree(repo_dir, 1)
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
-                                     '--ignore-ancestry',
+  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
                                      repo_url, other_repo_url, wc_dir)
 
   # Remove gamma from the working copy.
@@ -315,8 +311,7 @@ def single_file_relocate(sbox):
   svntest.main.safe_rmtree(repo_dir, 1)
   svntest.actions.run_and_verify_svn(None, None,
                                      ".*Cannot relocate.*",
-                                     'switch', '--relocate',
-                                     '--ignore-ancestry',
+                                     'relocate',
                                      iota_url, other_iota_url, iota_path)
 
 #----------------------------------------------------------------------
@@ -337,8 +332,7 @@ def relocate_with_switched_children(sbox):
   svntest.main.safe_rmtree(repo_dir, 1)
 
   # Do the switch and check the results in three ways.
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
-                                     '--ignore-ancestry',
+  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
                                      repo_url, other_repo_url, wc_dir)
 
   # Attempt to commit changes and examine results
@@ -395,8 +389,7 @@ def relocate_with_relative_externals(sbox):
   svntest.main.safe_rmtree(repo_dir, 1)
 
   # Now relocate our working copy.
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
-                                     '--ignore-ancestry',
+  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
                                      repo_url, other_repo_url, wc_dir)
   
   # Check the URLs of the externals -- were they updated to point to the
