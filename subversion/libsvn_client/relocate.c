@@ -274,13 +274,13 @@ svn_client_relocate2(const char *wcroot_dir,
        hi = apr_hash_next(hi))
     {
       const char *this_abspath = svn__apr_hash_index_key(hi);
-      const svn_string_t *pval = svn__apr_hash_index_val(hi);
+      const char *value = svn__apr_hash_index_val(hi);
       apr_array_header_t *ext_desc;
 
       svn_pool_clear(iterpool);
 
       SVN_ERR(svn_wc_parse_externals_description3(&ext_desc, this_abspath,
-                                                  pval->data, FALSE,
+                                                  value, FALSE,
                                                   iterpool));
       if (ext_desc->nelts)
         SVN_ERR(relocate_externals(this_abspath, ext_desc, old_repos_root_url,
