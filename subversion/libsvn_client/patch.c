@@ -2405,7 +2405,7 @@ check_dir_empty(svn_boolean_t *empty, const char *local_abspath,
   btn.result_pool = scratch_pool;
   SVN_ERR(svn_wc_walk_status(wc_ctx, local_abspath, svn_depth_immediates,
                              TRUE, TRUE, FALSE, NULL, find_existing_children,
-                             &btn, NULL, NULL, NULL, NULL, scratch_pool));
+                             &btn, NULL, NULL, scratch_pool));
   *empty = TRUE;
 
   /* Do we delete all children? */

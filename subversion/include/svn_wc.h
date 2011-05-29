@@ -3904,12 +3904,6 @@ typedef void (*svn_wc_status_func_t)(void *baton,
  * If @a cancel_func is non-NULL, call it with @a cancel_baton while walking
  * to determine if the client has canceled the operation.
  *
- * If @a external_func is non-NULL and an external definition is found
- * while walking @a local_abspath, call @a external_func with @a
- * external_baton, with the local abspath on which the definition was
- * found, and with the current external definition provided as both
- * the @a old_val and @a new_val parameters of the callback function.
- *
  * This function uses @a scratch_pool for temporary allocations.
  *
  * @since New in 1.7.
@@ -3924,8 +3918,6 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                    const apr_array_header_t *ignore_patterns,
                    svn_wc_status_func4_t status_func,
                    void *status_baton,
-                   svn_wc_external_update_t external_func,
-                   void *external_baton,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
                    apr_pool_t *scratch_pool);
@@ -3979,12 +3971,6 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
  * If @a cancel_func is non-NULL, call it with @a cancel_baton while building
  * the @a statushash to determine if the client has canceled the operation.
  *
- * If @a external_func is non-NULL and an external definition is found while
- * walking @a local_abspath, the editor will call @a external_func with @a
- * external_baton, with the local abspath on which the definition was
- * found, and with the current external definition provided as both
- * the @a old_val and @a new_val parameters of the callback function.
- *
  * If @a server_performs_filtering is TRUE, assume that the server handles
  * the ambient depth filtering, so this doesn't have to be handled in the
  * editor.
@@ -4009,8 +3995,6 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           const apr_array_header_t *ignore_patterns,
                           svn_wc_status_func4_t status_func,
                           void *status_baton,
-                          svn_wc_external_update_t external_func,
-                          void *external_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           apr_pool_t *result_pool,
@@ -5088,12 +5072,6 @@ svn_wc_process_committed(const char *path,
  * use_commit_times is TRUE, then set restored files' timestamps to
  * their last-commit-times.
  *
- * If @a external_func is non-NULL and an external definition is found
- * while walking @a local_abspath, call @a external_func with @a
- * external_baton, with the local abspath on which the definition was
- * found, and with the current external definition provided as both
- * the @a old_val and @a new_val parameters of the callback function.
- *
  * @since New in 1.7.
  */
 svn_error_t *
@@ -5106,8 +5084,6 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                         svn_boolean_t honor_depth_exclude,
                         svn_boolean_t depth_compatibility_trick,
                         svn_boolean_t use_commit_times,
-                        svn_wc_external_update_t external_func,
-                        void *external_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         svn_wc_notify_func2_t notify_func,

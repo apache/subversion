@@ -189,41 +189,6 @@ restore_node(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-/* Check if there is an externals definition stored on LOCAL_ABSPATH
-   using DB.  In that case send the externals definition and DEPTH to
-   EXTERNAL_FUNC.  Use SCRATCH_POOL for temporary allocations. */
-static svn_error_t *
-read_externals_info(svn_wc__db_t *db,
-                    const char *local_abspath,
-                    svn_wc_external_update_t external_func,
-                    void *external_baton,
-                    svn_depth_t depth,
-                    apr_pool_t *scratch_pool)
-{
-  apr_hash_t *props;
-  const svn_string_t *val;
-
-  SVN_ERR_ASSERT(external_func != NULL);
-
-  /* Directly use a DB api here as this code path is extensively used on
-     update. On top of that we already know that this an existing directory. */
-  SVN_ERR(svn_wc__db_base_get_props(&props, db, local_abspath,
-                                    scratch_pool, scratch_pool));
-
-  if (!props)
-    return SVN_NO_ERROR;
-
-  val = apr_hash_get(props, SVN_PROP_EXTERNALS, APR_HASH_KEY_STRING);
-
-  if (val)
-    {
-      SVN_ERR((external_func)(external_baton, local_abspath, val, val, depth,
-                              scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* The recursive crawler that describes a mixed-revision working
    copy to an RA layer.  Used to initiate updates.
 
@@ -264,9 +229,6 @@ read_externals_info(svn_wc__db_t *db,
    DEPTH_COMPATIBILITY_TRICK means the same thing here as it does
    in svn_wc_crawl_revisions5().
 
-   If EXTERNAL_FUNC is non-NULL, then send externals information with
-   the help of EXTERNAL_BATON
-
    If RESTORE_FILES is set, then unexpectedly missing working files
    will be restored from text-base and NOTIFY_FUNC/NOTIFY_BATON
    will be called to report the restoration.  USE_COMMIT_TIMES is
@@ -287,9 +249,6 @@ report_revisions_and_depths(svn_wc__db_t *db,
                             svn_boolean_t depth_compatibility_trick,
                             svn_boolean_t report_everything,
                             svn_boolean_t use_commit_times,
-                            svn_boolean_t had_props,
-                            svn_wc_external_update_t external_func,
-                            void *external_baton,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
                             svn_wc_notify_func2_t notify_func,
@@ -327,12 +286,6 @@ report_revisions_and_depths(svn_wc__db_t *db,
     dirents = NULL;
 
   /*** Do the real reporting and recursing. ***/
-
-  /* If "this dir" has "svn:externals" property set on it,
-   * call the external_func callback. */
-  if (external_func && had_props)
-    SVN_ERR(read_externals_info(db, dir_abspath, external_func,
-                                external_baton, dir_depth, iterpool));
 
   /* Looping over current directory's BASE children: */
   for (hi = apr_hash_first(scratch_pool, base_children); 
@@ -636,9 +589,6 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                                   depth_compatibility_trick,
                                                   start_empty,
                                                   use_commit_times,
-                                                  ths->had_props,
-                                                  external_func,
-                                                  external_baton,
                                                   cancel_func, cancel_baton,
                                                   notify_func, notify_baton,
                                                   iterpool));
@@ -667,8 +617,6 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                         svn_boolean_t honor_depth_exclude,
                         svn_boolean_t depth_compatibility_trick,
                         svn_boolean_t use_commit_times,
-                        svn_wc_external_update_t external_func,
-                        void *external_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         svn_wc_notify_func2_t notify_func,
@@ -685,7 +633,6 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
   svn_depth_t target_depth;
   svn_wc__db_lock_t *target_lock;
   svn_node_kind_t disk_kind;
-  svn_boolean_t had_props;
   svn_depth_t report_depth;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -696,7 +643,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                                  &repos_relpath, &repos_root_url,
                                  NULL, NULL, NULL, NULL, &target_depth,
                                  NULL, NULL, &target_lock,
-                                 &had_props, NULL, NULL,
+                                 NULL, NULL, NULL,
                                  db, local_abspath, scratch_pool,
                                  scratch_pool);
 
@@ -823,8 +770,6 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                                             depth_compatibility_trick,
                                             start_empty,
                                             use_commit_times,
-                                            had_props,
-                                            external_func, external_baton,
                                             cancel_func, cancel_baton,
                                             notify_func, notify_baton,
                                             scratch_pool);

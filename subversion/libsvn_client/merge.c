@@ -5694,7 +5694,6 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                              depth, TRUE, TRUE, TRUE, NULL,
                              pre_merge_status_cb,
                              &pre_merge_status_baton,
-                             NULL, NULL,
                              merge_cmd_baton->ctx->cancel_func,
                              merge_cmd_baton->ctx->cancel_baton,
                              scratch_pool));

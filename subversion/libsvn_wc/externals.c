@@ -1245,18 +1245,28 @@ svn_wc__externals_gather_definitions(apr_hash_t **externals,
   else
     {
       const svn_string_t *value;
+      svn_error_t *err;
       *externals = apr_hash_make(result_pool);
 
       local_abspath = apr_pstrdup(result_pool, local_abspath);
 
-      SVN_ERR(svn_wc_prop_get2(&value, wc_ctx, local_abspath,
-                               SVN_PROP_EXTERNALS, result_pool, scratch_pool));
+      err = svn_wc_prop_get2(&value, wc_ctx, local_abspath,
+                             SVN_PROP_EXTERNALS, result_pool, scratch_pool);
+
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+            return svn_error_return(err);
+
+          svn_error_clear(err);
+          value = NULL;
+        }
 
       if (value)
         apr_hash_set(*externals, local_abspath, APR_HASH_KEY_STRING,
                      value->data);
 
-      if (depths)
+      if (value && depths)
         {
           svn_depth_t node_depth;
           *depths = apr_hash_make(result_pool);

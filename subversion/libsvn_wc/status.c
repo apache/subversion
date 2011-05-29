@@ -71,10 +71,6 @@ struct walk_status_baton
   /* Externals info harvested during the status run. */
   apr_hash_t *externals;
 
-  /* Externals function/baton */
-  svn_wc_external_update_t external_func;
-  void *external_baton;
-
   /*** Repository lock handling ***/
   /* The repository root URL, if set. */
   const char *repos_root;
@@ -985,14 +981,6 @@ handle_externals(const struct walk_status_baton *wb,
       apr_pool_t *hash_pool = apr_hash_pool_get(wb->externals);
       apr_array_header_t *ext_items;
       int i;
-
-      if (wb->external_func &&
-          svn_dirent_is_ancestor(wb->target_abspath, local_abspath))
-        {
-          SVN_ERR((wb->external_func)(wb->external_baton, local_abspath,
-                                      prop_val, prop_val, depth,
-                                      scratch_pool));
-        }
 
       /* Now, parse the thing, and copy the parsed results into
          our "global" externals hash. */
@@ -2194,8 +2182,6 @@ close_edit(void *edit_baton,
                              eb->ignores,
                              eb->status_func,
                              eb->status_baton,
-                             eb->wb.external_func,
-                             eb->wb.external_baton,
                              eb->cancel_func,
                              eb->cancel_baton,
                              pool));
@@ -2222,8 +2208,6 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           const apr_array_header_t *ignore_patterns,
                           svn_wc_status_func4_t status_func,
                           void *status_baton,
-                          svn_wc_external_update_t external_func,
-                          void *external_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           apr_pool_t *result_pool,
@@ -2256,8 +2240,6 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
   eb->wb.db               = wc_ctx->db;
   eb->wb.target_abspath   = eb->target_abspath;
   eb->wb.ignore_text_mods = FALSE;
-  eb->wb.external_func    = external_func;
-  eb->wb.external_baton   = external_baton;
   eb->wb.externals        = apr_hash_make(result_pool);
   eb->wb.repos_locks      = NULL;
   eb->wb.repos_root       = NULL;
@@ -2332,8 +2314,6 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
                              const apr_array_header_t *ignore_patterns,
                              svn_wc_status_func4_t status_func,
                              void *status_baton,
-                             svn_wc_external_update_t external_func,
-                             void *external_baton,
                              svn_cancel_func_t cancel_func,
                              void *cancel_baton,
                              apr_pool_t *scratch_pool)
@@ -2348,8 +2328,6 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
   wb.target_abspath = local_abspath;
   wb.ignore_text_mods = ignore_text_mods;
   wb.externals = apr_hash_make(scratch_pool);
-  wb.external_func = external_func;
-  wb.external_baton = external_baton;
   wb.repos_root = NULL;
   wb.repos_locks = NULL;
 
@@ -2413,8 +2391,6 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                    const apr_array_header_t *ignore_patterns,
                    svn_wc_status_func4_t status_func,
                    void *status_baton,
-                   svn_wc_external_update_t external_func,
-                   void *external_baton,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
                    apr_pool_t *scratch_pool)
@@ -2429,8 +2405,6 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                                         ignore_patterns,
                                         status_func,
                                         status_baton,
-                                        external_func,
-                                        external_baton,
                                         cancel_func,
                                         cancel_baton,
                                         scratch_pool));

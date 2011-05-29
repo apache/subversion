@@ -263,7 +263,6 @@ svn_client_status5(svn_revnum_t *result_rev,
   apr_array_header_t *ignores;
   svn_error_t *err;
   apr_hash_t *changelist_hash = NULL;
-  struct svn_client__external_func_baton_t externals_store = { NULL };
 
   if (svn_path_is_url(path))
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -338,12 +337,6 @@ svn_client_status5(svn_revnum_t *result_rev,
       sb.anchor_relpath = dir;
     }
 
-  if (!ignore_externals)
-    {
-      externals_store.result_pool = pool;
-      externals_store.externals_new = apr_hash_make(pool);
-    }
-
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
   SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
@@ -386,10 +379,6 @@ svn_client_status5(svn_revnum_t *result_rev,
                                     depth, get_all,
                                     no_ignore, server_supports_depth,
                                     ignores, tweak_status, &sb,
-                                    ignore_externals
-                                        ? NULL
-                                        : svn_client__external_info_gatherer,
-                                    ignore_externals ? NULL : &externals_store,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     pool, pool));
 
@@ -470,7 +459,7 @@ svn_client_status5(svn_revnum_t *result_rev,
                                           &lock_fetch_reporter, &rb, FALSE,
                                           depth, TRUE,
                                           (! server_supports_depth),
-                                          FALSE, NULL, NULL,
+                                          FALSE,
                                           ctx->cancel_func, ctx->cancel_baton,
                                           NULL, NULL, pool));
         }
@@ -493,10 +482,6 @@ svn_client_status5(svn_revnum_t *result_rev,
       err = svn_wc_walk_status(ctx->wc_ctx, target_abspath,
                                depth, get_all, no_ignore, FALSE, ignores,
                                tweak_status, &sb,
-                               ignore_externals
-                                   ? NULL
-                                   : svn_client__external_info_gatherer,
-                               ignore_externals ? NULL : &externals_store,
                                ctx->cancel_func, ctx->cancel_baton,
                                pool);
 
@@ -527,10 +512,18 @@ svn_client_status5(svn_revnum_t *result_rev,
      in the future.
   */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
-    SVN_ERR(svn_client__do_external_status(ctx, externals_store.externals_new,
-                                           depth, get_all,
-                                           update, no_ignore,
-                                           status_func, status_baton, pool));
+    {
+      apr_hash_t *externals_new;
+      SVN_ERR(svn_wc__externals_gather_definitions(&externals_new, NULL,
+                                                   ctx->wc_ctx, target_abspath,
+                                                   depth, pool, pool));
+
+
+      SVN_ERR(svn_client__do_external_status(ctx, externals_new,
+                                             depth, get_all,
+                                             update, no_ignore,
+                                             status_func, status_baton, pool));
+    }
 
   return SVN_NO_ERROR;
 }
