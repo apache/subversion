@@ -50,7 +50,6 @@ struct svn_diff__snake_t
 static APR_INLINE void
 svn_diff__snake(apr_off_t k,
                 svn_diff__snake_t *fp,
-                int idx,
                 svn_diff__lcs_t **freelist,
                 apr_pool_t *pool)
 {
@@ -117,8 +116,8 @@ svn_diff__snake(apr_off_t k,
           lcs = apr_palloc(pool, sizeof(*lcs));
         }
 
-      lcs->position[idx] = start_position[0];
-      lcs->position[abs(1 - idx)] = start_position[1];
+      lcs->position[0] = start_position[0];
+      lcs->position[1] = start_position[1];
       lcs->length = position[1]->offset - start_position[1]->offset;
       lcs->next = previous_lcs;
       lcs->refcount = 1;
@@ -192,7 +191,6 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
               apr_off_t suffix_lines,
               apr_pool_t *pool)
 {
-  int idx;
   apr_off_t length[2];
   svn_diff__snake_t *fp;
   apr_off_t d;
@@ -231,25 +229,31 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
       return lcs;
     }
 
-  /* Calculate length of both sequences to be compared */
+  /* Calculate lengths M and N of the sequences to be compared */
   length[0] = position_list1->offset - position_list1->next->offset + 1;
   length[1] = position_list2->offset - position_list2->next->offset + 1;
-  idx = length[0] > length[1] ? 1 : 0;
 
   /* strikerXXX: here we allocate the furthest point array, which is
    * strikerXXX: sized M + N + 3 (!)
    */
   fp = apr_pcalloc(pool,
                    sizeof(*fp) * (apr_size_t)(length[0] + length[1] + 3));
-  fp += length[idx] + 1;
 
-  sentinel_position[idx].next = position_list1->next;
-  position_list1->next = &sentinel_position[idx];
-  sentinel_position[idx].offset = position_list1->offset + 1;
+  /* The origo of fp corresponds to the end state, where we are
+   * at the end of both files. The valid states thus span from
+   * -N (at end of first file and at the beginning of the second
+   * file) to +M (the opposite :). Finally, svn_diff__snake needs
+   * 1 extra slot on each side to work.
+   */
+  fp += length[1] + 1;
 
-  sentinel_position[abs(1 - idx)].next = position_list2->next;
-  position_list2->next = &sentinel_position[abs(1 - idx)];
-  sentinel_position[abs(1 - idx)].offset = position_list2->offset + 1;
+  sentinel_position[0].next = position_list1->next;
+  position_list1->next = &sentinel_position[0];
+  sentinel_position[0].offset = position_list1->offset + 1;
+
+  sentinel_position[1].next = position_list2->next;
+  position_list2->next = &sentinel_position[1];
+  sentinel_position[1].offset = position_list2->offset + 1;
 
   /* These are never dereferenced, only compared by value, so we
    * can safely fake these up and the void* cast is OK.
@@ -257,45 +261,48 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
   sentinel_position[0].node = (void*)&sentinel_position[0];
   sentinel_position[1].node = (void*)&sentinel_position[1];
 
-  d = length[abs(1 - idx)] - length[idx];
+  /* position d = M - N corresponds to the initial state, where
+   * we are at the beginning of both files.
+   */
+  d = length[0] - length[1];
 
-  /* k = -1 will be the first to be used to get previous
+  /* k = d - 1 will be the first to be used to get previous
    * position information from, make sure it holds sane
    * data
    */
-  fp[-1].position[0] = sentinel_position[0].next;
-  fp[-1].position[1] = &sentinel_position[1];
+  fp[d - 1].position[0] = sentinel_position[0].next;
+  fp[d - 1].position[1] = &sentinel_position[1];
 
   p = 0;
   do
     {
-      /* Forward */
-      for (k = -p; k < d; k++)
+      /* For k < 0, insertions are free */
+      for (k = (d < 0 ? d : 0) - p; k < 0; k++)
         {
-          svn_diff__snake(k, fp, idx, &lcs_freelist, pool);
+          svn_diff__snake(k, fp, &lcs_freelist, pool);
         }
-
-      for (k = d + p; k >= d; k--)
+	  /* for k > 0, deletions are free */
+      for (k = (d > 0 ? d : 0) + p; k >= 0; k--)
         {
-          svn_diff__snake(k, fp, idx, &lcs_freelist, pool);
+          svn_diff__snake(k, fp, &lcs_freelist, pool);
         }
 
       p++;
     }
-  while (fp[d].position[1] != &sentinel_position[1]);
+  while (fp[0].position[1] != &sentinel_position[1]);
 
   if (suffix_lines)
-    lcs->next = prepend_lcs(fp[d].lcs, suffix_lines,
+    lcs->next = prepend_lcs(fp[0].lcs, suffix_lines,
                             lcs->position[0]->offset - suffix_lines,
                             lcs->position[1]->offset - suffix_lines,
                             pool);
   else
-    lcs->next = fp[d].lcs;
+    lcs->next = fp[0].lcs;
   
   lcs = svn_diff__lcs_reverse(lcs);
 
-  position_list1->next = sentinel_position[idx].next;
-  position_list2->next = sentinel_position[abs(1 - idx)].next;
+  position_list1->next = sentinel_position[0].next;
+  position_list2->next = sentinel_position[1].next;
 
   if (prefix_lines)
     return prepend_lcs(lcs, prefix_lines, 1, 1, pool);
