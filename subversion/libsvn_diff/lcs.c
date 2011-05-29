@@ -80,8 +80,7 @@ struct svn_diff__snake_t
 };
 
 static APR_INLINE void
-svn_diff__snake(apr_off_t k,
-                svn_diff__snake_t *fp,
+svn_diff__snake(svn_diff__snake_t *fp_k,
                 svn_diff__lcs_t **freelist,
                 apr_pool_t *pool)
 {
@@ -94,7 +93,7 @@ svn_diff__snake(apr_off_t k,
    * can mark that lcs node for reuse, because the sequence up to this
    * point was a dead end.
    */
-  lcs = fp[k].lcs;
+  lcs = fp_k[0].lcs;
   while (lcs)
     {
       lcs->refcount--;
@@ -107,19 +106,19 @@ svn_diff__snake(apr_off_t k,
       lcs = previous_lcs;
     }
 
-  if (fp[k - 1].y + 1 > fp[k + 1].y)
+  if (fp_k[-1].y >= fp_k[1].y)
     {
-      start_position[0] = fp[k - 1].position[0];
-      start_position[1] = fp[k - 1].position[1]->next;
+      start_position[0] = fp_k[-1].position[0];
+      start_position[1] = fp_k[-1].position[1]->next;
 
-      previous_lcs = fp[k - 1].lcs;
+      previous_lcs = fp_k[-1].lcs;
     }
   else
     {
-      start_position[0] = fp[k + 1].position[0]->next;
-      start_position[1] = fp[k + 1].position[1];
+      start_position[0] = fp_k[1].position[0]->next;
+      start_position[1] = fp_k[1].position[1];
 
-      previous_lcs = fp[k + 1].lcs;
+      previous_lcs = fp_k[1].lcs;
     }
 
 
@@ -153,11 +152,11 @@ svn_diff__snake(apr_off_t k,
       lcs->length = position[1]->offset - start_position[1]->offset;
       lcs->next = previous_lcs;
       lcs->refcount = 1;
-      fp[k].lcs = lcs;
+      fp_k[0].lcs = lcs;
     }
   else
     {
-      fp[k].lcs = previous_lcs;
+      fp_k[0].lcs = previous_lcs;
     }
 
   if (previous_lcs)
@@ -165,10 +164,10 @@ svn_diff__snake(apr_off_t k,
       previous_lcs->refcount++;
     }
 
-  fp[k].position[0] = position[0];
-  fp[k].position[1] = position[1];
+  fp_k[0].position[0] = position[0];
+  fp_k[0].position[1] = position[1];
 
-  fp[k].y = position[1]->offset;
+  fp_k[0].y = position[1]->offset;
 }
 
 
@@ -311,12 +310,12 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
       /* For k < 0, insertions are free */
       for (k = (d < 0 ? d : 0) - p; k < 0; k++)
         {
-          svn_diff__snake(k, fp, &lcs_freelist, pool);
+          svn_diff__snake(fp + k, &lcs_freelist, pool);
         }
 	  /* for k > 0, deletions are free */
       for (k = (d > 0 ? d : 0) + p; k >= 0; k--)
         {
-          svn_diff__snake(k, fp, &lcs_freelist, pool);
+          svn_diff__snake(fp + k, &lcs_freelist, pool);
         }
 
       p++;
