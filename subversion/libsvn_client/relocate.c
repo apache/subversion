@@ -35,6 +35,8 @@
 #include "svn_path.h"
 #include "client.h"
 
+#include "private/svn_wc_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -258,8 +260,10 @@ svn_client_relocate2(const char *wcroot_dir,
 
 
   /* Relocate externals, too (if any). */
-  SVN_ERR(svn_client__crawl_for_externals(&externals_hash, local_abspath,
-                                          svn_depth_infinity, ctx, pool, pool));
+  SVN_ERR(svn_wc__externals_gather_definitions(&externals_hash, NULL,
+                                               ctx->wc_ctx, local_abspath,
+                                               svn_depth_infinity,
+                                               pool, pool));
   if (! apr_hash_count(externals_hash))
     return SVN_NO_ERROR;
 

@@ -970,36 +970,6 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
                                void *status_baton,
                                apr_pool_t *pool);
 
-/* Set *EXTERNALS_P to a hash mapping const char * local absolute
-   paths to const svn_string_t * svn:externals property values, those
-   found by crawling LOCAL_ABSPATH to DEPTH. */
-svn_error_t *
-svn_client__crawl_for_externals(apr_hash_t **externals_p,
-                                const char *local_abspath,
-                                svn_depth_t depth,
-                                svn_client_ctx_t *ctx,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool);
-
-/* Helper function to fix issue #2267,
- * "support svn:externals on locally added directories".
- *
- * Crawl all externals beneath ANCHOR_ABSPATH (this is cheap because we're
- * only crawling the WC DB itself). If there are externals within the
- * REQUESTED_DEPTH that weren't already picked up while we were crawling
- * the BASE tree, add them to the EXTERNALS_NEW hash with ambient depth
- * infinity. Facilitates populating externals in locally added directories.
- *
- * ### This is a bit of a hack. We should try to find a better solution
- * ### to this problem. */
-svn_error_t *
-svn_client__gather_local_external_changes(apr_hash_t *externals_new,
-                                          apr_hash_t *ambient_depths,
-                                          const char *anchor_abspath,
-                                          svn_depth_t requested_depth,
-                                          svn_client_ctx_t *ctx,
-                                          apr_pool_t *scratch_pool);
-
 /* Baton type for svn_wc__external_info_gatherer(). */
 typedef struct svn_client__external_func_baton_t
 {

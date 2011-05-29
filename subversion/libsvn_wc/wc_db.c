@@ -3220,6 +3220,90 @@ svn_wc__db_externals_defined_below(apr_hash_t **externals,
   return svn_error_return(svn_sqlite__reset(stmt));
 }
 
+svn_error_t *
+svn_wc__db_externals_gather_definitions(apr_hash_t **externals,
+                                        apr_hash_t **depths,
+                                        svn_wc__db_t *db,
+                                        const char *local_abspath,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  svn_sqlite__stmt_t *stmt;
+  const char *local_relpath;
+  svn_boolean_t have_row;
+  svn_error_t *err = NULL;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_abspath, scratch_pool, iterpool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  *externals = apr_hash_make(result_pool);
+  if (depths != NULL)
+    *depths = apr_hash_make(result_pool);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_EXTERNAL_PROPERTIES));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  while (have_row)
+    {
+      apr_hash_t *node_props;
+      const svn_string_t *external_value;
+
+      svn_pool_clear(iterpool);
+      err = svn_sqlite__column_properties(&node_props, stmt, 0, iterpool,
+                                          iterpool);
+
+      if (err)
+        break;
+
+      external_value = node_props
+                            ? apr_hash_get(node_props, SVN_PROP_EXTERNALS,
+                                           APR_HASH_KEY_STRING)
+                            : NULL;
+
+      if (external_value)
+        {
+          const char *node_abspath;
+          const char *node_relpath = svn_sqlite__column_text(stmt, 1, NULL);
+
+          node_abspath = svn_dirent_join(wcroot->abspath, node_relpath,
+                                         result_pool);
+
+          apr_hash_set(*externals, node_abspath,
+                       APR_HASH_KEY_STRING,
+                       apr_pstrdup(result_pool, external_value->data));
+
+          if (depths)
+            {
+              const char *depth_word = svn_sqlite__column_text(stmt, 2, NULL);
+              svn_depth_t depth = svn_depth_unknown;
+
+              if (depth_word)
+                depth = svn_depth_from_word(depth_word);
+
+              apr_hash_set(*depths, node_abspath,
+                           APR_HASH_KEY_STRING,
+                           svn_depth_to_word(depth)); /* Use static string */
+            }
+        }
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return svn_error_return(svn_error_compose_create(err,
+                                                   svn_sqlite__reset(stmt)));
+}
+
 /* Helper for svn_wc__db_op_copy to handle copying from one db to
    another */
 static svn_error_t *

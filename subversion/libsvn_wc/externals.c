@@ -1225,3 +1225,54 @@ svn_wc__external_remove(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__externals_gather_definitions(apr_hash_t **externals,
+                                     apr_hash_t **depths,
+                                     svn_wc_context_t *wc_ctx,
+                                     const char *local_abspath,
+                                     svn_depth_t depth,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool)
+{
+  if (depth == svn_depth_infinity
+      || depth == svn_depth_unknown)
+    {
+      return svn_error_return(
+        svn_wc__db_externals_gather_definitions(externals, depths,
+                                                wc_ctx->db, local_abspath,
+                                                result_pool, scratch_pool));
+    }
+  else
+    {
+      const svn_string_t *value;
+      *externals = apr_hash_make(result_pool);
+
+      local_abspath = apr_pstrdup(result_pool, local_abspath);
+
+      SVN_ERR(svn_wc_prop_get2(&value, wc_ctx, local_abspath,
+                               SVN_PROP_EXTERNALS, result_pool, scratch_pool));
+
+      if (value)
+        apr_hash_set(*externals, local_abspath, APR_HASH_KEY_STRING,
+                     value->data);
+
+      if (depths)
+        {
+          svn_depth_t node_depth;
+          *depths = apr_hash_make(result_pool);
+
+          SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, &node_depth, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL,
+                                       wc_ctx->db, local_abspath,
+                                       scratch_pool, scratch_pool));
+
+          apr_hash_set(*depths, local_abspath, APR_HASH_KEY_STRING,
+                       svn_depth_to_word(node_depth));
+        }
+
+      return SVN_NO_ERROR;
+    }
+}
