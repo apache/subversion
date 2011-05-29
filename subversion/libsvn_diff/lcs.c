@@ -33,9 +33,41 @@
  * Calculate the Longest Common Subsequence (LCS) between two datasources.
  * This function is what makes the diff code tick.
  *
- * The LCS algorithm implemented here is described by Sun Wu,
- * Udi Manber and Gene Meyers in "An O(NP) Sequence Comparison Algorithm"
+ * The LCS algorithm implemented here is based on the approach described
+ * by Sun Wu, Udi Manber and Gene Meyers in "An O(NP) Sequence Comparison
+ * Algorithm", but has been modified for better performance.
  *
+ * Let M and N be the lengths (number of tokens) of the two sources
+ * ('files'). The goal is to reach the end of both sources (files) with the
+ * minimum number of insertions + deletions. Since there is a known length
+ * difference N-M between the files, that is equivalent to just the minimum
+ * number of deletions, or equivalently the minimum number of insertions.
+ * For symmetry, we use the lesser number - deletions if M<N, insertions if
+ * M>N.
+ *
+ * Let 'k' be the difference in remaining length between the files, i.e.
+ * if we're at the beginning of both files, k=N-M, whereas k=0 for the
+ * 'end state', at the end of both files. An insertion will increase k by
+ * one, while a deletion decreases k by one. If k<0, then insertions are
+ * 'free' - we need those to reach the end state k=0 anyway - but deletions
+ * are costly: Adding a deletion means that we will have to add an additional
+ * insertion later to reach the end state, so it doesn't matter if we count
+ * deletions or insertions. Similarly, deletions are free for k>0.
+ *
+ * Let a 'state' be a given position in each file {pos1, pos2}. An array
+ * 'fp' keeps track of the best possible state (largest values of
+ * {pos1, pos2}) that can be achieved for a given cost 'p' (# moves away
+ * from k=0), as well as a linked list of what matches were used to reach
+ * that state. For each new value of p, we find for each value of k the
+ * best achievable state for that k - either by doing a costly operation
+ * (deletion if k<0) from a state achieved at a lower p, or doing a free
+ * operation (insertion if k<0) from a state achieved at the same p -
+ * and in both cases advancing past any matching regions found. This is
+ * handled by running loops over k in order of descending absolute value.
+ *
+ * A recent improvement of the algorithm is to ignore tokens that are unique
+ * to one file or the other, as those are known from the start to be
+ * impossible to match.
  */
 
 typedef struct svn_diff__snake_t svn_diff__snake_t;
@@ -191,46 +223,6 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
               apr_off_t suffix_lines,
               apr_pool_t *pool)
 {
-  /*
-   * Calculate the Longest Common Subsequence (LCS) between two datasources.
-   * This function is what makes the diff code tick.
-   *
-   * The LCS algorithm implemented here is based on the approach described
-   * by Sun Wu, Udi Manber and Gene Meyers in "An O(NP) Sequence Comparison
-   * Algorithm", but has been modified for better performance.
-   *
-   * Let M and N be the lengths (number of tokens) of the two sources
-   * ('files'). The goal is to reach the end of both sources (files) with the
-   * minimum number of insertions + deletions. Since there is a known length
-   * difference N-M between the files, that is equivalent to just the minimum
-   * number of deletions, or equivalently the minimum number of insertions.
-   * For symmetry, we use the lesser number - deletions if M<N, insertions if
-   * M>N.
-   *
-   * Let 'k' be the difference in remaining length between the files, i.e.
-   * if we're at the beginning of both files, k=N-M, whereas k=0 for the
-   * 'end state', at the end of both files. An insertion will increase k by
-   * one, while a deletion decreases k by one. If k<0, then insertions are
-   * 'free' - we need those to reach the end state k=0 anyway - but deletions
-   * are costly: Adding a deletion means that we will have to add an additional
-   * insertion later to reach the end state, so it doesn't matter if we count
-   * deletions or insertions. Similarly, deletions are free for k>0.
-   *
-   * Let a 'state' be a given position in each file {pos1, pos2}. An array
-   * 'fp' keeps track of the best possible state (largest values of
-   * {pos1, pos2}) that can be achieved for a given cost 'p' (# moves away
-   * from k=0), as well as a linked list of what matches were used to reach
-   * that state. For each new value of p, we find for each value of k the
-   * best achievable state for that k - either by doing a costly operation
-   * (deletion if k<0) from a state achieved at a lower p, or doing a free
-   * operation (insertion if k<0) from a state achieved at the same p -
-   * and in both cases advancing past any matching regions found. This is
-   * handled by running loops over k in order of descending absolute value.
-   *
-   * A recent improvement of the algorithm is to ignore tokens that are unique
-   * to one file or the other, as those are known from the start to be
-   * impossible to match.
-   */
   apr_off_t length[2];
   svn_diff__snake_t *fp;
   apr_off_t d;
