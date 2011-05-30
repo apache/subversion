@@ -91,7 +91,8 @@ _re_parse_checkout = re.compile('^([RMAGCUDE_ ][MAGCUDE_ ])'
                                 '([B ])'
                                 '([CAUD ])\s+'
                                 '(.+)')
-_re_parse_co_skipped = re.compile('^(Restored|Skipped)\s+\'(.+)\'( --.*)?')
+_re_parse_co_skipped = re.compile('^(Restored|Skipped|Removed external)'
+                                  '\s+\'(.+)\'(( --|: ).*)?')
 _re_parse_co_restored = re.compile('^(Restored)\s+\'(.+)\'')
 
 # Lines typically have a verb followed by whitespace then a path.
