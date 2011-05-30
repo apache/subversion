@@ -42,7 +42,7 @@
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
-/* #define USE_EXTERNALS_STORE */
+#define USE_EXTERNALS_STORE
 
 /* Closure for handle_external_item_change. */
 struct external_change_baton_t

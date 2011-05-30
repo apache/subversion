@@ -146,16 +146,15 @@ extern "C" {
  * The bump to 28 converted any remaining references to MD5 checksums
  *   to SHA1 checksums. Bumped in r1095214.
  *
- * The bump to 29 renamed the pristine files from '<SHA1>' to
- * '<SHA1>.svn-base' and introduced the EXTERNALS store.
- * ### Not bumped yet
+ * The bump to 29 renamed the pristine files from '<SHA1>' to '<SHA1>.svn-base'
+ * and introduced the EXTERNALS store.
  *
  * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 28
+#define SVN_WC__VERSION 29
 
 
 /* Formats <= this have no concept of "revert text-base/props".  */
