@@ -921,7 +921,6 @@ def tree_replace2(sbox):
     })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
-@XFail()  # Requires WC format >= 29.
 def upgrade_from_format_28(sbox):
   """upgrade from format 28: rename pristines"""
 
