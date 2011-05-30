@@ -1090,27 +1090,6 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
       if (defining_revision)
         *defining_revision = SVN_INVALID_REVNUM;
 
-#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
-      {
-        svn_boolean_t is_wcroot;
-        err = svn_wc__db_is_wcroot(&is_wcroot, wc_ctx->db, local_abspath,
-                                   scratch_pool);
-
-        if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-          return svn_error_return(err);
-
-        svn_error_clear(err);
-
-        if (is_wcroot && external_kind)
-          {
-            *external_kind = svn_node_dir;
-          }
-      }
-
-      if (defining_abspath && !*defining_abspath)
-        *defining_abspath = svn_dirent_dirname(local_abspath, result_pool);
-#endif
-
       return SVN_NO_ERROR;
     }
 
@@ -1132,11 +1111,6 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
               *external_kind = svn_node_none;
           }
     }
-
-#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
-  if (defining_abspath && !*defining_abspath)
-        *defining_abspath = svn_dirent_dirname(local_abspath, result_pool);
-#endif
 
   if (defining_url && *defining_url)
     *defining_url = svn_path_url_add_component2(repos_root_url, *defining_url,
@@ -1171,7 +1145,6 @@ svn_wc__external_register(svn_wc_context_t *wc_ctx,
                           apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(kind == svn_node_dir);
-#if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
   return svn_error_return(
             svn_wc__db_external_add_dir(wc_ctx->db, local_abspath,
                                         defining_abspath,
@@ -1183,9 +1156,6 @@ svn_wc__external_register(svn_wc_context_t *wc_ctx,
                                         revision,
                                         NULL,
                                         scratch_pool));
-#else
-  return SVN_NO_ERROR;
-#endif
 }
 
 svn_error_t *
@@ -1204,10 +1174,8 @@ svn_wc__external_remove(svn_wc_context_t *wc_ctx,
                                    wc_ctx->db, local_abspath, wri_abspath,
                                    scratch_pool, scratch_pool));
 
-#if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
   SVN_ERR(svn_wc__db_external_remove(wc_ctx->db, local_abspath, wri_abspath,
                                      NULL, scratch_pool));
-#endif
 
   if (kind == svn_wc__db_kind_dir)
     SVN_ERR(svn_wc_remove_from_revision_control2(wc_ctx, local_abspath,
@@ -1216,9 +1184,7 @@ svn_wc__external_remove(svn_wc_context_t *wc_ctx,
                                                  scratch_pool));
   else
     {
-#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
       SVN_ERR(svn_wc__db_base_remove(wc_ctx->db, local_abspath, scratch_pool));
-#endif
       SVN_ERR(svn_io_remove_file2(local_abspath, TRUE, scratch_pool));
     }
 
