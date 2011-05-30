@@ -862,6 +862,9 @@ def text_base_path(file_path):
   if os.path.isfile(fn):
     return fn
 
+  if os.path.isfile(fn + ".svn-base"):
+    return fn + ".svn-base"
+
   raise svntest.Failure("No pristine text for " + relpath)
 
 
