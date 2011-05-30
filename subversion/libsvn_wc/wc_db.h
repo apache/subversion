@@ -773,7 +773,6 @@ struct svn_wc__db_base_info_t {
   const char *repos_relpath;
   const char *repos_root_url;
   svn_depth_t depth;
-  svn_boolean_t had_props;
   svn_boolean_t update_root;
   svn_wc__db_lock_t *lock;
 };
