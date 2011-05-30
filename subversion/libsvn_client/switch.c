@@ -88,7 +88,6 @@ switch_internal(svn_revnum_t *result_rev,
   apr_array_header_t *preserved_exts;
   svn_boolean_t server_supports_depth;
   struct svn_client__dirent_fetcher_baton_t dfb;
-  svn_client__external_func_baton_t efb;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING)
@@ -223,11 +222,6 @@ switch_internal(svn_revnum_t *result_rev,
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
-  efb.externals_new = apr_hash_make(pool);
-  efb.externals_old = apr_hash_make(pool);
-  efb.ambient_depths = apr_hash_make(pool);
-  efb.result_pool = pool;
-
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
                                 SVN_RA_CAPABILITY_DEPTH, pool));
 
@@ -256,11 +250,6 @@ switch_internal(svn_revnum_t *result_rev,
                             depth_is_sticky ? depth : svn_depth_unknown,
                             switch_rev_url,
                             switch_editor, switch_edit_baton, pool));
-
-  SVN_ERR(svn_wc__externals_gather_definitions(&efb.externals_old,
-                                               &efb.ambient_depths,
-                                               ctx->wc_ctx, local_abspath,
-                                               depth, pool, pool));
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the update_editor
@@ -298,9 +287,7 @@ switch_internal(svn_revnum_t *result_rev,
                                                    ctx->wc_ctx, local_abspath,
                                                    depth, pool, pool));
 
-      new_depths = apr_hash_overlay(pool, new_depths, efb.ambient_depths);
-      SVN_ERR(svn_client__handle_externals(efb.externals_old,
-                                           new_externals,
+      SVN_ERR(svn_client__handle_externals(new_externals,
                                            new_depths,
                                            source_root, local_abspath,
                                            depth, use_sleep,

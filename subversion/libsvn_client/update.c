@@ -207,7 +207,6 @@ update_internal(svn_revnum_t *result_rev,
   svn_ra_session_t *ra_session;
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
-  svn_client__external_func_baton_t efb;
   struct svn_client__dirent_fetcher_baton_t dfb;
   svn_boolean_t server_supports_depth;
   svn_boolean_t tree_conflicted;
@@ -364,12 +363,6 @@ update_internal(svn_revnum_t *result_rev,
                                           local_abspath, ra_session, revision,
                                           pool));
 
-  /* Build a baton for the externals-info-gatherer callback. */
-  efb.externals_new = apr_hash_make(pool);
-  efb.externals_old = apr_hash_make(pool);
-  efb.ambient_depths = apr_hash_make(pool);
-  efb.result_pool = pool;
-
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
                                 SVN_RA_CAPABILITY_DEPTH, pool));
 
@@ -400,11 +393,6 @@ update_internal(svn_revnum_t *result_rev,
                             revnum, target,
                             depth_is_sticky ? depth : svn_depth_unknown,
                             FALSE, update_editor, update_edit_baton, pool));
-
-  SVN_ERR(svn_wc__externals_gather_definitions(&efb.externals_old,
-                                               &efb.ambient_depths,
-                                               ctx->wc_ctx, local_abspath,
-                                               depth, pool, pool));
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
@@ -438,9 +426,7 @@ update_internal(svn_revnum_t *result_rev,
                                                    ctx->wc_ctx, local_abspath,
                                                    depth, pool, pool));
 
-      new_depths = apr_hash_overlay(pool, new_depths, efb.ambient_depths);
-      SVN_ERR(svn_client__handle_externals(efb.externals_old,
-                                           new_externals,
+      SVN_ERR(svn_client__handle_externals(new_externals,
                                            new_depths,
                                            repos_root, local_abspath,
                                            depth, use_sleep,
