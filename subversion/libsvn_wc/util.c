@@ -369,14 +369,14 @@ svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
           new_conflict->mime_type = apr_pstrdup(result_pool,
                                                 conflict->mime_type);
         if (conflict->base_abspath)
-          new_conflict->base_file = svn_dirent_basename(conflict->base_abspath,
-                                                        result_pool);
+          new_conflict->base_file = apr_pstrdup(result_pool,
+                                                conflict->base_abspath);
         if (conflict->their_abspath)
-          new_conflict->their_file = svn_dirent_basename(conflict->their_abspath,
-                                                         result_pool);
+          new_conflict->their_file = apr_pstrdup(result_pool,
+                                                 conflict->their_abspath);
         if (conflict->my_abspath)
-          new_conflict->my_file = svn_dirent_basename(conflict->my_abspath,
-                                                      result_pool);
+          new_conflict->my_file = apr_pstrdup(result_pool,
+                                              conflict->my_abspath);
         if (conflict->merged_file)
           new_conflict->merged_file = apr_pstrdup(result_pool,
                                                   conflict->merged_file);
