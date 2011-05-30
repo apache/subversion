@@ -147,7 +147,7 @@ extern "C" {
  *   to SHA1 checksums. Bumped in r1095214.
  *
  * The bump to 29 renamed the pristine files from '<SHA1>' to '<SHA1>.svn-base'
- * and introduced the EXTERNALS store.
+ * and introduced the EXTERNALS store. Bumped in r1129286.
  *
  * == 1.7.x shipped with format ???
  *
