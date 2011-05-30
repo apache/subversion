@@ -1171,7 +1171,6 @@ def binary_file_externals(sbox):
 #----------------------------------------------------------------------
 
 # Issue #3351.
-@XFail()
 @Issue(3351)
 def update_lose_file_external(sbox):
   "delete a file external"
@@ -1230,7 +1229,9 @@ def update_lose_file_external(sbox):
                                         expected_status, None, wc_dir)
 
   # try to actually get rid of the external via an update
-  expected_output = svntest.wc.State(wc_dir, {})
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C/external'      : Item(verb='Removed external')
+  })
 
   # (re-use above expected_disk)
   expected_disk.tweak('A/C', props = {})
@@ -1238,6 +1239,9 @@ def update_lose_file_external(sbox):
 
   # (re-use above expected_status)
   expected_status.tweak(wc_rev = 3)
+
+  # And assume that the external will be removed.
+  expected_status.remove('A/C/external')
 
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
