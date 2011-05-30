@@ -980,7 +980,7 @@ SELECT DISTINCT local_relpath FROM nodes
 WHERE kind = 'file' AND parent_relpath = ?1
 
 -- STMT_SELECT_NODE_UPGRADE
-SELECT op_depth, presence, wc_id
+SELECT op_depth, presence, wc_id, kind
 FROM nodes
 WHERE local_relpath = ?1
 ORDER BY op_depth DESC

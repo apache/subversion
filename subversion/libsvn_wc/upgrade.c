@@ -1243,14 +1243,97 @@ rename_pristine_file(void *baton,
 }
 
 static svn_error_t *
+upgrade_externals(struct bump_baton *bb,
+                  svn_sqlite__db_t *sdb,
+                  apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_sqlite__stmt_t *stmt_add;
+  svn_boolean_t have_row;
+  apr_pool_t *iterpool;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_SELECT_EXTERNAL_PROPERTIES));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt_add, sdb,
+                                    STMT_INSERT_EXTERNAL));
+
+  /* ### For this intermediate upgrade we just assume WC_ID = 1.
+     ### Before this bump we lost track of externals all the time,
+     ### so lets keep this easy. */
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", (apr_int64_t)1, ""));
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  iterpool = svn_pool_create(scratch_pool);
+  while (have_row)
+    {
+      apr_hash_t *props;
+      const svn_string_t *externals = NULL;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_sqlite__column_properties(&props, stmt, 0,
+                                            iterpool, iterpool));
+
+      if (props)
+        externals = apr_hash_get(props, SVN_PROP_EXTERNALS,
+                                 APR_HASH_KEY_STRING);
+
+      if (externals)
+        {
+          apr_array_header_t *ext;
+          const char *local_relpath;
+          const char *local_abspath;
+          int i;
+
+          local_relpath = svn_sqlite__column_text(stmt, 1, NULL);
+          local_abspath = svn_dirent_join(bb->wcroot_abspath, local_relpath,
+                                          iterpool);
+
+          SVN_ERR(svn_wc_parse_externals_description3(&ext, local_abspath,
+                                                      externals->data, FALSE,
+                                                      iterpool));
+
+          for (i = 0; i < ext->nelts; i++)
+            {
+              const svn_wc_external_item2_t *item;
+              const char *item_relpath;
+
+              item = APR_ARRAY_IDX(ext, i, const svn_wc_external_item2_t *);
+              item_relpath = svn_relpath_join(local_relpath, item->target_dir,
+                                              iterpool);
+
+              /* Insert dummy externals definitions: Insert an unknown
+                 external, to make sure it will be cleaned up when it is not
+                 updated on the next update. */
+              SVN_ERR(svn_sqlite__bindf(stmt_add, "isssssis",
+                                        (apr_int64_t)1, /* wc_id */
+                                        item_relpath,
+                                        svn_relpath_dirname(item_relpath,
+                                                            iterpool),
+                                        "normal",
+                                        "unknown",
+                                        local_relpath,
+                                        (apr_int64_t)1, /* repos_id */
+                                        "" /* repos_relpath */));
+              SVN_ERR(svn_sqlite__insert(NULL, stmt_add));
+            }
+        }
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  svn_pool_destroy(iterpool);
+  return svn_error_return(svn_sqlite__reset(stmt));
+}
+
+static svn_error_t *
 bump_to_29(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
-  const char *wcroot_abspath = ((struct bump_baton *)baton)->wcroot_abspath;
+  struct bump_baton *bb = baton;
+  const char *wcroot_abspath = bb->wcroot_abspath;
   const char *pristine_dir_abspath;
-
-  /* ### Before enabling this code we should be able to upgrade existing
-     ### file externals to their new location */
-  SVN_ERR_MALFUNCTION();
 
   /* Rename all pristine files, adding a ".svn-base" suffix. */
   pristine_dir_abspath = svn_dirent_join_many(scratch_pool, wcroot_abspath,
@@ -1261,7 +1344,8 @@ bump_to_29(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   /* Externals */
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_CREATE_EXTERNALS));
-  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_VERIFICATION_TRIGGERS));
+
+  SVN_ERR(upgrade_externals(bb, sdb, scratch_pool));
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_29));
   return SVN_NO_ERROR;
 }
