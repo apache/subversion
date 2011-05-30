@@ -2187,10 +2187,9 @@ svn_wc__db_base_get_children_info(apr_hash_t **nodes,
       info->depth = (depth_str != NULL) ? svn_depth_from_word(depth_str)
                                         : svn_depth_unknown;
 
-      info->had_props = SQLITE_PROPERTIES_AVAILABLE(stmt, 7);
-      info->update_root = svn_sqlite__column_boolean(stmt, 8);
+      info->update_root = svn_sqlite__column_boolean(stmt, 7);
 
-      info->lock = lock_from_columns(stmt, 9, 10, 11, 12, result_pool);
+      info->lock = lock_from_columns(stmt, 8, 9, 10, 11, result_pool);
 
       err = fetch_repos_info(&info->repos_root_url, NULL, wcroot->sdb,
                              repos_id, result_pool);
@@ -2965,18 +2964,25 @@ svn_wc__db_external_add_dir(svn_wc__db_t *db,
                                 &ieb, scratch_pool));
 }
 
+/* Baton for db_external_remove */
+struct external_remove_baton
+{
+  const svn_skel_t *work_items;
+};
+
 static svn_error_t *
 db_external_remove(void *baton, svn_wc__db_wcroot_t *wcroot,
                    const char *local_relpath, apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
+  struct external_remove_baton *rb = baton;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_EXTERNAL));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  SVN_ERR(add_work_items(wcroot->sdb, baton, scratch_pool));
+  SVN_ERR(add_work_items(wcroot->sdb, rb->work_items, scratch_pool));
 
   /* ### What about actual? */
   return SVN_NO_ERROR;
@@ -2991,6 +2997,7 @@ svn_wc__db_external_remove(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
+  struct external_remove_baton rb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -3005,8 +3012,9 @@ svn_wc__db_external_remove(svn_wc__db_t *db,
 
   local_relpath = svn_dirent_skip_ancestor(wcroot->abspath, local_abspath);
 
+  rb.work_items = work_items;
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_external_remove,
-                              work_items, scratch_pool));
+                              &rb, scratch_pool));
 
   return SVN_NO_ERROR;
 }
