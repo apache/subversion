@@ -333,7 +333,7 @@ make_one_db(const char *wc_abspath,
 
 
 static svn_error_t *
-create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
+create_fake_wc(const char *subdir, apr_pool_t *scratch_pool)
 {
   const char *root;
   const char *wc_abspath;
@@ -372,7 +372,7 @@ create_open(svn_wc__db_t **db,
             const char *subdir,
             apr_pool_t *pool)
 {
-  SVN_ERR(create_fake_wc(subdir, SVN_WC__VERSION, pool));
+  SVN_ERR(create_fake_wc(subdir, pool));
 
   SVN_ERR(svn_dirent_get_absolute(local_abspath,
                                   svn_dirent_join("fake-wc", subdir, pool),
