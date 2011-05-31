@@ -1315,6 +1315,63 @@ text
   svntest.actions.load_repo(sbox, dump_str=dump_str,
                             bypass_prop_validation=True)
 
+# This test intentionally corrupts a revision and assumes an FSFS
+# repository. If you can make it work with BDB please do so.
+# However, the verification triggered by this test is in the repos layer
+# so it will trigger with either backend anyway.
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def verify_non_utf8_paths(sbox):
+  "svadmin verify with non-UTF-8 paths"
+
+  dumpfile = clean_dumpfile()
+  test_create(sbox)
+
+  # Load the dumpstream
+  load_and_verify_dumpstream(sbox, [], [], dumpfile_revisions, dumpfile,
+                             '--ignore-uuid')
+
+  # Replace the path 'A' in revision 1 with a non-UTF-8 sequence.
+  # This has been observed in repositories in the wild, though Subversion
+  # 1.6 and greater should prevent such filenames from entering the repository.
+  path1 = os.path.join(sbox.repo_dir, "db", "revs", "0", "1")
+  path_new = os.path.join(sbox.repo_dir, "db", "revs", "0", "1.new")
+  fp1 = open(path1)
+  fp_new = open(path_new, 'w')
+  for line in fp1.readlines():
+    if line == "A\n":
+      # replace 'A' with a latin1 character -- the new path is not valid UTF-8
+      fp_new.write("\xE6\n")
+    elif line == "text: 1 279 32 32 d63ecce65d8c428b86f4f8b0920921fe\n":
+      # fix up the representation checksum
+      fp_new.write("text: 1 279 32 32 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
+    elif line == "cpath: /A\n":
+      # also fix up copyfrom references to this path
+      fp_new.write("cpath: /\xE6\n")
+    elif line == "_0.0.t0-0 add-file true true /A\n":
+      # and another occurrance
+      fp_new.write("_0.0.t0-0 add-file true true /\xE6\n")
+    else:
+      fp_new.write(line)
+  fp1.close()
+  fp_new.close()
+  os.remove(path1)
+  os.rename(path_new, path1)
+
+  # Verify the repository, expecting failure
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        sbox.repo_dir)
+  svntest.verify.verify_outputs(
+    "Unexpected error while running 'svnadmin verify'.",
+    [], errput, None, ".*Path '.*' is not in UTF-8.*")
+
+  # Make sure the repository can still be dumped so that the
+  # encoding problem can be fixed in a dump/edit/load cycle.
+  exit_code, output, errput = svntest.main.run_svnadmin("dump", sbox.repo_dir)
+  if svntest.verify.compare_and_display_lines(
+    "Output of 'svnadmin dump' is unexpected.",
+    'STDERR', ["* Dumped revision 0.\n",
+               "* Dumped revision 1.\n"], errput):
+    raise svntest.Failure
 
 ########################################################################
 # Run the tests
@@ -1344,6 +1401,7 @@ test_list = [ None,
               dont_drop_valid_mergeinfo_during_incremental_loads,
               hotcopy_symlink,
               load_bad_props,
+              verify_non_utf8_paths,
              ]
 
 if __name__ == '__main__':
