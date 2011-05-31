@@ -1011,20 +1011,14 @@ insert_working_node(void *baton,
                 piwb->changed_rev,
                 piwb->changed_date,
                 piwb->changed_author,
+                /* Note: incomplete nodes may have a NULL target.  */
                 (piwb->kind == svn_wc__db_kind_symlink)
                             ? piwb->target : NULL));
-
 
   if (piwb->kind == svn_wc__db_kind_file)
     {
       SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, piwb->checksum,
                                         scratch_pool));
-    }
-  else if (piwb->kind == svn_wc__db_kind_symlink)
-    {
-      /* Note: incomplete nodes may have a NULL target.  */
-      if (piwb->target)
-        SVN_ERR(svn_sqlite__bind_text(stmt, 19, piwb->target));
     }
 
   if (piwb->original_repos_relpath != NULL)
@@ -1033,7 +1027,6 @@ insert_working_node(void *baton,
       SVN_ERR(svn_sqlite__bind_text(stmt, 6, piwb->original_repos_relpath));
       SVN_ERR(svn_sqlite__bind_int64(stmt, 7, piwb->original_revnum));
     }
-
 
   SVN_ERR(svn_sqlite__bind_properties(stmt, 15, piwb->props, scratch_pool));
 
