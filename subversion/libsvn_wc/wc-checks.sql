@@ -56,7 +56,8 @@ WHEN NOT (
     OR
     ((SELECT COUNT(*) FROM nodes
       WHERE wc_id = new.wc_id AND op_depth = new.op_depth
-        AND local_relpath = new.parent_relpath) == 1)
+        AND local_relpath = new.parent_relpath
+      LIMIT 2) == 1)
   )
 BEGIN
   SELECT RAISE(FAIL, 'WC DB validity check 03 failed');
@@ -66,9 +67,9 @@ END;
  * parent path. */
 CREATE TEMP TRIGGER validation_04 BEFORE INSERT ON actual_node
 WHEN NOT (new.local_relpath = ''
-          OR (SELECT COUNT(*) FROM nodes
-              WHERE wc_id = new.wc_id
-                AND local_relpath = new.parent_relpath) >= 1)
+          OR EXISTS (SELECT 1 FROM nodes
+                       WHERE wc_id = new.wc_id
+                         AND local_relpath = new.parent_relpath))
 BEGIN
   SELECT RAISE(FAIL, 'WC DB validity check 04 failed');
 END;
