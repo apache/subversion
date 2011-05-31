@@ -26,7 +26,7 @@
 
 /* ------------------------------------------------------------------------- */
 
-CREATE TEMP TRIGGER no_repository_updates BEFORE UPDATE ON REPOSITORY
+CREATE TEMPORARY TRIGGER no_repository_updates BEFORE UPDATE ON repository
 BEGIN
   SELECT RAISE(FAIL, 'Updates to REPOSITORY are not allowed.');
 END;
@@ -34,7 +34,7 @@ END;
 /* ------------------------------------------------------------------------- */
 
 /* Verify: on every NODES row: parent_relpath is parent of local_relpath */
-CREATE TEMP TRIGGER validation_01 BEFORE INSERT ON NODES
+CREATE TEMPORARY TRIGGER validation_01 BEFORE INSERT ON nodes
 WHEN NOT ((new.local_relpath = '' AND new.parent_relpath IS NULL)
           OR (relpath_depth(new.local_relpath)
               = relpath_depth(new.parent_relpath) + 1))
@@ -43,14 +43,14 @@ BEGIN
 END;
 
 /* Verify: on every NODES row: its op-depth <= its own depth */
-CREATE TEMP TRIGGER validation_02 BEFORE INSERT ON NODES
+CREATE TEMPORARY TRIGGER validation_02 BEFORE INSERT ON nodes
 WHEN NOT new.op_depth <= relpath_depth(new.local_relpath)
 BEGIN
   SELECT RAISE(FAIL, 'WC DB validity check 02 failed');
 END;
 
 /* Verify: on every NODES row: it is an op-root or its op-root row exists. */
-CREATE TEMP TRIGGER validation_03 BEFORE INSERT ON NODES
+CREATE TEMPORARY TRIGGER validation_03 BEFORE INSERT ON nodes
 WHEN NOT (
     (new.op_depth = relpath_depth(new.local_relpath))
     OR
@@ -65,7 +65,7 @@ END;
 
 /* Verify: on every ACTUAL row (except root): a NODES row exists at its
  * parent path. */
-CREATE TEMP TRIGGER validation_04 BEFORE INSERT ON actual_node
+CREATE TEMPORARY TRIGGER validation_04 BEFORE INSERT ON actual_node
 WHEN NOT (new.local_relpath = ''
           OR EXISTS (SELECT 1 FROM nodes
                        WHERE wc_id = new.wc_id
