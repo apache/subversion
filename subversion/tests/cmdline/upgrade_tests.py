@@ -456,7 +456,7 @@ def basic_upgrade_1_0(sbox):
   check_pristine(sbox, ['iota', 'A/mu', 'A/D/H/zeta'])
 
 # Helper function for the x3 tests.
-def do_x3_upgrade(sbox):
+def do_x3_upgrade(sbox, expected_error=[]):
   # Attempt to use the working copy, this should give an error
   expected_stderr = wc_is_too_old_regex
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
@@ -464,8 +464,11 @@ def do_x3_upgrade(sbox):
 
 
   # Now upgrade the working copy
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'upgrade', sbox.wc_dir)
+
+  if expected_error != []:
+    return
 
   # Actually check the format number of the upgraded working copy
   check_format(sbox, get_current_format())
@@ -565,7 +568,6 @@ def do_x3_upgrade(sbox):
       'A/B/E/alpha'       : {'svn:eol-style': 'native'}
   })
 
-@XFail()
 @Issue(2530)
 def x3_1_4_0(sbox):
   "3x same wc upgrade 1.4.0 test"
@@ -573,7 +575,8 @@ def x3_1_4_0(sbox):
   sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'wc-3x-1.4.0.tar.bz2', dir='wc-1.4.0')
 
-  do_x3_upgrade(sbox)
+  do_x3_upgrade(sbox, expected_error='.*E155016: The properties of.*are in an '
+                'indeterminate state and cannot be upgraded. See issue #2530.')
 
 @Issue(3811)
 def x3_1_4_6(sbox):
