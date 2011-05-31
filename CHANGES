@@ -26,7 +26,6 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * 'svn diff' can print git-style unidiff annotations 
     * svnsync can now steal locks on a mirror repository (issue #3309)
     * display the wc root in the output of 'svn info' (issue #3355)
-    * add '--ie' as an alias for '--ignore-externals' (issue #3436)
     * add 'svnlook filesize' (issue #3509)
     * add 'svn upgrade' command for upgrading working copies (r877675)
     * add 'svnsync --disable-locking' (issue #3545)
