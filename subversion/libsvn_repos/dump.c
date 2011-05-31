@@ -36,6 +36,7 @@
 #include "svn_props.h"
 
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_fs_util.h"
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
 
@@ -241,6 +242,10 @@ dump_node(struct edit_baton *eb,
   svn_revnum_t compare_rev = eb->current_rev - 1;
   svn_fs_root_t *compare_root = NULL;
   apr_file_t *delta_file = NULL;
+
+  /* If we're verifying, validate the path. */
+  if (eb->verify)
+    SVN_ERR(svn_fs__path_valid(path, pool));
 
   /* Write out metadata headers for this file node. */
   SVN_ERR(svn_stream_printf(eb->stream, pool,
