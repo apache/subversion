@@ -1335,8 +1335,8 @@ def verify_non_utf8_paths(sbox):
   # 1.6 and greater should prevent such filenames from entering the repository.
   path1 = os.path.join(sbox.repo_dir, "db", "revs", "0", "1")
   path_new = os.path.join(sbox.repo_dir, "db", "revs", "0", "1.new")
-  fp1 = open(path1)
-  fp_new = open(path_new, 'w')
+  fp1 = open(path1, 'rb')
+  fp_new = open(path_new, 'wb')
   for line in fp1.readlines():
     if line == "A\n":
       # replace 'A' with a latin1 character -- the new path is not valid UTF-8
