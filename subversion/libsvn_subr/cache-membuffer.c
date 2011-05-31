@@ -141,7 +141,7 @@
  * a mismatch found in any of them when being compared with the values
  * remembered in the setter function, an error will be returned.
  */
-#ifdef DEBUG_CACHE_MEMBUFFER
+#ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
 /* The prefix passed to svn_cache__create_membuffer_cache() effectively
  * defines the type of all items stored by that cache instance. We'll take
@@ -281,7 +281,7 @@ static svn_error_t* assert_equal_tags(const entry_tag_t *lhs,
 #define DEBUG_CACHE_MEMBUFFER_TAG
 #define DEBUG_CACHE_MEMBUFFER_INIT_TAG
 
-#endif /* DEBUG_CACHE_MEMBUFFER */
+#endif /* SVN_DEBUG_CACHE_MEMBUFFER */
 
 /* A single dictionary entry. Since they are allocated statically, these
  * entries can either be in use or in used state. An entry is unused, iff 
@@ -324,7 +324,7 @@ typedef struct entry_t
    */
   apr_uint32_t previous;
 
-#ifdef DEBUG_CACHE_MEMBUFFER
+#ifdef SVN_DEBUG_CACHE_MEMBUFFER
   /* Remember type, content and key hashes.
    */
   entry_tag_t tag;
@@ -1157,7 +1157,7 @@ membuffer_cache_set(svn_membuffer_t *cache,
       entry->size = size;
       entry->offset = cache->current_data;
 
-#ifdef DEBUG_CACHE_MEMBUFFER
+#ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
       /* Remember original content, type and key (hashes)
        */
@@ -1237,7 +1237,7 @@ membuffer_cache_get(svn_membuffer_t *cache,
   buffer = ALIGN_POINTER(apr_palloc(result_pool, size + ITEM_ALIGNMENT-1));
   memcpy(buffer, (const char*)cache->data + entry->offset, size);
 
-#ifdef DEBUG_CACHE_MEMBUFFER
+#ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
   /* Check for overlapping entries.
    */
@@ -1306,7 +1306,7 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
       cache->hit_count++;
       cache->total_hits++;
 
-#ifdef DEBUG_CACHE_MEMBUFFER
+#ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
       /* Check for overlapping entries.
        */
@@ -1377,7 +1377,7 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
       cache->hit_count++;
       cache->total_writes++;
 
-#ifdef DEBUG_CACHE_MEMBUFFER
+#ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
       /* Check for overlapping entries.
        */
@@ -1428,7 +1428,7 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
                    */
                   insert_entry(cache, entry);
 
-#ifdef DEBUG_CACHE_MEMBUFFER
+#ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
                   /* Remember original content, type and key (hashes)
                    */
@@ -1503,7 +1503,7 @@ typedef struct svn_membuffer_cache_t
    */
   int alloc_counter;
 
-#ifdef DEBUG_CACHE_MEMBUFFER
+#ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
   /* Invariant tag info for all items stored by this cache instance.
    */
@@ -1872,7 +1872,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                        pool));
   memcpy(cache->prefix, checksum->digest, sizeof(cache->prefix));
 
-#ifdef DEBUG_CACHE_MEMBUFFER
+#ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
   /* Initialize cache debugging support.
    */
