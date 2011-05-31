@@ -42,6 +42,7 @@ SVN_DISABLE_ENTRY_CACHE
 SVN_MERGE__ALLOW_ALL_FORWARD_MERGES_FROM_SELF
 SVN_USE_WIN32_CRASHHANDLER
 SVN_DAV_SEND_VTXN_NAME
+DISABLE_PREFIX_SUFFIX_SCANNING
 
 2.3 Debugging Support
 
@@ -184,6 +185,19 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Range:     definedness
   Default:   not defined
   Suggested: defined, not defined
+
+4.7 DISABLE_PREFIX_SUFFIX_SCANNING
+
+  Scope:     libsvn_diff
+  Purpose:   Define this symbol to disable the prefix/suffix scanning
+             of the diff processing, letting all lines be handled by the
+             full-fledged diff algorithm (with LCS algorithm). This define
+             can be useful for focusing on testing the LCS algorithm, or
+             for comparing diff performance with and without prefix/suffix
+             scanning.
+  Range:     definedness
+  Default:   not defined
+  Suggested: not defined
 
 
 5 Defines controling debug support
