@@ -858,7 +858,7 @@ struct transition
   enum parse_state required_state;
 
   /* A callback called upon each parser state transition. */
-  svn_error_t *(*fn)(enum parse_state *new_state, const char *input,
+  svn_error_t *(*fn)(enum parse_state *new_state, char *input,
                      svn_patch_t *patch, apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 };
@@ -890,7 +890,7 @@ grab_filename(const char **file_name, const char *line, apr_pool_t *result_pool,
 
 /* Parse the '--- ' line of a regular unidiff. */
 static svn_error_t *
-diff_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+diff_minus(enum parse_state *new_state, char *line, svn_patch_t *patch,
            apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* If we can find a tab, it separates the filename from
@@ -909,7 +909,7 @@ diff_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the '+++ ' line of a regular unidiff. */
 static svn_error_t *
-diff_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+diff_plus(enum parse_state *new_state, char *line, svn_patch_t *patch,
            apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* If we can find a tab, it separates the filename from
@@ -928,7 +928,7 @@ diff_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the first line of a git extended unidiff. */
 static svn_error_t *
-git_start(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_start(enum parse_state *new_state, char *line, svn_patch_t *patch,
           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   const char *old_path_start;
@@ -1033,7 +1033,7 @@ git_start(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the '--- ' line of a git extended unidiff. */
 static svn_error_t *
-git_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_minus(enum parse_state *new_state, char *line, svn_patch_t *patch,
           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* If we can find a tab, it separates the filename from
@@ -1055,14 +1055,14 @@ git_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the '+++ ' line of a git extended unidiff. */
 static svn_error_t *
-git_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_plus(enum parse_state *new_state, char *line, svn_patch_t *patch,
           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* If we can find a tab, it separates the filename from
    * the rest of the line which we can discard. */
   char *tab = strchr(line, '\t');
   if (tab)
-    *tab = '\0'; /* ### indirectly modifying LINE, which is const */
+    *tab = '\0';
 
   if (starts_with(line, "+++ /dev/null"))
     SVN_ERR(grab_filename(&patch->new_filename, "/dev/null",
@@ -1077,7 +1077,7 @@ git_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the 'rename from ' line of a git extended unidiff. */
 static svn_error_t *
-git_move_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_move_from(enum parse_state *new_state, char *line, svn_patch_t *patch,
               apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   SVN_ERR(grab_filename(&patch->old_filename,
@@ -1090,7 +1090,7 @@ git_move_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the 'rename to ' line of a git extended unidiff. */
 static svn_error_t *
-git_move_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_move_to(enum parse_state *new_state, char *line, svn_patch_t *patch,
             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   SVN_ERR(grab_filename(&patch->new_filename,
@@ -1105,7 +1105,7 @@ git_move_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the 'copy from ' line of a git extended unidiff. */
 static svn_error_t *
-git_copy_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_copy_from(enum parse_state *new_state, char *line, svn_patch_t *patch,
               apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   SVN_ERR(grab_filename(&patch->old_filename,
@@ -1118,7 +1118,7 @@ git_copy_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the 'copy to ' line of a git extended unidiff. */
 static svn_error_t *
-git_copy_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_copy_to(enum parse_state *new_state, char *line, svn_patch_t *patch,
             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   SVN_ERR(grab_filename(&patch->new_filename, line + STRLEN_LITERAL("copy to "),
@@ -1132,7 +1132,7 @@ git_copy_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the 'new file ' line of a git extended unidiff. */
 static svn_error_t *
-git_new_file(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_new_file(enum parse_state *new_state, char *line, svn_patch_t *patch,
              apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch->operation = svn_diff_op_added;
@@ -1145,7 +1145,7 @@ git_new_file(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the 'deleted file ' line of a git extended unidiff. */
 static svn_error_t *
-git_deleted_file(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_deleted_file(enum parse_state *new_state, char *line, svn_patch_t *patch,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch->operation = svn_diff_op_deleted;
