@@ -857,8 +857,6 @@ enum parse_state
    state_copy_from_seen,  /* copy from foo.c */
    state_minus_seen,      /* --- foo.c */
    state_unidiff_found,   /* valid start of a regular unidiff header */
-   state_add_seen,        /* ### unused? */
-   state_del_seen,        /* ### unused? */
    state_git_header_found /* valid start of a --git diff header */
 };
 
