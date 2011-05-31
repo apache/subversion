@@ -448,13 +448,7 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
 
   (*status)->switched = old_status->switched;
 
-#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
-  if (old_status->versioned
-      && old_status->switched
-      && old_status->kind == svn_node_file)
-#else
   if (old_status->node_status == svn_wc_status_external)
-#endif
     {
       svn_node_kind_t external_kind;
 
@@ -465,12 +459,7 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
                                          scratch_pool, scratch_pool));
 
       if (external_kind == svn_node_file)
-        {
-#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
-          (*status)->switched = FALSE;
-#endif
-          (*status)->file_external = TRUE;
-        }
+        (*status)->file_external = TRUE;
     }
 
   (*status)->text_status = old_status->node_status;

@@ -1641,13 +1641,11 @@ svn_wc__upgrade_sdb(int *result_format,
         *result_format = 28;
         /* FALLTHROUGH  */
 
-#if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
       case 28:
         SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_29, &bb,
                                              scratch_pool));
         *result_format = 29;
         /* FALLTHROUGH  */
-#endif
 
       /* ### future bumps go here.  */
 #if 0

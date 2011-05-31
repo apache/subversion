@@ -960,51 +960,6 @@ send_unversioned_item(const struct walk_status_baton *wb,
   return SVN_NO_ERROR;
 }
 
-#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
-/* Helper for get_dir_status. If LOCAL_ABSPATH has "svn:externals" property
-   set on it, send the name and value to WB->external_func, along with
-   this directory's depth, but skip this step if LOCAL_ABSPATH is the anchor
-   of a specific target.  (Also, we want to track the externals internally
-   so we can report status more accurately.) */
-static svn_error_t *
-handle_externals(const struct walk_status_baton *wb,
-                 const char *local_abspath,
-                 svn_depth_t depth,
-                 apr_pool_t *scratch_pool)
-{
-  const svn_string_t *prop_val;
-
-  SVN_ERR(svn_wc__internal_propget(&prop_val, wb->db, local_abspath,
-                                   SVN_PROP_EXTERNALS, scratch_pool,
-                                   scratch_pool));
-  if (prop_val)
-    {
-      apr_pool_t *hash_pool = apr_hash_pool_get(wb->externals);
-      apr_array_header_t *ext_items;
-      int i;
-
-      /* Now, parse the thing, and copy the parsed results into
-         our "global" externals hash. */
-      SVN_ERR(svn_wc_parse_externals_description3(&ext_items, local_abspath,
-                                                  prop_val->data, FALSE,
-                                                  scratch_pool));
-      for (i = 0; ext_items && i < ext_items->nelts; i++)
-        {
-          const svn_wc_external_item2_t *item;
-
-          item = APR_ARRAY_IDX(ext_items, i, const svn_wc_external_item2_t *);
-          apr_hash_set(wb->externals, svn_dirent_join(local_abspath,
-                                                      item->target_dir,
-                                                      hash_pool),
-                       APR_HASH_KEY_STRING, "");
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-#endif
-
-
 /* Send svn_wc_status3_t * structures for the directory LOCAL_ABSPATH and
    for all its entries through STATUS_FUNC/STATUS_BATON, or, if SELECTED
    is non-NULL, only for that directory entry.
@@ -1128,15 +1083,6 @@ get_dir_status(const struct walk_status_baton *wb,
 
       apr_hash_set(all_children, selected, APR_HASH_KEY_STRING, selected);
     }
-
-#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
-  /* If "this dir" has "svn:externals" property set on it, send the name and
-     value to wc->external_func along with this directory's depth. (Also,
-     we want to track the externals internally so we can report status more
-     accurately.) */
-  if (dir_info->had_props)
-    SVN_ERR(handle_externals(wb, local_abspath, dir_info->depth, iterpool));
-#endif
 
   if (!selected)
     {
@@ -2247,13 +2193,9 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
   eb->wb.repos_locks      = NULL;
   eb->wb.repos_root       = NULL;
 
-#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
-  eb->wb.externals = apr_hash_make(result_pool);
-#else
   SVN_ERR(svn_wc__db_externals_defined_below(&eb->wb.externals,
                                              wc_ctx->db, eb->target_abspath,
                                              result_pool, scratch_pool));
-#endif
 
   /* Use the caller-provided ignore patterns if provided; the build-time
      configured defaults otherwise. */
@@ -2341,12 +2283,8 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
   wb.repos_root = NULL;
   wb.repos_locks = NULL;
 
-#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
-  wb.externals = apr_hash_make(scratch_pool);
-#else
   SVN_ERR(svn_wc__db_externals_defined_below(&wb.externals, db, local_abspath,
                                              scratch_pool, scratch_pool));
-#endif
 
   /* Use the caller-provided ignore patterns if provided; the build-time
      configured defaults otherwise. */
