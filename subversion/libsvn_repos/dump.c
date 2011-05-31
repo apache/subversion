@@ -36,7 +36,7 @@
 #include "svn_props.h"
 
 #include "private/svn_mergeinfo_private.h"
-#include "private/svn_fs_util.h"
+#include "private/svn_fs_private.h"
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
 
