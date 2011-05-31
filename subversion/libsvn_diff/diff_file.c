@@ -2305,7 +2305,8 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
   /* Check what eol marker we should use for conflict markers.
      We use the eol marker of the modified file and fall back on the
      platform's eol marker if that file doesn't contain any newlines. */
-  eol = svn_eol__detect_eol(baton.buffer[1], baton.endp[1]);
+  eol = svn_eol__detect_eol(baton.buffer[1], baton.endp[1] - baton.buffer[1],
+                            NULL);
   if (! eol)
     eol = APR_EOL_STR;
   baton.marker_eol = eol;
