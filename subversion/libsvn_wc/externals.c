@@ -943,7 +943,6 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
 svn_error_t *
 svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
-                            const char *wri_abspath,
                             const svn_ra_reporter3_t *reporter,
                             void *report_baton,
                             svn_boolean_t restore_files,
@@ -962,9 +961,6 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
   const char *repos_root_url;
   const char *repos_relpath;
   svn_boolean_t update_root;
-
-  if (! wri_abspath)
-    wri_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
   err = svn_wc__db_base_get_info(NULL, &kind, &revision,
                                  &repos_relpath, &repos_root_url, NULL, NULL,

@@ -87,7 +87,6 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
 svn_error_t *
 svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
-                            const char *wri_abspath,
                             const svn_ra_reporter3_t *reporter,
                             void *report_baton,
                             svn_boolean_t restore_files,
