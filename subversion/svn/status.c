@@ -137,6 +137,13 @@ print_status(const char *path,
   char tree_status_code = ' ';
   const char *tree_desc_line = "";
 
+  /* For historic reasons svn ignores the property status for added nodes, even
+     if these nodes were copied and have local property changes.
+
+     Note that it doesn't do this on replacements, or children of copies.
+
+     ### Our test suite would catch more errors if we reported property
+         changes on copies. */
   if (node_status == svn_wc_status_added)
       prop_status = svn_wc_status_none;
 
