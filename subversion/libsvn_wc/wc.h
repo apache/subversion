@@ -182,8 +182,6 @@ extern "C" {
 /* A version < this has no work queue (see workqueue.h).  */
 #define SVN_WC__HAS_WORK_QUEUE 13
 
-#define SVN_WC__HAS_EXTERNALS_STORE 29
-
 /* Return true iff error E indicates an "is not a working copy" type
    of error, either because something wasn't a working copy at all, or
    because it's a working copy from a previous version (in need of

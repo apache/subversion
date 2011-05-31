@@ -76,10 +76,8 @@ get_pristine_fname(const char **pristine_abspath,
   subdir[1] = hexdigest[1];
   subdir[2] = '\0';
 
-#if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
   hexdigest = apr_pstrcat(scratch_pool, hexdigest, PRISTINE_STORAGE_EXT,
                           (char *)NULL);
-#endif
 
   /* The file is located at DIR/.svn/pristine/XX/XXYYZZ...svn-base */
   *pristine_abspath = svn_dirent_join_many(result_pool,

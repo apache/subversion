@@ -1410,7 +1410,6 @@ test_externals_store(apr_pool_t *pool)
                                        NULL,
                                        pool));
 
-#if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
   SVN_ERR(svn_wc__db_external_add_dir(db,
                                       dir_external_path,
                                       local_abspath /* wri_abspath */,
@@ -1422,7 +1421,6 @@ test_externals_store(apr_pool_t *pool)
                                       32,
                                       NULL,
                                       pool));
-#endif
 
   {
     svn_wc__db_status_t status;
@@ -1446,11 +1444,7 @@ test_externals_store(apr_pool_t *pool)
     SVN_TEST_ASSERT(kind == svn_wc__db_kind_file);
     SVN_TEST_STRING_ASSERT(repos_root_url, "svn://some-repos/svn");
     SVN_TEST_STRING_ASSERT(repos_uuid, "not-a-uuid");
-#if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
     SVN_TEST_STRING_ASSERT(defining_abspath, subdir);
-#else
-    SVN_TEST_ASSERT(defining_abspath == NULL);
-#endif
     SVN_TEST_STRING_ASSERT(recorded_repos_relpath, "some/new-location");
     SVN_TEST_ASSERT(recorded_peg_revision == 90);
     SVN_TEST_ASSERT(recorded_revision == 12);
@@ -1469,7 +1463,6 @@ test_externals_store(apr_pool_t *pool)
       SVN_TEST_STRING_ASSERT(v->data, "value-data");
     }
 
-#if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
     SVN_ERR(svn_wc__db_external_read(&status, &kind, &defining_abspath,
                                      &repos_root_url, &repos_uuid,
                                      &recorded_repos_relpath,
@@ -1486,7 +1479,6 @@ test_externals_store(apr_pool_t *pool)
     SVN_TEST_STRING_ASSERT(recorded_repos_relpath, "some/other-location");
     SVN_TEST_ASSERT(recorded_peg_revision == 70);
     SVN_TEST_ASSERT(recorded_revision == 32);
-#endif
   }
 
   return SVN_NO_ERROR;
