@@ -1075,14 +1075,33 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
 
   /* First, find the mergeinfo difference for old_path_rev->revnum, and
      old_path_rev->revnum - 1. */
-  SVN_ERR(get_path_mergeinfo(&curr_mergeinfo, repos->fs, old_path_rev->path,
-                             old_path_rev->revnum, subpool));
+  err = get_path_mergeinfo(&curr_mergeinfo, repos->fs, old_path_rev->path,
+                           old_path_rev->revnum, subpool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+        {
+          /* Issue #3896: If invalid mergeinfo is encountered the
+             best we can do is ignore it and act is if there are
+             no mergeinfo differences. */
+          svn_error_clear(err);
+          svn_pool_destroy(subpool);
+          *merged_mergeinfo = NULL;
+          return SVN_NO_ERROR;
+        }
+      else
+        {
+          return svn_error_return(err);
+        }
+    }
+
   err = get_path_mergeinfo(&prev_mergeinfo, repos->fs, old_path_rev->path,
                            old_path_rev->revnum - 1, subpool);
-  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND
+              || err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR))
     {
-      /* If the path doesn't exist in the previous revision, assume no
-         merges */
+      /* If the path doesn't exist in the previous revision or it does exist
+         but has invalid mergeinfo (Issue #3896), assume no merges. */
       svn_error_clear(err);
       svn_pool_destroy(subpool);
       *merged_mergeinfo = NULL;
