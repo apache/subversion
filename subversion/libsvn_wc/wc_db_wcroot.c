@@ -472,7 +472,13 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                                     svn_sqlite__mode_readwrite, NULL,
                                     db->state_pool, scratch_pool);
       if (err == NULL)
-        break;
+        {
+#ifdef SVN_DEBUG
+          /* Install self-verification trigger statements. */
+          SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_VERIFICATION_TRIGGERS));
+#endif
+          break;
+        }
       if (err->apr_err != SVN_ERR_SQLITE_ERROR
           && !APR_STATUS_IS_ENOENT(err->apr_err))
         return svn_error_return(err);
