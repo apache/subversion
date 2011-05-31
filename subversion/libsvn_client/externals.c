@@ -223,11 +223,10 @@ switch_dir_external(const char *local_abspath,
                                                   ctx, subpool));
 
               {
-                const char *repos_root_url;
                 const char *repos_uuid;
                 const char *repos_relpath;
 
-                SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url,
+                SVN_ERR(svn_wc__node_get_repos_info(NULL,
                                                     &repos_uuid,
                                                     ctx->wc_ctx, local_abspath,
                                                     subpool, subpool));
