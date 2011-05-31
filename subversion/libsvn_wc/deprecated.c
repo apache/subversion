@@ -4203,39 +4203,3 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
-
-#ifdef SVN_DISABLE_FULL_VERSION_MATCH
-/* This double underscore name is used by the 1.6 libsvn_client.
-   Keeping this name is sufficient for the 1.6 libsvn_client to link
-   against the 1.7 libraries.  This is only needed for pre-release
-   testing, it's not needed when all the Subversion libraries are
-   upgraded together. */
-svn_error_t *
-svn_wc__entry_versioned_internal(const svn_wc_entry_t **entry,
-                                 const char *path,
-                                 svn_wc_adm_access_t *adm_access,
-                                 svn_boolean_t show_hidden,
-                                 const char *caller_filename,
-                                 int caller_lineno,
-                                 apr_pool_t *pool);
-svn_error_t *
-svn_wc__entry_versioned_internal(const svn_wc_entry_t **entry,
-                                 const char *path,
-                                 svn_wc_adm_access_t *adm_access,
-                                 svn_boolean_t show_hidden,
-                                 const char *caller_filename,
-                                 int caller_lineno,
-                                 apr_pool_t *pool)
-{
-  const char *local_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  SVN_ERR(svn_wc__get_entry_versioned(entry, svn_wc__adm_get_db(adm_access),
-                                      local_abspath, svn_node_unknown,
-                                      show_hidden,
-                                      pool, pool));
-
-  return SVN_NO_ERROR;
-}
-#endif
