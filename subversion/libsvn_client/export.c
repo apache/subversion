@@ -569,6 +569,21 @@ copy_versioned_files(const char *from_abspath,
     }
   else if (from_kind == svn_node_file)
     {
+      svn_node_kind_t to_kind;
+
+      SVN_ERR(svn_io_check_path(to_abspath, &to_kind, pool));
+
+      if ((to_kind == svn_node_file || to_kind == svn_node_unknown) && ! force)
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("Destination file '%s' exists, and "
+                                   "will not be overwritten unless forced"),
+                                 svn_dirent_local_style(to_abspath, pool));
+      else if (to_kind == svn_node_dir)
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("Destination '%s' exists. Cannot "
+                                   "overwrite directory with non-directory"),
+                                 svn_dirent_local_style(to_abspath, pool));
+
       SVN_ERR(copy_one_versioned_file(from_abspath, to_abspath, ctx,
                                       revision, native_eol, ignore_keywords,
                                       pool));
@@ -1064,6 +1079,7 @@ svn_client_export5(svn_revnum_t *result_rev,
           apr_hash_t *props;
           apr_hash_index_t *hi;
           struct file_baton *fb = apr_pcalloc(pool, sizeof(*fb));
+          svn_node_kind_t to_kind;
 
           if (svn_path_is_empty(to_path))
             {
@@ -1080,6 +1096,19 @@ svn_client_export5(svn_revnum_t *result_rev,
               eb->root_path = to_path;
             }
 
+          SVN_ERR(svn_io_check_path(to_path, &to_kind, pool));
+
+          if ((to_kind == svn_node_file || to_kind == svn_node_unknown) &&
+              ! overwrite)
+            return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                     _("Destination file '%s' exists, and "
+                                       "will not be overwritten unless forced"),
+                                     svn_dirent_local_style(to_path, pool));
+          else if (to_kind == svn_node_dir)
+            return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                     _("Destination '%s' exists. Cannot "
+                                       "overwrite directory with non-directory"),
+                                     svn_dirent_local_style(to_path, pool));
 
           /* Since you cannot actually root an editor at a file, we
            * manually drive a few functions of our editor. */
