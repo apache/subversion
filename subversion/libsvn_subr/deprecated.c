@@ -1102,3 +1102,38 @@ svn_config_read(svn_config_t **cfgp, const char *file,
                                            FALSE,
                                            pool));
 }
+
+#ifdef SVN_DISABLE_FULL_VERSION_MATCH
+/* This double underscore name is used by the 1.6 command line client.
+   Keeping this name is sufficient for the 1.6 client to use the 1.7
+   libraries at runtime. */
+svn_error_t *
+svn_opt__eat_peg_revisions(apr_array_header_t **true_targets_p,
+                           apr_array_header_t *targets,
+                           apr_pool_t *pool);
+svn_error_t *
+svn_opt__eat_peg_revisions(apr_array_header_t **true_targets_p,
+                           apr_array_header_t *targets,
+                           apr_pool_t *pool)
+{
+  unsigned int i;
+  apr_array_header_t *true_targets;
+
+  true_targets = apr_array_make(pool, 5, sizeof(const char *));
+
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      const char *true_target;
+
+      SVN_ERR(svn_opt__split_arg_at_peg_revision(&true_target, NULL,
+                                                 target, pool));
+      APR_ARRAY_PUSH(true_targets, const char *) = true_target;
+    }
+
+  SVN_ERR_ASSERT(true_targets_p);
+  *true_targets_p = true_targets;
+
+  return SVN_NO_ERROR;
+}
+#endif
