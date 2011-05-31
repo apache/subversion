@@ -300,15 +300,17 @@ scan_eol(const char **eol, apr_file_t *file, apr_size_t max_len,
 
       if (len > 0)
         {
+          char *eolp;
+
           buf[len] = '\0';
           total_len += len;
 
-          eol_str = svn_eol__detect_eol(buf, buf + len);
+          eol_str = svn_eol__detect_eol(buf, len, &eolp);
 
           /* Detect the case where '\r' is the last character in the buffer
            * and '\n' would be the first character in the next buffer. */
           if (eol_str && eol_str[0] == '\r' && eol_str[1] == '\0' &&
-              buf[len - 1] == '\r')
+              eolp == buf + len)
             {
               len = 1;
               SVN_ERR(svn_io_file_read_full2(file, buf, 1, &len, &eof, pool));

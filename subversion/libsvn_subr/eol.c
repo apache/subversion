@@ -96,20 +96,22 @@ svn_eol__find_eol_start(char *buf, apr_size_t len)
 }
 
 const char *
-svn_eol__detect_eol(char *buf, char *endp)
+svn_eol__detect_eol(char *buf, apr_size_t len, char **eolp)
 {
-  const char *eol;
+  char *eol;
 
-  SVN_ERR_ASSERT_NO_RETURN(buf <= endp);
-  eol = svn_eol__find_eol_start(buf, endp - buf);
+  eol = svn_eol__find_eol_start(buf, len);
   if (eol)
     {
+      if (eolp)
+        *eolp = eol;
+
       if (*eol == '\n')
         return "\n";
 
       /* We found a CR. */
       ++eol;
-      if (eol == endp || *eol != '\n')
+      if (eol == buf + len || *eol != '\n')
         return "\r";
       return "\r\n";
     }
@@ -163,7 +165,7 @@ svn_eol__detect_file_eol(const char **eol, apr_file_t *file, apr_pool_t *pool)
       /* Try to detect the EOL style of the file by searching the
        * current chunk. */
       SVN_ERR_ASSERT(nbytes <= sizeof(buf));
-      *eol = svn_eol__detect_eol(buf, buf + nbytes);
+      *eol = svn_eol__detect_eol(buf, nbytes, NULL);
     }
   while (*eol == NULL);
 
