@@ -1907,10 +1907,6 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
    (a valid reference into the pristine store) and PRISTINE_PROPS to the node's
    pristine properties (to use for installing the file).
 
-   If IS_FILE_EXTERNAL is not NULL, check if the node might be a file external
-   when the node is not present in the working copy and return that information
-   instead and set *IS_FILE_EXTERNAL to true.
-
    If WRI_ABSPATH is not NULL, check for information in the working copy
    identified by WRI_ABSPATH.
    */
@@ -1922,7 +1918,6 @@ svn_wc__db_read_node_install_info(const char **wcroot_abspath,
                                   const char **target,
                                   apr_hash_t **pristine_props,
                                   apr_time_t *changed_date,
-                                  svn_boolean_t *is_file_external,
                                   svn_wc__db_t *db,
                                   const char *local_abspath,
                                   const char *wri_abspath,

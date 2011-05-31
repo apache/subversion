@@ -630,7 +630,6 @@ run_file_install(svn_wc__db_t *db,
   const char *wcroot_abspath;
   const char *source_abspath;
   const svn_checksum_t *checksum;
-  svn_boolean_t is_file_external;
   apr_hash_t *props;
   apr_time_t changed_date;
 
@@ -646,7 +645,6 @@ run_file_install(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_read_node_install_info(&wcroot_abspath, NULL, NULL,
                                             &checksum, NULL, &props,
                                             &changed_date,
-                                            &is_file_external,
                                             db, local_abspath, wri_abspath,
                                             scratch_pool, scratch_pool));
 
@@ -748,7 +746,7 @@ run_file_install(svn_wc__db_t *db,
     }
 
   /* ### this should happen before we rename the file into place.  */
-  if (record_fileinfo && !is_file_external)
+  if (record_fileinfo)
     {
       SVN_ERR(get_and_record_fileinfo(db, local_abspath,
                                       FALSE /* ignore_enoent */,
