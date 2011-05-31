@@ -141,7 +141,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       if (!info->log_entry->changed_paths2)
         {
           info->log_entry->changed_paths2 = apr_hash_make(info->pool);
-          info->log_entry->changed_paths = info->log_entry->changed_paths;
+          info->log_entry->changed_paths = info->log_entry->changed_paths2;
         }
 
       info->tmp_path = svn_log_changed_path2_create(info->pool);
