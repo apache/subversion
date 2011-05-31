@@ -885,13 +885,29 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
       svn_mergeinfo_t mergeinfo = NULL;
       svn_boolean_t inherited;
       const char *walk_path;
+      svn_error_t *err;
 
       /* Get the TARGET_WCPATH's explicit mergeinfo. */
-      SVN_ERR(svn_client__get_wc_mergeinfo(&target_mergeinfo, &inherited,
-                                           svn_mergeinfo_inherited,
-                                           target_abspath,
-                                           limit_abspath,
-                                           &walk_path, ctx, pool, pool));
+      err = svn_client__get_wc_mergeinfo(&target_mergeinfo, &inherited,
+                                         svn_mergeinfo_inherited,
+                                         target_abspath,
+                                         limit_abspath,
+                                         &walk_path, ctx, pool, pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+            {
+              /* Issue #3896: If we attempt elision because invalid
+                 mergeinfo is present on TARGET_WCPATH, then don't let
+                 the merge fail, just skip the elision attempt. */
+              svn_error_clear(err);
+              return SVN_NO_ERROR;
+            }
+          else
+            {
+              return svn_error_return(err);
+            }
+        }
 
      /* If TARGET_WCPATH has no explicit mergeinfo, there's nothing to
          elide, we're done. */
@@ -899,21 +915,48 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
         return SVN_NO_ERROR;
 
       /* Get TARGET_WCPATH's inherited mergeinfo from the WC. */
-      SVN_ERR(svn_client__get_wc_mergeinfo(&mergeinfo, &inherited,
-                                           svn_mergeinfo_nearest_ancestor,
-                                           target_abspath,
-                                           limit_abspath,
-                                           &walk_path, ctx, pool, pool));
+      err = svn_client__get_wc_mergeinfo(&mergeinfo, &inherited,
+                                         svn_mergeinfo_nearest_ancestor,
+                                         target_abspath,
+                                         limit_abspath,
+                                         &walk_path, ctx, pool, pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+            {
+              /* Issue #3896 again, but invalid mergeinfo is inherited. */
+              svn_error_clear(err);
+              return SVN_NO_ERROR;
+            }
+          else
+            {
+              return svn_error_return(err);
+            }
+        }
 
       /* If TARGET_WCPATH inherited no mergeinfo from the WC and we are
          not limiting our search to the working copy then check if it
          inherits any from the repos. */
       if (!mergeinfo && !wc_elision_limit_path)
         {
-          SVN_ERR(svn_client__get_wc_or_repos_mergeinfo
-                  (&mergeinfo, &inherited, TRUE,
-                   svn_mergeinfo_nearest_ancestor,
-                   NULL, target_wcpath, ctx, pool));
+          err = svn_client__get_wc_or_repos_mergeinfo(
+            &mergeinfo, &inherited, TRUE,
+            svn_mergeinfo_nearest_ancestor,
+            NULL, target_wcpath, ctx, pool);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+                {
+                  /* Issue #3896 again, but invalid mergeinfo is inherited
+                     from the repository. */
+                  svn_error_clear(err);
+                  return SVN_NO_ERROR;
+                }
+              else
+                {
+                  return svn_error_return(err);
+                }
+            }
         }
 
       /* If there is nowhere to elide TARGET_WCPATH's mergeinfo to and
