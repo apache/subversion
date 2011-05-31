@@ -779,6 +779,8 @@ datasources_open(void *baton,
       /* There will not be any identical prefix/suffix, so we're done. */
       return SVN_NO_ERROR;
 
+#ifndef DISABLE_PREFIX_SUFFIX_SCANNING
+
   SVN_ERR(find_identical_prefix(&reached_one_eof, prefix_lines,
                                 files, datasources_len, file_baton->pool));
 
@@ -787,6 +789,8 @@ datasources_open(void *baton,
      * so there may be some identical suffix.  */
     SVN_ERR(find_identical_suffix(suffix_lines, files, datasources_len,
                                   file_baton->pool));
+
+#endif
 
   /* Copy local results back to baton. */
   for (i = 0; i < datasources_len; i++)
