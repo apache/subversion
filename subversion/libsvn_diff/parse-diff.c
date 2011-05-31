@@ -316,9 +316,6 @@ scan_eol(const char **eol, apr_file_t *file, apr_size_t max_len,
               SVN_ERR(svn_io_file_read_full2(file, buf, 1, &len, &eof, pool));
               if (!eof && len == 1 && buf[0] == '\n')
                 eol_str = "\r\n";
-
-              /* We got either \r or \r\n, get outta here. */
-              break;
             }
         }
 
