@@ -26,7 +26,7 @@
 
 /* ------------------------------------------------------------------------- */
 
-CREATE TRIGGER no_repository_updates BEFORE UPDATE ON REPOSITORY
+CREATE TEMP TRIGGER no_repository_updates BEFORE UPDATE ON REPOSITORY
 BEGIN
   SELECT RAISE(FAIL, 'Updates to REPOSITORY are not allowed.');
 END;
@@ -34,7 +34,7 @@ END;
 /* ------------------------------------------------------------------------- */
 
 /* Verify: on every NODES row: parent_relpath is parent of local_relpath */
-CREATE TRIGGER validation_01 BEFORE INSERT ON NODES
+CREATE TEMP TRIGGER validation_01 BEFORE INSERT ON NODES
 WHEN NOT ((new.local_relpath = '' AND new.parent_relpath IS NULL)
           OR (relpath_depth(new.local_relpath)
               = relpath_depth(new.parent_relpath) + 1))
@@ -43,14 +43,14 @@ BEGIN
 END;
 
 /* Verify: on every NODES row: its op-depth <= its own depth */
-CREATE TRIGGER validation_02 BEFORE INSERT ON NODES
+CREATE TEMP TRIGGER validation_02 BEFORE INSERT ON NODES
 WHEN NOT new.op_depth <= relpath_depth(new.local_relpath)
 BEGIN
   SELECT RAISE(FAIL, 'WC DB validity check 02 failed');
 END;
 
 /* Verify: on every NODES row: it is an op-root or its op-root row exists. */
-CREATE TRIGGER validation_03 BEFORE INSERT ON NODES
+CREATE TEMP TRIGGER validation_03 BEFORE INSERT ON NODES
 WHEN NOT (
     (new.op_depth = relpath_depth(new.local_relpath))
     OR
