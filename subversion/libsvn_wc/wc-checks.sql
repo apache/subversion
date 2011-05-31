@@ -54,10 +54,9 @@ CREATE TEMPORARY TRIGGER validation_03 BEFORE INSERT ON nodes
 WHEN NOT (
     (new.op_depth = relpath_depth(new.local_relpath))
     OR
-    ((SELECT COUNT(*) FROM nodes
-      WHERE wc_id = new.wc_id AND op_depth = new.op_depth
-        AND local_relpath = new.parent_relpath
-      LIMIT 2) == 1)
+    (EXISTS (SELECT 1 FROM nodes
+              WHERE wc_id = new.wc_id AND op_depth = new.op_depth
+                AND local_relpath = new.parent_relpath))
   )
 BEGIN
   SELECT RAISE(FAIL, 'WC DB validity check 03 failed');
