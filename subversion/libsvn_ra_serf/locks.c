@@ -598,7 +598,8 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       lock_info_t *lock_ctx;
       const void *key;
       void *val;
-      svn_error_t *err, *new_err;
+      svn_error_t *err;
+      svn_error_t *new_err = NULL;
 
       svn_pool_clear(subpool);
 
