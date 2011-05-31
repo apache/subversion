@@ -186,14 +186,6 @@ svn_fs__path_change_create_internal(const svn_fs_id_t *node_rev_id,
                                     svn_fs_path_change_kind_t change_kind,
                                     apr_pool_t *pool);
 
-/* Check whether PATH is valid for a filesystem, following (most of) the
- * requirements in svn_fs.h:"Directory entry names and directory paths".
- *
- * Return SVN_ERR_FS_PATH_SYNTAX if PATH is not valid.
- */
-svn_error_t *
-svn_fs__path_valid(const char *path, apr_pool_t *pool);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
