@@ -2644,12 +2644,6 @@ insert_external_node(void *baton,
   SVN_ERR_ASSERT(ieb->presence == svn_wc__db_status_normal
                  || ieb->presence == svn_wc__db_status_excluded);
 
-  if (ieb->repos_id != INVALID_REPOS_ID)
-    repos_id = ieb->repos_id;
-  else
-    SVN_ERR(create_repos_id(&repos_id, ieb->repos_root_url, ieb->repos_uuid,
-                            wcroot->sdb, scratch_pool));
-
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_EXTERNAL));
 
   SVN_ERR(svn_sqlite__bindf(stmt, "issttsis",
