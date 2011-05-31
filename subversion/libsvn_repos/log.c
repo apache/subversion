@@ -1595,6 +1595,7 @@ handle_merged_revisions(svn_revnum_t rev,
     SVN_ERR(combine_mergeinfo_path_lists(&combined_list, deleted_mergeinfo,
                                           TRUE, pool));
 
+  SVN_ERR_ASSERT(combined_list != NULL);
   qsort(combined_list->elts, combined_list->nelts,
         combined_list->elt_size, compare_path_list_range);
 
