@@ -1345,7 +1345,7 @@ def verify_non_utf8_paths(sbox):
       # fix up the representation checksum
       fp_new.write("text: 1 279 32 32 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
     elif line == "cpath: /A\n":
-      # also fix up copyfrom references to this path
+      # also fix up the 'created path' field
       fp_new.write("cpath: /\xE6\n")
     elif line == "_0.0.t0-0 add-file true true /A\n":
       # and another occurrance
