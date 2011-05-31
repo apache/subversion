@@ -39,15 +39,12 @@
 
 #include "private/svn_sqlite.h"
 
-#include "../../libsvn_wc/wc.h"
 #include "../../libsvn_wc/wc_db.h"
-#include "../../libsvn_wc/wc-queries.h"
-#define SVN_WC__I_AM_WC_DB
-#include "../../libsvn_wc/wc_db_private.h"
 
 #include "private/svn_wc_private.h"
 
 #include "../svn_test.h"
+#include "utils.h"
 
 
 #define ROOT_ONE "http://example.com/one"
@@ -309,39 +306,6 @@ static const char * const TESTING_DATA = (
    "  '" G_TC_DATA "', null, null, null, null);"
    );
 
-WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
-
-
-static svn_error_t *
-create_fake_wc(const char *subdir_abspath, apr_pool_t *scratch_pool)
-{
-  const char *dotsvn_abspath = svn_dirent_join(subdir_abspath, ".svn",
-                                               scratch_pool);
-  const char *db_abspath = svn_dirent_join(dotsvn_abspath, "wc.db",
-                                           scratch_pool);
-  svn_sqlite__db_t *sdb;
-  const char * const my_statements[] = {
-    statements[STMT_CREATE_SCHEMA],
-    statements[STMT_CREATE_NODES],
-    statements[STMT_CREATE_NODES_TRIGGERS],
-    statements[STMT_CREATE_EXTERNALS],
-    TESTING_DATA,
-    NULL
-  };
-  int i;
-
-  SVN_ERR(svn_io_make_dir_recursively(dotsvn_abspath, scratch_pool));
-  svn_error_clear(svn_io_remove_file(db_abspath, scratch_pool));
-  SVN_ERR(svn_wc__db_util_open_db(&sdb, subdir_abspath, "wc.db",
-                                  svn_sqlite__mode_rwcreate, my_statements,
-                                  scratch_pool, scratch_pool));
-
-  for (i = 0; my_statements[i] != NULL; i++)
-    SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ i));
-
-  return SVN_NO_ERROR;
-}
-
 
 static svn_error_t *
 create_open(svn_wc__db_t **db,
@@ -353,7 +317,7 @@ create_open(svn_wc__db_t **db,
                                   svn_dirent_join("fake-wc", subdir, pool),
                                   pool));
   SVN_ERR(svn_wc__db_open(db, NULL, TRUE, TRUE, pool, pool));
-  SVN_ERR(create_fake_wc(*local_abspath, pool));
+  SVN_ERR(svn_test__create_fake_wc(*local_abspath, TESTING_DATA, pool, pool));
 
   return SVN_NO_ERROR;
 }

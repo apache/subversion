@@ -27,6 +27,12 @@
 
 #include "../svn_test_fs.h"
 
+#include "../../libsvn_wc/wc.h"
+#include "../../libsvn_wc/wc-queries.h"
+#define SVN_WC__I_AM_WC_DB
+#include "../../libsvn_wc/wc_db_private.h"
+
+
 /* Create an empty repository and WC for the test TEST_NAME.  Set *REPOS_URL
  * to the URL of the new repository and *WC_ABSPATH to the root path of the
  * new WC.
@@ -81,6 +87,46 @@ create_repos_and_wc(const char **repos_url,
 
   /* Register this WC for cleanup. */
   svn_test_add_dir_cleanup(*wc_abspath);
+
+  return SVN_NO_ERROR;
+}
+
+
+WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
+
+svn_error_t *
+svn_test__create_fake_wc(const char *wc_abspath,
+                         const char *extra_statements,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  const char *dotsvn_abspath = svn_dirent_join(wc_abspath, ".svn",
+                                               scratch_pool);
+  const char *db_abspath = svn_dirent_join(dotsvn_abspath, "wc.db",
+                                           scratch_pool);
+  svn_sqlite__db_t *sdb;
+  const char **my_statements;
+  int i;
+
+  /* Allocate MY_STATEMENTS in RESULT_POOL because the SDB will continue to
+   * refer to it over its lifetime. */
+  my_statements = apr_palloc(result_pool, 6 * sizeof(const char *));
+  my_statements[0] = statements[STMT_CREATE_SCHEMA];
+  my_statements[1] = statements[STMT_CREATE_NODES];
+  my_statements[2] = statements[STMT_CREATE_NODES_TRIGGERS];
+  my_statements[3] = statements[STMT_CREATE_EXTERNALS];
+  my_statements[4] = extra_statements;
+  my_statements[5] = NULL;
+
+  /* Create fake-wc/SUBDIR/.svn/ for placing the metadata. */
+  SVN_ERR(svn_io_make_dir_recursively(dotsvn_abspath, scratch_pool));
+
+  svn_error_clear(svn_io_remove_file(db_abspath, scratch_pool));
+  SVN_ERR(svn_wc__db_util_open_db(&sdb, wc_abspath, "wc.db",
+                                  svn_sqlite__mode_rwcreate, my_statements,
+                                  result_pool, scratch_pool));
+  for (i = 0; my_statements[i] != NULL; i++)
+    SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ i));
 
   return SVN_NO_ERROR;
 }
