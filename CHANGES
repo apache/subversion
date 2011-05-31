@@ -141,6 +141,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * svnsync now takes the '--config-option' argument (issue #2027)
     * svnsync can translate non-UTF-8 properties to UTF-8 (issue #3817)
     * svnadmin now errors on non-UTF-8 revision properties (issue #3755)
+    * svnadmin verify now errors on non-UTF-8 paths (r1129641)
 
  Developer-visible changes:
   - General:
