@@ -62,3 +62,14 @@ BEGIN
   SELECT RAISE(FAIL, 'WC DB validity check 03 failed');
 END;
 
+/* Verify: on every ACTUAL row (except root): a NODES row exists at its
+ * parent path. */
+CREATE TEMP TRIGGER validation_04 BEFORE INSERT ON actual_node
+WHEN NOT (new.local_relpath = ''
+          OR (SELECT COUNT(*) FROM nodes
+              WHERE wc_id = new.wc_id
+                AND local_relpath = new.parent_relpath) >= 1)
+BEGIN
+  SELECT RAISE(FAIL, 'WC DB validity check 04 failed');
+END;
+
