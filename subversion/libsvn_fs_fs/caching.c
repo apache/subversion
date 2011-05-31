@@ -93,7 +93,7 @@ warn_on_cache_errors(svn_error_t *err,
   return SVN_NO_ERROR;
 }
 
-#ifdef DEBUG_CACHE_DUMP_STATS
+#ifdef SVN_DEBUG_CACHE_DUMP_STATS
 /* Baton to be used for the dump_cache_statistics() pool cleanup function, */
 struct dump_cache_baton_t
 {
@@ -145,7 +145,7 @@ dump_cache_statistics(void *baton_void)
 
   return result;
 }
-#endif /* DEBUG_CACHE_DUMP_STATS */
+#endif /* SVN_DEBUG_CACHE_DUMP_STATS */
 
 /* This function sets / registers the required callbacks for a given
  * not transaction-specific CACHE object in FS. 
@@ -162,7 +162,7 @@ init_callbacks(svn_cache__t *cache,
 {
   if (cache != NULL)
     {
-#ifdef DEBUG_CACHE_DUMP_STATS
+#ifdef SVN_DEBUG_CACHE_DUMP_STATS
 
       /* schedule printing the access statistics upon pool cleanup,
        * i.e. end of FSFS session.
