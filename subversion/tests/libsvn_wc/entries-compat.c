@@ -38,15 +38,11 @@
 #include "svn_pools.h"
 #include "svn_wc.h"
 
-#include "private/svn_sqlite.h"
-
 #include "../../libsvn_wc/wc.h"
-#include "../../libsvn_wc/wc-queries.h"
 #include "../../libsvn_wc/wc_db.h"
-#define SVN_WC__I_AM_WC_DB
-#include "../../libsvn_wc/wc_db_private.h"
 
 #include "../svn_test.h"
+#include "utils.h"
 
 
 /* NOTE: these must be canonical!  */
@@ -302,65 +298,22 @@ static const char * const M_TESTING_DATA = (
    "  null, null, null, null);"
    );
 
-WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
-
 
 static svn_error_t *
-make_one_db(const char *wc_abspath,
-            const char * const my_statements[],
-            apr_pool_t *scratch_pool)
-{
-  const char *dotsvn_abspath = svn_dirent_join(wc_abspath, ".svn",
-                                               scratch_pool);
-  const char *db_abspath = svn_dirent_join(dotsvn_abspath, "wc.db",
-                                           scratch_pool);
-  svn_sqlite__db_t *sdb;
-  int i;
-
-  /* Create fake-wc/SUBDIR/.svn/ for placing the metadata. */
-  SVN_ERR(svn_io_make_dir_recursively(dotsvn_abspath, scratch_pool));
-
-  svn_error_clear(svn_io_remove_file(db_abspath, scratch_pool));
-  SVN_ERR(svn_wc__db_util_open_db(&sdb, wc_abspath, "wc.db",
-                                  svn_sqlite__mode_rwcreate, my_statements,
-                                  scratch_pool, scratch_pool));
-
-  for (i = 0; my_statements[i] != NULL; i++)
-    SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ i));
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-create_fake_wc(const char *subdir, apr_pool_t *scratch_pool)
+create_fake_wc(const char *subdir, apr_pool_t *pool)
 {
   const char *root;
   const char *wc_abspath;
-  const char * const my_statements[] = {
-    statements[STMT_CREATE_SCHEMA],
-    statements[STMT_CREATE_NODES],
-    statements[STMT_CREATE_NODES_TRIGGERS],
-    TESTING_DATA,
-    NULL
-  };
-  const char * const M_statements[] = {
-    statements[STMT_CREATE_SCHEMA],
-    statements[STMT_CREATE_NODES],
-    statements[STMT_CREATE_NODES_TRIGGERS],
-    M_TESTING_DATA,
-    NULL
-  };
 
-  root = svn_dirent_join("fake-wc", subdir, scratch_pool);
+  root = svn_dirent_join("fake-wc", subdir, pool);
 
-  SVN_ERR(svn_io_remove_dir2(root, TRUE, NULL, NULL, scratch_pool));
+  SVN_ERR(svn_io_remove_dir2(root, TRUE, NULL, NULL, pool));
 
-  SVN_ERR(svn_dirent_get_absolute(&wc_abspath, root, scratch_pool));
-  SVN_ERR(make_one_db(wc_abspath, my_statements, scratch_pool));
+  SVN_ERR(svn_dirent_get_absolute(&wc_abspath, root, pool));
+  SVN_ERR(svn_test__create_fake_wc(wc_abspath, TESTING_DATA, pool, pool));
 
-  wc_abspath = svn_dirent_join(wc_abspath, "M", scratch_pool);
-  SVN_ERR(make_one_db(wc_abspath, M_statements, scratch_pool));
+  wc_abspath = svn_dirent_join(wc_abspath, "M", pool);
+  SVN_ERR(svn_test__create_fake_wc(wc_abspath, M_TESTING_DATA, pool, pool));
 
   return SVN_NO_ERROR;
 }
