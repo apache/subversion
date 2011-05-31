@@ -749,6 +749,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
   svn_fs_root_t *root;
   apr_pool_t *subpool, *iterpool;
   int i;
+  svn_error_t *err;
 
   /* Initialize return value. */
   *added_mergeinfo = apr_hash_make(pool);
@@ -767,9 +768,25 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
   SVN_ERR(svn_fs_revision_root(&root, fs, rev, subpool));
 
   /* Fetch the mergeinfo changes for REV. */
-  SVN_ERR(fs_mergeinfo_changed(&deleted_mergeinfo_catalog,
-                               &added_mergeinfo_catalog,
-                               fs, rev, subpool));
+  err = fs_mergeinfo_changed(&deleted_mergeinfo_catalog,
+                             &added_mergeinfo_catalog,
+                             fs, rev, subpool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+        {
+          /* Issue #3896: If invalid mergeinfo is encountered the
+             best we can do is ignore it and act as if there were
+             no mergeinfo modifications. */
+          svn_error_clear(err);
+          svn_pool_destroy(subpool);
+          return SVN_NO_ERROR;
+        }
+      else
+        {
+          return svn_error_return(err);
+        }
+    }
 
   /* Check our PATHS for any changes to their inherited mergeinfo.
      (We deal with changes to mergeinfo directly *on* the paths in the
@@ -784,7 +801,6 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
       svn_mergeinfo_catalog_t catalog;
       svn_mergeinfo_t prev_mergeinfo, mergeinfo, deleted, added;
       apr_array_header_t *query_paths;
-      svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
@@ -818,14 +834,15 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
 
       /* Fetch the previous mergeinfo (including inherited stuff) for
          this path.  Ignore not-found errors returned by the
-         filesystem.  */
+         filesystem or invalid mergeinfo (Issue #3896).*/
       SVN_ERR(svn_fs_revision_root(&prev_root, fs, prev_rev, iterpool));
       query_paths = apr_array_make(iterpool, 1, sizeof(const char *));
       APR_ARRAY_PUSH(query_paths, const char *) = prev_path;
       err = svn_fs_get_mergeinfo(&catalog, prev_root, query_paths,
                                  svn_mergeinfo_inherited, FALSE, iterpool);
       if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
-                  err->apr_err == SVN_ERR_FS_NOT_DIRECTORY))
+                  err->apr_err == SVN_ERR_FS_NOT_DIRECTORY ||
+                  err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR))
         {
           svn_error_clear(err);
           err = SVN_NO_ERROR;
