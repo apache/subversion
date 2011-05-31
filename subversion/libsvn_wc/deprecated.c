@@ -105,7 +105,7 @@ traversal_info_update(void *baton,
 }
 
 /* Helper for functions that used to gather traversal_info */
-svn_error_t *
+static svn_error_t *
 gather_traversal_info(svn_wc_context_t *wc_ctx,
                       const char *local_abspath,
                       const char *path,
