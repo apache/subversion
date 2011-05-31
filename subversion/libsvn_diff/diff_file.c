@@ -779,7 +779,7 @@ datasources_open(void *baton,
       /* There will not be any identical prefix/suffix, so we're done. */
       return SVN_NO_ERROR;
 
-#ifndef DISABLE_PREFIX_SUFFIX_SCANNING
+#ifndef SVN_DISABLE_PREFIX_SUFFIX_SCANNING
 
   SVN_ERR(find_identical_prefix(&reached_one_eof, prefix_lines,
                                 files, datasources_len, file_baton->pool));
