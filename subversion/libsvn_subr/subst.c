@@ -1381,12 +1381,12 @@ translated_stream_seek(void *baton, const svn_stream_mark_t *mark)
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_io_buffered_fn_t. */
+/* Implements svn_io_is_buffered_fn_t. */
 static svn_boolean_t
-translated_stream_buffered(void *baton)
+translated_stream_is_buffered(void *baton)
 {
   struct translated_stream_baton *b = baton;
-  return svn_stream_buffered(b->stream);
+  return svn_stream_is_buffered(b->stream);
 }
 
 svn_error_t *
@@ -1499,7 +1499,7 @@ stream_translated(svn_stream_t *stream,
   svn_stream_set_close(s, translated_stream_close);
   svn_stream_set_mark(s, translated_stream_mark);
   svn_stream_set_seek(s, translated_stream_seek);
-  svn_stream_set_buffered(s, translated_stream_buffered);
+  svn_stream_set_is_buffered(s, translated_stream_is_buffered);
 
   return s;
 }

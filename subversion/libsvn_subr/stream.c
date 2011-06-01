@@ -53,7 +53,7 @@ struct svn_stream_t {
   svn_close_fn_t close_fn;
   svn_io_mark_fn_t mark_fn;
   svn_io_seek_fn_t seek_fn;
-  svn_io_buffered_fn_t buffered_fn;
+  svn_io_is_buffered_fn_t is_buffered_fn;
 };
 
 
@@ -72,7 +72,7 @@ svn_stream_create(void *baton, apr_pool_t *pool)
   stream->close_fn = NULL;
   stream->mark_fn = NULL;
   stream->seek_fn = NULL;
-  stream->buffered_fn = NULL;
+  stream->is_buffered_fn = NULL;
   return stream;
 }
 
@@ -121,10 +121,10 @@ svn_stream_set_seek(svn_stream_t *stream, svn_io_seek_fn_t seek_fn)
 }
 
 void
-svn_stream_set_buffered(svn_stream_t *stream,
-                        svn_io_buffered_fn_t buffered_fn)
+svn_stream_set_is_buffered(svn_stream_t *stream,
+                           svn_io_is_buffered_fn_t is_buffered_fn)
 {
-  stream->buffered_fn = buffered_fn;
+  stream->is_buffered_fn = is_buffered_fn;
 }
 
 svn_error_t *
@@ -183,13 +183,13 @@ svn_stream_seek(svn_stream_t *stream, const svn_stream_mark_t *mark)
   return stream->seek_fn(stream->baton, mark);
 }
 
-svn_boolean_t 
-svn_stream_buffered(svn_stream_t *stream)
+svn_boolean_t
+svn_stream_is_buffered(svn_stream_t *stream)
 {
-  if (stream->buffered_fn == NULL)
+  if (stream->is_buffered_fn == NULL)
     return FALSE;
 
-  return stream->buffered_fn(stream->baton);
+  return stream->is_buffered_fn(stream->baton);
 }
 
 svn_error_t *
@@ -486,7 +486,7 @@ stream_readline(svn_stringbuf_t **stringbuf,
    * EOL we are looking for. Optimize that common case.
    */
   if (svn_stream_supports_mark(stream) &&
-      svn_stream_buffered(stream) &&
+      svn_stream_is_buffered(stream) &&
       !detect_eol)
     {
       /* We can efficiently read chunks speculatively and reposition the
@@ -676,7 +676,7 @@ seek_handler_empty(void *baton, const svn_stream_mark_t *mark)
 }
 
 static svn_boolean_t
-buffered_handler_empty(void *baton)
+is_buffered_handler_empty(void *baton)
 {
   return FALSE;
 }
@@ -693,7 +693,7 @@ svn_stream_empty(apr_pool_t *pool)
   svn_stream_set_write(stream, write_handler_empty);
   svn_stream_set_mark(stream, mark_handler_empty);
   svn_stream_set_seek(stream, seek_handler_empty);
-  svn_stream_set_buffered(stream, buffered_handler_empty);
+  svn_stream_set_is_buffered(stream, is_buffered_handler_empty);
   return stream;
 }
 
@@ -789,9 +789,9 @@ seek_handler_disown(void *baton, const svn_stream_mark_t *mark)
 }
 
 static svn_boolean_t
-buffered_handler_disown(void *baton)
+is_buffered_handler_disown(void *baton)
 {
-  return svn_stream_buffered(baton);
+  return svn_stream_is_buffered(baton);
 }
 
 svn_stream_t *
@@ -804,7 +804,7 @@ svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool)
   svn_stream_set_write(s, write_handler_disown);
   svn_stream_set_mark(s, mark_handler_disown);
   svn_stream_set_seek(s, seek_handler_disown);
-  svn_stream_set_buffered(s, buffered_handler_disown);
+  svn_stream_set_is_buffered(s, is_buffered_handler_disown);
 
   return s;
 }
@@ -925,7 +925,7 @@ seek_handler_apr(void *baton, const svn_stream_mark_t *mark)
 }
 
 static svn_boolean_t
-buffered_handler_apr(void *baton)
+is_buffered_handler_apr(void *baton)
 {
   struct baton_apr *btn = baton;
   return (apr_file_flags_get(btn->file) & APR_BUFFERED) != 0;
@@ -1006,7 +1006,7 @@ svn_stream_from_aprfile2(apr_file_t *file,
   svn_stream_set_skip(stream, skip_handler_apr);
   svn_stream_set_mark(stream, mark_handler_apr);
   svn_stream_set_seek(stream, seek_handler_apr);
-  svn_stream_set_buffered(stream, buffered_handler_apr);
+  svn_stream_set_is_buffered(stream, is_buffered_handler_apr);
 
   if (! disown)
     svn_stream_set_close(stream, close_handler_apr);
@@ -1607,7 +1607,7 @@ seek_handler_stringbuf(void *baton, const svn_stream_mark_t *mark)
 }
 
 static svn_boolean_t
-buffered_handler_stringbuf(void *baton)
+is_buffered_handler_stringbuf(void *baton)
 {
   return TRUE;
 }
@@ -1631,7 +1631,7 @@ svn_stream_from_stringbuf(svn_stringbuf_t *str,
   svn_stream_set_write(stream, write_handler_stringbuf);
   svn_stream_set_mark(stream, mark_handler_stringbuf);
   svn_stream_set_seek(stream, seek_handler_stringbuf);
-  svn_stream_set_buffered(stream, buffered_handler_stringbuf);
+  svn_stream_set_is_buffered(stream, is_buffered_handler_stringbuf);
   return stream;
 }
 
@@ -1702,7 +1702,7 @@ skip_handler_string(void *baton, apr_size_t *count)
 }
 
 static svn_boolean_t
-buffered_handler_string(void *baton)
+is_buffered_handler_string(void *baton)
 {
   return TRUE;
 }
@@ -1725,7 +1725,7 @@ svn_stream_from_string(const svn_string_t *str,
   svn_stream_set_mark(stream, mark_handler_string);
   svn_stream_set_seek(stream, seek_handler_string);
   svn_stream_set_skip(stream, skip_handler_string);
-  svn_stream_set_buffered(stream, buffered_handler_string);
+  svn_stream_set_is_buffered(stream, is_buffered_handler_string);
   return stream;
 }
 
