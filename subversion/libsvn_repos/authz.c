@@ -776,6 +776,9 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
       return SVN_NO_ERROR;
     }
 
+  /* Sanity check. */
+  SVN_ERR_ASSERT(path[0] == '/');
+
   /* Determine the granted access for the requested path. */
   path = svn_fspath__canonicalize(path, pool);
   current_path = path;
