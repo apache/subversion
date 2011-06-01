@@ -763,7 +763,8 @@ typedef svn_error_t *(*svn_read_fn_t)(void *baton,
                                       char *buffer,
                                       apr_size_t *len);
 
-/** Skip data handler function for a generic stream.  @see svn_stream_t.
+/** Skip data handler function for a generic stream.  @see svn_stream_t
+ * and svn_stream_skip().
  * @since New in 1.7.
  */
 typedef svn_error_t *(*svn_skip_fn_t)(void *baton,
@@ -1082,11 +1083,11 @@ svn_stream_read(svn_stream_t *stream,
                 apr_size_t *len);
 
 /**
- * Skip COUNT bytes from a generic STREAM. If the stream is exhausted
- * before COUNT bytes have been read, an error will be returned and
- * COUNT will be changed to the actual number of bytes skipped.
+ * Skip @a count bytes from a generic @a stream. If the stream is exhausted
+ * before @a *count bytes have been read, return an error and set @a *count
+ * to the actual number of bytes skipped.
  *
- * NOTE. No assumption can be made on the semantics of this function
+ * @note  No assumption can be made on the semantics of this function
  * other than that the stream read pointer will be advanced by *count
  * bytes. Depending on the capabilities of the underlying stream
  * implementation, this may for instance be translated into a sequence
