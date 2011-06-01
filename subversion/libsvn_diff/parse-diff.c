@@ -309,12 +309,12 @@ scan_eol(const char **eol, apr_file_t *file, apr_size_t max_len,
 
           /* Detect the case where '\r' is the last character in the buffer
            * and '\n' would be the first character in the next buffer. */
-          if (eol_str && eol_str[0] == '\r' && eol_str[1] == '\0' &&
+          if (!eof && eol_str && eol_str[0] == '\r' && eol_str[1] == '\0' &&
               eolp == buf + len - 1 && total_len < max_len)
             {
               len = 1;
               SVN_ERR(svn_io_file_read_full2(file, buf, 1, &len, &eof, pool));
-              if (!eof && len == 1 && buf[0] == '\n')
+              if (len == 1 && buf[0] == '\n')
                 eol_str = "\r\n";
             }
         }
