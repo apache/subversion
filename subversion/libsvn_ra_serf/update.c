@@ -445,15 +445,22 @@ set_file_props(void *baton,
 {
   report_info_t *info = baton;
   const svn_delta_editor_t *editor = info->dir->update_editor;
+  apr_pool_t *scratch_pool = pool;  /* ### fix this  */
+  const char *prop_name;
 
   if (strcmp(name, "md5-checksum") == 0
       && strcmp(ns, SVN_DAV_PROP_NS_DAV) == 0)
     info->final_checksum = apr_pstrdup(info->pool, val->data);
 
-  return svn_ra_serf__set_baton_props(editor->change_file_prop,
-                                      info->file_baton,
-                                      ns, name, val, pool);
+  prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
+  if (prop_name != NULL)
+    return svn_error_return(editor->change_file_prop(info->file_baton,
+                                                     prop_name,
+                                                     val,
+                                                     scratch_pool));
+  return SVN_NO_ERROR;
 }
+
 
 static svn_error_t *
 set_dir_props(void *baton,
@@ -463,11 +470,19 @@ set_dir_props(void *baton,
               apr_pool_t *pool)
 {
   report_dir_t *dir = baton;
+  const svn_delta_editor_t *editor = dir->update_editor;
+  apr_pool_t *scratch_pool = pool;  /* ### fix this  */
+  const char *prop_name;
 
-  return svn_ra_serf__set_baton_props(dir->update_editor->change_dir_prop,
-                                      dir->dir_baton,
-                                      ns, name, val, pool);
+  prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
+  if (prop_name != NULL)
+    return svn_error_return(editor->change_dir_prop(dir->dir_baton,
+                                                    prop_name,
+                                                    val,
+                                                    scratch_pool));
+  return SVN_NO_ERROR;
 }
+
 
 static svn_error_t *
 remove_file_props(void *baton,
@@ -478,11 +493,18 @@ remove_file_props(void *baton,
 {
   report_info_t *info = baton;
   const svn_delta_editor_t *editor = info->dir->update_editor;
+  apr_pool_t *scratch_pool = pool;  /* ### fix this  */
+  const char *prop_name;
 
-  return svn_ra_serf__set_baton_props(editor->change_file_prop,
-                                      info->file_baton,
-                                      ns, name, NULL, pool);
+  prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
+  if (prop_name != NULL)
+    return svn_error_return(editor->change_file_prop(info->file_baton,
+                                                     prop_name,
+                                                     NULL,
+                                                     scratch_pool));
+  return SVN_NO_ERROR;
 }
+
 
 static svn_error_t *
 remove_dir_props(void *baton,
@@ -492,10 +514,17 @@ remove_dir_props(void *baton,
                  apr_pool_t *pool)
 {
   report_dir_t *dir = baton;
+  const svn_delta_editor_t *editor = dir->update_editor;
+  apr_pool_t *scratch_pool = pool;  /* ### fix this  */
+  const char *prop_name;
 
-  return svn_ra_serf__set_baton_props(dir->update_editor->change_dir_prop,
-                                      dir->dir_baton,
-                                      ns, name, NULL, pool);
+  prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
+  if (prop_name != NULL)
+    return svn_error_return(editor->change_dir_prop(dir->dir_baton,
+                                                    prop_name,
+                                                    NULL,
+                                                    scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 
