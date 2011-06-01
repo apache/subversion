@@ -269,73 +269,12 @@ parse_hunk_header(const char *header, svn_diff_hunk_t *hunk,
   return TRUE;
 }
 
-/* Set *EOL to the first end-of-line string found in FILE.
- * Start scanning at the current file cursor offset and scan up
- * to MAX_LEN bytes. Leave the current file cursor position unchanged.
- * Allocate *EOL statically; POOL is a scratch pool. */
-static svn_error_t *
-scan_eol(const char **eol, apr_file_t *file, apr_size_t max_len,
-         apr_pool_t *pool)
-{
-  const char *eol_str;
-  apr_off_t pos;
-  apr_size_t total_len;
-
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos, pool));
-
-  eol_str = NULL;
-  total_len = 0;
-  while (! eol_str)
-    {
-      char buf[256];
-      apr_size_t len;
-      svn_boolean_t eof;
-
-      if (total_len >= max_len)
-        break;
-
-      SVN_ERR(svn_io_file_read_full2(file, buf, sizeof(buf) - 1, &len, &eof,
-                                     pool));
-
-      if (len > 0)
-        {
-          char *eolp;
-
-          buf[len] = '\0';
-          total_len += len;
-
-          eol_str = svn_eol__detect_eol(buf, len, &eolp);
-
-          /* Detect the case where '\r' is the last character in the buffer
-           * and '\n' would be the first character in the next buffer. */
-          if (!eof && eol_str && eol_str[0] == '\r' && eol_str[1] == '\0' &&
-              eolp == buf + len - 1 && total_len < max_len)
-            {
-              len = 1;
-              SVN_ERR(svn_io_file_read_full2(file, buf, 1, &len, &eof, pool));
-              if (len == 1 && buf[0] == '\n')
-                eol_str = "\r\n";
-            }
-        }
-
-      if (eof)
-        break;
-    }
-
-  SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, pool));
-
-  *eol = eol_str;
-
-  return SVN_NO_ERROR;
-}
-
 /* A helper function similar to svn_stream_readline_detect_eol(),
  * suitable for reading a line of text from a range in the patch file.
  *
  * Allocate *STRINGBUF in RESULT_POOL, and read into it one line from FILE.
- * Reading stops either after a line-terminator was found or after
- * MAX_LEN bytes have been read.
+ * Reading stops either after a line-terminator was found or after MAX_LEN
+ * bytes have been read. The line-terminator is not stored in *STRINGBUF.
  *
  * The line-terminator is detected automatically and stored in *EOL
  * if EOL is not NULL. If EOF is reached and FILE does not end
@@ -355,46 +294,72 @@ readline(apr_file_t *file,
   svn_stringbuf_t *str;
   const char *eol_str;
   apr_size_t numbytes;
-  const char *match;
   char c;
   apr_size_t len;
+  svn_boolean_t found_eof;
 
   str = svn_stringbuf_create_ensure(80, result_pool);
 
-  SVN_ERR(scan_eol(&eol_str, file, max_len, scratch_pool));
-  if (eol)
-    *eol = eol_str;
-  if (eol_str == NULL)
-    {
-      /* No newline until EOF, EOL_STR can be anything. */
-      eol_str = APR_EOL_STR;
-    }
-
-  /* Read into STR up to and including the next EOL sequence. */
-  match = eol_str;
+  /* Read bytes into STR up to and including, but not storing,
+   * the next EOL sequence. */
+  eol_str = NULL;
   numbytes = 1;
   len = 0;
-  while (*match)
+  found_eof = FALSE;
+  while (!found_eof)
     {
-      SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes, eof,
-                                     scratch_pool));
+      if (len < max_len)
+        SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
+                                       &found_eof, scratch_pool));
       len++;
       if (numbytes != 1 || len > max_len)
         {
-          *eof = TRUE;
-          *stringbuf = str;
-          return SVN_NO_ERROR;
+          found_eof = TRUE;
+          break;
         }
-      if (c == *match)
-        match++;
-      else
-        match = eol_str;
 
-      svn_stringbuf_appendbyte(str, c);
+      if (c == '\n')
+        {
+          eol_str = "\n";
+        }
+      else if (c == '\r')
+        {
+          eol_str = "\r";
+
+          if (!found_eof && len < max_len)
+            {
+              apr_off_t pos;
+
+              /* Check for "\r\n" by peeking at the next byte. */
+              pos = 0;
+              SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos, scratch_pool));
+              SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
+                                             &found_eof, scratch_pool));
+              if (numbytes == 1 && c == '\n') 
+                {
+                  eol_str = "\r\n";
+                  len++;
+                }
+              else
+                {
+                  /* Pretend we never peeked. */
+                  SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
+                  found_eof = FALSE;
+                  numbytes = 1;
+                }
+            }
+        }
+      else
+        svn_stringbuf_appendbyte(str, c);
+
+      if (eol_str)
+        break;
     }
 
-  *eof = FALSE;
-  svn_stringbuf_chop(str, match - eol_str);
+  if (eol)
+    *eol = eol_str;
+  if (eof)
+    *eof = found_eof;
   *stringbuf = str;
 
   return SVN_NO_ERROR;
