@@ -17,9 +17,9 @@ The SVN source code boasts a number of enviroment variable or C pre-
 processor enabled tweaks that are mainly aimed at developer support.
 If you introduce new ones, please document them here.
 
-The usual namespace rules apply: only names that begin with "SVN_"
-and don't contain double underscores are considered part of the public
-API. Everything else is not officially supported.
+The usual namespace rules apply: names that don't begin with "SVN_" or
+contain double underscores are not part of the public API and may change
+arbitrarily at any time (including between patch releases).
 
 
 2 Defines and Environment Variables
