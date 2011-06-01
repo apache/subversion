@@ -925,7 +925,10 @@ static svn_error_t * commit_delete_entry(const char *path,
          target's lock token to those of its children. */
       if ((token = apr_hash_get(parent->cc->lock_tokens, path,
                                 APR_HASH_KEY_STRING)))
-        apr_hash_set(child_tokens, path, APR_HASH_KEY_STRING, token);
+        {
+          /* ### copy PATH into the right pool. which?  */
+          apr_hash_set(child_tokens, path, APR_HASH_KEY_STRING, token);
+        }
 
       SVN_ERR(svn_ra_neon__request_create(&request, parent->cc->ras, "DELETE",
                                           delete_target, pool));
