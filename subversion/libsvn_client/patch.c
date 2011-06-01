@@ -1732,8 +1732,8 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
         }
     }
 
-  /* Match property hunks.   ### Can we use scratch_pool here? */
-  for (hash_index = apr_hash_first(result_pool, patch->prop_patches);
+  /* Match property hunks. */
+  for (hash_index = apr_hash_first(scratch_pool, patch->prop_patches);
        hash_index;
        hash_index = apr_hash_next(hash_index))
     {
@@ -1783,7 +1783,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
     }
 
   /* Apply or reject property hunks. */
-  for (hash_index = apr_hash_first(result_pool, target->prop_targets);
+  for (hash_index = apr_hash_first(scratch_pool, target->prop_targets);
        hash_index;
        hash_index = apr_hash_next(hash_index))
     {
