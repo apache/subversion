@@ -877,7 +877,7 @@ typedef enum svn_diff_operation_kind_e
   svn_diff_op_moved,
   /* There's no tree changes, just text modifications. */
   svn_diff_op_modified
-}svn_diff_operation_kind_t;
+} svn_diff_operation_kind_t;
 
 /**
  * A single hunk inside a patch.
