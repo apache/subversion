@@ -11970,7 +11970,7 @@ svn_wc__db_base_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_int64_t last_repos_id = INVALID_REPOS_ID;
-  const char *last_repos_root_url;
+  const char *last_repos_root_url = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
