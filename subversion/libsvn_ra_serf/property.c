@@ -759,76 +759,69 @@ svn_ra_serf__walk_all_paths(apr_hash_t *props,
 }
 
 
-svn_error_t *
-svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop,
-                             void *baton,
-                             const char *ns,
-                             const char *name,
-                             const svn_string_t *val,
-                             apr_pool_t *pool)
+const char *
+svn_ra_serf__svnname_from_wirename(const char *ns,
+                                   const char *name,
+                                   apr_pool_t *result_pool)
 {
-  const char *prop_name;
+  if (*ns == '\0' || strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
+    return apr_pstrdup(result_pool, name);
 
-  if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
-    prop_name = name;
-  else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
-    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, (char *)NULL);
-  else if (strcmp(ns, SVN_PROP_PREFIX) == 0)
-    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, (char *)NULL);
-  else if (strcmp(ns, "") == 0)
-    prop_name = name;
-  else if (strcmp(name, SVN_DAV__VERSION_NAME) == 0)
-    prop_name = SVN_PROP_ENTRY_COMMITTED_REV;
-  else if (strcmp(name, SVN_DAV__CREATIONDATE) == 0)
-    prop_name = SVN_PROP_ENTRY_COMMITTED_DATE;
-  else if (strcmp(name, "creator-displayname") == 0)
-    prop_name = SVN_PROP_ENTRY_LAST_AUTHOR;
-  else if (strcmp(name, "repository-uuid") == 0)
-    prop_name = SVN_PROP_ENTRY_UUID;
-  else if (strcmp(name, "lock-token") == 0)
-    prop_name = SVN_PROP_ENTRY_LOCK_TOKEN;
-  else if (strcmp(name, "checked-in") == 0)
-    prop_name = SVN_RA_SERF__WC_CHECKED_IN_URL;
-  else if (strcmp(ns, "DAV:") == 0 ||
-           strcmp(ns, SVN_DAV_PROP_NS_DAV) == 0)
+  if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
+    return apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
+
+  if (strcmp(ns, SVN_PROP_PREFIX) == 0)
+    return apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
+
+  if (strcmp(name, SVN_DAV__VERSION_NAME) == 0)
+    return SVN_PROP_ENTRY_COMMITTED_REV;
+
+  if (strcmp(name, SVN_DAV__CREATIONDATE) == 0)
+    return SVN_PROP_ENTRY_COMMITTED_DATE;
+
+  if (strcmp(name, "creator-displayname") == 0)
+    return SVN_PROP_ENTRY_LAST_AUTHOR;
+
+  if (strcmp(name, "repository-uuid") == 0)
+    return SVN_PROP_ENTRY_UUID;
+
+  if (strcmp(name, "lock-token") == 0)
+    return SVN_PROP_ENTRY_LOCK_TOKEN;
+
+  if (strcmp(name, "checked-in") == 0)
+    return SVN_RA_SERF__WC_CHECKED_IN_URL;
+
+  if (strcmp(ns, "DAV:") == 0 || strcmp(ns, SVN_DAV_PROP_NS_DAV) == 0)
     {
       /* Here DAV: properties not yet converted to svn: properties should be
          ignored. */
-      return SVN_NO_ERROR;
-    }
-  else
-    {
-      /* An unknown namespace, must be a custom property. */
-      prop_name = apr_pstrcat(pool, ns, name, (char *)NULL);
+      return NULL;
     }
 
-  return setprop(baton, prop_name, val, pool);
+  /* An unknown namespace, must be a custom property. */
+  return apr_pstrcat(result_pool, ns, name, (char *)NULL);
 }
 
 
-/* Conforms to delta_editor.change_*_prop  */
+/* Conforms to svn_ra_serf__walker_visitor_t  */
 static svn_error_t *
-set_hash_props(void *baton,
+set_flat_props(void *baton,
+               const char *ns,
                const char *name,
                const svn_string_t *value,
                apr_pool_t *pool)
 {
   apr_hash_t *props = baton;
+  apr_pool_t *result_pool = apr_hash_pool_get(props);
+  const char *prop_name;
 
-  apr_hash_set(props, name, APR_HASH_KEY_STRING, value);
+  /* ### is VAL in the proper pool?  */
+
+  prop_name = svn_ra_serf__svnname_from_wirename(ns, name, result_pool);
+  if (prop_name != NULL)
+    apr_hash_set(props, prop_name, APR_HASH_KEY_STRING, value);
 
   return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-set_flat_props(void *baton,
-               const char *ns,
-               const char *name,
-               const svn_string_t *val,
-               apr_pool_t *pool)
-{
-  return svn_ra_serf__set_baton_props(set_hash_props, baton,
-                                      ns, name, val, pool);
 }
 
 

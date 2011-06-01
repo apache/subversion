@@ -953,19 +953,17 @@ svn_ra_serf__walk_all_paths(apr_hash_t *props,
                             void *baton,
                             apr_pool_t *pool);
 
-/* Higher-level variants on the walker. */
-typedef svn_error_t * (*svn_ra_serf__prop_set_t)(void *baton,
-                                                 const char *name,
-                                                 const svn_string_t *value,
-                                                 apr_pool_t *pool);
 
-svn_error_t *
-svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop,
-                             void *baton,
-                             const char *ns,
-                             const char *name,
-                             const svn_string_t *val,
-                             apr_pool_t *pool);
+/* Map a property name, as passed over the wire, into its corresponding
+   Subversion-internal name. The returned name will be a static value,
+   or allocated within RESULT_POOL.
+
+   If the property should be ignored (eg. some DAV properties), then NULL
+   will be returned.  */
+const char *
+svn_ra_serf__svnname_from_wirename(const char *ns,
+                                   const char *name,
+                                   apr_pool_t *result_pool);
 
 
 svn_error_t *
