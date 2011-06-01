@@ -111,18 +111,27 @@ remove_base_node(svn_wc__db_t *db,
   svn_wc__db_status_t base_status, wrk_status;
   svn_wc__db_kind_t base_kind, wrk_kind;
   svn_boolean_t have_base, have_work;
+  svn_error_t *err;
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  SVN_ERR(svn_wc__db_read_info(&wrk_status, &wrk_kind, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL,
-                               &have_base, NULL, &have_work,
-                               db, local_abspath, scratch_pool, scratch_pool));
+  err = svn_wc__db_read_info(&wrk_status, &wrk_kind, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL,
+                             &have_base, NULL, &have_work,
+                             db, local_abspath, scratch_pool, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      /* No node to delete, this can happen when the wq item is rerun. */
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
 
-  SVN_ERR_ASSERT(have_base); /* Verified in caller and _base_get_children() */
+  if(! have_base)
+    /* No base node to delete, this can happen when the wq item is rerun. */
+    return SVN_NO_ERROR;
 
   if (wrk_status == svn_wc__db_status_normal
       || wrk_status == svn_wc__db_status_not_present
@@ -178,9 +187,7 @@ remove_base_node(svn_wc__db_t *db,
       else if (base_kind == svn_wc__db_kind_dir
                && wrk_status != svn_wc__db_status_deleted)
         {
-          svn_error_t *err = svn_io_dir_remove_nonrecursive(local_abspath,
-                                                            scratch_pool);
-
+          err = svn_io_dir_remove_nonrecursive(local_abspath, scratch_pool);
           if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
                       || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)
                       || APR_STATUS_IS_ENOTEMPTY(err->apr_err)))
@@ -555,9 +562,13 @@ run_postupgrade(svn_wc__db_t *db,
   const char *wcroot_abspath;
   const char *adm_path;
   const char *temp_path;
+  svn_error_t *err;
 
-  SVN_ERR(svn_wc__wipe_postupgrade(wri_abspath, FALSE,
-                                   cancel_func, cancel_baton, scratch_pool));
+  err = svn_wc__wipe_postupgrade(wri_abspath, FALSE,
+                                 cancel_func, cancel_baton, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+    /* No entry, this can happen when the wq item is rerun. */
+    svn_error_clear(err);
 
   SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath, db, wri_abspath,
                                 scratch_pool, scratch_pool));
@@ -1449,6 +1460,15 @@ dispatch_work_item(svn_wc__db_t *db,
           SVN_ERR((*scan->func)(db, work_item, wri_abspath,
                                 cancel_func, cancel_baton,
                                 scratch_pool));
+
+#ifdef SVN_RUN_WORK_QUEUE_TWICE
+          /* Being able to run every workqueue item twice is one
+             requirement for workqueues to be restartable. */
+          SVN_ERR((*scan->func)(db, work_item, wri_abspath,
+                                cancel_func, cancel_baton,
+                                scratch_pool));
+#endif
+
           break;
         }
     }
