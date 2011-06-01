@@ -15,6 +15,12 @@ Status of 1.6.17:
 Candidate changes:
 ==================
 
+ * r1130303
+   CVE-2011-1921 and CVE-2011-1783.
+   Justification:
+     Already released in 1.6.17.
+   Votes:
+
  * r966167
    Allow passing --with-jdk to gen-make.py
    Backport branch in:
