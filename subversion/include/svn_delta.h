@@ -802,10 +802,12 @@ typedef struct svn_delta_editor_t
    * operations.  It doesn't really make much sense for commit-type
    * operations, because the revision of a commit isn't known until
    * the commit is finalized.
+   *
+   * Any temporary allocations may be performed in @a scratch_pool.
    */
   svn_error_t *(*set_target_revision)(void *edit_baton,
                                       svn_revnum_t target_revision,
-                                      apr_pool_t *pool);
+                                      apr_pool_t *scratch_pool);
 
   /** Set @a *root_baton to a baton for the top directory of the change.
    * (This is the top of the subtree being changed, not necessarily
@@ -816,12 +818,12 @@ typedef struct svn_delta_editor_t
    * new target revision set with @c set_target_revision).
    *
    * Allocations for the returned @a root_baton should be performed in
-   * @a dir_pool. It is also typical to (possibly) save this pool for later
-   * usage by @c close_directory.
+   * @a result_pool. It is also typical to (possibly) save this pool for
+   * later usage by @c close_directory.
    */
   svn_error_t *(*open_root)(void *edit_baton,
                             svn_revnum_t base_revision,
-                            apr_pool_t *dir_pool,
+                            apr_pool_t *result_pool,
                             void **root_baton);
 
 
@@ -830,7 +832,7 @@ typedef struct svn_delta_editor_t
    * revision number, it is used as a sanity check to ensure that you
    * are really removing the revision of @a path that you think you are.
    *
-   * All allocations should be performed in @a pool.
+   * Any temporary allocations may be performed in @a scratch_pool.
    *
    * @note The @a revision parameter is typically used only for
    * client->server commit-type operations, allowing the server to
@@ -843,7 +845,7 @@ typedef struct svn_delta_editor_t
   svn_error_t *(*delete_entry)(const char *path,
                                svn_revnum_t revision,
                                void *parent_baton,
-                               apr_pool_t *pool);
+                               apr_pool_t *scratch_pool);
 
 
   /** We are going to add a new subdirectory named @a path.  We will use
@@ -855,14 +857,14 @@ typedef struct svn_delta_editor_t
    * @a copyfrom_path under @a copyfrom_revision.
    *
    * Allocations for the returned @a child_baton should be performed in
-   * @a dir_pool. It is also typical to (possibly) save this pool for later
-   * usage by @c close_directory.
+   * @a result_pool. It is also typical to (possibly) save this pool for
+   * later usage by @c close_directory.
    */
   svn_error_t *(*add_directory)(const char *path,
                                 void *parent_baton,
                                 const char *copyfrom_path,
                                 svn_revnum_t copyfrom_revision,
-                                apr_pool_t *dir_pool,
+                                apr_pool_t *result_pool,
                                 void **child_baton);
 
   /** We are going to make changes in a subdirectory (of the directory
@@ -873,13 +875,13 @@ typedef struct svn_delta_editor_t
    * revision of the subdirectory.
    *
    * Allocations for the returned @a child_baton should be performed in
-   * @a dir_pool. It is also typical to (possibly) save this pool for later
-   * usage by @c close_directory.
+   * @a result_pool. It is also typical to (possibly) save this pool for
+   * later usage by @c close_directory.
    */
   svn_error_t *(*open_directory)(const char *path,
                                  void *parent_baton,
                                  svn_revnum_t base_revision,
-                                 apr_pool_t *dir_pool,
+                                 apr_pool_t *result_pool,
                                  void **child_baton);
 
   /** Change the value of a directory's property.
@@ -891,30 +893,34 @@ typedef struct svn_delta_editor_t
    * The callback is guaranteed to be called exactly once for each property
    * whose value differs between the start and the end of the edit.
    *
-   * All allocations should be performed in @a pool.
+   * Any temporary allocations may be performed in @a scratch_pool.
    */
   svn_error_t *(*change_dir_prop)(void *dir_baton,
                                   const char *name,
                                   const svn_string_t *value,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *scratch_pool);
 
   /** We are done processing a subdirectory, whose baton is @a dir_baton
    * (set by @c add_directory or @c open_directory).  We won't be using
    * the baton any more, so whatever resources it refers to may now be
    * freed.
+   *
+   * Any temporary allocations may be performed in @a scratch_pool.
    */
   svn_error_t *(*close_directory)(void *dir_baton,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *scratch_pool);
 
 
   /** In the directory represented by @a parent_baton, indicate that
    * @a path is present as a subdirectory in the edit source, but
    * cannot be conveyed to the edit consumer (perhaps because of
    * authorization restrictions).
+   *
+   * Any temporary allocations may be performed in @a scratch_pool.
    */
   svn_error_t *(*absent_directory)(const char *path,
                                    void *parent_baton,
-                                   apr_pool_t *pool);
+                                   apr_pool_t *scratch_pool);
 
   /** We are going to add a new file named @a path.  The callback can
    * store a baton for this new file in @a **file_baton; whatever value
@@ -925,7 +931,7 @@ typedef struct svn_delta_editor_t
    * @a copyfrom_path under @a copyfrom_revision.
    *
    * Allocations for the returned @a file_baton should be performed in
-   * @a file_pool. It is also typical to save this pool for later usage
+   * @a result_pool. It is also typical to save this pool for later usage
    * by @c apply_textdelta and possibly @c close_file.
    *
    * @note Because the editor driver could be employing the "postfix
@@ -942,7 +948,7 @@ typedef struct svn_delta_editor_t
                            void *parent_baton,
                            const char *copyfrom_path,
                            svn_revnum_t copyfrom_revision,
-                           apr_pool_t *file_pool,
+                           apr_pool_t *result_pool,
                            void **file_baton);
 
   /** We are going to make change to a file named @a path, which resides
@@ -954,7 +960,7 @@ typedef struct svn_delta_editor_t
    * current revision of the file.
    *
    * Allocations for the returned @a file_baton should be performed in
-   * @a file_pool. It is also typical to save this pool for later usage
+   * @a result_pool. It is also typical to save this pool for later usage
    * by @c apply_textdelta and possibly @c close_file.
    *
    * @note See note about memory usage on @a add_file, which also
@@ -963,7 +969,7 @@ typedef struct svn_delta_editor_t
   svn_error_t *(*open_file)(const char *path,
                             void *parent_baton,
                             svn_revnum_t base_revision,
-                            apr_pool_t *file_pool,
+                            apr_pool_t *result_pool,
                             void **file_baton);
 
   /** Apply a text delta, yielding the new revision of a file.
@@ -976,7 +982,8 @@ typedef struct svn_delta_editor_t
    * handler; we will then call @a *handler on successive text
    * delta windows as we receive them.  The callback should set
    * @a *handler_baton to the value we should pass as the @a baton
-   * argument to @a *handler.
+   * argument to @a *handler. These values should be allocated within
+   * @a result_pool.
    *
    * @a base_checksum is the hex MD5 digest for the base text against
    * which the delta is being applied; it is ignored if NULL, and may
@@ -990,7 +997,7 @@ typedef struct svn_delta_editor_t
    */
   svn_error_t *(*apply_textdelta)(void *file_baton,
                                   const char *base_checksum,
-                                  apr_pool_t *pool,
+                                  apr_pool_t *result_pool,
                                   svn_txdelta_window_handler_t *handler,
                                   void **handler_baton);
 
@@ -1003,12 +1010,12 @@ typedef struct svn_delta_editor_t
    * The callback is guaranteed to be called exactly once for each property
    * whose value differs between the start and the end of the edit.
    *
-   * All allocations should be performed in @a pool.
+   * Any temporary allocations may be performed in @a scratch_pool.
    */
   svn_error_t *(*change_file_prop)(void *file_baton,
                                    const char *name,
                                    const svn_string_t *value,
-                                   apr_pool_t *pool);
+                                   apr_pool_t *scratch_pool);
 
   /** We are done processing a file, whose baton is @a file_baton (set by
    * @c add_file or @c open_file).  We won't be using the baton any
@@ -1020,31 +1027,39 @@ typedef struct svn_delta_editor_t
    * checksum of the new fulltext, and the error
    * SVN_ERR_CHECKSUM_MISMATCH is returned if they do not match.  If
    * there is no new fulltext, @a text_checksum is ignored.
+   *
+   * Any temporary allocations may be performed in @a scratch_pool.
    */
   svn_error_t *(*close_file)(void *file_baton,
                              const char *text_checksum,
-                             apr_pool_t *pool);
+                             apr_pool_t *scratch_pool);
 
   /** In the directory represented by @a parent_baton, indicate that
    * @a path is present as a file in the edit source, but cannot be
    * conveyed to the edit consumer (perhaps because of authorization
    * restrictions).
+   *
+   * Any temporary allocations may be performed in @a scratch_pool.
    */
   svn_error_t *(*absent_file)(const char *path,
                               void *parent_baton,
-                              apr_pool_t *pool);
+                              apr_pool_t *scratch_pool);
 
   /** All delta processing is done.  Call this, with the @a edit_baton for
    * the entire edit.
+   *
+   * Any temporary allocations may be performed in @a scratch_pool.
    */
   svn_error_t *(*close_edit)(void *edit_baton,
-                             apr_pool_t *pool);
+                             apr_pool_t *scratch_pool);
 
   /** The editor-driver has decided to bail out.  Allow the editor to
    * gracefully clean up things if it needs to.
+   *
+   * Any temporary allocations may be performed in @a scratch_pool.
    */
   svn_error_t *(*abort_edit)(void *edit_baton,
-                             apr_pool_t *pool);
+                             apr_pool_t *scratch_pool);
 
   /* Be sure to update svn_delta_get_cancellation_editor() and
    * svn_delta_default_editor() if you add a new callback here. */
