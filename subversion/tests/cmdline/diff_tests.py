@@ -26,7 +26,7 @@
 ######################################################################
 
 # General modules
-import sys, re, os, time
+import sys, re, os, time, shutil
 
 # Our testing module
 import svntest
@@ -3773,6 +3773,45 @@ def diff_abs_localpath_from_wc_folder(sbox):
   os.chdir(os.path.abspath(A_path))
   svntest.actions.run_and_verify_svn(None, None, [], 'diff', B_abs_path)
   
+@Issue(3449)
+def no_spurious_conflict(sbox):
+  "no spurious conflict on update"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  data_dir = os.path.join(os.path.dirname(sys.argv[0]), 'diff_tests_data')
+  shutil.copyfile(os.path.join(data_dir, '3449_spurious_v1'),
+                  sbox.ospath('3449_spurious'))
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'add', sbox.ospath('3449_spurious'))
+  sbox.simple_commit()
+  shutil.copyfile(os.path.join(data_dir, '3449_spurious_v2'),
+                  sbox.ospath('3449_spurious'))
+  sbox.simple_commit()
+  shutil.copyfile(os.path.join(data_dir, '3449_spurious_v3'),
+                  sbox.ospath('3449_spurious'))
+  sbox.simple_commit()
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'update', '-r2', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '-c4', '^/', wc_dir)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('', status=' M')
+  expected_status.add({
+      '3449_spurious' : Item(status='M ', wc_rev=2),
+      })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # This update produces a conflict in 1.6
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'update', '--accept', 'postpone', wc_dir)
+  expected_status.tweak(wc_rev=4)
+  expected_status.tweak('3449_spurious', status='  ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+        
+
 ########################################################################
 #Run the tests
 
@@ -3838,6 +3877,7 @@ test_list = [ None,
               diff_git_with_props,
               diff_git_with_props_on_dir,
               diff_abs_localpath_from_wc_folder,
+              no_spurious_conflict,
               ]
 
 if __name__ == '__main__':
