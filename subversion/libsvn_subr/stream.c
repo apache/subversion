@@ -270,7 +270,7 @@ scan_eol(const char **eol, svn_stream_t *stream, apr_pool_t *pool)
       /* Detect the case where '\r' is the last character in the buffer
        * and '\n' would be the first character in the next buffer. */
       if (eol_str && eol_str[0] == '\r' && eol_str[1] == '\0' &&
-          eolp == buf + len)
+          eolp == buf + len - 1)
         {
           len = 1;
           SVN_ERR(svn_stream_read(stream, buf, &len));
