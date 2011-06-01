@@ -55,7 +55,7 @@
 #define OP_POSTUPGRADE "postupgrade"
 
 /* For work queue debugging. Generates output about its operation.  */
-/* #define DEBUG_WORK_QUEUE */
+/* #define SVN_DEBUG_WORK_QUEUE */
 
 
 struct work_item_dispatch {
@@ -1443,7 +1443,7 @@ dispatch_work_item(svn_wc__db_t *db,
       if (svn_skel__matches_atom(work_item->children, scan->name))
         {
 
-#ifdef DEBUG_WORK_QUEUE
+#ifdef SVN_DEBUG_WORK_QUEUE
           SVN_DBG(("dispatch: operation='%s'\n", scan->name));
 #endif
           SVN_ERR((*scan->func)(db, work_item, wri_abspath,
@@ -1482,7 +1482,7 @@ svn_wc__wq_run(svn_wc__db_t *db,
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-#ifdef DEBUG_WORK_QUEUE
+#ifdef SVN_DEBUG_WORK_QUEUE
   SVN_DBG(("wq_run: wri='%s'\n", wri_abspath));
 #endif
 
