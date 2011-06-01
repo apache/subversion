@@ -48,8 +48,8 @@
 struct svn_stream_t {
   void *baton;
   svn_read_fn_t read_fn;
-  svn_write_fn_t write_fn;
   svn_skip_fn_t skip_fn;
+  svn_write_fn_t write_fn;
   svn_close_fn_t close_fn;
   svn_io_mark_fn_t mark_fn;
   svn_io_seek_fn_t seek_fn;
@@ -136,10 +136,10 @@ svn_stream_read(svn_stream_t *stream, char *buffer, apr_size_t *len)
 
 
 svn_error_t *
-svn_stream_skip(svn_stream_t *stream, apr_size_t *count)
+svn_stream_skip(svn_stream_t *stream, apr_size_t *len)
 {
   SVN_ERR_ASSERT(stream->skip_fn != NULL);
-  return stream->skip_fn(stream->baton, count);
+  return stream->skip_fn(stream->baton, len);
 }
 
 
