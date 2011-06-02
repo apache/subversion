@@ -235,9 +235,16 @@ svn_string_find_char_backward(const svn_string_t *str, char ch)
   return find_char_backward(str->data, str->len, ch);
 }
 
-const svn_string_t *
-svn_string_from_stringbuf(const svn_stringbuf_t *strbuf)
+svn_string_t *
+svn_string_from_stringbuf(svn_stringbuf_t *strbuf)
 {
+  /* In debug mode, detect attempts to modify the original STRBUF object.
+   */
+#ifdef SVN_DEBUG
+  strbuf->pool = NULL;
+  strbuf->blocksize = strbuf->len;
+#endif
+
   /* Both, svn_string_t and svn_stringbuf_t are public API structures
    * since a couple of releases now. Thus, we can rely on their precise
    * layout not to change.
@@ -246,13 +253,12 @@ svn_string_from_stringbuf(const svn_stringbuf_t *strbuf)
    * to the (data, len) sub-set of svn_stringbuf_t. There is also no
    * difference in alignment and padding. So, we can just re-interpret
    * that part of STRBUF as a svn_string_t.
-   * 
+   *
    * However, since svn_string_t does not know about the blocksize
-   * member in svn_stringbuf_t, the returned svn_string_t must not
-   * try to re-allocate its data member. It would possibly be inconsistent
-   * with STRBUF's blocksize member. Hence, the result is a const
-   * structure.
-   * 
+   * member in svn_stringbuf_t, any attempt to re-size the returned
+   * svn_string_t might invalidate the STRBUF struct. Hence, we consider
+   * the source STRBUF "consumed".
+   *
    * Modifying the string character content is fine, though.
    */
   return (const svn_string_t *)&strbuf->data;
