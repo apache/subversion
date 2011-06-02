@@ -925,8 +925,7 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
                                                     result->merged_file :
                                                     cdesc->merged_file,
                                                scratch_pool));
-              merged_string = svn_string_create_from_buf(merged_stringbuf,
-                                                         scratch_pool);
+              merged_string = svn_string_from_stringbuf(merged_stringbuf);
               apr_hash_set(working_props, propname,
                            APR_HASH_KEY_STRING, merged_string);
               *conflict_remains = FALSE;
@@ -2483,7 +2482,7 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
     }
 
   if (new_value)
-    *propval_p = svn_string_create_from_buf(new_value, pool);
+    *propval_p = svn_string_from_stringbuf(new_value);
   else
     *propval_p = propval;
 

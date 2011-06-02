@@ -229,7 +229,7 @@ keyword_printf(const char *fmt,
       fmt = cur + 2;
     }
 
-  return svn_string_create_from_buf(value, pool);
+  return svn_string_from_stringbuf(value);
 }
 
 svn_error_t *

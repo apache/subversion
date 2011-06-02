@@ -226,7 +226,7 @@ run_hook_cmd(svn_string_t **result,
         return svn_error_wrap_apr
           (apr_err, _("Error closing read end of stderr pipe"));
 
-      *result = svn_string_create_from_buf(native_stdout, pool);
+      *result = svn_string_from_stringbuf(native_stdout);
     }
   else
     {
@@ -394,7 +394,7 @@ lock_token_content(apr_file_t **handle, apr_hash_t *lock_tokens,
 
   svn_stringbuf_appendcstr(lock_str, "\n");
   return create_temp_file(handle,
-                          svn_string_create_from_buf(lock_str, pool), pool);
+                          svn_string_from_stringbuf(lock_str), pool);
 }
 
 
