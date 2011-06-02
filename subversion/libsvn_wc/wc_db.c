@@ -10613,54 +10613,78 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
 }
 
 
-/* */
+/* Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
-is_wclocked(svn_boolean_t *locked,
-            svn_wc__db_t *db,
-            const char *local_abspath,
-            apr_int64_t recurse_depth,
+is_wclocked(void *baton,
+            svn_wc__db_wcroot_t *wcroot,
+            const char *dir_relpath,
             apr_pool_t *scratch_pool)
 {
+  svn_boolean_t *locked = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  svn_error_t *err;
+  apr_int64_t locked_levels, num_locks;
+  apr_int64_t dir_depth, depth = relpath_depth(dir_relpath);
 
-  err = get_statement_for_path(&stmt, db, local_abspath,
-                               STMT_SELECT_WC_LOCK, scratch_pool);
-  if (err && SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
+  /* The most common scenarios are no locks in the wc, or a single
+     fully recursive lock at the root, only legacy API users will
+     create any other locks.  First check for no locks at all. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_COUNT_WC_LOCK));
+  SVN_ERR(svn_sqlite__bindf(stmt, "i", wcroot->wc_id));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, svn_sqlite__reset(stmt),
+                             _("Count of WC_LOCK for id '%ld' failed"),
+                             wcroot->wc_id);
+  num_locks = svn_sqlite__column_int64(stmt, 0);
+  SVN_ERR(svn_sqlite__reset(stmt));
+  if (!num_locks)
     {
-      svn_error_clear(err);
       *locked = FALSE;
       return SVN_NO_ERROR;
     }
-  else
-    SVN_ERR(err);
 
+  /* Next check for a lock at root. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_SELECT_WC_LOCK));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, ""));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
+  if (have_row)
+    locked_levels = svn_sqlite__column_int64(stmt, 0);
+  SVN_ERR(svn_sqlite__reset(stmt));
   if (have_row)
     {
-      apr_int64_t locked_levels = svn_sqlite__column_int64(stmt, 0);
-
-      /* The directory in question is considered locked if we find a lock
-         with depth -1 or the depth of the lock is greater than or equal to
-         the depth we've recursed. */
-      *locked = (locked_levels == -1 || locked_levels >= recurse_depth);
-      return svn_error_return(svn_sqlite__reset(stmt));
+      *locked = (locked_levels == -1 || locked_levels >= depth);
+      if (*locked || num_locks == 1)
+        return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
+  /* Finally check for locks on dirs above root, only legacy API users
+     create these.  I'm not sure what order is best here but from the
+     target to the root is easy to code.  */
+  dir_depth = depth;
+  while (*dir_relpath)
     {
-      *locked = FALSE;
-      return SVN_NO_ERROR;
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_WC_LOCK));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, dir_relpath));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      if (have_row)
+        locked_levels = svn_sqlite__column_int64(stmt, 0);
+      SVN_ERR(svn_sqlite__reset(stmt));
+      if (have_row)
+        {
+          /* Any row here means there can be no locks closer to root
+             that extend past here. */
+          *locked = (locked_levels == -1 || locked_levels + dir_depth >= depth);
+          return SVN_NO_ERROR;
+        }
+      dir_relpath = svn_relpath_dirname(dir_relpath, scratch_pool);
+      --dir_depth;
     }
 
-  return svn_error_return(is_wclocked(locked, db,
-                                      svn_dirent_dirname(local_abspath,
-                                                         scratch_pool),
-                                      recurse_depth + 1, scratch_pool));
+  *locked = FALSE;
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -10670,8 +10694,17 @@ svn_wc__db_wclocked(svn_boolean_t *locked,
                     const char *local_abspath,
                     apr_pool_t *scratch_pool)
 {
-  return svn_error_return(is_wclocked(locked, db, local_abspath, 0,
-                                      scratch_pool));
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, is_wclocked, locked,
+                              scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 
