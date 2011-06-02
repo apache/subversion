@@ -1091,7 +1091,9 @@ svn_stream_read(svn_stream_t *stream,
  * other than that the stream read pointer will be advanced by *len
  * bytes. Depending on the capabilities of the underlying stream
  * implementation, this may for instance be translated into a sequence
- * of reads or a simple seek operation.
+ * of reads or a simple seek operation. If the stream implementation has
+ * not provided a skip function, this will read from the stream and
+ * discard the data.
  */
 svn_error_t *
 svn_stream_skip(svn_stream_t *stream,
