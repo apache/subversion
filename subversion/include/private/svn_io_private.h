@@ -64,6 +64,31 @@ svn_io__is_finfo_read_only(svn_boolean_t *read_only,
                            apr_pool_t *pool);
 
 
+/** Buffer test handler function for a generic stream. @see svn_stream_t 
+ * and svn_stream__is_buffered().
+ *
+ * @since New in 1.7.
+ */
+typedef svn_boolean_t (*svn_stream__is_buffered_fn_t)(void *baton);
+
+/** Set @a stream's buffer test function to @a is_buffered_fn
+ *
+ * @since New in 1.7.
+ */
+void
+svn_stream__set_is_buffered(svn_stream_t *stream,
+                            svn_stream__is_buffered_fn_t is_buffered_fn);
+
+/** Return whether this generic @a stream uses internal buffering.
+ * This may be used to work around subtle differences between buffered
+ * an non-buffered APR files.
+ *
+ * @since New in 1.7.
+ */
+svn_boolean_t
+svn_stream__is_buffered(svn_stream_t *stream);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

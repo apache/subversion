@@ -804,13 +804,6 @@ typedef svn_error_t *(*svn_stream_mark_fn_t)(void *baton,
 typedef svn_error_t *(*svn_stream_seek_fn_t)(void *baton,
                                          const svn_stream_mark_t *mark);
 
-/** Buffer test handler function for a generic stream. @see svn_stream_t 
- * and svn_stream_is_buffered().
- *
- * @since New in 1.7.
- */
-typedef svn_boolean_t (*svn_stream_is_buffered_fn_t)(void *baton);
-
 /** Create a generic stream.  @see svn_stream_t. */
 svn_stream_t *
 svn_stream_create(void *baton,
@@ -859,14 +852,6 @@ svn_stream_set_mark(svn_stream_t *stream,
 void
 svn_stream_set_seek(svn_stream_t *stream,
                     svn_stream_seek_fn_t seek_fn);
-
-/** Set @a stream's buffer test function to @a is_buffered_fn
- *
- * @since New in 1.7.
- */
-void
-svn_stream_set_is_buffered(svn_stream_t *stream,
-                           svn_stream_is_buffered_fn_t is_buffered_fn);
 
 /** Create a stream that is empty for reading and infinite for writing. */
 svn_stream_t *
@@ -1151,15 +1136,6 @@ svn_stream_mark(svn_stream_t *stream,
  */
 svn_error_t *
 svn_stream_seek(svn_stream_t *stream, const svn_stream_mark_t *mark);
-
-/** Return whether this generic @a stream uses internal buffering.
- * This may be used to work around subtle differences between buffered
- * an non-buffered APR files.
- *
- * @since New in 1.7.
- */
-svn_boolean_t
-svn_stream_is_buffered(svn_stream_t *stream);
 
 /** Return a writable stream which, when written to, writes to both of the
  * underlying streams.  Both of these streams will be closed upon closure of
