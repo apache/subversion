@@ -1201,6 +1201,11 @@ SVN_ERROR_START
              SVN_ERR_CLIENT_CATEGORY_START + 20,
              "Working copy and merge source not ready for reintegration")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING,
+             SVN_ERR_CLIENT_CATEGORY_START + 21,
+             "Invalid mergeinfo detected in merge target")
+
   /* misc errors */
 
   SVN_ERRDEF(SVN_ERR_BASE,

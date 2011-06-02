@@ -365,8 +365,20 @@ svn_cl__merge(apr_getopt_t *os,
   if (! opt_state->quiet)
     SVN_ERR(svn_cl__print_conflict_stats(ctx->notify_baton2, pool));
 
-  if (err && (! opt_state->reintegrate))
-    return svn_cl__may_need_force(err);
+  if (err)
+    {
+      if(err->apr_err == SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING)
+        {
+          err = svn_error_quick_wrap(
+            err,
+            _("Merge tracking not possible, use --ignore-ancestry or\n"
+              "fix invalid mergeinfo in target with 'svn propset'"));
+        }
+      else if (! opt_state->reintegrate)
+        {
+          return svn_cl__may_need_force(err);      
+        }
+    }
 
   return svn_error_return(err);
 }
