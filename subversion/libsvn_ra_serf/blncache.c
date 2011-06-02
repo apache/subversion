@@ -29,28 +29,34 @@
 
 #include "blncache.h"
 
-#define MAX_CACHE_SIZE 1000
-
+/* Baseline information cache object. */
 typedef struct baseline_info_t
 {
-  const char *bc_url;
-  svn_revnum_t revision;
+  const char *bc_url;    /* baseline collection URL. */
+  svn_revnum_t revision; /* revision associated with the baseline. */
+
 } baseline_info_t;
 
+/* Module-private structure used to hold the caches. */
 struct svn_ra_serf__blncache_t
 {
-  /** A hash containing as keys svn_revnum_t of baseline; the values are
-   * baseline collection URL.
+  /* A hash mapping 'svn_revnum_t *' baseline revisions to 'const
+   * char *' baseline collection URLs.
    */
   apr_hash_t *revnum_to_bc;
 
-  /** A hash containing as keys baseline URL; the values are
-   * (baseline_info_t *) structures.  (This is allocated from the same
-   * pool as 'revnum_to_bc'.)
+  /* A hash mapping 'const char *' baseline URLs to 'baseline_info_t *'
+   * structures. (Allocated from the same pool as 'revnum_to_bc'.)
    */
   apr_hash_t *baseline_info;
 };
 
+
+
+/* Return a pointer to an 'baseline_info_t' structure allocated from
+ * POOL and populated with BC_URL (which is duped into POOL) and
+ * REVISION.
+ */
 static baseline_info_t *
 baseline_info_make(const char *bc_url,
                    svn_revnum_t revision,
@@ -64,59 +70,41 @@ baseline_info_make(const char *bc_url,
   return result;
 }
 
-svn_error_t *
-svn_ra_serf__blncache_create(svn_ra_serf__blncache_t **blncache_p,
-                             apr_pool_t *pool)
-{
-    svn_ra_serf__blncache_t *blncache = apr_pcalloc(pool, sizeof(*blncache));
-    apr_pool_t *cache_pool;
-
-    /* Create subpool for cached data. It will be cleared if we reach maximum
-     * cache size.*/
-    cache_pool = svn_pool_create(pool);
-    blncache->revnum_to_bc = apr_hash_make(cache_pool);
-    blncache->baseline_info = apr_hash_make(cache_pool);
-
-    *blncache_p = blncache;
-
-    return SVN_NO_ERROR;
-}
-
-/* Helper to copy key and associate value with key in hash table.*/
+/* Set in HASH the value VAL for the KEY (whose key length is KLEN).
+ * KEY will be duped into HASH's pool.
+ */
 static void
 hash_set_copy(apr_hash_t *hash,
               const void *key,
               apr_ssize_t klen,
               const void *val)
 {
-    apr_pool_t *pool = apr_hash_pool_get(hash);
-    const void *key_copy;
-
-    if (klen == APR_HASH_KEY_STRING)
-      {
-        key_copy = apr_pstrdup(pool, (const char*) key);
-      }
-    else
-      {
-        key_copy = apr_pmemdup(pool, key, klen);
-      }
-
-    apr_hash_set(hash, key_copy, klen, val);
+  if (klen == APR_HASH_KEY_STRING)
+    klen = strlen(key);
+  apr_hash_set(hash, apr_pmemdup(apr_hash_pool_get(hash), key, klen),
+               klen, val);
 }
 
-static void
-recycle_cache_if_needed(svn_ra_serf__blncache_t *blncache)
+
+svn_error_t *
+svn_ra_serf__blncache_create(svn_ra_serf__blncache_t **blncache_p,
+                             apr_pool_t *pool)
 {
-  if (MAX_CACHE_SIZE < (apr_hash_count(blncache->baseline_info)
-                        + apr_hash_count(blncache->revnum_to_bc)))
-  {
-    /* Clear cache pool and create new hash tables. */
-    apr_pool_t *cache_pool = apr_hash_pool_get(blncache->revnum_to_bc);
-    svn_pool_clear(cache_pool);
-    blncache->revnum_to_bc = apr_hash_make(cache_pool);
-    blncache->baseline_info = apr_hash_make(cache_pool);
-  }
+  svn_ra_serf__blncache_t *blncache = apr_pcalloc(pool, sizeof(*blncache));
+  apr_pool_t *cache_pool;
+
+  /* Create subpool for cached data. It will be cleared if we reach maximum
+   * cache size.*/
+  cache_pool = svn_pool_create(pool);
+  blncache->revnum_to_bc = apr_hash_make(cache_pool);
+  blncache->baseline_info = apr_hash_make(cache_pool);
+
+  *blncache_p = blncache;
+
+  return SVN_NO_ERROR;
 }
+
+#define MAX_CACHE_SIZE 1000
 
 svn_error_t *
 svn_ra_serf__blncache_set(svn_ra_serf__blncache_t *blncache,
@@ -129,7 +117,14 @@ svn_ra_serf__blncache_set(svn_ra_serf__blncache_t *blncache,
     {
       apr_pool_t *cache_pool = apr_hash_pool_get(blncache->revnum_to_bc);
 
-      recycle_cache_if_needed(blncache);
+      /* If the caches are too big, delete and recreate 'em and move along. */
+      if (MAX_CACHE_SIZE < (apr_hash_count(blncache->baseline_info)
+                            + apr_hash_count(blncache->revnum_to_bc)))
+        {
+          svn_pool_clear(cache_pool);
+          blncache->revnum_to_bc = apr_hash_make(cache_pool);
+          blncache->baseline_info = apr_hash_make(cache_pool);
+        }
 
       hash_set_copy(blncache->revnum_to_bc, &revision, sizeof(revision),
                     apr_pstrdup(cache_pool, bc_url));
@@ -139,11 +134,13 @@ svn_ra_serf__blncache_set(svn_ra_serf__blncache_t *blncache,
           hash_set_copy(blncache->baseline_info, baseline_url,
                         APR_HASH_KEY_STRING,
                         baseline_info_make(bc_url, revision, cache_pool));
-      }
+        }
     }
 
   return SVN_NO_ERROR;
 }
+
+#undef MAX_CACHE_SIZE
 
 svn_error_t *
 svn_ra_serf__blncache_get_bc_url(const char **bc_url_p,
@@ -151,20 +148,9 @@ svn_ra_serf__blncache_get_bc_url(const char **bc_url_p,
                                  svn_revnum_t revnum,
                                  apr_pool_t *pool)
 {
-  const char *value;
-
-  value = apr_hash_get(blncache->revnum_to_bc, &revnum, sizeof(revnum));
-
-  if (value)
-    {
-      /* Copy baseline collection URL to result pool. */
-      *bc_url_p = apr_pstrdup(pool, value);
-    }
-  else
-    {
-      *bc_url_p = NULL;
-    }
-
+  const char *value = apr_hash_get(blncache->revnum_to_bc,
+                                   &revnum, sizeof(revnum));
+  *bc_url_p = value ? apr_pstrdup(pool, value) : NULL;
   return SVN_NO_ERROR;
 }
 
@@ -175,22 +161,19 @@ svn_ra_serf__blncache_get_baseline_info(const char **bc_url_p,
                                         const char *baseline_url,
                                         apr_pool_t *pool)
 {
-    baseline_info_t *info;
+  baseline_info_t *info = apr_hash_get(blncache->baseline_info, baseline_url,
+                                       APR_HASH_KEY_STRING);
+  if (info)
+    {
+      *bc_url_p = apr_pstrdup(pool, info->bc_url);
+      *revision_p = info->revision;
+    }
+  else
+    {
+      *bc_url_p = NULL;
+      *revision_p = SVN_INVALID_REVNUM;
+    }
 
-    info = apr_hash_get(blncache->baseline_info, baseline_url,
-                        APR_HASH_KEY_STRING);
-
-    if (info)
-      {
-        /* Copy baseline collection URL to result pool. */
-        *bc_url_p = apr_pstrdup(pool, info->bc_url);
-        *revision_p = info->revision;
-      }
-    else
-      {
-        *bc_url_p = NULL;
-        *revision_p = SVN_INVALID_REVNUM;
-      }
-
-    return SVN_NO_ERROR;
+  return SVN_NO_ERROR;
 }
+
