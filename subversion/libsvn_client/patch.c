@@ -1224,7 +1224,7 @@ scan_for_match(svn_linenum_t *matched_line,
       svn_pool_clear(iterpool);
 
       if (cancel_func)
-        SVN_ERR((cancel_func)(cancel_baton));
+        SVN_ERR(cancel_func(cancel_baton));
 
       SVN_ERR(match_hunk(&matched, content_info, hunk, fuzz, ignore_whitespace,
                          match_modified, iterpool));
@@ -1923,7 +1923,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       svn_pool_clear(iterpool);
 
       if (cancel_func)
-        SVN_ERR((cancel_func)(cancel_baton));
+        SVN_ERR(cancel_func(cancel_baton));
 
       hunk = APR_ARRAY_IDX(patch->hunks, i, svn_diff_hunk_t *);
 
@@ -1951,7 +1951,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       svn_pool_clear(iterpool);
 
       if (cancel_func)
-        SVN_ERR((cancel_func)(cancel_baton));
+        SVN_ERR(cancel_func(cancel_baton));
 
       hi = APR_ARRAY_IDX(target->content_info->hunks, i, hunk_info_t *);
       if (hi->already_applied)
@@ -2006,7 +2006,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
           svn_pool_clear(iterpool);
 
           if (cancel_func)
-            SVN_ERR((cancel_func)(cancel_baton));
+            SVN_ERR(cancel_func(cancel_baton));
 
           hunk = APR_ARRAY_IDX(prop_patch->hunks, i, svn_diff_hunk_t *);
 
