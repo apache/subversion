@@ -100,9 +100,6 @@ typedef struct report_dir_t
   /* the expanded directory name (including all parent names) */
   const char *name;
 
-  /* temporary path buffer for this directory. */
-  svn_stringbuf_t *name_buf;
-
   /* the canonical url for this directory. */
   const char *url;
 
@@ -173,9 +170,6 @@ typedef struct report_info_t
 
   /* the expanded file name (including all parent directory names) */
   const char *name;
-
-  /* file name buffer */
-  svn_stringbuf_t *name_buf;
 
   /* the canonical url for this file. */
   const char *url;
@@ -813,10 +807,8 @@ handle_fetch(serf_request_t *request,
       /* Expand our full name now if we haven't done so yet. */
       if (!info->name)
         {
-          info->name_buf = svn_stringbuf_dup(info->dir->name_buf,
-                                             info->editor_pool);
-          svn_path_add_component(info->name_buf, info->base_name);
-          info->name = info->name_buf->data;
+          info->name = svn_relpath_join(info->dir->name, info->base_name,
+                                        info->editor_pool);
         }
 
       if (SVN_IS_VALID_REVNUM(info->base_rev))
@@ -1137,10 +1129,8 @@ handle_propchange_only(report_info_t *info,
   /* Expand our full name now if we haven't done so yet. */
   if (!info->name)
     {
-      info->name_buf = svn_stringbuf_dup(info->dir->name_buf,
-                                         info->editor_pool);
-      svn_path_add_component(info->name_buf, info->base_name);
-      info->name = info->name_buf->data;
+      info->name = svn_relpath_join(info->dir->name, info->base_name,
+                                    info->editor_pool);
     }
 
   if (SVN_IS_VALID_REVNUM(info->base_rev))
@@ -1238,7 +1228,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
       ctx->active_propfinds++;
     }
 
-  /* If we've been asked to fetch the file or its an add, do so.
+  /* If we've been asked to fetch the file or it's an add, do so.
    * Otherwise, handle the case where only the properties changed.
    */
   if (info->fetch_file && ctx->text_deltas)
@@ -1349,13 +1339,10 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info->fetch_props = TRUE;
 
       info->dir->base_name = "";
-      /* Create empty stringbuf with estimated max. path size. */
-      info->dir->name_buf = svn_stringbuf_create_ensure(256, info->pool);
-      info->dir->name = info->dir->name_buf->data;
+      info->dir->name = "";
 
       info->base_name = info->dir->base_name;
       info->name = info->dir->name;
-      info->name_buf = info->dir->name_buf;
     }
   else if (state == NONE)
     {
@@ -1400,10 +1387,8 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info->base_name = dir->base_name;
 
       /* Expand our name. */
-      dir->name_buf = svn_stringbuf_dup(dir->parent_dir->name_buf, dir->pool);
-      svn_path_add_component(dir->name_buf, dir->base_name);
-
-      dir->name = dir->name_buf->data;
+      dir->name = svn_relpath_join(dir->parent_dir->name, dir->base_name,
+                                   dir->pool);
       info->name = dir->name;
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
@@ -1431,10 +1416,8 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info->base_name = dir->base_name;
 
       /* Expand our name. */
-      dir->name_buf = svn_stringbuf_dup(dir->parent_dir->name_buf, dir->pool);
-      svn_path_add_component(dir->name_buf, dir->base_name);
-
-      dir->name = dir->name_buf->data;
+      dir->name = svn_relpath_join(dir->parent_dir->name, dir->base_name,
+                                   dir->pool);
       info->name = dir->name;
 
       info->copyfrom_path = cf ? apr_pstrdup(info->pool, cf) : NULL;
@@ -1513,9 +1496,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
            strcmp(name.name, "delete-entry") == 0)
     {
       const char *file_name;
-      svn_stringbuf_t *name_buf;
       report_info_t *info;
       apr_pool_t *tmppool;
+      const char *full_path;
 
       file_name = svn_xml_get_attr_value("name", attrs);
 
@@ -1532,10 +1515,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       tmppool = svn_pool_create(info->dir->dir_baton_pool);
 
-      name_buf = svn_stringbuf_dup(info->dir->name_buf, tmppool);
-      svn_path_add_component(name_buf, file_name);
+      full_path = svn_relpath_join(info->dir->name, file_name, tmppool);
 
-      SVN_ERR(info->dir->update_editor->delete_entry(name_buf->data,
+      SVN_ERR(info->dir->update_editor->delete_entry(full_path,
                                                      SVN_INVALID_REVNUM,
                                                      info->dir->dir_baton,
                                                      tmppool));
@@ -1815,9 +1797,8 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       /* Expand our full name now if we haven't done so yet. */
       if (!info->name)
         {
-          info->name_buf = svn_stringbuf_dup(info->dir->name_buf, info->pool);
-          svn_path_add_component(info->name_buf, info->base_name);
-          info->name = info->name_buf->data;
+          info->name = svn_relpath_join(info->dir->name, info->base_name,
+                                        info->pool);
         }
 
       info->lock_token = apr_hash_get(ctx->lock_path_tokens, info->name,
@@ -1883,7 +1864,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
           path = svn_stringbuf_create(c, info->pool);
 
-          comp_count = svn_path_component_count(info->name_buf->data);
+          comp_count = svn_path_component_count(info->name);
 
           svn_path_remove_components(path, comp_count);
 
