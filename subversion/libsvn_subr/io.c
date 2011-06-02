@@ -1092,9 +1092,9 @@ svn_io_make_dir_recursively(const char *path, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_io_file_create2(const char *file,
-                                 const svn_string_t *contents,
-                                 apr_pool_t *pool)
+svn_error_t *svn_io_file_create(const char *file,
+                                const char *contents,
+                                apr_pool_t *pool)
 {
   apr_file_t *f;
   apr_size_t written;
@@ -1104,8 +1104,8 @@ svn_error_t *svn_io_file_create2(const char *file,
                            (APR_WRITE | APR_CREATE | APR_EXCL),
                            APR_OS_DEFAULT,
                            pool));
-  if (contents && contents->len)
-    err = svn_io_file_write_full(f, contents->data, contents->len,
+  if (contents && *contents)
+    err = svn_io_file_write_full(f, contents, strlen(contents),
                                  &written, pool);
 
 
