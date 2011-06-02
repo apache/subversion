@@ -625,7 +625,8 @@ get_encoding_and_cdata(const char **encoding_p,
                        const svn_string_t **encoded_value_p,
                        serf_bucket_alloc_t *alloc,
                        const svn_string_t *value,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   if (value == NULL)
     {
@@ -639,14 +640,14 @@ get_encoding_and_cdata(const char **encoding_p,
   if (svn_xml_is_xml_safe(value->data, value->len))
     {
       svn_stringbuf_t *xml_esc = NULL;
-      svn_xml_escape_cdata_string(&xml_esc, value, pool);
+      svn_xml_escape_cdata_string(&xml_esc, value, scratch_pool);
       *encoding_p = NULL;
-      *encoded_value_p = svn_string_create_from_buf(xml_esc, pool);
+      *encoded_value_p = svn_string_create_from_buf(xml_esc, result_pool);
     }
   else
     {
       *encoding_p = "base64";
-      *encoded_value_p = svn_base64_encode_string2(value, TRUE, pool);
+      *encoded_value_p = svn_base64_encode_string2(value, TRUE, result_pool);
     }
 
   return SVN_NO_ERROR;
@@ -654,8 +655,11 @@ get_encoding_and_cdata(const char **encoding_p,
 
 typedef struct walker_baton_t {
   serf_bucket_t *body_bkt;
+  apr_pool_t *body_pool;
+
   apr_hash_t *previous_changed_props;
   apr_hash_t *previous_removed_props;
+
   const char *path;
 
   /* Hack, since change_rev_prop(old_value_p != NULL, value = NULL) uses D:set
@@ -672,16 +676,13 @@ typedef struct walker_baton_t {
 
 /* If we have (recorded in WB) the old value of the property named NS:NAME,
  * then set *HAVE_OLD_VAL to TRUE and set *OLD_VAL_P to that old value
- * (which may be NULL); else set *HAVE_OLD_VAL to FALSE.
- *
- * The string pointed to by *OLD_VAL_P is not copied into POOL. */
+ * (which may be NULL); else set *HAVE_OLD_VAL to FALSE.  */
 static svn_error_t *
 derive_old_val(svn_boolean_t *have_old_val,
                const svn_string_t **old_val_p,
                walker_baton_t *wb,
                const char *ns,
-               const char *name,
-               apr_pool_t *pool)
+               const char *name)
 {
   *have_old_val = FALSE;
 
@@ -717,7 +718,7 @@ proppatch_walker(void *baton,
                  const char *ns,
                  const char *name,
                  const svn_string_t *val,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
   walker_baton_t *wb = baton;
   serf_bucket_t *body_bkt = wb->body_bkt;
@@ -727,16 +728,9 @@ proppatch_walker(void *baton,
   svn_boolean_t have_old_val;
   const svn_string_t *old_val;
   const svn_string_t *encoded_value;
-  char *prop_name;
+  const char *prop_name;
 
-  /* Use the namespace prefix instead of adding the xmlns attribute to support
-     property names containing ':' */
-  if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
-    prop_name = apr_pstrcat(pool, "S:", name, (char *)NULL);
-  else if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
-    prop_name = apr_pstrcat(pool, "C:", name, (char *)NULL);
-
-  SVN_ERR(derive_old_val(&have_old_val, &old_val, wb, ns, name, pool));
+  SVN_ERR(derive_old_val(&have_old_val, &old_val, wb, ns, name));
 
   /* Jump through hoops to work with D:remove and its val = (""-for-NULL)
    * representation. */
@@ -752,7 +746,8 @@ proppatch_walker(void *baton,
 
   alloc = body_bkt->allocator;
 
-  SVN_ERR(get_encoding_and_cdata(&encoding, &encoded_value, alloc, val, pool));
+  SVN_ERR(get_encoding_and_cdata(&encoding, &encoded_value, alloc, val,
+                                 wb->body_pool, scratch_pool));
   if (encoded_value)
     {
       cdata_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(encoded_value->data,
@@ -763,6 +758,13 @@ proppatch_walker(void *baton,
     {
       cdata_bkt = NULL;
     }
+
+  /* Use the namespace prefix instead of adding the xmlns attribute to support
+     property names containing ':' */
+  if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
+    prop_name = apr_pstrcat(wb->body_pool, "S:", name, (char *)NULL);
+  else if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
+    prop_name = apr_pstrcat(wb->body_pool, "C:", name, (char *)NULL);
 
   if (cdata_bkt)
     svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, prop_name,
@@ -780,7 +782,8 @@ proppatch_walker(void *baton,
       serf_bucket_t *cdata_bkt2;
 
       SVN_ERR(get_encoding_and_cdata(&encoding2, &encoded_value2,
-                                     alloc, old_val, pool));
+                                     alloc, old_val,
+                                     wb->body_pool, scratch_pool));
 
       if (encoded_value2)
         {
@@ -851,14 +854,23 @@ setup_proppatch_headers(serf_bucket_t *headers,
   return SVN_NO_ERROR;
 }
 
+
+struct proppatch_body_baton_t {
+  proppatch_context_t *proppatch;
+
+  /* Content in the body should be allocated here, to live long enough.  */
+  apr_pool_t *body_pool;
+};
+
 /* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t *
 create_proppatch_body(serf_bucket_t **bkt,
                       void *baton,
                       serf_bucket_alloc_t *alloc,
-                      apr_pool_t *pool)
+                      apr_pool_t *scratch_pool)
 {
-  proppatch_context_t *ctx = baton;
+  struct proppatch_body_baton_t *pbb = baton;
+  proppatch_context_t *ctx = pbb->proppatch;
   serf_bucket_t *body_bkt;
   walker_baton_t wb = { 0 };
 
@@ -873,6 +885,7 @@ create_proppatch_body(serf_bucket_t **bkt,
                                     NULL);
 
   wb.body_bkt = body_bkt;
+  wb.body_pool = pbb->body_pool;
   wb.previous_changed_props = ctx->previous_changed_props;
   wb.previous_removed_props = ctx->previous_removed_props;
   wb.path = ctx->path;
@@ -886,7 +899,8 @@ create_proppatch_body(serf_bucket_t **bkt,
       wb.deleting = FALSE;
       SVN_ERR(svn_ra_serf__walk_all_props(ctx->changed_props, ctx->path,
                                           SVN_INVALID_REVNUM,
-                                          proppatch_walker, &wb, pool));
+                                          proppatch_walker, &wb,
+                                          scratch_pool));
 
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:set");
@@ -901,7 +915,8 @@ create_proppatch_body(serf_bucket_t **bkt,
       wb.deleting = TRUE;
       SVN_ERR(svn_ra_serf__walk_all_props(ctx->removed_props, ctx->path,
                                           SVN_INVALID_REVNUM,
-                                          proppatch_walker, &wb, pool));
+                                          proppatch_walker, &wb,
+                                          scratch_pool));
 
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:set");
@@ -916,7 +931,8 @@ create_proppatch_body(serf_bucket_t **bkt,
       wb.deleting = TRUE;
       SVN_ERR(svn_ra_serf__walk_all_props(ctx->removed_props, ctx->path,
                                           SVN_INVALID_REVNUM,
-                                          proppatch_walker, &wb, pool));
+                                          proppatch_walker, &wb,
+                                          scratch_pool));
 
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:remove");
@@ -934,6 +950,7 @@ proppatch_resource(proppatch_context_t *proppatch,
                    apr_pool_t *pool)
 {
   svn_ra_serf__handler_t *handler;
+  struct proppatch_body_baton_t pbb;
 
   handler = apr_pcalloc(pool, sizeof(*handler));
   handler->method = "PROPPATCH";
@@ -944,8 +961,10 @@ proppatch_resource(proppatch_context_t *proppatch,
   handler->header_delegate = setup_proppatch_headers;
   handler->header_delegate_baton = proppatch;
 
+  pbb.proppatch = proppatch;
+  pbb.body_pool = pool;
   handler->body_delegate = create_proppatch_body;
-  handler->body_delegate_baton = proppatch;
+  handler->body_delegate_baton = &pbb;
 
   handler->response_handler = svn_ra_serf__handle_multistatus_only;
   handler->response_baton = &proppatch->progress;
