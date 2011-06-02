@@ -990,10 +990,10 @@ init_patch_target(patch_target_t **patch_target,
  * Do temporary allocations in SCRATCH_POOL.
  */
 static svn_error_t *
-read_line(target_content_info_t *content_info,
-          const char **line,
-          apr_pool_t *result_pool,
-          apr_pool_t *scratch_pool)
+readline(target_content_info_t *content_info,
+         const char **line,
+         apr_pool_t *result_pool,
+         apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *line_raw;
   const char *eol_str;
@@ -1067,7 +1067,7 @@ seek_to_line(target_content_info_t *content_info, svn_linenum_t line,
       while (! content_info->eof && content_info->current_line < line)
         {
           svn_pool_clear(iterpool);
-          SVN_ERR(read_line(content_info, &dummy, iterpool, iterpool));
+          SVN_ERR(readline(content_info, &dummy, iterpool, iterpool));
         }
       svn_pool_destroy(iterpool);
     }
@@ -1146,7 +1146,7 @@ match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
                                            NULL, FALSE,
                                            content_info->keywords, FALSE,
                                            iterpool));
-      SVN_ERR(read_line(content_info, &target_line, iterpool, iterpool));
+      SVN_ERR(readline(content_info, &target_line, iterpool, iterpool));
 
       lines_read++;
 
@@ -1298,7 +1298,7 @@ match_existing_target(svn_boolean_t *match,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(read_line(content_info, &line, iterpool, iterpool));
+      SVN_ERR(readline(content_info, &line, iterpool, iterpool));
       SVN_ERR(svn_diff_hunk_readline_modified_text(hunk, &hunk_line,
                                                    NULL, &hunk_eof,
                                                    iterpool, iterpool));
@@ -1527,7 +1527,7 @@ copy_lines_to_target(target_content_info_t *content_info, svn_linenum_t line,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(read_line(content_info, &target_line, iterpool, iterpool));
+      SVN_ERR(readline(content_info, &target_line, iterpool, iterpool));
       if (! content_info->eof)
         target_line = apr_pstrcat(iterpool, target_line, content_info->eol_str,
                                   (char *)NULL);
