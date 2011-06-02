@@ -261,7 +261,7 @@ svn_string_from_stringbuf(svn_stringbuf_t *strbuf)
    *
    * Modifying the string character content is fine, though.
    */
-  return (const svn_string_t *)&strbuf->data;
+  return (svn_string_t *)&strbuf->data;
 }
 
 
