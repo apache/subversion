@@ -57,6 +57,12 @@ struct svn_stream_t {
 };
 
 
+/*** Forward declarations. ***/
+
+static svn_error_t *
+skip_default_handler(void *baton, apr_size_t *count, svn_read_fn_t read_fn);
+
+
 /*** Generic streams. ***/
 
 svn_stream_t *
@@ -138,7 +144,9 @@ svn_stream_read(svn_stream_t *stream, char *buffer, apr_size_t *len)
 svn_error_t *
 svn_stream_skip(svn_stream_t *stream, apr_size_t *len)
 {
-  SVN_ERR_ASSERT(stream->skip_fn != NULL);
+  if (stream->skip_fn == NULL)
+    return skip_default_handler(stream->baton, len, stream->read_fn);
+
   return stream->skip_fn(stream->baton, len);
 }
 
@@ -650,13 +658,6 @@ read_handler_empty(void *baton, char *buffer, apr_size_t *len)
 }
 
 static svn_error_t *
-skip_handler_empty(void *baton, apr_size_t *count)
-{
-  *count = 0;
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 write_handler_empty(void *baton, const char *data, apr_size_t *len)
 {
   return SVN_NO_ERROR;
@@ -689,7 +690,6 @@ svn_stream_empty(apr_pool_t *pool)
 
   stream = svn_stream_create(NULL, pool);
   svn_stream_set_read(stream, read_handler_empty);
-  svn_stream_set_skip(stream, skip_handler_empty);
   svn_stream_set_write(stream, write_handler_empty);
   svn_stream_set_mark(stream, mark_handler_empty);
   svn_stream_set_seek(stream, seek_handler_empty);
@@ -1188,13 +1188,6 @@ read_handler_gz(void *baton, char *buffer, apr_size_t *len)
   return SVN_NO_ERROR;
 }
 
-/* Skip data from a compressed stream by reading and discarding it. */
-static svn_error_t *
-skip_handler_gz(void *baton, apr_size_t *count)
-{
-  return skip_default_handler(baton, count, read_handler_gz);
-}
-
 /* Compress data and write it to the substream */
 static svn_error_t *
 write_handler_gz(void *baton, const char *buffer, apr_size_t *len)
@@ -1308,7 +1301,6 @@ svn_stream_compressed(svn_stream_t *stream, apr_pool_t *pool)
 
   zstream = svn_stream_create(baton, pool);
   svn_stream_set_read(zstream, read_handler_gz);
-  svn_stream_set_skip(zstream, skip_handler_gz);
   svn_stream_set_write(zstream, write_handler_gz);
   svn_stream_set_close(zstream, close_handler_gz);
 
@@ -1347,13 +1339,6 @@ read_handler_checksum(void *baton, char *buffer, apr_size_t *len)
     btn->read_more = FALSE;
 
   return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-skip_handler_checksum(void *baton, apr_size_t *count)
-{
-  return skip_default_handler(baton, count, read_handler_checksum);
 }
 
 
@@ -1431,7 +1416,6 @@ svn_stream_checksummed2(svn_stream_t *stream,
 
   s = svn_stream_create(baton, pool);
   svn_stream_set_read(s, read_handler_checksum);
-  svn_stream_set_skip(s, skip_handler_checksum);
   svn_stream_set_write(s, write_handler_checksum);
   svn_stream_set_close(s, close_handler_checksum);
   return s;
