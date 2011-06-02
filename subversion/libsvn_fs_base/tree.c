@@ -5168,7 +5168,7 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
               if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
                 svn_error_clear(err);
               else
-                svn_error_return(err);
+                return svn_error_return(err);
             }
           else
             {
@@ -5368,7 +5368,7 @@ txn_body_get_mergeinfo_for_path(void *baton, trail_t *trail)
      inheriting the mergeinfo, so we need to a) remove non-inheritable
      ranges and b) telescope the merged-from paths.
 
-  /* Issue #3896: If a node has syntactically invalid mergeinfo, then
+     Issue #3896: If a node has syntactically invalid mergeinfo, then
      treat it as if no mergeinfo is present rather than raising a parse
      error. */
   if (nearest_ancestor == parent_path)

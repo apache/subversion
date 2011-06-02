@@ -3547,7 +3547,7 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
               if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
                 svn_error_clear(err);
               else
-                svn_error_return(err);
+                return svn_error_return(err);
               }
           else
             {
