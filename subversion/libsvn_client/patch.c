@@ -67,29 +67,17 @@ typedef struct hunk_info_t {
   svn_linenum_t fuzz;
 } hunk_info_t;
 
-/* A struct carrying the information related to the content of a target, be it
- * a property or the the text of a file. */
+/* A struct carrying the information related to the patched and unpatched
+ * content of a target, be it a property or the text of a file. */
 typedef struct target_content_info_t {
-  /* A stream to read lines form the target file. This is NULL in case
-   * the target file did not exist prior to patch application. */
-  svn_stream_t *stream;
+  /* Indicates whether unpatched content existed prior to patching. */
+  svn_boolean_t existed;
 
-  /* The patched stream, write-only, not seekable.
-   * This stream is equivalent to the target, except that in appropriate
-   * places it contains the modified text as it appears in the patch file.
-   * The data in the underlying file needs to be in repository-normal form,
-   * so EOL transformation and keyword contraction is done transparently. */
-  svn_stream_t *patched;
-
-  /* The reject stream, write-only, not seekable.
-   * Hunks that are rejected will be written to this stream. */
-  svn_stream_t *reject;
-
-  /* The line last read from the target file. */
+  /* The line last read from the unpatched content. */
   svn_linenum_t current_line;
 
-  /* The EOL-style of the target. Either 'none', 'fixed', or 'native'.
-   * See the documentation of svn_subst_eol_style_t. */
+  /* The EOL-style of the unpatched content. Either 'none', 'fixed',
+   * or 'native'. See the documentation of svn_subst_eol_style_t. */
   svn_subst_eol_style_t eol_style;
 
   /* If the EOL_STYLE above is not 'none', this is the EOL string
@@ -97,21 +85,45 @@ typedef struct target_content_info_t {
    * last line read from the target file was using. */
   const char *eol_str;
 
-  /* An array containing stream markers marking the beginning
-   * each line in the target stream. */
+  /* An array containing apr_off_t offsets marking the beginning of
+   * each line in the unpatched content. */
   apr_array_header_t *lines;
 
   /* An array containing hunk_info_t structures for hunks already matched. */
   apr_array_header_t *hunks;
 
-  /* True if end-of-file was reached while reading from the target. */
+  /* True if end-of-file was reached while reading from the unpatched
+   * content. */
   svn_boolean_t eof;
 
-  /* The keywords of the target. */
+  /* The keywords of the target. They will be contracted when reading
+   * unpatched content and expanded when writing patched content.
+   * When patching properties this hash is always empty. */
   apr_hash_t *keywords;
 
-  /* The pool the target_info is allocated in. */
-  apr_pool_t *pool;
+  /* A callback, with an associated baton, to read a line of unpatched
+   * content. */
+  svn_error_t *(*readline)(void *baton, svn_stringbuf_t **line,
+                           const char **eol_str, svn_boolean_t *eof,
+                           apr_pool_t *result_pool, apr_pool_t *scratch_pool);
+  void *read_baton;
+
+  /* A callback to get the current byte offset within the unpatched
+   * content. Uses the read baton. */
+  svn_error_t * (*tell)(void *baton, apr_off_t *offset,
+                        apr_pool_t *scratch_pool);
+
+  /* A callback to seek to an offset within the unpatched content.
+   * Uses the read baton. */
+  svn_error_t * (*seek)(void *baton, apr_off_t offset,
+                        apr_pool_t *scratch_pool);
+
+  /* A callback to write data to the patched content, with an
+   * associated baton. */
+  svn_error_t * (*write)(void *baton, const char *buf, apr_size_t len,
+                         apr_pool_t *scratch_pool);
+  void *write_baton;
+
 } target_content_info_t;
 
 typedef struct prop_patch_target_t {
@@ -119,11 +131,21 @@ typedef struct prop_patch_target_t {
   /* The name of the property */
   const char *name;
 
-  /* All the information that is specific to the content of the property. */
-  target_content_info_t *content_info;
+  /* The property value. This is NULL in case the property did not exist
+   * prior to patch application (see also CONTENT_INFO->existed).
+   * Note that the patch implementation does not support binary properties,
+   * so this string is not expected to contain embedded NUL characters. */
+  const svn_string_t *value;
 
-  /* Path to the temporary file underlying the result stream. */
-  const char *patched_path;
+  /* The patched property value.
+   * This is equivalent to the target, except that in appropriate
+   * places it contains the modified text as it appears in the patch file.
+   * The data in the underlying file needs to be in repository-normal form,
+   * so EOL transformation and keyword contraction is done transparently. */
+  svn_stringbuf_t *patched_value;
+
+  /* All information that is specific to the content of the property. */
+  target_content_info_t *content_info;
 
   /* Represents the operation performed on the property. It can be added,
    * deleted or modified.
@@ -149,14 +171,25 @@ typedef struct patch_target_t {
    * Is not always known, so it may be NULL. */
   const char *local_abspath;
 
-  /* The target file, read-only, seekable. This is NULL in case the target
-   * file did not exist prior to patch application. */
+  /* The target file, read-only. This is NULL in case the target
+   * file did not exist prior to patch application (see also
+   * CONTENT_INFO->existed). */
   apr_file_t *file;
 
-  /* Path to the temporary file underlying the result stream. */
+  /* The patched file.
+   * This is equivalent to the target, except that in appropriate
+   * places it contains the modified text as it appears in the patch file.
+   * The data in the underlying file needs to be in repository-normal form,
+   * so EOL transformation and keyword contraction is done transparently. */
+  apr_file_t *patched_file;
+
+  /* Path to the patched file. */
   const char *patched_path;
 
-  /* Path to the temporary file underlying the reject stream. */
+  /* Hunks that are rejected will be written to this file. */
+  apr_file_t *reject_file;
+
+  /* Path to the reject file. */
   const char *reject_path;
 
   /* The node kind of the target as found in WC-DB prior
@@ -214,8 +247,6 @@ typedef struct patch_target_t {
   /* A hash table of prop_patch_target_t objects keyed by property names. */
   apr_hash_t *prop_targets;
 
-  /* The pool the target is allocated in. */
-  apr_pool_t *pool;
 } patch_target_t;
 
 
@@ -462,17 +493,128 @@ resolve_target_path(patch_target_t *target,
   return SVN_NO_ERROR;
 }
 
-/* Initialize a PROP_TARGET structure for PROP_NAME. Use working copy
- * context WC_CTX. Use the REJECT stream that is shared with all content
- * info structures.
- * REMOVE_TEMPFILES as in svn_client_patch().
+/* Baton for reading from properties. */
+typedef struct prop_read_baton_t {
+  const svn_string_t *value;
+  apr_off_t offset;
+} prop_read_baton_t;
+
+/* Allocate *STRINGBUF in RESULT_POOL, and read into it one line from
+ * the unpatched property value accessed via BATON.
+ * Reading stops either after a line-terminator was found, or if
+ * the property value runs out in which case *EOF is set to TRUE.
+ * The line-terminator is not stored in *STRINGBUF.
+ *
+ * The line-terminator is detected automatically and stored in *EOL
+ * if EOL is not NULL. If the end of the property value is reached
+ * and does not end with a newline character, and EOL is not NULL,
+ * *EOL is set to NULL.
+ *
+ * SCRATCH_POOL is used for temporary allocations.
  */
+static svn_error_t *
+readline_prop(void *baton, svn_stringbuf_t **line, const char **eol_str,
+              svn_boolean_t *eof, apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
+{
+  prop_read_baton_t *b = (prop_read_baton_t *)baton;
+  svn_stringbuf_t *str;
+  const char *c;
+  svn_boolean_t found_eof;
+
+  str = svn_stringbuf_create_ensure(80, result_pool);
+
+  if (b->offset >= b->value->len)
+    {
+      *eol_str = NULL;
+      *eof = TRUE;
+      *line = str;
+      return SVN_NO_ERROR;
+    }
+
+  /* Read bytes into STR up to and including, but not storing,
+   * the next EOL sequence. */
+  *eol_str = NULL;
+  found_eof = FALSE;
+  do
+    {
+      c = b->value->data + b->offset;
+      b->offset++;
+
+      if (*c == '\0')
+        {
+          found_eof = TRUE;
+          break;
+        }
+      else if (*c == '\n')
+        {
+          *eol_str = "\n";
+        }
+      else if (*c == '\r')
+        {
+          *eol_str = "\r";
+          if (*(c + 1) == '\n')
+            {
+              *eol_str = "\r\n";
+              b->offset++;
+            }
+        }
+      else
+        svn_stringbuf_appendbyte(str, *c);
+
+      if (*eol_str)
+        break;
+    }
+  while (c < b->value->data + b->value->len);
+
+  if (eof)
+    *eof = found_eof;
+  *line = str;
+
+  return SVN_NO_ERROR;
+}
+
+/* Return in *OFFSET the current byte offset for reading from the
+ * unpatched property value accessed via BATON.
+ * Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+tell_prop(void *baton, apr_off_t *offset, apr_pool_t *scratch_pool)
+{
+  prop_read_baton_t *b = (prop_read_baton_t *)baton;
+  *offset = b->offset;
+  return SVN_NO_ERROR;
+}
+
+/* Seek to the specified by OFFSET in the unpatched property value accessed
+ * via BATON. Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+seek_prop(void *baton, apr_off_t offset, apr_pool_t *scratch_pool)
+{
+  prop_read_baton_t *b = (prop_read_baton_t *)baton;
+  b->offset = offset;
+  return SVN_NO_ERROR;
+}
+
+/* Write LEN bytes from BUF into the patched property value accessed
+ * via BATON. Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+write_prop(void *baton, const char *buf, apr_size_t len,
+           apr_pool_t *scratch_pool)
+{
+  svn_stringbuf_t *patched_value = (svn_stringbuf_t *)baton;
+  svn_stringbuf_appendbytes(patched_value, buf, len);
+  return SVN_NO_ERROR;
+}
+
+/* Initialize a PROP_TARGET structure for PROP_NAME on the patch target
+ * at LOCAL_ABSPATH. OPERATION indicates the operation performed on the
+ * property. Use working copy context WC_CTX.
+ * Allocate results in RESULT_POOL.
+ * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 init_prop_target(prop_patch_target_t **prop_target,
                  const char *prop_name,
                  svn_diff_operation_kind_t operation,
-                 svn_stream_t *reject,
-                 svn_boolean_t remove_tempfiles,
                  svn_wc_context_t *wc_ctx,
                  const char *local_abspath,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
@@ -480,20 +622,17 @@ init_prop_target(prop_patch_target_t **prop_target,
   prop_patch_target_t *new_prop_target;
   target_content_info_t *content_info;
   const svn_string_t *value;
-  const char *patched_path;
   svn_error_t *err;
+  prop_read_baton_t *prop_read_baton;
 
   content_info = apr_pcalloc(result_pool, sizeof(*content_info));
 
   /* All other fields are FALSE or NULL due to apr_pcalloc(). */
   content_info->current_line = 1;
   content_info->eol_style = svn_subst_eol_style_none;
-  content_info->lines = apr_array_make(result_pool, 0,
-                                       sizeof(svn_stream_mark_t *));
+  content_info->lines = apr_array_make(result_pool, 0, sizeof(apr_off_t));
   content_info->hunks = apr_array_make(result_pool, 0, sizeof(hunk_info_t *));
   content_info->keywords = apr_hash_make(result_pool);
-  content_info->reject = reject;
-  content_info->pool = result_pool;
 
   new_prop_target = apr_palloc(result_pool, sizeof(*new_prop_target));
   new_prop_target->name = apr_pstrdup(result_pool, prop_name);
@@ -512,22 +651,141 @@ init_prop_target(prop_patch_target_t **prop_target,
       else
         return svn_error_return(err);
     }
+  content_info->existed = (value != NULL);
+  new_prop_target->value = value;
+  new_prop_target->patched_value = svn_stringbuf_create("", result_pool);
 
-  if (value)
-    content_info->stream = svn_stream_from_string(value, result_pool);
 
-  /* Create a temporary file to write the patched result to. For properties,
-   * we don't have to worry about eol-style. ### Why not? */
-  SVN_ERR(svn_stream_open_unique(&content_info->patched,
-                                 &patched_path, NULL,
-                                 remove_tempfiles ?
-                                   svn_io_file_del_on_pool_cleanup :
-                                   svn_io_file_del_none,
-                                 result_pool, scratch_pool));
+  /* Wire up the read and write callbacks. */
+  prop_read_baton = apr_palloc(result_pool, sizeof(*prop_read_baton));
+  prop_read_baton->value = value;
+  prop_read_baton->offset = 0;
+  content_info->readline = readline_prop;
+  content_info->tell = tell_prop;
+  content_info->seek = seek_prop;
+  content_info->read_baton = prop_read_baton;
+  content_info->write = write_prop;
+  content_info->write_baton = new_prop_target->patched_value;
 
-  new_prop_target->patched_path = patched_path;
   *prop_target = new_prop_target;
 
+  return SVN_NO_ERROR;
+}
+
+/* Allocate *STRINGBUF in RESULT_POOL, and read into it one line from
+ * the unpatched file content accessed via BATON.
+ * Reading stops either after a line-terminator was found,
+ * or if EOF is reached in which case *EOF is set to TRUE.
+ * The line-terminator is not stored in *STRINGBUF.
+ *
+ * The line-terminator is detected automatically and stored in *EOL
+ * if EOL is not NULL. If EOF is reached and FILE does not end
+ * with a newline character, and EOL is not NULL, *EOL is set to NULL.
+ *
+ * SCRATCH_POOL is used for temporary allocations.
+ */
+static svn_error_t *
+readline_file(void *baton, svn_stringbuf_t **line, const char **eol_str,
+              svn_boolean_t *eof, apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
+{
+  apr_file_t *file = (apr_file_t *)baton;
+  svn_stringbuf_t *str;
+  apr_size_t numbytes;
+  char c;
+  svn_boolean_t found_eof;
+
+  str = svn_stringbuf_create_ensure(80, result_pool);
+
+  /* Read bytes into STR up to and including, but not storing,
+   * the next EOL sequence. */
+  *eol_str = NULL;
+  numbytes = 1;
+  found_eof = FALSE;
+  while (!found_eof)
+    {
+      SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
+                                     &found_eof, scratch_pool));
+      if (numbytes != 1)
+        {
+          found_eof = TRUE;
+          break;
+        }
+
+      if (c == '\n')
+        {
+          *eol_str = "\n";
+        }
+      else if (c == '\r')
+        {
+          *eol_str = "\r";
+
+          if (!found_eof)
+            {
+              apr_off_t pos;
+
+              /* Check for "\r\n" by peeking at the next byte. */
+              pos = 0;
+              SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos, scratch_pool));
+              SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
+                                             &found_eof, scratch_pool));
+              if (numbytes == 1 && c == '\n') 
+                {
+                  *eol_str = "\r\n";
+                }
+              else
+                {
+                  /* Pretend we never peeked. */
+                  SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
+                  found_eof = FALSE;
+                  numbytes = 1;
+                }
+            }
+        }
+      else
+        svn_stringbuf_appendbyte(str, c);
+
+      if (*eol_str)
+        break;
+    }
+
+  if (eof)
+    *eof = found_eof;
+  *line = str;
+
+  return SVN_NO_ERROR;
+}
+
+/* Return in *OFFSET the current byte offset for reading from the
+ * unpatched file content accessed via BATON.
+ * Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+tell_file(void *baton, apr_off_t *offset, apr_pool_t *scratch_pool)
+{
+  apr_file_t *file = (apr_file_t *)baton;
+  *offset = 0;
+  SVN_ERR(svn_io_file_seek(file, APR_CUR, offset, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Seek to the specified by OFFSET in the unpatched file content accessed
+ * via BATON. Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+seek_file(void *baton, apr_off_t offset, apr_pool_t *scratch_pool)
+{
+  apr_file_t *file = (apr_file_t *)baton;
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Write LEN bytes from BUF into the patched file content accessed
+ * via BATON. Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+write_file(void *baton, const char *buf, apr_size_t len,
+           apr_pool_t *scratch_pool)
+{
+  apr_file_t *file = (apr_file_t *)baton;
+  SVN_ERR(svn_io_file_write_full(file, buf, len, &len, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -607,11 +865,9 @@ init_patch_target(patch_target_t **patch_target,
   /* All other fields in content_info are FALSE or NULL due to apr_pcalloc().*/
   content_info->current_line = 1;
   content_info->eol_style = svn_subst_eol_style_none;
-  content_info->lines = apr_array_make(result_pool, 0,
-                                       sizeof(svn_stream_mark_t *));
+  content_info->lines = apr_array_make(result_pool, 0, sizeof(apr_off_t));
   content_info->hunks = apr_array_make(result_pool, 0, sizeof(hunk_info_t *));
   content_info->keywords = apr_hash_make(result_pool);
-  content_info->pool = result_pool;
 
   target = apr_pcalloc(result_pool, sizeof(*target));
 
@@ -620,7 +876,6 @@ init_patch_target(patch_target_t **patch_target,
   target->kind_on_disk = svn_node_none;
   target->content_info = content_info;
   target->prop_targets = apr_hash_make(result_pool);
-  target->pool = result_pool;
 
   SVN_ERR(resolve_target_path(target, choose_target_filename(patch),
                               base_dir, strip_count, prop_changes_only,
@@ -628,20 +883,15 @@ init_patch_target(patch_target_t **patch_target,
   if (! target->skipped)
     {
       const char *diff_header;
-      svn_boolean_t repair_eol;
       apr_size_t len;
-      svn_stream_t *patched_raw;
 
-      /* Create a temporary file, and associated streams,
-       * to write the patched result to. */
+      /* Create a temporary file to write the patched result to.
+       * Also grab various bits of information about the file. */
       if (target->kind_on_disk == svn_node_file)
         {
           SVN_ERR(svn_io_file_open(&target->file, target->local_abspath,
                                    APR_READ | APR_BINARY | APR_BUFFERED,
                                    APR_OS_DEFAULT, result_pool));
-
-          content_info->stream = svn_stream_from_aprfile2(target->file,
-                                                          FALSE, result_pool);
 
           SVN_ERR(svn_wc_text_modified_p2(&target->local_mods, wc_ctx,
                                           target->local_abspath, FALSE,
@@ -657,6 +907,13 @@ init_patch_target(patch_target_t **patch_target,
                                                    target->local_abspath,
                                                    result_pool,
                                                    scratch_pool));
+
+          /* Wire up the read callbacks. */
+          content_info->readline = readline_file;
+          content_info->seek = seek_file;
+          content_info->tell = tell_file;
+          content_info->read_baton = target->file;
+          content_info->existed = TRUE;
         }
 
       /* ### Is it ok to set the operation of the target already here? Isn't
@@ -670,38 +927,35 @@ init_patch_target(patch_target_t **patch_target,
       else if (patch->operation == svn_diff_op_deleted)
         target->deleted = TRUE;
 
-      SVN_ERR(svn_stream_open_unique(&patched_raw,
-                                     &target->patched_path, NULL,
-                                     remove_tempfiles ?
-                                       svn_io_file_del_on_pool_cleanup :
-                                       svn_io_file_del_none,
-                                     result_pool, scratch_pool));
+      /* Open a temporary file to write the patched result to. */
+      SVN_ERR(svn_io_open_unique_file3(&target->patched_file,
+                                       &target->patched_path, NULL,
+                                       remove_tempfiles ?
+                                         svn_io_file_del_on_pool_cleanup :
+                                         svn_io_file_del_none,
+                                       result_pool, scratch_pool));
 
-      /* We always expand keywords in the patched file, but repair newlines
-       * only if svn:eol-style dictates a particular style. */
-      repair_eol = (content_info->eol_style == svn_subst_eol_style_fixed
-                    || content_info->eol_style == svn_subst_eol_style_native);
-      content_info->patched = svn_subst_stream_translated(
-                              patched_raw, content_info->eol_str, repair_eol,
-                              content_info->keywords, TRUE, result_pool);
+      /* Put the write callback in place. */
+      content_info->write = write_file;
+      content_info->write_baton = target->patched_file;
 
-      /* We don't expand keywords, nor normalise line-endings,
-       * in reject files. */
-      SVN_ERR(svn_stream_open_unique(&content_info->reject,
-                                     &target->reject_path, NULL,
-                                     remove_tempfiles ?
-                                       svn_io_file_del_on_pool_cleanup :
-                                       svn_io_file_del_none,
-                                     result_pool, scratch_pool));
+      /* Open a temporary file to write rejected hunks to. */
+      SVN_ERR(svn_io_open_unique_file3(&target->reject_file,
+                                       &target->reject_path, NULL,
+                                       remove_tempfiles ?
+                                         svn_io_file_del_on_pool_cleanup :
+                                         svn_io_file_del_none,
+                                       result_pool, scratch_pool));
 
-      /* The reject stream needs a diff header. */
+      /* The reject file needs a diff header. */
       diff_header = apr_psprintf(scratch_pool, "--- %s%s+++ %s%s",
                                  target->canon_path_from_patchfile,
                                  APR_EOL_STR,
                                  target->canon_path_from_patchfile,
                                  APR_EOL_STR);
       len = strlen(diff_header);
-      SVN_ERR(svn_stream_write(content_info->reject, diff_header, &len));
+      SVN_ERR(svn_io_file_write_full(target->reject_file, diff_header, len,
+                                     &len, scratch_pool));
 
       /* Handle properties. */
       if (! target->skipped)
@@ -719,8 +973,6 @@ init_patch_target(patch_target_t **patch_target,
               SVN_ERR(init_prop_target(&prop_target,
                                        prop_name,
                                        prop_patch->operation,
-                                       content_info->reject,
-                                       remove_tempfiles,
                                        wc_ctx, target->local_abspath,
                                        result_pool, scratch_pool));
 
@@ -747,7 +999,7 @@ read_line(target_content_info_t *content_info,
   svn_stringbuf_t *line_raw;
   const char *eol_str;
 
-  if (content_info->eof)
+  if (content_info->eof || content_info->readline == NULL)
     {
       *line = "";
       return SVN_NO_ERROR;
@@ -756,15 +1008,16 @@ read_line(target_content_info_t *content_info,
   SVN_ERR_ASSERT(content_info->current_line <= content_info->lines->nelts + 1);
   if (content_info->current_line == content_info->lines->nelts + 1)
     {
-      svn_stream_mark_t *mark;
-      SVN_ERR(svn_stream_mark(content_info->stream, &mark,
-                              content_info->pool));
-      APR_ARRAY_PUSH(content_info->lines, svn_stream_mark_t *) = mark;
+      apr_off_t offset;
+
+      SVN_ERR(content_info->tell(content_info->read_baton, &offset,
+                                 scratch_pool));
+      APR_ARRAY_PUSH(content_info->lines, apr_off_t) = offset;
     }
 
-  SVN_ERR(svn_stream_readline_detect_eol(content_info->stream, &line_raw,
-                                         &eol_str, &content_info->eof,
-                                         scratch_pool));
+  SVN_ERR(content_info->readline(content_info->read_baton, &line_raw,
+                                 &eol_str, &content_info->eof,
+                                 result_pool, scratch_pool));
   if (content_info->eol_style == svn_subst_eol_style_none)
     content_info->eol_str = eol_str;
 
@@ -800,10 +1053,11 @@ seek_to_line(target_content_info_t *content_info, svn_linenum_t line,
 
   if (line <= content_info->lines->nelts)
     {
-      svn_stream_mark_t *mark;
+      apr_off_t offset;
 
-      mark = APR_ARRAY_IDX(content_info->lines, line - 1, svn_stream_mark_t *);
-      SVN_ERR(svn_stream_seek(content_info->stream, mark));
+      offset = APR_ARRAY_IDX(content_info->lines, line - 1, apr_off_t);
+      SVN_ERR(content_info->seek(content_info->read_baton, offset,
+                                 scratch_pool));
       content_info->current_line = line;
     }
   else
@@ -1017,41 +1271,40 @@ scan_for_match(svn_linenum_t *matched_line,
   return SVN_NO_ERROR;
 }
 
-/* Indicate in *MATCH whether the STREAM matches the modified text of HUNK.
- * Use CONTENT_INFO for retrieving information on eol and keywords that is
- * needed for the comparison.
+/* Indicate in *MATCH whether the content described by CONTENT_INFO
+ * matches the modified text of HUNK.
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 match_existing_target(svn_boolean_t *match,
                       target_content_info_t *content_info,
                       svn_diff_hunk_t *hunk,
-                      svn_stream_t *stream,
                       apr_pool_t *scratch_pool)
 {
   svn_boolean_t lines_matched;
   apr_pool_t *iterpool;
-  svn_boolean_t eof;
   svn_boolean_t hunk_eof;
+  svn_linenum_t saved_line;
 
   svn_diff_hunk_reset_modified_text(hunk);
+
+  saved_line = content_info->current_line;
 
   iterpool = svn_pool_create(scratch_pool);
   do
     {
-      svn_stringbuf_t *line;
+      const char *line;
       svn_stringbuf_t *hunk_line;
       const char *line_translated;
       const char *hunk_line_translated;
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_stream_readline_detect_eol(stream, &line, NULL,
-                                             &eof, iterpool));
+      SVN_ERR(read_line(content_info, &line, iterpool, iterpool));
       SVN_ERR(svn_diff_hunk_readline_modified_text(hunk, &hunk_line,
                                                    NULL, &hunk_eof,
                                                    iterpool, iterpool));
       /* Contract keywords. */
-      SVN_ERR(svn_subst_translate_cstring2(line->data, &line_translated,
+      SVN_ERR(svn_subst_translate_cstring2(line, &line_translated,
                                            NULL, FALSE,
                                            content_info->keywords,
                                            FALSE, iterpool));
@@ -1061,17 +1314,20 @@ match_existing_target(svn_boolean_t *match,
                                            content_info->keywords,
                                            FALSE, iterpool));
       lines_matched = ! strcmp(line_translated, hunk_line_translated);
-      if (eof != hunk_eof)
+      if (content_info->eof != hunk_eof)
         {
           svn_pool_destroy(iterpool);
           *match = FALSE;
           return SVN_NO_ERROR;
         }
       }
-    while (lines_matched && ! eof && ! hunk_eof);
+    while (lines_matched && ! content_info->eof && ! hunk_eof);
     svn_pool_destroy(iterpool);
 
-    *match = (lines_matched && eof == hunk_eof);
+    *match = (lines_matched && content_info->eof == hunk_eof);
+
+    SVN_ERR(seek_to_line(content_info, saved_line, scratch_pool));
+
     return SVN_NO_ERROR;
 }
 
@@ -1114,19 +1370,9 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
           if (target->db_kind == svn_node_file)
             {
               svn_boolean_t file_matches;
-              apr_file_t *file;
-              svn_stream_t *stream;
-
-              /* ### dannas: Why not use content_info-stream here? */
-              SVN_ERR(svn_io_file_open(&file, target->local_abspath,
-                                       APR_READ | APR_BINARY, APR_OS_DEFAULT,
-                                       scratch_pool));
-              stream = svn_stream_from_aprfile2(file, FALSE, scratch_pool);
 
               SVN_ERR(match_existing_target(&file_matches, content_info, hunk,
-                                            stream, scratch_pool));
-              SVN_ERR(svn_stream_close(stream));
-
+                                            scratch_pool));
               if (file_matches)
                 {
                   matched_line = 1;
@@ -1148,12 +1394,12 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
    * ### we have the diff operation available we can just check for adds. */
   else if (original_start == 0 && is_prop_hunk)
     {
-      if (content_info->stream)
+      if (content_info->existed)
         {
           svn_boolean_t prop_matches;
 
           SVN_ERR(match_existing_target(&prop_matches, content_info, hunk,
-                                        content_info->stream, scratch_pool));
+                                        scratch_pool));
 
           if (prop_matches)
             {
@@ -1166,11 +1412,7 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
       else
         matched_line = 1;
     }
-  /* ### We previously checked for target->kind_on_disk == svn_node_file
-   * ### here. But that wasn't generic enough to cope with properties. How
-   * ### better describe that content_info->stream is only set if we have an
-   * ### existing target? */
-  else if (original_start > 0 && content_info->stream)
+  else if (original_start > 0 && content_info->existed)
     {
       svn_linenum_t saved_line = content_info->current_line;
 
@@ -1266,14 +1508,14 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
   return SVN_NO_ERROR;
 }
 
-/* Copy lines to the patched stream until the specified LINE has been
+/* Copy lines to the patched content until the specified LINE has been
  * reached. Indicate in *EOF whether end-of-file was encountered while
  * reading from the target.
  * If LINE is zero, copy lines until end-of-file has been reached.
  * Do all allocations in POOL. */
 static svn_error_t *
 copy_lines_to_target(target_content_info_t *content_info, svn_linenum_t line,
-                     const char *patched_path, apr_pool_t *pool)
+                     apr_pool_t *pool)
 {
   apr_pool_t *iterpool;
 
@@ -1291,16 +1533,18 @@ copy_lines_to_target(target_content_info_t *content_info, svn_linenum_t line,
         target_line = apr_pstrcat(iterpool, target_line, content_info->eol_str,
                                   (char *)NULL);
       len = strlen(target_line);
-      SVN_ERR(svn_stream_write(content_info->patched, target_line, &len));
+      SVN_ERR(content_info->write(content_info->write_baton, target_line,
+                                  len, iterpool));
     }
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
 
-/* Write the diff text of HUNK to the reject stream of CONTENT_INFO,
+/* Write the diff text of HUNK to TARGET's reject file,
  * and mark TARGET as having had rejects.
- * Do temporary allocations in POOL. */
+ * We don't expand keywords, nor normalise line-endings, in reject files.
+ * Do temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
 reject_hunk(patch_target_t *target, target_content_info_t *content_info,
             svn_diff_hunk_t *hunk, const char *prop_name,
@@ -1322,8 +1566,8 @@ reject_hunk(patch_target_t *target, target_content_info_t *content_info,
        */
       prop_header = apr_psprintf(pool, "Property: %s\n", prop_name);
       len = strlen(prop_header);
-
-      SVN_ERR(svn_stream_write(content_info->reject, prop_header, &len));
+      SVN_ERR(svn_io_file_write_full(target->reject_file, prop_header,
+                                     len, &len, pool));
       atat = prop_atat;
     }
   else
@@ -1340,7 +1584,8 @@ reject_hunk(patch_target_t *target, target_content_info_t *content_info,
                              atat,
                              APR_EOL_STR);
   len = strlen(hunk_header);
-  SVN_ERR(svn_stream_write(content_info->reject, hunk_header, &len));
+  SVN_ERR(svn_io_file_write_full(target->reject_file, hunk_header, len,
+                                 &len, pool));
 
   iterpool = svn_pool_create(pool);
   do
@@ -1357,14 +1602,16 @@ reject_hunk(patch_target_t *target, target_content_info_t *content_info,
           if (hunk_line->len >= 1)
             {
               len = hunk_line->len;
-              SVN_ERR(svn_stream_write(content_info->reject, hunk_line->data,
-                                       &len));
+              SVN_ERR(svn_io_file_write_full(target->reject_file,
+                                             hunk_line->data, len, &len,
+                                             iterpool));
             }
 
           if (eol_str)
             {
               len = strlen(eol_str);
-              SVN_ERR(svn_stream_write(content_info->reject, eol_str, &len));
+              SVN_ERR(svn_io_file_write_full(target->reject_file, eol_str,
+                                             len, &len, iterpool));
             }
         }
     }
@@ -1380,7 +1627,7 @@ reject_hunk(patch_target_t *target, target_content_info_t *content_info,
 }
 
 /* Write the modified text of the hunk described by HI to the patched
- * stream of CONTENT_INFO. TARGET is the patch target.
+ * content of CONTENT_INFO. TARGET is the patch target.
  * If PROP_NAME is not NULL, the hunk is assumed to be targeted for
  * a property with the given name.
  * Do temporary allocations in POOL. */
@@ -1403,7 +1650,7 @@ apply_hunk(patch_target_t *target, target_content_info_t *content_info,
        * The target has changed on the fuzzy-matched lines,
        * so we should retain the target's version of those lines. */
       SVN_ERR(copy_lines_to_target(content_info, hi->matched_line + hi->fuzz,
-                                   target->patched_path, pool));
+                                   pool));
 
       /* Skip the target's version of the hunk.
        * Don't skip trailing lines which matched with fuzz. */
@@ -1443,8 +1690,8 @@ apply_hunk(patch_target_t *target, target_content_info_t *content_info,
           if (hunk_line->len >= 1)
             {
               len = hunk_line->len;
-              SVN_ERR(svn_stream_write(content_info->patched, hunk_line->data,
-                                       &len));
+              SVN_ERR(content_info->write(content_info->write_baton,
+                                          hunk_line->data, len, iterpool));
             }
 
           if (eol_str)
@@ -1455,7 +1702,8 @@ apply_hunk(patch_target_t *target, target_content_info_t *content_info,
                 eol_str = content_info->eol_str;
 
               len = strlen(eol_str);
-              SVN_ERR(svn_stream_write(content_info->patched, eol_str, &len));
+              SVN_ERR(content_info->write(content_info->write_baton,
+                                          eol_str, len, iterpool));
             }
         }
     }
@@ -1643,7 +1891,6 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   int i;
   static const svn_linenum_t MAX_FUZZ = 2;
   apr_hash_index_t *hash_index;
-  target_content_info_t *prop_content_info;
 
   SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx, strip_count,
                             remove_tempfiles, result_pool, scratch_pool));
@@ -1722,8 +1969,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   if (target->kind_on_disk == svn_node_file)
     {
       /* Copy any remaining lines to target. */
-      SVN_ERR(copy_lines_to_target(target->content_info, 0,
-                                   target->patched_path, scratch_pool));
+      SVN_ERR(copy_lines_to_target(target->content_info, 0, scratch_pool));
       if (! target->content_info->eof)
         {
           /* We could not copy the entire target file to the temporary file,
@@ -1812,11 +2058,10 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                                iterpool));
         }
 
-        if (prop_target->content_info->stream)
+        if (prop_target->content_info->existed)
           {
             /* Copy any remaining lines to target. */
             SVN_ERR(copy_lines_to_target(prop_target->content_info, 0,
-                                         prop_target->patched_path,
                                          scratch_pool));
             if (! prop_target->content_info->eof)
               {
@@ -1830,31 +2075,13 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
   svn_pool_destroy(iterpool);
 
-  /* Now close some streams that we don't need any longer to get
-   * file buffers flushed to disk. First, close the props streams... */
-  for (hash_index = apr_hash_first(scratch_pool, target->prop_targets);
-       hash_index;
-       hash_index = apr_hash_next(hash_index))
-    {
-      prop_patch_target_t *prop_target;
-      prop_target = svn__apr_hash_index_val(hash_index);
-      prop_content_info = prop_target->content_info;
-
-      /* ### If the prop did not exist pre-patching we'll not have a
-       * ### stream to read from. Find a better way to store info on
-       * ### the existence of the target prop. */
-      if (prop_content_info->stream)
-        SVN_ERR(svn_stream_close(prop_content_info->stream));
-
-      SVN_ERR(svn_stream_close(prop_content_info->patched));
-    }
-
-  /* .. and then streams associated with the file.
-   * But we're not closing the reject stream -- it still needed and
+  /* Now close files we don't need any longer to get their contents
+   * flushed to disk.
+   * But we're not closing the reject file -- it still needed and
    * will be closed later in write_out_rejected_hunks(). */
   if (target->kind_on_disk == svn_node_file)
-    SVN_ERR(svn_stream_close(target->content_info->stream));
-  SVN_ERR(svn_stream_close(target->content_info->patched));
+    SVN_ERR(svn_io_file_close(target->file, scratch_pool));
+  SVN_ERR(svn_io_file_close(target->patched_file, scratch_pool));
 
   if (! target->skipped)
     {
@@ -2136,9 +2363,22 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
             }
           else
             {
-              /* Copy the patched file on top of the target file. */
-              SVN_ERR(svn_io_copy_file(target->patched_path,
-                                       target->local_abspath, FALSE, pool));
+              svn_boolean_t repair_eol;
+
+              /* Copy the patched file on top of the target file.
+               * Always expand keywords in the patched file, but repair EOL
+               * only if svn:eol-style dictates a particular style. */
+              repair_eol = (target->content_info->eol_style ==
+                              svn_subst_eol_style_fixed ||
+                            target->content_info->eol_style ==
+                              svn_subst_eol_style_native);
+
+              SVN_ERR(svn_subst_copy_and_translate4(
+                        target->patched_path, target->local_abspath,
+                        target->content_info->eol_str, repair_eol,
+                        target->content_info->keywords,
+                        TRUE /* expand */, FALSE /* special */,
+                        ctx->cancel_func, ctx->cancel_baton, pool));
             }
 
           if (target->added || target->replaced)
@@ -2171,7 +2411,7 @@ write_out_rejected_hunks(patch_target_t *target,
                          svn_boolean_t dry_run,
                          apr_pool_t *pool)
 {
-  SVN_ERR(svn_stream_close(target->content_info->reject));
+  SVN_ERR(svn_io_file_close(target->reject_file, pool));
 
   if (! dry_run && (target->had_rejects || target->had_prop_rejects))
     {
@@ -2203,13 +2443,7 @@ install_patched_prop_targets(patch_target_t *target,
        hi = apr_hash_next(hi))
     {
       prop_patch_target_t *prop_target = svn__apr_hash_index_val(hi);
-      apr_file_t *file;
-      svn_stream_t *patched_stream;
-      svn_stringbuf_t *line;
-      svn_stringbuf_t *prop_content;
       const svn_string_t *prop_val;
-      const char *eol_str;
-      svn_boolean_t eof;
       svn_error_t *err;
 
       svn_pool_clear(iterpool);
@@ -2230,35 +2464,6 @@ install_patched_prop_targets(patch_target_t *target,
                                      iterpool));
           continue;
         }
-
-      /* A property is usually small, at most a couple of bytes.
-       * Start out assuming it won't be larger than a typical line of text. */
-      prop_content = svn_stringbuf_create_ensure(80, scratch_pool);
-
-      /* svn_wc_prop_set4() wants a svn_string_t for input so we need to
-       * open the tmp file for reading again.
-       * ### Just keep it open? */
-      SVN_ERR(svn_io_file_open(&file, prop_target->patched_path,
-                               APR_READ | APR_BINARY, APR_OS_DEFAULT,
-                               scratch_pool));
-
-      patched_stream = svn_stream_from_aprfile2(file, FALSE /* disown */,
-                                                iterpool);
-      do
-        {
-          SVN_ERR(svn_stream_readline_detect_eol(patched_stream,
-                                                 &line, &eol_str,
-                                                 &eof,
-                                                 iterpool));
-
-          svn_stringbuf_appendstr(prop_content, line);
-
-          if (eol_str)
-            svn_stringbuf_appendcstr(prop_content, eol_str);
-        }
-      while (! eof);
-
-      SVN_ERR(svn_stream_close(patched_stream));
 
       /* If the patch target doesn't exist yet, the patch wants to add an
        * empty file with properties set on it. So create an empty file and
@@ -2284,7 +2489,7 @@ install_patched_prop_targets(patch_target_t *target,
         }
 
       /* Attempt to set the property, and reject all hunks if this fails. */
-      prop_val = svn_stringbuf__morph_into_string(prop_content);
+      prop_val = svn_stringbuf__morph_into_string(prop_target->patched_value);
       if (dry_run)
         {
           const svn_string_t *canon_propval;
@@ -2299,13 +2504,13 @@ install_patched_prop_targets(patch_target_t *target,
         }
       else
         {
-          err = (svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
-                                  prop_target->name, prop_val, svn_depth_empty,
-                                  TRUE /* skip_checks */,
-                                  NULL /* changelist_filter */,
-                                  NULL, NULL /* cancellation */,
-                                  NULL, NULL /* notification */,
-                                  iterpool));
+          err = svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
+                                 prop_target->name, prop_val, svn_depth_empty,
+                                 TRUE /* skip_checks */,
+                                 NULL /* changelist_filter */,
+                                 NULL, NULL /* cancellation */,
+                                 NULL, NULL /* notification */,
+                                 iterpool);
         }
 
       if (err)
