@@ -586,29 +586,32 @@ open_dir(report_dir_t *dir)
 static svn_error_t *
 close_dir(report_dir_t *dir)
 {
-  report_dir_t *prev, *sibling;
+  report_dir_t *prev;
+  report_dir_t *sibling;
+
+  /* ### is there a better pool... this is tossed at end-of-func  */
+  apr_pool_t *scratch_pool = dir->dir_baton_pool;
 
   SVN_ERR_ASSERT(! dir->ref_count);
 
   SVN_ERR(svn_ra_serf__walk_all_props(dir->props, dir->base_name,
                                       dir->base_rev,
                                       set_dir_props, dir,
-                                      dir->dir_baton_pool));
+                                      scratch_pool));
 
   SVN_ERR(svn_ra_serf__walk_all_props(dir->removed_props, dir->base_name,
                                       dir->base_rev, remove_dir_props, dir,
-                                      dir->dir_baton_pool));
+                                      scratch_pool));
 
   if (dir->fetch_props)
     {
       SVN_ERR(svn_ra_serf__walk_all_props(dir->props, dir->url,
                                           dir->target_rev,
                                           set_dir_props, dir,
-                                          dir->dir_baton_pool));
+                                          scratch_pool));
     }
 
-  SVN_ERR(dir->update_editor->close_directory(dir->dir_baton,
-                                              dir->dir_baton_pool));
+  SVN_ERR(dir->update_editor->close_directory(dir->dir_baton, scratch_pool));
 
   /* remove us from our parent's children list */
   if (dir->parent_dir)
@@ -961,6 +964,10 @@ handle_fetch(serf_request_t *request,
         {
           report_info_t *info = fetch_ctx->info;
 
+          /* ### this doesn't feel quite right. but it gets tossed at the
+             ### end of this block, so it will work for now.  */
+          apr_pool_t *scratch_pool = info->editor_pool;
+
           err = info->textdelta(NULL, info->textdelta_baton);
           if (err)
             {
@@ -974,28 +981,28 @@ handle_fetch(serf_request_t *request,
           err = svn_ra_serf__walk_all_props(info->props,
                                             info->base_name,
                                             info->base_rev,
-                                            set_file_props,
-                                            info, info->editor_pool);
+                                            set_file_props, info,
+                                            scratch_pool);
 
           if (!err)
             err = svn_ra_serf__walk_all_props(info->dir->removed_props,
                                               info->base_name,
                                               info->base_rev,
-                                              remove_file_props,
-                                              info, info->editor_pool);
+                                              remove_file_props, info,
+                                              scratch_pool);
           if (!err && info->fetch_props)
             {
               err = svn_ra_serf__walk_all_props(info->props,
                                                 info->url,
                                                 info->target_rev,
-                                                set_file_props,
-                                                info, info->editor_pool);
+                                                set_file_props, info,
+                                                scratch_pool);
             }
 
           if (!err)
             err = info->dir->update_editor->close_file(info->file_baton,
                                                        info->final_checksum,
-                                                       info->editor_pool);
+                                                       scratch_pool);
 
           if (err)
             {
@@ -1125,6 +1132,8 @@ handle_stream(serf_request_t *request,
 static svn_error_t *
 handle_propchange_only(report_info_t *info)
 {
+  apr_pool_t *scratch_pool;
+
   /* Ensure our parent is open. */
   SVN_ERR(open_dir(info->dir));
 
@@ -1169,25 +1178,29 @@ handle_propchange_only(report_info_t *info)
   if (info->lock_token)
     check_lock(info);
 
+  /* ### not sure this is right, but it gets tossed in a bit. workable.  */
+  scratch_pool = info->editor_pool;
+
   /* set all of the properties we received */
   SVN_ERR(svn_ra_serf__walk_all_props(info->props,
                                       info->base_name, info->base_rev,
                                       set_file_props, info,
-                                      info->editor_pool));
+                                      scratch_pool));
   SVN_ERR(svn_ra_serf__walk_all_props(info->dir->removed_props,
                                       info->base_name, info->base_rev,
                                       remove_file_props, info,
-                                      info->editor_pool));
+                                      scratch_pool));
   if (info->fetch_props)
     {
       SVN_ERR(svn_ra_serf__walk_all_props(info->props, info->url,
-                                          info->target_rev, set_file_props,
-                                          info, info->editor_pool));
+                                          info->target_rev,
+                                          set_file_props, info,
+                                          scratch_pool));
     }
 
   SVN_ERR(info->dir->update_editor->close_file(info->file_baton,
                                                info->final_checksum,
-                                               info->editor_pool));
+                                               scratch_pool));
 
   /* We're done with our pools. */
   svn_pool_destroy(info->editor_pool);

@@ -662,22 +662,31 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
+
+struct dirent_walker_baton_t {
+  /* Update the fields in this entry.  */
+  svn_dirent_t *entry;
+
+  /* If allocations are necessary, then use this pool.  */
+  apr_pool_t *result_pool;
+};
+
 static svn_error_t *
 dirent_walker(void *baton,
               const char *ns,
               const char *name,
               const svn_string_t *val,
-              apr_pool_t *pool)
+              apr_pool_t *scratch_pool)
 {
-  svn_dirent_t *entry = baton;
+  struct dirent_walker_baton_t *dwb = baton;
 
   if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
     {
-      entry->has_props = TRUE;
+      dwb->entry->has_props = TRUE;
     }
   else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
     {
-      entry->has_props = TRUE;
+      dwb->entry->has_props = TRUE;
     }
   else if (strcmp(ns, SVN_DAV_PROP_NS_DAV) == 0)
     {
@@ -685,40 +694,42 @@ dirent_walker(void *baton,
         {
           apr_int64_t deadprop_count;
           SVN_ERR(svn_cstring_atoi64(&deadprop_count, val->data));
-          entry->has_props = deadprop_count > 0;
+          dwb->entry->has_props = deadprop_count > 0;
         }
     }
   else if (strcmp(ns, "DAV:") == 0)
     {
       if (strcmp(name, SVN_DAV__VERSION_NAME) == 0)
         {
-          entry->created_rev = SVN_STR_TO_REV(val->data);
+          dwb->entry->created_rev = SVN_STR_TO_REV(val->data);
         }
       else if (strcmp(name, "creator-displayname") == 0)
         {
-          entry->last_author = val->data;
+          dwb->entry->last_author = val->data;
         }
       else if (strcmp(name, SVN_DAV__CREATIONDATE) == 0)
         {
-          SVN_ERR(svn_time_from_cstring(&entry->time, val->data, pool));
+          SVN_ERR(svn_time_from_cstring(&dwb->entry->time,
+                                        val->data,
+                                        dwb->result_pool));
         }
       else if (strcmp(name, "getcontentlength") == 0)
         {
           /* 'getcontentlength' property is empty for directories. */
           if (val->len)
             {
-              SVN_ERR(svn_cstring_atoi64(&entry->size, val->data));
+              SVN_ERR(svn_cstring_atoi64(&dwb->entry->size, val->data));
             }
         }
       else if (strcmp(name, "resourcetype") == 0)
         {
           if (strcmp(val->data, "collection") == 0)
             {
-              entry->kind = svn_node_dir;
+              dwb->entry->kind = svn_node_dir;
             }
           else
             {
-              entry->kind = svn_node_file;
+              dwb->entry->kind = svn_node_file;
             }
         }
     }
@@ -741,6 +752,7 @@ path_dirent_walker(void *baton,
                    apr_pool_t *pool)
 {
   struct path_dirent_visitor_t *dirents = baton;
+  struct dirent_walker_baton_t dwb;
   svn_dirent_t *entry;
 
   /* Skip our original path. */
@@ -765,7 +777,9 @@ path_dirent_walker(void *baton,
       apr_hash_set(dirents->base_paths, base_name, APR_HASH_KEY_STRING, entry);
     }
 
-  return dirent_walker(entry, ns, name, val, pool);
+  dwb.entry = entry;
+  dwb.result_pool = pool;  /* ### fix this!  */
+  return svn_error_return(dirent_walker(&dwb, ns, name, val, pool));
 }
 
 static const svn_ra_serf__dav_props_t *
@@ -836,8 +850,8 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
   svn_ra_serf__propfind_context_t *prop_ctx;
   const char *path;
   svn_revnum_t fetched_rev;
-  svn_dirent_t *entry;
   svn_error_t *err;
+  struct dirent_walker_baton_t dwb;
 
   err = fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
                          session, rel_path, revision,
@@ -854,12 +868,13 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
         return svn_error_return(err);
     }
 
-  entry = apr_pcalloc(pool, sizeof(*entry));
+  dwb.entry = apr_pcalloc(pool, sizeof(*dwb.entry));
+  dwb.result_pool = pool;  /* ### fix this  */
+  SVN_ERR(svn_ra_serf__walk_all_props(props, path, fetched_rev,
+                                      dirent_walker, &dwb,
+                                      pool));
 
-  SVN_ERR(svn_ra_serf__walk_all_props(props, path, fetched_rev, dirent_walker,
-                                      entry, pool));
-
-  *dirent = entry;
+  *dirent = dwb.entry;
 
   return SVN_NO_ERROR;
 }
