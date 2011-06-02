@@ -537,11 +537,8 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
                                       propfind_path, rev, "0", all_props,
                                       pool, pool));
 
-  *ret_props = apr_hash_make(pool);
-
-  SVN_ERR(svn_ra_serf__walk_all_props(props, propfind_path, rev,
-                                      svn_ra_serf__set_bare_props, *ret_props,
-                                      pool));
+  SVN_ERR(svn_ra_serf__select_revprops(ret_props, propfind_path, rev, props,
+                                       pool, pool));
 
   return SVN_NO_ERROR;
 }
