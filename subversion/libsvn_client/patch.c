@@ -67,7 +67,7 @@ typedef struct hunk_info_t {
   svn_linenum_t fuzz;
 } hunk_info_t;
 
-/* A struct carrying the information related to the patched and unpatched
+/* A struct carrying information related to the patched and unpatched
  * content of a target, be it a property or the text of a file. */
 typedef struct target_content_info_t {
   /* Indicates whether unpatched content existed prior to patching. */
@@ -139,9 +139,7 @@ typedef struct prop_patch_target_t {
 
   /* The patched property value.
    * This is equivalent to the target, except that in appropriate
-   * places it contains the modified text as it appears in the patch file.
-   * The data in the underlying file needs to be in repository-normal form,
-   * so EOL transformation and keyword contraction is done transparently. */
+   * places it contains the modified text as it appears in the patch file. */
   svn_stringbuf_t *patched_value;
 
   /* All information that is specific to the content of the property. */
@@ -179,8 +177,9 @@ typedef struct patch_target_t {
   /* The patched file.
    * This is equivalent to the target, except that in appropriate
    * places it contains the modified text as it appears in the patch file.
-   * The data in the underlying file needs to be in repository-normal form,
-   * so EOL transformation and keyword contraction is done transparently. */
+   * The data in this file is written in repository-normal form.
+   * EOL transformation and keyword contraction is performed when the
+   * patched result is installed in the working copy. */
   apr_file_t *patched_file;
 
   /* Path to the patched file. */
