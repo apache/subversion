@@ -42,6 +42,8 @@
 
 #include "ra_svn.h"
 
+#include "private/svn_string_private.h"
+
 #define svn_iswhitespace(c) ((c) == ' ' || (c) == '\n')
 
 /* If we receive data that *claims* to be followed by a very long string,
@@ -642,7 +644,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
    * data and len members in stringbuf. 
    */
   item->kind = SVN_RA_SVN_STRING;
-  item->u.string = svn_string_from_stringbuf(stringbuf);
+  item->u.string = svn_stringbuf__morph_into_string(stringbuf);
 
   return SVN_NO_ERROR;
 }

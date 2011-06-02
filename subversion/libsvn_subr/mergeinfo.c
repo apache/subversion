@@ -34,6 +34,7 @@
 #include "svn_mergeinfo.h"
 #include "private/svn_fspath.h"
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_string_private.h"
 #include "svn_private_config.h"
 #include "svn_hash.h"
 
@@ -1506,7 +1507,7 @@ svn_rangelist_to_string(svn_string_t **output,
       svn_stringbuf_appendcstr(buf, range_to_string(range, pool));
     }
 
-    *output = svn_string_from_stringbuf(buf);
+  *output = svn_stringbuf__morph_into_string(buf);
 
   return SVN_NO_ERROR;
 }
@@ -1560,7 +1561,7 @@ svn_mergeinfo_to_string(svn_string_t **output, svn_mergeinfo_t input,
     {
       svn_stringbuf_t *mergeinfo_buf;
       SVN_ERR(mergeinfo_to_stringbuf(&mergeinfo_buf, input, NULL, pool));
-      *output = svn_string_from_stringbuf(mergeinfo_buf);
+      *output = svn_stringbuf__morph_into_string(mergeinfo_buf);
     }
   else
     {
@@ -1930,7 +1931,7 @@ svn_mergeinfo__catalog_to_formatted_string(svn_string_t **output,
      otherwise, return a new string containing only a newline
      character.  */
   if (output_buf)
-    *output = svn_string_from_stringbuf(output_buf);
+    *output = svn_stringbuf__morph_into_string(output_buf);
   else
     *output = svn_string_create("\n", pool);
 
@@ -1964,7 +1965,7 @@ svn_mergeinfo__to_formatted_string(svn_string_t **output,
     }
 #endif
 
-  *output = output_buf ? svn_string_from_stringbuf(output_buf)
+  *output = output_buf ? svn_stringbuf__morph_into_string(output_buf)
                        : svn_string_create("", pool);
   return SVN_NO_ERROR;
 }

@@ -48,6 +48,7 @@
 
 #include "svn_private_config.h"
 
+#include "private/svn_string_private.h"
 
 /**
  * The textual elements of a detranslated special file.  One of these
@@ -230,7 +231,7 @@ keyword_printf(const char *fmt,
       fmt = cur + 2;
     }
 
-  return svn_string_from_stringbuf(value);
+  return svn_stringbuf__morph_into_string(value);
 }
 
 svn_error_t *
