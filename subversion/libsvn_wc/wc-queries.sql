@@ -1066,8 +1066,8 @@ DROP TABLE IF EXISTS temp__node_props_cache;
 DROP TABLE IF EXISTS revert_list;
 CREATE TEMPORARY TABLE revert_list (
    /* need wc_id if/when revert spans multiple working copies */
-   local_relpath TEXT,
-   actual INTEGER,         /* 1 if an actual row, 0 if a nodes row */
+   local_relpath TEXT NOT NULL,
+   actual INTEGER NOT NULL,         /* 1 if an actual row, 0 if a nodes row */
    conflict_old TEXT,
    conflict_new TEXT,
    conflict_working TEXT,
@@ -1144,7 +1144,7 @@ DROP TABLE IF EXISTS delete_list;
 CREATE TEMPORARY TABLE delete_list (
 /* ### we should put the wc_id in here in case a delete spans multiple
    ### working copies. queries, etc will need to be adjusted.  */
-   local_relpath TEXT PRIMARY KEY
+   local_relpath TEXT PRIMARY KEY NOT NULL
    )
 
 /* This matches the selection in STMT_INSERT_DELETE_FROM_NODE_RECURSIVE */
