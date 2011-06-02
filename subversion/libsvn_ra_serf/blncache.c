@@ -69,11 +69,13 @@ svn_ra_serf__blncache_create(svn_ra_serf__blncache_t **blncache_p,
                              apr_pool_t *pool)
 {
     svn_ra_serf__blncache_t *blncache = apr_pcalloc(pool, sizeof(*blncache));
+    apr_pool_t *cache_pool;
 
     /* Create subpool for cached data. It will be cleared if we reach maximum
      * cache size.*/
-    blncache->revnum_to_bc = apr_hash_make(pool);
-    blncache->baseline_info = apr_hash_make(pool);
+    cache_pool = svn_pool_create(pool);
+    blncache->revnum_to_bc = apr_hash_make(cache_pool);
+    blncache->baseline_info = apr_hash_make(cache_pool);
 
     *blncache_p = blncache;
 
