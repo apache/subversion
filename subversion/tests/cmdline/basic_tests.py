@@ -1722,9 +1722,9 @@ def basic_peg_revision(sbox):
 
   # Without the trailing "@", expect failure.
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, None, ".*Syntax error parsing revision 'abc'", 'cat', wc_file)
+    None, None, ".*Syntax error parsing peg revision 'abc'", 'cat', wc_file)
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, None, ".*Syntax error parsing revision 'abc'", 'cat', url)
+    None, None, ".*Syntax error parsing peg revision 'abc'", 'cat', url)
 
   # With the trailing "@", expect success.
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
