@@ -854,15 +854,15 @@ svn_ra_serf__flatten_props(apr_hash_t **flat_props,
 }
 
 
-svn_error_t *
-svn_ra_serf__set_bare_props(void *baton,
-                            const char *ns,
-                            const char *name,
-                            const svn_string_t *val,
-                            apr_pool_t *scratch_pool)
+static svn_error_t *
+select_revprops(void *baton,
+                const char *ns,
+                const char *name,
+                const svn_string_t *val,
+                apr_pool_t *scratch_pool)
 {
-  apr_hash_t *props = baton;
-  apr_pool_t *result_pool = apr_hash_pool_get(props);
+  apr_hash_t *revprops = baton;
+  apr_pool_t *result_pool = apr_hash_pool_get(revprops);
   const char *prop_name;
 
   /* ### copy NAME into the RESULT_POOL?  */
@@ -882,9 +882,26 @@ svn_ra_serf__set_bare_props(void *baton,
       return SVN_NO_ERROR;
     }
 
-  apr_hash_set(props, prop_name, APR_HASH_KEY_STRING, val);
+  apr_hash_set(revprops, prop_name, APR_HASH_KEY_STRING, val);
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_ra_serf__select_revprops(apr_hash_t **revprops,
+                             const char *name,
+                             svn_revnum_t rev,
+                             apr_hash_t *all_revprops,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  *revprops = apr_hash_make(result_pool);
+
+  return svn_error_return(svn_ra_serf__walk_all_props(
+                            all_revprops, name, rev,
+                            select_revprops, *revprops,
+                            scratch_pool));
 }
 
 

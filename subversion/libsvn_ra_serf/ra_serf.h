@@ -966,12 +966,15 @@ svn_ra_serf__svnname_from_wirename(const char *ns,
                                    apr_pool_t *result_pool);
 
 
+/* Select the basic revision properties from the set of "all" properties.
+   Return these in *REVPROPS, allocated from RESULT_POOL.  */
 svn_error_t *
-svn_ra_serf__set_bare_props(void *baton,
-                            const char *ns,
-                            const char *name,
-                            const svn_string_t *val,
-                            apr_pool_t *pool);
+svn_ra_serf__select_revprops(apr_hash_t **revprops,
+                             const char *name,
+                             svn_revnum_t rev,
+                             apr_hash_t *all_revprops,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 
 /* PROPS is nested hash tables mapping REV -> PATH -> NS -> NAME -> VALUE.
