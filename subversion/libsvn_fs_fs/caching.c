@@ -148,11 +148,11 @@ dump_cache_statistics(void *baton_void)
 #endif /* SVN_DEBUG_CACHE_DUMP_STATS */
 
 /* This function sets / registers the required callbacks for a given
- * not transaction-specific CACHE object in FS. 
+ * not transaction-specific CACHE object in FS, if CACHE is not NULL.
  * 
- * All these svn_cache__t instances shall be handled uniformly. That 
- * applies to the NO_HANDLER flag as well which controls whether the
- * error handler will be sets for the cache.
+ * All these svn_cache__t instances shall be handled uniformly. Unless
+ * NO_HANDLER is true, register an error handler that reports errors
+ * as warnings for the given CACHE.
  */
 static svn_error_t *
 init_callbacks(svn_cache__t *cache,
@@ -410,8 +410,9 @@ remove_txn_cache(void *baton_void)
 }
 
 /* This function sets / registers the required callbacks for a given
- * transaction-specific *CACHE object. In particular, it will ensure
- * that *CACHE gets reset to NULL upon POOL destruction latest.
+ * transaction-specific *CACHE object, if CACHE is not NULL and a no-op
+ * otherwise. In particular, it will ensure that *CACHE gets reset to NULL
+ * upon POOL destruction latest.
  */
 static void
 init_txn_callbacks(svn_cache__t **cache,
