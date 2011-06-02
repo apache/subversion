@@ -171,9 +171,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1130303
-   CVE-2011-1921 and CVE-2011-1783.
-   Justification:
-     Already released in 1.6.17.
-   Votes:
-     +3: cmpilato (I'm applying the "obvious fix" rule)
