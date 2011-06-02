@@ -726,6 +726,10 @@ VALUES (?1, ?2, ?3)
 SELECT locked_levels FROM wc_lock
 WHERE wc_id = ?1 AND local_dir_relpath = ?2
 
+-- STMT_COUNT_WC_LOCK
+SELECT COUNT(*) FROM wc_lock
+WHERE wc_id = ?1
+
 -- STMT_DELETE_WC_LOCK
 DELETE FROM wc_lock
 WHERE wc_id = ?1 AND local_dir_relpath = ?2
