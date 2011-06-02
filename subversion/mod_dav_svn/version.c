@@ -348,7 +348,6 @@ dav_svn__checkout(dav_resource *resource,
   /* Auto-Versioning Stuff */
   if (auto_checkout)
     {
-      dav_resource *res; /* ignored */
       const char *uuid_buf;
       void *data;
       const char *shared_activity, *shared_txn_name = NULL;
@@ -429,9 +428,9 @@ dav_svn__checkout(dav_resource *resource,
 
       /* Tweak the VCR in-place, making it into a WR.  (Ignore the
          NULL return value.) */
-      res = dav_svn__create_working_resource(resource,
-                                             shared_activity, shared_txn_name,
-                                             TRUE /* tweak in place */);
+      dav_svn__create_working_resource(resource,
+                                       shared_activity, shared_txn_name,
+                                       TRUE /* tweak in place */);
 
       /* Remember that this resource was auto-checked-out, so that
          auto_versionable allows us to do an auto-checkin and
