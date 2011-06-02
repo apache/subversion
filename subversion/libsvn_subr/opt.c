@@ -794,7 +794,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
             }
 
           return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                   _("Syntax error parsing revision '%s'"),
+                                   _("Syntax error parsing peg revision '%s'"),
                                    &peg_rev[1]);
         }
       rev->kind = start_revision.kind;
