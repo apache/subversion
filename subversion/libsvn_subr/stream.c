@@ -252,57 +252,12 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
   return svn_stream_write(stream, translated, &len);
 }
 
-/* Scan STREAM for an end-of-line indicatior, and return it in *EOL.
- * Set *EOL to NULL if the stream runs out before an end-of-line indicator
- * is found. */
-static svn_error_t *
-scan_eol(const char **eol, svn_stream_t *stream, apr_pool_t *pool)
-{
-  const char *eol_str;
-  svn_stream_mark_t *mark;
-
-  SVN_ERR(svn_stream_mark(stream, &mark, pool));
-
-  eol_str = NULL;
-  while (! eol_str)
-    {
-      char buf[512];
-      char *eolp;
-      apr_size_t len;
-
-      len = sizeof(buf);
-      SVN_ERR(svn_stream_read(stream, buf, &len));
-      if (len == 0)
-          break; /* EOF */
-      eol_str = svn_eol__detect_eol(buf, len, &eolp);
-
-      /* Detect the case where '\r' is the last character in the buffer
-       * and '\n' would be the first character in the next buffer. */
-      if (eol_str && eol_str[0] == '\r' && eol_str[1] == '\0' &&
-          eolp == buf + len - 1)
-        {
-          len = 1;
-          SVN_ERR(svn_stream_read(stream, buf, &len));
-          if (len == 0)
-            break; /* EOF */
-          else if (*buf == '\n')
-            eol_str = "\r\n";
-        }
-    }
-
-  SVN_ERR(svn_stream_seek(stream, mark));
-
-  *eol = eol_str;
-
-  return SVN_NO_ERROR;
-}
-
 /* Size that 90% of the lines we encounter will be not longer than.
    used by stream_readline_bytewise() and stream_readline_chunky().
  */
 #define LINE_CHUNK_SIZE 80
 
-/* Guts of svn_stream_readline() and svn_stream_readline_detect_eol().
+/* Guts of svn_stream_readline().
  * Returns the line read from STREAM in *STRINGBUF, and indicates
  * end-of-file in *EOF.  If DETECT_EOL is TRUE, the end-of-line indicator
  * is detected automatically and returned in *EOL.
@@ -457,7 +412,7 @@ stream_readline_chunky(svn_stringbuf_t **stringbuf,
   return svn_stream_skip(stream, total_parsed);
 }
 
-/* Guts of svn_stream_readline() and svn_stream_readline_detect_eol().
+/* Guts of svn_stream_readline().
  * Returns the line read from STREAM in *STRINGBUF, and indicates
  * end-of-file in *EOF.  EOL must point to the desired end-of-line
  * indicator.  STRINGBUF is allocated in POOL. */
@@ -509,27 +464,6 @@ svn_stream_readline(svn_stream_t *stream,
   return svn_error_return(stream_readline(stringbuf, eof, eol, stream,
                                           pool));
 }
-
-svn_error_t *
-svn_stream_readline_detect_eol(svn_stream_t *stream,
-                               svn_stringbuf_t **stringbuf,
-                               const char **eol,
-                               svn_boolean_t *eof,
-                               apr_pool_t *pool)
-{
-  const char *eol_str = NULL;
-  SVN_ERR(scan_eol(&eol_str, stream, pool));
-  if (eol)
-    *eol = eol_str;
-
-  /* If we encountered EOF before EOL, EOL_STR can be anything. */
-  if (! eol_str)
-    eol_str = APR_EOL_STR;
-
-  return svn_error_return(stream_readline(stringbuf, eof, eol_str, stream,
-                                          pool));
-}
-
 
 svn_error_t *svn_stream_copy3(svn_stream_t *from, svn_stream_t *to,
                               svn_cancel_func_t cancel_func,

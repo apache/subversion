@@ -269,8 +269,7 @@ parse_hunk_header(const char *header, svn_diff_hunk_t *hunk,
   return TRUE;
 }
 
-/* A helper function similar to svn_stream_readline_detect_eol(),
- * suitable for reading a line of text from a range in the patch file.
+/* A helper for reading a line of text from a range in the patch file.
  *
  * Allocate *STRINGBUF in RESULT_POOL, and read into it one line from FILE.
  * Reading stops either after a line-terminator was found or after MAX_LEN
