@@ -60,7 +60,7 @@ struct svn_stream_t {
 /*** Forward declarations. ***/
 
 static svn_error_t *
-skip_default_handler(void *baton, apr_size_t *count, svn_read_fn_t read_fn);
+skip_default_handler(void *baton, apr_size_t len, svn_read_fn_t read_fn);
 
 
 /*** Generic streams. ***/
@@ -142,7 +142,7 @@ svn_stream_read(svn_stream_t *stream, char *buffer, apr_size_t *len)
 
 
 svn_error_t *
-svn_stream_skip(svn_stream_t *stream, apr_size_t *len)
+svn_stream_skip(svn_stream_t *stream, apr_size_t len)
 {
   if (stream->skip_fn == NULL)
     return skip_default_handler(stream->baton, len, stream->read_fn);
@@ -471,7 +471,7 @@ stream_readline_chunky(svn_stringbuf_t **stringbuf,
   /* Move the stream read pointer to the first position behind the EOL.
    */
   SVN_ERR(svn_stream_seek(stream, mark));
-  return svn_stream_skip(stream, &total_parsed);
+  return svn_stream_skip(stream, total_parsed);
 }
 
 /* Guts of svn_stream_readline() and svn_stream_readline_detect_eol().
@@ -626,24 +626,20 @@ svn_stream_contents_same2(svn_boolean_t *same,
 
 /* Skip data from any stream by reading and simply discarding it. */
 static svn_error_t *
-skip_default_handler(void *baton, apr_size_t *count, svn_read_fn_t read_fn)
+skip_default_handler(void *baton, apr_size_t len, svn_read_fn_t read_fn)
 {
-  apr_size_t total_bytes_read = 0;
   apr_size_t bytes_read = 1;
   char buffer[4096];
-  svn_error_t *err = SVN_NO_ERROR;
-  apr_size_t to_read = *count;
+  apr_size_t to_read = len;
 
-  while ((to_read > 0) && !err && (bytes_read > 0))
+  while ((to_read > 0) && (bytes_read > 0))
     {
       bytes_read = sizeof(buffer) < to_read ? sizeof(buffer) : to_read;
-      err = read_fn(baton, buffer, &bytes_read);
-      total_bytes_read += bytes_read;
+      SVN_ERR(read_fn(baton, buffer, &bytes_read));
       to_read -= bytes_read;
     }
 
-  *count = total_bytes_read;
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
@@ -765,9 +761,9 @@ read_handler_disown(void *baton, char *buffer, apr_size_t *len)
 }
 
 static svn_error_t *
-skip_handler_disown(void *baton, apr_size_t *count)
+skip_handler_disown(void *baton, apr_size_t len)
 {
-  return svn_stream_skip(baton, count);
+  return svn_stream_skip(baton, len);
 }
 
 static svn_error_t *
@@ -850,28 +846,12 @@ read_handler_apr(void *baton, char *buffer, apr_size_t *len)
 }
 
 static svn_error_t *
-skip_handler_apr(void *baton, apr_size_t *count)
+skip_handler_apr(void *baton, apr_size_t len)
 {
   struct baton_apr *btn = baton;
-  apr_off_t offset = *count;
-  apr_off_t new_pos = *count;
-  apr_off_t current = 0;
-  svn_error_t *err;
+  apr_off_t offset = len;
 
-  /* so far, we have not moved anything */
-  *count = 0;
-
-  SVN_ERR(svn_io_file_seek(btn->file, APR_CUR, &current, btn->pool));
-  err = svn_io_file_seek(btn->file, APR_CUR, &new_pos, btn->pool);
-
-  /* Irrespective of errors, return the number of bytes we actually moved.
-   * If no new position has been returned from seek(), assume that no move
-   * happend and keep the *count==0 set earlier.
-   */
-  if ((offset != new_pos) || (current == 0))
-    *count = (apr_size_t)(new_pos - current);
-
-  return err;
+  return svn_io_file_seek(btn->file, APR_CUR, &offset, btn->pool);
 }
 
 static svn_error_t *
@@ -1439,10 +1419,10 @@ read_handler_md5(void *baton, char *buffer, apr_size_t *len)
 }
 
 static svn_error_t *
-skip_handler_md5(void *baton, apr_size_t *count)
+skip_handler_md5(void *baton, apr_size_t len)
 {
   struct md5_stream_baton *btn = baton;
-  return svn_stream_skip(btn->proxy, count);
+  return svn_stream_skip(btn->proxy, len);
 }
 
 static svn_error_t *
@@ -1539,13 +1519,13 @@ read_handler_stringbuf(void *baton, char *buffer, apr_size_t *len)
 }
 
 static svn_error_t *
-skip_handler_stringbuf(void *baton, apr_size_t *count)
+skip_handler_stringbuf(void *baton, apr_size_t len)
 {
   struct stringbuf_stream_baton *btn = baton;
   apr_size_t left_to_read = btn->str->len - btn->amt_read;
 
-  *count = (*count > left_to_read) ? left_to_read : *count;
-  btn->amt_read += *count;
+  len = (len > left_to_read) ? left_to_read : len;
+  btn->amt_read += len;
   return SVN_NO_ERROR;
 }
 
@@ -1675,13 +1655,13 @@ seek_handler_string(void *baton, const svn_stream_mark_t *mark)
 }
 
 static svn_error_t *
-skip_handler_string(void *baton, apr_size_t *count)
+skip_handler_string(void *baton, apr_size_t len)
 {
   struct string_stream_baton *btn = baton;
   apr_size_t left_to_read = btn->str->len - btn->amt_read;
 
-  *count = (*count > left_to_read) ? left_to_read : *count;
-  btn->amt_read += *count;
+  len = (len > left_to_read) ? left_to_read : len;
+  btn->amt_read += len;
   return SVN_NO_ERROR;
 }
 
