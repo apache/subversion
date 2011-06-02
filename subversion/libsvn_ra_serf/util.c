@@ -605,7 +605,6 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                               svn_ra_serf__session_t *sess,
                               apr_pool_t *scratch_pool)
 {
-  apr_status_t status;
   apr_pool_t *iterpool;
 
   assert(sess->pending_error == SVN_NO_ERROR);
@@ -613,6 +612,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
   iterpool = svn_pool_create(scratch_pool);
   while (!*done)
     {
+      apr_status_t status;
       svn_error_t *err;
       int i;
 
@@ -651,7 +651,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
       serf_debug__closed_conn(sess->bkt_alloc);
       for (i = 0; i < sess->num_conns; i++)
         {
-         serf_debug__closed_conn(sess->conns[i]->bkt_alloc);
+          serf_debug__closed_conn(sess->conns[i]->bkt_alloc);
         }
     }
   svn_pool_destroy(iterpool);
