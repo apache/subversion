@@ -3817,8 +3817,8 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
             }
           else
             {
-              svn_error_return(err);
-            }      
+              return svn_error_return(err);
+            }
         }
 
       if (path_mergeinfo)
