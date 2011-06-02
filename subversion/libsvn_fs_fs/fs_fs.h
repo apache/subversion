@@ -497,13 +497,20 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
                            apr_pool_t *pool);
 
 
-/* Sets up the non-transaction-local svn_cache__t structures in FS.
-   POOL is used for temporary allocations. */
+/* Initialize all session-local caches in FS according to the global
+   cache settings. Use POOL for allocations.
+
+   Please note that it is permissible for this function to set some
+   or all of these caches to NULL, regardless of any setting. */
 svn_error_t *
 svn_fs_fs__initialize_caches(svn_fs_t *fs, apr_pool_t *pool);
 
-/* Sets up the svn_cache__t structures local to transaction TXN_ID in FS.
-   POOL is used for temporary allocations. */
+/* Initialize all transaction-local caches in FS according to the global
+   cache settings and make TXN_ID part of their key space. Use POOL for
+   allocations.
+
+   Please note that it is permissible for this function to set some or all
+   of these caches to NULL, regardless of any setting. */
 svn_error_t *
 svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
                                  const char *txn_id,
