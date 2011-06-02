@@ -3518,10 +3518,11 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
 
       if (has_mergeinfo)
         {
-          /* Save this partisular node's mergeinfo. */
+          /* Save this particular node's mergeinfo. */
           apr_hash_t *proplist;
           svn_mergeinfo_t kid_mergeinfo;
           svn_string_t *mergeinfo_string;
+          svn_error_t *err;
 
           SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, kid_dag, iterpool));
           mergeinfo_string = apr_hash_get(proplist, SVN_PROP_MERGEINFO,
@@ -3535,14 +3536,26 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
                  idstr->data);
             }
 
-          SVN_ERR(svn_mergeinfo_parse(&kid_mergeinfo,
-                                      mergeinfo_string->data,
-                                      result_pool));
-
-          apr_hash_set(result_catalog,
-                       apr_pstrdup(result_pool, kid_path),
-                       APR_HASH_KEY_STRING,
-                       kid_mergeinfo);
+          /* Issue #3896: If a node has syntactically invalid mergeinfo, then
+             treat it as if no mergeinfo is present rather than raising a parse
+             error. */
+          err = svn_mergeinfo_parse(&kid_mergeinfo,
+                                    mergeinfo_string->data,
+                                    result_pool);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+                svn_error_clear(err);
+              else
+                svn_error_return(err);
+              }
+          else
+            {
+              apr_hash_set(result_catalog,
+                           apr_pstrdup(result_pool, kid_path),
+                           APR_HASH_KEY_STRING,
+                           kid_mergeinfo);
+            }
         }
 
       if (go_down)
@@ -3661,40 +3674,76 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
 
   if (nearest_ancestor == parent_path)
     {
+      svn_error_t *err;
+
       /* We can return this directly. */
       svn_pool_destroy(iterpool);
-      return svn_mergeinfo_parse(mergeinfo,
-                                 mergeinfo_string->data,
-                                 result_pool);
+
+      /* Issue #3896: If a node has syntactically invalid mergeinfo, then
+         treat it as if no mergeinfo is present rather than raising a parse
+         error. */
+      err = svn_mergeinfo_parse(mergeinfo,
+                                mergeinfo_string->data,
+                                result_pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+            {
+              svn_error_clear(err);
+              err = NULL;
+              *mergeinfo = NULL;
+            }
+        }
+      return svn_error_return(err);
     }
   else
     {
       svn_mergeinfo_t temp_mergeinfo;
+      svn_error_t *err;
 
       /* We're inheriting this, so we need to (a) remove
          non-inheritable ranges and (b) add the rest of the path to
          the merged-from paths.
        */
 
-      SVN_ERR(svn_mergeinfo_parse(&temp_mergeinfo,
-                                  mergeinfo_string->data,
-                                  scratch_pool));
-      SVN_ERR(svn_mergeinfo_inheritable(&temp_mergeinfo,
-                                        temp_mergeinfo,
-                                        NULL, SVN_INVALID_REVNUM,
-                                        SVN_INVALID_REVNUM, scratch_pool));
+      /* Issue #3896: If a node inherits syntactically invalid mergeinfo,
+         then treat it as if no mergeinfo is inherited rather than raising
+         a parse error. */
+      err = svn_mergeinfo_parse(&temp_mergeinfo,
+                                mergeinfo_string->data,
+                                scratch_pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+            {
+              svn_error_clear(err);
+              *mergeinfo = NULL;
+            }
+          else
+            {
+              return svn_error_return(err);
+            }
+        }
+      else
+        {
+          SVN_ERR(svn_mergeinfo_inheritable(&temp_mergeinfo,
+                                            temp_mergeinfo,
+                                            NULL, SVN_INVALID_REVNUM,
+                                            SVN_INVALID_REVNUM,
+                                            scratch_pool));
 
-      SVN_ERR(append_to_merged_froms(mergeinfo,
-                                     temp_mergeinfo,
-                                     parent_path_relpath(parent_path,
-                                                         nearest_ancestor,
-                                                         scratch_pool),
-                                     result_pool));
+          SVN_ERR(append_to_merged_froms(mergeinfo,
+                                         temp_mergeinfo,
+                                         parent_path_relpath(parent_path,
+                                                             nearest_ancestor,
+                                                             scratch_pool),
+                                         result_pool));
 
-      if (validate_inherited_mergeinfo)
-        SVN_ERR(svn_fs_fs__validate_mergeinfo(mergeinfo, rev_root->fs,
-                                              *mergeinfo, result_pool,
-                                              iterpool));
+          if (validate_inherited_mergeinfo)
+            SVN_ERR(svn_fs_fs__validate_mergeinfo(mergeinfo, rev_root->fs,
+                                                  *mergeinfo, result_pool,
+                                                  iterpool));
+        }
       svn_pool_destroy(iterpool);
       return SVN_NO_ERROR;
     }
@@ -3749,14 +3798,29 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
 
   for (i = 0; i < paths->nelts; i++)
     {
+      svn_error_t *err;
       svn_mergeinfo_t path_mergeinfo;
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(get_mergeinfo_for_path(&path_mergeinfo, root, path,
-                                     inherit, validate_inherited_mergeinfo,
-                                     pool, iterpool));
+      err = get_mergeinfo_for_path(&path_mergeinfo, root, path,
+                                   inherit, validate_inherited_mergeinfo,
+                                   pool, iterpool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+            {
+              svn_error_clear(err);
+              err = NULL;
+              path_mergeinfo = NULL;
+            }
+          else
+            {
+              svn_error_return(err);
+            }      
+        }
+
       if (path_mergeinfo)
         apr_hash_set(result_catalog, path, APR_HASH_KEY_STRING,
                      path_mergeinfo);
