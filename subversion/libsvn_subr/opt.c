@@ -27,6 +27,7 @@
 #include <apr_want.h>
 
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 #include <apr_pools.h>
 #include <apr_general.h>
@@ -774,10 +775,28 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
         }
 
       if (ret || end_revision.kind != svn_opt_revision_unspecified)
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("Syntax error parsing revision '%s'"),
-                                 &peg_rev[1]);
+        {
+          /* If an svn+ssh URL was used and it contains only one @,
+           * provide an error message that presents a possible solution
+           * to the parsing error (issue #2349). */
+          if (strncmp(path, "svn+ssh://", 10) == 0)
+            {
+              const char *at;
 
+              at = strchr(path, '@');
+              if (at && strrchr(path, '@') == at)
+                return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                         _("Syntax error parsing peg revision "
+                                           "'%s'; if this problem is "
+                                           "unexpected try appending '@' to "
+                                           "the URL: '%s@'"),
+                                       &peg_rev[1], path);
+            }
+
+          return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                   _("Syntax error parsing revision '%s'"),
+                                   &peg_rev[1]);
+        }
       rev->kind = start_revision.kind;
       rev->value = start_revision.value;
     }
