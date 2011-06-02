@@ -176,7 +176,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.17
 
   User-visible changes:
     * improve checkout speed on Windows (issue #3719)
-    * make 'blame -g' more efficient on with large mergeinfo (r1094692)
+    * make 'blame -g' more efficient with large mergeinfo (r1094692)
     * avoid some invalid handle exceptions on Windows (r1095654)
     * preserve log message with a non-zero editor exit (r1072084)
     * fix FSFS cache performance on 64-bit platforms (r1103665)
