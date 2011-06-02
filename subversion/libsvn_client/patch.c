@@ -2283,7 +2283,7 @@ install_patched_prop_targets(patch_target_t *target,
         }
 
       /* Attempt to set the property, and reject all hunks if this fails. */
-      prop_val = svn_string_create_from_buf(prop_content, iterpool);
+      prop_val = svn_string_from_stringbuf(prop_content);
       if (dry_run)
         {
           const svn_string_t *canon_propval;

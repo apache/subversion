@@ -740,7 +740,7 @@ svn_utf_string_to_utf8(const svn_string_t **dest,
       if (! err)
         err = check_utf8(destbuf->data, destbuf->len, pool);
       if (! err)
-        *dest = svn_string_create_from_buf(destbuf, pool);
+        *dest = svn_string_from_stringbuf(destbuf);
     }
   else
     {
@@ -876,7 +876,7 @@ svn_utf_string_from_utf8(const svn_string_t **dest,
         err = convert_to_stringbuf(node, src->data, src->len,
                                    &dbuf, pool);
       if (! err)
-        *dest = svn_string_create_from_buf(dbuf, pool);
+        *dest = svn_string_from_stringbuf(dbuf);
     }
   else
     {

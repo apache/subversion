@@ -481,7 +481,7 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       if (err)
         goto cleanup;
 
-      *edited_contents = svn_string_create_from_buf(edited_contents_s, pool);
+      *edited_contents = svn_string_from_stringbuf(edited_contents_s);
 
       /* Translate back to UTF8/LF if desired. */
       if (as_text)
