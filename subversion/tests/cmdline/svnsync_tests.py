@@ -802,6 +802,66 @@ def descend_into_replace(sbox):
   run_test(sbox, "descend_into_replace.dump", subdir='/trunk/H',
            exp_dump_file_name = "descend_into_replace.expected.dump")
 
+def specific_deny_authz(sbox):
+  "verify if specifically denied paths dont sync"
+
+  sbox.build("specific-deny-authz")
+
+  dest_sbox = sbox.clone_dependent()
+  build_repos(dest_sbox)
+
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
+
+  run_init(dest_sbox.repo_url, sbox.repo_url)
+
+  svntest.main.run_svn(None, "cp",
+                       os.path.join(sbox.wc_dir, "A"),
+                       os.path.join(sbox.wc_dir, "A_COPY")
+                       )
+  svntest.main.run_svn(None, "ci", "-mm", sbox.wc_dir)
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  # For mod_dav_svn's parent path setup we need per-repos permissions in
+  # the authz file...
+  if sbox.repo_url.startswith('http'):
+    svntest.main.file_write(sbox.authz_file,
+                            "[specific-deny-authz:/]\n"
+                            "* = r\n"
+                            "\n"
+                            "[specific-deny-authz:/A]\n"
+                            "* = \n"
+                            "\n"
+                            "[specific-deny-authz:/A_COPY/B/lambda]\n"
+                            "* = \n"
+                            "\n"
+                            "[specific-deny-authz-1:/]\n"
+                            "* = rw\n")
+  # Otherwise we can just go with the permissions needed for the source
+  # repository.
+  else:
+    svntest.main.file_write(sbox.authz_file,
+                            "[/]\n"
+                            "* = r\n"
+                            "\n"
+                            "[/A]\n"
+                            "* = \n"
+                            "\n"
+                            "[/A_COPY/B/lambda]\n"
+                            "* = \n")
+
+  run_sync(dest_sbox.repo_url)
+
+  lambda_url = dest_sbox.repo_url + '/A_COPY/B/lambda'
+
+  # this file should have been blocked by authz
+  svntest.actions.run_and_verify_svn(None,
+                                     [], svntest.verify.AnyOutput,
+                                     'cat',
+                                     lambda_url)
+
+
+
 ########################################################################
 # Run the tests
 
@@ -841,6 +901,7 @@ test_list = [ None,
               delete_svn_props,
               commit_a_copy_of_root,
               descend_into_replace,
+              Skip(specific_deny_authz, svntest.main.is_ra_type_file),
              ]
 
 if __name__ == '__main__':
