@@ -62,6 +62,7 @@
 #include "private/svn_token.h"
 #include "private/svn_opt_private.h"
 #include "private/svn_client_private.h"
+#include "private/svn_string_private.h"
 
 
 
@@ -481,7 +482,7 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       if (err)
         goto cleanup;
 
-      *edited_contents = svn_string_from_stringbuf(edited_contents_s);
+      *edited_contents = svn_stringbuf__morph_into_string(edited_contents_s);
 
       /* Translate back to UTF8/LF if desired. */
       if (as_text)

@@ -177,15 +177,6 @@ svn_string_first_non_whitespace(const svn_string_t *str);
 apr_size_t
 svn_string_find_char_backward(const svn_string_t *str, char ch);
 
-/** Returns the @a svn_string_t information contained in the data and
- * len members of @a strbuf. This is effectively a typecast, converting
- * @a strbuf into an svn_string_t. This first will become invalid and must
- * not be accessed after this function returned.
- */
-svn_string_t *
-svn_string_from_stringbuf(svn_stringbuf_t *strbuf);
-/** @} */
-
 
 /** svn_stringbuf_t functions.
  *

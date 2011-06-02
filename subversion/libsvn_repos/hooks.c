@@ -36,6 +36,7 @@
 #include "svn_private_config.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_repos_private.h"
+#include "private/svn_string_private.h"
 
 
 
@@ -226,7 +227,7 @@ run_hook_cmd(svn_string_t **result,
         return svn_error_wrap_apr
           (apr_err, _("Error closing read end of stderr pipe"));
 
-      *result = svn_string_from_stringbuf(native_stdout);
+      *result = svn_stringbuf__morph_into_string(native_stdout);
     }
   else
     {
@@ -394,7 +395,7 @@ lock_token_content(apr_file_t **handle, apr_hash_t *lock_tokens,
 
   svn_stringbuf_appendcstr(lock_str, "\n");
   return create_temp_file(handle,
-                          svn_string_from_stringbuf(lock_str), pool);
+                          svn_stringbuf__morph_into_string(lock_str), pool);
 }
 
 

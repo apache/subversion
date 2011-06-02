@@ -236,7 +236,7 @@ svn_string_find_char_backward(const svn_string_t *str, char ch)
 }
 
 svn_string_t *
-svn_string_from_stringbuf(svn_stringbuf_t *strbuf)
+svn_stringbuf__morph_into_string(svn_stringbuf_t *strbuf)
 {
   /* In debug mode, detect attempts to modify the original STRBUF object.
    */

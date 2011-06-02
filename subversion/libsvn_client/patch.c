@@ -46,6 +46,7 @@
 #include "private/svn_eol_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_string_private.h"
 
 typedef struct hunk_info_t {
   /* The hunk. */
@@ -2283,7 +2284,7 @@ install_patched_prop_targets(patch_target_t *target,
         }
 
       /* Attempt to set the property, and reject all hunks if this fails. */
-      prop_val = svn_string_from_stringbuf(prop_content);
+      prop_val = svn_stringbuf__morph_into_string(prop_content);
       if (dry_run)
         {
           const svn_string_t *canon_propval;
