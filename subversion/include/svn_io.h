@@ -1223,6 +1223,9 @@ svn_stream_readline(svn_stream_t *stream,
  * is returned in @a *eol.  If EOF is reached and the stream does not
  * end with a newline character, @a *eol will be NULL.
  *
+ * @note This function will fail if @a stream does not support mark
+ * and seek (see @ref svn_stream_supports_mark).
+ *
  * @since New in 1.7.
  */
 svn_error_t *
