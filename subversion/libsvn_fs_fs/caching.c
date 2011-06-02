@@ -190,12 +190,6 @@ init_callbacks(svn_cache__t *cache,
   return SVN_NO_ERROR;
 }
 
-/* Initialize all session-local caches in FS according to the global
- * cache settings. Use POOL for allocations.
- * 
- * Please note that it is permissible for this function to set some
- * or all of these caches to NULL, regardless of any setting.
- */
 svn_error_t *
 svn_fs_fs__initialize_caches(svn_fs_t *fs,
                              apr_pool_t *pool)
@@ -438,13 +432,6 @@ init_txn_callbacks(svn_cache__t **cache,
     }
 }
 
-/* Initialize all transaction-local caches in FS according to the global
- * cache settings and make TXN_ID part of their key space. Use POOL for
- * allocations.
- * 
- * Please note that it is permissible for this function to set some or all
- * of these caches to NULL, regardless of any setting.
- */
 svn_error_t *
 svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
                                  const char *txn_id,
@@ -500,8 +487,6 @@ svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Make sure all transaction-local caches in FS are reset to NULL.
- */
 void
 svn_fs_fs__reset_txn_caches(svn_fs_t *fs)
 {
