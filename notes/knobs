@@ -141,7 +141,9 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
 4.1 CHECK_FOR_SAME_FILE
 
   Scope:     libsvn_subr (file copy)
-  Purpose:   
+  Purpose:   Test whether we try to do no-op file copies. If defined, 
+             svn_io_copy_file() will return an error when source and
+             destination are the same file.
   Range:     definedness
   Default:   not defined
   Suggested: not defined
@@ -157,7 +159,7 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
 4.3 SVN_DISABLE_ENTRY_CACHE
 
   Scope:     libsvn_wc
-  Purpose:   
+  Purpose:   If defined, ADM entries will not be cached.
   Range:     definedness
   Default:   not defined
   Suggested: defined, not defined
@@ -173,7 +175,9 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
 4.5 SVN_USE_WIN32_CRASHHANDLER
 
   Scope:     libsvn_subr
-  Purpose:   
+  Purpose:   Define this in the Win32 platform if you want to enable the
+             crash handler allowing for post-mortem analysis after fatal
+             application failures.
   Range:     definedness
   Default:   defined (Windows only), not defined (elsewhere)
   Suggested: defined (Windows only), not defined
@@ -219,7 +223,8 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
 5.2 SVN_DEBUG
 
   Scope:     (global)
-  Purpose:   
+  Purpose:   Enables various, debug-mode-only checks and other development
+             code. Never define this in release builds.
   Range:     definedness
   Default:   not defined
   Suggested: defined, not defined
@@ -227,8 +232,9 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
 5.3 SVN_CLIENT_COMMIT_DEBUG
 
   Scope:     libsvn_client
-  Purpose:   
+  Purpose:   Enables detailed client-side SVN_DBG output during commits.
   Range:     definedness
+             (if defined, SVN_DEBUG must be defined as well)
   Default:   not defined
   Suggested: defined, not defined
 
