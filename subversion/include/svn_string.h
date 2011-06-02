@@ -178,7 +178,8 @@ apr_size_t
 svn_string_find_char_backward(const svn_string_t *str, char ch);
 
 /** Returns the @a svn_string_t information contained in the data and
- * len members of @a strbuf.
+ * len members of @a strbuf. This is effectively a typecast, converting
+ * @a strbuf into an svn_string_t.
  */
 const svn_string_t *
 svn_string_from_stringbuf(const svn_stringbuf_t *strbuf);
