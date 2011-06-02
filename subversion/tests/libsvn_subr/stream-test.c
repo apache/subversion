@@ -262,7 +262,6 @@ test_stream_seek_file(apr_pool_t *pool)
   apr_status_t status;
   static const char *NL = APR_EOL_STR;
   svn_stream_mark_t *mark;
-  apr_size_t count;
 
   status = apr_file_open(&f, fname, (APR_READ | APR_WRITE | APR_CREATE |
                          APR_TRUNCATE | APR_DELONCLOSE), APR_OS_DEFAULT, pool);
@@ -305,12 +304,10 @@ test_stream_seek_file(apr_pool_t *pool)
   SVN_ERR(svn_stream_readline(stream, &line, NL, &eof, pool));
   SVN_TEST_ASSERT(eof);
 
-  /* Go back to the begin of last line and try to skip it
+  /* Go back to the beginning of the last line and try to skip it
    * NOT including the EOL. */
   SVN_ERR(svn_stream_seek(stream, mark));
-  count = strlen(file_data[1]);
-  SVN_ERR(svn_stream_skip(stream, &count));
-  SVN_TEST_ASSERT(count == strlen(file_data[1]));
+  SVN_ERR(svn_stream_skip(stream, strlen(file_data[1])));
   /* The remaining line should be empty */
   SVN_ERR(svn_stream_readline(stream, &line, NL, &eof, pool));
   SVN_TEST_ASSERT(! eof && strcmp(line->data, "") == 0);
@@ -351,9 +348,7 @@ test_stream_seek_stringbuf(apr_pool_t *pool)
 
   /* Go back to the begin of last word and try to skip some of it */
   SVN_ERR(svn_stream_seek(stream, mark));
-  len = 2;
-  SVN_ERR(svn_stream_skip(stream, &len));
-  SVN_TEST_ASSERT(len == 2);
+  SVN_ERR(svn_stream_skip(stream, 2));
   /* The remaining line should be empty */
   len = 3;
   SVN_ERR(svn_stream_read(stream, buf, &len));
@@ -400,9 +395,7 @@ test_stream_seek_translated(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(buf, " was");
 
   SVN_ERR(svn_stream_seek(translated_stream, mark));
-  len = 2;
-  SVN_ERR(svn_stream_skip(translated_stream, &len));
-  SVN_TEST_ASSERT(len == 2);
+  SVN_ERR(svn_stream_skip(translated_stream, 2));
   len = 2;
   SVN_ERR(svn_stream_read(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 2);
@@ -424,9 +417,7 @@ test_stream_seek_translated(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(buf, " expanded");
 
   SVN_ERR(svn_stream_seek(translated_stream, mark));
-  len = 6;
-  SVN_ERR(svn_stream_skip(translated_stream, &len));
-  SVN_TEST_ASSERT(len == 6);
+  SVN_ERR(svn_stream_skip(translated_stream, 6));
   len = 3;
   SVN_ERR(svn_stream_read(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 3);
@@ -448,9 +439,7 @@ test_stream_seek_translated(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(buf, " $Tw");
 
   SVN_ERR(svn_stream_seek(translated_stream, mark));
-  len = 2;
-  SVN_ERR(svn_stream_skip(translated_stream, &len));
-  SVN_TEST_ASSERT(len == 2);
+  SVN_ERR(svn_stream_skip(translated_stream, 2));
   len = 2;
   SVN_ERR(svn_stream_read(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 2);
@@ -472,9 +461,7 @@ test_stream_seek_translated(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(buf, "o");
 
   SVN_ERR(svn_stream_seek(translated_stream, mark));
-  len = 2;
-  SVN_ERR(svn_stream_skip(translated_stream, &len));
-  SVN_TEST_ASSERT(len == 1);
+  SVN_ERR(svn_stream_skip(translated_stream, 2));
   len = 1;
   SVN_ERR(svn_stream_read(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 0);
