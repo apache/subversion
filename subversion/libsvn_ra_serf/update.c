@@ -441,11 +441,10 @@ set_file_props(void *baton,
                const char *ns,
                const char *name,
                const svn_string_t *val,
-               apr_pool_t *pool)
+               apr_pool_t *scratch_pool)
 {
   report_info_t *info = baton;
   const svn_delta_editor_t *editor = info->dir->update_editor;
-  apr_pool_t *scratch_pool = pool;  /* ### fix this  */
   const char *prop_name;
 
   if (strcmp(name, "md5-checksum") == 0
@@ -467,11 +466,10 @@ set_dir_props(void *baton,
               const char *ns,
               const char *name,
               const svn_string_t *val,
-              apr_pool_t *pool)
+              apr_pool_t *scratch_pool)
 {
   report_dir_t *dir = baton;
   const svn_delta_editor_t *editor = dir->update_editor;
-  apr_pool_t *scratch_pool = pool;  /* ### fix this  */
   const char *prop_name;
 
   prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
@@ -489,11 +487,10 @@ remove_file_props(void *baton,
                   const char *ns,
                   const char *name,
                   const svn_string_t *val,
-                  apr_pool_t *pool)
+                  apr_pool_t *scratch_pool)
 {
   report_info_t *info = baton;
   const svn_delta_editor_t *editor = info->dir->update_editor;
-  apr_pool_t *scratch_pool = pool;  /* ### fix this  */
   const char *prop_name;
 
   prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
@@ -511,11 +508,10 @@ remove_dir_props(void *baton,
                  const char *ns,
                  const char *name,
                  const svn_string_t *val,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
   report_dir_t *dir = baton;
   const svn_delta_editor_t *editor = dir->update_editor;
-  apr_pool_t *scratch_pool = pool;  /* ### fix this  */
   const char *prop_name;
 
   prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
@@ -1130,10 +1126,9 @@ handle_stream(serf_request_t *request,
 }
 
 static svn_error_t *
-handle_propchange_only(report_info_t *info)
+handle_propchange_only(report_info_t *info,
+                       apr_pool_t *scratch_pool)
 {
-  apr_pool_t *scratch_pool;
-
   /* Ensure our parent is open. */
   SVN_ERR(open_dir(info->dir));
 
@@ -1177,9 +1172,6 @@ handle_propchange_only(report_info_t *info)
 
   if (info->lock_token)
     check_lock(info);
-
-  /* ### not sure this is right, but it gets tossed in a bit. workable.  */
-  scratch_pool = info->editor_pool;
 
   /* set all of the properties we received */
   SVN_ERR(svn_ra_serf__walk_all_props(info->props,
@@ -1292,8 +1284,13 @@ fetch_file(report_context_t *ctx, report_info_t *info)
     }
   else
     {
-      /* No propfind or GET request.  Just handle the prop changes now. */
-      SVN_ERR(handle_propchange_only(info));
+      /* No propfind or GET request.  Just handle the prop changes now.
+
+         Note: we'll use INFO->POOL for the scratch_pool here since it will
+         be destroyed at the end of handle_propchange_only(). That pool
+         would be quite fine, but it is unclear how long INFO->POOL will
+         stick around since its lifetime and usage are unclear.  */
+      SVN_ERR(handle_propchange_only(info, info->pool));
     }
 
   return SVN_NO_ERROR;
@@ -2373,10 +2370,15 @@ finish_report(void *report_baton,
   while (!report->done || report->active_fetches || report->active_propfinds)
     {
       svn_error_t *err;
+      apr_pool_t *iterpool_inner;
 
       svn_pool_clear(iterpool);
 
-      status = serf_context_run(sess->context, sess->timeout, iterpool);
+      /* We need to be careful between the outer and inner ITERPOOLs,
+         and what items are allocated within.  */
+      iterpool_inner = svn_pool_create(iterpool);
+
+      status = serf_context_run(sess->context, sess->timeout, iterpool_inner);
 
       err = sess->pending_error;
       sess->pending_error = SVN_NO_ERROR;
@@ -2410,6 +2412,8 @@ finish_report(void *report_baton,
       done_list = report->done_propfinds;
       while (done_list)
         {
+          svn_pool_clear(iterpool_inner);
+
           report->active_propfinds--;
 
           /* If we have some files that we won't be fetching the content
@@ -2440,7 +2444,7 @@ finish_report(void *report_baton,
                */
               if (cur)
                 {
-                  SVN_ERR(handle_propchange_only(cur->data));
+                  SVN_ERR(handle_propchange_only(cur->data, iterpool_inner));
 
                   if (!prev)
                     {
