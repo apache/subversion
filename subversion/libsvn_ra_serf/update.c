@@ -231,8 +231,6 @@ typedef struct report_info_t
  * its associated Serf session/connection.
  */
 typedef struct report_fetch_t {
-  /* Our pool. */
-  apr_pool_t *pool;
 
   /* The session we should use to fetch the file. */
   svn_ra_serf__session_t *sess;
@@ -1236,7 +1234,6 @@ fetch_file(report_context_t *ctx, report_info_t *info)
       report_fetch_t *fetch_ctx;
 
       fetch_ctx = apr_pcalloc(info->dir->pool, sizeof(*fetch_ctx));
-      fetch_ctx->pool = info->pool;
       fetch_ctx->info = info;
       fetch_ctx->done_list = &ctx->done_fetches;
       fetch_ctx->sess = ctx->sess;
@@ -2281,17 +2278,16 @@ finish_report(void *report_baton,
   svn_ra_serf__session_t *sess = report->sess;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  svn_ra_serf__list_t *done_list;
   const char *report_target;
-  apr_status_t status;
   svn_boolean_t closed_root;
-  int status_code, i;
+  int status_code;
   svn_stringbuf_t *buf = NULL;
-  apr_pool_t *iterpool;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_error_t *err;
 
-  svn_xml_make_close_tag(&buf, pool, "S:update-report");
+  svn_xml_make_close_tag(&buf, iterpool, "S:update-report");
   SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
-                                 NULL, pool));
+                                 NULL, iterpool));
 
   /* We need to flush the file, make it unbuffered (so that it can be
    * zero-copied via mmap), and reset the position before attempting to
@@ -2347,11 +2343,12 @@ finish_report(void *report_baton,
   sess->cur_conn = 1;
   closed_root = FALSE;
 
-  iterpool = svn_pool_create(pool);
   while (!report->done || report->active_fetches || report->active_propfinds)
     {
-      svn_error_t *err;
       apr_pool_t *iterpool_inner;
+      svn_ra_serf__list_t *done_list;
+      int i;
+      apr_status_t status;
 
       svn_pool_clear(iterpool);
 
@@ -2493,7 +2490,6 @@ finish_report(void *report_baton,
          serf_debug__closed_conn(sess->conns[i]->bkt_alloc);
         }
     }
-  svn_pool_destroy(iterpool);
 
   /* Ensure that we opened and closed our root dir and that we closed
    * all of our children. */
@@ -2502,8 +2498,10 @@ finish_report(void *report_baton,
       SVN_ERR(close_all_dirs(report->root_dir));
     }
 
-  /* FIXME subpool */
-  return report->update_editor->close_edit(report->update_baton, sess->pool);
+  err = report->update_editor->close_edit(report->update_baton, iterpool);
+
+  svn_pool_destroy(iterpool);
+  return svn_error_return(err);
 }
 #undef MAX_NR_OF_CONNS
 #undef EXP_REQS_PER_CONN
@@ -2749,7 +2747,6 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__connection_t *conn;
-  svn_ra_serf__handler_t *handler;
   const char *fetch_url;
   apr_hash_t *fetch_props;
   svn_node_kind_t res_kind;
@@ -2801,10 +2798,10 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   if (stream)
     {
       report_fetch_t *stream_ctx;
+      svn_ra_serf__handler_t *handler;
 
       /* Create the fetch context. */
       stream_ctx = apr_pcalloc(pool, sizeof(*stream_ctx));
-      stream_ctx->pool = pool;
       stream_ctx->target_stream = stream;
       stream_ctx->sess = session;
       stream_ctx->conn = conn;
