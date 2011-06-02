@@ -5144,6 +5144,7 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
           apr_hash_t *plist;
           svn_mergeinfo_t child_mergeinfo;
           svn_string_t *pval;
+          svn_error_t *err;
 
           SVN_ERR(svn_fs_base__dag_get_proplist(&plist, child_node,
                                                 trail, iterpool));
@@ -5157,13 +5158,26 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
                                          "mergeinfo but doesn't"),
                                        id_str->data);
             }
-          SVN_ERR(svn_mergeinfo_parse(&child_mergeinfo, pval->data,
-                                      result_pool));
-          apr_hash_set(args->result_catalog,
-                       svn_fspath__join(args->node_path, dirent->name,
-                                       result_pool),
-                       APR_HASH_KEY_STRING,
-                       child_mergeinfo);
+          /* Issue #3896: If syntactically invalid mergeinfo is present on
+             CHILD_NODE then treat it as if no mergeinfo is present rather
+             than raising a parse error. */
+          err = svn_mergeinfo_parse(&child_mergeinfo, pval->data,
+                                    result_pool);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+                svn_error_clear(err);
+              else
+                svn_error_return(err);
+            }
+          else
+            {
+              apr_hash_set(args->result_catalog,
+                           svn_fspath__join(args->node_path, dirent->name,
+                                            result_pool),
+                           APR_HASH_KEY_STRING,
+                           child_mergeinfo);
+            }
         }
 
       /* If the child has descendants with mergeinfo -- that is, if
@@ -5352,28 +5366,63 @@ txn_body_get_mergeinfo_for_path(void *baton, trail_t *trail)
   /* If our nearest ancestor is the very path we inquired about, we
      can return the mergeinfo results directly.  Otherwise, we're
      inheriting the mergeinfo, so we need to a) remove non-inheritable
-     ranges and b) telescope the merged-from paths.  */
+     ranges and b) telescope the merged-from paths.
+
+  /* Issue #3896: If a node has syntactically invalid mergeinfo, then
+     treat it as if no mergeinfo is present rather than raising a parse
+     error. */
   if (nearest_ancestor == parent_path)
     {
-      SVN_ERR(svn_mergeinfo_parse(args->mergeinfo,
-                                  mergeinfo_string->data, args->pool));
+      svn_error_t *err = svn_mergeinfo_parse(args->mergeinfo,
+                                             mergeinfo_string->data,
+                                             args->pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+            {
+              svn_error_clear(err);
+              err = NULL;
+              args->mergeinfo = NULL;
+            }
+        }
+      return svn_error_return(err);
     }
   else
     {
       svn_mergeinfo_t tmp_mergeinfo;
-      SVN_ERR(svn_mergeinfo_parse(&tmp_mergeinfo,
-                                  mergeinfo_string->data, trail->pool));
-      SVN_ERR(svn_mergeinfo_inheritable(&tmp_mergeinfo,
-                                        tmp_mergeinfo,
-                                        NULL, SVN_INVALID_REVNUM,
-                                        SVN_INVALID_REVNUM, trail->pool));
-      SVN_ERR(append_to_merged_froms(args->mergeinfo,
-                                     tmp_mergeinfo,
-                                     parent_path_relpath(parent_path,
-                                                         nearest_ancestor,
-                                                         trail->pool),
-                                     args->pool));
-      *(args->inherited) = TRUE;
+      svn_error_t *err = svn_mergeinfo_parse(&tmp_mergeinfo,
+                                             mergeinfo_string->data,
+                                             trail->pool);
+
+      /* Issue #3896: If a node inherits syntactically invalid mergeinfo,
+         then treat it as if no mergeinfo is inherited rather than raising
+         a parse error. */
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+            {
+              svn_error_clear(err);
+              args->mergeinfo = NULL;
+            }
+          else
+            {
+              return svn_error_return(err);
+            }
+        }
+      else
+        {
+          SVN_ERR(svn_mergeinfo_inheritable(&tmp_mergeinfo,
+                                            tmp_mergeinfo,
+                                            NULL, SVN_INVALID_REVNUM,
+                                            SVN_INVALID_REVNUM, trail->pool));
+          SVN_ERR(append_to_merged_froms(args->mergeinfo,
+                                         tmp_mergeinfo,
+                                         parent_path_relpath(parent_path,
+                                                             nearest_ancestor,
+                                                             trail->pool),
+                                         args->pool));
+          *(args->inherited) = TRUE;
+        }
     }
   return SVN_NO_ERROR;
 }
