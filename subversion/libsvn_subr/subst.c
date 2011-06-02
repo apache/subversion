@@ -1287,7 +1287,7 @@ typedef struct mark_translated_t
   svn_stream_mark_t *mark;
 } mark_translated_t;
 
-/* Implements svn_io_mark_fn_t. */
+/* Implements svn_stream_mark_fn_t. */
 static svn_error_t *
 translated_stream_mark(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 {
@@ -1312,7 +1312,7 @@ translated_stream_mark(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_io_seek_fn_t. */
+/* Implements svn_stream_seek_fn_t. */
 static svn_error_t *
 translated_stream_seek(void *baton, const svn_stream_mark_t *mark)
 {
@@ -1358,7 +1358,7 @@ translated_stream_seek(void *baton, const svn_stream_mark_t *mark)
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_io_is_buffered_fn_t. */
+/* Implements svn_stream_is_buffered_fn_t. */
 static svn_boolean_t
 translated_stream_is_buffered(void *baton)
 {

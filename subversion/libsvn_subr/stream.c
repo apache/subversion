@@ -48,12 +48,12 @@
 struct svn_stream_t {
   void *baton;
   svn_read_fn_t read_fn;
-  svn_skip_fn_t skip_fn;
+  svn_stream_skip_fn_t skip_fn;
   svn_write_fn_t write_fn;
   svn_close_fn_t close_fn;
-  svn_io_mark_fn_t mark_fn;
-  svn_io_seek_fn_t seek_fn;
-  svn_io_is_buffered_fn_t is_buffered_fn;
+  svn_stream_mark_fn_t mark_fn;
+  svn_stream_seek_fn_t seek_fn;
+  svn_stream_is_buffered_fn_t is_buffered_fn;
 };
 
 
@@ -97,7 +97,7 @@ svn_stream_set_read(svn_stream_t *stream, svn_read_fn_t read_fn)
 }
 
 void
-svn_stream_set_skip(svn_stream_t *stream, svn_skip_fn_t skip_fn)
+svn_stream_set_skip(svn_stream_t *stream, svn_stream_skip_fn_t skip_fn)
 {
   stream->skip_fn = skip_fn;
 }
@@ -115,20 +115,20 @@ svn_stream_set_close(svn_stream_t *stream, svn_close_fn_t close_fn)
 }
 
 void
-svn_stream_set_mark(svn_stream_t *stream, svn_io_mark_fn_t mark_fn)
+svn_stream_set_mark(svn_stream_t *stream, svn_stream_mark_fn_t mark_fn)
 {
   stream->mark_fn = mark_fn;
 }
 
 void
-svn_stream_set_seek(svn_stream_t *stream, svn_io_seek_fn_t seek_fn)
+svn_stream_set_seek(svn_stream_t *stream, svn_stream_seek_fn_t seek_fn)
 {
   stream->seek_fn = seek_fn;
 }
 
 void
 svn_stream_set_is_buffered(svn_stream_t *stream,
-                           svn_io_is_buffered_fn_t is_buffered_fn)
+                           svn_stream_is_buffered_fn_t is_buffered_fn)
 {
   stream->is_buffered_fn = is_buffered_fn;
 }
