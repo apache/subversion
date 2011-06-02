@@ -105,12 +105,8 @@ hash_set_copy(apr_hash_t *hash,
 static void
 recycle_cache_if_needed(svn_ra_serf__blncache_t *blncache)
 {
-  apr_size_t cache_size = 0;
-
-  cache_size += apr_hash_count(blncache->baseline_info);
-  cache_size += apr_hash_count(blncache->revnum_to_bc);
-
-  if (cache_size > MAX_CACHE_SIZE)
+  if (MAX_CACHE_SIZE < (apr_hash_count(blncache->baseline_info)
+                        + apr_hash_count(blncache->revnum_to_bc)))
   {
     /* Clear cache pool and create new hash tables. */
     apr_pool_t *cache_pool = apr_hash_pool_get(blncache->revnum_to_bc);
