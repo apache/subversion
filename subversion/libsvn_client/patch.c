@@ -891,14 +891,12 @@ init_patch_target(patch_target_t **patch_target,
           SVN_ERR(svn_io_file_open(&target->file, target->local_abspath,
                                    APR_READ | APR_BINARY | APR_BUFFERED,
                                    APR_OS_DEFAULT, result_pool));
-
           SVN_ERR(svn_wc_text_modified_p2(&target->local_mods, wc_ctx,
                                           target->local_abspath, FALSE,
                                           scratch_pool));
           SVN_ERR(svn_io_is_file_executable(&target->executable,
                                             target->local_abspath,
                                             scratch_pool));
-
           SVN_ERR(obtain_eol_and_keywords_for_file(&content->keywords,
                                                    &content->eol_style,
                                                    &content->eol_str,
@@ -906,13 +904,13 @@ init_patch_target(patch_target_t **patch_target,
                                                    target->local_abspath,
                                                    result_pool,
                                                    scratch_pool));
+          content->existed = TRUE;
 
           /* Wire up the read callbacks. */
           content->readline = readline_file;
           content->seek = seek_file;
           content->tell = tell_file;
           content->read_baton = target->file;
-          content->existed = TRUE;
         }
 
       /* ### Is it ok to set the operation of the target already here? Isn't
@@ -974,7 +972,6 @@ init_patch_target(patch_target_t **patch_target,
                                        prop_patch->operation,
                                        wc_ctx, target->local_abspath,
                                        result_pool, scratch_pool));
-
               apr_hash_set(target->prop_targets, prop_name,
                            APR_HASH_KEY_STRING, prop_target);
             }
@@ -1010,7 +1007,7 @@ readline(target_content_t *content,
       apr_off_t offset;
 
       SVN_ERR(content->tell(content->read_baton, &offset,
-                                 scratch_pool));
+                            scratch_pool));
       APR_ARRAY_PUSH(content->lines, apr_off_t) = offset;
     }
 
@@ -1180,9 +1177,7 @@ match_hunk(svn_boolean_t *matched, target_content_t *content,
   while (lines_matched);
 
   *matched = lines_matched && hunk_eof && hunk_line->len == 0;
-
   SVN_ERR(seek_to_line(content, saved_line, iterpool));
-
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
@@ -1324,7 +1319,6 @@ match_existing_target(svn_boolean_t *match,
     svn_pool_destroy(iterpool);
 
     *match = (lines_matched && content->eof == hunk_eof);
-
     SVN_ERR(seek_to_line(content, saved_line, scratch_pool));
 
     return SVN_NO_ERROR;
