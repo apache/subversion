@@ -4487,7 +4487,7 @@ update_wc_mergeinfo(svn_mergeinfo_catalog_t result_catalog,
           SVN_ERR(svn_client__get_wc_mergeinfo(&mergeinfo, &inherited,
                                                svn_mergeinfo_nearest_ancestor,
                                                local_abspath, NULL, NULL,
-                                               ctx, iterpool, iterpool));
+                                               FALSE, ctx, iterpool, iterpool));
         }
 
       if (mergeinfo == NULL)
@@ -5646,6 +5646,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
            hi;
            hi = apr_hash_next(hi))
         {
+          svn_error_t *err;
           svn_mergeinfo_t child_pre_merge_mergeinfo;
           const char *wc_path = svn__apr_hash_index_key(hi);
           svn_string_t *mergeinfo_string = svn__apr_hash_index_val(hi);
@@ -5654,9 +5655,20 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
 
           svn_pool_clear(iterpool);
           mergeinfo_child->abspath = apr_pstrdup(result_pool, wc_path);
-          SVN_ERR(svn_mergeinfo_parse(&child_pre_merge_mergeinfo,
-                                      mergeinfo_string->data, result_pool));
-
+          err = svn_mergeinfo_parse(&child_pre_merge_mergeinfo,
+                                    mergeinfo_string->data, result_pool);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+                {
+                  err = svn_error_createf(
+                    SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING, err,
+                    _("Invalid mergeinfo detected on '%s', "
+                      "mergetracking not possible"),
+                    svn_path_local_style(wc_path, scratch_pool));
+                }
+              return svn_error_return(err);
+            }
           /* Stash this child's pre-existing mergeinfo. */
           mergeinfo_child->pre_merge_mergeinfo = child_pre_merge_mergeinfo;
 
@@ -6006,7 +6018,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                         &mergeinfo, &inherited,
                         svn_mergeinfo_nearest_ancestor,
                         child_of_noninheritable->abspath,
-                        merge_cmd_baton->target_abspath, NULL,
+                        merge_cmd_baton->target_abspath, NULL, FALSE,
                         merge_cmd_baton->ctx, iterpool, iterpool));
 
                       SVN_ERR(svn_client__record_wc_mergeinfo(
@@ -6684,6 +6696,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
   range.inheritable = TRUE;
   if (honor_mergeinfo)
     {
+      svn_error_t *err;
       const char *source_root_url;
       merge_target = apr_pcalloc(scratch_pool, sizeof(*merge_target));
       merge_target->abspath = target_abspath;
@@ -6700,13 +6713,26 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
          working copy target URL). */
       SVN_ERR(svn_ra_reparent(merge_b->ra_session1, target_url,
                               iterpool));
-      SVN_ERR(get_full_mergeinfo(&target_mergeinfo,
-                                 &(merge_target->implicit_mergeinfo),
-                                 &indirect, svn_mergeinfo_inherited,
-                                 merge_b->ra_session1, target_abspath,
-                                 MAX(revision1, revision2),
-                                 0, /* Get all implicit mergeinfo */
-                                 ctx, scratch_pool, iterpool));
+      err = get_full_mergeinfo(&target_mergeinfo,
+                               &(merge_target->implicit_mergeinfo),
+                               &indirect, svn_mergeinfo_inherited,
+                               merge_b->ra_session1, target_abspath,
+                               MAX(revision1, revision2),
+                               0, /* Get all implicit mergeinfo */
+                               ctx, scratch_pool, iterpool);
+
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+            {
+              err = svn_error_createf(
+                SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING, err,
+                _("Invalid mergeinfo detected on merge target '%s', "
+                  "mergetracking not possible"),
+                svn_path_local_style(target_abspath, scratch_pool));
+            }
+          return svn_error_return(err);
+        }
 
       SVN_ERR(svn_ra_reparent(merge_b->ra_session1, url1, iterpool));
 
@@ -7040,7 +7066,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
                                            &indirect,
                                            svn_mergeinfo_explicit,
                                            abspath_with_new_mergeinfo,
-                                           NULL, NULL,
+                                           NULL, NULL, FALSE,
                                            merge_b->ctx,
                                            iterpool, iterpool));
       /* ...there *should* always be explicit mergeinfo at this point
@@ -7651,7 +7677,7 @@ record_mergeinfo_for_added_subtrees(
          mergeinfo? */
       SVN_ERR(svn_client__get_wc_mergeinfo(&parent_mergeinfo, &inherited,
                                            svn_mergeinfo_explicit,
-                                           dir_abspath, NULL, NULL,
+                                           dir_abspath, NULL, NULL, FALSE,
                                            merge_b->ctx,
                                            iterpool, iterpool));
       if (svn_mergeinfo__is_noninheritable(parent_mergeinfo, iterpool))
@@ -7700,7 +7726,7 @@ record_mergeinfo_for_added_subtrees(
           SVN_ERR(svn_client__get_wc_mergeinfo(
             &added_path_mergeinfo, &inherited,
             svn_mergeinfo_explicit, added_abspath,
-            NULL, NULL, merge_b->ctx, iterpool, iterpool));
+            NULL, NULL, FALSE, merge_b->ctx, iterpool, iterpool));
 
           /* Combine the explict mergeinfo on the added path (if any)
              with the mergeinfo for this merge. */
