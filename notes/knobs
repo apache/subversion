@@ -13,13 +13,14 @@
 1 Introduction
 ==============
 
+This is a document intended for use by Subversion developers only.
+In particular, interface naming rules do not apply here. I.e. even
+SVN_* identifiers are not part of the public API unless declared
+as public in some public header file.
+
 The SVN source code boasts a number of enviroment variable or C pre-
 processor enabled tweaks that are mainly aimed at developer support.
 If you introduce new ones, please document them here.
-
-The usual namespace rules apply: names that don't begin with "SVN_" or
-contain double underscores are not part of the public API and may change
-arbitrarily at any time (including between patch releases).
 
 
 2 Defines and Environment Variables
