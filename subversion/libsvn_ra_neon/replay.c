@@ -25,7 +25,7 @@
 #include "svn_pools.h"
 #include "svn_xml.h"
 
-#include "private/svn_strin_private.h"
+#include "private/svn_string_private.h"
 
 #include "../libsvn_ra/ra_loader.h"
 
