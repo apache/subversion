@@ -1180,24 +1180,6 @@ svn_stream_readline(svn_stream_t *stream,
                     apr_pool_t *pool);
 
 /**
- * Similar to svn_stream_readline(). The line-terminator is detected
- * automatically.  If @a eol is not NULL, the detected line-terminator
- * is returned in @a *eol.  If EOF is reached and the stream does not
- * end with a newline character, @a *eol will be NULL.
- *
- * @note This function will fail if @a stream does not support mark
- * and seek (see @ref svn_stream_supports_mark).
- *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_stream_readline_detect_eol(svn_stream_t *stream,
-                               svn_stringbuf_t **stringbuf,
-                               const char **eol,
-                               svn_boolean_t *eof,
-                               apr_pool_t *pool);
-
-/**
  * Read the contents of the readable stream @a from and write them to the
  * writable stream @a to calling @a cancel_func before copying each chunk.
  *
