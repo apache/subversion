@@ -310,13 +310,11 @@ scan_eol(const char **eol, svn_stream_t *stream, apr_pool_t *pool)
 static svn_error_t *
 stream_readline_bytewise(svn_stringbuf_t **stringbuf,
                          svn_boolean_t *eof,
-                         const char **eol,
+                         const char *eol,
                          svn_stream_t *stream,
-                         svn_boolean_t detect_eol,
                          apr_pool_t *pool)
 {
   svn_stringbuf_t *str;
-  const char *eol_str;
   apr_size_t numbytes;
   const char *match;
   char c;
@@ -327,22 +325,8 @@ stream_readline_bytewise(svn_stringbuf_t **stringbuf,
      80 chars.  */
   str = svn_stringbuf_create_ensure(LINE_CHUNK_SIZE, pool);
 
-  if (detect_eol)
-    {
-      SVN_ERR(scan_eol(&eol_str, stream, pool));
-      if (eol)
-        *eol = eol_str;
-      if (! eol_str)
-        {
-          /* No newline until EOF, EOL_STR can be anything. */
-          eol_str = APR_EOL_STR;
-        }
-    }
-  else
-    eol_str = *eol;
-
   /* Read into STR up to and including the next EOL sequence. */
-  match = eol_str;
+  match = eol;
   while (*match)
     {
       numbytes = 1;
@@ -351,8 +335,6 @@ stream_readline_bytewise(svn_stringbuf_t **stringbuf,
         {
           /* a 'short' read means the stream has run out. */
           *eof = TRUE;
-          if (detect_eol && eol)
-            *eol = NULL;
           *stringbuf = str;
           return SVN_NO_ERROR;
         }
@@ -360,13 +342,13 @@ stream_readline_bytewise(svn_stringbuf_t **stringbuf,
       if (c == *match)
         match++;
       else
-        match = eol_str;
+        match = eol;
 
       svn_stringbuf_appendbyte(str, c);
     }
 
   *eof = FALSE;
-  svn_stringbuf_chop(str, match - eol_str);
+  svn_stringbuf_chop(str, match - eol);
   *stringbuf = str;
 
   return SVN_NO_ERROR;
@@ -476,16 +458,13 @@ stream_readline_chunky(svn_stringbuf_t **stringbuf,
 
 /* Guts of svn_stream_readline() and svn_stream_readline_detect_eol().
  * Returns the line read from STREAM in *STRINGBUF, and indicates
- * end-of-file in *EOF.  If DETECT_EOL is TRUE, the end-of-line indicator
- * is detected automatically and returned in *EOL.
- * If DETECT_EOL is FALSE, *EOL must point to the desired end-of-line
+ * end-of-file in *EOF.  EOL must point to the desired end-of-line
  * indicator.  STRINGBUF is allocated in POOL. */
 static svn_error_t *
 stream_readline(svn_stringbuf_t **stringbuf,
                 svn_boolean_t *eof,
-                const char **eol,
+                const char *eol,
                 svn_stream_t *stream,
-                svn_boolean_t detect_eol,
                 apr_pool_t *pool)
 {
   *eof = FALSE;
@@ -494,15 +473,14 @@ stream_readline(svn_stringbuf_t **stringbuf,
    * EOL we are looking for. Optimize that common case.
    */
   if (svn_stream_supports_mark(stream) &&
-      svn_stream_is_buffered(stream) &&
-      !detect_eol)
+      svn_stream_is_buffered(stream))
     {
       /* We can efficiently read chunks speculatively and reposition the
        * stream pointer to the end of the line once we found that.
        */
       SVN_ERR(stream_readline_chunky(stringbuf,
                                      eof,
-                                     *eol,
+                                     eol,
                                      stream,
                                      pool));
     }
@@ -514,7 +492,6 @@ stream_readline(svn_stringbuf_t **stringbuf,
                                        eof,
                                        eol,
                                        stream,
-                                       detect_eol,
                                        pool));
     }
 
@@ -528,8 +505,8 @@ svn_stream_readline(svn_stream_t *stream,
                     svn_boolean_t *eof,
                     apr_pool_t *pool)
 {
-  return svn_error_return(stream_readline(stringbuf, eof, &eol, stream,
-                                          FALSE, pool));
+  return svn_error_return(stream_readline(stringbuf, eof, eol, stream,
+                                          pool));
 }
 
 svn_error_t *
@@ -539,8 +516,17 @@ svn_stream_readline_detect_eol(svn_stream_t *stream,
                                svn_boolean_t *eof,
                                apr_pool_t *pool)
 {
-  return svn_error_return(stream_readline(stringbuf, eof, eol, stream,
-                                          TRUE, pool));
+  const char *eol_str = NULL;
+  SVN_ERR(scan_eol(&eol_str, stream, pool));
+  if (eol)
+    *eol = eol_str;
+
+  /* If we encountered EOF before EOL, EOL_STR can be anything. */
+  if (! eol_str)
+    eol_str = APR_EOL_STR;
+
+  return svn_error_return(stream_readline(stringbuf, eof, eol_str, stream,
+                                          pool));
 }
 
 
