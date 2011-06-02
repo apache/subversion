@@ -25,6 +25,8 @@
 #include "svn_pools.h"
 #include "svn_xml.h"
 
+#include "private/svn_strin_private.h"
+
 #include "../libsvn_ra/ra_loader.h"
 
 #include "ra_neon.h"
@@ -394,7 +396,7 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
           {
             const svn_string_t *prop;
 
-            prop = svn_string_from_stringbuf(rb->prop_accum);
+            prop = svn_stringbuf__morph_into_string(rb->prop_accum);
             decoded_value = svn_base64_decode_string(prop, rb->prop_pool);
           }
         else
