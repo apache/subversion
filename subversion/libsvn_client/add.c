@@ -253,6 +253,40 @@ svn_client__get_auto_props(apr_hash_t **properties,
     {
       SVN_ERR(svn_io_detect_mimetype2(&autoprops.mimetype, path,
                                       ctx->mimetypes_map, pool));
+
+#ifdef HAVE_LIBMAGIC
+      /* We want to set an svn:mime-type property by default only on binary
+       * files. So don't set an svn:mime-type property on text files unless
+       * their mime-type appears in the map. This preserves behaviour
+       * of Subversion releases that did not include libmagic support.
+       * In those releases svn_io_detect_mimetype2() returned
+       * "application/octet-stream" or NULL unless the type was in the map. */
+      if (autoprops.mimetype && strncmp(autoprops.mimetype, "text/", 5) == 0)
+        {
+          if (ctx->mimetypes_map)
+            {
+              svn_boolean_t type_is_in_map = FALSE;
+              apr_hash_index_t *hi;
+
+              for (hi = apr_hash_first(pool, ctx->mimetypes_map);
+                   hi;
+                   hi = apr_hash_next(hi))
+                {
+                  const char *type_from_map = svn__apr_hash_index_val(hi);
+                  if (strcmp(type_from_map, autoprops.mimetype) == 0)
+                    {
+                      type_is_in_map = TRUE;
+                      break;
+                    }
+                }
+              if (!type_is_in_map)
+                autoprops.mimetype = NULL;
+            }
+          else
+            autoprops.mimetype = NULL;
+        }
+#endif
+
       if (autoprops.mimetype)
         apr_hash_set(autoprops.properties, SVN_PROP_MIME_TYPE,
                      strlen(SVN_PROP_MIME_TYPE),

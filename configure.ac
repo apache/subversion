@@ -686,6 +686,46 @@ if test $USE_NLS = "yes"; then
 fi
 AC_SUBST(MSGFMTFLAGS)
 
+dnl libmagic -------------------
+
+libmagic_found=no
+
+AC_ARG_WITH(libmagic,AS_HELP_STRING([--with-libmagic=PREFIX],
+                                [libmagic filetype detection library]),
+[
+  if test "$withval" = "yes" ; then
+    AC_MSG_ERROR([--with-libmagic requires an argument.])
+  else
+    libmagic_prefix=$withval
+    save_cppflags="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS -I$libmagic_prefix/include"
+    AC_CHECK_HEADERS(magic.h,[
+      save_ldflags="$LDFLAGS"
+      LDFLAGS="-L$libmagic_prefix/lib"
+      AC_CHECK_LIB(magic, magic_open, [libmagic_found="yes"])
+      LDFLAGS="$save_ldflags"
+    ])
+    CPPFLAGS="$save_cppflags"
+  fi
+],
+[
+  AC_CHECK_HEADER(magic.h, [
+    AC_CHECK_LIB(magic, magic_open, [libmagic_found="builtin"])
+  ])
+])
+
+if test "$libmagic_found" != "no"; then
+  AC_DEFINE([HAVE_LIBMAGIC], [1], [Defined if libmagic support is enabled])
+  SVN_MAGIC_LIBS="-lmagic"
+fi
+
+if test "$libmagic_found" = "yes"; then
+  SVN_MAGIC_INCLUDES="-I$libmagic_prefix/include"
+  LDFLAGS="$LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS(-L$libmagic_prefix/lib)`"
+fi
+
+AC_SUBST(SVN_MAGIC_INCLUDES)
+AC_SUBST(SVN_MAGIC_LIBS)
 
 dnl KWallet -------------------
 SVN_LIB_KWALLET

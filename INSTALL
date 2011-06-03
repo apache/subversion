@@ -146,6 +146,13 @@ I.    INTRODUCTION
          Subversion contains optional support for storing passwords in
          KWallet (KDE 4) or GNOME Keyring.
 
+      * libmagic
+
+         If the libmagic library is detected at compile time,
+         it will be used to determine mime-types of binary files
+         which are added to version control. Note that mime-types
+         configured via auto-props or the mime-types-file option
+         take precedence.
 
   C. Dependencies in Detail
 
@@ -565,6 +572,21 @@ I.    INTRODUCTION
 
       For more information on CSVN, see subversion/bindings/ctypes-python/README.
 
+      21. libmagic (OPTIONAL)
+
+      Subversion's configure script attempts to find libmagic automatically.
+      If it is installed in a non-standard location, then use:
+
+        --with-libmagic=/path/to/libmagic/prefix
+
+      The files include/magic.h and lib/libmagic.so.1.0 (or similar)
+      are expected beneath this prefix directory. If they cannot be
+      found Subversion will be compiled without support for libmagic.
+
+      If libmagic is installed but support for it should not be compiled
+      in, then use:
+      
+        --with-libmagic=no
 
   D. Documentation
 
