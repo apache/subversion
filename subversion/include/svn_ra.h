@@ -1057,7 +1057,7 @@ svn_ra_get_mergeinfo2(svn_ra_session_t *session,
  * Similar to svn_ra_get_mergeinfo2(), but with
  * @a validate_inherited_mergeinfo always passed as FALSE.
  *
- * @deprecated Provided for backward compatibility with the 1.7 API.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 svn_error_t *
 svn_ra_get_mergeinfo(svn_ra_session_t *session,
