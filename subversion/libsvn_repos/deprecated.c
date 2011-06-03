@@ -150,7 +150,6 @@ struct recover_baton
 {
   svn_error_t *(*start_callback)(void *baton);
   void *start_callback_baton;
-  apr_pool_t *pool;
 };
 
 static void
@@ -160,7 +159,8 @@ recovery_started(void *baton,
 {
   struct recover_baton *rb = baton;
 
-  if (notify->action == svn_repos_notify_mutex_acquired)
+  if (notify->action == svn_repos_notify_mutex_acquired
+      && rb->start_callback != NULL)
     svn_error_clear(rb->start_callback(rb->start_callback_baton));
 }
 
