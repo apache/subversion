@@ -787,9 +787,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
               if (at && strrchr(path, '@') == at)
                 return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                          _("Syntax error parsing peg revision "
-                                           "'%s'; if this problem is "
-                                           "unexpected try appending '@' to "
-                                           "the URL: '%s@'"),
+                                           "'%s'; did you mean '%s@'?"),
                                        &peg_rev[1], path);
             }
 
