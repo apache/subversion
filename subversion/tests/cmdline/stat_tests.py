@@ -1884,6 +1884,48 @@ def wc_wc_copy_timestamp(sbox):
 
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
+@XFail()
+def copy_with_mixed_revisions(sbox):
+  """copy with mixed revisions"""
+
+  # Note: A "local edit, incoming delete upon update" tree conflict
+  # leads to the same situation.
+
+  sbox.build()
+  wc = sbox.ospath
+
+  # Make a change in a tree and commit.
+  svntest.main.file_append(wc('A/D/G/rho'), "Local edit\n") 
+  sbox.simple_commit() # r2
+  sbox.simple_update()
+
+  # Set up mixed revisions.
+  svntest.main.run_svn(None, 'up', '-r', 1, wc('A/D/G'))
+
+  # Copy the tree into a newly-added directory.
+  sbox.simple_mkdir('copy-dest')
+  sbox.simple_copy('A/D', 'copy-dest')
+
+  ### As of r1130919 (pre-1.7 trunk): If we expect status '  ' for D/G,
+  ### the verification via 'svn status -vuq' fails.  If we expect
+  ### status 'A ', the verification via 'entries-dump' fails.  Which
+  ### one is right?
+  expected_status = svntest.wc.State(wc('copy-dest'), {
+    ''                : Item(status='A ', wc_rev=0),
+    'D'               : Item(status='A ', copied='+', wc_rev='-'),
+    'D/G'             : Item(status='  ', copied='+', wc_rev='-'), # <---
+    'D/G/pi'          : Item(status='  ', copied='+', wc_rev='-'),
+    'D/G/rho'         : Item(status='  ', copied='+', wc_rev='-'),
+    'D/G/tau'         : Item(status='  ', copied='+', wc_rev='-'),
+    'D/H'             : Item(status='  ', copied='+', wc_rev='-'),
+    'D/H/chi'         : Item(status='  ', copied='+', wc_rev='-'),
+    'D/H/omega'       : Item(status='  ', copied='+', wc_rev='-'),
+    'D/H/psi'         : Item(status='  ', copied='+', wc_rev='-'),
+    'D/gamma'         : Item(status='  ', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_status(wc('copy-dest'), expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -1924,6 +1966,7 @@ test_list = [ None,
               status_nested_wc_old_format,
               status_locked_deleted,
               wc_wc_copy_timestamp,
+              copy_with_mixed_revisions,
              ]
 
 if __name__ == '__main__':
