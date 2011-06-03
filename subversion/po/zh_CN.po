@@ -3527,7 +3527,7 @@ msgstr "(没有错误信息)"
 
 #, c-format
 msgid ""
-"post-commit FS processing had error:\n"
+"post commit FS processing had error:\n"
 "%s"
 msgstr ""
 "提交后的文件系统进程出错:\n"

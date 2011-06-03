@@ -4683,7 +4683,7 @@ msgstr "(pas de message d'erreur)"
 
 #: ../libsvn_repos/commit.c:703
 #, c-format
-msgid "post-commit FS processing had error '%s'."
+msgid "post commit FS processing had error '%s'."
 msgstr "le traitement FS d'après propagation (post-commit) a eu l'erreur '%s'."
 
 #: ../libsvn_repos/delta.c:191
