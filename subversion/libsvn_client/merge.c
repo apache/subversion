@@ -866,6 +866,12 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
             {
               svn_error_clear(err);
               APR_ARRAY_PUSH(adjusted_props, svn_prop_t) = *prop;
+
+              /* If we reparented RA_SESSION above, put it back
+                 to the original URL. */
+              if (old_url)
+                SVN_ERR(svn_ra_reparent(ra_session, old_url, iterpool));
+
               continue;
             }
           else
