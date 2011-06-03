@@ -589,7 +589,6 @@ def do_x3_upgrade(sbox, expected_error=[]):
 def x3_1_4_0(sbox):
   "3x same wc upgrade 1.4.0 test"
 
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'wc-3x-1.4.0.tar.bz2', dir='wc-1.4.0')
 
   do_x3_upgrade(sbox, expected_error='.*E155016: The properties of.*are in an '
@@ -599,7 +598,6 @@ def x3_1_4_0(sbox):
 def x3_1_4_6(sbox):
   "3x same wc upgrade 1.4.6 test"
 
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'wc-3x-1.4.6.tar.bz2', dir='wc-1.4.6')
 
   do_x3_upgrade(sbox)
@@ -608,7 +606,6 @@ def x3_1_4_6(sbox):
 def x3_1_6_12(sbox):
   "3x same wc upgrade 1.6.12 test"
 
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'wc-3x-1.6.12.tar.bz2', dir='wc-1.6.12')
 
   do_x3_upgrade(sbox)
@@ -622,7 +619,6 @@ def missing_dirs(sbox):
   #   rm -rf wc/A/B/E wc/A/D wc/A/B_new/E wc/A/B_new/F
   #   touch wc/A/D wc/A/B_new/F
 
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'missing-dirs.tar.bz2')
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'upgrade', sbox.wc_dir)
@@ -648,7 +644,6 @@ def missing_dirs(sbox):
 def missing_dirs2(sbox):
   "missing directories and obstructing dirs"
 
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'missing-dirs.tar.bz2')
   os.remove(sbox.ospath('A/D'))
   os.remove(sbox.ospath('A/B_new/F'))
@@ -679,7 +674,6 @@ def missing_dirs2(sbox):
 def delete_and_keep_local(sbox):
   "check status delete and delete --keep-local"
 
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'wc-delete.tar.bz2')
 
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -708,7 +702,6 @@ def delete_and_keep_local(sbox):
 def dirs_only_upgrade(sbox):
   "upgrade a wc without files"
 
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'dirs-only.tar.bz2')
 
   expected_output = ["Upgraded '%s'.\n" % (sbox.ospath('').rstrip(os.path.sep)),
@@ -742,7 +735,6 @@ def no_actual_node(sbox, path):
 def upgrade_tree_conflict_data(sbox):
   "upgrade tree conflict data (f20->f21)"
 
-  sbox.build(create_wc = False)
   wc_dir = sbox.wc_dir
   replace_sbox_with_tarfile(sbox, 'upgrade_tc.tar.bz2')
 
@@ -784,7 +776,6 @@ def upgrade_tree_conflict_data(sbox):
 def delete_in_copy_upgrade(sbox):
   "upgrade a delete within a copy"
 
-  sbox.build(create_wc = False)
   wc_dir = sbox.wc_dir
   replace_sbox_with_tarfile(sbox, 'delete-in-copy.tar.bz2')
 
@@ -818,7 +809,6 @@ def delete_in_copy_upgrade(sbox):
 def replaced_files(sbox):
   "upgrade with base and working replaced files"
 
-  sbox.build(create_wc = False)
   wc_dir = sbox.wc_dir
   replace_sbox_with_tarfile(sbox, 'replaced-files.tar.bz2')
 
@@ -880,7 +870,6 @@ def replaced_files(sbox):
 def upgrade_with_scheduled_change(sbox):
   "upgrade 1.6.x wc with a scheduled change"
   
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'upgrade_with_scheduled_change.tar.bz2')
 
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -895,7 +884,6 @@ def upgrade_with_scheduled_change(sbox):
 def tree_replace1(sbox):
   "upgrade 1.6 with tree replaced"
 
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'tree-replace1.tar.bz2')
 
   svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
@@ -920,7 +908,6 @@ def tree_replace1(sbox):
 def tree_replace2(sbox):
   "upgrade 1.6 with tree replaced (2)"
 
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'tree-replace2.tar.bz2')
 
   svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
@@ -945,7 +932,6 @@ def upgrade_from_format_28(sbox):
   """upgrade from format 28: rename pristines"""
 
   # Start with a format-28 WC that is a clean checkout of the Greek tree.
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'format_28.tar.bz2')
 
   # Get the old and new pristine file paths for file 'iota'.
@@ -967,7 +953,6 @@ def upgrade_from_format_28(sbox):
 def depth_exclude(sbox):
   "upgrade 1.6.x wc that has depth=exclude"
   
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'depth_exclude.tar.bz2')
 
   svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
@@ -983,7 +968,6 @@ def depth_exclude(sbox):
 def depth_exclude_2(sbox):
   "1.6.x wc that has depth=exclude inside a delete"
   
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'depth_exclude_2.tar.bz2')
 
   svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
