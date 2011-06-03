@@ -834,6 +834,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
       svn_mergeinfo_t filtered_younger_mergeinfo = NULL;
       const char *target_url;
       const char *old_url = NULL;
+      svn_error_t *err;
 
       if ((strcmp(prop->name, SVN_PROP_MERGEINFO) != 0)
           || (! prop->value)       /* Removal of mergeinfo */
@@ -853,7 +854,23 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                                                 target_url, pool));
 
       /* Parse the incoming mergeinfo to allow easier manipulation. */
-      SVN_ERR(svn_mergeinfo_parse(&mergeinfo, prop->value->data, pool));
+      err = svn_mergeinfo_parse(&mergeinfo, prop->value->data, iterpool);
+
+      if (err)
+        {
+          /* Issue #3896: If we can't parse it, we certainly can't
+             filter it. */
+          if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+            {
+              svn_error_clear(err);
+              APR_ARRAY_PUSH(adjusted_props, svn_prop_t) = *prop;
+              continue;
+            }
+          else
+            {
+              return svn_error_return(err);
+            }
+        }
 
       /* The working copy target PATH is at BASE_REVISION.  Divide the
          incoming mergeinfo into two groups.  One where all revision ranges
@@ -10191,10 +10208,30 @@ calculate_left_hand_side(const char **url_left,
        hi = apr_hash_next(hi))
     {
       const char *absolute_path = svn__apr_hash_index_key(hi);
+      svn_string_t *mergeinfo_string = svn__apr_hash_index_val(hi);
       const char *path_rel_to_session;
       const char *path_rel_to_root;
+      svn_mergeinfo_t subtree_mergeinfo;
+      svn_error_t *err;
 
       svn_pool_clear(iterpool);
+
+      /* Issue #3896: If invalid mergeinfo in the reintegrate target
+         prevents us from proceeding, then raise the best error possible. */
+      err = svn_mergeinfo_parse(&subtree_mergeinfo, mergeinfo_string->data,
+                                iterpool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+            {
+              err = svn_error_createf(
+                SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING, err,
+                _("Invalid mergeinfo detected on '%s', "
+                  "reintegrate merge not possible"),
+                svn_path_local_style(absolute_path, scratch_pool));
+            }
+          return svn_error_return(err);
+        }
 
       /* Convert the absolute path with mergeinfo on it to a path relative
          to the session root. */
