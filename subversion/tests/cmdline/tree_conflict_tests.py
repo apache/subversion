@@ -1375,7 +1375,7 @@ def actual_only_node_behaviour(sbox):
 
   # upgrade
   expected_stdout = None
-  expected_stderr = ".*Cannot upgrade.*foo.*"
+  expected_stderr = ".*Can't upgrade.*foo.*"
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "upgrade", foo_path)
 
