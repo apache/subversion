@@ -321,7 +321,7 @@ def info_url_special_characters(sbox):
                   sbox.repo_url + '%2F' + 'A']
 
   expected = {'Path' : 'A',
-              'Repository Root' : '.*',
+              'Repository Root' : re.escape(sbox.repo_url),
               'Revision' : '1',
               'Node Kind' : 'dir',
              }
@@ -384,6 +384,34 @@ def info_multiple_targets(sbox):
   multiple_wc_targets()
   multiple_url_targets()
 
+def info_repos_root_url(sbox):
+  """verify values for repository root"""
+  sbox.build(create_wc = False)
+  wc_dir = sbox.wc_dir
+
+  expected_info = [
+    {
+        'Path'              : re.escape(os.path.basename(sbox.repo_dir)),
+        'Repository Root'   : re.escape(sbox.repo_url),
+        'URL'               : re.escape(sbox.repo_url),
+        'Revision'          : '1',
+        'Node Kind'         : 'directory',
+        'Last Changed Rev'  : '1',
+    },
+    {
+        'Path'              : 'iota',
+        'Name'              : 'iota',
+        'Repository Root'   : re.escape(sbox.repo_url),
+        'URL'               : re.escape(sbox.repo_url + '/iota'),
+        'Revision'          : '1',
+        'Node Kind'         : 'file',
+        'Last Changed Rev'  : '1',
+    }
+  ]
+
+  svntest.actions.run_and_verify_info(expected_info, sbox.repo_url,
+                                      '--depth', 'files')
+
 ########################################################################
 # Run the tests
 
@@ -395,6 +423,7 @@ test_list = [ None,
               info_wcroot_abspaths,
               info_url_special_characters,
               info_multiple_targets,
+              info_repos_root_url,
              ]
 
 if __name__ == '__main__':
