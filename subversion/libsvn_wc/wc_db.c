@@ -10623,46 +10623,24 @@ is_wclocked(void *baton,
   svn_boolean_t *locked = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  apr_int64_t locked_levels, num_locks;
+  apr_int64_t locked_levels;
   apr_int64_t dir_depth, depth = relpath_depth(dir_relpath);
 
-  /* The most common scenarios are no locks in the wc, or a single
-     fully recursive lock at the root, only legacy API users will
-     create any other locks.  First check for no locks at all. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_COUNT_WC_LOCK));
+  /* First check for no locks at all, a common scenario for status. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_HAS_WC_LOCK));
   SVN_ERR(svn_sqlite__bindf(stmt, "i", wcroot->wc_id));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (!have_row)
-    return svn_error_createf(SVN_ERR_WC_CORRUPT, svn_sqlite__reset(stmt),
-                             _("Count of WC_LOCK for id '%ld' failed"),
-                             wcroot->wc_id);
-  num_locks = svn_sqlite__column_int64(stmt, 0);
   SVN_ERR(svn_sqlite__reset(stmt));
-  if (!num_locks)
+  if (!have_row)
     {
       *locked = FALSE;
       return SVN_NO_ERROR;
     }
 
-  /* Next check for a lock at root. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_SELECT_WC_LOCK));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, ""));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (have_row)
-    locked_levels = svn_sqlite__column_int64(stmt, 0);
-  SVN_ERR(svn_sqlite__reset(stmt));
-  if (have_row)
-    {
-      *locked = (locked_levels == -1 || locked_levels >= depth);
-      if (*locked || num_locks == 1)
-        return SVN_NO_ERROR;
-    }
-
-  /* Finally check for locks on dirs above root, only legacy API users
-     create these.  I'm not sure what order is best here but from the
-     target to the root is easy to code.  */
+  /* Now check for locks on on the directory. I'm not sure what order
+     is best here but from the target to the root is easy to code.  */
   dir_depth = depth;
-  while (*dir_relpath)
+  while (TRUE)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_WC_LOCK));
@@ -10678,6 +10656,10 @@ is_wclocked(void *baton,
           *locked = (locked_levels == -1 || locked_levels + dir_depth >= depth);
           return SVN_NO_ERROR;
         }
+
+      if (!*dir_relpath)
+        break;
+
       dir_relpath = svn_relpath_dirname(dir_relpath, scratch_pool);
       --dir_depth;
     }
