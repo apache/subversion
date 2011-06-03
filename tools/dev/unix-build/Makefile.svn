@@ -66,6 +66,7 @@ SERF_VER	= 0.7.x
 SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.23
 SQLITE_VER	= 3070603
+LIBMAGIC_VER	= 5.07
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
@@ -74,6 +75,7 @@ NEON_DIST	= neon-$(NEON_VER).tar.gz
 SQLITE_DIST	= sqlite-autoconf-$(SQLITE_VER).tar.gz
 CYRUS_SASL_DIST	= cyrus-sasl-$(CYRUS_SASL_VER).tar.gz
 HTTPD_DIST	= httpd-$(HTTPD_VER).tar.bz2
+LIBMAGIC_DIST	= file-$(LIBMAGIC_VER).tar.gz
 
 DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(SERF_DIST) \
@@ -81,7 +83,8 @@ DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(HTTPD_DIST) \
 		$(DISTDIR)/$(APR_ICONV_DIST) \
 		$(DISTDIR)/$(GNU_ICONV_DIST) \
-		$(DISTDIR)/$(CYRUS_SASL_DIST)
+		$(DISTDIR)/$(CYRUS_SASL_DIST) \
+		$(DISTDIR)/$(LIBMAGIC_DIST)
 
 FETCH_CMD	= wget -c
 
@@ -98,6 +101,7 @@ SERF_URL	= http://serf.googlecode.com/svn/branches/$(SERF_VER)
 SERF_OLD_URL	= http://serf.googlecode.com/svn/tags/$(SERF_OLD_VER)
 SQLITE_URL	= http://www.sqlite.org/$(SQLITE_DIST)
 CYRUS_SASL_URL	= ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/$(CYRUS_SASL_DIST)
+LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
 APR_SRCDIR	= $(SRCDIR)/apr-$(APR_VER)
@@ -110,6 +114,7 @@ SERF_SRCDIR	= $(SRCDIR)/serf-$(SERF_VER)
 SERF_OLD_SRCDIR	= $(SRCDIR)/serf-$(SERF_OLD_VER)
 SQLITE_SRCDIR	= $(SRCDIR)/sqlite-autoconf-$(SQLITE_VER)
 CYRUS_SASL_SRCDIR	= $(SRCDIR)/cyrus-sasl-$(CYRUS_SASL_VER)
+LIBMAGIC_SRCDIR	= $(SRCDIR)/file-$(LIBMAGIC_VER)
 SVN_SRCDIR	= $(SVN_WC)
 
 BDB_OBJDIR	= $(OBJDIR)/db-$(BDB_VER)
@@ -123,6 +128,7 @@ SERF_OBJDIR	= $(OBJDIR)/serf-$(SERF_VER)
 SERF_OLD_OBJDIR	= $(OBJDIR)/serf-$(SERF_OLD_VER)
 SQLITE_OBJDIR	= $(OBJDIR)/sqlite-$(SQLITE_VER)
 CYRUS_SASL_OBJDIR	= $(OBJDIR)/cyrus-sasl-$(CYRUS_SASL_VER)
+LIBMAGIC_OBJDIR	= $(OBJDIR)/file-$(LIBMAGIC_VER)
 SVN_OBJDIR	= $(OBJDIR)/$(SVN_REL_WC)
 
 # Tweak this for out-of-tree builds. Note that running individual
@@ -142,17 +148,18 @@ endif
 
 all: dirs-create bdb-install apr-install iconv-install apr-util-install \
 	httpd-install neon-install serf-install serf-old-install \
-	sqlite-install cyrus-sasl-install svn-install svn-bindings-install
+	sqlite-install cyrus-sasl-install libmagic-install \
+	svn-install svn-bindings-install
 
 # Use these to start a build from the beginning.
 reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
 	httpd-reset neon-reset serf-reset serf-old-reset sqlite-reset \
-	cyrus-sasl-reset svn-reset
+	cyrus-sasl-reset libmagic-reset svn-reset
 
 # Use to save disk space.
 clean: bdb-clean apr-clean iconv-clean apr-util-clean httpd-clean \
 	neon-clean serf-clean serf-old-clean sqlite-clean cyrus-sasl-clean \
-	svn-clean
+	libmagic-clean svn-clean
 
 # Nukes everything (including installed binaries!)
 # Use this to start ALL OVER AGAIN! Use with caution!
@@ -826,6 +833,50 @@ $(CYRUS_SASL_OBJDIR)/.installed: $(CYRUS_SASL_OBJDIR)/.compiled
 	(cd $(CYRUS_SASL_OBJDIR) && make install)
 	touch $@
 
+#######################################################################
+# libmagic
+#######################################################################
+
+libmagic-retrieve:	$(LIBMAGIC_OBJDIR)/.retrieved
+libmagic-configure:	$(LIBMAGIC_OBJDIR)/.configured
+libmagic-compile:	$(LIBMAGIC_OBJDIR)/.compiled
+libmagic-install:	$(LIBMAGIC_OBJDIR)/.installed
+libmagic-reset:
+	$(foreach f, .retrieved .configured .compiled .installed, \
+		rm -f $(LIBMAGIC_OBJDIR)/$(f);)
+
+libmagic-clean:
+	-(cd $(LIBMAGIC_OBJDIR) && make distclean)
+
+# fetch distfile for libmagic
+$(DISTDIR)/$(LIBMAGIC_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(LIBMAGIC_URL)
+
+# retrieve libmagic
+$(LIBMAGIC_OBJDIR)/.retrieved: $(DISTDIR)/$(LIBMAGIC_DIST)
+	[ -d $(LIBMAGIC_OBJDIR) ] || mkdir -p $(LIBMAGIC_OBJDIR)
+	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(LIBMAGIC_DIST)
+	touch $@
+
+# configure libmagic
+$(LIBMAGIC_OBJDIR)/.configured: $(LIBMAGIC_OBJDIR)/.retrieved
+	cd $(LIBMAGIC_OBJDIR) \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
+		$(LIBMAGIC_SRCDIR)/configure \
+		--enable-fsect-man5 \
+		--prefix=$(PREFIX)/libmagic
+	touch $@
+
+# compile libmagic
+$(LIBMAGIC_OBJDIR)/.compiled: $(LIBMAGIC_OBJDIR)/.configured
+	(cd $(LIBMAGIC_OBJDIR) && make)
+	touch $@
+
+# install libmagic
+$(LIBMAGIC_OBJDIR)/.installed: $(LIBMAGIC_OBJDIR)/.compiled
+	(cd $(LIBMAGIC_OBJDIR) && make install)
+	touch $@
+
 
 #######################################################################
 # svn
@@ -919,6 +970,7 @@ BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
+LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
 endif
 
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
@@ -963,6 +1015,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
 			--with-ruby-sitedir="$(SVN_PREFIX)/lib/ruby/site_ruby" \
 			--disable-mod-activation \
 			$(JAVAHL_FLAG) \
+			$(LIBMAGIC_FLAG) \
 			$(SVN_ALL_STATIC) \
 			$(DISABLE_NEON_VERSION_CHECK)
 	touch $@
