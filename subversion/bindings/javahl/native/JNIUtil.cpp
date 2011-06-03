@@ -948,6 +948,9 @@ svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
         return svn_error_createf(SVN_ERR_BAD_URL, NULL,
                                  _("URL '%s' contains a '..' element"),
                                  path);
+
+      /* strip any trailing '/' */
+      path = svn_uri_canonicalize(path, pool);
     }
   else  /* not a url, so treat as a path */
     {
@@ -974,8 +977,6 @@ svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
       /* For kicks and giggles, let's absolutize it. */
       SVN_ERR(svn_dirent_get_absolute(&path, path, pool));
     }
-    /* strip any trailing '/' */
-    path = svn_path_canonicalize(path, pool);
 
   return NULL;
 }
