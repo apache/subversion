@@ -185,7 +185,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.17
     * detect very occasional corruption and abort commit (issue #3845)
     * fixed: file externals cause non-inheritable mergeinfo (issue #3843)
     * fixed: file externals cause mixed-revision working copies (issue #3816)
-    * disallow GETs of baselined versions of resources (r1098608)
+    * fix crash in mod_dav_svn with GETs of baselined resources (r1104126)
+            See CVE-2011-1752, and descriptive advisory at
+            http://subversion.apache.org/security/CVE-2011-1752-advisory.txt
     * fixed: write-through proxy could direcly commit to slave (r917523)
     * detect a particular corruption condition in FSFS (r1100213)
     * improve error message when clients refer to unkown revisions (r939000)
@@ -196,6 +198,12 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.17
     * fix 'log -g' excessive duplicate output (issue #3650)
     * fix svnsync copyfrom handling bug with BDB (r1036429)
     * server-side validation of svn:mergeinfo syntax during commit (issue #3895)
+    * fix remotely triggerable mod_dav_svn DoS
+            See CVE-2011-1783, and descriptive advisory at
+            http://subversion.apache.org/security/CVE-2011-1783-advisory.txt
+    * fix potential leak of authz-protected file contents
+            See CVE-2011-1921, and descriptive advisory at
+            http://subversion.apache.org/security/CVE-2011-1921-advisory.txt
 
   Developer-visible changes:
     * fix reporting FS-level post-commit processing errors (r1104098)
