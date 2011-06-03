@@ -1766,9 +1766,9 @@ upgrade_working_copy(void *parent_baton,
 }
 
 
-/* Return TRUE if LOCAL_ABSPATH is a pre-1.7 working copy root, FALSE
-   otherwise. */
-static svn_boolean_t
+/* Return a verbose error if LOCAL_ABSPATH is a not a pre-1.7 working
+   copy root */
+static svn_error_t *
 is_old_wcroot(const char *local_abspath,
               apr_pool_t *scratch_pool)
 {
@@ -1779,8 +1779,10 @@ is_old_wcroot(const char *local_abspath,
                                               scratch_pool, scratch_pool);
   if (err)
     {
-      svn_error_clear(err);
-      return FALSE;
+      return svn_error_createf(
+        SVN_ERR_WC_INVALID_OP_ON_CWD, err,
+        _("Can't upgrade '%s' as it is not a pre-1.7 working copy directory"),
+        svn_dirent_local_style(local_abspath, scratch_pool));
     }
 
   svn_dirent_split(&parent_abspath, &name, local_abspath, scratch_pool);
@@ -1790,7 +1792,7 @@ is_old_wcroot(const char *local_abspath,
   if (err)
     {
       svn_error_clear(err);
-      return TRUE;
+      return SVN_NO_ERROR;
     }
 
   entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
@@ -1798,10 +1800,37 @@ is_old_wcroot(const char *local_abspath,
       || entry->absent
       || (entry->deleted && entry->schedule != svn_wc_schedule_add))
     {
-      return TRUE;
+      return SVN_NO_ERROR;
     }
 
-  return FALSE;
+  svn_dirent_split(&parent_abspath, &name, parent_abspath, scratch_pool);
+  while (!svn_dirent_is_root(parent_abspath, strlen(parent_abspath)))
+    {
+      err = svn_wc__read_entries_old(&entries, parent_abspath,
+                                     scratch_pool, scratch_pool);
+      if (err)
+        {
+          svn_error_clear(err);
+          parent_abspath = svn_dirent_join(parent_abspath, name, scratch_pool);
+          break;
+        }
+      entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
+      if (!entry
+          || entry->absent
+          || (entry->deleted && entry->schedule != svn_wc_schedule_add))
+        {
+          parent_abspath = svn_dirent_join(parent_abspath, name, scratch_pool);
+          break;
+        }
+      svn_dirent_split(&parent_abspath, &name, parent_abspath, scratch_pool);
+    }
+
+  return svn_error_createf(
+    SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
+    _("Can't upgrade '%s' as it is not a pre-1.7 working copy root,"
+      " the root is '%s'"),
+    svn_dirent_local_style(local_abspath, scratch_pool),
+    svn_dirent_local_style(parent_abspath, scratch_pool));
 }
 
 svn_error_t *
@@ -1820,11 +1849,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   svn_skel_t *work_item, *work_items = NULL;
   const char *pristine_from, *pristine_to, *db_from, *db_to;
 
-  if (!is_old_wcroot(local_abspath, scratch_pool))
-    return svn_error_createf(
-      SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
-      _("Cannot upgrade '%s' as it is not a pre-1.7 working copy root"),
-      svn_dirent_local_style(local_abspath, scratch_pool));
+  SVN_ERR(is_old_wcroot(local_abspath, scratch_pool));
 
   /* Given a pre-wcng root some/wc we create a temporary wcng in
      some/wc/.svn/tmp/wcng/wc.db and copy the metadata from one to the

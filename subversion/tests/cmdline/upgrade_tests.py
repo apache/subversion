@@ -243,6 +243,23 @@ def basic_upgrade(sbox):
                                      'info', sbox.wc_dir)
 
 
+  # Upgrade on something not a versioned dir gives a 'not directory' error.
+  not_dir = ".*E155019.*%s'.*directory"
+  os.mkdir(sbox.ospath('X'))
+  svntest.actions.run_and_verify_svn(None, None, not_dir % 'X',
+                                     'upgrade', sbox.ospath('X'))
+
+  svntest.actions.run_and_verify_svn(None, None, not_dir % 'Y',
+                                     'upgrade', sbox.ospath('Y'))
+
+  svntest.actions.run_and_verify_svn(None, None, not_dir % 'A/mu',
+                                     'upgrade', sbox.ospath('A/mu'))
+
+  # Upgrade on a versioned subdir gives a 'not root' error.
+  not_root = ".*E155019.*%s'.*root.*%s'"
+  svntest.actions.run_and_verify_svn(None, None, not_root % ('A', sbox.wc_dir),
+                                     'upgrade', sbox.ospath('A'))
+
   # Now upgrade the working copy
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'upgrade', sbox.wc_dir)
