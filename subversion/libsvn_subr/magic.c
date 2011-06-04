@@ -30,6 +30,7 @@
 #include <apr_file_info.h>
 
 #include "svn_io.h"
+#include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 
@@ -122,6 +123,7 @@ svn_magic__detect_binary_mimetype(const char **mimetype,
             magic_mimetype = NULL;
           else
            {
+             svn_error_t *err;
 #ifndef MAGIC_MIME_TYPE
              char *p;
 
@@ -130,9 +132,24 @@ svn_magic__detect_binary_mimetype(const char **mimetype,
              if (p)
               *p = '\0';
 #endif
-             /* The string is allocated from memory managed by libmagic so
-              * we must copy it to the result pool. */
-             magic_mimetype = apr_pstrdup(result_pool, magic_mimetype);
+            /* Make sure we got a valid mime type. */
+            err = svn_mime_type_validate(magic_mimetype, scratch_pool);
+            if (err)
+              {
+                if (err->apr_err == SVN_ERR_BAD_MIME_TYPE)
+                  {
+                    svn_error_clear(err);
+                    magic_mimetype = NULL;
+                  }
+                else
+                  return svn_error_return(err);
+              }
+            else
+              {
+                /* The string is allocated from memory managed by libmagic
+                 * so we must copy it to the result pool. */
+                magic_mimetype = apr_pstrdup(result_pool, magic_mimetype);
+              }
            }
         }
     }
