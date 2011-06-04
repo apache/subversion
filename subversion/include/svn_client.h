@@ -1018,6 +1018,10 @@ svn_client_create_context(svn_client_ctx_t **ctx,
  * IRI-to-URI encoding and some auto-escaping, and canonicalize.  For a
  * local path: canonicalize case and path separators.
  *
+ * If @a keep_last_origpath_on_truepath_collision is TRUE, and there are
+ * exactly two targets which both case-canonicalize to the same path, the last
+ * target will be returned in the original non-case-canonicalized form.
+ *
  * Allocate @a *targets_p and its elements in @a pool.
  *
  * @a ctx is required for possible repository authentication.
@@ -1030,8 +1034,23 @@ svn_client_create_context(svn_client_ctx_t **ctx,
  * error, and if this is the only type of error encountered, complete
  * the operation before returning the error(s).
  *
- * @since New in 1.6
+ * @since New in 1.7
  */
+svn_error_t *
+svn_client_args_to_target_array2(apr_array_header_t **targets_p,
+                                 apr_getopt_t *os,
+                                 const apr_array_header_t *known_targets,
+                                 svn_client_ctx_t *ctx,
+                                 svn_boolean_t keep_last_origpath_on_truepath_collision,
+                                 apr_pool_t *pool);
+
+/*
+ * Similar to svn_client_args_to_target_array2() but with 
+ * @a keep_last_origpath_on_truepath_collision always set to FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_args_to_target_array(apr_array_header_t **targets_p,
                                 apr_getopt_t *os,

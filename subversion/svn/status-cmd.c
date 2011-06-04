@@ -269,7 +269,8 @@ svn_cl__status(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, scratch_pool));
+                                                      ctx, FALSE,
+                                                      scratch_pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, scratch_pool);

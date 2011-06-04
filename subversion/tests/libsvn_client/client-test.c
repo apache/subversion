@@ -157,7 +157,8 @@ test_args_to_target_array(apr_pool_t *pool)
         return svn_error_wrap_apr(apr_err,
                                   "Error initializing command line arguments");
 
-      err = svn_client_args_to_target_array(&targets, os, NULL, ctx, iterpool);
+      err = svn_client_args_to_target_array2(&targets, os, NULL, ctx, FALSE,
+                                             iterpool);
 
       if (expected_output)
         {

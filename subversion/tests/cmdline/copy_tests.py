@@ -5173,9 +5173,8 @@ def copy_base_of_deleted(sbox):
     })
 
 
-# Regression test for issue #3702: "svn ren TODO todo" not work on windows
-# (i.e. case-only rename on Windows)
-@XFail(svntest.main.is_fs_case_insensitive)
+# Regression test for issue #3702: Unable to perform case-only rename
+# on windows.
 @Issue(3702)
 def case_only_rename(sbox):
   """case-only rename"""

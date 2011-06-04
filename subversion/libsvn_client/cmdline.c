@@ -158,11 +158,12 @@ check_root_url_of_target(const char **root_url,
 /* Note: This is substantially copied from svn_opt__args_to_target_array() in
  * order to move to libsvn_client while maintaining backward compatibility. */
 svn_error_t *
-svn_client_args_to_target_array(apr_array_header_t **targets_p,
-                                apr_getopt_t *os,
-                                const apr_array_header_t *known_targets,
-                                svn_client_ctx_t *ctx,
-                                apr_pool_t *pool)
+svn_client_args_to_target_array2(apr_array_header_t **targets_p,
+                                 apr_getopt_t *os,
+                                 const apr_array_header_t *known_targets,
+                                 svn_client_ctx_t *ctx,
+                                 svn_boolean_t keep_last_origpath_on_truepath_collision,
+                                 apr_pool_t *pool)
 {
   int i;
   svn_boolean_t rel_url_found = FALSE;
@@ -260,11 +261,27 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
               SVN_ERR(svn_opt__arg_canonicalize_path(&true_target,
                                                      true_target, pool));
 
-              /* If there was a truepath-conversion (which can happen on
-                 case-insensitive filesystems), check if there is an exact
-                 match in the wc-db (e.g. a scheduled-for-delete file only
-                 differing in case from an on-disk file).  If so, use that
-                 instead of the truepath converted variant. */
+              /* There are two situations in which a 'truepath-conversion'
+                 (case-canonicalization to on-disk path on case-insensitive
+                 filesystem) needs to be undone:
+              
+                 1. If KEEP_LAST_ORIGPATH_ON_TRUEPATH_COLLISION is TRUE, and
+                    this is the last target of a 2-element target list, and
+                    both targets have the same truepath. */
+              if (keep_last_origpath_on_truepath_collision
+                  && input_targets->nelts == 2 && i == 1
+                  && strcmp(original_target, true_target) != 0)
+                {
+                  const char *src_truepath = APR_ARRAY_IDX(output_targets,
+                                                           0,
+                                                           const char *);
+                  if (strcmp(src_truepath, true_target) == 0)
+                    true_target = original_target;
+                }
+
+              /* 2. If there is an exact match in the wc-db without a
+                    corresponding on-disk path (e.g. a scheduled-for-delete
+                    file only differing in case from an on-disk file). */
               if (strcmp(original_target, true_target) != 0)
                 {
                   const char *target_abspath;
