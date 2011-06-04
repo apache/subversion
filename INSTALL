@@ -588,6 +588,11 @@ I.    INTRODUCTION
       
         --with-libmagic=no
 
+      If configure should fail when libmagic is not present, but only
+      the default locations should be searched, then use:
+
+        --with-libmagic
+
   D. Documentation
 
       The primary documentation for Subversion is the free book
