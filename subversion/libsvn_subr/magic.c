@@ -70,7 +70,14 @@ svn_magic__init(svn_magic__cookie_t **magic_cookie,
   mc = apr_palloc(result_pool, sizeof(*mc));
 
   /* Initialise libmagic. */
+#ifndef MAGIC_MIME_TYPE
+  /* Some old versions of libmagic don't support MAGIC_MIME_TYPE.
+   * We can use MAGIC_MIME instead. It returns more than we need
+   * but we can work around that (see below). */
+  mc->magic = magic_open(MAGIC_MIME | MAGIC_ERROR);
+#else
   mc->magic = magic_open(MAGIC_MIME_TYPE | MAGIC_ERROR);
+#endif
   if (mc->magic)
     {
       /* This loads the default magic database.
@@ -115,6 +122,14 @@ svn_magic__detect_binary_mimetype(const char **mimetype,
             magic_mimetype = NULL;
           else
            {
+#ifndef MAGIC_MIME_TYPE
+             char *p;
+
+             /* Strip off trailing stuff like " charset=ascii". */
+             p = strchr(magic_mimetype, ' ');
+             if (p)
+              *p = '\0';
+#endif
              /* The string is allocated from memory managed by libmagic so
               * we must copy it to the result pool. */
              magic_mimetype = apr_pstrdup(result_pool, magic_mimetype);
