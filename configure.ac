@@ -694,7 +694,12 @@ AC_ARG_WITH(libmagic,AS_HELP_STRING([--with-libmagic=PREFIX],
                                 [libmagic filetype detection library]),
 [
   if test "$withval" = "yes" ; then
-    AC_MSG_ERROR([--with-libmagic requires an argument.])
+    AC_CHECK_HEADER(magic.h, [
+      AC_CHECK_LIB(magic, magic_open, [libmagic_found="builtin"])
+    ])
+    if test "$libmagic_found" = "no"; then
+      AC_MSG_ERROR([[--with-libmagic requested, but libmagic not found]])
+    fi
   else
     libmagic_prefix=$withval
     save_cppflags="$CPPFLAGS"
