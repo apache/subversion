@@ -47,6 +47,7 @@
 
 #include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_magic.h"
 
 #include "svn_private_config.h"
 
@@ -220,6 +221,7 @@ svn_error_t *
 svn_client__get_auto_props(apr_hash_t **properties,
                            const char **mimetype,
                            const char *path,
+                           svn_magic__cookie_t *magic_cookie,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
@@ -254,38 +256,20 @@ svn_client__get_auto_props(apr_hash_t **properties,
       SVN_ERR(svn_io_detect_mimetype2(&autoprops.mimetype, path,
                                       ctx->mimetypes_map, pool));
 
-#ifdef HAVE_LIBMAGIC
-      /* We want to set an svn:mime-type property by default only on binary
-       * files. So don't set an svn:mime-type property on text files unless
-       * their mime-type appears in the map. This preserves behaviour
-       * of Subversion releases that did not include libmagic support.
-       * In those releases svn_io_detect_mimetype2() returned
-       * "application/octet-stream" or NULL unless the type was in the map. */
-      if (autoprops.mimetype && strncmp(autoprops.mimetype, "text/", 5) == 0)
+      /* If we got no mime-type, or if it is "application/octet-stream",
+       * try to get the mime-type from libmagic. */
+      if (magic_cookie &&
+          (!autoprops.mimetype ||
+           strcmp(autoprops.mimetype, "application/octet-stream") == 0))
         {
-          if (ctx->mimetypes_map)
-            {
-              svn_boolean_t type_is_in_map = FALSE;
-              apr_hash_index_t *hi;
+          const char *magic_mimetype;
 
-              for (hi = apr_hash_first(pool, ctx->mimetypes_map);
-                   hi;
-                   hi = apr_hash_next(hi))
-                {
-                  const char *type_from_map = svn__apr_hash_index_val(hi);
-                  if (strcmp(type_from_map, autoprops.mimetype) == 0)
-                    {
-                      type_is_in_map = TRUE;
-                      break;
-                    }
-                }
-              if (!type_is_in_map)
-                autoprops.mimetype = NULL;
-            }
-          else
-            autoprops.mimetype = NULL;
+          SVN_ERR(svn_magic__detect_binary_mimetype(&magic_mimetype,
+                                                    path, magic_cookie,
+                                                    pool, pool));
+          if (magic_mimetype)
+            autoprops.mimetype = magic_mimetype;
         }
-#endif
 
       if (autoprops.mimetype)
         apr_hash_set(autoprops.properties, SVN_PROP_MIME_TYPE,
@@ -311,6 +295,7 @@ svn_client__get_auto_props(apr_hash_t **properties,
 /* Only call this if the on-disk node kind is a file. */
 static svn_error_t *
 add_file(const char *local_abspath,
+         svn_magic__cookie_t *magic_cookie,
          svn_client_ctx_t *ctx,
          apr_pool_t *pool)
 {
@@ -331,7 +316,7 @@ add_file(const char *local_abspath,
        we open them to estimate file type.
        That's why we postpone the add until after this step. */
     SVN_ERR(svn_client__get_auto_props(&properties, &mimetype, local_abspath,
-                                       ctx, pool));
+                                       magic_cookie, ctx, pool));
 
   /* Add the file */
   SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, local_abspath,
@@ -402,6 +387,9 @@ add_file(const char *local_abspath,
  * Files and directories that match ignore patterns will not be added unless
  * NO_IGNORE is TRUE.
  *
+ * Use MAGIC_COOKIE (which may be NULL) to detect the mime-type of files
+ * if necessary.
+ *
  * If CTX->CANCEL_FUNC is non-null, call it with CTX->CANCEL_BATON to allow
  * the user to cancel the operation
  */
@@ -410,6 +398,7 @@ add_dir_recursive(const char *dir_abspath,
                   svn_depth_t depth,
                   svn_boolean_t force,
                   svn_boolean_t no_ignore,
+                  svn_magic__cookie_t *magic_cookie,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *scratch_pool)
 {
@@ -476,12 +465,13 @@ add_dir_recursive(const char *dir_abspath,
             depth_below_here = svn_depth_empty;
 
           SVN_ERR(add_dir_recursive(abspath, depth_below_here,
-                                    force, no_ignore, ctx, iterpool));
+                                    force, no_ignore, magic_cookie,
+                                    ctx, iterpool));
         }
       else if ((dirent->kind == svn_node_file || dirent->special)
                && depth >= svn_depth_files)
         {
-          err = add_file(abspath, ctx, iterpool);
+          err = add_file(abspath, magic_cookie, ctx, iterpool);
           if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
             svn_error_clear(err);
           else
@@ -516,6 +506,9 @@ add(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
   svn_node_kind_t kind;
   svn_error_t *err;
   struct add_with_write_lock_baton *b = baton;
+  svn_magic__cookie_t *magic_cookie;
+
+  svn_magic__init(&magic_cookie, scratch_pool);
 
   if (b->existing_parent_abspath)
     {
@@ -565,11 +558,11 @@ add(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
          and pass depth along no matter what it is, so that the
          target's depth will be set correctly. */
       err = add_dir_recursive(b->local_abspath, b->depth,
-                              b->force, b->no_ignore, b->ctx,
+                              b->force, b->no_ignore, magic_cookie, b->ctx,
                               scratch_pool);
     }
   else if (kind == svn_node_file)
-    err = add_file(b->local_abspath, b->ctx, scratch_pool);
+    err = add_file(b->local_abspath, magic_cookie, b->ctx, scratch_pool);
   else if (kind == svn_node_none)
     {
       svn_boolean_t tree_conflicted;
