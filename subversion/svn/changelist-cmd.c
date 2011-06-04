@@ -62,7 +62,7 @@ svn_cl__changelist(apr_getopt_t *os,
   /* Parse the remaining arguments as paths. */
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   /* Changelist has no implicit dot-target `.', so don't you put that
      code here! */

@@ -736,6 +736,7 @@ svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets_p,
                                             apr_getopt_t *os,
                                             const apr_array_header_t *known_targets,
                                             svn_client_ctx_t *ctx,
+                                            svn_boolean_t keep_dest_origpath_on_truepath_collision,
                                             apr_pool_t *pool);
 
 /* Return a string allocated in POOL that is a copy of STR but with each

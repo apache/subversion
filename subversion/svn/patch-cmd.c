@@ -59,7 +59,7 @@ svn_cl__patch(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
   if (targets->nelts < 1)

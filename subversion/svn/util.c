@@ -1112,11 +1112,15 @@ svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets,
                                             apr_getopt_t *os,
                                             const apr_array_header_t *known_targets,
                                             svn_client_ctx_t *ctx,
+                                            svn_boolean_t keep_last_origpath_on_truepath_collision,
                                             apr_pool_t *pool)
 {
-  svn_error_t *err = svn_client_args_to_target_array(targets, os,
-                                                     known_targets,
-                                                     ctx, pool);
+  svn_error_t *err = svn_client_args_to_target_array2(targets,
+                                                      os,
+                                                      known_targets,
+                                                      ctx,
+                                                      keep_last_origpath_on_truepath_collision,
+                                                      pool);
   if (err)
     {
       if (err->apr_err ==  SVN_ERR_RESERVED_FILENAME_SPECIFIED)

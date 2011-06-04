@@ -52,7 +52,8 @@ svn_cl__unlock(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, scratch_pool));
+                                                      ctx, FALSE,
+                                                      scratch_pool));
 
   /* We don't support unlock on directories, so "." is not relevant. */
   if (! targets->nelts)

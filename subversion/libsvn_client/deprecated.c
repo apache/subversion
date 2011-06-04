@@ -369,6 +369,18 @@ svn_client_blame(const char *target,
                            receiver, receiver_baton, ctx, pool);
 }
 
+/*** From cmdline.c ***/
+svn_error_t *
+svn_client_args_to_target_array(apr_array_header_t **targets_p,
+                                apr_getopt_t *os,
+                                const apr_array_header_t *known_targets,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool)
+{
+  return svn_client_args_to_target_array2(targets_p, os, known_targets, ctx,
+                                          FALSE, pool);
+}
+
 /*** From commit.c ***/
 svn_error_t *
 svn_client_import3(svn_commit_info_t **commit_info_p,
