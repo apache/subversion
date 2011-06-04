@@ -1006,6 +1006,10 @@ main(int argc, const char **argv)
           else
             {
               char *end;
+
+              while (*rev_str == 'r')
+                ++rev_str;
+
               action->rev = strtol(rev_str, &end, 0);
               if (*end)
                 handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
