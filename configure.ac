@@ -697,9 +697,7 @@ AC_ARG_WITH(libmagic,AS_HELP_STRING([--with-libmagic=PREFIX],
     AC_CHECK_HEADER(magic.h, [
       AC_CHECK_LIB(magic, magic_open, [libmagic_found="builtin"])
     ])
-    if test "$libmagic_found" = "no"; then
-      AC_MSG_ERROR([[--with-libmagic requested, but libmagic not found]])
-    fi
+    libmagic_prefix="the default locations"
   else
     libmagic_prefix=$withval
     save_cppflags="$CPPFLAGS"
@@ -711,6 +709,9 @@ AC_ARG_WITH(libmagic,AS_HELP_STRING([--with-libmagic=PREFIX],
       LDFLAGS="$save_ldflags"
     ])
     CPPFLAGS="$save_cppflags"
+  fi
+  if test "$withval" != "no" && test "$libmagic_found" = "no"; then
+    AC_MSG_ERROR([[--with-libmagic requested, but libmagic not found at $libmagic_prefix]])
   fi
 ],
 [
