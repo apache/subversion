@@ -31,7 +31,7 @@
 typedef struct svn_magic__cookie_t svn_magic__cookie_t;
 
 /* This routine initialises libmagic.
- * Upon success new *MAGIC_COOKIE is allocated in RESULT_POOL.
+ * Upon success a new *MAGIC_COOKIE is allocated in RESULT_POOL.
  * On failure *MAGIC_COOKIE is set to NULL.
  * All resources used by libmagic are freed by a cleanup handler
  * installed on RESULT_POOL, i.e. *MAGIC_COOKIE becomes invalid when
