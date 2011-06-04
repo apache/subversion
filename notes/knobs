@@ -59,7 +59,6 @@ SERF_VERBOSE
 SSL_VERBOSE
 SVN_DEPRECATED
 SVN_FS__TRAIL_DEBUG
-SVN_STREAM__QUADRIPLEGIC
 
 2.4 Test-only
 
@@ -319,15 +318,6 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Default:   not defined
   Suggested: defined, not defined
 
-5.13 SVN_STREAM__QUADRIPLEGIC
-
-  Scope:     libsvn_subr/stream.c, svn_stream_*()
-  Purpose:   Disable optional features of streams: mark/seek/skip/buffered.
-  Range:     definedness
-  Default:   not defined
-  Suggested: defined, not defined
-
- 
 6 Defines that affect unit tests
 ================================
 
