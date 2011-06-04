@@ -66,10 +66,6 @@
 #include "private/svn_atomic.h"
 #include "private/svn_io_private.h"
 
-#ifdef HAVE_LIBMAGIC
-#include <magic.h>
-#endif
-
 #define SVN_SLEEP_ENV_VAR "SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS"
 
 /*
@@ -2910,10 +2906,6 @@ svn_io_detect_mimetype2(const char **mimetype,
   svn_error_t *err;
   unsigned char block[1024];
   apr_size_t amt_read = sizeof(block);
-  apr_finfo_t finfo;
-#ifdef HAVE_LIBMAGIC
-  magic_t magic;
-#endif
 
   /* Default return value is NULL. */
   *mimetype = NULL;
@@ -2940,40 +2932,6 @@ svn_io_detect_mimetype2(const char **mimetype,
     return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                              _("Can't detect MIME type of non-file '%s'"),
                              svn_dirent_local_style(file, pool));
-
-
-  /* Check if the file is empty and do not set a mime-type if it is.
-   * This also avoids spurious mime-types like "application/x-empty"
-   * from libmagic.
-   * ### merge this with the kind check above to save a stat() call */
-  SVN_ERR(svn_io_stat(&finfo, file, APR_FINFO_SIZE, pool));
-  if (finfo.size == 0)
-    return SVN_NO_ERROR;
-
-#ifdef HAVE_LIBMAGIC
-  /* Try to determine the mime-type with libmagic. */
-  magic = magic_open(MAGIC_MIME_TYPE | MAGIC_ERROR);
-  if (magic)
-    {
-      /* This loads the default magic database.
-       * Point the MAGIC environment variable at your favourite .mgc
-       * file to load a non-default database. */
-      if (magic_load(magic, NULL) != -1)
-        {
-          const char *magic_mime_type;
-
-          magic_mime_type = magic_file(magic, file);
-          if (magic_mime_type != NULL)
-            *mimetype = apr_pstrdup(pool, magic_mime_type);
-        }
-
-      /* This deallocates memory pointed to by magic_mime_type. */
-      magic_close(magic);
-
-      if (*mimetype)
-        return SVN_NO_ERROR;
-    }
-#endif
 
   SVN_ERR(svn_io_file_open(&fh, file, APR_READ, 0, pool));
 

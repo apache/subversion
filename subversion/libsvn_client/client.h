@@ -35,6 +35,8 @@
 #include "svn_ra.h"
 #include "svn_client.h"
 
+#include "private/svn_magic.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -348,10 +350,13 @@ svn_error_t * svn_client__can_delete(const char *path,
    (const char * keys mapping to svn_string_t * values), or if
    auto-props are disabled, set *PROPERTIES to NULL.
    Set *MIMETYPE to the mimetype, if any, or to NULL.
+   If MAGIC_COOKIE is not NULL and no mime-type can be determined
+   via CTX->config try to detect the mime-type with libmagic.
    Allocate the hash table, keys, values, and mimetype in POOL. */
 svn_error_t *svn_client__get_auto_props(apr_hash_t **properties,
                                         const char **mimetype,
                                         const char *path,
+                                        svn_magic__cookie_t *magic_cookie,
                                         svn_client_ctx_t *ctx,
                                         apr_pool_t *pool);
 

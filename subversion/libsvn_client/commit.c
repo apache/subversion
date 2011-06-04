@@ -49,6 +49,7 @@
 
 #include "client.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_magic.h"
 
 #include "svn_private_config.h"
 
@@ -70,6 +71,8 @@ typedef struct import_ctx_t
   /* Whether any changes were made to the repository */
   svn_boolean_t repos_changed;
 
+  /* A magic cookie for mime-type detection. */
+  svn_magic__cookie_t *magic_cookie;
 } import_ctx_t;
 
 
@@ -211,8 +214,9 @@ import_file(const svn_delta_editor_t *editor,
   if (! is_special)
     {
       /* add automatic properties */
-      SVN_ERR(svn_client__get_auto_props(&properties, &mimetype, path, ctx,
-                                         pool));
+      SVN_ERR(svn_client__get_auto_props(&properties, &mimetype, path,
+                                         import_ctx->magic_cookie,
+                                         ctx, pool));
     }
   else
     properties = apr_hash_make(pool);
@@ -494,6 +498,8 @@ import(const char *path,
   apr_array_header_t *batons = NULL;
   const char *edit_path = "";
   import_ctx_t *import_ctx = apr_pcalloc(pool, sizeof(*import_ctx));
+
+  svn_magic__init(&import_ctx->magic_cookie, pool);
 
   /* Get a root dir baton.  We pass an invalid revnum to open_root
      to mean "base this on the youngest revision".  Should we have an
