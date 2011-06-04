@@ -1033,7 +1033,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                 }
 
             } /* Iteration over each merge source in younger_mergeinfo. */
-        } /* if (apr_hash_count(younger_mergeinfo)) */
+        } /* if (younger_mergeinfo) */
 
       /* Filter self-referential mergeinfo from "older" mergeinfo. */
       if (mergeinfo)
