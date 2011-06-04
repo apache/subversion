@@ -934,7 +934,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
 
               for (j = 0; j < rangelist->nelts; j++)
                 {
-                  svn_error_t *err;
+                  svn_error_t *err2;
                   svn_opt_revision_t *start_revision;
                   const char *start_url;
                   svn_opt_revision_t peg_rev, rev1_opt, rev2_opt;
@@ -957,22 +957,22 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
 
                   /* Check if PATH@BASE_REVISION exists at
                      RANGE->START on the same line of history. */
-                  err = svn_client__repos_locations(&start_url,
-                                                    &start_revision,
-                                                    NULL,
-                                                    NULL,
-                                                    ra_session,
-                                                    target_url,
-                                                    &peg_rev,
-                                                    &rev1_opt,
-                                                    &rev2_opt,
-                                                    ctx,
-                                                    iterpool);
-                  if (err)
+                  err2 = svn_client__repos_locations(&start_url,
+                                                     &start_revision,
+                                                     NULL,
+                                                     NULL,
+                                                     ra_session,
+                                                     target_url,
+                                                     &peg_rev,
+                                                     &rev1_opt,
+                                                     &rev2_opt,
+                                                     ctx,
+                                                     iterpool);
+                  if (err2)
                     {
-                      if (err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES
-                          || err->apr_err == SVN_ERR_FS_NOT_FOUND
-                          || err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
+                      if (err2->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES
+                          || err2->apr_err == SVN_ERR_FS_NOT_FOUND
+                          || err2->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
                         {
                           /* PATH@BASE_REVISION didn't exist at
                              RANGE->START + 1 or is unrelated to the
@@ -991,14 +991,14 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                              the merge to proceed without filtering the
                              offending range seems the least worst
                              option. */
-                          svn_error_clear(err);
-                          err = NULL;
+                          svn_error_clear(err2);
+                          err2 = NULL;
                           APR_ARRAY_PUSH(adjusted_rangelist,
                                          svn_merge_range_t *) = range;
                         }
                       else
                         {
-                          return svn_error_return(err);
+                          return svn_error_return(err2);
                         }
                      }
                   else
