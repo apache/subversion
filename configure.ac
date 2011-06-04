@@ -721,7 +721,7 @@ AC_ARG_WITH(libmagic,AS_HELP_STRING([--with-libmagic=PREFIX],
 ])
 
 if test "$libmagic_found" != "no"; then
-  AC_DEFINE([HAVE_LIBMAGIC], [1], [Defined if libmagic support is enabled])
+  AC_DEFINE([SVN_HAVE_LIBMAGIC], [1], [Defined if libmagic support is enabled])
   SVN_MAGIC_LIBS="-lmagic"
 fi
 
