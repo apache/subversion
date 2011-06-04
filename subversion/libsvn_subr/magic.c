@@ -38,18 +38,18 @@
 
 #include "private/svn_magic.h"
 
-#ifdef HAVE_LIBMAGIC
+#ifdef SVN_HAVE_LIBMAGIC
 #include <magic.h>
 #endif
 
 struct svn_magic__cookie_t {
-#ifdef HAVE_LIBMAGIC
+#ifdef SVN_HAVE_LIBMAGIC
   magic_t magic;
 #endif
   char dummy;
 };
 
-#ifdef HAVE_LIBMAGIC
+#ifdef SVN_HAVE_LIBMAGIC
 /* Close the magic database. */
 static apr_status_t
 close_magic_cookie(void *baton)
@@ -67,7 +67,7 @@ svn_magic__init(svn_magic__cookie_t **magic_cookie,
 
   svn_magic__cookie_t *mc = NULL;
 
-#ifdef HAVE_LIBMAGIC
+#ifdef SVN_HAVE_LIBMAGIC
   mc = apr_palloc(result_pool, sizeof(*mc));
 
   /* Initialise libmagic. */
@@ -106,7 +106,7 @@ svn_magic__detect_binary_mimetype(const char **mimetype,
                                   apr_pool_t *scratch_pool)
 {
   const char *magic_mimetype = NULL;
-#ifdef HAVE_LIBMAGIC
+#ifdef SVN_HAVE_LIBMAGIC
   apr_finfo_t finfo;
 
   /* Do not ask libmagic for the mime-types of empty files.
