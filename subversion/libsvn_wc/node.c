@@ -1558,6 +1558,22 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
 }
 
 svn_error_t *
+svn_wc__node_get_md5_from_sha1(const svn_checksum_t **md5_checksum,
+                               svn_wc_context_t *wc_ctx,
+                               const char *wri_abspath,
+                               const svn_checksum_t *sha1_checksum,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  return svn_error_return(svn_wc__db_pristine_get_md5(md5_checksum,
+                                                      wc_ctx->db,
+                                                      wri_abspath,
+                                                      sha1_checksum,
+                                                      result_pool,
+                                                      scratch_pool));
+}
+
+svn_error_t *
 svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
                                     svn_wc_context_t *wc_ctx,
                                     const char *local_abspath,

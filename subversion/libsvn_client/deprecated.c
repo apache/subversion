@@ -2085,8 +2085,10 @@ svn_client_checkout(svn_revnum_t *result_rev,
 /*** From info.c ***/
 
 /* Convert an svn_info2_t to an svn_info_t, doing shallow copies of objects. */
-static svn_info_t *
-info_from_info2(const svn_info2_t *info2,
+static svn_error_t *
+info_from_info2(svn_info_t **new_info,
+                svn_wc_context_t *wc_ctx,
+                const svn_info2_t *info2,
                 apr_pool_t *pool)
 {
   svn_info_t *info = apr_pcalloc(pool, sizeof(*info));
@@ -2176,7 +2178,21 @@ info_from_info2(const svn_info2_t *info2,
         }
     }
 
-  return info;
+  if (info2->wc_info && info2->wc_info->checksum)
+    {
+      const svn_checksum_t *md5_checksum;
+
+      SVN_ERR(svn_wc__node_get_md5_from_sha1(&md5_checksum,
+                                             wc_ctx,
+                                             info2->wc_info->wcroot_abspath,
+                                             info2->wc_info->checksum,
+                                             pool, pool));
+
+      info->checksum = svn_checksum_to_cstring(md5_checksum, pool);
+    }
+
+  *new_info = info;
+  return SVN_NO_ERROR;
 }
 
 struct info_to_relpath_baton
@@ -2185,6 +2201,7 @@ struct info_to_relpath_baton
   const char *anchor_relpath;
   svn_info_receiver_t info_receiver;
   void *info_baton;
+  svn_wc_context_t *wc_ctx;
 };
 
 static svn_error_t *
@@ -2195,6 +2212,7 @@ info_receiver_relpath_wrapper(void *baton,
 {
   struct info_to_relpath_baton *rb = baton;
   const char *path = abspath_or_url;
+  svn_info_t *info;
 
   if (rb->anchor_relpath &&
       svn_dirent_is_ancestor(rb->anchor_abspath, abspath_or_url))
@@ -2205,9 +2223,11 @@ info_receiver_relpath_wrapper(void *baton,
                              scratch_pool);
     }
 
+  SVN_ERR(info_from_info2(&info, rb->wc_ctx, info2, scratch_pool));
+
   SVN_ERR(rb->info_receiver(rb->info_baton,
                             path,
-                            info_from_info2(info2, scratch_pool),
+                            info,
                             scratch_pool));
 
   return SVN_NO_ERROR;
@@ -2230,6 +2250,7 @@ svn_client_info2(const char *path_or_url,
   rb.anchor_relpath = NULL;
   rb.info_receiver = receiver;
   rb.info_baton = receiver_baton;
+  rb.wc_ctx = ctx->wc_ctx;
 
   if (!svn_path_is_url(path_or_url))
     {
