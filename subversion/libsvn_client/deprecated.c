@@ -2144,6 +2144,7 @@ info_from_info2(svn_info_t **new_info,
       info->has_wc_info           = FALSE;
       info->working_size          = SVN_INFO_SIZE_UNKNOWN;
       info->working_size64        = SVN_INVALID_FILESIZE;
+      info->depth                 = svn_depth_unknown;
     }
 
   /* Populate conflict fields. */
