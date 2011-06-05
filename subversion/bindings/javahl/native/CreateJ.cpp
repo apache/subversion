@@ -297,9 +297,11 @@ CreateJ::Info(const char *path, const svn_info2_t *info)
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
-      jworkingSize = info->wc_info->working_size;
+      /* ### Maybe rename the java fields while we can */
+      jworkingSize = info->wc_info->recorded_size;
+      jtext_time = info->wc_info->recorded_time;
+
       jcopyfrom_rev = info->wc_info->copyfrom_rev;
-      jtext_time = info->wc_info->text_time;
 
       if (info->wc_info->conflicts && info->wc_info->conflicts->nelts > 0)
         {
