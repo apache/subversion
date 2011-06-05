@@ -3014,7 +3014,6 @@ typedef struct svn_wc_info_t
   svn_wc_schedule_t schedule;
   const char *copyfrom_url;
   svn_revnum_t copyfrom_rev;
-  apr_time_t text_time;
   const svn_checksum_t *checksum;
   const char *changelist;
   svn_depth_t depth;
@@ -3024,7 +3023,12 @@ typedef struct svn_wc_info_t
    * representation, or #SVN_INVALID_FILESIZE if unknown.
    * Not applicable for directories.
    */
-  svn_filesize_t working_size;
+  svn_filesize_t recorded_size;
+
+  /**
+   * The time at which the file had the recorded size recorded_size and was
+   * considered unmodified. */
+  apr_time_t recorded_time;
 
   /** Array of const svn_wc_conflict_description2_t * which contains info
    * on any conflict of which this node is a victim. Otherwise NULL.  */

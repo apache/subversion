@@ -150,10 +150,11 @@ print_info_xml(void *baton,
                                               info->wc_info->copyfrom_rev));
 
       /* "<text-updated> xx </text-updated>" */
-      if (info->wc_info->text_time)
+      if (info->wc_info->recorded_time)
         svn_cl__xml_tagged_cdata(&sb, pool, "text-updated",
-                                 svn_time_to_cstring(info->wc_info->text_time,
-                                                     pool));
+                                 svn_time_to_cstring(
+                                          info->wc_info->recorded_time,
+                                          pool));
 
       /* "<checksum> xx </checksum>" */
       /* ### Print the checksum kind. */
@@ -413,8 +414,8 @@ print_info(void *baton,
 
   if (info->wc_info)
     {
-      if (info->wc_info->text_time)
-        SVN_ERR(svn_cl__info_print_time(info->wc_info->text_time,
+      if (info->wc_info->recorded_time)
+        SVN_ERR(svn_cl__info_print_time(info->wc_info->recorded_time,
                                         _("Text Last Updated"), pool));
 
       if (info->wc_info->checksum)

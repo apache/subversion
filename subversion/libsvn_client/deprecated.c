@@ -2122,7 +2122,7 @@ info_from_info2(svn_info_t **new_info,
       info->schedule            = info2->wc_info->schedule;
       info->copyfrom_url        = info2->wc_info->copyfrom_url;
       info->copyfrom_rev        = info2->wc_info->copyfrom_rev;
-      info->text_time           = info2->wc_info->text_time;
+      info->text_time           = info2->wc_info->recorded_time;
       info->prop_time           = 0;
       if (info2->wc_info->checksum
             && info2->wc_info->checksum->kind == svn_checksum_md5)
@@ -2133,7 +2133,7 @@ info_from_info2(svn_info_t **new_info,
       info->changelist          = info2->wc_info->changelist;
       info->depth               = info2->wc_info->depth;
 
-      info->working_size64      = info2->wc_info->working_size;
+      info->working_size64      = info2->wc_info->recorded_size;
       if (((apr_size_t)info->working_size64) == info->working_size64)
         info->working_size       = (apr_size_t)info->working_size64;
       else /* >= 4GB */
