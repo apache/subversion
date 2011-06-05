@@ -1629,15 +1629,24 @@ svn_client_propget3(apr_hash_t **props,
 {
   const char *target;
   apr_hash_t *temp_props;
+  svn_error_t *err;
 
   if (svn_path_is_url(path_or_url))
     target = path_or_url;
   else
     SVN_ERR(svn_dirent_get_absolute(&target, path_or_url, pool));
 
-  SVN_ERR(svn_client_propget4(&temp_props, propname, target,
-                              peg_revision, revision, actual_revnum,
-                              depth, changelists, ctx, pool, pool));
+  err = svn_client_propget4(&temp_props, propname, target,
+                            peg_revision, revision, actual_revnum,
+                            depth, changelists, ctx, pool, pool);
+
+  if (err && err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
+    {
+      err->apr_err = SVN_ERR_ENTRY_NOT_FOUND;
+      return svn_error_return(err);
+    }
+  else
+    SVN_ERR(err);
 
   if (actual_revnum
         && !svn_path_is_url(path_or_url)
