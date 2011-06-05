@@ -136,8 +136,15 @@ print_info_xml(void *baton,
                                schedule_str(info->wc_info->schedule));
 
       /* "<depth> xx </depth>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "depth",
-                               svn_depth_to_word(info->wc_info->depth));
+      {
+        svn_depth_t depth = info->wc_info->depth;
+
+        /* In the entries world info just passed depth infinity for files */
+        if (depth == svn_depth_unknown && info->kind == svn_node_file)
+          depth = svn_depth_infinity;
+
+        svn_cl__xml_tagged_cdata(&sb, pool, "depth", svn_depth_to_word(depth));
+      }
 
       /* "<copy-from-url> xx </copy-from-url>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "copy-from-url",
