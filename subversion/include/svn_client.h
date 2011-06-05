@@ -4419,6 +4419,9 @@ svn_client_revprop_set(const char *propname,
  * If error, don't touch @a *props, otherwise @a *props is a hash table
  * even if empty.
  *
+ * This function returns SVN_ERR_UNVERSIONED_RESOURCE when it is called on
+ * unversioned nodes.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
@@ -4438,6 +4441,9 @@ svn_client_propget4(apr_hash_t **props,
  * Similar to svn_client_propget4(), but with the following change to the
  * output hash keys:  keys are `<tt>char *</tt>' paths, prefixed by
  * @a target, which is a working copy path or a URL.
+ *
+ * This function returns SVN_ERR_ENTRY_NOT_FOUND where svn_client_propget4
+ * would return SVN_ERR_UNVERSIONED_RESOURCE.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
