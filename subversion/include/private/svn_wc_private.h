@@ -927,6 +927,20 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+/* Gets the md5 checksum for the pristine file identified by a sha1_checksum in the
+   working copy identified by wri_abspath.
+
+   Wraps svn_wc__db_pristine_get_md5().
+ */
+svn_error_t *
+svn_wc__node_get_md5_from_sha1(const svn_checksum_t **md5_checksum,
+                               svn_wc_context_t *wc_ctx,
+                               const char *wri_abspath,
+                               const svn_checksum_t *sha1_checksum,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
+
+
 /* Gets an array of const char *repos_relpaths of descendants of LOCAL_ABSPATH,
  * which must be the op root of an addition, copy or move. The descendants
  * returned are at the same op_depth, but are to be deleted by the commit
@@ -994,7 +1008,6 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool);
-
 
 #ifdef __cplusplus
 }
