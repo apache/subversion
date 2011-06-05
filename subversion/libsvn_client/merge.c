@@ -5690,7 +5690,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                     SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING, err,
                     _("Invalid mergeinfo detected on '%s', "
                       "mergetracking not possible"),
-                    svn_path_local_style(wc_path, scratch_pool));
+                    svn_dirent_local_style(wc_path, scratch_pool));
                 }
               return svn_error_return(err);
             }
@@ -6754,7 +6754,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
                 SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING, err,
                 _("Invalid mergeinfo detected on merge target '%s', "
                   "mergetracking not possible"),
-                svn_path_local_style(target_abspath, scratch_pool));
+                svn_dirent_local_style(target_abspath, scratch_pool));
             }
           return svn_error_return(err);
         }
@@ -10236,7 +10236,7 @@ calculate_left_hand_side(const char **url_left,
                 SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING, err,
                 _("Invalid mergeinfo detected on '%s', "
                   "reintegrate merge not possible"),
-                svn_path_local_style(absolute_path, scratch_pool));
+                svn_dirent_local_style(absolute_path, scratch_pool));
             }
           return svn_error_return(err);
         }
