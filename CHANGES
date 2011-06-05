@@ -41,6 +41,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * add extensive caching support to servers (r1067669, -75, -72302)
     * add configurable caching to svnadmin (r1078357)
     * make server-side network data compression rate configurable (r1072288)
+    * added support for auto-detecting mime-types with libmagic (r1131120)
 
   - Client-side bugfixes:
     * 'svn cp A B; svn mv B C' is equivalent to 'svn cp A C' (issue #756)
@@ -79,7 +80,6 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fix warning about copies committed with non-infinity depth (issue #3752)
     * can now commit multiple wc paths lacking a common parent (issue #2381)
     * 'svn export --depth $WC' now works correctly (issue #3800)
-    * added support for auto-detecting mime-types with libmagic (r1131120)
     * added support for case-only renames on Windows (issue #3702)
     * fixed: wc-to-wc copy of a switch source (issue #1802)
     * fixed: 'svn st' reports symlinks as obstructed items (issue #2284)
