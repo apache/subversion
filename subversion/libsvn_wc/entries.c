@@ -403,8 +403,8 @@ read_one_entry(const svn_wc_entry_t **new_entry,
             &entry->changelist,
             &conflicted,
             NULL /* op_root */,
-            NULL /* have_props */,
-            NULL /* props_mod */,
+            &entry->has_props /* have_props */,
+            &entry->has_prop_mods /* props_mod */,
             &have_base,
             &have_more_work,
             NULL /* have_work */,
@@ -412,6 +412,9 @@ read_one_entry(const svn_wc_entry_t **new_entry,
             entry_abspath,
             result_pool,
             scratch_pool));
+
+  if (entry->has_prop_mods)
+    entry->has_props = TRUE;
 
   if (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
     {
