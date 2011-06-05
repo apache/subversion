@@ -2133,6 +2133,9 @@ info_from_info2(svn_info_t **new_info,
       info->changelist          = info2->wc_info->changelist;
       info->depth               = info2->wc_info->depth;
 
+      if (info->depth == svn_depth_unknown && info->kind == svn_node_file)
+        info->depth = svn_depth_infinity;
+
       info->working_size64      = info2->wc_info->recorded_size;
       if (((apr_size_t)info->working_size64) == info->working_size64)
         info->working_size       = (apr_size_t)info->working_size64;
