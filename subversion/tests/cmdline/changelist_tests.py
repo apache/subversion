@@ -1042,6 +1042,7 @@ def move_added_keeps_changelist(sbox):
   svntest.actions.run_and_verify_info(expected_infos, kappa2_path)
 
 @Issue(3820)
+@XFail()
 def change_to_dir(sbox):
   "change file in changelist to dir"
 

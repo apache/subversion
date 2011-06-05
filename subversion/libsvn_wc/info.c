@@ -245,10 +245,6 @@ build_info_for_entry(svn_info2_t **info,
     }
 
   /* ### Temporary hacks to keep our test suite happy: */
-  if (db_kind == svn_wc__db_kind_dir)
-    wc_info->changelist = NULL; /* Should be valid in the DB */
-  if (db_kind != svn_wc__db_kind_dir)
-    wc_info->depth = svn_depth_infinity; /* Should be unknown */
 
   *info = tmpinfo;
   return SVN_NO_ERROR;
