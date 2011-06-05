@@ -2049,7 +2049,7 @@ public class BasicTests extends SVNTests
                          -1, info.getReposSize());
 
            // Examine depth
-           assertEquals(Depth.unknown, info.getDepth());
+           assertEquals(Depth.infinity, info.getDepth());
         }
 
         // Create wc with a depth of Depth.empty
