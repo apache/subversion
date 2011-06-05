@@ -72,7 +72,6 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * return correct error code for 'svn cat' on nonexisting file (issue #3713)
     * support svn:externals on locally added directories (issue #2267)
     * use installed GSSAPI lib for Kerberos in ra_serf (r877381)
-    * don't let file externals make mixed-rev WCs on checkout (issue #3816)
     * allow 'svn info' to run on an excluded item (issue #3792)
     * improve 'log -g' output with reverse merges (issue #3176)
     * don't print error message if stdout is a pipe and is closed (issue #3014)
