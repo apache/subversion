@@ -226,10 +226,10 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
         return FALSE;
       }
     utf8_path[outlength - outbytes] = '\0';
-    internal_path = svn_path_internal_style(utf8_path, pool);
+    internal_path = svn_dirent_internal_style(utf8_path, pool);
     /* get base path name */
-    internal_path = svn_path_dirname(internal_path, pool);
-    internal_path = svn_path_join(internal_path, SVN_LOCALE_RELATIVE_PATH,
+    internal_path = svn_dirent_dirname(internal_path, pool);
+    internal_path = svn_dirent_join(internal_path, SVN_LOCALE_RELATIVE_PATH,
                                   pool);
     bindtextdomain(PACKAGE_NAME, internal_path);
     apr_pool_destroy(pool);
