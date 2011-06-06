@@ -5236,6 +5236,7 @@ def copying_conflicts(sbox):
 
   # Create an assortment of conflicts.
   #   text                                 A/B/E/alpha
+  #   text (resolved by deleting markers)  A/B/E/alpha
   #   property (dir)                       A/D/H
   #   property (file)                      A/D/H/chi
   #   tree: local delete, incoming edit    A/D/gamma
@@ -5260,6 +5261,7 @@ def copying_conflicts(sbox):
   # Make "incoming" changes in A2 for the merge
   # incoming edits
   file_append(wc('A2/B/E/alpha'), "Edit for merge\n")
+  file_append(wc('A2/B/E/beta'), "Edit for merge\n")
   file_append(wc('A2/B/E/sigma'), "Edit for merge\n")
   sbox.simple_propset('foo', '99', 'A2/D/H')
   sbox.simple_propset('foo', '99', 'A2/D/H/chi')
@@ -5273,6 +5275,7 @@ def copying_conflicts(sbox):
   # Make some "local" changes in A before the merge.
   # local edit
   file_append(wc('A/B/E/alpha'), "Local edit\n") 
+  file_append(wc('A/B/E/beta'), "Local edit\n") 
   sbox.simple_propset('foo', '100', 'A/D/H')
   sbox.simple_propset('foo', '100', 'A/D/H/chi')
   # local add
@@ -5302,6 +5305,11 @@ def copying_conflicts(sbox):
   # Merge just one revision to reveal more conflicts.
   run_svn(None, 'merge', '-c', 4, url('A2'), wc('A'))
 
+  # Resolve one text conflict via marker file deletion.
+  os.remove(wc('A/B/E/beta.merge-left.r3'))
+  os.rename(wc('A/B/E/beta.merge-right.r4'), wc('A/B/E/beta'))
+  os.remove(wc('A/B/E/beta.working'))
+
   # Prepare for local copies and moves.
   sbox.simple_mkdir('copy-dest')
   sbox.simple_mkdir('move-dest')
@@ -5322,8 +5330,8 @@ def copying_conflicts(sbox):
     ''                  : Item(status='A ', wc_rev=0),
     'B'                 : Item(status='A ', copied='+', wc_rev='-'),
     'B/E'               : Item(status='  ', copied='+', wc_rev='-'),
-    'B/E/alpha'         : Item(status='M ', copied='+', wc_rev='-'),
-    'B/E/beta'          : Item(status='  ', copied='+', wc_rev='-'),
+    'B/E/alpha'         : Item(status='  ', copied='+', wc_rev='-'),
+    'B/E/beta'          : Item(status='M ', copied='+', wc_rev='-'),
     'B/F'               : Item(status='  ', copied='+', wc_rev='-'),
     'B/lambda'          : Item(status='  ', copied='+', wc_rev='-'),
     'D'                 : Item(status='A ', copied='+', wc_rev='-'),
@@ -5356,7 +5364,8 @@ def copying_conflicts(sbox):
   expected_disk = svntest.wc.State('', {
     'B/E/alpha'         : Item(contents="This is the file 'alpha'.\n"
                                "Local edit\n"),
-    'B/E/beta'          : Item(contents="This is the file 'beta'.\n"),
+    'B/E/beta'          : Item(contents="This is the file 'beta'.\n"
+                               "Edit for merge\n"),
     'B/F'               : Item(),
     'B/lambda'          : Item(contents="This is the file 'lambda'.\n"),
     'D/G/pi'            : Item(contents="This is the file 'pi'.\n"),
