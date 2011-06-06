@@ -6,12 +6,13 @@ This tracks the remaining TODOs for the 'Test Review' roadmap item for
 
 To answer that question we can now simply run:
 
+(Windows)
   win-tests.py --list --mode-filter xfail --log-to-stdout
   --milestone-filter="1.7.0"
 
-(Sorry, currently Windows only until some linux savvy dev reviews this
- patch: http://svn.haxx.se/dev/archive-2011-02/0682.shtml)
-
+(Unix-like)
+   make check MILESTONE_FILTER="1.7.0" MODE_FILTER=xfail \
+    TESTS=subversion/tests/cmdline/*py
 
 LISTING: dirent_uri-test.exe
 
