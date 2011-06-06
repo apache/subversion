@@ -251,7 +251,7 @@ build_info_for_entry(svn_info2_t **info,
 }
 
 
-/* Helper: build an svn_info_t *INFO struct with minimal content, to be
+/* Helper: build an svn_info2_t *INFO struct with minimal content, to be
    used in reporting info for unversioned tree conflict victims. */
 /* ### Some fields we could fill out based on the parent dir's entry
        or by looking at an obstructing item. */

@@ -409,8 +409,6 @@ svn_info_dup(const svn_info_t *info, apr_pool_t *pool)
     dupinfo->conflict_wrk = apr_pstrdup(pool, info->conflict_wrk);
   if (info->prejfile)
     dupinfo->prejfile = apr_pstrdup(pool, info->prejfile);
-  if (info->wcroot_abspath)
-    dupinfo->wcroot_abspath = apr_pstrdup(pool, info->wcroot_abspath);
 
   return dupinfo;
 }
