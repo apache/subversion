@@ -59,11 +59,14 @@ struct svn_diff_t {
   svn_diff_t *resolved_diff;
 };
 
+/* Type used for token indices and counts of tokens. Must be signed. */
+typedef long int svn_diff__token_index_t;
+
 struct svn_diff__position_t
 {
-  svn_diff__position_t *next;
-  svn_diff__node_t     *node;
-  apr_off_t             offset;
+  svn_diff__position_t   *next;
+  svn_diff__token_index_t token_index;
+  apr_off_t               offset;
 };
 
 struct svn_diff__lcs_t
@@ -89,20 +92,34 @@ typedef enum svn_diff__normalize_state_t
 
 
 /*
- * Calculate the Longest Common Subsequence (LCS) between two datasources,
- * POSITION_LIST1 and POSITION_LIST2. From the beginning of each list, 
- * PREFIX_LINES lines will be assumed to be equal and be excluded from the 
- * comparison process. Similarly, SUFFIX_LINES at the end of both sequences
- * will be skipped. The resulting lcs structure will be the return value
- * of this function. Allocations will be made from POOL.
+ * Calculate the Longest Common Subsequence (LCS) between two datasources
+ * POSITION_LIST1 and POSITION_LIST2, with TOKEN_COUNTS_LIST1 and 
+ * TOKEN_COUNTS_LIST2 the corresponding counts of the different tokens
+ * (indexed by the 'token_index' of the positions of each position_list).
+ *
+ * From the beginning of each list, PREFIX_LINES lines will be assumed to be
+ * equal and be excluded from the comparison process. Similarly, SUFFIX_LINES
+ * at the end of both sequences will be skipped.
+ *
+ * The resulting lcs structure will be the return value of this function.
+ * Allocations will be made from POOL.
  */
 svn_diff__lcs_t *
 svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
               svn_diff__position_t *position_list2, /* pointer to tail (ring) */
+              svn_diff__token_index_t *token_counts_list1, /* array of counts */
+              svn_diff__token_index_t *token_counts_list2, /* array of counts */
+              svn_diff__token_index_t num_tokens, /* length of count arrays */
               apr_off_t prefix_lines,
               apr_off_t suffix_lines,
               apr_pool_t *pool);
 
+
+/*
+ * Returns number of tokens in a tree
+ */
+svn_diff__token_index_t
+svn_diff__get_node_count(svn_diff__tree_t *tree);
 
 /*
  * Support functions to build a tree of token positions
@@ -124,6 +141,15 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
                      apr_off_t prefix_lines,
                      apr_pool_t *pool);
 
+/* 
+ * Returns an array with the counts for the tokens in
+ * the looped linked list given in loop_start.
+ * num_tokens equals the highest possible token index +1.
+ */
+svn_diff__token_index_t*
+svn_diff__get_token_counts(svn_diff__position_t *loop_start,
+                           svn_diff__token_index_t num_tokens,
+                           apr_pool_t *pool);
 
 /* Morph a svn_lcs_t into a svn_diff_t. */
 svn_diff_t *
@@ -136,6 +162,7 @@ void
 svn_diff__resolve_conflict(svn_diff_t *hunk,
                            svn_diff__position_t **position_list1,
                            svn_diff__position_t **position_list2,
+                           svn_diff__token_index_t num_tokens,
                            apr_pool_t *pool);
 
 

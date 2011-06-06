@@ -34,6 +34,34 @@
 #include "diff.h"
 
 
+svn_diff__token_index_t*
+svn_diff__get_token_counts(svn_diff__position_t *loop_start,
+                           svn_diff__token_index_t num_tokens,
+                           apr_pool_t *pool)
+{
+  svn_diff__token_index_t *token_counts;
+  svn_diff__token_index_t token_index;
+  svn_diff__position_t *current;
+
+  token_counts = apr_palloc(pool, num_tokens * sizeof(*token_counts));
+  for (token_index = 0; token_index < num_tokens; token_index++)
+    token_counts[token_index] = 0;
+
+  current = loop_start;
+  if (current != NULL)
+    {
+      do
+        {
+          token_counts[current->token_index]++;
+          current = current->next;
+        }
+      while (current != loop_start);
+    }
+
+  return token_counts;
+}
+
+
 svn_diff_t *
 svn_diff__diff(svn_diff__lcs_t *lcs,
                apr_off_t original_start, apr_off_t modified_start,
@@ -105,6 +133,8 @@ svn_diff_diff_2(svn_diff_t **diff,
 {
   svn_diff__tree_t *tree;
   svn_diff__position_t *position_list[2];
+  svn_diff__token_index_t num_tokens;
+  svn_diff__token_index_t *token_counts[2];
   svn_diff_datasource_e datasource[] = {svn_diff_datasource_original,
                                         svn_diff_datasource_modified};
   svn_diff__lcs_t *lcs;
@@ -138,6 +168,8 @@ svn_diff_diff_2(svn_diff_t **diff,
                                prefix_lines,
                                subpool));
 
+  num_tokens = svn_diff__get_node_count(tree);
+
   /* The cool part is that we don't need the tokens anymore.
    * Allow the app to clean them up if it wants to.
    */
@@ -147,8 +179,14 @@ svn_diff_diff_2(svn_diff_t **diff,
   /* We don't need the nodes in the tree either anymore, nor the tree itself */
   svn_pool_destroy(treepool);
 
+  token_counts[0] = svn_diff__get_token_counts(position_list[0], num_tokens,
+                                               subpool);
+  token_counts[1] = svn_diff__get_token_counts(position_list[1], num_tokens,
+                                               subpool);
+
   /* Get the lcs */
-  lcs = svn_diff__lcs(position_list[0], position_list[1], prefix_lines,
+  lcs = svn_diff__lcs(position_list[0], position_list[1], token_counts[0],
+                      token_counts[1], num_tokens, prefix_lines,
                       suffix_lines, subpool);
 
   /* Produce the diff */

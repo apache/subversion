@@ -41,20 +41,31 @@
 
 struct svn_diff__node_t
 {
-  svn_diff__node_t     *parent;
-  svn_diff__node_t     *left;
-  svn_diff__node_t     *right;
+  svn_diff__node_t       *parent;
+  svn_diff__node_t       *left;
+  svn_diff__node_t       *right;
 
-  apr_uint32_t          hash;
-  void                 *token;
+  apr_uint32_t            hash;
+  svn_diff__token_index_t index;
+  void                   *token;
 };
 
 struct svn_diff__tree_t
 {
-  svn_diff__node_t     *root[SVN_DIFF__HASH_SIZE];
-  apr_pool_t           *pool;
+  svn_diff__node_t       *root[SVN_DIFF__HASH_SIZE];
+  apr_pool_t             *pool;
+  svn_diff__token_index_t node_count;
 };
 
+
+/*
+ * Returns number of tokens in a tree
+ */
+svn_diff__token_index_t
+svn_diff__get_node_count(svn_diff__tree_t *tree)
+{
+  return tree->node_count;
+}
 
 /*
  * Support functions to build a tree of token positions
@@ -65,6 +76,7 @@ svn_diff__tree_create(svn_diff__tree_t **tree, apr_pool_t *pool)
 {
   *tree = apr_pcalloc(pool, sizeof(**tree));
   (*tree)->pool = pool;
+  (*tree)->node_count = 0;
 }
 
 
@@ -122,6 +134,7 @@ tree_insert_token(svn_diff__node_t **node, svn_diff__tree_t *tree,
   new_node->right = NULL;
   new_node->hash = hash;
   new_node->token = token;
+  new_node->index = tree->node_count++;
 
   *node = *node_ref = new_node;
 
@@ -168,7 +181,7 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
       /* Create a new position */
       position = apr_palloc(pool, sizeof(*position));
       position->next = NULL;
-      position->node = node;
+      position->token_index = node->index;
       position->offset = offset;
 
       *position_ref = position;

@@ -38,6 +38,7 @@ void
 svn_diff__resolve_conflict(svn_diff_t *hunk,
                            svn_diff__position_t **position_list1,
                            svn_diff__position_t **position_list2,
+                           svn_diff__token_index_t num_tokens,
                            apr_pool_t *pool)
 {
     apr_off_t modified_start = hunk->modified_start + 1;
@@ -47,6 +48,7 @@ svn_diff__resolve_conflict(svn_diff_t *hunk,
     apr_off_t latest_length = hunk->latest_length;
     svn_diff__position_t *start_position[2];
     svn_diff__position_t *position[2];
+    svn_diff__token_index_t *token_counts[2];
     svn_diff__lcs_t *lcs = NULL;
     svn_diff__lcs_t **lcs_ref = &lcs;
     svn_diff_t **diff_ref = &hunk->resolved_diff;
@@ -72,7 +74,7 @@ svn_diff__resolve_conflict(svn_diff_t *hunk,
                   ? modified_length : latest_length;
 
     while (common_length > 0
-           && position[0]->node == position[1]->node)
+           && position[0]->token_index == position[1]->token_index)
       {
         position[0] = position[0]->next;
         position[1] = position[1]->next;
@@ -173,8 +175,13 @@ svn_diff__resolve_conflict(svn_diff_t *hunk,
         position[1]->next = start_position[1];
       }
 
-    *lcs_ref = svn_diff__lcs(position[0], position[1], 0, 0,
-                             subpool);
+    token_counts[0] = svn_diff__get_token_counts(position[0], num_tokens,
+                                                 subpool);
+    token_counts[1] = svn_diff__get_token_counts(position[1], num_tokens,
+                                                 subpool);
+
+    *lcs_ref = svn_diff__lcs(position[0], position[1], token_counts[0],
+                             token_counts[1], num_tokens, 0, 0, subpool);
 
     /* Fix up the EOF lcs element in case one of
      * the two sequences was NULL.
@@ -247,6 +254,8 @@ svn_diff_diff3_2(svn_diff_t **diff,
 {
   svn_diff__tree_t *tree;
   svn_diff__position_t *position_list[3];
+  svn_diff__token_index_t num_tokens;
+  svn_diff__token_index_t *token_counts[3];
   svn_diff_datasource_e datasource[] = {svn_diff_datasource_original,
                                         svn_diff_datasource_modified,
                                         svn_diff_datasource_latest};
@@ -288,6 +297,8 @@ svn_diff_diff3_2(svn_diff_t **diff,
                                prefix_lines,
                                subpool));
 
+  num_tokens = svn_diff__get_node_count(tree);
+
   /* Get rid of the tokens, we don't need them to calc the diff */
   if (vtable->token_discard_all != NULL)
     vtable->token_discard_all(diff_baton);
@@ -295,10 +306,19 @@ svn_diff_diff3_2(svn_diff_t **diff,
   /* We don't need the nodes in the tree either anymore, nor the tree itself */
   svn_pool_destroy(treepool);
 
+  token_counts[0] = svn_diff__get_token_counts(position_list[0], num_tokens,
+                                               subpool);
+  token_counts[1] = svn_diff__get_token_counts(position_list[1], num_tokens,
+                                               subpool);
+  token_counts[2] = svn_diff__get_token_counts(position_list[2], num_tokens,
+                                               subpool);
+
   /* Get the lcs for original-modified and original-latest */
-  lcs_om = svn_diff__lcs(position_list[0], position_list[1], prefix_lines,
+  lcs_om = svn_diff__lcs(position_list[0], position_list[1], token_counts[0],
+                         token_counts[1], num_tokens, prefix_lines,
                          suffix_lines, subpool);
-  lcs_ol = svn_diff__lcs(position_list[0], position_list[2], prefix_lines,
+  lcs_ol = svn_diff__lcs(position_list[0], position_list[2], token_counts[0],
+                         token_counts[2], num_tokens, prefix_lines,
                          suffix_lines, subpool);
 
   /* Produce a merged diff */
@@ -431,6 +451,7 @@ svn_diff_diff3_2(svn_diff_t **diff,
                 svn_diff__resolve_conflict(*diff_ref,
                                            &position_list[1],
                                            &position_list[2],
+                                           num_tokens,
                                            pool);
               }
             else if (is_modified)
