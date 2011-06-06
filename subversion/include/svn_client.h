@@ -3574,14 +3574,15 @@ svn_client_cleanup(const char *dir,
  * @{
  */
 
-/** Recursively upgrade a working copy to a new metadata storage format.
+/** Recursively upgrade a working copy from any older format to the current
+ * WC metadata storage format.  @a wcroot_dir is the path to the WC root.
  *
  * Use @a scratch_pool for any temporary allocations.
  *
  * @since New in 1.7.
  */
 svn_error_t *
-svn_client_upgrade(const char *dir,
+svn_client_upgrade(const char *wcroot_dir,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *scratch_pool);
 
