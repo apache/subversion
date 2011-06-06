@@ -809,9 +809,9 @@ svn_wc__node_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
                                        apr_pool_t *result_pool,
                                        apr_pool_t *scratch_pool);
 
-/* Set @ *min_revision and @ *max_revision to the lowest and highest revision
+/* Set @a *min_revision and @a *max_revision to the lowest and highest revision
  * numbers found within @a local_abspath, using context @a wc_ctx.
- * If @ committed is TRUE, set @a *min_revision and @a *max_revision
+ * If @a committed is TRUE, set @a *min_revision and @a *max_revision
  * to the lowest and highest comitted (i.e. "last changed") revision numbers,
  * respectively. Use @a scratch_pool for temporary allocations.
  * 

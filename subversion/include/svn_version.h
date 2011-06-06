@@ -154,7 +154,7 @@ typedef struct svn_version_t
   int patch;                    /**< Patch number */
 
   /**
-   * The version tag (#SVN_VER_NUMTAG).\ Must always point to a
+   * The version tag (#SVN_VER_NUMTAG). Must always point to a
    * statically allocated string.
    */
   const char *tag;

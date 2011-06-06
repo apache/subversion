@@ -563,7 +563,8 @@ svn_client_commit_item3_create(apr_pool_t *pool);
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
-SVN_DEPRECATED svn_error_t *
+SVN_DEPRECATED
+svn_error_t *
 svn_client_commit_item_create(const svn_client_commit_item3_t **item,
                               apr_pool_t *pool);
 
@@ -1455,7 +1456,7 @@ svn_client_switch(svn_revnum_t *result_rev,
 /**
  * Schedule a working copy @a path for addition to the repository.
  *
- * If @a depth is  svn_depth_empty, add just @a path and nothing
+ * If @a depth is #svn_depth_empty, add just @a path and nothing
  * below it.  If #svn_depth_files, add @a path and any file
  * children of @a path.  If #svn_depth_immediates, add @a path, any
  * file children, and any immediate subdirectories (but nothing
@@ -1489,7 +1490,7 @@ svn_client_switch(svn_revnum_t *result_rev,
  *
  * If @a add_parents is TRUE, recurse up @a path's directory and look for
  * a versioned directory.  If found, add all intermediate paths between it
- * and @a path.  If not found, return #SVN_ERR_CLIENT_NO_VERSIONED_PARENTS. (### What?)
+ * and @a path.  If not found, return #SVN_ERR_CLIENT_NO_VERSIONED_PARENT.
  *
  * @par Important:
  * This is a *scheduling* operation.  No changes will
@@ -1601,8 +1602,8 @@ svn_client_mkdir4(const apr_array_header_t *paths,
                   apr_pool_t *pool);
 
 /**
- * Similar to svn_client_mkdir4(), but returns the @a commit_info_p directly,
- * rather than through @a commit_callback.
+ * Similar to svn_client_mkdir4(), but returns the commit info in
+ * @a *commit_info_p rather than through a callback function.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -1707,8 +1708,8 @@ svn_client_delete4(const apr_array_header_t *paths,
                    apr_pool_t *pool);
 
 /**
- * Similar to svn_client_delete4(), but returns the @a commit_info_p directly,
- * rather than through @a commit_callback.
+ * Similar to svn_client_delete4(), but returns the commit info in
+ * @a *commit_info_p rather than through a callback function.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -1834,8 +1835,8 @@ svn_client_import4(const char *path,
                    apr_pool_t *pool);
 
 /**
- * Similar to svn_client_import4(), but returns the @a commit_info_p directly,
- * rather than through @a commit_callback.
+ * Similar to svn_client_import4(), but returns the commit info in
+ * @a *commit_info_p rather than through a callback function.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -1975,8 +1976,8 @@ svn_client_commit5(const apr_array_header_t *targets,
                    apr_pool_t *pool);
 
 /**
- * Similar to svn_client_commit5(), but returns the @a commit_info_p directly,
- * rather than through @a commit_callback.  Does not make use of
+ * Similar to svn_client_commit5(), but returns the commit info in
+ * @a *commit_info_p rather than through a callback function.  Does not use
  * #svn_wc_notify_commit_copied or #svn_wc_notify_commit_copied_replaced
  * (preferring #svn_wc_notify_commit_added and
  * #svn_wc_notify_commit_replaced, respectively, instead).
@@ -1985,7 +1986,7 @@ svn_client_commit5(const apr_array_header_t *targets,
  * #SVN_INVALID_REVNUM, then the commit was a no-op; nothing needed to
  * be committed.
  *
- * Sets @ commit_as_operations to FALSE to match Subversion 1.6's behavior.
+ * Sets @a commit_as_operations to FALSE to match Subversion 1.6's behavior.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -2193,14 +2194,14 @@ typedef struct svn_client_status_t
   /** Set to the user name of the youngest commit, or @c NULL if not
    * out of date or non-existent.  Because a non-existent @c
    * svn:author property has the same behavior as an out-of-date
-   * working copy, examine @c ood_last_cmt_rev to determine whether
+   * working copy, examine @c ood_changed_rev to determine whether
    * the working copy is out of date. */
   const char *ood_changed_author;
 
   /** @} */
 
-  /** Reserved for libsvn_clients internal use; this value is only to be used for
-   * libsvn_client backwards compatibility wrappers, This value may be NULL or
+  /** Reserved for libsvn_client's internal use; this value is only to be used for
+   * libsvn_client backwards compatibility wrappers. This value may be NULL or
    * to other data in future versions. */
   const void *backwards_compatibility_baton;
 
@@ -3863,8 +3864,8 @@ svn_client_copy6(const apr_array_header_t *sources,
                  apr_pool_t *pool);
 
 /**
- * Similar to svn_client_copy6(), but returns the @a commit_info_p directly,
- * rather than through @a commit_callback.
+ * Similar to svn_client_copy6(), but returns the commit info in
+ * @a *commit_info_p rather than through a callback function.
  *
  * @since New in 1.6.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -4047,8 +4048,8 @@ svn_client_move6(const apr_array_header_t *src_paths,
                  apr_pool_t *pool);
 
 /**
- * Similar to svn_client_move6(), but returns the @a commit_info_p directly,
- * rather than through @a commit_callback.
+ * Similar to svn_client_move6(), but returns the commit info in
+ * @a *commit_info_p rather than through a callback function.
  *
  * A WC-to-WC move will include any modified and/or unversioned children.
  * @a force is ignored.
@@ -4256,7 +4257,8 @@ svn_client_propset_local(const char *propname,
 /**
  * An amalgamation of svn_client_propset_local() and
  * svn_client_propset_remote() that takes only a single target, and
- * returns the @a commit_info_p directly rather than through a callback.
+ * returns the commit info in @a *commit_info_p rather than through a
+ * callback function.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -4274,6 +4276,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                     const apr_hash_t *revprop_table,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
+
 /**
  * Like svn_client_propset3(), but with @a base_revision_for_url
  * always #SVN_INVALID_REVNUM; @a commit_info_p always @c NULL; @a
@@ -5120,10 +5123,10 @@ svn_client_get_changelists(const char *path,
  * be stored in the working copy if the targets are WC paths.
  *
  * For each target @a ctx->notify_func2/notify_baton2 will be used to indicate
- * whether it was locked.  An action of #svn_wc_notify_state_locked (### what?)
+ * whether it was locked.  An action of #svn_wc_notify_locked
  * means that the path was locked.  If the path was not locked because
  * it was out of date or there was already a lock in the repository,
- * the notification function will be called with @c
+ * the notification function will be called with
  * #svn_wc_notify_failed_lock, and the error passed in the notification
  * structure.
  *
