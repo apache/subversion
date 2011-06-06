@@ -258,6 +258,12 @@ class Sandbox:
     dest = self.ospath(dest)
     svntest.main.run_svn(False, 'copy', source, dest)
 
+  def simple_move(self, source, dest):
+    """SOURCE and DEST are relpaths relative to the WC."""
+    source = self.ospath(source)
+    dest = self.ospath(dest)
+    svntest.main.run_svn(False, 'move', source, dest)
+
   def simple_repo_copy(self, source, dest):
     """SOURCE and DEST are relpaths relative to the repo root."""
     svntest.main.run_svn(False, 'copy', '-m', svntest.main.make_log_msg(),

@@ -30,7 +30,13 @@ import stat, os, re, shutil
 # Our testing module
 import svntest
 from svntest import main
-from svntest.main import SVN_PROP_MERGEINFO
+from svntest.main import (
+  SVN_PROP_MERGEINFO,
+  file_append,
+  file_write,
+  make_log_msg,
+  run_svn,
+)
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -5214,7 +5220,169 @@ def case_only_rename(sbox):
 
   # Test that the necessary deletes and adds are present in status.
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+@XFail()
+@Issue(3899)
+def copying_conflicts(sbox):
+  """copying conflicts"""
+
+  # The destination of a copy operation should *not* be conflicted,
+  # and should contain the "mine-full" contents.
+
+  sbox.build()
+  wc = sbox.ospath
+  def url(relpath):
+    return '/'.join([sbox.repo_url, relpath])
+
+  # Create an assortment of conflicts.
+  #   text                                 A/B/E/alpha
+  #   property (dir)                       A/D/H
+  #   property (file)                      A/D/H/chi
+  #   tree: local delete, incoming edit    A/D/gamma
+  #   tree: local edit, incoming delete    A/D/G
+  #   tree: local add, incoming add        A/Q
+  #   tree: local missing, incoming edit   A/B/E/sigma
+
+  ### As we improve tree-conflict handling, this test may need some
+  ### maintenance.
+
+  # Create a branch for merging.
+  run_svn(None, 'cp', url('A'), url('A2'), '-m', make_log_msg()) # r2
+  sbox.simple_update()
+
+  # This revision won't be included in the merge, producing a "local
+  # missing" tree conflict.
+  file_write(wc('A2/B/E/sigma'), "New for merge.\n")
+  sbox.simple_add('A2/B/E/sigma')
+
+  sbox.simple_commit('A2') # r3
+
+  # Make "incoming" changes in A2 for the merge
+  # incoming edits
+  file_append(wc('A2/B/E/alpha'), "Edit for merge\n")
+  file_append(wc('A2/B/E/sigma'), "Edit for merge\n")
+  sbox.simple_propset('foo', '99', 'A2/D/H')
+  sbox.simple_propset('foo', '99', 'A2/D/H/chi')
+  # incoming add
+  sbox.simple_mkdir('A2/Q')
+  file_write(wc('A2/Q/zeta'), "New for merge\n")
+  sbox.simple_add('A2/Q/zeta')
   
+  sbox.simple_commit('A2') # r4
+
+  # Make some "local" changes in A before the merge.
+  # local edit
+  file_append(wc('A/B/E/alpha'), "Local edit\n") 
+  sbox.simple_propset('foo', '100', 'A/D/H')
+  sbox.simple_propset('foo', '100', 'A/D/H/chi')
+  # local add
+  sbox.simple_mkdir('A/Q')
+  file_write(wc('A/Q/sigma'), "New local file\n")
+  sbox.simple_add('A/Q/sigma')
+
+  # Make some "incoming" changes in A before the update.
+  # incoming edit
+  file_append(wc('A/D/gamma'), "Edit for merge\n")
+  # incoming delete
+  sbox.simple_rm('A/D/G')
+
+  sbox.simple_commit('A') # r5
+
+  # Roll back, make local, uncommitted changes.
+  run_svn(None, 'up', '-r', 4, sbox.wc_dir)
+  # local delete
+  sbox.simple_rm('A/D/gamma')
+  # local edit
+  file_append(wc('A/D/G/rho'), "Local edit\n") 
+
+  # Update to reveal the "local {delete,edit'}" tree conflicts,
+  # which we can't yet catch when merging.
+  sbox.simple_update()
+
+  # Merge just one revision to reveal more conflicts.
+  run_svn(None, 'merge', '-c', 4, url('A2'), wc('A'))
+
+  # Prepare for local copies and moves.
+  sbox.simple_mkdir('copy-dest')
+  sbox.simple_mkdir('move-dest')
+
+  # Copy conflict victims.
+  sbox.simple_copy('A/B/E/alpha', 'copy-dest')
+  sbox.simple_copy('A/D/H', 'copy-dest')
+  sbox.simple_copy('A/D/G', 'copy-dest')
+  sbox.simple_copy('A/Q', 'copy-dest')
+
+  # Copy directories with conflicted children.
+  sbox.simple_copy('A/B', 'copy-dest')
+  sbox.simple_copy('A/D', 'copy-dest')
+
+  # Everything copied without conflicts.  The entry_status for D/G is
+  # for 1.6 compatibility (see notes/api-errata/1.7/wc003.xt).
+  expected_status = svntest.wc.State(wc('copy-dest'), {
+    ''                  : Item(status='A ', wc_rev=0),
+    'B'                 : Item(status='A ', copied='+', wc_rev='-'),
+    'B/E'               : Item(status='  ', copied='+', wc_rev='-'),
+    'B/E/alpha'         : Item(status='M ', copied='+', wc_rev='-'),
+    'B/E/beta'          : Item(status='  ', copied='+', wc_rev='-'),
+    'B/F'               : Item(status='  ', copied='+', wc_rev='-'),
+    'B/lambda'          : Item(status='  ', copied='+', wc_rev='-'),
+    'D'                 : Item(status='A ', copied='+', wc_rev='-'),
+    'D/G'               : Item(status='A ', copied='+', wc_rev='-',
+                               entry_status='  '),
+    'D/G/pi'            : Item(status='  ', copied='+', wc_rev='-'),
+    'D/G/rho'           : Item(status='M ', copied='+', wc_rev='-'),
+    'D/G/tau'           : Item(status='  ', copied='+', wc_rev='-'),
+    'D/H'               : Item(status='  ', copied='+', wc_rev='-'),
+    'D/H/chi'           : Item(status='  ', copied='+', wc_rev='-'),
+    'D/H/omega'         : Item(status='  ', copied='+', wc_rev='-'),
+    'D/H/psi'           : Item(status='  ', copied='+', wc_rev='-'),
+    'D/gamma'           : Item(status='D ', copied='+', wc_rev='-'),
+    'G'                 : Item(status='A ', copied='+', wc_rev='-'),
+    'G/pi'              : Item(status='  ', copied='+', wc_rev='-'),
+    'G/rho'             : Item(status='M ', copied='+', wc_rev='-'),
+    'G/tau'             : Item(status='  ', copied='+', wc_rev='-'),
+    'H'                 : Item(status='A ', copied='+', wc_rev='-'),
+    'H/chi'             : Item(status='  ', copied='+', wc_rev='-'),
+    'H/omega'           : Item(status='  ', copied='+', wc_rev='-'),
+    'H/psi'             : Item(status='  ', copied='+', wc_rev='-'),
+    'Q'                 : Item(status='A ', copied='+', wc_rev='-'),
+    'Q/sigma'           : Item(status='  ', copied='+', wc_rev='-'),
+    'alpha'             : Item(status='A ', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_status(wc('copy-dest'), expected_status)
+
+  # Only the local changes remain at the copy destinations.
+  ### Currently fails because alpha and B/E/alpha contain conflict-marker text.
+  expected_disk = svntest.wc.State('', {
+    'B/E/alpha'         : Item(contents="This is the file 'alpha'.\n"
+                               "Local edit\n"),
+    'B/E/beta'          : Item(contents="This is the file 'beta'.\n"),
+    'B/F'               : Item(),
+    'B/lambda'          : Item(contents="This is the file 'lambda'.\n"),
+    'D/G/pi'            : Item(contents="This is the file 'pi'.\n"),
+    'D/G/rho'           : Item(contents="This is the file 'rho'.\n"
+                               "Local edit\n"),
+    'D/G/tau'           : Item(contents="This is the file 'tau'.\n"),
+    'D/H'               : Item(props={'foo':'100'}),
+    'D/H/chi'           : Item(contents="This is the file 'chi'.\n",
+                               props={'foo':'100'}),
+    'D/H/omega'         : Item(contents="This is the file 'omega'.\n"),
+    'D/H/psi'           : Item(contents="This is the file 'psi'.\n"),
+    'G/pi'              : Item(contents="This is the file 'pi'.\n"),
+    'G/rho'             : Item(contents="This is the file 'rho'.\n"
+                               "Local edit\n"),
+    'G/tau'             : Item(contents="This is the file 'tau'.\n"),
+    'H'                 : Item(props={'foo':'100'}),
+    'H/chi'             : Item(contents="This is the file 'chi'.\n",
+                               props={'foo':'100'}),
+    'H/omega'           : Item(contents="This is the file 'omega'.\n"),
+    'H/psi'             : Item(contents="This is the file 'psi'.\n"),
+    'Q/sigma'           : Item(contents="New local file\n"),
+    'alpha'             : Item(contents="This is the file 'alpha'.\n"
+                               "Local edit\n"),
+    })
+  svntest.actions.verify_disk(wc('copy-dest'), expected_disk, True)
+
 
 ########################################################################
 # Run the tests
@@ -5324,6 +5492,7 @@ test_list = [ None,
               deleted_file_with_case_clash,
               copy_base_of_deleted,
               case_only_rename,
+              copying_conflicts,
              ]
 
 if __name__ == '__main__':

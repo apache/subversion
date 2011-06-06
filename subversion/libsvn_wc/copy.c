@@ -482,10 +482,16 @@ copy_versioned_dir(svn_wc__db_t *db,
         }
     }
 
-  /* Copy all the remaining filesystem children, which are unversioned. */
+  /* Copy the remaining filesystem children, which are unversioned, skipping
+     any conflict-marker files. */
   if (disk_children)
     {
       apr_hash_index_t *hi;
+      apr_hash_t *marker_files;
+
+      SVN_ERR(svn_wc__db_get_conflict_marker_files(&marker_files, db,
+                                                   src_abspath, scratch_pool,
+                                                   scratch_pool));
 
       for (hi = apr_hash_first(scratch_pool, disk_children); hi;
            hi = apr_hash_next(hi))
@@ -495,6 +501,10 @@ copy_versioned_dir(svn_wc__db_t *db,
           const char *tmp_dst_abspath;
 
           if (svn_wc_is_adm_dir(name, iterpool))
+            continue;
+
+          if (marker_files &&
+              apr_hash_get(marker_files, name, APR_HASH_KEY_STRING))
             continue;
 
           svn_pool_clear(iterpool);
