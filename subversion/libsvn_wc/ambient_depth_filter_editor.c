@@ -201,7 +201,6 @@ make_dir_baton(struct dir_baton **d_p,
         }
       else
         {
-          exists = FALSE;
           status = svn_wc__db_status_not_present;
           kind = svn_wc__db_kind_unknown;
         }
