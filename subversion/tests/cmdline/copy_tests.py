@@ -5176,6 +5176,8 @@ def copy_base_of_deleted(sbox):
 # Regression test for issue #3702: Unable to perform case-only rename
 # on windows.
 @Issue(3702)
+# APR's apr_filepath_merge() with APR_FILEPATH_TRUENAME is broken on OS X.
+@XFail(svntest.main.is_os_darwin)
 def case_only_rename(sbox):
   """case-only rename"""
 
