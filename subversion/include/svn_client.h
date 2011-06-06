@@ -5326,7 +5326,7 @@ svn_info_dup(const svn_info_t *info,
 
 /**
  * Invoke @a receiver with @a receiver_baton to return information
- * about @a path_or_url in @a revision.  The information returned is
+ * about @a abspath_or_url in @a revision.  The information returned is
  * system-generated metadata, not the sort of "property" metadata
  * created by users.  See #svn_info_t.
  *
@@ -5335,13 +5335,13 @@ svn_info_dup(const svn_info_t *info,
  * no network connections will be made.
  *
  * Otherwise, information will be pulled from a repository.  The
- * actual node revision selected is determined by the @a path_or_url
+ * actual node revision selected is determined by the @a abspath_or_url
  * as it exists in @a peg_revision.  If @a peg_revision->kind is
  * #svn_opt_revision_unspecified, then it defaults to
  * #svn_opt_revision_head for URLs or #svn_opt_revision_working for
  * WC targets.
  *
- * If @a path_or_url is not a local path, then if @a revision is of
+ * If @a abspath_or_url is not a local path, then if @a revision is of
  * kind #svn_opt_revision_previous (or some other kind that requires
  * a local path), an error will be returned, because the desired
  * revision cannot be determined.
@@ -5349,13 +5349,13 @@ svn_info_dup(const svn_info_t *info,
  * Use the authentication baton cached in @a ctx to authenticate
  * against the repository.
  *
- * If @a path_or_url is a file, just invoke @a receiver on it.  If it
+ * If @a abspath_or_url is a file, just invoke @a receiver on it.  If it
  * is a directory, then descend according to @a depth.  If @a depth is
- * #svn_depth_empty, invoke @a receiver on @a path_or_url and
- * nothing else; if #svn_depth_files, on @a path_or_url and its
+ * #svn_depth_empty, invoke @a receiver on @a abspath_or_url and
+ * nothing else; if #svn_depth_files, on @a abspath_or_url and its
  * immediate file children; if #svn_depth_immediates, the preceding
  * plus on each immediate subdirectory; if #svn_depth_infinity, then
- * recurse fully, invoking @a receiver on @a path_or_url and
+ * recurse fully, invoking @a receiver on @a abspath_or_url and
  * everything beneath it.
  *
  * @a changelists is an array of <tt>const char *</tt> changelist
@@ -5378,7 +5378,7 @@ svn_client_info3(const char *abspath_or_url,
                  apr_pool_t *scratch_pool);
 
 /** Similar to svn_client_info3, but uses an svn_info_receiver_t instead of
- * a svn_info_receiver2_t.
+ * a svn_info_receiver2_t, and @a path_or_url may be a relative path.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
