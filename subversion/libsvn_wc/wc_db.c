@@ -7026,13 +7026,18 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
           err2 = svn_sqlite__column_checksum(checksum, stmt, 6, result_pool);
 
           if (err2 != NULL)
-            err = svn_error_compose_create(
-                     err,
-                     svn_error_createf(
-                           err->apr_err, err2,
-                          _("The node '%s' has a corrupt checksum value."),
-                          path_for_error_message(wcroot, local_relpath,
-                                                 scratch_pool)));
+            {
+              if (err)
+                err = svn_error_compose_create(
+                         err,
+                         svn_error_createf(
+                               err->apr_err, err2,
+                              _("The node '%s' has a corrupt checksum value."),
+                              path_for_error_message(wcroot, local_relpath,
+                                                     scratch_pool)));
+              else
+                err = err2;
+            }
         }
     }
   if (target)
