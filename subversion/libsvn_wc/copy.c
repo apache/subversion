@@ -220,6 +220,10 @@ copy_deleted_node(svn_wc__db_t *db,
    otherwise copy both the versioned metadata and the filesystem node (even
    if it is the wrong kind, and recursively if it is a dir).
 
+   If the versioned file has a text conflict, and the .mine file exists in
+   the filesystem, copy the .mine file to DST_ABSPATH.  Otherwise, copy the
+   versioned file itself.
+
    This also works for versioned symlinks that are stored in the db as
    svn_wc__db_kind_file with svn:special set. */
 static svn_error_t *
@@ -253,8 +257,46 @@ copy_versioned_file(svn_wc__db_t *db,
     {
       const char *tmp_dst_abspath;
       svn_node_kind_t disk_kind;
+      const apr_array_header_t *conflicts;
+      const char *conflict_working = NULL;
+      const char *my_src_abspath = NULL;
+      int i;
 
-      SVN_ERR(copy_to_tmpdir(&tmp_dst_abspath, &disk_kind, src_abspath,
+      /* By default, take the copy source as given. */
+      my_src_abspath = src_abspath;
+
+      /* Is there a text conflict at the source path? */
+      SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, src_abspath,
+                                        scratch_pool, scratch_pool));
+
+      for (i = 0; i < conflicts->nelts; i++)
+        {
+          const svn_wc_conflict_description2_t *desc;
+
+          desc = APR_ARRAY_IDX(conflicts, i,
+                               const svn_wc_conflict_description2_t*);
+
+          if (desc->kind == svn_wc_conflict_kind_text)
+            {
+              conflict_working = desc->my_abspath;
+              break;
+            }
+        }
+
+      if (conflict_working)
+        {
+          svn_node_kind_t working_kind;
+
+          SVN_DBG(("Theres a working file: %s\n", conflict_working));
+          /* Does the ".mine" file exist? */
+          SVN_ERR(svn_io_check_path(conflict_working, &working_kind,
+                                    scratch_pool));
+
+          if (working_kind == svn_node_file)
+            my_src_abspath = conflict_working;
+        }
+
+      SVN_ERR(copy_to_tmpdir(&tmp_dst_abspath, &disk_kind, my_src_abspath,
                              tmpdir_abspath,
                              TRUE, /* recursive */
                              cancel_func, cancel_baton, scratch_pool));

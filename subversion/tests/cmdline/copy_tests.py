@@ -5221,7 +5221,6 @@ def case_only_rename(sbox):
   # Test that the necessary deletes and adds are present in status.
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@XFail()
 @Issue(3899)
 def copying_conflicts(sbox):
   """copying conflicts"""
@@ -5359,8 +5358,8 @@ def copying_conflicts(sbox):
     })
   svntest.actions.run_and_verify_status(wc('copy-dest'), expected_status)
 
-  # Only the local changes remain at the copy destinations.
-  ### Currently fails because alpha and B/E/alpha contain conflict-marker text.
+  # Only the local changes appear at the copy destinations.  Note that
+  # B/E/beta had been resolved via marker-file deletion before the copy.
   expected_disk = svntest.wc.State('', {
     'B/E/alpha'         : Item(contents="This is the file 'alpha'.\n"
                                "Local edit\n"),
