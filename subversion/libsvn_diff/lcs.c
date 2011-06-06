@@ -81,6 +81,7 @@ struct svn_diff__snake_t
 
 static APR_INLINE void
 svn_diff__snake(svn_diff__snake_t *fp_k,
+                svn_diff__token_index_t *token_counts[2],
                 svn_diff__lcs_t **freelist,
                 apr_pool_t *pool)
 {
@@ -122,6 +123,11 @@ svn_diff__snake(svn_diff__snake_t *fp_k,
     }
 
 
+  if (previous_lcs)
+    {
+      previous_lcs->refcount++;
+    }
+
   /* ### Optimization, skip all positions that don't have matchpoints
    * ### anyway. Beware of the sentinel, don't skip it!
    */
@@ -129,41 +135,48 @@ svn_diff__snake(svn_diff__snake_t *fp_k,
   position[0] = start_position[0];
   position[1] = start_position[1];
 
-  while (position[0]->node == position[1]->node)
+  while (1)
     {
-      position[0] = position[0]->next;
-      position[1] = position[1]->next;
-    }
-
-  if (position[1] != start_position[1])
-    {
-      lcs = *freelist;
-      if (lcs)
+      while (position[0]->token_index == position[1]->token_index)
         {
-          *freelist = lcs->next;
+          position[0] = position[0]->next;
+          position[1] = position[1]->next;
         }
+
+      if (position[1] != start_position[1])
+        {
+          lcs = *freelist;
+          if (lcs)
+            {
+              *freelist = lcs->next;
+            }
+          else
+            {
+              lcs = apr_palloc(pool, sizeof(*lcs));
+            }
+
+          lcs->position[0] = start_position[0];
+          lcs->position[1] = start_position[1];
+          lcs->length = position[1]->offset - start_position[1]->offset;
+          lcs->next = previous_lcs;
+          lcs->refcount = 1;
+          previous_lcs = lcs;
+          start_position[0] = position[0];
+          start_position[1] = position[1];
+        }
+      
+      /* Skip any and all tokens that only occur in one of the files */
+      if (position[0]->token_index >= 0
+          && token_counts[1][position[0]->token_index] == 0)
+        start_position[0] = position[0] = position[0]->next;
+      else if (position[1]->token_index >= 0
+               && token_counts[0][position[1]->token_index] == 0)
+        start_position[1] = position[1] = position[1]->next;
       else
-        {
-          lcs = apr_palloc(pool, sizeof(*lcs));
-        }
-
-      lcs->position[0] = start_position[0];
-      lcs->position[1] = start_position[1];
-      lcs->length = position[1]->offset - start_position[1]->offset;
-      lcs->next = previous_lcs;
-      lcs->refcount = 1;
-      fp_k[0].lcs = lcs;
-    }
-  else
-    {
-      fp_k[0].lcs = previous_lcs;
+        break;
     }
 
-  if (previous_lcs)
-    {
-      previous_lcs->refcount++;
-    }
-
+  fp_k[0].lcs = previous_lcs;
   fp_k[0].position[0] = position[0];
   fp_k[0].position[1] = position[1];
 
@@ -218,11 +231,17 @@ prepend_lcs(svn_diff__lcs_t *lcs, apr_off_t lines,
 svn_diff__lcs_t *
 svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
               svn_diff__position_t *position_list2, /* pointer to tail (ring) */
+              svn_diff__token_index_t *token_counts_list1, /* array of counts */
+              svn_diff__token_index_t *token_counts_list2, /* array of counts */
+              svn_diff__token_index_t num_tokens,
               apr_off_t prefix_lines,
               apr_off_t suffix_lines,
               apr_pool_t *pool)
 {
   apr_off_t length[2];
+  svn_diff__token_index_t *token_counts[2];
+  svn_diff__token_index_t unique_count[2];
+  svn_diff__token_index_t token_index;
   svn_diff__snake_t *fp;
   apr_off_t d;
   apr_off_t k;
@@ -260,9 +279,22 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
       return lcs;
     }
 
-  /* Calculate lengths M and N of the sequences to be compared */
-  length[0] = position_list1->offset - position_list1->next->offset + 1;
-  length[1] = position_list2->offset - position_list2->next->offset + 1;
+  unique_count[1] = unique_count[0] = 0;
+  for (token_index = 0; token_index < num_tokens; token_index++)
+    {
+      if (token_counts_list1[token_index] == 0)
+        unique_count[1] += token_counts_list2[token_index];
+      if (token_counts_list2[token_index] == 0)
+        unique_count[0] += token_counts_list1[token_index];
+    }
+
+  /* Calculate lengths M and N of the sequences to be compared. Do not
+   * count tokens unique to one file, as those are ignored in __snake.
+   */
+  length[0] = position_list1->offset - position_list1->next->offset + 1
+              - unique_count[0];
+  length[1] = position_list2->offset - position_list2->next->offset + 1
+              - unique_count[1];
 
   /* strikerXXX: here we allocate the furthest point array, which is
    * strikerXXX: sized M + N + 3 (!)
@@ -281,16 +313,17 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
   sentinel_position[0].next = position_list1->next;
   position_list1->next = &sentinel_position[0];
   sentinel_position[0].offset = position_list1->offset + 1;
+  token_counts[0] = token_counts_list1;
 
   sentinel_position[1].next = position_list2->next;
   position_list2->next = &sentinel_position[1];
   sentinel_position[1].offset = position_list2->offset + 1;
+  token_counts[1] = token_counts_list2;
 
-  /* These are never dereferenced, only compared by value, so we
-   * can safely fake these up and the void* cast is OK.
+  /* Negative indices will not be used elsewhere
    */
-  sentinel_position[0].node = (void*)&sentinel_position[0];
-  sentinel_position[1].node = (void*)&sentinel_position[1];
+  sentinel_position[0].token_index = -1;
+  sentinel_position[1].token_index = -2;
 
   /* position d = M - N corresponds to the initial state, where
    * we are at the beginning of both files.
@@ -310,12 +343,12 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
       /* For k < 0, insertions are free */
       for (k = (d < 0 ? d : 0) - p; k < 0; k++)
         {
-          svn_diff__snake(fp + k, &lcs_freelist, pool);
+          svn_diff__snake(fp + k, token_counts, &lcs_freelist, pool);
         }
 	  /* for k > 0, deletions are free */
       for (k = (d > 0 ? d : 0) + p; k >= 0; k--)
         {
-          svn_diff__snake(fp + k, &lcs_freelist, pool);
+          svn_diff__snake(fp + k, token_counts, &lcs_freelist, pool);
         }
 
       p++;
