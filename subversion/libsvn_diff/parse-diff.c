@@ -696,8 +696,6 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
             }
           else
             {
-              in_hunk = FALSE;
-
               /* The start of the current line marks the first byte
                * after the hunk text. */
               end = last_line;
