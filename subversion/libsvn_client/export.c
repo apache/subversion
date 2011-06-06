@@ -505,10 +505,20 @@ copy_versioned_files(const char *from_abspath,
           else if (child_kind == svn_node_file
                    && depth >= svn_depth_files)
             {
-              SVN_ERR(copy_one_versioned_file(child_abspath, target_abspath,
-                                              ctx, revision,
-                                              native_eol, ignore_keywords,
-                                              iterpool));
+              svn_node_kind_t external_kind;
+
+              SVN_ERR(svn_wc__read_external_info(&external_kind,
+                                                 NULL, NULL, NULL,
+                                                 NULL, ctx->wc_ctx,
+                                                 child_abspath,
+                                                 child_abspath, TRUE,
+                                                 pool, pool));
+
+              if (external_kind != svn_node_file)
+                SVN_ERR(copy_one_versioned_file(child_abspath, target_abspath,
+                                                ctx, revision,
+                                                native_eol, ignore_keywords,
+                                                iterpool));
             }
         }
 

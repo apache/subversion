@@ -737,7 +737,6 @@ def export_with_externals(sbox):
 
 # Test for issue #2429
 @Issue(2429)
-@XFail()
 def export_wc_with_externals(sbox):
   "test exports from working copies with externals"
 
