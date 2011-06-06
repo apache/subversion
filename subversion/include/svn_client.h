@@ -5319,7 +5319,9 @@ typedef svn_error_t *(*svn_info_receiver_t)(
  * structure will be shared with @a info.
  *
  * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_info_t *
 svn_info_dup(const svn_info_t *info,
              apr_pool_t *pool);
