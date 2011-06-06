@@ -185,10 +185,6 @@ svn_diff__resolve_conflict(svn_diff_t *hunk,
     if ((*lcs_ref)->position[1]->offset == 1)
       (*lcs_ref)->position[1] = *position_list2;
 
-    /* Restore modified_length and latest_length */
-    modified_length = hunk->modified_length;
-    latest_length = hunk->latest_length;
-
     /* Produce the resolved diff */
     while (1)
       {
