@@ -3247,7 +3247,23 @@ deliver(const dav_resource *resource, ap_filter_t *output)
               apr_hash_this(hi, &key, NULL, &val);
               dirent = val;
 
-              if (dirent->kind != svn_node_dir)
+              if (dirent->kind == svn_node_file && dirent->special)
+                {
+                  svn_node_kind_t resolved_kind;
+                  const char *name = key;
+
+                  serr = svn_io_check_resolved_path(name, &resolved_kind,
+                                                    resource->pool);
+                  if (serr != NULL)
+                    return dav_svn__convert_err(serr,
+                                                HTTP_INTERNAL_SERVER_ERROR,
+                                                "couldn't fetch dirents "
+                                                "of SVNParentPath",
+                                                resource->pool);
+                  if (resolved_kind != svn_node_dir)
+                    continue;
+                }
+              else if (dirent->kind != svn_node_dir)
                 continue;
 
               ent->name = key;
