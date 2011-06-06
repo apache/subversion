@@ -3172,6 +3172,52 @@ svn_wc__db_externals_gather_definitions(apr_hash_t **externals,
                                                    svn_sqlite__reset(stmt)));
 }
 
+/* Copy the ACTUAL data for SRC_RELPATH and tweak it to refer to DST_RELPATH.
+   The new ACTUAL data won't have any conflicts. */
+static svn_error_t *
+copy_actual(svn_wc__db_wcroot_t *src_wcroot,
+            const char *src_relpath,
+            svn_wc__db_wcroot_t *dst_wcroot,
+            const char *dst_relpath,
+            apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", src_wcroot->wc_id, src_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    {
+      apr_size_t props_size;
+      const char *changelist;
+      const char *properties;
+
+      /* Skipping conflict data... */
+      changelist = svn_sqlite__column_text(stmt, 1, scratch_pool);
+      /* No need to parse the properties when simply copying. */
+      properties = svn_sqlite__column_blob(stmt, 6, &props_size, scratch_pool);
+
+      if (changelist || properties)
+        {
+          SVN_ERR(svn_sqlite__reset(stmt));
+
+          SVN_ERR(svn_sqlite__get_statement(&stmt, dst_wcroot->sdb,
+                                            STMT_INSERT_ACTUAL_NODE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "issbssssss",
+                                    dst_wcroot->wc_id, dst_relpath,
+                                svn_relpath_dirname(dst_relpath, scratch_pool),
+                                    properties, props_size, NULL, NULL, NULL,
+                                    NULL, changelist, NULL));
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+        }
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
+
 /* Helper for svn_wc__db_op_copy to handle copying from one db to
    another */
 static svn_error_t *
@@ -3195,8 +3241,6 @@ cross_db_copy(svn_wc__db_wcroot_t *src_wcroot,
   const char *changed_author;
   const svn_checksum_t *checksum;
   apr_hash_t *props;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
   svn_depth_t depth;
 
   SVN_ERR_ASSERT(kind == svn_wc__db_kind_file
@@ -3235,62 +3279,8 @@ cross_db_copy(svn_wc__db_wcroot_t *src_wcroot,
 
   SVN_ERR(insert_working_node(&iwb, dst_wcroot, dst_relpath, scratch_pool));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
-                                    STMT_SELECT_ACTUAL_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", src_wcroot->wc_id, src_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (have_row)
-    {
-      /* ### STMT_INSERT_ACTUAL_NODE doesn't cover every column, it's
-         ### enough for some cases but will probably need to extended. */
-      const char *prop_reject = svn_sqlite__column_text(stmt, 0, scratch_pool);
-      const char *changelist = svn_sqlite__column_text(stmt, 1, scratch_pool);
-      const char *conflict_old = svn_sqlite__column_text(stmt, 2, scratch_pool);
-      const char *conflict_new = svn_sqlite__column_text(stmt, 3, scratch_pool);
-      const char *conflict_wrk = svn_sqlite__column_text(stmt, 4, scratch_pool);
-      const char *tree_conflict_data = svn_sqlite__column_text(stmt, 5,
-                                                               scratch_pool);
-      apr_size_t props_size;
-      /* No need to parse the properties when simply copying. */
-      const char *properties = svn_sqlite__column_blob(stmt, 6, &props_size,
-                                                       scratch_pool);
-
-      SVN_ERR(svn_sqlite__reset(stmt));
-
-      if (prop_reject)
-        prop_reject = svn_relpath_join(dst_relpath,
-                                       svn_relpath_skip_ancestor(src_relpath,
-                                                                 prop_reject),
-                                       scratch_pool);
-      if (conflict_old)
-        conflict_old = svn_relpath_join(dst_relpath,
-                                        svn_relpath_skip_ancestor(src_relpath,
-                                                                  conflict_old),
-                                        scratch_pool);
-      if (conflict_new)
-        conflict_new = svn_relpath_join(dst_relpath,
-                                        svn_relpath_skip_ancestor(src_relpath,
-                                                                  conflict_new),
-                                        scratch_pool);
-      if (conflict_wrk)
-        conflict_wrk = svn_relpath_join(dst_relpath,
-                                        svn_relpath_skip_ancestor(src_relpath,
-                                                                  conflict_wrk),
-                                        scratch_pool);
-
-      /* ### Do we need to adjust relpaths in tree conflict data? */
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, dst_wcroot->sdb,
-                                        STMT_INSERT_ACTUAL_NODE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "issbssssss",
-                                dst_wcroot->wc_id, dst_relpath,
-                                svn_relpath_dirname(dst_relpath, scratch_pool),
-                                properties, props_size,
-                                conflict_old, conflict_new, conflict_wrk,
-                                prop_reject, changelist, tree_conflict_data));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-    }
-  SVN_ERR(svn_sqlite__reset(stmt));
+  SVN_ERR(copy_actual(src_wcroot, src_relpath,
+                      dst_wcroot, dst_relpath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3563,11 +3553,8 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
       SVN_ERR(svn_sqlite__step_done(stmt));
 
       /* ### Copying changelist is OK for a move but what about a copy? */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
-                                  STMT_INSERT_ACTUAL_NODE_FROM_ACTUAL_NODE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isss", src_wcroot->wc_id, src_relpath,
-                                dst_relpath, dst_parent_relpath));
-      SVN_ERR(svn_sqlite__step_done(stmt));
+      SVN_ERR(copy_actual(src_wcroot, src_relpath,
+                          dst_wcroot, dst_relpath, scratch_pool));
 
       if (dst_np_op_depth > 0)
         {
@@ -10123,6 +10110,59 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
 
   *victims = new_victims;
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_get_conflict_marker_files(apr_hash_t **marker_files,
+                                     svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  /* The parent should be a working copy directory. */
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  /* Look for text and property conflicts in ACTUAL */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_CONFLICT_MARKER_FILES));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row)
+    *marker_files = apr_hash_make(result_pool);
+  else
+    *marker_files = NULL;
+
+  while (have_row)
+    {
+      /* Collect the basenames of any conflict marker files. */
+      const char *marker_relpath;
+      const char *basename;
+      int i;
+
+      for (i = 0; i < 4; i++)
+        {
+          marker_relpath = svn_sqlite__column_text(stmt, i, scratch_pool);
+          if (marker_relpath)
+            {
+              basename = svn_dirent_basename(marker_relpath, result_pool);
+              apr_hash_set(*marker_files, basename, APR_HASH_KEY_STRING,
+                           basename);
+            }
+        }
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  return svn_sqlite__reset(stmt);
 }
 
 
