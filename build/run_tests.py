@@ -27,6 +27,7 @@
             [--verbose] [--log-to-stdout] [--cleanup] [--parallel]
             [--url=<base-url>] [--http-library=<http-library>] [--enable-sasl]
             [--fs-type=<fs-type>] [--fsfs-packing] [--fsfs-sharding=<n>]
+            [--list] [--milestone-filter=<regex>] [--mode-filter=<type>]
             [--server-minor-version=<version>]
             [--config-file=<file>]
             <abs_srcdir> <abs_builddir>
@@ -548,7 +549,8 @@ def main():
                             'http-library=', 'server-minor-version=',
                             'fsfs-packing', 'fsfs-sharding=',
                             'enable-sasl', 'parallel', 'config-file=',
-                            'log-to-stdout'])
+                            'log-to-stdout', 'list', 'milestone-filter=',
+                            'mode-filter='])
   except getopt.GetoptError:
     args = []
 
@@ -558,9 +560,9 @@ def main():
 
   base_url, fs_type, verbose, cleanup, enable_sasl, http_library, \
     server_minor_version, fsfs_sharding, fsfs_packing, parallel, \
-    config_file, log_to_stdout = \
+    config_file, log_to_stdout, list_tests, mode_filter, milestone_filter= \
             None, None, None, None, None, None, None, None, None, None, None, \
-            None
+            None, None, None, None
   for opt, val in opts:
     if opt in ['-u', '--url']:
       base_url = val
@@ -586,6 +588,12 @@ def main():
       config_file = val
     elif opt in ['--log-to-stdout']:
       log_to_stdout = 1
+    elif opt in ['--list']:
+      list_tests = 1
+    elif opt in ['--milestone-filter']:
+      milestone_filter = val
+    elif opt in ['--mode-filter']:
+      mode_filter = val
     else:
       raise getopt.GetoptError
 
@@ -599,7 +607,8 @@ def main():
   th = TestHarness(args[0], args[1], logfile, faillogfile,
                    base_url, fs_type, http_library, server_minor_version,
                    verbose, cleanup, enable_sasl, parallel, config_file,
-                   fsfs_sharding, fsfs_packing)
+                   fsfs_sharding, fsfs_packing, list_tests,
+                   mode_filter=mode_filter, milestone_filter=milestone_filter)
 
   failed = th.run(args[2:])
   if failed:
