@@ -639,10 +639,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         }
     }
 
-  /* Return the string properly wrapped into an RA_SVN item.
-   * Note that the svn_string_t structure is identical to the
-   * data and len members in stringbuf. 
-   */
+  /* Return the string properly wrapped into an RA_SVN item. */
   item->kind = SVN_RA_SVN_STRING;
   item->u.string = svn_stringbuf__morph_into_string(stringbuf);
 
