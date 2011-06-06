@@ -232,6 +232,7 @@ copy_versioned_file(svn_wc__db_t *db,
                     const char *dst_abspath,
                     const char *dst_op_root_abspath,
                     svn_boolean_t metadata_only,
+                    svn_boolean_t conflicted,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
                     svn_wc_notify_func2_t notify_func,
@@ -257,43 +258,46 @@ copy_versioned_file(svn_wc__db_t *db,
     {
       const char *tmp_dst_abspath;
       svn_node_kind_t disk_kind;
-      const apr_array_header_t *conflicts;
-      const char *conflict_working = NULL;
       const char *my_src_abspath = NULL;
       int i;
 
       /* By default, take the copy source as given. */
       my_src_abspath = src_abspath;
 
-      /* Is there a text conflict at the source path? */
-      SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, src_abspath,
-                                        scratch_pool, scratch_pool));
-
-      for (i = 0; i < conflicts->nelts; i++)
+      if (conflicted)
         {
-          const svn_wc_conflict_description2_t *desc;
+          const apr_array_header_t *conflicts;
+          const char *conflict_working = NULL;
 
-          desc = APR_ARRAY_IDX(conflicts, i,
-                               const svn_wc_conflict_description2_t*);
+          /* Is there a text conflict at the source path? */
+          SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, src_abspath,
+                                            scratch_pool, scratch_pool));
 
-          if (desc->kind == svn_wc_conflict_kind_text)
+          for (i = 0; i < conflicts->nelts; i++)
             {
-              conflict_working = desc->my_abspath;
-              break;
+              const svn_wc_conflict_description2_t *desc;
+          
+              desc = APR_ARRAY_IDX(conflicts, i,
+                                   const svn_wc_conflict_description2_t*);
+          
+              if (desc->kind == svn_wc_conflict_kind_text)
+                {
+                  conflict_working = desc->my_abspath;
+                  break;
+                }
             }
-        }
-
-      if (conflict_working)
-        {
-          svn_node_kind_t working_kind;
-
-          SVN_DBG(("Theres a working file: %s\n", conflict_working));
-          /* Does the ".mine" file exist? */
-          SVN_ERR(svn_io_check_path(conflict_working, &working_kind,
-                                    scratch_pool));
-
-          if (working_kind == svn_node_file)
-            my_src_abspath = conflict_working;
+          
+          if (conflict_working)
+            {
+              svn_node_kind_t working_kind;
+          
+              /* Does the ".mine" file exist? */
+              SVN_ERR(svn_io_check_path(conflict_working, &working_kind,
+                                        scratch_pool));
+          
+              if (working_kind == svn_node_file)
+                my_src_abspath = conflict_working;
+            }
         }
 
       SVN_ERR(copy_to_tmpdir(&tmp_dst_abspath, &disk_kind, my_src_abspath,
@@ -446,6 +450,7 @@ copy_versioned_dir(svn_wc__db_t *db,
       svn_wc__db_status_t child_status;
       svn_wc__db_kind_t child_kind;
       svn_boolean_t op_root;
+      svn_boolean_t conflicted;
 
       svn_pool_clear(iterpool);
       if (cancel_func)
@@ -458,8 +463,8 @@ copy_versioned_dir(svn_wc__db_t *db,
       SVN_ERR(svn_wc__db_read_info(&child_status, &child_kind, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, &op_root, NULL, NULL,
-                                   NULL, NULL, NULL,
+                                   NULL, NULL, &conflicted, &op_root, NULL,
+                                   NULL, NULL, NULL, NULL,
                                    db, child_src_abspath,
                                    iterpool, iterpool));
 
@@ -477,7 +482,7 @@ copy_versioned_dir(svn_wc__db_t *db,
             SVN_ERR(copy_versioned_file(db,
                                         child_src_abspath, child_dst_abspath,
                                         dst_op_root_abspath,
-                                        metadata_only,
+                                        metadata_only, conflicted,
                                         cancel_func, cancel_baton, NULL, NULL,
                                         iterpool));
           else if (child_kind == svn_wc__db_kind_dir)
@@ -598,6 +603,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
   svn_wc__db_t *db = wc_ctx->db;
   svn_wc__db_kind_t src_db_kind;
   const char *dstdir_abspath;
+  svn_boolean_t conflicted;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
@@ -634,9 +640,11 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
     SVN_ERR(svn_wc__db_read_info(&dstdir_status, NULL, NULL, NULL,
                                  &dst_repos_root_url, &dst_repos_uuid, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL,
-                                 db, dstdir_abspath, scratch_pool, scratch_pool));
+                                 &conflicted, NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
+                                 db, dstdir_abspath,
+                                 scratch_pool, scratch_pool));
 
     if (!src_repos_root_url)
       {
@@ -753,7 +761,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
       || src_db_kind == svn_wc__db_kind_symlink)
     {
       SVN_ERR(copy_versioned_file(db, src_abspath, dst_abspath, dst_abspath,
-                                  metadata_only,
+                                  metadata_only, conflicted,
                                   cancel_func, cancel_baton,
                                   notify_func, notify_baton,
                                   scratch_pool));
