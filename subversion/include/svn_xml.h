@@ -280,8 +280,9 @@ svn_xml_hash_atts_overlaying(const char **atts,
 /** Create an XML header and return it in @a *str.
  *
  * Fully-formed XML documents should start out with a header,
- * something like
+ * something like <pre>
  *         \<?xml version="1.0" encoding="utf-8"?\>
+ * </pre>
  *
  * This function returns such a header.  @a *str must either be @c NULL, in
  * which case a new string is created, or it must point to an existing

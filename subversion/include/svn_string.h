@@ -120,8 +120,7 @@ typedef struct svn_stringbuf_t
 } svn_stringbuf_t;
 
 
-/** svn_string_t functions.
- *
+/**
  * @defgroup svn_string_svn_string_t svn_string_t functions
  * @{
  */
@@ -177,9 +176,10 @@ svn_string_first_non_whitespace(const svn_string_t *str);
 apr_size_t
 svn_string_find_char_backward(const svn_string_t *str, char ch);
 
+/** @} */
+
 
-/** svn_stringbuf_t functions.
- *
+/**
  * @defgroup svn_string_svn_stringbuf_t svn_stringbuf_t functions
  * @{
  */
@@ -322,9 +322,8 @@ svn_string_compare_stringbuf(const svn_string_t *str1,
 /** @} */
 
 
-/** C strings.
- *
- * @defgroup svn_string_cstrings c string functions
+/**
+ * @defgroup svn_string_cstrings C string functions
  * @{
  */
 

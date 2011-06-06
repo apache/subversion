@@ -3245,7 +3245,7 @@ svn_wc_walk_entries(const char *path,
 
 
 /** Mark missing @a path as 'deleted' in its @a parent's list of
- * entries.  @ path should be a directory that is both deleted (via
+ * entries.  @a path should be a directory that is both deleted (via
  * svn_wc_delete4) and removed (via a system call).  This function
  * should only be called during post-commit processing following a
  * successful commit editor drive.
@@ -4212,7 +4212,7 @@ svn_wc_copy(const char *src,
  * repository on the next commit.  If @a local_abspath refers to a
  * directory, then a recursive deletion will occur. @a wc_ctx must hold
  * a write lock for the parent of @a local_abspath, @a local_abspath itself
- * and everything below @ local_abspath.
+ * and everything below @a local_abspath.
  *
  * If @a keep_local is FALSE, this function immediately deletes all files,
  * modified and unmodified, versioned and of @a delete_unversioned is TRUE,

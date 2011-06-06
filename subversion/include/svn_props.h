@@ -122,7 +122,7 @@ svn_prop_hash_dup(apr_hash_t *hash,
 /**
  * Return the value of property @a prop_name as it is in @a properties,
  * with values <tt>const svn_string_t</tt>. If @a prop_name is not
- * in @a properties or @ properties is NULL, return NULL.
+ * in @a properties or @a properties is NULL, return NULL.
  *
  * @since New in 1.7.
  */

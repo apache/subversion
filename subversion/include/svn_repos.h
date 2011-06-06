@@ -275,7 +275,7 @@ typedef struct svn_repos_notify_t
   svn_revnum_t new_revision;
 
   /** For #svn_repos_notify_load_commited_rev, the source revision, if
-      different from #new_revision, otherwise #SVN_INVALID_REVNUM.
+      different from @a new_revision, otherwise #SVN_INVALID_REVNUM.
       For #svn_repos_notify_load_txn_start, the source revision. */
   svn_revnum_t old_revision;
 
@@ -292,7 +292,7 @@ typedef struct svn_repos_notify_t
 } svn_repos_notify_t;
 
 /** Callback for providing notification from the repository.
- * Returns @a void.  Justification: success of an operation is not dependent
+ * Returns @c void.  Justification: success of an operation is not dependent
  * upon successful notification of that operation.
  *
  * @since New in 1.7. */
