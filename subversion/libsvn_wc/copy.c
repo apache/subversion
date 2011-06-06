@@ -621,7 +621,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
     err = svn_wc__db_read_info(&src_status, &src_db_kind, NULL, NULL,
                                &src_repos_root_url, &src_repos_uuid, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, &conflicted,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                db, src_abspath, scratch_pool, scratch_pool);
 
@@ -641,7 +641,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
                                  &dst_repos_root_url, &dst_repos_uuid, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL,
-                                 &conflicted, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL,
                                  db, dstdir_abspath,
                                  scratch_pool, scratch_pool));
