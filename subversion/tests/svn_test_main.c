@@ -395,6 +395,8 @@ main(int argc, const char *argv[])
 
   err = svn_cmdline__getopt_init(&os, argc, argv, pool);
 
+  os->interleave = TRUE; /* Let options and arguments be interleaved */
+
   /* Strip off any leading path components from the program name.  */
   prog_name = strrchr(argv[0], '/');
   if (prog_name)
