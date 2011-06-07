@@ -5307,8 +5307,9 @@ def copy_and_move_conflicts(sbox):
 
   # Resolve one text conflict via marker file deletion.
   os.remove(wc('A/B/E/beta.merge-left.r3'))
-  os.rename(wc('A/B/E/beta.merge-right.r4'), wc('A/B/E/beta'))
   os.remove(wc('A/B/E/beta.working'))
+  os.remove(wc('A/B/E/beta'))
+  os.rename(wc('A/B/E/beta.merge-right.r4'), wc('A/B/E/beta'))
 
   # Prepare for local copies and moves.
   sbox.simple_mkdir('copy-dest')
