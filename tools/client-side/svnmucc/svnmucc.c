@@ -52,6 +52,7 @@
 #include "svn_string.h"
 #include "svn_subst.h"
 #include "svn_utf.h"
+#include "svn_version.h"
 #include "private/svn_cmdline_private.h"
 
 static void handle_error(svn_error_t *err, apr_pool_t *pool)
