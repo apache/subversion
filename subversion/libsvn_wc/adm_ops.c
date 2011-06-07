@@ -603,17 +603,20 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
                void *notify_baton,
-               apr_pool_t *pool)
+               apr_pool_t *scratch_pool)
 {
+  apr_pool_t *pool = scratch_pool;
   svn_wc__db_t *db = wc_ctx->db;
   svn_error_t *err;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
+  svn_boolean_t conflicted;
+  const apr_array_header_t *conflicts;
 
   err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, &conflicted,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
                              db, local_abspath, pool, pool);
 
   if (delete_unversioned_target &&
@@ -662,10 +665,54 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__write_check(db, svn_dirent_dirname(local_abspath, pool),
                               pool));
 
+  /* Read conflicts, to allow deleting the markers after updating the DB */
+  if (conflicted)
+    SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
+                                      scratch_pool, scratch_pool));
+
   SVN_ERR(svn_wc__db_op_delete(db, local_abspath,
                                notify_func, notify_baton,
                                cancel_func, cancel_baton,
                                pool));
+
+  if (conflicted && conflicts != NULL /* && !keep_local */) /* ### Enable? */
+    {
+      int i;
+
+      /* Do we have conflict markers that should be removed? */
+      for (i = 0; i < conflicts->nelts; i++)
+        {
+          const svn_wc_conflict_description2_t *desc;
+
+          desc = APR_ARRAY_IDX(conflicts, i,
+                               const svn_wc_conflict_description2_t*);
+
+          if (desc->kind == svn_wc_conflict_kind_text)
+            {
+              if (desc->base_abspath != NULL)
+                {
+                  SVN_ERR(svn_io_remove_file2(desc->base_abspath, TRUE,
+                                              scratch_pool));
+                }
+              if (desc->their_abspath != NULL)
+                {
+                  SVN_ERR(svn_io_remove_file2(desc->their_abspath, TRUE,
+                                              scratch_pool));
+                }
+              if (desc->my_abspath != NULL)
+                {
+                  SVN_ERR(svn_io_remove_file2(desc->my_abspath, TRUE,
+                                              scratch_pool));
+                }
+            }
+          else if (desc->kind == svn_wc_conflict_kind_property
+                   && desc->their_abspath != NULL)
+            {
+              SVN_ERR(svn_io_remove_file2(desc->their_abspath, TRUE,
+                                          scratch_pool));
+            }
+        }
+    }
 
   /* By the time we get here, the db knows that everything that is still at
      LOCAL_ABSPATH is unversioned. */
