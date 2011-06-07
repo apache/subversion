@@ -33,6 +33,7 @@
 #include "svn_string.h"  /* loads "svn_types.h" and <apr_pools.h> */
 #include "svn_ctype.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_string_private.h"
 
 #include "svn_private_config.h"
 
