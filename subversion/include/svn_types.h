@@ -131,7 +131,9 @@ typedef struct svn_error_t
 
 } svn_error_t;
 
-
+/* See svn_version.h. 
+   Defined here to avoid including svn_version.h from all public headers. */
+typedef struct svn_version_t svn_version_t;
 
 /** @defgroup APR_ARRAY_compat_macros APR Array Compatibility Helper Macros
  * These macros are provided by APR itself from version 1.3.

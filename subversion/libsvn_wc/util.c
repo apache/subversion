@@ -33,6 +33,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_props.h"
+#include "svn_version.h"
 
 #include "wc.h"   /* just for prototypes of things in this .c file */
 #include "entries.h"
