@@ -43,7 +43,6 @@
 #include "svn_string.h"
 #include "svn_wc.h"
 #include "svn_opt.h"
-#include "svn_version.h"
 #include "svn_ra.h"
 #include "svn_diff.h"
 #include "svn_auth.h"

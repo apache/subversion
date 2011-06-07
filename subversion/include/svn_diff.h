@@ -54,7 +54,6 @@
 
 #include "svn_types.h"
 #include "svn_io.h"       /* for svn_stream_t */
-#include "svn_version.h"
 #include "svn_string.h"
 
 #ifdef __cplusplus
