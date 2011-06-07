@@ -593,24 +593,6 @@ erase_unversioned_from_wc(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* Delete the file FILE_ABSPATH if it exists. */
-static svn_error_t *
-attempt_deletion(const char *file_abspath,
-                 apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-
-  if (file_abspath == NULL)
-    return SVN_NO_ERROR;
-
-  err = svn_io_remove_file2(file_abspath, FALSE, scratch_pool);
-
-  if (err == NULL || !APR_STATUS_IS_ENOENT(err->apr_err))
-      return svn_error_return(err);
-
-  svn_error_clear(err);
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_wc_delete4(svn_wc_context_t *wc_ctx,
@@ -627,12 +609,11 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   svn_error_t *err;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
-  svn_boolean_t conflicted;
 
   err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, &conflicted, NULL,
-                             NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL,
                              db, local_abspath, pool, pool);
 
   if (delete_unversioned_target &&
@@ -680,36 +661,6 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
      be changing the childlist of that directory. */
   SVN_ERR(svn_wc__write_check(db, svn_dirent_dirname(local_abspath, pool),
                               pool));
-
-  if (!keep_local &&
-      conflicted &&
-      kind == svn_wc__db_kind_file)
-    {
-      const apr_array_header_t *conflicts;
-      int i;
-      
-      /* Does the file have any unversioned conflict marker files? */
-      SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
-                                        pool, pool));
-
-      for (i = 0; i < conflicts->nelts; i++)
-        {
-          const svn_wc_conflict_description2_t *desc;
-          
-          desc = APR_ARRAY_IDX(conflicts, i,
-                               const svn_wc_conflict_description2_t*);
-          
-          if (desc->kind == svn_wc_conflict_kind_text)
-            {
-              attempt_deletion(desc->base_abspath, pool);
-              attempt_deletion(desc->their_abspath, pool);
-              attempt_deletion(desc->my_abspath, pool);
-            }
-          else if (desc->kind == svn_wc_conflict_kind_property)
-            attempt_deletion(desc->their_abspath, pool);
-        }
-     
-    }
 
   SVN_ERR(svn_wc__db_op_delete(db, local_abspath,
                                notify_func, notify_baton,
