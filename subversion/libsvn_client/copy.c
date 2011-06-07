@@ -334,24 +334,11 @@ do_wc_to_wc_moves_with_locks2(void *baton,
   dst_abspath = svn_dirent_join(b->dst_parent_abspath, b->pair->base_name,
                                 scratch_pool);
 
-  SVN_ERR(svn_wc_copy3(b->ctx->wc_ctx, b->pair->src_abspath_or_url,
-                       dst_abspath, TRUE /* metadata_only */,
-                       b->ctx->cancel_func, b->ctx->cancel_baton,
-                       b->ctx->notify_func2, b->ctx->notify_baton2,
-                       scratch_pool));
-
-  /* Should we be using a workqueue for this move?  It's not clear.
-     What should happen if the copy above is interrupted?  The user
-     may want to abort the move and a workqueue might interfere with
-     that. */
-  SVN_ERR(svn_io_file_rename(b->pair->src_abspath_or_url, dst_abspath,
-                             scratch_pool));
-
-  SVN_ERR(svn_wc_delete4(b->ctx->wc_ctx, b->pair->src_abspath_or_url,
-                         TRUE, FALSE,
-                         b->ctx->cancel_func, b->ctx->cancel_baton,
-                         b->ctx->notify_func2, b->ctx->notify_baton2,
-                         scratch_pool));
+  SVN_ERR(svn_wc_move(b->ctx->wc_ctx, b->pair->src_abspath_or_url,
+                     dst_abspath, FALSE /* metadata_only */,
+                     b->ctx->cancel_func, b->ctx->cancel_baton,
+                     b->ctx->notify_func2, b->ctx->notify_baton2,
+                     scratch_pool));
 
   return SVN_NO_ERROR;
 }

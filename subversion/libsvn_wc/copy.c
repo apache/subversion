@@ -777,3 +777,38 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc_move(svn_wc_context_t *wc_ctx,
+            const char *src_abspath,
+            const char *dst_abspath,
+            svn_boolean_t metadata_only,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            svn_wc_notify_func2_t notify_func,
+            void *notify_baton,
+            apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc_copy3(wc_ctx, src_abspath, dst_abspath,
+                       TRUE /* metadata_only */,
+                       cancel_func, cancel_baton,
+                       notify_func, notify_baton,
+                       scratch_pool));
+
+  /* Should we be using a workqueue for this move?  It's not clear.
+     What should happen if the copy above is interrupted?  The user
+     may want to abort the move and a workqueue might interfere with
+     that. */
+  if (!metadata_only)
+    SVN_ERR(svn_io_file_rename(src_abspath, dst_abspath, scratch_pool));
+
+  /* ### TODO: Remove conflict marker left overs from dst_abspath (issue #3899)
+   */
+
+  SVN_ERR(svn_wc_delete4(wc_ctx, src_abspath, TRUE, FALSE,
+                         cancel_func, cancel_baton,
+                         notify_func, notify_baton,
+                         scratch_pool));
+
+  return SVN_NO_ERROR;
+}

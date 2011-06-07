@@ -4208,6 +4208,45 @@ svn_wc_copy(const char *src,
             apr_pool_t *pool);
 
 /**
+ * Move @a src_abspath to @a dst_abspath, by scheduling @a dst_abspath
+ * for addition to the repository, remembering the history. Mark @a src_abspath
+ * as deleted after moving.@a wc_ctx is used for accessing the working copy and
+ * must contain a write lock for the parent directory of @a src_abspath and
+ * @a dst_abspath.
+ *
+ * If @a metadata_only is TRUE then this is a database-only operation and
+ * the working directories and files are not changed.
+ *
+ * @a src_abspath must be a file or directory under version control;
+ * the parent of @a dst_abspath must be a directory under version control
+ * in the same working copy; @a dst_abspath will be the name of the copied
+ * item, and it must not exist already if @a metadata_only is FALSE.  Note that
+ * when @a src points to a versioned file, the working file doesn't
+ * necessarily exist in which case its text-base is used instead.
+ *
+ * If @a cancel_func is non-NULL, call it with @a cancel_baton at
+ * various points during the operation.  If it returns an error
+ * (typically #SVN_ERR_CANCELLED), return that error immediately.
+ *
+ * If @a notify_func is non-NULL, call it with @a notify_baton and the path
+ * of the root node (only) of the destination.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_move(svn_wc_context_t *wc_ctx,
+            const char *src_abspath,
+            const char *dst_abspath,
+            svn_boolean_t metadata_only,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            svn_wc_notify_func2_t notify_func,
+            void *notify_baton,
+            apr_pool_t *scratch_pool);
+
+/**
  * Schedule @a local_abspath for deletion.  It will be deleted from the
  * repository on the next commit.  If @a local_abspath refers to a
  * directory, then a recursive deletion will occur. @a wc_ctx must hold
