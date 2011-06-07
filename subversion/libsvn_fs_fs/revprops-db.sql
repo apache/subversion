@@ -28,7 +28,13 @@ pragma auto_vacuum = 1;
 create table revprop (revision integer UNIQUE not null,
                       properties BLOB not null);
 
-create index i_revision on revprop (revision);
+/* Unreleased 1.7-dev libraries also contained an index:
+   CREATE INDEX i_revision ON revprop (revision);
+
+   This was removed since the UNIQUE statement already constructs
+   its own index.  
+ */
+
 
 pragma user_version = 1;
 
