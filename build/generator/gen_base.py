@@ -27,6 +27,7 @@ import sys
 import glob
 import re
 import fileinput
+import filecmp
 try:
   # Python >=3.0
   import configparser
@@ -215,7 +216,26 @@ class GeneratorBase:
 
     import transform_sql
     for hdrfile, sqlfile in self.graph.get_deps(DT_SQLHDR):
-      transform_sql.main(sqlfile[0], open(hdrfile, 'w'))
+      new_hdrfile = hdrfile + ".new"
+      with open(new_hdrfile, 'w') as new_file:
+        transform_sql.main(sqlfile[0], new_file)
+
+      def identical(file1, file2):
+        try:
+          if filecmp.cmp(new_hdrfile, hdrfile):
+            return True
+          else:
+            return False
+        except:
+          return False
+
+      if identical(new_hdrfile, hdrfile):
+        os.remove(new_hdrfile)
+      else:
+        try:
+          os.remove(hdrfile)
+        except: pass
+        os.rename(new_hdrfile, hdrfile)
 
 
 class DependencyGraph:
