@@ -5222,11 +5222,11 @@ def case_only_rename(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 @Issue(3899)
-def copy_and_move_conflicts(sbox):
-  """copy and move conflicts"""
+def copying_conflicts(sbox):
+  """copying conflicts"""
 
-  # The destination of a copy or move operation should *not* be
-  # conflicted, and should contain the "mine-full" contents.
+  # The destination of a copy operation should *not* be conflicted,
+  # and should contain the "mine-full" contents.
 
   sbox.build()
   wc = sbox.ospath
@@ -5392,54 +5392,6 @@ def copy_and_move_conflicts(sbox):
     })
   svntest.actions.verify_disk(wc('copy-dest'), expected_disk, True)
 
-  # Move conflict victims.
-  sbox.simple_move('A/B/E/alpha', 'move-dest')
-  sbox.simple_move('A/D/H', 'move-dest')
-  sbox.simple_move('A/D/G', 'move-dest')
-  sbox.simple_move('A/Q', 'move-dest')
-
-  # Move directories with conflicted children.
-  sbox.simple_move('A/B', 'move-dest')
-  sbox.simple_move('A/D', 'move-dest')
-
-  # Expect same status and disk content as at the copy destination, except
-  # that A/B/E/alpha, A/D/G, and A/D/H were moved away first.
-  expected_status.wc_dir = wc('move-dest')
-  expected_status.tweak('B/E/alpha',
-                        'D/H',
-                        'D/H/chi',
-                        'D/H/omega',
-                        'D/H/psi',
-                        status='D ')
-  # A/D/G had been re-added from r4 due to a "local edit, incoming delete"
-  # tree conflict, so moving it away has a different effect.
-  expected_status.remove('D/G',
-                         'D/G/pi',
-                         'D/G/rho',
-                         'D/G/tau')
-  svntest.actions.run_and_verify_status(wc('move-dest'), expected_status)
-
-  expected_disk = svntest.wc.State('', {
-    'B/E/beta'          : Item(contents="This is the file 'beta'.\n"
-                               "Edit for merge\n"),
-    'B/lambda'          : Item(contents="This is the file 'lambda'.\n"),
-    'B/F'               : Item(),
-    'H'                 : Item(props={'foo':'100'}),
-    'H/chi'             : Item(contents="This is the file 'chi'.\n",
-                               props={'foo':'100'}),
-    'H/psi'             : Item(contents="This is the file 'psi'.\n"),
-    'H/omega'           : Item(contents="This is the file 'omega'.\n"),
-    'D'                 : Item(),
-    'G/tau'             : Item(contents="This is the file 'tau'.\n"),
-    'G/rho'             : Item(contents="This is the file 'rho'.\n"
-                               "Local edit\n"),
-    'G/pi'              : Item(contents="This is the file 'pi'.\n"),
-    'Q/sigma'           : Item(contents="New local file\n"),
-    'alpha'             : Item(contents="This is the file 'alpha'.\n"
-                               "Local edit\n"),
-    })
-  svntest.actions.verify_disk(wc('move-dest'), expected_disk, True)
-
 
 ########################################################################
 # Run the tests
@@ -5549,7 +5501,7 @@ test_list = [ None,
               deleted_file_with_case_clash,
               copy_base_of_deleted,
               case_only_rename,
-              copy_and_move_conflicts,
+              copying_conflicts,
              ]
 
 if __name__ == '__main__':
