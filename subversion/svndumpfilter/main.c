@@ -41,6 +41,7 @@
 #include "svn_sorts.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
+#include "svn_version.h"
 
 #include "private/svn_mergeinfo_private.h"
 
