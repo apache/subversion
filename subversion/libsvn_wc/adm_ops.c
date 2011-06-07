@@ -666,7 +666,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                               pool));
 
   /* Read conflicts, to allow deleting the markers after updating the DB */
-  if (conflicted)
+  if (!keep_local && conflicted)
     SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
                                       scratch_pool, scratch_pool));
 
@@ -675,7 +675,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                                cancel_func, cancel_baton,
                                pool));
 
-  if (conflicted && conflicts != NULL /* && !keep_local */) /* ### Enable? */
+  if (!keep_local && conflicted && conflicts != NULL)
     {
       int i;
 
