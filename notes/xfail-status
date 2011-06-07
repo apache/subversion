@@ -1,10 +1,10 @@
-This tracks the remaining TODOs for the 'Test Review' roadmap item for
+This tracked the remaining TODOs for the 'Test Review' roadmap item for
 1.7's release status (http://subversion.apache.org/roadmap), i.e.:
 
   "Determine which XFail and WIP tests should remain so,
    and which need to be fixed before release."
 
-To answer that question we can now simply run:
+To answer that question (for 1.7 or any future release) we can now simply run:
 
 (Windows)
   win-tests.py --list --mode-filter xfail --log-to-stdout
@@ -13,29 +13,3 @@ To answer that question we can now simply run:
 (Unix-like)
    make check MILESTONE_FILTER="1.7.0" MODE_FILTER=xfail \
     TESTS=subversion/tests/cmdline/*py
-
-LISTING: dirent_uri-test.exe
-
-Test #  Mode   Test Description
-------  -----  ----------------
-  34    XFAIL  test svn_dirent_get_absolute with lc drive
-  Issue #: 3795
-  Target Milestone: 1.7.0
-  Thread: http://svn.haxx.se/dev/archive-2009-10/0682.shtml
-  Log: r880444
-  Point Person: rhuijben
-
-
-LISTING: revert_tests.py
-Test #  Mode   Test Description
-------  -----  ----------------
-  27    XFAIL  revert with superfluous actual node [#3859(1.7.0)]
-
-
-LISTING: upgrade_tests.py
-Test #  Mode   Test Description
-------  -----  ----------------
-   8    XFAIL  3x same wc upgrade 1.4.0 test [#2530(1.7.0)]
-
-Note: It appears issue #2530 is the wrong association, see
-      http://svn.haxx.se/dev/archive-2011-04/0353.shtml
