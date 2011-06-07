@@ -3038,6 +3038,16 @@ typedef struct svn_wc_info_t
 
 } svn_wc_info_t;
 
+/**
+ * Return a duplicate of @a info, allocated in @a pool. No part of the new
+ * structure will be shared with @a info.
+ *
+ * @since New in 1.7.
+ */
+svn_wc_info_t *
+svn_wc_info_dup(const svn_wc_info_t *info,
+                apr_pool_t *pool);
+
 
 /** Given @a local_abspath in a dir under version control, decide if it is
  * in a state of conflict; return the answers in @a *text_conflicted_p, @a
