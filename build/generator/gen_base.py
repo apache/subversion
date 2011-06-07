@@ -217,8 +217,9 @@ class GeneratorBase:
     import transform_sql
     for hdrfile, sqlfile in self.graph.get_deps(DT_SQLHDR):
       new_hdrfile = hdrfile + ".new"
-      with open(new_hdrfile, 'w') as new_file:
-        transform_sql.main(sqlfile[0], new_file)
+      new_file = open(new_hdrfile, 'w')
+      transform_sql.main(sqlfile[0], new_file)
+      new_file.close()
 
       def identical(file1, file2):
         try:
