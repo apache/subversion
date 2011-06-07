@@ -778,6 +778,154 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
+/* Remove the conflict markers of NODE_ABSPATH, that were left over after
+   copying NODE_ABSPATH from SRC_ABSPATH. 
+
+   Only use this function when you know what you're doing. This function
+   explicitly ignores some case insensitivity issues!
+
+   */
+static svn_error_t *
+remove_node_conflict_markers(svn_wc__db_t *db,
+                             const char *src_abspath,
+                             const char *node_abspath,
+                             apr_pool_t *scratch_pool)
+{
+  const apr_array_header_t *conflicts;
+
+  SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, src_abspath,
+                                    scratch_pool, scratch_pool));
+
+  /* Do we have conflict markers that should be removed? */
+  if (conflicts != NULL)
+    {
+      int i;
+      const char *src_dir = svn_dirent_dirname(src_abspath, scratch_pool);
+      const char *dst_dir = svn_dirent_dirname(node_abspath, scratch_pool);
+
+      /* No iterpool: Maximum number of possible conflict markers is 4 */
+
+      for (i = 0; i < conflicts->nelts; i++)
+        {
+          const svn_wc_conflict_description2_t *desc;
+          const char *child_relpath;
+          const char *child_abpath;
+
+          desc = APR_ARRAY_IDX(conflicts, i,
+                               const svn_wc_conflict_description2_t*);
+
+          if (desc->kind != svn_wc_conflict_kind_text
+              && desc->kind != svn_wc_conflict_kind_property)
+            continue;
+
+          if (desc->base_abspath != NULL)
+            {
+              child_relpath = svn_dirent_is_child(src_dir, desc->base_abspath,
+                                                  NULL);
+
+              if (child_relpath)
+                {
+                  child_abpath = svn_dirent_join(dst_dir, child_relpath,
+                                                 scratch_pool);
+
+                  SVN_ERR(svn_io_remove_file2(child_abpath, TRUE,
+                                              scratch_pool));
+                }
+            }
+          if (desc->their_abspath != NULL)
+            {
+              child_relpath = svn_dirent_is_child(src_dir, desc->their_abspath,
+                                                  NULL);
+
+              if (child_relpath)
+                {
+                  child_abpath = svn_dirent_join(dst_dir, child_relpath,
+                                                 scratch_pool);
+
+                  SVN_ERR(svn_io_remove_file2(child_abpath, TRUE,
+                                              scratch_pool));
+                }
+            }
+          if (desc->my_abspath != NULL)
+            {
+              child_relpath = svn_dirent_is_child(src_dir, desc->my_abspath,
+                                                  NULL);
+
+              if (child_relpath)
+                {
+                  child_abpath = svn_dirent_join(dst_dir, child_relpath,
+                                                 scratch_pool);
+
+                  /* ### Copy child_abspath to node_abspath if it exists? */
+                  SVN_ERR(svn_io_remove_file2(child_abpath, TRUE,
+                                              scratch_pool));
+                }
+            }
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Remove all the conflict markers below SRC_DIR_ABSPATH, that were left over
+   after copying WC_DIR_ABSPATH from SRC_DIR_ABSPATH.
+
+   This function doesn't remove the conflict markers on WC_DIR_ABSPATH
+   itself!
+
+   Only use this function when you know what you're doing. This function
+   explicitly ignores some case insensitivity issues!
+   */
+static svn_error_t *
+remove_all_conflict_markers(svn_wc__db_t *db,
+                            const char *src_dir_abspath,
+                            const char *wc_dir_abspath,
+                            apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_hash_t *nodes;
+  apr_hash_t *conflicts; /* Unused */
+  apr_hash_index_t *hi;
+
+  /* Reuse a status helper to obtain all subdirs and conflicts in a single
+     db transaction. */
+  /* ### This uses a rifle to kill a fly. But at least it doesn't use heavy
+          artillery. */
+  SVN_ERR(svn_wc__db_read_children_info(&nodes, &conflicts, db,
+                                        src_dir_abspath,
+                                        scratch_pool, iterpool));
+
+  for (hi = apr_hash_first(scratch_pool, nodes);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *name = svn__apr_hash_index_key(hi);
+      struct svn_wc__db_info_t *info = svn__apr_hash_index_val(hi);
+
+      if (info->conflicted)
+        {
+          svn_pool_clear(iterpool);
+          SVN_ERR(remove_node_conflict_markers(
+                            db,
+                            svn_dirent_join(src_dir_abspath, name, iterpool),
+                            svn_dirent_join(wc_dir_abspath, name, iterpool),
+                            iterpool));
+        }
+      if (info->kind == svn_wc__db_kind_dir)
+        {
+          svn_pool_clear(iterpool);
+          SVN_ERR(remove_all_conflict_markers(
+                            db,
+                            svn_dirent_join(src_dir_abspath, name, iterpool),
+                            svn_dirent_join(wc_dir_abspath, name, iterpool),
+                            iterpool));
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc_move(svn_wc_context_t *wc_ctx,
             const char *src_abspath,
@@ -789,6 +937,7 @@ svn_wc_move(svn_wc_context_t *wc_ctx,
             void *notify_baton,
             apr_pool_t *scratch_pool)
 {
+  svn_wc__db_t *db = wc_ctx->db;
   SVN_ERR(svn_wc_copy3(wc_ctx, src_abspath, dst_abspath,
                        TRUE /* metadata_only */,
                        cancel_func, cancel_baton,
@@ -802,8 +951,26 @@ svn_wc_move(svn_wc_context_t *wc_ctx,
   if (!metadata_only)
     SVN_ERR(svn_io_file_rename(src_abspath, dst_abspath, scratch_pool));
 
-  /* ### TODO: Remove conflict marker left overs from dst_abspath (issue #3899)
-   */
+  {
+    svn_wc__db_kind_t kind;
+    svn_boolean_t conflicted;
+
+    SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 &conflicted, NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
+                                 db, src_abspath,
+                                 scratch_pool, scratch_pool));
+
+    if (kind == svn_wc__db_kind_dir)
+      SVN_ERR(remove_all_conflict_markers(db, src_abspath, dst_abspath,
+                                          scratch_pool));
+
+    if (conflicted)
+      SVN_ERR(remove_node_conflict_markers(db, src_abspath, dst_abspath,
+                                           scratch_pool));
+  }
 
   SVN_ERR(svn_wc_delete4(wc_ctx, src_abspath, TRUE, FALSE,
                          cancel_func, cancel_baton,
