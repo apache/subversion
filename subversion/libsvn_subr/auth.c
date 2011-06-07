@@ -33,6 +33,7 @@
 #include "svn_config.h"
 #include "svn_private_config.h"
 #include "svn_dso.h"
+#include "svn_version.h"
 
 /* The good way to think of this machinery is as a set of tables.
 

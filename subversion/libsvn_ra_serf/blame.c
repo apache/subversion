@@ -33,7 +33,6 @@
 #include "svn_xml.h"
 #include "svn_config.h"
 #include "svn_delta.h"
-#include "svn_version.h"
 #include "svn_path.h"
 #include "svn_base64.h"
 #include "svn_props.h"
