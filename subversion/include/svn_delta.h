@@ -40,7 +40,6 @@
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_io.h"
-#include "svn_version.h"
 #include "svn_checksum.h"
 
 #ifdef __cplusplus

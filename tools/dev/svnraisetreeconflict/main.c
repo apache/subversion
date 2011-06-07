@@ -40,6 +40,7 @@
 #include "svn_utf.h"
 #include "svn_path.h"
 #include "svn_opt.h"
+#include "svn_version.h"
 
 #include "private/svn_wc_private.h"
 

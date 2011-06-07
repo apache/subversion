@@ -25,6 +25,7 @@
 #include "svn_wc.h"
 #include "svn_utf.h"
 #include "svn_opt.h"
+#include "svn_version.h"
 
 #include "svn_private_config.h"
 

@@ -51,6 +51,7 @@
 #include "svn_utf.h"
 #include "svn_auth.h"
 #include "svn_hash.h"
+#include "svn_version.h"
 #include "cl.h"
 #include "svn_cache_config.h"
 

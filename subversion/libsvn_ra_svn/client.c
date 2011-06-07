@@ -40,14 +40,17 @@
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_config.h"
-#include "svn_private_config.h"
 #include "svn_ra.h"
-#include "../libsvn_ra/ra_loader.h"
 #include "svn_ra_svn.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
+#include "svn_version.h"
+
+#include "svn_private_config.h"
 
 #include "private/svn_fspath.h"
+
+#include "../libsvn_ra/ra_loader.h"
 
 #include "ra_svn.h"
 

@@ -49,6 +49,7 @@
 #include "svn_opt.h"
 #include "svn_props.h"
 #include "svn_diff.h"
+#include "svn_version.h"
 #include "svn_xml.h"
 
 #include "private/svn_cmdline_private.h"
