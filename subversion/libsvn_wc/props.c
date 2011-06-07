@@ -2407,6 +2407,7 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
 
   SVN_ERR(validate_prop_against_node_kind(propname, path, kind, pool));
 
+  /* This code may place the new prop val in either NEW_VALUE or PROPVAL. */
   if (!skip_some_checks && (strcmp(propname, SVN_PROP_EOL_STYLE) == 0))
     {
       svn_subst_eol_style_t eol_style;
@@ -2461,7 +2462,7 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
   else if (svn_prop_is_boolean(propname))
     {
       /* SVN_PROP_EXECUTABLE, SVN_PROP_NEEDS_LOCK, SVN_PROP_SPECIAL */
-      new_value = svn_stringbuf_create_from_string(&boolean_value, pool);
+      propval = &boolean_value;
     }
   else if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
     {
@@ -2479,7 +2480,7 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
           svn_dirent_local_style(path, pool));
 
       SVN_ERR(svn_mergeinfo_to_string(&new_value_str, mergeinfo, pool));
-      new_value = svn_stringbuf_create_from_string(new_value_str, pool);
+      propval = new_value_str;
     }
 
   if (new_value)
