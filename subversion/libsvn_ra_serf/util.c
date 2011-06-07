@@ -1159,6 +1159,21 @@ cdata_xml(void *userData, const char *data, int len)
   parser->error = parser->cdata(parser, parser->user_data, data, len);
 }
 
+/* Flip the requisite bits in CTX to indicate that processing of the
+   response is complete, adding the current "done item" to the list of
+   completed items. */
+static void
+add_done_item(svn_ra_serf__xml_parser_t *ctx)
+{
+  *ctx->done = TRUE;
+  if (ctx->done_list)
+    {
+      ctx->done_item->data = ctx->user_data;
+      ctx->done_item->next = *ctx->done_list;
+      *ctx->done_list = ctx->done_item;
+    }
+}
+
 /* Implements svn_ra_serf__response_handler_t */
 svn_error_t *
 svn_ra_serf__handle_xml_parser(serf_request_t *request,
@@ -1197,15 +1212,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       SVN_ERR_ASSERT(ctx->status_code);
 
       if (*ctx->done == FALSE)
-        {
-          *ctx->done = TRUE;
-          if (ctx->done_list)
-            {
-              ctx->done_item->data = ctx->user_data;
-              ctx->done_item->next = *ctx->done_list;
-              *ctx->done_list = ctx->done_item;
-            }
-        }
+        add_done_item(ctx);
 
       err = svn_ra_serf__handle_server_error(request, response, pool);
 
@@ -1243,18 +1250,11 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
           SVN_ERR_ASSERT(ctx->status_code);
 
           if (*ctx->done == FALSE)
-            {
-              *ctx->done = TRUE;
-              if (ctx->done_list)
-                {
-                  ctx->done_item->data = ctx->user_data;
-                  ctx->done_item->next = *ctx->done_list;
-                  *ctx->done_list = ctx->done_item;
-                }
-            }
-          SVN_ERR(svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                    _("XML parsing failed: (%d %s)"),
-                                    sl.code, sl.reason));
+            add_done_item(ctx);
+
+          return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                   _("XML parsing failed: (%d %s)"),
+                                   sl.code, sl.reason);
         }
 
       if (ctx->error && ctx->ignore_errors == FALSE)
@@ -1272,14 +1272,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
         {
           xml_status = XML_Parse(ctx->xmlp, NULL, 0, 1);
           XML_ParserFree(ctx->xmlp);
-
-          *ctx->done = TRUE;
-          if (ctx->done_list)
-            {
-              ctx->done_item->data = ctx->user_data;
-              ctx->done_item->next = *ctx->done_list;
-              *ctx->done_list = ctx->done_item;
-            }
+          add_done_item(ctx);
           return svn_error_wrap_apr(status, NULL);
         }
 
