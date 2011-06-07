@@ -33,6 +33,40 @@
 
 
 
+svn_wc_info_t *
+svn_wc_info_dup(const svn_wc_info_t *info,
+                apr_pool_t *pool)
+{
+  svn_wc_info_t *new_info = apr_pmemdup(pool, info, sizeof(*new_info));
+
+  if (info->changelist)
+    new_info->changelist = apr_pstrdup(pool, info->changelist);
+  if (info->checksum)
+    new_info->checksum = svn_checksum_dup(info->checksum, pool);
+  if (info->conflicts)
+    {
+      int i;
+
+      apr_array_header_t *new_conflicts
+        = apr_array_make(pool, info->conflicts->nelts, info->conflicts->elt_size);
+      for (i = 0; i < info->conflicts->nelts; i++)
+        {
+          APR_ARRAY_PUSH(new_conflicts, svn_wc_conflict_description2_t *)
+            = svn_wc__conflict_description2_dup(
+                APR_ARRAY_IDX(info->conflicts, i,
+                              const svn_wc_conflict_description2_t *),
+                pool);
+        }
+      new_info->conflicts = new_conflicts;
+    }
+  if (info->copyfrom_url)
+    new_info->copyfrom_url = apr_pstrdup(pool, info->copyfrom_url);
+  if (info->wcroot_abspath)
+    new_info->wcroot_abspath = apr_pstrdup(pool, info->wcroot_abspath);
+  return new_info;
+}
+
+
 /* Set *INFO to a new struct, allocated in RESULT_POOL, built from the WC
    metadata of LOCAL_ABSPATH.  Pointer fields are copied by reference, not
    dup'd. */
