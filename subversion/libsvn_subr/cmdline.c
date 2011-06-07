@@ -50,7 +50,6 @@
 #include "svn_nls.h"
 #include "svn_utf.h"
 #include "svn_auth.h"
-#include "svn_version.h"
 #include "svn_xml.h"
 #include "svn_base64.h"
 #include "svn_config.h"
