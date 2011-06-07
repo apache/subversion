@@ -21,20 +21,19 @@
  * ====================================================================
  */
 
+#include <apr_tables.h>
+#include <apr_xml.h>
 
-
-
+#include "svn_mergeinfo.h"
+#include "svn_path.h"
 #include "svn_ra.h"
+#include "svn_string.h"
 #include "svn_xml.h"
+
 #include "private/svn_dav_protocol.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "svn_private_config.h"
-#include "svn_mergeinfo.h"
 #include "ra_serf.h"
-#include "svn_path.h"
-#include "svn_string.h"
-#include <apr_tables.h>
-#include <apr_xml.h>
 
 
 
