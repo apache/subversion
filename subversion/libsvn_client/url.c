@@ -57,7 +57,7 @@ svn_client_url_from_path2(const char **url,
                                       result_pool, scratch_pool));
     }
   else
-    *url = apr_pstrdup(result_pool, path_or_url);
+    *url = svn_uri_canonicalize(path_or_url, result_pool);
 
   return SVN_NO_ERROR;
 }
