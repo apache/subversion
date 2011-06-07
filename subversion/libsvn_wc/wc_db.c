@@ -10150,7 +10150,7 @@ svn_wc__db_get_conflict_marker_files(apr_hash_t **marker_files,
     {
       /* Collect the basenames of any conflict marker files. */
       const char *marker_relpath;
-      const char *basename;
+      const char *base_name;
       int i;
 
       for (i = 0; i < 4; i++)
@@ -10158,9 +10158,9 @@ svn_wc__db_get_conflict_marker_files(apr_hash_t **marker_files,
           marker_relpath = svn_sqlite__column_text(stmt, i, scratch_pool);
           if (marker_relpath)
             {
-              basename = svn_dirent_basename(marker_relpath, result_pool);
-              apr_hash_set(*marker_files, basename, APR_HASH_KEY_STRING,
-                           basename);
+              base_name = svn_dirent_basename(marker_relpath, result_pool);
+              apr_hash_set(*marker_files, base_name, APR_HASH_KEY_STRING,
+                           base_name);
             }
         }
 
