@@ -25,8 +25,6 @@
 
 #include <apr_uri.h>
 
-#include <expat.h>
-
 #include <serf.h>
 
 #include "svn_pools.h"
@@ -34,7 +32,6 @@
 #include "svn_dav.h"
 #include "svn_xml.h"
 #include "svn_config.h"
-#include "svn_delta.h"
 #include "svn_dirent_uri.h"
 #include "svn_props.h"
 
