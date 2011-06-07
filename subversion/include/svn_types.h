@@ -1225,9 +1225,9 @@ typedef struct svn_info2_t
   /** Where the item lives in the repository. */
   const char *URL;
 
-  /** The revision of the object.  If path_or_url is a working-copy
-   * path, then this is its current working revnum.  If path_or_url
-   * is a URL, then this is the repos revision that path_or_url lives in. */
+  /** The revision of the object.  If the target is a working-copy
+   * path, then this is its current working revision number.  If the target
+   * is a URL, then this is the repository revision that it lives in. */
   svn_revnum_t rev;
 
   /** The node's kind. */
@@ -1255,7 +1255,7 @@ typedef struct svn_info2_t
    * The size of the file in the repository (untranslated,
    * e.g. without adjustment of line endings and keyword
    * expansion). Only applicable for file -- not directory -- URLs.
-   * For working copy paths, size64 will be #SVN_INVALID_FILESIZE.
+   * For working copy paths, @a size will be #SVN_INVALID_FILESIZE.
    */
   svn_filesize_t size;
 
