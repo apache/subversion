@@ -33,6 +33,8 @@
 #include "svn_ra.h"  /* for SVN_RA_CAPABILITY_* */
 #include "svn_repos.h"
 #include "svn_hash.h"
+#include "svn_version.h"
+
 #include "private/svn_repos_private.h"
 #include "svn_private_config.h" /* for SVN_TEMPLATE_ROOT_DIR */
 

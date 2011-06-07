@@ -29,6 +29,7 @@
 #include "svn_diff.h"
 #include "svn_types.h"
 #include "svn_ctype.h"
+#include "svn_version.h"
 
 #include "diff.h"
 

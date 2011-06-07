@@ -31,6 +31,7 @@
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
 #include "svn_path.h"
+#include "svn_version.h"
 
 #include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
