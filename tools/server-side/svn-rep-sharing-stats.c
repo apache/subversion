@@ -27,6 +27,7 @@
 #include "svn_repos.h"
 #include "svn_opt.h"
 #include "svn_utf.h"
+#include "svn_version.h"
 
 #include "../../subversion/libsvn_fs_fs/fs.h"
 #include "../../subversion/libsvn_fs_fs/fs_fs.h"
