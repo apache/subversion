@@ -3200,6 +3200,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
         "                  rev     CDATA #IMPLIED\n"
         "                  base    CDATA #IMPLIED>\n"
         "  <!ELEMENT updir EMPTY>\n"
+        "  <!ATTLIST updir href    CDATA #REQUIRED\n"
         "  <!ELEMENT file  EMPTY>\n"
         "  <!ATTLIST file  name    CDATA #REQUIRED\n"
         "                  href    CDATA #REQUIRED>\n"
@@ -3351,23 +3352,25 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           && ((resource->info->repos_path[1] != '\0')
               || dav_svn__get_list_parentpath_flag(resource->info->r)))
         {
-          if (gen_html)
+          const char *href;
+          if (resource->info->pegged)
             {
-              if (resource->info->pegged)
-                {
-                  ap_fprintf(output, bb,
-                             "  <li><a href=\"../?p=%ld\">..</a></li>\n",
-                             resource->info->root.rev);
-                }
-              else
-                {
-                  ap_fprintf(output, bb,
-                             "  <li><a href=\"../\">..</a></li>\n");
-                }
+              href = apr_psprintf(resource->pool, "../?p=%ld",
+                                  resource->info->root.rev);
             }
           else
             {
-              ap_fprintf(output, bb, "    <updir />\n");
+              href = "../";
+            }
+
+          if (gen_html)
+            {
+              ap_fprintf(output, bb,
+                         "  <li><a href=\"%s\">..</a></li>\n", href);
+            }
+          else
+            {
+              ap_fprintf(output, bb, "    <updir href=\"%s\"/>\n", href);
             }
         }
 
