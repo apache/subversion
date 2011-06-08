@@ -38,11 +38,32 @@
 #include "private/svn_wc_private.h"
 
 
-/* Helper: build an svn_info_t *INFO struct from svn_dirent_t DIRENT
+svn_client_info2_t *
+svn_client_info2_dup(const svn_client_info2_t *info,
+                     apr_pool_t *pool)
+{
+  svn_client_info2_t *new_info = apr_pmemdup(pool, info, sizeof(*new_info));
+
+  if (new_info->URL)
+    new_info->URL = apr_pstrdup(pool, info->URL);
+  if (new_info->repos_root_URL)
+    new_info->repos_root_URL = apr_pstrdup(pool, info->repos_root_URL);
+  if (new_info->repos_UUID)
+    new_info->repos_UUID = apr_pstrdup(pool, info->repos_UUID);
+  if (info->last_changed_author)
+    new_info->last_changed_author = apr_pstrdup(pool, info->last_changed_author);
+  if (new_info->lock)
+    new_info->lock = svn_lock_dup(info->lock, pool);
+  if (new_info->wc_info)
+    new_info->wc_info = svn_wc_info_dup(info->wc_info, pool);
+  return new_info;
+}
+
+/* Set *INFO to a new info struct built from DIRENT
    and (possibly NULL) svn_lock_t LOCK, all allocated in POOL.
    Pointer fields are copied by reference, not dup'd. */
 static svn_error_t *
-build_info_from_dirent(svn_info2_t **info,
+build_info_from_dirent(svn_client_info2_t **info,
                        const svn_dirent_t *dirent,
                        svn_lock_t *lock,
                        const char *URL,
@@ -51,7 +72,7 @@ build_info_from_dirent(svn_info2_t **info,
                        const char *repos_root,
                        apr_pool_t *pool)
 {
-  svn_info2_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
+  svn_client_info2_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
 
   tmpinfo->URL                  = URL;
   tmpinfo->rev                  = revision;
@@ -95,7 +116,7 @@ push_dir_info(svn_ra_session_t *ra_session,
               svn_revnum_t rev,
               const char *repos_UUID,
               const char *repos_root,
-              svn_info_receiver2_t receiver,
+              svn_client_info_receiver2_t receiver,
               void *receiver_baton,
               svn_depth_t depth,
               svn_client_ctx_t *ctx,
@@ -113,7 +134,7 @@ push_dir_info(svn_ra_session_t *ra_session,
     {
       const char *path, *URL, *fs_path;
       svn_lock_t *lock;
-      svn_info2_t *info;
+      svn_client_info2_t *info;
       const char *name = svn__apr_hash_index_key(hi);
       svn_dirent_t *the_ent = svn__apr_hash_index_val(hi);
 
@@ -198,11 +219,50 @@ same_resource_in_head(svn_boolean_t *same_p,
   return SVN_NO_ERROR;
 }
 
+/* A baton for wc_info_receiver(), containing the wrapped receiver. */
+typedef struct wc_info_receiver_baton_t
+{
+  svn_client_info_receiver2_t client_receiver_func;
+  void *client_receiver_baton;
+} wc_info_receiver_baton_t;
+
+/* A receiver for WC info, implementing svn_client_info_receiver2_t.
+ * Convert the WC info to client info and pass it to the client info
+ * receiver (BATON->client_receiver_func with BATON->client_receiver_baton). */
+static svn_error_t *
+wc_info_receiver(void *baton,
+                 const char *abspath_or_url,
+                 const svn_wc__info2_t *wc_info,
+                 apr_pool_t *scratch_pool)
+{
+  wc_info_receiver_baton_t *b = baton;
+  svn_client_info2_t client_info;
+
+  /* Make a shallow copy in CLIENT_INFO of the contents of WC_INFO. */
+  client_info.repos_root_URL = wc_info->repos_root_URL;
+  client_info.repos_UUID = wc_info->repos_UUID;
+  client_info.rev = wc_info->rev;
+  client_info.URL = wc_info->URL;
+
+  client_info.kind = wc_info->kind;
+  client_info.size = wc_info->size;
+  client_info.last_changed_rev = wc_info->last_changed_rev;
+  client_info.last_changed_date = wc_info->last_changed_date;
+  client_info.last_changed_author = wc_info->last_changed_author;
+
+  client_info.lock = wc_info->lock;
+
+  client_info.wc_info = wc_info->wc_info;
+
+  return b->client_receiver_func(b->client_receiver_baton,
+                                 abspath_or_url, &client_info, scratch_pool);
+}
+
 svn_error_t *
 svn_client_info3(const char *abspath_or_url,
                  const svn_opt_revision_t *peg_revision,
                  const svn_opt_revision_t *revision,
-                 svn_info_receiver2_t receiver,
+                 svn_client_info_receiver2_t receiver,
                  void *receiver_baton,
                  svn_depth_t depth,
                  const apr_array_header_t *changelists,
@@ -219,7 +279,7 @@ svn_client_info3(const char *abspath_or_url,
   apr_hash_t *parent_ents;
   const char *parent_url, *base_name;
   svn_dirent_t *the_ent;
-  svn_info2_t *info;
+  svn_client_info2_t *info;
   svn_error_t *err;
 
   if (depth == svn_depth_unknown)
@@ -231,9 +291,10 @@ svn_client_info3(const char *abspath_or_url,
           || peg_revision->kind == svn_opt_revision_unspecified))
     {
       /* Do all digging in the working copy. */
+      wc_info_receiver_baton_t b = { receiver, receiver_baton };
       return svn_error_return(
         svn_wc__get_info(ctx->wc_ctx, abspath_or_url, depth,
-                         receiver, receiver_baton, changelists,
+                         wc_info_receiver, &b, changelists,
                          ctx->cancel_func, ctx->cancel_baton, pool));
     }
 

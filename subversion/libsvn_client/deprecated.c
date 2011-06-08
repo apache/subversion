@@ -2120,11 +2120,11 @@ svn_info_dup(const svn_info_t *info, apr_pool_t *pool)
   return dupinfo;
 }
 
-/* Convert an svn_info2_t to an svn_info_t, doing shallow copies of objects. */
+/* Convert an svn_client_info2_t to an svn_info_t, doing shallow copies. */
 static svn_error_t *
 info_from_info2(svn_info_t **new_info,
                 svn_wc_context_t *wc_ctx,
-                const svn_info2_t *info2,
+                const svn_client_info2_t *info2,
                 apr_pool_t *pool)
 {
   svn_info_t *info = apr_pcalloc(pool, sizeof(*info));
@@ -2247,7 +2247,7 @@ struct info_to_relpath_baton
 static svn_error_t *
 info_receiver_relpath_wrapper(void *baton,
                               const char *abspath_or_url,
-                              const svn_info2_t *info2,
+                              const svn_client_info2_t *info2,
                               apr_pool_t *scratch_pool)
 {
   struct info_to_relpath_baton *rb = baton;

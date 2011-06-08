@@ -5194,7 +5194,7 @@ svn_client_unlock(const apr_array_header_t *targets,
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.6 API.  The new
- * API is #svn_info2_t, located in svn_types.h.
+ * API is #svn_client_info2_t.
  */
 typedef struct svn_info_t
 {
@@ -5306,7 +5306,8 @@ typedef struct svn_info_t
  * unavailable.  Use @a pool for all temporary allocation.
  *
  * @since New in 1.2.
- * @deprecated Provided for backward compatibility with the 1.6 API.
+ * @deprecated Provided for backward compatibility with the 1.6 API.  The new
+ * API is #svn_client_info_receiver2_t.
  */
 typedef svn_error_t *(*svn_info_receiver_t)(
   void *baton,
@@ -5319,7 +5320,8 @@ typedef svn_error_t *(*svn_info_receiver_t)(
  * structure will be shared with @a info.
  *
  * @since New in 1.3.
- * @deprecated Provided for backward compatibility with the 1.6 API.
+ * @deprecated Provided for backward compatibility with the 1.6 API.  The new
+ * API is #svn_client_info2_dup().
  */
 SVN_DEPRECATED
 svn_info_t *
@@ -5327,10 +5329,85 @@ svn_info_dup(const svn_info_t *info,
              apr_pool_t *pool);
 
 /**
+ * A structure which describes various system-generated metadata about
+ * a working-copy path or URL.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
+ *
+ * @since New in 1.7.
+ */
+typedef struct svn_client_info2_t
+{
+  /** Where the item lives in the repository. */
+  const char *URL;
+
+  /** The revision of the object.  If the target is a working-copy
+   * path, then this is its current working revnum.  If the target
+   * is a URL, then this is the repos revision that it lives in. */
+  svn_revnum_t rev;
+
+  /** The root URL of the repository. */
+  const char *repos_root_URL;
+
+  /** The repository's UUID. */
+  const char *repos_UUID;
+
+  /** The node's kind. */
+  svn_node_kind_t kind;
+
+  /** The size of the file in the repository (untranslated,
+   * e.g. without adjustment of line endings and keyword
+   * expansion). Only applicable for file -- not directory -- URLs.
+   * For working copy paths, @a size will be #SVN_INVALID_FILESIZE. */
+  svn_filesize_t size;
+
+  /** The last revision in which this object changed. */
+  svn_revnum_t last_changed_rev;
+
+  /** The date of the last_changed_rev. */
+  apr_time_t last_changed_date;
+
+  /** The author of the last_changed_rev. */
+  const char *last_changed_author;
+
+  /** An exclusive lock, if present.  Could be either local or remote. */
+  svn_lock_t *lock;
+
+  /* Possible information about the working copy, NULL if not valid. */
+  struct svn_wc_info_t *wc_info;
+
+} svn_client_info2_t;
+
+/**
+ * Return a duplicate of @a info, allocated in @a pool. No part of the new
+ * structure will be shared with @a info.
+ *
+ * @since New in 1.7.
+ */
+svn_client_info2_t *
+svn_client_info2_dup(const svn_client_info2_t *info,
+                     apr_pool_t *pool);
+
+/**
+ * The callback invoked by info retrievers.  Each invocation
+ * describes @a abspath_or_url with the information present in @a info.
+ * Use @a scratch_pool for all temporary allocation.
+ *
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_client_info_receiver2_t)(
+                         void *baton,
+                         const char *abspath_or_url,
+                         const svn_client_info2_t *info,
+                         apr_pool_t *scratch_pool);
+
+/**
  * Invoke @a receiver with @a receiver_baton to return information
  * about @a abspath_or_url in @a revision.  The information returned is
  * system-generated metadata, not the sort of "property" metadata
- * created by users.  See #svn_info_t.
+ * created by users.  See #svn_client_info2_t.
  *
  * If both revision arguments are either #svn_opt_revision_unspecified
  * or @c NULL, then information will be pulled solely from the working copy;
@@ -5372,7 +5449,7 @@ svn_error_t *
 svn_client_info3(const char *abspath_or_url,
                  const svn_opt_revision_t *peg_revision,
                  const svn_opt_revision_t *revision,
-                 svn_info_receiver2_t receiver,
+                 svn_client_info_receiver2_t receiver,
                  void *receiver_baton,
                  svn_depth_t depth,
                  const apr_array_header_t *changelists,
@@ -5380,7 +5457,7 @@ svn_client_info3(const char *abspath_or_url,
                  apr_pool_t *scratch_pool);
 
 /** Similar to svn_client_info3, but uses an svn_info_receiver_t instead of
- * a svn_info_receiver2_t, and @a path_or_url may be a relative path.
+ * a #svn_client_info_receiver2_t, and @a path_or_url may be a relative path.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.

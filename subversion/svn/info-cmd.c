@@ -77,12 +77,12 @@ schedule_str(svn_wc_schedule_t schedule)
 }
 
 
-/* A callback of type svn_info_receiver_t.
+/* A callback of type svn_client_info_receiver2_t.
    Prints svn info in xml mode to standard out */
 static svn_error_t *
 print_info_xml(void *baton,
                const char *target,
-               const svn_info2_t *info,
+               const svn_client_info2_t *info,
                apr_pool_t *pool)
 {
   svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
@@ -253,11 +253,11 @@ print_info_xml(void *baton,
 }
 
 
-/* A callback of type svn_info_receiver_t. */
+/* A callback of type svn_client_info_receiver2_t. */
 static svn_error_t *
 print_info(void *baton,
            const char *target,
-           const svn_info2_t *info,
+           const svn_client_info2_t *info,
            apr_pool_t *pool)
 {
   const char *path_prefix = baton;
@@ -534,7 +534,7 @@ svn_cl__info(apr_getopt_t *os,
   svn_error_t *err;
   svn_boolean_t seen_nonexistent_target = FALSE;
   svn_opt_revision_t peg_revision;
-  svn_info_receiver2_t receiver;
+  svn_client_info_receiver2_t receiver;
   const char *path_prefix;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,

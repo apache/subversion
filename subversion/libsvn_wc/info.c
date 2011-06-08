@@ -71,14 +71,14 @@ svn_wc_info_dup(const svn_wc_info_t *info,
    metadata of LOCAL_ABSPATH.  Pointer fields are copied by reference, not
    dup'd. */
 static svn_error_t *
-build_info_for_entry(svn_info2_t **info,
+build_info_for_entry(svn_wc__info2_t **info,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_node_kind_t kind,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
-  svn_info2_t *tmpinfo;
+  svn_wc__info2_t *tmpinfo;
   const char *repos_relpath;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t db_kind;
@@ -285,15 +285,15 @@ build_info_for_entry(svn_info2_t **info,
 }
 
 
-/* Helper: build an svn_info2_t *INFO struct with minimal content, to be
+/* Set *INFO to a new struct with minimal content, to be
    used in reporting info for unversioned tree conflict victims. */
 /* ### Some fields we could fill out based on the parent dir's entry
        or by looking at an obstructing item. */
 static svn_error_t *
-build_info_for_unversioned(svn_info2_t **info,
+build_info_for_unversioned(svn_wc__info2_t **info,
                            apr_pool_t *pool)
 {
-  svn_info2_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
+  svn_wc__info2_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
   tmpinfo->wc_info = apr_pcalloc(pool, sizeof (*tmpinfo->wc_info));
 
   tmpinfo->URL                  = NULL;
@@ -314,7 +314,7 @@ build_info_for_unversioned(svn_info2_t **info,
 /* Callback and baton for crawl_entries() walk over entries files. */
 struct found_entry_baton
 {
-  svn_info_receiver2_t receiver;
+  svn_wc__info_receiver2_t receiver;
   void *receiver_baton;
   svn_wc__db_t *db;
   /* The set of tree conflicts that have been found but not (yet) visited by
@@ -332,7 +332,7 @@ info_found_node_callback(const char *local_abspath,
                          apr_pool_t *pool)
 {
   struct found_entry_baton *fe_baton = walk_baton;
-  svn_info2_t *info;
+  svn_wc__info2_t *info;
 
   SVN_ERR(build_info_for_entry(&info, fe_baton->db, local_abspath,
                                kind, pool, pool));
@@ -397,7 +397,7 @@ svn_error_t *
 svn_wc__get_info(svn_wc_context_t *wc_ctx,
                  const char *local_abspath,
                  svn_depth_t depth,
-                 svn_info_receiver2_t receiver,
+                 svn_wc__info_receiver2_t receiver,
                  void *receiver_baton,
                  const apr_array_header_t *changelist_filter,
                  svn_cancel_func_t cancel_func,
@@ -457,7 +457,7 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
         {
           apr_array_header_t *conflicts = apr_array_make(iterpool,
             1, sizeof(const svn_wc_conflict_description2_t *));
-          svn_info2_t *info;
+          svn_wc__info2_t *info;
 
           SVN_ERR(build_info_for_unversioned(&info, iterpool));
           SVN_ERR(svn_wc__internal_get_repos_info(&info->repos_root_URL,

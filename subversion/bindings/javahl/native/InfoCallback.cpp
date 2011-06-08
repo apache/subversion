@@ -48,7 +48,7 @@ InfoCallback::~InfoCallback()
 svn_error_t *
 InfoCallback::callback(void *baton,
                        const char *path,
-                       const svn_info2_t *info,
+                       const svn_client_info2_t *info,
                        apr_pool_t *pool)
 {
   if (baton)
@@ -65,7 +65,7 @@ InfoCallback::callback(void *baton,
  */
 svn_error_t *
 InfoCallback::singleInfo(const char *path,
-                         const svn_info2_t *info,
+                         const svn_client_info2_t *info,
                          apr_pool_t *pool)
 {
   JNIEnv *env = JNIUtil::getEnv();

@@ -2998,8 +2998,7 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
 
 
 /**
- * This struct contains information about the working copy, and is used
- * in conjunction with #svn_info2_t.
+ * This struct contains information about a working copy node.
  *
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, users shouldn't allocate structures of this
