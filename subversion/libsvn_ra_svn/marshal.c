@@ -288,8 +288,8 @@ static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
 
   if (session && session->callbacks &&
       session->callbacks->cancel_func)
-    SVN_ERR((session->callbacks->cancel_func)
-              (session->callbacks_baton));
+    SVN_ERR((session->callbacks->cancel_func)(
+              session->callbacks_baton));
 
   SVN_ERR(svn_ra_svn__stream_read(conn->stream, data, len));
   if (*len == 0)
