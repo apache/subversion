@@ -188,10 +188,8 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     {
       count = end - data;
 
-      if (session && session->callbacks &&
-          session->callbacks->cancel_func)
-        SVN_ERR((session->callbacks->cancel_func)
-                   (session->callbacks_baton));
+      if (session && session->callbacks && session->callbacks->cancel_func)
+        SVN_ERR((session->callbacks->cancel_func)(session->callbacks_baton));
 
       SVN_ERR(svn_ra_svn__stream_write(conn->stream, data, &count));
       if (count == 0)
@@ -286,10 +284,8 @@ static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
 {
   svn_ra_svn__session_baton_t *session = conn->session;
 
-  if (session && session->callbacks &&
-      session->callbacks->cancel_func)
-    SVN_ERR((session->callbacks->cancel_func)(
-              session->callbacks_baton));
+  if (session && session->callbacks && session->callbacks->cancel_func)
+    SVN_ERR((session->callbacks->cancel_func)(session->callbacks_baton));
 
   SVN_ERR(svn_ra_svn__stream_read(conn->stream, data, len));
   if (*len == 0)
