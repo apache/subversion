@@ -26,7 +26,8 @@ PRAGMA AUTO_VACUUM = 1;
 
 /* A table for storing revision properties. */
 CREATE TABLE revprop (
-  revision INTEGER UNIQUE NOT NULL,
+  /* ### Not marking the column as AUTOINCREMENT. */
+  revision INTEGER NOT NULL PRIMARY KEY,
   properties BLOB NOT NULL
   );
 
