@@ -49,7 +49,7 @@ class CreateJ
   Checksum(const svn_checksum_t *checksum);
 
   static jobject
-  Info(const char *path, const svn_info2_t *info);
+  Info(const char *path, const svn_client_info2_t *info);
 
   static jobject
   Lock(const svn_lock_t *lock);

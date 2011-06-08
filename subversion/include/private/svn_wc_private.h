@@ -995,14 +995,78 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
                                svn_boolean_t no_wcroot_check,
                                apr_pool_t *scratch_pool);
 
-/* Walk the children of LOCAL_ABSPATH and push svn_info2_t's through
+
+/**
+ * A structure which describes various system-generated metadata about
+ * a working-copy path or URL.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
+ *
+ * @since New in 1.7.
+ */
+typedef struct svn_wc__info2_t
+{
+  /** Where the item lives in the repository. */
+  const char *URL;
+
+  /** The root URL of the repository. */
+  const char *repos_root_URL;
+
+  /** The repository's UUID. */
+  const char *repos_UUID;
+
+  /** The revision of the object.  If the target is a working-copy
+   * path, then this is its current working revision number.  If the target
+   * is a URL, then this is the repository revision that it lives in. */
+  svn_revnum_t rev;
+
+  /** The node's kind. */
+  svn_node_kind_t kind;
+
+  /** The size of the file in the repository (untranslated,
+   * e.g. without adjustment of line endings and keyword
+   * expansion). Only applicable for file -- not directory -- URLs.
+   * For working copy paths, @a size will be #SVN_INVALID_FILESIZE. */
+  svn_filesize_t size;
+
+  /** The last revision in which this object changed. */
+  svn_revnum_t last_changed_rev;
+
+  /** The date of the last_changed_rev. */
+  apr_time_t last_changed_date;
+
+  /** The author of the last_changed_rev. */
+  const char *last_changed_author;
+
+  /** An exclusive lock, if present.  Could be either local or remote. */
+  svn_lock_t *lock;
+
+  /* Possible information about the working copy, NULL if not valid. */
+  struct svn_wc_info_t *wc_info;
+
+} svn_wc__info2_t;
+
+/** The callback invoked by info retrievers.  Each invocation
+ * describes @a local_abspath with the information present in @a info.
+ * Use @a scratch_pool for all temporary allocation.
+ *
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_wc__info_receiver2_t)(void *baton,
+                                                 const char *local_abspath,
+                                                 const svn_wc__info2_t *info,
+                                                 apr_pool_t *scratch_pool);
+
+/* Walk the children of LOCAL_ABSPATH and push svn_wc__info2_t's through
    RECEIVER/RECEIVER_BATON.  Honor DEPTH while crawling children, and
    filter the pushed items against CHANGELISTS.  */
 svn_error_t *
 svn_wc__get_info(svn_wc_context_t *wc_ctx,
                  const char *local_abspath,
                  svn_depth_t depth,
-                 svn_info_receiver2_t receiver,
+                 svn_wc__info_receiver2_t receiver,
                  void *receiver_baton,
                  const apr_array_header_t *changelists,
                  svn_cancel_func_t cancel_func,

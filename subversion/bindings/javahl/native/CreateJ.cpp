@@ -225,7 +225,7 @@ CreateJ::Checksum(const svn_checksum_t *checksum)
 }
 
 jobject
-CreateJ::Info(const char *path, const svn_info2_t *info)
+CreateJ::Info(const char *path, const svn_client_info2_t *info)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
