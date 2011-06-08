@@ -1495,10 +1495,8 @@ insert_actual_node(svn_sqlite__db_t *sdb,
   if (actual_node->changelist)
     SVN_ERR(svn_sqlite__bind_text(stmt, 9, actual_node->changelist));
 
-  /* ### column 10 is text_mod */
-
   if (actual_node->tree_conflict_data)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 11, actual_node->tree_conflict_data));
+    SVN_ERR(svn_sqlite__bind_text(stmt, 10, actual_node->tree_conflict_data));
 
   /* Execute and reset the insert clause. */
   return svn_error_return(svn_sqlite__insert(NULL, stmt));
