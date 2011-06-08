@@ -264,6 +264,13 @@ svn_client__get_auto_props(apr_hash_t **properties,
         {
           const char *magic_mimetype;
 
+         /* Since libmagic usually treats UTF-16 files as "text/plain",
+          * svn_magic__detect_binary_mimetype() will return NULL for such
+          * files. This is fine for now since we currently don't support
+          * UTF-16-encoded text files (issue #2194).
+          * Once we do support UTF-16 this code path will fail to detect
+          * them as text unless the svn_io_detect_mimetype2() call above
+          * returns "text/plain" for them. */
           SVN_ERR(svn_magic__detect_binary_mimetype(&magic_mimetype,
                                                     path, magic_cookie,
                                                     pool, pool));
