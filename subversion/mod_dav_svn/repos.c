@@ -3200,7 +3200,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
         "                  rev     CDATA #IMPLIED\n"
         "                  base    CDATA #IMPLIED>\n"
         "  <!ELEMENT updir EMPTY>\n"
-        "  <!ATTLIST updir href    CDATA #REQUIRED\n"
+        "  <!ATTLIST updir href    CDATA #REQUIRED>\n"
         "  <!ELEMENT file  EMPTY>\n"
         "  <!ATTLIST file  name    CDATA #REQUIRED\n"
         "                  href    CDATA #REQUIRED>\n"
