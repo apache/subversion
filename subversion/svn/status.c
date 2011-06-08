@@ -366,14 +366,7 @@ svn_cl__print_status_xml(const char *path,
 
       svn_cl__xml_tagged_cdata(&sb, pool, "token", status->lock->token);
 
-      /* If lock_owner is NULL, assume WC is corrupt. */
-      if (status->lock->owner)
-        svn_cl__xml_tagged_cdata(&sb, pool, "owner",
-                                 status->lock->owner);
-      else
-        return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                                 _("'%s' has lock token, but no lock owner"),
-                                 svn_dirent_local_style(path, pool));
+      svn_cl__xml_tagged_cdata(&sb, pool, "owner", status->lock->owner);
 
       svn_cl__xml_tagged_cdata(&sb, pool, "comment",
                                status->lock->comment);
