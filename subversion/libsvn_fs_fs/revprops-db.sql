@@ -22,11 +22,13 @@
  */
 
 -- STMT_CREATE_SCHEMA
-pragma auto_vacuum = 1;
+PRAGMA AUTO_VACUUM = 1;
 
 /* A table for storing revision properties. */
-create table revprop (revision integer UNIQUE not null,
-                      properties BLOB not null);
+CREATE TABLE revprop (
+  revision INTEGER UNIQUE NOT NULL,
+  properties BLOB NOT NULL
+  );
 
 /* Unreleased 1.7-dev libraries also contained an index:
    CREATE INDEX i_revision ON revprop (revision);
@@ -36,12 +38,12 @@ create table revprop (revision integer UNIQUE not null,
  */
 
 
-pragma user_version = 1;
+PRAGMA USER_VERSION = 1;
 
 
 -- STMT_SET_REVPROP
-insert or replace into revprop(revision, properties)
-values (?1, ?2);
+INSERT OR REPLACE INTO revprop(revision, properties)
+VALUES (?1, ?2);
 
 -- STMT_GET_REVPROP
-select properties from revprop where revision = ?1;
+SELECT properties FROM revprop WHERE revision = ?1;
