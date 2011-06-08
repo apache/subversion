@@ -361,22 +361,7 @@ svn_cl__print_status_xml(const char *path,
     }
 
   if (status->lock)
-    {
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "lock", NULL);
-
-      svn_cl__xml_tagged_cdata(&sb, pool, "token", status->lock->token);
-
-      svn_cl__xml_tagged_cdata(&sb, pool, "owner", status->lock->owner);
-
-      svn_cl__xml_tagged_cdata(&sb, pool, "comment",
-                               status->lock->comment);
-
-      svn_cl__xml_tagged_cdata(&sb, pool, "created",
-                               svn_time_to_cstring
-                               (status->lock->creation_date, pool));
-
-      svn_xml_make_close_tag(&sb, pool, "lock");
-    }
+    svn_cl__print_xml_lock(&sb, status->lock, pool);
 
   svn_xml_make_close_tag(&sb, pool, "wc-status");
 
@@ -390,33 +375,8 @@ svn_cl__print_status_xml(const char *path,
                             generate_status_desc(status->repos_prop_status),
                             NULL);
       if (status->repos_lock)
-        {
-          svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "lock", NULL);
+        svn_cl__print_xml_lock(&sb, status->repos_lock, pool);
 
-          svn_cl__xml_tagged_cdata(&sb, pool, "token",
-                                   status->repos_lock->token);
-
-          svn_cl__xml_tagged_cdata(&sb, pool, "owner",
-                                   status->repos_lock->owner);
-
-          svn_cl__xml_tagged_cdata(&sb, pool, "comment",
-                                   status->repos_lock->comment);
-
-          svn_cl__xml_tagged_cdata(&sb, pool, "created",
-                                   svn_time_to_cstring
-                                   (status->repos_lock->creation_date,
-                                    pool));
-
-          if (status->repos_lock->expiration_date != 0)
-            {
-              svn_cl__xml_tagged_cdata(&sb, pool, "expires",
-                                       svn_time_to_cstring
-                                       (status->repos_lock->expiration_date,
-                                        pool));
-            }
-
-          svn_xml_make_close_tag(&sb, pool, "lock");
-        }
       svn_xml_make_close_tag(&sb, pool, "repos-status");
     }
 

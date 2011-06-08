@@ -244,32 +244,7 @@ print_info_xml(void *baton,
     }
 
   if (info->lock)
-    {
-      /* "<lock>" */
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "lock", NULL);
-
-      /* "<token> xx </token>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "token", info->lock->token);
-
-      /* "<owner> xx </owner>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "owner", info->lock->owner);
-
-      /* "<comment ...> xxxx </comment>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "comment", info->lock->comment);
-
-      /* "<created> xx </created>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "created",
-                               svn_time_to_cstring
-                               (info->lock->creation_date, pool));
-
-      /* "<expires> xx </expires>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "expires",
-                               svn_time_to_cstring
-                               (info->lock->expiration_date, pool));
-
-      /* "</lock>" */
-      svn_xml_make_close_tag(&sb, pool, "lock");
-    }
+    svn_cl__print_xml_lock(&sb, info->lock, pool);
 
   /* "</entry>" */
   svn_xml_make_close_tag(&sb, pool, "entry");
