@@ -450,6 +450,13 @@ svn_cl__print_xml_commit(svn_stringbuf_t **outstr,
                          const char *date,
                          apr_pool_t *pool);
 
+/* Output an XML "<lock>" element describing LOCK to *OUTSTR.  If *OUTSTR is
+   NULL, allocate it first from POOL, otherwise append to it. */
+void
+svn_cl__print_xml_lock(svn_stringbuf_t **outstr,
+                       const svn_lock_t *lock,
+                       apr_pool_t *pool);
+
 /* Do the following things that are commonly required before accessing revision
    properties.  Ensure that REVISION is specified explicitly and is not
    relative to a working-copy item.  Ensure that exactly one target is

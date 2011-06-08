@@ -1012,6 +1012,37 @@ svn_cl__print_xml_commit(svn_stringbuf_t **sb,
 }
 
 
+void
+svn_cl__print_xml_lock(svn_stringbuf_t **sb,
+                       const svn_lock_t *lock,
+                       apr_pool_t *pool)
+{
+  /* "<lock>" */
+  svn_xml_make_open_tag(sb, pool, svn_xml_normal, "lock", NULL);
+
+  /* "<token>xx</token>" */
+  svn_cl__xml_tagged_cdata(sb, pool, "token", lock->token);
+
+  /* "<owner>xx</owner>" */
+  svn_cl__xml_tagged_cdata(sb, pool, "owner", lock->owner);
+
+  /* "<comment>xx</comment>" */
+  svn_cl__xml_tagged_cdata(sb, pool, "comment", lock->comment);
+
+  /* "<created>xx</created>" */
+  svn_cl__xml_tagged_cdata(sb, pool, "created",
+                           svn_time_to_cstring(lock->creation_date, pool));
+
+  /* "<expires>xx</expires>" */
+  if (lock->expiration_date != 0)
+    svn_cl__xml_tagged_cdata(sb, pool, "expires",
+                             svn_time_to_cstring(lock->expiration_date, pool));
+
+  /* "</lock>" */
+  svn_xml_make_close_tag(sb, pool, "lock");
+}
+
+
 svn_error_t *
 svn_cl__xml_print_header(const char *tagname,
                          apr_pool_t *pool)
