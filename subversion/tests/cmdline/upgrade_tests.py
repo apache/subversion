@@ -965,6 +965,7 @@ def depth_exclude(sbox):
       'A'                 : Item(status='  ', wc_rev='1'),
       'X'                 : Item(status='A ', copied='+', wc_rev='-'),
     })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
 @Issue(3901)
 def depth_exclude_2(sbox):
@@ -978,6 +979,25 @@ def depth_exclude_2(sbox):
     {
       ''                  : Item(status='  ', wc_rev='1'),
       'A'                 : Item(status='D ', wc_rev='1'),
+    })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+@Issue(3916)
+@XFail()
+def add_add_del_del_tc(sbox):
+  "wc with add-add and del-del tree conflicts"
+  
+  replace_sbox_with_tarfile(sbox, 'add_add_del_del_tc.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''     : Item(status='  ', wc_rev='4'),
+      'A'    : Item(status='  ', wc_rev='4'),
+      'A/B'  : Item(status='A ', treeconflict='C', copied='+', wc_rev='-'),
+      'X'    : Item(status='  ', wc_rev='3'),
+      'X/Y'  : Item(status='! ', treeconflict='C', wc_rev='-'),
     })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
@@ -1025,6 +1045,7 @@ test_list = [ None,
               upgrade_from_format_28,
               depth_exclude,
               depth_exclude_2,
+              add_add_del_del_tc,
              ]
 
 
