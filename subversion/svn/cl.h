@@ -432,16 +432,16 @@ svn_cl__print_prop_hash(svn_stream_t *out,
                         svn_boolean_t names_only,
                         apr_pool_t *pool);
 
-/* Same as svn_cl__print_prop_hash(), only output xml to OUTSTR.  If OUTSTR is
-   NULL, allocate it first from pool, otherwise append the xml to it. */
+/* Same as svn_cl__print_prop_hash(), only output xml to *OUTSTR.  If *OUTSTR is
+   NULL, allocate it first from POOL, otherwise append to it. */
 svn_error_t *
 svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
                             apr_hash_t *prop_hash,
                             svn_boolean_t names_only,
                             apr_pool_t *pool);
 
-/* Output a commit xml element to OUTSTR.  IF OUTSTR is NULL, allocate it
-   first from pool, otherwise appen the xml to it.  If AUTHOR or DATE is
+/* Output a commit xml element to *OUTSTR.  If *OUTSTR is NULL, allocate it
+   first from POOL, otherwise append to it.  If AUTHOR or DATE is
    NULL, it will be omitted. */
 void
 svn_cl__print_xml_commit(svn_stringbuf_t **outstr,
@@ -666,12 +666,12 @@ svn_cl__xml_tagged_cdata(svn_stringbuf_t **sb,
                          const char *string);
 
 /* Print the XML prolog and document root element start-tag to stdout, using
-   TAGNAME as the root element name.  Use pool for temporary allocations. */
+   TAGNAME as the root element name.  Use POOL for temporary allocations. */
 svn_error_t *
 svn_cl__xml_print_header(const char *tagname, apr_pool_t *pool);
 
 /* Print the XML document root element end-tag to stdout, using TAGNAME as the
-   root element name.  Use pool for temporary allocations. */
+   root element name.  Use POOL for temporary allocations. */
 svn_error_t *
 svn_cl__xml_print_footer(const char *tagname, apr_pool_t *pool);
 
