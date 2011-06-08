@@ -22,24 +22,26 @@
  */
 
 -- STMT_CREATE_SCHEMA
-pragma auto_vacuum = 1;
+PRAGMA AUTO_VACUUM = 1;
 
 /* A table mapping representation hashes to locations in a rev file. */
-create table rep_cache (hash text not null primary key,
-                        revision integer not null,
-                        offset integer not null,
-                        size integer not null,
-                        expanded_size integer not null);
+CREATE TABLE rep_cache (
+  hash TEXT NOT NULL PRIMARY KEY,
+  revision INTEGER NOT NULL,
+  offset INTEGER NOT NULL,
+  size INTEGER NOT NULL,
+  expanded_size INTEGER NOT NULL
+  );
 
-pragma user_version = 1;
+PRAGMA USER_VERSION = 1;
 
 
 -- STMT_GET_REP
-select revision, offset, size, expanded_size
-from rep_cache
-where hash = ?1;
+SELECT revision, offset, size, expanded_size
+FROM rep_cache
+WHERE hash = ?1;
 
 
 -- STMT_SET_REP
-insert into rep_cache (hash, revision, offset, size, expanded_size)
-values (?1, ?2, ?3, ?4, ?5);
+INSERT INTO rep_cache (hash, revision, offset, size, expanded_size)
+VALUES (?1, ?2, ?3, ?4, ?5);
