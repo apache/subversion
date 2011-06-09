@@ -21,9 +21,9 @@
 #
 set -e
 
-AUTOCONF=autoconf-2.64
-LIBTOOL=libtool-1.5.26
-SWIG=swig-1.3.36
+AUTOCONF=autoconf-2.68
+LIBTOOL=libtool-2.4
+SWIG=swig-2.0.4
 
 LOCATION=${LOCATION-US}
 
