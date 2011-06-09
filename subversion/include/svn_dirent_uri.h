@@ -62,7 +62,7 @@
  *    - @c svn_dirent_internal_style()
  *    - @c svn_relpath_canonicalize()
  *    - @c svn_relpath_is_canonical()
- *    - @c svn_relpath_internal_style()
+ *    - @c svn_relpath__internal_style()
  *    - @c svn_uri_canonicalize()
  *    - @c svn_uri_is_canonical()
  *
@@ -159,16 +159,8 @@ svn_dirent_local_style(const char *dirent,
  * @since New in 1.7.
  */
 const char *
-svn_relpath_internal_style(const char *relpath,
-                           apr_pool_t *pool);
-
-/** Convert @a relpath from the canonical internal style to the local style.
- *
- * @since New in 1.7.
- */
-const char *
-svn_relpath_local_style(const char *relpath,
-                        apr_pool_t *pool);
+svn_relpath__internal_style(const char *relpath,
+                            apr_pool_t *pool);
 
 
 /** Join a base dirent (@a base) with a component (@a component), allocated in

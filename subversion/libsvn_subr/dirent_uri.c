@@ -920,17 +920,10 @@ svn_dirent_local_style(const char *dirent, apr_pool_t *pool)
 }
 
 const char *
-svn_relpath_internal_style(const char *dirent,
+svn_relpath__internal_style(const char *dirent,
                            apr_pool_t *pool)
 {
   return internal_style(type_relpath, dirent, pool);
-}
-
-const char *
-svn_relpath_local_style(const char *dirent,
-                        apr_pool_t *pool)
-{
-  return local_style(type_relpath, dirent, pool);
 }
 
 

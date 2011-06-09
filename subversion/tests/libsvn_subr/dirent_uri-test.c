@@ -2352,39 +2352,6 @@ test_dirent_local_style(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_relpath_local_style(apr_pool_t *pool)
-{
-  struct {
-    const char *path;
-    const char *result;
-  } tests[] = {
-    { "",                     "." },
-    { "c:hi",                 "c:hi" },
-#ifdef SVN_USE_DOS_PATHS
-    { "dir/file",             "dir\\file" },
-    { "a:/file",              "a:\\file" },
-#else
-    { "dir/file",             "dir/file" },
-    { "a:/file",              "a:/file" },
-#endif
-  };
-  int i;
-
-  for (i = 0; i < COUNT_OF(tests); i++)
-    {
-      const char *local = svn_relpath_local_style(tests[i].path, pool);
-
-      if (strcmp(local, tests[i].result))
-        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "svn_relpath_local_style(\"%s\") returned "
-                                 "\"%s\" expected \"%s\"",
-                                 tests[i].path, local, tests[i].result);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 test_dirent_internal_style(apr_pool_t *pool)
 {
   struct {
@@ -2458,11 +2425,11 @@ test_relpath_internal_style(apr_pool_t *pool)
 
   for (i = 0; i < COUNT_OF(tests); i++)
     {
-      const char *internal = svn_relpath_internal_style(tests[i].path, pool);
+      const char *internal = svn_relpath__internal_style(tests[i].path, pool);
 
       if (strcmp(internal, tests[i].result))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "svn_relpath_internal_style(\"%s\") returned "
+                                 "svn_relpath__internal_style(\"%s\") returned "
                                  "\"%s\" expected \"%s\"",
                                  tests[i].path, internal, tests[i].result);
     }
@@ -2926,8 +2893,6 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_uri_condense_targets"),
     SVN_TEST_PASS2(test_dirent_local_style,
                    "test svn_dirent_local_style"),
-    SVN_TEST_PASS2(test_relpath_local_style,
-                   "test svn_relpath_local_style"),
     SVN_TEST_PASS2(test_dirent_internal_style,
                    "test svn_dirent_internal_style"),
     SVN_TEST_PASS2(test_relpath_internal_style,

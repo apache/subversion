@@ -510,7 +510,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
         return svn_error_createf
           (SVN_ERR_FS_OUT_OF_DATE, err,
            _("File or directory '%s' is out of date; try updating"),
-           svn_relpath_local_style(local_relpath, pool));
+           local_relpath);
       return err;
     }
 

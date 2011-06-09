@@ -1442,7 +1442,7 @@ main(int argc, const char *argv[])
           /* Ensure that each prefix is UTF8-encoded, in internal
              style, and absolute. */
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&prefix, os->argv[i], pool));
-          prefix = svn_relpath_internal_style(prefix, pool);
+          prefix = svn_relpath__internal_style(prefix, pool);
           if (prefix[0] != '/')
             prefix = apr_pstrcat(pool, "/", prefix, (char *)NULL);
           APR_ARRAY_PUSH(opt_state.prefixes, const char *) = prefix;
