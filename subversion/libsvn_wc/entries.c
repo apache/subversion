@@ -70,6 +70,7 @@ typedef struct db_node_t {
   svn_depth_t depth;
   apr_time_t last_mod_time;
   apr_hash_t *properties;
+  svn_boolean_t file_external;
 } db_node_t;
 
 typedef struct db_actual_node_t {
@@ -102,7 +103,6 @@ alloc_entry(apr_pool_t *pool)
   entry->kind = svn_node_none;
   entry->working_size = SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN;
   entry->depth = svn_depth_infinity;
-  entry->file_external_path = NULL;
   entry->file_external_peg_rev.kind = svn_opt_revision_unspecified;
   entry->file_external_rev.kind = svn_opt_revision_unspecified;
   return entry;
@@ -143,22 +143,46 @@ static svn_error_t *
 check_file_external(svn_wc_entry_t *entry,
                     svn_wc__db_t *db,
                     const char *local_abspath,
+                    const char *wri_abspath,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
-  const char *serialized;
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+  const char *repos_relpath;
+  svn_revnum_t peg_revision;
+  svn_revnum_t revision;
+  svn_error_t *err;
 
-  SVN_ERR(svn_wc__db_temp_get_file_external(&serialized,
-                                            db, local_abspath,
-                                            scratch_pool, scratch_pool));
-  if (serialized != NULL)
+  err = svn_wc__db_external_read(&status, &kind, NULL, NULL, NULL,
+                                 &repos_relpath, &peg_revision, &revision,
+                                 db, local_abspath, wri_abspath,
+                                 result_pool, scratch_pool);
+
+  if (err)
     {
-      SVN_ERR(svn_wc__unserialize_file_external(
-                    &entry->file_external_path,
-                    &entry->file_external_peg_rev,
-                    &entry->file_external_rev,
-                    serialized,
-                    result_pool));
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
+
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+
+  if (status == svn_wc__db_status_normal
+      && kind == svn_wc__db_kind_file)
+    {
+      entry->file_external_path = repos_relpath;
+      if (SVN_IS_VALID_REVNUM(peg_revision))
+        {
+          entry->file_external_peg_rev.kind = svn_opt_revision_number;
+          entry->file_external_peg_rev.value.number = peg_revision;
+          entry->file_external_rev = entry->file_external_peg_rev;
+        }
+      if (SVN_IS_VALID_REVNUM(revision))
+        {
+          entry->file_external_rev.kind = svn_opt_revision_number;
+          entry->file_external_rev.value.number = revision;
+        }
     }
 
   return SVN_NO_ERROR;
@@ -896,13 +920,11 @@ read_one_entry(const svn_wc_entry_t **new_entry,
       entry->lock_creation_date = lock->date;
     }
 
-  /* Let's check for a file external.
-     ### right now this is ugly, since we have no good way querying
-     ### for a file external OR retrieving properties.  ugh.  */
+  /* Let's check for a file external.  ugh.  */
   if (status == svn_wc__db_status_normal
       && kind == svn_wc__db_kind_file)
-    SVN_ERR(check_file_external(entry, db, entry_abspath, result_pool,
-                                scratch_pool));
+    SVN_ERR(check_file_external(entry, db, entry_abspath, dir_abspath,
+                                result_pool, scratch_pool));
 
   entry->working_size = translated_size;
 
@@ -1458,6 +1480,9 @@ insert_node(svn_sqlite__db_t *sdb,
   if (node->translated_size != SVN_INVALID_FILESIZE)
     SVN_ERR(svn_sqlite__bind_int64(stmt, 16, node->translated_size));
 
+  if (node->file_external)
+    SVN_ERR(svn_sqlite__bind_int(stmt, 20, 1));
+
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
   return SVN_NO_ERROR;
@@ -1956,26 +1981,10 @@ write_entry(struct write_baton **entry_node,
                                       scratch_pool));
         }
 
-      /* Now, update the file external information.
-         ### This is a hack!  */
+      /* Now, update the file external information. */
       if (entry->file_external_path)
         {
-          svn_sqlite__stmt_t *stmt;
-          const char *str;
-
-          SVN_ERR(svn_wc__serialize_file_external(&str,
-                                                  entry->file_external_path,
-                                                  &entry->file_external_peg_rev,
-                                                  &entry->file_external_rev,
-                                                  scratch_pool));
-
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                            STMT_UPDATE_FILE_EXTERNAL));
-          SVN_ERR(svn_sqlite__bindf(stmt, "iss",
-                                    (apr_int64_t)1 /* wc_id */,
-                                    entry->name,
-                                    str));
-          SVN_ERR(svn_sqlite__step_done(stmt));
+          base_node->file_external = TRUE;
         }
     }
 
@@ -2145,6 +2154,16 @@ write_entry(struct write_baton **entry_node,
       (*entry_node)->work = working_node;
       (*entry_node)->below_work = below_working_node;
       (*entry_node)->tree_conflicts = tree_conflicts;
+    }
+
+  if (entry->file_external_path)
+    {
+      /* TODO: Maybe add a file external registration inside EXTERNALS here,
+               to allow removing file externals that aren't referenced from
+               svn:externals.
+
+         The svn:externals values are processed anyway after everything is
+         upgraded */
     }
 
   return SVN_NO_ERROR;

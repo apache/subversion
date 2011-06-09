@@ -957,14 +957,6 @@ INSERT OR REPLACE INTO actual_node (
   tree_conflict_data)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NULL, ?10)
 
--- STMT_SELECT_FILE_EXTERNAL
-SELECT file_external FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
-
--- STMT_UPDATE_FILE_EXTERNAL
-UPDATE nodes SET file_external = ?3
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
-
 /* ------------------------------------------------------------------------- */
 
 /* these are used in upgrade.c  */
