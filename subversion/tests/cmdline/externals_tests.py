@@ -1024,7 +1024,7 @@ def cannot_move_or_remove_file_externals(sbox):
 
 #----------------------------------------------------------------------
 
-def can_place_file_external_into_dir_external(sbox):
+def cant_place_file_external_into_dir_external(sbox):
   "place a file external into a directory external"
 
   external_url_for = externals_test_setup(sbox)
@@ -1045,35 +1045,9 @@ def can_place_file_external_into_dir_external(sbox):
 
   # Bring the working copy up to date and check that the file the file
   # external is switched to still exists.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, None, 'svn: E205011: ' +
+                                     'Failure occurred.*definitions',
                                      'up', wc_dir)
-
-  beta1_path = os.path.join(wc_dir, 'A', 'B', 'E', 'beta')
-  beta1_contents = open(beta1_path).read()
-
-  beta2_path = os.path.join(wc_dir, 'A', 'D-copy', 'G', 'beta')
-  beta2_contents = open(beta2_path).read()
-
-  if beta1_contents != beta2_contents:
-      raise svntest.Failure("Contents of '%s' and '%s' do not match" %
-                            (beta1_path, beta2_path))
-
-  # Now have a directory external from one repository and a file
-  # external from another repository.  This should fail.
-  ext = other_repo_url + "/A/B C/exdir_B\n" + \
-        "^/A/B/E/beta C/exdir_B/beta\n"
-  change_external(os.path.join(wc_dir, 'A'), ext)
-
-  expected_error = "|".join([".*Error handling externals definition.*",
-                             ".*Cannot insert a file external from " \
-                             + ".*/beta' into a working copy " \
-                             + ".*" + other_repo_url,
-                             ])
-  svntest.actions.run_and_verify_svn2("Able to put file external in foreign wc",
-                                      None,
-                                      expected_error,
-                                      1,
-                                      'up', wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -1768,7 +1742,7 @@ test_list = [ None,
               disallow_propset_invalid_formatted_externals,
               old_style_externals_ignore_peg_reg,
               cannot_move_or_remove_file_externals,
-              can_place_file_external_into_dir_external,
+              cant_place_file_external_into_dir_external,
               external_into_path_with_spaces,
               binary_file_externals,
               update_lose_file_external,
