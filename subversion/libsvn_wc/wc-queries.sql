@@ -352,6 +352,10 @@ UPDATE actual_node SET changelist = ?2
 WHERE wc_id = ?1 AND local_relpath IN
 (SELECT local_relpath FROM targets_list WHERE kind = 'file' AND wc_id = ?1)
 
+-- STMT_UPDATE_ACTUAL_CLEAR_CHANGELIST
+UPDATE actual_node SET changelist = NULL
+ WHERE wc_id = ?1 AND local_relpath = ?2
+
 -- STMT_MARK_SKIPPED_CHANGELIST_DIRS
 /* 7 corresponds to svn_wc_notify_skip */
 INSERT INTO changelist_list (wc_id, local_relpath, notify, changelist)
