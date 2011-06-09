@@ -11182,52 +11182,6 @@ svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__db_temp_get_file_external(const char **serialized_file_external,
-                                  svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
-                                 STMT_SELECT_FILE_EXTERNAL, scratch_pool));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  /* ### file externals are pretty bogus right now. they have just a
-     ### WORKING_NODE for a while, eventually settling into just a BASE_NODE.
-     ### until we get all that fixed, let's just not worry about raising
-     ### an error, and just say it isn't a file external.  */
-#if 1
-  if (!have_row)
-    *serialized_file_external = NULL;
-  else
-    /* see below: *serialized_file_external = ...  */
-#else
-  if (!have_row)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
-                             svn_sqlite__reset(stmt),
-                             _("'%s' has no BASE_NODE"),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-#endif
-
-  *serialized_file_external = svn_sqlite__column_text(stmt, 0, result_pool);
-
-  return svn_error_return(svn_sqlite__reset(stmt));
-}
-
-
-struct set_file_external_baton_t
-{
-  const char *repos_relpath;
-  const svn_opt_revision_t *peg_rev;
-  const svn_opt_revision_t *rev;
-};
-
 svn_error_t *
 svn_wc__db_temp_op_set_text_conflict_marker_files(svn_wc__db_t *db,
                                                   const char *local_abspath,
