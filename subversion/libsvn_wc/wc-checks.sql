@@ -49,7 +49,8 @@ BEGIN
   SELECT RAISE(FAIL, 'WC DB validity check 02 failed');
 END;
 
-/* Verify: on every NODES row: it is an op-root or its op-root row exists. */
+/* Verify: on every NODES row: it is an op-root or it has a parent with the
+    sames op-depth. (Except when the node is a file external) */
 CREATE TEMPORARY TRIGGER validation_03 BEFORE INSERT ON nodes
 WHEN NOT (
     (new.op_depth = relpath_depth(new.local_relpath))
@@ -58,6 +59,7 @@ WHEN NOT (
               WHERE wc_id = new.wc_id AND op_depth = new.op_depth
                 AND local_relpath = new.parent_relpath))
   )
+ AND NOT (new.file_external IS NOT NULL AND new.op_depth = 0)
 BEGIN
   SELECT RAISE(FAIL, 'WC DB validity check 03 failed');
 END;

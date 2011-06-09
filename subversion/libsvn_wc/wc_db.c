@@ -168,6 +168,8 @@ typedef struct insert_base_baton_t {
   /* for inserting symlinks */
   const char *target;
 
+  svn_boolean_t file_external;
+
   /* may need to insert/update ACTUAL to record a conflict  */
   const svn_skel_t *conflict;
 
@@ -843,6 +845,9 @@ insert_base_node(void *baton,
   if (pibb->dav_cache)
     SVN_ERR(svn_sqlite__bind_properties(stmt, 18, pibb->dav_cache,
                                         scratch_pool));
+
+  if (pibb->file_external)
+    SVN_ERR(svn_sqlite__bind_int(stmt, 20, 1));
 
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
@@ -2627,18 +2632,13 @@ insert_external_node(void *baton,
       ibb.keep_recorded_info  = ieb->keep_recorded_info;
   
       ibb.work_items      = ieb->work_items;
-  
+
+      ibb.file_external = TRUE;
+
       SVN_ERR(insert_base_node(&ibb, wcroot, local_relpath, scratch_pool));
     }
   else
     SVN_ERR(add_work_items(wcroot->sdb, ieb->work_items, scratch_pool));
-
-  /* And the file external info skel */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_UPDATE_FILE_EXTERNAL));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id, local_relpath,
-                            (apr_int64_t)1));
-  SVN_ERR(svn_sqlite__step_done(stmt));
 
   /* The externals table only support presence normal and excluded */
   SVN_ERR_ASSERT(ieb->presence == svn_wc__db_status_normal
