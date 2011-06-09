@@ -26,7 +26,7 @@
 #include "fs.h"
 
 /**
- * Prepend the @a number to the @c string in a space efficient way that
+ * Prepend the @a number to the @a string in a space efficient way that
  * no other (number,string) combination can produce the same result.
  * Allocate temporaries as well as the result from @a pool.
  */
@@ -94,7 +94,7 @@ svn_fs_fs__deserialize_txdelta_window(void **item,
 
 /**
  * Implements #svn_cache__serialize_func_t for manifests
- * (@a apr_array_header_t).
+ * (#apr_array_header_t).
  */
 svn_error_t *
 svn_fs_fs__serialize_manifest(char **data,
@@ -104,7 +104,7 @@ svn_fs_fs__serialize_manifest(char **data,
 
 /**
  * Implements #svn_cache__deserialize_func_t for manifests
- * (@a apr_array_header_t).
+ * (#apr_array_header_t).
  */
 svn_error_t *
 svn_fs_fs__deserialize_manifest(void **out,

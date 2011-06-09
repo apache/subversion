@@ -126,7 +126,7 @@ svn_temp_serializer__push(svn_temp_serializer__context_t *context,
 
 /**
  * End the serialization of the current sub-structure. The serialization
- * @c context will be focussed back on the parent structure. You may then
+ * @a context will be focussed back on the parent structure. You may then
  * add further sub-structures starting from that level.
  *
  * It is not necessary to call this function just for symmetry at the end

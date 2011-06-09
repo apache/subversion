@@ -782,7 +782,7 @@ svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
                              apr_pool_t *pool);
 
 /** Set @a *provider to an authentication provider of type @c
- * svn_auth_provider_object_t, or return @a NULL if the provider is not
+ * svn_auth_provider_object_t, or return @c NULL if the provider is not
  * available for the requested platform or the requested provider is unknown.
  *
  * Valid @a provider_name values are: "gnome_keyring", "keychain", "kwallet"

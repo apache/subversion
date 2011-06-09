@@ -98,7 +98,7 @@ typedef struct svn_io_dirent2_t {
 } svn_io_dirent2_t;
 
 
-/** Creates a new @a svn_io_dirent2_t structure
+/** Creates a new #svn_io_dirent2_t structure
  *
  * @since New in 1.7.
  */

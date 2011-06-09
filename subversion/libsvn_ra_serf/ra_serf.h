@@ -826,7 +826,7 @@ svn_ra_serf__define_ns(svn_ra_serf__ns_t **ns_list,
  * Look up @a name in the @a ns_list list for previously declared namespace
  * definitions.
  *
- * Return (in @a *returned_prop_name) @a svn_ra_serf__dav_props_t tuple
+ * Return (in @a *returned_prop_name) a #svn_ra_serf__dav_props_t tuple
  * representing the expanded name.
  */
 void

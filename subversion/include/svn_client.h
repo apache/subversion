@@ -903,7 +903,7 @@ typedef struct svn_client_ctx_t
   void *cancel_baton;
 
   /** notification function, defaulting to a function that forwards
-   * to notify_func().  If @a NULL, it will not be invoked.
+   * to notify_func().  If @c NULL, it will not be invoked.
    * @since New in 1.2. */
   svn_wc_notify_func2_t notify_func2;
 
@@ -1331,7 +1331,7 @@ svn_client_update(svn_revnum_t *result_rev,
  *
  * This is normally used to switch a working copy directory over to another
  * line of development, such as a branch or a tag.  Switching an existing
- * working copy directory is more efficient than checking out @a URL from
+ * working copy directory is more efficient than checking out @a url from
  * scratch.
  *
  * @param[out] result_rev   If non-NULL, the value of the revision to which
