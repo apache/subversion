@@ -991,7 +991,7 @@ wrap_external_error(const struct external_change_baton_t *eb,
                     svn_error_t *err,
                     apr_pool_t *scratch_pool)
 {
-  /*if (err && err->apr_err != SVN_ERR_CANCELLED)
+  if (err && err->apr_err != SVN_ERR_CANCELLED)
     {
       if (eb->ctx->notify_func2)
         {
@@ -1005,7 +1005,7 @@ wrap_external_error(const struct external_change_baton_t *eb,
         }
       svn_error_clear(err);
       return SVN_NO_ERROR;
-    }*/
+    }
 
   return err;
 }
