@@ -377,7 +377,6 @@ switch_file_external(const char *local_abspath,
   if (!locked_here)
     {
       const char *wcroot_abspath;
-      const char *dest_wc_repos_root_url;
 
       SVN_ERR(svn_wc_get_wc_root(&wcroot_abspath, ctx->wc_ctx, dir_abspath,
                                  subpool, subpool));
