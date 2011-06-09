@@ -177,7 +177,7 @@ file_diff(struct diff_baton *eb,
                                            &base_revision,
                                            NULL, NULL, NULL, NULL, NULL, NULL,
                                            NULL, &base_checksum, NULL,
-                                           NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL,
                                            db, local_abspath,
                                            scratch_pool, scratch_pool));
 

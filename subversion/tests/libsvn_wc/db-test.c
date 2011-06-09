@@ -368,7 +368,6 @@ test_getting_info(apr_pool_t *pool)
   const char *target;
   svn_boolean_t had_props;
   svn_boolean_t update_root;
-  svn_boolean_t needs_full_update;
   svn_wc__db_lock_t *lock;
   svn_wc__db_t *db;
   svn_error_t *err;
@@ -381,7 +380,7 @@ test_getting_info(apr_pool_t *pool)
             &repos_relpath, &repos_root_url, &repos_uuid,
             &changed_rev, &changed_date, &changed_author,&depth, &checksum, 
             &target, &lock, &had_props,
-            &update_root, &needs_full_update,
+            &update_root,
             db, local_abspath,
             pool, pool));
   SVN_TEST_ASSERT(kind == svn_wc__db_kind_dir);
@@ -404,7 +403,7 @@ test_getting_info(apr_pool_t *pool)
             &repos_relpath, &repos_root_url, &repos_uuid,
             NULL, NULL, NULL, NULL,
             &checksum, NULL, NULL,
-            NULL, NULL, NULL,
+            NULL, NULL,
             db, svn_dirent_join(local_abspath, "A", pool),
             pool, pool));
   SVN_TEST_ASSERT(kind == svn_wc__db_kind_file);
@@ -419,7 +418,7 @@ test_getting_info(apr_pool_t *pool)
             &repos_relpath, &repos_root_url, &repos_uuid,
             &changed_rev, &changed_date, &changed_author,
             &depth, &checksum, &target, &lock,
-            NULL, NULL, NULL,
+            NULL, NULL,
             db, svn_dirent_join(local_abspath, "B", pool),
             pool, pool));
   SVN_TEST_ASSERT(kind == svn_wc__db_kind_symlink);
@@ -443,7 +442,6 @@ test_getting_info(apr_pool_t *pool)
             NULL, NULL, NULL,
             NULL, NULL, NULL,
             NULL, NULL, NULL,
-            NULL,
             db, svn_dirent_join(local_abspath, "C", pool),
             pool, pool));
   SVN_TEST_ASSERT(kind == svn_wc__db_kind_unknown);
@@ -456,7 +454,6 @@ test_getting_info(apr_pool_t *pool)
             NULL, NULL, NULL,
             NULL, NULL, NULL,
             NULL, NULL, NULL,
-            NULL,
             db, svn_dirent_join(local_abspath, "D", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_not_present);
@@ -468,7 +465,6 @@ test_getting_info(apr_pool_t *pool)
             NULL, NULL, NULL,
             NULL, NULL, NULL,
             NULL, NULL, NULL,
-            NULL,
             db, svn_dirent_join(local_abspath, "E", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_incomplete);
@@ -479,7 +475,6 @@ test_getting_info(apr_pool_t *pool)
             NULL, NULL, NULL,
             NULL, NULL, NULL,
             NULL, &checksum, NULL,
-            NULL,
             NULL, NULL, NULL,
             db, svn_dirent_join(local_abspath, "F", pool),
             pool, pool));
@@ -493,7 +488,6 @@ test_getting_info(apr_pool_t *pool)
             &changed_rev, &changed_date, &changed_author,
             NULL, NULL, NULL,
             NULL, NULL, NULL,
-            NULL,
             db, svn_dirent_join(local_abspath, "G", pool),
             pool, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "G-alt");
@@ -509,7 +503,6 @@ test_getting_info(apr_pool_t *pool)
             NULL, NULL, NULL,
             NULL, NULL, NULL,
             NULL, &checksum, &target,
-            NULL,
             NULL, NULL, NULL,
             db, svn_dirent_join(local_abspath, "H", pool),
             pool, pool));
@@ -523,7 +516,6 @@ test_getting_info(apr_pool_t *pool)
             NULL, NULL, NULL,
             NULL, NULL, NULL,
             NULL, NULL, NULL,
-            NULL,
             db, svn_dirent_join(local_abspath, "missing-file", pool),
             pool, pool);
   SVN_TEST_ASSERT(err != NULL && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND);
@@ -553,7 +545,6 @@ validate_node(svn_wc__db_t *db,
             NULL, NULL, NULL,
             NULL, NULL, NULL,
             NULL, NULL, NULL,
-            NULL,
             db, path,
             scratch_pool, scratch_pool));
   SVN_TEST_ASSERT(kind == expected_kind);

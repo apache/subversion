@@ -161,7 +161,7 @@ build_info_for_entry(svn_wc__info2_t **info,
             SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &tmpinfo->rev, NULL,
                                              NULL, NULL, NULL, NULL, NULL,
                                              NULL, NULL, NULL, NULL, NULL,
-                                             NULL, NULL,
+                                             NULL,
                                              db, local_abspath,
                                              scratch_pool, scratch_pool));
         }
@@ -229,7 +229,6 @@ build_info_for_entry(svn_wc__info2_t **info,
           SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &tmpinfo->rev,
                                            NULL, NULL, NULL, NULL, NULL, NULL,
                                            NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL,
                                            db, local_abspath,
                                            result_pool, scratch_pool));
       }
