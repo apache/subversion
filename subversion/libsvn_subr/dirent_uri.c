@@ -75,14 +75,11 @@ relpath_is_canonical(const char *relpath);
 /**** Internal implementation functions *****/
 
 /* Return an internal-style new path based on PATH, allocated in POOL.
- * Pass type_uri for TYPE if PATH is a uri and type_dirent if PATH
- * is a regular path.
  *
- * "Internal-style" means that separators are all '/', and the new
- * path is canonicalized.
+ * "Internal-style" means that separators are all '/'.
  */
 static const char *
-internal_style(path_type_t type, const char *path, apr_pool_t *pool)
+internal_style(const char *path, apr_pool_t *pool)
 {
 #if '/' != SVN_PATH_LOCAL_SEPARATOR
     {
@@ -93,50 +90,6 @@ internal_style(path_type_t type, const char *path, apr_pool_t *pool)
       for (; *p != '\0'; ++p)
         if (*p == SVN_PATH_LOCAL_SEPARATOR)
           *p = '/';
-    }
-#endif
-
-  switch (type)
-    {
-      case type_uri:
-        return svn_uri_canonicalize(path, pool);
-      case type_relpath:
-        return svn_relpath_canonicalize(path, pool);
-      case type_dirent:
-      default:
-        return svn_dirent_canonicalize(path, pool);
-    }
-}
-
-/* Return a local-style new path based on PATH, allocated in POOL.
- * Pass type_uri for TYPE if PATH is a uri and type_dirent if PATH
- * is a regular path.
- *
- * "Local-style" means a path that looks like what users are
- * accustomed to seeing, including native separators.  The new path
- * will still be canonicalized.
- */
-static const char *
-local_style(path_type_t type, const char *path, apr_pool_t *pool)
-{
-  /* Internally, Subversion represents the current directory with the
-     empty string.  But users like to see "." . */
-  if (SVN_PATH_IS_EMPTY(path))
-    return ".";
-
-  /* If PATH is a URL, the "local style" is the same as the input. */
-  if (type == type_uri && svn_path_is_url(path))
-    return apr_pstrdup(pool, path);
-
-#if '/' != SVN_PATH_LOCAL_SEPARATOR
-    {
-      char *p = apr_pstrdup(pool, path);
-      path = p;
-
-      /* Convert all canonical separators to the local-style ones. */
-      for (; *p != '\0'; ++p)
-        if (*p == '/')
-          *p = SVN_PATH_LOCAL_SEPARATOR;
     }
 #endif
 
@@ -910,20 +863,37 @@ is_ancestor(path_type_t type, const char *path1, const char *path2)
 const char *
 svn_dirent_internal_style(const char *dirent, apr_pool_t *pool)
 {
-  return internal_style(type_dirent, dirent, pool);
+  return svn_dirent_canonicalize(internal_style(dirent, pool), pool);
 }
 
 const char *
 svn_dirent_local_style(const char *dirent, apr_pool_t *pool)
 {
-  return local_style(type_dirent, dirent, pool);
+  /* Internally, Subversion represents the current directory with the
+     empty string.  But users like to see "." . */
+  if (SVN_PATH_IS_EMPTY(dirent))
+    return ".";
+
+#if '/' != SVN_PATH_LOCAL_SEPARATOR
+    {
+      char *p = apr_pstrdup(pool, dirent);
+      dirent = p;
+
+      /* Convert all canonical separators to the local-style ones. */
+      for (; *p != '\0'; ++p)
+        if (*p == '/')
+          *p = SVN_PATH_LOCAL_SEPARATOR;
+    }
+#endif
+
+  return dirent;
 }
 
 const char *
 svn_relpath__internal_style(const char *dirent,
                            apr_pool_t *pool)
 {
-  return internal_style(type_relpath, dirent, pool);
+  return svn_relpath_canonicalize(internal_style(dirent, pool), pool);
 }
 
 

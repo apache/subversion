@@ -139,6 +139,7 @@ extern "C" {
 
 
 /** Convert @a dirent from the local style to the canonical internal style.
+ * "Local style" means native path separators and "." for the empty path.
  *
  * @since New in 1.6.
  */
@@ -146,7 +147,9 @@ const char *
 svn_dirent_internal_style(const char *dirent,
                           apr_pool_t *pool);
 
-/** Convert @a dirent from the canonical internal style to the local style.
+/** Convert @a dirent from the internal style to the local style.
+ * "Local style" means native path separators and "." for the empty path.
+ * If the input is not canonical, the output may not be canonical.
  *
  * @since New in 1.6.
  */
@@ -155,6 +158,7 @@ svn_dirent_local_style(const char *dirent,
                        apr_pool_t *pool);
 
 /** Convert @a relpath from the local style to the canonical internal style.
+ * "Local style" means native path separators and "." for the empty path.
  *
  * @since New in 1.7.
  */
