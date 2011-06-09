@@ -143,8 +143,10 @@ def externals_test_setup(sbox):
                                      '--quiet', wc_init_dir)
 
   # Get the whole working copy to revision 5.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'up', wc_init_dir)
+  expected_output = svntest.wc.State(wc_init_dir, {
+  })
+  svntest.actions.run_and_verify_update(wc_init_dir,
+                                        expected_output, None, None)
 
   # Now copy the initial repository to create the "other" repository,
   # the one to which the first repository's `svn:externals' properties
@@ -341,7 +343,13 @@ def update_receive_new_external(sbox):
   change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
 
   # Update the other working copy, see if we get the new item.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', other_wc_dir)
+  expected_output = svntest.wc.State(other_wc_dir, {
+    'A/D'               : Item(status=' U'),
+    'A/D/exdir_E/beta'  : Item(status='A '),
+    'A/D/exdir_E/alpha' : Item(status='A '),
+  })
+  svntest.actions.run_and_verify_update(other_wc_dir,
+                                        expected_output, None, None)
 
   probe_paths_exist([os.path.join(other_wc_dir, "A", "D", "exdir_E")])
 
@@ -397,7 +405,12 @@ def update_lose_external(sbox):
                                         "D"))
 
   # Update other working copy, see if lose & preserve things appropriately
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', other_wc_dir)
+  expected_output = svntest.wc.State(other_wc_dir, {
+    'A/D'               : Item(status=' U'),
+    'A/D/exdir_A'       : Item(verb='Removed external'),
+  })
+  svntest.actions.run_and_verify_update(other_wc_dir,
+                                        expected_output, None, None)
 
   expected_existing_paths = [
     os.path.join(other_wc_dir, "A", "D", "exdir_A"),
@@ -452,7 +465,14 @@ def update_change_pristine_external(sbox):
   change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
 
   # Update other working copy, see if get the right change.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', other_wc_dir)
+  expected_output = svntest.wc.State(other_wc_dir, {
+    'A/D'               : Item(status=' U'),
+    'A/D/x/y/z/blah/F'  : Item(status='D '),
+    'A/D/x/y/z/blah/E'  : Item(status='D '),
+    'A/D/x/y/z/blah/lambda': Item(status='D '),
+  })
+  svntest.actions.run_and_verify_update(other_wc_dir,
+                                        expected_output, None, None)
 
   xyzb_path = os.path.join(other_wc_dir, "x", "y", "z", "blah")
 
@@ -506,7 +526,15 @@ def update_change_modified_external(sbox):
   change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
 
   # Update other working copy, see if get the right change.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', other_wc_dir)
+  expected_output = svntest.wc.State(other_wc_dir, {
+    'A/D'               : Item(status=' U'),
+    'A/D/x/y/z/blah/F'  : Item(status='D '),
+    'A/D/x/y/z/blah/lambda': Item(status='D '),
+    'A/D/x/y/z/blah/E'  : Item(status='D '),
+  })
+  svntest.actions.run_and_verify_update(other_wc_dir,
+                                        expected_output, None, None)
+
 
   xyzb_path = os.path.join(other_wc_dir, "x", "y", "z", "blah")
 
@@ -557,7 +585,11 @@ def update_receive_change_under_external(sbox):
   # The output's going to be all screwy because of the module
   # notifications, so don't bother parsing it, just run update
   # directly.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/exdir_A/D/gamma': Item(status='U '),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None)
 
   external_gamma_path = os.path.join(wc_dir, 'A', 'D', 'exdir_A', 'D', 'gamma')
   contents = open(external_gamma_path).read()
@@ -581,8 +613,11 @@ def update_receive_change_under_external(sbox):
                                         expected_status,
                                         None, other_wc_dir)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'up', os.path.join(wc_dir, "A", "C"))
+  expected_output = svntest.wc.State(sbox.ospath('A/C'), {
+    'exdir_G/rho'       : Item(status='U '),
+  })
+  svntest.actions.run_and_verify_update(sbox.ospath('A/C'),
+                                        expected_output, None, None)
 
   external_rho_path = os.path.join(wc_dir, 'A', 'C', 'exdir_G', 'rho')
   contents = open(external_rho_path).read()
@@ -812,8 +847,13 @@ def external_with_peg_and_op_revision(sbox):
   change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
 
   # Update other working copy, see if we get the right change.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'up', wc_dir)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/x/y/z/blah'    : Item(verb='Removed external'),
+    'A/D/exdir_A'       : Item(verb='Removed external'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None)
+
 
   external_chi_path = os.path.join(wc_dir, 'A', 'D', 'exdir_A', 'H', 'chi')
   contents = open(external_chi_path).read()
@@ -848,9 +888,13 @@ def new_style_externals(sbox):
   change_external(os.path.join(wc_dir, "A/C"), new_externals_desc)
 
   # Update other working copy.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'up', wc_dir)
-
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C/exdir_I/chi'   : Item(status='A '),
+    'A/C/exdir_I/omega' : Item(status='A '),
+    'A/C/exdir_I/psi'   : Item(status='A '),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None)
   for dir_name in ["exdir_H", "exdir_I"]:
     exdir_X_omega_path = os.path.join(wc_dir, "A", "C", dir_name, "omega")
     contents = open(exdir_X_omega_path).read()
@@ -932,8 +976,10 @@ def old_style_externals_ignore_peg_reg(sbox):
                                      repo_url, wc_dir)
 
   # Update the working copy.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'up', wc_dir)
+  expected_output = svntest.wc.State(wc_dir, {
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None)
 
   # Set an external property using the old 'PATH URL' syntax with
   # @HEAD in the URL.
@@ -1017,8 +1063,10 @@ def cannot_move_or_remove_file_externals(sbox):
 
   # Bring the working copy up to date and check that the file the file
   # external is switched to still exists.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'up', wc_dir)
+  expected_output = svntest.wc.State(wc_dir, {
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None)
 
   open(os.path.join(wc_dir, 'A', 'D', 'gamma')).close()
 
@@ -1064,8 +1112,28 @@ def external_into_path_with_spaces(sbox):
         '^/A/D        A/another\ copy\ of\ D'
   change_external(wc_dir, ext)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'up', wc_dir)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/another copy of D/G': Item(status='A '),
+    'A/another copy of D/G/pi': Item(status='A '),
+    'A/another copy of D/G/tau': Item(status='A '),
+    'A/another copy of D/G/rho': Item(status='A '),
+    'A/another copy of D/H': Item(status='A '),
+    'A/another copy of D/H/chi': Item(status='A '),
+    'A/another copy of D/H/omega': Item(status='A '),
+    'A/another copy of D/H/psi': Item(status='A '),
+    'A/another copy of D/gamma': Item(status='A '),
+    'A/copy of D/H'     : Item(status='A '),
+    'A/copy of D/H/chi' : Item(status='A '),
+    'A/copy of D/H/omega': Item(status='A '),
+    'A/copy of D/H/psi' : Item(status='A '),
+    'A/copy of D/gamma' : Item(status='A '),
+    'A/copy of D/G'     : Item(status='A '),
+    'A/copy of D/G/rho' : Item(status='A '),
+    'A/copy of D/G/tau' : Item(status='A '),
+    'A/copy of D/G/pi'  : Item(status='A '),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None)
   probe_paths_exist([
       os.path.join(wc_dir, 'A', 'copy of D'),
       os.path.join(wc_dir, 'A', 'another copy of D'),
@@ -1248,8 +1316,15 @@ def switch_relative_external(sbox):
   change_external(D_path, externals_prop)
 
   # Update our working copy, and create a "branch" (A => A_copy)
-  svntest.actions.run_and_verify_svn(None, None, [], 'up',
-                                     '--quiet', wc_dir)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/ext/E'         : Item(status='A '),
+    'A/D/ext/E/beta'    : Item(status='A '),
+    'A/D/ext/E/alpha'   : Item(status='A '),
+    'A/D/ext/F'         : Item(status='A '),
+    'A/D/ext/lambda'    : Item(status='A '),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None)
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      '--quiet', A_path, A_copy_path)
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1324,8 +1399,12 @@ def relegate_external(sbox):
   # setup an external within the same repository
   externals_desc = '^/A/B/E        external'
   change_external(A_path, externals_desc)
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'up', wc_dir)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/external/alpha'  : Item(status='A '),
+    'A/external/beta'   : Item(status='A '),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None)
 
   # create another repository
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
@@ -1495,7 +1574,12 @@ def merge_target_with_externals(sbox):
   svntest.main.file_write(A_gamma_branch_path, "The new gamma!\n")
   svntest.actions.run_and_verify_svn(None, None, [], 'ci',
                                      '-m', 'branch edit', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/external'        : Item(status='A '),
+    'A/external-pinned' : Item(status='A '),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None)
 
   # Merge r8 from A-branch back to A.  There should be explicit mergeinfo
   # only at the root of A; the externals should not get any.
@@ -1602,7 +1686,41 @@ def update_external_on_locally_added_dir(sbox):
   change_external(new_dir, new_externals_desc, commit=False)
 
   # Update the working copy, see if we get the new item.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/foo/exdir_A/B'   : Item(status='A '),
+    'A/foo/exdir_A/B/E' : Item(status='A '),
+    'A/foo/exdir_A/B/E/beta': Item(status='A '),
+    'A/foo/exdir_A/B/E/alpha': Item(status='A '),
+    'A/foo/exdir_A/B/F' : Item(status='A '),
+    'A/foo/exdir_A/B/lambda': Item(status='A '),
+    'A/foo/exdir_A/D'   : Item(status='A '),
+    'A/foo/exdir_A/D/G' : Item(status='A '),
+    'A/foo/exdir_A/D/G/rho': Item(status='A '),
+    'A/foo/exdir_A/D/G/pi': Item(status='A '),
+    'A/foo/exdir_A/D/G/tau': Item(status='A '),
+    'A/foo/exdir_A/D/gamma': Item(status='A '),
+    'A/foo/exdir_A/D/H' : Item(status='A '),
+    'A/foo/exdir_A/D/H/chi': Item(status='A '),
+    'A/foo/exdir_A/D/H/omega': Item(status='A '),
+    'A/foo/exdir_A/D/H/psi': Item(status='A '),
+    'A/foo/exdir_A/C'   : Item(status='A '),
+    'A/foo/exdir_A/mu'  : Item(status='A '),
+    'A/foo/exdir_A/H/omega': Item(status='A '),
+    'A/foo/exdir_A/H/psi': Item(status='A '),
+    'A/foo/exdir_A/H/chi': Item(status='A '),
+    'A/foo/exdir_A/G/tau': Item(status='A '),
+    'A/foo/exdir_A/G/rho': Item(status='A '),
+    'A/foo/exdir_A/G/pi': Item(status='A '),
+    'A/foo/x/y/z/blah/F': Item(status='A '),
+    'A/foo/x/y/z/blah/E': Item(status='A '),
+    'A/foo/x/y/z/blah/E/beta': Item(status='A '),
+    'A/foo/x/y/z/blah/E/alpha': Item(status='A '),
+    'A/foo/x/y/z/blah/lambda': Item(status='A '),
+    'A/foo/exdir_E/beta': Item(status='A '),
+    'A/foo/exdir_E/alpha': Item(status='A '),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None)
 
   probe_paths_exist([os.path.join(wc_dir, "A", "foo", "exdir_E")])
 
