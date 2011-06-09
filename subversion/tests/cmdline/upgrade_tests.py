@@ -1001,6 +1001,24 @@ def add_add_del_del_tc(sbox):
     })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
+@Issue(3916)
+@XFail()
+def add_add_x2(sbox):
+  "wc with 2 tree conflicts in same entry"
+  
+  replace_sbox_with_tarfile(sbox, 'add_add_x2.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''     : Item(status='  ', wc_rev='4'),
+      'A'    : Item(status='  ', wc_rev='4'),
+      'A/X'  : Item(status='A ', treeconflict='C', copied='+', wc_rev='-'),
+      'A/Y'  : Item(status='A ', treeconflict='C', copied='+', wc_rev='-'),
+    })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -1046,6 +1064,7 @@ test_list = [ None,
               depth_exclude,
               depth_exclude_2,
               add_add_del_del_tc,
+              add_add_x2,
              ]
 
 
