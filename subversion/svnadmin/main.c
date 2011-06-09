@@ -1642,7 +1642,7 @@ main(int argc, const char *argv[])
   /* Initialize opt_state. */
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
-  opt_state.memory_cache_size = svn_get_cache_config()->cache_size;
+  opt_state.memory_cache_size = svn_cache_config_get()->cache_size;
 
   /* Parse options. */
   err = svn_cmdline__getopt_init(&os, argc, argv, pool);
@@ -1924,12 +1924,12 @@ main(int argc, const char *argv[])
   /* Configure FSFS caches for maximum efficiency with svnadmin.
    * Also, apply the respective command line parameters, if given. */
   {
-    svn_cache_config_t settings = *svn_get_cache_config();
+    svn_cache_config_t settings = *svn_cache_config_get();
 
     settings.cache_size = opt_state.memory_cache_size;
     settings.single_threaded = TRUE;
 
-    svn_set_cache_config(&settings);
+    svn_cache_config_set(&settings);
   }
 
   /* Run the subcommand. */

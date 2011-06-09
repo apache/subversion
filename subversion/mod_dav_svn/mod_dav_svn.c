@@ -457,7 +457,7 @@ SVNCacheFullTexts_cmd(cmd_parms *cmd, void *config, int arg)
 static const char *
 SVNInMemoryCacheSize_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
-  svn_cache_config_t settings = *svn_get_cache_config();
+  svn_cache_config_t settings = *svn_cache_config_get();
 
   apr_uint64_t value = 0;
   svn_error_t *err = svn_cstring_atoui64(&value, arg1);
@@ -469,7 +469,7 @@ SVNInMemoryCacheSize_cmd(cmd_parms *cmd, void *config, const char *arg1)
 
   settings.cache_size = value * 0x400;
 
-  svn_set_cache_config(&settings);
+  svn_cache_config_set(&settings);
 
   return NULL;
 }

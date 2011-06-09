@@ -64,7 +64,7 @@ static svn_cache_config_t cache_settings =
 
 /* Get the current FSFS cache configuration. */
 const svn_cache_config_t *
-svn_get_cache_config(void)
+svn_cache_config_get(void)
 {
   return &cache_settings;
 }
@@ -118,7 +118,7 @@ svn_cache__get_global_membuffer_cache(void)
           &new_cache,
           (apr_size_t)cache_size,
           (apr_size_t)(cache_size / 16),
-          ! svn_get_cache_config()->single_threaded,
+          ! svn_cache_config_get()->single_threaded,
           pool);
 
       /* Some error occured. Most likely it's an OOM error but we don't
@@ -156,7 +156,7 @@ svn_cache__get_global_membuffer_cache(void)
 }
 
 void
-svn_set_cache_config(const svn_cache_config_t *settings)
+svn_cache_config_set(const svn_cache_config_t *settings)
 {
   cache_settings = *settings;
 }
