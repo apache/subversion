@@ -376,23 +376,21 @@ switch_file_external(const char *local_abspath,
                          subpool));
   if (!locked_here)
     {
+      const char *wcroot_abspath;
       const char *dest_wc_repos_root_url;
 
-      /* Check that the repository root URL for the newly opened
-         wc is the same as the file external. */
-      SVN_ERR(svn_client__get_repos_root(&dest_wc_repos_root_url,
-                                         dir_abspath,
-                                         ctx, subpool, subpool));
+      SVN_ERR(svn_wc_get_wc_root(&wcroot_abspath, ctx->wc_ctx, dir_abspath,
+                                 subpool, subpool));
 
-      if (0 != strcmp(repos_root_url, dest_wc_repos_root_url))
-        return svn_error_createf
-          (SVN_ERR_RA_REPOS_ROOT_URL_MISMATCH, NULL,
-           _("Cannot insert a file external from '%s' into a working "
-             "copy from a different repository rooted at '%s'"),
-           url, dest_wc_repos_root_url);
-
-      SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, dir_abspath,
-                                         FALSE, subpool, subpool));
+      if (!svn_dirent_is_ancestor(wcroot_abspath, def_dir_abspath))
+        return svn_error_createf(
+                        SVN_ERR_WC_BAD_PATH, NULL,
+                        _("Cannot insert a file external defined on '%s' "
+                          "into the working copy '%s'."),
+                        svn_dirent_local_style(def_dir_abspath,
+                                               scratch_pool),
+                        svn_dirent_local_style(wcroot_abspath,
+                                               scratch_pool));
     }
 
   err = svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE, subpool);
@@ -994,10 +992,6 @@ wrap_external_error(const struct external_change_baton_t *eb,
                     svn_error_t *err,
                     apr_pool_t *scratch_pool)
 {
-  /* In maintainer mode we prefer to fail on external processing errors, instead
-     of just notifying them as a warning. (The warnings would be skipped
-     by the test suite) */
-#ifndef SVN_DEBUG
   if (err && err->apr_err != SVN_ERR_CANCELLED)
     {
       if (eb->ctx->notify_func2)
@@ -1013,7 +1007,6 @@ wrap_external_error(const struct external_change_baton_t *eb,
       svn_error_clear(err);
       return SVN_NO_ERROR;
     }
-#endif
 
   return err;
 }
