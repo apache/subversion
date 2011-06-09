@@ -43,8 +43,7 @@ quiet_mode(void)
 
 
 void
-svn_dbg__preamble(const char *file, long line, const char *func,
-                  FILE *output)
+svn_dbg__preamble(const char *file, long line, FILE *output)
 {
   debug_output = output;
 
@@ -60,7 +59,7 @@ svn_dbg__preamble(const char *file, long line, const char *func,
       else
         ++slash;
 
-      fprintf(output, "DBG: %s:%4ld:%s(): ", slash, line, func);
+      fprintf(output, "DBG: %s:%4ld: ", slash, line);
     }
 }
 
