@@ -164,7 +164,7 @@ svn_opt_get_canonical_subcommand(const svn_opt_subcommand_desc_t *table,
 /**
  * Return pointer to an @c apr_getopt_option_t for the option whose
  * option code is @a code, or @c NULL if no match.  @a option_table must end
- * with an element whose every field is zero.  If @c command is non-NULL,
+ * with an element whose every field is zero.  If @a command is non-NULL,
  * then return the subcommand-specific option description instead of the
  * generic one, if a specific description is defined.
  *

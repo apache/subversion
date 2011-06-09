@@ -46,9 +46,9 @@ extern "C" {
  * @{
  */
 
-/** Returns the @a svn_string_t information contained in the data and
+/** Returns the #svn_string_t information contained in the data and
  * len members of @a strbuf. This is effectively a typecast, converting
- * @a strbuf into an svn_string_t. This first will become invalid and must
+ * @a strbuf into an #svn_string_t. This first will become invalid and must
  * not be accessed after this function returned.
  */
 svn_string_t *

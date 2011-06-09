@@ -270,7 +270,7 @@ svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
  * resolution overhead.
  *
  * If access to the resulting cache object is guranteed to be serialized,
- * @a thread_safe may be set to @a FALSE for maximum performance.
+ * @a thread_safe may be set to @c FALSE for maximum performance.
  *
  * Allocations will be made in @a result_pool, in particular the data buffers.
  */

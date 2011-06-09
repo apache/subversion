@@ -1177,7 +1177,7 @@ svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
  * #svn_fs_path_change2_t * values will be #svn_node_unknown or
  * that and some of the @c copyfrom_known fields will be FALSE.
  *
- * Use @c pool for all allocations, including the hash and its values.
+ * Use @a pool for all allocations, including the hash and its values.
  *
  * @since New in 1.6.
  */
@@ -1532,7 +1532,7 @@ svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
 
 /**
  * Set @a *validated_mergeinfo equal to deep copy of @a mergeinfo, less
- * any mergeinfo that describes path-revs that do not exist in @a FS.
+ * any mergeinfo that describes path-revs that do not exist in @a fs.
  * If @a mergeinfo is empty then @a *validated_mergeinfo is set to an empty
  * mergeinfo hash.  If @a mergeinfo is NULL then @a *validated_mergeinfo is
  * set to NULL.
