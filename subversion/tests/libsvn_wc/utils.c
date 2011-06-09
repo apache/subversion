@@ -22,6 +22,7 @@
 
 #include "svn_error.h"
 #include "svn_client.h"
+#include "svn_pools.h"
 
 #include "utils.h"
 
@@ -66,8 +67,16 @@ create_repos_and_wc(const char **repos_url,
   {
     svn_repos_t *repos;
 
-    SVN_ERR(svn_test__create_repos(&repos, repos_path, opts, pool));
+    /* Use a subpool to create the repository and then destroy the subpool
+       so the repository's underlying filesystem is closed.  If opts->fs_type
+       is BDB this prevents any attempt to open a second environment handle
+       within the same process when we checkout the WC below.  BDB 4.4+ allows
+       only a single environment handle to be open per process. */
+    apr_pool_t *subpool = svn_pool_create(pool);
+
+    SVN_ERR(svn_test__create_repos(&repos, repos_path, opts, subpool));
     SVN_ERR(svn_uri_get_file_url_from_dirent(repos_url, repos_path, pool));
+    svn_pool_destroy(subpool);
   }
 
   /* Create a WC. Set *WC_ABSPATH to its path. */
