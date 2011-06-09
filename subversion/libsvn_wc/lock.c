@@ -334,8 +334,8 @@ pool_cleanup_locked(void *p)
                             scratch_pool, scratch_pool);
       if (!err)
         {
-          err = svn_wc__db_wq_fetch(&id, &work_item, db, lock->abspath,
-                                    scratch_pool, scratch_pool);
+          err = svn_wc__db_wq_fetch_next(&id, &work_item, db, lock->abspath, 0,
+                                         scratch_pool, scratch_pool);
           if (!err && work_item == NULL)
             {
               /* There is no remaining work, so we're good to remove any
@@ -352,8 +352,8 @@ pool_cleanup_locked(void *p)
     }
 
   /* ### should we create an API that just looks, but doesn't return?  */
-  err = svn_wc__db_wq_fetch(&id, &work_item, lock->db, lock->abspath,
-                            lock->pool, lock->pool);
+  err = svn_wc__db_wq_fetch_next(&id, &work_item, lock->db, lock->abspath, 0,
+                                 lock->pool, lock->pool);
 
   /* Close just this access baton. The pool cleanup will close the rest.  */
   if (!err)
@@ -1597,8 +1597,8 @@ svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
   apr_uint64_t id;
   svn_skel_t *work_item;
 
-  SVN_ERR(svn_wc__db_wq_fetch(&id, &work_item, wc_ctx->db, local_abspath,
-                              scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_wq_fetch_next(&id, &work_item, wc_ctx->db, local_abspath,
+                                   0, scratch_pool, scratch_pool));
   if (work_item)
     {
       /* Do not release locks (here or below) if there is work to do.  */

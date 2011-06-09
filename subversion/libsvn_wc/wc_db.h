@@ -2647,27 +2647,19 @@ svn_wc__db_wq_add(svn_wc__db_t *db,
    If there are no work items to be completed, then ID will be set to zero,
    and WORK_ITEM to NULL.
 
+   If COMPLETED_ID is not 0, the wq item COMPLETED_ID will be marked as
+   completed before returning the next item.
+
    RESULT_POOL will be used to allocate WORK_ITEM, and SCRATCH_POOL
    will be used for all temporary allocations.  */
 svn_error_t *
-svn_wc__db_wq_fetch(apr_uint64_t *id,
-                    svn_skel_t **work_item,
-                    svn_wc__db_t *db,
-                    const char *wri_abspath,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool);
-
-
-/* In the WCROOT associated with DB and WRI_ABSPATH, mark work item ID as
-   completed. If an error occurs, then it is unknown whether the work item
-   has been marked as completed.
-
-   Uses SCRATCH_POOL for all temporary allocations.  */
-svn_error_t *
-svn_wc__db_wq_completed(svn_wc__db_t *db,
-                        const char *wri_abspath,
-                        apr_uint64_t id,
-                        apr_pool_t *scratch_pool);
+svn_wc__db_wq_fetch_next(apr_uint64_t *id,
+                         svn_skel_t **work_item,
+                         svn_wc__db_t *db,
+                         const char *wri_abspath,
+                         apr_uint64_t completed_id,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
 /* @} */
 
