@@ -104,7 +104,8 @@ typedef enum svn_diff_datasource_e
 } svn_diff_datasource_e;
 
 
-/** A vtable for reading data from the three datasources. */
+/** A vtable for reading data from the three datasources.
+ * @since New in 1.7. */
 typedef struct svn_diff_fns2_t
 {
   /** Open the datasources of type @a datasources. */
