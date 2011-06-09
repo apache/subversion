@@ -202,9 +202,8 @@ svn_diff_diff_2(svn_diff_t **diff,
                 const svn_diff_fns2_t *diff_fns,
                 apr_pool_t *pool);
 
-/** Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
- * return a diff object in @a *diff that represents a difference between
- * an "original" and "modified" datasource.  Do all allocation in @a pool.
+/** Like svn_diff_diff_2() but using #svn_diff_fns_t instead of
+ * #svn_diff_fns2_t.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
@@ -228,10 +227,8 @@ svn_diff_diff3_2(svn_diff_t **diff,
                  const svn_diff_fns2_t *diff_fns,
                  apr_pool_t *pool);
 
-/** Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
- * return a diff object in @a *diff that represents a difference between
- * three datasources: "original", "modified", and "latest".  Do all
- * allocation in @a pool.
+/** Like svn_diff_diff3_2() but using #svn_diff_fns_t instead of
+ * #svn_diff_fns2_t.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
@@ -256,11 +253,8 @@ svn_diff_diff4_2(svn_diff_t **diff,
                  const svn_diff_fns2_t *diff_fns,
                  apr_pool_t *pool);
 
-/** Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
- * return a diff object in @a *diff that represents a difference between
- * two datasources: "original" and "latest", adjusted to become a full
- * difference between "original", "modified" and "latest" using "ancestor".
- * Do all allocation in @a pool.
+/** Like svn_diff_diff4_2() but using #svn_diff_fns_t instead of
+ * #svn_diff_fns2_t.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
