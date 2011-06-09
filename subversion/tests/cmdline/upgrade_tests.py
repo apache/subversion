@@ -1012,8 +1012,8 @@ def add_add_x2(sbox):
 
   expected_status = svntest.wc.State(sbox.wc_dir,
     {
-      ''     : Item(status='  ', wc_rev='4'),
-      'A'    : Item(status='  ', wc_rev='4'),
+      ''     : Item(status='  ', wc_rev='3'),
+      'A'    : Item(status='  ', wc_rev='3'),
       'A/X'  : Item(status='A ', treeconflict='C', copied='+', wc_rev='-'),
       'A/Y'  : Item(status='A ', treeconflict='C', copied='+', wc_rev='-'),
     })
