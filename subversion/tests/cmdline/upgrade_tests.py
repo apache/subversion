@@ -983,7 +983,7 @@ def depth_exclude_2(sbox):
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
 @Issue(3916)
-@XFail()
+@Wimp(3916)  # It passes but are the conflicts correct?
 def add_add_del_del_tc(sbox):
   "wc with add-add and del-del tree conflicts"
   
@@ -997,12 +997,12 @@ def add_add_del_del_tc(sbox):
       'A'    : Item(status='  ', wc_rev='4'),
       'A/B'  : Item(status='A ', treeconflict='C', copied='+', wc_rev='-'),
       'X'    : Item(status='  ', wc_rev='3'),
-      'X/Y'  : Item(status='! ', treeconflict='C', wc_rev='-'),
+      'X/Y'  : Item(status='! ', treeconflict='C')
     })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
 @Issue(3916)
-@XFail()
+@Wimp(3916)  # It passes but are the conflicts correct?
 def add_add_x2(sbox):
   "wc with 2 tree conflicts in same entry"
   
