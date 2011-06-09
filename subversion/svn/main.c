@@ -1487,9 +1487,9 @@ main(int argc, const char *argv[])
    * overhead caches will be used for the most time-critical structures.
    *
    * This is only relevant for FSFS over ra_local. */
-  settings = *svn_get_cache_config();
+  settings = *svn_cache_config_get();
   settings.cache_size = 0x0;
-  svn_set_cache_config(&settings);
+  svn_cache_config_set(&settings);
 
   /* Initialize the RA library. */
   err = svn_ra_initialize(pool);

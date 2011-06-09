@@ -64,7 +64,7 @@ typedef struct svn_cache_config_t
    @since New in 1.7.
  */
 const svn_cache_config_t *
-svn_get_cache_config(void);
+svn_cache_config_get(void);
 
 /** Set the cache configuration. Please note that it may not change
    the actual configuration *in use*. Therefore, call it before reading
@@ -76,7 +76,7 @@ svn_get_cache_config(void);
    @since New in 1.7.
  */
 void
-svn_set_cache_config(const svn_cache_config_t *settings);
+svn_cache_config_set(const svn_cache_config_t *settings);
 
 /** @} */
 

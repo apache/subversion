@@ -868,7 +868,7 @@ int main(int argc, const char *argv[])
    * keep the per-process caches smaller than the default.
    * Also, apply the respective command line parameters, if given. */
   {
-    svn_cache_config_t settings = *svn_get_cache_config();
+    svn_cache_config_t settings = *svn_cache_config_get();
 
     if (params.memory_cache_size != -1)
       settings.cache_size = params.memory_cache_size;
@@ -888,7 +888,7 @@ int main(int argc, const char *argv[])
 #endif
       }
 
-    svn_set_cache_config(&settings);
+    svn_cache_config_set(&settings);
   }
 
   while (1)
