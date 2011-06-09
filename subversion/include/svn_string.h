@@ -252,7 +252,7 @@ void
 svn_stringbuf_fillchar(svn_stringbuf_t *str, unsigned char c);
 
 /** Append a single character @a byte onto @a targetstr.
- * This is an optimized version of @ref svn_stringbuf_appendbytes
+ * This is an optimized version of svn_stringbuf_appendbytes()
  * that is much faster to call and execute. Gains vary with the ABI.
  * The advantages extend beyond the actual call because the reduced
  * register pressure allows for more optimization within the caller.
