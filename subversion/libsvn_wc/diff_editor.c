@@ -178,7 +178,6 @@ get_pristine_file(const char **result_abspath,
       SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, &checksum,
                                        NULL, NULL, NULL, NULL,
-                                       NULL,
                                        db, local_abspath,
                                        scratch_pool, scratch_pool));
     }
@@ -562,7 +561,7 @@ file_diff(struct edit_baton *eb,
   if (have_base)
     SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &revert_base_revnum,
                                      NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL,
                                      db, local_abspath,
                                      scratch_pool, scratch_pool));
 
@@ -1466,7 +1465,7 @@ open_file(const char *path,
 
   SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, &fb->base_checksum, NULL,
-                                   NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
                                    eb->db, fb->local_abspath,
                                    fb->pool, fb->pool));
 
@@ -1653,7 +1652,7 @@ close_file(void *file_baton,
                                          NULL, NULL, NULL, NULL,
                                          &pristine_checksum,
                                          NULL, NULL,
-                                         &had_props, NULL, NULL,
+                                         &had_props, NULL,
                                          db, fb->local_abspath,
                                          scratch_pool, scratch_pool));
 

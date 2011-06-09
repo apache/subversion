@@ -717,7 +717,6 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
      HAD_PROPS          FALSE
 
      UPDATE_ROOT        FALSE
-     NEEDS_FULL_UPDATE  FALSE
 
    If the STATUS is normal, and the REPOS_* values are NULL, then the
    caller should use svn_wc__db_scan_base_repos() to scan up the BASE
@@ -735,9 +734,6 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 
    If UPDATE_ROOT is requested, set it to TRUE if the node should only
    be updated when it is the root of an update (e.g. file externals).
-
-   If NEEDS_FULL_UPDATE is requested, set it to TRUE if the node needs to know
-   the complete set of children and properties on the next update. (EditorV1)
 
    All returned data will be allocated in RESULT_POOL. All temporary
    allocations will be made in SCRATCH_POOL.
@@ -758,7 +754,6 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          svn_wc__db_lock_t **lock,
                          svn_boolean_t *had_props,
                          svn_boolean_t *update_root,
-                         svn_boolean_t *needs_full_update,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,

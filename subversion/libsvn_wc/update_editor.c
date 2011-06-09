@@ -1089,7 +1089,7 @@ open_root(void *edit_baton,
       SVN_ERR(svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL,
                                        &db->changed_rev, &db->changed_date,
                                        &db->changed_author, &db->ambient_depth,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
                                        eb->db, db->local_abspath,
                                        db->pool, pool));
       db->was_incomplete = (status == svn_wc__db_status_incomplete);
@@ -1302,7 +1302,7 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                                        &left_repos_relpath,
                                        &repos_root_url,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL,
                                        eb->db,
                                        local_abspath,
                                        result_pool,
@@ -1444,7 +1444,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
             SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL,
                                              NULL, NULL, NULL, NULL, NULL,
                                              NULL, NULL, NULL, NULL, NULL,
-                                             NULL, NULL, NULL,
+                                             NULL, NULL,
                                              eb->db, local_abspath,
                                              scratch_pool, scratch_pool));
             if (base_status != svn_wc__db_status_not_present)
@@ -1714,7 +1714,7 @@ delete_entry(const char *path,
     SVN_ERR(svn_wc__db_base_get_info(&base_status, &base_kind, NULL,
                                      &repos_relpath,
                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL,
                                      eb->db, local_abspath,
                                      scratch_pool, scratch_pool));
 
@@ -2285,7 +2285,7 @@ open_directory(const char *path,
                                      NULL, NULL, NULL, &db->changed_rev,
                                      &db->changed_date, &db->changed_author,
                                      &db->ambient_depth, NULL, NULL, NULL,
-                                     NULL, NULL, NULL,
+                                     NULL, NULL,
                                      eb->db, db->local_abspath,
                                      db->pool, pool));
 
@@ -2606,7 +2606,7 @@ close_directory(void *dir_baton,
             /* ### We just check if there is some node in BASE at this path */
             err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL,
                                            NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
                                            eb->db, child_abspath,
                                            iterpool, iterpool);
 
@@ -3264,7 +3264,7 @@ open_file(const char *path,
                                      NULL, NULL, NULL, &fb->changed_rev,
                                      &fb->changed_date, &fb->changed_author,
                                      NULL, &fb->original_checksum, NULL, NULL,
-                                     NULL, NULL, NULL,
+                                     NULL, NULL,
                                      eb->db, fb->local_abspath,
                                      fb->pool, scratch_pool));
 
@@ -4372,7 +4372,7 @@ close_edit(void *edit_baton,
              have to worry about removing it. */
           err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL,
                                          NULL, NULL, NULL, NULL, NULL, NULL,
-                                         NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL,
                                          eb->db, eb->target_abspath,
                                          scratch_pool, scratch_pool);
           if (err)
@@ -4566,7 +4566,7 @@ make_editor(svn_revnum_t *target_revision,
       err = svn_wc__db_base_get_info(&dir_status, &dir_kind, NULL,
                                      &dir_repos_relpath, NULL, NULL, NULL,
                                      NULL, NULL, &dir_depth, NULL, NULL, NULL,
-                                     NULL, NULL, NULL,
+                                     NULL, NULL,
                                      db, eb->target_abspath,
                                      scratch_pool, scratch_pool);
 
@@ -4622,7 +4622,7 @@ make_editor(svn_revnum_t *target_revision,
                                                    NULL, &dir_repos_relpath,
                                                    NULL, NULL, NULL, NULL,
                                                    NULL, &dir_depth, NULL,
-                                                   NULL, NULL, NULL, NULL,
+                                                   NULL, NULL, NULL,
                                                    NULL,
                                                    db, child_abspath,
                                                    iterpool, iterpool));
