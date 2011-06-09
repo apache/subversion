@@ -269,7 +269,7 @@ svn_hash_get_cstring(apr_hash_t *hash,
                      const char *key,
                      const char *default_value);
 
-/** Like @ref svn_hash_get_cstring, but for boolean values.
+/** Like svn_hash_get_cstring(), but for boolean values.
  *
  * Parses the value as a boolean value. The recognized representations
  * are 'TRUE'/'FALSE', 'yes'/'no', 'on'/'off', '1'/'0'; case does not

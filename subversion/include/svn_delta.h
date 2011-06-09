@@ -486,8 +486,8 @@ svn_txdelta_to_svndiff3(svn_txdelta_window_handler_t *handler,
                         int compression_level,
                         apr_pool_t *pool);
 
-/** Similar to svn_txdelta_to_svndiff3, but always using the SVN default
- * compression level (@ref SVN_DEFAULT_COMPRESSION_LEVEL).
+/** Similar to svn_txdelta_to_svndiff3(), but always using the SVN default
+ * compression level (#SVN_DEFAULT_COMPRESSION_LEVEL).
  *
  * @since New in 1.4.
  * @deprecated Provided for backward compatibility with the 1.6 API.

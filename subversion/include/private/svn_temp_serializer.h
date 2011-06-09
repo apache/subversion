@@ -54,10 +54,10 @@ typedef struct svn_temp_serializer__context_t svn_temp_serializer__context_t;
  * we can't determine the structure size as part of the function.
  *
  * It is possible to specify a @c NULL source_struct in which case the first
- * call to @ref svn_temp_serializer__push will provide the root struct.
- * Alternatively, one may even call @ref svn_temp_serializer__add_string
+ * call to svn_temp_serializer__push() will provide the root struct.
+ * Alternatively, one may even call svn_temp_serializer__add_string()
  * but there is generally no point in doing so because the result will be
- * simple string object in a @ref svn_stringbuf_t.
+ * simple string object in a #svn_stringbuf_t.
  *
  * You may suggest a larger initial buffer size in @a suggested_buffer_size
  * to minimize the number of internal buffer re-allocations during the
@@ -80,7 +80,7 @@ svn_temp_serializer__init(const void *source_struct,
  * Continue the serialization process of the @a source_struct that has
  * already been serialized to @a buffer but contains references to new
  * objects yet to serialize. I.e. this function allows you to append
- * data to serialized structures returned by @ref svn_temp_serializer__get.
+ * data to serialized structures returned by svn_temp_serializer__get().
  *
  * The current size of the serialized data is given in @a currently_used.
  * If the allocated data buffer is actually larger, you may specifiy that
@@ -91,7 +91,7 @@ svn_temp_serializer__init(const void *source_struct,
  *
  * Please note that only sub-structures of @a source_struct may be added.
  * To add item referenced from other parts of the buffer, serialize from
- * @a source_struct first, get the result from @ref svn_temp_serializer__get
+ * @a source_struct first, get the result from svn_temp_serializer__get()
  * and call svn_temp_serializer__init_append for the next part.
  *
  * @return the serization context.
@@ -110,14 +110,14 @@ svn_temp_serializer__init_append(void *buffer,
  * the serialized structure can be established. @a struct_size must match
  * the result of @c sizeof() of the actual structure.
  *
- * Only in case that @ref svn_temp_serializer__init has not been provided
+ * Only in case that svn_temp_serializer__init() has not been provided
  * with a root structure and this is the first call after the initialization,
  * @a source_struct will point to a reference to the root structure instead
  * of being related to some other. 
  *
  * Sub-structures and strings will be added in a FIFO fashion. If you need
- * add further sub-structures on the same level, you need to call @ref
- * svn_serializer__pop to realign the serialization context.
+ * add further sub-structures on the same level, you need to call
+ * svn_serializer__pop() to realign the serialization context.
  */
 void
 svn_temp_serializer__push(svn_temp_serializer__context_t *context,
@@ -141,7 +141,7 @@ svn_temp_serializer__pop(svn_temp_serializer__context_t *context);
  * pointer in the original structure so that the correspondence in the
  * serialized structure can be established.
  *
- * Only in case that @ref svn_temp_serializer__init has not been provided
+ * Only in case that svn_temp_serializer__init() has not been provided
  * with a root structure and this is the first call after the initialization,
  * @a s will not be related to some struct.
  */
@@ -186,7 +186,7 @@ void
 svn_temp_deserializer__resolve(void *buffer, void **ptr);
 
 /**
- * Similar to @ref svn_temp_deserializer__resolve but instead of modifying
+ * Similar to svn_temp_deserializer__resolve() but instead of modifying
  * the buffer content, the resulting pointer is passed back to the caller
  * a the return value.
  */

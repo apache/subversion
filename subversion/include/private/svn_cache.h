@@ -122,7 +122,7 @@ typedef struct svn_cache__t svn_cache__t;
 
 /**
  * A structure containing typical statistics about a given cache instance.
- * Use @ref svn_cache__get_info to get this data. Note that not all types
+ * Use svn_cache__get_info() to get this data. Note that not all types
  * of caches will be able to report complete and correct information.
  */
 typedef struct svn_cache__info_t
@@ -132,7 +132,7 @@ typedef struct svn_cache__info_t
    */
   const char* id;
 
-  /** Number of getter calls (@ref svn_cache__get or @ref svn_cache__get).
+  /** Number of getter calls (svn_cache__get() or svn_cache__get()).
    */
   apr_uint64_t gets;
 
@@ -140,7 +140,7 @@ typedef struct svn_cache__info_t
    */
   apr_uint64_t hits;
 
-  /** Number of setter calls (@ref svn_cache__set).
+  /** Number of setter calls (svn_cache__set()).
    */
   apr_uint64_t sets;
 
@@ -193,7 +193,7 @@ typedef struct svn_cache__info_t
  * If @a thread_safe is true, and APR is compiled with threads, all
  * accesses to the cache will be protected with a mutex. The @a id
  * is a purely user-visible information that will allow coders to
- * identify this cache instance in a @ref svn_cache__info_t struct.
+ * identify this cache instance in a #svn_cache__info_t struct.
  * It does not influence the behavior of the cache itself.
  *
  * Note that NULL is a legitimate value for cache entries (and 
@@ -326,7 +326,7 @@ svn_cache__set_error_handler(svn_cache__t *cache,
 
 /**
  * Returns @c TRUE if the @a cache supports objects of the given @a size.
- * There is no guarantee, that @ref svn_cache__set will actually store the
+ * There is no guarantee, that svn_cache__set() will actually store the
  * respective object in that case. However, a @c FALSE return value indicates
  * that an attempt to cache the item will either fail or impair the overall
  * cache performance. @c FALSE will also be returned if @a cache is @c NULL.
@@ -397,7 +397,7 @@ svn_cache__iter(svn_boolean_t *completed,
                 apr_pool_t *scratch_pool);
 
 /**
- * Similar to @ref svn_cache__set but will call a specific de-serialization
+ * Similar to svn_cache__set() but will call a specific de-serialization
  * function @a func. @a found will be set depending on whether the @a key
  * has been found. Even if that reports @c TRUE, @a values may still return
  * a @c NULL pointer depending on the logic inside @a func.
