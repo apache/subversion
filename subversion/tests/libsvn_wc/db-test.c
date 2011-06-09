@@ -1273,6 +1273,7 @@ test_work_queue(apr_pool_t *pool)
   svn_skel_t *work_item;
   int run_count[3] = { 4, 7, 2 };  /* run the work 13 times, total.  */
   int fetches = 0;
+  apr_int64_t last_id = 0;
 
   SVN_ERR(create_open(&db, &local_abspath, "test_work_queue", pool));
 
@@ -1295,8 +1296,8 @@ test_work_queue(apr_pool_t *pool)
       int which;
 
       /* Fetch the next work item, or break when the work queue is empty.  */
-      SVN_ERR(svn_wc__db_wq_fetch(&id, &work_item, db, local_abspath,
-                                  pool, pool));
+      SVN_ERR(svn_wc__db_wq_fetch_next(&id, &work_item, db, local_abspath,
+                                       last_id, pool, pool));
       if (work_item == NULL)
         break;
 
@@ -1318,7 +1319,9 @@ test_work_queue(apr_pool_t *pool)
       /* If we have run this particular item enough times, then go ahead
          and remove it from the work queue.  */
       if (--run_count[which] == 0)
-        SVN_ERR(svn_wc__db_wq_completed(db, local_abspath, id, pool));
+        last_id = id;
+      else
+        last_id = 0;
     }
 
   /* Should have run precisely 13 work items.  */

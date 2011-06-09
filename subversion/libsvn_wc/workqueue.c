@@ -1501,6 +1501,7 @@ svn_wc__wq_run(svn_wc__db_t *db,
                apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_uint64_t last_id = 0;
 
 #ifdef SVN_DEBUG_WORK_QUEUE
   SVN_DBG(("wq_run: wri='%s'\n", wri_abspath));
@@ -1518,16 +1519,17 @@ svn_wc__wq_run(svn_wc__db_t *db,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc__db_wq_fetch(&id, &work_item, db, wri_abspath,
-                                  iterpool, iterpool));
+      SVN_ERR(svn_wc__db_wq_fetch_next(&id, &work_item, db, wri_abspath,
+                                       last_id, iterpool, iterpool));
       if (work_item == NULL)
         break;
 
       SVN_ERR(dispatch_work_item(db, wri_abspath, work_item,
                                  cancel_func, cancel_baton, iterpool));
 
-      /* The work item finished without error. Mark it completed.  */
-      SVN_ERR(svn_wc__db_wq_completed(db, wri_abspath, id, iterpool));
+      /* The work item finished without error. Mark it completed
+         in the next loop.  */
+      last_id = id;
     }
 
   svn_pool_destroy(iterpool);

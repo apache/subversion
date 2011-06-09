@@ -9805,19 +9805,69 @@ svn_wc__db_wq_add(svn_wc__db_t *db,
                                          scratch_pool));
 }
 
+/* Baton for wq_fetch_next */
+struct wq_fetch_next_baton_t
+{
+  apr_uint64_t id;
+  svn_skel_t *work_item;
+  apr_pool_t *result_pool;
+};
+
+static svn_error_t *
+wq_fetch_next(void *baton,
+             svn_wc__db_wcroot_t *wcroot,
+             const char *local_relpath,
+             apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  struct wq_fetch_next_baton_t *fnb = baton;
+  svn_boolean_t have_row;
+
+  if (fnb->id != 0)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_WORK_ITEM));
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 1, fnb->id));
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_WORK_ITEM));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (!have_row)
+    {
+      fnb->id = 0;
+      fnb->work_item = NULL;
+    }
+  else
+    {
+      apr_size_t len;
+      const void *val;
+
+      fnb->id = svn_sqlite__column_int64(stmt, 0);
+
+      val = svn_sqlite__column_blob(stmt, 1, &len, fnb->result_pool);
+
+      fnb->work_item = svn_skel__parse(val, len, fnb->result_pool);
+    }
+
+  return svn_error_return(svn_sqlite__reset(stmt));
+}
 
 svn_error_t *
-svn_wc__db_wq_fetch(apr_uint64_t *id,
-                    svn_skel_t **work_item,
-                    svn_wc__db_t *db,
-                    const char *wri_abspath,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
+svn_wc__db_wq_fetch_next(apr_uint64_t *id,
+                         svn_skel_t **work_item,
+                         svn_wc__db_t *db,
+                         const char *wri_abspath,
+                         apr_uint64_t completed_id,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
+  struct wq_fetch_next_baton_t fnb;
 
   SVN_ERR_ASSERT(id != NULL);
   SVN_ERR_ASSERT(work_item != NULL);
@@ -9827,52 +9877,16 @@ svn_wc__db_wq_fetch(apr_uint64_t *id,
                               wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_WORK_ITEM));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  fnb.id = completed_id;
+  fnb.result_pool = result_pool;
 
-  if (!have_row)
-    {
-      *id = 0;
-      *work_item = NULL;
-    }
-  else
-    {
-      apr_size_t len;
-      const void *val;
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, wq_fetch_next, &fnb,
+                              scratch_pool));
 
-      *id = svn_sqlite__column_int64(stmt, 0);
+  *id = fnb.id;
+  *work_item = fnb.work_item;
 
-      val = svn_sqlite__column_blob(stmt, 1, &len, result_pool);
-
-      *work_item = svn_skel__parse(val, len, result_pool);
-    }
-
-  return svn_error_return(svn_sqlite__reset(stmt));
-}
-
-
-svn_error_t *
-svn_wc__db_wq_completed(svn_wc__db_t *db,
-                        const char *wri_abspath,
-                        apr_uint64_t id,
-                        apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
-  SVN_ERR_ASSERT(id != 0);
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              wri_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_DELETE_WORK_ITEM));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, id));
-  return svn_error_return(svn_sqlite__step_done(stmt));
+  return SVN_NO_ERROR;
 }
 
 
