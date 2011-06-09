@@ -1773,7 +1773,7 @@ write_entry(struct write_baton **entry_node,
 
   /* ### set the text_mod value? */
 
-  if (entry->tree_conflict_data)
+  if (entry_node && entry->tree_conflict_data)
     {
       /* Issues #3840/#3916: 1.6 stores multiple tree conflicts on the
          parent node, 1.7 stores them directly on the conflited nodes.
@@ -1787,10 +1787,13 @@ write_entry(struct write_baton **entry_node,
       skel = skel->children;
       while(skel)
         {
-          const svn_wc_conflict_description2_t *conflict;
+          svn_wc_conflict_description2_t *conflict;
           svn_skel_t *new_skel;
 
-          SVN_ERR(svn_wc__deserialize_conflict(&conflict, skel,
+          /* *CONFLICT is allocated so it is safe to use a non-const pointer */
+          SVN_ERR(svn_wc__deserialize_conflict(
+                             (const svn_wc_conflict_description2_t**)&conflict,
+                                               skel,
                                                svn_dirent_join(root_abspath,
                                                                local_relpath,
                                                                scratch_pool),
@@ -1798,8 +1801,11 @@ write_entry(struct write_baton **entry_node,
 
           SVN_ERR_ASSERT(conflict->kind == svn_wc_conflict_kind_tree);
 
-          /* ### Do we need to tweak the conflict?  Are 1.6 conflicts
-                 valid 1.7 conflicts? */
+          /* Fix dubious data stored by old clients, local adds don't have
+             a repository URL. */
+          if (conflict->reason == svn_wc_conflict_reason_added)
+            conflict->src_left_version = NULL;
+            
           SVN_ERR(svn_wc__serialize_conflict(&new_skel, conflict,
                                              scratch_pool, scratch_pool));
 
