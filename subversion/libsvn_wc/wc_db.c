@@ -1052,6 +1052,19 @@ insert_working_node(void *baton,
                                        piwb->op_depth,
                                        scratch_pool));
 
+  if (piwb->kind == svn_wc__db_kind_dir)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_UPDATE_ACTUAL_CLEAR_CHANGELIST));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_ACTUAL_EMPTY));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
   SVN_ERR(add_work_items(wcroot->sdb, piwb->work_items, scratch_pool));
 
   if (piwb->not_present_op_depth > 0

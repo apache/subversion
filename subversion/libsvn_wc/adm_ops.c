@@ -745,15 +745,6 @@ add_from_disk(svn_wc__db_t *db,
     {
       SVN_ERR(svn_wc__db_op_add_directory(db, local_abspath, NULL,
                                           scratch_pool));
-
-      /* Remove any existing changelist on the prior node. */
-      SVN_ERR(svn_wc__db_op_set_changelist(db, local_abspath,
-                                           NULL /* new_changelist */,
-                                           NULL /* changelist_filter */,
-                                           svn_depth_empty,
-                                           notify_func, notify_baton,
-                                           NULL, NULL /* cancellation */,
-                                           scratch_pool));
     }
 
   return SVN_NO_ERROR;

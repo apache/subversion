@@ -1042,7 +1042,6 @@ def move_added_keeps_changelist(sbox):
   svntest.actions.run_and_verify_info(expected_infos, kappa2_path)
 
 @Issue(3820)
-@XFail()
 def change_to_dir(sbox):
   "change file in changelist to dir"
 
@@ -1076,9 +1075,16 @@ def change_to_dir(sbox):
   expected_infos = [{'Name' : 'mu', 'Changelist' : None}]
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
 
-  expected_infos = [{'Changelist' : None}] # No Name for directories?
+  # A/mu visible in changelist
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'changelist', 'qq', sbox.ospath('A/mu'))
+  expected_infos = [{'Name' : 'mu', 'Changelist' : 'qq'}]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  # A/mu removed from changelist after replace with dir via merge
   svntest.main.run_svn(None, "merge", "-c", "2", sbox.ospath('A'),
                        sbox.ospath('A'))
+  expected_infos = [{'Changelist' : None}] # No Name for directories?
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
 
 
