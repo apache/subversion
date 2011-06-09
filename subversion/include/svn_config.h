@@ -97,6 +97,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_SECTION_HELPERS              "helpers"
 #define SVN_CONFIG_OPTION_EDITOR_CMD                "editor-cmd"
 #define SVN_CONFIG_OPTION_DIFF_CMD                  "diff-cmd"
+/** @since New in 1.7. */
 #define SVN_CONFIG_OPTION_DIFF_EXTENSIONS           "diff-extensions"
 #define SVN_CONFIG_OPTION_DIFF3_CMD                 "diff3-cmd"
 #define SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG     "diff3-has-program-arg"
@@ -127,6 +128,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_PASSWORD_DB               "password-db"
 #define SVN_CONFIG_OPTION_REALM                     "realm"
 #define SVN_CONFIG_OPTION_AUTHZ_DB                  "authz-db"
+/** @since New in 1.7. */
 #define SVN_CONFIG_OPTION_FORCE_USERNAME_CASE       "force-username-case"
 #define SVN_CONFIG_SECTION_SASL                 "sasl"
 #define SVN_CONFIG_OPTION_USE_SASL                  "use-sasl"

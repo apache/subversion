@@ -375,15 +375,14 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 6,
              "Invalid lock")
 
- /** Previously this error number was used by #SVN_ERR_WC_NOT_DIRECTORY, which
-  * is now an alias for this error.
-  * @since Since 1.7. */
+  /** @since New in 1.7. Previously this error number was used by
+   * #SVN_ERR_WC_NOT_DIRECTORY, which is now an alias for this error. */
   SVN_ERRDEF(SVN_ERR_WC_NOT_WORKING_COPY,
              SVN_ERR_WC_CATEGORY_START + 7,
              "Path is not a working copy directory")
 
-  /** This name is deprecated. Use #SVN_ERR_WC_NOT_WORKING_COPY.
-   * @deprecated Provided for backward compatibility with the 1.6 API. */
+  /** @deprecated Provided for backward compatibility with the 1.6 API.
+   * Use #SVN_ERR_WC_NOT_WORKING_COPY. */
 #define SVN_ERR_WC_NOT_DIRECTORY SVN_ERR_WC_NOT_WORKING_COPY
 
   SVN_ERRDEF(SVN_ERR_WC_NOT_FILE,
@@ -476,7 +475,8 @@ SVN_ERROR_START
              "Failed to locate 'copyfrom' path in working copy")
 
   /** @since New in 1.5.
-   * @deprecated This event is not an error, and is now reported
+   * @deprecated Provided for backward compatibility with the 1.6 API.
+   * This event is not an error, and is now reported
    * via the standard notification mechanism instead. */
   SVN_ERRDEF(SVN_ERR_WC_CHANGELIST_MOVE,
              SVN_ERR_WC_CATEGORY_START + 29,

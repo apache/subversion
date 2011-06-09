@@ -311,6 +311,8 @@ svn_handle_warning(FILE *stream,
  *
  * This macro can be used when directly returning an error to ensure
  * that the call stack is recorded correctly.
+ * 
+ * @since New in 1.7.
  */
 #ifdef SVN_ERR__TRACING
 #define SVN_ERR__TRACED "traced call"
