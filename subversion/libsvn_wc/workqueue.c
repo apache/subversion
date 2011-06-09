@@ -1512,18 +1512,24 @@ svn_wc__wq_run(svn_wc__db_t *db,
       apr_uint64_t id;
       svn_skel_t *work_item;
 
+      svn_pool_clear(iterpool);
+
+      /* Make sure to do this *early* in the loop iteration. There may
+         be a LAST_ID that needs to be marked as completed, *before* we
+         start worrying about anything else.  */
+      SVN_ERR(svn_wc__db_wq_fetch_next(&id, &work_item, db, wri_abspath,
+                                       last_id, iterpool, iterpool));
+
       /* Stop work queue processing, if requested. A future 'svn cleanup'
-         should be able to continue the processing.  */
+         should be able to continue the processing. Note that we may
+         have WORK_ITEM, but we'll just skip its processing for now.  */
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      svn_pool_clear(iterpool);
-
-      SVN_ERR(svn_wc__db_wq_fetch_next(&id, &work_item, db, wri_abspath,
-                                       last_id, iterpool, iterpool));
+      /* If we have a WORK_ITEM, then process the sucker. Otherwise,
+         we're done.  */
       if (work_item == NULL)
         break;
-
       SVN_ERR(dispatch_work_item(db, wri_abspath, work_item,
                                  cancel_func, cancel_baton, iterpool));
 
