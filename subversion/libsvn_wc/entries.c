@@ -1506,6 +1506,7 @@ struct write_baton {
   db_node_t *base;
   db_node_t *work;
   db_node_t *below_work;
+  apr_hash_t *tree_conflicts;
 };
 
 
@@ -1523,7 +1524,8 @@ write_entry(struct write_baton **entry_node,
             const svn_wc_entry_t *entry,
             const svn_wc__text_base_info_t *text_base_info,
             const char *local_relpath,
-            const char *entry_abspath,
+            const char *tmp_entry_abspath,
+            const char *root_abspath,
             const svn_wc_entry_t *this_dir,
             svn_boolean_t create_locks,
             apr_pool_t *result_pool,
@@ -1533,6 +1535,7 @@ write_entry(struct write_baton **entry_node,
   db_node_t *working_node = NULL, *below_working_node = NULL;
   db_actual_node_t *actual_node = NULL;
   const char *parent_relpath;
+  apr_hash_t *tree_conflicts;
 
   if (*local_relpath == '\0')
     parent_relpath = NULL;
@@ -1750,20 +1753,62 @@ write_entry(struct write_baton **entry_node,
 
   if (entry->tree_conflict_data)
     {
-      /* Issue #3840: 1.6 uses one pair of () more than we do, so
-         strip it.  Thus, "()" becomes NULL and "((skel1) (skel2))"
-         becomes "(skel1) (skel2)". */
+      /* Issues #3840/#3916: 1.6 stores multiple tree conflicts on the
+         parent node, 1.7 stores them directly on the conflited nodes.
+         So "((skel1) (skel2))" becomes "(skel1)" and "(skel2)" */
       svn_skel_t *skel;
 
-      actual_node = MAYBE_ALLOC(actual_node, scratch_pool);
       skel = svn_skel__parse(entry->tree_conflict_data,
                              strlen(entry->tree_conflict_data),
                              scratch_pool);
-      if (skel->children)
-        actual_node->tree_conflict_data = svn_skel__unparse(skel->children,
-                                                            result_pool)->data;
-      else
-        actual_node->tree_conflict_data = NULL;
+      tree_conflicts = apr_hash_make(result_pool);
+      skel = skel->children;
+      while(skel)
+        {
+          const svn_wc_conflict_description2_t *conflict;
+          svn_skel_t *new_skel;
+
+          SVN_ERR(svn_wc__deserialize_conflict(&conflict, skel,
+                                               svn_dirent_join(root_abspath,
+                                                               local_relpath,
+                                                               scratch_pool),
+                                               scratch_pool, scratch_pool));
+
+          SVN_ERR_ASSERT(conflict->kind == svn_wc_conflict_kind_tree);
+
+          /* ### Do we need to tweak the conflict?  Are 1.6 conflicts
+                 valid 1.7 conflicts? */
+          SVN_ERR(svn_wc__serialize_conflict(&new_skel, conflict,
+                                             scratch_pool, scratch_pool));
+
+          /* Store in hash to be retrieved when writing the child
+             row. */
+          apr_hash_set(tree_conflicts,
+                       svn_dirent_skip_ancestor(root_abspath,
+                                                conflict->local_abspath),
+                       APR_HASH_KEY_STRING,
+                       svn_skel__unparse(new_skel, result_pool)->data);
+          skel = skel->next;
+        }
+    }
+  else
+    tree_conflicts = NULL;
+
+  if (parent_node && parent_node->tree_conflicts)
+    {
+      const char *tree_conflict_data = apr_hash_get(parent_node->tree_conflicts,
+                                                    local_relpath,
+                                                    APR_HASH_KEY_STRING);
+      if (tree_conflict_data)
+        {
+          actual_node = MAYBE_ALLOC(actual_node, scratch_pool);
+          actual_node->tree_conflict_data = tree_conflict_data;
+        }
+
+      /* Reset hash so that we don't write the row again when writing
+         actual-only nodes */
+      apr_hash_set(parent_node->tree_conflicts, local_relpath,
+                   APR_HASH_KEY_STRING, NULL);
     }
 
   if (entry->file_external_path != NULL)
@@ -1907,7 +1952,8 @@ write_entry(struct write_baton **entry_node,
           lock.comment = entry->lock_comment;
           lock.date = entry->lock_creation_date;
 
-          SVN_ERR(svn_wc__db_lock_add(db, entry_abspath, &lock, scratch_pool));
+          SVN_ERR(svn_wc__db_lock_add(db, tmp_entry_abspath, &lock,
+                                      scratch_pool));
         }
 
       /* Now, update the file external information.
@@ -2098,6 +2144,34 @@ write_entry(struct write_baton **entry_node,
       (*entry_node)->base = base_node;
       (*entry_node)->work = working_node;
       (*entry_node)->below_work = below_working_node;
+      (*entry_node)->tree_conflicts = tree_conflicts;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+write_actual_only_entries(apr_hash_t *tree_conflicts,
+                          svn_sqlite__db_t *sdb,
+                          apr_int64_t wc_id,
+                          const char *parent_relpath,
+                          apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, tree_conflicts);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      db_actual_node_t *actual_node = NULL;
+
+      actual_node = MAYBE_ALLOC(actual_node, scratch_pool);
+      actual_node->wc_id = wc_id;
+      actual_node->local_relpath = svn__apr_hash_index_key(hi);
+      actual_node->parent_relpath = parent_relpath;
+      actual_node->tree_conflict_data = svn__apr_hash_index_val(hi);
+
+      SVN_ERR(insert_actual_node(sdb, actual_node, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -2156,6 +2230,7 @@ entries_write_new_cb(void *baton,
                       ewb->wc_id, ewb->repos_id, this_dir, NULL, dir_relpath,
                       svn_dirent_join(new_root_abspath, dir_relpath,
                                       scratch_pool),
+                      old_root_abspath,
                       this_dir, FALSE, ewb->result_pool, iterpool));
 
   for (hi = apr_hash_first(scratch_pool, ewb->entries); hi;
@@ -2182,8 +2257,13 @@ entries_write_new_cb(void *baton,
                           this_entry, text_base_info, child_relpath,
                           svn_dirent_join(new_root_abspath, child_relpath,
                                           scratch_pool),
+                          old_root_abspath,
                           this_dir, TRUE, iterpool, iterpool));
     }
+
+  if (ewb->dir_node->tree_conflicts)
+    SVN_ERR(write_actual_only_entries(ewb->dir_node->tree_conflicts, sdb,
+                                      ewb->wc_id, dir_relpath, iterpool));
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
