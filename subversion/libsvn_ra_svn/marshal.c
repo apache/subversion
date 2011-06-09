@@ -337,6 +337,7 @@ static svn_error_t *readbuf_getchar_skip_whitespace(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+/* Read the next LEN bytes from CONN and copy them to *DATA. */
 static svn_error_t *readbuf_read(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                  char *data, apr_size_t len)
 {
