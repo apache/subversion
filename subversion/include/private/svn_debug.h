@@ -39,7 +39,8 @@ extern "C" {
 
 /* A couple helper functions for the macros below.  */
 void
-svn_dbg__preamble(const char *file, long line, FILE *output);
+svn_dbg__preamble(const char *file, long line, const char *func,
+                  FILE *output);
 void
 svn_dbg__printf(const char *fmt, ...)
   __attribute__((format(printf, 1, 2)));
@@ -54,7 +55,7 @@ svn_dbg__printf(const char *fmt, ...)
    for breakpoints.  */
 #ifdef SVN_DBG_QUIET
 
-#define SVN_DBG(ARGS) svn_dbg__preamble(__FILE__, __LINE__, NULL)
+#define SVN_DBG(ARGS) svn_dbg__preamble(__FILE__, __LINE__, __func__, NULL)
 
 #else
 
@@ -75,8 +76,8 @@ svn_dbg__printf(const char *fmt, ...)
  * Note that these output lines are filtered by our test suite automatically,
  * so you don't have to worry about throwing off expected output.
  */
-#define SVN_DBG(ARGS) (svn_dbg__preamble(__FILE__, __LINE__, SVN_DBG_OUTPUT), \
-                       svn_dbg__printf ARGS)
+#define SVN_DBG(ARGS) (svn_dbg__preamble(__FILE__, __LINE__, __func__, \
+                       SVN_DBG_OUTPUT), svn_dbg__printf ARGS)
 
 #endif
 
