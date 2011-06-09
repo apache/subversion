@@ -889,7 +889,8 @@ insert_base_node(void *baton,
     {
       if (parent_relpath
           && ((pibb->status == svn_wc__db_status_normal)
-              || (pibb->status == svn_wc__db_status_incomplete)))
+              || (pibb->status == svn_wc__db_status_incomplete))
+          && ! pibb->file_external)
         {
           SVN_ERR(extend_parent_delete(wcroot, local_relpath, scratch_pool));
         }

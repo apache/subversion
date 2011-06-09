@@ -1792,7 +1792,6 @@ def file_external_in_sibling(sbox):
                             [], 'update')
 
 @Issue(3823)
-@XFail()
 def file_external_update_without_commit(sbox):
   "update a file external without committing target"
 
