@@ -707,9 +707,14 @@ int main(int argc, const char *argv[])
           return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
         }
 
+      /* Use a subpool for the connection to ensure that if SASL is used
+       * the pool cleanup handlers that call sasl_dispose() (connection_pool)
+       * and sasl_done() (pool) are run in the right order. See issue #3664. */
+      connection_pool = svn_pool_create(pool);
       conn = svn_ra_svn_create_conn2(NULL, in_file, out_file, 
-                                     params.compression_level, pool);
-      svn_error_clear(serve(conn, &params, pool));
+                                     params.compression_level,
+                                     connection_pool);
+      svn_error_clear(serve(conn, &params, connection_pool));
       exit(0);
     }
 
