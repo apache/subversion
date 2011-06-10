@@ -691,9 +691,9 @@ set_prop_merge_state(svn_wc_notify_state_t *state,
  * property conflict.
  *
  * BASE_VAL/WORKING_VAL represent the current state of the working
- * copy, and OLD_VAL/NEW_VAL represents the incoming propchange.  Any
- * of these values might be NULL, indicating either non-existence or
- * intent-to-delete.
+ * copy, and INCOMING_OLD_VAL/INCOMING_NEW_VAL represents the incoming
+ * propchange.  Any of these values might be NULL, indicating either
+ * non-existence or intent-to-delete.
  *
  * If the callback isn't available, or if it responds with
  * 'choose_postpone', then set *CONFLICT_REMAINS to TRUE and return.
@@ -711,8 +711,8 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
                             svn_boolean_t is_dir,
                             const char *propname,
                             apr_hash_t *working_props,
-                            const svn_string_t *old_val,
-                            const svn_string_t *new_val,
+                            const svn_string_t *incoming_old_val,
+                            const svn_string_t *incoming_new_val,
                             const svn_string_t *base_val,
                             const svn_string_t *working_val,
                             svn_wc_conflict_resolver_func2_t conflict_func,
@@ -751,25 +751,25 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
       cdesc->my_abspath = svn_dirent_join(dirpath, file_name, filepool);
     }
 
-  if (new_val)
+  if (incoming_new_val)
     {
       const char *file_name;
 
-      SVN_ERR(svn_io_write_unique(&file_name, dirpath, new_val->data,
-                                  new_val->len, svn_io_file_del_on_pool_cleanup,
-                                  filepool));
+      SVN_ERR(svn_io_write_unique(&file_name, dirpath, incoming_new_val->data,
+                                  incoming_new_val->len,
+                                  svn_io_file_del_on_pool_cleanup, filepool));
       cdesc->their_abspath = svn_dirent_join(dirpath, file_name, filepool);
     }
 
-  if (!base_val && !old_val)
+  if (!base_val && !incoming_old_val)
     {
       /* If base and old are both NULL, then that's fine, we just let
          base_file stay NULL as-is.  Both agents are attempting to add a
          new property.  */
     }
 
-  else if ((base_val && !old_val)
-           || (!base_val && old_val))
+  else if ((base_val && !incoming_old_val)
+           || (!base_val && incoming_old_val))
     {
       /* If only one of base and old are defined, then we've got a
          situation where one agent is attempting to add the property
@@ -778,7 +778,8 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
          whichever older-value happens to be defined, so that the
          conflict-callback can still attempt a 3-way merge. */
 
-      const svn_string_t *conflict_base_val = base_val ? base_val : old_val;
+      const svn_string_t *conflict_base_val = base_val ? base_val
+                                                       : incoming_old_val;
       const char *file_name;
 
       SVN_ERR(svn_io_write_unique(&file_name, dirpath,
@@ -794,7 +795,7 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
       const svn_string_t *conflict_base_val;
       const char *file_name;
 
-      if (! svn_string_compare(base_val, old_val))
+      if (! svn_string_compare(base_val, incoming_old_val))
         {
           /* What happens if 'base' and 'old' don't match up?  In an
              ideal situation, they would.  But if they don't, this is
@@ -811,7 +812,7 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
              compare. */
 
           if (working_val && svn_string_compare(base_val, working_val))
-            conflict_base_val = old_val;
+            conflict_base_val = incoming_old_val;
           else
             conflict_base_val = base_val;
         }
@@ -821,11 +822,11 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
         }
 
       SVN_ERR(svn_io_write_unique(&file_name, dirpath, conflict_base_val->data,
-                                  conflict_base_val->len, svn_io_file_del_on_pool_cleanup,
-                                  filepool));
+                                  conflict_base_val->len,
+                                  svn_io_file_del_on_pool_cleanup, filepool));
       cdesc->base_abspath = svn_dirent_join(dirpath, file_name, filepool);
 
-      if (working_val && new_val)
+      if (working_val && incoming_new_val)
         {
           svn_stream_t *mergestream;
           svn_diff_t *diff;
@@ -837,10 +838,10 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
                                          filepool, scratch_pool));
           SVN_ERR(svn_diff_mem_string_diff3(&diff, conflict_base_val,
                                             working_val,
-                                            new_val, options, filepool));
+                                            incoming_new_val, options, filepool));
           SVN_ERR(svn_diff_mem_string_output_merge2
-                  (mergestream, diff, conflict_base_val, working_val, new_val,
-                   NULL, NULL, NULL, NULL,
+                  (mergestream, diff, conflict_base_val, working_val,
+                   incoming_new_val, NULL, NULL, NULL, NULL,
                    svn_diff_conflict_display_modified_latest, filepool));
           SVN_ERR(svn_stream_close(mergestream));
         }
@@ -854,9 +855,9 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
   cdesc->is_binary = mime_propval ?
       svn_mime_type_is_binary(mime_propval->data) : FALSE;
 
-  if (!old_val && new_val)
+  if (!incoming_old_val && incoming_new_val)
     cdesc->action = svn_wc_conflict_action_add;
-  else if (old_val && !new_val)
+  else if (incoming_old_val && !incoming_new_val)
     cdesc->action = svn_wc_conflict_action_delete;
   else
     cdesc->action = svn_wc_conflict_action_edit;
@@ -902,7 +903,8 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
          then choose _mine side or _theirs side for conflicting ones. */
       case svn_wc_conflict_choose_theirs_full:
         {
-          apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, new_val);
+          apr_hash_set(working_props, propname, APR_HASH_KEY_STRING,
+                       incoming_new_val);
           *conflict_remains = FALSE;
           break;
         }
