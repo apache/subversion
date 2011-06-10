@@ -839,7 +839,6 @@ static svn_error_t *
 elide_mergeinfo(svn_mergeinfo_t parent_mergeinfo,
                 svn_mergeinfo_t child_mergeinfo,
                 const char *local_abspath,
-                const char *path_suffix,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *scratch_pool)
 {
@@ -848,8 +847,8 @@ elide_mergeinfo(svn_mergeinfo_t parent_mergeinfo,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   SVN_ERR(should_elide_mergeinfo(&elides,
-                                 parent_mergeinfo, child_mergeinfo,
-                                 path_suffix, scratch_pool));
+                                 parent_mergeinfo, child_mergeinfo, NULL,
+                                 scratch_pool));
 
   if (elides)
     {
@@ -861,16 +860,18 @@ elide_mergeinfo(svn_mergeinfo_t parent_mergeinfo,
 
       if (ctx->notify_func2)
         {
-          const char *path = svn_dirent_join(local_abspath, path_suffix,
-                                             scratch_pool);
-          svn_wc_notify_t *notify =
-                svn_wc_create_notify(path, svn_wc_notify_merge_elide_info,
-                                     scratch_pool);
+          svn_wc_notify_t *notify;
 
+          notify = svn_wc_create_notify(local_abspath,
+                                        svn_wc_notify_merge_elide_info,
+                                        scratch_pool);
           ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
-          notify = svn_wc_create_notify(path, svn_wc_notify_update_update,
+
+          notify = svn_wc_create_notify(local_abspath,
+                                        svn_wc_notify_update_update,
                                         scratch_pool);
           notify->prop_state = svn_wc_notify_state_changed;
+
           ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
         }
     }
@@ -982,7 +983,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
         return SVN_NO_ERROR;
 
       SVN_ERR(elide_mergeinfo(mergeinfo, target_mergeinfo, target_abspath,
-                              NULL, ctx, pool));
+                              ctx, pool));
     }
   return SVN_NO_ERROR;
 }
