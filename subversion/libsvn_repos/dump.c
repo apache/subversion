@@ -353,13 +353,14 @@ dump_node(struct edit_baton *eb,
               svn_repos_notify_t *notify =
                     svn_repos_notify_create(svn_repos_notify_warning, pool);
 
-              notify->warning = apr_psprintf(
+              notify->warning = svn_repos_notify_warning_found_old_reference;
+              notify->warning_str = apr_psprintf(
                      pool,
-                     _("WARNING: Referencing data in revision %ld,"
-                       " which is older than the oldest\n"
-                       "WARNING: dumped revision (%ld).  Loading this dump"
-                       " into an empty repository\n"
-                       "WARNING: will fail.\n"),
+                     _("Referencing data in revision %ld,"
+                       " which is older than the oldest"
+                       " dumped revision (%ld).  Loading this dump"
+                       " into an empty repository"
+                       " will fail."),
                      cmp_rev, eb->oldest_dumped_rev);
               eb->found_old_reference = TRUE;
               eb->notify_func(eb->notify_baton, notify, pool);
@@ -457,12 +458,13 @@ dump_node(struct edit_baton *eb,
                   svn_repos_notify_t *notify =
                     svn_repos_notify_create(svn_repos_notify_warning, pool);
 
-                  notify->warning = apr_psprintf(
+                  notify->warning = svn_repos_notify_warning_found_old_mergeinfo;
+                  notify->warning_str = apr_psprintf(
                     pool,
-                    _("WARNING: Mergeinfo referencing revision(s) prior "
-                      "to the oldest dumped revision (%ld).\n"
-                      "WARNING: Loading this dump may result in invalid "
-                      "mergeinfo.\n"),
+                    _("Mergeinfo referencing revision(s) prior "
+                      "to the oldest dumped revision (%ld). "
+                      "Loading this dump may result in invalid "
+                      "mergeinfo."),
                     eb->oldest_dumped_rev);
 
                   eb->found_old_mergeinfo = TRUE;
@@ -1122,10 +1124,11 @@ svn_repos_dump_fs3(svn_repos_t *repos,
 
       if (found_old_reference)
         {
-          notify->warning = _("WARNING: The range of revisions dumped "
-                              "contained references to\n"
-                              "WARNING: copy sources outside that "
-                              "range.\n");
+          notify->warning = svn_repos_notify_warning_found_old_reference;
+          notify->warning_str = _("The range of revisions dumped "
+                                  "contained references to "
+                                  "copy sources outside that "
+                                  "range.");
           notify_func(notify_baton, notify, subpool);
         }
 
@@ -1133,10 +1136,11 @@ svn_repos_dump_fs3(svn_repos_t *repos,
          in dumped mergeinfo. */
       if (found_old_mergeinfo)
         {
-          notify->warning = _("WARNING: The range of revisions dumped "
-                              "contained mergeinfo\n"
-                              "WARNING: which reference revisions outside "
-                              "that range.\n");
+          notify->warning = svn_repos_notify_warning_found_old_mergeinfo;
+          notify->warning_str = _("The range of revisions dumped "
+                                  "contained mergeinfo "
+                                  "which reference revisions outside "
+                                  "that range.");
           notify_func(notify_baton, notify, subpool);
         }
     }
