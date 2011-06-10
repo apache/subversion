@@ -2601,15 +2601,11 @@ main(int argc, const char *argv[])
 
       /* Tell the user about 'svn cleanup' if any error on the stack
          was about locked working copies. */
-      for (tmp_err = err; tmp_err; tmp_err = tmp_err->child)
-        if (tmp_err->apr_err == SVN_ERR_WC_LOCKED)
-          {
-            svn_error_clear
-              (svn_cmdline_fputs(_("svn: run 'svn cleanup' to remove locks "
-                                   "(type 'svn help cleanup' for details)\n"),
-                                 stderr, pool));
-            break;
-          }
+      if (svn_error_find_cause(err, SVN_ERR_WC_LOCKED))
+        svn_error_clear(svn_cmdline_fputs(_("svn: run 'svn cleanup' to "
+                                            "remove locks (type 'svn help "
+                                            "cleanup' for details)\n"),
+                                          stderr, pool));
 
       svn_error_clear(err);
       svn_pool_destroy(pool);
