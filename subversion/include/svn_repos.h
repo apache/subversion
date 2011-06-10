@@ -240,6 +240,21 @@ typedef enum svn_repos_notify_action_t
 
 } svn_repos_notify_action_t;
 
+/** The type of error occurring.
+ *
+ * @since New in 1.7.
+ */
+typedef enum svn_repos_notify_warning_t
+{
+  /** Referencing copy source data from a revision earlier than the
+   * first revision dumped. */
+  svn_repos_notify_warning_found_old_reference,
+
+  /** An #SVN_PROP_MERGEINFO property's encoded mergeinfo references a
+   * revision earlier than the first revision dumped. */
+  svn_repos_notify_warning_found_old_mergeinfo,
+} svn_repos_notify_warning_t;
+
 /**
  * Structure used by #svn_repos_notify_func_t.
  *
@@ -261,8 +276,10 @@ typedef struct svn_repos_notify_t
    * the revision which just completed. */
   svn_revnum_t revision;
 
-  /** For #svn_repos_notify_warning, the warning text. */
-  const char *warning;
+  /** For #svn_repos_notify_warning, the warning object. Must be cleared
+      by the consumer of the notification. */
+  const char *warning_str;
+  svn_repos_notify_warning_t warning;
 
   /** For #svn_repos_notify_pack_shard_start,
       #svn_repos_notify_pack_shard_end,
