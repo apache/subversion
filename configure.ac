@@ -1297,10 +1297,15 @@ AC_SUBST(INCLUDE_OUTPUTS)
 
 # ==== Detection complete - output and run config.status =====================
 
-AC_CONFIG_HEADERS(subversion/svn_private_config.h)
-AC_CONFIG_COMMANDS([svn_private_config.h],
-                   [$SED -e "s/@SVN_DB_HEADER@/$SVN_DB_HEADER/" subversion/svn_private_config.h > subversion/svn_private_config.h.new
-                    mv -f subversion/svn_private_config.h.new subversion/svn_private_config.h],
+AC_CONFIG_HEADERS(subversion/svn_private_config.h.tmp)
+AC_CONFIG_COMMANDS([svn_private_config.h.tmp],
+                   [$SED -e "s/@SVN_DB_HEADER@/$SVN_DB_HEADER/" subversion/svn_private_config.h.tmp > subversion/svn_private_config.h.tmp.new
+                    if test -e subversion/svn_private_config.h && diff subversion/svn_private_config.h subversion/svn_private_config.h.tmp.new >/dev/null ; then
+                      rm -f subversion/svn_private_config.h.tmp.new
+                    else
+                      mv -f subversion/svn_private_config.h.tmp.new subversion/svn_private_config.h
+                    fi
+                    rm -f subversion/svn_private_config.h.tmp],
                    [SED="$SED"
                     SVN_DB_HEADER="$SVN_DB_HEADER"])
 AC_CONFIG_FILES([Makefile])
