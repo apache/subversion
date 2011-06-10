@@ -1527,10 +1527,7 @@ svn_uri_skip_ancestor(const char *parent_uri,
   if (child_uri[len] == 0)
     return ""; /* parent_uri == child_uri */
 
-  if (len == 1 && child_uri[0] == '/')
-    return child_uri + 1;
-
-  if (len > 0 && child_uri[len] == '/')
+  if (child_uri[len] == '/')
     return child_uri + len + 1;
 
   return child_uri;
