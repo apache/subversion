@@ -778,18 +778,20 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
          whichever older-value happens to be defined, so that the
          conflict-callback can still attempt a 3-way merge. */
 
-      const svn_string_t *the_val = base_val ? base_val : old_val;
+      const svn_string_t *conflict_base_val = base_val ? base_val : old_val;
       const char *file_name;
 
-      SVN_ERR(svn_io_write_unique(&file_name, dirpath, the_val->data,
-                                  the_val->len, svn_io_file_del_on_pool_cleanup,
+      SVN_ERR(svn_io_write_unique(&file_name, dirpath,
+                                  conflict_base_val->data,
+                                  conflict_base_val->len,
+                                  svn_io_file_del_on_pool_cleanup,
                                   filepool));
       cdesc->base_abspath = svn_dirent_join(dirpath, file_name, filepool);
     }
 
   else  /* base and old are both non-NULL */
     {
-      const svn_string_t *the_val;
+      const svn_string_t *conflict_base_val;
       const char *file_name;
 
       if (! svn_string_compare(base_val, old_val))
@@ -809,17 +811,17 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
              compare. */
 
           if (working_val && svn_string_compare(base_val, working_val))
-            the_val = old_val;
+            conflict_base_val = old_val;
           else
-            the_val = base_val;
+            conflict_base_val = base_val;
         }
       else
         {
-          the_val = base_val;
+          conflict_base_val = base_val;
         }
 
-      SVN_ERR(svn_io_write_unique(&file_name, dirpath, the_val->data,
-                                  the_val->len, svn_io_file_del_on_pool_cleanup,
+      SVN_ERR(svn_io_write_unique(&file_name, dirpath, conflict_base_val->data,
+                                  conflict_base_val->len, svn_io_file_del_on_pool_cleanup,
                                   filepool));
       cdesc->base_abspath = svn_dirent_join(dirpath, file_name, filepool);
 
@@ -833,10 +835,11 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
           SVN_ERR(svn_stream_open_unique(&mergestream, &cdesc->merged_file,
                                          NULL, svn_io_file_del_on_pool_cleanup,
                                          filepool, scratch_pool));
-          SVN_ERR(svn_diff_mem_string_diff3(&diff, the_val, working_val,
+          SVN_ERR(svn_diff_mem_string_diff3(&diff, conflict_base_val,
+                                            working_val,
                                             new_val, options, filepool));
           SVN_ERR(svn_diff_mem_string_output_merge2
-                  (mergestream, diff, the_val, working_val, new_val,
+                  (mergestream, diff, conflict_base_val, working_val, new_val,
                    NULL, NULL, NULL, NULL,
                    svn_diff_conflict_display_modified_latest, filepool));
           SVN_ERR(svn_stream_close(mergestream));
