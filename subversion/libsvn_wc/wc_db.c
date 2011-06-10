@@ -8434,6 +8434,9 @@ svn_wc__db_global_update(svn_wc__db_t *db,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool)
 {
+  NOT_IMPLEMENTED();
+
+#if 0
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   struct update_baton_t ub;
@@ -8471,9 +8474,6 @@ svn_wc__db_global_update(svn_wc__db_t *db,
   ub.conflict = conflict;
   ub.work_items = work_items;
 
-  NOT_IMPLEMENTED();
-
-#if 0
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, update_node, &ub,
                               scratch_pool));
 
