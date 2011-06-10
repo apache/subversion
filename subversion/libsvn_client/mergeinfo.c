@@ -861,18 +861,14 @@ elide_mergeinfo(svn_mergeinfo_t parent_mergeinfo,
 
       if (ctx->notify_func2)
         {
+          const char *path = svn_dirent_join(local_abspath, path_suffix,
+                                             scratch_pool);
           svn_wc_notify_t *notify =
-                svn_wc_create_notify(
-                              svn_dirent_join_many(scratch_pool, local_abspath,
-                                                   path_suffix, NULL),
-                              svn_wc_notify_merge_elide_info, scratch_pool);
+                svn_wc_create_notify(path, svn_wc_notify_merge_elide_info,
+                                     scratch_pool);
 
           ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
-          notify = svn_wc_create_notify(svn_dirent_join_many(scratch_pool,
-                                                             local_abspath,
-                                                             path_suffix,
-                                                             NULL),
-                                        svn_wc_notify_update_update,
+          notify = svn_wc_create_notify(path, svn_wc_notify_update_update,
                                         scratch_pool);
           notify->prop_state = svn_wc_notify_state_changed;
           ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
