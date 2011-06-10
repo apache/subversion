@@ -355,17 +355,19 @@ checkout_dir(dir_context_t *dir)
   checkout_context_t *checkout_ctx;
   svn_ra_serf__handler_t *handler;
   svn_error_t *err;
+  dir_context_t *parent_dir = dir->parent_dir;
 
   if (dir->checkout)
     {
       return SVN_NO_ERROR;
     }
 
-  if (dir->parent_dir)
+  /* Is one of our parent dirs newly added?  If so, we're already
+   * implicitly checked out.
+   */
+  while (parent_dir)
     {
-      /* Is our parent newly added?  If so, we're already implicitly checked
-       * out. */
-      if (dir->parent_dir->added)
+      if (parent_dir->added)
         {
           /* Implicitly checkout this dir now. */
           dir->checkout = apr_pcalloc(dir->pool, sizeof(*dir->checkout));
@@ -378,6 +380,7 @@ checkout_dir(dir_context_t *dir)
 
           return SVN_NO_ERROR;
         }
+      parent_dir = parent_dir->parent_dir;
     }
 
   /* Checkout our directory into the activity URL now. */
@@ -543,28 +546,28 @@ checkout_file(file_context_t *file)
 {
   svn_ra_serf__handler_t *handler;
   svn_error_t *err;
+  dir_context_t *parent_dir = file->parent_dir;
 
-  if (file->parent_dir)
+  /* Is one of our parent dirs newly added?  If so, we're already
+   * implicitly checked out.
+   */
+  while (parent_dir)
     {
-      dir_context_t *dir = file->parent_dir;
-
-      /* Is our parent newly added?  If so, we're already implicitly checked out. */
-      if (dir->added)
+      if (parent_dir->added)
         {
-          const char *diff_path;
-
-          /* Implicitly checkout this dir now. */
+          /* Implicitly checkout this file now. */
           file->checkout = apr_pcalloc(file->pool, sizeof(*file->checkout));
           file->checkout->pool = file->pool;
-
           file->checkout->activity_url = file->commit->activity_url;
-          diff_path = svn_relpath_is_child(dir->name, file->name, file->pool);
           file->checkout->resource_url =
-            svn_path_url_add_component2(dir->checkout->resource_url,
-                                        diff_path,
+            svn_path_url_add_component2(parent_dir->checkout->resource_url,
+                                        svn_relpath_is_child(parent_dir->name,
+                                                             file->name,
+                                                             file->pool),
                                         file->pool);
           return SVN_NO_ERROR;
         }
+      parent_dir = parent_dir->parent_dir;
     }
 
   /* Checkout our file into the activity URL now. */
