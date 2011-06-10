@@ -50,7 +50,7 @@ write_format(const char *path,
 {
   const char *contents;
 
-  path = svn_path_join(path, "format", pool);
+  path = svn_dirent_join(path, "format", pool);
 
   if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
     {
@@ -74,7 +74,7 @@ write_format(const char *path,
       const char *path_tmp;
 
       SVN_ERR(svn_io_write_unique(&path_tmp,
-                                  svn_path_dirname(path, pool),
+                                  svn_dirent_dirname(path, pool),
                                   contents, strlen(contents),
                                   svn_io_file_del_none, pool));
 
@@ -124,7 +124,7 @@ create_packed_filesystem(const char *dir,
 
   /* Rewrite the format file */
   SVN_ERR(svn_io_read_version_file(&version,
-                                   svn_path_join(dir, "format", subpool),
+                                   svn_dirent_join(dir, "format", subpool),
                                    subpool));
   SVN_ERR(write_format(dir, version, shard_size, subpool));
 
@@ -189,9 +189,9 @@ pack_filesystem(const svn_test_opts_t *opts,
      don't. */
   for (i = 0; i < (MAX_REV + 1) / SHARD_SIZE; i++)
     {
-      path = svn_path_join_many(pool, REPO_NAME, "revs",
-                                apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
-                                "pack", NULL);
+      path = svn_dirent_join_many(pool, REPO_NAME, "revs",
+                                  apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
+                                  "pack", NULL);
 
       /* These files should exist. */
       SVN_ERR(svn_io_check_path(path, &kind, pool));
@@ -199,9 +199,9 @@ pack_filesystem(const svn_test_opts_t *opts,
         return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
                                  "Expected pack file '%s' not found", path);
 
-      path = svn_path_join_many(pool, REPO_NAME, "revs",
-                                apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
-                                "manifest", NULL);
+      path = svn_dirent_join_many(pool, REPO_NAME, "revs",
+                                  apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
+                                  "manifest", NULL);
       SVN_ERR(svn_io_check_path(path, &kind, pool));
       if (kind != svn_node_file)
         return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
@@ -209,9 +209,9 @@ pack_filesystem(const svn_test_opts_t *opts,
                                  path);
 
       /* This directory should not exist. */
-      path = svn_path_join_many(pool, REPO_NAME, "revs",
-                                apr_psprintf(pool, "%d", i / SHARD_SIZE),
-                                NULL);
+      path = svn_dirent_join_many(pool, REPO_NAME, "revs",
+                                  apr_psprintf(pool, "%d", i / SHARD_SIZE),
+                                  NULL);
       SVN_ERR(svn_io_check_path(path, &kind, pool));
       if (kind != svn_node_none)
         return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
@@ -220,8 +220,8 @@ pack_filesystem(const svn_test_opts_t *opts,
 
   /* Ensure the min-unpacked-rev jives with the above operations. */
   SVN_ERR(svn_io_file_open(&file,
-                           svn_path_join(REPO_NAME, PATH_MIN_UNPACKED_REV,
-                                         pool),
+                           svn_dirent_join(REPO_NAME, PATH_MIN_UNPACKED_REV,
+                                           pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
   len = sizeof(buf);
   SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
@@ -231,9 +231,9 @@ pack_filesystem(const svn_test_opts_t *opts,
                              "Bad '%s' contents", PATH_MIN_UNPACKED_REV);
 
   /* Finally, make sure the final revision directory does exist. */
-  path = svn_path_join_many(pool, REPO_NAME, "revs",
-                            apr_psprintf(pool, "%d", (i / SHARD_SIZE) + 1),
-                            NULL);
+  path = svn_dirent_join_many(pool, REPO_NAME, "revs",
+                              apr_psprintf(pool, "%d", (i / SHARD_SIZE) + 1),
+                              NULL);
   SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind != svn_node_none)
     return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
@@ -265,7 +265,7 @@ pack_even_filesystem(const svn_test_opts_t *opts,
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE,
                                    pool));
 
-  path = svn_path_join_many(pool, REPO_NAME, "revs", "2.pack", NULL);
+  path = svn_dirent_join_many(pool, REPO_NAME, "revs", "2.pack", NULL);
   SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind != svn_node_dir)
     return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
