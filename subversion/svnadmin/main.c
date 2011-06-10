@@ -685,7 +685,7 @@ repos_notify_handler(void *baton,
   {
     case svn_repos_notify_warning:
       svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                                        "WARNING %d: %s\n", notify->warning,
+                                        "WARNING 0x%04x: %s\n", notify->warning,
                                         notify->warning_str));
       return;
 
