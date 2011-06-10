@@ -1256,7 +1256,7 @@ def hotcopy_symlink(sbox):
       raise svntest.Failure
 
 def load_bad_props(sbox):
-  "svadmin load with invalid svn: props"
+  "svnadmin load with invalid svn: props"
 
   dump_str = """SVN-fs-dump-format-version: 2
 
@@ -1321,7 +1321,7 @@ text
 # so it will trigger with either backend anyway.
 @SkipUnless(svntest.main.is_fs_type_fsfs)
 def verify_non_utf8_paths(sbox):
-  "svadmin verify with non-UTF-8 paths"
+  "svnadmin verify with non-UTF-8 paths"
 
   dumpfile = clean_dumpfile()
   test_create(sbox)
