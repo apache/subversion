@@ -7249,39 +7249,74 @@ read_url_txn(void *baton,
                                 NULL, NULL, wcroot, local_relpath,
                                 scratch_pool, scratch_pool));
         }
-      else if (have_base)
+      else if (status == svn_wc__db_status_deleted)
         {
-          SVN_ERR(base_get_info(NULL, NULL, NULL, &repos_relpath, &repos_id,
-                                NULL, NULL, NULL, NULL, NULL,
-                                NULL, NULL, NULL, NULL,
+          const char *base_del_relpath;
+          const char *work_del_relpath;
+
+          SVN_ERR(scan_deletion(&base_del_relpath, NULL, &work_del_relpath,
                                 wcroot, local_relpath,
                                 scratch_pool, scratch_pool));
+
+          if (base_del_relpath)
+            {
+              SVN_ERR(base_get_info(NULL, NULL, NULL, &repos_relpath,
+                                    &repos_id, NULL, NULL, NULL, NULL, NULL,
+                                    NULL, NULL, NULL, NULL,
+                                    wcroot, base_del_relpath,
+                                    scratch_pool, scratch_pool));
+
+              repos_relpath = svn_relpath_join(
+                                    repos_relpath,
+                                    svn_dirent_skip_ancestor(base_del_relpath,
+                                                             local_relpath),
+                                    scratch_pool);
+            }
+          else
+            {
+              /* The parent of the WORKING delete, must be an addition */
+              const char *work_relpath = svn_relpath_dirname(work_del_relpath,
+                                                             scratch_pool);
+
+              SVN_ERR(scan_addition(NULL, NULL, &repos_relpath, &repos_id,
+                                    NULL, NULL, NULL,
+                                    wcroot, work_relpath,
+                                    scratch_pool, scratch_pool));
+
+              repos_relpath = svn_relpath_join(
+                                    repos_relpath,
+                                    svn_dirent_skip_ancestor(work_relpath,
+                                                             local_relpath),
+                                    scratch_pool);
+            }
         }
-      else if (status == svn_wc__db_status_absent
-               || status == svn_wc__db_status_excluded
-               || status == svn_wc__db_status_not_present
-               || (!have_base && (status == svn_wc__db_status_deleted)))
+      else if (status == svn_wc__db_status_excluded)
         {
           const char *parent_relpath;
+          const char *name;
           struct read_url_baton_t new_rub;
           const char *url;
 
-          /* Set 'repos_root_url' to the *full URL* of the parent WC dir,
-           * and 'repos_relpath' to the *single path component* that is the
+          /* Set 'url' to the *full URL* of the parent WC dir,
+           * and 'name' to the *single path component* that is the
            * basename of this WC directory, so that joining them will result
            * in the correct full URL. */
-          svn_relpath_split(&parent_relpath, &repos_relpath, local_relpath,
+          svn_relpath_split(&parent_relpath, &name, local_relpath,
                             scratch_pool);
           new_rub.result_pool = scratch_pool;
           new_rub.url = &url;
           SVN_ERR(read_url_txn(&new_rub, wcroot, parent_relpath,
                                scratch_pool));
+
+          *rub->url = svn_path_url_add_component2(url, name, rub->result_pool);
+
+          return SVN_NO_ERROR;
         }
       else
         {
-          /* Status: obstructed, obstructed_add */
-          *rub->url = NULL;
-          return SVN_NO_ERROR;
+          /* All working statee are explicitly handled and all base statee
+             have a repos_relpath */
+          SVN_ERR_MALFUNCTION();
         }
     }
 
