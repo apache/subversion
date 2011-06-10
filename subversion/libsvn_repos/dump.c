@@ -1120,10 +1120,10 @@ svn_repos_dump_fs3(svn_repos_t *repos,
          warning, since the inline warnings already issued might easily be
          missed. */
 
-      notify = svn_repos_notify_create(svn_repos_notify_warning, subpool);
-
       if (found_old_reference)
         {
+          notify = svn_repos_notify_create(svn_repos_notify_warning, subpool);
+
           notify->warning = svn_repos_notify_warning_found_old_reference;
           notify->warning_str = _("The range of revisions dumped "
                                   "contained references to "
@@ -1136,6 +1136,8 @@ svn_repos_dump_fs3(svn_repos_t *repos,
          in dumped mergeinfo. */
       if (found_old_mergeinfo)
         {
+          notify = svn_repos_notify_create(svn_repos_notify_warning, subpool);
+
           notify->warning = svn_repos_notify_warning_found_old_mergeinfo;
           notify->warning_str = _("The range of revisions dumped "
                                   "contained mergeinfo "
