@@ -463,7 +463,7 @@ ensure_auth_subdir(const char *auth_dir,
   const char *subdir_full_path;
   svn_node_kind_t kind;
 
-  subdir_full_path = svn_dirent_join_many(pool, auth_dir, subdir, NULL);
+  subdir_full_path = svn_dirent_join(auth_dir, subdir, pool);
   err = svn_io_check_path(subdir_full_path, &kind, pool);
   if (err || kind == svn_node_none)
     {
@@ -485,7 +485,7 @@ ensure_auth_dirs(const char *path,
   svn_error_t *err;
 
   /* Ensure ~/.subversion/auth/ */
-  auth_dir = svn_dirent_join_many(pool, path, SVN_CONFIG__AUTH_SUBDIR, NULL);
+  auth_dir = svn_dirent_join(path, SVN_CONFIG__AUTH_SUBDIR, pool);
   err = svn_io_check_path(auth_dir, &kind, pool);
   if (err || kind == svn_node_none)
     {
