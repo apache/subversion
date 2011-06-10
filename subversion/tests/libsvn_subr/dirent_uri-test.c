@@ -2129,7 +2129,7 @@ test_dirent_get_absolute_from_lc_drive(apr_pool_t *pool)
   if (! getdcwd(3, current_dir_on_C, sizeof(current_dir_on_C)))
     return svn_error_create(SVN_ERR_BASE, NULL, "getdcwd() failed");
 
-  SVN_ERR(svn_io_get_dirents2(&dirents, "C:\\", pool));
+  SVN_ERR(svn_io_get_dirents3(&dirents, "C:\\", TRUE, pool, pool));
 
   /* We need a directory on 'C:\' to switch to lower case and back.
      We use the first directory we can find that is not the CWD and
@@ -2138,7 +2138,7 @@ test_dirent_get_absolute_from_lc_drive(apr_pool_t *pool)
   for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
     {
       const char *dir = svn__apr_hash_index_key(hi);
-      svn_io_dirent_t *de = svn__apr_hash_index_val(hi);
+      svn_io_dirent2_t *de = svn__apr_hash_index_val(hi);
 
       if (de->kind == svn_node_dir &&
           strcmp(dir, current_dir_on_C))
