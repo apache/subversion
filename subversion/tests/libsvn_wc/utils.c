@@ -130,7 +130,7 @@ svn_test__create_fake_wc(const char *wc_abspath,
   /* Create fake-wc/SUBDIR/.svn/ for placing the metadata. */
   SVN_ERR(svn_io_make_dir_recursively(dotsvn_abspath, scratch_pool));
 
-  svn_error_clear(svn_io_remove_file(db_abspath, scratch_pool));
+  svn_error_clear(svn_io_remove_file2(db_abspath, FALSE, scratch_pool));
   SVN_ERR(svn_wc__db_util_open_db(&sdb, wc_abspath, "wc.db",
                                   svn_sqlite__mode_rwcreate, my_statements,
                                   result_pool, scratch_pool));
