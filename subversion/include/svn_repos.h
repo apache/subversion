@@ -259,6 +259,13 @@ typedef enum svn_repos_notify_warning_t
   /** An #SVN_PROP_MERGEINFO property's encoded mergeinfo references a
    * revision earlier than the first revision dumped. */
   svn_repos_notify_warning_found_old_mergeinfo,
+
+  /** Found an invalid path in the filesystem.
+   * @see svn_fs.h:"Directory entry names and directory paths" */
+  /* ### TODO(doxygen): make that a proper doxygen link */
+  /* See svn_fs__path_valid(). */
+  svn_repos_notify_warning_invalid_fspath,
+
 } svn_repos_notify_warning_t;
 
 /**

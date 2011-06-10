@@ -1366,11 +1366,18 @@ def verify_non_utf8_paths(sbox):
 
   # Make sure the repository can still be dumped so that the
   # encoding problem can be fixed in a dump/edit/load cycle.
+  expected_stderr = [
+    "* Dumped revision 0.\n",
+    "WARNING 0x0002: E160005: "
+      "While validating fspath '?\\230': "
+      "Path '?\\230' is not in UTF-8"
+      "\n",
+    "* Dumped revision 1.\n",
+    ]
   exit_code, output, errput = svntest.main.run_svnadmin("dump", sbox.repo_dir)
   if svntest.verify.compare_and_display_lines(
     "Output of 'svnadmin dump' is unexpected.",
-    'STDERR', ["* Dumped revision 0.\n",
-               "* Dumped revision 1.\n"], errput):
+    'STDERR', expected_stderr, errput):
     raise svntest.Failure
 
 ########################################################################
