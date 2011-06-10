@@ -1120,6 +1120,9 @@ svn_repos_dump_fs3(svn_repos_t *repos,
          warning, since the inline warnings already issued might easily be
          missed. */
 
+      notify = svn_repos_notify_create(svn_repos_notify_dump_end, subpool);
+      notify_func(notify_baton, notify, subpool);
+
       if (found_old_reference)
         {
           notify = svn_repos_notify_create(svn_repos_notify_warning, subpool);
@@ -1294,6 +1297,13 @@ svn_repos_verify_fs2(svn_repos_t *repos,
           notify->revision = rev;
           notify_func(notify_baton, notify, iterpool);
         }
+    }
+
+  /* We're done. */
+  if (notify_func)
+    {
+      notify = svn_repos_notify_create(svn_repos_notify_dump_end, iterpool);
+      notify_func(notify_baton, notify, iterpool);
     }
 
   svn_pool_destroy(iterpool);
