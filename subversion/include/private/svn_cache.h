@@ -397,7 +397,7 @@ svn_cache__iter(svn_boolean_t *completed,
                 apr_pool_t *scratch_pool);
 
 /**
- * Similar to svn_cache__set() but will call a specific de-serialization
+ * Similar to svn_cache__get() but will call a specific de-serialization
  * function @a func. @a found will be set depending on whether the @a key
  * has been found. Even if that reports @c TRUE, @a values may still return
  * a @c NULL pointer depending on the logic inside @a func.
