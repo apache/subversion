@@ -1772,12 +1772,16 @@ do_plist(svnlook_ctxt_t *c,
 
       if (verbose)
         {
-          const char *pname_stdout;
-          SVN_ERR(svn_cmdline_cstring_from_utf8(&pname_stdout, pname, pool));
           if (xml)
-            svn_cmdline__print_xml_prop(&sb, pname_stdout, propval, pool);
+            svn_cmdline__print_xml_prop(&sb, pname, propval, pool);
           else
-            printf("  %s : %s\n", pname_stdout, propval->data);
+            {
+              const char *pname_stdout;
+
+              SVN_ERR(svn_cmdline_cstring_from_utf8(&pname_stdout, pname,
+                                                    pool));
+              printf("  %s : %s\n", pname_stdout, propval->data);
+            }
         }
       else if (xml)
         svn_xml_make_open_tag(&sb, pool, svn_xml_self_closing, "property",
