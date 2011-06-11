@@ -23,15 +23,15 @@
 # get-deps.sh -- download the dependencies useful for building Subversion
 #
 
-APR=apr-1.3.9
-APR_UTIL=apr-util-1.3.10
-NEON=neon-0.29.5
-SERF=serf-0.7.1
+APR=apr-1.4.5
+APR_UTIL=apr-util-1.3.12
+NEON=neon-0.29.6
+SERF=serf-0.7.2
 ZLIB=zlib-1.2.5
-SQLITE_VERSION=3.7.3
-SQLITE=sqlite-amalgamation-$SQLITE_VERSION
+SQLITE_VERSION=3.7.6.3
+SQLITE=sqlite-amalgamation-$(printf %u%02u%02u%02u $(echo $SQLITE_VERSION | sed -e "s/\./ /g"))
 
-HTTPD=httpd-2.2.17
+HTTPD=httpd-2.2.19
 APR_ICONV=apr-iconv-1.2.1
 
 BASEDIR=`pwd`
@@ -50,18 +50,18 @@ get_deps() {
     wget -nc http://webdav.org/neon/$NEON.tar.gz
     wget -nc http://serf.googlecode.com/files/$SERF.tar.bz2
     wget -nc http://www.zlib.net/$ZLIB.tar.bz2
-    wget -nc http://www.sqlite.org/$SQLITE.tar.gz
+    wget -nc http://www.sqlite.org/$SQLITE.zip
 
     cd $BASEDIR
     gzip  -dc $TEMPDIR/$NEON.tar.gz | tar -xf -
     bzip2 -dc $TEMPDIR/$ZLIB.tar.bz2 | tar -xf -
     bzip2 -dc $TEMPDIR/$SERF.tar.bz2 | tar -xf -
-    gzip  -dc $TEMPDIR/$SQLITE.tar.gz | tar -xf -
+    unzip -q $TEMPDIR/$SQLITE.zip
 
     mv $NEON neon
     mv $ZLIB zlib
     mv $SERF serf
-    mv sqlite-$SQLITE_VERSION sqlite-amalgamation
+    mv $SQLITE sqlite-amalgamation
 
     bzip2 -dc $TEMPDIR/$APR.tar.bz2 | tar -xf -
     bzip2 -dc $TEMPDIR/$APR_UTIL.tar.bz2 | tar -xf -
