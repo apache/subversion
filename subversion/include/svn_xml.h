@@ -281,13 +281,24 @@ svn_xml_hash_atts_overlaying(const char **atts,
  *
  * Fully-formed XML documents should start out with a header,
  * something like <pre>
- *         \<?xml version="1.0" encoding="utf-8"?\>
+ *         \<?xml version="1.0" encoding="UTF-8"?\>
  * </pre>
  *
  * This function returns such a header.  @a *str must either be @c NULL, in
  * which case a new string is created, or it must point to an existing
- * string to be appended to.
+ * string to be appended to. @a encoding must either be NULL, in which case
+ * encoding information is omitted from the header, or must be the name of
+ * the encoding of the XML document, such as "UTF-8".
+ * 
+ * @since New in 1.7.
  */
+void
+svn_xml_make_header2(svn_stringbuf_t **str,
+                     const char *encoding,
+                     apr_pool_t *pool);
+
+/* Like svn_xml_make_header2, but does not emit encoding information. */
+SVN_DEPRECATED
 void
 svn_xml_make_header(svn_stringbuf_t **str,
                     apr_pool_t *pool);
