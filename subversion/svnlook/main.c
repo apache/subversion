@@ -1726,8 +1726,8 @@ do_plist(svnlook_ctxt_t *c,
   if (xml)
     {
       char *revstr = apr_psprintf(pool, "%ld", c->rev_id);
-      /* <?xml version="1.0"?> */
-      svn_xml_make_header(&sb, pool);
+      /* <?xml version="1.0" encoding="UTF-8"?> */
+      svn_xml_make_header2(&sb, "UTF-8", pool);
 
       /* "<properties>" */
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "properties", NULL);
