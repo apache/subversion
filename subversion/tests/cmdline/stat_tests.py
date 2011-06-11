@@ -917,7 +917,7 @@ def status_in_xml(sbox):
   else:
     raise svntest.Failure
 
-  template = ["<?xml version=\"1.0\"?>\n",
+  template = ['<?xml version="1.0" encoding="UTF-8"?>\n',
               "<status>\n",
               "<target\n",
               "   path=\"%s\">\n" % (file_path),
@@ -1224,7 +1224,7 @@ def status_update_with_incoming_props(sbox):
   else:
     raise svntest.Failure
 
-  xout = ["<?xml version=\"1.0\"?>\n",
+  xout = ['<?xml version="1.0" encoding="UTF-8"?>\n',
           "<status>\n",
           "<target\n",
           "   path=\"%s\">\n" % (wc_dir),

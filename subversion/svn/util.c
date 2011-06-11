@@ -1049,8 +1049,8 @@ svn_cl__xml_print_header(const char *tagname,
 {
   svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
 
-  /* <?xml version="1.0"?> */
-  svn_xml_make_header(&sb, pool);
+  /* <?xml version="1.0" encoding="UTF-8"?> */
+  svn_xml_make_header2(&sb, "UTF-8", pool);
 
   /* "<TAGNAME>" */
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, tagname, NULL);
