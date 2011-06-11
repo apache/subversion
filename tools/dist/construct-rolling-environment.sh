@@ -98,7 +98,7 @@ create_prefix() {
 
     tar zxvf $SWIG.tar.gz
     cd $SWIG
-    ./configure --prefix=$PREFIX
+    ./configure --prefix=$PREFIX --without-pcre
     make
     make install
     cd ..
