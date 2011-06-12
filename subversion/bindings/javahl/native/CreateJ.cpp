@@ -755,7 +755,7 @@ CreateJ::ReposNotifyInformation(const svn_repos_notify_t *reposNotify)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  jstring jWarning = JNIUtil::makeJString(reposNotify->warning);
+  jstring jWarning = JNIUtil::makeJString(reposNotify->warning_str);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
