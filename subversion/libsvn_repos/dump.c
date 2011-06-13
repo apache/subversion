@@ -248,27 +248,30 @@ dump_node(struct edit_baton *eb,
     {
       svn_error_t *err = svn_fs__path_valid(path, pool);
 
-      if (eb->notify_func)
+      if (err)
         {
-          char errbuf[512]; /* ### svn_strerror() magic number  */
-          svn_repos_notify_t *notify;
-          notify = svn_repos_notify_create(svn_repos_notify_warning, pool);
+          if (eb->notify_func)
+            {
+              char errbuf[512]; /* ### svn_strerror() magic number  */
+              svn_repos_notify_t *notify;
+              notify = svn_repos_notify_create(svn_repos_notify_warning, pool);
 
-          notify->warning = svn_repos_notify_warning_invalid_fspath;
-          notify->warning_str = apr_psprintf(
-                 pool,
-                 _("E%06d: While validating fspath '%s': %s"),
-                 err->apr_err, path,
-                 svn_err_best_message(err, errbuf, sizeof(errbuf)));
+              notify->warning = svn_repos_notify_warning_invalid_fspath;
+              notify->warning_str = apr_psprintf(
+                     pool,
+                     _("E%06d: While validating fspath '%s': %s"),
+                     err->apr_err, path,
+                     svn_err_best_message(err, errbuf, sizeof(errbuf)));
 
-          eb->notify_func(eb->notify_baton, notify, pool);
+              eb->notify_func(eb->notify_baton, notify, pool);
+            }
+
+          /* Return the error in addition to notifying about it. */
+          if (eb->verify)
+            return svn_error_return(err);
+          else
+            svn_error_clear(err);
         }
-
-      /* Return the error in addition to notifying about it. */
-      if (eb->verify)
-        return svn_error_return(err);
-      else
-        svn_error_clear(err);
     }
 
   /* Write out metadata headers for this file node. */
