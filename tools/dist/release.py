@@ -67,6 +67,13 @@ def run_script(verbose, script):
     for l in script.split('\n'):
         subprocess.check_call(l.split(), stdout=stdout, stderr=stderr)
 
+def download_file(url, target):
+    response = urllib2.urlopen(url)
+    target_file = open(target, 'w')
+    target_file.write(response.read())
+
+#----------------------------------------------------------------------
+# Cleaning up the environment
 
 def cleanup(base_dir, args):
     'Remove generated files and folders.'
@@ -78,16 +85,73 @@ def cleanup(base_dir, args):
 #----------------------------------------------------------------------
 # Creating and environment to roll the release
 
+def prep_autoconf(base_dir, args):
+    'Download and build autoconf'
+    cwd = os.getcwd()
+    filebase = 'autoconf-2.68'
+    url = 'http://ftp.gnu.org/gnu/autoconf/%s.tar.gz' % filebase
+    tarball = os.path.join(get_tempdir(base_dir), filebase + '.tar.gz')
+
+    logging.info('Fetching %s' % filebase)
+    download_file(url, tarball)
+    tarfile.open(tarball).extractall(get_tempdir(base_dir))
+
+    logging.info('Building autoconf')
+    os.chdir(os.path.join(get_tempdir(base_dir), filebase))
+    run_script(args.verbose,
+               '''./configure --prefix=%s
+                  make
+                  make install''' % get_prefix(base_dir))
+
+    os.chdir(cwd)
+
+
+def prep_libtool(base_dir, args):
+    'Download and build libtool'
+    cwd = os.getcwd()
+    filebase = 'libtool-2.4'
+    url = 'http://ftp.gnu.org/gnu/libtool/%s.tar.gz' % filebase
+    tarball = os.path.join(get_tempdir(base_dir), filebase + '.tar.gz')
+
+    logging.info('Fetching %s' % filebase)
+    download_file(url, tarball)
+    tarfile.open(tarball).extractall(get_tempdir(base_dir))
+
+    logging.info('Building libtool')
+    os.chdir(os.path.join(get_tempdir(base_dir), filebase))
+    run_script(args.verbose,
+               '''./configure --prefix=%s
+                  make
+                  make install''' % get_prefix(base_dir))
+
+    os.chdir(cwd)
+
+def prep_swig(base_dir, args):
+    'Download and build swig'
+    cwd = os.getcwd()
+    filebase = 'swig-2.0.4'
+    url = 'http://sourceforge.net/projects/swig/files/swig/%(swig)s/%(swig)s.tar.gz/download?use_mirror=%(sf_mirror)s' % \
+        { 'swig' : filebase,
+          'sf_mirror' : args.sf_mirror }
+    tarball = os.path.join(get_tempdir(base_dir), filebase + '.tar.gz')
+
+    logging.info('Fetching %s' % filebase)
+    download_file(url, tarball)
+    tarfile.open(tarball).extractall(get_tempdir(base_dir))
+
+    logging.info('Building swig')
+    os.chdir(os.path.join(get_tempdir(base_dir), filebase))
+    run_script(args.verbose,
+               '''./configure --prefix=%s
+                  make
+                  make install''' % get_prefix(base_dir))
+
+    os.chdir(cwd)
+
+
 def build_env(base_dir, args):
     'Download prerequisites for a release and prepare the environment.'
     logging.info('Creating release environment')
-
-    # Versions of our environment
-    params = { 'autoconf'           : 'autoconf-2.68',
-               'libtool'            : 'libtool-2.4',
-               'swig'               : 'swig-2.0.4',
-               'sf_mirror'          : args.sf_mirror,
-             }
 
     prefix = get_prefix(base_dir)
     if os.path.exists(prefix):
@@ -99,50 +163,9 @@ def build_env(base_dir, args):
         raise RuntimeError("Directory exists: '%s'" % tempdir)
     os.mkdir(tempdir)
 
-    objects = { 'autoconf' : 'http://ftp.gnu.org/gnu/autoconf/%(autoconf)s.tar.gz',
-                'libtool' : 'http://ftp.gnu.org/gnu/libtool/%(libtool)s.tar.gz',
-                'swig' : 'http://sourceforge.net/projects/swig/files/swig/%(swig)s/%(swig)s.tar.gz/download?use_mirror=%(sf_mirror)s'
-              }
-
-    # Grab each of the prerequisite tarballs
-    for key, value in objects.items():
-        url = value % params
-        response = urllib2.urlopen(url)
-        target = open(os.path.join(get_tempdir(base_dir), key + '.tar.gz'), 'w')
-        target.write(response.read())
-        target.close()
-
-        target = tarfile.open(os.path.join(get_tempdir(base_dir),
-                                           key + '.tar.gz'))
-        target.extractall(get_tempdir(base_dir))
-
-    cwd = os.getcwd()
-
-    # build autoconf
-    logging.info('Building autoconf')
-    os.chdir(os.path.join(get_tempdir(base_dir), params['autoconf']))
-    run_script(args.verbose,
-               '''./configure --prefix=%s
-                  make
-                  make install''' % get_prefix(base_dir))
-
-    # build libtool
-    logging.info('Building libtool')
-    os.chdir(os.path.join(get_tempdir(base_dir), params['libtool']))
-    run_script(args.verbose,
-               '''./configure --prefix=%s
-                  make
-                  make install''' % get_prefix(base_dir))
-
-    # build swig
-    logging.info('Building swig')
-    os.chdir(os.path.join(get_tempdir(base_dir), params['swig']))
-    run_script(args.verbose,
-               '''./configure --prefix=%s --without-pcre
-                  make
-                  make install''' % get_prefix(base_dir))
-
-    os.chdir(cwd)
+    prep_autoconf(base_dir, args)
+    prep_libtool(base_dir, args)
+    prep_swig(base_dir, args)
 
 
 def roll_tarballs(base_dir, args):
