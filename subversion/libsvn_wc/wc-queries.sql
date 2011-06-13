@@ -737,10 +737,12 @@ VALUES (?1, ?2, ?3)
 SELECT locked_levels FROM wc_lock
 WHERE wc_id = ?1 AND local_dir_relpath = ?2
 
--- STMT_HAS_WC_LOCK
-SELECT 1 FROM wc_lock
+-- STMT_SELECT_ANCESTOR_WCLOCKS
+SELECT local_dir_relpath, locked_levels FROM wc_lock
 WHERE wc_id = ?1
-LIMIT 1
+  AND ((local_dir_relpath <= ?2 AND local_dir_relpath >= ?3)
+       OR local_dir_relpath = '')
+ORDER BY local_dir_relpath DESC
 
 -- STMT_DELETE_WC_LOCK
 DELETE FROM wc_lock

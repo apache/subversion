@@ -10732,50 +10732,56 @@ is_wclocked(void *baton,
   svn_boolean_t *locked = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  apr_int64_t locked_levels;
-  apr_int64_t dir_depth, depth = relpath_depth(dir_relpath);
+  apr_int64_t dir_depth = relpath_depth(dir_relpath);
+  const char *first_relpath;
 
-  /* First check for no locks at all, a common scenario for status. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_HAS_WC_LOCK));
-  SVN_ERR(svn_sqlite__bindf(stmt, "i", wcroot->wc_id));
+  /* Check for locks on all directories that might be ancestors.
+     As our new apis only use recursive locks the number of locks stored
+     in the DB will be very low */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_ANCESTOR_WCLOCKS));
+
+  /* Get the top level relpath to reduce the worst case number of results
+     to the number of directories below this node plus two.
+     (1: the node itself and 2: the wcroot). */
+  first_relpath = strchr(dir_relpath, '/');
+
+  if (first_relpath != NULL)
+    first_relpath = apr_pstrndup(scratch_pool, dir_relpath,
+                                 first_relpath - dir_relpath);
+  else
+    first_relpath = dir_relpath;
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss",
+                            wcroot->wc_id,
+                            dir_relpath,
+                            first_relpath));
+
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  SVN_ERR(svn_sqlite__reset(stmt));
-  if (!have_row)
-    {
-      *locked = FALSE;
-      return SVN_NO_ERROR;
-    }
 
-  /* Now check for locks on on the directory. I'm not sure what order
-     is best here but from the target to the root is easy to code.  */
-  dir_depth = depth;
-  while (TRUE)
+  while (have_row)
     {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_SELECT_WC_LOCK));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, dir_relpath));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-      if (have_row)
-        locked_levels = svn_sqlite__column_int64(stmt, 0);
-      SVN_ERR(svn_sqlite__reset(stmt));
-      if (have_row)
+      const char *relpath = svn_sqlite__column_text(stmt, 0, NULL);
+
+      if (svn_relpath_is_ancestor(relpath, dir_relpath))
         {
           /* Any row here means there can be no locks closer to root
              that extend past here. */
-          *locked = (locked_levels == -1 || locked_levels + dir_depth >= depth);
+          apr_int64_t locked_levels = svn_sqlite__column_int64(stmt, 1);
+          apr_int64_t row_depth = relpath_depth(relpath);
+
+          *locked = (locked_levels == -1 
+                     || locked_levels + row_depth >= dir_depth);
+          SVN_ERR(svn_sqlite__reset(stmt));
           return SVN_NO_ERROR;
         }
 
-      if (!*dir_relpath)
-        break;
-
-      dir_relpath = svn_relpath_dirname(dir_relpath, scratch_pool);
-      --dir_depth;
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
   *locked = FALSE;
 
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_sqlite__reset(stmt));
 }
 
 
