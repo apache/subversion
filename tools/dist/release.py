@@ -42,6 +42,9 @@ import subprocess
 import argparse       # standard in Python 2.7
 
 
+#----------------------------------------------------------------------
+# Utility functions
+
 def get_prefix(base_dir):
     return os.path.join(base_dir, 'prefix')
 
@@ -49,8 +52,7 @@ def get_tempdir(base_dir):
     return os.path.join(base_dir, 'tempdir')
 
 def run_script(script):
-    lines = script.split('\n')
-    for l in lines:
+    for l in script.split('\n'):
         subprocess.check_call(l.split())
 
 
@@ -60,6 +62,9 @@ def cleanup(base_dir, args):
     shutil.rmtree(get_prefix(base_dir), True)
     shutil.rmtree(get_tempdir(base_dir), True)
 
+
+#----------------------------------------------------------------------
+# Creating and environment to roll the release
 
 def build_env(base_dir, args):
     'Download prerequisites for a release and prepare the environment.'
@@ -128,6 +133,9 @@ def roll_tarballs(base_dir, args):
 def announce(base_dir, args):
     'Write the release announcement.'
 
+
+#----------------------------------------------------------------------
+# Main entry point for argument parsing and handling
 
 def main():
     'Parse arguments, and drive the appropriate subcommand.'
