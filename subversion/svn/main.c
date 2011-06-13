@@ -2578,8 +2578,6 @@ main(int argc, const char *argv[])
   err = (*subcommand->cmd_func)(os, &command_baton, pool);
   if (err)
     {
-      svn_error_t *tmp_err;
-
       /* For argument-related problems, suggest using the 'help'
          subcommand. */
       if (err->apr_err == SVN_ERR_CL_INSUFFICIENT_ARGS
