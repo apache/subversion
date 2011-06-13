@@ -38,6 +38,7 @@ import sys
 import shutil
 import urllib2
 import tarfile
+import logging
 import subprocess
 import argparse       # standard in Python 2.7
 
@@ -51,9 +52,20 @@ def get_prefix(base_dir):
 def get_tempdir(base_dir):
     return os.path.join(base_dir, 'tempdir')
 
-def run_script(script):
+def get_nullfile():
+    # This is certainly not cross platform
+    return open('/dev/null', 'w')
+
+def run_script(args, script):
+    if args.verbose:
+        stdout = None
+        stderr = None
+    else:
+        stdout = get_nullfile()
+        stderr = subprocess.STDOUT
+
     for l in script.split('\n'):
-        subprocess.check_call(l.split())
+        subprocess.check_call(l.split(), stdout=stdout, stderr=stderr)
 
 
 def cleanup(base_dir, args):
@@ -68,6 +80,7 @@ def cleanup(base_dir, args):
 
 def build_env(base_dir, args):
     'Download prerequisites for a release and prepare the environment.'
+    logging.info('Creating release environment')
 
     # Versions of our environment
     params = { 'autoconf'           : 'autoconf-2.68',
@@ -106,20 +119,26 @@ def build_env(base_dir, args):
     cwd = os.getcwd()
 
     # build autoconf
+    logging.info('Building autoconf')
     os.chdir(os.path.join(get_tempdir(base_dir), params['autoconf']))
-    run_script('''./configure --prefix=%s
+    run_script(args,
+               '''./configure --prefix=%s
                   make
                   make install''' % get_prefix(base_dir))
 
     # build libtool
+    logging.info('Building libtool')
     os.chdir(os.path.join(get_tempdir(base_dir), params['libtool']))
-    run_script('''./configure --prefix=%s
+    run_script(args,
+               '''./configure --prefix=%s
                   make
                   make install''' % get_prefix(base_dir))
 
     # build swig
+    logging.info('Building swig')
     os.chdir(os.path.join(get_tempdir(base_dir), params['swig']))
-    run_script('''./configure --prefix=%s --without-pcre
+    run_script(args,
+               '''./configure --prefix=%s --without-pcre
                   make
                   make install''' % get_prefix(base_dir))
 
@@ -145,6 +164,8 @@ def main():
                             description='Create an Apache Subversion release.')
     parser.add_argument('--clean', action='store_true', default=False,
                    help='Remove any directories previously created by %(prog)s')
+    parser.add_argument('--verbose', action='store_true', default=False,
+                   help='Increase output verbosity')
     parser.add_argument('--base-dir', default=os.getcwd(),
                    help='''The directory in which to create needed files and
                            folders.  The default is the current working
@@ -173,6 +194,13 @@ def main():
     # first, process any global operations
     if args.clean:
         cleanup(args.base_dir, args)
+
+    # Set up logging
+    logger = logging.getLogger()
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     sys.path.append(os.path.join(get_prefix(args.base_dir), 'bin'))
 
