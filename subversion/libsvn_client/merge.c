@@ -10289,7 +10289,7 @@ calculate_left_hand_side(const char **url_left,
 
   /* If the source revision is the same as the youngest common
      revision, then there can't possibly be any unmerged revisions
-     that we need to apply to target.  (Since it */
+     that we need to apply to target. */
   if (source_rev == yc_ancestor_rev)
     {
       svn_pool_destroy(iterpool);
