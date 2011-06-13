@@ -61,15 +61,16 @@
 #include "svn_private_config.h"
 
 /* Forward declaration.  */
-static const svn_string_t *
-message_from_skel(const svn_skel_t *skel,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool);
+static svn_error_t *
+prop_conflict_from_skel(const svn_string_t **conflict_desc,
+                        const svn_skel_t *skel,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
-/* Given a *SINGLE* property conflict in PROP_SKEL, generate a message
+/* Given a *SINGLE* property conflict in PROP_SKEL, generate a description
    for it, and write it to STREAM, along with a trailing EOL sequence.
 
-   See message_from_skel() for details on PROP_SKEL.  */
+   See prop_conflict_from_skel() for details on PROP_SKEL.  */
 static svn_error_t *
 append_prop_conflict(svn_stream_t *stream,
                      const svn_skel_t *prop_skel,
@@ -77,15 +78,13 @@ append_prop_conflict(svn_stream_t *stream,
 {
   /* TODO:  someday, perhaps prefix each conflict_description with a
      timestamp or something? */
-  const svn_string_t *message = message_from_skel(prop_skel, pool, pool);
+  const svn_string_t *conflict_desc;
   apr_size_t len;
-  const char *native_text =
-    svn_utf_cstring_from_utf8_fuzzy(message->data, pool);
+  const char *native_text;
 
-  len = strlen(native_text);
-  SVN_ERR(svn_stream_write(stream, native_text, &len));
+  SVN_ERR(prop_conflict_from_skel(&conflict_desc, prop_skel, pool, pool));
+  native_text = svn_utf_cstring_from_utf8_fuzzy(conflict_desc->data, pool);
 
-  native_text = svn_utf_cstring_from_utf8_fuzzy(APR_EOL_STR, pool);
   len = strlen(native_text);
   return svn_stream_write(stream, native_text, &len);
 }
@@ -391,7 +390,7 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
    Note that this function (currently) interprets the property values as
    strings, but they could actually be binary values. We'll keep the
    types as svn_string_t in case we fix this in the future.  */
-static const svn_string_t *
+static svn_stringbuf_t *
 generate_conflict_message(const char *propname,
                           const svn_string_t *original,
                           const svn_string_t *mine,
@@ -412,21 +411,20 @@ generate_conflict_message(const char *propname,
           /* Note that we don't care whether MINE is locally-added or
              edited, or just something different that is a copy of the
              pristine ORIGINAL.  */
-          return svn_string_createf(result_pool,
-                                    _("Trying to add new property '%s' with "
-                                      "value '%s',\nbut property already "
-                                      "exists with value '%s'."),
-                                    propname, incoming->data, mine->data);
+          return svn_stringbuf_createf(result_pool,
+                                       _("Trying to add new property '%s'\n"
+                                         "but the property already exists.\n"),
+                                       propname);
         }
 
       /* To have a conflict, we must have an ORIGINAL which has been
          locally-deleted.  */
       SVN_ERR_ASSERT_NO_RETURN(original != NULL);
-      return svn_string_createf(result_pool,
-                                _("Trying to create property '%s' with "
-                                  "value '%s',\nbut it has been locally "
-                                  "deleted."),
-                                propname, incoming->data);
+      return svn_stringbuf_createf(result_pool,
+                                   _("Trying to add new property '%s'\n"
+                                     "but the property has been locally "
+                                     "deleted.\n"),
+                                   propname);
     }
 
   if (incoming == NULL)
@@ -436,12 +434,11 @@ generate_conflict_message(const char *propname,
 
       /* Are we trying to delete a local addition? */
       if (original == NULL && mine != NULL)
-        return svn_string_createf(result_pool,
-                                  _("Trying to delete property '%s' with "
-                                    "value '%s',\nbut property has been "
-                                    "locally added with value '%s'."),
-                                  propname, incoming_base->data,
-                                  mine->data);
+        return svn_stringbuf_createf(result_pool,
+                                     _("Trying to delete property '%s'\n"
+                                       "but the property has been locally "
+                                       "added.\n"),
+                                     propname);
 
       /* A conflict can only occur if we originally had the property;
          otherwise, we would have merged the property-delete into the
@@ -453,34 +450,33 @@ generate_conflict_message(const char *propname,
           if (mine)
             /* We were trying to delete the correct property, but an edit
                caused the conflict.  */
-            return svn_string_createf(result_pool,
-                                      _("Trying to delete property '%s' with "
-                                        "value '%s',\nbut it has been modified "
-                                        "from '%s' to '%s'."),
-                                      propname, incoming_base->data,
-                                      original->data, mine->data);
+            return svn_stringbuf_createf(result_pool,
+                                         _("Trying to delete property '%s'\n"
+                                           "but the property has been locally "
+                                           "modified.\n"),
+                                         propname);
         }
       else if (mine == NULL)
         {
           /* We were trying to delete the property, but we have locally
              deleted the same property, but with a different value. */
-          return svn_string_createf(result_pool,
-                                    _("Trying to delete property '%s' with "
-                                      "value '%s',\nbut property with value "
-                                      "'%s' is locally deleted."),
-                                    propname, incoming_base->data,
-                                    original->data);
+          return svn_stringbuf_createf(result_pool,
+                                       _("Trying to delete property '%s'\n"
+                                         "but the property has been locally "
+                                         "deleted and had a different "
+                                         "value.\n"),
+                                       propname);
         }
 
       /* We were trying to delete INCOMING_BASE but our ORIGINAL is
          something else entirely.  */
       SVN_ERR_ASSERT_NO_RETURN(!svn_string_compare(original, incoming_base));
 
-      return svn_string_createf(result_pool,
-                                _("Trying to delete property '%s' with "
-                                  "value '%s',\nbut the local value is "
-                                  "'%s'."),
-                                propname, incoming_base->data, mine->data);
+      return svn_stringbuf_createf(result_pool,
+                                   _("Trying to delete property '%s'\n"
+                                     "but the local property value is "
+                                     "different.\n"),
+                                   propname);
     }
 
   /* Attempting to change the property from INCOMING_BASE to INCOMING.  */
@@ -495,40 +491,37 @@ generate_conflict_message(const char *propname,
       /* We have an unchanged property, so the original values must
          have been different.  */
       SVN_ERR_ASSERT_NO_RETURN(!svn_string_compare(original, incoming_base));
-      return svn_string_createf(result_pool,
-                                _("Trying to change property '%s' from '%s' "
-                                  "to '%s',\nbut property already exists "
-                                  "with value '%s'."),
-                                propname, incoming_base->data, incoming->data,
-                                mine->data);
+      return svn_stringbuf_createf(result_pool,
+                                   _("Trying to change property '%s'\n"
+                                     "but the local property value conflicts "
+                                     "with the incoming change.\n"),
+                                   propname);
     }
 
   if (original && mine)
-    return svn_string_createf(result_pool,
-                              _("Trying to change property '%s' from '%s' "
-                                "to '%s',\nbut the property has been locally "
-                                "changed from '%s' to '%s'."),
-                              propname, incoming_base->data, incoming->data,
-                              original->data, mine->data);
+    return svn_stringbuf_createf(result_pool,
+                                 _("Trying to change property '%s'\n"
+                                   "but the property has already been locally "
+                                   "changed to a different value.\n"),
+                                 propname);
 
   if (original)
-    return svn_string_createf(result_pool,
-                              _("Trying to change property '%s' from '%s' "
-                                "to '%s',\nbut it has been locally deleted."),
-                              propname, incoming_base->data, incoming->data);
+    return svn_stringbuf_createf(result_pool,
+                                 _("Trying to change property '%s'\nbut "
+                                   "the property has been locally deleted.\n"),
+                                 propname);
 
   if (mine)
-    return svn_string_createf(result_pool,
-                              _("Trying to change property '%s' from '%s' "
-                                "to '%s',\nbut property has been locally "
-                                "added with value '%s'."),
-                              propname, incoming_base->data, incoming->data,
-                              mine->data);
+    return svn_stringbuf_createf(result_pool,
+                                 _("Trying to change property '%s'\nbut the "
+                                   "property has been locally added with a "
+                                   "different value.\n"),
+                                 propname);
 
-  return svn_string_createf(result_pool,
-                            _("Trying to change property '%s' from '%s' to "
-                              "'%s',\nbut the property does not exist."),
-                            propname, incoming_base->data, incoming->data);
+  return svn_stringbuf_createf(result_pool,
+                               _("Trying to change property '%s'\nbut "
+                                 "the property does not exist locally.\n"),
+                               propname);
 }
 
 
@@ -552,25 +545,30 @@ maybe_prop_value(const svn_skel_t *skel,
 }
 
 
-/* Generate a property conflict message (see generate_conflict_message)
-   from the data contained in SKEL. The message will be allocated in
-   RESULT_POOL.
+/* Parse a property conflict description from the provided SKEL.
+   The result includes a descriptive message (see generate_conflict_message)
+   and maybe a diff of property values containing conflict markers.
+   The result will be allocated in RESULT_POOL.
 
    Note: SKEL is a single property conflict of the form:
 
    ("prop" ([ORIGINAL]) ([MINE]) ([INCOMING]) ([INCOMING_BASE]))
 
    See notes/wc-ng/conflict-storage for more information.  */
-static const svn_string_t *
-message_from_skel(const svn_skel_t *skel,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
+static svn_error_t *
+prop_conflict_from_skel(const svn_string_t **conflict_desc,
+                        const svn_skel_t *skel,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   const svn_string_t *original;
   const svn_string_t *mine;
   const svn_string_t *incoming;
   const svn_string_t *incoming_base;
   const char *propname;
+  svn_diff_t *diff;
+  svn_diff_file_options_t *diff_opts;
+  svn_stringbuf_t *buf;
 
   /* Navigate to the property name.  */
   skel = skel->children->next;
@@ -583,8 +581,72 @@ message_from_skel(const svn_skel_t *skel,
   incoming = maybe_prop_value(skel->next->next->next, scratch_pool);
   incoming_base = maybe_prop_value(skel->next->next->next->next, scratch_pool);
 
-  return generate_conflict_message(propname, original, mine, incoming,
-                                   incoming_base, result_pool);
+  buf = generate_conflict_message(propname, original, mine, incoming,
+                                  incoming_base, scratch_pool);
+
+  if (mine == NULL)
+    mine = svn_string_create("", scratch_pool);
+  if (incoming == NULL)
+    incoming = svn_string_create("", scratch_pool);
+
+  /* Pick a suitable base for the conflict diff.
+   * The incoming value is always a change,
+   * but the local value might not have changed. */
+  if (original == NULL)
+    {
+      if (incoming_base)
+        original = incoming_base;
+      else
+        original = svn_string_create("", scratch_pool);
+    }
+  else if (incoming_base && svn_string_compare(original, mine))
+    original = incoming_base;
+
+  /* ### TODO Do not attempt to generate diffs of binary data. */
+  diff_opts = svn_diff_file_options_create(scratch_pool);
+  diff_opts->ignore_space = FALSE;
+  diff_opts->ignore_eol_style = FALSE;
+  diff_opts->show_c_function = FALSE;
+  SVN_ERR(svn_diff_mem_string_diff3(&diff, original, mine, incoming,
+                                    diff_opts, scratch_pool));
+  if (svn_diff_contains_conflicts(diff))
+    {
+      svn_stream_t *stream;
+      svn_diff_conflict_display_style_t style;
+      const char *mine_marker = _("<<<<<<< (local property value)");
+      const char *incoming_marker = _(">>>>>>> (incoming property value)");
+      const char *separator = "=======";
+
+      style = svn_diff_conflict_display_modified_latest;
+      stream = svn_stream_from_stringbuf(buf, scratch_pool);
+      SVN_ERR(svn_stream_skip(stream, buf->len));
+      SVN_ERR(svn_diff_mem_string_output_merge2(stream, diff,
+                                                original, mine, incoming,
+                                                NULL, mine_marker,
+                                                incoming_marker, separator,
+                                                style, scratch_pool));
+      SVN_ERR(svn_stream_close(stream));
+    }
+  else
+    {
+      /* If we cannot print a conflict diff just print full values . */
+      if (mine->len > 0)
+        {
+          svn_stringbuf_appendcstr(buf, _("Local property value:\n"));
+          svn_stringbuf_appendbytes(buf, mine->data, mine->len);
+          svn_stringbuf_appendcstr(buf, "\n");
+        }
+
+      if (incoming->len > 0)
+        {
+          svn_stringbuf_appendcstr(buf, _("Incoming property value:\n"));
+          svn_stringbuf_appendbytes(buf, incoming->data, incoming->len);
+          svn_stringbuf_appendcstr(buf, "\n");
+        }
+    }
+
+  *conflict_desc = svn_string_create_from_buf(buf, result_pool);
+  return SVN_NO_ERROR;
 }
 
 

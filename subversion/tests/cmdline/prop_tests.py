@@ -1883,68 +1883,117 @@ def prop_reject_grind(sbox):
                        mu_path)
 
   # Check that A/mu.prej reports the expected conflicts:
-  expected_prej = svntest.verify.UnorderedOutput([
-   "Trying to change property 'edit.none' from 'repos' to 'repos.changed',\n"
-   "but the property does not exist.\n",
+  expected_prej = [
+    "Trying to change property 'edit.none'\n"
+    "but the property does not exist locally.\n"
+    "<<<<<<< (local property value)\n"
+    "=======\n"
+    "repos.changed>>>>>>> (incoming property value)\n",
 
-   "Trying to delete property 'del.del' with value 'repos',\n"
-   "but property with value 'local' is locally deleted.\n",
+    "Trying to delete property 'del.del'\n"
+    "but the property has been locally deleted and had a different value.\n",
 
-   "Trying to delete property 'del.edit' with value 'repos',\n"
-   "but the local value is 'local.changed'.\n",
+    "Trying to delete property 'del.edit'\n"
+    "but the local property value is different.\n"
+    "<<<<<<< (local property value)\n"
+    "local.changed=======\n"
+    ">>>>>>> (incoming property value)\n",
 
-   "Trying to change property 'edit.del' from 'repos' to 'repos.changed',\n"
-   "but it has been locally deleted.\n",
+    "Trying to change property 'edit.del'\n"
+    "but the property has been locally deleted.\n"
+    "<<<<<<< (local property value)\n"
+    "=======\n"
+    "repos.changed>>>>>>> (incoming property value)\n",
 
-   "Trying to change property 'edit.edit' from 'repos' to 'repos.changed',\n"
-   "but the property has been locally changed from 'local' to 'local.changed'.\n",
+    "Trying to change property 'edit.edit'\n"
+    "but the property has already been locally changed to a different value.\n"
+    "<<<<<<< (local property value)\n"
+    "local.changed=======\n"
+    "repos.changed>>>>>>> (incoming property value)\n",
 
-   "Trying to delete property 'del.edit2' with value 'repos',\n"
-   "but it has been modified from 'repos' to 'repos.changed'.\n",
+    "Trying to delete property 'del.edit2'\n"
+    "but the property has been locally modified.\n"
+    "<<<<<<< (local property value)\n"
+    "repos.changed=======\n"
+    ">>>>>>> (incoming property value)\n",
 
-   "Trying to delete property 'del.add' with value 'repos',\n"
-   "but property has been locally added with value 'local'.\n",
+    "Trying to delete property 'del.add'\n"
+    "but the property has been locally added.\n"
+    "<<<<<<< (local property value)\n"
+    "local=======\n"
+    ">>>>>>> (incoming property value)\n",
 
-   "Trying to delete property 'del.diff' with value 'repos',\n"
-   "but the local value is 'local'.\n",
+    "Trying to delete property 'del.diff'\n"
+    "but the local property value is different.\n"
+    "<<<<<<< (local property value)\n"
+    "local=======\n"
+    ">>>>>>> (incoming property value)\n",
 
-   "Trying to change property 'edit.add' from 'repos' to 'repos.changed',\n"
-   "but property has been locally added with value 'local'.\n",
+    "Trying to change property 'edit.add'\n"
+    "but the property has been locally added with a different value.\n"
+    "<<<<<<< (local property value)\n"
+    "local=======\n"
+    "repos.changed>>>>>>> (incoming property value)\n",
 
-   "Trying to change property 'edit.diff' from 'repos' to 'repos.changed',\n"
-   "but property already exists with value 'local'.\n",
+    "Trying to change property 'edit.diff'\n"
+    "but the local property value conflicts with the incoming change.\n"
+    "<<<<<<< (local property value)\n"
+    "local=======\n"
+    "repos.changed>>>>>>> (incoming property value)\n",
 
-   "Trying to add new property 'add.add' with value 'repos',\n"
-   "but property already exists with value 'local'.\n",
+    "Trying to add new property 'add.add'\n"
+    "but the property already exists.\n"
+    "<<<<<<< (local property value)\n"
+    "local=======\n"
+    "repos>>>>>>> (incoming property value)\n",
 
-   "Trying to add new property 'add.diff' with value 'repos',\n"
-   "but property already exists with value 'local'.\n",
+    "Trying to add new property 'add.diff'\n"
+    "but the property already exists.\n"
+    "Local property value:\n"
+    "local\n"
+    "Incoming property value:\n"
+    "repos\n",
 
-   "Trying to create property 'add.del' with value 'repos',\n"
-   "but it has been locally deleted.\n",
+    "Trying to add new property 'add.del'\n"
+    "but the property has been locally deleted.\n"
+    "<<<<<<< (local property value)\n"
+    "=======\n"
+    "repos>>>>>>> (incoming property value)\n",
 
-   "Trying to add new property 'add.edit' with value 'repos',\n"
-   "but property already exists with value 'local.changed'.\n",
+    "Trying to add new property 'add.edit'\n"
+    "but the property already exists.\n"
+    "<<<<<<< (local property value)\n"
+    "local.changed=======\n"
+    "repos>>>>>>> (incoming property value)\n",
+  ]
 
-   "\n"
-   ])
-
-  # Get the contents of mu.prej.  The error messages in the prej file are
-  # two lines each, but there is no guarantee as to order, so remove the
-  # newline between each two line error message and then split the whole
-  # thing into a list of strings on the remaining newline...
-  raw_prej = open(mu_prej_path,
-                     'r').read().replace('\nbut', ' but').split('\n')
-  # ...then put the newlines back in each list item.  That leaves us with
-  # list of two lines strings we can compare to the unordered expected
-  # prej file.
-  actual_prej = []
-  for line in raw_prej:
-      repaired_line = line.replace(' but', '\nbut')
-      actual_prej.append(repaired_line + '\n')
-
-  svntest.verify.verify_outputs("Expected mu.prej doesn't match actual mu.prej",
-                                actual_prej, None, expected_prej, None)
+  # Get the contents of mu.prej.  The error messages are in the prej file
+  # but there is no guarantee as to order. So try to locate each message
+  # in the file individually.
+  prej_file = open(mu_prej_path, 'r')
+  n = 0
+  for message in expected_prej:
+    prej_file.seek(0)
+    match = False
+    i = 0
+    j = 0
+    msg_lines = message.split('\n')
+    for file_line in prej_file:
+      line = msg_lines[i] + '\n'
+      match = (line == file_line)
+      if match:
+        # The last line in the list is always an empty string.
+        if msg_lines[i + 1] == "":
+          #print("found message %i in file at line %i" % (n, j))
+          break
+        i += 1
+      else:
+        i = 0
+      j += 1
+    n += 1
+    if not match:    
+      raise svntest.main.SVNUnmatchedError(
+              "Expected mu.prej doesn't match actual mu.prej")
 
 def obstructed_subdirs(sbox):
   """test properties of obstructed subdirectories"""
