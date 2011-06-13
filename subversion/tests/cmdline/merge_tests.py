@@ -680,8 +680,10 @@ def simple_property_merges(sbox):
                                        None, None, None, None, None, 1)
 
   def error_message(property, old_value, new_value):
-    return "Trying to change property '%s' from '%s' to '%s',\n" \
-           "but it has been locally deleted.\n" % (property, old_value, new_value)
+    return "Trying to change property '%s'\n" \
+           "but the property has been locally deleted.\n" \
+           "<<<<<<< (local property value)\n=======\n" \
+           "%s>>>>>>> (incoming property value)\n" % (property, new_value)
 
   # Merge B 3:4 into B2 now causes a conflict
   expected_disk.add({
@@ -3079,8 +3081,9 @@ def property_merge_undo_redo(sbox):
   expected_elision_output = wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({'A/B/E/alpha.prej'
-     : Item("Trying to create property 'foo' with value 'foo_val',\n"
-            + "but it has been locally deleted.\n")})
+     : Item("Trying to add new property 'foo'\n"
+            + "but the property has been locally deleted.\n"
+            + "Incoming property value:\nfoo_val")})
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/B/E/alpha', status=' C')
