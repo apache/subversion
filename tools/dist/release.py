@@ -37,6 +37,8 @@ import os
 import sys
 import shutil
 import urllib2
+import tarfile
+import subprocess
 import argparse       # standard in Python 2.7
 
 
@@ -46,8 +48,13 @@ def get_prefix(base_dir):
 def get_tempdir(base_dir):
     return os.path.join(base_dir, 'tempdir')
 
+def run_script(script):
+    lines = script.split('\n')
+    for l in lines:
+        subprocess.check_call(l.split())
 
-def cleanup(base_dir):
+
+def cleanup(base_dir, args):
     'Remove generated files and folders.'
 
     shutil.rmtree(get_prefix(base_dir), True)
@@ -85,6 +92,33 @@ def build_env(base_dir, args):
         response = urllib2.urlopen(url)
         target = open(os.path.join(get_tempdir(base_dir), key + '.tar.gz'), 'w')
         target.write(response.read())
+        target.close()
+
+        target = tarfile.open(os.path.join(get_tempdir(base_dir),
+                                           key + '.tar.gz'))
+        target.extractall(get_tempdir(base_dir))
+
+    cwd = os.getcwd()
+
+    # build autoconf
+    os.chdir(os.path.join(get_tempdir(base_dir), params['autoconf']))
+    run_script('''./configure --prefix=%s
+                  make
+                  make install''' % get_prefix(base_dir))
+
+    # build libtool
+    os.chdir(os.path.join(get_tempdir(base_dir), params['libtool']))
+    run_script('''./configure --prefix=%s
+                  make
+                  make install''' % get_prefix(base_dir))
+
+    # build swig
+    os.chdir(os.path.join(get_tempdir(base_dir), params['swig']))
+    run_script('''./configure --prefix=%s --without-pcre
+                  make
+                  make install''' % get_prefix(base_dir))
+
+    os.chdir(cwd)
 
 
 def roll_tarballs(base_dir, args):
@@ -119,12 +153,18 @@ def main():
                             SourceForge.  If in the EU, you may want to use
                             'kent' for this value.''')
 
+    # A meta-target
+    subparser = subparsers.add_parser('clean',
+                    help='''The same as the '--clean' switch, but as a
+                            separate subcommand.''')
+    subparser.set_defaults(func=cleanup)
+
     # Parse the arguments
     args = parser.parse_args()
 
     # first, process any global operations
     if args.clean:
-        cleanup(args.base_dir)
+        cleanup(args.base_dir, args)
 
     sys.path.append(os.path.join(get_prefix(args.base_dir), 'bin'))
 
