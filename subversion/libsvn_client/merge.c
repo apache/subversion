@@ -10197,6 +10197,7 @@ calculate_left_hand_side(const char **url_left,
   svn_boolean_t never_synced;
   svn_revnum_t youngest_merged_rev;
   const char *yc_ancestor_path;
+  svn_revnum_t yc_ancestor_rev;
   const char *source_url;
   const char *target_url;
 
@@ -10263,7 +10264,7 @@ calculate_left_hand_side(const char **url_left,
 
   /* Check that SOURCE_URL@SOURCE_REV and TARGET_URL@TARGET_REV are
      actually related, we can't reintegrate if they are not.  Also
-     get an initial value for *REV_LEFT. */
+     get an initial value for YC_ANCESTOR_REV. */
   source_url = svn_path_url_add_component2(source_repos_root,
                                            source_repos_rel_path,
                                            iterpool);
@@ -10271,16 +10272,16 @@ calculate_left_hand_side(const char **url_left,
                                            target_repos_rel_path,
                                            iterpool);
   SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_path,
-                                                   rev_left,
+                                                   &yc_ancestor_rev,
                                                    source_url, source_rev,
                                                    target_url, target_rev,
                                                    ctx, iterpool));
-  if (!(yc_ancestor_path && SVN_IS_VALID_REVNUM(*rev_left)))
+  if (!(yc_ancestor_path && SVN_IS_VALID_REVNUM(yc_ancestor_rev)))
     return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                              _("'%s@%ld' must be ancestrally related to "
                                "'%s@%ld'"), source_url, source_rev,
                              target_url, target_rev);
-
+    
   /* Get the mergeinfo from the source, including its descendants
      with differing explicit mergeinfo. */
   APR_ARRAY_PUSH(source_repos_rel_path_as_array, const char *) = "";
@@ -10306,7 +10307,7 @@ calculate_left_hand_side(const char **url_left,
   SVN_ERR(find_unmerged_mergeinfo(&unmerged_catalog,
                                   &never_synced,
                                   &youngest_merged_rev,
-                                  *rev_left,
+                                  yc_ancestor_rev,
                                   mergeinfo_catalog,
                                   segments_hash,
                                   source_repos_rel_path,
@@ -10329,6 +10330,7 @@ calculate_left_hand_side(const char **url_left,
       /* We never merged to the source.  Just return the branch point. */
       *url_left = svn_path_url_add_component2(source_repos_root,
                                               yc_ancestor_path, result_pool);
+      *rev_left = yc_ancestor_rev;
     }
   else
     {
