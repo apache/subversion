@@ -10138,7 +10138,8 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
 
 /* Helper for svn_client_merge_reintegrate() which calculates the
    'left hand side' of the underlying two-URL merge that a --reintegrate
-   merge actually performs.
+   merge actually performs.  If no merge should be performed, set
+   *URL_LEFT to NULL and *REV_LEFT to SVN_INVALID_REVNUM.
 
    TARGET_ABSPATH is the absolute working copy path of the reintegrate
    merge.
@@ -10201,6 +10202,10 @@ calculate_left_hand_side(const char **url_left,
   const char *source_url;
   const char *target_url;
 
+  /* Initialize our return variables. */
+  *url_left = NULL;
+  *rev_left = SVN_INVALID_REVNUM;
+     
   /* TARGET_ABSPATH may not have explicit mergeinfo and thus may not be
      contained within SUBTREES_WITH_MERGEINFO.  If this is the case then
      add a dummy item for TARGET_ABSPATH so we get its history (i.e. implicit
@@ -10281,6 +10286,15 @@ calculate_left_hand_side(const char **url_left,
                              _("'%s@%ld' must be ancestrally related to "
                                "'%s@%ld'"), source_url, source_rev,
                              target_url, target_rev);
+
+  /* If the source revision is the same as the youngest common
+     revision, then there can't possibly be any unmerged revisions
+     that we need to apply to target.  (Since it */
+  if (source_rev == yc_ancestor_rev)
+    {
+      svn_pool_destroy(iterpool);
+      return SVN_NO_ERROR;
+    }
     
   /* Get the mergeinfo from the source, including its descendants
      with differing explicit mergeinfo. */
@@ -10494,6 +10508,11 @@ merge_reintegrate_locked(const char *source,
                                    target_ra_session,
                                    ctx,
                                    scratch_pool, scratch_pool));
+
+  /* Did calculate_left_hand_side() decide that there was no merge to
+     be performed here?  */
+  if (! url1)
+    return SVN_NO_ERROR;
 
   /* If the target was moved after the source was branched from it,
      it is possible that the left URL differs from the target's current
