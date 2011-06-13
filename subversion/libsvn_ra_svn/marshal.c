@@ -43,6 +43,7 @@
 #include "ra_svn.h"
 
 #include "private/svn_string_private.h"
+#include "private/svn_dep_compat.h"
 
 #define svn_iswhitespace(c) ((c) == ' ' || (c) == '\n')
 
