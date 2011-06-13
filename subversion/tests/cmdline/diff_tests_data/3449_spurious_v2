@@ -2,24 +2,24 @@
 0B
 0C
 
-FIND_PACKAGE(Subversion)
-IF(Subversion_FOUND)
- 	IF(DEFINED KVIrc_WC_REVISION)
-		SET(CMAKE_KVIRC_BUILD_REVISION ${KVIrc_WC_REVISION})
-		MESSAGE("-- Current revision is ${KVIrc_WC_REVISION}")
-	ELSE()
-		MESSAGE("-- No Subversion working copy found")
-	ENDIF()
-ELSE()
-	STRING(COMPARE EQUAL "${MANUAL_REVISION}" "" MANUAL_REVISION_UNSET)
+Line A
+Line B
+ 	Line C
+		Line D
+		Line E
+	Line F
+		Line G
+	Line H
+Line F
+	Line I
 	
-	IF(MANUAL_REVISION_UNSET)
-		MESSAGE("Subversion not found. No revision number will be used")
-	ELSE()
-		SET(CMAKE_KVIRC_BUILD_REVISION ${MANUAL_REVISION})
-		MESSAGE("-- Current revision has been manually set to ${MANUAL_REVISION}")
-	ENDIF()
-ENDIF()
+	Line J
+		Line K
+	Line F
+		Line L
+		Line M
+	Line H
+Line H
 
 Blah
 
