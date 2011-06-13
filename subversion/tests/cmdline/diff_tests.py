@@ -3779,6 +3779,8 @@ def no_spurious_conflict(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
+  svntest.actions.do_sleep_for_timestamps()
+
   data_dir = os.path.join(os.path.dirname(sys.argv[0]), 'diff_tests_data')
   shutil.copyfile(os.path.join(data_dir, '3449_spurious_v1'),
                   sbox.ospath('3449_spurious'))
