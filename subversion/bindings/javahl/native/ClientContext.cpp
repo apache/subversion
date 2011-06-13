@@ -259,7 +259,7 @@ ClientContext::checkCancel(void *cancelBaton)
     ClientContext *that = (ClientContext *)cancelBaton;
     if (that->m_cancelOperation)
         return svn_error_create(SVN_ERR_CANCELLED, NULL,
-                                _("Operation canceled"));
+                                _("Operation cancelled"));
     else
         return SVN_NO_ERROR;
 }

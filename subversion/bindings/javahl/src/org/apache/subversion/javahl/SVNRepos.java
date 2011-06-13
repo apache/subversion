@@ -223,4 +223,7 @@ public class SVNRepos implements ISVNRepos
     public native void upgrade(File path, ReposNotifyCallback callback);
 
     public native void pack(File path, ReposNotifyCallback callback);
+
+    public native void cancelOperation()
+            throws ClientException;
 }
