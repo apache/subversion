@@ -56,8 +56,8 @@ def get_nullfile():
     # This is certainly not cross platform
     return open('/dev/null', 'w')
 
-def run_script(args, script):
-    if args.verbose:
+def run_script(verbose, script):
+    if verbose:
         stdout = None
         stderr = None
     else:
@@ -121,7 +121,7 @@ def build_env(base_dir, args):
     # build autoconf
     logging.info('Building autoconf')
     os.chdir(os.path.join(get_tempdir(base_dir), params['autoconf']))
-    run_script(args,
+    run_script(args.verbose,
                '''./configure --prefix=%s
                   make
                   make install''' % get_prefix(base_dir))
@@ -129,7 +129,7 @@ def build_env(base_dir, args):
     # build libtool
     logging.info('Building libtool')
     os.chdir(os.path.join(get_tempdir(base_dir), params['libtool']))
-    run_script(args,
+    run_script(args.verbose,
                '''./configure --prefix=%s
                   make
                   make install''' % get_prefix(base_dir))
@@ -137,7 +137,7 @@ def build_env(base_dir, args):
     # build swig
     logging.info('Building swig')
     os.chdir(os.path.join(get_tempdir(base_dir), params['swig']))
-    run_script(args,
+    run_script(args.verbose,
                '''./configure --prefix=%s --without-pcre
                   make
                   make install''' % get_prefix(base_dir))
