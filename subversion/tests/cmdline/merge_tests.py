@@ -3083,7 +3083,7 @@ def property_merge_undo_redo(sbox):
   expected_disk.add({'A/B/E/alpha.prej'
      : Item("Trying to add new property 'foo'\n"
             + "but the property has been locally deleted.\n"
-            + "Incoming property value:\nfoo_val")})
+            + "Incoming property value:\nfoo_val\n")})
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/B/E/alpha', status=' C')
