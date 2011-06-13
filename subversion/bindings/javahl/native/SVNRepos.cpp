@@ -38,6 +38,7 @@
 #include "svn_private_config.h"
 
 SVNRepos::SVNRepos()
+    : m_cancelOperation(false)
 {
 }
 
@@ -57,6 +58,22 @@ void SVNRepos::dispose()
 {
   static jfieldID fid = 0;
   SVNBase::dispose(&fid, JAVA_PACKAGE"/SVNRepos");
+}
+
+void SVNRepos::cancelOperation()
+{
+  m_cancelOperation = true;
+}
+
+svn_error_t *
+SVNRepos::checkCancel(void *cancelBaton)
+{
+  SVNRepos *that = (SVNRepos *)cancelBaton;
+  if (that->m_cancelOperation)
+    return svn_error_create(SVN_ERR_CANCELLED, NULL,
+                            _("Operation cancelled"));
+  else
+    return SVN_NO_ERROR;
 }
 
 void SVNRepos::create(File &path, bool disableFsyncCommits,
@@ -227,7 +244,7 @@ void SVNRepos::dump(File &path, OutputStream &dataOut,
                                     ? ReposNotifyCallback::notify
                                     : NULL,
                                  notifyCallback,
-                                 NULL, NULL, requestPool.pool()), );
+                                 checkCancel, this, requestPool.pool()), );
 }
 
 void SVNRepos::hotcopy(File &path, File &targetPath,
@@ -327,7 +344,7 @@ void SVNRepos::load(File &path,
                                     ? ReposNotifyCallback::notify
                                     : NULL,
                                  notifyCallback,
-                                 NULL, NULL, requestPool.pool()), );
+                                 checkCancel, this, requestPool.pool()), );
 }
 
 void SVNRepos::lstxns(File &path, MessageReceiver &messageReceiver)
@@ -374,7 +391,7 @@ jlong SVNRepos::recover(File &path, ReposNotifyCallback *notifyCallback)
                                     ? ReposNotifyCallback::notify
                                     : NULL,
                                  notifyCallback,
-                                 NULL, NULL, requestPool.pool()),
+                                 checkCancel, this, requestPool.pool()),
               -1);
 
   /* Since db transactions may have been replayed, it's nice to tell
@@ -567,7 +584,7 @@ SVNRepos::verify(File &path, Revision &revisionStart, Revision &revisionEnd,
                                     ? ReposNotifyCallback::notify
                                     : NULL,
                                    notifyCallback,
-                                   NULL, NULL /* cancel callback/baton */,
+                                   checkCancel, this /* cancel callback/baton */,
                                    requestPool.pool()), );
 }
 
@@ -590,7 +607,7 @@ void SVNRepos::pack(File &path, ReposNotifyCallback *notifyCallback)
                                     ? ReposNotifyCallback::notify
                                     : NULL,
                                  notifyCallback,
-                                 NULL, NULL,
+                                 checkCancel, this,
                                  requestPool.pool()),
               );
 }
