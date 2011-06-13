@@ -3517,13 +3517,16 @@ typedef struct svn_wc_status3_t
   /** The in-repository path relative to the repository root. */
   const char *repos_relpath;
 
-    /** a file or directory can be 'switched' if the switch command has been
+  /** a file or directory can be 'switched' if the switch command has been
    * used.  If this is TRUE, then file_external will be FALSE.
    */
   svn_boolean_t switched;
 
-  /** The locally present lock. (Values of path, token, owner, comment and
-   * are available if a lock is present) */
+  /** This directory has a working copy lock */
+  svn_boolean_t locked;
+
+  /** The repository file lock. (Values of path, token, owner, comment
+   * and are available if a lock is present) */
   const svn_lock_t *lock;
 
   /** Which changelist this item is part of, or NULL if not part of any. */

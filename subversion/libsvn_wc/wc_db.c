@@ -6644,6 +6644,12 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+is_wclocked(void *baton,
+            svn_wc__db_wcroot_t *wcroot,
+            const char *dir_relpath,
+            apr_pool_t *scratch_pool);
+
 /* baton for read_children_info() */
 struct read_children_info_baton_t
 {
@@ -6769,6 +6775,10 @@ read_children_info(void *baton,
                 child->depth = svn_depth_from_word(depth);
               else
                 child->depth = svn_depth_unknown;
+
+              if (new_child)
+                SVN_ERR(is_wclocked(&child->locked, wcroot, child_relpath,
+                                    scratch_pool));
             }
 
           child->recorded_mod_time = svn_sqlite__column_int64(stmt, 13);

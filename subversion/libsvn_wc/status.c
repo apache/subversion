@@ -259,6 +259,8 @@ read_info(const struct svn_wc__db_info_t **info,
                                db, local_abspath,
                                result_pool, scratch_pool));
 
+  SVN_ERR(svn_wc__db_wclocked(&mtb->locked, db, local_abspath, scratch_pool));
+
   /* Maybe we have to get some shadowed lock from BASE to make our test suite
      happy... (It might be completely unrelated, but...) */
   if (mtb->have_base
@@ -608,6 +610,7 @@ assemble_status(svn_wc_status3_t **status,
          || (node_status == svn_wc_status_normal))
 
         && (! switched_p)
+        && (! info->locked )
         && (! info->lock)
         && (! repos_lock)
         && (! info->changelist)
@@ -673,6 +676,7 @@ assemble_status(svn_wc_status3_t **status,
   else
     stat->lock = NULL;
 
+  stat->locked = info->locked;
   stat->conflicted = conflicted;
   stat->versioned = TRUE;
   stat->changelist = info->changelist;

@@ -1839,7 +1839,8 @@ struct svn_wc__db_info_t {
   svn_boolean_t have_base;
   svn_boolean_t have_more_work;
 
-  svn_wc__db_lock_t *lock;
+  svn_boolean_t locked;     /* WC directory lock */
+  svn_wc__db_lock_t *lock;  /* Repository file lock */
 };
 
 /* Return in *NODES a hash mapping name->struct svn_wc__db_info_t for
