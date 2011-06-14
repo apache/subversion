@@ -1786,6 +1786,16 @@ svn_io_detect_mimetype(const char **mimetype,
                        apr_pool_t *pool);
 
 
+/** Examine up to @a len bytes of data in @a buf to determine if the
+ * can be considered binary data, in which case return TRUE.
+ * If the data can be considered plain-text data, return FALSE.
+ *
+ * @since New in 1.7.
+ */
+svn_boolean_t
+svn_io_is_binary_data(const unsigned char *buf, apr_size_t len);
+
+
 /** Wrapper for apr_file_open().  @a fname is utf8-encoded. */
 svn_error_t *
 svn_io_file_open(apr_file_t **new_file,

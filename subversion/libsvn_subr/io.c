@@ -2944,9 +2944,18 @@ svn_io_detect_mimetype2(const char **mimetype,
   /* Now close the file.  No use keeping it open any more.  */
   SVN_ERR(svn_io_file_close(fh, pool));
 
+  if (svn_io_is_binary_data(block, amt_read))
+    *mimetype = generic_binary;
 
+  return SVN_NO_ERROR;
+}
+
+
+svn_boolean_t
+svn_io_is_binary_data(const unsigned char *buf, apr_size_t len)
+{
   /* Right now, this function is going to be really stupid.  It's
-     going to examine the first block of data, and make sure that 15%
+     going to examine the block of data, and make sure that 15%
      of the bytes are such that their value is in the ranges 0x07-0x0D
      or 0x20-0x7F, and that none of those bytes is 0x00.  If those
      criteria are not met, we're calling it binary.
@@ -2955,7 +2964,7 @@ svn_io_detect_mimetype2(const char **mimetype,
      the specified ranges, but I flubbed the condition.  At any rate,
      folks aren't complaining, so I'm not sure that it's worth
      adjusting this retroactively now.  --cmpilato  */
-  if (amt_read > 0)
+  if (len > 0)
     {
       apr_size_t i;
       apr_size_t binary_count = 0;
@@ -2963,29 +2972,25 @@ svn_io_detect_mimetype2(const char **mimetype,
       /* Run through the data we've read, counting the 'binary-ish'
          bytes.  HINT: If we see a 0x00 byte, we'll set our count to its
          max and stop reading the file. */
-      for (i = 0; i < amt_read; i++)
+      for (i = 0; i < len; i++)
         {
-          if (block[i] == 0)
+          if (buf[i] == 0)
             {
-              binary_count = amt_read;
+              binary_count = len;
               break;
             }
-          if ((block[i] < 0x07)
-              || ((block[i] > 0x0D) && (block[i] < 0x20))
-              || (block[i] > 0x7F))
+          if ((buf[i] < 0x07)
+              || ((buf[i] > 0x0D) && (buf[i] < 0x20))
+              || (buf[i] > 0x7F))
             {
               binary_count++;
             }
         }
 
-      if (((binary_count * 1000) / amt_read) > 850)
-        {
-          *mimetype = generic_binary;
-          return SVN_NO_ERROR;
-        }
+      return (((binary_count * 1000) / len) > 850);
     }
 
-  return SVN_NO_ERROR;
+  return FALSE;
 }
 
 
