@@ -1499,8 +1499,11 @@ svn_relpath_skip_ancestor(const char *parent_relpath,
   assert(relpath_is_canonical(parent_relpath));
   assert(relpath_is_canonical(child_relpath));
 
+  if (len == 0)
+    return child_relpath;
+
   if (0 != memcmp(parent_relpath, child_relpath, len))
-    return child_relpath; /* parent_relpath is no ancestor of child_relpath */
+    return NULL; /* parent_relpath is no ancestor of child_relpath */
 
   if (child_relpath[len] == 0)
     return ""; /* parent_relpath == child_relpath */
@@ -1508,7 +1511,7 @@ svn_relpath_skip_ancestor(const char *parent_relpath,
   if (child_relpath[len] == '/')
     return child_relpath + len + 1;
 
-  return child_relpath;
+  return NULL;
 }
 
 
@@ -2419,19 +2422,10 @@ const char *
 svn_fspath__skip_ancestor(const char *parent_fspath,
                           const char *child_fspath)
 {
-  const char *result;
   assert(svn_fspath__is_canonical(parent_fspath));
   assert(svn_fspath__is_canonical(child_fspath));
 
-  if (svn_relpath_is_ancestor(parent_fspath + 1, child_fspath + 1))
-    {
-      result = svn_relpath_skip_ancestor(parent_fspath + 1, child_fspath + 1);
-      assert(svn_relpath_is_canonical(result));
-    }
-  else
-    result = NULL;
-
-  return result;
+  return svn_relpath_skip_ancestor(parent_fspath + 1, child_fspath + 1);
 }
 
 svn_boolean_t
