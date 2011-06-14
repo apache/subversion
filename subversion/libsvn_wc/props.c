@@ -607,9 +607,12 @@ prop_conflict_from_skel(const svn_string_t **conflict_desc,
 
   /* If any of the property values involved in the diff is binary data,
    * do not generate a diff. */
-  original_is_binary = svn_io_is_binary_data(original->data, original->len);
-  mine_is_binary = svn_io_is_binary_data(mine->data, mine->len);
-  incoming_is_binary = svn_io_is_binary_data(incoming->data, incoming->len);
+  original_is_binary = svn_io_is_binary_data((unsigned char *)original->data,
+                                             original->len);
+  mine_is_binary = svn_io_is_binary_data((unsigned char *)mine->data,
+                                         mine->len);
+  incoming_is_binary = svn_io_is_binary_data((unsigned char *)incoming->data,
+                                             incoming->len);
 
   if (!(original_is_binary || mine_is_binary || incoming_is_binary))
     {
