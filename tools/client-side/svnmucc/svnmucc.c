@@ -668,7 +668,6 @@ execute(const apr_array_header_t *actions,
                         session, &root, pool));
           break;
         case ACTION_CP:
-          path1 = subtract_anchor(anchor, action->path[0], pool);
           path2 = subtract_anchor(anchor, action->path[1], pool);
           if (action->rev == SVN_INVALID_REVNUM)
             action->rev = head;
