@@ -1033,7 +1033,6 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   if (group_count >= (APR_UINT32_MAX / GROUP_SIZE))
     {
       group_count = (APR_UINT32_MAX / GROUP_SIZE) - 1;
-      directory_size = group_count * sizeof(entry_group_t);
     }
 
   group_init_size = 1 + group_count / (8 * GROUP_INIT_GRANULARITY);
