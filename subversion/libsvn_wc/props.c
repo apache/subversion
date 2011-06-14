@@ -569,6 +569,9 @@ prop_conflict_from_skel(const svn_string_t **conflict_desc,
   svn_diff_t *diff;
   svn_diff_file_options_t *diff_opts;
   svn_stringbuf_t *buf;
+  svn_boolean_t original_is_binary;
+  svn_boolean_t mine_is_binary;
+  svn_boolean_t incoming_is_binary;
 
   /* Navigate to the property name.  */
   skel = skel->children->next;
@@ -602,47 +605,64 @@ prop_conflict_from_skel(const svn_string_t **conflict_desc,
   else if (incoming_base && svn_string_compare(original, mine))
     original = incoming_base;
 
-  /* ### TODO Do not attempt to generate diffs of binary data. */
-  diff_opts = svn_diff_file_options_create(scratch_pool);
-  diff_opts->ignore_space = FALSE;
-  diff_opts->ignore_eol_style = FALSE;
-  diff_opts->show_c_function = FALSE;
-  SVN_ERR(svn_diff_mem_string_diff3(&diff, original, mine, incoming,
-                                    diff_opts, scratch_pool));
-  if (svn_diff_contains_conflicts(diff))
-    {
-      svn_stream_t *stream;
-      svn_diff_conflict_display_style_t style;
-      const char *mine_marker = _("<<<<<<< (local property value)");
-      const char *incoming_marker = _(">>>>>>> (incoming property value)");
-      const char *separator = "=======";
+  /* If any of the property values involved in the diff is binary data,
+   * do not generate a diff. */
+  original_is_binary = svn_io_is_binary_data(original->data, original->len);
+  mine_is_binary = svn_io_is_binary_data(mine->data, mine->len);
+  incoming_is_binary = svn_io_is_binary_data(incoming->data, incoming->len);
 
-      style = svn_diff_conflict_display_modified_latest;
-      stream = svn_stream_from_stringbuf(buf, scratch_pool);
-      SVN_ERR(svn_stream_skip(stream, buf->len));
-      SVN_ERR(svn_diff_mem_string_output_merge2(stream, diff,
-                                                original, mine, incoming,
-                                                NULL, mine_marker,
-                                                incoming_marker, separator,
-                                                style, scratch_pool));
-      SVN_ERR(svn_stream_close(stream));
+  if (!(original_is_binary || mine_is_binary || incoming_is_binary))
+    {
+      diff_opts = svn_diff_file_options_create(scratch_pool);
+      diff_opts->ignore_space = FALSE;
+      diff_opts->ignore_eol_style = FALSE;
+      diff_opts->show_c_function = FALSE;
+      SVN_ERR(svn_diff_mem_string_diff3(&diff, original, mine, incoming,
+                                        diff_opts, scratch_pool));
+      if (svn_diff_contains_conflicts(diff))
+        {
+          svn_stream_t *stream;
+          svn_diff_conflict_display_style_t style;
+          const char *mine_marker = _("<<<<<<< (local property value)");
+          const char *incoming_marker = _(">>>>>>> (incoming property value)");
+          const char *separator = "=======";
+
+          style = svn_diff_conflict_display_modified_latest;
+          stream = svn_stream_from_stringbuf(buf, scratch_pool);
+          SVN_ERR(svn_stream_skip(stream, buf->len));
+          SVN_ERR(svn_diff_mem_string_output_merge2(stream, diff,
+                                                    original, mine, incoming,
+                                                    NULL, mine_marker,
+                                                    incoming_marker, separator,
+                                                    style, scratch_pool));
+          SVN_ERR(svn_stream_close(stream));
+
+          *conflict_desc = svn_string_create_from_buf(buf, result_pool);
+          return SVN_NO_ERROR;
+        }
     }
-  else
-    {
-      /* If we cannot print a conflict diff just print full values . */
-      if (mine->len > 0)
-        {
-          svn_stringbuf_appendcstr(buf, _("Local property value:\n"));
-          svn_stringbuf_appendbytes(buf, mine->data, mine->len);
-          svn_stringbuf_appendcstr(buf, "\n");
-        }
 
-      if (incoming->len > 0)
-        {
-          svn_stringbuf_appendcstr(buf, _("Incoming property value:\n"));
-          svn_stringbuf_appendbytes(buf, incoming->data, incoming->len);
-          svn_stringbuf_appendcstr(buf, "\n");
-        }
+  /* If we could not print a conflict diff just print full values . */
+  if (mine->len > 0)
+    {
+      svn_stringbuf_appendcstr(buf, _("Local property value:\n"));
+      if (mine_is_binary)
+        svn_stringbuf_appendcstr(buf, _("Cannot display: property value is "
+                                        "binary data\n"));
+      else
+        svn_stringbuf_appendbytes(buf, mine->data, mine->len);
+      svn_stringbuf_appendcstr(buf, "\n");
+    }
+
+  if (incoming->len > 0)
+    {
+      svn_stringbuf_appendcstr(buf, _("Incoming property value:\n"));
+      if (incoming_is_binary)
+        svn_stringbuf_appendcstr(buf, _("Cannot display: property value is "
+                                        "binary data\n"));
+      else
+        svn_stringbuf_appendbytes(buf, incoming->data, incoming->len);
+      svn_stringbuf_appendcstr(buf, "\n");
     }
 
   *conflict_desc = svn_string_create_from_buf(buf, result_pool);
