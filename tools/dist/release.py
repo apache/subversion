@@ -126,7 +126,7 @@ class RollDep(object):
         # Extract tarball
         tarfile.open(tarball).extractall(tempdir)
 
-        logging.info('Building ' + self._label)
+        logging.info('Building ' + self.label)
         os.chdir(os.path.join(tempdir, self._filebase))
         run_script(self._verbose,
                    '''./configure --prefix=%s %s
@@ -140,7 +140,7 @@ class RollDep(object):
 class AutoconfDep(RollDep):
     def __init__(self, base_dir, use_existing, verbose):
         RollDep.__init__(self, base_dir, use_existing, verbose)
-        self._label = 'autoconf'
+        self.label = 'autoconf'
         self._filebase = 'autoconf-' + autoconf_ver
         self._url = 'http://ftp.gnu.org/gnu/autoconf/%s.tar.gz' % self._filebase
 
@@ -157,7 +157,7 @@ class AutoconfDep(RollDep):
 class LibtoolDep(RollDep):
     def __init__(self, base_dir, use_existing, verbose):
         RollDep.__init__(self, base_dir, use_existing, verbose)
-        self._label = 'libtool'
+        self.label = 'libtool'
         self._filebase = 'libtool-' + libtool_ver
         self._url = 'http://ftp.gnu.org/gnu/libtool/%s.tar.gz' % self._filebase
 
@@ -168,7 +168,7 @@ class LibtoolDep(RollDep):
 class SwigDep(RollDep):
     def __init__(self, base_dir, use_existing, verbose, sf_mirror):
         RollDep.__init__(self, base_dir, use_existing, verbose)
-        self._label = 'swig'
+        self.label = 'swig'
         self._filebase = 'swig-' + swig_ver
         self._url = 'http://sourceforge.net/projects/swig/files/swig/%(swig)s/%(swig)s.tar.gz/download?use_mirror=%(sf_mirror)s' % \
             { 'swig' : self._filebase,
@@ -200,23 +200,12 @@ def build_env(base_dir, args):
     libtool = LibtoolDep(base_dir, args.use_existing, args.verbose)
     swig = SwigDep(base_dir, args.use_existing, args.verbose, args.sf_mirror)
 
-    # Check to see if the system versions of the stuff we're downloading will
-    # suffice
-
-    if autoconf.use_system():
-        logging.info('Using system autoconf-' + autoconf_ver)
-    else:
-        autoconf.build()
-
-    if libtool.use_system():
-        logging.info('Using system libtool-' + libtool_ver)
-    else:
-        libtool.build()
-
-    if swig.use_system():
-        logging.info('Using system swig-' + swig_ver)
-    else:
-        swig.build()
+    # iterate over our rolling deps, and build them if needed
+    for dep in [autoconf, libtool, swig]:
+        if dep.use_system():
+            logging.info('Using system %s' % dep.label)
+        else:
+            dep.build()
 
 
 def roll_tarballs(base_dir, args):
