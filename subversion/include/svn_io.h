@@ -1793,7 +1793,7 @@ svn_io_detect_mimetype(const char **mimetype,
  * @since New in 1.7.
  */
 svn_boolean_t
-svn_io_is_binary_data(const unsigned char *buf, apr_size_t len);
+svn_io_is_binary_data(const void *buf, apr_size_t len);
 
 
 /** Wrapper for apr_file_open().  @a fname is utf8-encoded. */
