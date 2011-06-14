@@ -158,7 +158,7 @@ svn_client__path_relative_to_root(const char **rel_path,
       SVN_ERR_ASSERT(ra_session != NULL);
 
       /* Ask the RA layer to create a relative path for us */
-      err = svn_ra_get_path_relative_to_root(ra_session, rel_path,
+      err = svn_ra_get_path_relative_to_root(ra_session, &repos_relpath,
                                              abspath_or_url, scratch_pool);
 
       if (err)
