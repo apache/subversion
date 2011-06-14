@@ -83,13 +83,14 @@ def download_file(url, target):
 
 def cleanup(base_dir, args):
     'Remove generated files and folders.'
+    logging.info('Cleaning')
 
     shutil.rmtree(get_prefix(base_dir), True)
     shutil.rmtree(get_tempdir(base_dir), True)
 
 
 #----------------------------------------------------------------------
-# Creating and environment to roll the release
+# Creating an environment to roll the release
 
 class RollDep(object):
     'The super class for each of the build dependencies.'
@@ -207,6 +208,9 @@ def build_env(base_dir, args):
         else:
             dep.build()
 
+
+#----------------------------------------------------------------------
+# Create release artifacts
 
 def roll_tarballs(base_dir, args):
     'Create the release artifacts.'
