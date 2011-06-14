@@ -2424,12 +2424,13 @@ svn_fspath__skip_ancestor(const char *parent_fspath,
   assert(svn_fspath__is_canonical(child_fspath));
 
   if (svn_relpath_is_ancestor(parent_fspath + 1, child_fspath + 1))
-    result = svn_relpath_skip_ancestor(parent_fspath + 1, child_fspath + 1);
+    {
+      result = svn_relpath_skip_ancestor(parent_fspath + 1, child_fspath + 1);
+      assert(svn_relpath_is_canonical(result));
+    }
   else
-    result = child_fspath;
+    result = NULL;
 
-  assert(svn_relpath_is_canonical(result)
-         || strcmp(result, child_fspath) == 0);
   return result;
 }
 
