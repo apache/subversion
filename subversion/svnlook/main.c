@@ -176,7 +176,11 @@ static const apr_getopt_option_t options_table[] =
       "                            "
       "    --ignore-eol-style:\n"
       "                            "
-      "       Ignore changes in EOL style")},
+      "       Ignore changes in EOL style\n"
+      "                            "
+      "    -p (--show-c-function):\n"
+      "                            "
+      "       Show C function name in diff output.")},
 
   {"quiet",             'q', 0,
    N_("no progress (only errors) to stderr")},
@@ -1078,7 +1082,8 @@ print_diff_tree(svn_fs_root_t *root,
               SVN_ERR(svn_diff_file_output_unified3
                       (ostream, diff, orig_path, new_path,
                        orig_label, new_label,
-                       svn_cmdline_output_encoding(pool), NULL, FALSE, pool));
+                       svn_cmdline_output_encoding(pool), NULL,
+                       opts->show_c_function, pool));
               SVN_ERR(svn_stream_close(ostream));
               SVN_ERR(svn_cmdline_printf(pool, "\n"));
               diff_header_printed = TRUE;
