@@ -43,6 +43,12 @@ import subprocess
 import argparse       # standard in Python 2.7
 
 
+# Our required / recommended versions
+autoconf_ver = '2.68'
+libtool_ver = '2.4'
+swig_ver = '2.0.4'
+
+
 #----------------------------------------------------------------------
 # Utility functions
 
@@ -85,15 +91,58 @@ def cleanup(base_dir, args):
 #----------------------------------------------------------------------
 # Creating and environment to roll the release
 
+def is_wanted_autoconf():
+    'Return True if we have the required autoconf, False otherwise'
+    proc = subprocess.Popen(['autoconf', '-V'], stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT)
+    (stdout, stderr) = proc.communicate()
+    rc = proc.wait()
+    if rc: return False
+
+    version = stdout.split('\n')[0].split()[-1:][0]
+    return version == autoconf_ver
+
+
+def is_wanted_libtool():
+    'Return True if we have the required libtool, False otherwise'
+    proc = subprocess.Popen(['libtool', '--version'], stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT)
+    (stdout, stderr) = proc.communicate()
+    rc = proc.wait()
+    if rc: return False
+
+    version = stdout.split('\n')[0].split()[-1:][0]
+    return version == libtool_ver
+
+
+def is_wanted_swig():
+    'Return True if we have the required swig, False otherwise'
+    proc = subprocess.Popen(['swig', '-version'], stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT)
+    (stdout, stderr) = proc.communicate()
+    rc = proc.wait()
+    if rc: return False
+
+    version = stdout.split('\n')[1].split()[-1:][0]
+    return version == swig_ver
+
+
 def prep_autoconf(base_dir, args):
     'Download and build autoconf'
     cwd = os.getcwd()
-    filebase = 'autoconf-2.68'
-    url = 'http://ftp.gnu.org/gnu/autoconf/%s.tar.gz' % filebase
+    filebase = 'autoconf-' + autoconf_ver
     tarball = os.path.join(get_tempdir(base_dir), filebase + '.tar.gz')
 
-    logging.info('Fetching %s' % filebase)
-    download_file(url, tarball)
+    if os.path.exists(tarball):
+        if not args.use_existing:
+            raise RuntimeError('autoconf tarball "%s" already exists' % tarball)
+        logging.info('Using existing %s.tar.gz' % filebase)
+    else:
+        logging.info('Fetching %s' % filebase)
+        url = 'http://ftp.gnu.org/gnu/autoconf/%s.tar.gz' % filebase
+        download_file(url, tarball)
+
+    # Extract tarball
     tarfile.open(tarball).extractall(get_tempdir(base_dir))
 
     logging.info('Building autoconf')
@@ -110,11 +159,18 @@ def prep_libtool(base_dir, args):
     'Download and build libtool'
     cwd = os.getcwd()
     filebase = 'libtool-2.4'
-    url = 'http://ftp.gnu.org/gnu/libtool/%s.tar.gz' % filebase
     tarball = os.path.join(get_tempdir(base_dir), filebase + '.tar.gz')
 
-    logging.info('Fetching %s' % filebase)
-    download_file(url, tarball)
+    if os.path.exists(tarball):
+        if not args.use_existing:
+            raise RuntimeError('libtool tarball "%s" already exists' % tarball)
+        logging.info('Using existing %s.tar.gz' % filebase)
+    else:
+        logging.info('Fetching %s' % filebase)
+        url = 'http://ftp.gnu.org/gnu/libtool/%s.tar.gz' % filebase
+        download_file(url, tarball)
+
+    # Extract tarball
     tarfile.open(tarball).extractall(get_tempdir(base_dir))
 
     logging.info('Building libtool')
@@ -130,14 +186,21 @@ def prep_swig(base_dir, args):
     'Download and build swig'
     cwd = os.getcwd()
     filebase = 'swig-2.0.4'
-    url = 'http://sourceforge.net/projects/swig/files/swig/%(swig)s/%(swig)s.tar.gz/download?use_mirror=%(sf_mirror)s' % \
-        { 'swig' : filebase,
-          'sf_mirror' : args.sf_mirror }
     tarball = os.path.join(get_tempdir(base_dir), filebase + '.tar.gz')
 
-    logging.info('Fetching %s' % filebase)
-    download_file(url, tarball)
-    tarfile.open(tarball).extractall(get_tempdir(base_dir))
+    if os.path.exists(tarball):
+        if not args.use_existing:
+            raise RuntimeError('swig tarball "%s" already exists' % tarball)
+        logging.info('Using existing %s.tar.gz' % filebase)
+    else:
+        logging.info('Fetching %s' % filebase)
+        url = 'http://sourceforge.net/projects/swig/files/swig/%(swig)s/%(swig)s.tar.gz/download?use_mirror=%(sf_mirror)s' % \
+            { 'swig' : filebase,
+              'sf_mirror' : args.sf_mirror }
+        download_file(url, tarball)
+
+    # Extract tarball
+    tarfile.open(tarball, 'r').extractall(get_tempdir(base_dir))
 
     logging.info('Building swig')
     os.chdir(os.path.join(get_tempdir(base_dir), filebase))
@@ -153,19 +216,30 @@ def build_env(base_dir, args):
     'Download prerequisites for a release and prepare the environment.'
     logging.info('Creating release environment')
 
-    prefix = get_prefix(base_dir)
-    if os.path.exists(prefix):
-        raise RuntimeError("Directory exists: '%s'" % prefix)
-    os.mkdir(prefix)
+    try:
+        os.mkdir(get_prefix(base_dir))
+        os.mkdir(get_tempdir(base_dir))
+    except OSError:
+        if not args.use_existing:
+            raise
 
-    tempdir = get_tempdir(base_dir)
-    if os.path.exists(tempdir):
-        raise RuntimeError("Directory exists: '%s'" % tempdir)
-    os.mkdir(tempdir)
+    # Check to see if the system versions of the stuff we're downloading will
+    # suffice
 
-    prep_autoconf(base_dir, args)
-    prep_libtool(base_dir, args)
-    prep_swig(base_dir, args)
+    if not args.use_existing or not is_wanted_autoconf():
+        prep_autoconf(base_dir, args)
+    else:
+        logging.info('Using system autoconf-' + autoconf_ver)
+
+    if not args.use_existing or not is_wanted_libtool():
+        prep_libtool(base_dir, args)
+    else:
+        logging.info('Using system libtool-' + libtool_ver)
+
+    if not args.use_existing or not is_wanted_swig():
+        prep_swig(base_dir, args)
+    else:
+        logging.info('Using system swig-' + swig_ver)
 
 
 def roll_tarballs(base_dir, args):
@@ -196,14 +270,17 @@ def main():
     subparsers = parser.add_subparsers(title='subcommands')
 
     # Setup the parser for the build-env subcommand
-    build_env_parser = subparsers.add_parser('build-env',
+    subparser = subparsers.add_parser('build-env',
                     help='''Download release prerequisistes, including autoconf,
                             libtool, and swig.''')
-    build_env_parser.set_defaults(func=build_env)
-    build_env_parser.add_argument('--sf-mirror', default='softlayer',
+    subparser.set_defaults(func=build_env)
+    subparser.add_argument('--sf-mirror', default='softlayer',
                     help='''The mirror to use for downloading files from
                             SourceForge.  If in the EU, you may want to use
                             'kent' for this value.''')
+    subparser.add_argument('--use-existing', action='store_true', default=False,
+                    help='''Attempt to use existing build dependencies before
+                            downloading and building a private set.''')
 
     # A meta-target
     subparser = subparsers.add_parser('clean',
