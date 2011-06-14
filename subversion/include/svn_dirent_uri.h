@@ -646,10 +646,8 @@ svn_dirent_skip_ancestor(const char *parent_dirent,
 
 /** Return the relative path part of @a child_relpath that is below
  * @a parent_relpath, or just "" if @a parent_relpath is equal to
- * @a child_relpath. If @a child_relpath is not below @a parent_relpath,
- * return @a child_relpath.
- *
- * ### Returning the child in the no-match case is a bad idea.
+ * @a child_relpath. If @a child_relpath is not below or equal to
+ * @a parent_relpath, return NULL.
  *
  * @since New in 1.7.
  */
