@@ -1693,6 +1693,33 @@ def update_locked_deleted(sbox):
                                         None, expected_status)
 
 
+#----------------------------------------------------------------------
+def block_unlock_if_pre_unlock_hook_fails(sbox):
+  "block unlock operation if pre-unlock hook fails"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  svntest.actions.create_failing_hook(repo_dir, "pre-unlock", "error text")
+
+  # lock a file.
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G/pi', writelocked='K')
+
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     '-m', '', pi_path)
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Make sure the unlock operation fails as pre-unlock hook blocks it.
+  expected_unlock_fail_err_re = ".*error text|.*500 Internal Server Error"
+  svntest.actions.run_and_verify_svn2(None, None, expected_unlock_fail_err_re,
+                                      1, 'unlock', pi_path)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -1739,6 +1766,7 @@ test_list = [ None,
               replace_and_propset_locked_path,
               cp_isnt_ro,
               update_locked_deleted,
+              block_unlock_if_pre_unlock_hook_fails,
             ]
 
 if __name__ == '__main__':
