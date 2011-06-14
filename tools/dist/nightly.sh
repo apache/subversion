@@ -53,7 +53,7 @@ echo "Will place results in: $target"
 head=`$svn info $repo/trunk | grep '^Revision' | cut -d ' ' -f 2`
 
 # Get the latest versions of the rolling scripts
-for i in construct-rolling-environment.sh roll.sh dist.sh gen_nightly_ann.py
+for i in release.py roll.sh dist.sh gen_nightly_ann.py
 do 
   $svn export -r $head $repo/trunk/tools/dist/$i@$head $dir/$i
 done
@@ -61,9 +61,7 @@ done
 # Create the environment
 cd roll
 echo '----------------building environment------------------'
-if [ ! -d "prefix" ]; then
-  ../construct-rolling-environment.sh prefix
-fi;
+../release.py --base-dir ${abscwd}/roll build-env
 
 # Roll the tarballs
 echo '-------------------rolling tarball--------------------'
