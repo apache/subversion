@@ -162,13 +162,7 @@ class LibtoolDep(RollDep):
         self._url = 'http://ftp.gnu.org/gnu/libtool/%s.tar.gz' % self._filebase
 
     def use_system(self):
-        if not self._use_existing: return False
-
-        output = self._test_version(['libtool', '--version'])
-        if not output: return False
-
-        version = output[0].split()[-1:][0]
-        return version == libtool_ver
+        return False
 
 
 class SwigDep(RollDep):
