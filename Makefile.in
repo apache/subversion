@@ -414,9 +414,9 @@ local-install: @INSTALL_RULES@
 revision-install:
 	test -d $(DESTDIR)$(includedir)/subversion-1 || \
 	  $(MKDIR) $(DESTDIR)$(includedir)/subversion-1
-	(subversion/svnversion/svnversion $(top_srcdir) ||  \
-	 svnversion $(top_srcdir) ||                        \
-	 echo "unknown";                                    \
+	(subversion/svnversion/svnversion $(top_srcdir) 2> /dev/null ||  \
+	 svnversion $(top_srcdir) 2> /dev/null ||                        \
+	 echo "unknown";                                                 \
 	) > $(DESTDIR)$(includedir)/subversion-1/svn-revision.txt
 
 install-static: @INSTALL_STATIC_RULES@
