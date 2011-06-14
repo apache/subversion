@@ -142,10 +142,8 @@ svn_fspath__is_child(const char *parent_fspath,
 
 /** Return the relative path part of @a child_fspath that is below
  * @a parent_fspath, or just "" if @a parent_fspath is equal to
- * @a child_fspath. If @a child_fspath is not below @a parent_fspath,
- * return @a child_fspath.
- *
- * ### Returning the child in the no-match case is a bad idea.
+ * @a child_fspath. If @a child_fspath is not below @a parent_fspath
+ * or equal to it, return @c NULL.
  *
  * @since New in 1.7.
  */

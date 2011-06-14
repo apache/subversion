@@ -7840,14 +7840,12 @@ log_noop_revs(void *baton,
          calculate what path in the merge target would be affected by this
          revision. */
       rel_path = svn_fspath__skip_ancestor(log_gap_baton->source_repos_abs, path);
-      cwmi_path = svn_dirent_join(log_gap_baton->merge_b->target_abspath,
-                                  rel_path, pool);
-
       /* Is PATH even within the merge target?  If it isn't we
          can disregard it altogether. */
-      if (!svn_dirent_is_ancestor(log_gap_baton->merge_b->target_abspath,
-                                  cwmi_path))
+      if (rel_path == NULL)
         continue;
+      cwmi_path = svn_dirent_join(log_gap_baton->merge_b->target_abspath,
+                                  rel_path, pool);
 
       /* Find any explicit or inherited mergeinfo for PATH. */
       while (!log_entry_rev_required)
@@ -9611,11 +9609,11 @@ log_find_operative_revs(void *baton,
       svn_boolean_t in_catalog;
       svn_mergeinfo_t log_entry_as_mergeinfo;
 
+      rel_path = svn_fspath__skip_ancestor(log_baton->target_abspath, path);
       /* Easy out: The path is not within the tree of interest. */
-      if (!svn_fspath__is_ancestor(log_baton->target_abspath, path))
+      if (rel_path == NULL)
         continue;
 
-      rel_path = svn_fspath__skip_ancestor(log_baton->target_abspath, path);
       source_rel_path = svn_relpath_join(log_baton->source_repos_rel_path,
                                          rel_path, pool);
 
