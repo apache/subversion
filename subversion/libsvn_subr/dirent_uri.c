@@ -1525,7 +1525,7 @@ svn_uri_skip_ancestor(const char *parent_uri,
   assert(svn_uri_is_canonical(child_uri, NULL));
 
   if (0 != memcmp(parent_uri, child_uri, len))
-    return child_uri; /* parent_uri is no ancestor of child_uri */
+    return NULL; /* parent_uri is no ancestor of child_uri */
 
   if (child_uri[len] == 0)
     return ""; /* parent_uri == child_uri */
@@ -1533,7 +1533,7 @@ svn_uri_skip_ancestor(const char *parent_uri,
   if (child_uri[len] == '/')
     return child_uri + len + 1;
 
-  return child_uri;
+  return NULL;
 }
 
 svn_boolean_t

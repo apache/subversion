@@ -1568,7 +1568,7 @@ test_uri_skip_ancestor(apr_pool_t *pool)
     const char *result;
   } tests[] = {
     { "http://server",   "http://server/q", "q" },
-    { "svn://server",    "http://server/q", "http://server/q" },
+    { "svn://server",    "http://server/q", NULL },
   };
 
   for (i = 0; i < COUNT_OF(tests); i++)
@@ -1576,7 +1576,9 @@ test_uri_skip_ancestor(apr_pool_t *pool)
       const char* retval;
 
       retval = svn_uri_skip_ancestor(tests[i].path1, tests[i].path2);
-      if (strcmp(tests[i].result, retval))
+      if ((tests[i].result == NULL)
+          ? (retval != NULL)
+          : (retval == NULL || strcmp(tests[i].result, retval) != 0))
         return svn_error_createf(
              SVN_ERR_TEST_FAILED, NULL,
              "svn_uri_skip_ancestor (%s, %s) returned %s instead of %s",

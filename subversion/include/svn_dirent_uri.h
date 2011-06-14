@@ -657,7 +657,7 @@ svn_relpath_skip_ancestor(const char *parent_relpath,
 
 /** Return the relative path part of @a child_uri that is below
  * @a parent_uri, or just "" if @a parent_uri is equal to @a child_uri. If
- * @a child_uri is not below @a parent_uri, return @a child_uri.
+ * @a child_uri is not below or equal to @a parent_uri, return NULL.
  *
  * @since New in 1.7.
  */
