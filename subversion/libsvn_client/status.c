@@ -591,8 +591,6 @@ svn_client__create_status(svn_client_status_t **cst,
   (*cst)->text_status = status->text_status;
   (*cst)->prop_status = status->prop_status;
 
-  (*cst)->switched = status->switched;
-
   if (status->kind == svn_node_dir)
     (*cst)->locked = status->locked;
 
