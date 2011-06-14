@@ -91,125 +91,104 @@ def cleanup(base_dir, args):
 #----------------------------------------------------------------------
 # Creating and environment to roll the release
 
-def is_wanted_autoconf():
-    'Return True if we have the required autoconf, False otherwise'
-    proc = subprocess.Popen(['autoconf', '-V'], stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT)
-    (stdout, stderr) = proc.communicate()
-    rc = proc.wait()
-    if rc: return False
+class RollDep(object):
+    'The super class for each of the build dependencies.'
+    def __init__(self, base_dir, use_existing, verbose):
+        self._base_dir = base_dir
+        self._use_existing = use_existing
+        self._verbose = verbose
 
-    version = stdout.split('\n')[0].split()[-1:][0]
-    return version == autoconf_ver
+    def _test_version(self, cmd):
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT)
+        (stdout, stderr) = proc.communicate()
+        rc = proc.wait()
+        if rc: return ''
 
+        return stdout.split('\n')
 
-def is_wanted_libtool():
-    'Return True if we have the required libtool, False otherwise'
-    proc = subprocess.Popen(['libtool', '--version'], stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT)
-    (stdout, stderr) = proc.communicate()
-    rc = proc.wait()
-    if rc: return False
+    def build(self):
+        if not hasattr(self, '_extra_configure_flags'):
+            self._extra_configure_flags = ''
+        cwd = os.getcwd()
+        tempdir = get_tempdir(self._base_dir)
+        tarball = os.path.join(tempdir, self._filebase + '.tar.gz')
 
-    version = stdout.split('\n')[0].split()[-1:][0]
-    return version == libtool_ver
+        if os.path.exists(tarball):
+            if not self._use_existing:
+                raise RuntimeError('autoconf tarball "%s" already exists'
+                                                                    % tarball)
+            logging.info('Using existing %s.tar.gz' % self._filebase)
+        else:
+            logging.info('Fetching %s' % self._filebase)
+            download_file(self._url, tarball)
 
+        # Extract tarball
+        tarfile.open(tarball).extractall(tempdir)
 
-def is_wanted_swig():
-    'Return True if we have the required swig, False otherwise'
-    proc = subprocess.Popen(['swig', '-version'], stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT)
-    (stdout, stderr) = proc.communicate()
-    rc = proc.wait()
-    if rc: return False
+        logging.info('Building ' + self._label)
+        os.chdir(os.path.join(tempdir, self._filebase))
+        run_script(self._verbose,
+                   '''./configure --prefix=%s %s
+                      make
+                      make install''' % (get_prefix(self._base_dir),
+                                         self._extra_configure_flags))
 
-    version = stdout.split('\n')[1].split()[-1:][0]
-    return version == swig_ver
-
-
-def prep_autoconf(base_dir, args):
-    'Download and build autoconf'
-    cwd = os.getcwd()
-    filebase = 'autoconf-' + autoconf_ver
-    tarball = os.path.join(get_tempdir(base_dir), filebase + '.tar.gz')
-
-    if os.path.exists(tarball):
-        if not args.use_existing:
-            raise RuntimeError('autoconf tarball "%s" already exists' % tarball)
-        logging.info('Using existing %s.tar.gz' % filebase)
-    else:
-        logging.info('Fetching %s' % filebase)
-        url = 'http://ftp.gnu.org/gnu/autoconf/%s.tar.gz' % filebase
-        download_file(url, tarball)
-
-    # Extract tarball
-    tarfile.open(tarball).extractall(get_tempdir(base_dir))
-
-    logging.info('Building autoconf')
-    os.chdir(os.path.join(get_tempdir(base_dir), filebase))
-    run_script(args.verbose,
-               '''./configure --prefix=%s
-                  make
-                  make install''' % get_prefix(base_dir))
-
-    os.chdir(cwd)
+        os.chdir(cwd)
 
 
-def prep_libtool(base_dir, args):
-    'Download and build libtool'
-    cwd = os.getcwd()
-    filebase = 'libtool-2.4'
-    tarball = os.path.join(get_tempdir(base_dir), filebase + '.tar.gz')
+class AutoconfDep(RollDep):
+    def __init__(self, base_dir, use_existing, verbose):
+        RollDep.__init__(self, base_dir, use_existing, verbose)
+        self._label = 'autoconf'
+        self._filebase = 'autoconf-' + autoconf_ver
+        self._url = 'http://ftp.gnu.org/gnu/autoconf/%s.tar.gz' % self._filebase
 
-    if os.path.exists(tarball):
-        if not args.use_existing:
-            raise RuntimeError('libtool tarball "%s" already exists' % tarball)
-        logging.info('Using existing %s.tar.gz' % filebase)
-    else:
-        logging.info('Fetching %s' % filebase)
-        url = 'http://ftp.gnu.org/gnu/libtool/%s.tar.gz' % filebase
-        download_file(url, tarball)
+    def use_system(self):
+        if not self._use_existing: return False
 
-    # Extract tarball
-    tarfile.open(tarball).extractall(get_tempdir(base_dir))
+        output = self._test_version(['autoconf', '-V'])
+        if not output: return False
 
-    logging.info('Building libtool')
-    os.chdir(os.path.join(get_tempdir(base_dir), filebase))
-    run_script(args.verbose,
-               '''./configure --prefix=%s
-                  make
-                  make install''' % get_prefix(base_dir))
+        version = output[0].split()[-1:][0]
+        return version == autoconf_ver
 
-    os.chdir(cwd)
 
-def prep_swig(base_dir, args):
-    'Download and build swig'
-    cwd = os.getcwd()
-    filebase = 'swig-2.0.4'
-    tarball = os.path.join(get_tempdir(base_dir), filebase + '.tar.gz')
+class LibtoolDep(RollDep):
+    def __init__(self, base_dir, use_existing, verbose):
+        RollDep.__init__(self, base_dir, use_existing, verbose)
+        self._label = 'libtool'
+        self._filebase = 'libtool-' + libtool_ver
+        self._url = 'http://ftp.gnu.org/gnu/libtool/%s.tar.gz' % self._filebase
 
-    if os.path.exists(tarball):
-        if not args.use_existing:
-            raise RuntimeError('swig tarball "%s" already exists' % tarball)
-        logging.info('Using existing %s.tar.gz' % filebase)
-    else:
-        logging.info('Fetching %s' % filebase)
-        url = 'http://sourceforge.net/projects/swig/files/swig/%(swig)s/%(swig)s.tar.gz/download?use_mirror=%(sf_mirror)s' % \
-            { 'swig' : filebase,
-              'sf_mirror' : args.sf_mirror }
-        download_file(url, tarball)
+    def use_system(self):
+        if not self._use_existing: return False
 
-    # Extract tarball
-    tarfile.open(tarball, 'r').extractall(get_tempdir(base_dir))
+        output = self._test_version(['libtool', '--version'])
+        if not output: return False
 
-    logging.info('Building swig')
-    os.chdir(os.path.join(get_tempdir(base_dir), filebase))
-    run_script(args.verbose,
-               '''./configure --prefix=%s
-                  make
-                  make install''' % get_prefix(base_dir))
+        version = output[0].split()[-1:][0]
+        return version == libtool_ver
 
-    os.chdir(cwd)
+
+class SwigDep(RollDep):
+    def __init__(self, base_dir, use_existing, verbose, sf_mirror):
+        RollDep.__init__(self, base_dir, use_existing, verbose)
+        self._label = 'swig'
+        self._filebase = 'swig-' + swig_ver
+        self._url = 'http://sourceforge.net/projects/swig/files/swig/%(swig)s/%(swig)s.tar.gz/download?use_mirror=%(sf_mirror)s' % \
+            { 'swig' : self._filebase,
+              'sf_mirror' : sf_mirror }
+        self._extra_configure_flags = '--without-pcre'
+
+    def use_system(self):
+        if not self._use_existing: return False
+
+        output = self._test_version(['swig', '-version'])
+        if not output: return False
+
+        version = output[1].split()[-1:][0]
+        return version == swig_ver
 
 
 def build_env(base_dir, args):
@@ -223,23 +202,27 @@ def build_env(base_dir, args):
         if not args.use_existing:
             raise
 
+    autoconf = AutoconfDep(base_dir, args.use_existing, args.verbose)
+    libtool = LibtoolDep(base_dir, args.use_existing, args.verbose)
+    swig = SwigDep(base_dir, args.use_existing, args.verbose, args.sf_mirror)
+
     # Check to see if the system versions of the stuff we're downloading will
     # suffice
 
-    if not args.use_existing or not is_wanted_autoconf():
-        prep_autoconf(base_dir, args)
-    else:
+    if autoconf.use_system():
         logging.info('Using system autoconf-' + autoconf_ver)
-
-    if not args.use_existing or not is_wanted_libtool():
-        prep_libtool(base_dir, args)
     else:
+        autoconf.build()
+
+    if libtool.use_system():
         logging.info('Using system libtool-' + libtool_ver)
-
-    if not args.use_existing or not is_wanted_swig():
-        prep_swig(base_dir, args)
     else:
+        libtool.build()
+
+    if swig.use_system():
         logging.info('Using system swig-' + swig_ver)
+    else:
+        swig.build()
 
 
 def roll_tarballs(base_dir, args):
