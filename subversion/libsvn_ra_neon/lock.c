@@ -399,6 +399,7 @@ do_unlock(svn_ra_session_t *session,
   const char *url;
   const char *url_path;
   ne_uri uri;
+  svn_error_t *err = SVN_NO_ERROR;
 
   apr_hash_t *extra_headers = apr_hash_make(pool);
 
@@ -441,7 +442,6 @@ do_unlock(svn_ra_session_t *session,
 
   {
     int code = 0;
-    svn_error_t *err;
 
     err = svn_ra_neon__simple_request(&code, ras, "UNLOCK", url_path,
                                       extra_headers, NULL, 204, 0, pool);
@@ -460,13 +460,11 @@ do_unlock(svn_ra_session_t *session,
                                        _("No lock on path '%s'"
                                          " (%d Bad Request)"), path, code);
             default:
-              break; /* Handle as error */
+              break;
           }
       }
-    else
-      SVN_ERR(err);
   }
-  return SVN_NO_ERROR;
+  return svn_error_return(err);
 }
 
 
