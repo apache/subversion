@@ -1206,6 +1206,8 @@ svn_location_segment_t *
 svn_location_segment_dup(const svn_location_segment_t *segment,
                          apr_pool_t *pool);
 
+/** @} */
+
 /** A line number, such as in a file or a stream.
  *
  * @since New in 1.7.
@@ -1217,15 +1219,6 @@ typedef unsigned long svn_linenum_t;
  * @since New in 1.7.
  */
 #define SVN_LINENUM_MAX_VALUE ULONG_MAX
-
-/** @} */
-
-/** The size of the file is unknown.
- * Used as value in fields of type @c apr_size_t.
- *
- * @since New in 1.5
- */
-#define SVN_INFO_SIZE_UNKNOWN ((apr_size_t) -1)
 
 
 #ifdef __cplusplus

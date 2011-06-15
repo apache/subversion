@@ -1059,6 +1059,7 @@ svn_ra_get_mergeinfo2(svn_ra_session_t *session,
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_mergeinfo(svn_ra_session_t *session,
                      svn_mergeinfo_catalog_t *catalog,

@@ -3227,6 +3227,7 @@ svn_client_merge4(const char *source1,
  *
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_merge3(const char *source1,
                   const svn_opt_revision_t *revision1,
@@ -3353,6 +3354,7 @@ svn_client_merge_peg4(const char *source,
  *
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_merge_peg3(const char *source,
                       const apr_array_header_t *ranges_to_merge,
@@ -3503,8 +3505,8 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
  * Similar to svn_client_mergeinfo_log(), but finds only merged revisions
  * and always operates at @a depth #svn_depth_empty.
  *
- * @deprecated Provided for backwards compatibility with the 1.6 API.
- *
+ * @deprecated Provided for backwards compatibility with the 1.6 API. Use
+ * svn_client_mergeinfo_log() instead.
  * @since New in 1.5.
  */
 SVN_DEPRECATED
@@ -3524,8 +3526,8 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
  * Similar to svn_client_mergeinfo_log(), but finds only eligible revisions
  * and always operates at @a depth #svn_depth_empty.
  *
- * @deprecated Provided for backwards compatibility with the 1.6 API.
- *
+ * @deprecated Provided for backwards compatibility with the 1.6 API. Use
+ * svn_client_mergeinfo_log() instead.
  * @since New in 1.5.
  */
 SVN_DEPRECATED
@@ -4710,10 +4712,10 @@ svn_client_export5(svn_revnum_t *result_rev,
  * Similar to svn_client_export5(), but with @a ignore_keywords set
  * to FALSE.
  *
- * @deprecated Provided for backward compatibility with the 1.5 API.
- *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_export4(svn_revnum_t *result_rev,
                    const char *from_path_or_url,
@@ -5183,6 +5185,14 @@ svn_client_unlock(const apr_array_header_t *targets,
  *
  * @{
  */
+
+/** The size of the file is unknown.
+ * Used as value in fields of type @c apr_size_t in #svn_info_t.
+ *
+ * @since New in 1.5
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+#define SVN_INFO_SIZE_UNKNOWN ((apr_size_t) -1)
 
 /**
  * A structure which describes various system-generated metadata about
