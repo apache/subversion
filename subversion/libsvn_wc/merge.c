@@ -496,7 +496,6 @@ eval_conflict_func_result(svn_skel_t **work_items,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  apr_pool_t *pool = scratch_pool;  /* ### temporary rename  */
   const char *install_from = NULL;
   svn_boolean_t remove_source = FALSE;
 
@@ -534,11 +533,12 @@ eval_conflict_func_result(svn_skel_t **work_items,
           svn_diff_conflict_display_style_t style;
           svn_diff_file_options_t *diff3_options;
 
-          diff3_options = svn_diff_file_options_create(pool);
+          diff3_options = svn_diff_file_options_create(scratch_pool);
 
           if (mt->merge_options)
              SVN_ERR(svn_diff_file_options_parse(diff3_options,
-                                                 mt->merge_options, pool));
+                                                 mt->merge_options,
+                                                 scratch_pool));
 
           style = choice == svn_wc_conflict_choose_theirs_conflict
                     ? svn_diff_conflict_display_latest
@@ -546,15 +546,15 @@ eval_conflict_func_result(svn_skel_t **work_items,
 
           SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, mt->db,
                                                  mt->wri_abspath,
-                                                 pool, pool));
+                                                 scratch_pool, scratch_pool));
           SVN_ERR(svn_stream_open_unique(&chosen_stream, &chosen_path,
-                                         temp_dir,
-                                         svn_io_file_del_none, pool, pool));
+                                         temp_dir, svn_io_file_del_none,
+                                         scratch_pool, scratch_pool));
 
           SVN_ERR(svn_diff_file_diff3_2(&diff,
                                         left_abspath,
                                         detranslated_target, right_abspath,
-                                        diff3_options, pool));
+                                        diff3_options, scratch_pool));
           SVN_ERR(svn_diff_file_output_merge2(chosen_stream, diff,
                                               left_abspath,
                                               detranslated_target,
@@ -563,7 +563,7 @@ eval_conflict_func_result(svn_skel_t **work_items,
                                               NULL, NULL,
                                               NULL, NULL,
                                               style,
-                                              pool));
+                                              scratch_pool));
           SVN_ERR(svn_stream_close(chosen_stream));
 
           install_from = chosen_path;
