@@ -147,44 +147,31 @@ typedef struct svn_diff_fns2_t
 } svn_diff_fns2_t;
 
 
-/** A vtable for reading data from the three datasources.
+/** Like #svn_diff_fns2_t except with datasource_open() instead of
+ * datasources_open().
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 typedef struct svn_diff_fns_t
 {
-  /** Open the datasource of type @a datasource. */
   svn_error_t *(*datasource_open)(void *diff_baton,
                                   svn_diff_datasource_e datasource);
 
-  /** Close the datasource of type @a datasource. */
   svn_error_t *(*datasource_close)(void *diff_baton,
                                    svn_diff_datasource_e datasource);
 
-  /** Get the next "token" from the datasource of type @a datasource.
-   *  Return a "token" in @a *token.   Return a hash of "token" in @a *hash.
-   *  Leave @a token and @a hash untouched when the datasource is exhausted.
-   */
   svn_error_t *(*datasource_get_next_token)(apr_uint32_t *hash, void **token,
                                             void *diff_baton,
                                             svn_diff_datasource_e datasource);
 
-  /** A function for ordering the tokens, resembling 'strcmp' in functionality.
-   * @a compare should contain the return value of the comparison:
-   * If @a ltoken and @a rtoken are "equal", return 0.  If @a ltoken is
-   * "less than" @a rtoken, return a number < 0.  If @a ltoken  is
-   * "greater than" @a rtoken, return a number > 0.
-   */
   svn_error_t *(*token_compare)(void *diff_baton,
                                 void *ltoken,
                                 void *rtoken,
                                 int *compare);
 
-  /** Free @a token from memory, the diff algorithm is done with it. */
   void (*token_discard)(void *diff_baton,
                         void *token);
 
-  /** Free *all* tokens from memory, they're no longer needed. */
   void (*token_discard_all)(void *diff_baton);
 } svn_diff_fns_t;
 
