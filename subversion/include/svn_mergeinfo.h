@@ -410,7 +410,9 @@ svn_rangelist_inheritable2(apr_array_header_t **inheritable_rangelist,
 /** Like svn_rangelist_inheritable2, but always finds inheritable ranges.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
                           const apr_array_header_t *rangelist,
@@ -445,7 +447,9 @@ svn_mergeinfo_inheritable2(svn_mergeinfo_t *inheritable_mergeinfo,
 /** Like svn_mergeinfo_inheritable2, but always finds inheritable mergeinfo.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_mergeinfo_inheritable(svn_mergeinfo_t *inheritable_mergeinfo,
                           svn_mergeinfo_t mergeinfo,
