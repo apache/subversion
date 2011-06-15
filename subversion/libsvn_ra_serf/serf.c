@@ -388,10 +388,6 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   SVN_ERR(load_config(serf_sess, config, serf_sess->pool));
 
-  /* register cleanups */
-  apr_pool_cleanup_register(serf_sess->pool, serf_sess,
-                            svn_ra_serf__cleanup_serf_session,
-                            apr_pool_cleanup_null);
 
   serf_sess->conns = apr_palloc(serf_sess->pool, sizeof(*serf_sess->conns) * 4);
 

@@ -320,8 +320,6 @@ svn_ra_serf__conn_closed(serf_connection_t *conn,
                          apr_status_t why,
                          apr_pool_t *pool);
 
-apr_status_t
-svn_ra_serf__cleanup_serf_session(void *data);
 
 /* Helper function to provide SSL client certificates.
  *
