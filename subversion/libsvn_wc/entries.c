@@ -1908,15 +1908,16 @@ write_entry(struct write_baton **entry_node,
           /* The base MD5 checksum is available in the entry, unless there
            * is a copied WORKING node.  If possible, verify that the entry
            * checksum matches the base file that we found. */
-#ifdef SVN_DEBUG
           if (! (working_node && entry->copied))
             {
               svn_checksum_t *entry_md5_checksum, *found_md5_checksum;
-              SVN_ERR(svn_checksum_parse_hex(&entry_md5_checksum, svn_checksum_md5,
+              SVN_ERR(svn_checksum_parse_hex(&entry_md5_checksum,
+                                             svn_checksum_md5,
                                              entry->checksum, scratch_pool));
               if (text_base_info && text_base_info->revert_base.md5_checksum)
                 found_md5_checksum = text_base_info->revert_base.md5_checksum;
-              else if (text_base_info && text_base_info->normal_base.md5_checksum)
+              else if (text_base_info 
+                       && text_base_info->normal_base.md5_checksum)
                 found_md5_checksum = text_base_info->normal_base.md5_checksum;
               else
                 found_md5_checksum = NULL;
@@ -1929,7 +1930,6 @@ write_entry(struct write_baton **entry_node,
                   /* SVN_ERR_ASSERT(entry->deleted || ...); */
                 }
             }
-#endif
         }
 
       if (this_dir->repos)
