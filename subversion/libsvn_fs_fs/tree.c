@@ -3726,11 +3726,10 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
         }
       else
         {
-          SVN_ERR(svn_mergeinfo_inheritable(&temp_mergeinfo,
-                                            temp_mergeinfo,
-                                            NULL, SVN_INVALID_REVNUM,
-                                            SVN_INVALID_REVNUM,
-                                            scratch_pool));
+          SVN_ERR(svn_mergeinfo_inheritable2(&temp_mergeinfo, temp_mergeinfo,
+                                             NULL, SVN_INVALID_REVNUM,
+                                             SVN_INVALID_REVNUM, TRUE,
+                                             scratch_pool, scratch_pool));
 
           SVN_ERR(append_to_merged_froms(mergeinfo,
                                          temp_mergeinfo,

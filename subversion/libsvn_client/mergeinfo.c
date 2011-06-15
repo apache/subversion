@@ -317,8 +317,9 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
   if (*inherited
       && apr_hash_count(*mergeinfo)) /* Nothing to do for empty mergeinfo. */
     {
-      SVN_ERR(svn_mergeinfo_inheritable(mergeinfo, *mergeinfo, NULL,
-              SVN_INVALID_REVNUM, SVN_INVALID_REVNUM, result_pool));
+      SVN_ERR(svn_mergeinfo_inheritable2(mergeinfo, *mergeinfo, NULL,
+                                         SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+                                         TRUE, result_pool, scratch_pool));
       svn_mergeinfo__remove_empty_rangelists(*mergeinfo, result_pool);
     }
 

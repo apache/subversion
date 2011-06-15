@@ -5411,10 +5411,10 @@ txn_body_get_mergeinfo_for_path(void *baton, trail_t *trail)
         }
       else
         {
-          SVN_ERR(svn_mergeinfo_inheritable(&tmp_mergeinfo,
-                                            tmp_mergeinfo,
-                                            NULL, SVN_INVALID_REVNUM,
-                                            SVN_INVALID_REVNUM, trail->pool));
+          SVN_ERR(svn_mergeinfo_inheritable2(&tmp_mergeinfo, tmp_mergeinfo,
+                                             NULL, SVN_INVALID_REVNUM,
+                                             SVN_INVALID_REVNUM, TRUE,
+                                             trail->pool, trail->pool));
           SVN_ERR(append_to_merged_froms(args->mergeinfo,
                                          tmp_mergeinfo,
                                          parent_path_relpath(parent_path,
