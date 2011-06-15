@@ -1362,8 +1362,9 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
 }
 
 /* Merge a change to a property, using the rule that if the working value
-   is the same as OLD_VAL then apply the change as a simple update
-   (replacement), otherwise invoke maybe_generate_propconflict().
+   is equal to the new value then there is nothing we need to do. Else, if
+   the working value is the same as the old value then apply the change as a
+   simple update (replacement), otherwise invoke maybe_generate_propconflict().
    The definition of the arguments and behaviour is the same as
    apply_single_prop_change(). */
 static svn_error_t *
@@ -1390,8 +1391,15 @@ apply_single_generic_prop_change(svn_wc_notify_state_t *state,
 
   SVN_ERR_ASSERT(old_val != NULL);
 
+  /* If working_val is the same as new_val already then there is
+   * nothing to do */
+  if (working_val && new_val
+      && svn_string_compare(working_val, new_val))
+    {
+       set_prop_merge_state(state, svn_wc_notify_state_merged);
+    }
   /* If working_val is the same as old_val... */
-  if (working_val && old_val
+  else if (working_val && old_val
       && svn_string_compare(working_val, old_val))
     {
       /* A trivial update: change it to new_val. */
