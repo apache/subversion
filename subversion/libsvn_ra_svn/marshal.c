@@ -102,7 +102,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
                                           apr_pool_t *pool)
 {
   return svn_ra_svn_create_conn2(sock, in_file, out_file, 
-                                 SVN_DEFAULT_COMPRESSION_LEVEL, pool);
+                                 SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, pool);
 }
 
 svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,

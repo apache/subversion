@@ -5675,7 +5675,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
                           &whb,
                           b->rep_stream,
                           diff_version,
-                          SVN_DEFAULT_COMPRESSION_LEVEL,
+                          SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
                           pool);
 
   b->delta_stream = svn_txdelta_target_push(wh, whb, source, b->pool);

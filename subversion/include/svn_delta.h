@@ -53,13 +53,13 @@ extern "C" {
  *
  * @since New in 1.7.
  */
-#define SVN_NO_COMPRESSION_LEVEL 0
+#define SVN_DELTA_COMPRESSION_LEVEL_NONE 0
 
 /** This is the maximum compression level we can pass to zlib.
  *
  * @since New in 1.7.
  */
-#define SVN_MAX_COMPRESSION_LEVEL 9
+#define SVN_DELTA_COMPRESSION_LEVEL_MAX 9
 
 /** This is the default compression level we pass to zlib.  It
  * should be between 0 and 9, with higher numbers resulting in
@@ -67,7 +67,7 @@ extern "C" {
  *
  * @since New in 1.7.
  */
-#define SVN_DEFAULT_COMPRESSION_LEVEL 5
+#define SVN_DELTA_COMPRESSION_LEVEL_DEFAULT 5
 
 /**
  * Get libsvn_delta version information.
@@ -487,7 +487,7 @@ svn_txdelta_to_svndiff3(svn_txdelta_window_handler_t *handler,
                         apr_pool_t *pool);
 
 /** Similar to svn_txdelta_to_svndiff3(), but always using the SVN default
- * compression level (#SVN_DEFAULT_COMPRESSION_LEVEL).
+ * compression level (#SVN_DELTA_COMPRESSION_LEVEL_DEFAULT).
  *
  * @since New in 1.4.
  * @deprecated Provided for backward compatibility with the 1.6 API.
