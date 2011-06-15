@@ -3603,8 +3603,8 @@ append_to_merged_froms(svn_mergeinfo_t *output,
    type INHERIT.  Returns it in *MERGEINFO, or NULL if there is none.
    If *MERGEINFO is inherited and VALIDATE_INHERITED_MERGEINFO is true,
    then *MERGEINFO will only contain path-revs that actually exist in
-   repository.  The result is allocated in RESULT_POOL; POOL is used for
-   temporary allocations.
+   repository.  The result is allocated in RESULT_POOL; SCRATCH_POOL is
+   used for temporary allocations.
  */
 static svn_error_t *
 get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
@@ -3672,80 +3672,53 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
        _("Node-revision '%s@%ld' claims to have mergeinfo but doesn't"),
        parent_path_path(nearest_ancestor, scratch_pool), rev_root->rev);
 
-  if (nearest_ancestor == parent_path)
+  /* Parse the mergeinfo; store the result in *MERGEINFO. */
+  {
+    /* Issue #3896: If a node has syntactically invalid mergeinfo, then
+       treat it as if no mergeinfo is present rather than raising a parse
+       error. */
+    svn_error_t *err = svn_mergeinfo_parse(mergeinfo,
+                                           mergeinfo_string->data,
+                                           result_pool);
+    if (err)
+      {
+        if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+          {
+            svn_error_clear(err);
+            err = NULL;
+            *mergeinfo = NULL;
+          }
+        svn_pool_destroy(iterpool);
+        return svn_error_return(err);
+      }
+  }
+
+  /* If our nearest ancestor is the very path we inquired about, we
+     can return the mergeinfo results directly.  Otherwise, we're
+     inheriting the mergeinfo, so we need to a) remove non-inheritable
+     ranges and b) telescope the merged-from paths. */
+  if (nearest_ancestor != parent_path)
     {
-      svn_error_t *err;
+      svn_mergeinfo_t tmp_mergeinfo;
 
-      /* We can return this directly. */
-      svn_pool_destroy(iterpool);
+      SVN_ERR(svn_mergeinfo_inheritable2(&tmp_mergeinfo, *mergeinfo,
+                                         NULL, SVN_INVALID_REVNUM,
+                                         SVN_INVALID_REVNUM, TRUE,
+                                         scratch_pool, scratch_pool));
+      SVN_ERR(append_to_merged_froms(mergeinfo, tmp_mergeinfo,
+                                     parent_path_relpath(
+                                       parent_path, nearest_ancestor,
+                                       scratch_pool),
+                                     result_pool));
 
-      /* Issue #3896: If a node has syntactically invalid mergeinfo, then
-         treat it as if no mergeinfo is present rather than raising a parse
-         error. */
-      err = svn_mergeinfo_parse(mergeinfo,
-                                mergeinfo_string->data,
-                                result_pool);
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
-            {
-              svn_error_clear(err);
-              err = NULL;
-              *mergeinfo = NULL;
-            }
-        }
-      return svn_error_return(err);
+      if (validate_inherited_mergeinfo)
+        SVN_ERR(svn_fs_fs__validate_mergeinfo(mergeinfo, rev_root->fs,
+                                              *mergeinfo, result_pool,
+                                              iterpool));
     }
-  else
-    {
-      svn_mergeinfo_t temp_mergeinfo;
-      svn_error_t *err;
 
-      /* We're inheriting this, so we need to (a) remove
-         non-inheritable ranges and (b) add the rest of the path to
-         the merged-from paths.
-       */
-
-      /* Issue #3896: If a node inherits syntactically invalid mergeinfo,
-         then treat it as if no mergeinfo is inherited rather than raising
-         a parse error. */
-      err = svn_mergeinfo_parse(&temp_mergeinfo,
-                                mergeinfo_string->data,
-                                scratch_pool);
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
-            {
-              svn_error_clear(err);
-              *mergeinfo = NULL;
-            }
-          else
-            {
-              return svn_error_return(err);
-            }
-        }
-      else
-        {
-          SVN_ERR(svn_mergeinfo_inheritable2(&temp_mergeinfo, temp_mergeinfo,
-                                             NULL, SVN_INVALID_REVNUM,
-                                             SVN_INVALID_REVNUM, TRUE,
-                                             scratch_pool, scratch_pool));
-
-          SVN_ERR(append_to_merged_froms(mergeinfo,
-                                         temp_mergeinfo,
-                                         parent_path_relpath(parent_path,
-                                                             nearest_ancestor,
-                                                             scratch_pool),
-                                         result_pool));
-
-          if (validate_inherited_mergeinfo)
-            SVN_ERR(svn_fs_fs__validate_mergeinfo(mergeinfo, rev_root->fs,
-                                                  *mergeinfo, result_pool,
-                                                  iterpool));
-        }
-      svn_pool_destroy(iterpool);
-      return SVN_NO_ERROR;
-    }
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
 }
 
 /* Adds mergeinfo for each descendant of PATH (but not PATH itself)
