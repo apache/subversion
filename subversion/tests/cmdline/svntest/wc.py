@@ -858,11 +858,12 @@ def text_base_path(file_path):
   # Calculate single DB location
   dot_svn = svntest.main.get_admin_name()
   fn = os.path.join(root_path, dot_svn, 'pristine', checksum[0:2], checksum)
-  ### When SVN_WC__VERSION is bumped to 29, then use: checksum + ".svn-base"
 
+  # For SVN_WC__VERSION < 29
   if os.path.isfile(fn):
     return fn
 
+  # For SVN_WC__VERSION >= 29
   if os.path.isfile(fn + ".svn-base"):
     return fn + ".svn-base"
 
