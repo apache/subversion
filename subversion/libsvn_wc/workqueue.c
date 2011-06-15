@@ -955,6 +955,7 @@ run_file_copy_translated(svn_wc__db_t *db,
   const char *eol;
   apr_hash_t *keywords;
   svn_boolean_t special;
+  svn_error_t *err;
 
   local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
   SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
@@ -976,12 +977,27 @@ run_file_copy_translated(svn_wc__db_t *db,
                                      db, local_abspath, NULL, FALSE,
                                      scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_subst_copy_and_translate4(src_abspath, dst_abspath,
-                                        eol, TRUE /* repair */,
-                                        keywords, TRUE /* expand */,
-                                        special,
-                                        cancel_func, cancel_baton,
-                                        scratch_pool));
+  err = svn_subst_copy_and_translate4(src_abspath, dst_abspath,
+                                      eol, TRUE /* repair */,
+                                      keywords, TRUE /* expand */,
+                                      special,
+                                      cancel_func, cancel_baton,
+                                      scratch_pool);
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      svn_error_t *err2;
+      svn_node_kind_t kind;
+
+      /* The source file can be missing when the wq item is rerun. */
+      err2 = svn_io_check_path(src_abspath, &kind, scratch_pool);
+      if (!err2 && kind == svn_node_none)
+        {
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
+      svn_error_clear(err2);
+      return svn_error_return(err);
+    }
 
   return SVN_NO_ERROR;
 }

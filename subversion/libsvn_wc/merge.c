@@ -132,6 +132,18 @@ get_prop(const merge_target_t *mt,
 
      Always use the old settings (same reasons as for svn:keywords)
 
+  Sets *DETRANSLATED_ABSPATH to the path to the detranslated file,
+  this may be the same as SOURCE_ABSPATH if FORCE_COPY is FALSE and no
+  translation is required.
+
+  If FORCE_COPY is FALSE and *DETRANSLATED_ABSPATH is a file distinct
+  from SOURCE_ABSPATH then the file will be deleted on RESULT_POOL
+  cleanup.
+
+  If FORCE_COPY is TRUE then *DETRANSLATED_ABSPATH will always be a
+  new file distinct from SOURCE_ABSPATH and it will be the callers
+  responsibility to delete the file.
+
 */
 static svn_error_t *
 detranslate_wc_file(const char **detranslated_abspath,
@@ -229,16 +241,24 @@ detranslate_wc_file(const char **detranslated_abspath,
 
   if (force_copy || keywords || eol || special)
     {
+      const char *wcroot_abspath, *temp_dir_abspath;
       const char *detranslated;
 
       /* Force a copy into the temporary wc area to avoid having
          temporary files created below to appear in the actual wc. */
+      SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath, mt->db, mt->wri_abspath,
+                                    scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath, mt->db,
+                                             mt->wri_abspath,
+                                             scratch_pool, scratch_pool));
 
       /* ### svn_subst_copy_and_translate4() also creates a tempfile
          ### internally.  Anyway to piggyback on that? */
-      SVN_ERR(svn_io_open_unique_file3(NULL, &detranslated, NULL,
-                                      svn_io_file_del_on_pool_cleanup,
-                                      result_pool, scratch_pool));
+      SVN_ERR(svn_io_open_unique_file3(NULL, &detranslated, temp_dir_abspath,
+                                       (force_copy
+                                        ? svn_io_file_del_none
+                                        : svn_io_file_del_on_pool_cleanup),
+                                       result_pool, scratch_pool));
 
       /* Always 'repair' EOLs here, so that we can apply a diff that
          changes from inconsistent newlines and no 'svn:eol-style' to
@@ -691,7 +711,7 @@ preserve_pre_merge_files(svn_skel_t **work_items,
   /* We preserve all the files with keywords expanded and line
      endings in local (working) form. */
 
-  /* The workingqueue prefers (requires?) its paths to be in the subtree
+  /* The workingqueue requires its paths to be in the subtree
      relative to the wcroot path they are executed in.
 
      Make our LEFT and RIGHT files 'local' if they aren't... */
@@ -769,6 +789,11 @@ preserve_pre_merge_files(svn_skel_t **work_items,
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
   /* And maybe delete some tempfiles */
+  SVN_ERR(svn_wc__wq_build_file_remove(&work_item, mt->db,
+                                       detranslated_target_copy,
+                                       result_pool, scratch_pool));
+  *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+
   *work_items = svn_wc__wq_merge(*work_items, last_items, result_pool);
 
   return SVN_NO_ERROR;
