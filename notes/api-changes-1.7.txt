@@ -188,7 +188,6 @@ svn_diff.h
   + svn_diff_close_patch_file()
 
 svn_dirent_uri.h
-  # Rename 'dirent' to something like 'ospath'?  Too late, I guess.
   + svn_relpath_join()
   + svn_dirent_basename()
   + svn_dirent_split()
@@ -207,9 +206,17 @@ svn_dirent_uri.h
   + svn_relpath_get_longest_ancestor()
   + svn_uri_get_longest_ancestor()
   + svn_uri_is_child()
+    # Make private.
+  = svn_dirent_is_child()
+    # Deprecate.
   + svn_relpath_is_child()
+    # Make private.
+  = svn_dirent_is_ancestor()
+    # Deprecate.
   + svn_relpath_is_ancestor()
+    # Make private.
   + svn_uri_is_ancestor()
+    # Make private.
   + svn_dirent_skip_ancestor()
     # See ### comment: shouldn't return child.
   + svn_relpath_skip_ancestor()
@@ -232,8 +239,7 @@ svn_error_codes.h
   + SVN_ERR_IO_PIPE_WRITE_ERROR
   + SVN_ERR_STREAM_SEEK_NOT_SUPPORTED
   + SVN_ERR_WC_NOT_WORKING_COPY - new name for SVN_ERR_WC_NOT_DIRECTORY
-  - SVN_ERR_WC_CHANGELIST_MOVE - now deprecated
-    # Should say "for compatibility with 1.6 API".
+  - SVN_ERR_WC_CHANGELIST_MOVE - deprecated
   + SVN_ERR_WC_DB_ERROR
   + SVN_ERR_WC_MISSING
   + SVN_ERR_WC_NOT_SYMLINK
@@ -419,9 +425,11 @@ svn_types.h
   ! svn_node_kind_t - gets an enum tag name to match typedef
   + svn_tristate_t
   + svn_tristate_to_word()
-    # Are the strings localized or fixed? Make private?
+    # Are the strings localized or fixed?
+    # Make private.
   + svn_tristate_from_word()
-    # Are the strings localized or fixed? Make private?
+    # Are the strings localized or fixed?
+    # Make private. Stop using it for option parsing (svnserve).
   ! svn_depth_t - gets an enum tag name to match typedef
   ! svn_commit_info_t - gets a 'repos_root' field
     # Should be named 'repos_root_url'?
