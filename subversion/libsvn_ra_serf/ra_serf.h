@@ -109,9 +109,6 @@ struct svn_ra_serf__session_t {
   /* The current context */
   serf_context_t *context;
 
-  /* Bucket allocator for this context. */
-  serf_bucket_alloc_t *bkt_alloc;
-
   /* Are we using ssl */
   svn_boolean_t using_ssl;
 

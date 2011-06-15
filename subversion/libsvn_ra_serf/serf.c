@@ -353,8 +353,6 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
   serf_sess->pool = svn_pool_create(pool);
-  serf_sess->bkt_alloc = serf_bucket_allocator_create(serf_sess->pool, NULL,
-                                                      NULL);
   serf_sess->wc_callbacks = callbacks;
   serf_sess->wc_callback_baton = callback_baton;
   serf_sess->wc_progress_baton = callbacks->progress_baton;
