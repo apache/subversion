@@ -1302,7 +1302,7 @@ AC_CONFIG_COMMANDS([svn_private_config.h.tmp],
                    [svn_cf=subversion/svn_private_config.h;
                     $SED -e "s/@SVN_DB_HEADER@/$SVN_DB_HEADER/" $svn_cf.tmp > $svn_cf.tmp.new
                     cmp -s $svn_cf.tmp.new $svn_cf || mv -f $svn_cf.tmp.new $svn_cf
-                    rm -f $svn_cf.tmp.new $svn_cf.tmp)],
+                    rm -f $svn_cf.tmp.new $svn_cf.tmp],
                    [SED="$SED"
                     SVN_DB_HEADER="$SVN_DB_HEADER"])
 AC_CONFIG_FILES([Makefile])
