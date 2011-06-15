@@ -723,8 +723,8 @@ apply_textdelta(void *file_baton, const char *base_checksum,
 
   /* Prepare to write the delta to the delta_filestream */
   svn_txdelta_to_svndiff3(&(hb->apply_handler), &(hb->apply_baton),
-                          delta_filestream, 0, SVN_DEFAULT_COMPRESSION_LEVEL,
-                          pool);
+                          delta_filestream, 0,
+                          SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, pool);
 
   eb->dump_text = TRUE;
   eb->base_checksum = apr_pstrdup(eb->pool, base_checksum);

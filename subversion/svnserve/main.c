@@ -469,7 +469,7 @@ int main(int argc, const char *argv[])
   params.cfg = NULL;
   params.pwdb = NULL;
   params.authzdb = NULL;
-  params.compression_level = SVN_DEFAULT_COMPRESSION_LEVEL;
+  params.compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
   params.log_file = NULL;
   params.username_case = CASE_ASIS;
   params.memory_cache_size = (apr_uint64_t)-1;
@@ -589,10 +589,10 @@ int main(int argc, const char *argv[])
 
         case 'c':
           params.compression_level = atoi(arg);
-          if (params.compression_level < SVN_NO_COMPRESSION_LEVEL)
-            params.compression_level = SVN_NO_COMPRESSION_LEVEL;
-          if (params.compression_level > SVN_MAX_COMPRESSION_LEVEL)
-            params.compression_level = SVN_MAX_COMPRESSION_LEVEL;
+          if (params.compression_level < SVN_DELTA_COMPRESSION_LEVEL_NONE)
+            params.compression_level = SVN_DELTA_COMPRESSION_LEVEL_NONE;
+          if (params.compression_level > SVN_DELTA_COMPRESSION_LEVEL_MAX)
+            params.compression_level = SVN_DELTA_COMPRESSION_LEVEL_MAX;
           break;
 
         case 'M':

@@ -105,7 +105,7 @@ static authz_svn__subreq_bypass_func_t pathauthz_bypass_func = NULL;
 
 /* The compression level we will pass to svn_txdelta_to_svndiff3()
  * for wire-compression */
-static int svn__compression_level = SVN_DEFAULT_COMPRESSION_LEVEL;
+static int svn__compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
 
 static int
 init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
@@ -485,13 +485,14 @@ SVNCompressionLevel_cmd(cmd_parms *cmd, void *config, const char *arg1)
       return "Invalid decimal number for the SVN compression level.";
     }
 
-  if ((value < SVN_NO_COMPRESSION_LEVEL) || (value > SVN_MAX_COMPRESSION_LEVEL))
+  if ((value < SVN_DELTA_COMPRESSION_LEVEL_NONE)
+      || (value > SVN_DELTA_COMPRESSION_LEVEL_MAX))
     return apr_psprintf(cmd->pool,
                         "%d is not a valid compression level. "
                         "The valid range is %d .. %d.",
                         value,
-                        (int)SVN_NO_COMPRESSION_LEVEL,
-                        (int)SVN_MAX_COMPRESSION_LEVEL);
+                        (int)SVN_DELTA_COMPRESSION_LEVEL_NONE,
+                        (int)SVN_DELTA_COMPRESSION_LEVEL_MAX);
 
   svn__compression_level = value;
 
