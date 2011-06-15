@@ -1157,14 +1157,40 @@ cdata_xml(void *userData, const char *data, int len)
 static void
 add_done_item(svn_ra_serf__xml_parser_t *ctx)
 {
-  *ctx->done = TRUE;
-  if (ctx->done_list)
+  /* Make sure we don't add to DONE_LIST twice.  */
+  if (!*ctx->done)
     {
-      ctx->done_item->data = ctx->user_data;
-      ctx->done_item->next = *ctx->done_list;
-      *ctx->done_list = ctx->done_item;
+      *ctx->done = TRUE;
+      if (ctx->done_list)
+        {
+          ctx->done_item->data = ctx->user_data;
+          ctx->done_item->next = *ctx->done_list;
+          *ctx->done_list = ctx->done_item;
+        }
     }
 }
+
+
+static svn_error_t *
+inject_to_parser(svn_ra_serf__xml_parser_t *ctx,
+                 const char *data,
+                 apr_size_t len,
+                 const serf_status_line *sl)
+{
+  int xml_status;
+
+  xml_status = XML_Parse(ctx->xmlp, data, len, 0);
+  if (xml_status == XML_STATUS_ERROR)
+    return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                             _("XML parsing failed: (%d %s)"),
+                             sl->code, sl->reason);
+
+  if (ctx->error)
+    return svn_error_return(ctx->error);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Implements svn_ra_serf__response_handler_t */
 svn_error_t *
@@ -1173,11 +1199,8 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
                                void *baton,
                                apr_pool_t *pool)
 {
-  const char *data;
-  apr_size_t len;
   serf_status_line sl;
   apr_status_t status;
-  int xml_status;
   svn_ra_serf__xml_parser_t *ctx = baton;
   svn_error_t *err;
 
@@ -1203,8 +1226,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       /* If our caller won't know about the 404, abort() for now. */
       SVN_ERR_ASSERT(ctx->status_code);
 
-      if (*ctx->done == FALSE)
-        add_done_item(ctx);
+      add_done_item(ctx);
 
       err = svn_ra_serf__handle_server_error(request, response, pool);
 
@@ -1227,6 +1249,9 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
 
   while (1)
     {
+      const char *data;
+      apr_size_t len;
+
       status = serf_bucket_read(response, 8000, &data, &len);
 
       if (SERF_BUCKET_READ_ERROR(status))
@@ -1234,25 +1259,17 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
           return svn_error_wrap_apr(status, NULL);
         }
 
-      xml_status = XML_Parse(ctx->xmlp, data, len, 0);
-      if (xml_status == XML_STATUS_ERROR && ctx->ignore_errors == FALSE)
+      err = inject_to_parser(ctx, data, len, &sl);
+      if (err)
         {
-          XML_ParserFree(ctx->xmlp);
+          if (!ctx->ignore_errors)
+            {
+              XML_ParserFree(ctx->xmlp);
+              add_done_item(ctx);
+              return svn_error_return(err);
+            }
 
-          SVN_ERR_ASSERT(ctx->status_code);
-
-          if (*ctx->done == FALSE)
-            add_done_item(ctx);
-
-          return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                   _("XML parsing failed: (%d %s)"),
-                                   sl.code, sl.reason);
-        }
-
-      if (ctx->error && ctx->ignore_errors == FALSE)
-        {
-          XML_ParserFree(ctx->xmlp);
-          SVN_ERR(ctx->error);
+          svn_error_clear(err);
         }
 
       if (APR_STATUS_IS_EAGAIN(status))
@@ -1262,7 +1279,9 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
 
       if (APR_STATUS_IS_EOF(status))
         {
-          xml_status = XML_Parse(ctx->xmlp, NULL, 0, 1);
+          /* Ignore the return status. We just don't care.  */
+          (void) XML_Parse(ctx->xmlp, NULL, 0, 1);
+
           XML_ParserFree(ctx->xmlp);
           add_done_item(ctx);
           return svn_error_wrap_apr(status, NULL);
