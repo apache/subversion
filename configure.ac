@@ -1299,13 +1299,10 @@ AC_SUBST(INCLUDE_OUTPUTS)
 
 AC_CONFIG_HEADERS(subversion/svn_private_config.h.tmp:subversion/svn_private_config.h.in)
 AC_CONFIG_COMMANDS([svn_private_config.h.tmp],
-                   [$SED -e "s/@SVN_DB_HEADER@/$SVN_DB_HEADER/" subversion/svn_private_config.h.tmp > subversion/svn_private_config.h.tmp.new
-                    if test -e subversion/svn_private_config.h && diff subversion/svn_private_config.h subversion/svn_private_config.h.tmp.new >/dev/null ; then
-                      rm -f subversion/svn_private_config.h.tmp.new
-                    else
-                      mv -f subversion/svn_private_config.h.tmp.new subversion/svn_private_config.h
-                    fi
-                    rm -f subversion/svn_private_config.h.tmp],
+                   [svn_cf=subversion/svn_private_config.h;
+                    $SED -e "s/@SVN_DB_HEADER@/$SVN_DB_HEADER/" $svn_cf.tmp > $svn_cf.tmp.new
+                    cmp -s $svn_cf.tmp.new $svn_cf || mv -f $svn_cf.tmp.new $svn_cf
+                    rm -f $svn_cf.tmp.new $svn_cf.tmp)],
                    [SED="$SED"
                     SVN_DB_HEADER="$SVN_DB_HEADER"])
 AC_CONFIG_FILES([Makefile])
