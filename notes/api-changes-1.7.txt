@@ -12,49 +12,49 @@ Observations are marked with "#".
 
 HEADERS REVIEWED
 
-  r1134000 mod_authz_svn.h - no change
-  r1134000 mod_dav_svn.h - no change
-  r1134000 svn_auth.h
-  r1134000 svn_base64.h - no change
-  r1134000 svn_cache_config.h - new header
-  r1134000 svn_checksum.h
-  r1134000 svn_client.h
-  r1134000 svn_cmdline.h - no change
-  r1134000 svn_compat.h - no change
-  r1134000 svn_config.h
-  r1134000 svn_ctype.h - no change
-  r1134000 svn_dav.h
-  r1134000 svn_delta.h
-  r1134000 svn_diff.h
-  r1134000 svn_dirent_uri.h
-  r1134000 svn_dso.h - no change
-  r1134000 svn_error.h
-  r1134000 svn_error_codes.h
-  r1134000 svn_fs.h
-  r1134000 svn_hash.h
-  r1134000 svn_io.h
-  r1134000 svn_iter.h - no change except doc clarification
-  r1134000 svn_md5.h - no change
-  r1134000 svn_mergeinfo.h
-  r1134000 svn_nls.h - no change
-  r1134000 svn_opt.h
-  r1134000 svn_path.h
-  r1134000 svn_pools.h - no change
-  r1134000 svn_props.h
-  r1134000 svn_quoprint.h - no change
-  r1134000 svn_ra.h
-  r1134000 svn_ra_svn.h
-  r1134000 svn_repos.h
-  r1134000 svn_sorts.h - no change
-  r1134000 svn_string.h
-  r1134000 svn_subst.h
-  r1134000 svn_time.h - no change
-  r1134000 svn_types.h
-  r1134000 svn_user.h - no change
-  r1134000 svn_utf.h - no change
-  r1134000 svn_version.h
-  r1134000 svn_wc.h
-  r1134000 svn_xml.h - no change
+  r1136085 mod_authz_svn.h - no change
+  r1136085 mod_dav_svn.h - no change
+  r1136085 svn_auth.h
+  r1136085 svn_base64.h - no change
+  r1136085 svn_cache_config.h - new header
+  r1136085 svn_checksum.h
+  r1136085 svn_client.h
+  r1136085 svn_cmdline.h - no change
+  r1136085 svn_compat.h - no change
+  r1136085 svn_config.h
+  r1136085 svn_ctype.h - no change
+  r1136085 svn_dav.h
+  r1136085 svn_delta.h
+  r1136085 svn_diff.h
+  r1136085 svn_dirent_uri.h
+  r1136085 svn_dso.h - no change
+  r1136085 svn_error.h
+  r1136085 svn_error_codes.h
+  r1136085 svn_fs.h
+  r1136085 svn_hash.h
+  r1136085 svn_io.h
+  r1136085 svn_iter.h - no change except doc clarification
+  r1136085 svn_md5.h - no change
+  r1136085 svn_mergeinfo.h
+  r1136085 svn_nls.h - no change
+  r1136085 svn_opt.h
+  r1136085 svn_path.h
+  r1136085 svn_pools.h - no change
+  r1136085 svn_props.h
+  r1136085 svn_quoprint.h - no change
+  r1136085 svn_ra.h
+  r1136085 svn_ra_svn.h
+  r1136085 svn_repos.h
+  r1136085 svn_sorts.h - no change
+  r1136085 svn_string.h
+  r1136085 svn_subst.h
+  r1136085 svn_time.h - no change
+  r1136085 svn_types.h
+  r1136085 svn_user.h - no change
+  r1136085 svn_utf.h - no change
+  r1136085 svn_version.h
+  r1136085 svn_wc.h
+  r1136085 svn_xml.h
 
 NEW AND CHANGED SYMBOLS
 
@@ -98,15 +98,11 @@ svn_client.h
   + svn_client_diff_peg5() - adds 'git' format, 'show_copies_as_adds'
   + svn_client_merge4() - adds 'allow_mixed_rev'
   - svn_client_merge3() - deprecated
-    # Needs SVN_DEPRECATED.
   + svn_client_merge_peg4() - adds 'allow_mixed_rev'
   - svn_client_merge_peg3() - deprecated
-    # Needs SVN_DEPRECATED.
   + svn_client_mergeinfo_log() - adds 'finding_merged'; supports depth
   - svn_client_mergeinfo_log_merged() - deprecated
-    # Doc for deprecation should refer to svn_client_mergeinfo_log().
   - svn_client_mergeinfo_log_eligible() - deprecated
-      # Doc for deprecation should refer to svn_client_mergeinfo_log().
   + svn_client_upgrade()
   + svn_client_relocate2() - adds 'ignore_externals'
   ! svn_client_relocate() - deprecated; behaviour change: whole WC only
@@ -121,8 +117,6 @@ svn_client.h
   + svn_client_propget4()
   + svn_client_export5()
   - svn_changelist_receiver_t - moved from here to svn_wc.h
-  - SVN_INFO_SIZE_UNKNOWN - moved from here to svn_wc.h
-    # Should move this back to svn_client.h, following r1133417.
   - svn_info_t - deprecated
   - svn_info_receiver_t - deprecated
   - svn_info_dup() - deprecated
@@ -159,18 +153,15 @@ svn_dav.h
 
 svn_delta.h
   - removed svn_version.h
-  + SVN_NO_COMPRESSION_LEVEL 0
-  + SVN_MAX_COMPRESSION_LEVEL 9
-  + SVN_DEFAULT_COMPRESSION_LEVEL 5
-    # Use a library prefix SVN_DELTA for these three.
-    # Use a common prefix *_COMPRESSION_LEVEL for these three.
+  + SVN_DELTA_COMPRESSION_LEVEL_NONE 0
+  + SVN_DELTA_COMPRESSION_LEVEL_MAX 9
+  + SVN_DELTA_COMPRESSION_LEVEL_DEFAULT 5
   + svn_txdelta_to_svndiff3()
   ! svn_delta_path_driver() - gets 'const' on its paths array input
 
 svn_diff.h
   - removed svn_version.h
   + svn_diff_fns2_t
-    # Re-document the previous version relative to this one?
   + svn_diff_diff_2()
   + svn_diff_diff3_2()
   + svn_diff_diff4_2()
@@ -222,9 +213,7 @@ svn_dirent_uri.h
   + svn_dirent_skip_ancestor()
     # See ### comment: shouldn't return child.
   + svn_relpath_skip_ancestor()
-    # See ### comment: shouldn't return child.
   + svn_uri_skip_ancestor()
-    # Shouldn't return child.
   + svn_dirent_condense_targets()
   + svn_uri_condense_targets()
   + svn_dirent_is_under_root()
@@ -284,6 +273,7 @@ svn_fs.h
 svn_hash.h
   + svn_hash_get_cstring()
   + svn_hash_get_bool()
+    # Rename and move to svn_config_hash_get(), svn_config_hash_get_bool().
 
 svn_io.h
   + svn_io_dirent2_t
@@ -313,6 +303,7 @@ svn_io.h
   + svn_io_stat_dirent()
   + svn_io_dir_walk2()
   + svn_io_start_cmd2()
+  + svn_io_is_binary_data()
   + svn_io_file_putc()
   + svn_io_file_read_full2()
   + svn_io_dir_close()
@@ -328,10 +319,6 @@ svn_mergeinfo.h
   ! svn_rangelist_intersect() - gets 'const' on its array inputs
   + svn_rangelist_inheritable2()
   + svn_mergeinfo_inheritable2()
-  = svn_rangelist_inheritable() - no change, but:
-    # Should be deprecated.
-  = svn_mergeinfo_inheritable() - no change, but:
-    # Should be deprecated.
   ! svn_rangelist_dup() - gets 'const' on its array input
   ! svn_mergeinfo_inheritance_t - gets an enum tag name to match typedef
 
@@ -369,8 +356,6 @@ svn_ra.h
   + svn_ra_get_path_relative_to_root()
   + svn_ra_change_rev_prop2() - supports 'atomic' revprop changes
   + svn_ra_get_mergeinfo2() - can validate inherited mergeinfo
-  - svn_ra_get_mergeinfo() - deprecated
-    # Needs SVN_DEPRECATED.
   ! svn_ra_get_locations() - gets 'const' on its array input
   + svn_ra_get_locks2() - supports depth
   + SVN_RA_CAPABILITY_ATOMIC_REVPROPS
@@ -388,6 +373,8 @@ svn_repos.h
   - removed svn_version.h
   ! svn_repos_authz_access_t - gets an enum tag name to match typedef
   + svn_repos_notify_action_t
+  + svn_repos_notify_warning_t
+    # Doc: see '###' comment re making a Doxygen link.
   + svn_repos_notify_t
   + svn_repos_notify_func_t
   + svn_repos_notify_create()
@@ -448,9 +435,6 @@ svn_types.h
   ! svn_location_segment_dup() - gets 'const' on its input
   + svn_linenum_t
   + SVN_LINENUM_MAX_VALUE
-    # These two 'line number' symbols are in the wrong Doxygen group.
-  + SVN_INFO_SIZE_UNKNOWN
-    # Should move this back to svn_client.h, following r1133417.
 
 svn_version.h
   ! SVN_VER_MINOR - changed to 7
@@ -474,8 +458,6 @@ svn_wc.h
   - svn_wc_adm_access_pool() - deprecated
   - svn_wc_adm_locked() - deprecated
   + svn_wc_locked2()
-  + SVN_WC_ADM_DIR_NAME
-    # Doc'd deprecated; is it just moved?
 
   + svn_wc_external_update_t
   - svn_wc_traversal_info_t - deprecated
@@ -504,16 +486,14 @@ svn_wc.h
   + svn_wc_check_wc2()
 
   - svn_wc_has_binary_prop() - deprecated
-    # The replacement should be mentioned in the @deprecated clause.
 
   + svn_wc_text_modified_p2()
   + svn_wc_props_modified_p2()
 
-  = svn_wc_schedule_t - unchanged
-    # Should be marked deprecated, as is in a group marked deprecated?
-  = SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN - unchanged
-    # Should be marked deprecated, as is in a group marked deprecated?
+  - svn_wc_schedule_t - deprecated
+  - SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN - deprecated
   - svn_wc_entry_t - deprecated
+  - SVN_WC_ENTRY_THIS_DIR - deprecated
   - svn_wc_entry() - deprecated
   - svn_wc_entries_read() - deprecated
   - svn_wc_entry_dup() - deprecated
@@ -531,7 +511,6 @@ svn_wc.h
     # Should say what is the replacement for this functionality.
   + svn_wc_ensure_adm4()
   ! svn_wc_ensure_adm3() - deprecated; behaviour change re passing null
-    # Doc string should mention 'notes/api-errata/1.7/wc005.txt'.
   - svn_wc_maybe_set_repos_root() - deprecated
 
   + svn_wc_status3_t
@@ -545,7 +524,6 @@ svn_wc.h
   + svn_wc_walk_status()
   + svn_wc_get_status_editor5() - can omit depth filtering
     # '@a statushash' - unknown argument
-    # '@a pool' - unknown argument
   ! svn_wc_get_status_editor3() - gets 'const' on an array input
 
   + svn_wc_copy3()
@@ -577,14 +555,13 @@ svn_wc.h
   + svn_wc_get_wc_root()
   + svn_wc_get_actual_target2()
   + svn_wc_dirents_func_t
-    # Doc string: move mention of #3569 to a note; add '@a' before *dirents.
+    # Doc string: move mention of #3569 to a note.
   + svn_wc_get_update_editor4()
   ! svn_wc_get_update_editor3() - deprecated; gets 'const' on an array input
   + svn_wc_get_switch_editor4()
   ! svn_wc_get_switch_editor3() - deprecated; gets 'const' on an array input
   + svn_wc_prop_list2()
   + svn_wc_get_pristine_props()
-    # See '###' comment: obsolete comment?
   + svn_wc_prop_get2()
   + svn_wc_prop_set4() - adds depth, changelist, cancellation
   + svn_wc_get_diff_editor6() - adds git format, etc.
@@ -622,4 +599,8 @@ svn_wc.h
   + svn_wc_exclude()
   + svn_wc_read_kind()
     # See '###' comments re 'hidden'.
+
+svn_xml.h
+  + svn_xml_make_header2()
+    # Deprecated version needs '@deprecated' and parens after old func name.
 
