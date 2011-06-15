@@ -280,8 +280,6 @@ conn_setup(apr_socket_t *sock,
 {
   svn_ra_serf__connection_t *conn = baton;
 
-  /* While serf < 0.4.0 is supported we should set read_bkt even when
-     we have an error. See svn_ra_serf__conn_setup() */
   *read_bkt = serf_context_bucket_socket_create(conn->session->context,
                                                sock, conn->bkt_alloc);
 
@@ -317,10 +315,13 @@ conn_setup(apr_socket_t *sock,
             }
         }
 
-    if (write_bkt) /* = Serf >= 0.4.0, see svn_ra_serf__conn_setup() */
-      /* output stream */
-      *write_bkt = serf_bucket_ssl_encrypt_create(*write_bkt, conn->ssl_context,
-                                                  conn->bkt_alloc);
+      if (write_bkt)
+        {
+          /* output stream */
+          *write_bkt = serf_bucket_ssl_encrypt_create(*write_bkt,
+                                                      conn->ssl_context,
+                                                      conn->bkt_alloc);
+        }
     }
 
   return SVN_NO_ERROR;
