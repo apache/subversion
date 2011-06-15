@@ -186,6 +186,15 @@ svn_fs__path_change_create_internal(const svn_fs_id_t *node_rev_id,
                                     svn_fs_path_change_kind_t change_kind,
                                     apr_pool_t *pool);
 
+/* Append REL_PATH (which may contain slashes) to each path that exists in
+   the mergeinfo INPUT, and return a new mergeinfo in *OUTPUT.  Deep
+   copies the values.  Perform all allocations in POOL. */
+svn_error_t *
+svn_fs__append_to_merged_froms(svn_mergeinfo_t *output,
+                               svn_mergeinfo_t input,
+                               const char *rel_path,
+                               apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

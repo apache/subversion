@@ -3572,33 +3572,6 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
 }
 
 
-/* Helper for get_mergeinfo_for_path() that will append PATH_PIECE
-   (which may contain slashes) to each path that exists in the
-   mergeinfo INPUT, and return a new mergeinfo in *OUTPUT.  Deep
-   copies the values.  Perform all allocations in POOL. */
-static svn_error_t *
-append_to_merged_froms(svn_mergeinfo_t *output,
-                       svn_mergeinfo_t input,
-                       const char *path_piece,
-                       apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-  *output = apr_hash_make(pool);
-
-  for (hi = apr_hash_first(pool, input); hi; hi = apr_hash_next(hi))
-    {
-      const char *path = svn__apr_hash_index_key(hi);
-      apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
-      char *newpath;
-
-      newpath = svn_fspath__join(path, path_piece, pool);
-      apr_hash_set(*output, newpath, APR_HASH_KEY_STRING,
-                   svn_rangelist_dup(rangelist, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Calculates the mergeinfo for PATH under REV_ROOT using inheritance
    type INHERIT.  Returns it in *MERGEINFO, or NULL if there is none.
    If *MERGEINFO is inherited and VALIDATE_INHERITED_MERGEINFO is true,
@@ -3705,11 +3678,11 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
                                          NULL, SVN_INVALID_REVNUM,
                                          SVN_INVALID_REVNUM, TRUE,
                                          scratch_pool, scratch_pool));
-      SVN_ERR(append_to_merged_froms(mergeinfo, tmp_mergeinfo,
-                                     parent_path_relpath(
-                                       parent_path, nearest_ancestor,
-                                       scratch_pool),
-                                     result_pool));
+      SVN_ERR(svn_fs__append_to_merged_froms(mergeinfo, tmp_mergeinfo,
+                                             parent_path_relpath(
+                                               parent_path, nearest_ancestor,
+                                               scratch_pool),
+                                             result_pool));
 
       if (validate_inherited_mergeinfo)
         SVN_ERR(svn_fs_fs__validate_mergeinfo(mergeinfo, rev_root->fs,

@@ -5253,31 +5253,6 @@ crawl_directory_for_mergeinfo(svn_fs_t *fs,
 }
 
 
-/* Helper for get_mergeinfo_for_path() that will append REL_PATH
-   (which may contain slashes) to each path that exists in the
-   mergeinfo INPUT, and return a new mergeinfo in *OUTPUT.  Deep
-   copies the values.  Perform all allocations in POOL. */
-static svn_error_t *
-append_to_merged_froms(svn_mergeinfo_t *output,
-                       svn_mergeinfo_t input,
-                       const char *rel_path,
-                       apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-
-  *output = apr_hash_make(pool);
-  for (hi = apr_hash_first(pool, input); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      void *val;
-      apr_hash_this(hi, &key, NULL, &val);
-      apr_hash_set(*output, svn_fspath__join(key, rel_path, pool),
-                   APR_HASH_KEY_STRING, svn_rangelist_dup(val, pool));
-    }
-  return SVN_NO_ERROR;
-}
-
-
 /* Calculate the mergeinfo for PATH under revision ROOT using
    inheritance type INHERIT.  Set *MERGEINFO to the mergeinfo, or to
    NULL if there is none.  If *MERGEINFO is inherited set *INHERITED
@@ -5395,11 +5370,11 @@ txn_body_get_mergeinfo_for_path(void *baton, trail_t *trail)
                                          NULL, SVN_INVALID_REVNUM,
                                          SVN_INVALID_REVNUM, TRUE,
                                          trail->pool, trail->pool));
-      SVN_ERR(append_to_merged_froms(args->mergeinfo, tmp_mergeinfo,
-                                     parent_path_relpath(
-                                       parent_path, nearest_ancestor,
-                                       trail->pool),
-                                     args->pool));
+      SVN_ERR(svn_fs__append_to_merged_froms(args->mergeinfo, tmp_mergeinfo,
+                                             parent_path_relpath(
+                                               parent_path, nearest_ancestor,
+                                               trail->pool),
+                                             args->pool));
       *(args->inherited) = TRUE;
     }
 
