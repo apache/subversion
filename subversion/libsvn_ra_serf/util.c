@@ -1180,12 +1180,12 @@ inject_to_parser(svn_ra_serf__xml_parser_t *ctx,
   int xml_status;
 
   xml_status = XML_Parse(ctx->xmlp, data, len, 0);
-  if (xml_status == XML_STATUS_ERROR)
+  if (xml_status == XML_STATUS_ERROR && !ctx->ignore_errors)
     return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                              _("XML parsing failed: (%d %s)"),
                              sl->code, sl->reason);
 
-  if (ctx->error)
+  if (ctx->error && !ctx->ignore_errors)
     return svn_error_return(ctx->error);
 
   return SVN_NO_ERROR;
@@ -1262,14 +1262,12 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       err = inject_to_parser(ctx, data, len, &sl);
       if (err)
         {
-          if (!ctx->ignore_errors)
-            {
-              XML_ParserFree(ctx->xmlp);
-              add_done_item(ctx);
-              return svn_error_return(err);
-            }
+          /* Should have no errors if IGNORE_ERRORS is set.  */
+          SVN_ERR_ASSERT(!ctx->ignore_errors);
 
-          svn_error_clear(err);
+          XML_ParserFree(ctx->xmlp);
+          add_done_item(ctx);
+          return svn_error_return(err);
         }
 
       if (APR_STATUS_IS_EAGAIN(status))
