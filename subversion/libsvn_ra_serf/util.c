@@ -425,15 +425,6 @@ svn_ra_serf__conn_closed(serf_connection_t *conn,
                                             err);
 }
 
-apr_status_t
-svn_ra_serf__cleanup_serf_session(void *data)
-{
-  /* svn_ra_serf__session_t *serf_sess = data; */
-
-  /* Nothing to do. */
-
-  return APR_SUCCESS;
-}
 
 /* Implementation of svn_ra_serf__handle_client_cert */
 static svn_error_t *
