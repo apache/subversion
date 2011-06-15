@@ -1941,7 +1941,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
        * same lifetime as the dir->pool.
        */
       svn_ra_serf__ns_t *ns, *ns_name_match;
-      int found = 0;
+      svn_boolean_t found = FALSE;
       report_info_t *info;
       report_dir_t *dir;
       apr_hash_t *props;
@@ -1964,7 +1964,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
               ns_name_match = ns;
               if (strcmp(ns->url, info->prop_name) == 0)
                 {
-                  found = 1;
+                  found = TRUE;
                   break;
                 }
             }
@@ -2480,7 +2480,6 @@ finish_report(void *report_baton,
       report->done_fetches = NULL;
 
       /* Debugging purposes only! */
-      serf_debug__closed_conn(sess->bkt_alloc);
       for (i = 0; i < sess->num_conns; i++)
         {
          serf_debug__closed_conn(sess->conns[i]->bkt_alloc);
