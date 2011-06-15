@@ -2545,14 +2545,13 @@ svn_wc_check_wc(const char *path,
                 apr_pool_t *pool);
 
 
-/** As a replacement for this functionality, @see svn_mime_type_is_binary
- * and #SVN_PROP_MIME_TYPE.
- *
- * Set @a *has_binary_prop to @c TRUE iff @a path has been marked
+/** Set @a *has_binary_prop to @c TRUE iff @a path has been marked
  * with a property indicating that it is non-text (in other words, binary).
  * @a adm_access is an access baton set that contains @a path.
  *
- * @deprecated Provided for backward compatibility with the 1.6 API.
+ * @deprecated Provided for backward compatibility with the 1.6 API. As a
+ * replacement for this functionality, @see svn_mime_type_is_binary and
+ * #SVN_PROP_MIME_TYPE.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -2631,7 +2630,8 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
  * @{
  */
 
-/** The schedule states an entry can be in. */
+/** The schedule states an entry can be in.
+ * @deprecated Provided for backward compatibility with the 1.6 API. */
 typedef enum svn_wc_schedule_t
 {
   /** Nothing special here */
@@ -2658,6 +2658,7 @@ typedef enum svn_wc_schedule_t
  *  calculated and stored in the past for whatever reason).
  *
  * @since New in 1.5
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 #define SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN (-1)
 
@@ -2903,7 +2904,8 @@ typedef struct svn_wc_entry_t
 } svn_wc_entry_t;
 
 
-/** How an entries file's owner dir is named in the entries file. */
+/** How an entries file's owner dir is named in the entries file.
+ * @deprecated Provided for backward compatibility with the 1.6 API. */
 #define SVN_WC_ENTRY_THIS_DIR  ""
 
 
@@ -3309,7 +3311,7 @@ svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
  *
  * @note the @a uuid and @a repos parameters were documented as allowing
  * @c NULL to be passed. Beginning with 1.7, this will return an error,
- * contrary to prior documented behavior.
+ * contrary to prior documented behavior: see 'notes/api-errata/1.7/wc005.txt'.
  *
  * @since New in 1.5.
  * @deprecated Provided for backwards compatibility with the 1.6 API.
@@ -3990,8 +3992,9 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
  * the ambient depth filtering, so this doesn't have to be handled in the
  * editor.
  *
- * Allocate the editor itself in @a pool, but the editor does temporary
- * allocations in a subpool of @a pool.
+ * Allocate the editor itself in @a result_pool, and use @a scratch_pool
+ * for temporary allocations. The editor will do its temporary allocations
+ * in a subpool of @a result_pool.
  *
  * @since New in 1.7.
  */
@@ -5369,8 +5372,8 @@ typedef svn_error_t *(*svn_wc_get_file_t)(void *baton,
  * We really only need the names of the dirents for a not-present marking,
  * but we also store the node-kind if we receive one.
  *
- * *dirents should be set to a hash mapping <tt>const char *</tt> child names,
- * to <tt>const svn_dirent_t *</tt> instances.
+ * @a *dirents should be set to a hash mapping <tt>const char *</tt> child
+ * names, to <tt>const svn_dirent_t *</tt> instances.
  *
  * @since New in 1.7.
  */
@@ -5801,11 +5804,6 @@ svn_wc_prop_list(apr_hash_t **props,
  * node's revision will return NULL in @a props.
  *
  * If the node is not versioned, SVN_ERR_WC_PATH_NOT_FOUND will be returned.
- *
- * ### until we get to single-db: if the node has been marked for deletion,
- * ### is a directory, and the directory is missing on disk, then the
- * ### pristine properties will not be available; SVN_ERR_PROPERTY_NOT_FOUND
- * ### will be returned.
  *
  * @a props will be allocated in @a result_pool, and all temporary
  * allocations will be performed in @a scratch_pool.
