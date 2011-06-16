@@ -514,7 +514,25 @@ public class ClientNotifyInformation extends EventObject
 
         /** The server has instructed the client to follow a URL
           * redirection. */
-        url_redirect    ("url redirect");
+        url_redirect    ("url redirect"),
+
+        /** The operation was attempted on a path which doesn't exist. */
+        path_nonexistent ("path nonexistent"),
+
+        /** Removing a path by excluding it. */
+        exclude ("exclude"),
+
+        /** Operation failed because the node remains in conflict */
+        failed_conflict ("failed conflict"),
+
+        /** Operation failed because an added node is missing */
+        failed_missing ("failed missing"),
+
+        /** Operation failed because a node is out of date */
+        failed_out_of_date ("failed out of date"),
+
+        /** Operation failed because an added parent is not selected */
+        failed_no_parent ("failed no parent");
 
         /**
          * The description of the action.
