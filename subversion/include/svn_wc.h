@@ -1175,7 +1175,23 @@ typedef enum svn_wc_notify_action_t
 
   /** Removing a path by excluding it.
    * @since New in 1.7. */
-  svn_wc_notify_exclude
+  svn_wc_notify_exclude,
+
+  /** Operation failed because the node remains in conflict
+   * @since New in 1.7. */
+  svn_wc_notify_failed_conflict,
+
+  /** Operation failed because an added node is missing
+   * @since New in 1.7. */
+  svn_wc_notify_failed_missing,
+
+  /** Operation failed because a node is out of date
+   * @since New in 1.7. */
+  svn_wc_notify_failed_out_of_date,
+
+  /** Operation failed because an added parent is not selected
+   * @since New in 1.7. */
+  svn_wc_notify_failed_no_parent
 
 } svn_wc_notify_action_t;
 
