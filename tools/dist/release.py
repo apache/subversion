@@ -37,6 +37,7 @@ import os
 import sys
 import shutil
 import urllib2
+import hashlib
 import tarfile
 import logging
 import subprocess
@@ -60,6 +61,9 @@ def get_prefix(base_dir):
 
 def get_tempdir(base_dir):
     return os.path.join(base_dir, 'tempdir')
+
+def get_deploydir(base_dir):
+    return os.path.join(base_dir, 'deploy')
 
 def get_nullfile():
     # This is certainly not cross platform
@@ -90,6 +94,7 @@ def cleanup(base_dir, args):
 
     shutil.rmtree(get_prefix(base_dir), True)
     shutil.rmtree(get_tempdir(base_dir), True)
+    shutil.rmtree(get_deploydir(base_dir), True)
 
 
 #----------------------------------------------------------------------
@@ -230,6 +235,7 @@ def build_env(base_dir, args):
 
 def roll_tarballs(base_dir, args):
     'Create the release artifacts.'
+    extns = ['zip', 'tar.gz', 'tar.bz2']
     version_base = args.version.split('-')[0]
     version_extra = args.version.split('-')[1]
 
@@ -249,6 +255,60 @@ def roll_tarballs(base_dir, args):
     for dep in [autoconf, libtool, swig]:
         if not dep.have_usable():
            raise RuntimeError('Cannot find usable %s' % dep.label)
+
+    # Make sure CHANGES is sync'd
+    if not branch == 'trunk':
+        trunk_CHANGES = '%s/trunk/CHANGES@%d' % (repos, args.revnum)
+        branch_CHANGES = '%s/branches/%s/CHANGES@%d' % (repos, branch,
+                                                        args.revnum)
+        proc = subprocess.Popen(['svn', 'diff', '--summarize', branch_CHANGES,
+                                   trunk_CHANGES],
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT)
+        (stdout, stderr) = proc.communicate()
+        proc.wait()
+
+        if stdout:
+            raise RuntimeError('CHANGES not synced between trunk and branch')
+    
+    # Create the output directory
+    if not os.path.exists(get_deploydir(base_dir)):
+        os.mkdir(get_deploydir(base_dir))
+
+    # For now, just delegate to dist.sh to create the actual artifacts
+    if version_extra:
+        if version_extra.startswith('alpha'):
+            extra_args = '-alpha %s' % version_extra[5:]
+        elif version_extra.startswith('beta'):
+            extra_args = '-beta %s' % version_extra[4:]
+        elif version_extra.startswith('rc'):
+            extra_args = '-rc %s' % version_extra[2:]
+    logging.info('Building UNIX tarballs')
+    run_script(args.verbose, '%s/dist.sh -v %s -pr %s -r %d %s'
+                     % (sys.path[0], version_base, branch, args.revnum,
+                        extra_args) )
+    logging.info('Buildling Windows tarballs')
+    run_script(args.verbose, '%s/dist.sh -v %s -pr %s -r %d -zip %s'
+                     % (sys.path[0], version_base, branch, args.revnum,
+                        extra_args) )
+
+    # Move the results to the deploy directory
+    logging.info('Moving resulting artifacts')
+    for e in extns:
+        shutil.move('subversion-%s.%s' % (args.version, e),
+                    get_deploydir(base_dir))
+    shutil.move('svn_version.h.dist', get_deploydir(base_dir))
+
+    # Create sha1 sums
+    logging.info('Calculating checksums')
+    for e in extns:
+        filename = os.path.join(get_deploydir(base_dir), 'subversion-%s.%s' %
+                                                         (args.version, e))
+        m = hashlib.sha1()
+        m.update(open(filename, 'r').read())
+        open(filename + '.sha1', 'w').write(m.hexdigest())
+
+    # And we're done!
 
 
 def announce(base_dir, args):
