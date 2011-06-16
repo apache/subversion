@@ -1388,3 +1388,16 @@ svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets)
                                "targets"));
   return err;
 }
+
+const char *
+svn_cl__local_style_skip_ancestor(const char *parent_path,
+                                  const char *path,
+                                  apr_pool_t *pool)
+{
+  const char *relpath = NULL;
+
+  if (parent_path)
+    relpath = svn_dirent_skip_ancestor(parent_path, path);
+
+  return svn_dirent_local_style(relpath ? relpath : path, pool);
+}
