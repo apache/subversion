@@ -60,7 +60,9 @@ fixup_out_of_date_error(const char *local_abspath,
                         apr_pool_t *scratch_pool)
 {
   if (err->apr_err == SVN_ERR_FS_NOT_FOUND
-      || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+      || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS
+      || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND
+      || err->apr_err == SVN_ERR_RA_DAV_ALREADY_EXISTS)
     {
       if (ctx->notify_func2)
         {
@@ -69,6 +71,9 @@ fixup_out_of_date_error(const char *local_abspath,
           notify = svn_wc_create_notify(local_abspath ? local_abspath : path,
                                         svn_wc_notify_failed_out_of_date,
                                         scratch_pool);
+
+          notify->kind = kind;
+          notify->err = err;
 
           ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
         }
@@ -1481,19 +1486,23 @@ do_item_commit(void **dir_baton,
       if (kind == svn_node_file)
         {
           SVN_ERR_ASSERT(parent_baton);
-          SVN_ERR(editor->add_file
-                  (path, parent_baton, item->copyfrom_url,
+          err = editor->add_file(
+                   path, parent_baton, item->copyfrom_url,
                    item->copyfrom_url ? item->copyfrom_rev : SVN_INVALID_REVNUM,
-                   file_pool, &file_baton));
+                   file_pool, &file_baton);
         }
       else /* May be svn_node_none when adding parent dirs for a copy. */
         {
           SVN_ERR_ASSERT(parent_baton);
-          SVN_ERR(editor->add_directory
-                  (path, parent_baton, item->copyfrom_url,
+          err = editor->add_directory(
+                   path, parent_baton, item->copyfrom_url,
                    item->copyfrom_url ? item->copyfrom_rev : SVN_INVALID_REVNUM,
-                   pool, dir_baton));
+                   pool, dir_baton);
         }
+
+      if (err)
+        return svn_error_return(fixup_out_of_date_error(local_abspath, path,
+                                                        kind, err, ctx, pool));
 
       /* Set other prop-changes, if available in the baton */
       if (item->outgoing_prop_changes)
