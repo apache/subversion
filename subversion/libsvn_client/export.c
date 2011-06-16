@@ -1225,8 +1225,8 @@ svn_client_export5(svn_revnum_t *result_rev,
               SVN_ERR(svn_client__export_externals(eb->externals,
                                                    from_path_or_url,
                                                    to_abspath, repos_root_url,
-                                                   depth,
-                                                   native_eol, &use_sleep,
+                                                   depth, native_eol,
+                                                   ignore_keywords, &use_sleep,
                                                    ctx, pool));
             }
         }
