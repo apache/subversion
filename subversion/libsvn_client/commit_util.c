@@ -955,7 +955,7 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
 
   for (i = 0; i < targets->nelts; ++i)
     {
-      const char *repos_relpath, *target_abspath;
+      const char *target_abspath;
       svn_boolean_t is_added;
       svn_node_kind_t kind;
       const char *repos_root_url;
@@ -995,15 +995,6 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
       SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, NULL, wc_ctx,
                                           target_abspath,
                                           result_pool, iterpool));
-
-      SVN_ERR(svn_wc__node_get_repos_relpath(&repos_relpath, ctx->wc_ctx,
-                                             target_abspath,
-                                             iterpool, iterpool));
-      if (! repos_relpath)
-        return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                                 _("Entry for '%s' has no URL"),
-                                 svn_dirent_local_style(target_abspath,
-                                                        iterpool));
 
       /* Handle an added/replaced node. */
       SVN_ERR(svn_wc__node_is_added(&is_added, ctx->wc_ctx, target_abspath,
