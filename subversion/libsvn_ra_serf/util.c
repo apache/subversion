@@ -52,6 +52,45 @@
 #define XML_STATUS_ERROR 0
 #endif
 
+
+#define PARSE_CHUNK_SIZE 8000
+
+/* As chunks of content arrive from the server, and we need to hold them
+   in memory (because the XML parser is paused), they are copied into
+   these buffers. The buffers are arranged into a linked list.  */
+struct pending_buffer_t {
+  apr_size_t size;
+  char data[PARSE_CHUNK_SIZE];
+  struct pending_memnode_t *next;
+};
+
+
+/* This structure records pending data for the parser in memory blocks,
+   and possibly into a temporary file if "too much" content arrives.  */
+struct svn_ra_serf__pending_t {
+  /* The amount of content in memory.  */
+  apr_size_t memory_size;
+
+  /* HEAD points to the first block of the linked list of buffers.
+     TAIL points to the last block, for quickly appending more blocks
+     to the overall list.  */
+  struct pending_buffer_t *head;
+  struct pending_buffer_t *tail;
+
+  /* Once MEMORY_SIZE exceeds SPILL_SIZE, then arriving content will be
+     appended to the (temporary) file indicated by SPILL.  */
+  apr_file_t *spill;
+
+  /* As we consume content from SPILL, this value indicates where we
+     will begin reading.  */
+  apr_off_t spill_start;
+};
+
+/* We will store one megabyte in memory, before switching to store content
+   into a temporary file.  */
+#define SPILL_SIZE 1000000
+
+
 
 static const apr_uint32_t serf_failure_map[][2] =
 {
