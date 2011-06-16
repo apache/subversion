@@ -437,3 +437,15 @@ pre_1_2_recurse:
 
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_client_get_wc_root(const char **wcroot_abspath,
+                       svn_client_ctx_t *ctx,
+                       const char *local_abspath,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  return svn_wc__get_wc_root(wcroot_abspath, ctx->wc_ctx, local_abspath,
+                             result_pool, scratch_pool);
+}

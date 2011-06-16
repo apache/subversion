@@ -1864,9 +1864,9 @@ diff_repos_wc(const char *path1,
   callback_baton->ra_session = ra_session;
   if (use_git_diff_format)
     {
-      SVN_ERR(svn_wc_get_wc_root(&callback_baton->wc_root_abspath,
-                                 ctx->wc_ctx, anchor_abspath,
-                                 pool, pool));
+      SVN_ERR(svn_wc__get_wc_root(&callback_baton->wc_root_abspath,
+                                  ctx->wc_ctx, anchor_abspath,
+                                  pool, pool));
     }
   callback_baton->anchor = anchor;
 

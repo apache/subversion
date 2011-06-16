@@ -92,8 +92,8 @@ svn_cl__cleanup(apr_getopt_t *os,
             {
               const char *wcroot_abspath;
 
-              err2 = svn_wc_get_wc_root(&wcroot_abspath, ctx->wc_ctx,
-                                        target_abspath, subpool, subpool);
+              err2 = svn_client_get_wc_root(&wcroot_abspath, ctx,
+                                            target_abspath, subpool, subpool);
               if (err2)
                 err =  svn_error_compose_create(err, err2);
               else
