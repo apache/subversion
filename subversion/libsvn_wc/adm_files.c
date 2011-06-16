@@ -437,7 +437,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   SVN_ERR_ASSERT(url != NULL);
   SVN_ERR_ASSERT(repos_root_url != NULL);
   SVN_ERR_ASSERT(repos_uuid != NULL);
-  SVN_ERR_ASSERT(svn_uri_is_ancestor(repos_root_url, url));
+  SVN_ERR_ASSERT(svn_uri__is_ancestor(repos_root_url, url));
 
   SVN_ERR(svn_wc__internal_check_wc(&format, db, local_abspath, TRUE,
                                     scratch_pool));
@@ -503,7 +503,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
       /* ### comparing URLs, should they be canonicalized first? */
       if (strcmp(db_repos_uuid, repos_uuid)
           || strcmp(db_repos_root_url, repos_root_url)
-          || !svn_relpath_is_ancestor(db_repos_relpath, repos_relpath))
+          || !svn_relpath__is_ancestor(db_repos_relpath, repos_relpath))
         {
           const char *copyfrom_root_url, *copyfrom_repos_relpath;
 

@@ -60,7 +60,7 @@ svn_client__dirent_fetcher(void *baton,
   url = svn_path_url_add_component2(repos_root_url, repos_relpath,
                                     scratch_pool);
 
-  if (!svn_uri_is_ancestor(dfb->anchor_url, url))
+  if (!svn_uri__is_ancestor(dfb->anchor_url, url))
     {
       SVN_ERR(svn_client__ensure_ra_session_url(&old_url, dfb->ra_session,
                                                 url, scratch_pool));

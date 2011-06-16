@@ -802,8 +802,8 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       dead_end_rev.kind = svn_opt_revision_unspecified;
 
       /* Are the source and destination URLs at or under REPOS_ROOT? */
-      if (! (svn_uri_is_ancestor(repos_root, pair->src_abspath_or_url)
-             && svn_uri_is_ancestor(repos_root, pair->dst_abspath_or_url)))
+      if (! (svn_uri__is_ancestor(repos_root, pair->src_abspath_or_url)
+             && svn_uri__is_ancestor(repos_root, pair->dst_abspath_or_url)))
         return svn_error_create
           (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
            _("Source and destination URLs appear not to point to the "
@@ -1182,7 +1182,7 @@ check_url_kind(void *baton,
   struct check_url_kind_baton *cukb = baton;
 
   /* If we don't have a session or can't use the session, get one */
-  if (!svn_uri_is_ancestor(cukb->repos_root_url, url))
+  if (!svn_uri__is_ancestor(cukb->repos_root_url, url))
     *kind = svn_node_none;
   else
     {

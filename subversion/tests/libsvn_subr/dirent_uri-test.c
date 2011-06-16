@@ -1419,7 +1419,7 @@ test_relpath_is_ancestor(apr_pool_t *pool)
     {
       svn_boolean_t retval;
 
-      retval = svn_relpath_is_ancestor(tests[i].path1, tests[i].path2);
+      retval = svn_relpath__is_ancestor(tests[i].path1, tests[i].path2);
       if (tests[i].result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
@@ -1453,7 +1453,7 @@ test_uri_is_ancestor(apr_pool_t *pool)
     {
       svn_boolean_t retval;
 
-      retval = svn_uri_is_ancestor(tests[i].path1, tests[i].path2);
+      retval = svn_uri__is_ancestor(tests[i].path1, tests[i].path2);
       if (tests[i].result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,

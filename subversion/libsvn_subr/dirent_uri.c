@@ -1451,7 +1451,7 @@ svn_relpath__is_ancestor(const char *parent_relpath, const char *child_relpath)
 }
 
 svn_boolean_t
-svn_uri_is_ancestor(const char *parent_uri, const char *child_uri)
+svn_uri__is_ancestor(const char *parent_uri, const char *child_uri)
 {
   assert(svn_uri_is_canonical(parent_uri, NULL));
   assert(svn_uri_is_canonical(child_uri, NULL));
@@ -2458,7 +2458,7 @@ svn_fspath__is_ancestor(const char *parent_fspath,
   assert(svn_fspath__is_canonical(parent_fspath));
   assert(svn_fspath__is_canonical(child_fspath));
 
-  return svn_relpath_is_ancestor(parent_fspath + 1, child_fspath + 1);
+  return svn_relpath__is_ancestor(parent_fspath + 1, child_fspath + 1);
 }
 
 

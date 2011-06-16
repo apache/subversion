@@ -4474,7 +4474,7 @@ make_editor(svn_revnum_t *target_revision,
 
   /* Disallow a switch operation to change the repository root of the target,
      if that is known. */
-  if (switch_url && !svn_uri_is_ancestor(repos_root, switch_url))
+  if (switch_url && !svn_uri__is_ancestor(repos_root, switch_url))
     return svn_error_createf(SVN_ERR_WC_INVALID_SWITCH, NULL,
                              _("'%s'\nis not the same repository as\n'%s'"),
                              switch_url, repos_root);
@@ -5206,7 +5206,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                               dir_abspath,
                                               pool, pool));
 
-      if (!svn_uri_is_ancestor(original_root_url, copyfrom_url))
+      if (!svn_uri__is_ancestor(original_root_url, copyfrom_url))
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                  _("Copyfrom-url '%s' has different repository"
                                    " root than '%s'"),

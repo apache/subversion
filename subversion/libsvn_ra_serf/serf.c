@@ -456,7 +456,7 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, NULL, pool));
     }
 
-  if (!svn_uri_is_ancestor(session->repos_root_str, url))
+  if (!svn_uri__is_ancestor(session->repos_root_str, url))
     {
       return svn_error_createf(
           SVN_ERR_RA_ILLEGAL_URL, NULL,

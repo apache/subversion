@@ -1054,7 +1054,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
   /* If we're performing a repos-to-WC copy, check that the copyfrom
      repository is the same as the parent dir's repository. */
-  if (copyfrom_url && !svn_uri_is_ancestor(repos_root_url, copyfrom_url))
+  if (copyfrom_url && !svn_uri__is_ancestor(repos_root_url, copyfrom_url))
     return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                              _("The URL '%s' has a different repository "
                                "root than its parent"), copyfrom_url);

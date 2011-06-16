@@ -157,7 +157,7 @@ reporter_link_path(void *report_baton, const char *path, const char *url,
 {
   report_baton_t *rb = report_baton;
 
-  if (!svn_uri_is_ancestor(rb->ancestor, url))
+  if (!svn_uri__is_ancestor(rb->ancestor, url))
     {
       const char *ancestor;
 
