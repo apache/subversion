@@ -283,6 +283,10 @@ def roll_tarballs(base_dir, args):
             extra_args = '-beta %s' % version_extra[4:]
         elif version_extra.startswith('rc'):
             extra_args = '-rc %s' % version_extra[2:]
+        elif version_extra.startswith('nightly'):
+            extra_args = '-nightly'
+        else:
+            extra_args = ''
     logging.info('Building UNIX tarballs')
     run_script(args.verbose, '%s/dist.sh -v %s -pr %s -r %d %s'
                      % (sys.path[0], version_base, branch, args.revnum,
