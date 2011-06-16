@@ -549,7 +549,7 @@ svn_error_t *svn_ra_reparent(svn_ra_session_t *session,
   /* Make sure the new URL is in the same repository, so that the
      implementations don't have to do it. */
   SVN_ERR(svn_ra_get_repos_root2(session, &repos_root, pool));
-  if (! svn_uri_is_ancestor(repos_root, url))
+  if (! svn_uri__is_ancestor(repos_root, url))
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              _("'%s' isn't in the same repository as '%s'"),
                              url, repos_root);

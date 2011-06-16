@@ -300,7 +300,7 @@ check_repos_match(merge_cmd_baton_t *merge_b,
                   const char *url,
                   apr_pool_t *scratch_pool)
 {
-  if (!svn_uri_is_ancestor(merge_b->repos_root_url, url))
+  if (!svn_uri__is_ancestor(merge_b->repos_root_url, url))
     return svn_error_createf(
         SVN_ERR_UNSUPPORTED_FEATURE, NULL,
          _("Url '%s' of '%s' is not in repository '%s'"),

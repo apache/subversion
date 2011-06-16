@@ -904,7 +904,7 @@ collect_lock_tokens(apr_hash_t **result,
       const char *url = svn__apr_hash_index_key(hi);
       const char *token = svn__apr_hash_index_val(hi);
 
-      if (svn_uri_is_ancestor(base_url, url))
+      if (svn_uri__is_ancestor(base_url, url))
         {
           url = svn_uri_skip_ancestor(base_url, url, pool);
 
@@ -1153,7 +1153,7 @@ check_url_kind(void *baton,
   struct check_url_kind_baton *cukb = baton;
 
   /* If we don't have a session or can't use the session, get one */
-  if (!cukb->session || !svn_uri_is_ancestor(cukb->repos_root_url, url))
+  if (!cukb->session || !svn_uri__is_ancestor(cukb->repos_root_url, url))
     {
       SVN_ERR(svn_client_open_ra_session(&cukb->session, url, cukb->ctx,
                                          cukb->pool));

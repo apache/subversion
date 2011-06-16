@@ -192,7 +192,7 @@ reporter_link_path(void *reporter_baton,
   const char *fs_path = NULL;
   const char *repos_url = rbaton->sess->repos_url;
 
-  if (!svn_uri_is_ancestor(repos_url, url))
+  if (!svn_uri__is_ancestor(repos_url, url))
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              _("'%s'\n"
                                "is not the same repository as\n"
