@@ -2199,38 +2199,29 @@ write_actual_only_entries(apr_hash_t *tree_conflicts,
   return SVN_NO_ERROR;
 }
 
-struct entries_write_baton
+svn_error_t *
+svn_wc__write_upgraded_entries(void **dir_baton,
+                               void *parent_baton,
+                               svn_wc__db_t *db,
+                               svn_sqlite__db_t *sdb,
+                               apr_int64_t repos_id,
+                               apr_int64_t wc_id,
+                               const char *dir_abspath,
+                               const char *new_root_abspath,
+                               apr_hash_t *entries,
+                               apr_hash_t *text_bases_info,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db;
-  apr_int64_t repos_id;
-  apr_int64_t wc_id;
-  const char *dir_abspath;
-  const char *new_root_abspath;
-  apr_hash_t *entries;
-  apr_hash_t *text_bases_info;
-  struct write_baton *parent_node;
-  struct write_baton *dir_node;
-  apr_pool_t *result_pool;
-};
-
-/* Writes entries inside a sqlite transaction
-   Implements svn_sqlite__transaction_callback_t. */
-static svn_error_t *
-entries_write_new_cb(void *baton,
-                     svn_sqlite__db_t *sdb,
-                     apr_pool_t *scratch_pool)
-{
-  struct entries_write_baton *ewb = baton;
-  svn_wc__db_t *db = ewb->db;
-  const char *dir_abspath = ewb->dir_abspath;
-  const char *new_root_abspath = ewb->new_root_abspath;
   const svn_wc_entry_t *this_dir;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   const char *old_root_abspath, *dir_relpath;
+  struct write_baton *parent_node = parent_baton;
+  struct write_baton *dir_node;
 
   /* Get a copy of the "this dir" entry for comparison purposes. */
-  this_dir = apr_hash_get(ewb->entries, SVN_WC_ENTRY_THIS_DIR,
+  this_dir = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
                           APR_HASH_KEY_STRING);
 
   /* If there is no "this dir" entry, something is wrong. */
@@ -2248,21 +2239,21 @@ entries_write_new_cb(void *baton,
   dir_relpath = svn_dirent_skip_ancestor(old_root_abspath, dir_abspath);
 
   /* Write out "this dir" */
-  SVN_ERR(write_entry(&ewb->dir_node, ewb->parent_node, db, sdb,
-                      ewb->wc_id, ewb->repos_id, this_dir, NULL, dir_relpath,
+  SVN_ERR(write_entry(&dir_node, parent_node, db, sdb,
+                      wc_id, repos_id, this_dir, NULL, dir_relpath,
                       svn_dirent_join(new_root_abspath, dir_relpath,
-                                      scratch_pool),
+                                      iterpool),
                       old_root_abspath,
-                      this_dir, FALSE, ewb->result_pool, iterpool));
+                      this_dir, FALSE, result_pool, iterpool));
 
-  for (hi = apr_hash_first(scratch_pool, ewb->entries); hi;
+  for (hi = apr_hash_first(scratch_pool, entries); hi;
        hi = apr_hash_next(hi))
     {
       const char *name = svn__apr_hash_index_key(hi);
       const svn_wc_entry_t *this_entry = svn__apr_hash_index_val(hi);
       const char *child_abspath, *child_relpath;
       svn_wc__text_base_info_t *text_base_info
-        = apr_hash_get(ewb->text_bases_info, name, APR_HASH_KEY_STRING);
+        = apr_hash_get(text_bases_info, name, APR_HASH_KEY_STRING);
 
       svn_pool_clear(iterpool);
 
@@ -2274,57 +2265,21 @@ entries_write_new_cb(void *baton,
          use this function for upgrading old working copies. */
       child_abspath = svn_dirent_join(dir_abspath, name, iterpool);
       child_relpath = svn_dirent_skip_ancestor(old_root_abspath, child_abspath);
-      SVN_ERR(write_entry(NULL, ewb->dir_node, db, sdb,
-                          ewb->wc_id, ewb->repos_id,
+      SVN_ERR(write_entry(NULL, dir_node, db, sdb,
+                          wc_id, repos_id,
                           this_entry, text_base_info, child_relpath,
                           svn_dirent_join(new_root_abspath, child_relpath,
-                                          scratch_pool),
+                                          iterpool),
                           old_root_abspath,
                           this_dir, TRUE, iterpool, iterpool));
     }
 
-  if (ewb->dir_node->tree_conflicts)
-    SVN_ERR(write_actual_only_entries(ewb->dir_node->tree_conflicts, sdb,
-                                      ewb->wc_id, dir_relpath, iterpool));
+  if (dir_node->tree_conflicts)
+    SVN_ERR(write_actual_only_entries(dir_node->tree_conflicts, sdb,
+                                      wc_id, dir_relpath, iterpool));
 
+  *dir_baton = dir_node;
   svn_pool_destroy(iterpool);
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__write_upgraded_entries(void **dir_baton,
-                               void *parent_baton,
-                               svn_wc__db_t *db,
-                               svn_sqlite__db_t *sdb,
-                               apr_int64_t repos_id,
-                               apr_int64_t wc_id,
-                               const char *dir_abspath,
-                               const char *new_root_abspath,
-                               apr_hash_t *entries,
-                               apr_hash_t *text_bases_info,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool)
-{
-  struct entries_write_baton ewb;
-
-  ewb.db = db;
-  ewb.repos_id = repos_id;
-  ewb.wc_id = wc_id;
-  ewb.dir_abspath = dir_abspath;
-  ewb.new_root_abspath = new_root_abspath;
-  ewb.entries = entries;
-  ewb.text_bases_info = text_bases_info;
-  ewb.parent_node = parent_baton;
-  ewb.result_pool = result_pool;
-
-  /* Run this operation in a transaction to speed up SQLite.
-     See http://www.sqlite.org/faq.html#q19 for more details */
-  SVN_ERR(svn_sqlite__with_transaction(sdb, entries_write_new_cb, &ewb,
-                                       scratch_pool));
-
-  *dir_baton = ewb.dir_node;
-
   return SVN_NO_ERROR;
 }
 
