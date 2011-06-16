@@ -1366,9 +1366,7 @@ struct upgrade_data_t {
    REPOS_CACHE if it doesn't have a cached entry for this
    repository.
 
-   DATA->SDB will be null if this is the root directory, in which case
-   the db must be created and *DATA filled in, otherwise *DATA refer
-   to the single root db.
+   *DATA refers to the single root db.
 
    Uses SCRATCH_POOL for all temporary allocation.  */
 static svn_error_t *
@@ -1450,39 +1448,6 @@ upgrade_to_wcng(void **dir_baton,
                    apr_pstrdup(hash_pool, this_dir->repos),
                    APR_HASH_KEY_STRING,
                    apr_pstrdup(hash_pool, this_dir->uuid));
-    }
-
-  /* Create the new DB if it hasn't already been created. */
-  if (!data->sdb)
-    {
-      const char *root_adm_abspath;
-
-      /* In root wc construst path to temporary root wc/.svn/tmp/wcng/.svn */
-
-      data->root_abspath = svn_dirent_join(svn_wc__adm_child(dir_abspath, "tmp",
-                                                             scratch_pool),
-                                           "wcng", result_pool);
-      root_adm_abspath = svn_wc__adm_child(data->root_abspath, "",
-                                           scratch_pool);
-      SVN_ERR(svn_io_remove_dir2(root_adm_abspath, TRUE, NULL, NULL,
-                                 scratch_pool));
-      SVN_ERR(svn_wc__ensure_directory(root_adm_abspath, scratch_pool));
-
-      /* Create an empty sqlite database for this directory. */
-      SVN_ERR(svn_wc__db_upgrade_begin(&data->sdb,
-                                       &data->repos_id, &data->wc_id,
-                                       data->root_abspath,
-                                       this_dir->repos, this_dir->uuid,
-                                       result_pool, scratch_pool));
-
-      /* Migrate the entries over to the new database.
-         ### We need to think about atomicity here.
-
-         entries_write_new() writes in current format rather than
-         f12. Thus, this function bumps a working copy all the way to
-         current.  */
-      SVN_ERR(svn_wc__db_wclock_obtain(db, data->root_abspath, 0, FALSE,
-                                       scratch_pool));
     }
 
   old_wcroot_abspath = svn_dirent_get_longest_ancestor(dir_abspath,
@@ -1833,6 +1798,40 @@ is_old_wcroot(const char *local_abspath,
     svn_dirent_local_style(parent_abspath, scratch_pool));
 }
 
+/* Data for upgrade_working_copy_txn(). */
+typedef struct upgrade_working_copy_baton_t
+{
+  svn_wc__db_t *db;
+  const char *dir_abspath;
+  svn_wc_upgrade_get_repos_info_t repos_info_func;
+  void *repos_info_baton;
+  apr_hash_t *repos_cache;
+  struct upgrade_data_t *data;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+  svn_wc_notify_func2_t notify_func;
+  void *notify_baton;
+  apr_pool_t *result_pool;
+} upgrade_working_copy_baton_t;
+
+
+/* Helper for svn_wc_upgrade. Implements svn_sqlite__transaction_callback_t */
+static svn_error_t *
+upgrade_working_copy_txn(void *baton,
+                         svn_sqlite__db_t *sdb,
+                         apr_pool_t *scratch_pool)
+{
+  upgrade_working_copy_baton_t *b = baton;
+
+  /* Upgrade the pre-wcng into a wcng in a temporary location. */
+  return(upgrade_working_copy(NULL, b->db, b->dir_abspath,
+                              b->repos_info_func, b->repos_info_baton,
+                              b->repos_cache, b->data,
+                              b->cancel_func, b->cancel_baton,
+                              b->notify_func, b->notify_baton,
+                              b->result_pool, scratch_pool));
+}
+
 svn_error_t *
 svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
@@ -1848,6 +1847,11 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   struct upgrade_data_t data = { NULL };
   svn_skel_t *work_item, *work_items = NULL;
   const char *pristine_from, *pristine_to, *db_from, *db_to;
+  apr_hash_t *repos_cache = apr_hash_make(scratch_pool);
+  svn_wc_entry_t *this_dir;
+  apr_hash_t *entries;
+  const char *root_adm_abspath;
+  upgrade_working_copy_baton_t cb_baton;
 
   SVN_ERR(is_old_wcroot(local_abspath, scratch_pool));
 
@@ -1864,13 +1868,64 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                           NULL /* ### config */, FALSE, FALSE,
                           scratch_pool, scratch_pool));
 
-  /* Upgrade the pre-wcng into a wcng in a temporary location. */
-  SVN_ERR(upgrade_working_copy(NULL, db, local_abspath,
-                               repos_info_func, repos_info_baton,
-                               apr_hash_make(scratch_pool), &data,
-                               cancel_func, cancel_baton,
-                               notify_func, notify_baton,
-                               scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__read_entries_old(&entries, local_abspath,
+                                   scratch_pool, scratch_pool));
+
+  this_dir = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
+                          APR_HASH_KEY_STRING);
+  SVN_ERR(ensure_repos_info(this_dir, local_abspath, repos_info_func,
+                            repos_info_baton, repos_cache,
+                            scratch_pool, scratch_pool));
+
+  /* Cache repos UUID pairs for when a subdir doesn't have this information */
+  if (!apr_hash_get(repos_cache, this_dir->repos, APR_HASH_KEY_STRING))
+    apr_hash_set(repos_cache,
+                 apr_pstrdup(scratch_pool, this_dir->repos),
+                 APR_HASH_KEY_STRING,
+                 apr_pstrdup(scratch_pool, this_dir->uuid));
+
+  /* Create the new DB in the temporary root wc/.svn/tmp/wcng/.svn */
+  data.root_abspath = svn_dirent_join(svn_wc__adm_child(local_abspath, "tmp",
+                                                        scratch_pool),
+                                       "wcng", scratch_pool);
+  root_adm_abspath = svn_wc__adm_child(data.root_abspath, "",
+                                       scratch_pool);
+  SVN_ERR(svn_io_remove_dir2(root_adm_abspath, TRUE, NULL, NULL,
+                             scratch_pool));
+  SVN_ERR(svn_wc__ensure_directory(root_adm_abspath, scratch_pool));
+
+  /* Create an empty sqlite database for this directory. */
+  SVN_ERR(svn_wc__db_upgrade_begin(&data.sdb,
+                                   &data.repos_id, &data.wc_id,
+                                   data.root_abspath,
+                                   this_dir->repos, this_dir->uuid,
+                                   scratch_pool, scratch_pool));
+
+  /* Migrate the entries over to the new database.
+   ### We need to think about atomicity here.
+
+   entries_write_new() writes in current format rather than
+   f12. Thus, this function bumps a working copy all the way to
+   current.  */
+  SVN_ERR(svn_wc__db_wclock_obtain(db, data.root_abspath, 0, FALSE,
+                                   scratch_pool));
+
+  cb_baton.db = db;
+  cb_baton.dir_abspath = local_abspath;
+  cb_baton.repos_info_func = repos_info_func;
+  cb_baton.repos_info_baton = repos_info_baton;
+  cb_baton.repos_cache = repos_cache;
+  cb_baton.data = &data;
+  cb_baton.cancel_func = cancel_func;
+  cb_baton.cancel_baton = cancel_baton;
+  cb_baton.notify_func = notify_func;
+  cb_baton.notify_baton = notify_baton;
+  cb_baton.result_pool = scratch_pool;
+  
+  SVN_ERR(svn_sqlite__with_lock(data.sdb,
+                                upgrade_working_copy_txn,
+                                &cb_baton,
+                                scratch_pool));
 
   /* A workqueue item to move the pristine dir into place */
   pristine_from = svn_wc__adm_child(data.root_abspath, PRISTINE_STORAGE_RELPATH,
