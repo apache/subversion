@@ -48,6 +48,9 @@ autoconf_ver = '2.68'
 libtool_ver = '2.4'
 swig_ver = '2.0.4'
 
+# Some constants
+repos = 'http://svn.apache.org/repos/asf/subversion'
+
 
 #----------------------------------------------------------------------
 # Utility functions
@@ -145,14 +148,16 @@ class AutoconfDep(RollDep):
         self._filebase = 'autoconf-' + autoconf_ver
         self._url = 'http://ftp.gnu.org/gnu/autoconf/%s.tar.gz' % self._filebase
 
-    def use_system(self):
-        if not self._use_existing: return False
-
+    def have_usable(self):
         output = self._test_version(['autoconf', '-V'])
         if not output: return False
 
         version = output[0].split()[-1:][0]
         return version == autoconf_ver
+
+    def use_system(self):
+        if not self._use_existing: return False
+        return self.have_usable()
 
 
 class LibtoolDep(RollDep):
@@ -162,7 +167,16 @@ class LibtoolDep(RollDep):
         self._filebase = 'libtool-' + libtool_ver
         self._url = 'http://ftp.gnu.org/gnu/libtool/%s.tar.gz' % self._filebase
 
+    def have_usable(self):
+        output = self._test_version(['libtool', '--version'])
+        if not output: return False
+
+        version = output[0].split()[-1:][0]
+        return version == libtool_ver
+
     def use_system(self):
+        # We unconditionally return False here, to avoid using a borked
+        # system libtool (I'm looking at you, Debian).
         return False
 
 
@@ -176,14 +190,16 @@ class SwigDep(RollDep):
               'sf_mirror' : sf_mirror }
         self._extra_configure_flags = '--without-pcre'
 
-    def use_system(self):
-        if not self._use_existing: return False
-
+    def have_usable(self):
         output = self._test_version(['swig', '-version'])
         if not output: return False
 
         version = output[1].split()[-1:][0]
         return version == swig_ver
+
+    def use_system(self):
+        if not self._use_existing: return False
+        return have_usable()
 
 
 def build_env(base_dir, args):
@@ -214,6 +230,25 @@ def build_env(base_dir, args):
 
 def roll_tarballs(base_dir, args):
     'Create the release artifacts.'
+    version_base = args.version.split('-')[0]
+    version_extra = args.version.split('-')[1]
+
+    if args.branch:
+        branch = args.branch
+    else:
+        branch = version_base[:-1] + 'x'
+        
+    logging.info('Rolling release %s from branch %s@%d' % (args.version,
+                                                           branch, args.revnum))
+
+    # Ensure we've got the appropriate rolling dependencies available
+    autoconf = AutoconfDep(base_dir, False, args.verbose)
+    libtool = LibtoolDep(base_dir, False, args.verbose)
+    swig = SwigDep(base_dir, False, args.verbose, None)
+
+    for dep in [autoconf, libtool, swig]:
+        if not dep.have_usable():
+           raise RuntimeError('Cannot find usable %s' % dep.label)
 
 
 def announce(base_dir, args):
@@ -252,6 +287,17 @@ def main():
                     help='''Attempt to use existing build dependencies before
                             downloading and building a private set.''')
 
+    # Setup the parser for the roll subcommand
+    subparser = subparsers.add_parser('roll',
+                    help='''Create the release artifacts.''')
+    subparser.set_defaults(func=roll_tarballs)
+    subparser.add_argument('version',
+                    help='''The release label, such as '1.7.0-alpha1'.''')
+    subparser.add_argument('revnum', type=int,
+                    help='''The revision number to base the release on.''')
+    subparser.add_argument('--branch',
+                    help='''The branch to base the release on.''')
+
     # A meta-target
     subparser = subparsers.add_parser('clean',
                     help='''The same as the '--clean' switch, but as a
@@ -272,7 +318,9 @@ def main():
     else:
         logger.setLevel(logging.INFO)
 
-    sys.path.append(os.path.join(get_prefix(args.base_dir), 'bin'))
+    # Fix up our path so we can use our installed versions
+    os.environ['PATH'] = os.path.join(get_prefix(args.base_dir), 'bin') + ':' \
+                                                            + os.environ['PATH']
 
     # finally, run the subcommand, and give it the parsed arguments
     args.func(args.base_dir, args)
