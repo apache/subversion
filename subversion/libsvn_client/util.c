@@ -146,10 +146,8 @@ svn_client__path_relative_to_root(const char **rel_path,
                                    "root URL '%s'"),
                                  abspath_or_url, repos_root);
 
-      repos_relpath = svn_path_uri_decode(
-                            svn_uri_skip_ancestor(repos_root,
-                                                  abspath_or_url),
-                            result_pool);
+      repos_relpath = svn_uri_skip_ancestor(repos_root, abspath_or_url,
+                                            result_pool);
     }
   else
     {

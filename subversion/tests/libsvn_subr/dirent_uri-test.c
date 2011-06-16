@@ -1577,7 +1577,7 @@ test_uri_skip_ancestor(apr_pool_t *pool)
     {
       const char* retval;
 
-      retval = svn_uri_skip_ancestor(tests[i].path1, tests[i].path2);
+      retval = svn_uri_skip_ancestor(tests[i].path1, tests[i].path2, pool);
       if ((tests[i].result == NULL)
           ? (retval != NULL)
           : (retval == NULL || strcmp(tests[i].result, retval) != 0))

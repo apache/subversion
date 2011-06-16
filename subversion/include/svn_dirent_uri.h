@@ -652,15 +652,17 @@ const char *
 svn_relpath_skip_ancestor(const char *parent_relpath,
                           const char *child_relpath);
 
-/** Return the relative path part of @a child_uri that is below
+/** Return the URI-decoded relative path of @a child_uri that is below
  * @a parent_uri, or just "" if @a parent_uri is equal to @a child_uri. If
  * @a child_uri is not below or equal to @a parent_uri, return NULL.
+ * Allocate the result in @a result_pool.
  *
  * @since New in 1.7.
  */
 const char *
 svn_uri_skip_ancestor(const char *parent_uri,
-                      const char *child_uri);
+                      const char *child_uri,
+                      apr_pool_t *result_pool);
 
 /** Find the common prefix of the canonicalized dirents in @a targets
  * (an array of <tt>const char *</tt>'s), and remove redundant dirents if @a

@@ -4495,8 +4495,7 @@ make_editor(svn_revnum_t *target_revision,
 
   if (switch_url)
     eb->switch_relpath =
-      svn_path_uri_decode(svn_uri_skip_ancestor(repos_root, switch_url),
-                          scratch_pool);
+      svn_uri_skip_ancestor(repos_root, switch_url, scratch_pool);
   else
     eb->switch_relpath = NULL;
 
@@ -5214,8 +5213,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                  copyfrom_url, original_root_url);
 
       original_repos_relpath =
-        svn_path_uri_decode(svn_uri_skip_ancestor(original_root_url,
-                                                  copyfrom_url), pool);
+        svn_uri_skip_ancestor(original_root_url, copyfrom_url, pool);
     }
   else
     {

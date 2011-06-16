@@ -1123,10 +1123,8 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
                                       pair->src_abspath_or_url,
                                       pool, pool));
 
-  commit_relpath = svn_path_uri_decode(svn_uri_skip_ancestor(
-                                            repos_root_url,
-                                            pair->dst_abspath_or_url),
-                                       pool);
+  commit_relpath = svn_uri_skip_ancestor(repos_root_url,
+                                         pair->dst_abspath_or_url, pool);
 
   /* Handle this SRC. */
   SVN_ERR(harvest_committables(btn->ctx->wc_ctx,

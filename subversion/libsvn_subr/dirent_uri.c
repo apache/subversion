@@ -1539,7 +1539,8 @@ svn_relpath_skip_ancestor(const char *parent_relpath,
 
 const char *
 svn_uri_skip_ancestor(const char *parent_uri,
-                      const char *child_uri)
+                      const char *child_uri,
+                      apr_pool_t *result_pool)
 {
   apr_size_t len = strlen(parent_uri);
 
@@ -1553,7 +1554,7 @@ svn_uri_skip_ancestor(const char *parent_uri,
     return ""; /* parent_uri == child_uri */
 
   if (child_uri[len] == '/')
-    return child_uri + len + 1;
+    return svn_path_uri_decode(child_uri + len + 1, result_pool);
 
   return NULL;
 }
