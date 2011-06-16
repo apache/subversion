@@ -367,7 +367,7 @@ subtract_anchor(const char *anchor, const char *url, apr_pool_t *pool)
   if (! strcmp(url, anchor))
     return "";
   else
-    return svn_uri_is_child(anchor, url, pool);
+    return svn_uri__is_child(anchor, url, pool);
 }
 
 /* Add PATH to the operations tree rooted at OPERATION, creating any
