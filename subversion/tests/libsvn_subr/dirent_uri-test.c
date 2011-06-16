@@ -1490,14 +1490,14 @@ test_dirent_skip_ancestor(apr_pool_t *pool)
     { "/",               "bar/bla",         NULL },
 #ifdef SVN_USE_DOS_PATHS
     { "A:/foo",          "A:/foo/bar",      "bar"},
-    { "A:/foo",          "A:/foot",         "A:/foot"},
+    { "A:/foo",          "A:/foot",         NULL},
     { "A:/",             "A:/foo",          "foo"},
     { "A:",              "A:foo",           "foo"},
-    { "A:",              "A:/",             "A:/"},
-    { "//srv/share",     "//vrs/share",     "//vrs/share"},
-    { "//srv",           "//srv/share",     "//srv/share"},
+    { "A:",              "A:/",             NULL},
+    { "//srv/share",     "//vrs/share",     NULL},
+    { "//srv",           "//srv/share",     NULL},
     { "//srv/share",     "//srv/share/foo", "foo"},
-    { "/",               "//srv/share",     "//srv/share"},
+    { "/",               "//srv/share",     NULL},
 #endif
   };
 
