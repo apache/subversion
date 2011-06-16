@@ -1135,9 +1135,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       else
         {
           const char *repos_relpath =
-            svn_path_uri_decode(svn_uri_skip_ancestor(repos_root_url,
-                                                      copyfrom_url),
-                                scratch_pool);
+            svn_uri_skip_ancestor(repos_root_url, copyfrom_url, scratch_pool);
 
           SVN_ERR(svn_wc__db_op_copy_dir(db, local_abspath,
                                          apr_hash_make(scratch_pool),

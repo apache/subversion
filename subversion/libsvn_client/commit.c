@@ -906,8 +906,7 @@ collect_lock_tokens(apr_hash_t **result,
 
       if (svn_uri_is_ancestor(base_url, url))
         {
-          url = svn_path_uri_decode(svn_uri_skip_ancestor(base_url, url),
-                                    pool);
+          url = svn_uri_skip_ancestor(base_url, url, pool);
 
           apr_hash_set(*result, url, APR_HASH_KEY_STRING, token);
         }

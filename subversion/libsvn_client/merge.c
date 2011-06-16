@@ -10453,9 +10453,8 @@ merge_reintegrate_locked(const char *source,
      (with regard to the WC). */
   rev1 = target_base_rev;
 
-  source_repos_rel_path = svn_uri_skip_ancestor(wc_repos_root, url2);
-  source_repos_rel_path = svn_path_uri_decode(source_repos_rel_path,
-                                              scratch_pool);
+  source_repos_rel_path = svn_uri_skip_ancestor(wc_repos_root, url2,
+                                                scratch_pool);
   SVN_ERR(svn_client__path_relative_to_root(&target_repos_rel_path,
                                             ctx->wc_ctx, target_abspath,
                                             wc_repos_root, FALSE, NULL,
