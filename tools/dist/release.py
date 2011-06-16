@@ -297,20 +297,20 @@ def roll_tarballs(base_dir, args):
                         extra_args) )
 
     # Move the results to the deploy directory
-    logging.info('Moving resulting artifacts')
+    logging.info('Moving artifacts and calculating checksums')
     for e in extns:
-        shutil.move('subversion-%s.%s' % (args.version, e),
-                    get_deploydir(base_dir))
-    shutil.move('svn_version.h.dist', get_deploydir(base_dir))
+        if version_extra and version_extra.startswith('nightly'):
+            filename = 'subversion-trunk.%s' % e
+        else:
+            filename = 'subversion-%s.%s' % (args.version, e)
 
-    # Create sha1 sums
-    logging.info('Calculating checksums')
-    for e in extns:
-        filename = os.path.join(get_deploydir(base_dir), 'subversion-%s.%s' %
-                                                         (args.version, e))
+        shutil.move(filename, get_deploydir(base_dir))
+        filename = os.path.join(get_deploydir(base_dir), filename)
         m = hashlib.sha1()
         m.update(open(filename, 'r').read())
         open(filename + '.sha1', 'w').write(m.hexdigest())
+
+    shutil.move('svn_version.h.dist', get_deploydir(base_dir))
 
     # And we're done!
 
