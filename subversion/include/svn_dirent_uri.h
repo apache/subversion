@@ -629,14 +629,11 @@ svn_uri_is_ancestor(const char *parent_uri,
 
 /** Return the relative path part of @a child_dirent that is below
  * @a parent_dirent, or just "" if @a parent_dirent is equal to
- * @a child_dirent. If @a child_dirent is not below @a parent_dirent,
- * return @a child_dirent completely.
+ * @a child_dirent. If @a child_dirent is not below or equal to
+ * @a parent_dirent, return NULL.
  *
- * This function assumes @a parent_dirent and @a child_dirent are both
- * absolute or relative in the same way.
- *
- * ### Returning the child in the no-match case is a bad idea when the
- *     paths are relative; can be useful when they are absolute.
+ * If one of @a parent_dirent and @a child_dirent is absolute and
+ * the other relative, return NULL.
  *
  * @since New in 1.7.
  */

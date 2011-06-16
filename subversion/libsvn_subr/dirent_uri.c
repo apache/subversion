@@ -1467,27 +1467,22 @@ svn_dirent_skip_ancestor(const char *parent_dirent,
   apr_size_t root_len;
 
   if (0 != memcmp(parent_dirent, child_dirent, len))
-    return child_dirent; /* parent_dirent is no ancestor of child_dirent */
+    return NULL; /* parent_dirent is no ancestor of child_dirent */
 
   if (child_dirent[len] == 0)
     return ""; /* parent_dirent == child_dirent */
 
   root_len = dirent_root_length(child_dirent, strlen(child_dirent));
   if (root_len > len)
-    return child_dirent; /* Different root */
+    return NULL; /* Different root */
 
-  if (len == 1 && child_dirent[0] == '/')
-    return child_dirent + 1;
+  if (root_len == len)
+    return child_dirent + len;
 
   if (child_dirent[len] == '/')
     return child_dirent + len + 1;
 
-#ifdef SVN_USE_DOS_PATHS
-  if (root_len == len && len > 0 && child_dirent[len-1])
-    return child_dirent + len;
-#endif
-
-  return child_dirent;
+  return NULL;
 }
 
 const char *

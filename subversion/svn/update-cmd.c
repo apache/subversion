@@ -83,14 +83,14 @@ print_update_summary(apr_array_header_t *targets,
       /* Convert to an absolute path if it's not already. */
       if (! svn_dirent_is_absolute(path))
         SVN_ERR(svn_dirent_get_absolute(&path, path, iterpool));
-      path = svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
-                                                             path), iterpool);
 
       /* Print an update summary for this target, removing the current
          working directory prefix from PATH (if PATH is at or under
          $CWD), and converting the path to local style for display. */
       SVN_ERR(svn_cmdline_printf(iterpool, _("  Updated '%s' to r%ld.\n"),
-                                 path, rev));
+                                 svn_cl__local_style_skip_ancestor(
+                                   path_prefix, path, iterpool),
+                                 rev));
     }
 
   svn_pool_destroy(iterpool);

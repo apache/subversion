@@ -116,13 +116,11 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
   else
     {
       if (n->path_prefix)
-        path_local = svn_dirent_skip_ancestor(n->path_prefix, n->path);
-      else if (nb->path_prefix)
-        path_local = svn_dirent_skip_ancestor(nb->path_prefix, n->path);
-      else
-        path_local = n->path;
-
-      path_local = svn_dirent_local_style(path_local, pool);
+        path_local = svn_cl__local_style_skip_ancestor(n->path_prefix, n->path,
+                                                       pool);
+      else /* skip nb->path_prefix, if it's non-null */
+        path_local = svn_cl__local_style_skip_ancestor(nb->path_prefix, n->path,
+                                                       pool);
     }
 
   switch (n->action)

@@ -135,12 +135,8 @@ print_properties(svn_stream_t *out,
           /* Print the file name. */
 
           if (! is_url)
-            {
-              if (path_prefix)
-                filename = svn_dirent_skip_ancestor(path_prefix, filename);
-
-              filename = svn_dirent_local_style(filename, iterpool);
-            }
+            filename = svn_cl__local_style_skip_ancestor(path_prefix, filename,
+                                                         iterpool);
 
           /* In verbose mode, print exactly same as "proplist" does;
            * otherwise, print a brief header. */

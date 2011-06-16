@@ -1476,18 +1476,18 @@ test_dirent_skip_ancestor(apr_pool_t *pool)
     const char *result;
   } tests[] = {
     { "/foo",            "/foo/bar",        "bar"},
-    { "/foo/bar",        "/foot/bar",       "/foot/bar"},
+    { "/foo/bar",        "/foot/bar",       NULL },
     { "/foo",            "/foo",            ""},
-    { "/foo",            "/foot",           "/foot"},
-    { "/foot",           "/foo",            "/foo"},
+    { "/foo",            "/foot",           NULL },
+    { "/foot",           "/foo",            NULL },
     { "",                "foo",             "foo"},
-    { "",                "/foo",            "/foo"},
+    { "",                "/foo",            NULL },
     { "/",               "/foo",            "foo"},
-    { "/foo/bar/bla",    "/foo/bar",        "/foo/bar"},
+    { "/foo/bar/bla",    "/foo/bar",        NULL },
     { "/foo/bar",        "/foo/bar/bla",    "bla"},
-    { "foo/bar",         "foo",             "foo"},
-    { "/foo/bar",        "foo",             "foo"},
-    { "/",               "bar/bla",         "bar/bla"},
+    { "foo/bar",         "foo",             NULL },
+    { "/foo/bar",        "foo",             NULL },
+    { "/",               "bar/bla",         NULL },
 #ifdef SVN_USE_DOS_PATHS
     { "A:/foo",          "A:/foo/bar",      "bar"},
     { "A:/foo",          "A:/foot",         "A:/foot"},
@@ -1506,7 +1506,9 @@ test_dirent_skip_ancestor(apr_pool_t *pool)
       const char* retval;
 
       retval = svn_dirent_skip_ancestor(tests[i].path1, tests[i].path2);
-      if (strcmp(tests[i].result, retval))
+      if ((tests[i].result == NULL)
+          ? (retval != NULL)
+          : (retval == NULL || strcmp(tests[i].result, retval) != 0))
         return svn_error_createf(
              SVN_ERR_TEST_FAILED, NULL,
              "svn_dirent_skip_ancestor (%s, %s) returned %s instead of %s",

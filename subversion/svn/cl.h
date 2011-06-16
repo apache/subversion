@@ -823,6 +823,16 @@ svn_cl__opt_parse_path(svn_opt_revision_t *rev,
 svn_error_t *
 svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets);
 
+/* Return a copy of PATH, converted to the local path style, skipping
+ * PARENT_PATH if it is non-null and is a parent of or equal to PATH.
+ *
+ * This function assumes PARENT_PATH and PATH are both absolute "dirents"
+ * or both relative "dirents". */
+const char *
+svn_cl__local_style_skip_ancestor(const char *parent_path,
+                                  const char *path,
+                                  apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

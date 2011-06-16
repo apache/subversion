@@ -94,12 +94,10 @@ print_info_xml(void *baton,
   else
     rev_str = apr_pstrdup(pool, _("Resource is not under version control."));
 
-  if (path_prefix)
-    target = svn_dirent_skip_ancestor(path_prefix, target);
-
   /* "<entry ...>" */
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
-                        "path", svn_dirent_local_style(target, pool),
+                        "path", svn_cl__local_style_skip_ancestor(
+                                  path_prefix, target, pool),
                         "kind", svn_cl__node_kind_str_xml(info->kind),
                         "revision", rev_str,
                         NULL);
@@ -262,11 +260,9 @@ print_info(void *baton,
 {
   const char *path_prefix = baton;
 
-  if (path_prefix)
-    target = svn_dirent_skip_ancestor(path_prefix, target);
-
   SVN_ERR(svn_cmdline_printf(pool, _("Path: %s\n"),
-                             svn_dirent_local_style(target, pool)));
+                             svn_cl__local_style_skip_ancestor(
+                               path_prefix, target, pool)));
 
   /* ### remove this someday:  it's only here for cmdline output
      compatibility with svn 1.1 and older.  */
