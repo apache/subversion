@@ -5502,6 +5502,19 @@ svn_client_info(const char *path_or_url,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
 
+/**
+ * Set @a *wcroot_abspath to the local abspath of the root of the
+ * working copy in which @a local_abspath resides.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_get_wc_root(const char **wcroot_abspath,
+                       svn_client_ctx_t *ctx,
+                       const char *local_abspath,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
 /** @} */
 
 
