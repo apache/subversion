@@ -53,7 +53,7 @@ echo "Will place results in: $target"
 head=`$svn info $repo/trunk | grep '^Revision' | cut -d ' ' -f 2`
 
 # Get the latest versions of the rolling scripts
-for i in release.py roll.sh dist.sh gen_nightly_ann.py
+for i in release.py dist.sh gen_nightly_ann.py
 do 
   $svn export -r $head $repo/trunk/tools/dist/$i@$head $dir/$i
 done
@@ -65,7 +65,7 @@ echo '----------------building environment------------------'
 
 # Roll the tarballs
 echo '-------------------rolling tarball--------------------'
-${abscwd}/roll.sh trunk $head "-nightly"
+../release.py --base-dir ${abscwd}/roll roll --branch trunk trunk-nightly $head
 cd ..
 
 # Create the information page
@@ -77,7 +77,6 @@ if [ -f "$target/index.html" ]; then rm "$target/index.html"; fi
 mv index.html "$target"
 if [ ! -d "$target/dist" ]; then mkdir "$target/dist"; fi
 if [ -d "$target/dist/r$head" ]; then rm -r "$target/dist/r$head"; fi
-rm -r roll/deploy/to-tigris
 mv roll/deploy "$target/dist/r$head"
 
 # Some static links for the most recent artefacts.
