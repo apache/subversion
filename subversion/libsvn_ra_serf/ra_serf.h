@@ -590,6 +590,31 @@ struct svn_ra_serf__xml_parser_t {
 
   /* If an error occurred, this value will be non-NULL. */
   svn_error_t *error;
+
+  /* If "pausing" is to be allowed, then this must refer to the connection's
+     bucket allocator. It will be used to hold content in memory, then
+     return it once it has been consumed.
+
+     NOTE: if this field is NULL, then pausing is NOT allowed.  */
+  serf_bucket_alloc_t *pause_alloc;
+
+  /* If pausing is allowed, then callbacks can set this value to pause
+     the XML parsing. Note that additional elements may be parsed once
+     this value is set (as the current buffer is consumed; no further
+     buffers will be parsed until PAUSED is cleared).
+
+     At some point, the callbacks should clear this value. The main
+     serf_context_run() loop will notice the change and resume delivery
+     of content to the XML parser.  */
+  svn_boolean_t paused;
+
+  /* While the XML parser is paused, content arriving from the server
+     must be saved locally. We cannot stop reading, or the server may
+     decide to drop the connection. The content will be stored in memory
+     up to a certain limit, and will then be spilled over to disk.
+
+     See libsvn_ra_serf/util.c  */
+  struct svn_ra_serf__pending_t *pending;
 };
 
 /*
