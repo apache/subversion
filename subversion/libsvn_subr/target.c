@@ -312,7 +312,7 @@ svn_path_remove_redundancies(apr_array_header_t **pcondensed_targets,
 
           /* Quit here if this path is a child of one of the keepers. */
           if (is_url)
-            child_relpath = svn_uri_is_child(keeper, abs_path, temp_pool);
+            child_relpath = svn_uri__is_child(keeper, abs_path, temp_pool);
           else
             child_relpath = svn_dirent_is_child(keeper, abs_path, temp_pool);
           if (child_relpath)

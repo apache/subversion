@@ -88,7 +88,7 @@ fetch_repos_info(const char **repos_root,
   svn_ra_session_t *ra_session;
 
   /* The same info is likely to retrieved multiple times (e.g. externals) */
-  if (ri->last_repos && svn_uri_is_child(ri->last_repos, url, NULL))
+  if (ri->last_repos && svn_uri__is_child(ri->last_repos, url, NULL))
     {
       *repos_root = apr_pstrdup(result_pool, ri->last_repos);
       *repos_uuid = apr_pstrdup(result_pool, ri->last_uuid);

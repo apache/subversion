@@ -1150,7 +1150,7 @@ svn_ra_neon__get_path_relative_to_root(svn_ra_session_t *session,
     }
   else
     {
-      *rel_path = svn_uri_is_child(root_url, url, pool);
+      *rel_path = svn_uri__is_child(root_url, url, pool);
       if (! *rel_path)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                  _("'%s' isn't a child of repository root "

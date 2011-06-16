@@ -476,12 +476,12 @@ make_conflict_versions(const svn_wc_conflict_version_t **left,
 
   *left = svn_wc_conflict_version_create(
             src_repos_url,
-            svn_uri_is_child(src_repos_url, left_url, merge_b->pool),
+            svn_uri__is_child(src_repos_url, left_url, merge_b->pool),
             merge_b->merge_source.rev1, node_kind, merge_b->pool);
 
   *right = svn_wc_conflict_version_create(
              src_repos_url,
-             svn_uri_is_child(src_repos_url, right_url, merge_b->pool),
+             svn_uri__is_child(src_repos_url, right_url, merge_b->pool),
              merge_b->merge_source.rev2, node_kind, merge_b->pool);
 
   return SVN_NO_ERROR;

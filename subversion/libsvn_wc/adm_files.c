@@ -442,7 +442,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   SVN_ERR(svn_wc__internal_check_wc(&format, db, local_abspath, TRUE,
                                     scratch_pool));
 
-  repos_relpath = svn_uri_is_child(repos_root_url, url, scratch_pool);
+  repos_relpath = svn_uri__is_child(repos_root_url, url, scratch_pool);
   if (repos_relpath == NULL)
     repos_relpath = "";
 

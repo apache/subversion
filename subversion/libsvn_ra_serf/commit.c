@@ -561,9 +561,9 @@ checkout_file(file_context_t *file)
           file->checkout->activity_url = file->commit->activity_url;
           file->checkout->resource_url =
             svn_path_url_add_component2(parent_dir->checkout->resource_url,
-                                        svn_relpath_is_child(parent_dir->name,
-                                                             file->name,
-                                                             file->pool),
+                                        svn_relpath__is_child(parent_dir->name,
+                                                              file->name,
+                                                              file->pool),
                                         file->pool);
           return SVN_NO_ERROR;
         }

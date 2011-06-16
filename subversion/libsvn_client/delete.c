@@ -237,7 +237,7 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
       for (hi = apr_hash_first(pool, sessions); hi; hi = apr_hash_next(hi))
         {
           repos_root = svn__apr_hash_index_key(hi);
-          repos_relpath = svn_uri_is_child(repos_root, uri, pool);
+          repos_relpath = svn_uri__is_child(repos_root, uri, pool);
 
           if (repos_relpath)
             {
@@ -264,7 +264,7 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
           SVN_ERR(svn_ra_reparent(ra_session, repos_root, pool));
 
           apr_hash_set(sessions, repos_root, APR_HASH_KEY_STRING, ra_session);
-          repos_relpath = svn_uri_is_child(repos_root, uri, pool);
+          repos_relpath = svn_uri__is_child(repos_root, uri, pool);
 
           relpaths_list = apr_array_make(pool, 1, sizeof(const char *));
           apr_hash_set(relpaths, repos_root, APR_HASH_KEY_STRING,
