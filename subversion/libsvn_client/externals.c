@@ -161,6 +161,7 @@ switch_dir_external(const char *local_abspath,
       if (node_url)
         {
           const char *repos_root_url;
+          const char *repos_uuid;
 
           /* If we have what appears to be a version controlled
              subdir, and its top-level URL matches that of our
@@ -177,7 +178,7 @@ switch_dir_external(const char *local_abspath,
               return SVN_NO_ERROR;
             }
 
-          SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, NULL,
+          SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, &repos_uuid,
                                               ctx->wc_ctx, local_abspath,
                                               pool, subpool));
           if (repos_root_url)
@@ -222,29 +223,16 @@ switch_dir_external(const char *local_abspath,
                                                   timestamp_sleep,
                                                   ctx, subpool));
 
-              {
-                const char *repos_uuid;
-                const char *repos_relpath;
-
-                SVN_ERR(svn_wc__node_get_repos_info(NULL,
-                                                    &repos_uuid,
-                                                    ctx->wc_ctx, local_abspath,
-                                                    subpool, subpool));
-
-                SVN_ERR(svn_wc__node_get_repos_relpath(&repos_relpath,
-                                                       ctx->wc_ctx,
-                                                       local_abspath,
-                                                       subpool, subpool));
-
-                SVN_ERR(svn_wc__external_register(ctx->wc_ctx,
-                                                  defining_abspath,
-                                                  local_abspath, svn_node_dir,
-                                                  repos_root_url, repos_uuid,
-                                                  repos_relpath,
-                                                  SVN_INVALID_REVNUM,
-                                                  SVN_INVALID_REVNUM,
-                                                  subpool));
-              }
+              SVN_ERR(svn_wc__external_register(ctx->wc_ctx,
+                                                defining_abspath,
+                                                local_abspath, svn_node_dir,
+                                                repos_root_url, repos_uuid,
+                                                svn_uri_skip_ancestor(
+                                                            repos_root_url,
+                                                            url, subpool),
+                                                SVN_INVALID_REVNUM,
+                                                SVN_INVALID_REVNUM,
+                                                subpool));
 
               svn_pool_destroy(subpool);
               return SVN_NO_ERROR;
