@@ -1838,6 +1838,52 @@ def incoming_file_external_on_file(sbox):
   svntest.actions.run_and_verify_update(wc_dir, None, None, None,
                                         '.*The file external.*overwrite.*')
 
+
+def exclude_externals(sbox):
+  "try to exclude externals"
+
+  external_url_for = externals_test_setup(sbox)
+  wc_dir         = sbox.wc_dir
+  repo_url       = sbox.repo_url
+
+  # Checkout two working copies.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     repo_url, wc_dir)
+
+  # Excluding a file external should either fail (current behavior)
+  # or register the file external as excluded (preferred behavior)
+  svntest.actions.run_and_verify_update(sbox.ospath('A/B/gamma'),
+                                        None, None, None,
+                                        '.*Cannot exclude.*',
+                                        None, None, None, None, False,
+                                        '--set-depth', 'exclude',
+                                        sbox.ospath('A/B/gamma'))
+
+  # Excluding a directory external should either fail (current behavior)
+  # or register the directory external as excluded (preferred behavior)
+  svntest.actions.run_and_verify_update(sbox.ospath('A/C/exdir_G'),
+                                        None, None, None,
+                                        '.*Cannot exclude.*',
+                                        None, None, None, None, False,
+                                        '--set-depth', 'exclude',
+                                        sbox.ospath('A/C/exdir_G'))
+
+  # And after an update with --set-depth infinity all externals should
+  # be there again.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 6)
+  expected_status.add({
+      'A/B/gamma'         : Item(status='  ', wc_rev='6', switched='X'),
+      'A/C/exdir_H'       : Item(status='X '),
+      'A/C/exdir_G'       : Item(status='X '),
+      'A/D/exdir_A'       : Item(status='X '),
+      'A/D/x'             : Item(status='X '),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        None, None, expected_status, None,
+                                        None, None, None, None, False,
+                                        '--set-depth', 'infinity', wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -1875,6 +1921,7 @@ test_list = [ None,
               file_external_update_without_commit,
               incoming_file_on_file_external,
               incoming_file_external_on_file,
+              exclude_externals,
              ]
 
 if __name__ == '__main__':
