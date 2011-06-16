@@ -504,7 +504,7 @@ svn_ra_local__reparent(svn_ra_session_t *session,
   /* If the new URL isn't the same as our repository root URL, then
      let's ensure that it's some child of it. */
   if (strcmp(url, sess->repos_url) != 0)
-    relpath = svn_uri_is_child(sess->repos_url, url, pool);
+    relpath = svn_uri__is_child(sess->repos_url, url, pool);
   if (! relpath)
     return svn_error_createf
       (SVN_ERR_RA_ILLEGAL_URL, NULL,

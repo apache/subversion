@@ -641,7 +641,7 @@ static apr_hash_t *get_child_tokens(apr_hash_t *lock_tokens,
       svn_pool_clear(subpool);
       apr_hash_this(hi, &key, &klen, &val);
 
-      if (svn_relpath_is_child(dir, key, subpool))
+      if (svn_relpath__is_child(dir, key, subpool))
         apr_hash_set(tokens, key, klen, val);
     }
 

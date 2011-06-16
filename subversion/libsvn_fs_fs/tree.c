@@ -2955,7 +2955,7 @@ prev_location(const char **prev_path,
   SVN_ERR(fs_copied_from(&copy_src_rev, &copy_src_path,
                          copy_root, copy_path, pool));
   if (strcmp(copy_path, path) != 0)
-    remainder = svn_relpath_is_child(copy_path, path, pool);
+    remainder = svn_relpath__is_child(copy_path, path, pool);
   *prev_path = svn_fspath__join(copy_src_path, remainder, pool);
   *prev_rev = copy_src_rev;
   return SVN_NO_ERROR;
@@ -3205,7 +3205,7 @@ history_prev(void *baton, apr_pool_t *pool)
       if (strcmp(path, copy_dst) == 0)
         remainder = "";
       else
-        remainder = svn_relpath_is_child(copy_dst, path, pool);
+        remainder = svn_relpath__is_child(copy_dst, path, pool);
 
       if (remainder)
         {

@@ -145,8 +145,8 @@ push_dir_info(svn_ra_session_t *ra_session,
 
       path = svn_relpath_join(dir, name, subpool);
       URL = svn_path_url_add_component2(session_URL, name, subpool);
-      fs_path = svn_fspath__canonicalize(svn_uri_is_child(repos_root, URL,
-                                                          subpool), subpool);
+      fs_path = svn_fspath__canonicalize(svn_uri__is_child(repos_root, URL,
+                                                           subpool), subpool);
 
       lock = apr_hash_get(locks, fs_path, APR_HASH_KEY_STRING);
 

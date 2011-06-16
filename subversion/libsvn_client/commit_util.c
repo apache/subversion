@@ -1264,8 +1264,8 @@ svn_client__condense_commit_items(const char **base_url,
       size_t base_url_len = strlen(*base_url);
 
       if (url_len > base_url_len)
-        this_item->session_relpath = svn_uri_is_child(*base_url,
-                                                      this_item->url, pool);
+        this_item->session_relpath = svn_uri__is_child(*base_url,
+                                                       this_item->url, pool);
       else
         this_item->session_relpath = "";
     }

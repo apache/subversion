@@ -408,8 +408,8 @@ assemble_status(svn_wc_status3_t **status,
   else
     {
       /* A node is switched if it doesn't have the implied repos_relpath */
-      const char *name = svn_relpath_is_child(parent_repos_relpath,
-                                              info->repos_relpath, NULL);
+      const char *name = svn_relpath__is_child(parent_repos_relpath,
+                                               info->repos_relpath, NULL);
       switched_p = !name || (strcmp(name, svn_dirent_basename(local_abspath, NULL)) != 0);
     }
 

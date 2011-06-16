@@ -1011,7 +1011,7 @@ svn_error_t *svn_ra_neon__get_baseline_info(const char **bc_url_p,
         }
       if (bc_relative_p)
         {
-          const char *relpath = svn_uri_is_child(sess->repos_root, url, pool);
+          const char *relpath = svn_uri__is_child(sess->repos_root, url, pool);
           if (! relpath)
             relpath = "";
           *bc_relative_p = relpath;

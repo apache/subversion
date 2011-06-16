@@ -1409,9 +1409,9 @@ svn_dirent_is_child(const char *parent_dirent,
 }
 
 const char *
-svn_relpath_is_child(const char *parent_relpath,
-                     const char *child_relpath,
-                     apr_pool_t *pool)
+svn_relpath__is_child(const char *parent_relpath,
+                      const char *child_relpath,
+                      apr_pool_t *pool)
 {
   /* assert(relpath_is_canonical(parent_relpath)); */
   /* assert(relpath_is_canonical(child_relpath)); */
@@ -1420,9 +1420,9 @@ svn_relpath_is_child(const char *parent_relpath,
 }
 
 const char *
-svn_uri_is_child(const char *parent_uri,
-                 const char *child_uri,
-                 apr_pool_t *pool)
+svn_uri__is_child(const char *parent_uri,
+                  const char *child_uri,
+                  apr_pool_t *pool)
 {
   const char *relpath;
 
@@ -1442,7 +1442,7 @@ svn_dirent_is_ancestor(const char *parent_dirent, const char *child_dirent)
 }
 
 svn_boolean_t
-svn_relpath_is_ancestor(const char *parent_relpath, const char *child_relpath)
+svn_relpath__is_ancestor(const char *parent_relpath, const char *child_relpath)
 {
   assert(relpath_is_canonical(parent_relpath));
   assert(relpath_is_canonical(child_relpath));
@@ -2435,7 +2435,7 @@ svn_fspath__is_child(const char *parent_fspath,
   assert(svn_fspath__is_canonical(parent_fspath));
   assert(svn_fspath__is_canonical(child_fspath));
 
-  result = svn_relpath_is_child(parent_fspath + 1, child_fspath + 1, pool);
+  result = svn_relpath__is_child(parent_fspath + 1, child_fspath + 1, pool);
 
   assert(result == NULL || svn_relpath_is_canonical(result));
   return result;

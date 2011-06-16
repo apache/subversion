@@ -2008,7 +2008,7 @@ test_uri_is_child(apr_pool_t *pool)
         {
           const char *remainder;
 
-          remainder = svn_uri_is_child(paths[i], paths[j], pool);
+          remainder = svn_uri__is_child(paths[i], paths[j], pool);
 
           if (((remainder) && (! remainders[i][j]))
               || ((! remainder) && (remainders[i][j]))

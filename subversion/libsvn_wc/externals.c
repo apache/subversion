@@ -609,8 +609,8 @@ close_file(void *file_baton,
     const svn_checksum_t *original_checksum = NULL;
     
     svn_boolean_t added = !SVN_IS_VALID_REVNUM(eb->original_revision);
-    const char *repos_relpath = svn_uri_is_child(eb->repos_root_url,
-                                                      eb->url, pool);
+    const char *repos_relpath = svn_uri__is_child(eb->repos_root_url,
+                                                  eb->url, pool);
 
     if (! added)
       {
@@ -901,8 +901,8 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
   eb->diff3cmd = diff3_cmd;
 
   eb->record_ancestor_abspath = apr_pstrdup(edit_pool,record_ancestor_abspath);
-  eb->recorded_repos_relpath = svn_uri_is_child(repos_root_url, recorded_url,
-                                                edit_pool);
+  eb->recorded_repos_relpath = svn_uri__is_child(repos_root_url, recorded_url,
+                                                 edit_pool);
 
   eb->changed_rev = SVN_INVALID_REVNUM;
 

@@ -936,7 +936,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
              case, do not try to add dst to the NEW_DIRS list since it
              will be added to the commit items array later in this
              function. */
-          dir = svn_uri_is_child(
+          dir = svn_uri__is_child(
                   top_url,
                   svn_uri_dirname(first_pair->dst_abspath_or_url, pool),
                   pool);
@@ -959,7 +959,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
           for (i = 0; i < new_urls->nelts; i++)
             {
               const char *new_url = APR_ARRAY_IDX(new_urls, i, const char *);
-              dir = svn_uri_is_child(top_url, new_url, pool);
+              dir = svn_uri__is_child(top_url, new_url, pool);
               APR_ARRAY_PUSH(new_dirs, const char *) = dir ? dir : "";
             }
         }
@@ -978,8 +978,8 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                                path_driver_info_t *);
 
       if ((strcmp(pair->dst_abspath_or_url, repos_root) != 0)
-          && (svn_uri_is_child(pair->dst_abspath_or_url,
-                               pair->src_abspath_or_url, pool) != NULL))
+          && (svn_uri__is_child(pair->dst_abspath_or_url,
+                                pair->src_abspath_or_url, pool) != NULL))
         {
           info->resurrection = TRUE;
           top_url = svn_uri_dirname(top_url, pool);
@@ -1003,7 +1003,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       svn_node_kind_t dst_kind;
       const char *src_rel, *dst_rel;
 
-      src_rel = svn_uri_is_child(top_url, pair->src_abspath_or_url, pool);
+      src_rel = svn_uri__is_child(top_url, pair->src_abspath_or_url, pool);
       if (src_rel)
         {
           SVN_ERR(svn_ra_check_path(ra_session, src_rel, pair->src_revnum,
@@ -1036,7 +1036,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
 
       /* Figure out the basename that will result from this operation,
          and ensure that we aren't trying to overwrite existing paths.  */
-      dst_rel = svn_uri_is_child(top_url, pair->dst_abspath_or_url, pool);
+      dst_rel = svn_uri__is_child(top_url, pair->dst_abspath_or_url, pool);
       if (! dst_rel)
         dst_rel = "";
       SVN_ERR(svn_ra_check_path(ra_session, dst_rel, youngest,
@@ -1292,9 +1292,9 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
         APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
 
       svn_pool_clear(iterpool);
-      dst_rel = svn_uri_is_child(top_dst_url,
-                                 pair->dst_abspath_or_url,
-                                 iterpool);
+      dst_rel = svn_uri__is_child(top_dst_url,
+                                  pair->dst_abspath_or_url,
+                                  iterpool);
       SVN_ERR(svn_ra_check_path(ra_session, dst_rel, SVN_INVALID_REVNUM,
                                 &dst_kind, iterpool));
       if (dst_kind != svn_node_none)

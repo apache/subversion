@@ -568,9 +568,9 @@ svn_dirent_get_absolute(const char **pabsolute,
  * @since New in 1.7.
  */
 const char *
-svn_uri_is_child(const char *parent_uri,
-                 const char *child_uri,
-                 apr_pool_t *pool);
+svn_uri__is_child(const char *parent_uri,
+                  const char *child_uri,
+                  apr_pool_t *pool);
 
 /**
  * This function is similar to svn_uri_is_child(), except that it supports
@@ -593,9 +593,9 @@ svn_dirent_is_child(const char *parent_dirent,
  * @since New in 1.7.
  */
 const char *
-svn_relpath_is_child(const char *parent_relpath,
-                     const char *child_relpath,
-                     apr_pool_t *pool);
+svn_relpath__is_child(const char *parent_relpath,
+                      const char *child_relpath,
+                      apr_pool_t *pool);
 
 /** Return TRUE if @a parent_dirent is an ancestor of @a child_dirent or
  * the dirents are equal, and FALSE otherwise.

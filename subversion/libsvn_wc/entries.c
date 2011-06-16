@@ -1704,9 +1704,9 @@ write_entry(struct write_baton **entry_node,
           const char *relpath;
 
           working_node->repos_id = repos_id;
-          relpath = svn_uri_is_child(this_dir->repos,
-                                              entry->copyfrom_url,
-                                              result_pool);
+          relpath = svn_uri__is_child(this_dir->repos,
+                                      entry->copyfrom_url,
+                                      result_pool);
           if (relpath == NULL)
             working_node->repos_relpath = "";
           else
@@ -1938,16 +1938,16 @@ write_entry(struct write_baton **entry_node,
 
           if (entry->url != NULL)
             {
-              const char *relpath = svn_uri_is_child(this_dir->repos,
-                                                     entry->url,
-                                                     result_pool);
+              const char *relpath = svn_uri__is_child(this_dir->repos,
+                                                      entry->url,
+                                                      result_pool);
               base_node->repos_relpath = relpath ? relpath : "";
             }
           else
             {
-              const char *relpath = svn_uri_is_child(this_dir->repos,
-                                                     this_dir->url,
-                                                     scratch_pool);
+              const char *relpath = svn_uri__is_child(this_dir->repos,
+                                                      this_dir->url,
+                                                      scratch_pool);
               if (relpath == NULL)
                 base_node->repos_relpath = entry->name;
               else
