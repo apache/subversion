@@ -276,23 +276,18 @@ switch_dir_external(const char *local_abspath,
   {
     const char *repos_root_url;
     const char *repos_uuid;
-    const char *repos_relpath;
 
     SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url,
                                         &repos_uuid,
                                         ctx->wc_ctx, local_abspath,
                                         pool, pool));
 
-    SVN_ERR(svn_wc__node_get_repos_relpath(&repos_relpath,
-                                           ctx->wc_ctx,
-                                           local_abspath,
-                                           pool, pool));
-
     SVN_ERR(svn_wc__external_register(ctx->wc_ctx,
                                       defining_abspath,
                                       local_abspath, svn_node_dir,
                                       repos_root_url, repos_uuid,
-                                      repos_relpath,
+                                      svn_uri_skip_ancestor(repos_root_url,
+                                                            url, pool),
                                       SVN_INVALID_REVNUM,
                                       SVN_INVALID_REVNUM,
                                       pool));
@@ -1171,6 +1166,7 @@ svn_client__export_externals(apr_hash_t *externals,
                              const char *repos_root_url,
                              svn_depth_t requested_depth,
                              const char *native_eol,
+                             svn_boolean_t ignore_keywords,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *scratch_pool)
@@ -1235,10 +1231,11 @@ svn_client__export_externals(apr_hash_t *externals,
 
           SVN_ERR(wrap_external_error(
                           &eb, item_abspath,
-                          svn_client_export4(NULL, new_url, item_abspath,
+                          svn_client_export5(NULL, new_url, item_abspath,
                                              &item->peg_revision,
                                              &item->revision,
-                                             TRUE, FALSE, svn_depth_infinity,
+                                             TRUE, FALSE, ignore_keywords,
+                                             svn_depth_infinity,
                                              native_eol,
                                              ctx, sub_iterpool),
                           sub_iterpool));
