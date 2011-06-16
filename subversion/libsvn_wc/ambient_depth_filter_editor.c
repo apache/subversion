@@ -174,30 +174,25 @@ make_dir_baton(struct dir_baton **d_p,
   /* Okay, no easy out, so allocate and initialize a dir baton. */
   d = apr_pcalloc(pool, sizeof(*d));
 
-  d->abspath = apr_pstrdup(pool, eb->anchor_abspath);
   if (path)
-    d->abspath = svn_dirent_join(d->abspath, path, pool);
+    d->abspath = svn_dirent_join(eb->anchor_abspath, path, pool);
+  else
+    d->abspath = apr_pstrdup(pool, eb->anchor_abspath);
 
   /* The svn_depth_unknown means that: 1) pb is the anchor; 2) there
      is an non-null target, for which we are preparing the baton.
      This enables explicitly pull in the target. */
   if (pb && pb->ambient_depth != svn_depth_unknown)
     {
-      const char *abspath;
       svn_boolean_t exclude;
       svn_wc__db_status_t status;
       svn_wc__db_kind_t kind;
       svn_boolean_t exists = TRUE;
 
-      abspath = svn_dirent_join(eb->anchor_abspath,
-                                svn_dirent_skip_ancestor(eb->anchor_abspath,
-                                                         path),
-                                pool);
-
       if (!added)
         {
           SVN_ERR(ambient_read_info(&status, &kind, NULL,
-                                    eb->db, abspath, pool));
+                                    eb->db, d->abspath, pool));
         }
       else
         {
@@ -263,10 +258,7 @@ make_file_baton(struct file_baton **f_p,
       return SVN_NO_ERROR;
     }
 
-  abspath = svn_dirent_join(eb->anchor_abspath,
-                            svn_dirent_skip_ancestor(eb->anchor_abspath,
-                                                     path),
-                            pool);
+  abspath = svn_dirent_join(eb->anchor_abspath, path, pool);
 
   if (!added)
     {
@@ -392,10 +384,7 @@ delete_entry(const char *path,
       svn_wc__db_status_t status;
       const char *abspath;
 
-      abspath = svn_dirent_join(eb->anchor_abspath,
-                                svn_dirent_skip_ancestor(eb->anchor_abspath,
-                                                         path),
-                                pool);
+      abspath = svn_dirent_join(eb->anchor_abspath, path, pool);
 
       SVN_ERR(ambient_read_info(&status, &kind, NULL,
                                 eb->db, abspath, pool));
@@ -486,11 +475,7 @@ open_directory(const char *path,
      flush the logs of pb's directory, which might be important for
      this svn_wc_entry call. */
 
-  local_abspath = svn_dirent_join(eb->anchor_abspath,
-                                  svn_dirent_skip_ancestor(eb->anchor_abspath,
-                                                           path),
-                                  pool);
-
+  local_abspath = svn_dirent_join(eb->anchor_abspath, path, pool);
 
   SVN_ERR(ambient_read_info(&status, &kind, &depth,
                             eb->db, local_abspath, pool));
