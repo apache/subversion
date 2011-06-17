@@ -393,6 +393,8 @@ assemble_status(svn_wc_status3_t **status,
   svn_error_t *err;
   const char *repos_relpath;
   const char *repos_root_url;
+  svn_filesize_t filesize =
+    (dirent && (dirent->kind == svn_node_file)) ? dirent->filesize : -1;
 
   /* Defaults for two main variables. */
   enum svn_wc_status_kind node_status = svn_wc_status_normal;
@@ -644,6 +646,7 @@ assemble_status(svn_wc_status3_t **status,
         stat->kind = svn_node_unknown;
     }
   stat->depth = info->depth;
+  stat->filesize = filesize;
   stat->node_status = node_status;
   stat->text_status = text_status;
   stat->prop_status = prop_status;
@@ -729,6 +732,7 @@ assemble_unversioned(svn_wc_status3_t **status,
   /*stat->versioned = FALSE;*/
   stat->kind = svn_node_unknown; /* not versioned */
   stat->depth = svn_depth_unknown;
+  stat->filesize = -1;
   stat->node_status = svn_wc_status_none;
   stat->text_status = svn_wc_status_none;
   stat->prop_status = svn_wc_status_none;
