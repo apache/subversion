@@ -1973,6 +1973,39 @@ def merge_sensitive_log_ignores_cyclic_merges(sbox):
   log_chain = parse_log_output(out)
   check_merge_results(log_chain, expected_merges)
 
+#----------------------------------------------------------------------
+@Issue(3931)
+@XFail()
+def log_with_unrelated_peg_and_operative_revs(sbox):
+  "log with unrelated peg and operative rev targets"
+
+  guarantee_repos_and_wc(sbox)
+
+  target = sbox.repo_url + '/A/D/G/rho@2'
+
+  # log for /A/D/G/rho, deleted in revision 5, recreated in revision 8
+  expected_error = ".*File not found.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'log', '-r', '6:7', target)
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'log', '-r', '7:6', target)
+
+  expected_error = ".*Unable to find repository location for.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'log', '-r', '2:9', target)
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'log', '-r', '9:2', target)
+
+  # Currently this test fails because instead of returning the expected
+  # 'Unable to find repository location for ^/A/D/G/rho in revision 9'
+  # error, the log for ^/A/D/G/rho@8 is returned, but that is an unrelated
+  # line of history.
+  expected_error = ".*File not found.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'log', '-r', '2:HEAD', target)
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'log', '-r', 'HEAD:2', target)
+
 ########################################################################
 # Run the tests
 
@@ -2010,6 +2043,7 @@ test_list = [ None,
               log_of_local_copy,
               merge_sensitive_log_reverse_merges,
               merge_sensitive_log_ignores_cyclic_merges,
+              log_with_unrelated_peg_and_operative_revs,
              ]
 
 if __name__ == '__main__':
