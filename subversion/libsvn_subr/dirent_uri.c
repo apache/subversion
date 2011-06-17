@@ -819,43 +819,6 @@ is_child(path_type_t type, const char *path1, const char *path2,
   return NULL;
 }
 
-/* FIXME: no doc string */
-static svn_boolean_t
-is_ancestor(path_type_t type, const char *path1, const char *path2)
-{
-  apr_size_t path1_len;
-
-  /* If path1 is empty and path2 is not absolute, then path1 is an ancestor. */
-  if (SVN_PATH_IS_EMPTY(path1))
-    switch (type)
-     {
-       case type_dirent:
-         return !dirent_is_rooted(path2);
-       case type_relpath:
-         return TRUE;
-       case type_uri:
-         return FALSE;
-       default:
-         return path2[0] != '/';
-     }
-
-  /* If path1 is a prefix of path2, then:
-     - If path1 ends in a path separator,
-     - If the paths are of the same length
-     OR
-     - path2 starts a new path component after the common prefix,
-     then path1 is an ancestor. */
-  path1_len = strlen(path1);
-  if (strncmp(path1, path2, path1_len) == 0)
-    return path1[path1_len - 1] == '/'
-#ifdef SVN_USE_DOS_PATHS
-      || ((type == type_dirent) && path1[path1_len - 1] == ':')
-#endif
-      || (path2[path1_len] == '/' || path2[path1_len] == '\0');
-
-  return FALSE;
-}
-
 
 /**** Public API functions ****/
 
@@ -1434,30 +1397,6 @@ svn_uri__is_child(const char *parent_uri,
   return relpath;
 }
 
-svn_boolean_t
-svn_dirent_is_ancestor(const char *parent_dirent, const char *child_dirent)
-{
-  return is_ancestor(type_dirent, parent_dirent, child_dirent);
-}
-
-svn_boolean_t
-svn_relpath__is_ancestor(const char *parent_relpath, const char *child_relpath)
-{
-  assert(relpath_is_canonical(parent_relpath));
-  assert(relpath_is_canonical(child_relpath));
-
-  return is_ancestor(type_relpath, parent_relpath, child_relpath);
-}
-
-svn_boolean_t
-svn_uri__is_ancestor(const char *parent_uri, const char *child_uri)
-{
-  assert(svn_uri_is_canonical(parent_uri, NULL));
-  assert(svn_uri_is_canonical(child_uri, NULL));
-
-  return is_ancestor(type_uri, parent_uri, child_uri);
-}
-
 const char *
 svn_dirent_skip_ancestor(const char *parent_dirent,
                          const char *child_dirent)
@@ -1536,10 +1475,10 @@ svn_relpath_skip_ancestor(const char *parent_relpath,
 }
 
 
-const char *
-svn_uri_skip_ancestor(const char *parent_uri,
-                      const char *child_uri,
-                      apr_pool_t *result_pool)
+/* */
+static const char *
+uri_skip_ancestor(const char *parent_uri,
+                  const char *child_uri)
 {
   apr_size_t len = strlen(parent_uri);
 
@@ -1553,10 +1492,39 @@ svn_uri_skip_ancestor(const char *parent_uri,
     return ""; /* parent_uri == child_uri */
 
   if (child_uri[len] == '/')
-    return svn_path_uri_decode(child_uri + len + 1, result_pool);
+    return child_uri + len + 1;
 
   return NULL;
 }
+
+const char *
+svn_uri_skip_ancestor(const char *parent_uri,
+                      const char *child_uri,
+                      apr_pool_t *result_pool)
+{
+  const char *result = uri_skip_ancestor(parent_uri, child_uri);
+
+  return result ? svn_path_uri_decode(result, result_pool) : NULL;
+}
+
+svn_boolean_t
+svn_dirent_is_ancestor(const char *parent_dirent, const char *child_dirent)
+{
+  return svn_dirent_skip_ancestor(parent_dirent, child_dirent) != NULL;
+}
+
+svn_boolean_t
+svn_relpath__is_ancestor(const char *parent_relpath, const char *child_relpath)
+{
+  return svn_relpath_skip_ancestor(parent_relpath, child_relpath) != NULL;
+}
+
+svn_boolean_t
+svn_uri__is_ancestor(const char *parent_uri, const char *child_uri)
+{
+  return uri_skip_ancestor(parent_uri, child_uri) != NULL;
+}
+
 
 svn_boolean_t
 svn_dirent_is_absolute(const char *dirent)
