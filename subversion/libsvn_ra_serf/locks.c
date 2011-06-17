@@ -698,7 +698,7 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       const char *req_url, *path, *token;
       const void *key;
       void *val;
-      svn_lock_t *existing_lock;
+      svn_lock_t *existing_lock = NULL;
       struct unlock_context_t unlock_ctx;
       svn_error_t *lock_err = NULL;
 
