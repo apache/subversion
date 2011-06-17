@@ -278,6 +278,7 @@ def roll_tarballs(base_dir, args):
         os.mkdir(get_deploydir(base_dir))
 
     # For now, just delegate to dist.sh to create the actual artifacts
+    extra_args = ''
     if version_extra:
         if version_extra.startswith('alpha'):
             extra_args = '-alpha %s' % version_extra[5:]
@@ -287,8 +288,6 @@ def roll_tarballs(base_dir, args):
             extra_args = '-rc %s' % version_extra[2:]
         elif version_extra.startswith('nightly'):
             extra_args = '-nightly'
-        else:
-            extra_args = ''
     logging.info('Building UNIX tarballs')
     run_script(args.verbose, '%s/dist.sh -v %s -pr %s -r %d %s'
                      % (sys.path[0], version_base, branch, args.revnum,
