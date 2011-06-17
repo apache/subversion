@@ -1362,9 +1362,10 @@ test_dirent_is_ancestor(apr_pool_t *pool)
     { "//srv/shr",       "//srv",         FALSE},
     { "//srv/shr",       "//srv/shr/fld", TRUE },
     { "//srv/s r",       "//srv/s r/fld", TRUE },
-    { "//srv",           "//srv/shr/fld", TRUE },
+    { "//srv",           "//srv/shr/fld", FALSE },
     { "//srv/shr/fld",   "//srv/shr",     FALSE },
     { "//srv/shr/fld",   "//srv2/shr/fld", FALSE },
+    { "X:",              "X:/",           FALSE},
     { "X:/",             "X:/",           TRUE},
     { "X:/foo",          "X:/",           FALSE},
     { "X:/",             "X:/foo",        TRUE},
@@ -1446,7 +1447,7 @@ test_uri_is_ancestor(apr_pool_t *pool)
     { "http://test",    "http://test/foo", TRUE},
     { "http://test",    "file://test/foo", FALSE},
     { "http://test",    "http://testf",    FALSE},
-    { "http://",        "http://test",     TRUE},
+    { "http://",        "http://test",     FALSE},
   };
 
   for (i = 0; i < COUNT_OF(tests); i++)
