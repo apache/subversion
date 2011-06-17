@@ -98,9 +98,9 @@ svn_cl__cleanup(apr_getopt_t *os,
                 err =  svn_error_compose_create(err, err2);
               else
                 err = svn_error_createf(SVN_ERR_WC_LOCKED, err,
-                                        _("Working copy locked; trying running "
+                                        _("Working copy locked; try running "
                                           "'svn cleanup' on the root of the "
-                                          "working copy (%s) instead."),
+                                          "working copy ('%s') instead."),
                                           svn_dirent_local_style(wcroot_abspath,
                                                                  subpool));
             }
