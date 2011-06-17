@@ -805,12 +805,7 @@ get_prop_from_wc(apr_hash_t *props,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  apr_hash_t *changelist_hash = NULL;
   struct recursive_propget_receiver_baton rb;
-
-  if (changelists && changelists->nelts)
-    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists,
-                                       scratch_pool));
 
   /* Technically, svn_depth_unknown just means use whatever depth(s)
      we find in the working copy.  But this is a walk over extant
@@ -824,34 +819,12 @@ get_prop_from_wc(apr_hash_t *props,
   rb.pool = result_pool;
   rb.wc_ctx = ctx->wc_ctx;
 
-  /* Fetch the property, recursively or for a single resource. */
-  if (depth >= svn_depth_files && kind == svn_node_dir)
-    {
-      SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, target_abspath,
-                                          propname, depth, FALSE, pristine,
-                                          changelists,
-                                          recursive_propget_receiver, &rb,
-                                          ctx->cancel_func, ctx->cancel_baton,
-                                          scratch_pool));
-    }
-  else if (svn_wc__changelist_match(ctx->wc_ctx, target_abspath,
-                                    changelist_hash, scratch_pool))
-    {
-      const svn_string_t *propval;
-
-      SVN_ERR(pristine_or_working_propval(&propval, ctx->wc_ctx, target_abspath,
-                                          propname, pristine,
-                                          result_pool, scratch_pool));
-      if (propval)
-        {
-          apr_hash_t *target_props = apr_hash_make(result_pool);
-
-          apr_hash_set(target_props, target_abspath, APR_HASH_KEY_STRING,
-                       propval);
-          SVN_ERR(recursive_propget_receiver(&rb, target_abspath, target_props,
-                                             scratch_pool));      
-        }
-    }
+  SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, target_abspath,
+                                      propname, depth, FALSE, pristine,
+                                      changelists,
+                                      recursive_propget_receiver, &rb,
+                                      ctx->cancel_func, ctx->cancel_baton,
+                                      scratch_pool));
 
   return SVN_NO_ERROR;
 }
