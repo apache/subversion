@@ -23,7 +23,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html>
 <head>
-<title>Subversion @VERSION@ tarballs</title>
+<title>Apache Subversion [version] tarballs</title>
 </head>
 <body style="font-size: 14pt; text-align: justify;
   background-color: #f0f0f0; padding: 0 5%">
@@ -31,7 +31,7 @@
   text-decoration: underline">WARNING</h1>
 
 <p>The code you are about to download is a <i>Release Candidate</i>
-for Subversion @VERSION@.</p>
+for Apache Subversion [version] (r[revnum]).</p>
 
 
 <p>A <i>Release Candidate</i> is exactly what it sounds like: a
@@ -91,7 +91,7 @@ reputation as a packager and Subversion's reputation will suffer --
 but only one will deserve it.</p>
 
 <p>If you want to help us test this distribution of Subversion, you
-can find the files <a href="@DIRNAME@/">here</a>.</p>
+can find the files <a href="[dirname]/">here</a>.</p>
 
 </body>
 </html>

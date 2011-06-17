@@ -45,6 +45,16 @@ import logging
 import subprocess
 import argparse       # standard in Python 2.7
 
+# Find ezt, using Subversion's copy, if there isn't one on the system.
+try:
+    import ezt
+except ImportError:
+    ezt_path = os.path.dirname(os.path.dirname(os.path.abspath(sys.path[0])))
+    ezt_path = os.path.join(ezt_path, 'build', 'generator')
+    sys.path.append(ezt_path)
+
+    import ezt
+
 
 # Our required / recommended versions
 autoconf_ver = '2.68'
@@ -66,6 +76,9 @@ def get_tempdir(base_dir):
 
 def get_deploydir(base_dir):
     return os.path.join(base_dir, 'deploy')
+
+def get_tmpldir():
+    return os.path.join(os.path.abspath(sys.path[0]), 'templates')
 
 def get_nullfile():
     # This is certainly not cross platform
@@ -316,6 +329,39 @@ def roll_tarballs(base_dir, args):
     # And we're done!
 
 
+#----------------------------------------------------------------------
+# Post the candidate release artifacts
+
+def post_candidates(base_dir, args):
+    'Post the generated tarballs to web-accessible directory.'
+    version_base = args.version.split('-')[0]
+    version_extra = args.version.split('-')[1]
+
+    if args.target:
+        target = args.target
+    else:
+        target = os.path.join(os.getenv('HOME'), 'public_html', 'svn',
+                              args.version)
+
+    logging.info('Moving tarballs to %s' % target)
+    if not os.path.exists(target):
+        os.makedirs(target)
+
+    data = { 'version'      : args.version,
+             'revnum'       : 0,
+             'dirname'      : 'deploy',
+           }
+
+    template = ezt.Template(os.path.join(get_tmpldir(), 'rc-candidates.ezt'))
+    template.generate(open(os.path.join(target, 'index.html'), 'w'), data)
+
+    shutil.copytree(get_deploydir(base_dir), os.path.join(target, 'deploy'))
+
+
+
+#----------------------------------------------------------------------
+# Write announcements
+
 def announce(base_dir, args):
     'Write the release announcement.'
 
@@ -362,6 +408,17 @@ def main():
                     help='''The revision number to base the release on.''')
     subparser.add_argument('--branch',
                     help='''The branch to base the release on.''')
+
+    # Setup the parser for the post-candidates subcommand
+    subparser = subparsers.add_parser('post-candidates',
+                    help='''Build the website to host the candidate tarballs.
+                            The default location is somewhere in ~/public_html.
+                            ''')
+    subparser.set_defaults(func=post_candidates)
+    subparser.add_argument('version',
+                    help='''The release label, such as '1.7.0-alpha1'.''')
+    subparser.add_argument('--target',
+                    help='''The full path to the destination.''')
 
     # A meta-target
     subparser = subparsers.add_parser('clean',
