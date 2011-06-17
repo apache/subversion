@@ -1898,20 +1898,17 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
 
 /* Gets the information required to install a pristine file to the working copy
 
-   Set WCROOT_ABSPATH to the working copy root, STATUS to the presence of the
-   node, KIND to the node kind, SHA1_CHECKSUM to the checksum of the node
-   (a valid reference into the pristine store) and PRISTINE_PROPS to the node's
-   pristine properties (to use for installing the file).
+   Set WCROOT_ABSPATH to the working copy root, SHA1_CHECKSUM to the
+   checksum of the node (a valid reference into the pristine store)
+   and PRISTINE_PROPS to the node's pristine properties (to use for
+   installing the file).
 
    If WRI_ABSPATH is not NULL, check for information in the working copy
    identified by WRI_ABSPATH.
    */
 svn_error_t *
 svn_wc__db_read_node_install_info(const char **wcroot_abspath,
-                                  svn_wc__db_status_t *status,
-                                  svn_wc__db_kind_t *kind,
                                   const svn_checksum_t **sha1_checksum,
-                                  const char **target,
                                   apr_hash_t **pristine_props,
                                   apr_time_t *changed_date,
                                   svn_wc__db_t *db,

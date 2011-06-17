@@ -653,8 +653,8 @@ run_file_install(svn_wc__db_t *db,
   SVN_ERR(svn_skel__parse_int(&val, arg1->next->next, scratch_pool));
   record_fileinfo = (val != 0);
 
-  SVN_ERR(svn_wc__db_read_node_install_info(&wcroot_abspath, NULL, NULL,
-                                            &checksum, NULL, &props,
+  SVN_ERR(svn_wc__db_read_node_install_info(&wcroot_abspath,
+                                            &checksum, &props,
                                             &changed_date,
                                             db, local_abspath, wri_abspath,
                                             scratch_pool, scratch_pool));
