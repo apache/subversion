@@ -7133,10 +7133,7 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
 
 svn_error_t *
 svn_wc__db_read_node_install_info(const char **wcroot_abspath,
-                                  svn_wc__db_status_t *status,
-                                  svn_wc__db_kind_t *kind,
                                   const svn_checksum_t **sha1_checksum,
-                                  const char **target,
                                   apr_hash_t **pristine_props,
                                   apr_time_t *changed_date,
                                   svn_wc__db_t *db,
@@ -7185,25 +7182,8 @@ svn_wc__db_read_node_install_info(const char **wcroot_abspath,
 
   if (have_row)
     {
-      svn_wc__db_status_t db_status;
-
-      apr_int64_t op_depth = svn_sqlite__column_int64(stmt, 0);
-      db_status = svn_sqlite__column_token(stmt, 3, presence_map);
-
-      if (op_depth > 0)
-         err = convert_to_working_status(&db_status, db_status);
-
-      if (status)
-        *status = db_status;
-
-      if (kind)
-        *kind = svn_sqlite__column_token(stmt, 4, kind_map);
-
       if (!err && sha1_checksum)
         err = svn_sqlite__column_checksum(sha1_checksum, stmt, 6, result_pool);
-
-      if (target)
-        *target = svn_sqlite__column_text(stmt, 12, result_pool);
 
       if (!err && pristine_props)
         err = svn_sqlite__column_properties(pristine_props, stmt, 14,
