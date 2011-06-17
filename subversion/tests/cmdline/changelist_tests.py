@@ -616,7 +616,7 @@ def diff_with_changelists(sbox):
 #----------------------------------------------------------------------
 
 def propmods_with_changelists(sbox):
-  "propset/del/get --changelist"
+  "propset/del/get/list --changelist"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -637,6 +637,16 @@ def propmods_with_changelists(sbox):
   actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
   svntest.tree.compare_trees("disk", actual_disk_tree,
                              expected_disk.old_tree())
+
+  # Proplist the 'i' changelist
+  exit_code, output, errput = svntest.main.run_svn(None, "proplist", "--depth",
+                                                   "infinity", "--changelist",
+                                                   "i", wc_dir)
+  ### Really simple sanity check on the output of 'proplist'.  If we've got
+  ### a proper proplist content checker anywhere, we should probably use it
+  ### instead.
+  if len(output) != 6:
+    raise svntest.Failure
 
   # Remove the 'name' property from files in the 'o' and 'i' changelists.
   svntest.main.run_svn(None, "pdel", "--depth", "infinity",
