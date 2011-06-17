@@ -766,6 +766,8 @@ typedef svn_error_t *(*svn_wc__proplist_receiver_t)(void *baton,
  *
  * If a node has no properties, @a receiver_func is not called for the node.
  *
+ * If @a changelists are non-NULL and non-empty, filter by them.
+ *
  * Use @a wc_ctx to access the working copy, and @a scratch_pool for
  * temporary allocations.
  *
@@ -781,6 +783,7 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             svn_depth_t depth,
                             svn_boolean_t base_props,
                             svn_boolean_t pristine,
+                            const apr_array_header_t *changelists,
                             svn_wc__proplist_receiver_t receiver_func,
                             void *receiver_baton,
                             svn_cancel_func_t cancel_func,

@@ -7370,6 +7370,7 @@ typedef struct cache_props_baton_t
   svn_depth_t depth;
   svn_boolean_t base_props;
   svn_boolean_t pristine;
+  const apr_array_header_t *changelists;
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
 } cache_props_baton_t;
@@ -7385,8 +7386,8 @@ cache_props_recursive(void *cb_baton,
   svn_sqlite__stmt_t *stmt;
   int stmt_idx;
 
-  SVN_ERR(populate_targets_tree(wcroot, local_relpath, baton->depth, NULL,
-                                scratch_pool));
+  SVN_ERR(populate_targets_tree(wcroot, local_relpath, baton->depth,
+                                baton->changelists, scratch_pool));
 
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_CREATE_NODE_PROPS_CACHE));
@@ -7424,6 +7425,7 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
                                 svn_depth_t depth,
                                 svn_boolean_t base_props,
                                 svn_boolean_t pristine,
+                                const apr_array_header_t *changelists,
                                 svn_wc__proplist_receiver_t receiver_func,
                                 void *receiver_baton,
                                 svn_cancel_func_t cancel_func,
@@ -7451,8 +7453,10 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
   baton.depth = depth;
   baton.base_props = base_props;
   baton.pristine = pristine;
+  baton.changelists = changelists;
   baton.cancel_func = cancel_func;
   baton.cancel_baton = cancel_baton;
+
   SVN_ERR(with_finalization(wcroot, local_relpath,
                             cache_props_recursive, &baton,
                             NULL, NULL,

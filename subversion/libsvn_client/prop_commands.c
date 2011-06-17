@@ -756,7 +756,6 @@ struct recursive_propget_receiver_baton
 {
   apr_hash_t *props; /* Hash to collect props. */
   apr_pool_t *pool; /* Pool to allocate additions to PROPS. */
-  apr_hash_t *changelist_hash; /* Keys are changelists to filter on. */
   svn_wc_context_t *wc_ctx;  /* Working copy context. */
 };
 
@@ -768,11 +767,6 @@ recursive_propget_receiver(void *baton,
                            apr_pool_t *scratch_pool)
 {
   struct recursive_propget_receiver_baton *b = baton;
-
-  /* If the node doesn't pass changelist filtering, get outta here. */
-  if (! svn_wc__changelist_match(b->wc_ctx, local_abspath,
-                                 b->changelist_hash, scratch_pool))
-    return SVN_NO_ERROR;
 
   if (apr_hash_count(props))
     {
@@ -829,13 +823,13 @@ get_prop_from_wc(apr_hash_t *props,
   rb.props = props;
   rb.pool = result_pool;
   rb.wc_ctx = ctx->wc_ctx;
-  rb.changelist_hash = changelist_hash;
 
   /* Fetch the property, recursively or for a single resource. */
   if (depth >= svn_depth_files && kind == svn_node_dir)
     {
       SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, target_abspath,
                                           propname, depth, FALSE, pristine,
+                                          changelists,
                                           recursive_propget_receiver, &rb,
                                           ctx->cancel_func, ctx->cancel_baton,
                                           scratch_pool));
@@ -1126,7 +1120,6 @@ remote_proplist(const char *target_prefix,
 /* Baton for recursive_proplist_receiver(). */
 struct recursive_proplist_receiver_baton
 {
-  apr_hash_t *changelist_hash; /* Keys are changelists to filter on. */
   svn_wc_context_t *wc_ctx;  /* Working copy context. */
   svn_proplist_receiver_t wrapped_receiver;  /* Proplist receiver to call. */
   void *wrapped_receiver_baton;    /* Baton for the proplist receiver. */
@@ -1145,11 +1138,6 @@ recursive_proplist_receiver(void *baton,
 {
   struct recursive_proplist_receiver_baton *b = baton;
   const char *path;
-
-  /* If the node doesn't pass changelist filtering, get outta here. */
-  if (! svn_wc__changelist_match(b->wc_ctx, local_abspath,
-                                 b->changelist_hash, scratch_pool))
-    return SVN_NO_ERROR;
 
   /* Attempt to convert absolute paths to relative paths for
    * presentation purposes, if needed. */
@@ -1224,7 +1212,6 @@ svn_client_proplist3(const char *path_or_url,
           struct recursive_proplist_receiver_baton rb;
 
           rb.wc_ctx = ctx->wc_ctx;
-          rb.changelist_hash = changelist_hash;
           rb.wrapped_receiver = receiver;
           rb.wrapped_receiver_baton = receiver_baton;
 
@@ -1241,7 +1228,7 @@ svn_client_proplist3(const char *path_or_url,
 
           SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, local_abspath, NULL,
                                               depth,
-                                              FALSE, pristine,
+                                              FALSE, pristine, changelists,
                                               recursive_proplist_receiver, &rb,
                                               ctx->cancel_func,
                                               ctx->cancel_baton, pool));

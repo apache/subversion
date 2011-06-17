@@ -1838,6 +1838,7 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             svn_depth_t depth,
                             svn_boolean_t base_props,
                             svn_boolean_t pristine,
+                            const apr_array_header_t *changelists,
                             svn_wc__proplist_receiver_t receiver_func,
                             void *receiver_baton,
                             svn_cancel_func_t cancel_func,
@@ -1862,6 +1863,15 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
     case svn_depth_empty:
       {
         apr_hash_t *props;
+        apr_hash_t *changelist_hash = NULL;
+
+        if (changelists && changelists->nelts)
+          SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
+                                             changelists, scratch_pool));
+
+        if (!svn_wc__internal_changelist_match(wc_ctx->db, local_abspath,
+                                               changelist_hash, scratch_pool))
+          break; 
 
         if (pristine)
           SVN_ERR(svn_wc__db_read_pristine_props(&props, wc_ctx->db,
@@ -1881,7 +1891,7 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
       {
         SVN_ERR(svn_wc__db_read_props_streamily(wc_ctx->db, local_abspath,
                                                 depth, base_props, pristine,
-                                                receiver, baton,
+                                                changelists, receiver, baton,
                                                 cancel_func, cancel_baton,
                                                 scratch_pool));
       }
