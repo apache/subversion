@@ -352,7 +352,16 @@ def post_candidates(base_dir, args):
              'dirname'      : 'deploy',
            }
 
-    template = ezt.Template(os.path.join(get_tmpldir(), 'rc-candidates.ezt'))
+    # Choose the right template text
+    if version_extra:
+        if version_extra.startswith('nightly')
+            template_filename = 'nightly-candidates.ezt'
+        else:
+            template_filename = 'rc-candidates.ezt'
+    else:
+        template_filename = 'stable-candidates.ezt'
+
+    template = ezt.Template(os.path.join(get_tmpldir(), template_filename))
     template.generate(open(os.path.join(target, 'index.html'), 'w'), data)
 
     shutil.copytree(get_deploydir(base_dir), os.path.join(target, 'deploy'))
