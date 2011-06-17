@@ -318,6 +318,10 @@ struct dir_baton
      and reinstall it. */
   apr_hash_t *deletion_conflicts;
 
+  /* A hash of file names (only the hash key matters) seen by add_file
+     and not yet added to the database by close_file. */
+  apr_hash_t *not_present_files;
+
   /* Set if an unversioned dir of the same name already existed in
      this directory. */
   svn_boolean_t obstruction_found;
@@ -604,6 +608,7 @@ make_dir_baton(struct dir_baton **d_p,
   d->old_revision = SVN_INVALID_REVNUM;
   d->adding_dir   = adding;
   d->changed_rev  = SVN_INVALID_REVNUM;
+  d->not_present_files = apr_hash_make(dir_pool);
 
   /* Copy some flags from the parent baton */
   if (pb)
@@ -2643,6 +2648,41 @@ close_directory(void *dir_baton,
       }
   }
 
+  if (apr_hash_count(db->not_present_files))
+    {
+      apr_hash_index_t *hi;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+      /* This should call some new function (which could also be used
+         for new_children above) to add all the names in single
+         transaction, but I can't even trigger it.  I've tried
+         ra_local, ra_svn, ra_neon, ra_serf and they all call
+         close_file before close_dir. */
+      for (hi = apr_hash_first(scratch_pool, db->not_present_files);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *child = svn__apr_hash_index_key(hi);
+          const char *child_abspath, *child_relpath;
+
+          svn_pool_clear(iterpool);
+
+          child_abspath = svn_dirent_join(db->local_abspath, child, iterpool);
+          child_relpath = svn_dirent_join(db->new_relpath, child, iterpool);
+
+          SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db,
+                                                       child_abspath,
+                                                       child_relpath,
+                                                       eb->repos_root,
+                                                       eb->repos_uuid,
+                                                       *eb->target_revision,
+                                                       svn_wc__db_kind_file,
+                                                       NULL, NULL,
+                                                       iterpool));
+        }
+      svn_pool_destroy(iterpool);
+    }
+
   /* If this directory is merely an anchor for a targeted child, then we
      should not be updating the node at all.  */
   if (db->parent_baton == NULL
@@ -2957,17 +2997,9 @@ add_file(const char *path,
 
          The only thing we can do is add a not-present node, to allow
          a future update to bring in the new files when the problem is
-         resolved.  Note that svn_wc__db_base_add_not_present_node()
-         explicitly adds the node into the parent's node database. */
-
-      SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db, fb->local_abspath,
-                                                   fb->new_relpath,
-                                                   eb->repos_root,
-                                                   eb->repos_uuid,
-                                                   *eb->target_revision,
-                                                   svn_wc__db_kind_file,
-                                                   NULL, NULL,
-                                                   pool));
+         resolved. */
+      apr_hash_set(pb->not_present_files, apr_pstrdup(pb->pool, fb->name),
+                   APR_HASH_KEY_STRING, (void*)1);
 
       remember_skipped_tree(eb, fb->local_abspath, pool);
       fb->skip_this = TRUE;
@@ -3061,14 +3093,8 @@ add_file(const char *path,
          Note that we can safely assume that no present base node exists,
          because then we would not have received an add_file.
        */
-      SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db, fb->local_abspath,
-                                                   fb->new_relpath,
-                                                   eb->repos_root,
-                                                   eb->repos_uuid,
-                                                   *eb->target_revision,
-                                                   svn_wc__db_kind_file,
-                                                   NULL, NULL,
-                                                   pool));
+      apr_hash_set(pb->not_present_files, apr_pstrdup(pb->pool, fb->name),
+                   APR_HASH_KEY_STRING, (void*)1);
 
       do_notification(eb, fb->local_abspath, svn_node_unknown,
                       svn_wc_notify_skip, scratch_pool);
@@ -3168,14 +3194,8 @@ add_file(const char *path,
       || *eb->target_basename == '\0'
       || (strcmp(fb->local_abspath, eb->target_abspath) != 0))
     {
-      SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db, fb->local_abspath,
-                                                   fb->new_relpath,
-                                                   eb->repos_root,
-                                                   eb->repos_uuid,
-                                                   *eb->target_revision,
-                                                   svn_wc__db_kind_file,
-                                                   NULL, NULL,
-                                                   pool));
+      apr_hash_set(pb->not_present_files, apr_pstrdup(pb->pool, fb->name),
+                   APR_HASH_KEY_STRING, (void*)1);
     }
 
   if (tree_conflict != NULL)
@@ -4252,6 +4272,9 @@ close_file(void *file_baton,
       SVN_ERR(svn_wc__db_temp_op_remove_working(eb->db, fb->local_abspath,
                                                 scratch_pool));
     }
+
+  apr_hash_set(fb->dir_baton->not_present_files, fb->name,
+               APR_HASH_KEY_STRING, NULL);
 
   /* Send a notification to the callback function.  (Skip notifications
      about files which were already notified for another reason.) */
