@@ -591,21 +591,24 @@ struct svn_ra_serf__xml_parser_t {
   /* If an error occurred, this value will be non-NULL. */
   svn_error_t *error;
 
-  /* If "pausing" is to be allowed, then this must refer to the connection's
-     bucket allocator. It will be used to hold content in memory, then
-     return it once it has been consumed.
+  /* Deciding whether to pause, or not, is performed within the parsing
+     callbacks. If a callback decides to set this flag, then the loop
+     driving the parse (generally, a series of calls to serf_context_run())
+     is going to need to coordinate the un-pausing of the parser by
+     processing pending content. Thus, deciding to pause the parser is a
+     coordinate effort rather than merely setting this flag.
 
-     NOTE: if this field is NULL, then pausing is NOT allowed.  */
-  serf_bucket_alloc_t *pause_alloc;
+     When an XML parsing callback sets this flag, note that additional
+     elements may be parsed (as the current buffer is consumed). At some
+     point, the flag will be recognized and arriving network content will
+     be stashed away in the PENDING structure (see below).
 
-  /* If pausing is allowed, then callbacks can set this value to pause
-     the XML parsing. Note that additional elements may be parsed once
-     this value is set (as the current buffer is consumed; no further
-     buffers will be parsed until PAUSED is cleared).
+     At some point, the controlling loop should clear this value. The
+     underlying network processing will note the change and begin passing
+     content into the XML callbacks.
 
-     At some point, the callbacks should clear this value. The main
-     serf_context_run() loop will notice the change and resume delivery
-     of content to the XML parser.  */
+     Note that the controlling loop should also process pending content
+     since the arriving network content will typically finish first.  */
   svn_boolean_t paused;
 
   /* While the XML parser is paused, content arriving from the server
@@ -771,6 +774,12 @@ svn_ra_serf__xml_push_state(svn_ra_serf__xml_parser_t *parser,
  */
 void
 svn_ra_serf__xml_pop_state(svn_ra_serf__xml_parser_t *parser);
+
+
+svn_error_t *
+svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
+                             apr_pool_t *scratch_pool);
+
 
 /*
  * Add the appropriate serf buckets to @a agg_bucket represented by

@@ -61,7 +61,8 @@
 struct pending_buffer_t {
   apr_size_t size;
   char data[PARSE_CHUNK_SIZE];
-  struct pending_memnode_t *next;
+
+  struct pending_buffer_t *next;
 };
 
 
@@ -76,6 +77,10 @@ struct svn_ra_serf__pending_t {
      to the overall list.  */
   struct pending_buffer_t *head;
   struct pending_buffer_t *tail;
+
+  /* Available blocks for storing pending data. These were allocated
+     previously, then the data consumed and returned to this list.  */
+  struct pending_buffer_t *avail;
 
   /* Once MEMORY_SIZE exceeds SPILL_SIZE, then arriving content will be
      appended to the (temporary) file indicated by SPILL.  */
@@ -1211,6 +1216,85 @@ add_done_item(svn_ra_serf__xml_parser_t *ctx)
 
 
 static svn_error_t *
+write_to_pending(svn_ra_serf__xml_parser_t *ctx,
+                 const char *data,
+                 apr_size_t len,
+                 apr_pool_t *scratch_pool)
+{
+  struct pending_buffer_t *pb;
+
+  /* The caller should not have provided us more than we can store into
+     a single memory block.  */
+  SVN_ERR_ASSERT(len <= PARSE_CHUNK_SIZE);
+
+  if (ctx->pending == NULL)
+    ctx->pending = apr_pcalloc(ctx->pool, sizeof(*ctx->pending));
+
+  /* We do not (yet) have a spill file, but the amount stored in memory
+     has grown too large. Create the file and place the pending data into
+     the temporary file.  */
+  if (ctx->pending->spill == NULL
+      && ctx->pending->memory_size > SPILL_SIZE)
+    {
+      SVN_ERR(svn_io_open_unique_file3(&ctx->pending->spill,
+                                       NULL /* temp_path */,
+                                       NULL /* dirpath */,
+                                       svn_io_file_del_on_pool_cleanup,
+                                       ctx->pool, scratch_pool));
+    }
+
+  /* Once a spill file has been constructed, then we need to put all
+     arriving data into the file. We will no longer attempt to hold it
+     in memory.  */
+  if (ctx->pending->spill != NULL)
+    {
+      /* NOTE: we assume the file position is at the END. The caller should
+         ensure this, so that we will append.  */
+      SVN_ERR(svn_io_file_write_full(ctx->pending->spill, data, len,
+                                     NULL, scratch_pool));
+    }
+
+  /* We're still within bounds of holding the pending information in
+     memory. Get a buffer (already available, or alloc it), copy the data
+     there, and link it into our pending data.  */
+  if (ctx->pending->avail != NULL)
+    {
+      pb = ctx->pending->avail;
+      ctx->pending->avail = pb->next;
+    }
+  else
+    {
+      pb = apr_palloc(ctx->pool, sizeof(*pb));
+    }
+  /* NOTE: *pb is uninitialized. All fields must be stored.  */
+
+  pb->size = len;
+  memcpy(pb->data, data, len);
+  pb->next = NULL;
+
+  /* Start a list of buffers, or append to the end of the linked list
+     of buffers.  */
+  if (ctx->pending->tail == NULL)
+    {
+      ctx->pending->head = pb;
+      ctx->pending->tail = pb;
+    }
+  else
+    {
+      ctx->pending->tail->next = pb;
+      ctx->pending->tail = pb;
+    }
+
+  /* We need to record how much is buffered in memory. Once we reach
+     SPILL_SIZE (or thereabouts, it doesn't have to be precise), then
+     we'll switch to putting the content into a file.  */
+  ctx->pending->memory_size += len;
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 inject_to_parser(svn_ra_serf__xml_parser_t *ctx,
                  const char *data,
                  apr_size_t len,
@@ -1220,12 +1304,63 @@ inject_to_parser(svn_ra_serf__xml_parser_t *ctx,
 
   xml_status = XML_Parse(ctx->xmlp, data, len, 0);
   if (xml_status == XML_STATUS_ERROR && !ctx->ignore_errors)
-    return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                             _("XML parsing failed: (%d %s)"),
-                             sl->code, sl->reason);
+    {
+      if (sl == NULL)
+        return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                 _("XML parsing failed"));
+
+      return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                               _("XML parsing failed: (%d %s)"),
+                               sl->code, sl->reason);
+    }
 
   if (ctx->error && !ctx->ignore_errors)
     return svn_error_return(ctx->error);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
+                             apr_pool_t *scratch_pool)
+{
+  /* Fast path exit: already paused, or nothing to do.  */
+  if (parser->paused || parser->pending == NULL)
+    return SVN_NO_ERROR;
+
+  /* Empty out memory buffers until we run out, or we get paused again.  */
+  while (parser->pending->head != NULL)
+    {
+      struct pending_buffer_t *pb = parser->pending->head;
+      svn_error_t *err;
+
+      if (parser->pending->tail == pb)
+        parser->pending->head = parser->pending->tail = NULL;
+      else
+        parser->pending->head = pb->next;
+      parser->pending->memory_size -= pb->size;
+
+      err = inject_to_parser(parser, pb->data, pb->size, NULL);
+
+      /* Return the block to the "available" list.  */
+      pb->next = parser->pending->avail;
+      parser->pending->avail = pb;
+
+      if (err)
+        return svn_error_return(err);
+
+      /* If the callbacks paused us, then we're done for now.  */
+      if (parser->paused)
+        return SVN_NO_ERROR;
+    }
+
+  /* If we don't have a spill file, then we've exhausted all
+     pending content.  */
+  if (parser->pending->spill == NULL)
+    return SVN_NO_ERROR;
+
+  /* ### read the spill file...  */
 
   return SVN_NO_ERROR;
 }
