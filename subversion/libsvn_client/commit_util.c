@@ -1736,6 +1736,7 @@ svn_client__do_commit(const char *base_url,
       const svn_checksum_t *new_text_base_md5_checksum;
       const svn_checksum_t *new_text_base_sha1_checksum;
       svn_boolean_t fulltext = FALSE;
+      svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
@@ -1759,11 +1760,19 @@ svn_client__do_commit(const char *base_url,
           && ! (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY))
         fulltext = TRUE;
 
-      SVN_ERR(svn_wc_transmit_text_deltas3(&new_text_base_md5_checksum,
-                                           &new_text_base_sha1_checksum,
-                                           ctx->wc_ctx, item->path,
-                                           fulltext, editor, mod->file_baton,
-                                           result_pool, iterpool));
+      err = svn_wc_transmit_text_deltas3(&new_text_base_md5_checksum,
+                                         &new_text_base_sha1_checksum,
+                                         ctx->wc_ctx, item->path,
+                                         fulltext, editor, mod->file_baton,
+                                         result_pool, iterpool);
+
+      if (err)
+        return svn_error_return(fixup_out_of_date_error(item->path,
+                                                        base_url,
+                                                        item->session_relpath,
+                                                        svn_node_file,
+                                                        err, ctx, iterpool));
+
       if (md5_checksums)
         apr_hash_set(*md5_checksums, item->path, APR_HASH_KEY_STRING,
                      new_text_base_md5_checksum);
