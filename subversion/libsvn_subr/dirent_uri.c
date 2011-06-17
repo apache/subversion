@@ -500,9 +500,8 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
              Note: normally the share name is treated as case insensitive too,
              but it seems to be possible to configure Samba to treat those as
              case sensitive, so better leave that alone. */
-          dst = canon + 2;
-          while (*dst && *dst != '/')
-            *(dst++) = canonicalize_to_lower(*dst);
+          for (dst = canon + 2; *dst && *dst != '/'; dst++)
+            *dst = canonicalize_to_lower(*dst);
         }
     }
 #endif /* SVN_USE_DOS_PATHS */
