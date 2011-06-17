@@ -2064,10 +2064,6 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
 /**
  * Structure for holding the "status" of a working copy item.
  *
- * The item's entry data is in @a entry, augmented and possibly shadowed
- * by the other fields.  @a entry is @c NULL if this item is not under
- * version control.
- *
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, to preserve binary compatibility, users
  * should not directly allocate structures of this type.
