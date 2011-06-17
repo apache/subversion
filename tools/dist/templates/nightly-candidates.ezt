@@ -1,30 +1,29 @@
-#!/usr/bin/env python
-#
-#
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
-#
+<!--
 
-webpagetext = '''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing,
+ software distributed under the License is distributed on an
+ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ KIND, either express or implied.  See the License for the
+ specific language governing permissions and limitations
+ under the License.
+
+-->
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html>
 <head>
-<title>Subversion nightly tarballs (r%d)</title>
+<title>Subversion nightly tarballs (r[revnum])</title>
 </head>
 <body style="font-size: 14pt; text-align: justify;
   background-color: #f0f0f0; padding: 0 5%%">
@@ -32,7 +31,7 @@ webpagetext = '''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
   text-decoration: underline">WARNING</h1>
 
 <p>The code you are about to download is an <i>automatically generated</i>
-nightly release of Subversion (r%d).</p>
+nightly release of Subversion (r[revnum]).</p>
 
 <p>This distribution is automatically generated from the latest sources from
 <a href="http://svn.apache.org/repos/asf/subversion/trunk/">Subversion trunk</a>.
@@ -60,11 +59,7 @@ made available to users who rely on their operating system distro's
 packages.</p>
 
 <p>If you want to help us test this distribution of Subversion, you
-can find the files <a href="dist/">here</a>.</p>
+can find the files <a href="[dirname]/">here</a>.</p>
 
 </body>
-</html>'''
-
-import sys
-rev = int(sys.argv[1])
-print(webpagetext % (rev, rev))
+</html>
