@@ -583,6 +583,7 @@ svn_client__create_status(svn_client_status_t **cst,
 
   (*cst)->kind = status->kind;
   (*cst)->local_abspath = local_abspath;
+  (*cst)->filesize = status->filesize;
   (*cst)->versioned = status->versioned;
 
   (*cst)->conflicted = status->conflicted;
