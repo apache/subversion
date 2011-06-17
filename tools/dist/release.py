@@ -31,6 +31,8 @@
 #   as Python version) which may not be common, but are guaranteed to be
 #   available on people.apache.org.
 
+# It'd be kind of nice to use the Subversion python bindings in this script,
+# but people.apache.org doesn't currently have them installed
 
 # Stuff we need
 import os
@@ -257,7 +259,7 @@ def roll_tarballs(base_dir, args):
            raise RuntimeError('Cannot find usable %s' % dep.label)
 
     # Make sure CHANGES is sync'd
-    if not branch == 'trunk':
+    if branch != 'trunk':
         trunk_CHANGES = '%s/trunk/CHANGES@%d' % (repos, args.revnum)
         branch_CHANGES = '%s/branches/%s/CHANGES@%d' % (repos, branch,
                                                         args.revnum)
