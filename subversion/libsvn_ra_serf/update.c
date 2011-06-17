@@ -71,6 +71,25 @@ typedef enum report_state_e {
     NEED_PROP_NAME,
 } report_state_e;
 
+
+/* While we process the REPORT response, we will queue up GET and PROPFIND
+   requests. For a very large checkout, it is very easy to queue requests
+   faster than they are resolved. Thus, we need to pause the XML processing
+   (which queues more requests) to avoid queueing too many, with their
+   attendant memory costs. When the queue count drops low enough, we will
+   resume XML processing.
+
+   Note that we don't want the count to drop to zero. We have multiple
+   connections that we want to keep busy. These are also heuristic numbers
+   since network and parsing behavior (ie. it doesn't pause immediately)
+   can make the measurements quite imprecise.
+
+   We measure outstanding requests as the sum of ACTIVE_FETCHES and
+   ACTIVE_PROPFINDS in the report_context_t structure.  */
+#define REQUEST_COUNT_TO_PAUSE 1000
+#define REQUEST_COUNT_TO_RESUME 100
+
+
 /* Forward-declare our report context. */
 typedef struct report_context_t report_context_t;
 
@@ -330,6 +349,8 @@ struct report_context_t {
   /* Are we done parsing the REPORT response? */
   svn_boolean_t done;
 
+  /* The XML parser context for the REPORT response.  */
+  svn_ra_serf__xml_parser_t *parser_ctx;
 };
 
 
@@ -1276,6 +1297,9 @@ fetch_file(report_context_t *ctx, report_info_t *info)
       SVN_ERR(handle_propchange_only(info, info->pool));
     }
 
+  if (ctx->active_fetches + ctx->active_propfinds > REQUEST_COUNT_TO_PAUSE)
+    ctx->parser_ctx->paused = TRUE;
+
   return SVN_NO_ERROR;
 }
 
@@ -1775,6 +1799,10 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           SVN_ERR_ASSERT(info->dir->propfind);
 
           ctx->active_propfinds++;
+
+          if (ctx->active_fetches + ctx->active_propfinds
+              > REQUEST_COUNT_TO_PAUSE)
+            ctx->parser_ctx->paused = TRUE;
         }
       else
         {
@@ -2331,6 +2359,8 @@ finish_report(void *report_baton,
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
 
+  report->parser_ctx = parser_ctx;
+
   svn_ra_serf__request_create(handler);
 
   /* Open the first extra connection. */
@@ -2346,6 +2376,7 @@ finish_report(void *report_baton,
       int i;
       apr_status_t status;
 
+      /* Note: this throws out the old ITERPOOL_INNER.  */
       svn_pool_clear(iterpool);
 
       /* We need to be careful between the outer and inner ITERPOOLs,
@@ -2479,6 +2510,19 @@ finish_report(void *report_baton,
         }
       report->done_fetches = NULL;
 
+      /* If the parser is paused, and the number of active requests has
+         dropped far enough, then resume parsing.  */
+      if (parser_ctx->paused
+          && (report->active_fetches + report->active_propfinds
+              < REQUEST_COUNT_TO_RESUME))
+        parser_ctx->paused = FALSE;
+
+      /* If we have not paused the parser and it looks like data MAY be
+         present (we can't know for sure because of the private structure),
+         then go process the pending content.  */
+      if (!parser_ctx->paused && parser_ctx->pending != NULL)
+        SVN_ERR(svn_ra_serf__process_pending(parser_ctx, iterpool_inner));
+
       /* Debugging purposes only! */
       for (i = 0; i < sess->num_conns; i++)
         {
@@ -2498,8 +2542,7 @@ finish_report(void *report_baton,
   svn_pool_destroy(iterpool);
   return svn_error_return(err);
 }
-#undef MAX_NR_OF_CONNS
-#undef EXP_REQS_PER_CONN
+
 
 static svn_error_t *
 abort_report(void *report_baton,
