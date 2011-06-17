@@ -348,13 +348,13 @@ def post_candidates(base_dir, args):
         os.makedirs(target)
 
     data = { 'version'      : args.version,
-             'revnum'       : 0,
+             'revnum'       : args.revnum,
              'dirname'      : 'deploy',
            }
 
     # Choose the right template text
     if version_extra:
-        if version_extra.startswith('nightly')
+        if version_extra.startswith('nightly'):
             template_filename = 'nightly-candidates.ezt'
         else:
             template_filename = 'rc-candidates.ezt'
@@ -364,6 +364,8 @@ def post_candidates(base_dir, args):
     template = ezt.Template(os.path.join(get_tmpldir(), template_filename))
     template.generate(open(os.path.join(target, 'index.html'), 'w'), data)
 
+    if os.path.exists(os.path.join(target, 'deploy')):
+        shutil.rmtree(os.path.join(target, 'deploy'))
     shutil.copytree(get_deploydir(base_dir), os.path.join(target, 'deploy'))
 
 
@@ -426,6 +428,8 @@ def main():
     subparser.set_defaults(func=post_candidates)
     subparser.add_argument('version',
                     help='''The release label, such as '1.7.0-alpha1'.''')
+    subparser.add_argument('revnum', type=int,
+                    help='''The revision number to base the release on.''')
     subparser.add_argument('--target',
                     help='''The full path to the destination.''')
 
