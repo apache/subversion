@@ -4253,11 +4253,6 @@ close_file(void *file_baton,
                                                 scratch_pool));
     }
 
-  /* We may as well run whatever is in the queue right now.  */
-  SVN_ERR(svn_wc__wq_run(eb->db, fb->dir_baton->local_abspath,
-                         eb->cancel_func, eb->cancel_baton,
-                         scratch_pool));
-
   /* Send a notification to the callback function.  (Skip notifications
      about files which were already notified for another reason.) */
   if (eb->notify_func && !fb->already_notified && fb->edited)
