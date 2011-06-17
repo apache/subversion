@@ -343,13 +343,18 @@ def post_candidates(base_dir, args):
         target = os.path.join(os.getenv('HOME'), 'public_html', 'svn',
                               args.version)
 
+    if args.code_name:
+        dirname = args.code_name
+    else:
+        dirname = 'deploy'
+
     logging.info('Moving tarballs to %s' % target)
     if not os.path.exists(target):
         os.makedirs(target)
 
     data = { 'version'      : args.version,
              'revnum'       : args.revnum,
-             'dirname'      : 'deploy',
+             'dirname'      : dirname,
            }
 
     # Choose the right template text
@@ -364,10 +369,9 @@ def post_candidates(base_dir, args):
     template = ezt.Template(os.path.join(get_tmpldir(), template_filename))
     template.generate(open(os.path.join(target, 'index.html'), 'w'), data)
 
-    if os.path.exists(os.path.join(target, 'deploy')):
-        shutil.rmtree(os.path.join(target, 'deploy'))
-    shutil.copytree(get_deploydir(base_dir), os.path.join(target, 'deploy'))
-
+    if os.path.exists(os.path.join(target, dirname)):
+        shutil.rmtree(os.path.join(target, dirname))
+    shutil.copytree(get_deploydir(base_dir), os.path.join(target, dirname))
 
 
 #----------------------------------------------------------------------
@@ -432,6 +436,9 @@ def main():
                     help='''The revision number to base the release on.''')
     subparser.add_argument('--target',
                     help='''The full path to the destination.''')
+    subparser.add_argument('--code-name',
+                    help='''A whimsical name for the release, used only for
+                            naming the download directory.''')
 
     # A meta-target
     subparser = subparsers.add_parser('clean',
