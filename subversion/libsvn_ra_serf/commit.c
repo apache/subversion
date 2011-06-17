@@ -1845,18 +1845,6 @@ close_directory(void *dir_baton,
 }
 
 static svn_error_t *
-absent_directory(const char *path,
-                 void *parent_baton,
-                 apr_pool_t *pool)
-{
-#if 0
-  dir_context_t *parent = parent_baton;
-#endif
-
-  SVN_ERR_MALFUNCTION();
-}
-
-static svn_error_t *
 add_file(const char *path,
          void *parent_baton,
          const char *copy_path,
@@ -2196,18 +2184,6 @@ close_file(void *file_baton,
 }
 
 static svn_error_t *
-absent_file(const char *path,
-            void *parent_baton,
-            apr_pool_t *pool)
-{
-#if 0
-  dir_context_t *parent = parent_baton;
-#endif
-
-  SVN_ERR_MALFUNCTION();
-}
-
-static svn_error_t *
 close_edit(void *edit_baton,
            apr_pool_t *pool)
 {
@@ -2368,13 +2344,11 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   editor->open_directory = open_directory;
   editor->change_dir_prop = change_dir_prop;
   editor->close_directory = close_directory;
-  editor->absent_directory = absent_directory;
   editor->add_file = add_file;
   editor->open_file = open_file;
   editor->apply_textdelta = apply_textdelta;
   editor->change_file_prop = change_file_prop;
   editor->close_file = close_file;
-  editor->absent_file = absent_file;
   editor->close_edit = close_edit;
   editor->abort_edit = abort_edit;
 
