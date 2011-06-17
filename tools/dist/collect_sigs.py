@@ -117,7 +117,7 @@ except:
   print 'Cannot find config file'
   sys.exit(1)
 
-r = re.compile('\[GNUPG\:\] GOODSIG (\w*) (.*)')
+r = re.compile('^\[GNUPG\:\] GOODSIG (\w*) (.*)')
 
 def files():
   for f in os.listdir(config.filesdir):
