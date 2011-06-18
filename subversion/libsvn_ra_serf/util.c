@@ -1215,6 +1215,32 @@ add_done_item(svn_ra_serf__xml_parser_t *ctx)
 }
 
 
+/* Get a buffer from the parsing context. It will come from the free list,
+   or allocated as necessary.  */
+static struct pending_buffer_t *
+get_buffer(svn_ra_serf__xml_parser_t *parser)
+{
+  struct pending_buffer_t *pb;
+
+  if (parser->pending->avail == NULL)
+    return apr_palloc(parser->pool, sizeof(*pb));
+
+  pb = parser->pending->avail;
+  parser->pending->avail = pb->next;
+  return pb;
+}
+
+
+/* Return PB to the list of available buffers in PARSER.  */
+static void
+return_buffer(svn_ra_serf__xml_parser_t *parser,
+              struct pending_buffer_t *pb)
+{
+  pb->next = parser->pending->avail;
+  parser->pending->avail = pb;
+}
+
+
 static svn_error_t *
 write_to_pending(svn_ra_serf__xml_parser_t *ctx,
                  const char *data,
@@ -1255,17 +1281,9 @@ write_to_pending(svn_ra_serf__xml_parser_t *ctx,
     }
 
   /* We're still within bounds of holding the pending information in
-     memory. Get a buffer (already available, or alloc it), copy the data
-     there, and link it into our pending data.  */
-  if (ctx->pending->avail != NULL)
-    {
-      pb = ctx->pending->avail;
-      ctx->pending->avail = pb->next;
-    }
-  else
-    {
-      pb = apr_palloc(ctx->pool, sizeof(*pb));
-    }
+     memory. Get a buffer, copy the data there, and link it into our
+     pending data.  */
+  pb = get_buffer(ctx);
   /* NOTE: *pb is uninitialized. All fields must be stored.  */
 
   pb->size = len;
@@ -1325,27 +1343,38 @@ svn_error_t *
 svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
                              apr_pool_t *scratch_pool)
 {
+  struct pending_buffer_t *pb;
+  svn_error_t *err;
+  apr_off_t output_unused;
+
   /* Fast path exit: already paused, or nothing to do.  */
   if (parser->paused || parser->pending == NULL)
     return SVN_NO_ERROR;
 
+  /* ### it is possible that the XML parsing of the pending content is
+     ### so slow, and that we don't return to reading the connection
+     ### fast enough... that the server will disconnect us. right now,
+     ### that is highly improbably, but is noted for future's sake.
+     ### should that ever happen, the loops in this function can simply
+     ### terminate after N seconds.  */
+
   /* Empty out memory buffers until we run out, or we get paused again.  */
   while (parser->pending->head != NULL)
     {
-      struct pending_buffer_t *pb = parser->pending->head;
-      svn_error_t *err;
-
+      /* Pull the HEAD buffer out of the list.  */
+      pb = parser->pending->head;
       if (parser->pending->tail == pb)
         parser->pending->head = parser->pending->tail = NULL;
       else
         parser->pending->head = pb->next;
+
+      /* We're using less memory now. If we haven't hit the spill file,
+         then we may be able to keep using memory.  */
       parser->pending->memory_size -= pb->size;
 
       err = inject_to_parser(parser, pb->data, pb->size, NULL);
 
-      /* Return the block to the "available" list.  */
-      pb->next = parser->pending->avail;
-      parser->pending->avail = pb;
+      return_buffer(parser, pb);
 
       if (err)
         return svn_error_return(err);
@@ -1360,9 +1389,43 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
   if (parser->pending->spill == NULL)
     return SVN_NO_ERROR;
 
-  /* ### read the spill file...  */
+  /* Seek once to where we left off reading.  */
+  output_unused = parser->pending->spill_start;  /* ### stupid API  */
+  SVN_ERR(svn_io_file_seek(parser->pending->spill,
+                           APR_SET, &output_unused,
+                           scratch_pool));
 
-  return SVN_NO_ERROR;
+  /* We need a buffer for reading out of the file. One of these will always
+     exist by the time we start reading from the spill file.  */
+  pb = get_buffer(parser);
+
+  /* Keep reading until we hit EOF, or get paused again.  */
+  while (TRUE)
+    {
+      apr_size_t len = sizeof(pb->data);
+      apr_status_t status;
+
+      /* Read some data and remember where we left off.  */
+      status = apr_file_read(parser->pending->spill, pb->data, &len);
+      if (status && !APR_STATUS_IS_EOF(status))
+        {
+          err = svn_error_wrap_apr(status, NULL);
+          break;
+        }
+      parser->pending->spill_start += len;
+
+      err = inject_to_parser(parser, pb->data, len, NULL);
+      if (err)
+        break;
+
+      /* If there is no more content (for now), or the callbacks paused
+         the parsing, then we're done.  */
+      if (APR_STATUS_IS_EOF(status) || parser->paused)
+        break;
+    }
+
+  return_buffer(parser, pb);
+  return svn_error_return(err);  /* may be SVN_NO_ERROR  */
 }
 
 
