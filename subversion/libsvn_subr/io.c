@@ -623,8 +623,8 @@ svn_io_read_link(svn_string_t **dest,
   } while (rv == -1 && APR_STATUS_IS_EINTR(apr_get_os_error()));
 
   if (rv == -1)
-    return svn_error_wrap_apr
-      (apr_get_os_error(), _("Can't read contents of link"));
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Can't read contents of link"));
 
   buf[rv] = '\0';
   dest_apr.data = buf;
@@ -800,10 +800,9 @@ svn_io_copy_file(const char *src,
 
   if (apr_err)
     {
-      err = svn_error_wrap_apr
-            (apr_err, _("Can't copy '%s' to '%s'"),
-             svn_dirent_local_style(src, pool),
-             svn_dirent_local_style(dst_tmp, pool));
+      err = svn_error_wrap_apr(apr_err, _("Can't copy '%s' to '%s'"),
+                               svn_dirent_local_style(src, pool),
+                               svn_dirent_local_style(dst_tmp, pool));
     }
    else
      err = NULL;
@@ -1155,9 +1154,8 @@ svn_io_set_file_affected_time(apr_time_t apr_time,
   status = apr_file_mtime_set(native_path, apr_time, pool);
 
   if (status)
-    return svn_error_wrap_apr
-      (status, _("Can't set access time of '%s'"),
-       svn_dirent_local_style(path, pool));
+    return svn_error_wrap_apr(status, _("Can't set access time of '%s'"),
+                              svn_dirent_local_style(path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1915,13 +1913,13 @@ svn_io_file_lock2(const char *lock_file,
       switch (locktype & APR_FLOCK_TYPEMASK)
         {
         case APR_FLOCK_SHARED:
-          return svn_error_wrap_apr
-            (apr_err, _("Can't get shared lock on file '%s'"),
-             svn_dirent_local_style(lock_file, pool));
+          return svn_error_wrap_apr(apr_err,
+                                    _("Can't get shared lock on file '%s'"),
+                                    svn_dirent_local_style(lock_file, pool));
         case APR_FLOCK_EXCLUSIVE:
-          return svn_error_wrap_apr
-            (apr_err, _("Can't get exclusive lock on file '%s'"),
-             svn_dirent_local_style(lock_file, pool));
+          return svn_error_wrap_apr(apr_err,
+                                    _("Can't get exclusive lock on file '%s'"),
+                                    svn_dirent_local_style(lock_file, pool));
         default:
           SVN_ERR_MALFUNCTION();
         }
@@ -1966,8 +1964,8 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
 #ifdef WIN32
 
     if (! FlushFileBuffers(filehand))
-        return svn_error_wrap_apr
-          (apr_get_os_error(), _("Can't flush file to disk"));
+        return svn_error_wrap_apr(apr_get_os_error(),
+                                  _("Can't flush file to disk"));
 
 #else
       int rv;
@@ -1983,8 +1981,8 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
         return SVN_NO_ERROR;
 
       if (rv == -1)
-        return svn_error_wrap_apr
-          (apr_get_os_error(), _("Can't flush file to disk"));
+        return svn_error_wrap_apr(apr_get_os_error(),
+                                  _("Can't flush file to disk"));
 
 #endif
   }
@@ -2435,8 +2433,9 @@ svn_io_start_cmd2(apr_proc_t *cmd_proc,
   /* Create the process attributes. */
   apr_err = apr_procattr_create(&cmdproc_attr, pool);
   if (apr_err)
-    return svn_error_wrap_apr
-      (apr_err, _("Can't create process '%s' attributes"), cmd);
+    return svn_error_wrap_apr(apr_err,
+                              _("Can't create process '%s' attributes"),
+                              cmd);
 
   /* Make sure we invoke cmd directly, not through a shell. */
   apr_err = apr_procattr_cmdtype_set(cmdproc_attr,
@@ -2453,8 +2452,9 @@ svn_io_start_cmd2(apr_proc_t *cmd_proc,
       SVN_ERR(cstring_from_utf8(&path_apr, path, pool));
       apr_err = apr_procattr_dir_set(cmdproc_attr, path_apr);
       if (apr_err)
-        return svn_error_wrap_apr
-          (apr_err, _("Can't set process '%s' directory"), cmd);
+        return svn_error_wrap_apr(apr_err,
+                                  _("Can't set process '%s' directory"),
+                                  cmd);
     }
 
   /* Use requested inputs and outputs.
@@ -2466,22 +2466,25 @@ svn_io_start_cmd2(apr_proc_t *cmd_proc,
     {
       apr_err = apr_procattr_child_in_set(cmdproc_attr, infile, NULL);
       if (apr_err)
-        return svn_error_wrap_apr
-          (apr_err, _("Can't set process '%s' child input"), cmd);
+        return svn_error_wrap_apr(apr_err,
+                                  _("Can't set process '%s' child input"),
+                                  cmd);
     }
   if (outfile)
     {
       apr_err = apr_procattr_child_out_set(cmdproc_attr, outfile, NULL);
       if (apr_err)
-        return svn_error_wrap_apr
-          (apr_err, _("Can't set process '%s' child outfile"), cmd);
+        return svn_error_wrap_apr(apr_err,
+                                  _("Can't set process '%s' child outfile"),
+                                  cmd);
     }
   if (errfile)
     {
       apr_err = apr_procattr_child_err_set(cmdproc_attr, errfile, NULL);
       if (apr_err)
-        return svn_error_wrap_apr
-          (apr_err, _("Can't set process '%s' child errfile"), cmd);
+        return svn_error_wrap_apr(apr_err,
+                                  _("Can't set process '%s' child errfile"),
+                                  cmd);
     }
 
   /* Forward request for pipes to APR. */
@@ -2494,14 +2497,16 @@ svn_io_start_cmd2(apr_proc_t *cmd_proc,
   /* Have the child print any problems executing its program to errfile. */
   apr_err = apr_pool_userdata_set(errfile, ERRFILE_KEY, NULL, pool);
   if (apr_err)
-    return svn_error_wrap_apr
-      (apr_err, _("Can't set process '%s' child errfile for error handler"),
-       cmd);
+    return svn_error_wrap_apr(apr_err,
+                              _("Can't set process '%s' child errfile for "
+                                "error handler"),
+                              cmd);
   apr_err = apr_procattr_child_errfn_set(cmdproc_attr,
                                          handle_child_process_error);
   if (apr_err)
-    return svn_error_wrap_apr
-      (apr_err, _("Can't set process '%s' error handler"), cmd);
+    return svn_error_wrap_apr(apr_err,
+                              _("Can't set process '%s' error handler"),
+                              cmd);
 
   /* Convert cmd and args from UTF-8 */
   SVN_ERR(cstring_from_utf8(&cmd_apr, cmd, pool));
@@ -3662,9 +3667,9 @@ svn_io_dir_walk2(const char *dirname,
         break;
       else if (apr_err)
         {
-          return svn_error_wrap_apr
-            (apr_err, _("Can't read directory entry in '%s'"),
-             svn_dirent_local_style(dirname, pool));
+          return svn_error_wrap_apr(apr_err,
+                                    _("Can't read directory entry in '%s'"),
+                                    svn_dirent_local_style(dirname, pool));
         }
 
       if (finfo.filetype == APR_DIR)
