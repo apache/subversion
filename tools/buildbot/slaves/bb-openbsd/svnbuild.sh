@@ -22,5 +22,8 @@
 set -e
 set -x
 
+# needs autoconf-2.64 installed
+export AUTOCONF_VERSION=2.64
+
 branch="$(basename $(svn info . | grep ^URL  | cut -d' ' -f2))"
 (cd .. && gmake BRANCH="$branch")
