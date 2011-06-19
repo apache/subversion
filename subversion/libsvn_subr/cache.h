@@ -72,8 +72,11 @@ typedef struct svn_cache__vtable_t {
 
 struct svn_cache__t {
   const svn_cache__vtable_t *vtable;
+
   svn_cache__error_handler_t error_handler;
   void *error_baton;
+
+  /* Private data for the cache implementation. */
   void *cache_internal;
 
   /* Total number of calls to getters. */
