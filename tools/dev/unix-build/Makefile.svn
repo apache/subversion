@@ -755,7 +755,6 @@ $(SQLITE_OBJDIR)/.configured: $(SQLITE_OBJDIR)/.retrieved
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
 		$(SQLITE_SRCDIR)/configure \
 		--prefix=$(PREFIX)/sqlite \
-		--disable-tcl \
 		$(THREADSAFE_FLAG)
 	touch $@
 
