@@ -178,10 +178,10 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
 
       svn_error_clear(err);
 
-      /* Check to see if we already have a mapping for
-         REP->SHA1_CHECKSUM.  If so, and the value is the same one we
-         were about to write, that's cool -- just do nothing.  If,
-         however, the value is *different*, that's a red flag!  */
+      /* Constraint failed so the mapping for SHA1_CHECKSUM->REP
+         should exist.  If so, and the value is the same one we were
+         about to write, that's cool -- just do nothing.  If, however,
+         the value is *different*, that's a red flag!  */
       SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, fs, rep->sha1_checksum,
                                            pool));
 
@@ -207,6 +207,10 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
           else
             return SVN_NO_ERROR;
         }
+
+      /* Something really odd at this point, we failed to insert the
+         checksum AND failed to read an existing checksum.  Do we need
+         to flag this? */
     }
 
   return SVN_NO_ERROR;
