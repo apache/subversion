@@ -39,9 +39,9 @@ PRAGMA USER_VERSION = 1;
 -- STMT_GET_REP
 SELECT revision, offset, size, expanded_size
 FROM rep_cache
-WHERE hash = ?1;
+WHERE hash = ?1
 
 
 -- STMT_SET_REP
-INSERT INTO rep_cache (hash, revision, offset, size, expanded_size)
-VALUES (?1, ?2, ?3, ?4, ?5);
+INSERT OR FAIL INTO rep_cache (hash, revision, offset, size, expanded_size)
+VALUES (?1, ?2, ?3, ?4, ?5)

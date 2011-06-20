@@ -150,6 +150,7 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   representation_t *old_rep;
   svn_sqlite__stmt_t *stmt;
+  svn_error_t *err;
 
   SVN_ERR_ASSERT(ffd->rep_sharing_allowed);
   if (! ffd->rep_cache_db)
@@ -161,20 +162,37 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                             _("Only SHA1 checksums can be used as keys in the "
                               "rep_cache table.\n"));
 
-  /* Check to see if we already have a mapping for REP->SHA1_CHECKSUM.  If so,
-     and the value is the same one we were about to write, that's
-     cool -- just do nothing.  If, however, the value is *different*,
-     that's a red flag!  */
-  SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, fs, rep->sha1_checksum, pool));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db, STMT_SET_REP));
+  SVN_ERR(svn_sqlite__bindf(stmt, "siiii",
+                            svn_checksum_to_cstring(rep->sha1_checksum, pool),
+                            (apr_int64_t) rep->revision,
+                            (apr_int64_t) rep->offset,
+                            (apr_int64_t) rep->size,
+                            (apr_int64_t) rep->expanded_size));
 
-  if (old_rep)
+  err = svn_sqlite__insert(NULL, stmt);
+  if (err)
     {
-      if ( reject_dup && ((old_rep->revision != rep->revision)
-            || (old_rep->offset != rep->offset)
-            || (old_rep->size != rep->size)
-            || (old_rep->expanded_size != rep->expanded_size)) )
-        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                 apr_psprintf(pool,
+      if (err->apr_err != SVN_ERR_SQLITE_CONSTRAINT)
+        return svn_error_return(err);
+
+      svn_error_clear(err);
+
+      /* Check to see if we already have a mapping for
+         REP->SHA1_CHECKSUM.  If so, and the value is the same one we
+         were about to write, that's cool -- just do nothing.  If,
+         however, the value is *different*, that's a red flag!  */
+      SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, fs, rep->sha1_checksum,
+                                           pool));
+
+      if (old_rep)
+        {
+          if (reject_dup && ((old_rep->revision != rep->revision)
+                             || (old_rep->offset != rep->offset)
+                             || (old_rep->size != rep->size)
+                             || (old_rep->expanded_size != rep->expanded_size)))
+            return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                     apr_psprintf(pool,
                               _("Representation key for checksum '%%s' exists "
                                 "in filesystem '%%s' with a different value "
                                 "(%%ld,%%%s,%%%s,%%%s) than what we were about "
@@ -186,17 +204,10 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                  fs->path, old_rep->revision, old_rep->offset, old_rep->size,
                  old_rep->expanded_size, rep->revision, rep->offset, rep->size,
                  rep->expanded_size);
-      else
-        return SVN_NO_ERROR;
+          else
+            return SVN_NO_ERROR;
+        }
     }
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db, STMT_SET_REP));
-  SVN_ERR(svn_sqlite__bindf(stmt, "siiii",
-                            svn_checksum_to_cstring(rep->sha1_checksum, pool),
-                            (apr_int64_t) rep->revision,
-                            (apr_int64_t) rep->offset,
-                            (apr_int64_t) rep->size,
-                            (apr_int64_t) rep->expanded_size));
-
-  return svn_sqlite__insert(NULL, stmt);
+  return SVN_NO_ERROR;
 }
