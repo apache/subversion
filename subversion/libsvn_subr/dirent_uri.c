@@ -2184,29 +2184,29 @@ svn_uri_condense_targets(const char **pcommon,
 
 svn_error_t *
 svn_dirent_is_under_root(svn_boolean_t *under_root,
-                         const char **abspath,
+                         const char **result_path,
                          const char *base_path,
                          const char *path,
-                         apr_pool_t *pool)
+                         apr_pool_t *result_pool)
 {
   apr_status_t status;
   char *full_path;
 
   *under_root = FALSE;
-  if (abspath)
-    *abspath = NULL;
+  if (result_path)
+    *result_path = NULL;
 
   status = apr_filepath_merge(&full_path,
                               base_path,
                               path,
                               APR_FILEPATH_NOTABOVEROOT
                               | APR_FILEPATH_SECUREROOTTEST,
-                              pool);
+                              result_pool);
 
   if (status == APR_SUCCESS)
     {
-      if (abspath)
-        *abspath = svn_dirent_canonicalize(full_path, pool);
+      if (result_path)
+        *result_path = svn_dirent_canonicalize(full_path, result_pool);
       *under_root = TRUE;
       return SVN_NO_ERROR;
     }

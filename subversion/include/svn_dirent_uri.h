@@ -746,11 +746,15 @@ svn_uri_condense_targets(const char **pcommon,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
-/** Check that when @a path is joined to @a base_path, the resulting path is
- * still under @a base_path in the local filesystem. If not, set @a under_root
- * to @c FALSE. If @a under_root of @c TRUE is returned, and @a result_path is
- * not @c NULL, then @a *result_path will be set to the absolute path of @a
- * path, allocated in @a result_pool.
+/** Join @a path onto @a base_path, checking that @a path does not attempt
+ * to traverse above @a base_path. If @a path or any ".." component within
+ * it resolves to a path above @a base_path, or if @a path is an absolute
+ * path, then set @a *under_root to @c FALSE. Otherwise, set @a *under_root
+ * to @c TRUE and, if @a result_path is not @c NULL, set @a *result_path to
+ * the resulting path, allocated in @a result_pool.
+ *
+ * @a path need not be canonical. @a base_path must be canonical and
+ * @a *result_path will be canonical.
  *
  * Note: Use of this function is strongly encouraged. Do not roll your own.
  * (http://cve.mitre.org/cgi-bin/cvename.cgi?name=2007-3846)
