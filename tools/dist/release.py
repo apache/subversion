@@ -355,7 +355,6 @@ def post_candidates(base_dir, args):
     else:
         dirname = 'deploy'
 
-    logging.info('Moving tarballs to %s' % target)
     if not os.path.exists(target):
         os.makedirs(target)
 
@@ -377,6 +376,7 @@ def post_candidates(base_dir, args):
     template.parse(get_tmplfile(template_filename).read())
     template.generate(open(os.path.join(target, 'index.html'), 'w'), data)
 
+    logging.info('Moving tarballs to %s' % os.path.join(target, dirname))
     if os.path.exists(os.path.join(target, dirname)):
         shutil.rmtree(os.path.join(target, dirname))
     shutil.copytree(get_deploydir(base_dir), os.path.join(target, dirname))
