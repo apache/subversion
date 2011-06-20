@@ -106,11 +106,13 @@ struct svn_sqlite__value_t
 
 
 /* Convert SQLite error codes to SVN. Evaluates X multiple times */
-#define SQLITE_ERROR_CODE(x) ((x) == SQLITE_READONLY       \
-                              ? SVN_ERR_SQLITE_READONLY    \
-                              : ((x) == SQLITE_BUSY        \
-                                 ? SVN_ERR_SQLITE_BUSY     \
-                                 : SVN_ERR_SQLITE_ERROR) )
+#define SQLITE_ERROR_CODE(x) ((x) == SQLITE_READONLY            \
+                              ? SVN_ERR_SQLITE_READONLY         \
+                              : ((x) == SQLITE_BUSY             \
+                                 ? SVN_ERR_SQLITE_BUSY          \
+                                 : ((x) == SQLITE_CONSTRAINT    \
+                                    ? SVN_ERR_SQLITE_CONSTRAINT \
+                                    : SVN_ERR_SQLITE_ERROR)))
 
 
 /* SQLITE->SVN quick error wrap, much like SVN_ERR. */

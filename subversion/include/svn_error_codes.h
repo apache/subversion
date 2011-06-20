@@ -1365,6 +1365,11 @@ SVN_ERROR_START
              "SQLite busy at transaction rollback; "
              "resetting all busy SQLite statements to allow rollback")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_SQLITE_CONSTRAINT,
+             SVN_ERR_MISC_CATEGORY_START + 35,
+             "Constraint error in SQLite db")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
