@@ -184,7 +184,7 @@ AC_DEFUN(SVN_FIND_SWIG,
   if test "$RUBY" != "none"; then
     rbconfig="$RUBY -rrbconfig -e "
 
-    for var_name in arch archdir CC LDSHARED DLEXT LIBRUBYARG \
+    for var_name in arch archdir CC LDSHARED DLEXT LIBS LIBRUBYARG \
                     rubyhdrdir sitedir sitelibdir sitearchdir libdir
     do
       rbconfig_tmp=`$rbconfig "print Config::CONFIG@<:@'$var_name'@:>@"`
@@ -218,8 +218,8 @@ AC_DEFUN(SVN_FIND_SWIG,
     ])
     SWIG_RB_LINK="$svn_cv_ruby_link"
 
-    AC_CACHE_CHECK([for linking Ruby libraries], [ac_cv_ruby_libs], [
-      ac_cv_ruby_libs="$rbconfig_LIBRUBYARG"
+    AC_CACHE_CHECK([how to link Ruby libraries], [ac_cv_ruby_libs], [
+      ac_cv_ruby_libs="$rbconfig_LIBRUBYARG $rbconfig_LIBS"
     ])
     SWIG_RB_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_ruby_libs)`"
 
