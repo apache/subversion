@@ -53,7 +53,7 @@ echo "Will place results in: $target"
 head=`$svn info $repo/trunk | grep '^Revision' | cut -d ' ' -f 2`
 
 # Get the latest versions of the rolling scripts
-for i in release.py dist.sh gen_nightly_ann.py
+for i in release.py dist.sh
 do 
   $svn export -r $head $repo/trunk/tools/dist/$i@$head $dir/$i
 done
