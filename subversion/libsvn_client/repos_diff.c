@@ -392,7 +392,7 @@ get_file_from_ra(struct file_baton *b,
      
      This function filters these property changes from the change hash
  */
-static svn_error_t *
+static void
 remove_non_prop_changes(apr_hash_t *pristine_props,
                         apr_array_header_t *changes)
 {
@@ -413,7 +413,7 @@ remove_non_prop_changes(apr_hash_t *pristine_props,
               int j;
 
               /* Remove the matching change by shifting the rest */
-              for (j = i; j < changes->nelts; j++)
+              for (j = i; j < changes->nelts - 1; j++)
                 {
                   APR_ARRAY_IDX(changes, j, svn_prop_t)
                        = APR_ARRAY_IDX(changes, j+1, svn_prop_t);
@@ -422,8 +422,6 @@ remove_non_prop_changes(apr_hash_t *pristine_props,
             }
         }
     }
-
-  return SVN_NO_ERROR;
 }
 
 /* Get the props attached to a directory in the repository at BASE_REVISION. */
@@ -1113,7 +1111,7 @@ close_directory(void *dir_baton,
   scratch_pool = b->pool;
 
   if (!b->added && b->propchanges->nelts > 0)
-    SVN_ERR(remove_non_prop_changes(b->pristine_props, b->propchanges));
+    remove_non_prop_changes(b->pristine_props, b->propchanges);
 
   /* Don't do the props_changed stuff if this is a dry_run and we don't
      have an access baton, since in that case the directory will already
