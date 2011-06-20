@@ -57,6 +57,8 @@ for i in release.py dist.sh
 do 
   $svn export -r $head $repo/trunk/tools/dist/$i@$head $dir/$i
 done
+# We also need ezt
+$svn export -r $head $repos/trunk/build/generator/ezt.py@$head $dir/ezt.py
 
 # Create the environment
 cd roll
