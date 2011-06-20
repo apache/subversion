@@ -393,8 +393,9 @@ assemble_status(svn_wc_status3_t **status,
   svn_error_t *err;
   const char *repos_relpath;
   const char *repos_root_url;
-  svn_filesize_t filesize =
-    (dirent && (dirent->kind == svn_node_file)) ? dirent->filesize : -1;
+  svn_filesize_t filesize = (dirent && (dirent->kind == svn_node_file))
+                                ? dirent->filesize
+                                : SVN_INVALID_FILESIZE;
 
   /* Defaults for two main variables. */
   enum svn_wc_status_kind node_status = svn_wc_status_normal;

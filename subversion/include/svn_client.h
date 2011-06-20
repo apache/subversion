@@ -2078,8 +2078,8 @@ typedef struct svn_client_status_t
   /** The absolute path to the node */
   const char *local_abspath;
 
-  /** The actual size of the working file on disk, or -1 if unknown
-   * (or if the item isn't a file at all). */
+  /** The actual size of the working file on disk, or SVN_INVALID_FILESIZE
+   * if unknown (or if the item isn't a file at all). */
   svn_filesize_t filesize;
 
   /** If the path is under version control, versioned is TRUE, otherwise
