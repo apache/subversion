@@ -733,7 +733,7 @@ assemble_unversioned(svn_wc_status3_t **status,
   /*stat->versioned = FALSE;*/
   stat->kind = svn_node_unknown; /* not versioned */
   stat->depth = svn_depth_unknown;
-  stat->filesize = -1;
+  stat->filesize = SVN_INVALID_FILESIZE;
   stat->node_status = svn_wc_status_none;
   stat->text_status = svn_wc_status_none;
   stat->prop_status = svn_wc_status_none;
