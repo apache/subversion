@@ -491,9 +491,10 @@ cleanup_edit_baton_child(void *edit_baton)
 }
 
 
-/* Return a new dir_baton to represent NAME (a subdirectory of
-   PARENT_BATON).  If PATH is NULL, this is the root directory of the
-   edit. ADDING should be TRUE if we are adding this directory.  */
+/* Make a new dir baton in a subpool of PB->pool. PB is the parent baton.
+   If PATH and PB are NULL, this is the root directory of the edit; in this
+   case, make the new dir baton in a subpool of EB->pool.
+   ADDING should be TRUE if we are adding this directory.  */
 static svn_error_t *
 make_dir_baton(struct dir_baton **d_p,
                const char *path,
@@ -755,7 +756,7 @@ struct file_baton
 };
 
 
-/* Make a new file baton in the provided POOL, with PB as the parent baton.
+/* Make a new file baton in a subpool of PB->pool. PB is the parent baton.
  * PATH is relative to the root of the edit. ADDING tells whether this file
  * is being added. */
 static svn_error_t *
