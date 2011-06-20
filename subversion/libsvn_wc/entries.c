@@ -1789,6 +1789,7 @@ write_entry(struct write_baton **entry_node,
         {
           svn_wc_conflict_description2_t *conflict;
           svn_skel_t *new_skel;
+          const char *key;
 
           /* *CONFLICT is allocated so it is safe to use a non-const pointer */
           SVN_ERR(svn_wc__deserialize_conflict(
@@ -1811,9 +1812,8 @@ write_entry(struct write_baton **entry_node,
 
           /* Store in hash to be retrieved when writing the child
              row. */
-          apr_hash_set(tree_conflicts,
-                       svn_dirent_skip_ancestor(root_abspath,
-                                                conflict->local_abspath),
+          key = svn_dirent_skip_ancestor(root_abspath, conflict->local_abspath);
+          apr_hash_set(tree_conflicts, apr_pstrdup(result_pool, key),
                        APR_HASH_KEY_STRING,
                        svn_skel__unparse(new_skel, result_pool)->data);
           skel = skel->next;
