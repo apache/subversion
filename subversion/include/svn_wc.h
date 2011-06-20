@@ -3491,8 +3491,8 @@ typedef struct svn_wc_status3_t
    * (#svn_depth_unknown for files or when no depth is set) */
   svn_depth_t depth;
 
-  /** The actual size of the working file on disk, or -1 if unknown
-   * (or if the item isn't a file at all). */
+  /** The actual size of the working file on disk, or SVN_INVALID_FILESIZE
+   * if unknown (or if the item isn't a file at all). */
   svn_filesize_t filesize;
 
   /** If the path is under version control, versioned is TRUE, otherwise
