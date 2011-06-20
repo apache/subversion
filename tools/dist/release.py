@@ -373,7 +373,7 @@ def post_candidates(base_dir, args):
     else:
         template_filename = 'stable-candidates.ezt'
 
-    template = ezt.Template(get_tmplfile(template_filename))
+    template = ezt.Template(get_tmplfile(template_filename).read())
     template.generate(open(os.path.join(target, 'index.html'), 'w'), data)
 
     if os.path.exists(os.path.join(target, dirname)):
