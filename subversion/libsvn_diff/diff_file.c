@@ -385,6 +385,8 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
   apr_off_t lines = 0;
   apr_size_t i;
 
+  *reached_one_eof = FALSE;
+
   for (i = 1, is_match = TRUE; i < file_len; i++)
     is_match = is_match && *file[0].curp == *file[i].curp;
   while (is_match)
