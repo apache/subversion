@@ -226,7 +226,7 @@ class SwigDep(RollDep):
 
     def use_system(self):
         if not self._use_existing: return False
-        return have_usable()
+        return self.have_usable()
 
 
 def build_env(base_dir, args):
