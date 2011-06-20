@@ -373,7 +373,6 @@ resolve_target_path(patch_target_t *target,
                     apr_pool_t *scratch_pool)
 {
   const char *stripped_path;
-  const char *full_path;
   svn_wc_status3_t *status;
   svn_error_t *err;
   svn_boolean_t under_root;
@@ -420,7 +419,7 @@ resolve_target_path(patch_target_t *target,
   /* Make sure the path is secure to use. We want the target to be inside
    * of the working copy and not be fooled by symlinks it might contain. */
   SVN_ERR(svn_dirent_is_under_root(&under_root,
-                                   &full_path, local_abspath,
+                                   &target->local_abspath, local_abspath,
                                    target->local_relpath, result_pool));
 
   if (! under_root)
@@ -430,9 +429,6 @@ resolve_target_path(patch_target_t *target,
       target->local_abspath = NULL;
       return SVN_NO_ERROR;
     }
-
-  SVN_ERR(svn_dirent_get_absolute(&target->local_abspath, full_path,
-                                  result_pool));
 
   /* Skip things we should not be messing with. */
   err = svn_wc_status3(&status, wc_ctx, target->local_abspath,

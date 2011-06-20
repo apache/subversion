@@ -57,6 +57,12 @@
             (status) != svn_wc__db_status_excluded &&       \
             (status) != svn_wc__db_status_not_present)
 
+static svn_error_t *
+path_join_under_root(const char **result_path,
+                     const char *base_path,
+                     const char *add_path,
+                     apr_pool_t *result_pool);
+
 
 /*
  * This code handles "checkout" and "update" and "switch".
@@ -521,7 +527,8 @@ make_dir_baton(struct dir_baton **d_p,
   if (path)
     {
       d->name = svn_dirent_basename(path, dir_pool);
-      d->local_abspath = svn_dirent_join(pb->local_abspath, d->name, dir_pool);
+      SVN_ERR(path_join_under_root(&d->local_abspath,
+                                   pb->local_abspath, d->name, dir_pool));
     }
   else
     {
@@ -775,7 +782,8 @@ make_file_baton(struct file_baton **f_p,
   /* Make the file's on-disk name. */
   f->name = svn_dirent_basename(path, file_pool);
   f->old_revision = SVN_INVALID_REVNUM;
-  f->local_abspath = svn_dirent_join(pb->local_abspath, f->name, file_pool);
+  SVN_ERR(path_join_under_root(&f->local_abspath,
+                               pb->local_abspath, f->name, file_pool));
 
   /* Figure out the new_URL for this file. */
   if (adding || pb->edit_baton->switch_relpath)
@@ -993,9 +1001,9 @@ accumulate_last_change(svn_revnum_t *changed_rev,
 }
 
 
-/* Check that when ADD_PATH is joined to BASE_PATH, the resulting path
- * is still under BASE_PATH in the local filesystem.  If not, return
- * SVN_ERR_WC_OBSTRUCTED_UPDATE; else return success.
+/* Join ADD_PATH to BASE_PATH.  If ADD_PATH is absolute, or if any ".."
+ * component of it resolves to a path above BASE_PATH, then return
+ * SVN_ERR_WC_OBSTRUCTED_UPDATE.
  *
  * This is to prevent the situation where the repository contains,
  * say, "..\nastyfile".  Although that's perfectly legal on some
@@ -1005,23 +1013,23 @@ accumulate_last_change(svn_revnum_t *changed_rev,
  * (http://cve.mitre.org/cgi-bin/cvename.cgi?name=2007-3846)
  */
 static svn_error_t *
-check_path_under_root(const char *base_path,
-                      const char *add_path,
-                      apr_pool_t *scratch_pool)
+path_join_under_root(const char **result_path,
+                     const char *base_path,
+                     const char *add_path,
+                     apr_pool_t *pool)
 {
   svn_boolean_t under_root;
 
-  SVN_ERR(svn_dirent_is_under_root(&under_root, NULL, base_path, add_path,
-                                   scratch_pool));
+  SVN_ERR(svn_dirent_is_under_root(&under_root,
+                                   result_path, base_path, add_path, pool));
 
   if (! under_root)
     {
       return svn_error_createf(
           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-         _("Path '%s' is not in the working copy"),
-         svn_dirent_local_style(svn_dirent_join(base_path, add_path,
-                                                scratch_pool),
-                                scratch_pool));
+          _("Path '%s' is not in the working copy"),
+          svn_dirent_local_style(svn_dirent_join(base_path, add_path, pool),
+                                 pool));
     }
 
   return SVN_NO_ERROR;
@@ -1677,9 +1685,8 @@ delete_entry(const char *path,
 
   SVN_ERR(mark_directory_edited(pb, scratch_pool));
 
-  SVN_ERR(check_path_under_root(pb->local_abspath, base, scratch_pool));
-
-  local_abspath = svn_dirent_join(pb->local_abspath, base, scratch_pool);
+  SVN_ERR(path_join_under_root(&local_abspath, pb->local_abspath, base,
+                               scratch_pool));
 
   deleting_target =  (strcmp(local_abspath, eb->target_abspath) == 0);
 
@@ -1906,8 +1913,6 @@ add_directory(const char *path,
     return SVN_NO_ERROR;
 
   SVN_ERR(mark_directory_edited(db, pool));
-
-  SVN_ERR(check_path_under_root(pb->local_abspath, db->name, pool));
 
   if (strcmp(eb->target_abspath, db->local_abspath) == 0)
     {
@@ -2247,8 +2252,6 @@ open_directory(const char *path,
 
   if (db->skip_this)
     return SVN_NO_ERROR;
-
-  SVN_ERR(check_path_under_root(pb->local_abspath, db->name, pool));
 
   /* Detect obstructing working copies */
   {
@@ -2950,8 +2953,6 @@ add_file(const char *path,
 
   SVN_ERR(mark_file_edited(fb, pool));
 
-  SVN_ERR(check_path_under_root(pb->local_abspath, fb->name, pool));
-
   /* The file_pool can stick around for a *long* time, so we want to
      use a subpool for any temporary allocations. */
   scratch_pool = svn_pool_create(pool);
@@ -3243,8 +3244,6 @@ open_file(const char *path,
 
   if (fb->skip_this)
     return SVN_NO_ERROR;
-
-  SVN_ERR(check_path_under_root(pb->local_abspath, fb->name, scratch_pool));
 
   /* Detect obstructing working copies */
   {
