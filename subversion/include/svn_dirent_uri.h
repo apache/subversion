@@ -554,30 +554,18 @@ svn_dirent_get_absolute(const char **pabsolute,
                         const char *relative,
                         apr_pool_t *pool);
 
-/** Test if @a child_uri is a child of @a parent_uri.  If not, return
- * @c NULL.  If so, return a URI-decoded copy of the remainder uri,
- * allocated in @a pool.  (The remainder is the component which, added
- * to @a parent_uri, yields @a child_uri.  The remainder does not
- * begin with a dir separator.)
- *
- * Both uris must be in canonical form.
- *
- * If @a child_uri is the same as @a parent_uri, it is not considered a child,
- * so the result is @c NULL; an empty string is never returned.
- *
- * @since New in 1.7.
+/** Similar to svn_uri_skip_ancestor(), except that if @a child_uri is
+ * the same as @a parent_uri, it is not considered a child, so the result
+ * is @c NULL; an empty string is never returned.
  */
 const char *
 svn_uri__is_child(const char *parent_uri,
                   const char *child_uri,
                   apr_pool_t *pool);
 
-/**
- * This function is similar to svn_uri_is_child(), except that it supports
- * Windows dirents and UNC paths on Windows.
- *
- * ### @todo Makes no attempt to handle one absolute and one relative
- * dirent, and will simply return NULL.
+/** Similar to svn_dirent_skip_ancestor(), except that if @a child_dirent is
+ * the same as @a parent_dirent, it is not considered a child, so the result
+ * is @c NULL; an empty string is never returned.
  *
  * @since New in 1.6.
  */
@@ -586,11 +574,9 @@ svn_dirent_is_child(const char *parent_dirent,
                     const char *child_dirent,
                     apr_pool_t *pool);
 
-/**
- * This function is similar to svn_uri_is_child(), except that it supports
- * only relative paths.
- *
- * @since New in 1.7.
+/** Similar to svn_relpath_skip_ancestor(), except that if @a child_relpath is
+ * the same as @a parent_relpath, it is not considered a child, so the result
+ * is @c NULL; an empty string is never returned.
  */
 const char *
 svn_relpath__is_child(const char *parent_relpath,
@@ -608,10 +594,6 @@ svn_dirent_is_ancestor(const char *parent_dirent,
 
 /** Return TRUE if @a parent_relpath is an ancestor of @a child_relpath or
  * the relpaths are equal, and FALSE otherwise.
- *
- * This function supports only relative paths.
- *
- * @since New in 1.7.
  */
 svn_boolean_t
 svn_relpath__is_ancestor(const char *parent_relpath,
@@ -619,8 +601,6 @@ svn_relpath__is_ancestor(const char *parent_relpath,
 
 /** Return TRUE if @a parent_uri is an ancestor of @a child_uri or
  * the uris are equal, and FALSE otherwise.
- *
- * @since New in 1.7.
  */
 svn_boolean_t
 svn_uri__is_ancestor(const char *parent_uri,
