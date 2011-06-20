@@ -71,17 +71,15 @@ echo '-------------------rolling tarball--------------------'
 cd ..
 
 # Create the information page
-./gen_nightly_ann.py $head > index.html
-
-# Move the results to the target location
 echo '-------------------moving results---------------------'
-if [ -f "$target/index.html" ]; then rm "$target/index.html"; fi
-mv index.html "$target"
+./release.py --base-dir ${abscwd}/roll post-candidates trunk-nightly $head \
+    --target $target
+exit 1
 if [ ! -d "$target/dist" ]; then mkdir "$target/dist"; fi
 if [ -d "$target/dist/r$head" ]; then rm -r "$target/dist/r$head"; fi
-mv roll/deploy "$target/dist/r$head"
+mv $target/deploy $target/dist/r$head
 
-# Some static links for the most recent artefacts.
+# Some static links for the most recent artifacts.
 ln -sf "r$head" "$target/dist/current"
 ls "$target/dist/r$head" | while read fname; do
   ln -sf "r$head/$fname" "$target/dist/$fname"
