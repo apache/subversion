@@ -80,6 +80,13 @@ def get_deploydir(base_dir):
 def get_tmpldir():
     return os.path.join(os.path.abspath(sys.path[0]), 'templates')
 
+def get_tmplfile(filename):
+    try:
+        return open(os.path.join(get_tmpldir(), filename))
+    except IOError:
+        # Hmm, we had a problem with the local version, let's try the repo
+        return urllib2.urlopen(repos + '/trunk/tools/dist/templates/' + filename)
+
 def get_nullfile():
     # This is certainly not cross platform
     return open('/dev/null', 'w')
@@ -366,7 +373,7 @@ def post_candidates(base_dir, args):
     else:
         template_filename = 'stable-candidates.ezt'
 
-    template = ezt.Template(os.path.join(get_tmpldir(), template_filename))
+    template = ezt.Template(get_tmplfile(template_filename))
     template.generate(open(os.path.join(target, 'index.html'), 'w'), data)
 
     if os.path.exists(os.path.join(target, dirname)):
