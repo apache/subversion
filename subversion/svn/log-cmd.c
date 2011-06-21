@@ -512,9 +512,9 @@ log_entry_receiver_xml(void *baton,
                                     "copyfrom-rev", revstr,
                                     "kind", svn_cl__node_kind_str_xml(
                                                      log_item->node_kind),
-                                    "text-mods", svn_tristate_to_word(
+                                    "text-mods", svn_tristate__to_word(
                                                      log_item->text_modified),
-                                    "prop-mods", svn_tristate_to_word(
+                                    "prop-mods", svn_tristate__to_word(
                                                      log_item->props_modified),
                                     NULL);
             }

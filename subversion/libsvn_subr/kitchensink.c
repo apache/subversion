@@ -181,7 +181,7 @@ svn_node_kind_from_word(const char *word)
 }
 
 const char *
-svn_tristate_to_word(svn_tristate_t tristate)
+svn_tristate__to_word(svn_tristate_t tristate)
 {
   switch (tristate)
     {
@@ -196,7 +196,7 @@ svn_tristate_to_word(svn_tristate_t tristate)
 }
 
 svn_tristate_t
-svn_tristate_from_word(const char *word)
+svn_tristate__from_word(const char *word)
 {
   if (word == NULL)
     return svn_tristate_unknown;

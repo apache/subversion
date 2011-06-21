@@ -59,10 +59,10 @@ read_config(svn_memcache_t **memcache_p,
    * like svnadmin will activate this to speed up operations
    * dump and verify.
    */
-  *cache_txdeltas 
-    = svn_hash_get_bool(fs->config, 
-                        SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
-                        FALSE);
+  *cache_txdeltas
+    = svn_hash__get_bool(fs->config,
+                         SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
+                         FALSE);
   /* by default, cache fulltexts.
    * Most SVN tools care about reconstructed file content.
    * Thus, this is a reasonable default.
@@ -70,10 +70,10 @@ read_config(svn_memcache_t **memcache_p,
    * won't be re-used rendering the cache less effective
    * by squeezing wanted data out.
    */
-  *cache_fulltexts 
-    = svn_hash_get_bool(fs->config,
-                        SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
-                        TRUE);
+  *cache_fulltexts
+    = svn_hash__get_bool(fs->config,
+                         SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
+                         TRUE);
 
   return svn_config_get_bool(ffd->config, fail_stop,
                              CONFIG_SECTION_CACHES, CONFIG_OPTION_FAIL_STOP,

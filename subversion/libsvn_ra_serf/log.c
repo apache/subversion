@@ -169,9 +169,9 @@ read_changed_path_attributes(svn_log_changed_path2_t *change, const char **attrs
 
   change->node_kind = svn_node_kind_from_word(
                            svn_xml_get_attr_value("node-kind", attrs));
-  change->text_modified = svn_tristate_from_word(
+  change->text_modified = svn_tristate__from_word(
                            svn_xml_get_attr_value("text-mods", attrs));
-  change->props_modified = svn_tristate_from_word(
+  change->props_modified = svn_tristate__from_word(
                            svn_xml_get_attr_value("prop-mods", attrs));
 
   return SVN_NO_ERROR;

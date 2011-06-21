@@ -265,9 +265,9 @@ svn_hash__clear(apr_hash_t *hash, apr_pool_t *pool);
  * @since New in 1.7.
  */
 const char *
-svn_hash_get_cstring(apr_hash_t *hash,
-                     const char *key,
-                     const char *default_value);
+svn_hash__get_cstring(apr_hash_t *hash,
+                      const char *key,
+                      const char *default_value);
 
 /** Like svn_hash_get_cstring(), but for boolean values.
  *
@@ -277,10 +277,10 @@ svn_hash_get_cstring(apr_hash_t *hash,
  * 
  * @since New in 1.7.
  */
-svn_boolean_t 
-svn_hash_get_bool(apr_hash_t *hash,
-                  const char *key,
-                  svn_boolean_t default_value);
+svn_boolean_t
+svn_hash__get_bool(apr_hash_t *hash,
+                   const char *key,
+                   svn_boolean_t default_value);
 
 /** @} */
 

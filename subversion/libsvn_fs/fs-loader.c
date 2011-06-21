@@ -394,10 +394,10 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   svn_error_t *err;
   svn_error_t *err2;
   fs_library_vtable_t *vtable;
-  
-  const char *fs_type = svn_hash_get_cstring(fs_config, 
-                                             SVN_FS_CONFIG_FS_TYPE, 
-                                             DEFAULT_FS_TYPE);
+
+  const char *fs_type = svn_hash__get_cstring(fs_config, 
+                                              SVN_FS_CONFIG_FS_TYPE,
+                                              DEFAULT_FS_TYPE);
   SVN_ERR(get_library_vtable(&vtable, fs_type, pool));
 
   /* Create the FS directory and write out the fsap-name file. */

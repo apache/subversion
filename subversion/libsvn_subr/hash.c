@@ -515,10 +515,10 @@ svn_hash__clear(apr_hash_t *hash, apr_pool_t *pool)
 
 /*** Specialized getter APIs ***/
 
-const char*
-svn_hash_get_cstring(apr_hash_t *hash, 
-                     const char *key, 
-                     const char *default_value)
+const char *
+svn_hash__get_cstring(apr_hash_t *hash,
+                      const char *key,
+                      const char *default_value)
 {
   if (hash)
     {
@@ -531,12 +531,12 @@ svn_hash_get_cstring(apr_hash_t *hash,
 
 
 svn_boolean_t
-svn_hash_get_bool(apr_hash_t *hash, const char *key,
-                  svn_boolean_t default_value)
+svn_hash__get_bool(apr_hash_t *hash, const char *key,
+                   svn_boolean_t default_value)
 {
-  const char *tmp_value = svn_hash_get_cstring(hash, key, NULL);
-  svn_tristate_t value = svn_tristate_from_word(tmp_value);
-  
+  const char *tmp_value = svn_hash__get_cstring(hash, key, NULL);
+  svn_tristate_t value = svn_tristate__from_word(tmp_value);
+
   if (value == svn_tristate_true)
     return TRUE;
   else if (value == svn_tristate_false)

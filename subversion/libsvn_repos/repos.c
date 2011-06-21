@@ -1227,9 +1227,9 @@ svn_repos_create(svn_repos_t **repos_p,
   repos->format = SVN_REPOS__FORMAT_NUMBER;
 
   /* Discover the type of the filesystem we are about to create. */
-  repos->fs_type = svn_hash_get_cstring(fs_config, SVN_FS_CONFIG_FS_TYPE, 
-                                        DEFAULT_FS_TYPE);
-  if (svn_hash_get_bool(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE, FALSE))
+  repos->fs_type = svn_hash__get_cstring(fs_config, SVN_FS_CONFIG_FS_TYPE,
+                                         DEFAULT_FS_TYPE);
+  if (svn_hash__get_bool(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE, FALSE))
     repos->format = SVN_REPOS__FORMAT_NUMBER_LEGACY;
 
   /* Don't create a repository inside another repository. */

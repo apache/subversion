@@ -263,7 +263,7 @@ typedef enum svn_tristate_t
  * @since New in 1.7.
  */
 const char *
-svn_tristate_to_word(svn_tristate_t tristate);
+svn_tristate__to_word(svn_tristate_t tristate);
 
 /** Return the appropriate tristate for @a word. If @a word is "true", returns
  * #svn_tristate_true; if @a word is "false", returns #svn_tristate_false,
@@ -272,7 +272,7 @@ svn_tristate_to_word(svn_tristate_t tristate);
  * @since New in 1.7.
  */
 svn_tristate_t
-svn_tristate_from_word(const char * word);
+svn_tristate__from_word(const char * word);
 
 
 /** About Special Files in Subversion
