@@ -636,13 +636,17 @@ test_uri_dirname(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Paths to test and the expected result, for canonicalize tests. */
+typedef struct testcase_canonicalize_t {
+  const char *path;
+  const char *result;
+} testcase_canonicalize_t;
+
 static svn_error_t *
 test_dirent_canonicalize(apr_pool_t *pool)
 {
-  struct {
-    const char *path;
-    const char *result;
-  } tests[] = {
+  const testcase_canonicalize_t *t;
+  static const testcase_canonicalize_t tests[] = {
     { "",                     "" },
     { ".",                    "" },
     { "/",                    "/" },
@@ -696,17 +700,16 @@ test_dirent_canonicalize(apr_pool_t *pool)
     { "//srv/s r/qq",         "//srv/s r/qq" },
 #endif /* SVN_USE_DOS_PATHS */
   };
-  int i;
 
-  for (i = 0; i < COUNT_OF(tests); i++)
+  for (t = tests; t < tests + COUNT_OF(tests); t++)
     {
-      const char *canonical = svn_dirent_canonicalize(tests[i].path, pool);
+      const char *canonical = svn_dirent_canonicalize(t->path, pool);
 
-      if (strcmp(canonical, tests[i].result))
+      if (strcmp(canonical, t->result))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_dirent_canonicalize(\"%s\") returned "
                                  "\"%s\" expected \"%s\"",
-                                 tests[i].path, canonical, tests[i].result);
+                                 t->path, canonical, t->result);
     }
 
   return SVN_NO_ERROR;
@@ -715,10 +718,8 @@ test_dirent_canonicalize(apr_pool_t *pool)
 static svn_error_t *
 test_relpath_canonicalize(apr_pool_t *pool)
 {
-  struct {
-    const char *path;
-    const char *result;
-  } tests[] = {
+  const testcase_canonicalize_t *t;
+  static const testcase_canonicalize_t tests[] = {
     { "",                     "" },
     { ".",                    "" },
     { "/",                    "" },
@@ -779,18 +780,16 @@ test_relpath_canonicalize(apr_pool_t *pool)
     { "file:///c:/temp/REPOS", "file:/c:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:/C:/temp/REPOS" },
   };
-  int i;
 
-  for (i = 0; i < COUNT_OF(tests); i++)
-
+  for (t = tests; t < tests + COUNT_OF(tests); t++)
     {
-      const char *canonical = svn_relpath_canonicalize(tests[i].path, pool);
+      const char *canonical = svn_relpath_canonicalize(t->path, pool);
 
-      if (strcmp(canonical, tests[i].result))
+      if (strcmp(canonical, t->result))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_relpath_canonicalize(\"%s\") returned "
                                  "\"%s\" expected \"%s\"",
-                                 tests[i].path, canonical, tests[i].result);
+                                 t->path, canonical, t->result);
     }
 
   return SVN_NO_ERROR;
@@ -799,10 +798,8 @@ test_relpath_canonicalize(apr_pool_t *pool)
 static svn_error_t *
 test_uri_canonicalize(apr_pool_t *pool)
 {
-  struct {
-    const char *path;
-    const char *result;
-  } tests[] = {
+  const testcase_canonicalize_t *t;
+  static const testcase_canonicalize_t tests[] = {
     { "http://hst",           "http://hst" },
     { "http://hst/foo/../bar","http://hst/foo/../bar" },
     { "http://hst/",          "http://hst" },
@@ -857,30 +854,32 @@ test_uri_canonicalize(apr_pool_t *pool)
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
 #endif /* SVN_USE_DOS_PATHS */
   };
-  int i;
 
-  for (i = 0; i < COUNT_OF(tests); i++)
-
+  for (t = tests; t < tests + COUNT_OF(tests); t++)
     {
-      const char *canonical = svn_uri_canonicalize(tests[i].path, pool);
+      const char *canonical = svn_uri_canonicalize(t->path, pool);
 
-      if (strcmp(canonical, tests[i].result))
+      if (strcmp(canonical, t->result))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_uri_canonicalize(\"%s\") returned "
                                  "\"%s\" expected \"%s\"",
-                                 tests[i].path, canonical, tests[i].result);
+                                 t->path, canonical, t->result);
     }
 
   return SVN_NO_ERROR;
 }
 
+/* Paths to test and the expected result, for is_canonical tests. */
+typedef struct testcase_is_canonical_t {
+  const char *path;
+  svn_boolean_t canonical;
+} testcase_is_canonical_t;
+
 static svn_error_t *
 test_dirent_is_canonical(apr_pool_t *pool)
 {
-  struct {
-    const char *path;
-    svn_boolean_t canonical;
-  } tests[] = {
+  const testcase_is_canonical_t *t;
+  static const testcase_is_canonical_t tests[] = {
     { "",                      TRUE },
     { ".",                     FALSE },
     { "/",                     TRUE },
@@ -947,30 +946,29 @@ test_dirent_is_canonical(apr_pool_t *pool)
     { "foo/.:", TRUE },
 #endif /* SVN_USE_DOS_PATHS */
   };
-  int i;
 
-  for (i = 0; i < COUNT_OF(tests); i++)
+  for (t = tests; t < tests + COUNT_OF(tests); t++)
     {
       svn_boolean_t canonical;
       const char* canonicalized;
 
-      canonical = svn_dirent_is_canonical(tests[i].path, pool);
-      if (tests[i].canonical != canonical)
+      canonical = svn_dirent_is_canonical(t->path, pool);
+      if (t->canonical != canonical)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_dirent_is_canonical(\"%s\") returned "
                                  "\"%s\" expected \"%s\"",
-                                 tests[i].path,
+                                 t->path,
                                  canonical ? "TRUE" : "FALSE",
-                                 tests[i].canonical ? "TRUE" : "FALSE");
+                                 t->canonical ? "TRUE" : "FALSE");
 
-      canonicalized = svn_dirent_canonicalize(tests[i].path, pool);
+      canonicalized = svn_dirent_canonicalize(t->path, pool);
 
-      if ((canonical && strcmp(tests[i].path, canonicalized) != 0)
-          || (!canonical && strcmp(tests[i].path, canonicalized) == 0))
+      if ((canonical && strcmp(t->path, canonicalized) != 0)
+          || (!canonical && strcmp(t->path, canonicalized) == 0))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_dirent_canonicalize(\"%s\") returned \"%s\" "
                                  "while svn_dirent_is_canonical returned TRUE",
-                                 tests[i].path,
+                                 t->path,
                                  canonicalized);
     }
 
@@ -980,10 +978,8 @@ test_dirent_is_canonical(apr_pool_t *pool)
 static svn_error_t *
 test_relpath_is_canonical(apr_pool_t *pool)
 {
-  struct {
-    const char *path;
-    svn_boolean_t canonical;
-  } tests[] = {
+  const testcase_is_canonical_t *t;
+  static const testcase_is_canonical_t tests[] = {
     { "",                      TRUE },
     { ".",                     FALSE },
     { "/",                     FALSE },
@@ -1040,31 +1036,30 @@ test_relpath_is_canonical(apr_pool_t *pool)
     { "file:///c:/temp/REPOS", FALSE },
     { "file:///C:/temp/REPOS", FALSE },
   };
-  int i;
 
-  for (i = 0; i < COUNT_OF(tests); i++)
+  for (t = tests; t < tests + COUNT_OF(tests); t++)
     {
       svn_boolean_t canonical;
       const char* canonicalized;
 
-      canonical = svn_relpath_is_canonical(tests[i].path);
-      if (tests[i].canonical != canonical)
+      canonical = svn_relpath_is_canonical(t->path);
+      if (t->canonical != canonical)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_relpath_is_canonical(\"%s\") returned "
                                  "\"%s\" expected \"%s\"",
-                                 tests[i].path,
+                                 t->path,
                                  canonical ? "TRUE" : "FALSE",
-                                 tests[i].canonical ? "TRUE" : "FALSE");
+                                 t->canonical ? "TRUE" : "FALSE");
 
-      canonicalized = svn_relpath_canonicalize(tests[i].path, pool);
+      canonicalized = svn_relpath_canonicalize(t->path, pool);
 
-      if ((canonical && strcmp(tests[i].path, canonicalized) != 0)
-          || (!canonical && strcmp(tests[i].path, canonicalized) == 0))
+      if ((canonical && strcmp(t->path, canonicalized) != 0)
+          || (!canonical && strcmp(t->path, canonicalized) == 0))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_relpath_canonicalize(\"%s\") returned "
                                  "\"%s\"  while svn_relpath_is_canonical "
                                  "returned %s",
-                                 tests[i].path,
+                                 t->path,
                                  canonicalized,
                                  canonical ? "TRUE" : "FALSE");
     }
@@ -1072,17 +1067,21 @@ test_relpath_is_canonical(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Paths to test and the expected result, for is_canonical tests. */
+typedef struct testcase_uri_is_canonical_t {
+  const char *path;
+  svn_boolean_t canonical;
+  svn_boolean_t canonicalizable;
+} testcase_uri_is_canonical_t;
+
 static svn_error_t *
 test_uri_is_canonical(apr_pool_t *pool)
 {
   /* svn_uri_is_canonical() was a private function in the 1.6 API, and
      has since taken a MAJOR change of direction, namely that only
      absolute URLs are considered canonical uris now. */
-  struct {
-    const char *path;
-    svn_boolean_t canonical;
-    svn_boolean_t canonicalizable;
-  } tests[] = {
+  const testcase_uri_is_canonical_t *t;
+  static const testcase_uri_is_canonical_t tests[] = {
     { "",                                FALSE, FALSE },
     { ".",                               FALSE, FALSE },
     { "/",                               FALSE, FALSE },
@@ -1184,32 +1183,31 @@ test_uri_is_canonical(apr_pool_t *pool)
     { "file:///C:/temp/REPOS",           TRUE,  TRUE  },
 #endif /* SVN_USE_DOS_PATHS */
   };
-  int i;
 
-  for (i = 0; i < COUNT_OF(tests); i++)
+  for (t = tests; t < tests + COUNT_OF(tests); t++)
     {
       svn_boolean_t canonical;
       const char* canonicalized;
 
-      canonical = svn_uri_is_canonical(tests[i].path, pool);
-      if (tests[i].canonical != canonical)
+      canonical = svn_uri_is_canonical(t->path, pool);
+      if (t->canonical != canonical)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_uri_is_canonical(\"%s\") returned "
                                  "\"%s\" expected \"%s\"",
-                                 tests[i].path,
+                                 t->path,
                                  canonical ? "TRUE" : "FALSE",
-                                 tests[i].canonical ? "TRUE" : "FALSE");
-      if (! tests[i].canonicalizable)
+                                 t->canonical ? "TRUE" : "FALSE");
+      if (! t->canonicalizable)
         continue;
 
-      canonicalized = svn_uri_canonicalize(tests[i].path, pool);
+      canonicalized = svn_uri_canonicalize(t->path, pool);
 
-      if ((canonical && strcmp(tests[i].path, canonicalized) != 0)
-          || (!canonical && strcmp(tests[i].path, canonicalized) == 0))
+      if ((canonical && strcmp(t->path, canonicalized) != 0)
+          || (!canonical && strcmp(t->path, canonicalized) == 0))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_uri_canonicalize(\"%s\") returned \"%s\" "
                                  "while svn_uri_is_canonical returned %s",
-                                 tests[i].path,
+                                 t->path,
                                  canonicalized,
                                  canonical ? "TRUE" : "FALSE");
     }
@@ -1348,17 +1346,18 @@ test_uri_split(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Paths to test and the expected result, for is_ancestor tests. */
+typedef struct testcase_is_ancestor_t {
+  const char *path1;
+  const char *path2;
+  svn_boolean_t result;
+} testcase_is_ancestor_t;
+
 static svn_error_t *
 test_dirent_is_ancestor(apr_pool_t *pool)
 {
-  apr_size_t i;
-
-  /* Dirents to test and their expected results. */
-  struct {
-    const char *path1;
-    const char *path2;
-    svn_boolean_t result;
-  } tests[] = {
+  const testcase_is_ancestor_t *t;
+  static const testcase_is_ancestor_t tests[] = {
     { "/foo",            "/foo/bar",      TRUE},
     { "/foo/bar",        "/foo/bar/",     TRUE},
     { "/",               "/foo",          TRUE},
@@ -1395,17 +1394,17 @@ test_dirent_is_ancestor(apr_pool_t *pool)
 #endif /* SVN_USE_DOS_PATHS */
   };
 
-  for (i = 0; i < COUNT_OF(tests); i++)
+  for (t = tests; t < tests + COUNT_OF(tests); t++)
     {
       svn_boolean_t retval;
 
-      retval = svn_dirent_is_ancestor(tests[i].path1, tests[i].path2);
-      if (tests[i].result != retval)
+      retval = svn_dirent_is_ancestor(t->path1, t->path2);
+      if (t->result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_dirent_is_ancestor (%s, %s) returned %s instead of %s",
-           tests[i].path1, tests[i].path2, retval ? "TRUE" : "FALSE",
-           tests[i].result ? "TRUE" : "FALSE");
+           t->path1, t->path2, retval ? "TRUE" : "FALSE",
+           t->result ? "TRUE" : "FALSE");
     }
   return SVN_NO_ERROR;
 }
@@ -1413,14 +1412,8 @@ test_dirent_is_ancestor(apr_pool_t *pool)
 static svn_error_t *
 test_relpath_is_ancestor(apr_pool_t *pool)
 {
-  apr_size_t i;
-
-  /* Dirents to test and their expected results. */
-  struct {
-    const char *path1;
-    const char *path2;
-    svn_boolean_t result;
-  } tests[] = {
+  const testcase_is_ancestor_t *t;
+  static const testcase_is_ancestor_t tests[] = {
     { "foo",            "foo/bar",        TRUE},
     { "food/bar",       "foo/bar",        FALSE},
     { "",                "foo",           TRUE},
@@ -1434,17 +1427,17 @@ test_relpath_is_ancestor(apr_pool_t *pool)
     { "",                "C:",            TRUE},
   };
 
-  for (i = 0; i < COUNT_OF(tests); i++)
+  for (t = tests; t < tests + COUNT_OF(tests); t++)
     {
       svn_boolean_t retval;
 
-      retval = svn_relpath__is_ancestor(tests[i].path1, tests[i].path2);
-      if (tests[i].result != retval)
+      retval = svn_relpath__is_ancestor(t->path1, t->path2);
+      if (t->result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_relpath_is_ancestor (%s, %s) returned %s instead of %s",
-           tests[i].path1, tests[i].path2, retval ? "TRUE" : "FALSE",
-           tests[i].result ? "TRUE" : "FALSE");
+           t->path1, t->path2, retval ? "TRUE" : "FALSE",
+           t->result ? "TRUE" : "FALSE");
     }
   return SVN_NO_ERROR;
 }
@@ -1452,14 +1445,8 @@ test_relpath_is_ancestor(apr_pool_t *pool)
 static svn_error_t *
 test_uri_is_ancestor(apr_pool_t *pool)
 {
-  apr_size_t i;
-
-  /* URIs to test and their expected results. */
-  struct {
-    const char *path1;
-    const char *path2;
-    svn_boolean_t result;
-  } tests[] = {
+  const testcase_is_ancestor_t *t;
+  static const testcase_is_ancestor_t tests[] = {
     { "http://test",    "http://test",     TRUE},
     { "http://test",    "http://taste",    FALSE},
     { "http://test",    "http://test/foo", TRUE},
@@ -1468,32 +1455,33 @@ test_uri_is_ancestor(apr_pool_t *pool)
     { "http://",        "http://test",     FALSE},
   };
 
-  for (i = 0; i < COUNT_OF(tests); i++)
+  for (t = tests; t < tests + COUNT_OF(tests); t++)
     {
       svn_boolean_t retval;
 
-      retval = svn_uri__is_ancestor(tests[i].path1, tests[i].path2);
-      if (tests[i].result != retval)
+      retval = svn_uri__is_ancestor(t->path1, t->path2);
+      if (t->result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_uri_is_ancestor (%s, %s) returned %s instead of %s",
-           tests[i].path1, tests[i].path2, retval ? "TRUE" : "FALSE",
-           tests[i].result ? "TRUE" : "FALSE");
+           t->path1, t->path2, retval ? "TRUE" : "FALSE",
+           t->result ? "TRUE" : "FALSE");
     }
   return SVN_NO_ERROR;
 }
 
+/* Paths to test and the expected result, for skip_ancestor tests. */
+typedef struct testcase_skip_ancestor_t {
+  const char *path1;
+  const char *path2;
+  const char *result;
+} testcase_skip_ancestor_t;
+
 static svn_error_t *
 test_dirent_skip_ancestor(apr_pool_t *pool)
 {
-  apr_size_t i;
-
-  /* Dirents to test and their expected results. */
-  struct {
-    const char *path1;
-    const char *path2;
-    const char *result;
-  } tests[] = {
+  const testcase_skip_ancestor_t *t;
+  static const testcase_skip_ancestor_t tests[] = {
     { "/foo",            "/foo/bar",        "bar"},
     { "/foo/bar",        "/foot/bar",       NULL },
     { "/foo",            "/foo",            ""},
@@ -1520,18 +1508,18 @@ test_dirent_skip_ancestor(apr_pool_t *pool)
 #endif
   };
 
-  for (i = 0; i < COUNT_OF(tests); i++)
+  for (t = tests; t < tests + COUNT_OF(tests); t++)
     {
       const char* retval;
 
-      retval = svn_dirent_skip_ancestor(tests[i].path1, tests[i].path2);
-      if ((tests[i].result == NULL)
+      retval = svn_dirent_skip_ancestor(t->path1, t->path2);
+      if ((t->result == NULL)
           ? (retval != NULL)
-          : (retval == NULL || strcmp(tests[i].result, retval) != 0))
+          : (retval == NULL || strcmp(t->result, retval) != 0))
         return svn_error_createf(
              SVN_ERR_TEST_FAILED, NULL,
              "svn_dirent_skip_ancestor (%s, %s) returned %s instead of %s",
-             tests[i].path1, tests[i].path2, retval, tests[i].result);
+             t->path1, t->path2, retval, t->result);
     }
   return SVN_NO_ERROR;
 }
@@ -1539,14 +1527,8 @@ test_dirent_skip_ancestor(apr_pool_t *pool)
 static svn_error_t *
 test_relpath_skip_ancestor(apr_pool_t *pool)
 {
-  apr_size_t i;
-
-  /* Dirents to test and their expected results. */
-  struct {
-    const char *path1;
-    const char *path2;
-    const char *result;
-  } tests[] = {
+  const testcase_skip_ancestor_t *t;
+  static const testcase_skip_ancestor_t tests[] = {
     { "foo",             "foo/bar",        "bar"},
     { "foo/bar",         "foot/bar",       NULL },
     { "foo",             "foo",            ""},
@@ -1561,18 +1543,18 @@ test_relpath_skip_ancestor(apr_pool_t *pool)
     { "svn:/server",     "http:/server/q", NULL },
   };
 
-  for (i = 0; i < COUNT_OF(tests); i++)
+  for (t = tests; t < tests + COUNT_OF(tests); t++)
     {
       const char* retval;
 
-      retval = svn_relpath_skip_ancestor(tests[i].path1, tests[i].path2);
-      if ((tests[i].result == NULL)
+      retval = svn_relpath_skip_ancestor(t->path1, t->path2);
+      if ((t->result == NULL)
           ? (retval != NULL)
-          : (retval == NULL || strcmp(tests[i].result, retval) != 0))
+          : (retval == NULL || strcmp(t->result, retval) != 0))
         return svn_error_createf(
              SVN_ERR_TEST_FAILED, NULL,
              "svn_relpath_skip_ancestor (%s, %s) returned %s instead of %s",
-             tests[i].path1, tests[i].path2, retval, tests[i].result);
+             t->path1, t->path2, retval, t->result);
     }
   return SVN_NO_ERROR;
 }
@@ -1580,45 +1562,40 @@ test_relpath_skip_ancestor(apr_pool_t *pool)
 static svn_error_t *
 test_uri_skip_ancestor(apr_pool_t *pool)
 {
-  apr_size_t i;
-
-  /* Dirents to test and their expected results. */
-  struct {
-    const char *path1;
-    const char *path2;
-    const char *result;
-  } tests[] = {
+  const testcase_skip_ancestor_t *t;
+  static const testcase_skip_ancestor_t tests[] = {
     { "http://server",   "http://server/q", "q" },
     { "svn://server",    "http://server/q", NULL },
   };
 
-  for (i = 0; i < COUNT_OF(tests); i++)
+  for (t = tests; t < tests + COUNT_OF(tests); t++)
     {
       const char* retval;
 
-      retval = svn_uri_skip_ancestor(tests[i].path1, tests[i].path2, pool);
-      if ((tests[i].result == NULL)
+      retval = svn_uri_skip_ancestor(t->path1, t->path2, pool);
+      if ((t->result == NULL)
           ? (retval != NULL)
-          : (retval == NULL || strcmp(tests[i].result, retval) != 0))
+          : (retval == NULL || strcmp(t->result, retval) != 0))
         return svn_error_createf(
              SVN_ERR_TEST_FAILED, NULL,
              "svn_uri_skip_ancestor (%s, %s) returned %s instead of %s",
-             tests[i].path1, tests[i].path2, retval, tests[i].result);
+             t->path1, t->path2, retval, t->result);
     }
   return SVN_NO_ERROR;
 }
 
+/* Paths to test and the expected result, for get_longest_ancestor tests. */
+typedef struct testcase_get_longest_ancestor_t {
+  const char *path1;
+  const char *path2;
+  const char *result;
+} testcase_get_longest_ancestor_t;
+
 static svn_error_t *
 test_dirent_get_longest_ancestor(apr_pool_t *pool)
 {
-  apr_size_t i;
-
-  /* Paths to test and their expected results. */
-  struct {
-    const char *path1;
-    const char *path2;
-    const char *result;
-  } tests[] = {
+  const testcase_get_longest_ancestor_t *t;
+  static const testcase_get_longest_ancestor_t tests[] = {
     { "/foo",           "/foo/bar",        "/foo"},
     { "/foo/bar",       "foo/bar",         SVN_EMPTY_PATH},
     { "/",              "/foo",            "/"},
@@ -1657,28 +1634,26 @@ test_dirent_get_longest_ancestor(apr_pool_t *pool)
 #endif /* SVN_USE_DOS_PATHS */
   };
 
-  for (i = 0; i < COUNT_OF(tests); i++)
+  for (t = tests; t < tests + COUNT_OF(tests); t++)
     {
       const char *retval;
 
-      retval = svn_dirent_get_longest_ancestor(tests[i].path1, tests[i].path2,
-                                               pool);
+      retval = svn_dirent_get_longest_ancestor(t->path1, t->path2, pool);
 
-      if (strcmp(tests[i].result, retval))
+      if (strcmp(t->result, retval))
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_dirent_get_longest_ancestor (%s, %s) returned %s instead of %s",
-           tests[i].path1, tests[i].path2, retval, tests[i].result);
+           t->path1, t->path2, retval, t->result);
 
       /* changing the order of the paths should return the same results */
-      retval = svn_dirent_get_longest_ancestor(tests[i].path2, tests[i].path1,
-                                               pool);
+      retval = svn_dirent_get_longest_ancestor(t->path2, t->path1, pool);
 
-      if (strcmp(tests[i].result, retval))
+      if (strcmp(t->result, retval))
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_dirent_get_longest_ancestor (%s, %s) returned %s instead of %s",
-           tests[i].path2, tests[i].path1, retval, tests[i].result);
+           t->path2, t->path1, retval, t->result);
     }
   return SVN_NO_ERROR;
 }
@@ -1686,14 +1661,8 @@ test_dirent_get_longest_ancestor(apr_pool_t *pool)
 static svn_error_t *
 test_relpath_get_longest_ancestor(apr_pool_t *pool)
 {
-  apr_size_t i;
-
-  /* Paths to test and their expected results. */
-  struct {
-    const char *path1;
-    const char *path2;
-    const char *result;
-  } tests[] = {
+  const testcase_get_longest_ancestor_t *t;
+  static const testcase_get_longest_ancestor_t tests[] = {
     { "foo",            "foo/bar",         "foo"},
     { "foo/bar",        "foo/bar",         "foo/bar"},
     { "",               "foo",             ""},
@@ -1720,30 +1689,28 @@ test_relpath_get_longest_ancestor(apr_pool_t *pool)
     { "X:foo",          "X:bar",           ""},
   };
 
-  for (i = 0; i < COUNT_OF(tests); i++)
+  for (t = tests; t < tests + COUNT_OF(tests); t++)
     {
       const char *retval;
 
-      retval = svn_relpath_get_longest_ancestor(tests[i].path1, tests[i].path2,
-                                                pool);
+      retval = svn_relpath_get_longest_ancestor(t->path1, t->path2, pool);
 
-      if (strcmp(tests[i].result, retval))
+      if (strcmp(t->result, retval))
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_relpath_get_longest_ancestor (%s, %s) returned "
            "%s instead of %s",
-           tests[i].path1, tests[i].path2, retval, tests[i].result);
+           t->path1, t->path2, retval, t->result);
 
       /* changing the order of the paths should return the same results */
-      retval = svn_relpath_get_longest_ancestor(tests[i].path2, tests[i].path1,
-                                                pool);
+      retval = svn_relpath_get_longest_ancestor(t->path2, t->path1, pool);
 
-      if (strcmp(tests[i].result, retval))
+      if (strcmp(t->result, retval))
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_relpath_get_longest_ancestor (%s, %s) returned "
            "%s instead of %s",
-           tests[i].path2, tests[i].path1, retval, tests[i].result);
+           t->path2, t->path1, retval, t->result);
     }
   return SVN_NO_ERROR;
 }
@@ -1751,14 +1718,8 @@ test_relpath_get_longest_ancestor(apr_pool_t *pool)
 static svn_error_t *
 test_uri_get_longest_ancestor(apr_pool_t *pool)
 {
-  apr_size_t i;
-
-  /* Paths to test and their expected results. */
-  struct {
-    const char *path1;
-    const char *path2;
-    const char *result;
-  } tests[] = {
+  const testcase_get_longest_ancestor_t *t;
+  static const testcase_get_longest_ancestor_t tests[] = {
     { "http://test",    "http://test",     "http://test"},
     { "http://test",    "http://taste",    SVN_EMPTY_PATH},
     { "http://test",    "http://test/foo", "http://test"},
@@ -1769,28 +1730,26 @@ test_uri_get_longest_ancestor(apr_pool_t *pool)
     { "file:///A/C",    "file:///A/D",     "file:///A"},
   };
 
-  for (i = 0; i < COUNT_OF(tests); i++)
+  for (t = tests; t < tests + COUNT_OF(tests); t++)
     {
       const char *retval;
 
-      retval = svn_uri_get_longest_ancestor(tests[i].path1, tests[i].path2,
-                                             pool);
+      retval = svn_uri_get_longest_ancestor(t->path1, t->path2, pool);
 
-      if (strcmp(tests[i].result, retval))
+      if (strcmp(t->result, retval))
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_uri_get_longest_ancestor (%s, %s) returned %s instead of %s",
-           tests[i].path1, tests[i].path2, retval, tests[i].result);
+           t->path1, t->path2, retval, t->result);
 
       /* changing the order of the paths should return the same results */
-      retval = svn_uri_get_longest_ancestor(tests[i].path2, tests[i].path1,
-                                             pool);
+      retval = svn_uri_get_longest_ancestor(t->path2, t->path1, pool);
 
-      if (strcmp(tests[i].result, retval))
+      if (strcmp(t->result, retval))
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_uri_get_longest_ancestor (%s, %s) returned %s instead of %s",
-           tests[i].path2, tests[i].path1, retval, tests[i].result);
+           t->path2, t->path1, retval, t->result);
     }
   return SVN_NO_ERROR;
 }
@@ -2686,10 +2645,8 @@ test_dirent_is_under_root(apr_pool_t *pool)
 static svn_error_t *
 test_fspath_is_canonical(apr_pool_t *pool)
 {
-  struct {
-    const char *path;
-    svn_boolean_t canonical;
-  } tests[] = {
+  const testcase_is_canonical_t *t;
+  static const testcase_is_canonical_t tests[] = {
     { "",                      FALSE },
     { ".",                     FALSE },
     { "/",                     TRUE },
@@ -2704,20 +2661,19 @@ test_fspath_is_canonical(apr_pool_t *pool)
     { "/a\\",                  TRUE },  /* a single component */
     { "/a\\b",                 TRUE },  /* a single component */
   };
-  int i;
 
-  for (i = 0; i < COUNT_OF(tests); i++)
+  for (t = tests; t < tests + COUNT_OF(tests); t++)
     {
       svn_boolean_t canonical
-        = svn_fspath__is_canonical(tests[i].path);
+        = svn_fspath__is_canonical(t->path);
 
-      if (tests[i].canonical != canonical)
+      if (t->canonical != canonical)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_fspath__is_canonical(\"%s\") returned "
                                  "\"%s\" expected \"%s\"",
-                                 tests[i].path,
+                                 t->path,
                                  canonical ? "TRUE" : "FALSE",
-                                 tests[i].canonical ? "TRUE" : "FALSE");
+                                 t->canonical ? "TRUE" : "FALSE");
     }
 
   return SVN_NO_ERROR;
@@ -2824,15 +2780,11 @@ test_fspath_dirname_basename_split(apr_pool_t *pool)
 static svn_error_t *
 test_fspath_get_longest_ancestor(apr_pool_t *pool)
 {
-  int i;
+  const testcase_get_longest_ancestor_t *t;
 
   /* Paths to test and their expected results.  Same as in
    * test_relpath_get_longest_ancestor() but with '/' prefix. */
-  struct {
-    const char *path1;
-    const char *path2;
-    const char *result;
-  } tests[] = {
+  static const testcase_get_longest_ancestor_t tests[] = {
     { "/foo",            "/foo/bar",         "/foo" },
     { "/foo/bar",        "/foo/bar",         "/foo/bar" },
     { "/",               "/foo",             "/" },
@@ -2859,18 +2811,16 @@ test_fspath_get_longest_ancestor(apr_pool_t *pool)
     { "/X:foo",          "/X:bar",           "/" },
   };
 
-  for (i = 0; i < COUNT_OF(tests); i++)
+  for (t = tests; t < tests + COUNT_OF(tests); t++)
     {
       const char *result;
 
-      result = svn_fspath__get_longest_ancestor(tests[i].path1, tests[i].path2,
-                                                pool);
-      SVN_TEST_STRING_ASSERT(tests[i].result, result);
+      result = svn_fspath__get_longest_ancestor(t->path1, t->path2, pool);
+      SVN_TEST_STRING_ASSERT(t->result, result);
 
       /* changing the order of the paths should return the same result */
-      result = svn_fspath__get_longest_ancestor(tests[i].path2, tests[i].path1,
-                                                pool);
-      SVN_TEST_STRING_ASSERT(tests[i].result, result);
+      result = svn_fspath__get_longest_ancestor(t->path2, t->path1, pool);
+      SVN_TEST_STRING_ASSERT(t->result, result);
     }
   return SVN_NO_ERROR;
 }
