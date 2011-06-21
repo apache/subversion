@@ -1200,6 +1200,7 @@ svn_ra_neon__do_proppatch(svn_ra_neon__session_t *ras,
 {
   svn_error_t *err;
   svn_stringbuf_t *body;
+  int code;
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* just punt if there are no changes to make. */
@@ -1273,9 +1274,22 @@ svn_ra_neon__do_proppatch(svn_ra_neon__session_t *ras,
   apr_hash_set(extra_headers, "Content-Type", APR_HASH_KEY_STRING,
                "text/xml; charset=UTF-8");
 
-  err = svn_ra_neon__simple_request(NULL, ras, "PROPPATCH", url,
+  err = svn_ra_neon__simple_request(&code, ras, "PROPPATCH", url,
                                     extra_headers, body->data,
                                     200, 207, pool);
+
+  if (err && err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
+    switch(code)
+      {
+        case 423:
+          return svn_error_createf(SVN_ERR_RA_NOT_LOCKED, err,
+                                   _("No lock on path '%s'; "
+                                     " repository is unchanged"), url);
+        /* ### Add case 412 for a better error on issue #3674 */
+        default:
+          break;
+      }
+
   if (err)
     return svn_error_create
       (SVN_ERR_RA_DAV_PROPPATCH_FAILED, err,
