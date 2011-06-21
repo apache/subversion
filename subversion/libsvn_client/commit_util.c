@@ -99,7 +99,7 @@ fixup_out_of_date_error(const char *local_abspath,
                                                                 path,
                                                                 scratch_pool));
     }
-  else if (err->apr_err == SVN_ERR_FS_NO_LOCK_TOKEN
+  else if (svn_error_find_cause(err, SVN_ERR_FS_NO_LOCK_TOKEN)
            || err->apr_err == SVN_ERR_FS_LOCK_OWNER_MISMATCH
            || err->apr_err == SVN_ERR_RA_NOT_LOCKED)
     {
@@ -1684,7 +1684,13 @@ do_item_commit(void **dir_baton,
     {
       /* Close any outstanding file batons that didn't get caught by
          the "has local mods" conditional above. */
-      SVN_ERR(editor->close_file(file_baton, NULL, file_pool));
+      err = editor->close_file(file_baton, NULL, file_pool);
+
+      if (err)
+        return svn_error_return(fixup_out_of_date_error(local_abspath,
+                                                        icb->base_url,
+                                                        path, kind,
+                                                        err, ctx, pool));
     }
 
   return SVN_NO_ERROR;
