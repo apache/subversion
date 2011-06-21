@@ -359,8 +359,36 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
             src = seg;
 
           /* Found a hostname, convert to lowercase and copy to dst. */
-          while (*src && (*src != '/'))
+          while (*src && (*src != '/') && (*src != ':'))
             *(dst++) = canonicalize_to_lower((*src++));
+
+          if (*src == ':')
+            {
+              /* We probably have a port number: Is it a default portnumber
+                 which doesn't belong in a canonical url? */
+              if (src[1] == '8' && src[2] == '0' 
+                  && (src[3]== '/'|| !src[3])
+                  && !strncmp(canon, "http:", 5))
+                {
+                  src += 3;
+                }
+              else if (src[1] == '4' && src[2] == '4' && src[3] == '3'
+                       && (src[4]== '/'|| !src[4])
+                       && !strncmp(canon, "https:", 6))
+                {
+                  src += 4;
+                }
+              else if (src[1] == '3' && src[2] == '6'
+                       && src[3] == '9' && src[4] == '0'
+                       && (src[5]== '/'|| !src[5])
+                       && !strncmp(canon, "svn:", 4))
+                {
+                  src += 5;
+                }
+
+              while (*src && (*src != '/'))
+                *(dst++) = canonicalize_to_lower((*src++));
+            }
 
           /* Copy trailing slash, or null-terminator. */
           *(dst) = *(src);
@@ -1760,12 +1788,41 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
 
   /* Found a hostname, check that it's all lowercase. */
   ptr = seg;
-  while (*ptr && *ptr != '/')
+  while (*ptr && *ptr != '/' && *ptr != ':')
     {
       if (*ptr >= 'A' && *ptr <= 'Z')
         return FALSE;
       ptr++;
     }
+
+  /* Found a portnumber */
+  if (*ptr == ':')
+    {
+      apr_int64_t port = 0;
+
+      ptr++;
+      schema_data = ptr;
+
+      while (*ptr >= '0' && *ptr <= '9')
+        {
+          port = 10 * port + (*ptr - '0');
+          ptr++;
+        }
+
+      if (ptr == schema_data)
+        return FALSE; /* Fail on "http://host:" */
+
+      if (*ptr && *ptr != '/')
+        return FALSE; /* Not a port number */
+
+      if (port == 80 && strncmp(uri, "http:", 5) == 0)
+        return FALSE;
+      else if (port == 443 && !strncmp(uri, "https:", 6) == 0)
+        return FALSE;
+      else if (port == 3690 && !strncmp(uri, "svn:", 4) == 0)
+        return FALSE;
+    }
+
   schema_data = ptr;
 
 #ifdef SVN_USE_DOS_PATHS
