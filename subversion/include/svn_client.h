@@ -5515,6 +5515,25 @@ svn_client_get_wc_root(const char **wcroot_abspath,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
+/**
+ * Set @a *min_revision and @a *max_revision to the lowest and highest
+ * revision numbers found within @a local_abspath.  If @a committed is
+ * TRUE, set @a *min_revision and @a *max_revision to the lowest and
+ * highest comitted (i.e. "last changed") revision numbers,
+ * respectively.  NULL may be passed for either of @a min_revision and
+ * @a max_revision to indicate the caller's lack of interest in the
+ * value.  Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_min_max_revisions(svn_revnum_t *min_revision,
+                             svn_revnum_t *max_revision,
+                             const char *local_abspath,
+                             svn_boolean_t committed,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *scratch_pool);
+
 /** @} */
 
 

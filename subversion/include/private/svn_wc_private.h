@@ -827,6 +827,9 @@ svn_wc__node_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
  * If @a committed is TRUE, set @a *min_revision and @a *max_revision
  * to the lowest and highest comitted (i.e. "last changed") revision numbers,
  * respectively. Use @a scratch_pool for temporary allocations.
+ *
+ * Either of MIN_REVISION and MAX_REVISION may be passed as NULL if
+ * the caller doesn't care about that return value.
  * 
  * This function provides a subset of the functionality of
  * svn_wc_revision_status2() and is more efficient if the caller
