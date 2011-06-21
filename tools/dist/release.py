@@ -42,6 +42,7 @@ import urllib2
 import hashlib
 import tarfile
 import logging
+import datetime
 import subprocess
 import argparse       # standard in Python 2.7
 
@@ -385,6 +386,28 @@ def post_candidates(base_dir, args):
 #----------------------------------------------------------------------
 # Write announcements
 
+def write_news(base_dir, args):
+    'Write text for the Subversion website.'
+    version_base = args.version.split('-')[0]
+    version_extra = args.version.split('-')[1]
+
+    data = { 'date' : datetime.date.today().strftime('%Y%m%d'),
+             'date_pres' : datetime.date.today().strftime('%Y-%m-%d'),
+             'version' : args.version,
+             'version_base' : version_base[0:3],
+           }
+
+    if version_extra:
+        if version_extra.startswith('alpha'):
+            template_filename = 'rc-news.ezt'
+    else:
+        template_filename = 'stable-news.ezt'
+
+    template = ezt.Template()
+    template.parse(get_tmplfile(template_filename).read())
+    template.generate(sys.stdout, data)
+
+
 def announce(base_dir, args):
     'Write the release announcement.'
 
@@ -447,6 +470,14 @@ def main():
     subparser.add_argument('--code-name',
                     help='''A whimsical name for the release, used only for
                             naming the download directory.''')
+
+    # The write-news subcommand
+    subparser = subparsers.add_parser('write-news',
+                    help='''Output to stdout template text for use in the news
+                            section of the Subversion website.''')
+    subparser.set_defaults(func=write_news)
+    subparser.add_argument('version',
+                    help='''The release label, such as '1.7.0-alpha1'.''')
 
     # A meta-target
     subparser = subparsers.add_parser('clean',
