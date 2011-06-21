@@ -11520,21 +11520,21 @@ get_min_max_revisions(svn_revnum_t *min_revision,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     {
-        if (committed)
-          {
-            min_rev = svn_sqlite__column_revnum(stmt, 2);
-            max_rev = svn_sqlite__column_revnum(stmt, 3);
-          }
-        else
-          {
-            min_rev = svn_sqlite__column_revnum(stmt, 0);
-            max_rev = svn_sqlite__column_revnum(stmt, 1);
-          }
+      if (committed)
+        {
+          min_rev = svn_sqlite__column_revnum(stmt, 2);
+          max_rev = svn_sqlite__column_revnum(stmt, 3);
+        }
+      else
+        {
+          min_rev = svn_sqlite__column_revnum(stmt, 0);
+          max_rev = svn_sqlite__column_revnum(stmt, 1);
+        }
     }
   else
     {
-        min_rev = SVN_INVALID_REVNUM;
-        max_rev = SVN_INVALID_REVNUM;
+      min_rev = SVN_INVALID_REVNUM;
+      max_rev = SVN_INVALID_REVNUM;
     }
 
   /* The statement should only return at most one row. */
