@@ -133,6 +133,7 @@ split_props(apr_array_header_t **props,
         }
       else if (property[i] == ';')
         {
+          /* ";;" becomes ";" */
           if (property[i+1] == ';')
             {
               new_prop[j] = ';';
