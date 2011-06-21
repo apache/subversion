@@ -1412,6 +1412,7 @@ static svn_error_t * commit_close_file(void *file_baton,
       put_baton_t *pb = file->put_baton;
       apr_hash_t *extra_headers;
       svn_ra_neon__request_t *request;
+      int code;
       const char *public_url =
         svn_path_url_add_component2(file->cc->ras->url->data,
                                     file->local_relpath, pool);
@@ -1461,10 +1462,24 @@ static svn_error_t * commit_close_file(void *file_baton,
         }
 
       /* run the request and get the resulting status code (and svn_error_t) */
-      err = svn_ra_neon__request_dispatch(NULL, request, extra_headers, NULL,
+      err = svn_ra_neon__request_dispatch(&code, request, extra_headers, NULL,
                                           201 /* Created */,
                                           204 /* No Content */,
                                           pool);
+
+      if (err && (err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED))
+        {
+          switch (code)
+          {
+            case 423:
+               err = svn_error_createf(SVN_ERR_RA_NOT_LOCKED, err,
+                                       _("No lock on path '%s'"
+                                         " (Status %d on PUT Request)"),
+                                       put_target, code);
+            default:
+              break;
+          }
+      }
     cleanup:
       svn_ra_neon__request_destroy(request);
       SVN_ERR(err);

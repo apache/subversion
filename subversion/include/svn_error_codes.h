@@ -1206,6 +1206,11 @@ SVN_ERROR_START
              SVN_ERR_CLIENT_CATEGORY_START + 21,
              "Invalid mergeinfo detected in merge target")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_CLIENT_NO_LOCK_TOKEN,
+             SVN_ERR_CLIENT_CATEGORY_START + 21,
+             "Can't commit without a valid lock token")
+
   /* misc errors */
 
   SVN_ERRDEF(SVN_ERR_BASE,
