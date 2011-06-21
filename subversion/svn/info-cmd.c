@@ -165,7 +165,7 @@ print_info_xml(void *baton,
       /* ### Print the checksum kind. */
       svn_cl__xml_tagged_cdata(&sb, pool, "checksum",
                                svn_checksum_to_cstring(info->wc_info->checksum,
-                                                       pool)); 
+                                                       pool));
 
       if (info->wc_info->changelist)
         /* "<changelist> xx </changelist>" */
@@ -623,7 +623,7 @@ svn_cl__info(apr_getopt_t *os,
 
   if (seen_nonexistent_target)
     return svn_error_create(
-      SVN_ERR_ILLEGAL_TARGET, NULL, 
+      SVN_ERR_ILLEGAL_TARGET, NULL,
       _("Could not display info for all targets because some "
         "targets don't exist"));
   else

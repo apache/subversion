@@ -102,7 +102,7 @@ class Generator(gen_win.WinGeneratorBase):
 
   def write(self):
     "Write a Workspace (.dsw)"
-    
+
     # Gather sql targets for inclusion in svn_config project.
     class _eztdata(object):
       def __init__(self, **kw):

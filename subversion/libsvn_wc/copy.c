@@ -257,25 +257,25 @@ copy_versioned_file(svn_wc__db_t *db,
           for (i = 0; i < conflicts->nelts; i++)
             {
               const svn_wc_conflict_description2_t *desc;
-          
+
               desc = APR_ARRAY_IDX(conflicts, i,
                                    const svn_wc_conflict_description2_t*);
-          
+
               if (desc->kind == svn_wc_conflict_kind_text)
                 {
                   conflict_working = desc->my_abspath;
                   break;
                 }
             }
-          
+
           if (conflict_working)
             {
               svn_node_kind_t working_kind;
-          
+
               /* Does the ".mine" file exist? */
               SVN_ERR(svn_io_check_path(conflict_working, &working_kind,
                                         scratch_pool));
-          
+
               if (working_kind == svn_node_file)
                 my_src_abspath = conflict_working;
             }
@@ -786,7 +786,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
 }
 
 /* Remove the conflict markers of NODE_ABSPATH, that were left over after
-   copying NODE_ABSPATH from SRC_ABSPATH. 
+   copying NODE_ABSPATH from SRC_ABSPATH.
 
    Only use this function when you know what you're doing. This function
    explicitly ignores some case insensitivity issues!

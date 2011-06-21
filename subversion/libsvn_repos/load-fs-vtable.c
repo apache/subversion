@@ -129,7 +129,7 @@ set_revision_mapping(apr_hash_t *rev_map,
   apr_hash_set(rev_map, mapped_revs,
                sizeof(svn_revnum_t), mapped_revs + 1);
 }
-                     
+
 /* Return the revision to which FROM_REV maps in REV_MAP, or
    SVN_INVALID_REVNUM if no such mapping exists. */
 static svn_revnum_t
@@ -289,7 +289,7 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
                  If that is what we have here, then find the mapping for the
                  oldest rev from the load stream and subtract 1 to get the
                  renumbered, non-inclusive, start revision. */
-              rev_from_map = get_revision_mapping(pb->rev_map, 
+              rev_from_map = get_revision_mapping(pb->rev_map,
                                                   pb->oldest_old_rev);
               if (SVN_IS_VALID_REVNUM(rev_from_map))
                 range->start = rev_from_map - 1;

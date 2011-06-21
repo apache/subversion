@@ -66,7 +66,7 @@ baseline_info_make(const char *bc_url,
 
   result->bc_url = apr_pstrdup(pool, bc_url);
   result->revision = revision;
-  
+
   return result;
 }
 

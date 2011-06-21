@@ -390,7 +390,7 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
       apr_hash_t *mergeinfo_props;
       apr_hash_index_t *hi;
       svn_opt_revision_t opt;
-      
+
       opt.kind = svn_opt_revision_unspecified;
 
       SVN_ERR(svn_client_propget4(&mergeinfo_props,
@@ -1634,7 +1634,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo_p,
         {
           const char *key = svn__apr_hash_index_key(hi);
           void *val = svn__apr_hash_index_val(hi);
-            
+
           apr_hash_set(full_path_mergeinfo,
                        svn_path_url_add_component2(repos_root, key + 1, pool),
                        APR_HASH_KEY_STRING, val);

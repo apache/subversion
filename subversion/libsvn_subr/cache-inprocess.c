@@ -76,7 +76,7 @@ typedef struct inprocess_cache_t {
 
   /* Sum of the SIZE members of all cache_entry elements that are
    * accessible from HASH. This is used to make statistics available
-   * even if the sub-pools have already been destroyed. 
+   * even if the sub-pools have already been destroyed.
    */
   apr_size_t data_size;
 
@@ -486,7 +486,7 @@ inprocess_cache_get_partial(void **value_p,
 
   *found = TRUE;
   return unlock_cache(cache,
-                      func(value_p, entry->value, entry->size, baton, 
+                      func(value_p, entry->value, entry->size, baton,
                            result_pool));
 }
 

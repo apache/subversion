@@ -265,7 +265,7 @@ def roll_tarballs(base_dir, args):
         branch = args.branch
     else:
         branch = version_base[:-1] + 'x'
-        
+
     logging.info('Rolling release %s from branch %s@%d' % (args.version,
                                                            branch, args.revnum))
 
@@ -292,7 +292,7 @@ def roll_tarballs(base_dir, args):
 
         if stdout:
             raise RuntimeError('CHANGES not synced between trunk and branch')
-    
+
     # Create the output directory
     if not os.path.exists(get_deploydir(base_dir)):
         os.mkdir(get_deploydir(base_dir))

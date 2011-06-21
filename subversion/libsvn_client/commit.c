@@ -1067,7 +1067,7 @@ determine_lock_targets(apr_array_header_t **lock_targets,
       if (! wc_targets)
         {
           wc_targets = apr_array_make(scratch_pool, 4, sizeof(const char *));
-          apr_hash_set(wc_items, apr_pstrdup(scratch_pool, wcroot_abspath), 
+          apr_hash_set(wc_items, apr_pstrdup(scratch_pool, wcroot_abspath),
                        APR_HASH_KEY_STRING, wc_targets);
         }
 
@@ -1101,7 +1101,7 @@ determine_lock_targets(apr_array_header_t **lock_targets,
           else
             {
               /* Lock the parent to allow deleting the target */
-              APR_ARRAY_PUSH(*lock_targets, const char *) 
+              APR_ARRAY_PUSH(*lock_targets, const char *)
                       = svn_dirent_dirname(target_abspath, result_pool);
             }
         }
@@ -1117,13 +1117,13 @@ determine_lock_targets(apr_array_header_t **lock_targets,
               || !svn_path_is_empty(APR_ARRAY_IDX(wc_targets, 0, const char*))
               || !strcmp(common, wcroot_abspath))
             {
-              APR_ARRAY_PUSH(*lock_targets, const char *) 
+              APR_ARRAY_PUSH(*lock_targets, const char *)
                     = apr_pstrdup(result_pool, common);
             }
           else
             {
               /* Lock the parent to allow deleting the target */
-              APR_ARRAY_PUSH(*lock_targets, const char *) 
+              APR_ARRAY_PUSH(*lock_targets, const char *)
                        = svn_dirent_dirname(common, result_pool);
             }
         }
@@ -1262,7 +1262,7 @@ svn_client_commit5(const apr_array_header_t *targets,
                                                   base_abspath,
                                                   pool);
 
-  /* If a non-recursive commit is desired, do not allow a deleted directory 
+  /* If a non-recursive commit is desired, do not allow a deleted directory
      as one of the targets. */
   if (depth != svn_depth_infinity && ! commit_as_operations)
     for (i = 0; i < rel_targets->nelts; i++)
@@ -1326,7 +1326,7 @@ svn_client_commit5(const apr_array_header_t *targets,
     }
 
   {
-    apr_hash_index_t *hi = apr_hash_first(iterpool, 
+    apr_hash_index_t *hi = apr_hash_first(iterpool,
                                           committables->by_repository);
 
     commit_items = svn__apr_hash_index_val(hi);

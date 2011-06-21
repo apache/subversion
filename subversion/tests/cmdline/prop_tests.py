@@ -1991,7 +1991,7 @@ def prop_reject_grind(sbox):
         i = 0
       j += 1
     n += 1
-    if not match:    
+    if not match:
       raise svntest.main.SVNUnmatchedError(
               "Expected mu.prej doesn't match actual mu.prej")
 

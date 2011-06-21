@@ -5106,7 +5106,7 @@ def copy_url_shortcut(sbox):
   # Can use ^/A/D/G even though X/pi is a delete within a copy.
   svntest.actions.run_and_verify_svn(None, None, [], 'copy',
                                      '^/A/D/G/pi', sbox.ospath('X/pi'))
-  
+
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'X'     : Item(status='A ', copied='+', wc_rev='-'),
@@ -5127,16 +5127,16 @@ def deleted_file_with_case_clash(sbox):
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
-  
+
   iota_path = os.path.join(wc_dir, 'iota')
   iota2_path = os.path.join(wc_dir, 'iota2')
   IOTA_path = os.path.join(wc_dir, 'IOTA')
   iota_url = sbox.repo_url + '/iota'
-  
+
   # Perform a case-only rename in two steps.
   svntest.main.run_svn(None, 'move', iota_path, iota2_path)
   svntest.main.run_svn(None, 'move', iota2_path, IOTA_path)
-  
+
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'iota' : Item(status='D ', wc_rev=1),
@@ -5145,7 +5145,7 @@ def deleted_file_with_case_clash(sbox):
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Perform 'info' calls on both the deleted and added paths, to see if 
+  # Perform 'info' calls on both the deleted and added paths, to see if
   # we get the correct information. The deleted path is not on disk and
   # hidden by the on-disk case-clashing file, but we should be able to
   # target it explicitly because it's in the wc-db.
@@ -5157,7 +5157,7 @@ def deleted_file_with_case_clash(sbox):
 
   expected_info_IOTA = {'Path' : re.escape(IOTA_path),
                         'Schedule' : 'add',
-                        'Copied From URL': iota_url, 
+                        'Copied From URL': iota_url,
                        }
   svntest.actions.run_and_verify_info([expected_info_IOTA], IOTA_path)
 
@@ -5189,7 +5189,7 @@ def case_only_rename(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   iota_path = os.path.join(wc_dir, 'iota')
   IoTa_path = os.path.join(wc_dir, 'IoTa')
   B_path = os.path.join(wc_dir, 'A/B')
@@ -5198,7 +5198,7 @@ def case_only_rename(sbox):
   # Perform a couple of case-only renames.
   svntest.main.run_svn(None, 'move', iota_path, IoTa_path)
   svntest.main.run_svn(None, 'move', B_path, b_path)
-  
+
   # Create expected status.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -5269,13 +5269,13 @@ def copy_and_move_conflicts(sbox):
   sbox.simple_mkdir('A2/Q')
   file_write(wc('A2/Q/zeta'), "New for merge\n")
   sbox.simple_add('A2/Q/zeta')
-  
+
   sbox.simple_commit('A2') # r4
 
   # Make some "local" changes in A before the merge.
   # local edit
-  file_append(wc('A/B/E/alpha'), "Local edit\n") 
-  file_append(wc('A/B/E/beta'), "Local edit\n") 
+  file_append(wc('A/B/E/alpha'), "Local edit\n")
+  file_append(wc('A/B/E/beta'), "Local edit\n")
   sbox.simple_propset('foo', '100', 'A/D/H')
   sbox.simple_propset('foo', '100', 'A/D/H/chi')
   # local add
@@ -5296,7 +5296,7 @@ def copy_and_move_conflicts(sbox):
   # local delete
   sbox.simple_rm('A/D/gamma')
   # local edit
-  file_append(wc('A/D/G/rho'), "Local edit\n") 
+  file_append(wc('A/D/G/rho'), "Local edit\n")
 
   # Update to reveal the "local {delete,edit'}" tree conflicts,
   # which we can't yet catch when merging.

@@ -255,7 +255,7 @@ SVNMasterURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
                         cmd->pool);
   if (! *uri_base_name)
     return "SVNMasterURI value must not be a server root";
-  
+
   conf->master_uri = apr_pstrdup(cmd->pool, arg1);
 
   return NULL;
@@ -981,7 +981,7 @@ static const command_rec cmds[] =
 
   /* per directory/location */
   AP_INIT_FLAG("SVNCacheTextDeltas", SVNCacheTextDeltas_cmd, NULL,
-               ACCESS_CONF|RSRC_CONF, 
+               ACCESS_CONF|RSRC_CONF,
                "speeds up data access to older revisions by caching "
                "delta information if sufficient in-memory cache is "
                "available (default is Off)."),

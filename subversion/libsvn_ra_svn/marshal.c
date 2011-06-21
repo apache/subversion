@@ -101,7 +101,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
                                           apr_file_t *out_file,
                                           apr_pool_t *pool)
 {
-  return svn_ra_svn_create_conn2(sock, in_file, out_file, 
+  return svn_ra_svn_create_conn2(sock, in_file, out_file,
                                  SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, pool);
 }
 
@@ -587,7 +587,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
    * prevent DOS attacks but makes them harder (you have to actually send
    * gigabytes of data). */
   readbuf_len = len < SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD
-                    ? len 
+                    ? len
                     : SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD;
   stringbuf = svn_stringbuf_create_ensure(readbuf_len, pool);
   dest = stringbuf->data;
@@ -601,7 +601,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       stringbuf->len += readbuf_len;
       len -= readbuf_len;
 
-      /* Early exit. In most cases, strings can be read in the first 
+      /* Early exit. In most cases, strings can be read in the first
        * iteration. */
       if (len == 0)
         break;
@@ -610,7 +610,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
        * and re-alloc the string buffer. */
       readbuf_len
         = len < SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD
-              ? len 
+              ? len
               : SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD;
 
       svn_stringbuf_ensure(stringbuf, stringbuf->len + readbuf_len + 1);

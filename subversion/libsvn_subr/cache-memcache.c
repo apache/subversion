@@ -190,7 +190,7 @@ memcache_get(void **value_p,
     {
       if (cache->deserialize_func)
         {
-          SVN_ERR((cache->deserialize_func)(value_p, data, data_len, 
+          SVN_ERR((cache->deserialize_func)(value_p, data, data_len,
                                             result_pool));
         }
       else
@@ -205,7 +205,7 @@ memcache_get(void **value_p,
   return SVN_NO_ERROR;
 }
 
-/* Core functionality of our setter functions: store LENGH bytes of DATA 
+/* Core functionality of our setter functions: store LENGH bytes of DATA
  * to be identified by KEY in the memcached given by CACHE_VOID. Use POOL
  * for temporary allocations.
  */

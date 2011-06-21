@@ -201,7 +201,7 @@ reporter_link_path(void *reporter_baton,
   /* Skip the repos_url, but keep the last '/' to create an fspath */
   fs_path = svn_uri_skip_ancestor(repos_url, url, pool);
   if (fs_path[0] == '\0')
-    fs_path = "/";  
+    fs_path = "/";
   else
     fs_path = apr_pstrcat(pool, "/", fs_path, (char *)NULL);
 

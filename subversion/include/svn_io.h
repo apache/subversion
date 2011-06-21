@@ -1818,7 +1818,7 @@ svn_io_file_getc(char *ch,
                  apr_pool_t *pool);
 
 
-/** Wrapper for apr_file_putc(). 
+/** Wrapper for apr_file_putc().
   * @since New in 1.7
   */
 svn_error_t *

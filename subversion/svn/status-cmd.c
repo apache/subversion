@@ -211,7 +211,7 @@ print_status(void *baton,
                                                         &twks->changed_date,
                                                         &twks->changed_author,
                                                         sb->ctx->wc_ctx,
-                                                        local_abspath, 
+                                                        local_abspath,
                                                         sb->cl_pool, pool));
             break;
 

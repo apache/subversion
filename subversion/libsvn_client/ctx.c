@@ -89,6 +89,6 @@ svn_client_create_context(svn_client_ctx_t **ctx,
 
   SVN_ERR(svn_wc_context_create(&(*ctx)->wc_ctx, NULL /* config */, pool,
                                 pool));
-  
+
   return SVN_NO_ERROR;
 }

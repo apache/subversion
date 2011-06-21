@@ -1255,7 +1255,7 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
     }
 
   if (dir_was_added
-      && merge_b->dry_run 
+      && merge_b->dry_run
       && dry_run_added_p(merge_b, local_abspath))
     {
       return SVN_NO_ERROR; /* We can't do a real prop merge for added dirs */
@@ -2052,7 +2052,7 @@ merge_dir_added(svn_wc_notify_state_t *state,
      * risk of destroying data. Only skip if it is versioned but unexpectedly
      * missing from disk, or is unversioned but obstructed by a node of the
      * wrong kind. */
-    if (obstr_state == svn_wc_notify_state_obstructed 
+    if (obstr_state == svn_wc_notify_state_obstructed
         && (is_deleted || kind == svn_node_none))
       {
         svn_node_kind_t disk_kind;
@@ -2370,7 +2370,7 @@ merge_dir_opened(svn_boolean_t *tree_conflicted,
         }
 
       /* Check for tree conflicts, if any. */
-      
+
       /* If we're trying to open a file, the reason for the conflict is
        * 'replaced'. Because the merge is trying to open the directory,
        * rather than adding it, the directory must have existed in the
@@ -5557,12 +5557,12 @@ pre_merge_status_cb(void *baton,
            hi = apr_hash_next(hi))
         {
           const char *missing_root_path = svn__apr_hash_index_key(hi);
-          
+
           if (svn_dirent_is_ancestor(missing_root_path,
                                      dup_abspath))
             {
               new_missing_root = FALSE;
-              break;          
+              break;
             }
         }
 
@@ -5659,7 +5659,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                               &working_revision, NULL, depth, NULL,
                               merge_cmd_baton->ctx, scratch_pool,
                               scratch_pool));
-  
+
   if (subtrees_with_mergeinfo)
     {
       apr_hash_index_t *hi;
@@ -5790,7 +5790,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
              }
         }
     }
-  
+
   if (apr_hash_count(shallow_subtrees))
     {
       apr_hash_index_t *hi;
@@ -5892,7 +5892,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
 
   /* Case 8: Path is an immediate *directory* child of
      MERGE_CMD_BATON->TARGET_ABSPATH and DEPTH is svn_depth_immediates.
-     
+
      Case 9: Path is an immediate *file* child of
      MERGE_CMD_BATON->TARGET_ABSPATH and DEPTH is svn_depth_files. */
   if (depth == svn_depth_immediates || depth == svn_depth_files)
@@ -5903,7 +5903,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
       SVN_ERR(svn_wc__node_get_children_of_working_node(
         &immediate_children, merge_cmd_baton->ctx->wc_ctx,
         merge_cmd_baton->target_abspath, FALSE, scratch_pool, scratch_pool));
-      
+
       if (!iterpool)
         iterpool = svn_pool_create(scratch_pool);
 
@@ -6425,7 +6425,7 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
   if (merge_range_ts->nelts == 0)
     {
       svn_pool_destroy(iterpool);
-      return SVN_NO_ERROR;  
+      return SVN_NO_ERROR;
     }
 
   /* Find the extremes of the revisions across our set of ranges. */
@@ -8990,7 +8990,7 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
               svn_sort__item_t elt = APR_ARRAY_IDX(sorted_cat, i,
                                                    svn_sort__item_t);
               svn_error_t *err;
-              
+
               svn_pool_clear(subpool);
               err = svn_client__record_wc_mergeinfo(elt.key,
                                                     elt.value,
@@ -10203,7 +10203,7 @@ calculate_left_hand_side(const char **url_left,
   /* Initialize our return variables. */
   *url_left = NULL;
   *rev_left = SVN_INVALID_REVNUM;
-     
+
   /* TARGET_ABSPATH may not have explicit mergeinfo and thus may not be
      contained within SUBTREES_WITH_MERGEINFO.  If this is the case then
      add a dummy item for TARGET_ABSPATH so we get its history (i.e. implicit
@@ -10293,7 +10293,7 @@ calculate_left_hand_side(const char **url_left,
       svn_pool_destroy(iterpool);
       return SVN_NO_ERROR;
     }
-    
+
   /* Get the mergeinfo from the source, including its descendants
      with differing explicit mergeinfo. */
   APR_ARRAY_PUSH(source_repos_rel_path_as_array, const char *) = "";

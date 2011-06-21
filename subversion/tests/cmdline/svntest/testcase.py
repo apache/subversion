@@ -197,7 +197,7 @@ class _XFail(TestCase):
     that we're running over a particular RA layer).
 
     WIP is ...
-    
+
     ISSUES is an issue number (or a list of issue numbers) tracking this."""
 
     TestCase.__init__(self, create_test_case(test_case), cond_func, wip=wip,
@@ -287,7 +287,7 @@ def Wimp_deco(wip, cond_func = lambda: True):
       return _Wimp(wip, func, cond_func)
 
   return _second
-  
+
 
 def Skip_deco(cond_func = lambda: True):
   def _second(func):
@@ -317,7 +317,7 @@ def Issues_deco(*issues):
       return func
 
     else:
-      # we need to wrap the function 
+      # we need to wrap the function
       return create_test_case(func, issues=issues)
 
   return _second

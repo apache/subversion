@@ -54,7 +54,7 @@ dav_svn__allow_read(request_rec *r,
       return TRUE;
     }
 
-  /* Sometimes we get paths that do not start with '/' and 
+  /* Sometimes we get paths that do not start with '/' and
      hence below uri concatenation would lead to wrong uris .*/
   if (path && path[0] != '/')
     path = apr_pstrcat(pool, "/", path, NULL);

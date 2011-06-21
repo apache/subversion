@@ -589,7 +589,7 @@ assemble_status(svn_wc_status3_t **status,
               SVN_ERR(svn_wc__internal_node_get_schedule(&schedule, &copied,
                                                          db, local_abspath,
                                                          scratch_pool));
-            
+
               if (schedule == svn_wc_schedule_add)
                 node_status = svn_wc_status_added;
               else if (schedule == svn_wc_schedule_replace)
@@ -719,9 +719,9 @@ assemble_unversioned(svn_wc_status3_t **status,
   err = svn_wc__db_op_read_tree_conflict(&tree_conflict,
                                          db, local_abspath,
                                          scratch_pool, scratch_pool);
-  
-  if (path_kind == svn_node_dir && 
-      err && 
+
+  if (path_kind == svn_node_dir &&
+      err &&
       err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
     svn_error_clear(err);
   else

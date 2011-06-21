@@ -414,12 +414,12 @@ svn_checksum_mismatch_err(const svn_checksum_t *expected,
   va_start(ap, fmt);
   desc = apr_pvsprintf(scratch_pool, fmt, ap);
   va_end(ap);
-    
+
   return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
                            _("%s:\n"
                              "   expected:  %s\n"
                              "     actual:  %s\n"),
-                desc,               
+                desc,
                 svn_checksum_to_cstring_display(expected, scratch_pool),
                 svn_checksum_to_cstring_display(actual, scratch_pool));
 }

@@ -1371,7 +1371,7 @@ def revert_tree_conflicts_with_replacements(sbox):
   # Case 3: incoming edits
   file_append(wc('A/B/lambda'), "Incoming!\n")
   file_write(wc('A/B/E/alpha'), "Incoming!.\n")
-  
+
   # Commit and roll back to r1.
   sbox.simple_commit()
   run_svn(None, 'up', wc_dir, '-r1', '-q')
@@ -1442,7 +1442,7 @@ def revert_tree_conflicts_with_replacements(sbox):
   cd_and_status_u('A/D/H')
 
   # Revert everything (i.e., accept "theirs-full").
-  svntest.actions.run_and_verify_revert([    
+  svntest.actions.run_and_verify_revert([
     wc('A/B/E'),
     wc('A/B/E/alpha'),   # incoming
     wc('A/B/E/beta'),

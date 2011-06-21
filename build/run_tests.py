@@ -435,7 +435,7 @@ class TestHarness:
       prog_f = None
     else:
       prog_f = progress_func
-      
+
     if test_nums:
       test_selection = [test_nums]
     else:

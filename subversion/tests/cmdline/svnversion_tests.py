@@ -295,7 +295,7 @@ def svnversion_with_structural_changes(sbox):
                                             [ "1:2M\n" ], [])
 
 def committed_revisions(sbox):
-  "test 'svnversion --committed'" 
+  "test 'svnversion --committed'"
   sbox.build()
   wc_dir = sbox.wc_dir
   repo_url = sbox.repo_url
@@ -391,9 +391,9 @@ def child_switched(sbox):
   svntest.actions.run_and_verify_svnversion(None,
                                             os.path.join(wc_dir, 'A', 'B'),
                                             None, [ "2S\n" ], [])
-  
+
   ### Target is not repos root but is WC root.
-  
+
   # Switch the root of the working copy to ^/branch, then switch D/G to
   # ^A/D/G.
   sbox.simple_switch(repo_url + '/branch', '.')

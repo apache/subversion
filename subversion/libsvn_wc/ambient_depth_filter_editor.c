@@ -349,7 +349,7 @@ open_root(void *edit_baton,
                                 eb->db, eb->anchor_abspath,
                                 pool));
 
-      if (kind != svn_wc__db_kind_unknown 
+      if (kind != svn_wc__db_kind_unknown
           && status != svn_wc__db_status_not_present
           && status != svn_wc__db_status_excluded
           && status != svn_wc__db_status_absent)

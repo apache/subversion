@@ -173,7 +173,7 @@ def authz_read_access(sbox):
   # create some folders with spaces in their names
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'logmsg',
                                      fws_url, fws_empty_folder_url)
-  
+
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   write_authz_file(sbox, { "/": "* = r",
@@ -1138,7 +1138,7 @@ def case_sensitive_authz(sbox):
       else:
         mixed_val = repo_name[i].lower()
         mixed_repo_name = mixed_repo_name + mixed_val
-    return mixed_repo_name 
+    return mixed_repo_name
 
   mixed_case_repo_dir = mixcases(os.path.basename(sbox.repo_dir))
 
@@ -1205,7 +1205,7 @@ def authz_tree_conflict(sbox):
                                         "Failed to mark '.*C' absent:",
                                         None, None, None, None, 0,
                                         '-r', '1', wc_dir)
-  
+
 @Issue(3900)
 @Skip(svntest.main.is_ra_type_file)
 def wc_delete(sbox):

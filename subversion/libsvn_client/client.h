@@ -732,7 +732,7 @@ typedef struct svn_client__copy_pair_t
 
 */
 
-/* Structure that contains an apr_hash_t * hash of apr_array_header_t * 
+/* Structure that contains an apr_hash_t * hash of apr_array_header_t *
    arrays of svn_client_commit_item3_t * structures; keyed by the
    canonical repository URLs. For faster lookup, it also provides
    an hash index keyed by the local absolute path. */
@@ -783,7 +783,7 @@ typedef svn_error_t *(*svn_client__check_url_kind_t)(void *baton,
        add them to the LOCK_TOKENS array.
 
    At the successful return of this function, COMMITTABLES will point
-   a new svn_client__committables_t*.  LOCK_TOKENS will point to a hash 
+   a new svn_client__committables_t*.  LOCK_TOKENS will point to a hash
    table with const char * lock tokens, keyed on const char * URLs.
 
    If DEPTH is specified, descend (or not) into each target in TARGETS

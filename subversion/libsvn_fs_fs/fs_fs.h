@@ -110,7 +110,7 @@ svn_error_t *svn_fs_fs__rep_contents_dir(apr_hash_t **entries,
                                          apr_pool_t *pool);
 
 /* Set *DIRENT to the entry identified by NAME in the directory given
-   by NODEREV in filesystem FS.  The returned object is allocated in POOL, 
+   by NODEREV in filesystem FS.  The returned object is allocated in POOL,
    which is also used for temporary allocations. */
 svn_error_t *
 svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,

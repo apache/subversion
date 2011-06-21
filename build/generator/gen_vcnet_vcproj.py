@@ -122,7 +122,7 @@ class Generator(gen_win.WinGeneratorBase):
     else:
       self.write_with_template(fname, 'templates/vcnet_vcxproj.ezt', data)
       self.write_with_template(fname + '.filters', 'templates/vcnet_vcxproj_filters.ezt', data)
-      
+
   def find_rootpath(self):
     "Gets the root path as understand by the project system"
     return "$(SolutionDir)"

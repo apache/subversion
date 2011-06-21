@@ -378,7 +378,7 @@ test_getting_info(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_base_get_info(
             &status, &kind, &revision,
             &repos_relpath, &repos_root_url, &repos_uuid,
-            &changed_rev, &changed_date, &changed_author,&depth, &checksum, 
+            &changed_rev, &changed_date, &changed_author,&depth, &checksum,
             &target, &lock, &had_props,
             &update_root,
             db, local_abspath,

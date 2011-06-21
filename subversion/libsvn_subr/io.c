@@ -1545,15 +1545,15 @@ io_set_file_perms(const char *path,
 #ifdef WIN32
 #if APR_HAS_UNICODE_FS
 /* copy of the apr function utf8_to_unicode_path since apr doesn't export this one */
-static apr_status_t io_utf8_to_unicode_path(apr_wchar_t* retstr, apr_size_t retlen, 
+static apr_status_t io_utf8_to_unicode_path(apr_wchar_t* retstr, apr_size_t retlen,
                                             const char* srcstr)
 {
     /* TODO: The computations could preconvert the string to determine
      * the true size of the retstr, but that's a memory over speed
      * tradeoff that isn't appropriate this early in development.
      *
-     * Allocate the maximum string length based on leading 4 
-     * characters of \\?\ (allowing nearly unlimited path lengths) 
+     * Allocate the maximum string length based on leading 4
+     * characters of \\?\ (allowing nearly unlimited path lengths)
      * plus the trailing null, then transform /'s into \\'s since
      * the \\?\ form doesn't allow '/' path seperators.
      *
@@ -1565,15 +1565,15 @@ static apr_status_t io_utf8_to_unicode_path(apr_wchar_t* retstr, apr_size_t retl
     apr_status_t rv;
 
     /* This is correct, we don't twist the filename if it will
-     * definately be shorter than 248 characters.  It merits some 
+     * definately be shorter than 248 characters.  It merits some
      * performance testing to see if this has any effect, but there
      * seem to be applications that get confused by the resulting
      * Unicode \\?\ style file names, especially if they use argv[0]
      * or call the Win32 API functions such as GetModuleName, etc.
      * Not every application is prepared to handle such names.
-     * 
-     * Note also this is shorter than MAX_PATH, as directory paths 
-     * are actually limited to 248 characters. 
+     *
+     * Note also this is shorter than MAX_PATH, as directory paths
+     * are actually limited to 248 characters.
      *
      * Note that a utf-8 name can never result in more wide chars
      * than the original number of utf-8 narrow chars.
@@ -1782,7 +1782,7 @@ svn_io__is_finfo_read_only(svn_boolean_t *read_only,
 
   else if (apr_gid_compare(gid, file_info->group) == APR_SUCCESS)
     *read_only = !(file_info->protection & APR_GWRITE);
-  
+
   else
     *read_only = !(file_info->protection & APR_WWRITE);
 
@@ -3449,13 +3449,13 @@ dir_make(const char *path, apr_fileperms_t perm,
                                   APR_FILE_ATTR_HIDDEN,
                                   APR_FILE_ATTR_HIDDEN,
                                   pool);
-#else 
-    /* on Windows, use our wrapper so we can also set the 
+#else
+    /* on Windows, use our wrapper so we can also set the
        FILE_ATTRIBUTE_NOT_CONTENT_INDEXED attribute */
     status = io_win_file_attrs_set(path_apr,
-                                   FILE_ATTRIBUTE_HIDDEN | 
+                                   FILE_ATTRIBUTE_HIDDEN |
                                    FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
-                                   FILE_ATTRIBUTE_HIDDEN | 
+                                   FILE_ATTRIBUTE_HIDDEN |
                                    FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
                                    pool);
 

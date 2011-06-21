@@ -1223,7 +1223,7 @@ svn_sqlite__create_scalar_function(svn_sqlite__db_t *db,
   fwb->scratch_pool = svn_pool_create(db->state_pool);
   fwb->func = func;
   fwb->baton = baton;
-  
+
   SQLITE_ERR(sqlite3_create_function(db->db3, func_name, argc, SQLITE_ANY,
                                      fwb, wrapped_func, NULL, NULL),
              db);

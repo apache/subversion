@@ -264,7 +264,7 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
               /* There are two situations in which a 'truepath-conversion'
                  (case-canonicalization to on-disk path on case-insensitive
                  filesystem) needs to be undone:
-              
+
                  1. If KEEP_LAST_ORIGPATH_ON_TRUEPATH_COLLISION is TRUE, and
                     this is the last target of a 2-element target list, and
                     both targets have the same truepath. */
@@ -288,7 +288,7 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
                   svn_node_kind_t kind;
                   svn_error_t *err2;
 
-                  SVN_ERR(svn_dirent_get_absolute(&target_abspath, 
+                  SVN_ERR(svn_dirent_get_absolute(&target_abspath,
                                                   original_target, pool));
                   err2 = svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath,
                                           FALSE, pool);
@@ -305,7 +305,7 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
                         true_target = original_target;
                     }
                 }
-              
+
               /* If the target has the same name as a Subversion
                  working copy administrative dir, skip it. */
               base_name = svn_dirent_basename(true_target, pool);

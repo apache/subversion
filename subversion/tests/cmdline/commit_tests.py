@@ -482,7 +482,7 @@ def nested_dir_replacements(sbox):
   #
   #    - A/D/H should be a local addition "A"
   #         (and exists as shadowed node in BASE)
-  #         
+  #
   #    - A/D/bloo scheduled as "A" at rev 0
   #         (rev 0 because it did not exist before)
   #

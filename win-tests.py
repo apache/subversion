@@ -318,7 +318,7 @@ def locate_libs():
     suffix = "-1"
   else:
     suffix = ""
-    
+
   if cp.has_option('options', '--with-static-apr'):
     dlls.append(os.path.join(gen_obj.apr_path, objdir,
                              'libapr%s.dll' % (suffix)))

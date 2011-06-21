@@ -803,7 +803,7 @@ def blame_multiple_targets(sbox):
 
   def multiple_wc_targets():
     "multiple wc targets"
-    
+
     # First, make a new revision of iota.
     iota = os.path.join(sbox.wc_dir, 'iota')
     non_existent = os.path.join(sbox.wc_dir, 'non-existent')
@@ -819,7 +819,7 @@ def blame_multiple_targets(sbox):
     expected_err = ".*W155010.*\n.*E200009.*"
     expected_err_re = re.compile(expected_err, re.DOTALL)
 
-    exit_code, output, error = svntest.main.run_svn(1, 'blame', 
+    exit_code, output, error = svntest.main.run_svn(1, 'blame',
                                                     non_existent, iota)
 
     # Verify error
@@ -846,7 +846,7 @@ def blame_multiple_targets(sbox):
     expected_err = ".*(W160017|W160013).*\n.*E200009.*"
     expected_err_re = re.compile(expected_err, re.DOTALL)
 
-    exit_code, output, error = svntest.main.run_svn(1, 'blame', 
+    exit_code, output, error = svntest.main.run_svn(1, 'blame',
                                                     non_existent, iota_url)
 
     # Verify error

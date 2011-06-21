@@ -1842,7 +1842,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
             svn_fspath__join(ctx->sess->session_url.path,
                              svn_path_uri_encode(info->name, info->pool),
                              info->pool);
-          
+
           SVN_ERR(svn_ra_serf__get_relative_path(&fs_path, full_path,
                                                  ctx->sess, NULL, info->pool));
           info->delta_base = svn_string_createf(info->pool, "%s/%ld/%s",

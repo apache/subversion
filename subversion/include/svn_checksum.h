@@ -241,7 +241,7 @@ svn_checksum_size(const svn_checksum_t *checksum);
 
 
 /**
- * Return an error of type #SVN_ERR_CHECKSUM_MISMATCH for @a actual and 
+ * Return an error of type #SVN_ERR_CHECKSUM_MISMATCH for @a actual and
  * @a expected checksums which do not match.  Use @a fmt, and the following
  * parameters to populate the error message.
  *

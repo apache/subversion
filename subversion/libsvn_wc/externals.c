@@ -607,7 +607,7 @@ close_file(void *file_baton,
     apr_hash_t *new_dav_props = NULL;
     const svn_checksum_t *new_checksum = NULL;
     const svn_checksum_t *original_checksum = NULL;
-    
+
     svn_boolean_t added = !SVN_IS_VALID_REVNUM(eb->original_revision);
     const char *repos_relpath = svn_uri__is_child(eb->repos_root_url,
                                                   eb->url, pool);
@@ -1025,7 +1025,7 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
          the target as switched.
 
          ### We can probably report a parent url and unswitched later */
-      SVN_ERR(reporter->link_path(report_baton, "", 
+      SVN_ERR(reporter->link_path(report_baton, "",
                                   svn_path_url_add_component2(repos_root_url,
                                                               repos_relpath,
                                                               scratch_pool),

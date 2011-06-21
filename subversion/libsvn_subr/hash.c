@@ -525,7 +525,7 @@ svn_hash__get_cstring(apr_hash_t *hash,
       const char *value = apr_hash_get(hash, key, APR_HASH_KEY_STRING);
       return value ? value : default_value;
     }
-    
+
   return default_value;
 }
 
@@ -541,7 +541,7 @@ svn_hash__get_bool(apr_hash_t *hash, const char *key,
     return TRUE;
   else if (value == svn_tristate_false)
     return FALSE;
-  
+
   return default_value;
 }
 

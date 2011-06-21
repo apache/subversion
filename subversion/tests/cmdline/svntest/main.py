@@ -670,7 +670,7 @@ def run_wc_lock_tester(recursive, path):
 
 def youngest(repos_path):
   "run 'svnlook youngest' on REPOS_PATH, returns revision as int"
-  exit_code, stdout_lines, stderr_lines = run_command(svnlook_binary, None, 0, 
+  exit_code, stdout_lines, stderr_lines = run_command(svnlook_binary, None, 0,
                                                       'youngest', repos_path)
   if exit_code or stderr_lines:
     raise Failure("Unexpected failure of 'svnlook youngest':\n%s" % stderr_lines)
@@ -1384,7 +1384,7 @@ def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
 
   if not parallel:
     for i, testnum in enumerate(testnums):
-      
+
       if run_one_test(testnum, test_list) == 1:
           exit_code = 1
       # signal progress
@@ -1567,7 +1567,7 @@ def get_target_milestones_for_issues(issue_numbers):
   try:
     xmldoc = xml.dom.minidom.parse(issue_xml_f)
     issue_xml_f.close()
-  
+
     # Get the target milestone for each issue.
     issue_element = xmldoc.getElementsByTagName('issue')
     for i in issue_element:

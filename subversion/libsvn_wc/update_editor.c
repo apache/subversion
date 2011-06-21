@@ -1513,7 +1513,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
         /* Do a deep tree detection of local changes. The update editor will
          * not visit the subdirectories of a directory that it wants to delete.
          * Therefore, we need to start a separate crawl here. */
-              
+
         SVN_ERR(node_has_local_mods(&modified, &all_mods_are_deletes,
                                     eb->db, local_abspath,
                                     eb->cancel_func, eb->cancel_baton,
@@ -2183,7 +2183,7 @@ add_directory(const char *path,
     /* If there is no conflict we take over any added directory */
     SVN_ERR(svn_wc__db_temp_op_remove_working(eb->db, db->local_abspath, pool));
 
-  /* ### We can't record an unversioned obstruction yet, so 
+  /* ### We can't record an unversioned obstruction yet, so
      ### we record a delete instead, which will allow resolving the conflict
      ### to theirs with 'svn revert'. */
   if (db->shadowed && db->obstruction_found)
@@ -2846,7 +2846,7 @@ absent_node(const char *path,
     {
       /* We found an obstructing working copy!
 
-         We can do two things now: 
+         We can do two things now:
             1) notify the user, record a skip, etc.
             2) Just record the absent node in BASE in the parent
                working copy.
@@ -2883,7 +2883,7 @@ absent_node(const char *path,
   {
     const char *repos_relpath;
     repos_relpath = svn_relpath_join(pb->new_relpath, name, scratch_pool);
-    
+
     /* Insert an absent node below the parent node to note that this child
        is absent. (This puts it in the parent db if the child is obstructed) */
     SVN_ERR(svn_wc__db_base_add_absent_node(eb->db, local_abspath,
@@ -3503,7 +3503,7 @@ change_file_prop(void *file_baton,
 /* Perform the actual merge of file changes between an original file,
    identified by ORIGINAL_CHECKSUM (an empty file if NULL) to a new file
    identified by NEW_CHECKSUM.
-   
+
    Merge the result into LOCAL_ABSPATH, which is part of the working copy
    identified by WRI_ABSPATH. Use OLD_REVISION and TARGET_REVISION for naming
    the intermediate files.
@@ -3531,7 +3531,7 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
-  /* Actual file exists and has local mods: 
+  /* Actual file exists and has local mods:
      Now we need to let loose svn_wc__merge_internal() to merge
      the textual changes into the working file. */
   const char *oldrev_str, *newrev_str, *mine_str;
@@ -3696,7 +3696,7 @@ merge_file(svn_skel_t **work_items,
     }
   else
     {
-      /* The working file is not an obstruction. 
+      /* The working file is not an obstruction.
          So: is the file modified, relative to its ORIGINAL pristine?
 
          This function sets is_locally_modified to FALSE for
@@ -3741,7 +3741,7 @@ merge_file(svn_skel_t **work_items,
     }
   else if (fb->new_text_base_sha1_checksum)
     {
-      /* Actual file exists and has local mods: 
+      /* Actual file exists and has local mods:
          Now we need to let loose svn_wc__merge_internal() to merge
          the textual changes into the working file. */
       SVN_ERR(svn_wc__perform_file_merge(work_items,
@@ -4021,7 +4021,7 @@ close_file(void *file_baton,
    * locally there already is a file scheduled for addition, or vice versa.
    * It sees incoming symlinks as simple files and may wrongly try to offer
    * a text conflict. So flag a tree conflict here. */
-  if (!fb->shadowed 
+  if (!fb->shadowed
       && (! fb->adding_file || fb->add_existed))
     {
       svn_boolean_t local_is_link = FALSE;
@@ -4155,7 +4155,7 @@ close_file(void *file_baton,
         {
           /* If a lock was removed and we didn't update the text contents, we
              might need to set the file read-only.
-      
+
              Note: this will also update the executable flag, but ... meh.  */
           SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, eb->db,
                                                    fb->local_abspath,
@@ -4265,7 +4265,7 @@ close_file(void *file_baton,
   /* Deal with the WORKING tree, based on updates to the BASE tree.  */
 
   /* If this file was locally-added and is now being added by the update, we
-     can toss the local-add, turning this into a local-edit. 
+     can toss the local-add, turning this into a local-edit.
      If the local file is replaced, we don't want to touch ACTUAL. */
   if (fb->add_existed && fb->adding_file)
     {
@@ -4285,7 +4285,7 @@ close_file(void *file_baton,
       svn_wc_notify_action_t action = svn_wc_notify_update_update;
 
       if (fb->shadowed)
-        action = fb->adding_file 
+        action = fb->adding_file
                         ? svn_wc_notify_update_shadowed_add
                         : svn_wc_notify_update_shadowed_update;
       else if (fb->obstruction_found || fb->add_existed)
@@ -4378,14 +4378,14 @@ close_edit(void *edit_baton,
         {
           svn_wc__db_status_t status;
           svn_error_t *err;
-       
+
           /* Note: we are fetching information about the *target*, not anchor.
              There is no guarantee that the target has a BASE node.
              For example:
 
                The node was not present in BASE, but locally-added, and the
                update did not create a new BASE node "under" the local-add.
-       
+
              If there is no BASE node for the target, then we certainly don't
              have to worry about removing it. */
           err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL,
@@ -4397,14 +4397,14 @@ close_edit(void *edit_baton,
             {
               if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
                 return svn_error_return(err);
-       
+
               svn_error_clear(err);
             }
           else if (status == svn_wc__db_status_excluded)
             {
               /* There is a small chance that the explicit target of an update/
                  switch is gone in the repository, in that specific case the
-                 node hasn't been re-added to the BASE tree by this update. 
+                 node hasn't been re-added to the BASE tree by this update.
 
                  If so, we should get rid of this excluded node now. */
 

@@ -451,7 +451,7 @@ process_commit_file_install(svn_wc__db_t *db,
      involves recording the textual timestamp for this entry.  We'd like
      to just use the timestamp of the working file, but it is possible
      that at some point during the commit, the real working file might
-     have changed again. 
+     have changed again.
    */
 
   SVN_ERR(install_committed_file(&overwrote_working, db,
@@ -538,7 +538,7 @@ svn_wc__wq_build_file_commit(svn_skel_t **work_item,
   /* This are currently ignored, they are here for compat. */
   svn_skel__prepend_int(FALSE, *work_item, result_pool);
   svn_skel__prepend_int(FALSE, *work_item, result_pool);
-  
+
   svn_skel__prepend_str(local_relpath, *work_item, result_pool);
 
   svn_skel__prepend_str(OP_FILE_COMMIT, *work_item, result_pool);
@@ -1021,7 +1021,7 @@ svn_wc__wq_build_file_copy_translated(svn_skel_t **work_item,
                                 result_pool, scratch_pool));
   svn_skel__prepend_str(local_relpath, *work_item, result_pool);
 
-  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath, 
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
                                 local_abspath, result_pool, scratch_pool));
   svn_skel__prepend_str(local_relpath, *work_item, result_pool);
 
@@ -1366,7 +1366,7 @@ run_set_property_conflict_marker(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
                                   local_relpath, scratch_pool, scratch_pool));
-                                   
+
 
   arg = arg->next;
   local_relpath = arg->len ? apr_pstrmemdup(scratch_pool, arg->data, arg->len)

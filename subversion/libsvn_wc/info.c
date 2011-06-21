@@ -113,7 +113,7 @@ build_info_for_entry(svn_wc__info2_t **info,
                                &wc_info->recorded_size,
                                &wc_info->recorded_time,
                                &wc_info->changelist,
-                               &conflicted, &op_root, NULL, NULL, 
+                               &conflicted, &op_root, NULL, NULL,
                                &have_base, NULL, NULL,
                                db, local_abspath,
                                result_pool, scratch_pool));

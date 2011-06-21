@@ -378,7 +378,7 @@ svn_error_purge_tracing(svn_error_t *err)
          error chain with trace only links would map into SVN_NO_ERROR. */
       if (! err)
         return svn_error_create(
-                 SVN_ERR_ASSERTION_ONLY_TRACING_LINKS, 
+                 SVN_ERR_ASSERTION_ONLY_TRACING_LINKS,
                  svn_error_compose_create(
                    svn_error__malfunction(TRUE, __FILE__, __LINE__,
                                           NULL /* ### say something? */),

@@ -365,7 +365,7 @@ svn_repos_find_root_path(const char *path,
  * returns error, with undefined effect on @a *repos_p.  If an exclusive
  * lock is present, this blocks until it's gone.  @a fs_config will be
  * passed to the filesystem initialization function and may be @c NULL.
- * 
+ *
  * @since New in 1.7.
  */
 svn_error_t *
@@ -375,7 +375,7 @@ svn_repos_open2(svn_repos_t **repos_p,
                 apr_pool_t *pool);
 
 /** Similar to svn_repos_open2() with @a fs_config set to NULL.
- * 
+ *
  * @deprecated Provided for backward compatibility with 1.6 API.
  */
 SVN_DEPRECATED

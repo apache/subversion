@@ -84,7 +84,7 @@ typedef struct commit_ctx_t
 
   /* A hash of revision properties (log messages, etc.) we need to set
      on the commit transaction. */
-  apr_hash_t *revprop_table; 
+  apr_hash_t *revprop_table;
 
   /* A hash mapping svn_string_t * paths (those which are valid as
      target in the MERGE response) to svn_node_kind_t kinds. */
@@ -582,7 +582,7 @@ static svn_error_t * copy_resource(svn_ra_neon__session_t *ras,
                                              scratch_pool);
   SVN_ERR(svn_ra_neon__copy(ras, 1 /* overwrite */, SVN_RA_NEON__DEPTH_INFINITE,
                             copy_src_url, copy_dst_url, scratch_pool));
-  
+
   return SVN_NO_ERROR;
 }
 
