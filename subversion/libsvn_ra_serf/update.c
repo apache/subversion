@@ -2369,6 +2369,11 @@ finish_report(void *report_baton,
   sess->cur_conn = 1;
   closed_root = FALSE;
 
+  /* Note that we may have no active GET or PROPFIND requests, yet the
+     processing has not been completed. This could be from a delay on the
+     network or because we've spooled the entire response into our "pending"
+     content of the XML parser. The DONE flag will get set when all the
+     XML content has been received *and* parsed.  */
   while (!report->done || report->active_fetches || report->active_propfinds)
     {
       apr_pool_t *iterpool_inner;
