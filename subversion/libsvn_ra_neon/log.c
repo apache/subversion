@@ -195,9 +195,9 @@ log_start_element(int *elem, void *baton, int parent,
                                      svn_xml_get_attr_value("node-kind", atts));
       lb->this_path_item->copyfrom_rev = SVN_INVALID_REVNUM;
 
-      lb->this_path_item->text_modified = svn_tristate_from_word(
+      lb->this_path_item->text_modified = svn_tristate__from_word(
                                      svn_xml_get_attr_value("text-mods", atts));
-      lb->this_path_item->props_modified = svn_tristate_from_word(
+      lb->this_path_item->props_modified = svn_tristate__from_word(
                                      svn_xml_get_attr_value("prop-mods", atts));
 
       /* See documentation for `svn_repos_node_t' in svn_repos.h,

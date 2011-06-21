@@ -651,8 +651,8 @@ static svn_error_t *
 get_bool(svn_boolean_t *boolp, const char *input, svn_boolean_t default_value,
          const char *section, const char *option)
 {
-  svn_tristate_t value = svn_tristate_from_word(input);
-  
+  svn_tristate_t value = svn_tristate__from_word(input);
+
   if (value == svn_tristate_true)
     *boolp = TRUE;
   else if (value == svn_tristate_false)

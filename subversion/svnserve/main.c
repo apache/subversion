@@ -601,12 +601,12 @@ int main(int argc, const char *argv[])
           
         case SVNSERVE_OPT_CACHE_TXDELTAS:
           params.cache_txdeltas 
-             = svn_tristate_from_word(arg) == svn_tristate_true;
+             = svn_tristate__from_word(arg) == svn_tristate_true;
           break;
 
         case SVNSERVE_OPT_CACHE_FULLTEXTS:
           params.cache_fulltexts
-             = svn_tristate_from_word(arg) == svn_tristate_true;
+             = svn_tristate__from_word(arg) == svn_tristate_true;
           break;
 
 #ifdef WIN32
