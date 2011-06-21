@@ -89,7 +89,14 @@ struct svn_ra_serf__pending_t {
   /* As we consume content from SPILL, this value indicates where we
      will begin reading.  */
   apr_off_t spill_start;
+
+  /* This flag is set when the network has reached EOF. The PENDING
+     processing can then properly detect when parsing has completed.  */
+  svn_boolean_t network_eof;
 };
+
+#define HAS_PENDING_DATA(p) ((p) != NULL \
+                             && ((p)->head != NULL || (p)->spill != NULL))
 
 /* We will store one megabyte in memory, before switching to store content
    into a temporary file.  */
@@ -1388,7 +1395,7 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
   /* If we don't have a spill file, then we've exhausted all
      pending content.  */
   if (parser->pending->spill == NULL)
-    return SVN_NO_ERROR;
+    goto pending_empty;
 
   /* Seek once to where we left off reading.  */
   output_unused = parser->pending->spill_start;  /* ### stupid API  */
@@ -1419,14 +1426,34 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
       if (err)
         break;
 
-      /* If there is no more content (for now), or the callbacks paused
-         the parsing, then we're done.  */
-      if (APR_STATUS_IS_EOF(status) || parser->paused)
+      /* If we just consumed everything in the spill file, then we may
+         be done with the parsing.  */
+      /* ### future change: when we hit EOF, then remove the spill file.
+         ### we could go back to using memory for a while.  */
+      if (APR_STATUS_IS_EOF(status))
+        goto pending_empty;
+
+      /* If the callbacks paused the parsing, then we're done for now.  */
+      if (parser->paused)
         break;
     }
 
   return_buffer(parser, pb);
   return svn_error_return(err);  /* may be SVN_NO_ERROR  */
+
+ pending_empty:
+  /* If the PENDING structures are empty *and* we consumed all content from
+     the network, then we're completely done with the parsing.  */
+  if (parser->pending->network_eof)
+    {
+      /* Tell the parser that no more content will be parsed. Ignore the
+         return status. We just don't care.  */
+      (void) XML_Parse(parser->xmlp, NULL, 0, 1);
+
+      XML_ParserFree(parser->xmlp);
+      add_done_item(parser);
+    }
+  return SVN_NO_ERROR;
 }
 
 
@@ -1513,12 +1540,18 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
          PAUSED flag, then it will not be cleared. write_to_pending() will
          only save the content. Logic outside of serf_context_run() will
          clear that flag, as appropriate, along with processing the
-         content that we have placed into the PENDING buffer.  */
-      if (0 /* ### not yet...  ctx->paused  */)
+         content that we have placed into the PENDING buffer.
+
+         We want to save arriving content into the PENDING structures if
+         the parser has been paused, or we already have data in there (so
+         the arriving data is appended, rather than injected out of order)  */
+#ifdef DISABLE_THIS_FOR_NOW
+      if (ctx->paused || HAS_PENDING_DATA(ctx->pending))
         {
           err = write_to_pending(ctx, data, len, pool);
         }
       else
+#endif
         {
           err = inject_to_parser(ctx, data, len, &sl);
           if (err)
@@ -1541,11 +1574,20 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
 
       if (APR_STATUS_IS_EOF(status))
         {
-          /* Ignore the return status. We just don't care.  */
-          (void) XML_Parse(ctx->xmlp, NULL, 0, 1);
+          if (ctx->pending != NULL)
+            ctx->pending->network_eof = TRUE;
 
-          XML_ParserFree(ctx->xmlp);
-          add_done_item(ctx);
+          /* We just hit the end of the network content. If we have nothing
+             in the PENDING structures, then we're completely done.  */
+          if (!HAS_PENDING_DATA(ctx->pending))
+            {
+              /* Ignore the return status. We just don't care.  */
+              (void) XML_Parse(ctx->xmlp, NULL, 0, 1);
+
+              XML_ParserFree(ctx->xmlp);
+              add_done_item(ctx);
+            }
+
           return svn_error_wrap_apr(status, NULL);
         }
 
