@@ -780,7 +780,7 @@ get_dirent_props(apr_uint32_t dirent_fields, apr_pool_t *pool)
   apr_array_header_t *props = apr_array_make
     (pool, 7, sizeof(svn_ra_serf__dav_props_t));
 
-  if (dirent_fields & SVN_DIRENT_KIND) 
+  if (dirent_fields & SVN_DIRENT_KIND)
     {
       prop = apr_array_push(props);
       prop->namespace = "DAV:";
@@ -793,7 +793,7 @@ get_dirent_props(apr_uint32_t dirent_fields, apr_pool_t *pool)
       prop->namespace = "DAV:";
       prop->name = "getcontentlength";
     }
-  
+
   if (dirent_fields & SVN_DIRENT_HAS_PROPS)
     {
       prop = apr_array_push(props);

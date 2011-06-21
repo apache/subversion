@@ -186,7 +186,7 @@ condense_targets(const char **common_parent,
         }
       APR_ARRAY_PUSH(*target_relpaths, const char *) = base_name;
     }
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -274,7 +274,7 @@ organize_lock_targets(const char **common_parent_url,
     {
       apr_array_header_t *rel_urls, *target_urls;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-      
+
       /* Get the common parent dirent and a bunch of relpaths, one per
          target. */
       SVN_ERR(condense_targets(&common_dirent, &rel_targets, targets,

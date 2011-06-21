@@ -61,7 +61,7 @@ def get_changed_paths(*args):
   #print '%s:\n '%(' '.join(args)), '\n  '.join(changed_paths)
   return changed_paths
 
-  
+
 def has_path_changed(path, changed_paths):
   '''Returns True if any changed path begins with the given path.
      path: A path relative to the repos root, without leading slash.

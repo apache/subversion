@@ -298,7 +298,7 @@ svn_stringbuf_create_ensure(apr_size_t blocksize, apr_pool_t *pool)
 
   ++blocksize; /* + space for '\0' */
   blocksize = APR_ALIGN_DEFAULT(blocksize);
-  
+
   /* Allocate memory for svn_string_t and data in one chunk. */
   mem = apr_palloc(pool, sizeof(*new_string) + blocksize);
 

@@ -2237,7 +2237,7 @@ random_three_way_merge(apr_pool_t *pool)
       svn_stringbuf_t *original, *modified1, *modified2, *combined;
       /* Pick NUM_LINES large enough so that the 'strip identical suffix' code
          gets triggered with reasonable probability.  (Currently it ignores
-         50 lines or more, and empirically N=4000 suffices to trigger that 
+         50 lines or more, and empirically N=4000 suffices to trigger that
          behaviour most of the time.) */
       int num_lines = 4000, num_src = 10, num_dst = 10;
       svn_boolean_t *lines = apr_pcalloc(subpool, sizeof(*lines) * num_lines);

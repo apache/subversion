@@ -196,10 +196,10 @@ typedef struct svn_cache__info_t
  * identify this cache instance in a #svn_cache__info_t struct.
  * It does not influence the behavior of the cache itself.
  *
- * Note that NULL is a legitimate value for cache entries (and 
+ * Note that NULL is a legitimate value for cache entries (and
  * @a serialize_func will not be called on it).
  *
- * It is not safe for @a serialize_func nor @a deserialize_func to 
+ * It is not safe for @a serialize_func nor @a deserialize_func to
  * interact with the cache itself.
  */
 svn_error_t *
@@ -260,7 +260,7 @@ svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
 
 /**
  * Creates a new membuffer cache object in @a *cache. It will contain
- * up to @a total_size bytes of data, using @a directory_size bytes 
+ * up to @a total_size bytes of data, using @a directory_size bytes
  * for index information and the remainder for serialized objects.
  *
  * Since each index entry is about 50 bytes long, 1 to 10 percent of
@@ -288,7 +288,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
  * are strings.  Values will be serialized for the memcache using @a
  * serialize_func and deserialized using @a deserialize_func.  Because
  * the same memcache object may cache many different kinds of values
- * form multiple caches, @a prefix should be specified to differentiate 
+ * form multiple caches, @a prefix should be specified to differentiate
  * this cache from other caches.  @a *cache_p will be allocated in @a result_pool.
  *
  * If @a deserialize_func is NULL, then the data is returned as an

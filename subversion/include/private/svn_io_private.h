@@ -64,7 +64,7 @@ svn_io__is_finfo_read_only(svn_boolean_t *read_only,
                            apr_pool_t *pool);
 
 
-/** Buffer test handler function for a generic stream. @see svn_stream_t 
+/** Buffer test handler function for a generic stream. @see svn_stream_t
  * and svn_stream__is_buffered().
  *
  * @since New in 1.7.

@@ -197,7 +197,7 @@ static const apr_getopt_option_t svnserve__options[] =
         "[0 .. no compression, 5 .. default, \n"
         "                             "
         " 9 .. maximum compression]")},
-    {"memory-cache-size", 'M', 1, 
+    {"memory-cache-size", 'M', 1,
      N_("size of the extra in-memory cache in MB used to\n"
         "                             "
         "minimize redundant operations.\n"
@@ -207,7 +207,7 @@ static const apr_getopt_option_t svnserve__options[] =
         "threaded mode.\n"
         "                             "
         "[used for FSFS repositories only]")},
-    {"cache-txdeltas", SVNSERVE_OPT_CACHE_TXDELTAS, 1, 
+    {"cache-txdeltas", SVNSERVE_OPT_CACHE_TXDELTAS, 1,
      N_("enable or disable caching of deltas between older\n"
         "                             "
         "revisions.\n"
@@ -215,7 +215,7 @@ static const apr_getopt_option_t svnserve__options[] =
         "Default is no.\n"
         "                             "
         "[used for FSFS repositories only]")},
-    {"cache-fulltexts", SVNSERVE_OPT_CACHE_FULLTEXTS, 1, 
+    {"cache-fulltexts", SVNSERVE_OPT_CACHE_FULLTEXTS, 1,
      N_("enable or disable caching of file contents\n"
         "                             "
         "Default is yes.\n"
@@ -598,9 +598,9 @@ int main(int argc, const char *argv[])
         case 'M':
           params.memory_cache_size = 0x100000 * apr_strtoi64(arg, NULL, 0);
           break;
-          
+
         case SVNSERVE_OPT_CACHE_TXDELTAS:
-          params.cache_txdeltas 
+          params.cache_txdeltas
              = svn_tristate__from_word(arg) == svn_tristate_true;
           break;
 
@@ -711,7 +711,7 @@ int main(int argc, const char *argv[])
        * the pool cleanup handlers that call sasl_dispose() (connection_pool)
        * and sasl_done() (pool) are run in the right order. See issue #3664. */
       connection_pool = svn_pool_create(pool);
-      conn = svn_ra_svn_create_conn2(NULL, in_file, out_file, 
+      conn = svn_ra_svn_create_conn2(NULL, in_file, out_file,
                                      params.compression_level,
                                      connection_pool);
       svn_error_clear(serve(conn, &params, connection_pool));
@@ -868,7 +868,7 @@ int main(int argc, const char *argv[])
     winservice_running();
 #endif
 
-  /* Configure FS caches for maximum efficiency with svnserve. 
+  /* Configure FS caches for maximum efficiency with svnserve.
    * For pre-forked (i.e. multi-processed) mode of operation,
    * keep the per-process caches smaller than the default.
    * Also, apply the respective command line parameters, if given. */

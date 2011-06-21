@@ -34,7 +34,7 @@
  *
  * Hence, deserialization can be simply done by copying the buffer and
  * adjusting the pointers. No fine-grained allocation and copying is
- * necessary. 
+ * necessary.
  */
 
 /* An element in the structure stack. It contains a pointer to the source
@@ -202,7 +202,7 @@ store_current_end_pointer(svn_temp_serializer__context_t *context,
 
   /* store the current buffer length because that's where we will append
    * the serialized data of the sub-struct or string */
-  *target_ptr = *source_pointer == NULL 
+  *target_ptr = *source_pointer == NULL
               ? 0
               : context->buffer->len - context->source->target_offset;
 }
@@ -210,7 +210,7 @@ store_current_end_pointer(svn_temp_serializer__context_t *context,
 /* Begin serialization of a referenced sub-structure within the
  * serialization CONTEXT. SOURCE_STRUCT must be a reference to the pointer
  * in the original parent structure so that the correspondence in the
- * serialized structure can be established. STRUCT_SIZE must match the 
+ * serialized structure can be established. STRUCT_SIZE must match the
  * result of sizeof() of the actual structure.
  */
 void
@@ -258,8 +258,8 @@ svn_temp_serializer__pop(svn_temp_serializer__context_t *context)
 }
 
 /* Serialize a string referenced from the current structure within the
- * serialization CONTEXT. S must be a reference to the char* pointer in 
- * the original structure so that the correspondence in the serialized 
+ * serialization CONTEXT. S must be a reference to the char* pointer in
+ * the original structure so that the correspondence in the serialized
  * structure can be established.
  */
 void
@@ -320,7 +320,7 @@ svn_temp_serializer__get(svn_temp_serializer__context_t *context)
   return context->buffer;
 }
 
-/* Replace the deserialized pointer value at PTR inside BUFFER with a 
+/* Replace the deserialized pointer value at PTR inside BUFFER with a
  * proper pointer value.
  */
 void

@@ -1827,7 +1827,7 @@ def merge_replace_causes_tree_conflict2(sbox):
 
   # Merge them one by one to see all the errors.
 
-  ### A file-with-file replacement onto a deleted file. 
+  ### A file-with-file replacement onto a deleted file.
   # svn merge $URL/A/mu $URL/branch/mu A/mu
   expected_stdout = verify.UnorderedOutput([
     "--- Merging differences between repository URLs into '" + A + "':\n",

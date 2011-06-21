@@ -539,8 +539,8 @@ req_check_access(request_rec *r,
 /* Log a message indicating the access control decision made about a
  * request.  The macro LOG_ARGS_SIGNATURE expands to FILE, LINE and
  * MODULE_INDEX in HTTPD 2.3 as APLOG_MARK macro has been changed for
- * per-module loglevel configuration.  It expands to FILE and LINE 
- * in older server versions.  ALLOWED is boolean.  
+ * per-module loglevel configuration.  It expands to FILE and LINE
+ * in older server versions.  ALLOWED is boolean.
  * REPOS_PATH and DEST_REPOS_PATH are information
  * about the request.  DEST_REPOS_PATH may be NULL. */
 static void

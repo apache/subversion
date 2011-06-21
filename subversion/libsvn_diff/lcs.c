@@ -164,7 +164,7 @@ svn_diff__snake(svn_diff__snake_t *fp_k,
           start_position[0] = position[0];
           start_position[1] = position[1];
         }
-      
+
       /* Skip any and all tokens that only occur in one of the files */
       if (position[0]->token_index >= 0
           && token_counts[1][position[0]->token_index] == 0)
@@ -269,7 +269,7 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
   if (position_list1 == NULL || position_list2 == NULL)
     {
       if (suffix_lines)
-        lcs = prepend_lcs(lcs, suffix_lines, 
+        lcs = prepend_lcs(lcs, suffix_lines,
                           lcs->position[0]->offset - suffix_lines,
                           lcs->position[1]->offset - suffix_lines,
                           pool);
@@ -362,7 +362,7 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
                             pool);
   else
     lcs->next = fp[0].lcs;
-  
+
   lcs = svn_diff__lcs_reverse(lcs);
 
   position_list1->next = sentinel_position[0].next;

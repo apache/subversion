@@ -2369,7 +2369,7 @@ static svn_error_t *file_rev_handler(void *baton, const char *path,
       svn_stream_set_close(stream, svndiff_close_handler);
 
       /* If the connection does not support SVNDIFF1 or if we don't want to use
-       * compression, use the non-compressing "version 0" implementation */ 
+       * compression, use the non-compressing "version 0" implementation */
       if (   svn_ra_svn_compression_level(frb->conn) > 0
           && svn_ra_svn_has_capability(frb->conn, SVN_RA_SVN_CAP_SVNDIFF1))
         svn_txdelta_to_svndiff3(d_handler, d_baton, stream, 1,
@@ -3098,11 +3098,11 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 
   /* construct FS configuration parameters */
   b.fs_config = apr_hash_make(pool);
-  apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS, 
+  apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
                APR_HASH_KEY_STRING, params->cache_txdeltas ? "1" : "0");
-  apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS, 
+  apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                APR_HASH_KEY_STRING, params->cache_fulltexts ? "1" : "0");
-  
+
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */
   if (params->compression_level > 0)

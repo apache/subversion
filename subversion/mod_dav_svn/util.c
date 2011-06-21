@@ -498,7 +498,7 @@ dav_svn__test_canonical(const char *path, apr_pool_t *pool)
     return NULL;
   if (svn_relpath_is_canonical(path))
     return NULL;
-      
+
   /* Otherwise, generate a generic HTTP_BAD_REQUEST error. */
   return dav_svn__new_error_tag
     (pool, HTTP_BAD_REQUEST, 0,

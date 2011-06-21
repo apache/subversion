@@ -2037,7 +2037,7 @@ try_copy(const apr_array_header_t *sources,
                _("Cannot mix repository and working copy sources"));
 
           if (dst_is_url)
-            pair->dst_abspath_or_url = 
+            pair->dst_abspath_or_url =
               svn_path_url_add_component2(dst_path_in, src_basename, pool);
           else
             pair->dst_abspath_or_url = svn_dirent_join(dst_path_in,
@@ -2413,7 +2413,7 @@ svn_client_move6(const apr_array_header_t *src_paths,
 
       err = try_copy(sources,
                      dst_is_url
-                         ? svn_path_url_add_component2(dst_path, 
+                         ? svn_path_url_add_component2(dst_path,
                                                        src_basename, pool)
                          : svn_dirent_join(dst_path, src_basename, pool),
                      TRUE /* is_move */,

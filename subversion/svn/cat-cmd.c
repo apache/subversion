@@ -91,7 +91,7 @@ svn_cl__cat(apr_getopt_t *os,
 
   if (seen_nonexistent_target)
     return svn_error_create(
-      SVN_ERR_ILLEGAL_TARGET, NULL, 
+      SVN_ERR_ILLEGAL_TARGET, NULL,
       _("Could not cat all targets because some targets don't exist"));
   else
     return SVN_NO_ERROR;

@@ -1045,7 +1045,7 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
                                  apr_pool_t *pool);
 
 /*
- * Similar to svn_client_args_to_target_array2() but with 
+ * Similar to svn_client_args_to_target_array2() but with
  * @a keep_last_origpath_on_truepath_collision always set to FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -1325,7 +1325,7 @@ svn_client_update(svn_revnum_t *result_rev,
  * @{
  */
 
-/** 
+/**
  * Switch an existing working copy directory to a different repository
  * location.
  *
@@ -4442,7 +4442,7 @@ svn_client_propget4(apr_hash_t **props,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool);
 
-/** 
+/**
  * Similar to svn_client_propget4(), but with the following change to the
  * output hash keys:  keys are `<tt>char *</tt>' paths, prefixed by
  * @a target, which is a working copy path or a URL.

@@ -61,7 +61,7 @@ extern "C" {
    available, do not create a hash entry for it.  If no keywords are
    found in the list, or if there is no list, set *KEYWORDS to NULL.
 
-   If SPECIAL is not NULL determine if the svn:special flag is set on 
+   If SPECIAL is not NULL determine if the svn:special flag is set on
    LOCAL_ABSPATH in DB.  If so, set SPECIAL to TRUE, if not, set it to FALSE.
 
    If PROPS is not NULL, use PROPS instead of the properties on LOCAL_ABSPATH.
@@ -141,7 +141,7 @@ svn_wc__expand_keywords(apr_hash_t **keywords,
 
    This function looks at the current values of the above properties,
    including any scheduled-but-not-yet-committed changes.
- 
+
    If LOCAL_ABSPATH is a directory, this function is a no-op.
 
    Use SCRATCH_POOL for any temporary allocations.

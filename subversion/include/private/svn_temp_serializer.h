@@ -113,7 +113,7 @@ svn_temp_serializer__init_append(void *buffer,
  * Only in case that svn_temp_serializer__init() has not been provided
  * with a root structure and this is the first call after the initialization,
  * @a source_struct will point to a reference to the root structure instead
- * of being related to some other. 
+ * of being related to some other.
  *
  * Sub-structures and strings will be added in a FIFO fashion. If you need
  * add further sub-structures on the same level, you need to call

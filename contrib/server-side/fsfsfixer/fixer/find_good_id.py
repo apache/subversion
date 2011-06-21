@@ -38,7 +38,7 @@ def rev_file_indexes(repo_dir, rev):
      (offset, size, expanded-size, csum [,sha1-csum, uniquifier]) tuples
      taken from all the "text: REV ..." representation lines
      in revision REV.
-     
+
      Here, NODEREV is the node-revision id minus the /offset part, and
      FULL_ID is the full node-revision id (including the /offset part).
      """

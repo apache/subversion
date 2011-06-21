@@ -371,13 +371,13 @@ public class Status implements java.io.Serializable
                    this.treeConflicted = true;
                    this.conflictDescriptor = new ConflictDescriptor(conflict);
                    break;
-    
+
                  case text:
                    this.conflictOld = conflict.getBasePath();
                    this.conflictWorking = conflict.getMergedPath();
                    this.conflictNew = conflict.getMyPath();
                    break;
-    
+
                  case property:
                    // Ignore
                    break;

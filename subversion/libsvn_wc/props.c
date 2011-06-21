@@ -1827,7 +1827,7 @@ propname_filter_receiver(void *baton,
       SVN_ERR(pfb->receiver_func(pfb->receiver_baton, local_abspath, props,
                                  scratch_pool));
     }
-    
+
   return SVN_NO_ERROR;
 }
 
@@ -1871,7 +1871,7 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
 
         if (!svn_wc__internal_changelist_match(wc_ctx->db, local_abspath,
                                                changelist_hash, scratch_pool))
-          break; 
+          break;
 
         if (pristine)
           SVN_ERR(svn_wc__db_read_pristine_props(&props, wc_ctx->db,

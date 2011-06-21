@@ -332,14 +332,14 @@ get_file_from_ra(struct file_baton *b,
   if (! props_only)
     {
       svn_stream_t *fstream;
-      
+
       SVN_ERR(svn_stream_open_unique(&fstream, &(b->path_start_revision), NULL,
                                      svn_io_file_del_on_pool_cleanup, b->pool,
                                      b->pool));
-      
+
       fstream = svn_stream_checksummed2(fstream, NULL, &b->start_md5_checksum,
                                         svn_checksum_md5, TRUE, b->pool);
-      
+
       /* Retrieve the file and its properties */
       SVN_ERR(svn_ra_get_file(b->edit_baton->ra_session,
                               b->path,
@@ -389,7 +389,7 @@ get_file_from_ra(struct file_baton *b,
 
      See http://subversion.tigris.org/issues/show_bug.cgi?id=3657#desc9 and
      http://svn.haxx.se/dev/archive-2010-08/0351.shtml for more details.
-     
+
      This function filters these property changes from the change hash
  */
 static void

@@ -178,7 +178,7 @@ svn_fs_fs__get_sharded_offset(void **out,
                               apr_pool_t *pool);
 
 /**
- * Implements #svn_cache__partial_getter_func_t for a single 
+ * Implements #svn_cache__partial_getter_func_t for a single
  * #svn_fs_dirent_t within a serialized directory contents hash,
  * identified by its name in @a baton.
  */

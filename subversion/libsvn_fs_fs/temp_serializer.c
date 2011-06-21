@@ -33,11 +33,11 @@
 
 #include "temp_serializer.h"
 
-/* Utility to encode a signed NUMBER into a variable-length sequence of 
+/* Utility to encode a signed NUMBER into a variable-length sequence of
  * 8-bit chars in KEY_BUFFER and return the last writen position.
  *
- * Numbers will be stored in 7 bits / byte and using byte values above 
- * 32 (' ') to make them combinable with other string by simply separating 
+ * Numbers will be stored in 7 bits / byte and using byte values above
+ * 32 (' ') to make them combinable with other string by simply separating
  * individual parts with spaces.
  */
 static char*
@@ -65,7 +65,7 @@ encode_number(apr_int64_t number, char *key_buffer)
 }
 
 /* Prepend the NUMBER to the STRING in a space efficient way that no other
- * (number,string) combination can produce the same result. 
+ * (number,string) combination can produce the same result.
  * Allocate temporaries as well as the result from POOL.
  */
 const char*
@@ -75,13 +75,13 @@ svn_fs_fs__combine_number_and_string(apr_int64_t number,
 {
   apr_size_t len = strlen(string);
 
-  /* number part requires max. 10x7 bits + 1 space. 
+  /* number part requires max. 10x7 bits + 1 space.
    * Add another 1 for the terminal 0 */
   char *key_buffer = apr_palloc(pool, len + 12);
   const char *key = key_buffer;
 
-  /* Prepend the number to the string and separate them by space. No other 
-   * number can result in the same prefix, no other string in the same 
+  /* Prepend the number to the string and separate them by space. No other
+   * number can result in the same prefix, no other string in the same
    * postfix nor can the boundary between them be ambiguous. */
   key_buffer = encode_number(number, key_buffer);
   *++key_buffer = ' ';
@@ -271,7 +271,7 @@ typedef struct hash_data_t
 static int
 compare_dirent_id_names(const void *lhs, const void *rhs)
 {
-  return strcmp((*(const svn_fs_dirent_t *const *)lhs)->name, 
+  return strcmp((*(const svn_fs_dirent_t *const *)lhs)->name,
                 (*(const svn_fs_dirent_t *const *)rhs)->name);
 }
 
@@ -450,7 +450,7 @@ svn_fs_fs__noderev_deserialize(void *buffer,
 }
 
 
-/* Utility function to serialize COUNT svn_txdelta_op_t objects 
+/* Utility function to serialize COUNT svn_txdelta_op_t objects
  * at OPS in the given serialization CONTEXT.
  */
 static void
@@ -687,7 +687,7 @@ svn_fs_fs__serialize_dir_entries(char **data,
 {
   apr_hash_t *dir = in;
 
-  /* serialize the dir content into a new serialization context 
+  /* serialize the dir content into a new serialization context
    * and return the serialized data */
   return return_serialized_dir_context(serialize_dir(dir, pool),
                                        data,

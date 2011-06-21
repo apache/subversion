@@ -2265,7 +2265,7 @@ def reintegrate_creates_bogus_mergeinfo(sbox):
   beta_path       = os.path.join(sbox.wc_dir, "A", "B", "E", "beta")
   A_path          = os.path.join(sbox.wc_dir, "A")
   A_path_1        = os.path.join(sbox.wc_dir, "A@1")
-  A_COPY_path     = os.path.join(sbox.wc_dir, "A_COPY") 
+  A_COPY_path     = os.path.join(sbox.wc_dir, "A_COPY")
   A_COPY_psi_path = os.path.join(sbox.wc_dir, "A_COPY", "D", "H", "psi")
   A_COPY_url      = sbox.repo_url + "/A_COPY"
 

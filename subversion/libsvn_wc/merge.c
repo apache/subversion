@@ -1117,8 +1117,8 @@ merge_binary_file(svn_skel_t **work_items,
   *work_items = NULL;
 
   svn_dirent_split(&merge_dirpath, &merge_filename, mt->local_abspath, pool);
- 
-  /* Attempt to merge the binary file. At the moment, we can only 
+
+  /* Attempt to merge the binary file. At the moment, we can only
      handle the special case: if the LEFT side of the merge is equal
      to WORKING, then we can copy RIGHT directly. */
   SVN_ERR(svn_io_files_contents_same_p(&same_contents,

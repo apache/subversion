@@ -289,7 +289,7 @@ svn_xml_hash_atts_overlaying(const char **atts,
  * string to be appended to. @a encoding must either be NULL, in which case
  * encoding information is omitted from the header, or must be the name of
  * the encoding of the XML document, such as "UTF-8".
- * 
+ *
  * @since New in 1.7.
  */
 void

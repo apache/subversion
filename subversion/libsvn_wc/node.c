@@ -162,30 +162,30 @@ svn_wc__internal_get_repos_info(const char **repos_root_url,
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
           && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
         return svn_error_return(err);
- 
+
       /* This node is not versioned. Return NULL repos info.  */
       svn_error_clear(err);
- 
+
       if (repos_root_url)
         *repos_root_url = NULL;
       if (repos_uuid)
         *repos_uuid = NULL;
       return SVN_NO_ERROR;
     }
- 
+
   if (((repos_root_url && *repos_root_url) || !repos_root_url)
       && ((repos_uuid && *repos_uuid) || !repos_uuid))
     return SVN_NO_ERROR;
- 
+
   if (status == svn_wc__db_status_deleted)
     {
       const char *base_del_abspath, *wrk_del_abspath;
- 
+
       SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath, NULL,
                                        &wrk_del_abspath,
                                        db, local_abspath,
                                        scratch_pool, scratch_pool));
- 
+
       if (base_del_abspath)
         SVN_ERR(svn_wc__db_scan_base_repos(NULL,repos_root_url,
                                            repos_uuid, db, base_del_abspath,
@@ -1389,7 +1389,7 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
     if (scan_working)
       {
         const char *op_root_abspath;
-      
+
         SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath, NULL,
                                          NULL, NULL, &original_repos_relpath,
                                          repos_root_url,
@@ -1742,7 +1742,7 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
 
             SVN_ERR(convert_db_kind_to_node_kind(&expected_kind, db_kind,
                                                  status, FALSE));
-                                         
+
             if (disk_kind != expected_kind)
               *obstruction_state = svn_wc_notify_state_obstructed;
           }

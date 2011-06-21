@@ -49,7 +49,7 @@
 
 
 /* The diff baton */
-struct diff_baton 
+struct diff_baton
 {
   /* A wc db. */
   svn_wc__db_t *db;
@@ -192,7 +192,7 @@ file_diff(struct diff_baton *eb,
       else
         {
           /* We can't look in this middle working layer (yet).
-             We just report the change itself. 
+             We just report the change itself.
 
              And if we could look at it, how would we report the addition
              of this middle layer (and maybe different layers below that)?
@@ -411,7 +411,7 @@ file_diff(struct diff_baton *eb,
         {
           SVN_ERR(eb->callbacks->file_changed(NULL, NULL, NULL,
                                               path,
-                                              modified ? pristine_abspath 
+                                              modified ? pristine_abspath
                                                        : NULL,
                                               translated,
                                               revision,

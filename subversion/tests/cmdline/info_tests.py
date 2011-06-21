@@ -350,7 +350,7 @@ def info_multiple_targets(sbox):
     expected_err = ".*W155010.*\n\n.*E200009.*"
     expected_err_re = re.compile(expected_err, re.DOTALL)
 
-    exit_code, output, error = svntest.main.run_svn(1, 'info', alpha, 
+    exit_code, output, error = svntest.main.run_svn(1, 'info', alpha,
                                                     non_existent_path, beta)
 
     # Verify error
@@ -373,7 +373,7 @@ def info_multiple_targets(sbox):
     expected_err = ".*W170000.*\n\n.*E200009.*"
     expected_err_re = re.compile(expected_err, re.DOTALL)
 
-    exit_code, output, error = svntest.main.run_svn(1, 'info', alpha, 
+    exit_code, output, error = svntest.main.run_svn(1, 'info', alpha,
                                                     non_existent_url, beta)
 
     # Verify error

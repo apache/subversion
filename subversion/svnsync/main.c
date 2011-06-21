@@ -1660,7 +1660,7 @@ info_cmd(apr_getopt_t *os, void *b, apr_pool_t * pool)
 
   from_url = apr_hash_get(props, SVNSYNC_PROP_FROM_URL,
                           APR_HASH_KEY_STRING);
-  
+
   if (! from_url)
     return svn_error_createf
       (SVN_ERR_BAD_URL, NULL,

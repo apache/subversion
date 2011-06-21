@@ -101,7 +101,7 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
     {
       path = svn_dirent_join(path, summary->path, pool);
 
-      /* Convert non-urls to local style, so that things like "" 
+      /* Convert non-urls to local style, so that things like ""
          show up as "." */
       path = svn_dirent_local_style(path, pool);
     }
@@ -137,7 +137,7 @@ summarize_regular(const svn_client_diff_summarize_t *summary,
     {
       path = svn_dirent_join(path, summary->path, pool);
 
-      /* Convert non-urls to local style, so that things like "" 
+      /* Convert non-urls to local style, so that things like ""
          show up as "." */
       path = svn_dirent_local_style(path, pool);
     }

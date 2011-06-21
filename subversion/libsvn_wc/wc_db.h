@@ -1078,7 +1078,7 @@ svn_wc__db_external_add_symlink(svn_wc__db_t *db,
 
 /* Adds (or overwrites) a directory external LOCAL_ABSPATH to the working copy
    identified by WRI_ABSPATH.
- 
+
   Directory externals are stored in their own working copy, so one should use
   the normal svn_wc__db functions to access the normal working copy
   information.

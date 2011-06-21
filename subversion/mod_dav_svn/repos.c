@@ -2135,17 +2135,17 @@ get_resource(request_rec *r,
     {
       /* construct FS configuration parameters */
       fs_config = apr_hash_make(r->connection->pool);
-      apr_hash_set(fs_config, 
-                   SVN_FS_CONFIG_FSFS_CACHE_DELTAS, 
-                   APR_HASH_KEY_STRING, 
+      apr_hash_set(fs_config,
+                   SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
+                   APR_HASH_KEY_STRING,
                    dav_svn__get_txdelta_cache_flag(r) ? "1" : "0");
-      apr_hash_set(fs_config, 
-                   SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS, 
-                   APR_HASH_KEY_STRING, 
+      apr_hash_set(fs_config,
+                   SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
+                   APR_HASH_KEY_STRING,
                    dav_svn__get_fulltext_cache_flag(r) ? "1" : "0");
-      
+
       /* open the FS */
-      serr = svn_repos_open2(&(repos->repos), fs_path, fs_config, 
+      serr = svn_repos_open2(&(repos->repos), fs_path, fs_config,
                              r->connection->pool);
       if (serr != NULL)
         {
@@ -2360,7 +2360,7 @@ get_parent_path(const char *path,
       /* Remove any trailing slash; else svn_path_dirname() asserts. */
       if (tmp[len-1] == '/')
         tmp[len-1] = '\0';
-     
+
       if (is_urlpath)
         return svn_urlpath__dirname(tmp, pool);
       else

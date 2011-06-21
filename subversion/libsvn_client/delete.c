@@ -283,7 +283,7 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
   /* At this point, we should have two hashs:
       SESSIONS maps repos_roots to ra_sessions.
       RELPATHS maps repos_roots to a list of decoded relpaths for that root.
-      
+
      Now we iterate over the collection of sessions and do a commit for each
      one with the collected relpaths. */
   for (hi = apr_hash_first(pool, sessions); hi; hi = apr_hash_next(hi))

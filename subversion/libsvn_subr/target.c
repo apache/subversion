@@ -156,7 +156,7 @@ svn_path_condense_targets(const char **pcommon,
 
                   if (i_is_url != j_is_url)
                     continue;
-                  
+
                   if (i_is_url)
                     ancestor = svn_uri_get_longest_ancestor(abs_targets_i,
                                                             abs_targets_j,

@@ -3772,7 +3772,7 @@ def diff_abs_localpath_from_wc_folder(sbox):
   B_abs_path = os.path.abspath(os.path.join(wc_dir, 'A', 'B'))
   os.chdir(os.path.abspath(A_path))
   svntest.actions.run_and_verify_svn(None, None, [], 'diff', B_abs_path)
-  
+
 @Issue(3449)
 def no_spurious_conflict(sbox):
   "no spurious conflict on update"
@@ -3812,7 +3812,7 @@ def no_spurious_conflict(sbox):
   expected_status.tweak(wc_rev=4)
   expected_status.tweak('3449_spurious', status='  ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
-        
+
 
 ########################################################################
 #Run the tests

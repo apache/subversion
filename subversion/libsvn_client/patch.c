@@ -724,7 +724,7 @@ readline_file(void *baton, svn_stringbuf_t **line, const char **eol_str,
               SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos, scratch_pool));
               SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
                                              &found_eof, scratch_pool));
-              if (numbytes == 1 && c == '\n') 
+              if (numbytes == 1 && c == '\n')
                 {
                   *eol_str = "\r\n";
                 }

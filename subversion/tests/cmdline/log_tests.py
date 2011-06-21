@@ -1827,13 +1827,13 @@ def merge_sensitive_log_reverse_merges(sbox):
   A_path      = os.path.join(wc_dir, 'A')
   A_COPY_path = os.path.join(wc_dir, 'A_COPY')
   D_COPY_path = os.path.join(wc_dir, 'A_COPY', 'D')
-  
+
   # Merge -c3,5 from A to A_COPY, commit as r7
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', '-c3,5', A_path, A_COPY_path)
   svntest.main.run_svn(None, 'ci', '-m', 'Merge -c3,5 from A to A_COPY',
                        wc_dir)
-    
+
   # Merge -c-3,-5,4,6 from A to A_COPY, commit as r8
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', '-c-3,4,-5,6', A_path, A_COPY_path)
@@ -1960,7 +1960,7 @@ def merge_sensitive_log_ignores_cyclic_merges(sbox):
     8  : [15,11,9],
     7  : [15,11],
     6  : [],
-    5  : [],    
+    5  : [],
     4  : [],
     3  : [],
     2  : [15,11],

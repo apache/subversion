@@ -16478,7 +16478,7 @@ def merge_change_to_file_with_executable(sbox):
   "executable flag is maintained during binary merge"
 
   # Scenario: When merging a change to a binary file with the 'svn:executable'
-  # property set, the file is not marked as 'executable'. After commit, the 
+  # property set, the file is not marked as 'executable'. After commit, the
   # executable bit is set correctly.
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -16521,7 +16521,7 @@ def merge_change_to_file_with_executable(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      trunk_url,
                                      sbox.repo_url + '/branch',
-                                     '-m', "Creating the Branch")   
+                                     '-m', "Creating the Branch")
 
   # Modify the files + commit (r3)
   svntest.main.file_append(alpha_path, 'appended alpha text')
@@ -16532,7 +16532,7 @@ def merge_change_to_file_with_executable(sbox):
   svntest.main.safe_rmtree(wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
                                      sbox.repo_url + '/branch', wc_dir)
-  
+
   # Recalculate the paths
   alpha_path = os.path.join(wc_dir, "alpha")
   beta_path = os.path.join(wc_dir, "beta")

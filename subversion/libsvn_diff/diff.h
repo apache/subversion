@@ -93,7 +93,7 @@ typedef enum svn_diff__normalize_state_t
 
 /*
  * Calculate the Longest Common Subsequence (LCS) between two datasources
- * POSITION_LIST1 and POSITION_LIST2, with TOKEN_COUNTS_LIST1 and 
+ * POSITION_LIST1 and POSITION_LIST2, with TOKEN_COUNTS_LIST1 and
  * TOKEN_COUNTS_LIST2 the corresponding counts of the different tokens
  * (indexed by the 'token_index' of the positions of each position_list).
  *
@@ -141,7 +141,7 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
                      apr_off_t prefix_lines,
                      apr_pool_t *pool);
 
-/* 
+/*
  * Returns an array with the counts for the tokens in
  * the looped linked list given in loop_start.
  * num_tokens equals the highest possible token index +1.

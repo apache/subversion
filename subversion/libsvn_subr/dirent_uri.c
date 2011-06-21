@@ -319,7 +319,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
   if (type == type_uri)
     {
       assert(*src != '/');
-        
+
       while (*src && (*src != '/') && (*src != ':'))
         src++;
 
@@ -366,7 +366,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
             {
               /* We probably have a port number: Is it a default portnumber
                  which doesn't belong in a canonical url? */
-              if (src[1] == '8' && src[2] == '0' 
+              if (src[1] == '8' && src[2] == '0'
                   && (src[3]== '/'|| !src[3])
                   && !strncmp(canon, "http:", 5))
                 {
@@ -464,10 +464,10 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
         slash_len = 1;
       else if (type == type_uri && next[0] == '%')
         slash_len = 3;
-      
+
       seglen = next - src;
 
-      if (seglen == 0 
+      if (seglen == 0
           || (seglen == 1 && src[0] == '.')
           || (type == type_uri && seglen == 3 && src[0] == '%' && src[1] == '2'
               && canonicalize_to_upper(src[2]) == 'E'))
@@ -1885,7 +1885,7 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
           else if (((*(ptr+2) < '0' || *(ptr+2) > '9'))
                    && (*(ptr+2) < 'A' || *(ptr+2) > 'F'))
             return FALSE;
-          
+
           digitz[0] = *(++ptr);
           digitz[1] = *(++ptr);
           digitz[2] = '\0';

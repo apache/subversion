@@ -1103,7 +1103,7 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_update_skip_obstruction,
 
   /** An explicit update tried to update a file or directory that
-   * doesn't live in the repository and can't be brought in. 
+   * doesn't live in the repository and can't be brought in.
    * @since New in 1.7. */
   svn_wc_notify_update_skip_working_only,
 
@@ -1160,7 +1160,7 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_commit_copied,
 
   /** Committing an overwriting (replace) copy (path is the target of
-   * the copy, not the source). 
+   * the copy, not the source).
    * @since New in 1.7. */
   svn_wc_notify_commit_copied_replaced,
 
@@ -1193,7 +1193,7 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.7. */
   svn_wc_notify_failed_no_parent,
 
-  /** Operation failed because a node is locked by another user and/or 
+  /** Operation failed because a node is locked by another user and/or
    * working copy.  @since New in 1.7. */
   svn_wc_notify_failed_locked,
 

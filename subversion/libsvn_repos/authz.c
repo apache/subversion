@@ -454,11 +454,11 @@ authz_get_any_access(svn_config_t *cfg, const char *repos_name,
   baton.repos_path = "/";
   baton.qualified_repos_path = apr_pstrcat(pool, repos_name,
                                            ":/", (char *)NULL);
-  
+
   /* We could have used svn_config_enumerate2 for "repos_name:/".
    * However, this requires access for root explicitly (which the user
-   * may not always have). So we end up enumerating the sections in 
-   * the authz CFG and stop on the first match with some access for 
+   * may not always have). So we end up enumerating the sections in
+   * the authz CFG and stop on the first match with some access for
    * this user. */
   svn_config_enumerate_sections2(cfg, authz_get_any_access_parser_cb,
                                  &baton, pool);
@@ -782,7 +782,7 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
   /* Determine the granted access for the requested path. */
   path = svn_fspath__canonicalize(path, pool);
   current_path = path;
-  
+
   while (!authz_get_path_access(authz->cfg, repos_name,
                                 current_path, user,
                                 required_access,

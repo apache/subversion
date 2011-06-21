@@ -158,7 +158,7 @@ set_revision_mapping(apr_hash_t *rev_map,
   apr_hash_set(rev_map, mapped_revs,
                sizeof(svn_revnum_t), mapped_revs + 1);
 }
-                     
+
 /* Return the revision to which FROM_REV maps in REV_MAP, or
    SVN_INVALID_REVNUM if no such mapping exists. */
 static svn_revnum_t
@@ -368,7 +368,7 @@ commit_callback(const svn_commit_info_t *commit_info,
 
   /* Update our "last revision mapped". */
   pb->last_rev_mapped = rb->rev;
-  
+
   return SVN_NO_ERROR;
 }
 

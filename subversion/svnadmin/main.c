@@ -109,9 +109,9 @@ open_repos(svn_repos_t **repos,
 {
   /* construct FS configuration parameters: enable all available caches */
   apr_hash_t *fs_config = apr_hash_make(pool);
-  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS, 
+  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
                APR_HASH_KEY_STRING, "1");
-  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS, 
+  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                APR_HASH_KEY_STRING, "1");
 
   /* now, open the requested repository */
@@ -527,7 +527,7 @@ target_arg_to_dirent(const char **dirent,
   *dirent = svn_dirent_internal_style(path, pool);
   return SVN_NO_ERROR;
 }
-  
+
 /* Parse the remaining command-line arguments from OS, returning them
    in a new array *ARGS (allocated from POOL) and optionally verifying
    that we got the expected number thereof.  If MIN_EXPECTED is not
@@ -549,7 +549,7 @@ parse_args(apr_array_header_t **args,
 
   if (min_expected || max_expected)
     SVN_ERR_ASSERT(args);
-  
+
   if ((min_expected >= 0) && (num_args < min_expected))
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
                             "Not enough arguments");
@@ -560,10 +560,10 @@ parse_args(apr_array_header_t **args,
     {
       *args = apr_array_make(pool, num_args, sizeof(const char *));
       while (os->ind < os->argc)
-        APR_ARRAY_PUSH(*args, const char *) = 
+        APR_ARRAY_PUSH(*args, const char *) =
           apr_pstrdup(pool, os->argv[os->ind++]);
     }
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1703,7 +1703,7 @@ main(int argc, const char *argv[])
         opt_state.help = TRUE;
         break;
       case 'M':
-        opt_state.memory_cache_size 
+        opt_state.memory_cache_size
             = 0x100000 * apr_strtoi64(opt_arg, NULL, 0);
         break;
       case svnadmin__version:

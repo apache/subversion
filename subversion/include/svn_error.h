@@ -310,7 +310,7 @@ svn_handle_warning(FILE *stream,
  *
  * This macro can be used when directly returning an error to ensure
  * that the call stack is recorded correctly.
- * 
+ *
  * @since New in 1.7.
  */
 #ifdef SVN_ERR__TRACING
@@ -409,7 +409,7 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
 /** Evaluates to @c TRUE iff @a apr_err (of type #apr_status_t) is in the given
  * @a category, which should be one of the @c SVN_ERR_*_CATEGORY_START
  * constants.
- * 
+ *
  * @since New in 1.7.
  */
 #define SVN_ERROR_IN_CATEGORY(apr_err, category)            \

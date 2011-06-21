@@ -236,7 +236,7 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
               *ret = old_node;
               return SVN_NO_ERROR;
             }
-          
+
           /* 2nd level: hash lookup */
 #if APR_HAS_THREADS
           apr_err = apr_thread_mutex_lock(xlate_handle_mutex);
@@ -389,7 +389,7 @@ put_xlate_handle_node(xlate_handle_node_t *node,
         node = atomic_swap(&xlat_uton_static_handle, node);
       if (node == NULL)
         return;
-        
+
 #if APR_HAS_THREADS
       if (apr_thread_mutex_lock(xlate_handle_mutex) != APR_SUCCESS)
         SVN_ERR_MALFUNCTION_NO_RETURN();

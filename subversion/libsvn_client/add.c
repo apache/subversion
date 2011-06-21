@@ -588,7 +588,7 @@ add(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
                                    "before adding a new item here"),
                                  svn_dirent_local_style(b->local_abspath,
                                                         scratch_pool));
-        
+
       return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                _("'%s' not found"),
                                svn_dirent_local_style(b->local_abspath,

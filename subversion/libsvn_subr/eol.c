@@ -74,7 +74,7 @@ svn_eol__find_eol_start(char *buf, apr_size_t len)
     apr_uintptr_t r_test = chunk ^ R_MASK;
     apr_uintptr_t n_test = chunk ^ N_MASK;
 
-    /* A byte in R_TEST can by < 0x80, iff it has been \0 before 
+    /* A byte in R_TEST can by < 0x80, iff it has been \0 before
      * (i.e. \r in *BUF). Dito for N_TEST. */
     r_test |= (r_test & LOWER_7BITS_SET) + LOWER_7BITS_SET;
     n_test |= (n_test & LOWER_7BITS_SET) + LOWER_7BITS_SET;

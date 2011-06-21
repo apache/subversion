@@ -300,7 +300,7 @@ typedef struct pristine_install_baton_t
  *
  * This function expects to be executed inside a SQLite txn that has already
  * acquired a 'RESERVED' lock.
- * 
+ *
  * Implements 'notes/wc-ng/pristine-store' section A-3(a).
  * Implements svn_sqlite__transaction_callback_t. */
 static svn_error_t *
