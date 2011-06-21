@@ -34,6 +34,7 @@ PARALLEL ?= 1
 CLEANUP ?= 1
 USE_HTTPV1 ?= no
 USE_AUTHZ_SHORT_CIRCUIT ?= no
+RAMDISK ?= /ramdisk
 
 PWD		= $(shell pwd)
 UNAME		= $(shell uname)
@@ -1197,6 +1198,7 @@ stop-svnserve:
 define do_check
 @-cd $(svn_builddir) && for fs in fsfs bdb; do \
     echo "Begin test: $(subst svn-check-,,$@) x $$fs"; \
+    test -d "$(RAMDISK)/tmp" && export TMPDIR="$(RAMDISK)/tmp"; \
     make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) $1 FS_TYPE=$$fs; \
     for log in tests.log fails.log; do \
         test -f $$log && mv -f $$log $$log.$@-$$fs; \
@@ -1204,20 +1206,31 @@ define do_check
 done
 endef
 
-svn-check-neon: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled
+TEST_WORK=$(svn_builddir)/subversion/tests/cmdline/svn-test-work
+svn-check-prepare-ramdisk:
+	-rm -rf "$(TEST_WORK)"; \
+	if [ -d "$(RAMDISK)" ] && \
+		touch "$(RAMDISK)/$(SVN_REL_WC).writetest" && \
+		mkdir -p "$(RAMDISK)/$(SVN_REL_WC)"; then \
+			rm -f "$(RAMDISK)/$(SVN_REL_WC).writetest"; \
+			ln -s "$(RAMDISK)/$(SVN_REL_WC)" "$(TEST_WORK)"; \
+			mkdir -p "$(RAMDISK)/tmp"; \
+	fi
+
+svn-check-neon: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled svn-check-prepare-ramdisk
 	$(HTTPD_START_CMD)
 	$(call do_check,BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon)
 	$(HTTPD_STOP_CMD)
 
-svn-check-serf: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled
+svn-check-serf: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled svn-check-prepare-ramdisk
 	$(HTTPD_START_CMD)
 	$(call do_check,BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf)
 	$(HTTPD_STOP_CMD)
 
-svn-check-local:
+svn-check-local: svn-check-prepare-ramdisk
 	$(call do_check)
 
-svn-check-svn:
+svn-check-svn: svn-check-prepare-ramdisk
 	$(SVNSERVE_START_CMD)
 	$(call do_check,BASE_URL=svn://127.0.0.1)
 	$(SVNSERVE_STOP_CMD)
@@ -1267,7 +1280,8 @@ svn-check-javahl:
 				tee $(svn_builddir)/tests.log.bindings.javahl; \
 	fi
 
-svn-check: svn-check-local svn-check-svn svn-check-neon svn-check-serf svn-check-bindings
+svn-check: svn-check-prepare-ramdisk svn-check-local svn-check-svn \
+	svn-check-neon svn-check-serf svn-check-bindings
 
 .PHONY: sign-email
 sign-email:
