@@ -1161,10 +1161,11 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
     }
 
   /* Close the file baton, and get outta here. */
-  return editor->close_file(file_baton,
-                            svn_checksum_to_cstring(local_md5_checksum,
-                                                    scratch_pool),
-                            scratch_pool);
+  return svn_error_return(
+             editor->close_file(file_baton,
+                                svn_checksum_to_cstring(local_md5_checksum,
+                                                        scratch_pool),
+                                scratch_pool));
 }
 
 svn_error_t *
