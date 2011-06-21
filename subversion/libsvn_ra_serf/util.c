@@ -1278,6 +1278,7 @@ write_to_pending(svn_ra_serf__xml_parser_t *ctx,
          ensure this, so that we will append.  */
       SVN_ERR(svn_io_file_write_full(ctx->pending->spill, data, len,
                                      NULL, scratch_pool));
+      return SVN_NO_ERROR;
     }
 
   /* We're still within bounds of holding the pending information in
