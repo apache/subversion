@@ -1485,24 +1485,50 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
         }
     }
 
+  /* If we are storing content into a spill file, then move to the end of
+     the file. We need to pre-position the file so that write_to_pending()
+     will always append the content.  */
+  if (ctx->pending != NULL && ctx->pending->spill != NULL)
+    {
+      apr_off_t output_unused = 0;  /* ### stupid API  */
+
+      SVN_ERR(svn_io_file_seek(ctx->pending->spill,
+                               APR_END, &output_unused,
+                               pool));
+    }
+
   while (1)
     {
       const char *data;
       apr_size_t len;
 
-      status = serf_bucket_read(response, 8000, &data, &len);
+      status = serf_bucket_read(response, PARSE_CHUNK_SIZE, &data, &len);
 
       if (SERF_BUCKET_READ_ERROR(status))
         {
           return svn_error_wrap_apr(status, NULL);
         }
 
-      err = inject_to_parser(ctx, data, len, &sl);
+      /* Note: once the callbacks invoked by inject_to_parser() sets the
+         PAUSED flag, then it will not be cleared. write_to_pending() will
+         only save the content. Logic outside of serf_context_run() will
+         clear that flag, as appropriate, along with processing the
+         content that we have placed into the PENDING buffer.  */
+      if (0 /* ### not yet...  ctx->paused  */)
+        {
+          err = write_to_pending(ctx, data, len, pool);
+        }
+      else
+        {
+          err = inject_to_parser(ctx, data, len, &sl);
+          if (err)
+            {
+              /* Should have no errors if IGNORE_ERRORS is set.  */
+              SVN_ERR_ASSERT(!ctx->ignore_errors);
+            }
+        }
       if (err)
         {
-          /* Should have no errors if IGNORE_ERRORS is set.  */
-          SVN_ERR_ASSERT(!ctx->ignore_errors);
-
           XML_ParserFree(ctx->xmlp);
           add_done_item(ctx);
           return svn_error_return(err);
