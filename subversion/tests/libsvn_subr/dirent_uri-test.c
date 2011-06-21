@@ -1346,60 +1346,90 @@ test_uri_split(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Paths to test and the expected result, for is_ancestor tests. */
-typedef struct testcase_is_ancestor_t {
+/* Paths to test and the expected result, for ancestor tests. */
+typedef struct testcase_ancestor_t {
   const char *path1;
   const char *path2;
-  svn_boolean_t result;
-} testcase_is_ancestor_t;
+  const char *result;
+} testcase_ancestor_t;
+
+static const testcase_ancestor_t dirent_ancestor_tests[] =
+  {
+    { "",               "",                 "" },
+    { "",               "foo",              "foo" },
+    { "",               ".bar",             ".bar" },
+    { "",               "/",                NULL },
+    { "",               "/foo",             NULL },
+    { "/",              "",                 NULL },
+    { "/",              "foo",              NULL },
+    { "/",              "/",                "" },
+    { "/",              "/foo",             "foo" },
+    { "/",              "bar/bla",          NULL },
+    { "/foo",           "/foo",             "" },
+    { "/foo",           "/foot",            NULL },
+    { "/foo",           "/foo/bar",         "bar" },
+    { "/foo/bar",       "/foot/bar",        NULL },
+    { "/foot",          "/foo",             NULL },
+    { "/foo/bar/bla",   "/foo/bar",         NULL },
+    { "/foo/bar",       "/foo/bar/bla",     "bla" },
+    { "foo/bar",        "foo",              NULL },
+    { "/foo/bar",       "foo",              NULL },
+    { "/.bar",          "/",                NULL },
+    { "/foo/bar",       "/foo",             NULL },
+    { "foo",            "foo/bar",          "bar" },
+    { "foo.",           "foo./.bar",        ".bar" },
+    { "X:foo",          "X:bar",            NULL },
+    { "../foo",         "..",               NULL },
+#ifdef SVN_USE_DOS_PATHS
+    { "",               "C:",               NULL },
+    { "",               "C:foo",            NULL },
+    { "",               "C:/",              NULL },
+    { "",               "C:/foo",           NULL },
+    { "X",              "X:",               NULL },
+    { "X",              "X:foo",            NULL },
+    { "X",              "X:/",              NULL },
+    { "X",              "X:/foo",           NULL },
+    { "X:",             "X:",               "" },
+    { "X:",             "X:foo",            "foo" },
+    { "X:",             "X:/",              NULL },
+    { "X:",             "X:/foo",           NULL },
+    { "X:/",            "X:",               NULL },
+    { "X:/",            "X:foo",            NULL },
+    { "X:/",            "X:/",              "" },
+    { "X:/",            "X:/foo",           "foo" },
+    { "X:/foo",         "X:/",              NULL },
+    { "A:/foo",         "A:/foo/bar",       "bar" },
+    { "A:/foo",         "A:/foot",          NULL },
+    { "//srv",          "//srv/share",      NULL },
+    { "//srv",          "//srv/shr/fld",    NULL },
+    { "//srv/shr",      "//srv",            NULL },
+    { "//srv/share",    "//vrs/share",      NULL },
+    { "//srv/share",    "//srv/share/foo",  "foo" },
+    { "//srv/shr",      "//srv/shr/fld",    "fld" },
+    { "//srv/s r",      "//srv/s r/fld",    "fld" },
+    { "//srv/shr/fld",  "//srv/shr",        NULL },
+    { "//srv/shr/fld",  "//srv2/shr/fld",   NULL },
+    { "/",              "//srv/share",      NULL },
+#else /* !SVN_USE_DOS_PATHS */
+    { "",               "C:",               "C:" },
+    { "",               "C:/foo",           "C:/foo" },
+    { "X:",             "X:foo",            NULL },
+#endif
+  };
 
 static svn_error_t *
 test_dirent_is_ancestor(apr_pool_t *pool)
 {
-  const testcase_is_ancestor_t *t;
-  static const testcase_is_ancestor_t tests[] = {
-    { "/foo",            "/foo/bar",      TRUE},
-    { "/foo/bar",        "/foo/bar/",     TRUE},
-    { "/",               "/foo",          TRUE},
-    { SVN_EMPTY_PATH,    "foo",           TRUE},
-    { SVN_EMPTY_PATH,    ".bar",          TRUE},
-    { SVN_EMPTY_PATH,    "/",             FALSE},
-    { SVN_EMPTY_PATH,    "/foo",          FALSE},
-    { "/.bar",           "/",             FALSE},
-    { "foo/bar",         "foo",           FALSE},
-    { "/foo/bar",        "/foo",          FALSE},
-    { "foo",             "foo/bar",       TRUE},
-    { "foo.",            "foo./.bar",     TRUE},
+  const testcase_ancestor_t *t;
 
-    { "../foo",          "..",            FALSE},
-    { SVN_EMPTY_PATH,    SVN_EMPTY_PATH,  TRUE},
-    { "/",               "/",             TRUE},
-    { "X:foo",           "X:bar",         FALSE},
-#ifdef SVN_USE_DOS_PATHS
-    { "//srv/shr",       "//srv",         FALSE},
-    { "//srv/shr",       "//srv/shr/fld", TRUE },
-    { "//srv/s r",       "//srv/s r/fld", TRUE },
-    { "//srv",           "//srv/shr/fld", FALSE },
-    { "//srv/shr/fld",   "//srv/shr",     FALSE },
-    { "//srv/shr/fld",   "//srv2/shr/fld", FALSE },
-    { "X:",              "X:/",           FALSE},
-    { "X:/",             "X:/",           TRUE},
-    { "X:/foo",          "X:/",           FALSE},
-    { "X:/",             "X:/foo",        TRUE},
-    { "X:",              "X:foo",         TRUE},
-    { SVN_EMPTY_PATH,    "C:/",           FALSE},
-#else /* !SVN_USE_DOS_PATHS */
-    { "X:",              "X:foo",         FALSE},
-    { SVN_EMPTY_PATH,    "C:/",           TRUE},
-#endif /* SVN_USE_DOS_PATHS */
-  };
-
-  for (t = tests; t < tests + COUNT_OF(tests); t++)
+  for (t = dirent_ancestor_tests;
+       t < dirent_ancestor_tests + COUNT_OF(dirent_ancestor_tests);
+       t++)
     {
       svn_boolean_t retval;
 
       retval = svn_dirent_is_ancestor(t->path1, t->path2);
-      if (t->result != retval)
+      if (!!t->result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_dirent_is_ancestor (%s, %s) returned %s instead of %s",
@@ -1409,30 +1439,44 @@ test_dirent_is_ancestor(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static const testcase_ancestor_t relpath_ancestor_tests[] =
+  {
+    { "",               "",                 "" },
+    { "",               "foo",              "foo" },
+    { "",               ".bar",             ".bar" },
+    { "",               "bar/bla",          "bar/bla" },
+    { "foo",            "foo",              "" },
+    { "foo",            "foo/bar",          "bar" },
+    { "foo",            "foot",             NULL },
+    { "foo.",           "foo./.bar",        ".bar" },
+    { "foot",           "foo",              NULL },
+    { "foo/bar",        "foo",              NULL },
+    { "foo/bar",        "foo/bar/bla",      "bla" },
+    { "foo/bar",        "foot/bar",         NULL },
+    { "foo/bar/bla",    "foo/bar",          NULL },
+    { "food/bar",       "foo/bar",          NULL },
+    { "http:/server",   "http:/server/q",   "q" },
+    { "svn:/server",    "http:/server/q",   NULL },
+    /* These are relpaths so a colon is not special. */
+    { "",               "C:",               "C:" },
+    { "X:",             "X:foo",            NULL },
+    { "X:",             "X:/foo",           "foo" },
+    { "X:foo",          "X:bar",            NULL },
+  };
+
 static svn_error_t *
 test_relpath_is_ancestor(apr_pool_t *pool)
 {
-  const testcase_is_ancestor_t *t;
-  static const testcase_is_ancestor_t tests[] = {
-    { "foo",            "foo/bar",        TRUE},
-    { "food/bar",       "foo/bar",        FALSE},
-    { "",                "foo",           TRUE},
-    { "",                ".bar",          TRUE},
-    { "foo/bar",         "foo",           FALSE},
-    { "foo",             "foo/bar",       TRUE},
-    { "foo.",            "foo./.bar",     TRUE},
-    { "",                "",              TRUE},
-    { "X:foo",           "X:bar",         FALSE},
-    { "X:",              "X:foo",         FALSE},
-    { "",                "C:",            TRUE},
-  };
+  const testcase_ancestor_t *t;
 
-  for (t = tests; t < tests + COUNT_OF(tests); t++)
+  for (t = relpath_ancestor_tests;
+       t < relpath_ancestor_tests + COUNT_OF(relpath_ancestor_tests);
+       t++)
     {
       svn_boolean_t retval;
 
       retval = svn_relpath__is_ancestor(t->path1, t->path2);
-      if (t->result != retval)
+      if (!!t->result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_relpath_is_ancestor (%s, %s) returned %s instead of %s",
@@ -1442,25 +1486,31 @@ test_relpath_is_ancestor(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static const testcase_ancestor_t uri_ancestor_tests[] =
+  {
+    { "http://test",    "http://test",      "" },
+    { "http://test",    "http://taste",     NULL },
+    { "http://test",    "http://test/foo",  "foo" },
+    { "http://test",    "file://test/foo",  NULL },
+    { "http://test",    "http://testf",     NULL },
+    { "http://",        "http://test",      NULL },
+    { "http://server",  "http://server/q",  "q" },
+    { "svn://server",   "http://server/q",  NULL },
+  };
+
 static svn_error_t *
 test_uri_is_ancestor(apr_pool_t *pool)
 {
-  const testcase_is_ancestor_t *t;
-  static const testcase_is_ancestor_t tests[] = {
-    { "http://test",    "http://test",     TRUE},
-    { "http://test",    "http://taste",    FALSE},
-    { "http://test",    "http://test/foo", TRUE},
-    { "http://test",    "file://test/foo", FALSE},
-    { "http://test",    "http://testf",    FALSE},
-    { "http://",        "http://test",     FALSE},
-  };
+  const testcase_ancestor_t *t;
 
-  for (t = tests; t < tests + COUNT_OF(tests); t++)
+  for (t = uri_ancestor_tests;
+       t < uri_ancestor_tests + COUNT_OF(uri_ancestor_tests);
+       t++)
     {
       svn_boolean_t retval;
 
       retval = svn_uri__is_ancestor(t->path1, t->path2);
-      if (t->result != retval)
+      if (!!t->result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_uri_is_ancestor (%s, %s) returned %s instead of %s",
@@ -1470,45 +1520,14 @@ test_uri_is_ancestor(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Paths to test and the expected result, for skip_ancestor tests. */
-typedef struct testcase_skip_ancestor_t {
-  const char *path1;
-  const char *path2;
-  const char *result;
-} testcase_skip_ancestor_t;
-
 static svn_error_t *
 test_dirent_skip_ancestor(apr_pool_t *pool)
 {
-  const testcase_skip_ancestor_t *t;
-  static const testcase_skip_ancestor_t tests[] = {
-    { "/foo",            "/foo/bar",        "bar"},
-    { "/foo/bar",        "/foot/bar",       NULL },
-    { "/foo",            "/foo",            ""},
-    { "/foo",            "/foot",           NULL },
-    { "/foot",           "/foo",            NULL },
-    { "",                "foo",             "foo"},
-    { "",                "/foo",            NULL },
-    { "/",               "/foo",            "foo"},
-    { "/foo/bar/bla",    "/foo/bar",        NULL },
-    { "/foo/bar",        "/foo/bar/bla",    "bla"},
-    { "foo/bar",         "foo",             NULL },
-    { "/foo/bar",        "foo",             NULL },
-    { "/",               "bar/bla",         NULL },
-#ifdef SVN_USE_DOS_PATHS
-    { "A:/foo",          "A:/foo/bar",      "bar"},
-    { "A:/foo",          "A:/foot",         NULL},
-    { "A:/",             "A:/foo",          "foo"},
-    { "A:",              "A:foo",           "foo"},
-    { "A:",              "A:/",             NULL},
-    { "//srv/share",     "//vrs/share",     NULL},
-    { "//srv",           "//srv/share",     NULL},
-    { "//srv/share",     "//srv/share/foo", "foo"},
-    { "/",               "//srv/share",     NULL},
-#endif
-  };
+  const testcase_ancestor_t *t;
 
-  for (t = tests; t < tests + COUNT_OF(tests); t++)
+  for (t = dirent_ancestor_tests;
+       t < dirent_ancestor_tests + COUNT_OF(dirent_ancestor_tests);
+       t++)
     {
       const char* retval;
 
@@ -1527,23 +1546,11 @@ test_dirent_skip_ancestor(apr_pool_t *pool)
 static svn_error_t *
 test_relpath_skip_ancestor(apr_pool_t *pool)
 {
-  const testcase_skip_ancestor_t *t;
-  static const testcase_skip_ancestor_t tests[] = {
-    { "foo",             "foo/bar",        "bar"},
-    { "foo/bar",         "foot/bar",       NULL },
-    { "foo",             "foo",            ""},
-    { "foo",             "foot",           NULL },
-    { "foot",            "foo",            NULL },
-    { "",                "foo",            "foo"},
-    { "foo/bar/bla",     "foo/bar",        NULL },
-    { "foo/bar",         "foo/bar/bla",    "bla"},
-    { "foo/bar",         "foo",            NULL },
-    { "",                "bar/bla",        "bar/bla"},
-    { "http:/server",    "http:/server/q", "q" },
-    { "svn:/server",     "http:/server/q", NULL },
-  };
+  const testcase_ancestor_t *t;
 
-  for (t = tests; t < tests + COUNT_OF(tests); t++)
+  for (t = relpath_ancestor_tests;
+       t < relpath_ancestor_tests + COUNT_OF(relpath_ancestor_tests);
+       t++)
     {
       const char* retval;
 
@@ -1562,13 +1569,11 @@ test_relpath_skip_ancestor(apr_pool_t *pool)
 static svn_error_t *
 test_uri_skip_ancestor(apr_pool_t *pool)
 {
-  const testcase_skip_ancestor_t *t;
-  static const testcase_skip_ancestor_t tests[] = {
-    { "http://server",   "http://server/q", "q" },
-    { "svn://server",    "http://server/q", NULL },
-  };
+  const testcase_ancestor_t *t;
 
-  for (t = tests; t < tests + COUNT_OF(tests); t++)
+  for (t = uri_ancestor_tests;
+       t < uri_ancestor_tests + COUNT_OF(uri_ancestor_tests);
+       t++)
     {
       const char* retval;
 
