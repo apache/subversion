@@ -1817,9 +1817,9 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
 
       if (port == 80 && strncmp(uri, "http:", 5) == 0)
         return FALSE;
-      else if (port == 443 && !strncmp(uri, "https:", 6) == 0)
+      else if (port == 443 && strncmp(uri, "https:", 6) == 0)
         return FALSE;
-      else if (port == 3690 && !strncmp(uri, "svn:", 4) == 0)
+      else if (port == 3690 && strncmp(uri, "svn:", 4) == 0)
         return FALSE;
     }
 

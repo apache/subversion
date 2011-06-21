@@ -1169,6 +1169,9 @@ test_uri_is_canonical(apr_pool_t *pool)
     { "svn://sERVER:3690/r",             FALSE, TRUE  },
     { "svn://:",                         FALSE, FALSE },
     { "svn://server:/r",                 FALSE, TRUE  },
+    { "http://server:443",               TRUE,  TRUE  },
+    { "svn://server:80",                 TRUE,  TRUE  },
+    { "https://server:3690",             TRUE,  TRUE  },
 #ifdef SVN_USE_DOS_PATHS
     { "file:///c:/temp/repos",           FALSE, TRUE  },
     { "file:///c:/temp/REPOS",           FALSE, TRUE  },
