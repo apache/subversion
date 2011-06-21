@@ -1191,7 +1191,11 @@ typedef enum svn_wc_notify_action_t
 
   /** Operation failed because an added parent is not selected
    * @since New in 1.7. */
-  svn_wc_notify_failed_no_parent
+  svn_wc_notify_failed_no_parent,
+
+  /** Operation failed because a node is locked by another user and/or 
+   * working copy.  @since New in 1.7. */
+  svn_wc_notify_failed_locked,
 
 } svn_wc_notify_action_t;
 

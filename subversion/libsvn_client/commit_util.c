@@ -99,6 +99,42 @@ fixup_out_of_date_error(const char *local_abspath,
                                                                 path,
                                                                 scratch_pool));
     }
+  else if (err->apr_err == SVN_ERR_FS_NO_LOCK_TOKEN
+           || err->apr_err == SVN_ERR_FS_LOCK_OWNER_MISMATCH
+           || err->apr_err == SVN_ERR_RA_NOT_LOCKED)
+    {
+      if (ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify;
+
+          if (local_abspath)
+            notify = svn_wc_create_notify(local_abspath,
+                                          svn_wc_notify_failed_locked,
+                                          scratch_pool);
+          else
+            notify = svn_wc_create_notify_url(
+                                svn_path_url_add_component2(base_url, path,
+                                                            scratch_pool),
+                                svn_wc_notify_failed_locked,
+                                scratch_pool);
+
+          notify->kind = kind;
+          notify->err = err;
+
+          ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
+        }
+
+      return svn_error_createf(SVN_ERR_CLIENT_NO_LOCK_TOKEN, err,
+                   (kind == svn_node_dir
+                     ? _("Directory '%s' is locked in another working copy")
+                     : _("File '%s' is locked in another working copy")),
+                   local_abspath 
+                      ? svn_dirent_local_style(local_abspath,
+                                               scratch_pool)
+                      : svn_path_url_add_component2(base_url,
+                                                    path,
+                                                    scratch_pool));
+    }
   else
     return err;
 }
@@ -1784,7 +1820,7 @@ svn_client__do_commit(const char *base_url,
   svn_pool_destroy(iterpool);
 
   /* Close the edit. */
-  return editor->close_edit(edit_baton, scratch_pool);
+  return svn_error_return(editor->close_edit(edit_baton, scratch_pool));
 }
 
 
