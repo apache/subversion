@@ -74,7 +74,6 @@ cd ..
 echo '-------------------moving results---------------------'
 ./release.py --base-dir ${abscwd}/roll post-candidates trunk-nightly $head \
     --target $target
-exit 1
 if [ ! -d "$target/dist" ]; then mkdir "$target/dist"; fi
 if [ -d "$target/dist/r$head" ]; then rm -r "$target/dist/r$head"; fi
 mv $target/deploy $target/dist/r$head
