@@ -9046,8 +9046,8 @@ ensure_wc_is_suitable_merge_target(const char *target_abspath,
       svn_revnum_t min_rev;
       svn_revnum_t max_rev;
 
-      SVN_ERR(svn_wc__min_max_revisions(&min_rev, &max_rev, ctx->wc_ctx,
-                                        target_abspath, FALSE, scratch_pool));
+      SVN_ERR(svn_client_min_max_revisions(&min_rev, &max_rev, target_abspath,
+                                           FALSE, ctx, scratch_pool));
 
       if (!(SVN_IS_VALID_REVNUM(min_rev) && SVN_IS_VALID_REVNUM(max_rev)))
         {

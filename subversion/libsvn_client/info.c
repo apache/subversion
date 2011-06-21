@@ -449,3 +449,18 @@ svn_client_get_wc_root(const char **wcroot_abspath,
   return svn_wc__get_wc_root(wcroot_abspath, ctx->wc_ctx, local_abspath,
                              result_pool, scratch_pool);
 }
+
+
+/* NOTE: This function was requested by the TortoiseSVN project.  See
+   issue #3927. */
+svn_error_t *
+svn_client_min_max_revisions(svn_revnum_t *min_revision,
+                             svn_revnum_t *max_revision,
+                             const char *local_abspath,
+                             svn_boolean_t committed,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *scratch_pool)
+{
+  return svn_wc__min_max_revisions(min_revision, max_revision, ctx->wc_ctx,
+                                   local_abspath, committed, scratch_pool);
+}
