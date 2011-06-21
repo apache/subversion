@@ -965,7 +965,8 @@ test_dirent_is_canonical(apr_pool_t *pool)
 
       canonicalized = svn_dirent_canonicalize(tests[i].path, pool);
 
-      if (canonical && (strcmp(tests[i].path, canonicalized) != 0))
+      if ((canonical && strcmp(tests[i].path, canonicalized) != 0)
+          || (!canonical && strcmp(tests[i].path, canonicalized) == 0))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_dirent_canonicalize(\"%s\") returned \"%s\" "
                                  "while svn_dirent_is_canonical returned TRUE",
@@ -1057,7 +1058,8 @@ test_relpath_is_canonical(apr_pool_t *pool)
 
       canonicalized = svn_relpath_canonicalize(tests[i].path, pool);
 
-      if (canonical && (strcmp(tests[i].path, canonicalized) != 0))
+      if ((canonical && strcmp(tests[i].path, canonicalized) != 0)
+          || (!canonical && strcmp(tests[i].path, canonicalized) == 0))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_relpath_canonicalize(\"%s\") returned "
                                  "\"%s\"  while svn_relpath_is_canonical "
@@ -1202,7 +1204,8 @@ test_uri_is_canonical(apr_pool_t *pool)
 
       canonicalized = svn_uri_canonicalize(tests[i].path, pool);
 
-      if (canonical && (strcmp(tests[i].path, canonicalized) != 0))
+      if ((canonical && strcmp(tests[i].path, canonicalized) != 0)
+          || (!canonical && strcmp(tests[i].path, canonicalized) == 0))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_uri_canonicalize(\"%s\") returned \"%s\" "
                                  "while svn_uri_is_canonical returned %s",
