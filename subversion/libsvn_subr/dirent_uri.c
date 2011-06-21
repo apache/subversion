@@ -385,6 +385,10 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
                 {
                   src += 5;
                 }
+              else if (src[1] == '/' || !src[1])
+                {
+                  src += 1;
+                }
 
               while (*src && (*src != '/'))
                 *(dst++) = canonicalize_to_lower((*src++));
