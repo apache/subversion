@@ -441,8 +441,8 @@ pre_1_2_recurse:
 
 svn_error_t *
 svn_client_get_wc_root(const char **wcroot_abspath,
-                       svn_client_ctx_t *ctx,
                        const char *local_abspath,
+                       svn_client_ctx_t *ctx,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
