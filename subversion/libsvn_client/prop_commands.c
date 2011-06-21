@@ -611,38 +611,6 @@ pristine_or_working_props(apr_hash_t **props,
 }
 
 
-/* Set *PROPVAL to the pristine (base) value of property PROPNAME at
- * PATH, if PRISTINE is true, or else the working value if PRISTINE is
- * false.  Allocate *PROPVAL in POOL.
- */
-static svn_error_t *
-pristine_or_working_propval(const svn_string_t **propval,
-                            svn_wc_context_t *wc_ctx,
-                            const char *local_abspath,
-                            const char *propname,
-                            svn_boolean_t pristine,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
-{
-  apr_hash_t *props;
-
-  *propval = NULL;
-
-  SVN_ERR(pristine_or_working_props(&props, wc_ctx, local_abspath, pristine,
-                                    scratch_pool, scratch_pool));
-  if (props != NULL)
-    {
-      const svn_string_t *value = apr_hash_get(props,
-                                               propname, APR_HASH_KEY_STRING);
-      if (value)
-        *propval = svn_string_dup(value, result_pool);
-    }
-  /* ### should we throw an error if this node is defined to have
-     ### no properties? (ie. props==NULL)  */
-
-  return SVN_NO_ERROR;
-}
-
 /* Helper for the remote case of svn_client_propget.
  *
  * Get the value of property PROPNAME in REVNUM, using RA_LIB and
