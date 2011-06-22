@@ -90,32 +90,15 @@ else
 fi
 
 if test -n "$APXS" && test "$APXS" != "no"; then
-  AC_MSG_CHECKING([whether Apache version is compatible with APR version])
-  apr_major_version="${apr_version%%.*}"
-  case "$apr_major_version" in
-    0)
-      apache_minor_version_wanted_regex="0"
-      ;;
-    1)
-      apache_minor_version_wanted_regex=["[1-4]"]
-      ;;
-    2)
-      apache_minor_version_wanted_regex=["[3-4]"]
-      ;;
-    *)
-      AC_MSG_ERROR([unknown APR version])
-      ;;
-  esac
-  old_CPPFLAGS="$CPPFLAGS"
-  CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
-  AC_EGREP_CPP([apache_minor_version= *\"$apache_minor_version_wanted_regex\"],
-               [
-#include "$APXS_INCLUDE/ap_release.h"
-apache_minor_version=AP_SERVER_MINORVERSION],
-               [AC_MSG_RESULT([yes])],
-               [AC_MSG_RESULT([no])
-                AC_MSG_ERROR([Apache version incompatible with APR version])])
-  CPPFLAGS="$old_CPPFLAGS"
+    AC_MSG_CHECKING([whether Apache's APR is compatible configure's APR])
+    APXS_APR_CONFIG=`$APXS -q APR_CONFIG`
+    APXS_APR_VERSION=`$APXS_APR_CONFIG --version`
+    if test "$APXS_APR_VERSION" = "$apr_version"; then
+        AC_MSG_RESULT(yes)
+    else
+        AC_MSG_RESULT(no)
+        AC_MSG_ERROR([Apache's APR version $APXS_APR_VERSION doesn't match configure's $apr_version])
+    fi
 fi
 
 AC_ARG_WITH(apache-libexecdir,
