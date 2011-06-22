@@ -500,7 +500,7 @@ class TargetLib(TargetLinked):
     # Is a library referencing symbols which are undefined at link time.
     self.undefined_lib_symbols = options.get('undefined-lib-symbols') == 'yes'
 
-    self.link_cmd = '$(LINK_LIB)'
+    self.link_cmd = options.get('link-cmd', '$(LINK_LIB)')
 
     self.msvc_static = options.get('msvc-static') == 'yes' # is a static lib
     self.msvc_fake = options.get('msvc-fake') == 'yes' # has fake target
