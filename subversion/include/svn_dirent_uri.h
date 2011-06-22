@@ -422,15 +422,16 @@ svn_uri_is_root(const char *uri,
 /** Return a new dirent like @a dirent, but transformed such that some types
  * of dirent specification redundancies are removed.
  *
- * This involves collapsing redundant "/./" elements, removing
- * multiple adjacent separator characters, removing trailing
- * separator characters, and possibly other semantically inoperative
- * transformations.
+ * This involves:
+ *   - collapsing redundant "/./" elements
+ *   - removing multiple adjacent separator characters
+ *   - removing trailing separator characters
+ *   - converting the server name of a UNC path to lower case (on Windows)
+ *   - converting a drive letter to upper case (on Windows)
  *
- * Convert the server name of UNC paths lowercase and drive letters to
- * upper case on Windows.
+ * and possibly other semantically inoperative transformations.
  *
- * The returned dirent may be statically allocated or allocated from @a pool.
+ * The returned dirent may be allocated statically or from @a pool.
  *
  * @since New in 1.6.
  */
@@ -442,15 +443,14 @@ svn_dirent_canonicalize(const char *dirent,
 /** Return a new relpath like @a relpath, but transformed such that some types
  * of relpath specification redundancies are removed.
  *
- * This involves collapsing redundant "/./" elements, removing
- * multiple adjacent separator characters, removing trailing
- * separator characters, and possibly other semantically inoperative
- * transformations.
+ * This involves:
+ *   - collapsing redundant "/./" elements
+ *   - removing multiple adjacent separator characters
+ *   - removing trailing separator characters
  *
- * This functions supports relpaths.
+ * and possibly other semantically inoperative transformations.
  *
- * The returned relpath may be statically allocated or allocated from @a
- * pool.
+ * The returned relpath may be allocated statically or from @a pool.
  *
  * @since New in 1.7.
  */
@@ -462,14 +462,17 @@ svn_relpath_canonicalize(const char *relpath,
 /** Return a new uri like @a uri, but transformed such that some types
  * of uri specification redundancies are removed.
  *
- * This involves collapsing redundant "/./" elements, removing
- * multiple adjacent separator characters, removing trailing separator
- * characters, and possibly other semantically inoperative
- * transformations.  This function also normalizes the escaping of the
- * path component by unescaping characters that don't need escaping
- * and escaping characters that do need escaping but weren't.
+ * This involves:
+ *   - collapsing redundant "/./" elements
+ *   - removing multiple adjacent separator characters
+ *   - removing trailing separator characters
+ *   - normalizing the escaping of the path component by unescaping
+ *     characters that don't need escaping and escaping characters that do
+ *     need escaping but weren't
  *
- * The returned uri may be statically allocated or allocated from @a pool.
+ * and possibly other semantically inoperative transformations.
+ *
+ * The returned uri may be allocated statically or from @a pool.
  *
  * @since New in 1.7.
  */
@@ -484,6 +487,7 @@ svn_uri_canonicalize(const char *uri,
  * "looks exactly the same as @c svn_dirent_canonicalize() would make
  * it look".
  *
+ * @see svn_dirent_canonicalize()
  * @since New in 1.6.
  */
 svn_boolean_t
@@ -492,6 +496,7 @@ svn_dirent_is_canonical(const char *dirent,
 
 /** Return @c TRUE iff @a relpath is canonical.
  *
+ * @see svn_relpath_canonicalize()
  * @since New in 1.7.
  */
 svn_boolean_t
@@ -500,6 +505,7 @@ svn_relpath_is_canonical(const char *relpath);
 /** Return @c TRUE iff @a uri is canonical.  Use @a pool for temporary
  * allocations.
  *
+ * @see svn_uri_canonicalize()
  * @since New in 1.7.
  */
 svn_boolean_t
