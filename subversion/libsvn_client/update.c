@@ -183,7 +183,6 @@ update_internal(svn_revnum_t *result_rev,
                 svn_boolean_t ignore_externals,
                 svn_boolean_t allow_unver_obstructions,
                 svn_boolean_t adds_as_modification,
-                svn_boolean_t innerupdate,
                 svn_boolean_t *timestamp_sleep,
                 svn_boolean_t notify_summary,
                 svn_client_ctx_t *ctx,
@@ -518,8 +517,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
           err = update_internal(result_rev, missing_parent, anchor_abspath,
                                 &peg_revision, svn_depth_empty, FALSE,
                                 ignore_externals, allow_unver_obstructions,
-                                adds_as_modification,
-                                innerupdate, timestamp_sleep,
+                                adds_as_modification, timestamp_sleep,
                                 FALSE, ctx, pool);
           if (err)
             goto cleanup;
@@ -543,9 +541,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   err = update_internal(result_rev, local_abspath, anchor_abspath,
                         &peg_revision, depth, depth_is_sticky,
                         ignore_externals, allow_unver_obstructions,
-                        adds_as_modification,
-                        innerupdate,
-                        timestamp_sleep,
+                        adds_as_modification, timestamp_sleep,
                         TRUE, ctx, pool);
  cleanup:
   err = svn_error_compose_create(
