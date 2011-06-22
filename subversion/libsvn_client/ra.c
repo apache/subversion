@@ -440,7 +440,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
   svn_opt_revision_t *good_rev;
   svn_opt_revision_t peg_revision, start_rev;
   svn_opt_revision_t dead_end_rev;
-  svn_opt_revision_t *ignored_rev, *new_rev;
+  svn_opt_revision_t *ignored_rev;
   svn_revnum_t rev;
   const char *ignored_url, *corrected_url;
 
@@ -472,14 +472,13 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
 
   /* Run the history function to get the object's (possibly
      different) url in REVISION. */
-  SVN_ERR(svn_client__repos_locations(&url, &new_rev,
+  SVN_ERR(svn_client__repos_locations(&url, &good_rev,
                                       &ignored_url, &ignored_rev,
                                       ra_session,
                                       path_or_url, &peg_revision,
                                       /* search range: */
                                       &start_rev, &dead_end_rev,
                                       ctx, pool));
-  good_rev = (svn_opt_revision_t *)new_rev;
 
   /* Make the session point to the real URL. */
   SVN_ERR(svn_ra_reparent(ra_session, url, pool));
