@@ -34,7 +34,7 @@
 
 #define PRISTINE_STORAGE_EXT ".svn-base"
 #define PRISTINE_STORAGE_RELPATH "pristine"
-#define PRISTINE_TEMPDIR_RELPATH ""
+#define PRISTINE_TEMPDIR_RELPATH "tmp"
 
 
 
@@ -408,12 +408,14 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
   SVN_ERR_ASSERT(md5_checksum->kind == svn_checksum_md5);
 
   /* ### this logic assumes that TEMPFILE_ABSPATH follows this pattern:
-     ###   WCROOT_ABSPATH/COMPONENT/TEMPFNAME
+     ###   WCROOT_ABSPATH/COMPONENT/COMPONENT/TEMPFNAME
      ### if we change this (see PRISTINE_TEMPDIR_RELPATH), then this
      ### logic should change.  */
-  wri_abspath = svn_dirent_dirname(svn_dirent_dirname(tempfile_abspath,
-                                                      scratch_pool),
-                                   scratch_pool);
+  wri_abspath = svn_dirent_dirname(
+                    svn_dirent_dirname(
+                        svn_dirent_dirname(tempfile_abspath, scratch_pool),
+                        scratch_pool),
+                    scratch_pool);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               wri_abspath, scratch_pool, scratch_pool));
