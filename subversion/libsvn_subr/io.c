@@ -4150,8 +4150,9 @@ svn_io_open_unique_file3(apr_file_t **file,
   struct temp_file_cleanup_s *baton = NULL;
   apr_int32_t flags = (APR_READ | APR_WRITE | APR_CREATE | APR_EXCL |
                        APR_BUFFERED | APR_BINARY);
-#ifndef WIN32
+#if !defined(WIN32) && !defined(__OS2__)
   apr_fileperms_t perms;
+  svn_boolean_t using_system_temp_dir = FALSE;
 #endif
 
   SVN_ERR_ASSERT(file || unique_path);
@@ -4161,7 +4162,12 @@ svn_io_open_unique_file3(apr_file_t **file,
     *unique_path = NULL;
 
   if (dirpath == NULL)
-    SVN_ERR(svn_io_temp_dir(&dirpath, scratch_pool));
+    {
+#if !defined(WIN32) && !defined(__OS2__)
+      using_system_temp_dir = TRUE;
+#endif
+      SVN_ERR(svn_io_temp_dir(&dirpath, scratch_pool));
+    }
 
   switch (delete_when)
     {
@@ -4191,17 +4197,20 @@ svn_io_open_unique_file3(apr_file_t **file,
                            result_pool, scratch_pool));
 
 #if !defined(WIN32) && !defined(__OS2__)
-  /* ### file_mktemp() creates files with mode 0600.
-   * ### As of r880338, tempfiles created by svn_io_open_unique_file3()
-   * ### often end up being copied or renamed into the working copy.
-   * ### This will cause working files having mode 0600 while users might
-   * ### expect to see 644 or 664. Ideally, permissions should be tweaked
-   * ### by our callers after installing tempfiles in the WC, but until
-   * ### that's done we need to avoid breaking pre-r880338 behaviour.
-   * ### So we tweak perms of the tempfile here, but only if the umask
-   * ### allows it. */
-  SVN_ERR(merge_default_file_perms(tempfile, &perms, scratch_pool));
-  SVN_ERR(file_perms_set2(tempfile, perms));
+  /* apr_file_mktemp() creates files with mode 0600.
+   * This is appropriate if we're using a system temp dir since we don't
+   * want to leak sensitive data into temp files other users can read.
+   * If we're not using a system temp dir we're probably using the
+   * .svn/tmp area and it's likely that the tempfile will end up being
+   * copied or renamed into the working copy.
+   * This would cause working files having mode 0600 while users might
+   * expect to see 0644 or 0664. So we tweak perms of the tempfile in this
+   * case, but only if the umask allows it. */
+  if (!using_system_temp_dir)
+    {
+      SVN_ERR(merge_default_file_perms(tempfile, &perms, scratch_pool));
+      SVN_ERR(file_perms_set2(tempfile, perms));
+    }
 #endif
 
   if (file)
