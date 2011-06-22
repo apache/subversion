@@ -469,6 +469,8 @@ svn_relpath_canonicalize(const char *relpath,
  *   - normalizing the escaping of the path component by unescaping
  *     characters that don't need escaping and escaping characters that do
  *     need escaping but weren't
+ *   - removing the port number if it is the default port number (80 for
+ *     http, 443 for https, 3690 for svn)
  *
  * and possibly other semantically inoperative transformations.
  *
