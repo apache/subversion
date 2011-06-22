@@ -90,7 +90,7 @@ else
 fi
 
 if test -n "$APXS" && test "$APXS" != "no"; then
-    AC_MSG_CHECKING([whether Apache's APR is compatible configure's APR])
+    AC_MSG_CHECKING([whether Apache's APR is compatible with configure's APR])
     APXS_APR_CONFIG=`$APXS -q APR_CONFIG`
     APXS_APR_VERSION=`$APXS_APR_CONFIG --version`
     if test "$APXS_APR_VERSION" = "$apr_version"; then
