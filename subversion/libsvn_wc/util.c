@@ -449,20 +449,6 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
 
   (*status)->switched = old_status->switched;
 
-  if (old_status->node_status == svn_wc_status_external)
-    {
-      svn_node_kind_t external_kind;
-
-      SVN_ERR(svn_wc__read_external_info(&external_kind, NULL, NULL, NULL,
-                                         NULL, wc_ctx,
-                                         local_abspath /* wri_abspath */,
-                                         local_abspath, TRUE,
-                                         scratch_pool, scratch_pool));
-
-      if (external_kind == svn_node_file)
-        (*status)->file_external = TRUE;
-    }
-
   (*status)->text_status = old_status->node_status;
   (*status)->prop_status = old_status->prop_status;
 
