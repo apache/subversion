@@ -3815,11 +3815,20 @@ svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
 {
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath;
+  const svn_string_t *value;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  return svn_error_return(svn_wc__marked_as_binary(has_binary_prop,
-                                                   local_abspath, db, pool));
+  SVN_ERR(svn_wc__internal_propget(&value, db, local_abspath,
+                                   SVN_PROP_MIME_TYPE,
+                                   pool, pool));
+
+  if (value && (svn_mime_type_is_binary(value->data)))
+    *has_binary_prop = TRUE;
+  else
+    *has_binary_prop = FALSE;
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
