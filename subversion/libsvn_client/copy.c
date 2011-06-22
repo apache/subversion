@@ -1552,7 +1552,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                                             &pair->src_peg_revision,
                                             &pair->src_op_revision, NULL,
                                             svn_depth_infinity,
-                                            ignore_externals, FALSE, TRUE,
+                                            ignore_externals, FALSE,
                                             &sleep_needed, ctx, pool);
 
         ctx->notify_func2 = old_notify_func2;

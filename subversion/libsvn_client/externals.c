@@ -270,7 +270,7 @@ switch_dir_external(const char *local_abspath,
   /* ... Hello, new hotness. */
   SVN_ERR(svn_client__checkout_internal(NULL, url, local_abspath, peg_revision,
                                         revision, NULL, svn_depth_infinity,
-                                        FALSE, FALSE, TRUE, timestamp_sleep,
+                                        FALSE, FALSE, timestamp_sleep,
                                         ctx, pool));
 
   {

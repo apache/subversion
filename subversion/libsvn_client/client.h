@@ -521,7 +521,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               svn_depth_t depth,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
-                              svn_boolean_t innercheckout,
                               svn_boolean_t *timestamp_sleep,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool);
