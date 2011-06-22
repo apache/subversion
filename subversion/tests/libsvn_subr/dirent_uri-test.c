@@ -795,11 +795,8 @@ test_relpath_canonicalize(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-test_uri_canonicalize(apr_pool_t *pool)
-{
-  const testcase_canonicalize_t *t;
-  static const testcase_canonicalize_t tests[] = {
+static const testcase_canonicalize_t uri_canonical_tests[] =
+  {
     { "http://hst",           "http://hst" },
     { "http://hst/foo/../bar","http://hst/foo/../bar" },
     { "http://hst/",          "http://hst" },
@@ -811,9 +808,11 @@ test_uri_canonicalize(apr_pool_t *pool)
     { "svn+ssh:///",          "svn+ssh://" },
     { "http://HST/",          "http://hst" },
     { "http://HST/FOO/BaR",   "http://hst/FOO/BaR" },
+    { "svn+ssh://jens@10.0.1.1",    "svn+ssh://jens@10.0.1.1" },
     { "svn+ssh://j.raNDom@HST/BaR", "svn+ssh://j.raNDom@hst/BaR" },
     { "svn+SSH://j.random:jRaY@HST/BaR", "svn+ssh://j.random:jRaY@hst/BaR" },
     { "SVN+ssh://j.raNDom:jray@HST/BaR", "svn+ssh://j.raNDom:jray@hst/BaR" },
+    { "svn+ssh://j.raNDom:jray@hst/BaR", "svn+ssh://j.raNDom:jray@hst/BaR" },
     { "fILe:///Users/jrandom/wc", "file:///Users/jrandom/wc" },
     { "fiLE:///",             "file://" },
     { "fiLE://",              "file://" },
@@ -840,10 +839,36 @@ test_uri_canonicalize(apr_pool_t *pool)
     { "file:///C%3a/temp",     "file:///C:/temp" },
     { "http://server/cr%AB",   "http://server/cr%AB" },
     { "http://server/cr%ab",   "http://server/cr%AB" },
+    { "http://hst/foo/bar/",   "http://hst/foo/bar" },
+    { "http://hst/foo/.",      "http://hst/foo" },
+    { "http://hst/foo/%2E",    "http://hst/foo" },
+    { "http://hst/%",          "http://hst/%25" },
+    { "http://hst/+",          "http://hst/+" },
+    { "http://hst/#",          "http://hst/%23" },
+    { "http://hst/ ",          "http://hst/%20" },
+    { "http://hst/%2B",        "http://hst/+" },
+    { "http://HST",            "http://hst" },
+    { "http://hst/foo/./bar",  "http://hst/foo/bar" },
+    { "hTTp://hst/foo/bar",    "http://hst/foo/bar" },
+    { "http://hst/foo/bar/",   "http://hst/foo/bar" },
+    { "file://SRV/share/repo", "file://srv/share/repo" },
+    { "file://srv/SHARE/repo", "file://srv/SHARE/repo" },
+    { "file://srv/share/repo", "file://srv/share/repo" },
+    { "file://srv/share/repo/","file://srv/share/repo" },
+    { "file:///folder/c#",     "file:///folder/c%23" }, /* # needs escaping */
+    { "file:///fld/with space","file:///fld/with%20space" }, /* # needs escaping */
+    { "file:///fld/c%23",      "file:///fld/c%23" }, /* Properly escaped C# */
+    { "file:///%DE%AD%BE%EF",  "file:///%DE%AD%BE%EF" },
+    { "file:///%de%ad%be%ef",  "file:///%DE%AD%BE%EF" },
+    { "file:///%DE%ad%BE%ef",  "file:///%DE%AD%BE%EF" },
     { "http://server:80",      "http://server" },
     { "http://server:81/",     "http://server:81" },
     { "https://Server:443/q",  "https://server/q" },
     { "svn://sERVER:3690/r",   "svn://server/r" },
+    { "svn://server:/r",       "svn://server/r" },
+    { "http://server:443",     "http://server:443" },
+    { "svn://server:80",       "svn://server:80" },
+    { "https://server:3690",   "https://server:3690" },
 #ifdef SVN_USE_DOS_PATHS
     { "file:///c:/temp/repos", "file:///C:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///C:/temp/REPOS" },
@@ -853,11 +878,74 @@ test_uri_canonicalize(apr_pool_t *pool)
     { "file:///c:/temp/REPOS", "file:///c:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
 #endif /* SVN_USE_DOS_PATHS */
+  /* svn_uri_is_canonical() was a private function in the 1.6 API, and
+     has since taken a MAJOR change of direction, namely that only
+     absolute URLs are considered canonical uris now. */
+    { "",                                NULL },
+    { ".",                               NULL },
+    { "/",                               NULL },
+    { "/.",                              NULL },
+    { "./",                              NULL },
+    { "./.",                             NULL },
+    { "//",                              NULL },
+    { "/////",                           NULL },
+    { "./././.",                         NULL },
+    { "////././.",                       NULL },
+    { "foo",                             NULL },
+    { ".foo",                            NULL },
+    { "foo.",                            NULL },
+    { "/foo",                            NULL },
+    { "foo/",                            NULL },
+    { "foo./",                           NULL },
+    { "foo./.",                          NULL },
+    { "foo././/.",                       NULL },
+    { "/foo/bar",                        NULL },
+    { "foo/..",                          NULL },
+    { "foo/../",                         NULL },
+    { "foo/../.",                        NULL },
+    { "foo//.//bar",                     NULL },
+    { "///foo",                          NULL },
+    { "/.//./.foo",                      NULL },
+    { ".///.foo",                        NULL },
+    { "../foo",                          NULL },
+    { "../../foo/",                      NULL },
+    { "../../foo/..",                    NULL },
+    { "/../../",                         NULL },
+    { "dirA",                            NULL },
+    { "foo/dirA",                        NULL },
+    { "foo/./bar",                       NULL },
+    { "C:/folder/subfolder/file",        NULL },
+    { "X:/foo",                          NULL },
+    { "X:",                              NULL },
+    { "X:foo",                           NULL },
+    { "X:foo/",                          NULL },
+    /* Some people use colons in their filenames. */
+    { ":",                               NULL },
+    { ".:",                              NULL },
+    { "foo/.:",                          NULL },
+    { "//server/share",                  NULL }, /* Only valid as dirent */
+    { "//server",                        NULL },
+    { "//",                              NULL },
+    { "sch://@/",                        NULL },
+    { "sch:///",                         NULL },
+    { "svn://:",                         NULL },
   };
 
-  for (t = tests; t < tests + COUNT_OF(tests); t++)
+static svn_error_t *
+test_uri_canonicalize(apr_pool_t *pool)
+{
+  const testcase_canonicalize_t *t;
+
+  for (t = uri_canonical_tests;
+       t < uri_canonical_tests + COUNT_OF(uri_canonical_tests);
+       t++)
     {
-      const char *canonical = svn_uri_canonicalize(t->path, pool);
+      const char *canonical;
+
+      if (! t->result)
+        continue;
+
+      canonical = svn_uri_canonicalize(t->path, pool);
 
       if (strcmp(canonical, t->result))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -1067,149 +1155,25 @@ test_relpath_is_canonical(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Paths to test and the expected result, for is_canonical tests. */
-typedef struct testcase_uri_is_canonical_t {
-  const char *path;
-  svn_boolean_t canonical;
-  svn_boolean_t canonicalizable;
-} testcase_uri_is_canonical_t;
-
 static svn_error_t *
 test_uri_is_canonical(apr_pool_t *pool)
 {
-  /* svn_uri_is_canonical() was a private function in the 1.6 API, and
-     has since taken a MAJOR change of direction, namely that only
-     absolute URLs are considered canonical uris now. */
-  const testcase_uri_is_canonical_t *t;
-  static const testcase_uri_is_canonical_t tests[] = {
-    { "",                                FALSE, FALSE },
-    { ".",                               FALSE, FALSE },
-    { "/",                               FALSE, FALSE },
-    { "/.",                              FALSE, FALSE },
-    { "./",                              FALSE, FALSE },
-    { "./.",                             FALSE, FALSE },
-    { "//",                              FALSE, FALSE },
-    { "/////",                           FALSE, FALSE },
-    { "./././.",                         FALSE, FALSE },
-    { "////././.",                       FALSE, FALSE },
-    { "foo",                             FALSE, FALSE },
-    { ".foo",                            FALSE, FALSE },
-    { "foo.",                            FALSE, FALSE },
-    { "/foo",                            FALSE, FALSE },
-    { "foo/",                            FALSE, FALSE },
-    { "foo./",                           FALSE, FALSE },
-    { "foo./.",                          FALSE, FALSE },
-    { "foo././/.",                       FALSE, FALSE },
-    { "/foo/bar",                        FALSE, FALSE },
-    { "foo/..",                          FALSE, FALSE },
-    { "foo/../",                         FALSE, FALSE },
-    { "foo/../.",                        FALSE, FALSE },
-    { "foo//.//bar",                     FALSE, FALSE },
-    { "///foo",                          FALSE, FALSE },
-    { "/.//./.foo",                      FALSE, FALSE },
-    { ".///.foo",                        FALSE, FALSE },
-    { "../foo",                          FALSE, FALSE },
-    { "../../foo/",                      FALSE, FALSE },
-    { "../../foo/..",                    FALSE, FALSE },
-    { "/../../",                         FALSE, FALSE },
-    { "dirA",                            FALSE, FALSE },
-    { "foo/dirA",                        FALSE, FALSE },
-    { "foo/./bar",                       FALSE, FALSE },
-    { "http://hst",                      TRUE,  TRUE  },
-    { "http://hst/foo/../bar",           TRUE,  TRUE  },
-    { "http://hst/foo/bar/",             FALSE, TRUE  },
-    { "http://hst/",                     FALSE, TRUE  },
-    { "http://hst/foo/.",                FALSE, TRUE  },
-    { "http://hst/foo/%2E",              FALSE, TRUE  },
-    { "http://hst/%",                    FALSE, TRUE  },
-    { "http://hst/+",                    TRUE,  TRUE  },
-    { "http://hst/#",                    FALSE, TRUE  },
-    { "http://hst/ ",                    FALSE, TRUE  },
-    { "http://hst/%2B",                  FALSE, TRUE  },
-    { "http://HST",                      FALSE, TRUE  },
-    { "http://HST/",                     FALSE, TRUE  },
-    { "http://HST/FOO/BaR",              FALSE, TRUE  },
-    { "http://hst/foo/./bar",            FALSE, TRUE  },
-    { "hTTp://hst/foo/bar",              FALSE, TRUE  },
-    { "http://hst/foo/bar/",             FALSE, TRUE  },
-    { "svn+ssh://jens@10.0.1.1",         TRUE,  TRUE  },
-    { "svn+ssh://j.raNDom@HST/BaR",      FALSE, TRUE  },
-    { "svn+SSH://j.random:jRaY@HST/BaR", FALSE, TRUE  },
-    { "SVN+ssh://j.raNDom:jray@HST/BaR", FALSE, TRUE  },
-    { "svn+ssh://j.raNDom:jray@hst/BaR", TRUE,  TRUE  },
-    { "fILe:///Users/jrandom/wc",        FALSE, TRUE  },
-    { "fiLE:///",                        FALSE, TRUE  },
-    { "fiLE://",                         FALSE, TRUE  },
-    { "C:/folder/subfolder/file",        FALSE, FALSE },
-    { "X:/foo",                          FALSE, FALSE },
-    { "X:",                              FALSE, FALSE },
-    { "X:foo",                           FALSE, FALSE },
-    { "X:foo/",                          FALSE, FALSE },
-    /* Some people use colons in their filenames. */
-    { ":",                               FALSE, FALSE },
-    { ".:",                              FALSE, FALSE },
-    { "foo/.:",                          FALSE, FALSE },
-    { "file://SRV/share/repo",           FALSE, TRUE  },
-    { "file://srv/SHARE/repo",           TRUE,  TRUE  },
-    { "file://srv/share/repo",           TRUE,  TRUE  },
-    { "file://srv/share/repo/",          FALSE, TRUE  },
-    { "//server/share",                  FALSE, FALSE }, /* Only valid as dirent */
-    { "//server",                        FALSE, FALSE },
-    { "//",                              FALSE, FALSE },
-    { "file:///folder/c#",               FALSE, TRUE  }, /* # needs escaping */
-    { "file:///fld/with space",          FALSE, TRUE  }, /* # needs escaping */
-    { "file:///fld/c%23",                TRUE,  TRUE  }, /* Properly escaped C# */
-    { "file:///%DE%AD%BE%EF",            TRUE,  TRUE  },
-    { "file:///%de%ad%be%ef",            FALSE, TRUE  },
-    { "file:///%DE%ad%BE%ef",            FALSE, TRUE  },
-    { "sch://@/",                        FALSE, FALSE },
-    { "sch:///",                         FALSE, FALSE },
-    { "http://server:80",                FALSE, TRUE  },
-    { "http://server:81/",               FALSE, TRUE  },
-    { "https://Server:443/q",            FALSE, TRUE  },
-    { "svn://sERVER:3690/r",             FALSE, TRUE  },
-    { "svn://:",                         FALSE, FALSE },
-    { "svn://server:/r",                 FALSE, TRUE  },
-    { "http://server:443",               TRUE,  TRUE  },
-    { "svn://server:80",                 TRUE,  TRUE  },
-    { "https://server:3690",             TRUE,  TRUE  },
-#ifdef SVN_USE_DOS_PATHS
-    { "file:///c:/temp/repos",           FALSE, TRUE  },
-    { "file:///c:/temp/REPOS",           FALSE, TRUE  },
-    { "file:///C:/temp/REPOS",           TRUE,  TRUE  },
-#else /* !SVN_USE_DOS_PATHS */
-    { "file:///c:/temp/repos",           TRUE,  TRUE  },
-    { "file:///c:/temp/REPOS",           TRUE,  TRUE  },
-    { "file:///C:/temp/REPOS",           TRUE,  TRUE  },
-#endif /* SVN_USE_DOS_PATHS */
-  };
+  const testcase_canonicalize_t *t;
 
-  for (t = tests; t < tests + COUNT_OF(tests); t++)
+  for (t = uri_canonical_tests;
+       t < uri_canonical_tests + COUNT_OF(uri_canonical_tests);
+       t++)
     {
       svn_boolean_t canonical;
-      const char* canonicalized;
 
       canonical = svn_uri_is_canonical(t->path, pool);
-      if (t->canonical != canonical)
+      if (canonical != (t->result && strcmp(t->path, t->result) == 0))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_uri_is_canonical(\"%s\") returned "
-                                 "\"%s\" expected \"%s\"",
+                                 "\"%s\"; canonical form is \"%s\"",
                                  t->path,
                                  canonical ? "TRUE" : "FALSE",
-                                 t->canonical ? "TRUE" : "FALSE");
-      if (! t->canonicalizable)
-        continue;
-
-      canonicalized = svn_uri_canonicalize(t->path, pool);
-
-      if ((canonical && strcmp(t->path, canonicalized) != 0)
-          || (!canonical && strcmp(t->path, canonicalized) == 0))
-        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "svn_uri_canonicalize(\"%s\") returned \"%s\" "
-                                 "while svn_uri_is_canonical returned %s",
-                                 t->path,
-                                 canonicalized,
-                                 canonical ? "TRUE" : "FALSE");
+                                 t->result);
     }
 
   return SVN_NO_ERROR;
