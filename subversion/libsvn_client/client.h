@@ -544,8 +544,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
 
    DEPTH and DEPTH_IS_STICKY behave as for svn_client__update_internal().
 
-   If INNERSWITCH is true, no anchor check is performed on the target.
-
    If IGNORE_ANCESTRY is true, don't perform a common ancestry check
    between the PATH and URL; otherwise, do, and return
    SVN_ERR_CLIENT_UNRELATED_RESOURCES if they aren't related.
@@ -561,7 +559,6 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t ignore_ancestry,
-                            svn_boolean_t innerswitch,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
