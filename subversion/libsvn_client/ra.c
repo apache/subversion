@@ -621,7 +621,7 @@ svn_client__repos_locations(const char **start_url,
           const char *repos_relpath;
           svn_boolean_t is_copy;
 
-          SVN_ERR(svn_wc__node_get_origin(&is_copy, NULL, &repos_relpath,
+          SVN_ERR(svn_wc__node_get_origin(&is_copy, &peg_revnum, &repos_relpath,
                                           &repos_root_url, NULL,
                                           ctx->wc_ctx, local_abspath_or_url,
                                           FALSE, subpool, subpool));
