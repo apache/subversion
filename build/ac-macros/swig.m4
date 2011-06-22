@@ -226,7 +226,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_MSG_CHECKING([for rb_errinfo])
     old_CFLAGS="$CFLAGS"
     old_LIBS="$LIBS"
-    CFLAGS="`echo $CFLAGS | $SED -e "s/ -ansi//g"` $svn_cv_ruby_includes"
+    CFLAGS="`echo $CFLAGS | $SED -e "s/ -ansi//g;s/ -std=c89//g"` $svn_cv_ruby_includes"
     LIBS="$SWIG_RB_LIBS"
     AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <ruby.h>
