@@ -504,27 +504,6 @@ svn_wc_conflicted_p3(svn_boolean_t *text_conflicted_p,
 }
 
 svn_error_t *
-svn_wc__marked_as_binary(svn_boolean_t *marked,
-                         const char *local_abspath,
-                         svn_wc__db_t *db,
-                         apr_pool_t *scratch_pool)
-{
-  const svn_string_t *value;
-
-  SVN_ERR(svn_wc__internal_propget(&value, db, local_abspath,
-                                   SVN_PROP_MIME_TYPE,
-                                   scratch_pool, scratch_pool));
-
-  if (value && (svn_mime_type_is_binary(value->data)))
-    *marked = TRUE;
-  else
-    *marked = FALSE;
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
 svn_wc__min_max_revisions(svn_revnum_t *min_revision,
                           svn_revnum_t *max_revision,
                           svn_wc_context_t *wc_ctx,

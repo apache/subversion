@@ -152,16 +152,6 @@ svn_wc__get_actual_props(apr_hash_t **props,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
-/* Set *MARKED to indicate whether the versioned file at LOCAL_ABSPATH in DB
- * has a "binary" file type, as indicated by its working svn:mime-type
- * property. See svn_mime_type_is_binary() for the interpretation. */
-svn_error_t *
-svn_wc__marked_as_binary(svn_boolean_t *marked,
-                         const char *local_abspath,
-                         svn_wc__db_t *db,
-                         apr_pool_t *scratch_pool);
-
-
 svn_error_t *
 svn_wc__get_prejfile_abspath(const char **prejfile_abspath,
                              svn_wc__db_t *db,
