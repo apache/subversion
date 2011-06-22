@@ -219,7 +219,7 @@ switch_dir_external(const char *local_abspath,
                                                   peg_revision, revision,
                                                   svn_depth_infinity,
                                                   TRUE, FALSE, FALSE,
-                                                  TRUE, TRUE,
+                                                  TRUE /* ignore_ancestry */,
                                                   timestamp_sleep,
                                                   ctx, subpool));
 

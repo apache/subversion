@@ -67,7 +67,6 @@ switch_internal(svn_revnum_t *result_rev,
                 svn_boolean_t ignore_externals,
                 svn_boolean_t allow_unver_obstructions,
                 svn_boolean_t ignore_ancestry,
-                svn_boolean_t innerswitch,
                 svn_boolean_t *timestamp_sleep,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
@@ -335,7 +334,6 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t ignore_ancestry,
-                            svn_boolean_t innerswitch,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
@@ -364,7 +362,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                          depth, depth_is_sticky,
                          ignore_externals,
                          allow_unver_obstructions, ignore_ancestry,
-                         innerswitch, timestamp_sleep, ctx, pool);
+                         timestamp_sleep, ctx, pool);
 
   if (acquired_lock)
     err2 = svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, pool);
@@ -396,6 +394,5 @@ svn_client_switch3(svn_revnum_t *result_rev,
                                      peg_revision, revision, depth,
                                      depth_is_sticky, ignore_externals,
                                      allow_unver_obstructions,
-                                     ignore_ancestry,
-                                     FALSE, NULL, ctx, pool);
+                                     ignore_ancestry, NULL, ctx, pool);
 }
