@@ -17,7 +17,7 @@ Candidate changes:
 
  * r966167
    Allow passing --with-jdk to gen-make.py
-   Backport branch in:
+   Branch:
      ^/subversion/branches/1.6.x-r966167
    Justification:
      On 64 bit windows, looking in the registry will not always return the
@@ -26,6 +26,17 @@ Candidate changes:
      (Which then fixes building 1.6.x on the Windows buildbots)
    Votes:
      +1: rhuijben     
+
+ * r1138975, r1138977:
+   Add a sanity check to get-deps.sh.
+   Justification:
+     Prevent a false impression as to which version of a dependency will be used.
+   Notes:
+     r1138975 is the change.  r1138977 reverts accidentally-committed local changes.
+     Note that r1138977 replaces the bogusly-committed files rather than merges
+     into them.
+   Votes:
+     +1: danielsh
 
 Veto-blocked changes:
 =====================
