@@ -170,7 +170,7 @@ svn_wc__internal_check_wc(int *wc_format,
         switch (db_status)
           {
             case svn_wc__db_status_not_present:
-            case svn_wc__db_status_unauthz:
+            case svn_wc__db_status_server_excluded:
             case svn_wc__db_status_excluded:
               /* If there is a directory here, it is not related to the parent
                  working copy: Obstruction */
@@ -609,7 +609,7 @@ adm_available(svn_boolean_t *available,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
-  *available = !(status == svn_wc__db_status_unauthz
+  *available = !(status == svn_wc__db_status_server_excluded
                  || status == svn_wc__db_status_excluded
                  || status == svn_wc__db_status_not_present);
 

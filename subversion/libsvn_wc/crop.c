@@ -113,7 +113,7 @@ crop_children(svn_wc__db_t *db,
                                    NULL, NULL, NULL, NULL, NULL,
                                    db, child_abspath, iterpool, iterpool));
 
-      if (child_status == svn_wc__db_status_unauthz ||
+      if (child_status == svn_wc__db_status_server_excluded ||
           child_status == svn_wc__db_status_excluded ||
           child_status == svn_wc__db_status_not_present)
         {
@@ -243,7 +243,7 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
 
   switch (status)
     {
-      case svn_wc__db_status_unauthz:
+      case svn_wc__db_status_server_excluded:
       case svn_wc__db_status_excluded:
       case svn_wc__db_status_not_present:
         return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
@@ -342,7 +342,7 @@ svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
   switch (status)
     {
       case svn_wc__db_status_not_present:
-      case svn_wc__db_status_unauthz:
+      case svn_wc__db_status_server_excluded:
         return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                  _("The node '%s' was not found."),
                                  svn_dirent_local_style(local_abspath,

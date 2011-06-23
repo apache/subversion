@@ -187,9 +187,8 @@ typedef enum svn_wc__db_status_t {
        will be present. */
     svn_wc__db_status_deleted,
 
-    /* This node was named by the server, but no information was provided
-     * since the user has no authorization to this node. */
-    svn_wc__db_status_unauthz,
+    /* This node was named by the server, but no information was provided. */
+    svn_wc__db_status_server_excluded,
 
     /* This node has been administratively excluded. */
     svn_wc__db_status_excluded,
@@ -613,7 +612,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
    The node's kind is described by KIND, and the reason for its absence
    is specified by STATUS. Only three values are allowed for STATUS:
 
-     svn_wc__db_status_unauthz
+     svn_wc__db_status_server_excluded
      svn_wc__db_status_excluded
 
    If CONFLICT is not NULL, then it describes a conflict for this node. The
@@ -1668,7 +1667,7 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
        an ancestor location. Call scan_deletion() to determine the full
        details of the operations upon this node.
 
-     svn_wc__db_status_unauthz
+     svn_wc__db_status_server_excluded
        The node is versioned/known by the server, but the server has
        decided not to provide further information about the node. This
        is a BASE node (since changes are not allowed to this node).

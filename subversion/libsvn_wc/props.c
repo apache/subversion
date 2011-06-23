@@ -246,7 +246,7 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
 
   /* Checks whether the node exists and returns the hidden flag */
   if (status == svn_wc__db_status_not_present
-      || status == svn_wc__db_status_unauthz
+      || status == svn_wc__db_status_server_excluded
       || status == svn_wc__db_status_excluded)
     {
       return svn_error_createf(
@@ -1941,7 +1941,7 @@ svn_wc__get_pristine_props(apr_hash_t **props,
       || status == svn_wc__db_status_incomplete
 #endif
       || status == svn_wc__db_status_excluded
-      || status == svn_wc__db_status_unauthz
+      || status == svn_wc__db_status_server_excluded
       || status == svn_wc__db_status_not_present)
     {
       *props = NULL;

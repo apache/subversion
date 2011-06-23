@@ -268,7 +268,7 @@ convert_db_kind_to_node_kind(svn_node_kind_t *node_kind,
     switch (db_status)
       {
         case svn_wc__db_status_not_present:
-        case svn_wc__db_status_unauthz:
+        case svn_wc__db_status_server_excluded:
         case svn_wc__db_status_excluded:
           *node_kind = svn_node_none;
 
@@ -619,7 +619,7 @@ walker_helper(svn_wc__db_t *db,
         switch (child_status)
           {
             case svn_wc__db_status_not_present:
-            case svn_wc__db_status_unauthz:
+            case svn_wc__db_status_server_excluded:
             case svn_wc__db_status_excluded:
               continue;
             default:
@@ -709,7 +709,7 @@ svn_wc__internal_walk_children(svn_wc__db_t *db,
   if (db_kind == svn_wc__db_kind_file
       || status == svn_wc__db_status_not_present
       || status == svn_wc__db_status_excluded
-      || status == svn_wc__db_status_unauthz)
+      || status == svn_wc__db_status_server_excluded)
     return SVN_NO_ERROR;
 
   if (db_kind == svn_wc__db_kind_dir)
@@ -748,10 +748,10 @@ svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
 }
 
 svn_error_t *
-svn_wc__node_is_status_unauthz(svn_boolean_t *is_unauthz,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *scratch_pool)
+svn_wc__node_is_status_server_excluded(svn_boolean_t *is_server_excluded,
+                                       svn_wc_context_t *wc_ctx,
+                                       const char *local_abspath,
+                                       apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
 
@@ -762,7 +762,7 @@ svn_wc__node_is_status_unauthz(svn_boolean_t *is_unauthz,
                                NULL, NULL, NULL, NULL, NULL,
                                wc_ctx->db, local_abspath,
                                scratch_pool, scratch_pool));
-  *is_unauthz = (status == svn_wc__db_status_unauthz);
+  *is_server_excluded = (status == svn_wc__db_status_server_excluded);
 
   return SVN_NO_ERROR;
 }
@@ -1107,7 +1107,7 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
   switch (status)
     {
       case svn_wc__db_status_not_present:
-      case svn_wc__db_status_unauthz:
+      case svn_wc__db_status_server_excluded:
       case svn_wc__db_status_excluded:
         /* We used status normal in the entries world. */
         if (schedule)
@@ -1724,7 +1724,7 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
         break;
 
       case svn_wc__db_status_excluded:
-      case svn_wc__db_status_unauthz:
+      case svn_wc__db_status_server_excluded:
       case svn_wc__db_status_incomplete:
         *obstruction_state = svn_wc_notify_state_missing;
         break;

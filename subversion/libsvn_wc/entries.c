@@ -803,7 +803,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
       entry->schedule = svn_wc_schedule_normal;
       entry->deleted = TRUE;
     }
-  else if (status == svn_wc__db_status_unauthz)
+  else if (status == svn_wc__db_status_server_excluded)
     {
       entry->absent = TRUE;
     }
@@ -857,7 +857,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
   SVN_ERR_ASSERT(repos_relpath != NULL
                  || entry->schedule == svn_wc_schedule_delete
                  || status == svn_wc__db_status_not_present
-                 || status == svn_wc__db_status_unauthz
+                 || status == svn_wc__db_status_server_excluded
                  || status == svn_wc__db_status_excluded);
   if (repos_relpath)
     entry->url = svn_path_url_add_component2(entry->repos,
@@ -1694,7 +1694,7 @@ write_entry(struct write_baton **entry_node,
   if (entry->absent)
     {
       SVN_ERR_ASSERT(base_node && !working_node);
-      base_node->presence = svn_wc__db_status_unauthz;
+      base_node->presence = svn_wc__db_status_server_excluded;
     }
 
   if (entry->copied)
