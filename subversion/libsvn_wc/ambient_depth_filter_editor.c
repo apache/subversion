@@ -279,7 +279,7 @@ make_file_baton(struct file_baton **f_p,
          doesn't want to hear about the file at all. */
 
       if (status == svn_wc__db_status_not_present
-          || status == svn_wc__db_status_unauthz
+          || status == svn_wc__db_status_server_excluded
           || status == svn_wc__db_status_excluded
           || kind == svn_wc__db_kind_unknown)
         {
@@ -352,7 +352,7 @@ open_root(void *edit_baton,
       if (kind != svn_wc__db_kind_unknown
           && status != svn_wc__db_status_not_present
           && status != svn_wc__db_status_excluded
-          && status != svn_wc__db_status_unauthz)
+          && status != svn_wc__db_status_server_excluded)
         {
           b->ambient_depth = depth;
         }
@@ -392,7 +392,7 @@ delete_entry(const char *path,
       if (kind == svn_wc__db_kind_unknown
           || status == svn_wc__db_status_not_present
           || status == svn_wc__db_status_excluded
-          || status == svn_wc__db_status_unauthz)
+          || status == svn_wc__db_status_server_excluded)
         return SVN_NO_ERROR;
     }
 
@@ -483,7 +483,7 @@ open_directory(const char *path,
   if (kind != svn_wc__db_kind_unknown
       && status != svn_wc__db_status_not_present
       && status != svn_wc__db_status_excluded
-      && status != svn_wc__db_status_unauthz)
+      && status != svn_wc__db_status_server_excluded)
     {
       b->ambient_depth = depth;
     }

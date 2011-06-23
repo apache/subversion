@@ -220,7 +220,7 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
                                "because its delete is already committed"),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
-  else if (status == svn_wc__db_status_unauthz
+  else if (status == svn_wc__db_status_server_excluded
       || status == svn_wc__db_status_excluded
       || status == svn_wc__db_status_incomplete)
     return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
@@ -282,7 +282,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                                "because its delete is already committed"),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
-  else if (status == svn_wc__db_status_unauthz
+  else if (status == svn_wc__db_status_server_excluded
       || status == svn_wc__db_status_excluded
       || status == svn_wc__db_status_incomplete)
     return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,

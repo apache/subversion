@@ -1681,7 +1681,7 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
                                                     svn_client__copy_pair_t *);
       svn_node_kind_t kind;
       svn_boolean_t is_excluded;
-      svn_boolean_t is_unauthz;
+      svn_boolean_t is_server_excluded;
 
       svn_pool_clear(iterpool);
 
@@ -1706,10 +1706,11 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
         }
 
       /* Hidden by server exclusion (not authorized) */
-      SVN_ERR(svn_wc__node_is_status_unauthz(&is_unauthz, ctx->wc_ctx,
-                                             pair->dst_abspath_or_url,
-                                             iterpool));
-      if (is_unauthz)
+      SVN_ERR(svn_wc__node_is_status_server_excluded(&is_server_excluded,
+                                                     ctx->wc_ctx,
+                                                     pair->dst_abspath_or_url,
+                                                     iterpool));
+      if (is_server_excluded)
         {
           return svn_error_createf
             (SVN_ERR_ENTRY_EXISTS,

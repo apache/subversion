@@ -511,7 +511,7 @@ copy_versioned_dir(svn_wc__db_t *db,
         }
       else
         {
-          SVN_ERR_ASSERT(child_status == svn_wc__db_status_unauthz);
+          SVN_ERR_ASSERT(child_status == svn_wc__db_status_server_excluded);
 
           return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                                    _("Cannot copy '%s' excluded by server"),
@@ -725,7 +725,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
                      _("'%s' is already under version control "
                        "but is excluded."),
                      svn_dirent_local_style(dst_abspath, scratch_pool));
-          case svn_wc__db_status_unauthz:
+          case svn_wc__db_status_server_excluded:
             return svn_error_createf(
                      SVN_ERR_ENTRY_EXISTS, NULL,
                      _("'%s' is already under version control"),

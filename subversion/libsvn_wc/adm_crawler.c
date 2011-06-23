@@ -350,7 +350,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
         }
 
       /*** The Big Tests: ***/
-      if (ths->status == svn_wc__db_status_unauthz
+      if (ths->status == svn_wc__db_status_server_excluded
           || ths->status == svn_wc__db_status_not_present)
         {
           /* If the entry is 'absent' or 'not-present', make sure the server

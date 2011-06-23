@@ -466,16 +466,16 @@ svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
                                apr_pool_t *scratch_pool);
 
 /**
- * Set @a *is_unauthz to whether access to @a local_abspath is not authorized,
- * using @a wc_ctx.  If @a local_abspath is not in the working copy, return
- * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
- * allocations.
+ * Set @a *is_server_excluded to whether @a local_abspath has been
+ * excluded by the server, using @a wc_ctx.  If @a local_abspath is not
+ * in the working copy, return @c SVN_ERR_WC_PATH_NOT_FOUND.
+ * Use @a scratch_pool for all temporary allocations.
  */
 svn_error_t *
-svn_wc__node_is_status_unauthz(svn_boolean_t *is_unauthz,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *scratch_pool);
+svn_wc__node_is_status_server_excluded(svn_boolean_t *is_server_excluded,
+                                       svn_wc_context_t *wc_ctx,
+                                       const char *local_abspath,
+                                       apr_pool_t *scratch_pool);
 
 /**
  * Set @a *is_not_present to whether the status of @a local_abspath is
