@@ -285,7 +285,9 @@ static const svn_token_map_t kind_map[] = {
    of all the status values. */
 static const svn_token_map_t presence_map[] = {
   { "normal", svn_wc__db_status_normal },
-  { "absent", svn_wc__db_status_absent },
+  /* ### "absent" is the former name of 'not authorized' state, we should
+   * ### change it to "unauthz" in the DB as well with a format bump. */
+  { "absent", svn_wc__db_status_unauthz },
   { "excluded", svn_wc__db_status_excluded },
   { "not-present", svn_wc__db_status_not_present },
   { "incomplete", svn_wc__db_status_incomplete },
@@ -895,7 +897,7 @@ insert_base_node(void *baton,
           SVN_ERR(extend_parent_delete(wcroot, local_relpath, scratch_pool));
         }
       else if (pibb->status == svn_wc__db_status_not_present
-               || pibb->status == svn_wc__db_status_absent
+               || pibb->status == svn_wc__db_status_unauthz
                || pibb->status == svn_wc__db_status_excluded)
         {
           SVN_ERR(retract_parent_delete(wcroot, local_relpath, scratch_pool));
@@ -1817,7 +1819,7 @@ add_absent_excluded_not_present_node(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_uri_is_canonical(repos_root_url, scratch_pool));
   SVN_ERR_ASSERT(repos_uuid != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
-  SVN_ERR_ASSERT(status == svn_wc__db_status_absent
+  SVN_ERR_ASSERT(status == svn_wc__db_status_unauthz
                  || status == svn_wc__db_status_excluded
                  || status == svn_wc__db_status_not_present);
 
@@ -1879,7 +1881,7 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
                                 const svn_skel_t *work_items,
                                 apr_pool_t *scratch_pool)
 {
-  SVN_ERR_ASSERT(status == svn_wc__db_status_absent
+  SVN_ERR_ASSERT(status == svn_wc__db_status_unauthz
                  || status == svn_wc__db_status_excluded);
 
   return add_absent_excluded_not_present_node(
@@ -3510,7 +3512,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
       else
         dst_presence = svn_wc__db_status_not_present;
       break;
-    case svn_wc__db_status_absent:
+    case svn_wc__db_status_unauthz:
       return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                                _("Cannot copy '%s' excluded by server"),
                                path_for_error_message(src_wcroot,
@@ -3737,7 +3739,7 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
          an unshadowed depth) */
       if (status == svn_wc__db_status_not_present
           || status == svn_wc__db_status_excluded
-          || status == svn_wc__db_status_absent
+          || status == svn_wc__db_status_unauthz
           || node_revision != revision
           || node_repos_id != repos_id
           || strcmp(node_repos_relpath, repos_relpath))
@@ -3792,7 +3794,7 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
     case svn_wc__db_status_excluded:
       dst_presence = svn_wc__db_status_excluded;
       break;
-    case svn_wc__db_status_absent:
+    case svn_wc__db_status_unauthz:
       return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                                _("Cannot copy '%s' excluded by server"),
                                path_for_error_message(src_wcroot,
@@ -7757,7 +7759,7 @@ check_replace_txn(void *baton,
      the delete root. */
   if (replaced_status != svn_wc__db_status_not_present
       && replaced_status != svn_wc__db_status_excluded
-      && replaced_status != svn_wc__db_status_absent
+      && replaced_status != svn_wc__db_status_unauthz
       && replaced_status != svn_wc__db_status_base_deleted)
     crb->is_replace = TRUE;
 
@@ -8620,7 +8622,7 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
      re-absent it, so we can remove the node. */
   if (!is_root
       && (status == svn_wc__db_status_not_present
-          || (status == svn_wc__db_status_absent && revision != new_rev)))
+          || (status == svn_wc__db_status_unauthz && revision != new_rev)))
     {
       return svn_error_return(db_base_remove(NULL, wcroot, local_relpath,
                                              scratch_pool));
@@ -8641,7 +8643,7 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
   /* Early out */
   if (depth <= svn_depth_empty
       || db_kind != svn_wc__db_kind_dir
-      || status == svn_wc__db_status_absent
+      || status == svn_wc__db_status_unauthz
       || status == svn_wc__db_status_excluded
       || status == svn_wc__db_status_not_present)
     return SVN_NO_ERROR;
@@ -8723,7 +8725,7 @@ bump_revisions_post_update(void *baton,
   switch (status)
     {
       case svn_wc__db_status_excluded:
-      case svn_wc__db_status_absent:
+      case svn_wc__db_status_unauthz:
       case svn_wc__db_status_not_present:
         return SVN_NO_ERROR;
 
@@ -10399,7 +10401,7 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
                     wcroot, local_relpath,
                     scratch_pool, scratch_pool));
 
-  *hidden = (status == svn_wc__db_status_absent
+  *hidden = (status == svn_wc__db_status_unauthz
              || status == svn_wc__db_status_not_present
              || status == svn_wc__db_status_excluded);
 

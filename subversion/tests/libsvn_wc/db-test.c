@@ -445,7 +445,7 @@ test_getting_info(apr_pool_t *pool)
             db, svn_dirent_join(local_abspath, "C", pool),
             pool, pool));
   SVN_TEST_ASSERT(kind == svn_wc__db_kind_unknown);
-  SVN_TEST_ASSERT(status == svn_wc__db_status_absent);
+  SVN_TEST_ASSERT(status == svn_wc__db_status_unauthz);
 
   /* Test: not-present presence. */
   SVN_ERR(svn_wc__db_base_get_info(
@@ -554,7 +554,7 @@ validate_node(svn_wc__db_t *db,
                                     scratch_pool, scratch_pool));
   switch (status)
     {
-    case svn_wc__db_status_absent:
+    case svn_wc__db_status_unauthz:
     case svn_wc__db_status_excluded:
     case svn_wc__db_status_incomplete:
     case svn_wc__db_status_not_present:
@@ -659,7 +659,7 @@ test_inserting_nodes(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_base_add_absent_node(
             db, svn_dirent_join(local_abspath, "N/N-b", pool),
             "N/N-b", ROOT_ONE, UUID_ONE, 3,
-            svn_wc__db_kind_file, svn_wc__db_status_absent,
+            svn_wc__db_kind_file, svn_wc__db_status_unauthz,
             NULL, NULL,
             pool));
 
@@ -683,7 +683,7 @@ test_inserting_nodes(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_base_add_absent_node(
             db, svn_dirent_join(local_abspath, "R", pool),
             "R", ROOT_ONE, UUID_ONE, 3,
-            svn_wc__db_kind_unknown, svn_wc__db_status_absent,
+            svn_wc__db_kind_unknown, svn_wc__db_status_unauthz,
             NULL, NULL,
             pool));
 
@@ -696,7 +696,7 @@ test_inserting_nodes(apr_pool_t *pool)
                         svn_wc__db_kind_file, svn_wc__db_status_normal,
                         pool));
   SVN_ERR(validate_node(db, local_abspath, "N/N-b",
-                        svn_wc__db_kind_file, svn_wc__db_status_absent,
+                        svn_wc__db_kind_file, svn_wc__db_status_unauthz,
                         pool));
   SVN_ERR(validate_node(db, local_abspath, "N/N-c",
                         svn_wc__db_kind_unknown, svn_wc__db_status_incomplete,
@@ -711,7 +711,7 @@ test_inserting_nodes(apr_pool_t *pool)
                         svn_wc__db_kind_symlink, svn_wc__db_status_not_present,
                         pool));
   SVN_ERR(validate_node(db, local_abspath, "R",
-                        svn_wc__db_kind_unknown, svn_wc__db_status_absent,
+                        svn_wc__db_kind_unknown, svn_wc__db_status_unauthz,
                         pool));
 
   /* ### do we need to test any attributes of the node? */
@@ -857,14 +857,14 @@ test_pdh(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_base_add_absent_node(
             db, svn_dirent_join(local_abspath, "sub", pool),
             "sub", ROOT_ONE, UUID_ONE, 1,
-            svn_wc__db_kind_file, svn_wc__db_status_absent,
+            svn_wc__db_kind_file, svn_wc__db_status_unauthz,
             NULL, NULL,
             pool));
 
   SVN_ERR(svn_wc__db_base_add_absent_node(
             db, svn_dirent_join(local_abspath, "sub/A", pool),
             "sub/A", ROOT_ONE, UUID_ONE, 1,
-            svn_wc__db_kind_file, svn_wc__db_status_absent,
+            svn_wc__db_kind_file, svn_wc__db_status_unauthz,
             NULL, NULL,
             pool));
 

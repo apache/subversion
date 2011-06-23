@@ -524,7 +524,7 @@ recursive_resolve_conflict(svn_wc__db_t *db,
 
       if (status == svn_wc__db_status_not_present
           || status == svn_wc__db_status_excluded
-          || status == svn_wc__db_status_absent)
+          || status == svn_wc__db_status_unauthz)
         continue;
 
       apr_hash_set(visited, name, APR_HASH_KEY_STRING, name);
