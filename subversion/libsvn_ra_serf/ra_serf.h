@@ -654,6 +654,8 @@ typedef struct svn_ra_serf__server_error_t {
 
 /* A simple request context that can be passed to handle_status_only. */
 typedef struct svn_ra_serf__simple_request_context_t {
+  apr_pool_t *pool;
+
   /* The HTTP status code of the response */
   int status;
 
