@@ -2215,7 +2215,8 @@ svn_client_status_dup(const svn_client_status_t *status,
                       apr_pool_t *result_pool);
 
 /**
- * A callback for reporting a @a status about @a local_abspath.
+ * A callback for reporting a @a status about @a path (which may be an
+ * absolute or relative path).
  *
  * @a baton is a closure object; it should be provided by the
  * implementation, and passed by the caller.
@@ -2276,6 +2277,9 @@ typedef svn_error_t *(*svn_client_status_func_t)(
  * it's a member of one of those changelists.  If @a changelists is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
+ * If @a path is an absolute path then the @c path parameter passed in each
+ * call to @a status_func will be an absolute path.
+ * 
  * All temporary allocations are performed in @a scratch_pool.
  *
  * @since New in 1.7.
