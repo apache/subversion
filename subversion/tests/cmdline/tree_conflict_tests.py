@@ -1379,6 +1379,38 @@ def actual_only_node_behaviour(sbox):
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "upgrade", foo_path)
 
+#----------------------------------------------------------------------
+# Regression test for an issue #3526 variant
+#
+@Issues(3526)
+def update_dir_with_not_present(sbox):
+  "lock status update shouldn't flag tree conflict"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  newtxt = sbox.ospath('A/B/new.txt')
+
+  main.file_write(newtxt, 'new.txt')
+  sbox.simple_add('A/B/new.txt')
+  sbox.simple_commit()
+
+  sbox.simple_move('A/B/new.txt', 'A/C/newer.txt')
+  sbox.simple_commit()
+  sbox.simple_rm('A/B')
+
+  # We can't commit this without updating (ra_svn produces its own error)
+  run_and_verify_svn(None, None, "svn: E(155011|160028): Dir.*B.*out of date",
+                     'ci', '-m', '', wc_dir)
+
+  # So we run update
+  run_and_verify_svn(None, None, [],
+                     'up', wc_dir)
+
+  # And now we can commit
+  run_and_verify_svn(None, None, [],
+                     'ci', '-m', '', wc_dir)
+
 #######################################################################
 # Run the tests
 
@@ -1408,6 +1440,7 @@ test_list = [ None,
               lock_update_only,
               at_directory_external,
               actual_only_node_behaviour,
+              update_dir_with_not_present,
              ]
 
 if __name__ == '__main__':
