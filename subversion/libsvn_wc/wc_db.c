@@ -6068,16 +6068,15 @@ op_delete_txn(void *baton,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     {
-      const char *absent_path
-        = svn_dirent_local_style(svn_sqlite__column_text(stmt, 0, scratch_pool),
-                                 scratch_pool);
+      const char *absent_path = svn_sqlite__column_text(stmt, 0, scratch_pool);
 
       return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
                                svn_sqlite__reset(stmt),
                           _("Cannot delete '%s' as '%s' is excluded by server"),
-                               svn_dirent_local_style(local_relpath,
+                               path_for_error_message(wcroot, local_relpath,
                                                       scratch_pool),
-                               absent_path);
+                               path_for_error_message(wcroot, absent_path,
+                                                      scratch_pool));
     }
   SVN_ERR(svn_sqlite__reset(stmt));
 
