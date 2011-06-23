@@ -5547,8 +5547,9 @@ svn_client_min_max_revisions(svn_revnum_t *min_revision,
 /**
  * The callback invoked by svn_client_patch() before attempting to patch
  * the target file at @a canon_path_from_patchfile (the path as parsed from
- * the patch file, but in canonicalized form). The callback can prevent
- * the file from being patched by setting @a filtered to @c TRUE.
+ * the patch file, but in canonicalized form). The callback can set
+ * @a *filtered to @c TRUE to prevent the file from being patched, or else
+ * must set it to @c FALSE.
  *
  * The callback is also provided with @a patch_abspath, the path of a
  * temporary file containing the patched result, and with @a reject_abspath,
