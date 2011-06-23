@@ -2098,19 +2098,25 @@ typedef struct svn_client_status_t
    * svn_wc_status_modified and svn_wc_status_conflicted. */
   enum svn_wc_status_kind text_status;
 
-  /** The status of the entry's properties.
+  /** The status of the node's properties.
    * Valid values are: svn_wc_status_none, svn_wc_status_normal,
    * svn_wc_status_modified and svn_wc_status_conflicted. */
   enum svn_wc_status_kind prop_status;
 
   /** a node can be 'locked' if a working copy update is in progress or
    * was interrupted. */
-  svn_boolean_t locked;
+  svn_boolean_t wc_is_locked;
 
   /** a file or directory can be 'copied' if it's scheduled for
    * addition-with-history (or part of a subtree that is scheduled as such.).
    */
   svn_boolean_t copied;
+
+  /** The URL of the repository root. */
+  const char *repos_root_url;
+
+  /** The in-repository path relative to the repository root. */
+  const char *repos_relpath;
 
   /** Base revision. */
   svn_revnum_t revision;
@@ -2123,15 +2129,6 @@ typedef struct svn_client_status_t
 
   /** Last commit author of this item */
   const char *changed_author;
-
-  /** The URL of the repository */
-  const char *repos_root_url;
-
-  /** The in-repository path relative to the repository root.
-   * Use svn_path_url_component2() to join this value to the
-   * repos_root_url to get the full URL.
-   */
-  const char *repos_relpath;
 
     /** a file or directory can be 'switched' if the switch command has been
    * used.  If this is TRUE, then file_external will be FALSE.
@@ -2174,13 +2171,13 @@ typedef struct svn_client_status_t
    * restructuring changes */
   enum svn_wc_status_kind repos_node_status;
 
-  /** The entry's text status in the repository. */
+  /** The node's text status in the repository. */
   enum svn_wc_status_kind repos_text_status;
 
-  /** The entry's property status in the repository. */
+  /** The node's property status in the repository. */
   enum svn_wc_status_kind repos_prop_status;
 
-  /** The entry's lock in the repository, if any. */
+  /** The node's lock in the repository, if any. */
   const svn_lock_t *repos_lock;
 
   /** Set to the youngest committed revision, or #SVN_INVALID_REVNUM
