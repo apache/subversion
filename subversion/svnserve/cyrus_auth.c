@@ -282,8 +282,8 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
     }
 
   /* Make sure the context is always destroyed. */
-  apr_pool_cleanup_register(b->pool, sasl_ctx, sasl_dispose_cb,
-                            apr_pool_cleanup_null);
+  apr_pool_pre_cleanup_register(b->pool, sasl_ctx, sasl_dispose_cb,
+                                apr_pool_cleanup_null);
 
   /* Initialize security properties. */
   svn_ra_svn__default_secprops(&secprops);
