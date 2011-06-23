@@ -306,9 +306,10 @@ svn_handle_warning(FILE *stream,
   } while (0)
 
 /**
- * A statement macro for returning error values.
+ * A macro for wrapping an error in a source-location trace message.
  *
- * This macro can be used when directly returning an error to ensure
+ * This macro can be used when directly returning an already created
+ * error (when not using SVN_ERR, svn_error_create(), etc.) to ensure
  * that the call stack is recorded correctly.
  *
  * @since New in 1.7.
