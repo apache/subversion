@@ -1208,8 +1208,13 @@ SVN_ERROR_START
 
   /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_CLIENT_NO_LOCK_TOKEN,
-             SVN_ERR_CLIENT_CATEGORY_START + 21,
-             "Can't commit without a valid lock token")
+             SVN_ERR_CLIENT_CATEGORY_START + 22,
+             "Can't perform this operation without a valid lock token")
+
+/** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_CLIENT_FORBIDDEN,
+             SVN_ERR_CLIENT_CATEGORY_START + 23,
+             "The operation is forbidden by the server")
 
   /* misc errors */
 

@@ -1197,6 +1197,10 @@ typedef enum svn_wc_notify_action_t
    * working copy.  @since New in 1.7. */
   svn_wc_notify_failed_locked,
 
+  /** Operation failed because the operation was forbidden by the server.
+   * @since New in 1.7. */
+  svn_wc_notify_failed_forbidden,
+
 } svn_wc_notify_action_t;
 
 

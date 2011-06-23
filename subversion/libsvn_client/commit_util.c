@@ -135,6 +135,40 @@ fixup_out_of_date_error(const char *local_abspath,
                                                     path,
                                                     scratch_pool));
     }
+  else if (err->apr_err == SVN_ERR_RA_DAV_FORBIDDEN)
+    {
+      if (ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify;
+
+          if (local_abspath)
+            notify = svn_wc_create_notify(local_abspath,
+                                          svn_wc_notify_failed_forbidden,
+                                          scratch_pool);
+          else
+            notify = svn_wc_create_notify_url(
+                                svn_path_url_add_component2(base_url, path,
+                                                            scratch_pool),
+                                svn_wc_notify_failed_forbidden,
+                                scratch_pool);
+
+          notify->kind = kind;
+          notify->err = err;
+
+          ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
+        }
+
+      return svn_error_createf(SVN_ERR_CLIENT_FORBIDDEN, err,
+                   (kind == svn_node_dir
+                     ? _("Changing directory '%s' is forbidden by the server")
+                     : _("Changing file '%s' is forbidden by the server")),
+                   local_abspath
+                      ? svn_dirent_local_style(local_abspath,
+                                               scratch_pool)
+                      : svn_path_url_add_component2(base_url,
+                                                    path,
+                                                    scratch_pool));
+    }
   else
     return err;
 }
