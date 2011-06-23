@@ -50,15 +50,15 @@
 #define SVN_CLIENT_COMMIT_DEBUG
 */
 
-/* Wrap an RA error in an out-of-date error if warranted. */
+/* Wrap an RA error in a nicer error if one is available. */
 static svn_error_t *
-fixup_out_of_date_error(const char *local_abspath,
-                        const char *base_url,
-                        const char *path,
-                        svn_node_kind_t kind,
-                        svn_error_t *err,
-                        svn_client_ctx_t *ctx,
-                        apr_pool_t *scratch_pool)
+fixup_commit_error(const char *local_abspath,
+                   const char *base_url,
+                   const char *path,
+                   svn_node_kind_t kind,
+                   svn_error_t *err,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *scratch_pool)
 {
   if (err->apr_err == SVN_ERR_FS_NOT_FOUND
       || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS
@@ -1550,10 +1550,10 @@ do_item_commit(void **dir_baton,
                                  parent_baton, pool);
 
       if (err)
-        return svn_error_return(fixup_out_of_date_error(local_abspath,
-                                                        icb->base_url,
-                                                        path, item->kind,
-                                                        err, ctx, pool));
+        return svn_error_return(fixup_commit_error(local_abspath,
+                                                   icb->base_url,
+                                                   path, item->kind,
+                                                   err, ctx, pool));
     }
 
   /* If this item is supposed to be added, do so. */
@@ -1577,10 +1577,10 @@ do_item_commit(void **dir_baton,
         }
 
       if (err)
-        return svn_error_return(fixup_out_of_date_error(local_abspath,
-                                                        icb->base_url,
-                                                        path, kind, err,
-                                                        ctx, pool));
+        return svn_error_return(fixup_commit_error(local_abspath,
+                                                   icb->base_url,
+                                                   path, kind, err,
+                                                   ctx, pool));
 
       /* Set other prop-changes, if available in the baton */
       if (item->outgoing_prop_changes)
@@ -1618,11 +1618,11 @@ do_item_commit(void **dir_baton,
                                       file_pool, &file_baton);
 
               if (err)
-                return svn_error_return(fixup_out_of_date_error(local_abspath,
-                                                                icb->base_url,
-                                                                path, kind,
-                                                                err, ctx,
-                                                                pool));
+                return svn_error_return(fixup_commit_error(local_abspath,
+                                                           icb->base_url,
+                                                           path, kind,
+                                                           err, ctx,
+                                                           pool));
             }
         }
       else
@@ -1642,11 +1642,11 @@ do_item_commit(void **dir_baton,
                 }
 
               if (err)
-                return svn_error_return(fixup_out_of_date_error(local_abspath,
-                                                                icb->base_url,
-                                                                path, kind,
-                                                                err, ctx,
-                                                                pool));
+                return svn_error_return(fixup_commit_error(local_abspath,
+                                                           icb->base_url,
+                                                           path, kind,
+                                                           err, ctx,
+                                                           pool));
             }
         }
 
@@ -1659,10 +1659,10 @@ do_item_commit(void **dir_baton,
               (kind == svn_node_dir) ? *dir_baton : file_baton, pool);
 
       if (err)
-        return svn_error_return(fixup_out_of_date_error(local_abspath,
-                                                        icb->base_url,
-                                                        path, kind, err,
-                                                        ctx, pool));
+        return svn_error_return(fixup_commit_error(local_abspath,
+                                                   icb->base_url,
+                                                   path, kind, err,
+                                                   ctx, pool));
 
       /* Make any additional client -> repository prop changes. */
       if (item->outgoing_prop_changes)
@@ -1704,10 +1704,10 @@ do_item_commit(void **dir_baton,
                                     file_pool, &file_baton);
 
           if (err)
-            return svn_error_return(fixup_out_of_date_error(local_abspath,
-                                                            icb->base_url,
-                                                            path, kind,
-                                                            err, ctx, pool));
+            return svn_error_return(fixup_commit_error(local_abspath,
+                                                       icb->base_url,
+                                                       path, kind,
+                                                       err, ctx, pool));
         }
 
       /* Add this file mod to the FILE_MODS hash. */
@@ -1722,10 +1722,10 @@ do_item_commit(void **dir_baton,
       err = editor->close_file(file_baton, NULL, file_pool);
 
       if (err)
-        return svn_error_return(fixup_out_of_date_error(local_abspath,
-                                                        icb->base_url,
-                                                        path, kind,
-                                                        err, ctx, pool));
+        return svn_error_return(fixup_commit_error(local_abspath,
+                                                   icb->base_url,
+                                                   path, kind,
+                                                   err, ctx, pool));
     }
 
   return SVN_NO_ERROR;
@@ -1844,11 +1844,11 @@ svn_client__do_commit(const char *base_url,
                                          result_pool, iterpool);
 
       if (err)
-        return svn_error_return(fixup_out_of_date_error(item->path,
-                                                        base_url,
-                                                        item->session_relpath,
-                                                        svn_node_file,
-                                                        err, ctx, iterpool));
+        return svn_error_return(fixup_commit_error(item->path,
+                                                   base_url,
+                                                   item->session_relpath,
+                                                   svn_node_file,
+                                                   err, ctx, iterpool));
 
       if (md5_checksums)
         apr_hash_set(*md5_checksums, item->path, APR_HASH_KEY_STRING,
