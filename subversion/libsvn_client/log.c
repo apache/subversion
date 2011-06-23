@@ -367,6 +367,11 @@ svn_client_log5(const apr_array_header_t *targets,
                   (range->start.value.number > range->end.value.number ?
                    range->start : range->end);
             }
+          else if (range->start.kind == svn_opt_revision_head ||
+                   range->end.kind == svn_opt_revision_head)
+            {
+              session_opt_rev.kind = svn_opt_revision_head;
+            }
           else if (range->start.kind == svn_opt_revision_date &&
                    range->end.kind == svn_opt_revision_date)
             {

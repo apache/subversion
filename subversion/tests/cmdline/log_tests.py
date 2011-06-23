@@ -1975,7 +1975,6 @@ def merge_sensitive_log_ignores_cyclic_merges(sbox):
 
 #----------------------------------------------------------------------
 @Issue(3931)
-@XFail()
 def log_with_unrelated_peg_and_operative_revs(sbox):
   "log with unrelated peg and operative rev targets"
 
@@ -2000,7 +1999,7 @@ def log_with_unrelated_peg_and_operative_revs(sbox):
   # 'Unable to find repository location for ^/A/D/G/rho in revision 9'
   # error, the log for ^/A/D/G/rho@8 is returned, but that is an unrelated
   # line of history.
-  expected_error = ".*File not found.*"
+  expected_error = ".*Unable to find repository location for.*"
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'log', '-r', '2:HEAD', target)
   svntest.actions.run_and_verify_svn(None, None, expected_error,
