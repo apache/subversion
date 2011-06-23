@@ -1131,7 +1131,7 @@ get_dir_status(const struct walk_status_baton *wb,
         {
           if (info->status != svn_wc__db_status_not_present
               && info->status != svn_wc__db_status_excluded
-              && info->status != svn_wc__db_status_absent)
+              && info->status != svn_wc__db_status_unauthz)
             {
               if (depth == svn_depth_files
                   && info->kind == svn_wc__db_kind_dir)
@@ -2443,7 +2443,7 @@ internal_status(svn_wc_status3_t **status,
 
   if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
       || node_status == svn_wc__db_status_not_present
-      || node_status == svn_wc__db_status_absent
+      || node_status == svn_wc__db_status_unauthz
       || node_status == svn_wc__db_status_excluded)
     {
       svn_error_clear(err);

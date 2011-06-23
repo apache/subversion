@@ -869,7 +869,7 @@ walk_local_nodes_diff(struct edit_baton *eb,
 
       if (status == svn_wc__db_status_not_present
           || status == svn_wc__db_status_excluded
-          || status == svn_wc__db_status_absent)
+          || status == svn_wc__db_status_unauthz)
         continue;
 
       child_path = svn_relpath_join(path, name, iterpool);
@@ -1102,7 +1102,7 @@ report_wc_directory_as_added(struct edit_baton *eb,
 
       if (status == svn_wc__db_status_not_present
           || status == svn_wc__db_status_excluded
-          || status == svn_wc__db_status_absent)
+          || status == svn_wc__db_status_unauthz)
         {
           continue;
         }

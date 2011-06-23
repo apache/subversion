@@ -135,7 +135,7 @@ remove_base_node(svn_wc__db_t *db,
 
   if (wrk_status == svn_wc__db_status_normal
       || wrk_status == svn_wc__db_status_not_present
-      || wrk_status == svn_wc__db_status_absent)
+      || wrk_status == svn_wc__db_status_unauthz)
     {
       base_status = wrk_status;
       base_kind = wrk_kind;

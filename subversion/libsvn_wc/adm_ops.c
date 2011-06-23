@@ -635,7 +635,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
 
   switch (status)
     {
-      /* svn_wc__db_status_absent handled by svn_wc__db_op_delete */
+      /* svn_wc__db_status_unauthz handled by svn_wc__db_op_delete */
       case svn_wc__db_status_excluded:
       case svn_wc__db_status_not_present:
         return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
@@ -781,7 +781,7 @@ check_can_add_to_parent(const char **repos_root_url,
   if (err
       || parent_status == svn_wc__db_status_not_present
       || parent_status == svn_wc__db_status_excluded
-      || parent_status == svn_wc__db_status_absent)
+      || parent_status == svn_wc__db_status_unauthz)
     {
       return
         svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, err,
@@ -1363,7 +1363,7 @@ revert_restore(svn_wc__db_t *db,
      item on disk matches the versioned item, if it doesn't match then
      fix it or delete it.  */
   if (on_disk != svn_node_none
-      && status != svn_wc__db_status_absent
+      && status != svn_wc__db_status_unauthz
       && status != svn_wc__db_status_deleted
       && status != svn_wc__db_status_excluded
       && status != svn_wc__db_status_not_present)
@@ -1485,7 +1485,7 @@ revert_restore(svn_wc__db_t *db,
   /* If we expect a versioned item to be present and there is nothing
      on disk then recreate it. */
   if (on_disk == svn_node_none
-      && status != svn_wc__db_status_absent
+      && status != svn_wc__db_status_unauthz
       && status != svn_wc__db_status_deleted
       && status != svn_wc__db_status_excluded
       && status != svn_wc__db_status_not_present)

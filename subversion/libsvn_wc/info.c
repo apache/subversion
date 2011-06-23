@@ -235,7 +235,7 @@ build_info_for_entry(svn_wc__info2_t **info,
       wc_info->schedule = svn_wc_schedule_delete;
     }
   else if (status == svn_wc__db_status_not_present
-           || status == svn_wc__db_status_absent)
+           || status == svn_wc__db_status_unauthz)
     {
       return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                _("The node '%s' was not found."),

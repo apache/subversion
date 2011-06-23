@@ -53,7 +53,7 @@
 /* Checks whether a svn_wc__db_status_t indicates whether a node is
    present in a working copy. Used by the editor implementation */
 #define IS_NODE_PRESENT(status)                             \
-           ((status) != svn_wc__db_status_absent &&         \
+           ((status) != svn_wc__db_status_unauthz &&         \
             (status) != svn_wc__db_status_excluded &&       \
             (status) != svn_wc__db_status_not_present)
 
@@ -1528,7 +1528,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
           }
         break;
 
-      case svn_wc__db_status_absent:
+      case svn_wc__db_status_unauthz:
         /* Not allowed to view the node. Not allowed to report tree
          * conflicts. */
       case svn_wc__db_status_excluded:
@@ -1753,7 +1753,7 @@ delete_entry(const char *path,
        Do not notify, but perform the change even when the node is shadowed */
   if (base_status == svn_wc__db_status_not_present
       || base_status == svn_wc__db_status_excluded
-      || base_status == svn_wc__db_status_absent)
+      || base_status == svn_wc__db_status_unauthz)
     {
       SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath, scratch_pool));
 
@@ -2855,7 +2855,7 @@ absent_node(const char *path,
       */
     }
   else if (status == svn_wc__db_status_not_present
-           || status == svn_wc__db_status_absent
+           || status == svn_wc__db_status_unauthz
            || status == svn_wc__db_status_excluded)
     {
       /* The BASE node is not actually there, so we can safely turn it into
@@ -2891,7 +2891,7 @@ absent_node(const char *path,
                                             eb->repos_uuid,
                                             *(eb->target_revision),
                                             absent_kind,
-                                            svn_wc__db_status_absent,
+                                            svn_wc__db_status_unauthz,
                                             NULL, NULL,
                                             scratch_pool));
   }
@@ -4944,7 +4944,7 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
     {
       *wc_root = FALSE;
     }
-  else if (status == svn_wc__db_status_absent
+  else if (status == svn_wc__db_status_unauthz
            || status == svn_wc__db_status_excluded
            || status == svn_wc__db_status_not_present)
     {
