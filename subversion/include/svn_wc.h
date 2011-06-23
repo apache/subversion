@@ -2033,9 +2033,8 @@ svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
                               apr_pool_t *pool);
 
 
-/** A callback used in svn_client_merge3(), svn_client_update3(), and
- * svn_client_switch2() for resolving conflicts during the application
- * of a tree delta to a working copy.
+/** A callback used in merge, update and switch for resolving conflicts
+ * during the application of a tree delta to a working copy.
  *
  * @a description describes the exact nature of the conflict, and
  * provides information to help resolve it.  @a baton is a closure
@@ -5440,8 +5439,9 @@ typedef svn_error_t *(*svn_wc_dirents_func_t)(void *baton,
  * If @a allow_unver_obstructions is TRUE, then allow unversioned
  * obstructions when adding a path.
  *
- * If @a adds_as_modification is TRUE, local additions are seen as a local
- * modification of added nodes when the node kind matches.
+ * If @a adds_as_modification is TRUE, a local addition at the same path
+ * as an incoming addition of the same node kind results in a normal node
+ * with a possible local modification, instead of a tree conflict.
  *
  * If @a depth is #svn_depth_infinity, update fully recursively.
  * Else if it is #svn_depth_immediates, update the uppermost

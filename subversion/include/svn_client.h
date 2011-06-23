@@ -1224,9 +1224,9 @@ svn_client_checkout(svn_revnum_t *result_rev,
  * If @a allow_unver_obstructions is FALSE then the update will abort
  * if there are any unversioned obstructing items.
  *
- * If @a adds_as_modifications is TRUE, local additions that obstruct
- * added files are handled as a modified version of the file instead of
- * as a tree conflict.
+ * If @a adds_as_modification is TRUE, a local addition at the same path
+ * as an incoming addition of the same node kind results in a normal node
+ * with a possible local modification, instead of a tree conflict.
  *
  * If @a make_parents is TRUE, create any non-existent parent
  * directories also by checking them out at depth=empty.
