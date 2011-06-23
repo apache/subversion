@@ -1199,7 +1199,7 @@ typedef enum svn_wc_notify_action_t
 
   /** Operation failed because the operation was forbidden by the server.
    * @since New in 1.7. */
-  svn_wc_notify_failed_forbidden,
+  svn_wc_notify_failed_forbidden_by_server,
 
 } svn_wc_notify_action_t;
 

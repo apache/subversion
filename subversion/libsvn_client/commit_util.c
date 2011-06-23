@@ -142,14 +142,15 @@ fixup_out_of_date_error(const char *local_abspath,
           svn_wc_notify_t *notify;
 
           if (local_abspath)
-            notify = svn_wc_create_notify(local_abspath,
-                                          svn_wc_notify_failed_forbidden,
-                                          scratch_pool);
+            notify = svn_wc_create_notify(
+                                    local_abspath,
+                                    svn_wc_notify_failed_forbidden_by_server,
+                                    scratch_pool);
           else
             notify = svn_wc_create_notify_url(
                                 svn_path_url_add_component2(base_url, path,
                                                             scratch_pool),
-                                svn_wc_notify_failed_forbidden,
+                                svn_wc_notify_failed_forbidden_by_server,
                                 scratch_pool);
 
           notify->kind = kind;
@@ -158,7 +159,7 @@ fixup_out_of_date_error(const char *local_abspath,
           ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
         }
 
-      return svn_error_createf(SVN_ERR_CLIENT_FORBIDDEN, err,
+      return svn_error_createf(SVN_ERR_CLIENT_FORBIDDEN_BY_SERVER, err,
                    (kind == svn_node_dir
                      ? _("Changing directory '%s' is forbidden by the server")
                      : _("Changing file '%s' is forbidden by the server")),
