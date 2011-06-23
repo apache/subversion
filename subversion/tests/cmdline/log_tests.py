@@ -1975,7 +1975,7 @@ def merge_sensitive_log_ignores_cyclic_merges(sbox):
 
 #----------------------------------------------------------------------
 @Issue(3931)
-# serf returns a spurious error from svn_ra_get_locations(), see issse #3936
+# serf returns a spurious error from svn_ra_get_locations(), see issue #3936
 @XFail(svntest.main.is_ra_type_dav_serf)
 def log_with_unrelated_peg_and_operative_revs(sbox):
   "log with unrelated peg and operative rev targets"
