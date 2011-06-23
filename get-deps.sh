@@ -45,6 +45,12 @@ get_deps() {
     mkdir -p $TEMPDIR
     cd $TEMPDIR
 
+    for d in neon zlib serf sqlite-amalgamation apr apr-util; do
+      if [ -d $i ]; then
+        echo "Local directory '$i' already exists; the downloaded copy won't be used" >&2
+      fi
+    done
+
     wget -nc $APACHE_MIRROR/apr/$APR.tar.bz2
     wget -nc $APACHE_MIRROR/apr/$APR_UTIL.tar.bz2
     wget -nc http://webdav.org/neon/$NEON.tar.gz
