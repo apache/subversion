@@ -541,7 +541,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
   jobject jRepositoryPropType = EnumMapper::mapStatusKind(
                                                   status->repos_prop_status);
   jboolean jIsCopied = (status->copied == 1) ? JNI_TRUE: JNI_FALSE;
-  jboolean jIsLocked = (status->locked == 1) ? JNI_TRUE: JNI_FALSE;
+  jboolean jIsLocked = (status->wc_is_locked == 1) ? JNI_TRUE: JNI_FALSE;
   jboolean jIsSwitched = (status->switched == 1) ? JNI_TRUE: JNI_FALSE;
   jboolean jIsFileExternal = (status->file_external == 1) ? JNI_TRUE
                                                           : JNI_FALSE;

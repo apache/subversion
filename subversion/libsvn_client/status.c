@@ -83,7 +83,7 @@ tweak_status(void *baton,
                            scratch_pool);
 
   /* If the status item has an entry, but doesn't belong to one of the
-     changelists our caller is interested in, we filter our this status
+     changelists our caller is interested in, we filter out this status
      transmission.  */
   if (sb->changelist_hash
       && (! status->changelist
@@ -593,7 +593,7 @@ svn_client__create_status(svn_client_status_t **cst,
   (*cst)->prop_status = status->prop_status;
 
   if (status->kind == svn_node_dir)
-    (*cst)->locked = status->locked;
+    (*cst)->wc_is_locked = status->locked;
 
   (*cst)->copied = status->copied;
   (*cst)->revision = status->revision;

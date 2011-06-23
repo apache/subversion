@@ -259,7 +259,7 @@ print_status(const char *path,
                                 "%c%c%c%c%c%c%c %c   %6s   %6s %-12s %s%s\n",
                                 generate_status_code(combined_status(status)),
                                 generate_status_code(prop_status),
-                                status->locked ? 'L' : ' ',
+                                status->wc_is_locked ? 'L' : ' ',
                                 status->copied ? '+' : ' ',
                                 generate_switch_column_code(status),
                                 lock_status,
@@ -276,7 +276,7 @@ print_status(const char *path,
            svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %c   %6s   %s%s\n",
                               generate_status_code(combined_status(status)),
                               generate_status_code(prop_status),
-                              status->locked ? 'L' : ' ',
+                              status->wc_is_locked ? 'L' : ' ',
                               status->copied ? '+' : ' ',
                               generate_switch_column_code(status),
                               lock_status,
@@ -291,7 +291,7 @@ print_status(const char *path,
        svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %s%s\n",
                           generate_status_code(combined_status(status)),
                           generate_status_code(prop_status),
-                          status->locked ? 'L' : ' ',
+                          status->wc_is_locked ? 'L' : ' ',
                           status->copied ? '+' : ' ',
                           generate_switch_column_code(status),
                           ((status->lock)
@@ -334,7 +334,7 @@ svn_cl__print_status_xml(const char *path,
                      (status->node_status != svn_wc_status_deleted)
                                           ? status->prop_status
                                           : svn_wc_status_none));
-  if (status->locked)
+  if (status->wc_is_locked)
     apr_hash_set(att_hash, "wc-locked", APR_HASH_KEY_STRING, "true");
   if (status->copied)
     apr_hash_set(att_hash, "copied", APR_HASH_KEY_STRING, "true");
