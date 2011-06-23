@@ -1002,10 +1002,12 @@ check_nonrecursive_dir_delete(svn_wc_context_t *wc_ctx,
                                             scratch_pool, scratch_pool));
 
           if (children->nelts > 0)
-            return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                    _("Cannot non-recursively commit a "
-                                      "directory deletion of a directory "
-                                      "with child nodes"));
+            return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                     _("Cannot delete the directory '%s' "
+                                       "in a non-recursive commit "
+                                       "because it has children"),
+                                     svn_dirent_local_style(target_abspath,
+                                                            scratch_pool));
         }
     }
 
