@@ -27,7 +27,7 @@ Candidate changes:
    Votes:
      +1: rhuijben     
 
- * r1138975, r1138977:
+ * r1138975, r1138977
    Add a sanity check to get-deps.sh.
    Justification:
      Prevent a false impression as to which version of a dependency will be used.
