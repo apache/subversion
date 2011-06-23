@@ -34,7 +34,7 @@ Candidate changes:
    Justification:
      Users report get-deps.sh is currently broken.
    Notes:
-     r1134734 also bumped dependcy versions; the backport branch excludes
+     r1134734 also bumped dependency versions; the backport branch excludes
      those bumps.
    Votes:
      +1: danielsh, arfrever
