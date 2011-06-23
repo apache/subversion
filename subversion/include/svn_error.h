@@ -351,8 +351,7 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
   do {                                                      \
     svn_error_t *svn_err__temp = (expr);                    \
     if (svn_err__temp)                                      \
-      return svn_error_return(svn_error_quick_wrap(         \
-                                 svn_err__temp, wrap_msg)); \
+      return svn_error_quick_wrap(svn_err__temp, wrap_msg); \
   } while (0)
 
 
