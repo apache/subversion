@@ -1789,8 +1789,8 @@ svn_client_proplist(apr_array_header_t **props,
 
 struct status4_wrapper_baton
 {
-  svn_wc_status_func3_t old_func;
   svn_wc_context_t *wc_ctx;
+  svn_wc_status_func3_t old_func;
   void *old_baton;
 };
 
@@ -1829,7 +1829,7 @@ svn_client_status4(svn_revnum_t *result_rev,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  struct status4_wrapper_baton swb = { status_func, ctx->wc_ctx,
+  struct status4_wrapper_baton swb = { ctx->wc_ctx, status_func,
                                        status_baton };
 
   return svn_client_status5(result_rev, ctx, path, revision, depth, get_all,
