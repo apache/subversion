@@ -372,6 +372,7 @@ checkout_dir(dir_context_t *dir)
           /* Implicitly checkout this dir now. */
           dir->checkout = apr_pcalloc(dir->pool, sizeof(*dir->checkout));
           dir->checkout->pool = dir->pool;
+          dir->checkout->progress.pool = dir->pool;
           dir->checkout->activity_url = dir->commit->activity_url;
           dir->checkout->resource_url =
             svn_path_url_add_component2(dir->parent_dir->checkout->resource_url,
@@ -390,6 +391,7 @@ checkout_dir(dir_context_t *dir)
 
   checkout_ctx = apr_pcalloc(dir->pool, sizeof(*checkout_ctx));
   checkout_ctx->pool = dir->pool;
+  checkout_ctx->progress.pool = dir->pool;
 
   checkout_ctx->activity_url = dir->commit->activity_url;
 
@@ -558,6 +560,7 @@ checkout_file(file_context_t *file)
           /* Implicitly checkout this file now. */
           file->checkout = apr_pcalloc(file->pool, sizeof(*file->checkout));
           file->checkout->pool = file->pool;
+          file->checkout->progress.pool = file->pool;
           file->checkout->activity_url = file->commit->activity_url;
           file->checkout->resource_url =
             svn_path_url_add_component2(parent_dir->checkout->resource_url,
@@ -577,6 +580,7 @@ checkout_file(file_context_t *file)
 
   file->checkout = apr_pcalloc(file->pool, sizeof(*file->checkout));
   file->checkout->pool = file->pool;
+  file->checkout->progress.pool = file->pool;
 
   file->checkout->activity_url = file->commit->activity_url;
 
@@ -1129,6 +1133,7 @@ setup_copy_dir_headers(serf_bucket_t *headers,
   /* Implicitly checkout this dir now. */
   dir->checkout = apr_pcalloc(dir->pool, sizeof(*dir->checkout));
   dir->checkout->pool = dir->pool;
+  dir->checkout->progress.pool = dir->pool;
   dir->checkout->activity_url = dir->commit->activity_url;
   dir->checkout->resource_url = apr_pstrdup(dir->checkout->pool, uri.path);
 
@@ -1341,6 +1346,7 @@ open_root(void *edit_baton,
       handler->session = ctx->session;
 
       post_ctx = apr_pcalloc(ctx->pool, sizeof(*post_ctx));
+      post_ctx->pool = ctx->pool;
 
       prc = apr_pcalloc(ctx->pool, sizeof(*prc));
       prc->request_ctx = post_ctx;
@@ -1422,6 +1428,7 @@ open_root(void *edit_baton,
       handler->session = ctx->session;
 
       mkact_ctx = apr_pcalloc(ctx->pool, sizeof(*mkact_ctx));
+      mkact_ctx->pool = ctx->pool;
 
       handler->response_handler = svn_ra_serf__handle_status_only;
       handler->response_baton = mkact_ctx;
@@ -1471,6 +1478,7 @@ open_root(void *edit_baton,
   /* PROPPATCH our revprops and pass them along.  */
   proppatch_ctx = apr_pcalloc(ctx->pool, sizeof(*proppatch_ctx));
   proppatch_ctx->pool = dir_pool;
+  proppatch_ctx->progress.pool = dir_pool;
   proppatch_ctx->commit = ctx;
   proppatch_ctx->path = proppatch_target;
   proppatch_ctx->changed_props = apr_hash_make(proppatch_ctx->pool);
@@ -1540,6 +1548,7 @@ delete_entry(const char *path,
 
   /* DELETE our entry */
   delete_ctx = apr_pcalloc(pool, sizeof(*delete_ctx));
+  delete_ctx->progress.pool = pool;
   delete_ctx->path = apr_pstrdup(pool, path);
   delete_ctx->revision = revision;
   delete_ctx->lock_token_hash = dir->commit->lock_tokens;
@@ -1656,6 +1665,7 @@ add_directory(const char *path,
   handler->session = dir->commit->session;
 
   add_dir_ctx = apr_pcalloc(dir->pool, sizeof(*add_dir_ctx));
+  add_dir_ctx->pool = dir->pool;
 
   handler->response_handler = svn_ra_serf__handle_status_only;
   handler->response_baton = add_dir_ctx;
@@ -1823,6 +1833,7 @@ close_directory(void *dir_baton,
 
       proppatch_ctx = apr_pcalloc(pool, sizeof(*proppatch_ctx));
       proppatch_ctx->pool = pool;
+      proppatch_ctx->progress.pool = pool;
       proppatch_ctx->commit = dir->commit;
       proppatch_ctx->name = dir->name;
       proppatch_ctx->changed_props = dir->changed_props;
@@ -1907,6 +1918,7 @@ add_file(const char *path,
       svn_ra_serf__handler_t *handler;
 
       head_ctx = apr_pcalloc(new_file->pool, sizeof(*head_ctx));
+      head_ctx->pool = new_file->pool;
 
       handler = apr_pcalloc(new_file->pool, sizeof(*handler));
       handler->session = new_file->commit->session;
@@ -2091,6 +2103,7 @@ close_file(void *file_baton,
       handler->session = ctx->commit->session;
 
       copy_ctx = apr_pcalloc(pool, sizeof(*copy_ctx));
+      copy_ctx->pool = pool;
 
       handler->response_handler = svn_ra_serf__handle_status_only;
       handler->response_baton = copy_ctx;
@@ -2128,6 +2141,7 @@ close_file(void *file_baton,
       handler->session = ctx->commit->session;
 
       put_ctx = apr_pcalloc(pool, sizeof(*put_ctx));
+      put_ctx->pool = pool;
 
       handler->response_handler = svn_ra_serf__handle_status_only;
       handler->response_baton = put_ctx;
@@ -2170,6 +2184,7 @@ close_file(void *file_baton,
 
       proppatch = apr_pcalloc(ctx->pool, sizeof(*proppatch));
       proppatch->pool = ctx->pool;
+      proppatch->progress.pool = pool;
       proppatch->name = ctx->name;
       proppatch->path = ctx->url;
       proppatch->commit = ctx->commit;
@@ -2227,6 +2242,7 @@ close_edit(void *edit_baton,
       handler->session = ctx->session;
 
       delete_ctx = apr_pcalloc(pool, sizeof(*delete_ctx));
+      delete_ctx->pool = pool;
 
       handler->response_handler = svn_ra_serf__handle_status_only;
       handler->response_baton = delete_ctx;
@@ -2266,6 +2282,7 @@ abort_edit(void *edit_baton,
   handler->session = ctx->session;
 
   delete_ctx = apr_pcalloc(pool, sizeof(*delete_ctx));
+  delete_ctx->pool = pool;
 
   handler->response_handler = svn_ra_serf__handle_status_only;
   handler->response_baton = delete_ctx;
@@ -2427,6 +2444,7 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
   /* PROPPATCH our log message and pass it along.  */
   proppatch_ctx = apr_pcalloc(pool, sizeof(*proppatch_ctx));
   proppatch_ctx->pool = pool;
+  proppatch_ctx->progress.pool = pool;
   proppatch_ctx->commit = commit;
   proppatch_ctx->path = proppatch_target;
   proppatch_ctx->changed_props = apr_hash_make(proppatch_ctx->pool);

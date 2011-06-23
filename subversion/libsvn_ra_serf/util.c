@@ -917,6 +917,8 @@ svn_ra_serf__handle_status_only(serf_request_t *request,
   svn_error_t *err;
   svn_ra_serf__simple_request_context_t *ctx = baton;
 
+  SVN_ERR_ASSERT(ctx->pool);
+
   err = svn_ra_serf__handle_discard_body(request, response,
                                          &ctx->server_error, pool);
 
@@ -932,8 +934,8 @@ svn_ra_serf__handle_status_only(serf_request_t *request,
         }
 
       ctx->status = sl.code;
-      ctx->reason = sl.reason;
-      ctx->location = svn_ra_serf__response_get_location(response, pool);
+      ctx->reason = sl.reason ? apr_pstrdup(ctx->pool, sl.reason) : NULL;
+      ctx->location = svn_ra_serf__response_get_location(response, ctx->pool);
       ctx->done = TRUE;
     }
 
@@ -1077,6 +1079,8 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
   svn_ra_serf__simple_request_context_t *ctx = baton;
   svn_ra_serf__server_error_t *server_err = &ctx->server_error;
 
+  SVN_ERR_ASSERT(ctx->pool);
+
   /* If necessary, initialize our XML parser. */
   if (server_err && !server_err->init)
     {
@@ -1148,8 +1152,8 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
         }
 
       ctx->status = sl.code;
-      ctx->reason = sl.reason;
-      ctx->location = svn_ra_serf__response_get_location(response, pool);
+      ctx->reason = sl.reason ? apr_pstrdup(ctx->pool, sl.reason) : NULL;
+      ctx->location = svn_ra_serf__response_get_location(response, ctx->pool);
     }
 
   return svn_error_return(err);
@@ -1482,7 +1486,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
 
   if (sl.code == 301 || sl.code == 302 || sl.code == 307)
     {
-      ctx->location = svn_ra_serf__response_get_location(response, pool);
+      ctx->location = svn_ra_serf__response_get_location(response, ctx->pool);
     }
 
   /* Woo-hoo.  Nothing here to see.  */

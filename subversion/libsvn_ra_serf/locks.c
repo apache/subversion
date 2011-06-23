@@ -705,6 +705,7 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       svn_pool_clear(subpool);
 
       ctx = apr_pcalloc(subpool, sizeof(*ctx));
+      ctx->pool = subpool;
 
       apr_hash_this(hi, &key, NULL, &val);
       path = key;
