@@ -89,7 +89,7 @@ def lock_file(sbox):
                                      '-m', '', file_path)
 
   # --- Meanwhile, in our other working copy... ---
-  err_re = "(svn\: E195021\: File '.*iota' is locked in another)|" + \
+  err_re = "(svn\: E195022\: File '.*iota' is locked in another)|" + \
            "(svn\: E160039: User 'jconstant' does not own lock on path.*iota')"
 
   svntest.main.run_svn(None, 'update', wc_b)
@@ -110,7 +110,7 @@ def lock_file(sbox):
   # change the locked file's properties
   svntest.main.run_svn(None, 'propset', 'sneakyuser', 'Sally', file_path_b)
 
-  err_re = "(svn\: E195021\: File '.*iota' is locked in another)|" + \
+  err_re = "(svn\: E195022\: File '.*iota' is locked in another)|" + \
            "(svn\: E160039\: User 'jconstant' does not own lock on path)"
 
   # attempt (and fail) to commit as user Sally
