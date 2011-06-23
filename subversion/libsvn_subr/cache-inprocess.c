@@ -31,10 +31,6 @@
 
 #include "cache.h"
 
-/* A per-process cache implementation.  See cache-membuffer.c for a newer,
- * memcached-like per-process cache, that aims to solve latency and reliability
- * issues with this implementation. */
-
 /* The (internal) cache object. */
 typedef struct inprocess_cache_t {
   /* A user-defined identifier for this cache instance. */
