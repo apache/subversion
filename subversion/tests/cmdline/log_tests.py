@@ -2006,6 +2006,36 @@ def log_with_unrelated_peg_and_operative_revs(sbox):
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'log', '-r', 'HEAD:2', target)
 
+#----------------------------------------------------------------------
+@Issue(3937)
+@XFail(svntest.main.is_ra_type_dav_serf)
+def log_on_nonexistent_path_and_valid_rev(sbox):
+  "log on nonexistent path does not error out"
+
+  sbox.build()#create_wc=False)
+  real_path_real_rev   = sbox.repo_url + '/A@1'
+  real_path_bad_rev    = sbox.repo_url + '/A@99'
+  bad_url_bad_rev      = sbox.repo_url + '/Z@99'
+  bad_path_real_rev    = sbox.repo_url + '/Z@1'
+  bad_path_default_rev = sbox.repo_url + '/Z'
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'log', '-q', real_path_real_rev)
+
+  expected_error = ".*No such revision 99*"
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'log', '-q', real_path_bad_rev)
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'log', '-q', bad_url_bad_rev)
+
+  # Currently this test fails over ra_serf because the following log
+  # commands return empty logs rather than errors.
+  expected_error = ".*not found.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'log', '-q', bad_path_real_rev)
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'log', '-q', bad_path_default_rev)
+
 ########################################################################
 # Run the tests
 
@@ -2044,6 +2074,7 @@ test_list = [ None,
               merge_sensitive_log_reverse_merges,
               merge_sensitive_log_ignores_cyclic_merges,
               log_with_unrelated_peg_and_operative_revs,
+              log_on_nonexistent_path_and_valid_rev,
              ]
 
 if __name__ == '__main__':
