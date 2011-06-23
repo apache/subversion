@@ -1212,7 +1212,7 @@ SVN_ERROR_START
              "Can't perform this operation without a valid lock token")
 
 /** @since New in 1.7. */
-  SVN_ERRDEF(SVN_ERR_CLIENT_FORBIDDEN,
+  SVN_ERRDEF(SVN_ERR_CLIENT_FORBIDDEN_BY_SERVER,
              SVN_ERR_CLIENT_CATEGORY_START + 23,
              "The operation is forbidden by the server")
 
