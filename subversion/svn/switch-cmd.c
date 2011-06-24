@@ -142,17 +142,11 @@ svn_cl__switch(apr_getopt_t *os,
 
   /* Validate the switch_url */
   if (! svn_path_is_url(switch_url))
-    return svn_error_createf
-      (SVN_ERR_BAD_URL, NULL,
-       _("'%s' does not appear to be a URL"), switch_url);
+    return svn_error_createf(SVN_ERR_BAD_URL, NULL,
+                             _("'%s' does not appear to be a URL"), switch_url);
 
-  /* Target path cannot be URL */
-  if (svn_path_is_url(target))
-    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("'%s' is not a local path"),
-                             target);
+  SVN_ERR(svn_cl__check_target_is_local_path(target));
 
-  /* Canonicalize the URL. */
   switch_url = svn_uri_canonicalize(switch_url, scratch_pool);
 
   /* Deal with depthstuffs. */
