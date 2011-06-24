@@ -106,21 +106,13 @@ svn_cl__commit(apr_getopt_t *os,
   svn_config_t *cfg;
   svn_boolean_t no_unlock = FALSE;
   struct copy_warning_notify_baton cwnb;
-  int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
                                                       ctx, FALSE, pool));
 
-  /* Check that no targets are URLs */
-  for (i = 0; i < targets->nelts; i++)
-    {
-      const char *target = APR_ARRAY_IDX(targets, i, const char *);
-      if (svn_path_is_url(target))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("'%s' is a URL, but URLs cannot be "
-                                   "commit targets"), target);
-    }
+  SVN_ERR_W(svn_cl__check_targets_are_local_paths(targets),
+            _("Commit targets must be local paths"));
 
   /* Add "." if user passed 0 arguments. */
   svn_opt_push_implicit_dot_target(targets, pool);

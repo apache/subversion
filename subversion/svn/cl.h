@@ -823,6 +823,10 @@ svn_cl__opt_parse_path(svn_opt_revision_t *rev,
 svn_error_t *
 svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets);
 
+/* Return an error if TARGETS contains a URL; otherwise return SVN_NO_ERROR. */
+svn_error_t *
+svn_cl__check_targets_are_local_paths(const apr_array_header_t *targets);
+
 /* Return a copy of PATH, converted to the local path style, skipping
  * PARENT_PATH if it is non-null and is a parent of or equal to PATH.
  *

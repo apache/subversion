@@ -57,16 +57,7 @@ svn_cl__cleanup(apr_getopt_t *os,
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
 
-  /* Don't even attempt to modify the working copy if any of the
-   * targets look like URLs. URLs are invalid input. */
-  for (i = 0; i < targets->nelts; i++)
-    {
-      const char *target = APR_ARRAY_IDX(targets, i, const char *);
-
-      if (svn_path_is_url(target))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("'%s' is not a local path"), target);
-    }
+  SVN_ERR(svn_cl__check_targets_are_local_paths(targets));
 
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
