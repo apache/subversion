@@ -97,7 +97,10 @@ if test -n "$APXS" && test "$APXS" != "no"; then
         AC_MSG_RESULT(yes)
     else
         AC_MSG_RESULT(no)
-        AC_MSG_ERROR([Apache's APR version $APXS_APR_VERSION doesn't match configure's $apr_version])
+        if test "$APXS_EXPLICIT" != ""; then
+            AC_MSG_ERROR([Apache's APR version $APXS_APR_VERSION doesn't match configure's $apr_version])
+        fi
+        APXS=""
     fi
 fi
 
