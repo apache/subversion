@@ -532,10 +532,10 @@ public class ClientNotifyInformation extends EventObject
         failed_out_of_date ("failed out of date"),
 
         /** Operation failed because an added parent is not selected */
-        failed_no_parent ("failed no parent");
+        failed_no_parent ("failed no parent"),
 
         /** Operation failed because a node is locked */
-        failed_locked ("failed by lock");
+        failed_locked ("failed by lock"),
 
         /** Operation failed because the operation was forbidden */
         failed_forbidden_by_server ("failed forbidden by server");
