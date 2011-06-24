@@ -2707,8 +2707,7 @@ def commit_url(sbox):
   url = sbox.repo_url
 
   # Commit directly to a URL
-  expected_error = ("svn: E205000: '" + url +
-                    "' is a URL, but URLs cannot be commit targets")
+  expected_error = ("svn: E205000: '" + url + "' is not a local path")
   svntest.actions.run_and_verify_commit(None,
                                         None,
                                         None,
