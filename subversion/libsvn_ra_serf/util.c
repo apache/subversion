@@ -857,7 +857,7 @@ svn_ra_serf__handle_discard_body(serf_request_t *request,
               server_err->error = SVN_NO_ERROR;
             }
 
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
 
     }
@@ -939,7 +939,7 @@ svn_ra_serf__handle_status_only(serf_request_t *request,
       ctx->done = TRUE;
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 /* Given a string like "HTTP/1.1 500 (status)" in BUF, parse out the numeric
@@ -1127,7 +1127,7 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
          available to be read. */
       if (!err || !APR_STATUS_IS_EOF(err->apr_err))
         {
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
       else if (ctx->done && server_err->error->apr_err == APR_SUCCESS)
         {
@@ -1156,7 +1156,7 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
       ctx->location = svn_ra_serf__response_get_location(response, ctx->pool);
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 static void
@@ -1345,7 +1345,7 @@ inject_to_parser(svn_ra_serf__xml_parser_t *ctx,
     }
 
   if (ctx->error && !ctx->ignore_errors)
-    return svn_error_return(ctx->error);
+    return svn_error_trace(ctx->error);
 
   return SVN_NO_ERROR;
 }
@@ -1389,7 +1389,7 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
       return_buffer(parser, pb);
 
       if (err)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       /* If the callbacks paused us, then we're done for now.  */
       if (parser->paused)
@@ -1443,7 +1443,7 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
     }
 
   return_buffer(parser, pb);
-  return svn_error_return(err);  /* may be SVN_NO_ERROR  */
+  return svn_error_trace(err);  /* may be SVN_NO_ERROR  */
 
  pending_empty:
   /* If the PENDING structures are empty *and* we consumed all content from
@@ -1568,7 +1568,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
         {
           XML_ParserFree(ctx->xmlp);
           add_done_item(ctx);
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
 
       if (APR_STATUS_IS_EAGAIN(status))
@@ -1814,7 +1814,7 @@ handle_response(serf_request_t *request,
           return SVN_NO_ERROR;
         }
 
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 }
 
@@ -1832,7 +1832,7 @@ handle_response_cb(serf_request_t *request,
   svn_error_t *err;
   apr_status_t serf_status = APR_SUCCESS;
 
-  err = svn_error_return(
+  err = svn_error_trace(
           handle_response(request, response, ctx, &serf_status, pool));
 
   if (err || session->pending_error)

@@ -370,13 +370,13 @@ log_entry_receiver(void *baton,
                           svn_error_clear(err);
                           break;
                         }
-                      return svn_error_return(err);
+                      return svn_error_trace(err);
                     }
                 }
               svn_pool_destroy(iterpool);
             }
           else
-            return svn_error_return(err);
+            return svn_error_trace(err);
         }
 
       SVN_ERR(svn_cmdline_printf(pool, _("\n")));

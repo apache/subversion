@@ -872,7 +872,7 @@ diff_dir_props_changed(svn_wc_notify_state_t *state,
   if (diff_cmd_baton->anchor)
     path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
 
-  return svn_error_return(diff_props_changed(state,
+  return svn_error_trace(diff_props_changed(state,
                                              tree_conflicted, path,
                                              dir_was_added,
                                              propchanges,

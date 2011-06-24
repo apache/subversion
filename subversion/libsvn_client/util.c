@@ -166,7 +166,7 @@ svn_client__path_relative_to_root(const char **rel_path,
                                      _("URL '%s' is not inside repository"),
                                      abspath_or_url);
 
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
     }
 
@@ -215,7 +215,7 @@ svn_client__default_walker_error_handler(const char *path,
                                          void *walk_baton,
                                          apr_pool_t *pool)
 {
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 

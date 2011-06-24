@@ -846,7 +846,7 @@ svn_ra_serf__flatten_props(apr_hash_t **flat_props,
 {
   *flat_props = apr_hash_make(result_pool);
 
-  return svn_error_return(svn_ra_serf__walk_all_props(
+  return svn_error_trace(svn_ra_serf__walk_all_props(
                             props, path, revision,
                             set_flat_props,
                             *flat_props /* baton */,
@@ -898,7 +898,7 @@ svn_ra_serf__select_revprops(apr_hash_t **revprops,
 {
   *revprops = apr_hash_make(result_pool);
 
-  return svn_error_return(svn_ra_serf__walk_all_props(
+  return svn_error_trace(svn_ra_serf__walk_all_props(
                             all_revprops, name, rev,
                             select_revprops, *revprops,
                             scratch_pool));

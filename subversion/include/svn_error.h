@@ -302,7 +302,7 @@ svn_handle_warning(FILE *stream,
   do {                                          \
     svn_error_t *svn_err__temp = (expr);        \
     if (svn_err__temp)                          \
-      return svn_error_return(svn_err__temp);   \
+      return svn_error_trace(svn_err__temp);    \
   } while (0)
 
 /**
@@ -317,9 +317,9 @@ svn_handle_warning(FILE *stream,
 #ifdef SVN_ERR__TRACING
 #define SVN_ERR__TRACED "traced call"
 
-#define svn_error_return(expr)  svn_error_quick_wrap((expr), SVN_ERR__TRACED)
+#define svn_error_trace(expr)  svn_error_quick_wrap((expr), SVN_ERR__TRACED)
 #else
-#define svn_error_return(expr)  (expr)
+#define svn_error_trace(expr)  (expr)
 #endif
 
 /**
@@ -441,7 +441,7 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
  */
 #define SVN_ERR_MALFUNCTION()                                      \
   do {                                                             \
-    return svn_error_return(svn_error__malfunction(                \
+    return svn_error_trace(svn_error__malfunction(                 \
                                  TRUE, __FILE__, __LINE__, NULL)); \
   } while (0)
 

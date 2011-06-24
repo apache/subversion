@@ -544,7 +544,7 @@ fetch_repos_info(const char **repos_root_url,
   if (repos_uuid)
     *repos_uuid = svn_sqlite__column_text(stmt, 1, result_pool);
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 
@@ -634,7 +634,7 @@ create_repos_id(apr_int64_t *repos_id,
   if (have_row)
     {
       *repos_id = svn_sqlite__column_int64(get_stmt, 0);
-      return svn_error_return(svn_sqlite__reset(get_stmt));
+      return svn_error_trace(svn_sqlite__reset(get_stmt));
     }
   SVN_ERR(svn_sqlite__reset(get_stmt));
 
@@ -650,7 +650,7 @@ create_repos_id(apr_int64_t *repos_id,
   SVN_ERR(svn_sqlite__get_statement(&insert_stmt, sdb,
                                     STMT_INSERT_REPOSITORY));
   SVN_ERR(svn_sqlite__bindf(insert_stmt, "ss", repos_root_url, repos_uuid));
-  return svn_error_return(svn_sqlite__insert(repos_id, insert_stmt));
+  return svn_error_trace(svn_sqlite__insert(repos_id, insert_stmt));
 }
 
 
@@ -1310,7 +1310,7 @@ add_single_work_item(svn_sqlite__db_t *sdb,
   serialized = svn_skel__unparse(work_item, scratch_pool);
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_WORK_ITEM));
   SVN_ERR(svn_sqlite__bind_blob(stmt, 1, serialized->data, serialized->len));
-  return svn_error_return(svn_sqlite__insert(NULL, stmt));
+  return svn_error_trace(svn_sqlite__insert(NULL, stmt));
 }
 
 
@@ -1334,7 +1334,7 @@ add_work_items(svn_sqlite__db_t *sdb,
 
   /* Is the list a single work item? Or a list of work items?  */
   if (SVN_WC__SINGLE_WORK_ITEM(skel))
-    return svn_error_return(add_single_work_item(sdb, skel, scratch_pool));
+    return svn_error_trace(add_single_work_item(sdb, skel, scratch_pool));
 
   /* SKEL is a list-of-lists, aka list of work items.  */
 
@@ -1363,7 +1363,7 @@ does_node_exist(svn_boolean_t *exists,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(exists, stmt));
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 
@@ -1465,7 +1465,7 @@ svn_wc__db_init(svn_wc__db_t *db,
 
   /* ### no children, conflicts, or work items to install in a txn... */
 
-  return svn_error_return(insert_base_node(&ibb, wcroot, "", scratch_pool));
+  return svn_error_trace(insert_base_node(&ibb, wcroot, "", scratch_pool));
 }
 
 
@@ -2198,7 +2198,7 @@ svn_wc__db_base_get_children_info(apr_hash_t **nodes,
                              repos_id, result_pool);
 
       if (err)
-        return svn_error_return(
+        return svn_error_trace(
                  svn_error_compose_create(err,
                                           svn_sqlite__reset(stmt)));
 
@@ -2320,7 +2320,7 @@ svn_wc__db_base_get_dav_cache(apr_hash_t **props,
 
   SVN_ERR(svn_sqlite__column_properties(props, stmt, 0, result_pool,
                                         scratch_pool));
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 
@@ -2500,7 +2500,7 @@ with_triggers(void *baton,
 
   err2 = svn_sqlite__exec_statements(wcroot->sdb, b->drop_trigger);
 
-  return svn_error_return(svn_error_compose_create(err1, err2));
+  return svn_error_trace(svn_error_compose_create(err1, err2));
 }
 
 
@@ -2558,7 +2558,7 @@ with_finalization(svn_wc__db_wcroot_t *wcroot,
 
   err2 = svn_sqlite__exec_statements(wcroot->sdb, finalize_stmt_idx);
 
-  return svn_error_return(svn_error_compose_create(err1, err2));
+  return svn_error_trace(svn_error_compose_create(err1, err2));
 }
 
 
@@ -2600,7 +2600,7 @@ insert_external_node(void *baton,
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       svn_error_clear(err);
     }
@@ -2762,7 +2762,7 @@ svn_wc__db_external_add_file(svn_wc__db_t *db,
 
   ieb.work_items = work_items;
 
-  return svn_error_return(
+  return svn_error_trace(
             svn_wc__db_with_txn(wcroot, local_relpath, insert_external_node,
                                 &ieb, scratch_pool));
 }
@@ -2846,7 +2846,7 @@ svn_wc__db_external_add_symlink(svn_wc__db_t *db,
 
   ieb.work_items = work_items;
 
-  return svn_error_return(
+  return svn_error_trace(
             svn_wc__db_with_txn(wcroot, local_relpath, insert_external_node,
                                 &ieb, scratch_pool));
 }
@@ -2901,7 +2901,7 @@ svn_wc__db_external_add_dir(svn_wc__db_t *db,
 
   ieb.work_items = work_items;
 
-  return svn_error_return(
+  return svn_error_trace(
             svn_wc__db_with_txn(wcroot, local_relpath, insert_external_node,
                                 &ieb, scratch_pool));
 }
@@ -3045,7 +3045,7 @@ svn_wc__db_external_read(svn_wc__db_status_t *status,
                                                      scratch_pool));
     }
 
-  return svn_error_return(
+  return svn_error_trace(
                 svn_error_compose_create(err, svn_sqlite__reset(stmt)));
 }
 
@@ -3092,7 +3092,7 @@ svn_wc__db_externals_defined_below(apr_hash_t **externals,
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 svn_error_t *
@@ -3175,7 +3175,7 @@ svn_wc__db_externals_gather_definitions(apr_hash_t **externals,
 
   svn_pool_destroy(iterpool);
 
-  return svn_error_return(svn_error_compose_create(err,
+  return svn_error_trace(svn_error_compose_create(err,
                                                    svn_sqlite__reset(stmt)));
 }
 
@@ -3487,7 +3487,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
               if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
                 svn_error_clear(err);
               else
-                return svn_error_return(err);
+                return svn_error_trace(err);
             }
           else if (dst_status == svn_wc__db_status_deleted)
             {
@@ -3639,7 +3639,7 @@ op_copy_txn(void * baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
        /* Source and destination databases differ; so also start a lock
           in the destination database, by calling ourself in a lock. */
 
-      return svn_error_return(
+      return svn_error_trace(
                         svn_sqlite__with_lock(ocb->dst_wcroot->sdb,
                                               op_copy_txn, ocb, scratch_pool));
     }
@@ -3725,7 +3725,7 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
     if (err)
       {
         if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-          return svn_error_return(err);
+          return svn_error_trace(err);
 
         svn_error_clear(err);
         return SVN_NO_ERROR; /* There is no shadowed node at src_op_depth */
@@ -3914,7 +3914,7 @@ op_copy_shadowed_layer_txn(void * baton, svn_sqlite__db_t *sdb,
        /* Source and destination databases differ; so also start a lock
           in the destination database, by calling ourself in a lock. */
 
-      return svn_error_return(
+      return svn_error_trace(
                         svn_sqlite__with_lock(ocb->dst_wcroot->sdb,
                                               op_copy_shadowed_layer_txn,
                                               ocb, scratch_pool));
@@ -4571,7 +4571,7 @@ set_actual_props(apr_int64_t wc_id,
                                   svn_relpath_dirname(local_relpath,
                                                       scratch_pool)));
   SVN_ERR(svn_sqlite__bind_properties(stmt, 4, props, scratch_pool));
-  return svn_error_return(svn_sqlite__step_done(stmt));
+  return svn_error_trace(svn_sqlite__step_done(stmt));
 }
 
 
@@ -4649,7 +4649,7 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
   spb.conflict = conflict;
   spb.work_items = work_items;
 
-  return svn_error_return(svn_wc__db_with_txn(wcroot, local_relpath,
+  return svn_error_trace(svn_wc__db_with_txn(wcroot, local_relpath,
                                               set_props_txn, &spb,
                                               scratch_pool));
 }
@@ -4968,7 +4968,7 @@ do_changelist_notify(void *baton,
     }
   svn_pool_destroy(iterpool);
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 
@@ -5002,7 +5002,7 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
 
   /* Perform the set-changelist operation (transactionally), perform any
      notifications necessary, and then clean out our temporary tables.  */
-  return svn_error_return(with_finalization(wcroot, local_relpath,
+  return svn_error_trace(with_finalization(wcroot, local_relpath,
                                             set_changelist_txn, &scb,
                                             do_changelist_notify, NULL,
                                             cancel_func, cancel_baton,
@@ -5530,7 +5530,7 @@ svn_wc__db_revert_list_notify(svn_wc_notify_func2_t notify_func,
   SVN_ERR(svn_sqlite__bindf(stmt, "ss", local_relpath, like_arg));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
-    return svn_error_return(svn_sqlite__reset(stmt)); /* optimise for no row */
+    return svn_error_trace(svn_sqlite__reset(stmt)); /* optimise for no row */
   while (have_row)
     {
       const char *notify_relpath = svn_sqlite__column_text(stmt, 0, NULL);
@@ -5679,7 +5679,7 @@ read_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   if (!have_row)
-    return svn_error_return(svn_sqlite__reset(stmt));
+    return svn_error_trace(svn_sqlite__reset(stmt));
 
   conflict_data = svn_sqlite__column_text(stmt, 0, NULL);
   skel = svn_skel__parse(conflict_data, strlen(conflict_data), scratch_pool);
@@ -6199,7 +6199,7 @@ do_delete_notify(void *baton,
     }
   svn_pool_destroy(iterpool);
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 
@@ -6230,7 +6230,7 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
 
   /* Perform the deletion operation (transactionally), perform any
      notifications necessary, and then clean out our temporary tables.  */
-  return svn_error_return(with_finalization(wcroot, local_relpath,
+  return svn_error_trace(with_finalization(wcroot, local_relpath,
                                             op_delete_txn, &odb,
                                             do_delete_notify, NULL,
                                             cancel_func, cancel_baton,
@@ -7068,7 +7068,7 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
       *had_props = SQLITE_PROPERTIES_AVAILABLE(stmt, 14);
     }
 
-  return svn_error_return(
+  return svn_error_trace(
             svn_error_compose_create(err,
                                      svn_sqlite__reset(stmt)));
 }
@@ -7354,7 +7354,7 @@ svn_wc__db_read_url(const char **url,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  return svn_error_return(read_url(url, wcroot, local_relpath, result_pool,
+  return svn_error_trace(read_url(url, wcroot, local_relpath, result_pool,
                                    scratch_pool));
 }
 
@@ -7652,7 +7652,7 @@ db_read_pristine_props(apr_hash_t **props,
     }
 
   *props = NULL;
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 
@@ -7743,13 +7743,13 @@ check_replace_txn(void *baton,
     status = svn_sqlite__column_token(stmt, 3, presence_map);
 
     if (status != svn_wc__db_status_normal)
-      return svn_error_return(svn_sqlite__reset(stmt));
+      return svn_error_trace(svn_sqlite__reset(stmt));
   }
 
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   if (!have_row)
-    return svn_error_return(svn_sqlite__reset(stmt));
+    return svn_error_trace(svn_sqlite__reset(stmt));
 
   replaced_status = svn_sqlite__column_token(stmt, 3, presence_map);
 
@@ -8077,7 +8077,7 @@ determine_repos_info(apr_int64_t *repos_id,
       *repos_id = svn_sqlite__column_int64(stmt, 0);
       *repos_relpath = svn_sqlite__column_text(stmt, 1, result_pool);
 
-      return svn_error_return(svn_sqlite__reset(stmt));
+      return svn_error_trace(svn_sqlite__reset(stmt));
     }
 
   SVN_ERR(svn_sqlite__reset(stmt));
@@ -8624,7 +8624,7 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
           || (status == svn_wc__db_status_server_excluded &&
               revision != new_rev)))
     {
-      return svn_error_return(db_base_remove(NULL, wcroot, local_relpath,
+      return svn_error_trace(db_base_remove(NULL, wcroot, local_relpath,
                                              scratch_pool));
     }
 
@@ -9210,7 +9210,7 @@ scan_addition(svn_wc__db_status_t *status,
   sab.original_revision = original_revision;
   sab.result_pool = result_pool;
 
-  return svn_error_return(svn_wc__db_with_txn(wcroot, local_relpath,
+  return svn_error_trace(svn_wc__db_with_txn(wcroot, local_relpath,
                                               scan_addition_txn,
                                               &sab, scratch_pool));
 }
@@ -9485,7 +9485,7 @@ scan_deletion(const char **base_del_relpath,
   sd_baton.work_del_relpath = work_del_relpath;
   sd_baton.result_pool = result_pool;
 
-  return svn_error_return(svn_wc__db_with_txn(wcroot, local_relpath,
+  return svn_error_trace(svn_wc__db_with_txn(wcroot, local_relpath,
                                               scan_deletion_txn, &sd_baton,
                                               scratch_pool));
 }
@@ -9550,7 +9550,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  return svn_error_return(create_db(sdb, repos_id, wc_id, dir_abspath,
+  return svn_error_trace(create_db(sdb, repos_id, wc_id, dir_abspath,
                                     repos_root_url, repos_uuid,
                                     SDB_FILE,
                                     result_pool, scratch_pool));
@@ -9812,7 +9812,7 @@ svn_wc__db_upgrade_get_repos_id(apr_int64_t *repos_id,
                              repos_root_url);
 
   *repos_id = svn_sqlite__column_int64(stmt, 0);
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 
@@ -9836,7 +9836,7 @@ svn_wc__db_wq_add(svn_wc__db_t *db,
   VERIFY_USABLE_WCROOT(wcroot);
 
   /* Add the work item(s) to the WORK_QUEUE.  */
-  return svn_error_return(add_work_items(wcroot->sdb, work_item,
+  return svn_error_trace(add_work_items(wcroot->sdb, work_item,
                                          scratch_pool));
 }
 
@@ -9888,7 +9888,7 @@ wq_fetch_next(void *baton,
       fnb->work_item = svn_skel__parse(val, len, fnb->result_pool);
     }
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 svn_error_t *
@@ -9947,7 +9947,7 @@ svn_wc__db_temp_get_format(int *format,
   if (err)
     {
       if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
-        return svn_error_return(err);
+        return svn_error_trace(err);
       svn_error_clear(err);
 
       /* Remap the returned error.  */
@@ -10374,7 +10374,7 @@ svn_wc__db_read_kind(svn_wc__db_kind_t *kind,
 
   *kind = svn_sqlite__column_token(stmt_info, 4, kind_map);
 
-  return svn_error_return(svn_sqlite__reset(stmt_info));
+  return svn_error_trace(svn_sqlite__reset(stmt_info));
 }
 
 
@@ -10702,7 +10702,7 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
   baton.steal_lock = steal_lock;
   baton.levels_to_lock = levels_to_lock;
 
-  return svn_error_return(svn_wc__db_with_txn(wcroot, local_relpath,
+  return svn_error_trace(svn_wc__db_with_txn(wcroot, local_relpath,
                                               wclock_obtain_cb, &baton,
                                               scratch_pool));
 }
@@ -10767,7 +10767,7 @@ is_wclocked(void *baton,
 
   *locked = FALSE;
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 
@@ -11313,7 +11313,7 @@ svn_wc__db_temp_op_set_text_conflict_marker_files(svn_wc__db_t *db,
                                            new_relpath,
                                            wrk_relpath));
 
-  return svn_error_return(svn_sqlite__step_done(stmt));
+  return svn_error_trace(svn_sqlite__step_done(stmt));
 }
 
 
@@ -11377,7 +11377,7 @@ svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
                                          local_relpath,
                                          prej_relpath));
 
-  return svn_error_return(svn_sqlite__step_done(stmt));
+  return svn_error_trace(svn_sqlite__step_done(stmt));
 }
 
 svn_error_t *
@@ -11497,7 +11497,7 @@ svn_wc__db_get_not_present_descendants(const apr_array_header_t **descendants,
   else
     *descendants = apr_array_make(result_pool, 0, sizeof(const char*));
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 
@@ -11571,7 +11571,7 @@ svn_wc__db_min_max_revisions(svn_revnum_t *min_revision,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  return svn_error_return(get_min_max_revisions(min_revision, max_revision,
+  return svn_error_trace(get_min_max_revisions(min_revision, max_revision,
                                                 wcroot, local_relpath,
                                                 committed, scratch_pool));
 }
@@ -11620,7 +11620,7 @@ svn_wc__db_is_sparse_checkout(svn_boolean_t *is_sparse_checkout,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  return svn_error_return(is_sparse_checkout_internal(is_sparse_checkout,
+  return svn_error_trace(is_sparse_checkout_internal(is_sparse_checkout,
                                                       wcroot, local_relpath,
                                                       scratch_pool));
 }
@@ -11731,7 +11731,7 @@ svn_wc__db_has_switched_subtrees(svn_boolean_t *is_switched,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  return svn_error_return(has_switched_subtrees(is_switched, wcroot,
+  return svn_error_trace(has_switched_subtrees(is_switched, wcroot,
                                                 local_relpath, trail_url,
                                                 scratch_pool));
 }
@@ -11917,7 +11917,7 @@ svn_wc__db_has_local_mods(svn_boolean_t *is_modified,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  return svn_error_return(has_local_mods(is_modified, wcroot, local_relpath,
+  return svn_error_trace(has_local_mods(is_modified, wcroot, local_relpath,
                                          db, cancel_func, cancel_baton,
                                          scratch_pool));
 }
@@ -11983,7 +11983,7 @@ revision_status_txn(void *baton,
     if (err)
       {
         if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-          return svn_error_return(err);
+          return svn_error_trace(err);
 
         svn_error_clear(err); /* No Base node, but no fatal error */
         *rsb->is_switched = FALSE;
@@ -12028,7 +12028,7 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  return svn_error_return(svn_wc__db_with_txn(wcroot, local_relpath,
+  return svn_error_trace(svn_wc__db_with_txn(wcroot, local_relpath,
                                               revision_status_txn, &rsb,
                                               scratch_pool));
 }
@@ -12078,7 +12078,7 @@ svn_wc__db_base_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
 
           if (err)
             {
-              return svn_error_return(
+              return svn_error_trace(
                             svn_error_compose_create(err,
                                                      svn_sqlite__reset(stmt)));
             }
@@ -12177,7 +12177,7 @@ verify_wcroot(svn_wc__db_wcroot_t *wcroot,
     }
   svn_pool_destroy(iterpool);
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 svn_error_t *

@@ -315,7 +315,7 @@ svn_wc__open_adm_stream(svn_stream_t **stream,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
 
   local_abspath = svn_wc__adm_child(dir_abspath, fname, scratch_pool);
-  return svn_error_return(svn_stream_open_readonly(stream, local_abspath,
+  return svn_error_trace(svn_stream_open_readonly(stream, local_abspath,
                                                    result_pool, scratch_pool));
 }
 
@@ -449,7 +449,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   /* Early out: we know we're not dealing with an existing wc, so
      just create one. */
   if (format == 0)
-    return svn_error_return(init_adm(db, local_abspath,
+    return svn_error_trace(init_adm(db, local_abspath,
                                      repos_relpath, repos_root_url, repos_uuid,
                                      revision, depth, scratch_pool));
 
@@ -544,7 +544,7 @@ svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
                    svn_depth_t depth,
                    apr_pool_t *scratch_pool)
 {
-  return svn_error_return(
+  return svn_error_trace(
     svn_wc__internal_ensure_adm(wc_ctx->db, local_abspath, url, repos_root_url,
                                 repos_uuid, revision, depth, scratch_pool));
 }
@@ -600,7 +600,7 @@ svn_wc__adm_cleanup_tmp_area(svn_wc__db_t *db,
   SVN_ERR(svn_io_remove_dir2(tmp_path, TRUE, NULL, NULL, scratch_pool));
 
   /* Now, rebuild the tmp area. */
-  return svn_error_return(init_adm_tmp_area(adm_abspath, scratch_pool));
+  return svn_error_trace(init_adm_tmp_area(adm_abspath, scratch_pool));
 }
 
 
@@ -630,7 +630,7 @@ svn_wc_create_tmp_file2(apr_file_t **fp,
                                        pool, pool);
   err = svn_error_compose_create(err, svn_wc__db_close(db));
   if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   SVN_ERR(svn_io_open_unique_file3(fp, new_name, temp_dir,
                                    delete_when, pool, pool));

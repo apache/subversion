@@ -712,7 +712,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
                                db, dst_abspath, scratch_pool, scratch_pool);
 
     if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-      return svn_error_return(err);
+      return svn_error_trace(err);
 
     svn_error_clear(err);
 

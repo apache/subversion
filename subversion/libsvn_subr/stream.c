@@ -163,7 +163,7 @@ svn_stream_write(svn_stream_t *stream, const char *data, apr_size_t *len)
 svn_error_t *
 svn_stream_reset(svn_stream_t *stream)
 {
-  return svn_error_return(
+  return svn_error_trace(
             svn_stream_seek(stream, NULL));
 }
 
@@ -461,7 +461,7 @@ svn_stream_readline(svn_stream_t *stream,
                     svn_boolean_t *eof,
                     apr_pool_t *pool)
 {
-  return svn_error_return(stream_readline(stringbuf, eof, eol, stream,
+  return svn_error_trace(stream_readline(stringbuf, eof, eol, stream,
                                           pool));
 }
 

@@ -118,7 +118,7 @@ relegate_dir_external(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_io_file_rename(local_abspath, new_path, scratch_pool));
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 /* Try to update a directory external at PATH to URL at REVISION.
@@ -156,7 +156,7 @@ switch_dir_external(const char *local_abspath,
           goto relegate;
         }
       else if (err)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       if (node_url)
         {
@@ -212,7 +212,7 @@ switch_dir_external(const char *local_abspath,
                       goto relegate;
                     }
                   else if (err)
-                    return svn_error_return(err);
+                    return svn_error_trace(err);
                 }
 
               SVN_ERR(svn_client__switch_internal(NULL, local_abspath, url,
@@ -501,7 +501,7 @@ cleanup:
              svn_wc__release_write_lock(ctx->wc_ctx, dir_abspath, subpool));
 
   svn_pool_destroy(subpool);
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 /* Return the scheme of @a uri in @a scheme allocated from @a pool.
@@ -796,7 +796,7 @@ handle_external_item_removal(const struct external_change_baton_t *eb,
         err = svn_error_compose_create(err, err2);
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 static svn_error_t *

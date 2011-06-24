@@ -133,7 +133,7 @@ read_propfile(apr_hash_t **props,
   *props = apr_hash_make(result_pool);
   SVN_ERR(svn_hash_read2(*props, stream, SVN_HASH_TERMINATOR, result_pool));
 
-  return svn_error_return(svn_stream_close(stream));
+  return svn_error_trace(svn_stream_close(stream));
 }
 
 
@@ -262,7 +262,7 @@ read_wcprops(apr_hash_t **all_wcprops,
                                 result_pool, scratch_pool));
     }
 
-  return svn_error_return(svn_stream_close(stream));
+  return svn_error_trace(svn_stream_close(stream));
 }
 
 
@@ -386,7 +386,7 @@ get_versioned_files(const apr_array_header_t **children,
 
   *children = child_names;
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 
@@ -424,7 +424,7 @@ create_physical_lock(const char *abspath, apr_pool_t *scratch_pool)
       return SVN_NO_ERROR;
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -547,7 +547,7 @@ svn_wc__wipe_postupgrade(const char *dir_abspath,
           err = NULL;
         }
       svn_pool_destroy(iterpool);
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
   for (i = 0; i < subdirs->nelts; ++i)
     {
@@ -646,7 +646,7 @@ ensure_repos_info(svn_wc_entry_t *entry,
         _("Working copy '%s' can't be upgraded because it doesn't have a url"),
         svn_dirent_local_style(local_abspath, scratch_pool));
 
-   return svn_error_return((*repos_info_func)(&entry->repos, &entry->uuid,
+   return svn_error_trace((*repos_info_func)(&entry->repos, &entry->uuid,
                                               repos_info_baton,
                                               entry->url,
                                               result_pool, scratch_pool));
@@ -899,7 +899,7 @@ migrate_node_props(const char *dir_abspath,
   SVN_ERR(read_propfile(&working_props, working_abspath,
                         scratch_pool, scratch_pool));
 
-  return svn_error_return(svn_wc__db_upgrade_apply_props(
+  return svn_error_trace(svn_wc__db_upgrade_apply_props(
                             sdb, new_wcroot_abspath,
                             svn_relpath_join(dir_relpath, name, scratch_pool),
                             base_props, revert_props, working_props,
@@ -1325,7 +1325,7 @@ upgrade_externals(struct bump_baton *bb,
     }
 
   svn_pool_destroy(iterpool);
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 static svn_error_t *

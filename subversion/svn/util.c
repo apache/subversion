@@ -529,7 +529,7 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
                         stderr, TRUE /* fatal */, "svn: ");
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -820,7 +820,7 @@ svn_cl__get_log_message(const char **log_msg,
               (err, _("Could not use external editor to fetch log message; "
                       "consider setting the $SVN_EDITOR environment variable "
                       "or using the --message (-m) or --file (-F) options"));
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
 
       if (msg_string)
@@ -910,7 +910,7 @@ svn_cl__may_need_force(svn_error_t *err)
          "may be lost)"));
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -967,7 +967,7 @@ svn_cl__try(svn_error_t *err,
       *success = TRUE;
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -1160,7 +1160,7 @@ svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets,
           svn_error_clear(err);
         }
       else
-        return svn_error_return(err);
+        return svn_error_trace(err);
     }
   return SVN_NO_ERROR;
 }
@@ -1214,7 +1214,7 @@ svn_cl__changelist_paths(apr_array_header_t **paths,
   svn_pool_destroy(iterpool);
 
   SVN_ERR(svn_hash_from_cstring_keys(&paths_hash, found, result_pool));
-  return svn_error_return(svn_hash_keys(paths, paths_hash, result_pool));
+  return svn_error_trace(svn_hash_keys(paths, paths_hash, result_pool));
 }
 
 svn_cl__show_revs_t
@@ -1246,7 +1246,7 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
       return SVN_NO_ERROR;
     }
   else if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   *human_cstring = svn_time_to_human_cstring(when, pool);
 

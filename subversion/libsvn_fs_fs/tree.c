@@ -968,7 +968,7 @@ svn_fs_fs__check_path(svn_node_kind_t *kind_p,
       *kind_p = svn_node_none;
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 /* Set *VALUE_P to the value of the property named PROPNAME of PATH in
@@ -1732,7 +1732,7 @@ svn_fs_fs__commit_txn(const char **conflict_p,
   svn_fs_fs__reset_txn_caches(fs);
 
   svn_pool_destroy(iterpool);
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -1795,7 +1795,7 @@ fs_merge(const char **conflict_p,
     {
       if ((err->apr_err == SVN_ERR_FS_CONFLICT) && conflict_p)
         *conflict_p = conflict->data;
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   return SVN_NO_ERROR;
@@ -2109,7 +2109,7 @@ fs_copy(svn_fs_root_t *from_root,
         const char *to_path,
         apr_pool_t *pool)
 {
-  return svn_error_return(copy_helper(from_root, from_path, to_root, to_path,
+  return svn_error_trace(copy_helper(from_root, from_path, to_root, to_path,
                                     TRUE, pool));
 }
 
@@ -2126,7 +2126,7 @@ fs_revision_link(svn_fs_root_t *from_root,
   if (! to_root->is_txn_root)
     return SVN_FS__NOT_TXN(to_root);
 
-  return svn_error_return(copy_helper(from_root, path, to_root, path,
+  return svn_error_trace(copy_helper(from_root, path, to_root, path,
                                       FALSE, pool));
 }
 
@@ -3547,7 +3547,7 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
               if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
                 svn_error_clear(err);
               else
-                return svn_error_return(err);
+                return svn_error_trace(err);
               }
           else
             {
@@ -3662,7 +3662,7 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
             *mergeinfo = NULL;
           }
         svn_pool_destroy(iterpool);
-        return svn_error_return(err);
+        return svn_error_trace(err);
       }
   }
 
@@ -3762,7 +3762,7 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
             }
           else
             {
-              return svn_error_return(err);
+              return svn_error_trace(err);
             }
         }
 

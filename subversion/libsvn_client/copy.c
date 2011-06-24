@@ -157,7 +157,7 @@ extend_wc_mergeinfo(const char *target_abspath,
   else if (! wc_mergeinfo)
     wc_mergeinfo = mergeinfo;
 
-  return svn_error_return(
+  return svn_error_trace(
     svn_client__record_wc_mergeinfo(target_abspath, wc_mergeinfo,
                                     FALSE, ctx, pool));
 }
@@ -432,7 +432,7 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
 
   svn_io_sleep_for_timestamps(dst_path, pool);
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -1156,11 +1156,11 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
     {
       /* At least try to abort the edit (and fs txn) before throwing err. */
       svn_error_clear(editor->abort_edit(edit_baton, pool));
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   /* Close the edit. */
-  return svn_error_return(editor->close_edit(edit_baton, pool));
+  return svn_error_trace(editor->close_edit(edit_baton, pool));
 }
 
 /* Baton for check_url_kind */
@@ -1749,7 +1749,7 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
     /* Get the repository uuid of SRC_URL */
     src_err = svn_ra_get_uuid2(ra_session, &src_uuid, scratch_pool);
     if (src_err && src_err->apr_err != SVN_ERR_RA_NO_REPOS_UUID)
-      return svn_error_return(src_err);
+      return svn_error_trace(src_err);
 
     /* Get repository uuid of dst's parent directory, since dst may
        not exist.  ### TODO:  we should probably walk up the wc here,
@@ -2256,26 +2256,26 @@ try_copy(const apr_array_header_t *sources,
 
       /* Copy or move all targets. */
       if (is_move)
-        return svn_error_return(do_wc_to_wc_moves(copy_pairs, dst_path_in, ctx,
+        return svn_error_trace(do_wc_to_wc_moves(copy_pairs, dst_path_in, ctx,
                                                   pool));
       else
-        return svn_error_return(do_wc_to_wc_copies(copy_pairs, ctx, pool));
+        return svn_error_trace(do_wc_to_wc_copies(copy_pairs, ctx, pool));
     }
   else if ((! srcs_are_urls) && (dst_is_url))
     {
-      return svn_error_return(
+      return svn_error_trace(
         wc_to_repos_copy(copy_pairs, make_parents, revprop_table,
                          commit_callback, commit_baton, ctx, pool));
     }
   else if ((srcs_are_urls) && (! dst_is_url))
     {
-      return svn_error_return(
+      return svn_error_trace(
         repos_to_wc_copy(copy_pairs, make_parents, ignore_externals,
                          ctx, pool));
     }
   else
     {
-      return svn_error_return(
+      return svn_error_trace(
         repos_to_repos_copy(copy_pairs, make_parents, revprop_table,
                             commit_callback, commit_baton, ctx, is_move,
                             pool));
@@ -2346,7 +2346,7 @@ svn_client_copy6(const apr_array_header_t *sources,
     }
 
   svn_pool_destroy(subpool);
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -2427,5 +2427,5 @@ svn_client_move6(const apr_array_header_t *src_paths,
     }
 
   svn_pool_destroy(subpool);
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }

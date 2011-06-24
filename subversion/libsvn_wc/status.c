@@ -529,7 +529,7 @@ assemble_status(svn_wc_status3_t **status,
               if (err)
                 {
                   if (!APR_STATUS_IS_EACCES(err->apr_err))
-                    return svn_error_return(err);
+                    return svn_error_trace(err);
 
                   /* An access denied is very common on Windows when another
                      application has the file open.  Previously we ignored
@@ -820,7 +820,7 @@ send_status_structure(const struct walk_status_baton *wb,
                           repos_lock, scratch_pool, scratch_pool));
 
   if (statstruct && status_func)
-    return svn_error_return((*status_func)(status_baton, local_abspath,
+    return svn_error_trace((*status_func)(status_baton, local_abspath,
                                            statstruct, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -963,7 +963,7 @@ send_unversioned_item(const struct walk_status_baton *wb,
   /* If we aren't ignoring it, or if it's an externals path, pass this
      entry to the status func. */
   if (no_ignore || (! is_ignored) || is_external)
-    return svn_error_return((*status_func)(status_baton, local_abspath,
+    return svn_error_trace((*status_func)(status_baton, local_abspath,
                                            status, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1071,7 +1071,7 @@ get_dir_status(const struct walk_status_baton *wb,
       if (err)
         {
           if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-            return svn_error_return(err);
+            return svn_error_trace(err);
           svn_error_clear(err);
           /* The node is neither a tree conflict nor a versioned node */
         }
@@ -2359,7 +2359,7 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                    void *cancel_baton,
                    apr_pool_t *scratch_pool)
 {
-  return svn_error_return(
+  return svn_error_trace(
            svn_wc__internal_walk_status(wc_ctx->db,
                                         local_abspath,
                                         depth,
@@ -2453,7 +2453,7 @@ internal_status(svn_wc_status3_t **status,
     SVN_ERR(err);
 
   if (node_kind == svn_wc__db_kind_unknown)
-    return svn_error_return(assemble_unversioned(status,
+    return svn_error_trace(assemble_unversioned(status,
                                                  db, local_abspath,
                                                  dirent->kind,
                                                  FALSE /* is_ignored */,
@@ -2487,7 +2487,7 @@ internal_status(svn_wc_status3_t **status,
           parent_repos_relpath = NULL;
         }
       else if (err)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       if (!err
           && parent_repos_relpath == NULL
@@ -2504,7 +2504,7 @@ internal_status(svn_wc_status3_t **status,
       parent_repos_relpath = NULL;
     }
 
-  return svn_error_return(assemble_status(status, db, local_abspath,
+  return svn_error_trace(assemble_status(status, db, local_abspath,
                                           parent_repos_root_url,
                                           parent_repos_relpath,
                                           NULL,
@@ -2523,7 +2523,7 @@ svn_wc_status3(svn_wc_status3_t **status,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
-  return svn_error_return(
+  return svn_error_trace(
     internal_status(status, wc_ctx->db, local_abspath, result_pool,
                     scratch_pool));
 }
@@ -2578,7 +2578,7 @@ svn_wc_get_ignores2(apr_array_header_t **patterns,
   apr_array_header_t *default_ignores;
 
   SVN_ERR(svn_wc_get_default_ignores(&default_ignores, config, scratch_pool));
-  return svn_error_return(collect_ignore_patterns(patterns, wc_ctx->db,
+  return svn_error_trace(collect_ignore_patterns(patterns, wc_ctx->db,
                                                   local_abspath,
                                                   default_ignores,
                                                   result_pool, scratch_pool));

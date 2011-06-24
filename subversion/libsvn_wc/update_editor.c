@@ -1076,7 +1076,7 @@ open_root(void *edit_baton,
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       svn_error_clear(err);
       already_conflicted = FALSE;
@@ -1569,7 +1569,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
 
   /* A conflict was detected. Append log commands to the log accumulator
    * to record it. */
-  return svn_error_return(create_tree_conflict(pconflict, eb, local_abspath,
+  return svn_error_trace(create_tree_conflict(pconflict, eb, local_abspath,
                                                reason, action, their_node_kind,
                                                their_relpath,
                                                result_pool, scratch_pool));
@@ -1951,7 +1951,7 @@ add_directory(const char *path,
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       svn_error_clear(err);
       wc_kind = svn_wc__db_kind_unknown;
@@ -2630,7 +2630,7 @@ close_directory(void *dir_baton,
                 /* Fall through to allow recovering later */
               }
             else if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-              return svn_error_return(err);
+              return svn_error_trace(err);
 
             svn_error_clear(err);
 
@@ -2834,7 +2834,7 @@ absent_node(const char *path,
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       svn_error_clear(err);
       status = svn_wc__db_status_not_present;
@@ -2981,7 +2981,7 @@ add_file(const char *path,
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       svn_error_clear(err);
       wc_kind = svn_wc__db_kind_unknown;
@@ -3455,7 +3455,7 @@ apply_textdelta(void *file_baton,
   if (err)
     {
       svn_pool_destroy(handler_pool);
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   /* Prepare to apply the delta.  */
@@ -4396,7 +4396,7 @@ close_edit(void *edit_baton,
           if (err)
             {
               if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-                return svn_error_return(err);
+                return svn_error_trace(err);
 
               svn_error_clear(err);
             }
@@ -5029,7 +5029,7 @@ svn_wc_is_wc_root2(svn_boolean_t *wc_root,
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND &&
           err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       return svn_error_create(SVN_ERR_ENTRY_NOT_FOUND, err, err->message);
     }
@@ -5046,7 +5046,7 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
                             const char *local_abspath,
                             apr_pool_t *scratch_pool)
 {
-  return svn_error_return(svn_wc__db_is_wcroot(wc_root,
+  return svn_error_trace(svn_wc__db_is_wcroot(wc_root,
                                                wc_ctx->db,
                                                local_abspath,
                                                scratch_pool));
@@ -5088,7 +5088,7 @@ svn_wc_get_actual_target2(const char **anchor,
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND &&
           err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       svn_error_clear(err);
       is_wc_root = FALSE;
@@ -5164,7 +5164,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                              db, local_abspath, scratch_pool, scratch_pool);
 
   if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-    return svn_error_return(err);
+    return svn_error_trace(err);
   else if(err)
     svn_error_clear(err);
   else
@@ -5390,7 +5390,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                   all_work_items,
                                   pool));
 
-  return svn_error_return(svn_wc__wq_run(db, dir_abspath,
+  return svn_error_trace(svn_wc__wq_run(db, dir_abspath,
                                          cancel_func, cancel_baton,
                                          pool));
 }

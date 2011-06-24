@@ -134,7 +134,7 @@ attempt_deletion(const char *file_abspath,
   if (err == NULL || !APR_STATUS_IS_ENOENT(err->apr_err))
     {
       *was_present = TRUE;
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   svn_error_clear(err);
@@ -329,7 +329,7 @@ svn_wc__resolve_text_conflict(svn_wc__db_t *db,
 {
   svn_boolean_t ignored_result;
 
-  return svn_error_return(resolve_conflict_on_node(
+  return svn_error_trace(resolve_conflict_on_node(
                             db, local_abspath,
                             TRUE /* resolve_text */,
                             FALSE /* resolve_props */,
@@ -628,7 +628,7 @@ svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
   else if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
 
-  return svn_error_return(recursive_resolve_conflict(
+  return svn_error_trace(recursive_resolve_conflict(
                             wc_ctx->db,
                             local_abspath,
                             conflicted,

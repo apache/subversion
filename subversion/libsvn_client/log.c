@@ -137,7 +137,7 @@ svn_client__get_copy_source(const char *path_or_url,
             *copyfrom_path = NULL;
             *copyfrom_rev = SVN_INVALID_REVNUM;
         }
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   *copyfrom_path = copyfrom_info.path;

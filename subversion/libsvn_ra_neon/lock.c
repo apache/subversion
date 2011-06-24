@@ -464,7 +464,7 @@ do_unlock(svn_ra_session_t *session,
           }
       }
   }
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -512,7 +512,7 @@ svn_ra_neon__unlock(svn_ra_session_t *session,
         }
 
       if (lock_func)
-        callback_err = svn_error_return(
+        callback_err = svn_error_trace(
                  lock_func(lock_baton, path, FALSE, old_lock, err, iterpool));
 
       svn_error_clear(err);
@@ -527,7 +527,7 @@ svn_ra_neon__unlock(svn_ra_session_t *session,
   svn_pool_destroy(iterpool);
 
  departure:
-  return svn_error_return(
+  return svn_error_trace(
           svn_ra_neon__maybe_store_auth_info_after_result(ret_err, ras, pool));
 }
 

@@ -1165,7 +1165,7 @@ base_check_path(svn_node_kind_t *kind_p,
       *kind_p = svn_node_none;
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -2729,7 +2729,7 @@ svn_fs_base__commit_txn(const char **conflict_p,
         {
           if ((err->apr_err == SVN_ERR_FS_CONFLICT) && conflict_p)
             *conflict_p = merge_args.conflict->data;
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
 
       /* Try to commit. */
@@ -2749,17 +2749,17 @@ svn_fs_base__commit_txn(const char **conflict_p,
           if (err2)
             {
               svn_error_clear(err);
-              return svn_error_return(err2);  /* err2 is bad,
+              return svn_error_trace(err2);  /* err2 is bad,
                                                  it should not occur */
             }
           else if (youngest_rev == youngish_rev)
-            return svn_error_return(err);
+            return svn_error_trace(err);
           else
             svn_error_clear(err);
         }
       else if (err)
         {
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
       else
         {
@@ -2838,7 +2838,7 @@ base_merge(const char **conflict_p,
     {
       if ((err->apr_err == SVN_ERR_FS_CONFLICT) && conflict_p)
         *conflict_p = merge_args.conflict->data;
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   return SVN_NO_ERROR;
@@ -4555,7 +4555,7 @@ txn_body_closest_copy(void *baton, trail_t *trail)
           svn_error_clear(err);
           return SVN_NO_ERROR;
         }
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
   if ((svn_fs_base__dag_node_kind(path_node_in_copy_dst) == svn_node_none)
       || (! (svn_fs_base__id_check_related
@@ -4678,7 +4678,7 @@ svn_fs_base__get_path_kind(svn_node_kind_t *kind,
       return SVN_NO_ERROR;
     }
   else if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   *kind = svn_fs_base__dag_node_kind(path_node);
   return SVN_NO_ERROR;
@@ -4713,7 +4713,7 @@ svn_fs_base__get_path_created_rev(svn_revnum_t *rev,
       return SVN_NO_ERROR;
     }
   else if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   /* Find the created_rev of the dag_node. */
   SVN_ERR(svn_fs_base__dag_get_revision(&created_rev, path_node,
@@ -5168,7 +5168,7 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
               if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
                 svn_error_clear(err);
               else
-                return svn_error_return(err);
+                return svn_error_trace(err);
             }
           else
             {
@@ -5354,7 +5354,7 @@ txn_body_get_mergeinfo_for_path(void *baton, trail_t *trail)
             err = NULL;
             args->mergeinfo = NULL;
           }
-        return svn_error_return(err);
+        return svn_error_trace(err);
       }
   }
 

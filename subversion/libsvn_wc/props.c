@@ -369,7 +369,7 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
                     void *cancel_baton,
                     apr_pool_t *scratch_pool)
 {
-  return svn_error_return(svn_wc__perform_props_merge(
+  return svn_error_trace(svn_wc__perform_props_merge(
                             state,
                             wc_ctx->db,
                             local_abspath,
@@ -1098,7 +1098,7 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
                   if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
                     svn_error_clear(err);
                   else
-                    return svn_error_return(err);
+                    return svn_error_trace(err);
                   }
               else
                 {
@@ -1497,7 +1497,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
            if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
              svn_error_clear(err);
            else
-             return svn_error_return(err);
+             return svn_error_trace(err);
            }
        else
          {
@@ -1765,7 +1765,7 @@ wcprop_set(svn_wc__db_t *db,
     prophash = apr_hash_make(scratch_pool);
 
   apr_hash_set(prophash, name, APR_HASH_KEY_STRING, value);
-  return svn_error_return(svn_wc__db_base_set_dav_cache(db, local_abspath,
+  return svn_error_trace(svn_wc__db_base_set_dav_cache(db, local_abspath,
                                                         prophash,
                                                         scratch_pool));
 }
@@ -1784,7 +1784,7 @@ svn_wc__get_actual_props(apr_hash_t **props,
   /* ### perform some state checking. for example, locally-deleted nodes
      ### should not have any ACTUAL props.  */
 
-  return svn_error_return(svn_wc__db_read_props(props, db, local_abspath,
+  return svn_error_trace(svn_wc__db_read_props(props, db, local_abspath,
                                                 result_pool, scratch_pool));
 }
 
@@ -1796,7 +1796,7 @@ svn_wc_prop_list2(apr_hash_t **props,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
-  return svn_error_return(svn_wc__get_actual_props(props,
+  return svn_error_trace(svn_wc__get_actual_props(props,
                                                    wc_ctx->db,
                                                    local_abspath,
                                                    result_pool,
@@ -1951,7 +1951,7 @@ svn_wc__get_pristine_props(apr_hash_t **props,
   /* status: normal, moved_here, copied, deleted  */
 
   /* After the above checks, these pristines should always be present.  */
-  return svn_error_return(
+  return svn_error_trace(
                svn_wc__db_read_pristine_props(props, db, local_abspath,
                                               result_pool, scratch_pool));
 }
@@ -1964,7 +1964,7 @@ svn_wc_get_pristine_props(apr_hash_t **props,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  return svn_error_return(svn_wc__get_pristine_props(props,
+  return svn_error_trace(svn_wc__get_pristine_props(props,
                                                      wc_ctx->db,
                                                      local_abspath,
                                                      result_pool,
@@ -2404,7 +2404,7 @@ propset_walk_cb(const char *local_abspath,
       err = SVN_NO_ERROR;
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 svn_error_t *
@@ -2434,7 +2434,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
   if (prop_kind == svn_prop_wc_kind)
     {
       SVN_ERR_ASSERT(depth == svn_depth_empty);
-      return svn_error_return(wcprop_set(wc_ctx->db, local_abspath,
+      return svn_error_trace(wcprop_set(wc_ctx->db, local_abspath,
                                          name, value, scratch_pool));
     }
 
@@ -2643,7 +2643,7 @@ svn_wc_props_modified_p2(svn_boolean_t *modified_p,
                          const char *local_abspath,
                          apr_pool_t *scratch_pool)
 {
-  return svn_error_return(
+  return svn_error_trace(
              svn_wc__props_modified(modified_p,
                                     wc_ctx->db,
                                     local_abspath,
@@ -2700,7 +2700,7 @@ svn_wc_get_prop_diffs2(apr_array_header_t **propchanges,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  return svn_error_return(svn_wc__internal_propdiff(propchanges,
+  return svn_error_trace(svn_wc__internal_propdiff(propchanges,
                                     original_props, wc_ctx->db, local_abspath,
                                     result_pool, scratch_pool));
 }

@@ -145,7 +145,7 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
   err = svn_client_mkdir2(&commit_info, paths, ctx, pool);
   /* These structs have the same layout for the common fields. */
   *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 /*** From blame.c ***/
@@ -434,7 +434,7 @@ svn_client_import(svn_client_commit_info_t **commit_info_p,
                            FALSE, ctx, pool);
   /* These structs have the same layout for the common fields. */
   *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -551,7 +551,7 @@ svn_client_commit2(svn_client_commit_info_t **commit_info_p,
                            ctx, pool);
   /* These structs have the same layout for the common fields. */
   *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 svn_error_t *
@@ -653,7 +653,7 @@ svn_client_copy2(svn_commit_info_t **commit_info_p,
                               ctx, pool);
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 svn_error_t *
@@ -671,7 +671,7 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
                          ctx, pool);
   /* These structs have the same layout for the common fields. */
   *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 svn_error_t *
@@ -739,7 +739,7 @@ svn_client_move3(svn_commit_info_t **commit_info_p,
                               force, ctx, pool);
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 svn_error_t *
@@ -756,7 +756,7 @@ svn_client_move2(svn_client_commit_info_t **commit_info_p,
   err = svn_client_move3(&commit_info, src_path, dst_path, force, ctx, pool);
   /* These structs have the same layout for the common fields. */
   *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -830,7 +830,7 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
   err = svn_client_delete2(&commit_info, paths, force, ctx, pool);
   /* These structs have the same layout for the common fields. */
   *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 /*** From diff.c ***/
@@ -1402,7 +1402,7 @@ svn_client_log(const apr_array_header_t *targets,
                        pool));
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 /*** From merge.c ***/
@@ -1643,7 +1643,7 @@ svn_client_propget3(apr_hash_t **props,
   if (err && err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
     {
       err->apr_err = SVN_ERR_ENTRY_NOT_FOUND;
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
   else
     SVN_ERR(err);
@@ -2058,7 +2058,7 @@ svn_client_checkout2(svn_revnum_t *result_rev,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
-  return svn_error_return(svn_client_checkout3(result_rev, URL, path,
+  return svn_error_trace(svn_client_checkout3(result_rev, URL, path,
                                         peg_revision, revision,
                                         SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                         ignore_externals, FALSE, ctx, pool));
@@ -2077,7 +2077,7 @@ svn_client_checkout(svn_revnum_t *result_rev,
 
   peg_revision.kind = svn_opt_revision_unspecified;
 
-  return svn_error_return(svn_client_checkout2(result_rev, URL, path,
+  return svn_error_trace(svn_client_checkout2(result_rev, URL, path,
                                                &peg_revision, revision, recurse,
                                                FALSE, ctx, pool));
 }
@@ -2361,7 +2361,7 @@ svn_client_uuid_from_path(const char **uuid,
   const char *local_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  return svn_error_return(
+  return svn_error_trace(
     svn_client_uuid_from_path2(uuid, local_abspath, ctx, pool, pool));
 }
 

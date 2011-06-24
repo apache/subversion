@@ -120,5 +120,5 @@ svn_cl__export(apr_getopt_t *os,
                             _("Failure occurred processing one or more "
                               "externals definitions"));
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }

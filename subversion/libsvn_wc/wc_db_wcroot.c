@@ -224,7 +224,7 @@ svn_wc__db_close(svn_wc__db_t *db)
     }
 
   /* Run the cleanup for each WCROOT.  */
-  return svn_error_return(svn_wc__db_close_many_wcroots(roots, db->state_pool,
+  return svn_error_trace(svn_wc__db_close_many_wcroots(roots, db->state_pool,
                                                         scratch_pool));
 }
 
@@ -285,7 +285,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
             err = svn_error_quick_wrap(err, _("Cleanup with an older 1.7 "
                                               "client before upgrading with "
                                               "this client"));
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
     }
 
@@ -481,7 +481,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
         }
       if (err->apr_err != SVN_ERR_SQLITE_ERROR
           && !APR_STATUS_IS_ENOENT(err->apr_err))
-        return svn_error_return(err);
+        return svn_error_trace(err);
       svn_error_clear(err);
 
       /* If we have not moved upwards, then check for a wc-1 working copy.
@@ -544,7 +544,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                                 _("Missing a row in WCROOT for '%s'."),
                                 svn_dirent_local_style(original_abspath,
                                                        scratch_pool)));
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
 
       /* WCROOT.local_abspath may be NULL when the database is stored

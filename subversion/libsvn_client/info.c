@@ -292,7 +292,7 @@ svn_client_info3(const char *abspath_or_url,
     {
       /* Do all digging in the working copy. */
       wc_info_receiver_baton_t b = { receiver, receiver_baton };
-      return svn_error_return(
+      return svn_error_trace(
         svn_wc__get_info(ctx->wc_ctx, abspath_or_url, depth,
                          wc_info_receiver, &b, changelists,
                          ctx->cancel_func, ctx->cancel_baton, pool));
@@ -364,7 +364,7 @@ svn_client_info3(const char *abspath_or_url,
     }
   else if (err)
     {
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   if (! the_ent)
@@ -394,7 +394,7 @@ svn_client_info3(const char *abspath_or_url,
           lock = NULL;
         }
       else if (err)
-        return svn_error_return(err);
+        return svn_error_trace(err);
     }
   else
     lock = NULL;
@@ -424,7 +424,7 @@ pre_1_2_recurse:
               locks = apr_hash_make(pool); /* use an empty hash */
             }
           else if (err)
-            return svn_error_return(err);
+            return svn_error_trace(err);
         }
       else
         locks = apr_hash_make(pool); /* use an empty hash */

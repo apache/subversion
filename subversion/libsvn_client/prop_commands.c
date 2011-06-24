@@ -241,7 +241,7 @@ propset_on_url(const char *propname,
     {
       /* At least try to abort the edit (and fs txn) before throwing err. */
       svn_error_clear(editor->abort_edit(edit_baton, pool));
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   /* Close the edit. */
@@ -585,7 +585,7 @@ pristine_or_working_props(apr_hash_t **props,
 {
   if (pristine)
     {
-      return svn_error_return(svn_wc_get_pristine_props(props,
+      return svn_error_trace(svn_wc_get_pristine_props(props,
                                                         wc_ctx,
                                                         local_abspath,
                                                         result_pool,
@@ -606,7 +606,7 @@ pristine_or_working_props(apr_hash_t **props,
       }
   }
 
-  return svn_error_return(svn_wc_prop_list2(props, wc_ctx, local_abspath,
+  return svn_error_trace(svn_wc_prop_list2(props, wc_ctx, local_abspath,
                                             result_pool, scratch_pool));
 }
 
@@ -857,7 +857,7 @@ svn_client_propget4(apr_hash_t **props,
           revnum = SVN_INVALID_REVNUM;
         }
       else if (err)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       SVN_ERR(get_prop_from_wc(*props, propname, target,
                                pristine, kind,
@@ -1092,7 +1092,7 @@ recursive_proplist_receiver(void *baton,
   else
     path = local_abspath;
 
-  return svn_error_return(b->wrapped_receiver(b->wrapped_receiver_baton,
+  return svn_error_trace(b->wrapped_receiver(b->wrapped_receiver_baton,
                                               path, props, scratch_pool));
 }
 

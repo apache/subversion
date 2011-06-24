@@ -152,7 +152,7 @@ read_key_or_val(char **pbuf,
   SVN_ERR(svn_stream_read(stream, buf, &numread));
   *actual_length += numread;
   if (numread != len)
-    return svn_error_return(stream_ran_dry());
+    return svn_error_trace(stream_ran_dry());
   buf[len] = '\0';
 
   /* Suck up extra newline after key data */
@@ -160,9 +160,9 @@ read_key_or_val(char **pbuf,
   SVN_ERR(svn_stream_read(stream, &c, &numread));
   *actual_length += numread;
   if (numread != 1)
-    return svn_error_return(stream_ran_dry());
+    return svn_error_trace(stream_ran_dry());
   if (c != '\n')
-    return svn_error_return(stream_malformed());
+    return svn_error_trace(stream_malformed());
 
   *pbuf = buf;
   return SVN_NO_ERROR;

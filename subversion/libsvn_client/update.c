@@ -409,7 +409,7 @@ update_internal(svn_revnum_t *result_rev,
       /* Don't rely on the error handling to handle the sleep later, do
          it now */
       svn_io_sleep_for_timestamps(local_abspath, pool);
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
   *use_sleep = TRUE;
 
@@ -548,7 +548,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
             err,
             svn_wc__release_write_lock(ctx->wc_ctx, lockroot_abspath, pool));
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -607,7 +607,7 @@ svn_client_update4(apr_array_header_t **result_revs,
       if (err)
         {
           if(err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
-            return svn_error_return(err);
+            return svn_error_trace(err);
 
           svn_error_clear(err);
 

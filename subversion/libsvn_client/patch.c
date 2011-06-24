@@ -438,7 +438,7 @@ resolve_target_path(patch_target_t *target,
       if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
         svn_error_clear(err);
       else
-        return svn_error_return(err);
+        return svn_error_trace(err);
     }
   else if (status->node_status == svn_wc_status_ignored ||
            status->node_status == svn_wc_status_unversioned ||
@@ -462,7 +462,7 @@ resolve_target_path(patch_target_t *target,
           target->locally_deleted = FALSE;
         }
       else
-        return svn_error_return(err);
+        return svn_error_trace(err);
     }
   SVN_ERR(svn_wc_read_kind(&target->db_kind, wc_ctx, target->local_abspath,
                            FALSE, scratch_pool));
@@ -644,7 +644,7 @@ init_prop_target(prop_patch_target_t **prop_target,
           value = NULL;
         }
       else
-        return svn_error_return(err);
+        return svn_error_trace(err);
     }
   content->existed = (value != NULL);
   new_prop_target->value = value;
@@ -2528,7 +2528,7 @@ install_patched_prop_targets(patch_target_t *target,
                 }
             }
           else
-            return svn_error_return(err);
+            return svn_error_trace(err);
         }
 
     }
@@ -2982,7 +2982,7 @@ svn_client_patch(const char *patch_abspath,
   baton.patch_func = patch_func;
   baton.patch_baton = patch_baton;
 
-  return svn_error_return(
+  return svn_error_trace(
            svn_wc__call_with_write_lock(apply_patches, &baton,
                                         ctx->wc_ctx, local_abspath, FALSE,
                                         result_pool, scratch_pool));

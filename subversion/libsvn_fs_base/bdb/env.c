@@ -519,7 +519,7 @@ bdb_close(bdb_env_t *bdb)
     svn_pool_destroy(bdb->pool);
   else
     free(bdb);
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -572,7 +572,7 @@ svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
       err = bdb_close(bdb);
       release_cache_mutex();
     }
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -636,7 +636,7 @@ svn_fs_bdb__open(bdb_env_baton_t **bdb_batonp, const char *path,
   if (err)
     {
       release_cache_mutex();
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   bdb = bdb_cache_get(&key, &panic);
@@ -707,7 +707,7 @@ svn_fs_bdb__open(bdb_env_baton_t **bdb_batonp, const char *path,
     }
 
   release_cache_mutex();
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 

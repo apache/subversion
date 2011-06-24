@@ -162,7 +162,7 @@ check_file_external(svn_wc_entry_t *entry,
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       svn_error_clear(err);
       return SVN_NO_ERROR;
@@ -720,7 +720,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
               if (err)
                 {
                   if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-                    return svn_error_return(err);
+                    return svn_error_trace(err);
                   svn_error_clear(err);
                 }
               else if (parent_root_url != NULL
@@ -1059,7 +1059,7 @@ read_entry_pair(const svn_wc_entry_t **parent_entry,
               if (err)
                 {
                   if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-                    return svn_error_return(err);
+                    return svn_error_trace(err);
 
                   /* No problem. Clear the error and leave the default value
                      of "missing".  */
@@ -1092,12 +1092,12 @@ read_entries(apr_hash_t **entries,
                                      scratch_pool));
 
   if (wc_format < SVN_WC__WC_NG_VERSION)
-    return svn_error_return(svn_wc__read_entries_old(entries,
+    return svn_error_trace(svn_wc__read_entries_old(entries,
                                                      wcroot_abspath,
                                                      result_pool,
                                                      scratch_pool));
 
-  return svn_error_return(read_entries_new(entries, db, wcroot_abspath,
+  return svn_error_trace(read_entries_new(entries, db, wcroot_abspath,
                                            result_pool, scratch_pool));
 }
 
@@ -1230,7 +1230,7 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
         {
           if (err->apr_err != SVN_ERR_WC_MISSING || kind != svn_node_unknown
               || *entry_name != '\0')
-            return svn_error_return(err);
+            return svn_error_trace(err);
           svn_error_clear(err);
 
           /* The caller didn't know the node type, we saw a directory there,
@@ -1258,7 +1258,7 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
           if (err == SVN_NO_ERROR)
             return SVN_NO_ERROR;
           if (err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
-            return svn_error_return(err);
+            return svn_error_trace(err);
           svn_error_clear(err);
 
           /* We asked for a FILE, but the node found is a DIR. Thus, we
@@ -1521,7 +1521,7 @@ insert_actual_node(svn_sqlite__db_t *sdb,
     SVN_ERR(svn_sqlite__bind_text(stmt, 10, actual_node->tree_conflict_data));
 
   /* Execute and reset the insert clause. */
-  return svn_error_return(svn_sqlite__insert(NULL, stmt));
+  return svn_error_trace(svn_sqlite__insert(NULL, stmt));
 }
 
 struct write_baton {
@@ -2471,7 +2471,7 @@ svn_wc__walker_default_error_handler(const char *path,
 {
   /* Note: don't trace this. We don't want to insert a false "stack frame"
      onto an error generated elsewhere.  */
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -2504,7 +2504,7 @@ svn_wc_walk_entries3(const char *path,
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_return(err);
+        return svn_error_trace(err);
       /* Remap into SVN_ERR_UNVERSIONED_RESOURCE.  */
       svn_error_clear(err);
       return walk_callbacks->handle_error(

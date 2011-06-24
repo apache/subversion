@@ -762,7 +762,7 @@ close_edit(void *edit_baton,
          We ignore the possible error result from svn_fs_abort_txn();
          it's more important to return the original error. */
       svn_error_clear(svn_fs_abort_txn(eb->txn, pool));
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   /* Pass new revision information to the caller's callback. */
@@ -799,7 +799,7 @@ close_edit(void *edit_baton,
       }
   }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 

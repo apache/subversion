@@ -675,7 +675,7 @@ svn_skel__parse_int(apr_int64_t *n, const svn_skel_t *skel,
   /* We need to duplicate the SKEL contents in order to get a NUL-terminated
      version of it. The SKEL may not have valid memory at DATA[LEN].  */
   str = apr_pstrmemdup(scratch_pool, skel->data, skel->len);
-  return svn_error_return(svn_cstring_atoi64(n, str));
+  return svn_error_trace(svn_cstring_atoi64(n, str));
 }
 
 

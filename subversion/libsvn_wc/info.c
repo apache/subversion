@@ -437,7 +437,7 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND && root_tree_conflict)
     svn_error_clear(err);
   else if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   /* If there are any tree conflicts that we have found but have not reported,
    * send a minimal info struct for each one now. */

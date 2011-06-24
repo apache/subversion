@@ -804,7 +804,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
      filtering doesn't apply if we are trying to remove mergeinfo
      entirely.  */
   if (! same_repos)
-    return svn_error_return(omit_mergeinfo_changes(props, *props, pool));
+    return svn_error_trace(omit_mergeinfo_changes(props, *props, pool));
 
   /* If we aren't honoring mergeinfo and this is a merge from the
      same repository, then get outta here.  If this is a reintegrate
@@ -876,7 +876,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
             }
           else
             {
-              return svn_error_return(err);
+              return svn_error_trace(err);
             }
         }
 
@@ -998,7 +998,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                         }
                       else
                         {
-                          return svn_error_return(err2);
+                          return svn_error_trace(err2);
                         }
                      }
                   else
@@ -1222,7 +1222,7 @@ merge_props_changed(svn_wc_notify_state_t *state,
           return SVN_NO_ERROR;
         }
       else if (err)
-        return svn_error_return(err);
+        return svn_error_trace(err);
     }
 
   return SVN_NO_ERROR;
@@ -1261,7 +1261,7 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
       return SVN_NO_ERROR; /* We can't do a real prop merge for added dirs */
     }
 
-  return svn_error_return(merge_props_changed(state,
+  return svn_error_trace(merge_props_changed(state,
                                               tree_conflicted,
                                               local_abspath,
                                               propchanges,
@@ -1327,7 +1327,7 @@ conflict_resolver(svn_wc_conflict_result_t **result,
                    APR_HASH_KEY_STRING, conflicted_path);
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 /* An svn_wc_diff_callbacks4_t function. */
@@ -2939,7 +2939,7 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
         }
       else
         {
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
     }
   else /* PRIMARY_URL@peg_rev exists. */
@@ -3959,7 +3959,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
               || err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
             svn_error_clear(err);
           else
-            return svn_error_return(err);
+            return svn_error_trace(err);
         }
       else
         {
@@ -4499,7 +4499,7 @@ update_wc_mergeinfo(svn_mergeinfo_catalog_t result_catalog,
             }
           else
             {
-              return svn_error_return(err);
+              return svn_error_trace(err);
             }
         }
 
@@ -5692,7 +5692,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                       "mergetracking not possible"),
                     svn_dirent_local_style(wc_path, scratch_pool));
                 }
-              return svn_error_return(err);
+              return svn_error_trace(err);
             }
           /* Stash this child's pre-existing mergeinfo. */
           mergeinfo_child->pre_merge_mergeinfo = child_pre_merge_mergeinfo;
@@ -6756,7 +6756,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
                   "mergetracking not possible"),
                 svn_dirent_local_style(target_abspath, scratch_pool));
             }
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
 
       SVN_ERR(svn_ra_reparent(merge_b->ra_session1, url1, iterpool));
@@ -9345,7 +9345,7 @@ merge_locked(const char *source1,
               if (use_sleep)
                 svn_io_sleep_for_timestamps(target_abspath, scratch_pool);
 
-              return svn_error_return(err);
+              return svn_error_trace(err);
             }
 
           /* Close our temporary RA sessions (this could've happened
@@ -9381,7 +9381,7 @@ merge_locked(const char *source1,
     svn_io_sleep_for_timestamps(target_abspath, scratch_pool);
 
   if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   return SVN_NO_ERROR;
 }
@@ -10048,7 +10048,7 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
                 }
               else
                 {
-                  return svn_error_return(err);
+                  return svn_error_trace(err);
                 }
             }
           else
@@ -10242,7 +10242,7 @@ calculate_left_hand_side(const char **url_left,
                   "reintegrate merge not possible"),
                 svn_dirent_local_style(absolute_path, scratch_pool));
             }
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
 
       /* Convert the absolute path with mergeinfo on it to a path relative
@@ -10588,7 +10588,7 @@ merge_reintegrate_locked(const char *source,
     svn_io_sleep_for_timestamps(target_abspath, scratch_pool);
 
   if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   return SVN_NO_ERROR;
 }
@@ -10698,7 +10698,7 @@ merge_peg_locked(const char *source,
   SVN_ERR(svn_wc_read_kind(&target_kind, ctx->wc_ctx, target_abspath, FALSE,
                            scratch_pool));
   if (target_kind != svn_node_dir && target_kind != svn_node_file)
-    return svn_error_return(svn_error_createf(
+    return svn_error_trace(svn_error_createf(
                               SVN_ERR_ILLEGAL_TARGET, NULL,
                               _("Merge target '%s' does not exist in the "
                                 "working copy"), target_abspath));
@@ -10752,7 +10752,7 @@ merge_peg_locked(const char *source,
     svn_io_sleep_for_timestamps(target_abspath, scratch_pool);
 
   if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   return SVN_NO_ERROR;
 }

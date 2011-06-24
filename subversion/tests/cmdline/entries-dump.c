@@ -248,7 +248,7 @@ directory_dump(const char *path,
       SVN_ERR(directory_dump_old(&bt, dir_abspath, scratch_pool));
     }
 
-  return svn_error_return(svn_wc_context_destroy(bt.wc_ctx));
+  return svn_error_trace(svn_wc_context_destroy(bt.wc_ctx));
 }
 
 int

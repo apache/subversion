@@ -608,7 +608,7 @@ svn_cl__info(apr_getopt_t *os,
             }
           else
             {
-              return svn_error_return(err);
+              return svn_error_trace(err);
             }
 
           svn_error_clear(err);

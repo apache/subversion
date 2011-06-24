@@ -462,7 +462,7 @@ set_file_props(void *baton,
 
   prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
   if (prop_name != NULL)
-    return svn_error_return(editor->change_file_prop(info->file_baton,
+    return svn_error_trace(editor->change_file_prop(info->file_baton,
                                                      prop_name,
                                                      val,
                                                      scratch_pool));
@@ -483,7 +483,7 @@ set_dir_props(void *baton,
 
   prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
   if (prop_name != NULL)
-    return svn_error_return(editor->change_dir_prop(dir->dir_baton,
+    return svn_error_trace(editor->change_dir_prop(dir->dir_baton,
                                                     prop_name,
                                                     val,
                                                     scratch_pool));
@@ -504,7 +504,7 @@ remove_file_props(void *baton,
 
   prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
   if (prop_name != NULL)
-    return svn_error_return(editor->change_file_prop(info->file_baton,
+    return svn_error_trace(editor->change_file_prop(info->file_baton,
                                                      prop_name,
                                                      NULL,
                                                      scratch_pool));
@@ -525,7 +525,7 @@ remove_dir_props(void *baton,
 
   prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
   if (prop_name != NULL)
-    return svn_error_return(editor->change_dir_prop(dir->dir_baton,
+    return svn_error_trace(editor->change_dir_prop(dir->dir_baton,
                                                     prop_name,
                                                     NULL,
                                                     scratch_pool));
@@ -1066,7 +1066,7 @@ handle_stream(serf_request_t *request,
                   err,
                   svn_ra_serf__handle_discard_body(request, response, NULL, pool));
 
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   while (1)
@@ -2545,7 +2545,7 @@ finish_report(void *report_baton,
   err = report->update_editor->close_edit(report->update_baton, iterpool);
 
   svn_pool_destroy(iterpool);
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 

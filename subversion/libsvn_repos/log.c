@@ -784,7 +784,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
         }
       else
         {
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
     }
 

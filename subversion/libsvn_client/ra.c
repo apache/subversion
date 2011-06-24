@@ -74,7 +74,7 @@ open_tmp_file(apr_file_t **fp,
               void *callback_baton,
               apr_pool_t *pool)
 {
-  return svn_error_return(svn_io_open_unique_file3(fp, NULL, NULL,
+  return svn_error_trace(svn_io_open_unique_file3(fp, NULL, NULL,
                                   svn_io_file_del_on_pool_cleanup,
                                   pool, pool));
 }
@@ -107,7 +107,7 @@ get_wc_prop(void *baton,
           if (! strcmp(relpath, item->session_relpath))
             {
               SVN_ERR_ASSERT(svn_dirent_is_absolute(item->path));
-              return svn_error_return(svn_wc_prop_get2(value, cb->ctx->wc_ctx,
+              return svn_error_trace(svn_wc_prop_get2(value, cb->ctx->wc_ctx,
                                                        item->path, name,
                                                        pool, pool));
             }
@@ -122,7 +122,7 @@ get_wc_prop(void *baton,
 
   local_abspath = svn_dirent_join(cb->base_dir_abspath, relpath, pool);
 
-  return svn_error_return(svn_wc_prop_get2(value, cb->ctx->wc_ctx,
+  return svn_error_trace(svn_wc_prop_get2(value, cb->ctx->wc_ctx,
                                            local_abspath, name, pool, pool));
 }
 
@@ -193,7 +193,7 @@ set_wc_prop(void *baton,
      right, but the conflict would remind the user to make sure.
      Unfortunately, we don't have a clean mechanism for doing that
      here, so we just set the property and hope for the best. */
-  return svn_error_return(svn_wc_prop_set4(cb->ctx->wc_ctx, local_abspath,
+  return svn_error_trace(svn_wc_prop_set4(cb->ctx->wc_ctx, local_abspath,
                                            name,
                                            value, svn_depth_empty,
                                            TRUE /* skip_checks */,
@@ -224,7 +224,7 @@ invalidate_wc_props(void *baton,
      the cache altogether anyway, there's little to lose in wiping the
      whole cache.  Is it the most well-behaved approach to take?  Not
      so much.  We choose not to care.  */
-  return svn_error_return(svn_wc__node_clear_dav_cache_recursive(
+  return svn_error_trace(svn_wc__node_clear_dav_cache_recursive(
                               cb->ctx->wc_ctx, local_abspath, pool));
 }
 
@@ -233,7 +233,7 @@ static svn_error_t *
 cancel_callback(void *baton)
 {
   callback_baton_t *b = baton;
-  return svn_error_return((b->ctx->cancel_func)(b->ctx->cancel_baton));
+  return svn_error_trace((b->ctx->cancel_func)(b->ctx->cancel_baton));
 }
 
 
@@ -367,7 +367,7 @@ svn_client_open_ra_session(svn_ra_session_t **session,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
-  return svn_error_return(
+  return svn_error_trace(
              svn_client__open_ra_session_internal(session, NULL, url,
                                                   NULL, NULL, FALSE, TRUE,
                                                   ctx, pool));
@@ -405,7 +405,7 @@ svn_client_uuid_from_path2(const char **uuid,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
-  return svn_error_return(
+  return svn_error_trace(
     svn_wc__node_get_repos_info(NULL, uuid, ctx->wc_ctx, local_abspath,
                                 result_pool, scratch_pool));
 }
