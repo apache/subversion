@@ -389,7 +389,7 @@ class TestHarness:
     if self.http_library is not None:
       svntest.main.options.http_library = self.http_library
     if self.server_minor_version is not None:
-      svntest.main.options.server_minor_version = self.server_minor_version
+      svntest.main.options.server_minor_version = int(self.server_minor_version)
     if self.list_tests is not None:
       svntest.main.options.list_tests = True
     if self.milestone_filter is not None:
@@ -397,7 +397,7 @@ class TestHarness:
     if self.svn_bin is not None:
       svntest.main.options.svn_bin = self.svn_bin
     if self.fsfs_sharding is not None:
-      svntest.main.options.fsfs_sharding = self.fsfs_sharding
+      svntest.main.options.fsfs_sharding = int(self.fsfs_sharding)
     if self.fsfs_packing is not None:
       svntest.main.options.fsfs_packing = self.fsfs_packing
     if self.mode_filter is not None:
