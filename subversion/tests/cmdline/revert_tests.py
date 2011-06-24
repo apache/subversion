@@ -1548,7 +1548,6 @@ def revert_no_text_change_conflict_recursive(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@XFail()
 @Issue(3938)
 def revert_with_unversioned_targets(sbox):
   "revert with unversioned targets"
