@@ -1389,6 +1389,22 @@ svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets)
   return err;
 }
 
+svn_error_t *
+svn_cl__check_targets_are_local_paths(const apr_array_header_t *targets)
+{
+  int i;
+
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+
+      if (svn_path_is_url(target))
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'%s' is not a local path"), target);
+    }
+  return SVN_NO_ERROR;
+}
+
 const char *
 svn_cl__local_style_skip_ancestor(const char *parent_path,
                                   const char *path,

@@ -110,7 +110,6 @@ svn_cl__update(apr_getopt_t *os,
   svn_boolean_t depth_is_sticky;
   struct svn_cl__check_externals_failed_notify_baton nwb;
   apr_array_header_t *result_revs;
-  int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -122,15 +121,7 @@ svn_cl__update(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
 
-  /* If any targets are URLs, display error message and exit. */
-  for (i = 0; i < targets->nelts; i++)
-    {
-      const char *target = APR_ARRAY_IDX(targets, i, const char *);
-
-      if (svn_path_is_url(target))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("'%s' is not a local path"), target);
-    }
+  SVN_ERR(svn_cl__check_targets_are_local_paths(targets));
 
   /* If using changelists, convert targets into a set of paths that
      match the specified changelist(s). */
