@@ -877,8 +877,8 @@ handle_external_item_change(const struct external_change_baton_t *eb,
 
       /* First notify that we're about to handle an external. */
       if (eb->ctx->notify_func2)
-        (*eb->ctx->notify_func2)
-          (eb->ctx->notify_baton2,
+        (*eb->ctx->notify_func2)(
+           eb->ctx->notify_baton2,
            svn_wc_create_notify(local_abspath, svn_wc_notify_update_external,
                                 scratch_pool), scratch_pool);
 
@@ -1307,8 +1307,8 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
 
           /* Tell the client we're starting an external status set. */
           if (ctx->notify_func2)
-            (ctx->notify_func2)
-              (ctx->notify_baton2,
+            (ctx->notify_func2)(
+               ctx->notify_baton2,
                svn_wc_create_notify(fullpath, svn_wc_notify_status_external,
                                     iterpool), iterpool);
 
