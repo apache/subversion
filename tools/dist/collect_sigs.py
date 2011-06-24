@@ -28,6 +28,11 @@
 #  * Post to IRC when a new signature is collected
 #    - Since we don't want to have a long running bot, perhaps we could
 #      also patch wayita to accept and then echo a privmsg?
+#  * Mail dev@ when somebody submits a successful signature, and include a
+#    comments field which could be included in the mail.
+#  * Use a subversion repository instead of sqlite backend
+#    - no need to re-invent storage and retrieval
+#    - perhaps we could re-use existing CIA/mailer hooks?
 #
 
 import sys, os
@@ -112,7 +117,7 @@ except:
   print 'Cannot find config file'
   sys.exit(1)
 
-r = re.compile('\[GNUPG\:\] GOODSIG (\w*) (.*)')
+r = re.compile('^\[GNUPG\:\] GOODSIG (\w*) (.*)')
 
 def files():
   for f in os.listdir(config.filesdir):
@@ -154,7 +159,7 @@ and <tt>END PGP SIGNATURE</tt> lines will be ignored.</p>
 </form>
 <hr/>
 ''' % os.getenv('SCRIPT_NAME')
- 
+
 
 
 def split(sigs):

@@ -59,9 +59,9 @@ escape_activity(const char *activity_id, apr_pool_t *pool)
 static const char *
 activity_pathname(const dav_svn_repos *repos, const char *activity_id)
 {
-  return svn_path_join(repos->activities_db,
-                       escape_activity(activity_id, repos->pool),
-                       repos->pool);
+  return svn_dirent_join(repos->activities_db,
+                         escape_activity(activity_id, repos->pool),
+                         repos->pool);
 }
 
 /* Return the transaction name of the activity stored in file

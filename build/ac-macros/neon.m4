@@ -61,6 +61,10 @@ AC_DEFUN(SVN_LIB_NEON,
     fi
 
     SVN_NEON_CONFIG()
+  ],
+  [
+    AC_PATH_PROG(neon_config, neon-config)
+    SVN_NEON_CONFIG()
   ])
   
   AC_SUBST(SVN_NEON_INCLUDES)

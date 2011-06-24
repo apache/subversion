@@ -191,6 +191,14 @@ svn_skel__parse_proplist(apr_hash_t **proplist_p,
                          const svn_skel_t *skel,
                          apr_pool_t *result_pool);
 
+/* Parse a `PROPLIST' SKEL looking for PROPNAME.  If PROPNAME is found
+   then return its value in *PROVAL, allocated in RESULT_POOL. */
+svn_error_t *
+svn_skel__parse_prop(svn_string_t **propval,
+                     const svn_skel_t *skel,
+                     const char *propname,
+                     apr_pool_t *result_pool);
+
 /* Unparse a PROPLIST hash (which has const char * property names and
    svn_stringbuf_t * values) into a `PROPLIST' skel *SKEL_P.  Use POOL
    for all allocations.  */

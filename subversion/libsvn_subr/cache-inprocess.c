@@ -32,19 +32,27 @@
 #include "cache.h"
 
 /* The (internal) cache object. */
-typedef struct {
-  /* Maps from a key (of size CACHE->KLEN) to a struct cache_entry. */
+typedef struct inprocess_cache_t {
+  /* A user-defined identifier for this cache instance. */
+  const char *id;
+
+  /* HASH maps a key (of size KLEN) to a struct cache_entry. */
   apr_hash_t *hash;
   apr_ssize_t klen;
 
-  /* Used to copy values in and out of the cache. */
-  svn_cache__dup_func_t dup_func;
+  /* Used to copy values into the cache. */
+  svn_cache__serialize_func_t serialize_func;
 
+  /* Used to copy values out of the cache. */
+  svn_cache__deserialize_func_t deserialize_func;
+
+  /* Maximum number of pages that this cache instance may allocate */
+  apr_uint64_t total_pages;
   /* The number of pages we're allowed to allocate before having to
    * try to reuse one. */
-  apr_int64_t unallocated_pages;
+  apr_uint64_t unallocated_pages;
   /* Number of cache entries stored on each page.  Must be at least 1. */
-  apr_int64_t items_per_page;
+  apr_uint64_t items_per_page;
 
   /* A dummy cache_page serving as the head of a circular doubly
    * linked list of cache_pages.  SENTINEL->NEXT is the most recently
@@ -58,13 +66,19 @@ typedef struct {
   struct cache_page *partial_page;
   /* If PARTIAL_PAGE is not null, this is the number of entries
    * currently on PARTIAL_PAGE. */
-  apr_int64_t partial_page_number_filled;
+  apr_uint64_t partial_page_number_filled;
 
   /* The pool that the svn_cache__t itself, HASH, and all pages are
    * allocated in; subpools of this pool are used for the cache_entry
    * structs, as well as the dup'd values and hash keys.
    */
   apr_pool_t *cache_pool;
+
+  /* Sum of the SIZE members of all cache_entry elements that are
+   * accessible from HASH. This is used to make statistics available
+   * even if the sub-pools have already been destroyed.
+   */
+  apr_size_t data_size;
 
 #if APR_HAS_THREADS
   /* A lock for intra-process synchronization to the cache, or NULL if
@@ -83,7 +97,11 @@ struct cache_page {
   struct cache_page *next;
 
   /* The pool in which cache_entry structs, hash keys, and dup'd
-   * values are allocated. */
+   * values are allocated.  The CACHE_PAGE structs are allocated
+   * in CACHE_POOL and have the same lifetime as the cache itself.
+   * (The cache will never allocate more than TOTAL_PAGES page
+   * structs (inclusive of the sentinel) from CACHE_POOL.)
+   */
   apr_pool_t *page_pool;
 
   /* A singly linked list of the entries on this page; used to remove
@@ -94,7 +112,12 @@ struct cache_page {
 /* An cache entry. */
 struct cache_entry {
   const void *key;
+
+  /* serialized value */
   void *value;
+
+  /* length of the serialized value in bytes */
+  apr_size_t size;
 
   /* The page it's on (needed so that the LRU list can be
    * maintained). */
@@ -129,31 +152,20 @@ insert_page(inprocess_cache_t *cache,
 
 /* If PAGE is in the circularly linked list (eg, its NEXT isn't NULL),
  * move it to the front of the list. */
-static void
+static svn_error_t *
 move_page_to_front(inprocess_cache_t *cache,
                    struct cache_page *page)
 {
-  assert(page != cache->sentinel);
+  /* This function is called whilst CACHE is locked. */
+
+  SVN_ERR_ASSERT(page != cache->sentinel);
 
   if (! page->next)
-    return;
+    return SVN_NO_ERROR;
 
   remove_page_from_list(page);
   insert_page(cache, page);
-}
 
-/* Uses CACHE->dup_func to copy VALUE into *VALUE_P inside POOL, or
-   just sets *VALUE_P to NULL if VALUE is NULL. */
-static svn_error_t *
-duplicate_value(void **value_p,
-                inprocess_cache_t *cache,
-                void *value,
-                apr_pool_t *pool)
-{
-  if (value)
-    SVN_ERR((cache->dup_func)(value_p, value, pool));
-  else
-    *value_p = NULL;
   return SVN_NO_ERROR;
 }
 
@@ -210,11 +222,12 @@ inprocess_cache_get(void **value_p,
                     svn_boolean_t *found,
                     void *cache_void,
                     const void *key,
-                    apr_pool_t *pool)
+                    apr_pool_t *result_pool)
 {
   inprocess_cache_t *cache = cache_void;
+  svn_error_t *err = NULL;
   struct cache_entry *entry;
-  svn_error_t *err;
+  char* buffer;
 
   SVN_ERR(lock_cache(cache));
 
@@ -225,11 +238,25 @@ inprocess_cache_get(void **value_p,
       return unlock_cache(cache, SVN_NO_ERROR);
     }
 
-  move_page_to_front(cache, entry->page);
+  SVN_ERR(move_page_to_front(cache, entry->page));
 
+  /* duplicate the buffer entry */
+  buffer = apr_palloc(result_pool, entry->size);
+  memcpy(buffer, entry->value, entry->size);
+
+  /* the cache is no longer being accessed */
+  SVN_ERR(unlock_cache(cache, SVN_NO_ERROR));
+
+  /* deserialize the buffer content. Usually, this will directly
+     modify the buffer content directly.
+   */
   *found = TRUE;
-  err = duplicate_value(value_p, cache, entry->value, pool);
-  return unlock_cache(cache, err);
+  if (entry->value)
+    err = cache->deserialize_func(value_p, buffer, entry->size, result_pool);
+  else
+    *value_p = NULL;
+
+  return err;
 }
 
 /* Removes PAGE from the LRU list, removes all of its entries from
@@ -249,6 +276,7 @@ erase_page(inprocess_cache_t *cache,
        e;
        e = e->next_entry)
     {
+      cache->data_size -= e->size;
       apr_hash_set(cache->hash, e->key, cache->klen, NULL);
     }
 
@@ -267,7 +295,7 @@ static svn_error_t *
 inprocess_cache_set(void *cache_void,
                     const void *key,
                     void *value,
-                    apr_pool_t *pool)
+                    apr_pool_t *scratch_pool)
 {
   inprocess_cache_t *cache = cache_void;
   struct cache_entry *existing_entry;
@@ -301,9 +329,22 @@ inprocess_cache_set(void *cache_void,
     {
       struct cache_page *page = existing_entry->page;
 
-      move_page_to_front(cache, page);
-      err = duplicate_value(&(existing_entry->value), cache,
-                            value, page->page_pool);
+      SVN_ERR(move_page_to_front(cache, page));
+      cache->data_size -= existing_entry->size;
+      if (value)
+        {
+          err = cache->serialize_func((char **)&existing_entry->value,
+                                      &existing_entry->size,
+                                      value,
+                                      page->page_pool);
+          cache->data_size += existing_entry->size;
+        }
+      else
+        {
+          existing_entry->value = NULL;
+          existing_entry->size = 0;
+        }
+
       goto cleanup;
     }
 
@@ -340,8 +381,20 @@ inprocess_cache_set(void *cache_void,
 
     /* Copy the key and value into the page's pool.  */
     new_entry->key = duplicate_key(cache, key, page->page_pool);
-    err = duplicate_value(&(new_entry->value), cache, value,
-                          page->page_pool);
+    if (value)
+      {
+        err = cache->serialize_func((char **)&new_entry->value,
+                                    &new_entry->size,
+                                    value,
+                                    page->page_pool);
+        cache->data_size += new_entry->size;
+      }
+    else
+      {
+        new_entry->value = NULL;
+        new_entry->size = 0;
+      }
+
     if (err)
       goto cleanup;
 
@@ -395,7 +448,7 @@ inprocess_cache_iter(svn_boolean_t *completed,
                      void *cache_void,
                      svn_iter_apr_hash_cb_t user_cb,
                      void *user_baton,
-                     apr_pool_t *pool)
+                     apr_pool_t *scratch_pool)
 {
   inprocess_cache_t *cache = cache_void;
   struct cache_iter_baton b;
@@ -405,34 +458,140 @@ inprocess_cache_iter(svn_boolean_t *completed,
   SVN_ERR(lock_cache(cache));
   return unlock_cache(cache,
                       svn_iter_apr_hash(completed, cache->hash, iter_cb, &b,
-                                        pool));
-
+                                        scratch_pool));
 }
+
+static svn_error_t *
+inprocess_cache_get_partial(void **value_p,
+                            svn_boolean_t *found,
+                            void *cache_void,
+                            const void *key,
+                            svn_cache__partial_getter_func_t func,
+                            void *baton,
+                            apr_pool_t *result_pool)
+{
+  inprocess_cache_t *cache = cache_void;
+  struct cache_entry *entry;
+
+  SVN_ERR(lock_cache(cache));
+
+  entry = apr_hash_get(cache->hash, key, cache->klen);
+  if (! entry)
+    {
+      *found = FALSE;
+      return unlock_cache(cache, SVN_NO_ERROR);
+    }
+
+  SVN_ERR(move_page_to_front(cache, entry->page));
+
+  *found = TRUE;
+  return unlock_cache(cache,
+                      func(value_p, entry->value, entry->size, baton,
+                           result_pool));
+}
+
+static svn_error_t *
+inprocess_cache_set_partial(void *cache_void,
+                            const void *key,
+                            svn_cache__partial_setter_func_t func,
+                            void *baton,
+                            apr_pool_t *scratch_pool)
+{
+  inprocess_cache_t *cache = cache_void;
+  struct cache_entry *entry;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  SVN_ERR(lock_cache(cache));
+
+  entry = apr_hash_get(cache->hash, key, cache->klen);
+  if (! entry)
+    return unlock_cache(cache, err);
+
+  SVN_ERR(move_page_to_front(cache, entry->page));
+
+  cache->data_size -= entry->size;
+  err = func((char **)&entry->value,
+             &entry->size,
+             baton,
+             entry->page->page_pool);
+  cache->data_size += entry->size;
+
+  return unlock_cache(cache, err);
+}
+
+static svn_boolean_t
+inprocess_cache_is_cachable(void *cache_void, apr_size_t size)
+{
+  /* Be relatively strict: per page we should not allocate more than
+   * we could spare as "unused" memory.
+   * But in most cases, nobody will ask anyway. And in no case, this
+   * will be used for checks _inside_ the cache code.
+   */
+  inprocess_cache_t *cache = cache_void;
+  return size < SVN_ALLOCATOR_RECOMMENDED_MAX_FREE / cache->items_per_page;
+}
+
+static svn_error_t *
+inprocess_cache_get_info(void *cache_void,
+                         svn_cache__info_t *info,
+                         svn_boolean_t reset,
+                         apr_pool_t *result_pool)
+{
+  inprocess_cache_t *cache = cache_void;
+
+  SVN_ERR(lock_cache(cache));
+
+  info->id = apr_pstrdup(result_pool, cache->id);
+
+  info->used_entries = apr_hash_count(cache->hash);
+  info->total_entries = cache->items_per_page * cache->total_pages;
+
+  info->used_size = cache->data_size;
+  info->data_size = cache->data_size;
+  info->total_size = cache->data_size
+                   + cache->items_per_page * sizeof(struct cache_page)
+                   + info->used_entries * sizeof(struct cache_entry);
+
+  return unlock_cache(cache, SVN_NO_ERROR);
+}
+
 
 static svn_cache__vtable_t inprocess_cache_vtable = {
   inprocess_cache_get,
   inprocess_cache_set,
-  inprocess_cache_iter
+  inprocess_cache_iter,
+  inprocess_cache_is_cachable,
+  inprocess_cache_get_partial,
+  inprocess_cache_set_partial,
+  inprocess_cache_get_info
 };
 
 svn_error_t *
 svn_cache__create_inprocess(svn_cache__t **cache_p,
-                            svn_cache__dup_func_t dup_func,
+                            svn_cache__serialize_func_t serialize,
+                            svn_cache__deserialize_func_t deserialize,
                             apr_ssize_t klen,
                             apr_int64_t pages,
                             apr_int64_t items_per_page,
                             svn_boolean_t thread_safe,
+                            const char *id,
                             apr_pool_t *pool)
 {
   svn_cache__t *wrapper = apr_pcalloc(pool, sizeof(*wrapper));
   inprocess_cache_t *cache = apr_pcalloc(pool, sizeof(*cache));
 
+  cache->id = apr_pstrdup(pool, id);
+
+  SVN_ERR_ASSERT(klen == APR_HASH_KEY_STRING || klen >= 1);
+
   cache->hash = apr_hash_make(pool);
   cache->klen = klen;
 
-  cache->dup_func = dup_func;
+  cache->serialize_func = serialize;
+  cache->deserialize_func = deserialize;
 
   SVN_ERR_ASSERT(pages >= 1);
+  cache->total_pages = pages;
   cache->unallocated_pages = pages;
   SVN_ERR_ASSERT(items_per_page >= 1);
   cache->items_per_page = items_per_page;

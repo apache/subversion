@@ -61,7 +61,7 @@ extern "C" {
 typedef int svn_ra_neon__xml_elmid;
 
 /** XML element */
-typedef struct {
+typedef struct svn_ra_neon__xml_elm_t {
   /** XML namespace. */
   const char *nspace;
 
@@ -127,6 +127,10 @@ typedef struct svn_ra_neon__session_t {
      constants' addresses, therefore). */
   apr_hash_t *capabilities;
 
+  /* Tri-state variable holding information about server support for
+     deadprop-count property.*/
+  svn_tristate_t supports_deadprop_count;
+
   /*** HTTP v2 protocol stuff. ***
    *
    * We assume that if mod_dav_svn sends one of the special v2 OPTIONs
@@ -146,6 +150,8 @@ typedef struct svn_ra_neon__session_t {
   const char *rev_root_stub;    /* for accessing REV/PATH pairs */
   const char *txn_stub;         /* for accessing transactions (i.e. txnprops) */
   const char *txn_root_stub;    /* for accessing TXN/PATH pairs */
+  const char *vtxn_stub;        /* for accessing transactions (i.e. txnprops) */
+  const char *vtxn_root_stub;   /* for accessing TXN/PATH pairs */
 
   /*** End HTTP v2 stuff ***/
 
@@ -154,7 +160,7 @@ typedef struct svn_ra_neon__session_t {
 #define SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras) ((ras)->me_resource != NULL)
 
 
-typedef struct {
+typedef struct svn_ra_neon__request_t {
   ne_request *ne_req;                   /* neon request structure */
   ne_session *ne_sess;                  /* neon session structure */
   svn_ra_neon__session_t *sess;          /* DAV session structure */
@@ -296,9 +302,6 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
                                   apr_uint32_t dirent_fields,
                                   apr_pool_t *pool);
 
-svn_error_t * svn_ra_neon__abort_commit(void *session_baton,
-                                        void *edit_baton);
-
 svn_error_t * svn_ra_neon__get_mergeinfo(
   svn_ra_session_t *session,
   apr_hash_t **mergeinfo,
@@ -436,7 +439,7 @@ svn_error_t *svn_ra_neon__get_path_relative_to_root(svn_ra_session_t *session,
 
 #define SVN_RA_NEON__PROP_DEADPROP_COUNT SVN_DAV_PROP_NS_DAV "deadprop-count"
 
-typedef struct {
+typedef struct svn_ra_neon__resource_t {
   /* what is the URL for this resource */
   const char *url;
 
@@ -481,7 +484,6 @@ svn_error_t * svn_ra_neon__get_props_resource(svn_ra_neon__resource_t **rsrc,
 svn_error_t * svn_ra_neon__get_starting_props(svn_ra_neon__resource_t **rsrc,
                                               svn_ra_neon__session_t *sess,
                                               const char *url,
-                                              const char *label,
                                               apr_pool_t *pool);
 
 /* Shared helper func: given a public URL which may not exist in HEAD,
@@ -512,17 +514,14 @@ svn_error_t * svn_ra_neon__get_one_prop(const svn_string_t **propval,
 
 /* Get various Baseline-related information for a given "public" URL.
 
-   Given a session SESS and a URL, return whether the URL is a
-   directory in *IS_DIR.  IS_DIR may be NULL if this flag is unneeded.
-
    REVISION may be SVN_INVALID_REVNUM to indicate that the operation
    should work against the latest (HEAD) revision, or whether it should
    return information about that specific revision.
 
-   If BC_URL is not NULL, then it will be filled in with the URL for
+   If BC_URL_P is not NULL, then it will be filled in with the URL for
    the Baseline Collection for the specified revision, or the HEAD.
 
-   If BC_RELATIVE is not NULL, then it will be filled in with a
+   If BC_RELATIVE_P is not NULL, then it will be filled in with a
    relative pathname for the baselined resource corresponding to the
    revision of the resource specified by URL.
 
@@ -531,16 +530,15 @@ svn_error_t * svn_ra_neon__get_one_prop(const svn_string_t **propval,
    as the REVISION parameter, unless we are working against the HEAD. In
    that case, the HEAD revision number is returned.
 
-   Allocation for BC_URL->data, BC_RELATIVE->data, and temporary data,
+   Allocation for *BC_URL_P, *BC_RELATIVE_P, and temporary data,
    will occur in POOL.
 
    Note: a Baseline Collection is a complete tree for a specified Baseline.
    DeltaV baselines correspond one-to-one to Subversion revisions. Thus,
    the entire state of a revision can be found in a Baseline Collection.
 */
-svn_error_t *svn_ra_neon__get_baseline_info(svn_boolean_t *is_dir,
-                                            svn_string_t *bc_url,
-                                            svn_string_t *bc_relative,
+svn_error_t *svn_ra_neon__get_baseline_info(const char **bc_url_p,
+                                            const char **bc_relative_p,
                                             svn_revnum_t *latest_rev,
                                             svn_ra_neon__session_t *sess,
                                             const char *url,
@@ -862,7 +860,8 @@ enum {
   ELEM_has_children,
   ELEM_merged_revision,
   ELEM_deleted_rev_report,
-  ELEM_validate_inherited_mergeinfo
+  ELEM_validate_inherited_mergeinfo,
+  ELEM_subtractive_merge,
 };
 
 /* ### docco */
@@ -1168,6 +1167,21 @@ svn_ra_neon__assemble_locktoken_body(svn_stringbuf_t **body,
                                      apr_hash_t *lock_tokens,
                                      apr_pool_t *pool);
 
+
+/* Wrapper around ne_uri_unparse(). Turns a URI structure back into a string.
+ * The returned string is allocated in POOL. */
+const char *
+svn_ra_neon__uri_unparse(const ne_uri *uri,
+                         apr_pool_t *pool);
+
+/* Sets *SUPPORTS_DEADPROP_COUNT to non-zero if server supports
+ * deadprop-count property. Uses FINAL_URL to discover this informationn
+ * if it is not already cached. */
+svn_error_t *
+svn_ra_neon__get_deadprop_count_support(svn_boolean_t *supported,
+                                        svn_ra_neon__session_t *ras,
+                                        const char *final_url,
+                                        apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -51,10 +51,12 @@ svn_cl__mkdir(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+
+  SVN_ERR(svn_cl__assert_homogeneous_target_type(targets));
 
   if (! svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *)))
     {
@@ -94,7 +96,7 @@ svn_cl__mkdir(apr_getopt_t *os,
         return svn_error_quick_wrap
           (err, _("Try 'svn mkdir --parents' instead?"));
       else
-        return svn_error_return(err);
+        return svn_error_trace(err);
     }
 
   return SVN_NO_ERROR;

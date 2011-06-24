@@ -101,6 +101,7 @@ reset_log_item(struct log_baton *lb)
   lb->log_entry->changed_paths  = NULL;
   lb->log_entry->has_children   = FALSE;
   lb->log_entry->changed_paths2 = NULL;
+  lb->log_entry->subtractive_merge = FALSE;
 
   svn_pool_clear(lb->subpool);
 }
@@ -137,6 +138,8 @@ log_start_element(int *elem, void *baton, int parent,
       { "DAV:", "comment", ELEM_comment, SVN_RA_NEON__XML_CDATA },
       { SVN_XML_NAMESPACE, "has-children", ELEM_has_children,
         SVN_RA_NEON__XML_CDATA },
+      { SVN_XML_NAMESPACE, "subtractive-merge", ELEM_subtractive_merge,
+        SVN_RA_NEON__XML_CDATA },
       { NULL }
     };
   const svn_ra_neon__xml_elm_t *elm
@@ -172,6 +175,9 @@ log_start_element(int *elem, void *baton, int parent,
     case ELEM_has_children:
       lb->log_entry->has_children = TRUE;
       break;
+    case ELEM_subtractive_merge:
+      lb->log_entry->subtractive_merge = TRUE;
+      break;
 
     default:
       lb->want_cdata = NULL;
@@ -189,9 +195,9 @@ log_start_element(int *elem, void *baton, int parent,
                                      svn_xml_get_attr_value("node-kind", atts));
       lb->this_path_item->copyfrom_rev = SVN_INVALID_REVNUM;
 
-      lb->this_path_item->text_modified = svn_tristate_from_word(
+      lb->this_path_item->text_modified = svn_tristate__from_word(
                                      svn_xml_get_attr_value("text-mods", atts));
-      lb->this_path_item->props_modified = svn_tristate_from_word(
+      lb->this_path_item->props_modified = svn_tristate__from_word(
                                      svn_xml_get_attr_value("prop-mods", atts));
 
       /* See documentation for `svn_repos_node_t' in svn_repos.h,
@@ -362,7 +368,8 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
   svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
   svn_boolean_t want_custom_revprops;
   struct log_baton lb;
-  svn_string_t bc_url, bc_relative;
+  const char *bc_url;
+  const char *bc_relative;
   const char *final_bc_url;
   svn_revnum_t use_rev;
   svn_error_t *err;
@@ -495,11 +502,9 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
      baseline-collection URL, which we get from the largest of the
      START and END revisions. */
   use_rev = (start > end) ? start : end;
-  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                         ras, ras->url->data, use_rev,
-                                         pool));
-  final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
-                                            pool);
+  SVN_ERR(svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL, ras,
+                                         ras->url->data, use_rev, pool));
+  final_bc_url = svn_path_url_add_component2(bc_url, bc_relative, pool);
 
 
   err = svn_ra_neon__parsed_request(ras,

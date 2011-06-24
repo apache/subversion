@@ -186,16 +186,23 @@ class Sandbox:
     return '%s/REDIRECT-%s-%s' % (parts[0],
                                   temporary and 'TEMP' or 'PERM',
                                   parts[1])
-    
+
   def simple_update(self, target=None):
     """Update the WC or TARGET.
        TARGET is a relpath relative to the WC."""
-    assert not self.read_only
     if target is None:
       target = self.wc_dir
     else:
       target = self.ospath(target)
     svntest.main.run_svn(False, 'update', target)
+
+  def simple_switch(self, url, target=None):
+    """Switch a TARGET to URL"""
+    if target is None:
+      target = self.wc_dir
+    else:
+      target = self.ospath(target)
+    svntest.main.run_svn(False, 'switch', url, target, '--ignore-ancestry')
 
   def simple_commit(self, target=None):
     """Commit the WC or TARGET with a default log message.
@@ -244,6 +251,24 @@ class Sandbox:
     assert len(targets) > 0
     targets = self.ospaths(targets)
     svntest.main.run_svn(False, 'propdel', name, *targets)
+
+  def simple_copy(self, source, dest):
+    """SOURCE and DEST are relpaths relative to the WC."""
+    source = self.ospath(source)
+    dest = self.ospath(dest)
+    svntest.main.run_svn(False, 'copy', source, dest)
+
+  def simple_move(self, source, dest):
+    """SOURCE and DEST are relpaths relative to the WC."""
+    source = self.ospath(source)
+    dest = self.ospath(dest)
+    svntest.main.run_svn(False, 'move', source, dest)
+
+  def simple_repo_copy(self, source, dest):
+    """SOURCE and DEST are relpaths relative to the repo root."""
+    svntest.main.run_svn(False, 'copy', '-m', svntest.main.make_log_msg(),
+                         self.repo_url + '/' + source,
+                         self.repo_url + '/' + dest)
 
 
 def is_url(target):

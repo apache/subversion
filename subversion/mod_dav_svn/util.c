@@ -36,7 +36,7 @@
 #include "svn_base64.h"
 
 #include "dav_svn.h"
-
+#include "private/svn_fspath.h"
 
 dav_error *
 dav_svn__new_error(apr_pool_t *pool,
@@ -111,7 +111,7 @@ dav_svn__convert_err(svn_error_t *serr,
     /* Remove the trace-only error chain links.  We need predictable
        protocol behavior regardless of whether or not we're in a
        debugging build. */
-    serr = svn_error_purge_tracing(serr);
+    svn_error_t *purged_serr = svn_error_purge_tracing(serr);
 
     /* ### someday mod_dav_svn will send back 'rich' error tags, much
        finer grained than plain old svn_error_t's.  But for now, all
@@ -122,7 +122,7 @@ dav_svn__convert_err(svn_error_t *serr,
        appropriate HTTP status code.  If no more appropriate HTTP
        status code maps to the Subversion error code, use the one
        suggested status provided by the caller. */
-    switch (serr->apr_err)
+    switch (purged_serr->apr_err)
       {
       case SVN_ERR_FS_NOT_FOUND:
         status = HTTP_NOT_FOUND;
@@ -130,6 +130,7 @@ dav_svn__convert_err(svn_error_t *serr,
       case SVN_ERR_UNSUPPORTED_FEATURE:
         status = HTTP_NOT_IMPLEMENTED;
         break;
+      case SVN_ERR_FS_LOCK_OWNER_MISMATCH:
       case SVN_ERR_FS_PATH_ALREADY_LOCKED:
         status = HTTP_LOCKED;
         break;
@@ -139,11 +140,12 @@ dav_svn__convert_err(svn_error_t *serr,
         /* add other mappings here */
       }
 
-    derr = build_error_chain(pool, serr, status);
+    derr = build_error_chain(pool, purged_serr, status);
     if (message != NULL
-        && serr->apr_err != SVN_ERR_REPOS_HOOK_FAILURE)
+        && purged_serr->apr_err != SVN_ERR_REPOS_HOOK_FAILURE)
       /* Don't hide hook failures; we might hide the error text */
-      derr = dav_push_error(pool, status, serr->apr_err, message, derr);
+      derr = dav_push_error(pool, status, purged_serr->apr_err,
+                            message, derr);
 
     /* Now, destroy the Subversion error. */
     svn_error_clear(serr);
@@ -488,7 +490,13 @@ dav_svn__brigade_printf(apr_bucket_brigade *bb,
 dav_error *
 dav_svn__test_canonical(const char *path, apr_pool_t *pool)
 {
-  if (svn_path_is_canonical(path, pool))
+  if (path[0] == '\0')
+    return NULL;
+  if (svn_path_is_url(path) && svn_uri_is_canonical(path, pool))
+    return NULL;
+  if ((path[0] == '/') && svn_fspath__is_canonical(path))
+    return NULL;
+  if (svn_relpath_is_canonical(path))
     return NULL;
 
   /* Otherwise, generate a generic HTTP_BAD_REQUEST error. */
@@ -716,20 +724,20 @@ request_body_to_string(svn_string_t **request_str,
         {
           const char *data;
           apr_size_t len;
-          
+
           if (APR_BUCKET_IS_EOS(bucket))
             {
               seen_eos = 1;
               break;
             }
-          
+
           if (APR_BUCKET_IS_METADATA(bucket))
             continue;
-          
+
           status = apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ);
           if (status != APR_SUCCESS)
             goto cleanup;
-          
+
           total_read += len;
           if (limit_req_body && total_read > limit_req_body)
             {
@@ -739,10 +747,10 @@ request_body_to_string(svn_string_t **request_str,
               result = HTTP_REQUEST_ENTITY_TOO_LARGE;
               goto cleanup;
             }
-          
+
           svn_stringbuf_appendbytes(buf, data, len);
         }
-      
+
       apr_brigade_cleanup(brigade);
     }
   while (!seen_eos);
@@ -757,7 +765,7 @@ request_body_to_string(svn_string_t **request_str,
 
  cleanup:
   apr_brigade_destroy(brigade);
-  
+
   /* Apache will supply a default error, plus the error log above. */
   return result;
 }

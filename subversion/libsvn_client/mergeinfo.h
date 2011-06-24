@@ -109,7 +109,16 @@ svn_client__merge_path_dup(const svn_client__merge_path_t *old,
    (ignored if NULL) or beyond any switched path.
 
    Set *WALKED_PATH to the path climbed from LOCAL_ABSPATH to find inherited
-   mergeinfo, or "" if none was found. (ignored if NULL). */
+   mergeinfo, or "" if none was found. (ignored if NULL).
+
+   If IGNORE_INVALID_MERGEINFO is true, then syntactically invalid explicit
+   mergeinfo on found on LOCAL_ABSPATH is ignored and *MERGEINFO is set to an
+   empty hash.  If IGNORE_INVALID_MERGEINFO is false, then syntactically
+   invalid explicit mergeinfo on found on LOCAL_ABSPATH results in a
+   SVN_ERR_MERGEINFO_PARSE_ERROR error.  Regardless of
+   IGNORE_INVALID_MERGEINFO, if LOCAL_ABSPATH inherits invalid mergeinfo,
+   then *MERGEINFO is always set to an empty hash and no parse error is
+   raised. */
 svn_error_t *
 svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                              svn_boolean_t *inherited,
@@ -117,6 +126,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                              const char *local_abspath,
                              const char *limit_abspath,
                              const char **walked_path,
+                             svn_boolean_t ignore_invalid_mergeinfo,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
@@ -138,6 +148,7 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
                                      const char *local_abspath,
                                      const char *limit_path,
                                      const char **walked_path,
+                                     svn_boolean_t ignore_invalid_mergeinfo,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
@@ -207,9 +218,10 @@ svn_client__get_repos_mergeinfo_catalog(
    target has no info of its own.
 
    If no mergeinfo can be obtained from the WC or REPOS_ONLY is TRUE,
-   get it from the repository.  RA_SESSION should be an open RA
-   session pointing at TARGET_WCPATH's URL, or NULL, in which case this
-   function will open its own temporary session.
+   get it from the repository.  If the repository is contacted for mergeinfo
+   and RA_SESSION does not point to TARGET_WCPATH's URL, then it is
+   temporarily reparented.  If RA_SESSION is NULL, then a temporary session
+   is opened as needed.
 
    Store any mergeinfo obtained for TARGET_WCPATH in
    *TARGET_MERGEINFO, if no mergeinfo is found *TARGET_MERGEINFO is
@@ -252,6 +264,7 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
   svn_boolean_t *indirect,
   svn_boolean_t include_descendants,
   svn_boolean_t repos_only,
+  svn_boolean_t ignore_invalid_mergeinfo,
   svn_mergeinfo_inheritance_t inherit,
   svn_ra_session_t *ra_session,
   const char *target_wcpath,
@@ -264,9 +277,14 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
    session whose session URL maps to PATH_OR_URL's URL, or NULL.
    If RANGE_YOUNGEST and RANGE_OLDEST are valid, use them to bound the
    revision ranges of returned mergeinfo.  See svn_ra_get_location_segments()
-   for the rules governing PEG_REVISION, START_REVISION, and END_REVISION.*/
+   for the rules governing PEG_REVISION, START_REVISION, and END_REVISION.
+
+   If HAS_REV_ZERO_HISTORY is not NULL, then set *HAS_REV_ZERO_HISTORY to
+   TRUE if the natural history of PATH_OR_URL@PEG_REVISION includes
+   revision 0.  Set *HAS_REV_ZERO_HISTORY to FALSE otherwise. */
 svn_error_t *
 svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
+                                     svn_boolean_t *has_rev_zero_history,
                                      const char *path_or_url,
                                      const svn_opt_revision_t *peg_revision,
                                      svn_revnum_t range_youngest,
@@ -274,14 +292,6 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
                                      svn_ra_session_t *ra_session,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
-
-/* Translates an array SEGMENTS (of svn_location_t *), like the one
-   returned from svn_client__repos_location_segments, into a mergeinfo
-   *MERGEINFO_P, allocated in POOL. */
-svn_error_t *
-svn_client__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
-                                    const apr_array_header_t *segments,
-                                    apr_pool_t *pool);
 
 /* Parse any explicit mergeinfo on LOCAL_ABSPATH and store it in
    MERGEINFO.  If no record of any mergeinfo exists, set MERGEINFO to NULL.

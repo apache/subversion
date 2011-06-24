@@ -36,8 +36,11 @@
 #include "svn_repos.h"
 #include "svn_checksum.h"
 #include "svn_props.h"
+#include "svn_mergeinfo.h"
 #include "repos.h"
 #include "svn_private_config.h"
+#include "private/svn_fspath.h"
+#include "private/svn_repos_private.h"
 
 
 
@@ -164,6 +167,147 @@ check_authz(struct edit_baton *editor_baton, const char *path,
   return SVN_NO_ERROR;
 }
 
+
+/* Return a directory baton allocated in POOL which represents
+   FULL_PATH, which is the immediate directory child of the directory
+   represented by PARENT_BATON.  EDIT_BATON is the commit editor
+   baton.  WAS_COPIED reveals whether or not this directory is the
+   result of a copy operation.  BASE_REVISION is the base revision of
+   the directory. */
+static struct dir_baton *
+make_dir_baton(struct edit_baton *edit_baton,
+               struct dir_baton *parent_baton,
+               const char *full_path,
+               svn_boolean_t was_copied,
+               svn_revnum_t base_revision,
+               apr_pool_t *pool)
+{
+  struct dir_baton *db;
+  db = apr_pcalloc(pool, sizeof(*db));
+  db->edit_baton = edit_baton;
+  db->parent = parent_baton;
+  db->pool = pool;
+  db->path = full_path;
+  db->was_copied = was_copied;
+  db->base_rev = base_revision;
+  return db;
+}
+
+
+/* This function is the shared guts of add_file() and add_directory(),
+   which see for the meanings of the parameters.  The only extra
+   parameter here is IS_DIR, which is TRUE when adding a directory,
+   and FALSE when adding a file.  */
+static svn_error_t *
+add_file_or_directory(const char *path,
+                      void *parent_baton,
+                      const char *copy_path,
+                      svn_revnum_t copy_revision,
+                      svn_boolean_t is_dir,
+                      apr_pool_t *pool,
+                      void **return_baton)
+{
+  struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_boolean_t was_copied = FALSE;
+  const char *full_path;
+
+  full_path = svn_fspath__join(eb->base_path,
+                               svn_relpath_canonicalize(path, pool), pool);
+
+  /* Sanity check. */
+  if (copy_path && (! SVN_IS_VALID_REVNUM(copy_revision)))
+    return svn_error_createf
+      (SVN_ERR_FS_GENERAL, NULL,
+       _("Got source path but no source revision for '%s'"), full_path);
+
+  if (copy_path)
+    {
+      const char *fs_path;
+      svn_fs_root_t *copy_root;
+      svn_node_kind_t kind;
+      size_t repos_url_len;
+      svn_repos_authz_access_t required;
+
+      /* Copy requires recursive write access to the destination path
+         and write access to the parent path. */
+      required = svn_authz_write | (is_dir ? svn_authz_recursive : 0);
+      SVN_ERR(check_authz(eb, full_path, eb->txn_root,
+                          required, subpool));
+      SVN_ERR(check_authz(eb, pb->path, eb->txn_root,
+                          svn_authz_write, subpool));
+
+      /* Check PATH in our transaction.  Make sure it does not exist
+         unless its parent directory was copied (in which case, the
+         thing might have been copied in as well), else return an
+         out-of-dateness error. */
+      SVN_ERR(svn_fs_check_path(&kind, eb->txn_root, full_path, subpool));
+      if ((kind != svn_node_none) && (! pb->was_copied))
+        return out_of_date(full_path, kind);
+
+      /* For now, require that the url come from the same repository
+         that this commit is operating on. */
+      copy_path = svn_path_uri_decode(copy_path, subpool);
+      repos_url_len = strlen(eb->repos_url);
+      if (strncmp(copy_path, eb->repos_url, repos_url_len) != 0)
+        return svn_error_createf
+          (SVN_ERR_FS_GENERAL, NULL,
+           _("Source url '%s' is from different repository"), copy_path);
+
+      fs_path = apr_pstrdup(subpool, copy_path + repos_url_len);
+
+      /* Now use the "fs_path" as an absolute path within the
+         repository to make the copy from. */
+      SVN_ERR(svn_fs_revision_root(&copy_root, eb->fs,
+                                   copy_revision, subpool));
+
+      /* Copy also requires (recursive) read access to the source */
+      required = svn_authz_read | (is_dir ? svn_authz_recursive : 0);
+      SVN_ERR(check_authz(eb, fs_path, copy_root, required, subpool));
+
+      SVN_ERR(svn_fs_copy(copy_root, fs_path,
+                          eb->txn_root, full_path, subpool));
+      was_copied = TRUE;
+    }
+  else
+    {
+      /* No ancestry given, just make a new directory or empty file.
+         Note that we don't perform an existence check here like the
+         copy-from case does -- that's because svn_fs_make_*()
+         already errors out if the file already exists.  Verify write
+         access to the full path and to the parent. */
+      SVN_ERR(check_authz(eb, full_path, eb->txn_root,
+                          svn_authz_write, subpool));
+      SVN_ERR(check_authz(eb, pb->path, eb->txn_root,
+                          svn_authz_write, subpool));
+      if (is_dir)
+        SVN_ERR(svn_fs_make_dir(eb->txn_root, full_path, subpool));
+      else
+        SVN_ERR(svn_fs_make_file(eb->txn_root, full_path, subpool));
+    }
+
+  /* Cleanup our temporary subpool. */
+  svn_pool_destroy(subpool);
+
+  /* Build a new child baton. */
+  if (is_dir)
+    {
+      *return_baton = make_dir_baton(eb, pb, full_path, was_copied,
+                                     SVN_INVALID_REVNUM, pool);
+    }
+  else
+    {
+      struct file_baton *new_fb = apr_pcalloc(pool, sizeof(*new_fb));
+      new_fb->edit_baton = eb;
+      new_fb->path = full_path;
+      *return_baton = new_fb;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /*** Editor functions ***/
 
@@ -230,7 +374,10 @@ delete_entry(const char *path,
   svn_node_kind_t kind;
   svn_revnum_t cr_rev;
   svn_repos_authz_access_t required = svn_authz_write;
-  const char *full_path = svn_path_join(eb->base_path, path, pool);
+  const char *full_path;
+
+  full_path = svn_fspath__join(eb->base_path,
+                               svn_relpath_canonicalize(path, pool), pool);
 
   /* Check PATH in our transaction.  */
   SVN_ERR(svn_fs_check_path(&kind, eb->txn_root, full_path, pool));
@@ -261,26 +408,6 @@ delete_entry(const char *path,
 }
 
 
-static struct dir_baton *
-make_dir_baton(struct edit_baton *edit_baton,
-               struct dir_baton *parent_baton,
-               const char *full_path,
-               svn_boolean_t was_copied,
-               svn_revnum_t base_revision,
-               apr_pool_t *pool)
-{
-  struct dir_baton *db;
-  db = apr_pcalloc(pool, sizeof(*db));
-  db->edit_baton = edit_baton;
-  db->parent = parent_baton;
-  db->pool = pool;
-  db->path = full_path;
-  db->was_copied = was_copied;
-  db->base_rev = base_revision;
-  return db;
-}
-
-
 static svn_error_t *
 add_directory(const char *path,
               void *parent_baton,
@@ -289,88 +416,8 @@ add_directory(const char *path,
               apr_pool_t *pool,
               void **child_baton)
 {
-  struct dir_baton *pb = parent_baton;
-  struct edit_baton *eb = pb->edit_baton;
-  const char *full_path = svn_path_join(eb->base_path, path, pool);
-  apr_pool_t *subpool = svn_pool_create(pool);
-  svn_boolean_t was_copied = FALSE;
-
-  /* Sanity check. */
-  if (copy_path && (! SVN_IS_VALID_REVNUM(copy_revision)))
-    return svn_error_createf
-      (SVN_ERR_FS_GENERAL, NULL,
-       _("Got source path but no source revision for '%s'"), full_path);
-
-  if (copy_path)
-    {
-      const char *fs_path;
-      svn_fs_root_t *copy_root;
-      svn_node_kind_t kind;
-      size_t repos_url_len;
-
-      /* Copy requires recursive write access to the destination path
-         and write access to the parent path. */
-      SVN_ERR(check_authz(eb, full_path, eb->txn_root,
-                          svn_authz_write | svn_authz_recursive,
-                          subpool));
-      SVN_ERR(check_authz(eb, pb->path, eb->txn_root,
-                          svn_authz_write, subpool));
-
-      /* Check PATH in our transaction.  Make sure it does not exist
-         unless its parent directory was copied (in which case, the
-         thing might have been copied in as well), else return an
-         out-of-dateness error. */
-      SVN_ERR(svn_fs_check_path(&kind, eb->txn_root, full_path, subpool));
-      if ((kind != svn_node_none) && (! pb->was_copied))
-        return out_of_date(full_path, kind);
-
-      /* For now, require that the url come from the same repository
-         that this commit is operating on. */
-      copy_path = svn_path_uri_decode(copy_path, subpool);
-      repos_url_len = strlen(eb->repos_url);
-      if (strncmp(copy_path, eb->repos_url, repos_url_len) != 0)
-        return svn_error_createf
-          (SVN_ERR_FS_GENERAL, NULL,
-           _("Source url '%s' is from different repository"), copy_path);
-
-      fs_path = apr_pstrdup(subpool, copy_path + repos_url_len);
-
-      /* Now use the "fs_path" as an absolute path within the
-         repository to make the copy from. */
-      SVN_ERR(svn_fs_revision_root(&copy_root, eb->fs,
-                                   copy_revision, subpool));
-
-      /* Copy also requires recursive read access to the source
-         path. */
-      SVN_ERR(check_authz(eb, fs_path, copy_root,
-                          svn_authz_read | svn_authz_recursive,
-                          subpool));
-
-      SVN_ERR(svn_fs_copy(copy_root, fs_path,
-                          eb->txn_root, full_path, subpool));
-      was_copied = TRUE;
-    }
-  else
-    {
-      /* No ancestry given, just make a new directory.  We don't
-         bother with an out-of-dateness check here because
-         svn_fs_make_dir will error out if PATH already exists.
-         Verify write access to the full path and the parent
-         directory. */
-      SVN_ERR(check_authz(eb, full_path, eb->txn_root,
-                          svn_authz_write, subpool));
-      SVN_ERR(check_authz(eb, pb->path, eb->txn_root,
-                          svn_authz_write, subpool));
-      SVN_ERR(svn_fs_make_dir(eb->txn_root, full_path, subpool));
-    }
-
-  /* Cleanup our temporary subpool. */
-  svn_pool_destroy(subpool);
-
-  /* Build a new dir baton for this directory. */
-  *child_baton = make_dir_baton(eb, pb, full_path, was_copied,
-                                SVN_INVALID_REVNUM, pool);
-  return SVN_NO_ERROR;
+  return add_file_or_directory(path, parent_baton, copy_path, copy_revision,
+                               TRUE /* is_dir */, pool, child_baton);
 }
 
 
@@ -384,7 +431,10 @@ open_directory(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_node_kind_t kind;
-  const char *full_path = svn_path_join(eb->base_path, path, pool);
+  const char *full_path;
+
+  full_path = svn_fspath__join(eb->base_path,
+                               svn_relpath_canonicalize(path, pool), pool);
 
   /* Check PATH in our transaction.  If it does not exist,
      return a 'Path not present' error. */
@@ -424,8 +474,6 @@ apply_textdelta(void *file_baton,
 }
 
 
-
-
 static svn_error_t *
 add_file(const char *path,
          void *parent_baton,
@@ -434,90 +482,9 @@ add_file(const char *path,
          apr_pool_t *pool,
          void **file_baton)
 {
-  struct file_baton *new_fb;
-  struct dir_baton *pb = parent_baton;
-  struct edit_baton *eb = pb->edit_baton;
-  const char *full_path = svn_path_join(eb->base_path, path, pool);
-  apr_pool_t *subpool = svn_pool_create(pool);
-
-  /* Sanity check. */
-  if (copy_path && (! SVN_IS_VALID_REVNUM(copy_revision)))
-    return svn_error_createf
-      (SVN_ERR_FS_GENERAL, NULL,
-       _("Got source path but no source revision for '%s'"), full_path);
-
-  if (copy_path)
-    {
-      const char *fs_path;
-      svn_fs_root_t *copy_root;
-      svn_node_kind_t kind;
-      size_t repos_url_len;
-
-      /* Copy requires recursive write to the destination path and
-         parent path. */
-      SVN_ERR(check_authz(eb, full_path, eb->txn_root,
-                          svn_authz_write, subpool));
-      SVN_ERR(check_authz(eb, pb->path, eb->txn_root,
-                          svn_authz_write, subpool));
-
-      /* Check PATH in our transaction.  Make sure it does not exist
-         unless its parent directory was copied (in which case, the
-         thing might have been copied in as well), else return an
-         out-of-dateness error. */
-      SVN_ERR(svn_fs_check_path(&kind, eb->txn_root, full_path, subpool));
-      if ((kind != svn_node_none) && (! pb->was_copied))
-        return out_of_date(full_path, kind);
-
-      /* For now, require that the url come from the same repository
-         that this commit is operating on. */
-      copy_path = svn_path_uri_decode(copy_path, subpool);
-      repos_url_len = strlen(eb->repos_url);
-      if (strncmp(copy_path, eb->repos_url, repos_url_len) != 0)
-            return svn_error_createf
-              (SVN_ERR_FS_GENERAL, NULL,
-               _("Source url '%s' is from different repository"), copy_path);
-
-      fs_path = apr_pstrdup(subpool, copy_path + repos_url_len);
-
-      /* Now use the "fs_path" as an absolute path within the
-         repository to make the copy from. */
-      SVN_ERR(svn_fs_revision_root(&copy_root, eb->fs,
-                                   copy_revision, subpool));
-
-      /* Copy also requires read access to the source */
-      SVN_ERR(check_authz(eb, fs_path, copy_root,
-                          svn_authz_read, subpool));
-
-      SVN_ERR(svn_fs_copy(copy_root, fs_path,
-                          eb->txn_root, full_path, subpool));
-    }
-  else
-    {
-      /* No ancestry given, just make a new, empty file.  Note that we
-         don't perform an existence check here like the copy-from case
-         does -- that's because svn_fs_make_file() already errors out
-         if the file already exists.  Verify write access to the full
-         path and to the parent. */
-      SVN_ERR(check_authz(eb, full_path, eb->txn_root, svn_authz_write,
-                          subpool));
-      SVN_ERR(check_authz(eb, pb->path, eb->txn_root, svn_authz_write,
-                          subpool));
-      SVN_ERR(svn_fs_make_file(eb->txn_root, full_path, subpool));
-    }
-
-  /* Cleanup our temporary subpool. */
-  svn_pool_destroy(subpool);
-
-  /* Build a new file baton */
-  new_fb = apr_pcalloc(pool, sizeof(*new_fb));
-  new_fb->edit_baton = eb;
-  new_fb->path = full_path;
-
-  *file_baton = new_fb;
-  return SVN_NO_ERROR;
+  return add_file_or_directory(path, parent_baton, copy_path, copy_revision,
+                               FALSE /* is_dir */, pool, file_baton);
 }
-
-
 
 
 static svn_error_t *
@@ -532,7 +499,10 @@ open_file(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   svn_revnum_t cr_rev;
   apr_pool_t *subpool = svn_pool_create(pool);
-  const char *full_path = svn_path_join(eb->base_path, path, pool);
+  const char *full_path;
+
+  full_path = svn_fspath__join(eb->base_path,
+                               svn_relpath_canonicalize(path, pool), pool);
 
   /* Check for read authorization. */
   SVN_ERR(check_authz(eb, full_path, eb->txn_root,
@@ -561,6 +531,38 @@ open_file(const char *path,
 }
 
 
+/* Verify the mergeinfo property value VALUE and return an error if it
+ * is invalid. The PATH on which that property is set is used for error
+ * messages only.  Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+verify_mergeinfo(const svn_string_t *value,
+                 const char *path,
+                 apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  svn_mergeinfo_t mergeinfo;
+
+  /* It's okay to delete svn:mergeinfo. */
+  if (value == NULL)
+    return SVN_NO_ERROR;
+
+  /* Mergeinfo is UTF-8 encoded so the number of bytes returned by strlen()
+   * should match VALUE->LEN. Prevents trailing garbage in the property. */
+  if (strlen(value->data) != value->len)
+    return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+                             _("Commit rejected because mergeinfo on '%s' "
+                               "contains unexpected string terminator"),
+                             path);
+
+  err = svn_mergeinfo_parse(&mergeinfo, value->data, scratch_pool);
+  if (err)
+    return svn_error_createf(err->apr_err, err,
+                             _("Commit rejected because mergeinfo on '%s' "
+                               "is syntactically invalid"),
+                             path);
+  return SVN_NO_ERROR;
+}
+
 
 static svn_error_t *
 change_file_prop(void *file_baton,
@@ -574,6 +576,9 @@ change_file_prop(void *file_baton,
   /* Check for write authorization. */
   SVN_ERR(check_authz(eb, fb->path, eb->txn_root,
                       svn_authz_write, pool));
+
+  if (value && strcmp(name, SVN_PROP_MERGEINFO) == 0)
+    SVN_ERR(verify_mergeinfo(value, fb->path, pool));
 
   return svn_repos_fs_change_node_prop(eb->txn_root, fb->path,
                                        name, value, pool);
@@ -599,16 +604,9 @@ close_file(void *file_baton,
                                      text_digest, pool));
 
       if (!svn_checksum_match(text_checksum, checksum))
-        {
-          return svn_error_createf
-            (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-             apr_psprintf(pool, "%s:\n%s\n%s\n",
-                          _("Checksum mismatch for resulting fulltext\n(%s)"),
-                          _("   expected:  %s"),
-                          _("     actual:  %s")),
-             fb->path, svn_checksum_to_cstring_display(text_checksum, pool),
-             svn_checksum_to_cstring_display(checksum, pool));
-        }
+        return svn_checksum_mismatch_err(text_checksum, checksum, pool,
+                            _("Checksum mismatch for resulting fulltext\n(%s)"),
+                            fb->path);
     }
 
   return SVN_NO_ERROR;
@@ -640,11 +638,75 @@ change_dir_prop(void *dir_baton,
         return out_of_date(db->path, svn_node_dir);
     }
 
+  if (value && strcmp(name, SVN_PROP_MERGEINFO) == 0)
+    SVN_ERR(verify_mergeinfo(value, db->path, pool));
+
   return svn_repos_fs_change_node_prop(eb->txn_root, db->path,
                                        name, value, pool);
 }
 
+const char *
+svn_repos__post_commit_error_str(svn_error_t *err,
+                                 apr_pool_t *pool)
+{
+  svn_error_t *hook_err1, *hook_err2;
+  const char *msg;
 
+  if (! err)
+    return _("(no error)");
+
+  err = svn_error_purge_tracing(err);
+
+  /* hook_err1 is the SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED wrapped
+     error from the post-commit script, if any, and hook_err2 should
+     be the original error, but be defensive and handle a case where
+     SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED doesn't wrap an error. */
+  hook_err1 = svn_error_find_cause(err, SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED);
+  if (hook_err1 && hook_err1->child)
+    hook_err2 = hook_err1->child;
+  else
+    hook_err2 = hook_err1;
+
+  /* This implementation counts on svn_repos_fs_commit_txn() returning
+     svn_fs_commit_txn() as the parent error with a child
+     SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED error.  If the parent error
+     is SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED then there was no error
+     in svn_fs_commit_txn().
+
+     The post-commit hook error message is already self describing, so
+     it can be dropped into an error message without any additional
+     text. */
+  if (hook_err1)
+    {
+      if (err == hook_err1)
+        {
+          if (hook_err2->message)
+            msg = apr_pstrdup(pool, hook_err2->message);
+          else
+            msg = _("post-commit hook failed with no error message.");
+        }
+      else
+        {
+          msg = hook_err2->message
+                  ? apr_pstrdup(pool, hook_err2->message)
+                  : _("post-commit hook failed with no error message.");
+          msg = apr_psprintf(
+                  pool,
+                  _("post commit FS processing had error:\n%s\n%s"),
+                  err->message ? err->message : _("(no error message)"),
+                  msg);
+        }
+    }
+  else
+    {
+      msg = apr_psprintf(pool,
+                         _("post commit FS processing had error:\n%s"),
+                         err->message ? err->message
+                                      : _("(no error message)"));
+    }
+
+  return msg;
+}
 
 static svn_error_t *
 close_edit(void *edit_baton,
@@ -654,7 +716,7 @@ close_edit(void *edit_baton,
   svn_revnum_t new_revision = SVN_INVALID_REVNUM;
   svn_error_t *err;
   const char *conflict;
-  char *post_commit_err = NULL;
+  const char *post_commit_err = NULL;
 
   /* If no transaction has been created (ie. if open_root wasn't
      called before close_edit), abort the operation here with an
@@ -667,51 +729,40 @@ close_edit(void *edit_baton,
   err = svn_repos_fs_commit_txn(&conflict, eb->repos,
                                 &new_revision, eb->txn, pool);
 
-  if (err)
+  if (SVN_IS_VALID_REVNUM(new_revision))
     {
-      if (err->apr_err == SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED)
+      if (err)
         {
           /* If the error was in post-commit, then the commit itself
              succeeded.  In which case, save the post-commit warning
              (to be reported back to the client, who will probably
              display it as a warning) and clear the error. */
-          if (err->child && err->child->message)
-            {
-              svn_error_t *warning_err = err->child;
-#ifdef SVN_ERR__TRACING
-              /* Skip over any trace records.  */
-              while (warning_err->message != NULL
-                     && strcmp(warning_err->message, SVN_ERR__TRACED) == 0)
-                warning_err = warning_err->child;
-#endif
-              post_commit_err = apr_pstrdup(pool, warning_err->message);
-            }
-
+          post_commit_err = svn_repos__post_commit_error_str(err, pool);
           svn_error_clear(err);
           err = SVN_NO_ERROR;
         }
-      else  /* Got a real error -- one that stopped the commit */
-        {
-          /* ### todo: we should check whether it really was a conflict,
-             and return the conflict info if so? */
+    }
+  else
+    {
+      /* ### todo: we should check whether it really was a conflict,
+         and return the conflict info if so? */
 
-          /* If the commit failed, it's *probably* due to a conflict --
-             that is, the txn being out-of-date.  The filesystem gives us
-             the ability to continue diddling the transaction and try
-             again; but let's face it: that's not how the cvs or svn works
-             from a user interface standpoint.  Thus we don't make use of
-             this fs feature (for now, at least.)
+      /* If the commit failed, it's *probably* due to a conflict --
+         that is, the txn being out-of-date.  The filesystem gives us
+         the ability to continue diddling the transaction and try
+         again; but let's face it: that's not how the cvs or svn works
+         from a user interface standpoint.  Thus we don't make use of
+         this fs feature (for now, at least.)
 
-             So, in a nutshell: svn commits are an all-or-nothing deal.
-             Each commit creates a new fs txn which either succeeds or is
-             aborted completely.  No second chances;  the user simply
-             needs to update and commit again  :)
+         So, in a nutshell: svn commits are an all-or-nothing deal.
+         Each commit creates a new fs txn which either succeeds or is
+         aborted completely.  No second chances;  the user simply
+         needs to update and commit again  :)
 
-             We ignore the possible error result from svn_fs_abort_txn();
-             it's more important to return the original error. */
-          svn_error_clear(svn_fs_abort_txn(eb->txn, pool));
-          return svn_error_return(err);
-        }
+         We ignore the possible error result from svn_fs_abort_txn();
+         it's more important to return the original error. */
+      svn_error_clear(svn_fs_abort_txn(eb->txn, pool));
+      return svn_error_trace(err);
     }
 
   /* Pass new revision information to the caller's callback. */
@@ -743,12 +794,12 @@ close_edit(void *edit_baton,
         commit_info->author = author ? author->data : NULL;
         commit_info->post_commit_err = post_commit_err;
         err = (*eb->commit_callback)(commit_info,
-                                      eb->commit_callback_baton,
-                                      pool);
+                                     eb->commit_callback_baton,
+                                     pool);
       }
   }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -822,7 +873,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   eb->commit_callback_baton = callback_baton;
   eb->authz_callback = authz_callback;
   eb->authz_baton = authz_baton;
-  eb->base_path = apr_pstrdup(subpool, base_path);
+  eb->base_path = svn_fspath__canonicalize(base_path, subpool);
   eb->repos = repos;
   eb->repos_url = repos_url;
   eb->repos_name = svn_dirent_basename(svn_repos_path(repos, subpool),

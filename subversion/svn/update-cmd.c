@@ -50,7 +50,7 @@ print_update_summary(apr_array_header_t *targets,
 {
   int i;
   const char *path_prefix;
-  apr_pool_t *iter_pool;
+  apr_pool_t *iterpool;
 
   if (targets->nelts < 2)
     return SVN_NO_ERROR;
@@ -58,14 +58,14 @@ print_update_summary(apr_array_header_t *targets,
   SVN_ERR(svn_dirent_get_absolute(&path_prefix, "", scratch_pool));
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Summary of updates:\n")));
 
-  iter_pool = svn_pool_create(scratch_pool);
+  iterpool = svn_pool_create(scratch_pool);
 
   for (i = 0; i < targets->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(targets, i, const char *);
       svn_revnum_t rev = SVN_INVALID_REVNUM;
 
-      svn_pool_clear(iter_pool);
+      svn_pool_clear(iterpool);
 
       /* PATH shouldn't be a URL. */
       SVN_ERR_ASSERT(! svn_path_is_url(path));
@@ -82,18 +82,18 @@ print_update_summary(apr_array_header_t *targets,
 
       /* Convert to an absolute path if it's not already. */
       if (! svn_dirent_is_absolute(path))
-        SVN_ERR(svn_dirent_get_absolute(&path, path, iter_pool));
-      path = svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
-                                                             path), iter_pool);
+        SVN_ERR(svn_dirent_get_absolute(&path, path, iterpool));
 
       /* Print an update summary for this target, removing the current
          working directory prefix from PATH (if PATH is at or under
          $CWD), and converting the path to local style for display. */
-      SVN_ERR(svn_cmdline_printf(iter_pool, _("  Updated '%s' to r%ld.\n"),
-                                 path, rev));
+      SVN_ERR(svn_cmdline_printf(iterpool, _("  Updated '%s' to r%ld.\n"),
+                                 svn_cl__local_style_skip_ancestor(
+                                   path_prefix, path, iterpool),
+                                 rev));
     }
 
-  svn_pool_destroy(iter_pool);
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -113,36 +113,15 @@ svn_cl__update(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, scratch_pool));
+                                                      ctx, FALSE,
+                                                      scratch_pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, scratch_pool);
 
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
 
-  /* If any targets are URLs, notify that we're skipping them and remove
-     them from TARGETS.  Although svn_client_update4() would skip them
-     anyway, we don't want to pass invalid targets to it, and especially
-     not to print_update_summary(). */
-  {
-    apr_array_header_t *new_targets
-      = apr_array_make(scratch_pool, targets->nelts, sizeof(const char *));
-    int i;
-
-    for (i = 0; i < targets->nelts; i++)
-      {
-        const char *target = APR_ARRAY_IDX(targets, i, const char *);
-
-        if (svn_path_is_url(target))
-          ctx->notify_func2(ctx->notify_baton2,
-                            svn_wc_create_notify_url(
-                              target, svn_wc_notify_skip, scratch_pool),
-                            scratch_pool);
-        else
-          APR_ARRAY_PUSH(new_targets, const char *) = target;
-      }
-    targets = new_targets;
-  }
+  SVN_ERR(svn_cl__check_targets_are_local_paths(targets));
 
   /* If using changelists, convert targets into a set of paths that
      match the specified changelist(s). */
@@ -174,12 +153,13 @@ svn_cl__update(apr_getopt_t *os,
   nwb.had_externals_error = FALSE;
   ctx->notify_func2 = svn_cl__check_externals_failed_notify_wrapper;
   ctx->notify_baton2 = &nwb;
-  
+
   SVN_ERR(svn_client_update4(&result_revs, targets,
                              &(opt_state->start_revision),
                              depth, depth_is_sticky,
                              opt_state->ignore_externals,
-                             opt_state->force, opt_state->parents,
+                             opt_state->force, TRUE /* adds_as_modification */,
+                             opt_state->parents,
                              ctx, scratch_pool));
 
   if (! opt_state->quiet)

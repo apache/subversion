@@ -28,7 +28,7 @@ import os, types, sys
 import svntest
 
 # if somebody does a "from testcase import *", they only get these names
-__all__ = ['XFail', 'Wimp', 'Skip', 'SkipUnless']
+__all__ = ['_XFail', '_Wimp', '_Skip', '_SkipUnless']
 
 RESULT_OK = 'ok'
 RESULT_FAIL = 'fail'
@@ -70,7 +70,8 @@ class TestCase:
     RESULT_SKIP: (2, TextColors.success('SKIP: '), True),
     }
 
-  def __init__(self, delegate=None, cond_func=lambda: True, doc=None, wip=None):
+  def __init__(self, delegate=None, cond_func=lambda: True, doc=None, wip=None,
+               issues=None):
     """Create a test case instance based on DELEGATE.
 
     COND_FUNC is a callable that is evaluated at test run time and should
@@ -83,7 +84,7 @@ class TestCase:
 
     DOC is ...
 
-    WIP is ...
+    WIP is a string describing the reason for the work-in-progress
     """
     assert hasattr(cond_func, '__call__')
 
@@ -91,6 +92,7 @@ class TestCase:
     self._cond_func = cond_func
     self.description = doc or delegate.description
     self.inprogress = wip
+    self.issues = issues
 
   def get_function_name(self):
     """Return the name of the python function implementing the test."""
@@ -102,6 +104,10 @@ class TestCase:
     If a sandbox should not be constructed, this method returns None.
     """
     return self._delegate.get_sandbox_name()
+
+  def set_issues(self, issues):
+    """Set the issues associated with this test."""
+    self.issues = issues
 
   def run(self, sandbox):
     """Run the test within the given sandbox."""
@@ -129,7 +135,7 @@ class FunctionTestCase(TestCase):
   is derived from the file name in which FUNC was defined)
   """
 
-  def __init__(self, func):
+  def __init__(self, func, issues=None):
     # it better be a function that accepts an sbox parameter and has a
     # docstring on it.
     assert isinstance(func, types.FunctionType)
@@ -153,7 +159,7 @@ class FunctionTestCase(TestCase):
     assert doc[0].lower() == doc[0], \
         "%s's docstring should not be capitalized" % name
 
-    TestCase.__init__(self, doc=doc)
+    TestCase.__init__(self, doc=doc, issues=issues)
     self.func = func
 
   def get_function_name(self):
@@ -170,7 +176,7 @@ class FunctionTestCase(TestCase):
     return self.func(sandbox)
 
 
-class XFail(TestCase):
+class _XFail(TestCase):
   """A test that is expected to fail, if its condition is true."""
 
   _result_map = {
@@ -179,7 +185,8 @@ class XFail(TestCase):
     RESULT_SKIP: (2, TextColors.success('SKIP: '), True),
     }
 
-  def __init__(self, test_case, cond_func=lambda: True, wip=None):
+  def __init__(self, test_case, cond_func=lambda: True, wip=None,
+               issues=None):
     """Create an XFail instance based on TEST_CASE.  COND_FUNC is a
     callable that is evaluated at test run time and should return a
     boolean value.  If COND_FUNC returns true, then TEST_CASE is
@@ -189,16 +196,19 @@ class XFail(TestCase):
     information that are not available at __init__ time (like the fact
     that we're running over a particular RA layer).
 
-    WIP is ..."""
+    WIP is ...
 
-    TestCase.__init__(self, create_test_case(test_case), cond_func, wip=wip)
+    ISSUES is an issue number (or a list of issue numbers) tracking this."""
+
+    TestCase.__init__(self, create_test_case(test_case), cond_func, wip=wip,
+                      issues=issues)
 
   def list_mode(self):
     # basically, the only possible delegate is a Skip test. favor that mode.
     return self._delegate.list_mode() or 'XFAIL'
 
 
-class Wimp(XFail):
+class _Wimp(_XFail):
   """Like XFail, but indicates a work-in-progress: an unexpected pass
   is not considered a test failure."""
 
@@ -209,13 +219,13 @@ class Wimp(XFail):
     }
 
   def __init__(self, wip, test_case, cond_func=lambda: True):
-    XFail.__init__(self, test_case, cond_func, wip)
+    _XFail.__init__(self, test_case, cond_func, wip)
 
 
-class Skip(TestCase):
+class _Skip(TestCase):
   """A test that will be skipped if its conditional is true."""
 
-  def __init__(self, test_case, cond_func=lambda: True):
+  def __init__(self, test_case, cond_func=lambda: True, issues=None):
     """Create a Skip instance based on TEST_CASE.  COND_FUNC is a
     callable that is evaluated at test run time and should return a
     boolean value.  If COND_FUNC returns true, then TEST_CASE is
@@ -225,7 +235,8 @@ class Skip(TestCase):
     __init__ time (like the fact that we're running over a
     particular RA layer)."""
 
-    TestCase.__init__(self, create_test_case(test_case), cond_func)
+    TestCase.__init__(self, create_test_case(test_case), cond_func,
+                      issues=issues)
 
   def list_mode(self):
     if self._cond_func():
@@ -243,15 +254,73 @@ class Skip(TestCase):
     return self._delegate.run(sandbox)
 
 
-class SkipUnless(Skip):
+class _SkipUnless(_Skip):
   """A test that will be skipped if its conditional is false."""
 
   def __init__(self, test_case, cond_func):
-    Skip.__init__(self, test_case, lambda c=cond_func: not c())
+    _Skip.__init__(self, test_case, lambda c=cond_func: not c())
 
 
-def create_test_case(func):
+def create_test_case(func, issues=None):
   if isinstance(func, TestCase):
     return func
   else:
-    return FunctionTestCase(func)
+    return FunctionTestCase(func, issues=issues)
+
+
+# Various decorators to make declaring tests as such simpler
+def XFail_deco(cond_func = lambda: True):
+  def _second(func):
+    if isinstance(func, TestCase):
+      return _XFail(func, cond_func, issues=func.issues)
+    else:
+      return _XFail(func, cond_func)
+
+  return _second
+
+
+def Wimp_deco(wip, cond_func = lambda: True):
+  def _second(func):
+    if isinstance(func, TestCase):
+      return _Wimp(wip, func, cond_func, issues=func.issues)
+    else:
+      return _Wimp(wip, func, cond_func)
+
+  return _second
+
+
+def Skip_deco(cond_func = lambda: True):
+  def _second(func):
+    if isinstance(func, TestCase):
+      return _Skip(func, cond_func, issues=func.issues)
+    else:
+      return _Skip(func, cond_func)
+
+  return _second
+
+
+def SkipUnless_deco(cond_func):
+  def _second(func):
+    if isinstance(func, TestCase):
+      return _Skip(func, lambda c=cond_func: not c(), issues=func.issues)
+    else:
+      return _Skip(func, lambda c=cond_func: not c())
+
+  return _second
+
+
+def Issues_deco(*issues):
+  def _second(func):
+    if isinstance(func, TestCase):
+      # if the wrapped thing is already a test case, just set the issues
+      func.set_issues(issues)
+      return func
+
+    else:
+      # we need to wrap the function
+      return create_test_case(func, issues=issues)
+
+  return _second
+
+# Create a singular alias, for linguistic correctness
+Issue_deco = Issues_deco

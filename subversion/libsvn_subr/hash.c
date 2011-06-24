@@ -347,15 +347,16 @@ svn_hash_read(apr_hash_t *hash,
           size_t keylen;
           int parsed_len;
           void *keybuf;
-          
+
           /* Get the length of the key */
           SVN_ERR(svn_cstring_atoi(&parsed_len, buf + 2));
           keylen = parsed_len;
 
           /* Now read that much into a buffer, + 1 byte for null terminator */
           keybuf = apr_palloc(pool, keylen + 1);
-          SVN_ERR(svn_io_file_read_full(srcfile,
-                                        keybuf, keylen, &num_read, pool));
+          SVN_ERR(svn_io_file_read_full2(srcfile,
+                                         keybuf, keylen,
+                                         &num_read, NULL, pool));
           ((char *) keybuf)[keylen] = '\0';
 
           /* Suck up extra newline after key data */
@@ -379,9 +380,9 @@ svn_hash_read(apr_hash_t *hash,
 
               /* Again, 1 extra byte for the null termination. */
               valbuf = apr_palloc(pool, vallen + 1);
-              SVN_ERR(svn_io_file_read_full(srcfile,
-                                            valbuf, vallen,
-                                            &num_read, pool));
+              SVN_ERR(svn_io_file_read_full2(srcfile,
+                                             valbuf, vallen,
+                                             &num_read, NULL, pool));
               ((char *) valbuf)[vallen] = '\0';
 
               /* Suck up extra newline after val data */
@@ -509,3 +510,38 @@ svn_hash__clear(apr_hash_t *hash, apr_pool_t *pool)
 #endif
   return SVN_NO_ERROR;
 }
+
+
+
+/*** Specialized getter APIs ***/
+
+const char *
+svn_hash__get_cstring(apr_hash_t *hash,
+                      const char *key,
+                      const char *default_value)
+{
+  if (hash)
+    {
+      const char *value = apr_hash_get(hash, key, APR_HASH_KEY_STRING);
+      return value ? value : default_value;
+    }
+
+  return default_value;
+}
+
+
+svn_boolean_t
+svn_hash__get_bool(apr_hash_t *hash, const char *key,
+                   svn_boolean_t default_value)
+{
+  const char *tmp_value = svn_hash__get_cstring(hash, key, NULL);
+  svn_tristate_t value = svn_tristate__from_word(tmp_value);
+
+  if (value == svn_tristate_true)
+    return TRUE;
+  else if (value == svn_tristate_false)
+    return FALSE;
+
+  return default_value;
+}
+

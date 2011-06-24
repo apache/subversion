@@ -33,9 +33,7 @@
 
 /**
  * This class requests username/password and informations about
- * ssl-certificates from the user. There are 3 Java interfaces for that.
- * PromptUserPassword, PromptUserPassword2 and PromptUserPassword3
- * each following interface extends the previous interface.
+ * ssl-certificates from the user.
  */
 class Prompter
 {

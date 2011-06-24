@@ -279,6 +279,11 @@ SVN_ERROR_START
              SVN_ERR_IO_CATEGORY_START + 6,
              "Write error")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_IO_PIPE_WRITE_ERROR,
+             SVN_ERR_IO_CATEGORY_START + 7,
+             "Write error in pipe")
+
   /* stream errors */
 
   SVN_ERRDEF(SVN_ERR_STREAM_UNEXPECTED_EOF,
@@ -370,15 +375,14 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 6,
              "Invalid lock")
 
- /** Previously this error number was used by #SVN_ERR_WC_NOT_DIRECTORY, which
-  * is now an alias for this error.
-  * @since Since 1.7. */
+  /** @since New in 1.7. Previously this error number was used by
+   * #SVN_ERR_WC_NOT_DIRECTORY, which is now an alias for this error. */
   SVN_ERRDEF(SVN_ERR_WC_NOT_WORKING_COPY,
              SVN_ERR_WC_CATEGORY_START + 7,
              "Path is not a working copy directory")
 
-  /** This name is deprecated. Use #SVN_ERR_WC_NOT_WORKING_COPY.
-   * @deprecated Provided for backward compatibility with the 1.6 API. */
+  /** @deprecated Provided for backward compatibility with the 1.6 API.
+   * Use #SVN_ERR_WC_NOT_WORKING_COPY. */
 #define SVN_ERR_WC_NOT_DIRECTORY SVN_ERR_WC_NOT_WORKING_COPY
 
   SVN_ERRDEF(SVN_ERR_WC_NOT_FILE,
@@ -471,7 +475,8 @@ SVN_ERROR_START
              "Failed to locate 'copyfrom' path in working copy")
 
   /** @since New in 1.5.
-   * @deprecated This event is not an error, and is now reported
+   * @deprecated Provided for backward compatibility with the 1.6 API.
+   * This event is not an error, and is now reported
    * via the standard notification mechanism instead. */
   SVN_ERRDEF(SVN_ERR_WC_CHANGELIST_MOVE,
              SVN_ERR_WC_CATEGORY_START + 29,
@@ -1191,6 +1196,26 @@ SVN_ERROR_START
              SVN_ERR_CLIENT_CATEGORY_START + 19,
              "Detected a cycle while processing the operation")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_CLIENT_MERGE_UPDATE_REQUIRED,
+             SVN_ERR_CLIENT_CATEGORY_START + 20,
+             "Working copy and merge source not ready for reintegration")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING,
+             SVN_ERR_CLIENT_CATEGORY_START + 21,
+             "Invalid mergeinfo detected in merge target")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_CLIENT_NO_LOCK_TOKEN,
+             SVN_ERR_CLIENT_CATEGORY_START + 22,
+             "Can't perform this operation without a valid lock token")
+
+/** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_CLIENT_FORBIDDEN_BY_SERVER,
+             SVN_ERR_CLIENT_CATEGORY_START + 23,
+             "The operation is forbidden by the server")
+
   /* misc errors */
 
   SVN_ERRDEF(SVN_ERR_BASE,
@@ -1350,6 +1375,11 @@ SVN_ERROR_START
              "SQLite busy at transaction rollback; "
              "resetting all busy SQLite statements to allow rollback")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_SQLITE_CONSTRAINT,
+             SVN_ERR_MISC_CATEGORY_START + 35,
+             "Constraint error in SQLite db")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
@@ -1405,6 +1435,10 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_ASSERTION_FAIL,
              SVN_ERR_MALFUNC_CATEGORY_START + 0,
              "Assertion failure")
+
+  SVN_ERRDEF(SVN_ERR_ASSERTION_ONLY_TRACING_LINKS,
+             SVN_ERR_MALFUNC_CATEGORY_START + 1,
+             "No non-tracing links found in the error chain")
 
 SVN_ERROR_END
 

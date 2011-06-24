@@ -32,10 +32,12 @@ import os
 import svntest
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
-Wimp = svntest.testcase.Wimp
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 exp_noop_up_out = svntest.actions.expected_noop_update_output
 
@@ -310,7 +312,13 @@ def revert_nested_adds(sbox):
   X_path = sbox.ospath('X')
   Y_path = sbox.ospath('A/C/Y')
   Z_path = sbox.ospath('A/D/H/Z')
-  files = [X_path, Y_path, Z_path]
+  files = ([X_path, Y_path, Z_path]
+           + [os.path.join(X_path, child)
+              for child in ['P', 'delta']]
+           + [os.path.join(Y_path, child)
+              for child in ['Q', 'epsilon', 'upsilon']]
+           + [os.path.join(Z_path, child)
+              for child in ['R', 'zeta']])
 
   exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                               'revert',
@@ -319,7 +327,7 @@ def revert_nested_adds(sbox):
   check_reversion(files, output)
 
 #----------------------------------------------------------------------
-
+@SkipUnless(svntest.main.is_posix_os)
 def revert_add_executable(sbox):
   "revert: add some executable files"
 
@@ -400,7 +408,7 @@ def revert_delete_dirs(sbox):
 # revert' or 'svn rm' will make that happen by removing the entry from
 # .svn/entries file. While 'svn revert' does with no error,
 # 'svn rm' does it with error.
-
+@Issue(863)
 def unschedule_missing_added(sbox):
   "unschedule addition on missing items"
 
@@ -453,7 +461,7 @@ def unschedule_missing_added(sbox):
 #
 # Make sure 'rm foo; svn rm foo' works on files and directories.
 # Also make sure that the deletion is committable.
-
+@Issue(962)
 def delete_missing(sbox):
   "schedule and commit deletion on missing items"
 
@@ -491,7 +499,7 @@ def delete_missing(sbox):
 # Revert . inside an svn added empty directory should generate an error.
 # Not anymore!  wc-ng uses absolute paths for everything, which means we
 # can handle this case without too much trouble.
-
+@Issue(854)
 def revert_inside_newly_added_dir(sbox):
   "revert inside a newly added dir"
 
@@ -508,7 +516,7 @@ def revert_inside_newly_added_dir(sbox):
 #----------------------------------------------------------------------
 # Regression test for issue #1609:
 # 'svn status' should show a schedule-add directory as 'A' not '?'
-
+@Issue(1609)
 def status_add_deleted_directory(sbox):
   "status after add of deleted directory"
 
@@ -552,6 +560,7 @@ def status_add_deleted_directory(sbox):
 #----------------------------------------------------------------------
 # Regression test for issue #939:
 # Recursive 'svn add' should still traverse already-versioned dirs.
+@Issue(939)
 def add_recursive_already_versioned(sbox):
   "'svn add' should traverse already-versioned dirs"
 
@@ -671,8 +680,46 @@ def propset_on_deleted_should_fail(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', iota)
 
-  svntest.actions.run_and_verify_svn(None, None, "svn: Can't set propert.*",
+  svntest.actions.run_and_verify_svn(None, None, "svn: E155023: Can't set propert.*",
                                      'ps', 'prop', 'val', iota)
+
+@Issue(3468)
+def replace_dir_delete_child(sbox):
+  "replace a dir, then delete a child"
+  # The purpose of this test is to make sure that when a child of a
+  # replaced directory is deleted, the result can be committed.
+
+  sbox.build()
+
+  # Replace A/D/H with a copy of A/B
+  sbox.simple_rm('A/D/H')
+  sbox.simple_copy('A/B', 'A/D/H')
+
+  # Remove two children
+  sbox.simple_rm('A/D/H/lambda')
+  sbox.simple_rm('A/D/H/E')
+
+  # Don't look at what "svn status" says before commit.  It's not clear
+  # what it should be and that's not the point of this test.
+
+  # Commit.
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A/D/H'         : Item(verb='Replacing'),
+    'A/D/H/lambda'  : Item(verb='Deleting'),
+    'A/D/H/E'       : Item(verb='Deleting'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.add({
+    'A/D/H/F' : Item(status='  ', wc_rev=0),
+    })
+  expected_status.tweak('A/D/H', 'A/D/H/F', wc_rev=2)
+  expected_status.remove('A/D/H/psi', 'A/D/H/omega', 'A/D/H/chi')
+
+  svntest.actions.run_and_verify_commit(sbox.wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, sbox.wc_dir)
 
 
 ########################################################################
@@ -684,7 +731,7 @@ test_list = [ None,
               revert_add_files,
               revert_add_directories,
               revert_nested_adds,
-              SkipUnless(revert_add_executable, svntest.main.is_posix_os),
+              revert_add_executable,
               revert_delete_files,
               revert_delete_dirs,
               unschedule_missing_added,
@@ -696,6 +743,7 @@ test_list = [ None,
               delete_non_existent,
               delete_redelete_fudgery,
               propset_on_deleted_should_fail,
+              replace_dir_delete_child,
              ]
 
 if __name__ == '__main__':

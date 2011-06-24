@@ -63,13 +63,13 @@ jobject EnumMapper::mapChangePathAction(const char action)
   switch (action)
     {
       case 'A':
-        return mapEnum(JAVA_PACKAGE"/ChangePath$Action", 0);
+        return mapEnum(JAVA_PACKAGE"/types/ChangePath$Action", 0);
       case 'D':
-        return mapEnum(JAVA_PACKAGE"/ChangePath$Action", 1);
+        return mapEnum(JAVA_PACKAGE"/types/ChangePath$Action", 1);
       case 'R':
-        return mapEnum(JAVA_PACKAGE"/ChangePath$Action", 2);
+        return mapEnum(JAVA_PACKAGE"/types/ChangePath$Action", 2);
       case 'M':
-        return mapEnum(JAVA_PACKAGE"/ChangePath$Action", 3);
+        return mapEnum(JAVA_PACKAGE"/types/ChangePath$Action", 3);
       default:
         return NULL;
     }
@@ -132,7 +132,7 @@ jobject EnumMapper::mapNotifyLockState(svn_wc_notify_lock_state_t state)
 jobject EnumMapper::mapScheduleKind(svn_wc_schedule_t schedule)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/Info$ScheduleKind", (int) schedule);
+  return mapEnum(JAVA_PACKAGE"/types/Info$ScheduleKind", (int) schedule);
 }
 
 /**
@@ -142,7 +142,13 @@ jobject EnumMapper::mapStatusKind(svn_wc_status_kind svnKind)
 {
   // We're assuming a valid value for the C enum above
   // The offset here is +1
-  return mapEnum(JAVA_PACKAGE"/Status$Kind", ((int) svnKind) - 1);
+  return mapEnum(JAVA_PACKAGE"/types/Status$Kind", ((int) svnKind) - 1);
+}
+
+jobject EnumMapper::mapChecksumKind(svn_checksum_kind_t kind)
+{
+  // We're assuming a valid value for the C enum above
+  return mapEnum(JAVA_PACKAGE"/types/Checksum$Kind", (int) kind);
 }
 
 jobject EnumMapper::mapConflictKind(svn_wc_conflict_kind_t kind)
@@ -165,7 +171,7 @@ jobject EnumMapper::mapConflictReason(svn_wc_conflict_reason_t reason)
 
 int EnumMapper::toMergeinfoLogKind(jobject jLogKind)
 {
-  return getOrdinal(JAVA_PACKAGE"/Mergeinfo$LogKind", jLogKind);
+  return getOrdinal(JAVA_PACKAGE"/types/Mergeinfo$LogKind", jLogKind);
 }
 
 int EnumMapper::toLogLevel(jobject jLogLevel)
@@ -207,7 +213,7 @@ svn_wc_conflict_choice_t EnumMapper::toConflictChoice(jobject jchoice)
 
 svn_opt_revision_kind EnumMapper::toRevisionKind(jobject jkind)
 {
-  return (svn_opt_revision_kind) getOrdinal(JAVA_PACKAGE"/Revision$Kind",
+  return (svn_opt_revision_kind) getOrdinal(JAVA_PACKAGE"/types/Revision$Kind",
                                             jkind);
 }
 

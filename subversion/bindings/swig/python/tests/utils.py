@@ -64,7 +64,7 @@ class Temper(object):
     repos.svn_repos_load_fs2(handle, open(dump_path, 'rb'), StringIO(),
                              repos.load_uuid_default, None, False, False, None)
     return (handle, repo_path, repo_uri)
-    
+
 def file_uri_for_path(path):
   """Return the file: URI corresponding to the given path."""
   uri_path = urllib.pathname2url(path)

@@ -696,7 +696,7 @@ msgstr "Dateisystem hat keinen solchen Indexdatensatz zur Prüfsummen-Repräsent
 
 #: ../include/svn_error_codes.h:744
 msgid "Property value in filesystem differs from the provided base value"
-msgstr ""
+msgstr "Eigenschaftswert im Dateisystem weicht von dem angegebenen Basiswert ab"
 
 #: ../include/svn_error_codes.h:751
 msgid "The repository is locked, perhaps for db recovery"
@@ -872,7 +872,7 @@ msgstr "Kann Anmeldungsmechanismus nicht aushandeln"
 
 #: ../include/svn_error_codes.h:972
 msgid "Editor drive was aborted"
-msgstr ""
+msgstr "Editor-Steuerung wurde unterbrochen"
 
 #: ../include/svn_error_codes.h:978
 msgid "Initialization of SSPI library failed"
@@ -889,7 +889,7 @@ msgstr "Initialisierung der SSPI-Bibliothek schlug fehl"
 
 #: ../include/svn_error_codes.h:991
 msgid "While handling serf response:"
-msgstr ""
+msgstr "Während der Abwicklung einer serf Antwort:"
 
 #: ../include/svn_error_codes.h:999
 msgid "Credential data unavailable"
@@ -925,7 +925,7 @@ msgstr "Eintrag ist nur teilweise lesbar"
 
 #: ../include/svn_error_codes.h:1036
 msgid "Invalid authz configuration"
-msgstr "Ungültige authz Komfigturation"
+msgstr "Ungültige authz Konfiguration"
 
 #: ../include/svn_error_codes.h:1041
 msgid "Item is not writable"
@@ -1058,7 +1058,7 @@ msgstr "Ungültige Revision angegeben"
 
 #: ../include/svn_error_codes.h:1187
 msgid "Detected a cycle while processing the operation"
-msgstr ""
+msgstr "Endlosschleife während der Verarbeitung der Operation entdeckt"
 
 #: ../include/svn_error_codes.h:1193
 msgid "A problem occurred; see other errors for details"
@@ -2068,7 +2068,7 @@ msgstr ""
 #: ../libsvn_client/ra.c:378
 #, c-format
 msgid "Redirect cycle detected for URL '%s'"
-msgstr ""
+msgstr "Endlosschleife bei der Umleitung der URL »%s« entdeckt"
 
 #: ../libsvn_client/ra.c:750 ../libsvn_ra/compat.c:376
 #, c-format
@@ -2103,7 +2103,7 @@ msgstr "Unbekannter Revisionstyp für »%s« angefragt"
 
 #: ../libsvn_client/revisions.c:185
 msgid "PREV, BASE, or COMMITTED revision keywords are invalid for URL"
-msgstr ""
+msgstr "PREV, BASE oder COMMITTED Revisions-Schlüsselwörter sind für die URL ungültig"
 
 #: ../libsvn_client/status.c:302 ../libsvn_client/status.c:331
 #: ../libsvn_client/status.c:340 ../libsvn_client/status.c:533
@@ -2234,7 +2234,7 @@ msgstr "Ungültiges Argument »%s« in Vergleichsoptionen"
 
 #: ../libsvn_diff/diff_file.c:942
 msgid "No newline at end of file"
-msgstr ""
+msgstr "Kein Zeilenumbruch am Ende der Datei"
 
 #. Order of date components can be different in different languages
 #: ../libsvn_diff/diff_file.c:1149
@@ -2602,9 +2602,9 @@ msgstr "Eine solche Darstellung »%s« existiert nicht"
 #: ../libsvn_fs_fs/fs_fs.c:3494 ../libsvn_fs_fs/tree.c:2463
 #: ../libsvn_ra_neon/fetch.c:750 ../libsvn_ra_svn/client.c:1073
 #: ../libsvn_repos/commit.c:607 ../libsvn_repos/load-fs-vtable.c:484
-#, fuzzy, c-format
+#, c-format
 msgid "   expected:  %s"
-msgstr "Gelöscht: %s\n"
+msgstr "   erwartet:  %s"
 
 #: ../libsvn_fs_base/dag.c:1282 ../libsvn_fs_base/reps-strings.c:831
 #: ../libsvn_fs_base/reps-strings.c:927 ../libsvn_fs_base/reps-strings.c:942
@@ -2614,7 +2614,7 @@ msgstr "Gelöscht: %s\n"
 #: ../libsvn_repos/commit.c:608 ../libsvn_repos/load-fs-vtable.c:485
 #, c-format
 msgid "     actual:  %s"
-msgstr ""
+msgstr "tatsächlich:  %s"
 
 #: ../libsvn_fs_base/dag.c:1378
 #, c-format
@@ -2831,20 +2831,14 @@ msgid "Failure reading representation '%s'"
 msgstr "Fehler beim Lesen der Darstellung »%s«"
 
 #: ../libsvn_fs_base/reps-strings.c:925
-#, fuzzy, c-format
+#, c-format
 msgid "MD5 checksum mismatch on representation '%s'"
-msgstr ""
-"MD5-Prüfsummenfehler auf Darstellung »%s«:\n"
-"   Erwartet:    %s\n"
-"   Tatsächlich: %s\n"
+msgstr "MD5-Prüfsummenfehler auf Darstellung »%s«"
 
 #: ../libsvn_fs_base/reps-strings.c:940
-#, fuzzy, c-format
+#, c-format
 msgid "SHA1 checksum mismatch on representation '%s'"
-msgstr ""
-"SHA1-Prüfsummenfehler auf Darstellung »%s«:\n"
-"   Erwartet:    %s\n"
-"   Tatsächlich: %s\n"
+msgstr "SHA1-Prüfsummenfehler auf Darstellung »%s«"
 
 #: ../libsvn_fs_base/reps-strings.c:956
 msgid "Null rep, but offset past zero already"
@@ -3161,12 +3155,12 @@ msgstr "Erwartete Dateisystemformat zwischen 1 und %d; fand %d"
 #: ../libsvn_fs_fs/fs_fs.c:1335
 #, c-format
 msgid "'%s' is not a regular file. Please move it out of the way and try again"
-msgstr ""
+msgstr "»%s« ist keine reguläre Datei. Bitte aus dem Weg bewegen und noch einmal versuchen."
 
 #: ../libsvn_fs_fs/fs_fs.c:1593
 #, c-format
 msgid "Failed to create hotcopy at '%s'. The file '%s' is missing from the source repository. Please create this file, for instance by running 'svnadmin upgrade %s'"
-msgstr ""
+msgstr "Erstellen der hotcopy auf »%s« fehlgeschlagen. Die Datei »%s« fehlt im Quellprojektarchiv. Bitte diese Datei erstellen, z.B. durch die Ausführung von »svnadmin upgrade %s«"
 
 #: ../libsvn_fs_fs/fs_fs.c:1830 ../libsvn_fs_fs/fs_fs.c:1844
 msgid "Found malformed header in revision file"
@@ -3186,7 +3180,7 @@ msgstr "Keine Revision %ld"
 
 #: ../libsvn_fs_fs/fs_fs.c:1976
 msgid "Manifest offset too large"
-msgstr ""
+msgstr "Manifest offset zu groß"
 
 #: ../libsvn_fs_fs/fs_fs.c:2086 ../libsvn_fs_fs/fs_fs.c:2100
 #: ../libsvn_fs_fs/fs_fs.c:2108 ../libsvn_fs_fs/fs_fs.c:2116
@@ -3266,12 +3260,9 @@ msgid "svndiff window length is corrupt"
 msgstr "Svndiff Fensterlänge ist beschädigt"
 
 #: ../libsvn_fs_fs/fs_fs.c:3493
-#, fuzzy
+#
 msgid "Checksum mismatch while reading representation"
-msgstr ""
-"Prüfsummenfehler beim Lesen der Darstellung:\n"
-"   Erwartet:    %s\n"
-"   Tatsächlich: %s\n"
+msgstr "Prüfsummenfehler beim Lesen der Darstellung"
 
 #: ../libsvn_fs_fs/fs_fs.c:3790 ../libsvn_fs_fs/fs_fs.c:3803
 #: ../libsvn_fs_fs/fs_fs.c:3809 ../libsvn_fs_fs/fs_fs.c:6772
@@ -3309,7 +3300,7 @@ msgstr "Kann Transaktionsverzeichnis in »%s« in Revision %ld nicht anlegen"
 
 #: ../libsvn_fs_fs/fs_fs.c:4761
 msgid "Internal error: a null transaction id was passed to get_txn_proplist()"
-msgstr ""
+msgstr "Interner Fehler: eine Transaktionskennung von Null wurde übergeben um get_txn_proplist() zu erhalten"
 
 #: ../libsvn_fs_fs/fs_fs.c:4920 ../libsvn_fs_fs/fs_fs.c:4927
 msgid "next-id file corrupt"
@@ -10201,7 +10192,7 @@ msgstr "Überspringe »%s«\n"
 #: ../svn/notify.c:885
 #, fuzzy, c-format
 msgid "Redirecting to URL '%s'\n"
-msgstr "Lese »%s«"
+msgstr "Umleitung zur URL »%s«"
 
 #: ../svn/obliterate-cmd.c:60
 #, c-format

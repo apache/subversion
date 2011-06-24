@@ -37,6 +37,7 @@
 #include "../../libsvn_fs_base/trail.h"
 #include "../../libsvn_fs_base/bdb/txn-table.h"
 #include "../../libsvn_fs_base/bdb/nodes-table.h"
+#include "../../libsvn_fs_base/key-gen.h"
 
 #include "private/svn_fs_util.h"
 #include "../../libsvn_delta/delta.h"
@@ -460,6 +461,7 @@ abort_txn(const svn_test_opts_t *opts,
     SVN_ERR(svn_fs_begin_txn(&txn4, fs, 0, pool));
     SVN_ERR(svn_fs_txn_name(&txn4_name, txn4, pool));
     SVN_ERR(svn_fs_commit_txn(&conflict, &new_rev, txn4, pool));
+    SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(new_rev));
     err = svn_fs_abort_txn(txn4, pool);
     if (! err)
       return svn_error_create
@@ -844,6 +846,7 @@ delete(const svn_test_opts_t *opts,
 
   /* Commit the greek tree. */
   SVN_ERR(svn_fs_commit_txn(NULL, &new_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(new_rev));
 
   /* Create new transaction. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, pool));
@@ -1164,6 +1167,7 @@ create_within_copy(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, spool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, spool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(spool);
 
   /*** Revision 2:  Copy A/D to A/D3 ***/
@@ -1172,6 +1176,7 @@ create_within_copy(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev, spool));
   SVN_ERR(svn_fs_copy(rev_root, "A/D", txn_root, "A/D3", spool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, spool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(spool);
 
   /*** Revision 3:  Copy A/D/G to A/D/G2 ***/
@@ -1180,6 +1185,7 @@ create_within_copy(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev, spool));
   SVN_ERR(svn_fs_copy(rev_root, "A/D/G", txn_root, "A/D/G2", spool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, spool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(spool);
 
   /*** Revision 4: Copy A/D to A/D2 and create up and I in the existing
@@ -1195,6 +1201,7 @@ create_within_copy(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_make_dir(txn_root, "A/D2/G2/I", spool));
   SVN_ERR(svn_fs_make_file(txn_root, "A/D2/G2/up", spool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, spool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(spool);
 
   /*** Revision 5:  Create A/D3/down and A/D3/J ***/
@@ -1203,6 +1210,7 @@ create_within_copy(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_make_file(txn_root, "A/D3/down", spool));
   SVN_ERR(svn_fs_make_dir(txn_root, "A/D3/J", spool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, spool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(spool);
 
   {
@@ -1287,6 +1295,7 @@ skip_deltas(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_make_file(txn_root, "f", subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "f", f->data, subpool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   SVN_ERR(svn_fs_deltify_revision(fs, youngest_rev, subpool));
   svn_pool_clear(subpool);
 
@@ -1301,6 +1310,7 @@ skip_deltas(const svn_test_opts_t *opts,
       SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
       SVN_ERR(svn_test__set_file_contents(txn_root, "f", f->data, subpool));
       SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+      SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
       SVN_ERR(svn_fs_deltify_revision(fs, youngest_rev, subpool));
       svn_pool_clear(subpool);
     }
@@ -1358,6 +1368,7 @@ redundant_copy(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
 
   /* In a transaction, copy A to Z. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
@@ -1427,6 +1438,7 @@ orphaned_textmod_change(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, subpool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(subpool);
 
   /* Revision 2:  Start to change "iota", but don't complete the work. */
@@ -1443,6 +1455,7 @@ orphaned_textmod_change(const svn_test_opts_t *opts,
      testing that misbehaving callers don't introduce more damage to
      the repository than they have to. */
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(subpool);
 
   /* Fetch changed paths for the youngest revision.  We should find none. */
@@ -1464,6 +1477,50 @@ orphaned_textmod_change(const svn_test_opts_t *opts,
 
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+key_test(apr_pool_t *pool)
+{
+  int i;
+  const char *keys[9][2] = {
+    { "0", "1" },
+    { "9", "a" },
+    { "zzzzz", "100000" },
+    { "z000000zzzzzz", "z000001000000" },
+    { "97hnq33jx2a", "97hnq33jx2b" },
+    { "97hnq33jx2z", "97hnq33jx30" },
+    { "999", "99a" },
+    { "a9z", "aa0" },
+    { "z", "10" }
+  };
+
+  for (i = 0; i < 9; i++)
+    {
+      char gen_key[MAX_KEY_SIZE];
+      const char *orig_key = keys[i][0];
+      const char *next_key = keys[i][1];
+      apr_size_t len, olen;
+
+      len = strlen(orig_key);
+      olen = len;
+
+      svn_fs_base__next_key(orig_key, &len, gen_key);
+      if (! (((len == olen) || (len == (olen + 1)))
+             && (strlen(next_key) == len)
+             && (strcmp(next_key, gen_key) == 0)))
+        {
+          return svn_error_createf
+            (SVN_ERR_FS_GENERAL, NULL,
+             "failed to increment key \"%s\" correctly\n"
+             "  expected: %s\n"
+             "    actual: %s",
+             orig_key, next_key, gen_key);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ------------------------------------------------------------------------ */
 
@@ -1492,5 +1549,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "ensure no-op for redundant copies"),
     SVN_TEST_OPTS_PASS(orphaned_textmod_change,
                        "test for orphaned textmod changed paths"),
+    SVN_TEST_PASS2(key_test,
+                   "testing sequential alphanumeric key generation"),
     SVN_TEST_NULL
   };

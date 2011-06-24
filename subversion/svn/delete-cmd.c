@@ -48,26 +48,16 @@ svn_cl__delete(apr_getopt_t *os,
   apr_array_header_t *targets;
   svn_error_t *err;
   svn_boolean_t is_url;
-  int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
-  /* Check that all targets are of the same type. */
+  SVN_ERR(svn_cl__assert_homogeneous_target_type(targets));
   is_url = svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *));
-  for (i = 1; i < targets->nelts; i++)
-    {
-      const char *target = APR_ARRAY_IDX(targets, i, const char *);
-      if (is_url != svn_path_is_url(target))
-        return svn_error_return(
-                 svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                  _("Cannot mix repository and working copy "
-                                    "targets")));
-    }
 
   if (! is_url)
     {
@@ -97,7 +87,7 @@ svn_cl__delete(apr_getopt_t *os,
   if (ctx->log_msg_func3)
     SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err, pool));
   else if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   return SVN_NO_ERROR;
 }

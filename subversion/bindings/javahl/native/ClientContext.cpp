@@ -25,6 +25,7 @@
  */
 
 #include "svn_client.h"
+#include "private/svn_wc_private.h"
 #include "svn_private_config.h"
 
 #include "ClientContext.h"
@@ -86,8 +87,8 @@ ClientContext::ClientContext(jobject jsvnclient)
     persistentCtx->notify_baton2 = m_jctx;
     persistentCtx->progress_func = progress;
     persistentCtx->progress_baton = m_jctx;
-    persistentCtx->conflict_func = resolve;
-    persistentCtx->conflict_baton = m_jctx;
+    persistentCtx->conflict_func2 = resolve;
+    persistentCtx->conflict_baton2 = m_jctx;
 }
 
 ClientContext::~ClientContext()
@@ -258,7 +259,7 @@ ClientContext::checkCancel(void *cancelBaton)
     ClientContext *that = (ClientContext *)cancelBaton;
     if (that->m_cancelOperation)
         return svn_error_create(SVN_ERR_CANCELLED, NULL,
-                                _("Operation canceled"));
+                                _("Operation cancelled"));
     else
         return SVN_NO_ERROR;
 }
@@ -341,15 +342,16 @@ ClientContext::progress(apr_off_t progressVal, apr_off_t total,
     POP_AND_RETURN_NOTHING();
 
   env->CallVoidMethod(jctx, mid, jevent);
-  
+
   POP_AND_RETURN_NOTHING();
 }
 
 svn_error_t *
 ClientContext::resolve(svn_wc_conflict_result_t **result,
-                       const svn_wc_conflict_description_t *desc,
+                       const svn_wc_conflict_description2_t *desc,
                        void *baton,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   jobject jctx = (jobject) baton;
   JNIEnv *env = JNIUtil::getEnv();
@@ -391,7 +393,7 @@ ClientContext::resolve(svn_wc_conflict_result_t **result,
       return err;
     }
 
-  *result = javaResultToC(jresult, pool);
+  *result = javaResultToC(jresult, result_pool);
   if (*result == NULL)
     {
       // Unable to convert the result into a C representation.

@@ -55,7 +55,7 @@ AC_DEFUN(SVN_FIND_SWIG,
   where=$1
 
   if test $where = no; then
-    AC_PATH_PROG(SWIG, none, none)
+    SWIG=none
   elif test $where = check; then
     AC_PATH_PROG(SWIG, swig, none)
   else
@@ -92,15 +92,12 @@ AC_DEFUN(SVN_FIND_SWIG,
     #   packages/rpm/redhat-7.x/subversion.spec
     #   packages/rpm/rhel-3/subversion.spec
     #   packages/rpm/rhel-4/subversion.spec
-    if test -n "$SWIG_VERSION" &&
-       test "$SWIG_VERSION" -ge "103024" &&
-       test "$SWIG_VERSION" -le "103039"; then
+    if test -n "$SWIG_VERSION" && test "$SWIG_VERSION" -ge "103024"; then
       SWIG_SUITABLE=yes
     else
       SWIG_SUITABLE=no
       AC_MSG_WARN([Detected SWIG version $SWIG_VERSION_RAW])
-      AC_MSG_WARN([Subversion requires 1.3.24 or later, and is known to work])
-      AC_MSG_WARN([with versions up to 1.3.39])
+      AC_MSG_WARN([Subversion requires SWIG 1.3.24 or later])
     fi
   fi
  
@@ -187,7 +184,7 @@ AC_DEFUN(SVN_FIND_SWIG,
   if test "$RUBY" != "none"; then
     rbconfig="$RUBY -rrbconfig -e "
 
-    for var_name in arch archdir CC LDSHARED DLEXT LIBRUBYARG \
+    for var_name in arch archdir CC LDSHARED DLEXT LIBS LIBRUBYARG \
                     rubyhdrdir sitedir sitelibdir sitearchdir libdir
     do
       rbconfig_tmp=`$rbconfig "print Config::CONFIG@<:@'$var_name'@:>@"`
@@ -221,15 +218,15 @@ AC_DEFUN(SVN_FIND_SWIG,
     ])
     SWIG_RB_LINK="$svn_cv_ruby_link"
 
-    AC_CACHE_CHECK([for linking Ruby libraries], [ac_cv_ruby_libs], [
-      ac_cv_ruby_libs="$rbconfig_LIBRUBYARG"
+    AC_CACHE_CHECK([how to link Ruby libraries], [ac_cv_ruby_libs], [
+      ac_cv_ruby_libs="$rbconfig_LIBRUBYARG $rbconfig_LIBS"
     ])
     SWIG_RB_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_ruby_libs)`"
 
     AC_MSG_CHECKING([for rb_errinfo])
     old_CFLAGS="$CFLAGS"
     old_LIBS="$LIBS"
-    CFLAGS="`echo $CFLAGS | $SED -e "s/ -ansi//g"` $svn_cv_ruby_includes"
+    CFLAGS="`echo $CFLAGS | $SED -e "s/ -ansi//g;s/ -std=c89//g"` $svn_cv_ruby_includes"
     LIBS="$SWIG_RB_LIBS"
     AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <ruby.h>

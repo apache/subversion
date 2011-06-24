@@ -27,8 +27,6 @@ package org.apache.subversion.javahl;
  * The result returned by the callback API used to handle conflicts
  * encountered during merge/update/switch operations.  Includes a poor
  * man's enum for <code>svn_wc_conflict_choice_t</code>.
- *
- * @since 1.5
  */
 public class ConflictResult
 {

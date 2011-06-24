@@ -60,15 +60,15 @@ class Generator(generator.swig.Generator):
       os.remove(out)
     if self._skip_checkout(path):
       open(out, "w")
-    elif self.version() == 103024:
+    elif self.version() == (1, 3, 24):
       shutil.copy(build_path_join(self.swig_libdir, path), out)
     else:
       run("%s -o %s -co %s" % (self.swig_path, out, path))
 
   def _skip_checkout(self, path):
     """Should we skip this checkout?"""
-    return (path == "ruby/rubytracking.swg" and self.version() < 103026 or
-            path == "common.swg" and self.version() > 103024)
+    return (path == "ruby/rubytracking.swg" and self.version() < (1, 3, 26) or
+            path == "common.swg" and self.version() > (1, 3, 24))
 
   def _output_file(self, path):
     """Get output filename"""

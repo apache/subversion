@@ -33,6 +33,7 @@
 #include "svn_config.h"
 #include "svn_private_config.h"
 #include "svn_dso.h"
+#include "svn_version.h"
 
 /* The good way to think of this machinery is as a set of tables.
 
@@ -60,7 +61,7 @@
 
 /* This effectively defines a single table.  Every provider in this
    array returns the same kind of credentials. */
-typedef struct
+typedef struct provider_set_t
 {
   /* ordered array of svn_auth_provider_object_t */
   apr_array_header_t *providers;
@@ -183,7 +184,7 @@ svn_auth_first_credentials(void **credentials,
   table = apr_hash_get(auth_baton->tables, cred_kind, APR_HASH_KEY_STRING);
   if (! table)
     return svn_error_createf(SVN_ERR_AUTHN_NO_PROVIDER, NULL,
-                             "No provider registered for '%s' credentials",
+                             _("No provider registered for '%s' credentials"),
                              cred_kind);
 
   /* First, see if we have cached creds in the auth_baton. */

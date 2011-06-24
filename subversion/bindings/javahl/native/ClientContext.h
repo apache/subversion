@@ -62,9 +62,10 @@ class ClientContext
   static void progress(apr_off_t progressVal, apr_off_t total,
                        void *baton, apr_pool_t *pool);
   static svn_error_t *resolve(svn_wc_conflict_result_t **result,
-                              const svn_wc_conflict_description_t *desc,
+                              const svn_wc_conflict_description2_t *desc,
                               void *baton,
-                              apr_pool_t *pool);
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
   static svn_wc_conflict_result_t *javaResultToC(jobject result,
                                                  apr_pool_t *pool);
 

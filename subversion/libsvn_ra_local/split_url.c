@@ -49,7 +49,7 @@ svn_ra_local__split_URL(svn_repos_t **repos,
                              _("Unable to open repository '%s'"), URL);
 
   /* Attempt to open a repository at URL. */
-  err = svn_repos_open(repos, repos_root_dirent, pool);
+  err = svn_repos_open2(repos, repos_root_dirent, NULL, pool);
   if (err)
     return svn_error_createf(SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED, err,
                              _("Unable to open repository '%s'"), URL);

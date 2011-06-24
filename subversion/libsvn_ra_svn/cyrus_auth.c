@@ -54,8 +54,9 @@
  *       in atexit processing, at which point we are already running in
  *       single threaded mode.
  */
-volatile svn_atomic_t svn_ra_svn__sasl_status;
+volatile svn_atomic_t svn_ra_svn__sasl_status = 0;
 
+/* Initialized by svn_ra_svn__sasl_common_init(). */
 static volatile svn_atomic_t sasl_ctx_count;
 
 static apr_pool_t *sasl_pool = NULL;

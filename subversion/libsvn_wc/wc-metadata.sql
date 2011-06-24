@@ -76,9 +76,12 @@ CREATE UNIQUE INDEX I_LOCAL_ABSPATH ON WCROOT (local_abspath);
 
 /* ------------------------------------------------------------------------- */
 
-/* The PRISTINE table keeps track of pristine texts. Each pristine text is
-   stored in a file which may be compressed. Each pristine text is
-   referenced by any number of rows in the NODES and ACTUAL_NODE tables.
+/* The PRISTINE table keeps track of pristine texts.  Each row describes a
+   single pristine text.  The text itself is stored in a file whose name is
+   derived from the 'checksum' column.  Each pristine text is referenced by
+   any number of rows in the NODES and ACTUAL_NODE tables.
+
+   In future, the pristine text file may be compressed.
  */
 CREATE TABLE PRISTINE (
   /* The SHA-1 checksum of the pristine text. This is a unique key. The
@@ -95,8 +98,9 @@ CREATE TABLE PRISTINE (
      Used to verify the pristine file is "proper". */
   size  INTEGER NOT NULL,
 
-  /* ### this will probably go away, in favor of counting references
-     ### that exist in NODES. Not yet used; always set to 1. */
+  /* The number of rows in the NODES table that have a 'checksum' column
+     value that refers to this row.  (References in other places, such as
+     in the ACTUAL_NODE table, are not counted.) */
   refcount  INTEGER NOT NULL,
 
   /* Alternative MD5 checksum used for communicating with older
@@ -137,12 +141,12 @@ CREATE TABLE ACTUAL_NODE (
      the properties, relative to WORKING/BASE as appropriate. */
   properties  BLOB,
 
-  /* basenames of the conflict files. */
+  /* relpaths of the conflict files. */
   /* ### These columns will eventually be merged into conflict_data below. */
   conflict_old  TEXT,
   conflict_new  TEXT,
   conflict_working  TEXT,
-  prop_reject  TEXT,  /* ### is this right? */
+  prop_reject  TEXT,
 
   /* if not NULL, this node is part of a changelist. */
   changelist  TEXT,
@@ -167,9 +171,9 @@ CREATE TABLE ACTUAL_NODE (
            conflicts? Why do we need these in a column to refer to the
            pristine store? Can't we just parse the checksums from
            conflict_data as well? */
-  older_checksum  TEXT,
-  left_checksum  TEXT,
-  right_checksum  TEXT,
+  older_checksum  TEXT REFERENCES PRISTINE (checksum),
+  left_checksum  TEXT REFERENCES PRISTINE (checksum),
+  right_checksum  TEXT REFERENCES PRISTINE (checksum),
 
   PRIMARY KEY (wc_id, local_relpath)
   );
@@ -180,15 +184,11 @@ CREATE INDEX I_ACTUAL_CHANGELIST ON ACTUAL_NODE (changelist);
 
 /* ------------------------------------------------------------------------- */
 
+/* This table is a cache of information about repository locks. */
 CREATE TABLE LOCK (
   /* what repository location is locked */
   repos_id  INTEGER NOT NULL REFERENCES REPOSITORY (id),
   repos_relpath  TEXT NOT NULL,
-  /* ### BH: Shouldn't this refer to an working copy location? You can have a
-         single relpath checked out multiple times in one (switch) or more
-         working copies. */
-  /* ### HKW: No, afaik.  This table is just a cache of what's in the
-         repository, so these should be repos_relpaths. */
 
   /* Information about the lock. Note: these values are just caches from
      the server, and are not authoritative. */
@@ -325,42 +325,56 @@ CREATE TABLE NODES (
 
   /* WC state fields */
 
-  /* Is this node "present" or has it been excluded for some reason?
+  /* The tree state of the node.
 
-     In case 'op_depth' is equal to 0, this is part of the BASE tree; in
-     that case, all presence values except 'base-deleted' are allowed.
+     In case 'op_depth' is equal to 0, this node is part of the 'BASE'
+     tree.  The 'BASE' represents pristine nodes that are in the
+     repository; it is obtained and modified by commands such as
+     checkout/update/switch.
 
-     In case 'op_depth' is greater than 0, this is part of a layer of
-     working nodes; in that case, the following presence values apply:
+     In case 'op_depth' is greater than 0, this node is part of a
+     layer of working nodes.  The 'WORKING' tree is obtained and
+     modified by commands like delete/copy/revert.
 
-     Only allowed values: normal, not-present, incomplete, base-deleted,
-     excluded.  (the others do not make sense for the WORKING tree)
+     The 'BASE' and 'WORKING' trees use the same literal values for
+     the 'presence' but the meaning of each value can vary depending
+     on the tree.
 
-     normal: this node has been added/copied/moved-here. There may be an
-       underlying BASE node at this location, implying this is a replace.
-       Scan upwards from here looking for copyfrom or moved_here values
-       to detect the type of operation constructing this node.
+     normal: in the 'BASE' tree this is an ordinary node for which we
+       have full information.  In the 'WORKING' tree it's an added or
+       copied node for which we have full information.
 
-     not-present: the node (or parent) was originally copied or moved-here.
-       A subtree of that source has since been deleted. There may be
-       underlying BASE node to replace. For a move-here or copy-here, the
-       records are simply removed rather than switched to not-present.
-       Note this reflects a deletion only. It is not possible move-away
-       nodes from the WORKING tree. The purported destination would receive
-       a copy from the original source of a copy-here/move-here, or if the
-       nodes were plain adds, those nodes would be shifted to that target
-       for addition.
+     not-present: in the 'BASE' tree this is a node that is implied to
+       exist by the parent node, but is not present in the working
+       copy.  Typically obtained by delete/commit, or by update to
+       revision in which the node does not exist.  In the 'WORKING'
+       tree this is a copy of a 'not-present' node from the 'BASE'
+       tree, and it will be deleted on commit.  Such a node cannot be
+       copied directly, but can be copied as a descendant.
 
-     incomplete: nodes are being added into the WORKING tree, and the full
-       information about this node is not (yet) present.
+     incomplete: in the 'BASE' tree this is an ordinary node for which
+       we do not have full information.  Only the name is guaranteed;
+       we may not have all its children, we may not have its checksum,
+       etc.  In the 'WORKING' tree this is a copied node for which we
+       do not have the full information.  This state is generally
+       obtained when an operation was interrupted.
 
-     base-deleted: the underlying BASE node has been marked for deletion due
-       to a delete or a move-away (see the moved_to column to determine
-       which), and has not been replaced.
+     base-deleted: not valid in 'BASE' tree.  In the 'WORKING' tree
+       this represents a node that is deleted from the tree below the
+       current 'op_depth'.  This state is badly named, it should be
+       something like 'deleted'.
 
-     excluded: this node is administratively excluded (sparse WC). This must
-       be a child (or grandchild etc.) of a copied directory.
-  */
+     absent: in the 'BASE' tree this is a node that is excluded by
+       authz.  The name of the node is known from the parent, but no
+       other information is available.  Not valid in the 'WORKING'
+       tree as there is no way to commit such a node.
+
+     excluded: in the 'BASE' tree this node is administratively
+       excluded by the user (sparse WC).  In the 'WORKING' tree this
+       is a copy of an excluded node from the 'BASE' tree.  Such a
+       node cannot be copied directly but can be copied as a
+       descendant. */
+
   presence  TEXT NOT NULL,
 
   /* ### JF: For an old-style move, "copyfrom" info stores its source, but a
@@ -401,7 +415,7 @@ CREATE TABLE NODES (
 
   /* The SHA-1 checksum of the pristine text, if this node is a file and was
      moved here or copied here, else NULL. */
-  checksum  TEXT,
+  checksum  TEXT REFERENCES PRISTINE (checksum),
 
   /* for kind==symlink, this specifies the target. */
   symlink_target  TEXT,
@@ -465,131 +479,109 @@ CREATE TABLE NODES (
 
 CREATE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath, op_depth);
 
+/* Many queries have to filter the nodes table to pick only that version
+   of each node with the highest (most "current") op_depth.  This view
+   does the heavy lifting for such queries.
 
+   Note that this view includes a row for each and every path that is known
+   in the WC, including, for example, paths that were children of a base- or
+   lower-op-depth directory that has been replaced by something else in the
+   current view.
+ */
+CREATE VIEW NODES_CURRENT AS
+  SELECT * FROM nodes AS n
+    WHERE op_depth = (SELECT MAX(op_depth) FROM nodes AS n2
+                      WHERE n2.wc_id = n.wc_id
+                        AND n2.local_relpath = n.local_relpath);
 
-/* ------------------------------------------------------------------------- */
+/* Many queries have to filter the nodes table to pick only that version
+   of each node with the base (least "current") op_depth.  This view
+   does the heavy lifting for such queries. */
+CREATE VIEW NODES_BASE AS
+  SELECT * FROM nodes
+  WHERE op_depth = 0;
 
-/* Format 13 introduces the work queue, and erases a few columns from the
-   original schema.  */
--- STMT_UPGRADE_TO_13
+-- STMT_CREATE_NODES_TRIGGERS
 
-CREATE TABLE WORK_QUEUE (
-  /* Work items are identified by this value.  */
-  id  INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TRIGGER nodes_insert_trigger
+AFTER INSERT ON nodes
+WHEN NEW.checksum IS NOT NULL
+BEGIN
+  UPDATE pristine SET refcount = refcount + 1
+  WHERE checksum = NEW.checksum;
+END;
 
-  /* A serialized skel specifying the work item.  */
-  work  BLOB NOT NULL
-  );
+CREATE TRIGGER nodes_delete_trigger
+AFTER DELETE ON nodes
+WHEN OLD.checksum IS NOT NULL
+BEGIN
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+END;
 
-/* The contents of dav_cache are suspect in format 12, so it is best to just
-   erase anything there.  */
-UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;
+CREATE TRIGGER nodes_update_checksum_trigger
+AFTER UPDATE OF checksum ON nodes
+WHEN NEW.checksum IS NOT OLD.checksum
+  /* AND (NEW.checksum IS NOT NULL OR OLD.checksum IS NOT NULL) */
+BEGIN
+  UPDATE pristine SET refcount = refcount + 1
+  WHERE checksum = NEW.checksum;
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+END;
 
-PRAGMA user_version = 13;
+-- STMT_CREATE_EXTERNALS
 
+CREATE TABLE EXTERNALS (
+  /* Working copy location related fields (like NODES)*/
 
-/* ------------------------------------------------------------------------- */
+  wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
+  local_relpath  TEXT NOT NULL,
 
-/* Format 14 introduces a table for storing wc locks, and additional columns
-   for storing conflict data in ACTUAL. */
--- STMT_UPGRADE_TO_14
+  /* The working copy root can't be recorded as an external in itself
+     so this will never be NULL. */
+  parent_relpath  TEXT NOT NULL,
 
-/* The existence of a row in this table implies a write lock. */
-CREATE TABLE WC_LOCK (
-  /* specifies the location of this node in the local filesystem */
-  wc_id  INTEGER NOT NULL  REFERENCES WCROOT (id),
-  local_dir_relpath  TEXT NOT NULL,
- 
-  PRIMARY KEY (wc_id, local_dir_relpath)
- );
+  /* Repository location fields */
+  repos_id  INTEGER NOT NULL REFERENCES REPOSITORY (id),
 
-/* A skel containing the conflict details. */
-ALTER TABLE ACTUAL_NODE
-ADD COLUMN conflict_data  BLOB;
+  /* Either 'normal' or 'excluded' */
+  presence  TEXT NOT NULL,
 
-/* Three columns containing the checksums of older, left and right conflict
-   texts.  Stored in a column to allow storing them in the pristine store */
-ALTER TABLE ACTUAL_NODE
-ADD COLUMN older_checksum  TEXT;
+  /* the kind of the external. */
+  kind  TEXT NOT NULL,
 
-ALTER TABLE ACTUAL_NODE
-ADD COLUMN left_checksum  TEXT;
+  /* The local relpath of the directory NODE defining this external 
+     (Defaults to the parent directory of the file external after upgrade) */
+  def_local_relpath         TEXT NOT NULL,
 
-ALTER TABLE ACTUAL_NODE
-ADD COLUMN right_checksum  TEXT;
+  /* The url of the external as used in the definition */
+  def_repos_relpath         TEXT NOT NULL,
 
-PRAGMA user_version = 14;
+  /* The operational (peg) and node revision if this is a revision fixed
+     external; otherwise NULL. (Usually these will both have the same value) */
+  def_operational_revision  TEXT,
+  def_revision              TEXT,
 
+  PRIMARY KEY (wc_id, local_relpath)
+);
 
-/* ------------------------------------------------------------------------- */
-
-/* Format 15 introduces new handling for excluded nodes.  */
--- STMT_UPGRADE_TO_15
-
-UPDATE base_node
-SET
-  presence = 'excluded',
-  checksum = NULL, translated_size = NULL, changed_rev = NULL,
-  changed_date = NULL, changed_author = NULL, depth = NULL,
-  symlink_target = NULL, last_mod_time = NULL, properties = NULL,
-  incomplete_children = NULL, file_external = NULL
-WHERE depth = 'exclude';
-
-/* We don't support cropping working nodes, but we might see them
-   via a copy from a sparse tree. Convert them anyway to make sure
-   we never see depth exclude in our database */
-UPDATE working_node
-SET
-  presence = 'excluded',
-  checksum = NULL, translated_size = NULL, changed_rev = NULL,
-  changed_date = NULL, changed_author = NULL, depth = NULL,
-  symlink_target = NULL, copyfrom_repos_id = NULL, copyfrom_repos_path = NULL,
-  copyfrom_revnum = NULL, moved_here = NULL, moved_to = NULL,
-  last_mod_time = NULL, properties = NULL, keep_local = NULL
-WHERE depth = 'exclude';
-
-PRAGMA user_version = 15;
-
-
-/* ------------------------------------------------------------------------- */
-
-/* Format 16 introduces some new columns for pristines and locks.  */
--- STMT_UPGRADE_TO_16
-
-/* An md5 column for the pristine table. */
-ALTER TABLE PRISTINE
-ADD COLUMN md5_checksum  TEXT;
-
-/* Add the locked_levels column to record the depth of a lock. */
-ALTER TABLE WC_LOCK
-ADD COLUMN locked_levels  INTEGER NOT NULL DEFAULT -1;
-
-/* Default the depth of existing locks to 0. */
-UPDATE wc_lock
-SET locked_levels = 0;
-
-PRAGMA user_version = 16;
-
-/* ------------------------------------------------------------------------- */
-
-/* Format 17 involves no schema changes, it moves the pristine files
-   from .svn/text-base to .svn/pristine */
-
--- STMT_UPGRADE_TO_17
-PRAGMA user_version = 17;
-
-/* ------------------------------------------------------------------------- */
-
-/* Format 18 involves no schema changes, it moves the property data from files
-   into the database. */
-
--- STMT_UPGRADE_TO_18
-PRAGMA user_version = 18;
-
+CREATE INDEX I_EXTERNALS_PARENT ON EXTERNALS (wc_id, parent_relpath);
+CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
+                                                      def_local_relpath,
+                                                      local_relpath);
 
 /* Format 20 introduces NODES and removes BASE_NODE and WORKING_NODE */
 
 -- STMT_UPGRADE_TO_20
+
+UPDATE BASE_NODE SET checksum=(SELECT checksum FROM pristine
+                           WHERE md5_checksum=BASE_NODE.checksum)
+WHERE EXISTS(SELECT 1 FROM pristine WHERE md5_checksum=BASE_NODE.checksum);
+
+UPDATE WORKING_NODE SET checksum=(SELECT checksum FROM pristine
+                           WHERE md5_checksum=WORKING_NODE.checksum)
+WHERE EXISTS(SELECT 1 FROM pristine WHERE md5_checksum=WORKING_NODE.checksum);
 
 INSERT INTO NODES (
        wc_id, local_relpath, op_depth, parent_relpath,
@@ -598,9 +590,9 @@ INSERT INTO NODES (
        changed_revision, changed_date, changed_author,
        checksum, properties, translated_size, last_mod_time,
        dav_cache, symlink_target, file_external )
-SELECT wc_id, local_relpath, 0 AS op_depth, parent_relpath,
+SELECT wc_id, local_relpath, 0 /*op_depth*/, parent_relpath,
        repos_id, repos_relpath, revnum,
-       presence, depth, NULL AS moved_here, NULL AS moved_to, kind,
+       presence, depth, NULL /*moved_here*/, NULL /*moved_to*/, kind,
        changed_rev, changed_date, changed_author,
        checksum, properties, translated_size, last_mod_time,
        dav_cache, symlink_target, file_external
@@ -612,12 +604,12 @@ INSERT INTO NODES (
        changed_revision, changed_date, changed_author,
        checksum, properties, translated_size, last_mod_time,
        dav_cache, symlink_target, file_external )
-SELECT wc_id, local_relpath, 2 AS op_depth, parent_relpath,
+SELECT wc_id, local_relpath, 2 /*op_depth*/, parent_relpath,
        copyfrom_repos_id, copyfrom_repos_path, copyfrom_revnum,
-       presence, depth, NULL AS moved_here, NULL AS moved_to, kind,
+       presence, depth, NULL /*moved_here*/, NULL /*moved_to*/, kind,
        changed_rev, changed_date, changed_author,
        checksum, properties, translated_size, last_mod_time,
-       NULL AS dav_cache, symlink_target, NULL AS file_external
+       NULL /*dav_cache*/, symlink_target, NULL /*file_external*/
 FROM WORKING_NODE;
 
 DROP TABLE BASE_NODE;
@@ -646,6 +638,116 @@ UPDATE actual_node SET conflict_data = NULL;
 
 PRAGMA user_version = 22;
 
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 23 involves no schema changes, it introduces multi-layer
+   op-depth processing for NODES. */
+
+-- STMT_UPGRADE_TO_23
+PRAGMA user_version = 23;
+
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 24 involves no schema changes; it starts using the pristine
+   table's refcount column correctly. */
+
+-- STMT_UPGRADE_TO_24
+UPDATE pristine SET refcount =
+  (SELECT COUNT(*) FROM nodes
+   WHERE checksum = pristine.checksum /*OR checksum = pristine.md5_checksum*/);
+
+PRAGMA user_version = 24;
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 25 introduces the NODES_CURRENT view. */
+
+-- STMT_UPGRADE_TO_25
+DROP VIEW IF EXISTS NODES_CURRENT;
+CREATE VIEW NODES_CURRENT AS
+  SELECT * FROM nodes
+    JOIN (SELECT wc_id, local_relpath, MAX(op_depth) AS op_depth FROM nodes
+          GROUP BY wc_id, local_relpath) AS filter
+    ON nodes.wc_id = filter.wc_id
+      AND nodes.local_relpath = filter.local_relpath
+      AND nodes.op_depth = filter.op_depth;
+
+PRAGMA user_version = 25;
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 26 introduces the NODES_BASE view. */
+
+-- STMT_UPGRADE_TO_26
+DROP VIEW IF EXISTS NODES_BASE;
+CREATE VIEW NODES_BASE AS
+  SELECT * FROM nodes
+  WHERE op_depth = 0;
+
+PRAGMA user_version = 26;
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 27 involves no schema changes, it introduces stores
+   conflict files as relpaths rather than names in ACTUAL_NODE. */
+
+-- STMT_UPGRADE_TO_27
+PRAGMA user_version = 27;
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 28 involves no schema changes, it only converts MD5 pristine 
+   references to SHA1. */
+
+-- STMT_UPGRADE_TO_28
+
+UPDATE NODES SET checksum=(SELECT checksum FROM pristine
+                           WHERE md5_checksum=nodes.checksum)
+WHERE EXISTS(SELECT 1 FROM pristine WHERE md5_checksum=nodes.checksum);
+
+PRAGMA user_version = 28;
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 29 introduces the EXTERNALS table (See STMT_CREATE_TRIGGERS) and
+   optimizes a few trigger definitions. ... */
+
+-- STMT_UPGRADE_TO_29
+
+DROP TRIGGER IF EXISTS nodes_update_checksum_trigger;
+DROP TRIGGER IF EXISTS nodes_insert_trigger;
+DROP TRIGGER IF EXISTS nodes_delete_trigger;
+
+CREATE TRIGGER nodes_update_checksum_trigger
+AFTER UPDATE OF checksum ON nodes
+WHEN NEW.checksum IS NOT OLD.checksum
+  /* AND (NEW.checksum IS NOT NULL OR OLD.checksum IS NOT NULL) */
+BEGIN
+  UPDATE pristine SET refcount = refcount + 1
+  WHERE checksum = NEW.checksum;
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+END;
+
+CREATE TRIGGER nodes_insert_trigger
+AFTER INSERT ON nodes
+WHEN NEW.checksum IS NOT NULL
+BEGIN
+  UPDATE pristine SET refcount = refcount + 1
+  WHERE checksum = NEW.checksum;
+END;
+
+CREATE TRIGGER nodes_delete_trigger
+AFTER DELETE ON nodes
+WHEN OLD.checksum IS NOT NULL
+BEGIN
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+END;
+
+PRAGMA user_version = 29;
 
 /* ------------------------------------------------------------------------- */
 
@@ -707,8 +809,20 @@ FROM ACTUAL_NODE_BACKUP;
 
 DROP TABLE ACTUAL_NODE_BACKUP;
 
-/* Note: One difference remains between the schemas of an upgraded and a
- * fresh WC.  While format 22 was current, "NOT NULL" was added to the
+/* Note: Other differences between the schemas of an upgraded and a
+ * fresh WC.
+ *
+ * While format 22 was current, "NOT NULL" was added to the
  * columns PRISTINE.size and PRISTINE.md5_checksum.  The format was not
- * bumped because it is a forward- and backward-compatible change. */
+ * bumped because it is a forward- and backward-compatible change.
+ *
+ * While format 23 was current, "REFERENCES PRISTINE" was added to the
+ * columns ACTUAL_NODE.older_checksum, ACTUAL_NODE.left_checksum,
+ * ACTUAL_NODE.right_checksum, NODES.checksum.
+ *
+ * The "NODES_BASE" view was originally implemented with a more complex (but
+ * functionally equivalent) statement using a 'JOIN'.  WCs that were created
+ * at or upgraded to format 26 before it was changed will still have the old
+ * version.
+ */
 

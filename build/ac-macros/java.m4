@@ -87,7 +87,7 @@ AC_DEFUN(SVN_FIND_JDK,
 
     if test "$OSX_VER" = "10.4"; then
       dnl For OS X 10.4, the SDK version is 10.4u instead of 10.4.
-      OSX_VER = "$OSX_VERu"
+      OSX_VER="10.4u"
     fi
 
     OSX_SYS_JAVA_FRAMEWORK="/System/Library/Frameworks/JavaVM.framework"
@@ -125,13 +125,19 @@ AC_DEFUN(SVN_FIND_JDK,
     JNI_INCLUDEDIR="$OSX_SDK_JAVA_FRAMEWORK/Headers"
     JDK_SUITABLE=yes
   else
-    AC_MSG_WARN([no JNI header files found.])
-    if test "$os_arch" = "Darwin"; then
-      AC_MSG_WARN([You may need to install the latest Java Development package from http://connect.apple.com/.  Apple no longer includes the JNI header files by default on Java updates.])
-    fi
     JDK_SUITABLE=no
   fi
-  AC_MSG_RESULT([$JNI_INCLUDEDIR/jni.h])
+  if test "$JDK_SUITABLE" = "yes"; then
+    AC_MSG_RESULT([$JNI_INCLUDEDIR/jni.h])
+  else
+    AC_MSG_RESULT([no])
+    if test "$where" != "check"; then
+      AC_MSG_WARN([no JNI header files found.])
+      if test "$os_arch" = "Darwin"; then
+        AC_MSG_WARN([You may need to install the latest Java Development package from http://connect.apple.com/.  Apple no longer includes the JNI header files by default on Java updates.])
+      fi
+    fi
+  fi
 
   if test "$JDK_SUITABLE" = "yes"; then
     JAVA_BIN='$(JDK)/bin'

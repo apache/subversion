@@ -36,7 +36,7 @@ class Generator(gen_win.WinGeneratorBase):
                                       'vcnet-vcproj')
 
   def quote(self, str):
-    return '&quot;%s&quot;' % str
+    return '"%s"' % str
 
   def get_external_project(self, target, proj_ext):
     "Link project files: prefer vcproj's, but if don't exist, try dsp's."
@@ -123,6 +123,10 @@ class Generator(gen_win.WinGeneratorBase):
       self.write_with_template(fname, 'templates/vcnet_vcxproj.ezt', data)
       self.write_with_template(fname + '.filters', 'templates/vcnet_vcxproj_filters.ezt', data)
 
+  def find_rootpath(self):
+    "Gets the root path as understand by the project system"
+    return "$(SolutionDir)"
+
   def write(self):
     "Write a Solution (.sln)"
 
@@ -137,6 +141,7 @@ class Generator(gen_win.WinGeneratorBase):
                                    key=lambda t: t[0]):
       sql.append(_eztdata(header=hdrfile.replace('/', '\\'),
                           source=sqlfile[0].replace('/', '\\'),
+                          dependencies=[x.replace('/', '\\') for x in sqlfile[1:]],
                           svn_python=sys.executable))
 
     # apr doesn't supply vcproj files, the user must convert them
@@ -197,7 +202,7 @@ class Generator(gen_win.WinGeneratorBase):
         if depends[i].fname.startswith(self.projfilesdir):
           path = depends[i].fname[len(self.projfilesdir) + 1:]
         else:
-          path = '..\\..\\..\\' + depends[i].fname
+          path = '$(SolutionDir)' + depends[i].fname
         deplist.append(gen_win.ProjectItem(guid=guids[depends[i].name],
                                            index=i,
                                            path=path,

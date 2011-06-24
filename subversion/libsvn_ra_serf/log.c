@@ -34,8 +34,6 @@
 #include "svn_dav.h"
 #include "svn_xml.h"
 #include "svn_config.h"
-#include "svn_delta.h"
-#include "svn_version.h"
 #include "svn_path.h"
 #include "svn_props.h"
 
@@ -49,7 +47,7 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-typedef enum {
+typedef enum log_state_e {
   NONE = 0,
   REPORT,
   ITEM,
@@ -63,9 +61,10 @@ typedef enum {
   REPLACED_PATH,
   DELETED_PATH,
   MODIFIED_PATH,
+  SUBTRACTIVE_MERGE,
 } log_state_e;
 
-typedef struct {
+typedef struct log_info_t {
   apr_pool_t *pool;
 
   /* The currently collected value as we build it up */
@@ -82,7 +81,7 @@ typedef struct {
   const char *revprop_name;
 } log_info_t;
 
-typedef struct {
+typedef struct log_context_t {
   apr_pool_t *pool;
 
   /* parameters set by our caller */
@@ -140,7 +139,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       if (!info->log_entry->changed_paths2)
         {
           info->log_entry->changed_paths2 = apr_hash_make(info->pool);
-          info->log_entry->changed_paths = info->log_entry->changed_paths;
+          info->log_entry->changed_paths = info->log_entry->changed_paths2;
         }
 
       info->tmp_path = svn_log_changed_path2_create(info->pool);
@@ -170,9 +169,9 @@ read_changed_path_attributes(svn_log_changed_path2_t *change, const char **attrs
 
   change->node_kind = svn_node_kind_from_word(
                            svn_xml_get_attr_value("node-kind", attrs));
-  change->text_modified = svn_tristate_from_word(
+  change->text_modified = svn_tristate__from_word(
                            svn_xml_get_attr_value("text-mods", attrs));
-  change->props_modified = svn_tristate_from_word(
+  change->props_modified = svn_tristate__from_word(
                            svn_xml_get_attr_value("prop-mods", attrs));
 
   return SVN_NO_ERROR;
@@ -230,6 +229,10 @@ start_log(svn_ra_serf__xml_parser_t *parser,
       else if (strcmp(name.name, "has-children") == 0)
         {
           push_state(parser, log_ctx, HAS_CHILDREN);
+        }
+      else if (strcmp(name.name, "subtractive-merge") == 0)
+        {
+          push_state(parser, log_ctx, SUBTRACTIVE_MERGE);
         }
       else if (strcmp(name.name, "added-path") == 0)
         {
@@ -399,6 +402,12 @@ end_log(svn_ra_serf__xml_parser_t *parser,
            strcmp(name.name, "has-children") == 0)
     {
       info->log_entry->has_children = TRUE;
+      svn_ra_serf__xml_pop_state(parser);
+    }
+  else if (state == SUBTRACTIVE_MERGE &&
+           strcmp(name.name, "subtractive-merge") == 0)
+    {
+      info->log_entry->subtractive_merge = TRUE;
       svn_ra_serf__xml_pop_state(parser);
     }
   else if ((state == ADDED_PATH &&

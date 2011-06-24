@@ -33,7 +33,6 @@
 #include "svn_xml.h"
 #include "svn_config.h"
 #include "svn_delta.h"
-#include "svn_version.h"
 #include "svn_path.h"
 #include "svn_base64.h"
 #include "svn_props.h"
@@ -47,7 +46,7 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-typedef enum {
+typedef enum blame_state_e {
   NONE = 0,
   FILE_REVS_REPORT,
   FILE_REV,
@@ -58,7 +57,7 @@ typedef enum {
   TXDELTA,
 } blame_state_e;
 
-typedef struct {
+typedef struct blame_info_t {
   /* Current pool. */
   apr_pool_t *pool;
 
@@ -96,7 +95,7 @@ typedef struct {
 
 } blame_info_t;
 
-typedef struct {
+typedef struct blame_context_t {
   /* pool passed to get_file_revs */
   apr_pool_t *pool;
 
@@ -454,7 +453,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   blame_ctx->done = FALSE;
 
   SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
-                                         NULL, session->repos_url.path,
+                                         NULL, session->session_url.path,
                                          end, NULL, pool));
   req_url = svn_path_url_add_component2(basecoll_url, relative_url, pool);
 
@@ -491,5 +490,5 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                                          parser_ctx->location),
             err);
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }

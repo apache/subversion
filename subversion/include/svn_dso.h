@@ -58,20 +58,8 @@ extern "C" {
 svn_error_t *
 svn_dso_initialize2(void);
 
-/**
- * Initialize the DSO loading routines.
- *
- * @note This should be called prior to the creation of any pool that
- *       is passed to a function that comes from a DSO, otherwise you
- *       risk having the DSO unloaded before all pool cleanup callbacks
- *       that live in the DSO have been executed.  If it is not called
- *       prior to @c svn_dso_load being used for the first time there
- *       will be a best effort attempt made to initialize the subsystem,
- *       but it will not be entirely thread safe and it risks running
- *       into the previously mentioned problems with DSO unloading and
- *       pool cleanup callbacks.
- *
- * Calls svn_dso_initialize2(void) upon error aborts.
+/** The same as svn_dso_initialize2(), except that if there is an error this
+ * calls abort() instead of returning the error.
  *
  * @deprecated Provided for backwards compatibility with the 1.5 API.
  *
@@ -85,9 +73,9 @@ svn_dso_initialize(void);
 #if APR_HAS_DSO
 
 /**
- * Attempt to load @a libname, returning it in @a dso.
+ * Attempt to load @a libname, returning it in @a *dso.
  *
- * If @a libname cannot be loaded set @a dso to NULL and return
+ * If @a libname cannot be loaded set @a *dso to NULL and return
  * @c SVN_NO_ERROR.
  *
  * @note Due to pool lifetime issues DSOs are all loaded into a global

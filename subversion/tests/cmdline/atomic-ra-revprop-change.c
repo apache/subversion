@@ -119,7 +119,7 @@ construct_config(apr_hash_t **config_p,
   svn_config_t *servers;
 
   /* Populate SERVERS. */
-  SVN_ERR(svn_config_create(&servers, pool));
+  SVN_ERR(svn_config_create(&servers, FALSE,  pool));
   svn_config_set(servers, SVN_CONFIG_SECTION_GLOBAL,
                  SVN_CONFIG_OPTION_HTTP_LIBRARY, http_library);
 
@@ -152,7 +152,7 @@ change_rev_prop(const char *url,
   SVN_ERR(construct_auth_baton(&callbacks->auth_baton, pool));
   SVN_ERR(construct_config(&config, http_library, pool));
 
-  SVN_ERR(svn_ra_open3(&sess, url, NULL, callbacks, NULL /* baton */,
+  SVN_ERR(svn_ra_open4(&sess, NULL, url, NULL, callbacks, NULL /* baton */,
                        config, pool));
 
   SVN_ERR(svn_ra_has_capability(sess, &capable,
@@ -164,7 +164,7 @@ change_rev_prop(const char *url,
                                     &old_value, propval, pool);
 
       if (want_error && err
-          && svn_error_has_cause(err, SVN_ERR_FS_PROP_BASEVALUE_MISMATCH))
+          && svn_error_find_cause(err, SVN_ERR_FS_PROP_BASEVALUE_MISMATCH))
         {
           /* Expectation was matched.  Get out. */
           svn_error_clear(err);
@@ -178,7 +178,7 @@ change_rev_prop(const char *url,
                                 "An error was expected but not seen");
       else
       	/* A real (non-SVN_ERR_FS_PROP_BASEVALUE_MISMATCH) error. */
-      	return svn_error_return(err);
+      	return svn_error_trace(err);
     }
   else
     /* Running under --server-minor-version? */
@@ -196,7 +196,7 @@ extract_values_from_skel(svn_string_t **old_propval_p,
 {
   apr_hash_t *proplist;
   svn_skel_t *skel;
-  
+
   skel = svn_skel__parse(skel_cstr, strlen(skel_cstr), pool);
   SVN_ERR(svn_skel__parse_proplist(&proplist, skel, pool));
   *old_propval_p = apr_hash_get(proplist, KEY_OLD_PROPVAL, APR_HASH_KEY_STRING);

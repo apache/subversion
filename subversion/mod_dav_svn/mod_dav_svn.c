@@ -32,10 +32,13 @@
 #include <mod_dav.h>
 
 #include "svn_version.h"
-#include "svn_fs.h"
+#include "svn_cache_config.h"
 #include "svn_utf.h"
+#include "svn_ctype.h"
 #include "svn_dso.h"
 #include "mod_dav_svn.h"
+
+#include "private/svn_fspath.h"
 
 #include "dav_svn.h"
 #include "mod_authz_svn.h"
@@ -50,7 +53,7 @@
 #define PATHAUTHZ_BYPASS_ARG "short_circuit"
 
 /* per-server configuration */
-typedef struct {
+typedef struct server_conf_t {
   const char *special_uri;
 } server_conf_t;
 
@@ -73,7 +76,7 @@ enum path_authz_conf {
 };
 
 /* per-dir configuration */
-typedef struct {
+typedef struct dir_conf_t {
   const char *fs_path;               /* path to the SVN FS */
   const char *repo_name;             /* repository name */
   const char *xslt_uri;              /* XSL transform URI */
@@ -86,6 +89,8 @@ typedef struct {
   const char *root_dir;              /* our top-level directory */
   const char *master_uri;            /* URI to the master SVN repos */
   const char *activities_db;         /* path to activities database(s) */
+  enum conf_flag txdelta_cache;      /* whether to enable txdelta caching */
+  enum conf_flag fulltext_cache;     /* whether to enable fulltext caching */
 } dir_conf_t;
 
 
@@ -97,6 +102,10 @@ extern module AP_MODULE_DECLARE_DATA dav_svn_module;
 
 /* The authz_svn provider for bypassing path authz. */
 static authz_svn__subreq_bypass_func_t pathauthz_bypass_func = NULL;
+
+/* The compression level we will pass to svn_txdelta_to_svndiff3()
+ * for wire-compression */
+static int svn__compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
 
 static int
 init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
@@ -172,10 +181,10 @@ create_dir_config(apr_pool_t *p, char *dir)
   /* NOTE: dir==NULL creates the default per-dir config */
   dir_conf_t *conf = apr_pcalloc(p, sizeof(*conf));
 
-  /*In subversion context dir is always considered to be coming from
-   <Location /blah> directive. So we treat it as URI. */
+  /* In subversion context dir is always considered to be coming from
+     <Location /blah> directive. So we treat it as a urlpath. */
   if (dir)
-    conf->root_dir = svn_uri_canonicalize(dir, p);
+    conf->root_dir = svn_urlpath__canonicalize(dir, p);
   conf->bulk_updates = CONF_FLAG_ON;
   conf->v2_protocol = CONF_FLAG_ON;
 
@@ -204,6 +213,8 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->v2_protocol = INHERIT_VALUE(parent, child, v2_protocol);
   newconf->path_authz_method = INHERIT_VALUE(parent, child, path_authz_method);
   newconf->list_parentpath = INHERIT_VALUE(parent, child, list_parentpath);
+  newconf->txdelta_cache = INHERIT_VALUE(parent, child, txdelta_cache);
+  newconf->fulltext_cache = INHERIT_VALUE(parent, child, fulltext_cache);
   /* Prefer our parent's value over our new one - hence the swap. */
   newconf->root_dir = INHERIT_VALUE(child, parent, root_dir);
 
@@ -226,6 +237,8 @@ static const char *
 SVNMasterURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
   dir_conf_t *conf = config;
+  apr_uri_t parsed_uri;
+  const char *uri_base_name = "";
 
   /* SVNMasterURI requires mod_proxy and mod_proxy_http
    * (r->handler = "proxy-server" in mirror.c), make sure
@@ -234,6 +247,14 @@ SVNMasterURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
     return "module mod_proxy not loaded, required for SVNMasterURI";
   if (ap_find_linked_module("mod_proxy_http.c") == NULL)
     return "module mod_proxy_http not loaded, required for SVNMasterURI";
+  if (APR_SUCCESS != apr_uri_parse(cmd->pool, arg1, &parsed_uri))
+    return "unable to parse SVNMasterURI value";
+  if (parsed_uri.path)
+    uri_base_name = svn_urlpath__basename(
+                        svn_urlpath__canonicalize(parsed_uri.path, cmd->pool),
+                        cmd->pool);
+  if (! *uri_base_name)
+    return "SVNMasterURI value must not be a server root";
 
   conf->master_uri = apr_pstrdup(cmd->pool, arg1);
 
@@ -356,8 +377,7 @@ SVNPath_cmd(cmd_parms *cmd, void *config, const char *arg1)
   if (conf->fs_parent_path != NULL)
     return "SVNPath cannot be defined at same time as SVNParentPath.";
 
-  conf->fs_path = svn_path_internal_style(apr_pstrdup(cmd->pool, arg1),
-                                          cmd->pool);
+  conf->fs_path = svn_dirent_internal_style(arg1, cmd->pool);
 
   return NULL;
 }
@@ -371,8 +391,7 @@ SVNParentPath_cmd(cmd_parms *cmd, void *config, const char *arg1)
   if (conf->fs_path != NULL)
     return "SVNParentPath cannot be defined at same time as SVNPath.";
 
-  conf->fs_parent_path = svn_path_internal_style(apr_pstrdup(cmd->pool, arg1),
-                                                 cmd->pool);
+  conf->fs_parent_path = svn_dirent_internal_style(arg1, cmd->pool);
 
   return NULL;
 }
@@ -405,6 +424,77 @@ SVNSpecialURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
   conf = ap_get_module_config(cmd->server->module_config,
                               &dav_svn_module);
   conf->special_uri = uri;
+
+  return NULL;
+}
+
+static const char *
+SVNCacheTextDeltas_cmd(cmd_parms *cmd, void *config, int arg)
+{
+  dir_conf_t *conf = config;
+
+  if (arg)
+    conf->txdelta_cache = CONF_FLAG_ON;
+  else
+    conf->txdelta_cache = CONF_FLAG_OFF;
+
+  return NULL;
+}
+
+static const char *
+SVNCacheFullTexts_cmd(cmd_parms *cmd, void *config, int arg)
+{
+  dir_conf_t *conf = config;
+
+  if (arg)
+    conf->fulltext_cache = CONF_FLAG_ON;
+  else
+    conf->fulltext_cache = CONF_FLAG_OFF;
+
+  return NULL;
+}
+
+static const char *
+SVNInMemoryCacheSize_cmd(cmd_parms *cmd, void *config, const char *arg1)
+{
+  svn_cache_config_t settings = *svn_cache_config_get();
+
+  apr_uint64_t value = 0;
+  svn_error_t *err = svn_cstring_atoui64(&value, arg1);
+  if (err)
+    {
+      svn_error_clear(err);
+      return "Invalid decimal number for the SVN cache size.";
+    }
+
+  settings.cache_size = value * 0x400;
+
+  svn_cache_config_set(&settings);
+
+  return NULL;
+}
+
+static const char *
+SVNCompressionLevel_cmd(cmd_parms *cmd, void *config, const char *arg1)
+{
+  int value = 0;
+  svn_error_t *err = svn_cstring_atoi(&value, arg1);
+  if (err)
+    {
+      svn_error_clear(err);
+      return "Invalid decimal number for the SVN compression level.";
+    }
+
+  if ((value < SVN_DELTA_COMPRESSION_LEVEL_NONE)
+      || (value > SVN_DELTA_COMPRESSION_LEVEL_MAX))
+    return apr_psprintf(cmd->pool,
+                        "%d is not a valid compression level. "
+                        "The valid range is %d .. %d.",
+                        value,
+                        (int)SVN_DELTA_COMPRESSION_LEVEL_NONE,
+                        (int)SVN_DELTA_COMPRESSION_LEVEL_MAX);
+
+  svn__compression_level = value;
 
   return NULL;
 }
@@ -472,7 +562,7 @@ dav_svn_get_repos_path(request_rec *r,
 
   /* Construct the full path from the parent path base directory
      and the repository name. */
-  *repos_path = svn_path_join(fs_parent_path, repos_name, r->pool);
+  *repos_path = svn_urlpath__join(fs_parent_path, repos_name, r->pool);
   return NULL;
 }
 
@@ -567,6 +657,22 @@ dav_svn__get_txn_root_stub(request_rec *r)
 }
 
 
+const char *
+dav_svn__get_vtxn_stub(request_rec *r)
+{
+  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/vtxn",
+                     (char *)NULL);
+}
+
+
+const char *
+dav_svn__get_vtxn_root_stub(request_rec *r)
+{
+  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/vtxr",
+                     (char *)NULL);
+}
+
+
 svn_boolean_t
 dav_svn__get_autoversioning_flag(request_rec *r)
 {
@@ -644,6 +750,32 @@ dav_svn__get_activities_db(request_rec *r)
 }
 
 
+svn_boolean_t
+dav_svn__get_txdelta_cache_flag(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  return conf->txdelta_cache == CONF_FLAG_ON;
+}
+
+
+svn_boolean_t
+dav_svn__get_fulltext_cache_flag(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  return conf->fulltext_cache == CONF_FLAG_ON;
+}
+
+
+int
+dav_svn__get_compression_level(void)
+{
+  return svn__compression_level;
+}
+
 static void
 merge_xml_filter_insert(request_rec *r)
 {
@@ -663,7 +795,7 @@ merge_xml_filter_insert(request_rec *r)
 }
 
 
-typedef struct {
+typedef struct merge_ctx_t {
   apr_bucket_brigade *bb;
   apr_xml_parser *parser;
   apr_pool_t *pool;
@@ -846,6 +978,33 @@ static const command_rec cmds[] =
                ACCESS_CONF|RSRC_CONF,
                "enables server advertising of support for version 2 of "
                "Subversion's HTTP protocol (default values is On)."),
+
+  /* per directory/location */
+  AP_INIT_FLAG("SVNCacheTextDeltas", SVNCacheTextDeltas_cmd, NULL,
+               ACCESS_CONF|RSRC_CONF,
+               "speeds up data access to older revisions by caching "
+               "delta information if sufficient in-memory cache is "
+               "available (default is Off)."),
+
+  /* per directory/location */
+  AP_INIT_FLAG("SVNCacheFullTexts", SVNCacheFullTexts_cmd, NULL,
+               ACCESS_CONF|RSRC_CONF,
+               "speeds up data access by caching full file content "
+               "if sufficient in-memory cache is available "
+               "(default is Off)."),
+
+  /* per server */
+  AP_INIT_TAKE1("SVNInMemoryCacheSize", SVNInMemoryCacheSize_cmd, NULL,
+                RSRC_CONF,
+                "specifies the maximum size im kB per process of Subversion's "
+                "in-memory object cache (default value is 16384; 0 deactivates "
+                "the cache)."),
+  /* per server */
+  AP_INIT_TAKE1("SVNCompressionLevel", SVNCompressionLevel_cmd, NULL,
+                RSRC_CONF,
+                "specifies the compression level used before sending file "
+                "content over the network (0 for no compression, 9 for "
+                "maximum, 5 is default)."),
 
   { NULL }
 };

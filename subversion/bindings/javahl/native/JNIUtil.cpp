@@ -226,10 +226,10 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
         return FALSE;
       }
     utf8_path[outlength - outbytes] = '\0';
-    internal_path = svn_path_internal_style(utf8_path, pool);
+    internal_path = svn_dirent_internal_style(utf8_path, pool);
     /* get base path name */
-    internal_path = svn_path_dirname(internal_path, pool);
-    internal_path = svn_path_join(internal_path, SVN_LOCALE_RELATIVE_PATH,
+    internal_path = svn_dirent_dirname(internal_path, pool);
+    internal_path = svn_dirent_join(internal_path, SVN_LOCALE_RELATIVE_PATH,
                                   pool);
     bindtextdomain(PACKAGE_NAME, internal_path);
     apr_pool_destroy(pool);
@@ -948,6 +948,9 @@ svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
         return svn_error_createf(SVN_ERR_BAD_URL, NULL,
                                  _("URL '%s' contains a '..' element"),
                                  path);
+
+      /* strip any trailing '/' */
+      path = svn_uri_canonicalize(path, pool);
     }
   else  /* not a url, so treat as a path */
     {
@@ -969,13 +972,11 @@ svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
          the performance penalty.
        */
 
-      path = svn_path_internal_style(path, pool);
+      path = svn_dirent_internal_style(path, pool);
 
       /* For kicks and giggles, let's absolutize it. */
       SVN_ERR(svn_dirent_get_absolute(&path, path, pool));
     }
-    /* strip any trailing '/' */
-    path = svn_path_canonicalize(path, pool);
 
   return NULL;
 }

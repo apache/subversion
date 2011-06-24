@@ -56,7 +56,7 @@ svn_cl__export(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   /* We want exactly 1 or 2 targets for this subcommand. */
   if (targets->nelts < 1)
@@ -74,7 +74,10 @@ svn_cl__export(apr_getopt_t *os,
      the `to' path.  Else, a `to' path was supplied. */
   if (targets->nelts == 1)
     {
-      to = svn_path_uri_decode(svn_uri_basename(truefrom, pool), pool);
+      if (svn_path_is_url(truefrom))
+        to = svn_uri_basename(truefrom, pool);
+      else
+        to = svn_dirent_basename(truefrom, pool);
     }
   else
     {
@@ -117,5 +120,5 @@ svn_cl__export(apr_getopt_t *os,
                             _("Failure occurred processing one or more "
                               "externals definitions"));
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }

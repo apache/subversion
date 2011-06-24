@@ -32,9 +32,12 @@ import svntest
 from svntest import wc
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = wc.StateItem
 exp_noop_up_out = svntest.actions.expected_noop_update_output
 
@@ -45,6 +48,7 @@ exp_noop_up_out = svntest.actions.expected_noop_update_output
 
 #----------------------------------------------------------------------
 # this test should be SKIPped on systems without the executable bit
+@SkipUnless(svntest.main.is_posix_os)
 def import_executable(sbox):
   "import of executable files"
 
@@ -294,6 +298,7 @@ def import_avoid_empty_revision(sbox):
 #----------------------------------------------------------------------
 
 # test for issue 2433: "import" does not handle eol-style correctly
+@Issue(2433)
 def import_eol_style(sbox):
   "import should honor the eol-style property"
 
@@ -371,7 +376,7 @@ enable-auto-props = yes
 
 # list all tests here, starting with None:
 test_list = [ None,
-              SkipUnless(import_executable, svntest.main.is_posix_os),
+              import_executable,
               import_ignores,
               import_avoid_empty_revision,
               import_no_ignores,

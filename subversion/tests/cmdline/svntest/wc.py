@@ -73,7 +73,7 @@ import svntest
 # Working revision, last-changed revision, and last author are whitespace
 # only if the item is missing.
 #
-_re_parse_status = re.compile('^([?!MACDRUGI_~ ][MACDRUG_ ])'
+_re_parse_status = re.compile('^([?!MACDRUGXI_~ ][MACDRUG_ ])'
                               '([L ])'
                               '([+ ])'
                               '([SX ])'
@@ -83,18 +83,20 @@ _re_parse_status = re.compile('^([?!MACDRUGI_~ ][MACDRUG_ ])'
                               '((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?'
                               '(?P<path>.+)$')
 
-_re_parse_skipped = re.compile("^Skipped.* '(.+)'\n")
+_re_parse_skipped = re.compile("^Skipped[^']* '(.+)'( --.*)?\n")
 
 _re_parse_summarize = re.compile("^([MAD ][M ])      (.+)\n")
 
 _re_parse_checkout = re.compile('^([RMAGCUDE_ ][MAGCUDE_ ])'
                                 '([B ])'
-                                '([C ])\s+'
+                                '([CAUD ])\s+'
                                 '(.+)')
-_re_parse_co_skipped = re.compile('^(Restored|Skipped)\s+\'(.+)\'')
+_re_parse_co_skipped = re.compile('^(Restored|Skipped|Removed external)'
+                                  '\s+\'(.+)\'(( --|: ).*)?')
 _re_parse_co_restored = re.compile('^(Restored)\s+\'(.+)\'')
 
 # Lines typically have a verb followed by whitespace then a path.
+_re_parse_commit_ext = re.compile('^(([A-Za-z]+( [a-z]+)*)) \'(.+)\'( --.*)?')
 _re_parse_commit = re.compile('^(\w+(  \(bin\))?)\s+(.+)')
 
 
@@ -460,8 +462,8 @@ class State:
 
       match = _re_parse_checkout.search(line)
       if match:
-        if match.group(3) == 'C':
-          treeconflict = 'C'
+        if match.group(3) != ' ':
+          treeconflict = match.group(3)
         else:
           treeconflict = None
         desc[to_relpath(match.group(4))] = StateItem(status=match.group(1),
@@ -480,6 +482,11 @@ class State:
     desc = { }
     for line in lines:
       if line.startswith('DBG:') or line.startswith('Transmitting'):
+        continue
+
+      match = _re_parse_commit_ext.search(line)
+      if match:
+        desc[to_relpath(match.group(4))] = StateItem(verb=match.group(1))
         continue
 
       match = _re_parse_commit.search(line)
@@ -592,7 +599,7 @@ class State:
         item = StateItem.from_entry(entry)
         if name:
           desc[repos_join(parent, name)] = item
-          implied_url = repos_join(parent_url, svn_url_quote(name))
+          implied_url = repos_join(parent_url, svn_uri_quote(name))
         else:
           item._url = entry.url  # attach URL to directory StateItems
           desc[parent] = item
@@ -600,7 +607,7 @@ class State:
           grandpa, this_name = repos_split(parent)
           if grandpa in desc:
             implied_url = repos_join(desc[grandpa]._url,
-                                     svn_url_quote(this_name))
+                                     svn_uri_quote(this_name))
           else:
             implied_url = None
 
@@ -808,7 +815,7 @@ def repos_join(base, path):
   return base + '/' + path
 
 
-def svn_url_quote(url):
+def svn_uri_quote(url):
   # svn defines a different set of "safe" characters than Python does, so
   # we need to avoid escaping them. see subr/path.c:uri_char_validity[]
   return urllib.quote(url, "!$&'()*+,-./:=@_~")
@@ -842,36 +849,23 @@ def open_wc_db(local_path):
 def text_base_path(file_path):
   """Return the path to the text-base file for the versioned file
      FILE_PATH."""
+
+  info = svntest.actions.run_and_parse_info(file_path)[0]
+
+  checksum = info['Checksum']
   db, root_path, relpath = open_wc_db(file_path)
 
-  c = db.cursor()
-  # NODES conversion is complete enough that we can use it if it exists
-  c.execute("""pragma table_info(nodes)""")
-  if c.fetchone():
-    c.execute("""select checksum from nodes
-                 where local_relpath = '""" + relpath + """'
-                 and op_depth = 0""")
-  else:
-    c.execute("""select checksum from base_node
-                 where local_relpath = '""" + relpath + """'""")
-  row = c.fetchone()
-  if row is not None:
-    checksum = row[0]
-    if checksum is not None and checksum[0:6] == "$md5 $":
-      c.execute("""select checksum from pristine
-                   where md5_checksum = '""" + checksum + """'""")
-      checksum = c.fetchone()[0]
-  if row is None or checksum is None:
-    raise svntest.Failure("No SHA1 checksum for " + relpath)
-  db.close()
-
-  checksum = checksum[6:]
   # Calculate single DB location
   dot_svn = svntest.main.get_admin_name()
   fn = os.path.join(root_path, dot_svn, 'pristine', checksum[0:2], checksum)
 
+  # For SVN_WC__VERSION < 29
   if os.path.isfile(fn):
     return fn
+
+  # For SVN_WC__VERSION >= 29
+  if os.path.isfile(fn + ".svn-base"):
+    return fn + ".svn-base"
 
   raise svntest.Failure("No pristine text for " + relpath)
 

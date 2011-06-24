@@ -21,26 +21,25 @@
  * ====================================================================
  */
 
+#include <apr_tables.h>
+#include <apr_xml.h>
 
-
-
+#include "svn_mergeinfo.h"
+#include "svn_path.h"
 #include "svn_ra.h"
+#include "svn_string.h"
 #include "svn_xml.h"
+
 #include "private/svn_dav_protocol.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "svn_private_config.h"
-#include "svn_mergeinfo.h"
 #include "ra_serf.h"
-#include "svn_path.h"
-#include "svn_string.h"
-#include <apr_tables.h>
-#include <apr_xml.h>
 
 
 
 
 /* The current state of our XML parsing. */
-typedef enum {
+typedef enum mergeinfo_state_e {
   NONE = 0,
   MERGEINFO_REPORT,
   MERGEINFO_ITEM,
@@ -54,7 +53,7 @@ typedef enum {
    get_mergeinfo.  curr_path and curr_info contain the value of the
    CDATA from the mergeinfo items as we get them from the server.  */
 
-typedef struct {
+typedef struct mergeinfo_context_t {
   apr_pool_t *pool;
   svn_stringbuf_t *curr_path;
   svn_stringbuf_t *curr_info;

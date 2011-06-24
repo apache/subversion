@@ -428,7 +428,7 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
 {
   svn_boolean_t validate_inherited_mergeinfo = FALSE;
 
-  return svn_error_return(svn_ra_get_mergeinfo2(session, catalog, paths,
+  return svn_error_trace(svn_ra_get_mergeinfo2(session, catalog, paths,
                           revision, inherit, &validate_inherited_mergeinfo,
                           include_descendants, pool));
 }

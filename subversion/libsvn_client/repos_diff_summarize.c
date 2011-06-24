@@ -176,7 +176,7 @@ diff_deleted_dir(const char *dir,
                           revision,
                           SVN_DIRENT_KIND,
                           pool));
-  
+
   for (hi = apr_hash_first(pool, dirents); hi;
        hi = apr_hash_next(hi))
     {

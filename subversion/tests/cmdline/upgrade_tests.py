@@ -40,11 +40,14 @@ import svntest
 from svntest import wc
 
 Item = svntest.wc.StateItem
-XFail = svntest.testcase.XFail
-SkipUnless = svntest.testcase.SkipUnless
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 
-wc_is_too_old_regex = (".*Working copy format of '.*' is too old \(\d+\); " +
-                    "please run 'svn upgrade'")
+wc_is_too_old_regex = (".*Working copy '.*' is too old \(format \d+.*\).*")
 
 
 def get_current_format():
@@ -103,7 +106,21 @@ def check_pristine(sbox, files):
 def check_dav_cache(dir_path, wc_id, expected_dav_caches):
   dot_svn = svntest.main.get_admin_name()
   db = svntest.sqlite3.connect(os.path.join(dir_path, dot_svn, 'wc.db'))
+
   c = db.cursor()
+
+  # Check if python's sqlite can read our db
+  c.execute('select sqlite_version()')
+  sqlite_ver = map(int, c.fetchone()[0].split('.'))
+
+  # SQLite versions have 3 or 4 number groups
+  major = sqlite_ver[0]
+  minor = sqlite_ver[1]
+  patch = sqlite_ver[2]
+
+  if major < 3 or (major == 3 and minor < 6) \
+     or (major == 3 and minor == 6 and patch < 18):
+       return # We need a newer SQLite
 
   for local_relpath, expected_dav_cache in expected_dav_caches.items():
     # NODES conversion is complete enough that we can use it if it exists
@@ -183,6 +200,22 @@ def simple_property_verify(dir_path, expected_props):
     print('Actual properties: %s' % actual_props)
     raise svntest.Failure("Properties unequal")
 
+def simple_checksum_verify(expected_checksums):
+
+  for path, checksum in expected_checksums:
+    exit_code, output, errput = svntest.main.run_svn(None, 'info', path)
+    if exit_code:
+      raise svntest.Failure()
+    if checksum:
+      if not svntest.verify.RegexOutput('Checksum: ' + checksum,
+                                        match_all=False).matches(output):
+        raise svntest.Failure("did not get expected checksum " + checksum)
+    if not checksum:
+      if svntest.verify.RegexOutput('Checksum: ',
+                                    match_all=False).matches(output):
+        raise svntest.Failure("unexpected checksum")
+
+
 def run_and_verify_status_no_server(wc_dir, expected_status):
   "same as svntest.actions.run_and_verify_status(), but without '-u'"
 
@@ -209,6 +242,25 @@ def basic_upgrade(sbox):
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'info', sbox.wc_dir)
 
+
+  # Upgrade on something not a versioned dir gives a 'not directory' error.
+  not_dir = ".*E155019.*%s'.*directory"
+  os.mkdir(sbox.ospath('X'))
+  svntest.actions.run_and_verify_svn(None, None, not_dir % 'X',
+                                     'upgrade', sbox.ospath('X'))
+
+  svntest.actions.run_and_verify_svn(None, None, not_dir % 'Y',
+                                     'upgrade', sbox.ospath('Y'))
+
+  svntest.actions.run_and_verify_svn(None, None, not_dir %
+                                        re.escape(sbox.ospath('A/mu')),
+                                     'upgrade', sbox.ospath('A/mu'))
+
+  # Upgrade on a versioned subdir gives a 'not root' error.
+  not_root = ".*E155019.*%s'.*root.*%s'"
+  svntest.actions.run_and_verify_svn(None, None, not_root %
+                                        ('A', re.escape(sbox.wc_dir)),
+                                     'upgrade', sbox.ospath('A'))
 
   # Now upgrade the working copy
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -285,8 +337,7 @@ def logs_left_1_5(sbox):
   replace_sbox_with_tarfile(sbox, 'logs_left_1_5.tar.bz2')
 
   # Try to upgrade, this should give an error
-  expected_stderr = (".*Cannot upgrade with existing logs; please "
-                     "run 'svn cleanup' with Subversion 1.6")
+  expected_stderr = (".*Cannot upgrade with existing logs; .*")
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'upgrade', sbox.wc_dir)
 
@@ -321,8 +372,6 @@ def xml_entries_relocate(path, from_url, to_url):
   txt = open(entries).read().replace('url="' + from_url, 'url="' + to_url)
   os.chmod(entries, 0777)
   open(entries, 'w').write(txt)
-
-  print('Relocated %s' % path)
 
   for dirent in os.listdir(path):
     item_path = os.path.join(path, dirent)
@@ -426,7 +475,7 @@ def basic_upgrade_1_0(sbox):
   check_pristine(sbox, ['iota', 'A/mu', 'A/D/H/zeta'])
 
 # Helper function for the x3 tests.
-def do_x3_upgrade(sbox):
+def do_x3_upgrade(sbox, expected_error=[]):
   # Attempt to use the working copy, this should give an error
   expected_stderr = wc_is_too_old_regex
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
@@ -434,8 +483,11 @@ def do_x3_upgrade(sbox):
 
 
   # Now upgrade the working copy
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'upgrade', sbox.wc_dir)
+
+  if expected_error != []:
+    return
 
   # Actually check the format number of the upgraded working copy
   check_format(sbox, get_current_format())
@@ -535,26 +587,27 @@ def do_x3_upgrade(sbox):
       'A/B/E/alpha'       : {'svn:eol-style': 'native'}
   })
 
+@Issue(2530)
 def x3_1_4_0(sbox):
   "3x same wc upgrade 1.4.0 test"
 
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'wc-3x-1.4.0.tar.bz2', dir='wc-1.4.0')
 
-  do_x3_upgrade(sbox)
+  do_x3_upgrade(sbox, expected_error='.*E155016: The properties of.*are in an '
+                'indeterminate state and cannot be upgraded. See issue #2530.')
 
+@Issue(3811)
 def x3_1_4_6(sbox):
   "3x same wc upgrade 1.4.6 test"
 
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'wc-3x-1.4.6.tar.bz2', dir='wc-1.4.6')
 
   do_x3_upgrade(sbox)
 
+@Issue(3811)
 def x3_1_6_12(sbox):
   "3x same wc upgrade 1.6.12 test"
 
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'wc-3x-1.6.12.tar.bz2', dir='wc-1.6.12')
 
   do_x3_upgrade(sbox)
@@ -568,7 +621,6 @@ def missing_dirs(sbox):
   #   rm -rf wc/A/B/E wc/A/D wc/A/B_new/E wc/A/B_new/F
   #   touch wc/A/D wc/A/B_new/F
 
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'missing-dirs.tar.bz2')
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'upgrade', sbox.wc_dir)
@@ -578,25 +630,22 @@ def missing_dirs(sbox):
       'A'                 : Item(status='  ', wc_rev='1'),
       'A/mu'              : Item(status='  ', wc_rev='1'),
       'A/C'               : Item(status='  ', wc_rev='1'),
-      'A/D'               : Item(status='~ ', wc_rev='?'),
+      'A/D'               : Item(status='! ', wc_rev='-'),
       'A/B'               : Item(status='  ', wc_rev='1'),
       'A/B/F'             : Item(status='  ', wc_rev='1'),
-      'A/B/E'             : Item(status='! ', wc_rev='?'),
+      'A/B/E'             : Item(status='! ', wc_rev='-'),
       'A/B/lambda'        : Item(status='  ', wc_rev='1'),
       'iota'              : Item(status='  ', wc_rev='1'),
       'A/B_new'           : Item(status='A ', wc_rev='-', copied='+'),
-      'A/B_new/E'         : Item(status='! ', wc_rev='?'),
-      'A/B_new/F'         : Item(status='~ ', wc_rev='?'),
+      'A/B_new/E'         : Item(status='! ', wc_rev='-'),
+      'A/B_new/F'         : Item(status='! ', wc_rev='-'),
       'A/B_new/lambda'    : Item(status='  ', wc_rev='-', copied='+'),
     })
-  if svntest.main.wc_is_singledb(sbox.wc_dir):
-    expected_status.tweak('A/D', 'A/B_new/F', status='! ')
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
-  
+
 def missing_dirs2(sbox):
   "missing directories and obstructing dirs"
 
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'missing-dirs.tar.bz2')
   os.remove(sbox.ospath('A/D'))
   os.remove(sbox.ospath('A/B_new/F'))
@@ -610,25 +659,23 @@ def missing_dirs2(sbox):
       'A'                 : Item(status='  ', wc_rev='1'),
       'A/mu'              : Item(status='  ', wc_rev='1'),
       'A/C'               : Item(status='  ', wc_rev='1'),
-      'A/D'               : Item(status='~ ', wc_rev='?'),
+      'A/D'               : Item(status='! ', wc_rev='-'),
       'A/B'               : Item(status='  ', wc_rev='1'),
       'A/B/F'             : Item(status='  ', wc_rev='1'),
-      'A/B/E'             : Item(status='! ', wc_rev='?'),
+      'A/B/E'             : Item(status='! ', wc_rev='-'),
       'A/B/lambda'        : Item(status='  ', wc_rev='1'),
       'iota'              : Item(status='  ', wc_rev='1'),
       'A/B_new'           : Item(status='A ', wc_rev='-', copied='+'),
-      'A/B_new/E'         : Item(status='! ', wc_rev='?'),
-      'A/B_new/F'         : Item(status='~ ', wc_rev='?'),
+      'A/B_new/E'         : Item(status='! ', wc_rev='-'),
+      'A/B_new/F'         : Item(status='! ', wc_rev='-'),
       'A/B_new/lambda'    : Item(status='  ', wc_rev='-', copied='+'),
     })
-  if svntest.main.wc_is_singledb(sbox.wc_dir):
-    expected_status.tweak('A/D', 'A/B_new/F', status='! ')
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
+@Issue(3808)
 def delete_and_keep_local(sbox):
   "check status delete and delete --keep-local"
 
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'wc-delete.tar.bz2')
 
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -648,16 +695,15 @@ def delete_and_keep_local(sbox):
   if not os.path.exists(os.path.join(sbox.wc_dir, 'Deleted-Keep-Local')):
     raise svntest.Failure('wc/Deleted-Keep-Local should exist')
 
-  # Deleted-Keep-Local should be removed after the upgrade as it was
+  # Deleted should be removed after the upgrade as it was
   # schedule delete and doesn't contain unversioned changes.
   if os.path.exists(os.path.join(sbox.wc_dir, 'Deleted')):
     raise svntest.Failure('wc/Deleted should not exist')
 
 
 def dirs_only_upgrade(sbox):
-  "upgrade a wc without files" 
+  "upgrade a wc without files"
 
-  sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'dirs-only.tar.bz2')
 
   expected_output = ["Upgraded '%s'.\n" % (sbox.ospath('').rstrip(os.path.sep)),
@@ -672,11 +718,25 @@ def dirs_only_upgrade(sbox):
       })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
+def read_tree_conflict_data(sbox, path):
+  dot_svn = svntest.main.get_admin_name()
+  db = svntest.sqlite3.connect(os.path.join(sbox.wc_dir, dot_svn, 'wc.db'))
+  for row in db.execute("select tree_conflict_data from actual_node "
+                        "where tree_conflict_data is not null "
+                        "and local_relpath = '%s'" % path):
+    return
+  raise svntest.Failure("conflict expected for '%s'" % path)
+
+def no_actual_node(sbox, path):
+  dot_svn = svntest.main.get_admin_name()
+  db = svntest.sqlite3.connect(os.path.join(sbox.wc_dir, dot_svn, 'wc.db'))
+  for row in db.execute("select 1 from actual_node "
+                        "where local_relpath = '%s'" % path):
+    raise svntest.Failure("no actual node expected for '%s'" % path)
 
 def upgrade_tree_conflict_data(sbox):
   "upgrade tree conflict data (f20->f21)"
 
-  sbox.build(create_wc = False)
   wc_dir = sbox.wc_dir
   replace_sbox_with_tarfile(sbox, 'upgrade_tc.tar.bz2')
 
@@ -688,16 +748,39 @@ def upgrade_tree_conflict_data(sbox):
   expected_status.tweak('A/D/G/rho', status='A ', copied='+',
                         treeconflict='C', wc_rev='-')
 
-  run_and_verify_status_no_server(wc_dir, expected_status)
+  # Look inside pre-upgrade database
+  read_tree_conflict_data(sbox, 'A/D/G')
+  no_actual_node(sbox, 'A/D/G/pi')
+  no_actual_node(sbox, 'A/D/G/rho')
+  no_actual_node(sbox, 'A/D/G/tau')
 
+  # While the upgrade from f20 to f21 will work the upgrade from f22
+  # to f23 will not, since working nodes are present, so the
+  # auto-upgrade will fail.  If this happens we cannot use the
+  # Subversion libraries to query the working copy.
+  exit_code, output, errput = svntest.main.run_svn('format 22', 'st', wc_dir)
+
+  if not exit_code:
+    run_and_verify_status_no_server(wc_dir, expected_status)
+  else:
+    if not svntest.verify.RegexOutput('.*format 22 with WORKING nodes.*',
+                                      match_all=False).matches(errput):
+      raise svntest.Failure()
+
+  # Look insde post-upgrade database
+  read_tree_conflict_data(sbox, 'A/D/G/pi')
+  read_tree_conflict_data(sbox, 'A/D/G/rho')
+  read_tree_conflict_data(sbox, 'A/D/G/tau')
+  # no_actual_node(sbox, 'A/D/G')  ### not removed but should be?
+
+
+@Issue(3898)
 def delete_in_copy_upgrade(sbox):
   "upgrade a delete within a copy"
 
-  sbox.build(create_wc = False)
   wc_dir = sbox.wc_dir
   replace_sbox_with_tarfile(sbox, 'delete-in-copy.tar.bz2')
 
-  # Doesn't work, creates spurious base nodes for the copy
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'upgrade', sbox.wc_dir)
 
@@ -705,16 +788,251 @@ def delete_in_copy_upgrade(sbox):
   expected_status.add({
       'A/B-copied'         : Item(status='A ', copied='+', wc_rev='-'),
       'A/B-copied/lambda'  : Item(status='  ', copied='+', wc_rev='-'),
-      'A/B-copied/E'       : Item(status='D ', wc_rev='?'),
-      'A/B-copied/E/alpha' : Item(status='D ', wc_rev='?'),
-      'A/B-copied/E/beta'  : Item(status='D ', wc_rev='?'),
+      'A/B-copied/E'       : Item(status='D ', copied='+', wc_rev='-'),
+      'A/B-copied/E/alpha' : Item(status='D ', copied='+', wc_rev='-'),
+      'A/B-copied/E/beta'  : Item(status='D ', copied='+', wc_rev='-'),
       'A/B-copied/F'       : Item(status='  ', copied='+', wc_rev='-'),
       })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
+  svntest.actions.run_and_verify_svn(None, 'Reverted.*', [], 'revert', '-R',
+                                     sbox.ospath('A/B-copied/E'))
+
+  expected_status.tweak('A/B-copied/E',
+                        'A/B-copied/E/alpha',
+                        'A/B-copied/E/beta',
+                        status='  ')
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+  simple_checksum_verify([[sbox.ospath('A/B-copied/E/alpha'),
+                           'b347d1da69df9a6a70433ceeaa0d46c8483e8c03']])
+
+
+def replaced_files(sbox):
+  "upgrade with base and working replaced files"
+
+  wc_dir = sbox.wc_dir
+  replace_sbox_with_tarfile(sbox, 'replaced-files.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', sbox.wc_dir)
+
+  # A is a checked-out dir containing A/f and A/g, then
+  # svn cp wc/A wc/B
+  # svn rm wc/A/f wc/B/f
+  # svn cp wc/A/g wc/A/f     # A/f replaced by copied A/g
+  # svn cp wc/A/g wc/B/f     # B/f replaced by copied A/g (working-only)
+  # svn rm wc/A/g wc/B/g
+  # touch wc/A/g wc/B/g
+  # svn add wc/A/g wc/B/g    # A/g replaced, B/g replaced (working-only)
+  # svn ps pX vX wc/A/g
+  # svn ps pY vY wc/B/g
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''    : Item(status='  ', wc_rev='5'),
+      'A'   : Item(status='  ', wc_rev='5'),
+      'A/f' : Item(status='R ', wc_rev='-', copied='+'),
+      'A/g' : Item(status='RM', wc_rev='5'),
+      'B'   : Item(status='A ', wc_rev='-', copied='+'),
+      'B/f' : Item(status='R ', wc_rev='-', copied='+'),
+      'B/g' : Item(status='RM', wc_rev='-'),
+  })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+  simple_property_verify(sbox.wc_dir, {
+      'A/f' : {'pAg' : 'vAg' },
+      'A/g' : {'pX'  : 'vX' },
+      'B/f' : {'pAg' : 'vAg' },
+      'B/g' : {'pY'  : 'vY' },
+      })
+
+  simple_checksum_verify([
+      [sbox.ospath('A/f'), '395dfb603d8a4e0348d0b082803f2b7426c76eb9'],
+      [sbox.ospath('A/g'), None],
+      [sbox.ospath('B/f'), '395dfb603d8a4e0348d0b082803f2b7426c76eb9'],
+      [sbox.ospath('B/g'), None]])
+
+  svntest.actions.run_and_verify_svn(None, 'Reverted.*', [], 'revert',
+                                     sbox.ospath('A/f'), sbox.ospath('B/f'),
+                                     sbox.ospath('A/g'), sbox.ospath('B/g'))
+
+  simple_property_verify(sbox.wc_dir, {
+      'A/f' : {'pAf' : 'vAf' },
+      'A/g' : {'pAg' : 'vAg' },
+      'B/f' : {'pAf' : 'vAf' },
+      'B/g' : {'pAg' : 'vAg' },
+      })
+
+  simple_checksum_verify([
+      [sbox.ospath('A/f'), '958eb2d755df2d9e0de6f7b835aec16b64d83f6f'],
+      [sbox.ospath('A/g'), '395dfb603d8a4e0348d0b082803f2b7426c76eb9'],
+      [sbox.ospath('B/f'), '958eb2d755df2d9e0de6f7b835aec16b64d83f6f'],
+      [sbox.ospath('B/g'), '395dfb603d8a4e0348d0b082803f2b7426c76eb9']])
+
+def upgrade_with_scheduled_change(sbox):
+  "upgrade 1.6.x wc with a scheduled change"
+
+  replace_sbox_with_tarfile(sbox, 'upgrade_with_scheduled_change.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', sbox.wc_dir)
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.add({
+      'A/scheduled_file_1' : Item(status='A ', wc_rev='-'),
+      })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+@Issue(3777)
+def tree_replace1(sbox):
+  "upgrade 1.6 with tree replaced"
+
+  replace_sbox_with_tarfile(sbox, 'tree-replace1.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''      : Item(status=' M', wc_rev=17),
+      'B'     : Item(status='R ', copied='+', wc_rev='-'),
+      'B/f'   : Item(status='R ', copied='+', wc_rev='-'),
+      'B/g'   : Item(status='D ', wc_rev=17),
+      'B/h'   : Item(status='A ', copied='+', wc_rev='-'),
+      'B/C'   : Item(status='R ', copied='+', wc_rev='-'),
+      'B/C/f' : Item(status='R ', copied='+', wc_rev='-'),
+      'B/D'   : Item(status='D ', wc_rev=17),
+      'B/D/f' : Item(status='D ', wc_rev=17),
+      'B/E'   : Item(status='A ', copied='+', wc_rev='-'),
+      'B/E/f' : Item(status='A ', copied='+', wc_rev='-'),
+    })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+@Issue(3777)
+def tree_replace2(sbox):
+  "upgrade 1.6 with tree replaced (2)"
+
+  replace_sbox_with_tarfile(sbox, 'tree-replace2.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''      : Item(status=' M', wc_rev=12),
+      'B'     : Item(status='R ', copied='+', wc_rev='-'),
+      'B/f'   : Item(status='D ', wc_rev=12),
+      'B/D'   : Item(status='D ', wc_rev=12),
+      'B/g'   : Item(status='A ', copied='+', wc_rev='-'),
+      'B/E'   : Item(status='A ', copied='+', wc_rev='-'),
+      'C'     : Item(status='R ', copied='+', wc_rev='-'),
+      'C/f'   : Item(status='A ', copied='+', wc_rev='-'),
+      'C/D'   : Item(status='A ', copied='+', wc_rev='-'),
+      'C/g'   : Item(status='D ', wc_rev=12),
+      'C/E'   : Item(status='D ', wc_rev=12),
+    })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+def upgrade_from_format_28(sbox):
+  """upgrade from format 28: rename pristines"""
+
+  # Start with a format-28 WC that is a clean checkout of the Greek tree.
+  replace_sbox_with_tarfile(sbox, 'format_28.tar.bz2')
+
+  # Get the old and new pristine file paths for file 'iota'.
+  checksum = '2c0aa9014a0cd07f01795a333d82485ef6d083e2'
+  old_pristine_path = os.path.join(sbox.wc_dir, svntest.main.get_admin_name(),
+                                   'pristine', checksum[0:2], checksum)
+  new_pristine_path = old_pristine_path + '.svn-base'
+
+  assert os.path.exists(old_pristine_path)
+  assert not os.path.exists(new_pristine_path)
+
+  # Touch the WC to auto-upgrade it
+  svntest.actions.run_and_verify_svn(None, None, [], 'info', sbox.wc_dir)
+
+  assert not os.path.exists(old_pristine_path)
+  assert os.path.exists(new_pristine_path)
+
+@Issue(3901)
+def depth_exclude(sbox):
+  "upgrade 1.6.x wc that has depth=exclude"
+
+  replace_sbox_with_tarfile(sbox, 'depth_exclude.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''                  : Item(status='  ', wc_rev='1'),
+      'A'                 : Item(status='  ', wc_rev='1'),
+      'X'                 : Item(status='A ', copied='+', wc_rev='-'),
+    })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+@Issue(3901)
+def depth_exclude_2(sbox):
+  "1.6.x wc that has depth=exclude inside a delete"
+
+  replace_sbox_with_tarfile(sbox, 'depth_exclude_2.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''                  : Item(status='  ', wc_rev='1'),
+      'A'                 : Item(status='D ', wc_rev='1'),
+    })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+@Issue(3916)
+def add_add_del_del_tc(sbox):
+  "wc with add-add and del-del tree conflicts"
+
+  replace_sbox_with_tarfile(sbox, 'add_add_del_del_tc.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''     : Item(status='  ', wc_rev='4'),
+      'A'    : Item(status='  ', wc_rev='4'),
+      'A/B'  : Item(status='A ', treeconflict='C', copied='+', wc_rev='-'),
+      'X'    : Item(status='  ', wc_rev='3'),
+      'X/Y'  : Item(status='! ', treeconflict='C')
+    })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+@Issue(3916)
+def add_add_x2(sbox):
+  "wc with 2 tree conflicts in same entry"
+
+  replace_sbox_with_tarfile(sbox, 'add_add_x2.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''     : Item(status='  ', wc_rev='3'),
+      'A'    : Item(status='  ', wc_rev='3'),
+      'A/X'  : Item(status='A ', treeconflict='C', copied='+', wc_rev='-'),
+      'A/Y'  : Item(status='A ', treeconflict='C', copied='+', wc_rev='-'),
+    })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
 ########################################################################
 # Run the tests
+
+  # prop states
+  #
+  # .base                      simple checkout
+  # .base, .revert             delete, copy-here
+  # .working                   add, propset
+  # .base, .working            checkout, propset
+  # .base, .revert, .working   delete, copy-here, propset
+  # .revert, .working          delete, add, propset
+  # .revert                    delete, add
+  #
+  # 1.3.x (f4)
+  # 1.4.0 (f8, buggy)
+  # 1.4.6 (f8, fixed)
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -727,15 +1045,24 @@ test_list = [ None,
               basic_upgrade_1_0,
               # Upgrading from 1.4.0-1.4.5 with specific states fails
               # See issue #2530
-              XFail(x3_1_4_0),
-              XFail(x3_1_4_6),
-              XFail(x3_1_6_12),
+              x3_1_4_0,
+              x3_1_4_6,
+              x3_1_6_12,
               missing_dirs,
               missing_dirs2,
-              XFail(delete_and_keep_local),
+              delete_and_keep_local,
               dirs_only_upgrade,
               upgrade_tree_conflict_data,
               delete_in_copy_upgrade,
+              replaced_files,
+              upgrade_with_scheduled_change,
+              tree_replace1,
+              tree_replace2,
+              upgrade_from_format_28,
+              depth_exclude,
+              depth_exclude_2,
+              add_add_del_del_tc,
+              add_add_x2,
              ]
 
 

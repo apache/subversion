@@ -47,7 +47,7 @@ extern "C" {
 /*** Option processing ***/
 
 /* --accept actions */
-typedef enum
+typedef enum svn_cl__accept_t
 {
   /* invalid accept action */
   svn_cl__accept_invalid = -2,
@@ -112,7 +112,7 @@ svn_cl__accept_from_word(const char *word);
 /*** Mergeinfo flavors. ***/
 
 /* --show-revs values */
-typedef enum {
+typedef enum svn_cl__show_revs_t {
   svn_cl__show_revs_invalid = -1,
   svn_cl__show_revs_merged,
   svn_cl__show_revs_eligible
@@ -233,7 +233,7 @@ typedef struct svn_cl__opt_state_t
 } svn_cl__opt_state_t;
 
 
-typedef struct
+typedef struct svn_cl__cmd_baton_t
 {
   svn_cl__opt_state_t *opt_state;
   svn_client_ctx_t *ctx;
@@ -263,7 +263,6 @@ svn_opt_subcommand_t
   svn_cl__mergeinfo,
   svn_cl__mkdir,
   svn_cl__move,
-  svn_cl__obliterate,
   svn_cl__patch,
   svn_cl__propdel,
   svn_cl__propedit,
@@ -324,7 +323,7 @@ svn_cl__check_cancel(void *baton);
 
 /* Various conflict-resolution callbacks. */
 
-typedef struct {
+typedef struct svn_cl__conflict_baton_t {
   svn_cl__accept_t accept_which;
   apr_hash_t *config;
   const char *editor_cmd;
@@ -433,16 +432,16 @@ svn_cl__print_prop_hash(svn_stream_t *out,
                         svn_boolean_t names_only,
                         apr_pool_t *pool);
 
-/* Same as svn_cl__print_prop_hash(), only output xml to OUTSTR.  If OUTSTR is
-   NULL, allocate it first from pool, otherwise append the xml to it. */
+/* Same as svn_cl__print_prop_hash(), only output xml to *OUTSTR.  If *OUTSTR is
+   NULL, allocate it first from POOL, otherwise append to it. */
 svn_error_t *
 svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
                             apr_hash_t *prop_hash,
                             svn_boolean_t names_only,
                             apr_pool_t *pool);
 
-/* Output a commit xml element to OUTSTR.  IF OUTSTR is NULL, allocate it
-   first from pool, otherwise appen the xml to it.  If AUTHOR or DATE is
+/* Output a commit xml element to *OUTSTR.  If *OUTSTR is NULL, allocate it
+   first from POOL, otherwise append to it.  If AUTHOR or DATE is
    NULL, it will be omitted. */
 void
 svn_cl__print_xml_commit(svn_stringbuf_t **outstr,
@@ -450,6 +449,13 @@ svn_cl__print_xml_commit(svn_stringbuf_t **outstr,
                          const char *author,
                          const char *date,
                          apr_pool_t *pool);
+
+/* Output an XML "<lock>" element describing LOCK to *OUTSTR.  If *OUTSTR is
+   NULL, allocate it first from POOL, otherwise append to it. */
+void
+svn_cl__print_xml_lock(svn_stringbuf_t **outstr,
+                       const svn_lock_t *lock,
+                       apr_pool_t *pool);
 
 /* Do the following things that are commonly required before accessing revision
    properties.  Ensure that REVISION is specified explicitly and is not
@@ -569,6 +575,12 @@ svn_cl__notifier_mark_checkout(void *baton);
 svn_error_t *
 svn_cl__notifier_mark_export(void *baton);
 
+/* Make the notifier for use with BATON print the appropriate notifications
+ * for a wc to repository copy
+ */
+svn_error_t *
+svn_cl__notifier_mark_wc_to_repos_copy(void *baton);
+
 /* Baton for use with svn_cl__check_externals_failed_notify_wrapper(). */
 struct svn_cl__check_externals_failed_notify_baton
 {
@@ -661,12 +673,12 @@ svn_cl__xml_tagged_cdata(svn_stringbuf_t **sb,
                          const char *string);
 
 /* Print the XML prolog and document root element start-tag to stdout, using
-   TAGNAME as the root element name.  Use pool for temporary allocations. */
+   TAGNAME as the root element name.  Use POOL for temporary allocations. */
 svn_error_t *
 svn_cl__xml_print_header(const char *tagname, apr_pool_t *pool);
 
 /* Print the XML document root element end-tag to stdout, using TAGNAME as the
-   root element name.  Use pool for temporary allocations. */
+   root element name.  Use POOL for temporary allocations. */
 svn_error_t *
 svn_cl__xml_print_footer(const char *tagname, apr_pool_t *pool);
 
@@ -731,6 +743,7 @@ svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets_p,
                                             apr_getopt_t *os,
                                             const apr_array_header_t *known_targets,
                                             svn_client_ctx_t *ctx,
+                                            svn_boolean_t keep_dest_origpath_on_truepath_collision,
                                             apr_pool_t *pool);
 
 /* Return a string allocated in POOL that is a copy of STR but with each
@@ -753,18 +766,6 @@ const char *
 svn_cl__node_description(const svn_wc_conflict_version_t *node,
                          const char *wc_repos_root_URL,
                          apr_pool_t *pool);
-
-/* Join a BASE path with a COMPONENT, allocating the result in POOL.
- * COMPONENT need not be a single single component: it can be any path,
- * absolute or relative to BASE.
- *
- * This function exists to gather the cases when it could not be determined
- * if BASE is an uri, dirent or relative.
- */
-const char *
-svn_cl__path_join(const char *base,
-                  const char *component,
-                  apr_pool_t *pool);
 
 /* Return, in @a *true_targets_p, a copy of @a targets with peg revision
  * specifiers snipped off the end of each element.
@@ -816,6 +817,25 @@ svn_cl__opt_parse_path(svn_opt_revision_t *rev,
                        const char **truepath,
                        const char *path,
                        apr_pool_t *pool);
+
+/* Return an error if TARGETS contains a mixture of URLs and paths; otherwise
+ * return SVN_NO_ERROR. */
+svn_error_t *
+svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets);
+
+/* Return an error if TARGETS contains a URL; otherwise return SVN_NO_ERROR. */
+svn_error_t *
+svn_cl__check_targets_are_local_paths(const apr_array_header_t *targets);
+
+/* Return a copy of PATH, converted to the local path style, skipping
+ * PARENT_PATH if it is non-null and is a parent of or equal to PATH.
+ *
+ * This function assumes PARENT_PATH and PATH are both absolute "dirents"
+ * or both relative "dirents". */
+const char *
+svn_cl__local_style_skip_ancestor(const char *parent_path,
+                                  const char *path,
+                                  apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

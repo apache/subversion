@@ -34,14 +34,36 @@
 #include "svn_wc.h"
 
 #include "svn_private_config.h"
+#include "private/svn_fspath.h"
 #include "private/svn_wc_private.h"
 
 
-/* Helper: build an svn_info_t *INFO struct from svn_dirent_t DIRENT
+svn_client_info2_t *
+svn_client_info2_dup(const svn_client_info2_t *info,
+                     apr_pool_t *pool)
+{
+  svn_client_info2_t *new_info = apr_pmemdup(pool, info, sizeof(*new_info));
+
+  if (new_info->URL)
+    new_info->URL = apr_pstrdup(pool, info->URL);
+  if (new_info->repos_root_URL)
+    new_info->repos_root_URL = apr_pstrdup(pool, info->repos_root_URL);
+  if (new_info->repos_UUID)
+    new_info->repos_UUID = apr_pstrdup(pool, info->repos_UUID);
+  if (info->last_changed_author)
+    new_info->last_changed_author = apr_pstrdup(pool, info->last_changed_author);
+  if (new_info->lock)
+    new_info->lock = svn_lock_dup(info->lock, pool);
+  if (new_info->wc_info)
+    new_info->wc_info = svn_wc_info_dup(info->wc_info, pool);
+  return new_info;
+}
+
+/* Set *INFO to a new info struct built from DIRENT
    and (possibly NULL) svn_lock_t LOCK, all allocated in POOL.
    Pointer fields are copied by reference, not dup'd. */
 static svn_error_t *
-build_info_from_dirent(svn_info_t **info,
+build_info_from_dirent(svn_client_info2_t **info,
                        const svn_dirent_t *dirent,
                        svn_lock_t *lock,
                        const char *URL,
@@ -50,7 +72,7 @@ build_info_from_dirent(svn_info_t **info,
                        const char *repos_root,
                        apr_pool_t *pool)
 {
-  svn_info_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
+  svn_client_info2_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
 
   tmpinfo->URL                  = URL;
   tmpinfo->rev                  = revision;
@@ -61,177 +83,9 @@ build_info_from_dirent(svn_info_t **info,
   tmpinfo->last_changed_date    = dirent->time;
   tmpinfo->last_changed_author  = dirent->last_author;
   tmpinfo->lock                 = lock;
-  tmpinfo->depth                = svn_depth_unknown;
-  tmpinfo->working_size         = SVN_INFO_SIZE_UNKNOWN;
+  tmpinfo->size                 = dirent->size;
 
-  if (((apr_size_t)dirent->size) == dirent->size)
-    tmpinfo->size               = (apr_size_t)dirent->size;
-  else /* >= 4GB */
-    tmpinfo->size               = SVN_INFO_SIZE_UNKNOWN;
-
-  tmpinfo->size64               = dirent->size;
-  tmpinfo->working_size64       = SVN_INVALID_FILESIZE;
-  tmpinfo->tree_conflict        = NULL;
-
-  *info = tmpinfo;
-  return SVN_NO_ERROR;
-}
-
-
-/* Helper: build an svn_info_t *INFO struct from WC metadata,
-   allocated in POOL.  Pointer fields are copied by reference, not
-   dup'd.  PATH is the path of the WC node that ENTRY represents. */
-static svn_error_t *
-build_info_for_entry(svn_info_t **info,
-                     svn_wc_context_t *wc_ctx,
-                     const char *local_abspath,
-                     apr_pool_t *pool)
-{
-  svn_info_t *tmpinfo;
-  const char *copyfrom_url;
-  svn_revnum_t copyfrom_rev;
-  svn_boolean_t is_copy_target;
-  const char *lock_token, *lock_owner, *lock_comment;
-  apr_time_t lock_date;
-  const svn_checksum_t *checksum;
-  svn_node_kind_t kind;
-
-  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, pool));
-
-  if (kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("The node '%s' was not found."),
-                             svn_dirent_local_style(local_abspath, pool));
-
-  tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
-  tmpinfo->kind = kind;
-
-  SVN_ERR(svn_wc__node_get_url(&tmpinfo->URL, wc_ctx, local_abspath,
-                               pool, pool));
-
-  /* WC-1 returned repos UUID's and root URLs for schedule-deleted
-     stuff, too. */
-  SVN_ERR(svn_wc__node_get_repos_info(&tmpinfo->repos_root_URL,
-                                      &tmpinfo->repos_UUID,
-                                      wc_ctx, local_abspath, TRUE, TRUE,
-                                      pool, pool));
-
-  SVN_ERR(svn_wc__node_get_changed_info(&tmpinfo->last_changed_rev,
-                                        &tmpinfo->last_changed_date,
-                                        &tmpinfo->last_changed_author,
-                                        wc_ctx, local_abspath, pool, pool));
-  SVN_ERR(svn_wc__node_get_commit_base_rev(&tmpinfo->rev, wc_ctx,
-                                           local_abspath, pool));
-  /* ### FIXME: For now, we'll tweak an SVN_INVALID_REVNUM and make it
-     ### 0.  In WC-1, files scheduled for addition were assigned
-     ### revision=0.  This is wrong, and we're trying to remedy that,
-     ### but for the sake of test suite and code sanity now in WC-NG,
-     ### we'll just maintain the old behavior.
-     ###
-     ### We should also just be fetching the true BASE revision
-     ### above, which means copied items would also not have a
-     ### revision to display.  But WC-1 wants to show the revision of
-     ### copy targets as the copyfrom-rev.  *sigh*
-  */
-  if (! SVN_IS_VALID_REVNUM(tmpinfo->rev))
-    tmpinfo->rev = 0;
-
-  SVN_ERR(svn_wc__node_get_copyfrom_info(NULL, NULL,
-                                         &copyfrom_url, &copyfrom_rev,
-                                         &is_copy_target, wc_ctx,
-                                         local_abspath, pool, pool));
-  if (is_copy_target)
-    {
-      tmpinfo->copyfrom_url = copyfrom_url;
-      tmpinfo->copyfrom_rev = copyfrom_rev;
-    }
-  else
-    {
-      tmpinfo->copyfrom_url = NULL;
-      tmpinfo->copyfrom_rev = SVN_INVALID_REVNUM;
-    }
-
-  SVN_ERR(svn_wc__node_get_changelist(&tmpinfo->changelist, wc_ctx,
-                                      local_abspath, pool, pool));
-
-  SVN_ERR(svn_wc__node_get_base_checksum(&checksum, wc_ctx, local_abspath,
-                                         pool, pool));
-  if (checksum)
-    tmpinfo->checksum = svn_checksum_to_cstring(checksum, pool);
-
-  SVN_ERR(svn_wc__node_get_depth(&tmpinfo->depth, wc_ctx,
-                                 local_abspath, pool));
-  if (tmpinfo->depth == svn_depth_unknown)
-    tmpinfo->depth = svn_depth_infinity;
-
-  SVN_ERR(svn_wc__node_get_schedule(&tmpinfo->schedule, NULL,
-                                    wc_ctx, local_abspath, pool));
-
-  SVN_ERR(svn_wc_get_wc_root(&tmpinfo->wcroot_abspath, wc_ctx,
-                             local_abspath, pool, pool));
-
-  /* Some random stuffs we don't have wc-ng apis for yet */
-  SVN_ERR(svn_wc__node_get_info_bits(&tmpinfo->text_time,
-                                     &tmpinfo->conflict_old,
-                                     &tmpinfo->conflict_new,
-                                     &tmpinfo->conflict_wrk,
-                                     &tmpinfo->prejfile,
-                                     wc_ctx, local_abspath, pool, pool));
-
-  /* Some defaults */
-  tmpinfo->has_wc_info          = TRUE;
-  tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
-  tmpinfo->size64               = SVN_INVALID_FILESIZE;
-
-  SVN_ERR(svn_wc__node_get_translated_size(&tmpinfo->working_size64, wc_ctx,
-                                           local_abspath, pool));
-  if (((apr_size_t)tmpinfo->working_size64) == tmpinfo->working_size64)
-    tmpinfo->working_size       = (apr_size_t)tmpinfo->working_size64;
-  else /* >= 4GB */
-    tmpinfo->working_size       = SVN_INFO_SIZE_UNKNOWN;
-
-  /* lock stuff */
-  SVN_ERR(svn_wc__node_get_lock_info(&lock_token, &lock_owner,
-                                     &lock_comment, &lock_date,
-                                     wc_ctx, local_abspath, pool, pool));
-  if (lock_token)  /* the token is the critical bit. */
-    {
-      tmpinfo->lock = apr_pcalloc(pool, sizeof(*(tmpinfo->lock)));
-      tmpinfo->lock->token         = lock_token;
-      tmpinfo->lock->owner         = lock_owner;
-      tmpinfo->lock->comment       = lock_comment;
-      tmpinfo->lock->creation_date = lock_date;
-    }
-
-  *info = tmpinfo;
-  return SVN_NO_ERROR;
-}
-
-
-/* Helper: build an svn_info_t *INFO struct with minimal content, to be
-   used in reporting info for unversioned tree conflict victims. */
-/* ### Some fields we could fill out based on the parent dir's entry
-       or by looking at an obstructing item. */
-static svn_error_t *
-build_info_for_unversioned(svn_info_t **info,
-                           apr_pool_t *pool)
-{
-  svn_info_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
-
-  tmpinfo->URL                  = NULL;
-  tmpinfo->rev                  = SVN_INVALID_REVNUM;
-  tmpinfo->kind                 = svn_node_none;
-  tmpinfo->repos_UUID           = NULL;
-  tmpinfo->repos_root_URL       = NULL;
-  tmpinfo->last_changed_rev     = SVN_INVALID_REVNUM;
-  tmpinfo->last_changed_date    = 0;
-  tmpinfo->last_changed_author  = NULL;
-  tmpinfo->lock                 = NULL;
-  tmpinfo->working_size         = SVN_INFO_SIZE_UNKNOWN;
-  tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
-  tmpinfo->size64               = SVN_INVALID_FILESIZE;
-  tmpinfo->working_size64       = SVN_INVALID_FILESIZE;
-  tmpinfo->tree_conflict        = NULL;
+  tmpinfo->wc_info              = NULL;
 
   *info = tmpinfo;
   return SVN_NO_ERROR;
@@ -262,7 +116,7 @@ push_dir_info(svn_ra_session_t *ra_session,
               svn_revnum_t rev,
               const char *repos_UUID,
               const char *repos_root,
-              svn_info_receiver_t receiver,
+              svn_client_info_receiver2_t receiver,
               void *receiver_baton,
               svn_depth_t depth,
               svn_client_ctx_t *ctx,
@@ -270,7 +124,6 @@ push_dir_info(svn_ra_session_t *ra_session,
               apr_pool_t *pool)
 {
   apr_hash_t *tmpdirents;
-  svn_info_t *info;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
 
@@ -281,6 +134,7 @@ push_dir_info(svn_ra_session_t *ra_session,
     {
       const char *path, *URL, *fs_path;
       svn_lock_t *lock;
+      svn_client_info2_t *info;
       const char *name = svn__apr_hash_index_key(hi);
       svn_dirent_t *the_ent = svn__apr_hash_index_val(hi);
 
@@ -290,11 +144,9 @@ push_dir_info(svn_ra_session_t *ra_session,
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
       path = svn_relpath_join(dir, name, subpool);
-      URL  = svn_path_url_add_component2(session_URL, name, subpool);
-
-      fs_path = svn_uri_is_child(repos_root, URL, subpool);
-      fs_path = apr_pstrcat(subpool, "/", fs_path, (char *)NULL);
-      fs_path = svn_path_uri_decode(fs_path, subpool);
+      URL = svn_path_url_add_component2(session_URL, name, subpool);
+      fs_path = svn_fspath__canonicalize(svn_uri__is_child(repos_root, URL,
+                                                           subpool), subpool);
 
       lock = apr_hash_get(locks, fs_path, APR_HASH_KEY_STRING);
 
@@ -321,119 +173,6 @@ push_dir_info(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
-
-
-/* Callback and baton for crawl_entries() walk over entries files. */
-struct found_entry_baton
-{
-  apr_hash_t *changelist_hash;
-  svn_info_receiver_t receiver;
-  void *receiver_baton;
-  svn_wc_context_t *wc_ctx;
-};
-
-/* An svn_wc__node_found_func_t callback function. */
-static svn_error_t *
-info_found_node_callback(const char *local_abspath,
-                         void *walk_baton,
-                         apr_pool_t *pool)
-{
-  struct found_entry_baton *fe_baton = walk_baton;
-  svn_info_t *info = NULL;
-  const svn_wc_conflict_description2_t *tree_conflict = NULL;
-  svn_error_t *err;
-
-  if (! svn_wc__changelist_match(fe_baton->wc_ctx, local_abspath,
-                                 fe_baton->changelist_hash, pool))
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, fe_baton->wc_ctx,
-                                    local_abspath, pool, pool));
-
-  err = build_info_for_entry(&info, fe_baton->wc_ctx, local_abspath,
-                             pool);
-  if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-      && tree_conflict)
-    {
-      svn_error_clear(err);
-
-      SVN_ERR(build_info_for_unversioned(&info, pool));
-      SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
-                                          NULL,
-                                          fe_baton->wc_ctx,
-                                          local_abspath, FALSE, FALSE,
-                                          pool, pool));
-    }
-  else if (err)
-    return svn_error_return(err);
-
-  SVN_ERR_ASSERT(info != NULL);
-
-  if (tree_conflict)
-    info->tree_conflict = svn_wc__cd2_to_cd(tree_conflict, pool);
-  SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, local_abspath,
-                             info, pool));
-  return SVN_NO_ERROR;
-}
-
-
-/* Walk the children of LOCAL_ABSPATH to push svn_info_t's through
-   RECEIVER/RECEIVER_BATON.  Honor DEPTH while crawling children, and
-   filter the pushed items against CHANGELIST_HASH.  */
-static svn_error_t *
-crawl_entries(const char *local_abspath,
-              svn_info_receiver_t receiver,
-              void *receiver_baton,
-              svn_depth_t depth,
-              apr_hash_t *changelist_hash,
-              svn_client_ctx_t *ctx,
-              apr_pool_t *pool)
-{
-  struct found_entry_baton fe_baton;
-  svn_error_t *err;
-
-  fe_baton.changelist_hash = changelist_hash;
-  fe_baton.receiver = receiver;
-  fe_baton.receiver_baton = receiver_baton;
-  fe_baton.wc_ctx = ctx->wc_ctx;
-
-  err = svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
-                                   info_found_node_callback, &fe_baton, depth,
-                                   ctx->cancel_func, ctx->cancel_baton, pool);
-
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    {
-      /* Check for a tree conflict on the root node of the info, and if there
-         is one, send a minimal info struct. */
-      const svn_wc_conflict_description2_t *tree_conflict;
-
-      SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, ctx->wc_ctx,
-                                        local_abspath, pool, pool));
-
-      if (tree_conflict)
-        {
-          svn_info_t *info;
-          svn_error_clear(err);
-
-          SVN_ERR(build_info_for_unversioned(&info, pool));
-          info->tree_conflict = svn_wc__cd2_to_cd(tree_conflict, pool);
-
-          SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
-                                              NULL,
-                                              ctx->wc_ctx,
-                                              local_abspath, FALSE, FALSE,
-                                              pool, pool));
-
-          SVN_ERR(receiver(receiver_baton, local_abspath, info, pool));
-        }
-      else
-        return svn_error_return(err);
-    }
-  else if (err)
-    return svn_error_return(err);
-
-  return SVN_NO_ERROR;
-}
 
 /* Set *SAME_P to TRUE if URL exists in the head of the repository and
    refers to the same resource as it does in REV, using POOL for
@@ -480,11 +219,50 @@ same_resource_in_head(svn_boolean_t *same_p,
   return SVN_NO_ERROR;
 }
 
+/* A baton for wc_info_receiver(), containing the wrapped receiver. */
+typedef struct wc_info_receiver_baton_t
+{
+  svn_client_info_receiver2_t client_receiver_func;
+  void *client_receiver_baton;
+} wc_info_receiver_baton_t;
+
+/* A receiver for WC info, implementing svn_client_info_receiver2_t.
+ * Convert the WC info to client info and pass it to the client info
+ * receiver (BATON->client_receiver_func with BATON->client_receiver_baton). */
+static svn_error_t *
+wc_info_receiver(void *baton,
+                 const char *abspath_or_url,
+                 const svn_wc__info2_t *wc_info,
+                 apr_pool_t *scratch_pool)
+{
+  wc_info_receiver_baton_t *b = baton;
+  svn_client_info2_t client_info;
+
+  /* Make a shallow copy in CLIENT_INFO of the contents of WC_INFO. */
+  client_info.repos_root_URL = wc_info->repos_root_URL;
+  client_info.repos_UUID = wc_info->repos_UUID;
+  client_info.rev = wc_info->rev;
+  client_info.URL = wc_info->URL;
+
+  client_info.kind = wc_info->kind;
+  client_info.size = wc_info->size;
+  client_info.last_changed_rev = wc_info->last_changed_rev;
+  client_info.last_changed_date = wc_info->last_changed_date;
+  client_info.last_changed_author = wc_info->last_changed_author;
+
+  client_info.lock = wc_info->lock;
+
+  client_info.wc_info = wc_info->wc_info;
+
+  return b->client_receiver_func(b->client_receiver_baton,
+                                 abspath_or_url, &client_info, scratch_pool);
+}
+
 svn_error_t *
 svn_client_info3(const char *abspath_or_url,
                  const svn_opt_revision_t *peg_revision,
                  const svn_opt_revision_t *revision,
-                 svn_info_receiver_t receiver,
+                 svn_client_info_receiver2_t receiver,
                  void *receiver_baton,
                  svn_depth_t depth,
                  const apr_array_header_t *changelists,
@@ -501,7 +279,7 @@ svn_client_info3(const char *abspath_or_url,
   apr_hash_t *parent_ents;
   const char *parent_url, *base_name;
   svn_dirent_t *the_ent;
-  svn_info_t *info;
+  svn_client_info2_t *info;
   svn_error_t *err;
 
   if (depth == svn_depth_unknown)
@@ -513,14 +291,11 @@ svn_client_info3(const char *abspath_or_url,
           || peg_revision->kind == svn_opt_revision_unspecified))
     {
       /* Do all digging in the working copy. */
-      apr_hash_t *changelist_hash = NULL;
-      if (changelists && changelists->nelts)
-        SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
-                                           changelists, pool));
-
-      return svn_error_return(
-        crawl_entries(abspath_or_url, receiver, receiver_baton,
-                      depth, changelist_hash, ctx, pool));
+      wc_info_receiver_baton_t b = { receiver, receiver_baton };
+      return svn_error_trace(
+        svn_wc__get_info(ctx->wc_ctx, abspath_or_url, depth,
+                         wc_info_receiver, &b, changelists,
+                         ctx->cancel_func, ctx->cancel_baton, pool));
     }
 
   /* Go repository digging instead. */
@@ -537,7 +312,6 @@ svn_client_info3(const char *abspath_or_url,
   SVN_ERR(svn_ra_get_uuid2(ra_session, &repos_UUID, pool));
 
   svn_uri_split(&parent_url, &base_name, url, pool);
-  base_name = svn_path_uri_decode(base_name, pool);
 
   /* Get the dirent for the URL itself. */
   err = svn_ra_stat(ra_session, "", rev, &the_ent, pool);
@@ -590,7 +364,7 @@ svn_client_info3(const char *abspath_or_url,
     }
   else if (err)
     {
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   if (! the_ent)
@@ -620,7 +394,7 @@ svn_client_info3(const char *abspath_or_url,
           lock = NULL;
         }
       else if (err)
-        return svn_error_return(err);
+        return svn_error_trace(err);
     }
   else
     lock = NULL;
@@ -650,7 +424,7 @@ pre_1_2_recurse:
               locks = apr_hash_make(pool); /* use an empty hash */
             }
           else if (err)
-            return svn_error_return(err);
+            return svn_error_trace(err);
         }
       else
         locks = apr_hash_make(pool); /* use an empty hash */
@@ -664,40 +438,29 @@ pre_1_2_recurse:
   return SVN_NO_ERROR;
 }
 
-svn_info_t *
-svn_info_dup(const svn_info_t *info, apr_pool_t *pool)
+
+svn_error_t *
+svn_client_get_wc_root(const char **wcroot_abspath,
+                       const char *local_abspath,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
-  svn_info_t *dupinfo = apr_palloc(pool, sizeof(*dupinfo));
+  return svn_wc__get_wc_root(wcroot_abspath, ctx->wc_ctx, local_abspath,
+                             result_pool, scratch_pool);
+}
 
-  /* Perform a trivial copy ... */
-  *dupinfo = *info;
 
-  /* ...and then re-copy stuff that needs to be duped into our pool. */
-  if (info->URL)
-    dupinfo->URL = apr_pstrdup(pool, info->URL);
-  if (info->repos_root_URL)
-    dupinfo->repos_root_URL = apr_pstrdup(pool, info->repos_root_URL);
-  if (info->repos_UUID)
-    dupinfo->repos_UUID = apr_pstrdup(pool, info->repos_UUID);
-  if (info->last_changed_author)
-    dupinfo->last_changed_author = apr_pstrdup(pool,
-                                               info->last_changed_author);
-  if (info->lock)
-    dupinfo->lock = svn_lock_dup(info->lock, pool);
-  if (info->copyfrom_url)
-    dupinfo->copyfrom_url = apr_pstrdup(pool, info->copyfrom_url);
-  if (info->checksum)
-    dupinfo->checksum = apr_pstrdup(pool, info->checksum);
-  if (info->conflict_old)
-    dupinfo->conflict_old = apr_pstrdup(pool, info->conflict_old);
-  if (info->conflict_new)
-    dupinfo->conflict_new = apr_pstrdup(pool, info->conflict_new);
-  if (info->conflict_wrk)
-    dupinfo->conflict_wrk = apr_pstrdup(pool, info->conflict_wrk);
-  if (info->prejfile)
-    dupinfo->prejfile = apr_pstrdup(pool, info->prejfile);
-  if (info->wcroot_abspath)
-    dupinfo->wcroot_abspath = apr_pstrdup(pool, info->wcroot_abspath);
-
-  return dupinfo;
+/* NOTE: This function was requested by the TortoiseSVN project.  See
+   issue #3927. */
+svn_error_t *
+svn_client_min_max_revisions(svn_revnum_t *min_revision,
+                             svn_revnum_t *max_revision,
+                             const char *local_abspath,
+                             svn_boolean_t committed,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *scratch_pool)
+{
+  return svn_wc__min_max_revisions(min_revision, max_revision, ctx->wc_ctx,
+                                   local_abspath, committed, scratch_pool);
 }

@@ -174,11 +174,11 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                            svn_boolean_t include_descendants,
                            apr_pool_t *pool)
 {
-  int status_code;
   svn_ra_neon__session_t *ras = session->priv;
   svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
   struct mergeinfo_baton mb;
-  svn_string_t bc_url, bc_relative;
+  const char *bc_url;
+  const char *bc_relative;
   const char *final_bc_url;
 
   static const char minfo_report_head[] =
@@ -247,11 +247,9 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
      it as the main argument to the REPORT request; it might cause
      dav_get_resource() to choke on the server.  So instead, we pass a
      baseline-collection URL, which we get from END. */
-  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                         ras, ras->url->data, revision,
-                                         pool));
-  final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
-                                            pool);
+  SVN_ERR(svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL, ras,
+                                         ras->url->data, revision, pool));
+  final_bc_url = svn_path_url_add_component2(bc_url, bc_relative, pool);
 
   SVN_ERR(svn_ra_neon__parsed_request(ras,
                                       "REPORT",
@@ -263,7 +261,7 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                                       end_element,
                                       &mb,
                                       NULL,
-                                      &status_code,
+                                      NULL,
                                       FALSE,
                                       pool));
 

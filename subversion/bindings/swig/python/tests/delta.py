@@ -46,15 +46,15 @@ class DeltaTestCase(unittest.TestCase):
     window_handler, baton = \
        svn.delta.tx_apply(src_stream, target_stream, None)
     window_handler(None, baton)
-    
+
   def testTxdeltaWindowT(self):
     """Test the svn_txdelta_window_t wrapper."""
     a = StringIO("abc\ndef\n")
     b = StringIO("def\nghi\n")
-    
+
     delta_stream = svn.delta.svn_txdelta(a, b)
     window = svn.delta.svn_txdelta_next_window(delta_stream)
-    
+
     self.assert_(window.sview_offset + window.sview_len <= len(a.getvalue()))
     self.assert_(window.tview_len <= len(b.getvalue()))
     self.assert_(len(window.new_data) > 0)
