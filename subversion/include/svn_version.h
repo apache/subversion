@@ -141,6 +141,26 @@ extern "C" {
 /* Version queries and compatibility checks */
 
 /**
+ * Version information. Each library contains a function called
+ * svn_<i>libname</i>_version() that returns a pointer to a statically
+ * allocated object of this type.
+ *
+ * @since New in 1.1.
+ */
+struct svn_version_t
+{
+  int major;                    /**< Major version number */
+  int minor;                    /**< Minor version number */
+  int patch;                    /**< Patch number */
+
+  /**
+   * The version tag (#SVN_VER_NUMTAG). Must always point to a
+   * statically allocated string.
+   */
+  const char *tag;
+};
+
+/**
  * Define a static svn_version_t object.
  *
  * @since New in 1.1.
