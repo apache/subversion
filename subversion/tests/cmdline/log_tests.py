@@ -1983,6 +1983,10 @@ def log_with_unrelated_peg_and_operative_revs(sbox):
 
   target = sbox.repo_url + '/A/D/G/rho@2'
 
+  # Currently this test fails because ra_serf returns an SVN_ERR_FS_NOT_FOUND
+  # error from svn_ra_get_locations() that the other RA layers do not
+  # return. The test passes with all other RA layers. See issue #3936.
+
   # log for /A/D/G/rho, deleted in revision 5, recreated in revision 8
   expected_error = ".*File not found.*"
   svntest.actions.run_and_verify_svn(None, None, expected_error,
@@ -1996,10 +2000,6 @@ def log_with_unrelated_peg_and_operative_revs(sbox):
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'log', '-r', '9:2', target)
 
-  # Currently this test fails because instead of returning the expected
-  # 'Unable to find repository location for ^/A/D/G/rho in revision 9'
-  # error, the log for ^/A/D/G/rho@8 is returned, but that is an unrelated
-  # line of history.
   expected_error = ".*Unable to find repository location for.*"
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'log', '-r', '2:HEAD', target)
