@@ -385,7 +385,7 @@ test_patch(const svn_test_opts_t *opts,
   pcb.state_pool = pool;
   SVN_ERR(svn_client_patch(patch_file_path, wc_path, FALSE, 0, FALSE,
                            FALSE, FALSE, patch_collection_func, &pcb,
-                           ctx, pool, pool));
+                           ctx, pool));
   SVN_ERR(svn_io_file_close(patch_file, pool));
 
   SVN_TEST_ASSERT(apr_hash_count(pcb.patched_tempfiles) == 1);

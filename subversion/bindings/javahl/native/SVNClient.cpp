@@ -1492,8 +1492,7 @@ SVNClient::patch(const char *patchPath, const char *targetPath, bool dryRun,
                                  dryRun, stripCount, reverse,
                                  ignoreWhitespace, removeTempfiles,
                                  PatchCallback::callback, callback,
-                                 ctx, requestPool.pool(),
-                                 requestPool.pool()), );
+                                 ctx, requestPool.pool()), );
 }
 
 ClientContext &
