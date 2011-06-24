@@ -67,6 +67,9 @@
 #
 # To prevent the server from advertising httpv2, pass USE_HTTPV1 in
 # the environment.
+#
+# Passing --no-tests as argv[1] will have the script start a server
+# but not run any tests.
 
 SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
