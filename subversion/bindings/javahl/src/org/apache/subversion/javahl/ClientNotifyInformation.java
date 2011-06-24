@@ -534,6 +534,12 @@ public class ClientNotifyInformation extends EventObject
         /** Operation failed because an added parent is not selected */
         failed_no_parent ("failed no parent");
 
+        /** Operation failed because a node is locked */
+        failed_locked ("failed by lock");
+
+        /** Operation failed because the operation was forbidden */
+        failed_forbidden_by_server;
+
         /**
          * The description of the action.
          */
