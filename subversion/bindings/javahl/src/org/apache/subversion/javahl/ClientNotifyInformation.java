@@ -538,7 +538,7 @@ public class ClientNotifyInformation extends EventObject
         failed_locked ("failed by lock");
 
         /** Operation failed because the operation was forbidden */
-        failed_forbidden_by_server;
+        failed_forbidden_by_server ("failed forbidden by server");
 
         /**
          * The description of the action.
