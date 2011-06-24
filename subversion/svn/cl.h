@@ -827,6 +827,10 @@ svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets);
 svn_error_t *
 svn_cl__check_targets_are_local_paths(const apr_array_header_t *targets);
 
+/* Return an error if TARGET is a URL; otherwise return SVN_NO_ERROR. */
+svn_error_t *
+svn_cl__check_target_is_local_path(const char *target);
+
 /* Return a copy of PATH, converted to the local path style, skipping
  * PARENT_PATH if it is non-null and is a parent of or equal to PATH.
  *

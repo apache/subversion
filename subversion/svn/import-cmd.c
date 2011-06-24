@@ -100,14 +100,11 @@ svn_cl__import(apr_getopt_t *os,
       url = APR_ARRAY_IDX(targets, 1, const char *);
     }
 
-  if (svn_path_is_url(path))
-    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("'%s' is not a local path"), path);
+  SVN_ERR(svn_cl__check_target_is_local_path(path));
 
   if (! svn_path_is_url(url))
-    return svn_error_createf
-      (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       _("Invalid URL '%s'"), url);
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Invalid URL '%s'"), url);
 
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_infinity;
