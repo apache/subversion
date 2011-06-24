@@ -225,6 +225,7 @@ typedef struct report_info_t
   /* controlling file_baton and textdelta handler */
   void *file_baton;
   const char *base_checksum;
+  const char *final_sha1_checksum; /* ### currently unused */
   svn_txdelta_window_handler_t textdelta;
   void *textdelta_baton;
 
@@ -1508,6 +1509,12 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info->copyfrom_path = cf ? apr_pstrdup(info->pool, cf) : NULL;
       info->copyfrom_rev = cr ? SVN_STR_TO_REV(cr) : SVN_INVALID_REVNUM;
+
+      info->final_sha1_checksum =
+        svn_xml_get_attr_value("sha1-checksum", attrs);
+      if (info->final_sha1_checksum)
+        info->final_sha1_checksum = apr_pstrdup(info->pool,
+                                                info->final_sha1_checksum);
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "delete-entry") == 0)
@@ -1679,8 +1686,13 @@ start_report(svn_ra_serf__xml_parser_t *parser,
           if (info->base_checksum)
             info->base_checksum = apr_pstrdup(info->pool, info->base_checksum);
 
-          info->fetch_file = TRUE;
+          info->final_sha1_checksum =
+            svn_xml_get_attr_value("sha1-checksum", attrs);
+          if (info->final_sha1_checksum)
+            info->final_sha1_checksum = apr_pstrdup(info->pool,
+                                                    info->final_sha1_checksum);
 
+          info->fetch_file = TRUE;
         }
       else if (strcmp(name.name, "set-prop") == 0 ||
                strcmp(name.name, "remove-prop") == 0)

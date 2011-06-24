@@ -295,6 +295,8 @@ add_helper(svn_boolean_t is_dir,
       const char *qname = apr_xml_quote_string(pool, child->name, 1);
       const char *elt;
       const char *real_path = get_real_fs_path(child, pool);
+      const char *bc_url_str = "";
+      const char *sha1_checksum_str = "";
 
       if (is_dir)
         {
@@ -320,36 +322,39 @@ add_helper(svn_boolean_t is_dir,
           /* make sure that the BC_URL is xml attribute safe. */
           bc_url = apr_xml_quote_string(pool, bc_url, 1);
         }
+      else
+        {
+          svn_checksum_t *sha1_checksum;
 
+          SVN_ERR(svn_fs_file_checksum(&sha1_checksum, svn_checksum_sha1,
+                                       uc->rev_root, real_path, FALSE, pool));
+          if (sha1_checksum)
+            sha1_checksum_str =
+              apr_psprintf(pool, " sha1-checksum=\"%s\"",
+                           svn_checksum_to_cstring(sha1_checksum, pool));
+        }
+          
+      if (bc_url)
+        bc_url_str = apr_psprintf(pool, " bc-url=\"%s\"", bc_url);
 
       if (copyfrom_path == NULL)
         {
-          if (bc_url)
-            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
-                               "bc-url=\"%s\">" DEBUG_CR,
-                               DIR_OR_FILE(is_dir), qname, bc_url);
-          else
-            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\">" DEBUG_CR,
-                               DIR_OR_FILE(is_dir), qname);
+          elt = apr_psprintf(pool,
+                             "<S:add-%s name=\"%s\"%s%s>" DEBUG_CR,
+                             DIR_OR_FILE(is_dir), qname, bc_url_str,
+                             sha1_checksum_str);
         }
       else
         {
           const char *qcopy = apr_xml_quote_string(pool, copyfrom_path, 1);
 
-          if (bc_url)
-            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
-                               "copyfrom-path=\"%s\" copyfrom-rev=\"%ld\" "
-                               "bc-url=\"%s\">" DEBUG_CR,
-                               DIR_OR_FILE(is_dir),
-                               qname, qcopy, copyfrom_revision,
-                               bc_url);
-          else
-            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
-                               "copyfrom-path=\"%s\""
-                               " copyfrom-rev=\"%ld\">" DEBUG_CR,
-                               DIR_OR_FILE(is_dir),
-                               qname, qcopy, copyfrom_revision);
-
+          elt = apr_psprintf(pool,
+                             "<S:add-%s name=\"%s\"%s%s "
+                             "copyfrom-path=\"%s\" copyfrom-rev=\"%ld\">"
+                             DEBUG_CR,
+                             DIR_OR_FILE(is_dir),
+                             bc_url, sha1_checksum_str,
+                             qname, qcopy, copyfrom_revision);
           child->copyfrom = TRUE;
         }
 
@@ -780,12 +785,26 @@ upd_close_file(void *file_baton, const char *text_checksum, apr_pool_t *pool)
      to fetch it. */
   if ((! file->uc->send_all) && (! file->added) && file->text_changed)
     {
+      svn_checksum_t *sha1_checksum;
+      const char *real_path = get_real_fs_path(file, pool);
+      const char *sha1_digest = NULL;
+
+      /* Try to grab the SHA1 checksum, if it's readily available, and
+         pump it down to the client, too. */
+      SVN_ERR(svn_fs_file_checksum(&sha1_checksum, svn_checksum_sha1,
+                                   file->uc->rev_root, real_path, FALSE, pool));
+      if (sha1_checksum)
+        sha1_digest = svn_checksum_to_cstring(sha1_checksum, pool);
+
       SVN_ERR(dav_svn__brigade_printf
               (file->uc->bb, file->uc->output,
-               "<S:fetch-file%s%s%s/>" DEBUG_CR,
+               "<S:fetch-file%s%s%s%s%s%s/>" DEBUG_CR,
                file->base_checksum ? " base-checksum=\"" : "",
                file->base_checksum ? file->base_checksum : "",
-               file->base_checksum ? "\"" : ""));
+               file->base_checksum ? "\"" : "",
+               sha1_digest ? " sha1-checksum=\"" : "",
+               sha1_digest ? sha1_digest : "",
+               sha1_digest ? "\"" : ""));
     }
 
   if (text_checksum)
