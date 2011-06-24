@@ -2701,19 +2701,6 @@ def start_commit_detect_capabilities(sbox):
   if data != 'yes':
     raise svntest.Failure
 
-def commit_url(sbox):
-  "'svn commit SOME_URL' should error"
-  sbox.build()
-  url = sbox.repo_url
-
-  # Commit directly to a URL
-  expected_error = ("svn: E205000: '" + url + "' is not a local path")
-  svntest.actions.run_and_verify_commit(None,
-                                        None,
-                                        None,
-                                        expected_error,
-                                        url)
-
 # Test for issue #3198
 @Issue(3198)
 def commit_added_missing(sbox):
@@ -2880,7 +2867,6 @@ test_list = [ None,
               changelist_near_conflict,
               commit_out_of_date_file,
               start_commit_detect_capabilities,
-              commit_url,
               commit_added_missing,
               tree_conflicts_block_commit,
               tree_conflicts_resolved,
