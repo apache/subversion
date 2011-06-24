@@ -91,7 +91,8 @@ revert(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
       /* If target isn't versioned, just send a 'skip'
          notification and move on. */
       if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
-          || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
+          || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE
+          || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
         {
           if (b->ctx->notify_func2)
             (*b->ctx->notify_func2)
