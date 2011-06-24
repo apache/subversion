@@ -37,7 +37,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 /* Return an error with code SVN_ERR_UNSUPPORTED_FEATURE, and an error
-   message referencing PATH_OR_URL, if the "server" pointed to be
+   message referencing PATH_OR_URL, if the "server" pointed to by
    RA_SESSION doesn't support Merge Tracking (e.g. is pre-1.5).
    Perform temporary allocations in POOL. */
 svn_error_t *
@@ -45,28 +45,76 @@ svn_ra__assert_mergeinfo_capable_server(svn_ra_session_t *ra_session,
                                         const char *path_or_url,
                                         apr_pool_t *pool);
 
-/** Permanently delete @a path (relative to the URL of @a session) in revision
- * @a rev.
+
+/*** Operational Locks ***/
+
+/** This is a function type which allows svn_ra__get_operational_lock()
+ * to report lock attempt failures.  If non-NULL, @a locktoken is the
+ * preexisting lock which prevented lock acquisition.
  *
- * Do not change the content of other node in the repository, even other nodes
- * that were copied from this one. The only other change in the repository is
- * to "copied from" pointers that were pointing to the now-deleted node. These
- * are removed or made to point to a previous version of the now-deleted node.
- * (### TODO: details.)
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_ra__lock_retry_func_t)(void *baton,
+                                                  const svn_string_t *locktoken,
+                                                  apr_pool_t *pool);
+
+/** Acquire a lock (of sorts) on the repository associated with the
+ * given RA @a session, retrying as necessary up to @a num_retries
+ * times, and set @a *lock_string_p to the value of the acquired lock
+ * token.  Allocate the returned token from @a pool.  (See this
+ * function's counterpart svn_ra__release_operational_lock() for your
+ * lock removal needs.)
  *
- * If administratively forbidden, return @c SVN_ERR_RA_NOT_AUTHORIZED. If not
- * implemented by the server, return @c SVN_ERR_RA_NOT_IMPLEMENTED.
+ * @a lock_revprop_name is the name of the revision-0 property used to
+ * store the lock.
  *
- * @note This functionality is not implemented in pre-1.7 servers and may not
- * be implemented in all 1.7 and later servers.
+ * If @a steal_lock is set, then replace any pre-existing lock on the
+ * repository with our own.  Iff such a theft occurs and
+ * @a stolen_lock_p is non-NULL, set @a *stolen_lock_p to the token of
+ * the lock we stole.
+ *
+ * Call @a retry_func with @a retry_baton each time the retry loop
+ * fails to acquire a lock.
+ *
+ * Use @a cancel_func and @a cancel_baton to check for early
+ * cancellation.
+ *
+ * @note If the server does not support #SVN_RA_CAPABILITY_ATOMIC_REVPROPS
+ * (i.e., is a pre-1.7 server), then this function makes a "best effort"
+ * attempt to obtain the lock, but is susceptible to a race condition; see
+ * issue #3546.
  *
  * @since New in 1.7.
  */
 svn_error_t *
-svn_ra__obliterate_path_rev(svn_ra_session_t *session,
-                            svn_revnum_t rev,
-                            const char *path,
-                            apr_pool_t *pool);
+svn_ra__get_operational_lock(const svn_string_t **lock_string_p,
+                             const svn_string_t **stolen_lock_p,
+                             svn_ra_session_t *session,
+                             const char *lock_revprop_name,
+                             svn_boolean_t steal_lock,
+                             int num_retries,
+                             svn_ra__lock_retry_func_t retry_func,
+                             void *retry_baton,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *pool);
+
+/** Release an operational lock (whose value is @a mylocktoken) on the
+ * repository associated with RA @a session.  (This is the counterpart
+ * to svn_ra__get_operational_lock().)
+ *
+ * @a lock_revprop_name is the name of the revision-0 property used to
+ * store the lock.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_ra__release_operational_lock(svn_ra_session_t *session,
+                                 const char *lock_revprop_name,
+                                 const svn_string_t *mylocktoken,
+                                 apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

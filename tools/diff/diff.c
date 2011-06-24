@@ -86,9 +86,9 @@ int main(int argc, const char *argv[])
       svn_handle_error2(svn_err, stdout, FALSE, "diff: ");
       return 2;
     }
-  
+
   options_array = apr_array_make(pool, 0, sizeof(const char *));
-  
+
   for (i = 1 ; i < argc ; i++)
     {
       if (!no_more_options && (argv[i][0] == '-'))

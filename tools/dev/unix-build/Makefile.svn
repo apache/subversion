@@ -1,13 +1,40 @@
 # vim: noexpandtab tabstop=8 shiftwidth=8 syntax=make
 #
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
 # WARNING: This may or may not work on your system. This Makefile is
 # an example, rather than a ready-made universal solution.
+#
+# Note to Subversion committers:
+# This Makefile is used by the bb-openbsd buildbot
+# (http://ci.apache.org/builders/bb-openbsd).
+# Please check the bot's health after making changes to this file.
 
 ENABLE_PYTHON_BINDINGS ?= yes
 ENABLE_RUBY_BINDINGS ?= yes
 ENABLE_PERL_BINDINGS ?= yes
 ENABLE_JAVA_BINDINGS ?= no # they don't build with thread-less APR...
 USE_APR_ICONV ?= no # set to yes to use APR iconv instead of GNU iconv
+PARALLEL ?= 1
+CLEANUP ?= 1
+USE_HTTPV1 ?= no
+USE_AUTHZ_SHORT_CIRCUIT ?= no
+RAMDISK ?= /ramdisk
 
 PWD		= $(shell pwd)
 UNAME		= $(shell uname)
@@ -31,24 +58,26 @@ OBJDIR		= $(PWD)/objdir
 
 BDB_MAJOR_VER	= 4.7
 BDB_VER		= $(BDB_MAJOR_VER).25
-APR_VER		= 1.4.2
+APR_VER		= 1.4.5
 APR_ICONV_VER	= 1.2.1
 GNU_ICONV_VER	= 1.13.1
-APR_UTIL_VER	= 1.3.9
-HTTPD_VER	= 2.2.15
-NEON_VER	= 0.29.3
+APR_UTIL_VER	= 1.3.12
+HTTPD_VER	= 2.2.19
+NEON_VER	= 0.29.6
 SERF_VER	= 0.7.x
 SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.23
-SQLITE_VER	= 3.6.23.1
+SQLITE_VER	= 3070603
+LIBMAGIC_VER	= 5.07
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
 GNU_ICONV_DIST	= libiconv-$(GNU_ICONV_VER).tar.gz
 NEON_DIST	= neon-$(NEON_VER).tar.gz
-SQLITE_DIST	= sqlite-$(SQLITE_VER).tar.gz
+SQLITE_DIST	= sqlite-autoconf-$(SQLITE_VER).tar.gz
 CYRUS_SASL_DIST	= cyrus-sasl-$(CYRUS_SASL_VER).tar.gz
 HTTPD_DIST	= httpd-$(HTTPD_VER).tar.bz2
+LIBMAGIC_DIST	= file-$(LIBMAGIC_VER).tar.gz
 
 DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(SERF_DIST) \
@@ -56,7 +85,8 @@ DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(HTTPD_DIST) \
 		$(DISTDIR)/$(APR_ICONV_DIST) \
 		$(DISTDIR)/$(GNU_ICONV_DIST) \
-		$(DISTDIR)/$(CYRUS_SASL_DIST)
+		$(DISTDIR)/$(CYRUS_SASL_DIST) \
+		$(DISTDIR)/$(LIBMAGIC_DIST)
 
 FETCH_CMD	= wget -c
 
@@ -73,6 +103,7 @@ SERF_URL	= http://serf.googlecode.com/svn/branches/$(SERF_VER)
 SERF_OLD_URL	= http://serf.googlecode.com/svn/tags/$(SERF_OLD_VER)
 SQLITE_URL	= http://www.sqlite.org/$(SQLITE_DIST)
 CYRUS_SASL_URL	= ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/$(CYRUS_SASL_DIST)
+LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
 APR_SRCDIR	= $(SRCDIR)/apr-$(APR_VER)
@@ -83,8 +114,9 @@ HTTPD_SRCDIR	= $(SRCDIR)/httpd-$(HTTPD_VER)
 NEON_SRCDIR	= $(SRCDIR)/neon-$(NEON_VER)
 SERF_SRCDIR	= $(SRCDIR)/serf-$(SERF_VER)
 SERF_OLD_SRCDIR	= $(SRCDIR)/serf-$(SERF_OLD_VER)
-SQLITE_SRCDIR	= $(SRCDIR)/sqlite-$(SQLITE_VER)
+SQLITE_SRCDIR	= $(SRCDIR)/sqlite-autoconf-$(SQLITE_VER)
 CYRUS_SASL_SRCDIR	= $(SRCDIR)/cyrus-sasl-$(CYRUS_SASL_VER)
+LIBMAGIC_SRCDIR	= $(SRCDIR)/file-$(LIBMAGIC_VER)
 SVN_SRCDIR	= $(SVN_WC)
 
 BDB_OBJDIR	= $(OBJDIR)/db-$(BDB_VER)
@@ -98,6 +130,7 @@ SERF_OBJDIR	= $(OBJDIR)/serf-$(SERF_VER)
 SERF_OLD_OBJDIR	= $(OBJDIR)/serf-$(SERF_OLD_VER)
 SQLITE_OBJDIR	= $(OBJDIR)/sqlite-$(SQLITE_VER)
 CYRUS_SASL_OBJDIR	= $(OBJDIR)/cyrus-sasl-$(CYRUS_SASL_VER)
+LIBMAGIC_OBJDIR	= $(OBJDIR)/file-$(LIBMAGIC_VER)
 SVN_OBJDIR	= $(OBJDIR)/$(SVN_REL_WC)
 
 # Tweak this for out-of-tree builds. Note that running individual
@@ -117,17 +150,18 @@ endif
 
 all: dirs-create bdb-install apr-install iconv-install apr-util-install \
 	httpd-install neon-install serf-install serf-old-install \
-	sqlite-install cyrus-sasl-install svn-install svn-bindings-install
+	sqlite-install cyrus-sasl-install libmagic-install \
+	svn-install svn-bindings-install
 
 # Use these to start a build from the beginning.
 reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
 	httpd-reset neon-reset serf-reset serf-old-reset sqlite-reset \
-	cyrus-sasl-reset svn-reset
+	cyrus-sasl-reset libmagic-reset svn-reset
 
 # Use to save disk space.
 clean: bdb-clean apr-clean iconv-clean apr-util-clean httpd-clean \
 	neon-clean serf-clean serf-old-clean sqlite-clean cyrus-sasl-clean \
-	svn-clean
+	libmagic-clean svn-clean
 
 # Nukes everything (including installed binaries!)
 # Use this to start ALL OVER AGAIN! Use with caution!
@@ -194,7 +228,7 @@ $(BDB_OBJDIR)/.retrieved: $(DISTDIR)/$(BDB_DIST)
 # configure bdb
 $(BDB_OBJDIR)/.configured: $(BDB_OBJDIR)/.retrieved
 	cd $(BDB_SRCDIR)/build_unix \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
 		../dist/configure \
 		--prefix=$(PREFIX)/bdb \
 		--enable-debug
@@ -248,7 +282,7 @@ $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved
 			> $(APR_SRCDIR)/build/apr_hints.m4
 	cd $(APR_SRCDIR) && ./buildconf
 	cd $(APR_OBJDIR) \
-		&& env CFLAGS="-O0 -g $(PROFILE_CFLAGS)" \
+		&& env CFLAGS="-O0 -g $(PROFILE_CFLAGS)" GREP="`which grep`" \
 		$(APR_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--enable-maintainer-mode \
@@ -293,7 +327,7 @@ $(APR_ICONV_OBJDIR)/.retrieved: $(DISTDIR)/$(APR_ICONV_DIST)
 # configure apr-iconv
 $(APR_ICONV_OBJDIR)/.configured: $(APR_ICONV_OBJDIR)/.retrieved
 	cd $(APR_ICONV_OBJDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
 		$(APR_ICONV_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--with-apr=$(PREFIX)/apr
@@ -373,7 +407,7 @@ $(GNU_ICONV_OBJDIR)/.configured: $(GNU_ICONV_OBJDIR)/.retrieved
 	cd $(SRCDIR)/libiconv-${GNU_ICONV_VER} && \
 		${MAKE} -f Makefile.devel lib/aliases.h
 	cd $(GNU_ICONV_OBJDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
 		$(GNU_ICONV_SRCDIR)/configure \
 		--prefix=$(PREFIX)/iconv \
 		--enable-extra-encodings
@@ -442,6 +476,7 @@ $(APR_UTIL_OBJDIR)/.configured: $(APR_UTIL_OBJDIR)/.retrieved
 	cd $(APR_UTIL_OBJDIR) \
 		&& env LD_LIBRARY_PATH=$(PREFIX)/bdb/lib \
 			CFLAGS="-O0 -g $(PROFILE_CFLAGS)" \
+			GREP="`which grep`" \
 			$(APR_UTIL_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--enable-maintainer-mode \
@@ -489,7 +524,7 @@ $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST)
 # configure httpd
 $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved
 	cd $(HTTPD_OBJDIR) \
-		&& CFLAGS="$(PROFILE_CFLAGS)" \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
 		$(HTTPD_SRCDIR)/configure \
 		--prefix=$(PREFIX)/httpd \
 		--enable-maintainer-mode \
@@ -569,7 +604,7 @@ $(NEON_OBJDIR)/.configured: $(NEON_OBJDIR)/.retrieved
 		chmod +x $(NEON_OBJDIR)/krb5-config; \
 	fi
 	cd $(NEON_OBJDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
 		$(NEON_SRCDIR)/configure \
 		PATH=$(NEON_OBJDIR):$$PATH \
 		--prefix=$(PREFIX)/neon \
@@ -719,10 +754,9 @@ endif
 # configure sqlite
 $(SQLITE_OBJDIR)/.configured: $(SQLITE_OBJDIR)/.retrieved
 	cd $(SQLITE_OBJDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
 		$(SQLITE_SRCDIR)/configure \
 		--prefix=$(PREFIX)/sqlite \
-		--disable-tcl \
 		$(THREADSAFE_FLAG)
 	touch $@
 
@@ -780,6 +814,7 @@ $(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved
 	cd $(CYRUS_SASL_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
 		CPPFLAGS="-I/usr/include/kerberosV" \
+		GREP="`which grep`" \
 		$(CYRUS_SASL_SRCDIR)/configure \
 		--with-dbpath=$(PREFIX)/cyrus-sasl/etc/sasldb2 \
 		--with-plugindir=$(PREFIX)/cyrus-sasl/lib/sasl2 \
@@ -799,6 +834,50 @@ $(CYRUS_SASL_OBJDIR)/.compiled: $(CYRUS_SASL_OBJDIR)/.configured
 # install cyrus-sasl
 $(CYRUS_SASL_OBJDIR)/.installed: $(CYRUS_SASL_OBJDIR)/.compiled
 	(cd $(CYRUS_SASL_OBJDIR) && make install)
+	touch $@
+
+#######################################################################
+# libmagic
+#######################################################################
+
+libmagic-retrieve:	$(LIBMAGIC_OBJDIR)/.retrieved
+libmagic-configure:	$(LIBMAGIC_OBJDIR)/.configured
+libmagic-compile:	$(LIBMAGIC_OBJDIR)/.compiled
+libmagic-install:	$(LIBMAGIC_OBJDIR)/.installed
+libmagic-reset:
+	$(foreach f, .retrieved .configured .compiled .installed, \
+		rm -f $(LIBMAGIC_OBJDIR)/$(f);)
+
+libmagic-clean:
+	-(cd $(LIBMAGIC_OBJDIR) && make distclean)
+
+# fetch distfile for libmagic
+$(DISTDIR)/$(LIBMAGIC_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(LIBMAGIC_URL)
+
+# retrieve libmagic
+$(LIBMAGIC_OBJDIR)/.retrieved: $(DISTDIR)/$(LIBMAGIC_DIST)
+	[ -d $(LIBMAGIC_OBJDIR) ] || mkdir -p $(LIBMAGIC_OBJDIR)
+	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(LIBMAGIC_DIST)
+	touch $@
+
+# configure libmagic
+$(LIBMAGIC_OBJDIR)/.configured: $(LIBMAGIC_OBJDIR)/.retrieved
+	cd $(LIBMAGIC_OBJDIR) \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		$(LIBMAGIC_SRCDIR)/configure \
+		--enable-fsect-man5 \
+		--prefix=$(PREFIX)/libmagic
+	touch $@
+
+# compile libmagic
+$(LIBMAGIC_OBJDIR)/.compiled: $(LIBMAGIC_OBJDIR)/.configured
+	(cd $(LIBMAGIC_OBJDIR) && make)
+	touch $@
+
+# install libmagic
+$(LIBMAGIC_OBJDIR)/.installed: $(LIBMAGIC_OBJDIR)/.compiled
+	(cd $(LIBMAGIC_OBJDIR) && make install)
 	touch $@
 
 
@@ -846,42 +925,55 @@ $(SVN_OBJDIR)/.retrieved:
 	fi
 	touch $@
 
-ifeq ($(BRANCH_MAJOR),1.5)
+ifeq ($(BRANCH_MAJOR),1.6)
+BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
+SERF_FLAG=--with-serf="$(PREFIX)/serf"
+MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
+MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
+W_NO_SYSTEM_HEADERS=-Wno-system-headers
+else ifeq ($(BRANCH_MAJOR),1.5)
 BDB_FLAG=$(PREFIX)/bdb
 SERF_FLAG=--with-serf="$(PREFIX)/serf-old"
 MOD_DAV_SVN=modules/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
+W_NO_SYSTEM_HEADERS=-Wno-system-headers
 else ifeq ($(BRANCH_MAJOR),1.4)
 BDB_FLAG=$(PREFIX)/bdb
 MOD_DAV_SVN=modules/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
+W_NO_SYSTEM_HEADERS=-Wno-system-headers
 else ifeq ($(BRANCH_MAJOR),1.3)
 BDB_FLAG=$(PREFIX)/bdb
 MOD_DAV_SVN=modules/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
+W_NO_SYSTEM_HEADERS=-Wno-system-headers
 else ifeq ($(BRANCH_MAJOR),1.2)
 BDB_FLAG=$(PREFIX)/bdb
 MOD_DAV_SVN=modules/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
+W_NO_SYSTEM_HEADERS=-Wno-system-headers
 else ifeq ($(BRANCH_MAJOR),1.1)
 BDB_FLAG=$(PREFIX)/bdb
 MOD_DAV_SVN=modules/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
+W_NO_SYSTEM_HEADERS=-Wno-system-headers
 else ifeq ($(BRANCH_MAJOR),1.0)
 BDB_FLAG=$(PREFIX)/bdb
 MOD_DAV_SVN=modules/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
+W_NO_SYSTEM_HEADERS=-Wno-system-headers
 else
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
+LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
 endif
 
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
@@ -911,6 +1003,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
 	cd $(svn_builddir) && \
 		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib" \
 			LD_LIBRARY_PATH="$(PREFIX)/bdb/lib:$(PREFIX)/iconv/lib:$$LD_LIBRARY_PATH" \
+			GREP="`which grep`" \
 			$(SVN_SRCDIR)/configure \
 			--enable-maintainer-mode \
 			--with-ssl \
@@ -926,6 +1019,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
 			--with-ruby-sitedir="$(SVN_PREFIX)/lib/ruby/site_ruby" \
 			--disable-mod-activation \
 			$(JAVAHL_FLAG) \
+			$(LIBMAGIC_FLAG) \
 			$(SVN_ALL_STATIC) \
 			$(DISABLE_NEON_VERSION_CHECK)
 	touch $@
@@ -933,7 +1027,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
 # compile svn
 $(SVN_OBJDIR)/.compiled: $(SVN_OBJDIR)/.configured
 	cd $(svn_builddir) \
-		&& make EXTRA_CFLAGS="$(PROFILE_CFLAGS)"
+		&& make EXTRA_CFLAGS="$(PROFILE_CFLAGS) $(W_NO_SYSTEM_HEADERS)"
 	touch $@
 
 # install svn
@@ -1011,6 +1105,12 @@ httpd-conf:
 	echo "    AuthName \"Subversion Repository\"" >> $(HTTPD_CHECK_CONF)
 	echo "    AuthUserFile $(HTTPD_CHECK_USERS)" >> $(HTTPD_CHECK_CONF)
 	echo "    Require valid-user" >> $(HTTPD_CHECK_CONF)
+ifeq ($(USE_HTTPV1),yes)
+	echo "    SVNAdvertiseV2Protocol off" >> $(HTTPD_CHECK_CONF)
+endif
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo "    SVNPathAuthz short_circuit" >> $(HTTPD_CHECK_CONF)
+endif
 	echo "</Location>" >> $(HTTPD_CHECK_CONF)
 	echo "<Location /svn-test-work/local_tmp/repos>" >> $(HTTPD_CHECK_CONF)
 	echo "    DAV svn" >> $(HTTPD_CHECK_CONF)
@@ -1020,18 +1120,30 @@ httpd-conf:
 	echo "    AuthName \"Subversion Repository\"" >> $(HTTPD_CHECK_CONF)
 	echo "    AuthUserFile $(HTTPD_CHECK_USERS)" >> $(HTTPD_CHECK_CONF)
 	echo "    Require valid-user" >> $(HTTPD_CHECK_CONF)
+ifeq ($(USE_HTTPV1),yes)
+	echo "    SVNAdvertiseV2Protocol off" >> $(HTTPD_CHECK_CONF)
+endif
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo "    SVNPathAuthz short_circuit" >> $(HTTPD_CHECK_CONF)
+endif
 	echo "</Location>" >> $(HTTPD_CHECK_CONF)
 	echo "# This Location lets you access repositories dropped in /tmp/" >> $(HTTPD_CHECK_CONF)
 	echo "<Location /svn>" >> $(HTTPD_CHECK_CONF)
 	echo "    DAV svn" >> $(HTTPD_CHECK_CONF)
 	echo "    SVNParentPath /tmp" >> $(HTTPD_CHECK_CONF)
 	echo "    Allow from all" >> $(HTTPD_CHECK_CONF)
+ifeq ($(USE_HTTPV1),yes)
+	echo "    SVNAdvertiseV2Protocol off" >> $(HTTPD_CHECK_CONF)
+endif
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo "    SVNPathAuthz short_circuit" >> $(HTTPD_CHECK_CONF)
+endif
 	echo "</Location>" >> $(HTTPD_CHECK_CONF)
 	echo 'RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)$$ /svn-test-work/repositories/$$1' >> $(HTTPD_CHECK_CONF)
 	echo 'RedirectMatch ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)$$ /svn-test-work/repositories/$$1' >> $(HTTPD_CHECK_CONF)
 
 # We need this to make sure some targets below pick up the right libraries
-LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/cyrus-sasl/lib:$(PREFIX)/iconv/lib:$(PREFIX)/svn-$(WC)/lib
+LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/cyrus-sasl/lib:$(PREFIX)/iconv/lib:$(PREFIX)/libmagic/lib:$(PREFIX)/svn-$(WC)/lib
 
 .PHONY: libpath
 libpath:
@@ -1043,13 +1155,15 @@ HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 			$(PREFIX)/httpd/bin/apachectl \
 			-f conf/httpd-svn-check-$(WC).conf
 HTTPD_START_CMD = $(HTTPD_CMD) -k start
-HTTPD_STOP_CMD = $(HTTPD_CMD) -k stop
+HTTPD_START_CMD_DEBUG = $(HTTPD_START_CMD) -X
+HTTPD_STOP_CMD = $(HTTPD_CMD) -k stop; sleep 3
 
 SVNSERVE_START_CMD = $(SVN_PREFIX)/bin/svnserve \
 			--listen-host 127.0.0.1 \
 			--pid-file $(PWD)/svnserve-$(WC).pid \
 			-d -r $(svn_builddir)/subversion/tests/cmdline
-SVNSERVE_STOP_CMD = kill `cat $(PWD)/svnserve-$(WC).pid`
+SVNSERVE_STOP_CMD = kill `cat $(PWD)/svnserve-$(WC).pid`; sleep 3; \
+			rm -f $(PWD)/svnserve-$(WC).pid
 
 start-httpd: httpd-conf
 	$(HTTPD_START_CMD)
@@ -1058,74 +1172,67 @@ start-httpd: httpd-conf
 	@echo "The URL http://localhost:$(HTTPD_CHECK_PORT)/svn/"
 	@echo "lets you access repositories dropped into /tmp"
 
+start-httpd-debug: httpd-conf
+	$(HTTPD_START_CMD_DEBUG) &
+	@echo "To run tests over http, run:"
+	@echo "    make check BASE_URL=http://localhost:$(HTTPD_CHECK_PORT)"
+	@echo "The URL http://localhost:$(HTTPD_CHECK_PORT)/svn/"
+	@echo "lets you access repositories dropped into /tmp"
+	@echo "Trying to attach gdb to httpd..."
+	@sleep 1
+	gdb $(PREFIX)/httpd/bin/httpd `cat $(PREFIX)/httpd/logs/httpd.pid`
+
 stop-httpd:
 	$(HTTPD_STOP_CMD)
-	sleep 3
 
 start-svnserve: $(SVN_OBJDIR)/.compiled
+	-ls $(PWD)/svnserve-*.pid | while read pidfile; do \
+		kill `cat "$$pidfile"`; sleep 3; \
+		rm -f $$pidfile; \
+	done
 	$(SVNSERVE_START_CMD)
 
 stop-svnserve:
 	$(SVNSERVE_STOP_CMD)
 
-# run tests in parallel
-PARALLEL=PARALLEL=1 CLEANUP=1
-TEST_LOGS=tests.log fails.log
+define do_check
+-cd $(svn_builddir) && for fs in fsfs bdb; do \
+    echo "Begin test: $(subst svn-check-,,$@) x $$fs"; \
+    test -d "$(RAMDISK)/tmp" && export TMPDIR="$(RAMDISK)/tmp"; \
+    make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) $1 FS_TYPE=$$fs; \
+    for log in tests.log fails.log; do \
+        test -f $$log && mv -f $$log $$log.$@-$$fs; \
+    done; \
+done
+endef
 
-svn-check-neon: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled
+TEST_WORK=$(svn_builddir)/subversion/tests/cmdline/svn-test-work
+svn-check-prepare-ramdisk:
+	-rm -rf "$(TEST_WORK)"; \
+	if [ -d "$(RAMDISK)" ] && \
+		touch "$(RAMDISK)/$(SVN_REL_WC).writetest" && \
+		mkdir -p "$(RAMDISK)/$(SVN_REL_WC)"; then \
+			rm -f "$(RAMDISK)/$(SVN_REL_WC).writetest"; \
+			ln -s "$(RAMDISK)/$(SVN_REL_WC)" "$(TEST_WORK)"; \
+			mkdir -p "$(RAMDISK)/tmp"; \
+	fi
+
+svn-check-neon: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled svn-check-prepare-ramdisk
 	$(HTTPD_START_CMD)
-	-cd $(svn_builddir) && make check FS_TYPE=fsfs \
-	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon \
-	       $(PARALLEL)
-	-$(foreach log, $(TEST_LOGS), \
-		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
-			$(svn_builddir)/$(log).$@-fsfs;)
-	-cd $(svn_builddir) && make check FS_TYPE=bdb \
-	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon \
-	       $(PARALLEL)
-	-$(foreach log, $(TEST_LOGS), \
-		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
-			$(svn_builddir)/$(log).$@-bdb;)
+	$(call do_check,BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon)
 	$(HTTPD_STOP_CMD)
 
-svn-check-serf: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled
+svn-check-serf: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled svn-check-prepare-ramdisk
 	$(HTTPD_START_CMD)
-	-cd $(svn_builddir) && make check FS_TYPE=fsfs \
-	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf \
-	       $(PARALLEL)
-	-$(foreach log, $(TEST_LOGS), \
-		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
-			$(svn_builddir)/$(log).$@-fsfs;)
-	-cd $(svn_builddir) && make check FS_TYPE=bdb \
-	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf \
-	       $(PARALLEL)
-	-$(foreach log, $(TEST_LOGS), \
-		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
-			$(svn_builddir)/$(log).$@-bdb;)
+	$(call do_check,BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf)
 	$(HTTPD_STOP_CMD)
 
-svn-check-local:
-	-cd $(svn_builddir) && make check FS_TYPE=fsfs $(PARALLEL)
-	-$(foreach log, $(TEST_LOGS), \
-		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
-			$(svn_builddir)/$(log).$@-fsfs;)
-	-cd $(svn_builddir) && make check FS_TYPE=bdb $(PARALLEL)
-	-$(foreach log, $(TEST_LOGS), \
-		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
-			$(svn_builddir)/$(log).$@-bdb;)
+svn-check-local: svn-check-prepare-ramdisk
+	$(call do_check)
 
-svn-check-svn:
+svn-check-svn: svn-check-prepare-ramdisk
 	$(SVNSERVE_START_CMD)
-	-cd $(svn_builddir) && make check FS_TYPE=fsfs \
-		BASE_URL=svn://127.0.0.1 $(PARALLEL)
-	-$(foreach log, $(TEST_LOGS), \
-		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
-			$(svn_builddir)/$(log).$@-fsfs;)
-	-cd $(svn_builddir) && make check FS_TYPE=bdb \
-		BASE_URL=svn://127.0.0.1 $(PARALLEL)
-	-$(foreach log, $(TEST_LOGS), \
-		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
-			$(svn_builddir)/$(log).$@-bdb;)
+	$(call do_check,BASE_URL=svn://127.0.0.1)
 	$(SVNSERVE_STOP_CMD)
 
 .PHONY: svn-check-swig-pl svn-check-swig-py svn-check-swig-rb svn-check-javahl
@@ -1173,7 +1280,8 @@ svn-check-javahl:
 				tee $(svn_builddir)/tests.log.bindings.javahl; \
 	fi
 
-svn-check: svn-check-local svn-check-svn svn-check-neon svn-check-serf svn-check-bindings
+svn-check: svn-check-prepare-ramdisk svn-check-local svn-check-svn \
+	svn-check-neon svn-check-serf svn-check-bindings
 
 .PHONY: sign-email
 sign-email:

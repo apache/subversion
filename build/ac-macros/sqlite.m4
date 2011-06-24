@@ -177,9 +177,11 @@ dnl at sqlite_file.  If not, fail.
 AC_DEFUN(SVN_SQLITE_FILE_CONFIG,
 [
   sqlite_amalg="$1"
+  AC_MSG_CHECKING([sqlite amalgamation])
   if test ! -e $sqlite_amalg; then
-    echo "amalgamation not found at $sqlite_amalg"
+    AC_MSG_RESULT([no])
   else
+    AC_MSG_RESULT([yes])
     AC_MSG_CHECKING([sqlite amalgamation file version])
     AC_EGREP_CPP(SQLITE_VERSION_OKAY,[
 #include "$sqlite_amalg"

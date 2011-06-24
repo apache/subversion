@@ -266,7 +266,7 @@ ver_patch=`echo $VERSION | cut -d '.' -f 3`
 
 vsn_file="$DISTPATH/subversion/include/svn_version.h"
 
-if [ "$VERSION" != "trunk"]; then
+if [ "$VERSION" != "trunk" ]; then
   sed \
    -e "/#define *SVN_VER_MAJOR/s/[0-9]\+/$ver_major/" \
    -e "/#define *SVN_VER_MINOR/s/[0-9]\+/$ver_minor/" \

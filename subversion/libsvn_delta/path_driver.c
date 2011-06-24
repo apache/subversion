@@ -31,6 +31,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
+#include "private/svn_fspath.h"
 
 
 /*** Helper functions. ***/

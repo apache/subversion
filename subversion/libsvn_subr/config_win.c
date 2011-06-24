@@ -130,12 +130,12 @@ parse_section(svn_config_t *cfg, HKEY hkey, const char *section,
         {
           DWORD value_len = value->blocksize;
           err = RegQueryValueEx(hkey, option->data, NULL, NULL,
-                                value->data, &value_len);
+                                (LPBYTE)value->data, &value_len);
           if (err == ERROR_MORE_DATA)
             {
               svn_stringbuf_ensure(value, value_len);
               err = RegQueryValueEx(hkey, option->data, NULL, NULL,
-                                    value->data, &value_len);
+                                    (LPBYTE)value->data, &value_len);
             }
           if (err != ERROR_SUCCESS)
             return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,

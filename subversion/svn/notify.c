@@ -46,6 +46,7 @@ struct notify_baton
   svn_boolean_t received_some_change;
   svn_boolean_t is_checkout;
   svn_boolean_t is_export;
+  svn_boolean_t is_wc_to_repos_copy;
   svn_boolean_t suppress_summary_lines;
   svn_boolean_t sent_first_txdelta;
   svn_boolean_t in_external;
@@ -115,13 +116,11 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
   else
     {
       if (n->path_prefix)
-        path_local = svn_dirent_skip_ancestor(n->path_prefix, n->path);
-      else if (nb->path_prefix)
-        path_local = svn_dirent_skip_ancestor(nb->path_prefix, n->path);
-      else
-        path_local = n->path;
-
-      path_local = svn_dirent_local_style(path_local, pool);
+        path_local = svn_cl__local_style_skip_ancestor(n->path_prefix, n->path,
+                                                       pool);
+      else /* skip nb->path_prefix, if it's non-null */
+        path_local = svn_cl__local_style_skip_ancestor(nb->path_prefix, n->path,
+                                                       pool);
     }
 
   switch (n->action)
@@ -149,19 +148,41 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
             goto print_error;
         }
       break;
-
-    case svn_wc_notify_update_add_deleted:
-    case svn_wc_notify_update_update_deleted:
-      /* ### Before 1.7.0 these notifications where suppressed in the wc
-         ### library.. how should we notify these?
-
-         ### Fall through in deleted notification. */
-
+    case svn_wc_notify_update_skip_obstruction:
+      nb->skipped_paths++;
+      if ((err = svn_cmdline_printf(
+            pool, _("Skipped '%s' -- An obstructing working copy was found\n"),
+            path_local)))
+        goto print_error;
+      break;
+    case svn_wc_notify_update_skip_working_only:
+      nb->skipped_paths++;
+      if ((err = svn_cmdline_printf(
+            pool, _("Skipped '%s' -- Has no versioned parent\n"),
+            path_local)))
+        goto print_error;
+      break;
     case svn_wc_notify_update_delete:
-    case svn_wc_notify_update_external_removed:
+    case svn_wc_notify_exclude:
       nb->received_some_change = TRUE;
       if ((err = svn_cmdline_printf(pool, "D    %s\n", path_local)))
         goto print_error;
+      break;
+
+    case svn_wc_notify_update_external_removed:
+      nb->received_some_change = TRUE;
+      if (n->err && n->err->message)
+        {
+          if ((err = svn_cmdline_printf(pool, "Removed external '%s': %s\n",
+              path_local, n->err->message)))
+            goto print_error;
+        }
+      else
+        {
+          if ((err = svn_cmdline_printf(pool, "Removed external '%s'\n",
+                                        path_local)))
+            goto print_error;
+        }
       break;
 
     case svn_wc_notify_update_replace:
@@ -323,7 +344,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                   err = svn_cmdline_printf(pool,
                                            apr_pstrcat(pool, s,
                                                        "%"APR_UINT64_T_FMT
-                                                       " and fuzz %d (%s)\n",
+                                                       " and fuzz %lu (%s)\n",
                                                        (char *)NULL),
                                            n->hunk_original_start,
                                            n->hunk_original_length,
@@ -340,7 +361,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                   err = svn_cmdline_printf(pool,
                                            apr_pstrcat(pool, s,
                                                        "%"APR_UINT64_T_FMT
-                                                       " and fuzz %d\n",
+                                                       " and fuzz %lu\n",
                                                        (char *)NULL),
                                            n->hunk_original_start,
                                            n->hunk_original_length,
@@ -393,7 +414,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
           if (n->prop_name)
             err = svn_cmdline_printf(pool,
                           _(">         applied hunk ## -%lu,%lu +%lu,%lu ## "
-                                        "with fuzz %d (%s)\n"),
+                                        "with fuzz %lu (%s)\n"),
                                         n->hunk_original_start,
                                         n->hunk_original_length,
                                         n->hunk_modified_start,
@@ -403,7 +424,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
           else
             err = svn_cmdline_printf(pool,
                           _(">         applied hunk @@ -%lu,%lu +%lu,%lu @@ "
-                                        "with fuzz %d\n"),
+                                        "with fuzz %lu\n"),
                                         n->hunk_original_start,
                                         n->hunk_original_length,
                                         n->hunk_modified_start,
@@ -513,7 +534,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       /* Currently this is used for checkouts and switches too.  If we
          want different output, we'll have to add new actions. */
       if ((err = svn_cmdline_printf(pool,
-                                    _("\nFetching external item into '%s'\n"),
+                                    _("\nFetching external item into '%s':\n"),
                                     path_local)))
         goto print_error;
       break;
@@ -548,12 +569,12 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_update_started:
-      if (! (nb->suppress_summary_lines || 
+      if (! (nb->suppress_summary_lines ||
              nb->in_external ||
              nb->is_checkout ||
              nb->is_export))
         {
-          if ((err = svn_cmdline_printf(pool, _("Updating '%s' ...\n"),
+          if ((err = svn_cmdline_printf(pool, _("Updating '%s':\n"),
                                         path_local)))
             goto print_error;
         }
@@ -646,7 +667,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_status_external:
       if ((err = svn_cmdline_printf
-           (pool, _("\nPerforming status on external item at '%s'\n"),
+           (pool, _("\nPerforming status on external item at '%s':\n"),
             path_local)))
         goto print_error;
       break;
@@ -662,37 +683,49 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
     case svn_wc_notify_commit_modified:
       /* xgettext: Align the %s's on this and the following 4 messages */
       if ((err = svn_cmdline_printf(pool,
-                                    _("Sending        %s\n"),
+                                    _("Sending %s       %s\n"),
+                                    nb->is_wc_to_repos_copy
+                                      ? _("copy of") : "",
                                     path_local)))
         goto print_error;
       break;
 
     case svn_wc_notify_commit_added:
+    case svn_wc_notify_commit_copied:
       if (n->mime_type && svn_mime_type_is_binary(n->mime_type))
         {
           if ((err = svn_cmdline_printf(pool,
-                                        _("Adding  (bin)  %s\n"),
+                                        _("Adding %s (bin)  %s\n"),
+                                        nb->is_wc_to_repos_copy
+                                          ? _("copy of") : "",
                                         path_local)))
           goto print_error;
         }
       else
         {
           if ((err = svn_cmdline_printf(pool,
-                                        _("Adding         %s\n"),
+                                        _("Adding %s        %s\n"),
+                                        nb->is_wc_to_repos_copy
+                                          ? _("copy of") : "",
                                         path_local)))
             goto print_error;
         }
       break;
 
     case svn_wc_notify_commit_deleted:
-      if ((err = svn_cmdline_printf(pool, _("Deleting       %s\n"),
+      if ((err = svn_cmdline_printf(pool, _("Deleting %s      %s\n"),
+                                    nb->is_wc_to_repos_copy
+                                      ? _("copy of") : "",
                                     path_local)))
         goto print_error;
       break;
 
     case svn_wc_notify_commit_replaced:
+    case svn_wc_notify_commit_copied_replaced:
       if ((err = svn_cmdline_printf(pool,
-                                    _("Replacing      %s\n"),
+                                    _("Replacing %s     %s\n"),
+                                    nb->is_wc_to_repos_copy
+                                      ? _("copy of") : "",
                                     path_local)))
         goto print_error;
       break;
@@ -802,10 +835,10 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                pool,
                _("--- Recording mergeinfo for reverse merge of r%ld through r%ld into '%s':\n"),
                n->merge_range->start, n->merge_range->end + 1, path_local);
+        }
 
       if (err)
         goto print_error;
-        }
       break;
 
     case svn_wc_notify_merge_elide_info:
@@ -855,6 +888,24 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         goto print_error;
       break;
 
+    case svn_wc_notify_update_shadowed_add:
+      nb->received_some_change = TRUE;
+      if ((err = svn_cmdline_printf(pool, "   A %s\n", path_local)))
+        goto print_error;
+      break;
+
+    case svn_wc_notify_update_shadowed_update:
+      nb->received_some_change = TRUE;
+      if ((err = svn_cmdline_printf(pool, "   U %s\n", path_local)))
+        goto print_error;
+      break;
+
+    case svn_wc_notify_update_shadowed_delete:
+      nb->received_some_change = TRUE;
+      if ((err = svn_cmdline_printf(pool, "   D %s\n", path_local)))
+        goto print_error;
+      break;
+
     case svn_wc_notify_property_modified:
     case svn_wc_notify_property_added:
         err = svn_cmdline_printf(pool,
@@ -868,6 +919,15 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         err = svn_cmdline_printf(pool,
                                  _("property '%s' deleted from '%s'.\n"),
                                  n->prop_name, path_local);
+        if (err)
+          goto print_error;
+      break;
+
+    case svn_wc_notify_property_deleted_nonexistent:
+        err = svn_cmdline_printf(pool,
+                                 _("Attempting to delete nonexistent "
+                                   "property '%s' on '%s'\n"), n->prop_name,
+                                   path_local);
         if (err)
           goto print_error;
       break;
@@ -895,10 +955,18 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_url_redirect:
-      err = svn_cmdline_printf(pool, _("Redirecting to URL '%s'\n"),
+      err = svn_cmdline_printf(pool, _("Redirecting to URL '%s':\n"),
                                n->url);
       if (err)
         goto print_error;
+      break;
+
+    case svn_wc_notify_path_nonexistent:
+      err = svn_cmdline_printf(pool, _("'%s' is not under version control"),
+                               path_local);
+      if (err)
+        goto print_error;
+      break;
 
     default:
       break;
@@ -916,7 +984,15 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
   if (!nb->had_print_error)
     {
       nb->had_print_error = TRUE;
-      svn_handle_error2(err, stderr, FALSE, "svn: ");
+      /* Issue #3014:
+       * Don't print anything on broken pipes. The pipe was likely
+       * closed by the process at the other end. We expect that
+       * process to perform error reporting as necessary.
+       *
+       * ### This assumes that there is only one error in a chain for
+       * ### SVN_ERR_IO_PIPE_WRITE_ERROR. See svn_cmdline_fputs(). */
+      if (err->apr_err != SVN_ERR_IO_PIPE_WRITE_ERROR)
+        svn_handle_error2(err, stderr, FALSE, "svn: ");
     }
   svn_error_clear(err);
 }
@@ -928,12 +1004,13 @@ svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
                      svn_boolean_t suppress_summary_lines,
                      apr_pool_t *pool)
 {
-  struct notify_baton *nb = apr_palloc(pool, sizeof(*nb));
+  struct notify_baton *nb = apr_pcalloc(pool, sizeof(*nb));
 
   nb->received_some_change = FALSE;
   nb->sent_first_txdelta = FALSE;
   nb->is_checkout = FALSE;
   nb->is_export = FALSE;
+  nb->is_wc_to_repos_copy = FALSE;
   nb->suppress_summary_lines = suppress_summary_lines;
   nb->in_external = FALSE;
   nb->had_print_error = FALSE;
@@ -963,6 +1040,15 @@ svn_cl__notifier_mark_export(void *baton)
   struct notify_baton *nb = baton;
 
   nb->is_export = TRUE;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cl__notifier_mark_wc_to_repos_copy(void *baton)
+{
+  struct notify_baton *nb = baton;
+
+  nb->is_wc_to_repos_copy = TRUE;
   return SVN_NO_ERROR;
 }
 

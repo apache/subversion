@@ -28,6 +28,8 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 
+#include "private/svn_fspath.h"
+
 #include "mod_authz_svn.h"
 #include "dav_svn.h"
 
@@ -51,6 +53,11 @@ dav_svn__allow_read(request_rec *r,
     {
       return TRUE;
     }
+
+  /* Sometimes we get paths that do not start with '/' and
+     hence below uri concatenation would lead to wrong uris .*/
+  if (path && path[0] != '/')
+    path = apr_pstrcat(pool, "/", path, NULL);
 
   /* If bypass is specified and authz has exported the provider.
      Otherwise, we fall through to the full version.  This should be
@@ -139,20 +146,21 @@ authz_read(svn_boolean_t *allowed,
          copied tree.  So we start at path and walk up its parents
          asking if anyone was copied, and if so where from.  */
       while (! (svn_path_is_empty(path_s->data)
-                || ((path_s->len == 1) && (path_s->data[0] == '/'))))
+                || svn_fspath__is_root(path_s->data, path_s->len)))
         {
           SVN_ERR(svn_fs_copied_from(&rev, &revpath, root,
                                      path_s->data, pool));
 
           if (SVN_IS_VALID_REVNUM(rev) && revpath)
             {
-              revpath = svn_path_join(revpath, lopped_path, pool);
+              revpath = svn_fspath__join(revpath, lopped_path, pool);
               break;
             }
 
           /* Lop off the basename and try again. */
-          lopped_path = svn_path_join(svn_uri_basename
-                                      (path_s->data, pool), lopped_path, pool);
+          lopped_path = svn_relpath_join(svn_fspath__basename(path_s->data,
+                                                              pool),
+                                         lopped_path, pool);
           svn_path_remove_component(path_s);
         }
 

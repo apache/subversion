@@ -38,6 +38,7 @@
 #include "svn_private_config.h"
 
 SVNRepos::SVNRepos()
+    : m_cancelOperation(false)
 {
 }
 
@@ -57,6 +58,22 @@ void SVNRepos::dispose()
 {
   static jfieldID fid = 0;
   SVNBase::dispose(&fid, JAVA_PACKAGE"/SVNRepos");
+}
+
+void SVNRepos::cancelOperation()
+{
+  m_cancelOperation = true;
+}
+
+svn_error_t *
+SVNRepos::checkCancel(void *cancelBaton)
+{
+  SVNRepos *that = (SVNRepos *)cancelBaton;
+  if (that->m_cancelOperation)
+    return svn_error_create(SVN_ERR_CANCELLED, NULL,
+                            _("Operation cancelled"));
+  else
+    return SVN_NO_ERROR;
 }
 
 void SVNRepos::create(File &path, bool disableFsyncCommits,
@@ -107,8 +124,8 @@ void SVNRepos::deltify(File &path, Revision &revStart, Revision &revEnd)
       return;
     }
 
-  SVN_JNI_ERR(svn_repos_open(&repos, path.getInternalStyle(requestPool),
-                             requestPool.pool()), );
+  SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
+                              NULL, requestPool.pool()), );
   fs = svn_repos_fs(repos);
   SVN_JNI_ERR(svn_fs_youngest_rev(&youngest, fs, requestPool.pool()), );
 
@@ -176,8 +193,8 @@ void SVNRepos::dump(File &path, OutputStream &dataOut,
       return;
     }
 
-  SVN_JNI_ERR(svn_repos_open(&repos, path.getInternalStyle(requestPool),
-                             requestPool.pool()), );
+  SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
+                              NULL, requestPool.pool()), );
   fs = svn_repos_fs(repos);
   SVN_JNI_ERR(svn_fs_youngest_rev(&youngest, fs, requestPool.pool()), );
 
@@ -227,7 +244,7 @@ void SVNRepos::dump(File &path, OutputStream &dataOut,
                                     ? ReposNotifyCallback::notify
                                     : NULL,
                                  notifyCallback,
-                                 NULL, NULL, requestPool.pool()), );
+                                 checkCancel, this, requestPool.pool()), );
 }
 
 void SVNRepos::hotcopy(File &path, File &targetPath,
@@ -316,17 +333,18 @@ void SVNRepos::load(File &path,
       return;
     }
 
-  SVN_JNI_ERR(svn_repos_open(&repos, path.getInternalStyle(requestPool),
-                             requestPool.pool()), );
+  SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
+                              NULL, requestPool.pool()), );
 
   SVN_JNI_ERR(svn_repos_load_fs3(repos, dataIn.getStream(requestPool),
                                  uuid_action, relativePath,
                                  usePreCommitHook, usePostCommitHook,
+                                 FALSE,
                                  notifyCallback != NULL
                                     ? ReposNotifyCallback::notify
                                     : NULL,
                                  notifyCallback,
-                                 NULL, NULL, requestPool.pool()), );
+                                 checkCancel, this, requestPool.pool()), );
 }
 
 void SVNRepos::lstxns(File &path, MessageReceiver &messageReceiver)
@@ -342,8 +360,8 @@ void SVNRepos::lstxns(File &path, MessageReceiver &messageReceiver)
       return;
     }
 
-  SVN_JNI_ERR(svn_repos_open(&repos, path.getInternalStyle(requestPool),
-                             requestPool.pool()), );
+  SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
+                              NULL, requestPool.pool()), );
   fs = svn_repos_fs (repos);
   SVN_JNI_ERR(svn_fs_list_transactions(&txns, fs, requestPool.pool()), );
 
@@ -373,14 +391,14 @@ jlong SVNRepos::recover(File &path, ReposNotifyCallback *notifyCallback)
                                     ? ReposNotifyCallback::notify
                                     : NULL,
                                  notifyCallback,
-                                 NULL, NULL, requestPool.pool()),
+                                 checkCancel, this, requestPool.pool()),
               -1);
 
   /* Since db transactions may have been replayed, it's nice to tell
    * people what the latest revision is.  It also proves that the
    * recovery actually worked. */
-  SVN_JNI_ERR(svn_repos_open(&repos, path.getInternalStyle(requestPool),
-                             requestPool.pool()), -1);
+  SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
+                              NULL, requestPool.pool()), -1);
   SVN_JNI_ERR(svn_fs_youngest_rev(&youngest_rev, svn_repos_fs (repos),
                                   requestPool.pool()),
               -1);
@@ -403,8 +421,8 @@ void SVNRepos::rmtxns(File &path, StringArray &transactions)
       return;
     }
 
-  SVN_JNI_ERR(svn_repos_open(&repos, path.getInternalStyle(requestPool),
-                             requestPool.pool()), );
+  SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
+                              NULL, requestPool.pool()), );
   fs = svn_repos_fs (repos);
 
   args = transactions.array(requestPool);
@@ -460,8 +478,8 @@ void SVNRepos::setRevProp(File &path, Revision &revision,
 
   /* Open the filesystem. */
   svn_repos_t *repos;
-  SVN_JNI_ERR(svn_repos_open(&repos, path.getInternalStyle(requestPool),
-                             requestPool.pool()), );
+  SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
+                              NULL, requestPool.pool()), );
 
   /* If we are bypassing the hooks system, we just hit the filesystem
    * directly. */
@@ -534,8 +552,8 @@ SVNRepos::verify(File &path, Revision &revisionStart, Revision &revisionEnd,
 
   /* This whole process is basically just a dump of the repository
    * with no interest in the output. */
-  SVN_JNI_ERR(svn_repos_open(&repos, path.getInternalStyle(requestPool),
-                             requestPool.pool()), );
+  SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
+                              NULL, requestPool.pool()), );
   SVN_JNI_ERR(svn_fs_youngest_rev(&youngest, svn_repos_fs (repos),
                                   requestPool.pool()), );
 
@@ -566,7 +584,7 @@ SVNRepos::verify(File &path, Revision &revisionStart, Revision &revisionEnd,
                                     ? ReposNotifyCallback::notify
                                     : NULL,
                                    notifyCallback,
-                                   NULL, NULL /* cancel callback/baton */,
+                                   checkCancel, this /* cancel callback/baton */,
                                    requestPool.pool()), );
 }
 
@@ -581,15 +599,15 @@ void SVNRepos::pack(File &path, ReposNotifyCallback *notifyCallback)
       return;
     }
 
-  SVN_JNI_ERR(svn_repos_open(&repos, path.getInternalStyle(requestPool),
-                             requestPool.pool()), );
+  SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
+                              NULL, requestPool.pool()), );
 
   SVN_JNI_ERR(svn_repos_fs_pack2(repos,
                                  notifyCallback != NULL
                                     ? ReposNotifyCallback::notify
                                     : NULL,
                                  notifyCallback,
-                                 NULL, NULL,
+                                 checkCancel, this,
                                  requestPool.pool()),
               );
 }
@@ -626,15 +644,15 @@ jobject SVNRepos::lslocks(File &path, svn_depth_t depth)
       return NULL;
     }
 
-  SVN_JNI_ERR(svn_repos_open(&repos, path.getInternalStyle(requestPool),
-                             requestPool.pool()), NULL);
+  SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
+                              NULL, requestPool.pool()), NULL);
   /* Fetch all locks on or below the root directory. */
   SVN_JNI_ERR(svn_repos_fs_get_locks2(&locks, repos, "/", depth, NULL, NULL,
                                       requestPool.pool()),
               NULL);
 
   JNIEnv *env = JNIUtil::getEnv();
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/Lock");
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/Lock");
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
@@ -671,8 +689,8 @@ void SVNRepos::rmlocks(File &path, StringArray &locks)
       return;
     }
 
-  SVN_JNI_ERR(svn_repos_open(&repos, path.getInternalStyle(requestPool),
-                             requestPool.pool()), );
+  SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
+                              NULL, requestPool.pool()), );
   fs = svn_repos_fs (repos);
   const char *username;
 

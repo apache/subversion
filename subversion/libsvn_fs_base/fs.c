@@ -486,7 +486,6 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__set_uuid,
   svn_fs_base__revision_root,
   svn_fs_base__begin_txn,
-  svn_fs_base__begin_obliteration_txn,
   svn_fs_base__open_txn,
   svn_fs_base__purge_txn,
   svn_fs_base__list_transactions,
@@ -1275,7 +1274,7 @@ base_hotcopy(const char *src_path,
                    "the problem persists, try deactivating this feature\n"
                    "in DB_CONFIG"));
             else
-              return svn_error_return(err);
+              return svn_error_trace(err);
           }
       }
     svn_pool_destroy(subpool);
@@ -1294,7 +1293,7 @@ base_hotcopy(const char *src_path,
              "hotcopy algorithm.  If the problem persists, try deactivating\n"
              "this feature in DB_CONFIG"));
       else
-        return svn_error_return(err);
+        return svn_error_trace(err);
     }
 
   /* Only now that the hotcopied filesystem is complete,

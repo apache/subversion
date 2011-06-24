@@ -91,7 +91,7 @@ public class Lock implements java.io.Serializable
         this.expirationDate = expirationDate;
     }
 
-    Lock(org.apache.subversion.javahl.Lock aLock)
+    Lock(org.apache.subversion.javahl.types.Lock aLock)
     {
         this(aLock.getOwner(), aLock.getPath(), aLock.getToken(),
              aLock.getComment(),

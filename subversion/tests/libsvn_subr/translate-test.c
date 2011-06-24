@@ -237,7 +237,7 @@ create_file(const char *fname, const char *eol_str, apr_pool_t *pool)
     {
       const char *this_eol_str = eol_str ? eol_str : random_eol_marker();
 
-      apr_err = apr_file_printf(f, "%s", lines[i]);
+      apr_file_printf(f, "%s", lines[i]);
 
       /* Is it overly paranoid to use putc(), because of worry about
          fprintf() doing a newline conversion? */

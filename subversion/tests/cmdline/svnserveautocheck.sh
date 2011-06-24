@@ -39,6 +39,10 @@ set +e
 
 trap trap_cleanup SIGHUP SIGTERM SIGINT
 
+# Ensure the server uses a known locale.
+LC_ALL=C
+export LC_ALL
+
 function really_cleanup() {
     if [ -e  "$SVNSERVE_PID" ]; then
         kill $(cat "$SVNSERVE_PID")
@@ -85,10 +89,15 @@ while netstat -an | grep $SVNSERVE_PORT | grep 'LISTEN'; do
   SVNSERVE_PORT=$(($RANDOM+1024))
 done
 
+if [ "$THREADED" != "" ]; then
+  SVNSERVE_ARGS="-T"
+fi
+
 "$SERVER_CMD" -d -r "$ABS_BUILDDIR/subversion/tests/cmdline" \
             --listen-host 127.0.0.1 \
             --listen-port $SVNSERVE_PORT \
-            --pid-file $SVNSERVE_PID &
+            --pid-file $SVNSERVE_PID \
+            $SVNSERVE_ARGS &
 
 BASE_URL=svn://127.0.0.1:$SVNSERVE_PORT
 if [ $# == 0 ]; then

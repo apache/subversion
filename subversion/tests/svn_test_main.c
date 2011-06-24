@@ -26,9 +26,12 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <setjmp.h>
 
 #include <apr_pools.h>
 #include <apr_general.h>
+#include <apr_signal.h>
+#include <apr_env.h>
 
 #include "svn_cmdline.h"
 #include "svn_opt.h"
@@ -63,6 +66,13 @@ static svn_boolean_t quiet_mode = FALSE;
 /* Test option: Remove test directories after success */
 static svn_boolean_t cleanup_mode = FALSE;
 
+/* Test option: Allow segfaults */
+static svn_boolean_t allow_segfaults = FALSE;
+
+/* Test option: Limit testing to a given mode (i.e. XFail, Skip,
+   Pass, All). */
+enum svn_test_mode_t mode_filter = svn_test_all;
+
 /* Option parsing enums and structures */
 enum {
   cleanup_opt = SVN_OPT_FIRST_LONGOPT_ID,
@@ -72,7 +82,10 @@ enum {
   trap_assert_opt,
   quiet_opt,
   config_opt,
-  server_minor_version_opt
+  server_minor_version_opt,
+  allow_segfault_opt,
+  srcdir_opt,
+  mode_filter_opt
 };
 
 static const apr_getopt_option_t cl_options[] =
@@ -85,6 +98,9 @@ static const apr_getopt_option_t cl_options[] =
                     N_("specify a filesystem backend type ARG")},
   {"list",          list_opt, 0,
                     N_("lists all the tests with their short description")},
+  {"mode-filter",   mode_filter_opt, 1,
+                    N_("only run/list tests with expected mode ARG = PASS, "
+                       "XFAIL, SKIP, or ALL (default)\n")},
   {"verbose",       verbose_opt, 0,
                     N_("print extra information")},
   {"server-minor-version", server_minor_version_opt, 1,
@@ -94,6 +110,10 @@ static const apr_getopt_option_t cl_options[] =
                     N_("catch and report SVN_ERR_ASSERT failures")},
   {"quiet",         quiet_opt, 0,
                     N_("print only unexpected results")},
+  {"allow-segfaults", allow_segfault_opt, 0,
+                    N_("don't trap seg faults (useful for debugging)")},
+  {"srcdir",        srcdir_opt, 1,
+                    N_("source directory")},
   {0,               0, 0, 0}
 };
 
@@ -175,15 +195,28 @@ get_array_size(void)
   return (i - 1);
 }
 
+/* Buffer used for setjmp/longjmp. */
+static jmp_buf jump_buffer;
+
+/* Our SIGSEGV handler, which jumps back into do_test_num(), which see for
+   more information. */
+static void
+crash_handler(int signum)
+{
+  longjmp(jump_buffer, 1);
+}
 
 
 /* Execute a test number TEST_NUM.  Pretty-print test name and dots
-   according to our test-suite spec, and return the result code. */
+   according to our test-suite spec, and return the result code.
+   If HEADER_MSG and *HEADER_MSG are not NULL, print *HEADER_MSG prior
+   to pretty-printing the test information, then set *HEADER_MSG to NULL. */
 static svn_boolean_t
 do_test_num(const char *progname,
             int test_num,
             svn_boolean_t msg_only,
             svn_test_opts_t *opts,
+            const char **header_msg,
             apr_pool_t *pool)
 {
   svn_boolean_t skip, xfail, wimp;
@@ -192,12 +225,15 @@ do_test_num(const char *progname,
   const char *msg = NULL;  /* the message this individual test prints out */
   const struct svn_test_descriptor_t *desc;
   const int array_size = get_array_size();
+  svn_boolean_t run_this_test; /* This test's mode matches DESC->MODE. */
 
   /* Check our array bounds! */
   if (test_num < 0)
     test_num += array_size + 1;
   if ((test_num > array_size) || (test_num <= 0))
     {
+      if (header_msg && *header_msg)
+        printf("%s", *header_msg);
       printf("FAIL: %s: THERE IS NO TEST NUMBER %2d\n", progname, test_num);
       skip_cleanup = TRUE;
       return TRUE;  /* BAIL, this test number doesn't exist. */
@@ -207,21 +243,53 @@ do_test_num(const char *progname,
   skip = desc->mode == svn_test_skip;
   xfail = desc->mode == svn_test_xfail;
   wimp = xfail && desc->wip;
-
-  /* Do test */
   msg = desc->msg;
-  if (msg_only || skip)
-    ; /* pass */
-  else if (desc->func2)
-    err = (*desc->func2)(pool);
-  else
-    err = (*desc->func_opts)(opts, pool);
+  run_this_test = mode_filter == svn_test_all || mode_filter == desc->mode;
 
-  if (err && err->apr_err == SVN_ERR_TEST_SKIPPED)
+  if (run_this_test && header_msg && *header_msg)
     {
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-      skip = TRUE;
+      printf("%s", *header_msg);
+      *header_msg = NULL;
+    }
+
+  if (!allow_segfaults)
+    {
+      /* Catch a crashing test, so we don't interrupt the rest of 'em. */
+      apr_signal(SIGSEGV, crash_handler);
+    }
+
+  /* We use setjmp/longjmp to recover from the crash.  setjmp() essentially
+     establishes a rollback point, and longjmp() goes back to that point.
+     When we invoke longjmp(), it instructs setjmp() to return non-zero,
+     so we don't end up in an infinite loop.
+
+     If we've got non-zero from setjmp(), we know we've crashed. */
+  if (setjmp(jump_buffer) == 0)
+    {
+      /* Do test */
+      if (msg_only || skip || !run_this_test)
+        ; /* pass */
+      else if (desc->func2)
+        err = (*desc->func2)(pool);
+      else
+        err = (*desc->func_opts)(opts, pool);
+
+      if (err && err->apr_err == SVN_ERR_TEST_SKIPPED)
+        {
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+          skip = TRUE;
+        }
+    }
+  else
+    err = svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                           "Test crashed "
+                           "(run in debugger with '--allow-segfaults')");
+
+  if (!allow_segfaults)
+    {
+      /* Now back to your regularly scheduled program... */
+      apr_signal(SIGSEGV, SIG_DFL);
     }
 
   /* Failure means unexpected results -- FAIL or XPASS. */
@@ -236,15 +304,16 @@ do_test_num(const char *progname,
 
   if (msg_only)
     {
-      printf(" %2d     %-5s  %s%s%s%s\n",
-             test_num,
-             (xfail ? "XFAIL" : (skip ? "SKIP" : "")),
-             msg ? msg : "(test did not provide name)",
-             (wimp && verbose_mode) ? " [[" : "",
-             (wimp && verbose_mode) ? desc->wip : "",
-             (wimp && verbose_mode) ? "]]" : "");
+      if (run_this_test)
+        printf(" %3d    %-5s  %s%s%s%s\n",
+               test_num,
+               (xfail ? "XFAIL" : (skip ? "SKIP" : "")),
+               msg ? msg : "(test did not provide name)",
+               (wimp && verbose_mode) ? " [[" : "",
+               (wimp && verbose_mode) ? desc->wip : "",
+               (wimp && verbose_mode) ? "]]" : "");
     }
-  else if ((! quiet_mode) || test_failed)
+  else if (run_this_test && ((! quiet_mode) || test_failed))
     {
       printf("%s %s %d: %s%s%s%s\n",
              (err
@@ -260,7 +329,7 @@ do_test_num(const char *progname,
 
   if (msg)
     {
-      int len = strlen(msg);
+      size_t len = strlen(msg);
       if (len > 50)
         printf("WARNING: Test docstring exceeds 50 characters\n");
       if (msg[len - 1] == '.')
@@ -270,6 +339,8 @@ do_test_num(const char *progname,
     }
   if (desc->msg == NULL)
     printf("WARNING: New-style test descriptor is missing a docstring.\n");
+
+  fflush(stdout);
 
   skip_cleanup = test_failed;
 
@@ -284,6 +355,7 @@ main(int argc, const char *argv[])
   const char *prog_name;
   int i;
   svn_boolean_t got_error = FALSE;
+  apr_allocator_t *allocator;
   apr_pool_t *pool, *test_pool;
   svn_boolean_t ran_a_test = FALSE;
   svn_boolean_t list_mode = FALSE;
@@ -306,14 +378,24 @@ main(int argc, const char *argv[])
       exit(1);
     }
 
-  /* set up the global pool */
-  pool = svn_pool_create(NULL);
+  /* set up the global pool.  Use a separate mutexless allocator,
+   * given this application is single threaded.
+   */
+  if (apr_allocator_create(&allocator))
+    return EXIT_FAILURE;
+
+  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
+
+  pool = svn_pool_create_ex(NULL, allocator);
+  apr_allocator_owner_set(allocator, pool);
 
   /* Remember the command line */
   test_argc = argc;
   test_argv = argv;
 
   err = svn_cmdline__getopt_init(&os, argc, argv, pool);
+
+  os->interleave = TRUE; /* Let options and arguments be interleaved */
 
   /* Strip off any leading path components from the program name.  */
   prog_name = strrchr(argv[0], '/');
@@ -361,6 +443,22 @@ main(int argc, const char *argv[])
         case list_opt:
           list_mode = TRUE;
           break;
+        case mode_filter_opt:
+          if (svn_cstring_casecmp(opt_arg, "PASS") == 0)
+            mode_filter = svn_test_pass;
+          else if (svn_cstring_casecmp(opt_arg, "XFAIL") == 0)
+            mode_filter = svn_test_xfail;
+          else if (svn_cstring_casecmp(opt_arg, "SKIP") == 0)
+            mode_filter = svn_test_skip;
+          else if (svn_cstring_casecmp(opt_arg, "ALL") == 0)
+            mode_filter = svn_test_all;
+          else
+            {
+              fprintf(stderr, "FAIL: Invalid --mode-filter option.  Try ");
+              fprintf(stderr, " PASS, XFAIL, SKIP or ALL.\n");
+              exit(1);
+            }
+          break;
         case verbose_opt:
           verbose_mode = TRUE;
           break;
@@ -369,6 +467,9 @@ main(int argc, const char *argv[])
           break;
         case quiet_opt:
           quiet_mode = TRUE;
+          break;
+        case allow_segfault_opt:
+          allow_segfaults = TRUE;
           break;
         case server_minor_version_opt:
           {
@@ -389,6 +490,11 @@ main(int argc, const char *argv[])
       }
     }
 
+  /* Disable sleeping for timestamps, to speed up the tests. */
+  apr_env_set(
+         "SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS",
+         "yes", pool);
+
   /* You can't be both quiet and verbose. */
   if (quiet_mode && verbose_mode)
     {
@@ -407,15 +513,16 @@ main(int argc, const char *argv[])
     {
       if (! strcmp(argv[1], "list") || list_mode)
         {
+          const char *header_msg;
           ran_a_test = TRUE;
 
           /* run all tests with MSG_ONLY set to TRUE */
-
-          printf("Test #  Mode   Test Description\n"
-                 "------  -----  ----------------\n");
+          header_msg = "Test #  Mode   Test Description\n"
+                       "------  -----  ----------------\n";
           for (i = 1; i <= array_size; i++)
             {
-              if (do_test_num(prog_name, i, TRUE, &opts, test_pool))
+              if (do_test_num(prog_name, i, TRUE, &opts, &header_msg,
+                              test_pool))
                 got_error = TRUE;
 
               /* Clear the per-function pool */
@@ -435,7 +542,8 @@ main(int argc, const char *argv[])
                     continue;
 
                   ran_a_test = TRUE;
-                  if (do_test_num(prog_name, test_num, FALSE, &opts, test_pool))
+                  if (do_test_num(prog_name, test_num, FALSE, &opts, NULL,
+                                  test_pool))
                     got_error = TRUE;
 
                   /* Clear the per-function pool */
@@ -451,7 +559,7 @@ main(int argc, const char *argv[])
       /* just run all tests */
       for (i = 1; i <= array_size; i++)
         {
-          if (do_test_num(prog_name, i, FALSE, &opts, test_pool))
+          if (do_test_num(prog_name, i, FALSE, &opts, NULL, test_pool))
             got_error = TRUE;
 
           /* Clear the per-function pool */

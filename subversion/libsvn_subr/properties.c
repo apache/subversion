@@ -72,14 +72,14 @@ svn_property_kind(int *prefix_len,
   if (strncmp(prop_name, SVN_PROP_WC_PREFIX, wc_prefix_len) == 0)
     {
       if (prefix_len)
-        *prefix_len = wc_prefix_len;
+        *prefix_len = (int) wc_prefix_len;
       return svn_prop_wc_kind;
     }
 
   if (strncmp(prop_name, SVN_PROP_ENTRY_PREFIX, entry_prefix_len) == 0)
     {
       if (prefix_len)
-        *prefix_len = entry_prefix_len;
+        *prefix_len = (int) entry_prefix_len;
       return svn_prop_entry_kind;
     }
 
@@ -221,6 +221,21 @@ svn_prop_diffs(apr_array_header_t **propdiffs,
   return SVN_NO_ERROR;
 }
 
+apr_hash_t *
+svn_prop_array_to_hash(const apr_array_header_t *properties,
+                       apr_pool_t *pool)
+{
+  int i;
+  apr_hash_t *prop_hash = apr_hash_make(pool);
+
+  for (i = 0; i < properties->nelts; i++)
+    {
+      const svn_prop_t *prop = &APR_ARRAY_IDX(properties, i, svn_prop_t);
+      apr_hash_set(prop_hash, prop->name, APR_HASH_KEY_STRING, prop->value);
+    }
+
+  return prop_hash;
+}
 
 svn_boolean_t
 svn_prop_is_boolean(const char *prop_name)

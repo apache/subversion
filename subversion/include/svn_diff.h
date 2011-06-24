@@ -54,7 +54,6 @@
 
 #include "svn_types.h"
 #include "svn_io.h"       /* for svn_stream_t */
-#include "svn_version.h"
 #include "svn_string.h"
 
 #ifdef __cplusplus
@@ -105,12 +104,16 @@ typedef enum svn_diff_datasource_e
 } svn_diff_datasource_e;
 
 
-/** A vtable for reading data from the three datasources. */
-typedef struct svn_diff_fns_t
+/** A vtable for reading data from the three datasources.
+ * @since New in 1.7. */
+typedef struct svn_diff_fns2_t
 {
-  /** Open the datasource of type @a datasource. */
-  svn_error_t *(*datasource_open)(void *diff_baton,
-                                  svn_diff_datasource_e datasource);
+  /** Open the datasources of type @a datasources. */
+  svn_error_t *(*datasources_open)(void *diff_baton,
+                                   apr_off_t *prefix_lines,
+                                   apr_off_t *suffix_lines,
+                                   const svn_diff_datasource_e *datasources,
+                                   apr_size_t datasources_len);
 
   /** Close the datasource of type @a datasource. */
   svn_error_t *(*datasource_close)(void *diff_baton,
@@ -141,6 +144,35 @@ typedef struct svn_diff_fns_t
 
   /** Free *all* tokens from memory, they're no longer needed. */
   void (*token_discard_all)(void *diff_baton);
+} svn_diff_fns2_t;
+
+
+/** Like #svn_diff_fns2_t except with datasource_open() instead of
+ * datasources_open().
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+typedef struct svn_diff_fns_t
+{
+  svn_error_t *(*datasource_open)(void *diff_baton,
+                                  svn_diff_datasource_e datasource);
+
+  svn_error_t *(*datasource_close)(void *diff_baton,
+                                   svn_diff_datasource_e datasource);
+
+  svn_error_t *(*datasource_get_next_token)(apr_uint32_t *hash, void **token,
+                                            void *diff_baton,
+                                            svn_diff_datasource_e datasource);
+
+  svn_error_t *(*token_compare)(void *diff_baton,
+                                void *ltoken,
+                                void *rtoken,
+                                int *compare);
+
+  void (*token_discard)(void *diff_baton,
+                        void *token);
+
+  void (*token_discard_all)(void *diff_baton);
 } svn_diff_fns_t;
 
 
@@ -149,7 +181,21 @@ typedef struct svn_diff_fns_t
 /** Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
  * return a diff object in @a *diff that represents a difference between
  * an "original" and "modified" datasource.  Do all allocation in @a pool.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_diff_diff_2(svn_diff_t **diff,
+                void *diff_baton,
+                const svn_diff_fns2_t *diff_fns,
+                apr_pool_t *pool);
+
+/** Like svn_diff_diff_2() but using #svn_diff_fns_t instead of
+ * #svn_diff_fns2_t.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_diff(svn_diff_t **diff,
               void *diff_baton,
@@ -160,7 +206,21 @@ svn_diff_diff(svn_diff_t **diff,
  * return a diff object in @a *diff that represents a difference between
  * three datasources: "original", "modified", and "latest".  Do all
  * allocation in @a pool.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_diff_diff3_2(svn_diff_t **diff,
+                 void *diff_baton,
+                 const svn_diff_fns2_t *diff_fns,
+                 apr_pool_t *pool);
+
+/** Like svn_diff_diff3_2() but using #svn_diff_fns_t instead of
+ * #svn_diff_fns2_t.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_diff3(svn_diff_t **diff,
                void *diff_baton,
@@ -172,7 +232,21 @@ svn_diff_diff3(svn_diff_t **diff,
  * two datasources: "original" and "latest", adjusted to become a full
  * difference between "original", "modified" and "latest" using "ancestor".
  * Do all allocation in @a pool.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_diff_diff4_2(svn_diff_t **diff,
+                 void *diff_baton,
+                 const svn_diff_fns2_t *diff_fns,
+                 apr_pool_t *pool);
+
+/** Like svn_diff_diff4_2() but using #svn_diff_fns_t instead of
+ * #svn_diff_fns2_t.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_diff4(svn_diff_t **diff,
                void *diff_baton,
@@ -490,7 +564,7 @@ svn_diff_file_diff4_2(svn_diff_t **diff,
                       const svn_diff_file_options_t *options,
                       apr_pool_t *pool);
 
-/** Simliar to svn_file_diff4_2(), but with @a options set to a struct with
+/** Similar to svn_file_diff4_2(), but with @a options set to a struct with
  * default options.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
@@ -639,7 +713,7 @@ svn_diff_mem_string_diff(svn_diff_t **diff,
                          apr_pool_t *pool);
 
 
-/** Generate @a diff output from the @a orginal, @a modified and @a latest
+/** Generate @a diff output from the @a original, @a modified and @a latest
  * in-memory strings.  @a diff will be allocated in @a pool.
  *
  * @since New in 1.5.
@@ -784,7 +858,7 @@ typedef enum svn_diff_operation_kind_e
   svn_diff_op_moved,
   /* There's no tree changes, just text modifications. */
   svn_diff_op_modified
-}svn_diff_operation_kind_t;
+} svn_diff_operation_kind_t;
 
 /**
  * A single hunk inside a patch.
@@ -837,14 +911,14 @@ typedef struct svn_diff_hunk_t svn_diff_hunk_t;
  * text will be returned in reversed form.
  * The line-terminator is detected automatically and stored in @a *eol
  * if @a eol is not NULL.
- * If EOF is reached and the stream does not end with a newline character,
- * and @a eol is not NULL, @a *eol is set to NULL.
+ * If EOF is reached, set @a *eof to TRUE, and set @a *eol to NULL if the
+ * hunk does not end with a newline character and @a eol is not NULL.
  * Temporary allocations will be performed in @a scratch_pool.
  *
  * @since New in 1.7.
  */
 svn_error_t *
-svn_diff_hunk_readline_diff_text(const svn_diff_hunk_t *hunk,
+svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
                                  svn_stringbuf_t **stringbuf,
                                  const char **eol,
                                  svn_boolean_t *eof,
@@ -856,15 +930,15 @@ svn_diff_hunk_readline_diff_text(const svn_diff_hunk_t *hunk,
  * of the original text of @a hunk.
  * The line-terminator is detected automatically and stored in @a *eol
  * if @a eol is not NULL.
- * If EOF is reached and the stream does not end with a newline character,
- * and @a eol is not NULL, @a *eol is set to NULL.
+ * If EOF is reached, set @a *eof to TRUE, and set @a *eol to NULL if the
+ * hunk text does not end with a newline character and @a eol is not NULL.
  * Temporary allocations will be performed in @a scratch_pool.
  *
  * @see svn_diff_hunk_t
  * @since New in 1.7.
  */
 svn_error_t *
-svn_diff_hunk_readline_original_text(const svn_diff_hunk_t *hunk,
+svn_diff_hunk_readline_original_text(svn_diff_hunk_t *hunk,
                                      svn_stringbuf_t **stringbuf,
                                      const char **eol,
                                      svn_boolean_t *eof,
@@ -879,7 +953,7 @@ svn_diff_hunk_readline_original_text(const svn_diff_hunk_t *hunk,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_diff_hunk_readline_modified_text(const svn_diff_hunk_t *hunk,
+svn_diff_hunk_readline_modified_text(svn_diff_hunk_t *hunk,
                                      svn_stringbuf_t **stringbuf,
                                      const char **eol,
                                      svn_boolean_t *eof,
@@ -888,18 +962,18 @@ svn_diff_hunk_readline_modified_text(const svn_diff_hunk_t *hunk,
 
 /** Reset the diff text of @a hunk so it can be read again from the start.
  * @since New in 1.7. */
-svn_error_t *
-svn_diff_hunk_reset_diff_text(const svn_diff_hunk_t *hunk);
+void
+svn_diff_hunk_reset_diff_text(svn_diff_hunk_t *hunk);
 
 /** Reset the original text of @a hunk so it can be read again from the start.
  * @since New in 1.7. */
-svn_error_t *
-svn_diff_hunk_reset_original_text(const svn_diff_hunk_t *hunk);
+void
+svn_diff_hunk_reset_original_text(svn_diff_hunk_t *hunk);
 
 /** Reset the modified text of @a hunk so it can be read again from the start.
  * @since New in 1.7. */
-svn_error_t *
-svn_diff_hunk_reset_modified_text(const svn_diff_hunk_t *hunk);
+void
+svn_diff_hunk_reset_modified_text(svn_diff_hunk_t *hunk);
 
 /** Return the line offset of the original hunk text,
  * as parsed from the hunk header.
@@ -941,7 +1015,8 @@ svn_diff_hunk_get_trailing_context(const svn_diff_hunk_t *hunk);
 
 /**
  * Data type to manage parsing of properties in patches.
- * 
+ * API users should not allocate structures of this type directly.
+ *
  * @since New in 1.7. */
 typedef struct svn_prop_patch_t {
   const char *name;
@@ -957,15 +1032,10 @@ typedef struct svn_prop_patch_t {
 
 /**
  * Data type to manage parsing of patches.
+ * API users should not allocate structures of this type directly.
  *
  * @since New in 1.7. */
 typedef struct svn_patch_t {
-  /** Path to the patch file. */
-  const char *path;
-
-  /** The patch file itself. */
-  apr_file_t *patch_file;
-
   /**
    * The old and new file names as retrieved from the patch file.
    * These paths are UTF-8 encoded and canonicalized, but otherwise
@@ -992,6 +1062,20 @@ typedef struct svn_patch_t {
   svn_boolean_t reverse;
 } svn_patch_t;
 
+/* An opaque type representing an open patch file.
+ *
+ * @since New in 1.7. */
+typedef struct svn_patch_file_t svn_patch_file_t;
+
+/* Open @a patch_file at @a local_abspath.
+ * Allocate @a patch_file in @a result_pool.
+ *
+ * @since New in 1.7. */
+svn_error_t *
+svn_diff_open_patch_file(svn_patch_file_t **patch_file,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool);
+
 /**
  * Return the next @a *patch in @a patch_file.
  * If no patch can be found, set @a *patch to NULL.
@@ -1000,24 +1084,25 @@ typedef struct svn_patch_t {
  * whitespace to be parsed.
  * Allocate results in @a result_pool.
  * Use @a scratch_pool for all other allocations.
- * 
+ *
  * @since New in 1.7. */
 svn_error_t *
 svn_diff_parse_next_patch(svn_patch_t **patch,
-                          apr_file_t *patch_file,
+                          svn_patch_file_t *patch_file,
                           svn_boolean_t reverse,
                           svn_boolean_t ignore_whitespace,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
 /**
- * Dispose of @a patch, closing any streams used by it.
+ * Dispose of @a patch_file.
  * Use @a scratch_pool for all temporary allocations.
  *
  * @since New in 1.7.
  */
 svn_error_t *
-svn_diff_close_patch(const svn_patch_t *patch, apr_pool_t *scratch_pool);
+svn_diff_close_patch_file(svn_patch_file_t *patch_file,
+                          apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

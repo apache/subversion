@@ -28,6 +28,8 @@
 
 import sys, os
 import getopt
+import shlex
+
 try:
   # Python >=3.0
   from subprocess import getstatusoutput as subprocess_getstatusoutput
@@ -129,7 +131,7 @@ class Permission:
     def parse_groups(self, groupsiter):
         for option, value in groupsiter:
             groupusers = []
-            for token in value.split():
+            for token in shlex.split(value):
                 # expand nested groups in place; no forward decls
                 if token[0] == "@":
                     try:

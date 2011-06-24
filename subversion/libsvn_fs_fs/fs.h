@@ -242,6 +242,19 @@ typedef struct fs_fs_data_t
      pack files. */
   svn_cache__t *packed_offset_cache;
 
+  /* Cache for txdelta_window_t objects; the key is (revFilePath, offset) */
+  svn_cache__t *txdelta_window_cache;
+
+  /* Cache for node_revision_t objects; the key is (revision, id offset) */
+  svn_cache__t *node_revision_cache;
+
+  /* If set, there are or have been more than one concurrent transaction */
+  svn_boolean_t concurrent_transactions;
+
+  /* Tempoary cache for changed directories yet to be committed; maps from
+     unparsed FS ID to ###x.  NULL outside transactions. */
+  svn_cache__t *txn_dir_cache;
+
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
 
@@ -317,7 +330,8 @@ typedef struct representation_t
      file. */
   svn_filesize_t size;
 
-  /* The size of the fulltext of the representation. */
+  /* The size of the fulltext of the representation. If this is 0,
+   * the fulltext size is equal to representation size in the rev file, */
   svn_filesize_t expanded_size;
 
   /* Is this representation a transaction? */

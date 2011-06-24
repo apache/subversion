@@ -27,6 +27,7 @@
 #include "svn_repos.h"
 #include "svn_opt.h"
 #include "svn_utf.h"
+#include "svn_version.h"
 
 #include "../../subversion/libsvn_fs_fs/fs.h"
 #include "../../subversion/libsvn_fs_fs/fs_fs.h"
@@ -92,7 +93,7 @@ check_lib_versions(void)
     };
 
   SVN_VERSION_DEFINE(my_version);
-  return svn_error_return(svn_ver_check_list(&my_version, checklist));
+  return svn_error_trace(svn_ver_check_list(&my_version, checklist));
 }
 
 

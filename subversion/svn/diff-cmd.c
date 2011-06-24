@@ -93,11 +93,18 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
 
   /* Tack on the target path, so we can differentiate between different parts
    * of the output when we're given multiple targets. */
-  path = svn_cl__path_join(path, summary->path, pool);
+  if (svn_path_is_url(path))
+    {
+      path = svn_path_url_add_component2(path, summary->path, pool);
+    }
+  else
+    {
+      path = svn_dirent_join(path, summary->path, pool);
 
-  /* Convert non-urls to local style, so that things like "" show up as "." */
-  if (! svn_path_is_url(path))
-    path = svn_dirent_local_style(path, pool);
+      /* Convert non-urls to local style, so that things like ""
+         show up as "." */
+      path = svn_dirent_local_style(path, pool);
+    }
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
                         "kind", svn_cl__node_kind_str_xml(summary->node_kind),
@@ -122,11 +129,18 @@ summarize_regular(const svn_client_diff_summarize_t *summary,
 
   /* Tack on the target path, so we can differentiate between different parts
    * of the output when we're given multiple targets. */
-  path = svn_uri_join(path, summary->path, pool);
+  if (svn_path_is_url(path))
+    {
+      path = svn_path_url_add_component2(path, summary->path, pool);
+    }
+  else
+    {
+      path = svn_dirent_join(path, summary->path, pool);
 
-  /* Convert non-urls to local style, so that things like "" show up as "." */
-  if (! svn_path_is_url(path))
-    path = svn_dirent_local_style(path, pool);
+      /* Convert non-urls to local style, so that things like ""
+         show up as "." */
+      path = svn_dirent_local_style(path, pool);
+    }
 
   /* Note: This output format tries to look like the output of 'svn status',
    *       thus the blank spaces where information that is not relevant to
@@ -192,7 +206,7 @@ svn_cl__diff(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   if (! opt_state->old_target && ! opt_state->new_target
       && (targets->nelts == 2)
@@ -232,7 +246,7 @@ svn_cl__diff(apr_getopt_t *os,
                                                            const char *));
 
       SVN_ERR(svn_cl__args_to_target_array_print_reserved(&tmp2, os, tmp,
-                                                          ctx, pool));
+                                                          ctx, FALSE, pool));
       SVN_ERR(svn_opt_parse_path(&old_rev, &old_target,
                                  APR_ARRAY_IDX(tmp2, 0, const char *),
                                  pool));
@@ -260,7 +274,7 @@ svn_cl__diff(apr_getopt_t *os,
     }
   else
     {
-      svn_boolean_t working_copy_present = FALSE, url_present = FALSE;
+      svn_boolean_t working_copy_present;
 
       /* The 'svn diff [-r N[:M]] [TARGET[@REV]...]' case matches. */
 
@@ -272,25 +286,14 @@ svn_cl__diff(apr_getopt_t *os,
       old_target = "";
       new_target = "";
 
-      /* Check to see if at least one of our paths is a working copy
-         path. */
-      for (i = 0; i < targets->nelts; ++i)
-        {
-          const char *path = APR_ARRAY_IDX(targets, i, const char *);
-          if (! svn_path_is_url(path))
-            working_copy_present = TRUE;
-          else
-            url_present = TRUE;
-        }
+      SVN_ERR(svn_cl__assert_homogeneous_target_type(targets));
 
-      if (url_present && working_copy_present)
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                  _("Cannot mix repository and working copy "
-                                    "targets"));
+      working_copy_present = ! svn_path_is_url(APR_ARRAY_IDX(targets, 0,
+                                                             const char *));
 
       if (opt_state->start_revision.kind == svn_opt_revision_unspecified
           && working_copy_present)
-          opt_state->start_revision.kind = svn_opt_revision_base;
+        opt_state->start_revision.kind = svn_opt_revision_base;
       if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
         opt_state->end_revision.kind = working_copy_present
           ? svn_opt_revision_working : svn_opt_revision_head;
@@ -322,8 +325,21 @@ svn_cl__diff(apr_getopt_t *os,
                                      _("Path '%s' not relative to base URLs"),
                                      path);
 
-          target1 = svn_cl__path_join(old_target, path, iterpool);
-          target2 = svn_cl__path_join(new_target, path, iterpool);
+          if (svn_path_is_url(old_target))
+            target1 = svn_path_url_add_component2(
+                          old_target,
+                          svn_relpath_canonicalize(path, iterpool),
+                          iterpool);
+          else
+            target1 = svn_dirent_join(old_target, path, iterpool);
+
+          if (svn_path_is_url(new_target))
+            target2 = svn_path_url_add_component2(
+                          new_target,
+                          svn_relpath_canonicalize(path, iterpool),
+                          iterpool);
+          else
+            target2 = svn_dirent_join(new_target, path, iterpool);
 
           if (opt_state->summarize)
             SVN_ERR(svn_client_diff_summarize2

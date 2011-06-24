@@ -29,6 +29,7 @@
 #include <apr_strings.h>
 #include <apr_lib.h>
 #include <apr_xlate.h>
+#include <apr_atomic.h>
 
 #include "svn_string.h"
 #include "svn_error.h"
@@ -39,12 +40,18 @@
 #include "win32_xlate.h"
 
 #include "private/svn_utf_private.h"
+#include "private/svn_dep_compat.h"
+#include "private/svn_string_private.h"
 
 
 
-#define SVN_UTF_NTOU_XLATE_HANDLE "svn-utf-ntou-xlate-handle"
-#define SVN_UTF_UTON_XLATE_HANDLE "svn-utf-uton-xlate-handle"
-#define SVN_APR_UTF8_CHARSET "UTF-8"
+/* Use these static strings to maximize performance on standard conversions.
+ * Any strings on other locations are still valid, however.
+ */
+static const char *SVN_UTF_NTOU_XLATE_HANDLE = "svn-utf-ntou-xlate-handle";
+static const char *SVN_UTF_UTON_XLATE_HANDLE = "svn-utf-uton-xlate-handle";
+
+static const char *SVN_APR_UTF8_CHARSET = "UTF-8";
 
 #if APR_HAS_THREADS
 static apr_thread_mutex_t *xlate_handle_mutex = NULL;
@@ -79,6 +86,13 @@ typedef struct xlate_handle_node_t {
    memory leak. */
 static apr_hash_t *xlate_handle_hash = NULL;
 
+/* "1st level cache" to standard conversion maps. We may access these
+ * using atomic xchange ops, i.e. without further thread synchronization.
+ * If the respective item is NULL, fallback to hash lookup.
+ */
+static volatile void *xlat_ntou_static_handle = NULL;
+static volatile void *xlat_uton_static_handle = NULL;
+
 /* Clean up the xlate handle cache. */
 static apr_status_t
 xlate_cleanup(void *arg)
@@ -90,6 +104,10 @@ xlate_cleanup(void *arg)
   xlate_handle_mutex = NULL;
 #endif
   xlate_handle_hash = NULL;
+
+  /* ensure no stale objects get accessed */
+  xlat_ntou_static_handle = NULL;
+  xlat_uton_static_handle = NULL;
 
   return APR_SUCCESS;
 }
@@ -158,6 +176,30 @@ get_xlate_key(const char *topage,
                      "-xlate-handle", (char *)NULL);
 }
 
+/* Atomically replace the content in *MEM with NEW_VALUE and return
+ * the previous content of *MEM. If atomicy cannot be guaranteed,
+ * *MEM will not be modified and NEW_VALUE is simply returned to
+ * the caller.
+ */
+static APR_INLINE void*
+atomic_swap(volatile void **mem, void *new_value)
+{
+#if APR_HAS_THREADS
+#if APR_VERSION_AT_LEAST(1,3,0)
+   return apr_atomic_xchgptr(mem, new_value);
+#else
+   /* old APRs don't support atomic swaps. Simply return the
+    * input to the caller for further proccessing. */
+   return new_value;
+#endif
+#else
+   /* no threads - no sync. necessary */
+   void *old_value = (void*)*mem;
+   *mem = new_value;
+   return old_value;
+#endif
+}
+
 /* Set *RET to a handle node for converting from FROMPAGE to TOPAGE,
    creating the handle node if it doesn't exist in USERDATA_KEY.
    If a node is not cached and apr_xlate_open() returns APR_EINVAL or
@@ -183,6 +225,19 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
     {
       if (xlate_handle_hash)
         {
+          /* 1st level: global, static items */
+          if (userdata_key == SVN_UTF_NTOU_XLATE_HANDLE)
+            old_node = atomic_swap(&xlat_ntou_static_handle, NULL);
+          else if (userdata_key == SVN_UTF_UTON_XLATE_HANDLE)
+            old_node = atomic_swap(&xlat_uton_static_handle, NULL);
+
+          if (old_node && old_node->valid)
+            {
+              *ret = old_node;
+              return SVN_NO_ERROR;
+            }
+
+          /* 2nd level: hash lookup */
 #if APR_HAS_THREADS
           apr_err = apr_thread_mutex_lock(xlate_handle_mutex);
           if (apr_err != APR_SUCCESS)
@@ -321,9 +376,20 @@ put_xlate_handle_node(xlate_handle_node_t *node,
   assert(node->next == NULL);
   if (!userdata_key)
     return;
+
+  /* push previous global node to the hash */
   if (xlate_handle_hash)
     {
       xlate_handle_node_t **node_p;
+
+      /* 1st level: global, static items */
+      if (userdata_key == SVN_UTF_NTOU_XLATE_HANDLE)
+        node = atomic_swap(&xlat_ntou_static_handle, node);
+      else if (userdata_key == SVN_UTF_UTON_XLATE_HANDLE)
+        node = atomic_swap(&xlat_uton_static_handle, node);
+      if (node == NULL)
+        return;
+
 #if APR_HAS_THREADS
       if (apr_thread_mutex_lock(xlate_handle_mutex) != APR_SUCCESS)
         SVN_ERR_MALFUNCTION_NO_RETURN();
@@ -577,7 +643,7 @@ invalid_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
 {
   const char *last = svn_utf__last_valid(data, len);
   const char *valid_txt = "", *invalid_txt = "";
-  int i;
+  apr_size_t i;
   size_t valid, invalid;
 
   /* We will display at most 24 valid octets (this may split a leading
@@ -675,7 +741,7 @@ svn_utf_string_to_utf8(const svn_string_t **dest,
       if (! err)
         err = check_utf8(destbuf->data, destbuf->len, pool);
       if (! err)
-        *dest = svn_string_create_from_buf(destbuf, pool);
+        *dest = svn_stringbuf__morph_into_string(destbuf);
     }
   else
     {
@@ -811,7 +877,7 @@ svn_utf_string_from_utf8(const svn_string_t **dest,
         err = convert_to_stringbuf(node, src->data, src->len,
                                    &dbuf, pool);
       if (! err)
-        *dest = svn_string_create_from_buf(dbuf, pool);
+        *dest = svn_stringbuf__morph_into_string(dbuf);
     }
   else
     {

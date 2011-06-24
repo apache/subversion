@@ -574,7 +574,7 @@ class Rep(object):
     if header == 'DELTA':
       line = f.readline()
       digest = None
-      
+
       # This should be the start of the svndiff stream
       actual_start = f.tell()
       try:
@@ -698,12 +698,12 @@ class NodeRev(object):
         length = int(values[2])
         size = int(values[3])
         digest = values[4]
-        
+
         if len(values) > 5:
             sha1 = values[5]
         else:
             sha1 = None
-        
+
         if len(values) > 6:
             uniquifier = values[6]
         else:
@@ -749,10 +749,10 @@ class NodeRev(object):
           offset = f.tell()
           f.seek(self.text.offset)
           self.dir = getDirHash(f)
-          
+
           for k,v in self.dir.items():
               nodeType, nodeId = v
-              
+
               if nodeId.rev != self.id.rev:
                   if not os.path.exists(str(nodeId.rev)):
                       print "Can't check %s" % repr(nodeId)
@@ -763,7 +763,7 @@ class NodeRev(object):
               else:
                   f.seek(nodeId.offset)
                   idLine = f.readline()
-              
+
               if idLine != ("id: %s\n" % nodeId):
                   raise DataCorrupt(
                      ("Entry for '%s' at " % k ) +

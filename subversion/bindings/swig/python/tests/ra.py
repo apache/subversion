@@ -28,7 +28,7 @@ if version_info[0] >= 3:
 else:
   # Python <3.0
   from StringIO import StringIO
-  
+
 import utils
 
 class SubversionRepositoryAccessTestCase(unittest.TestCase):
@@ -40,7 +40,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     ra.initialize()
     self.temper = utils.Temper()
     # Isolate each test from the others with a fresh repository.
-    
+
     # Open repository directly for cross-checking
     (self.repos, _, self.repos_uri) = self.temper.alloc_known_repo(
       'trac/versioncontrol/tests/svnrepos.dump', suffix='-ra')

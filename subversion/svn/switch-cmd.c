@@ -93,6 +93,7 @@ svn_cl__switch(apr_getopt_t *os,
                void *baton,
                apr_pool_t *scratch_pool)
 {
+  svn_error_t *err;
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
@@ -108,7 +109,8 @@ svn_cl__switch(apr_getopt_t *os,
      switch to ("switch_url"). */
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, scratch_pool));
+                                                      ctx, FALSE,
+                                                      scratch_pool));
 
   /* handle only-rewrite case specially */
   if (opt_state->relocate)
@@ -172,10 +174,23 @@ svn_cl__switch(apr_getopt_t *os,
   ctx->notify_baton2 = &nwb;
 
   /* Do the 'switch' update. */
-  SVN_ERR(svn_client_switch2(NULL, target, switch_url, &peg_revision,
-                             &(opt_state->start_revision), depth,
-                             depth_is_sticky, opt_state->ignore_externals,
-                             opt_state->force, ctx, scratch_pool));
+  err = svn_client_switch3(NULL, target, switch_url, &peg_revision,
+                           &(opt_state->start_revision), depth,
+                           depth_is_sticky, opt_state->ignore_externals,
+                           opt_state->force, opt_state->ignore_ancestry,
+                           ctx, scratch_pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
+        return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, err,
+                                 _("Path '%s' does not share common version "
+                                   "control ancestry with the requested switch "
+                                   "location.  Use --ignore-ancestry to "
+                                   "disable this check."),
+                                   svn_dirent_local_style(target,
+                                                          scratch_pool));
+      return err;
+    }
 
   if (! opt_state->quiet)
     SVN_ERR(svn_cl__print_conflict_stats(nwb.wrapped_baton, scratch_pool));

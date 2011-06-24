@@ -61,7 +61,7 @@ void
 StringArray::init(void)
 {
   const std::vector<jobject> &jobjects = Array::vector();
-  
+
   for (std::vector<jobject>::const_iterator it = jobjects.begin();
         it < jobjects.end(); ++it)
     {

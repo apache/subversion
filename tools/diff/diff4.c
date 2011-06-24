@@ -40,15 +40,13 @@ do_diff4(svn_stream_t *ostream,
 {
   svn_diff_t *diff;
 
-  SVN_ERR(svn_diff_file_diff4(&diff,
-                              original, modified, latest, ancestor,
-                              pool));
-  SVN_ERR(svn_diff_file_output_merge(ostream, diff,
-                                     original, modified, latest,
-                                     NULL, NULL, NULL, NULL,
-                                     FALSE,
-                                     FALSE,
-                                     pool));
+  SVN_ERR(svn_diff_file_diff4_2(&diff, original, modified, latest, ancestor,
+                                svn_diff_file_options_create(pool), pool));
+  SVN_ERR(svn_diff_file_output_merge2(ostream, diff,
+                                      original, modified, latest,
+                                      NULL, NULL, NULL, NULL,
+                                      svn_diff_conflict_display_modified_latest,
+                                      pool));
 
   return NULL;
 }

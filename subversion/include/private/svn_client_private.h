@@ -37,18 +37,27 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/** Obliterate the node at URL @a url in revision @a rev.
- *
- * Use the authentication baton stored in @a ctx for authentication.
+/** Return @c SVN_ERR_ILLEGAL_TARGET if TARGETS contains a mixture of
+ * URLs and paths; otherwise return SVN_NO_ERROR.
  *
  * @since New in 1.7.
  */
 svn_error_t *
-svn_client__obliterate_path_rev(const char *url,
-                                svn_revnum_t rev,
-                                svn_client_ctx_t *ctx,
-                                apr_pool_t *pool);
+svn_client__assert_homogeneous_target_type(const apr_array_header_t *targets);
 
+
+/* Create a svn_client_status_t structure *CST for LOCAL_ABSPATH, shallow
+ * copying data from *STATUS wherever possible and retrieving the other values
+ * where needed. Peform temporary allocations in SCRATCH_POOL and allocate the
+ * result in RESULT_POOL
+ */
+svn_error_t *
+svn_client__create_status(svn_client_status_t **cst,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          const svn_wc_status3_t *status,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

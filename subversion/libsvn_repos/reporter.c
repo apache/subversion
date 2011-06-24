@@ -33,6 +33,7 @@
 #include "repos.h"
 #include "svn_private_config.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_fspath.h"
 
 #define NUM_CACHED_SOURCE_ROOTS 4
 
@@ -101,8 +102,8 @@ typedef struct report_baton_t
 {
   /* Parameters remembered from svn_repos_begin_report2 */
   svn_repos_t *repos;
-  const char *fs_base;         /* FS path corresponding to wc anchor */
-  const char *s_operand;       /* Anchor-relative wc target (may be empty) */
+  const char *fs_base;         /* fspath corresponding to wc anchor */
+  const char *s_operand;       /* anchor-relative wc target (may be empty) */
   svn_revnum_t t_rev;          /* Revnum which the edit will bring the wc to */
   const char *t_path;          /* FS path the edit will bring the wc to */
   svn_boolean_t text_deltas;   /* Whether to report text deltas */
@@ -130,7 +131,7 @@ typedef struct report_baton_t
   svn_fs_root_t *t_root;
   svn_fs_root_t *s_roots[NUM_CACHED_SOURCE_ROOTS];
 
-  /* Cache for revision properties. This is used to eliminate redundant 
+  /* Cache for revision properties. This is used to eliminate redundant
      revprop fetching. */
   apr_hash_t* revision_infos;
 
@@ -200,7 +201,7 @@ read_string(const char **str, apr_file_t *temp, apr_pool_t *pool)
 
   size = (apr_size_t)len;
   buf = apr_palloc(pool, size+1);
-  SVN_ERR(svn_io_file_read_full(temp, buf, size, NULL, pool));
+  SVN_ERR(svn_io_file_read_full2(temp, buf, size, NULL, NULL, pool));
   buf[len] = 0;
   *str = buf;
   return SVN_NO_ERROR;
@@ -461,7 +462,7 @@ get_revision_info(report_baton_t *b,
   info = apr_hash_get(b->revision_infos, &rev, sizeof(rev));
   if (!info)
     {
-      /* Info is not available, yet. 
+      /* Info is not available, yet.
          Get all revprops. */
       SVN_ERR(svn_fs_revision_proplist(&r_props,
                                        b->repos->fs,
@@ -483,7 +484,7 @@ get_revision_info(report_baton_t *b,
       info->author = author ? svn_string_dup(author, b->pool) : NULL;
 
       /* Cache it */
-      apr_hash_set(b->revision_infos, &rev, sizeof(rev), info);
+      apr_hash_set(b->revision_infos, &info->rev, sizeof(rev), info);
     }
 
   *revision_info = info;
@@ -859,9 +860,23 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
     {
       int distance = svn_fs_compare_ids(s_entry->id, t_entry->id);
       if (distance == 0 && !any_path_info(b, e_path)
-          && (!info || (!info->start_empty && !info->lock_token))
           && (requested_depth <= wc_depth || t_entry->kind == svn_node_file))
-        return SVN_NO_ERROR;
+        {
+          if (!info)
+            return SVN_NO_ERROR;
+
+          if (!info->start_empty)
+            {
+              svn_lock_t *lock;
+
+              if (!info->lock_token)
+                return SVN_NO_ERROR;
+
+              SVN_ERR(svn_fs_get_lock(&lock, b->repos->fs, t_path, pool));
+              if (lock && (strcmp(lock->token, info->lock_token) == 0))
+                return SVN_NO_ERROR;
+            }
+        }
 
       related = (distance != -1 || b->ignore_ancestry);
     }
@@ -1061,10 +1076,10 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
               continue;
             }
 
-          e_fullpath = svn_path_join(e_path, name, subpool);
-          t_fullpath = svn_path_join(t_path, name, subpool);
+          e_fullpath = svn_relpath_join(e_path, name, subpool);
+          t_fullpath = svn_fspath__join(t_path, name, subpool);
           t_entry = apr_hash_get(t_entries, name, APR_HASH_KEY_STRING);
-          s_fullpath = s_path ? svn_path_join(s_path, name, subpool) : NULL;
+          s_fullpath = s_path ? svn_fspath__join(s_path, name, subpool) : NULL;
           s_entry = s_entries ?
             apr_hash_get(s_entries, name, APR_HASH_KEY_STRING) : NULL;
 
@@ -1128,11 +1143,11 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                     continue;
 
                   /* There is no corresponding target entry, so delete. */
-                  e_fullpath = svn_path_join(e_path, s_entry->name, subpool);
+                  e_fullpath = svn_relpath_join(e_path, s_entry->name, subpool);
                   SVN_ERR(svn_repos_deleted_rev(svn_fs_root_fs(b->t_root),
-                                                svn_path_join(t_path,
-                                                              s_entry->name,
-                                                              subpool),
+                                                svn_fspath__join(t_path,
+                                                                 s_entry->name,
+                                                                 subpool),
                                                 s_rev, b->t_rev,
                                                 &deleted_rev, subpool));
 
@@ -1176,12 +1191,12 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                   apr_hash_get(s_entries, t_entry->name, APR_HASH_KEY_STRING)
                   : NULL;
               s_fullpath = s_entry ?
-                  svn_path_join(s_path, t_entry->name, subpool) : NULL;
+                  svn_fspath__join(s_path, t_entry->name, subpool) : NULL;
             }
 
           /* Compose the report, editor, and target paths for this entry. */
-          e_fullpath = svn_path_join(e_path, t_entry->name, subpool);
-          t_fullpath = svn_path_join(t_path, t_entry->name, subpool);
+          e_fullpath = svn_relpath_join(e_path, t_entry->name, subpool);
+          t_fullpath = svn_fspath__join(t_path, t_entry->name, subpool);
 
           SVN_ERR(update_entry(b, s_rev, s_fullpath, s_entry, t_fullpath,
                                t_entry, dir_baton, e_fullpath, NULL,
@@ -1209,7 +1224,7 @@ drive(report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
 
   /* Compute the target path corresponding to the working copy anchor,
      and check its authorization. */
-  t_anchor = *b->s_operand ? svn_dirent_dirname(b->t_path, pool) : b->t_path;
+  t_anchor = *b->s_operand ? svn_fspath__dirname(b->t_path, pool) : b->t_path;
   SVN_ERR(check_auth(b, &allowed, t_anchor, pool));
   if (!allowed)
     return svn_error_create
@@ -1217,7 +1232,7 @@ drive(report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
        _("Not authorized to open root of edit operation"));
 
   /* Collect information about the source and target nodes. */
-  s_fullpath = svn_path_join(b->fs_base, b->s_operand, pool);
+  s_fullpath = svn_fspath__join(b->fs_base, b->s_operand, pool);
   SVN_ERR(get_source_root(b, &s_root, s_rev));
   SVN_ERR(fake_dirent(&s_entry, s_root, s_fullpath, pool));
   SVN_ERR(fake_dirent(&t_entry, b->t_root, b->t_path, pool));
@@ -1318,7 +1333,7 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
     if (err == SVN_NO_ERROR)
       return b->editor->close_edit(b->edit_baton, pool);
     svn_error_clear(b->editor->abort_edit(b->edit_baton, pool));
-    return svn_error_return(err);
+    return svn_error_trace(err);
   }
 }
 
@@ -1336,7 +1351,7 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
 
   /* Munge the path to be anchor-relative, so that we can use edit paths
      as report paths. */
-  path = svn_path_join(b->s_operand, path, pool);
+  path = svn_relpath_join(b->s_operand, path, pool);
 
   lrep = lpath ? apr_psprintf(pool, "+%" APR_SIZE_T_FMT ":%s",
                               strlen(lpath), lpath) : "-";
@@ -1449,11 +1464,11 @@ svn_repos_begin_report2(void **report_baton,
      keep track of them. */
   b = apr_palloc(pool, sizeof(*b));
   b->repos = repos;
-  b->fs_base = apr_pstrdup(pool, fs_base);
+  b->fs_base = svn_fspath__canonicalize(fs_base, pool);
   b->s_operand = apr_pstrdup(pool, s_operand);
   b->t_rev = revnum;
-  b->t_path = switch_path ? switch_path
-    : svn_path_join(fs_base, s_operand, pool);
+  b->t_path = switch_path ? svn_fspath__canonicalize(switch_path, pool)
+                          : svn_fspath__join(b->fs_base, s_operand, pool);
   b->text_deltas = text_deltas;
   b->requested_depth = depth;
   b->ignore_ancestry = ignore_ancestry;

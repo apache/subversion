@@ -76,7 +76,7 @@
    filesystems.  We /should/ be safe using this as a unique hash key,
    because the database must be on a local filesystem.  We can hope,
    anyway. */
-typedef struct
+typedef struct bdb_env_key_t
 {
   apr_dev_t device;
   apr_ino_t inode;
@@ -179,7 +179,7 @@ struct bdb_env_t
 #if APR_HAS_THREADS
 /* Get the thread-specific error info from a bdb_env_t. */
 static bdb_error_info_t *
-get_error_info(bdb_env_t *bdb)
+get_error_info(const bdb_env_t *bdb)
 {
   void *priv;
   apr_threadkey_private_get(&priv, bdb->error_info);
@@ -221,7 +221,7 @@ bdb_error_gatherer(const DB_ENV *dbenv, const char *baton, const char *msg)
 {
   /* See the documentation at bdb_env_t's definition why the
      (bdb_env_t *) cast is safe and why it is done. */
-  bdb_error_info_t *error_info = get_error_info((bdb_env_t *) baton);
+  bdb_error_info_t *error_info = get_error_info((const bdb_env_t *) baton);
   svn_error_t *new_err;
 
   SVN_BDB_ERROR_GATHERER_IGNORE(dbenv);
@@ -373,7 +373,7 @@ clear_cache(void *data)
 }
 #endif /* APR_HAS_THREADS */
 
-static volatile svn_atomic_t bdb_cache_state;
+static volatile svn_atomic_t bdb_cache_state = 0;
 
 static svn_error_t *
 bdb_init_cb(void *baton, apr_pool_t *pool)
@@ -519,7 +519,7 @@ bdb_close(bdb_env_t *bdb)
     svn_pool_destroy(bdb->pool);
   else
     free(bdb);
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -572,7 +572,7 @@ svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
       err = bdb_close(bdb);
       release_cache_mutex();
     }
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -636,7 +636,7 @@ svn_fs_bdb__open(bdb_env_baton_t **bdb_batonp, const char *path,
   if (err)
     {
       release_cache_mutex();
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   bdb = bdb_cache_get(&key, &panic);
@@ -707,7 +707,7 @@ svn_fs_bdb__open(bdb_env_baton_t **bdb_batonp, const char *path,
     }
 
   release_cache_mutex();
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 

@@ -503,7 +503,7 @@ typedef struct svn_ra_callbacks2_t
   /** Notification callback baton, used with progress_func. */
   void *progress_baton;
 
-  /** Cancelation function
+  /** Cancellation function
    *
    * As its baton, the general callback baton is used
    *
@@ -638,7 +638,7 @@ svn_ra_open3(svn_ra_session_t **session_p,
              apr_pool_t *pool);
 
 /**
- * Similiar to svn_ra_open3(), but with @a uuid set to @c NULL.
+ * Similar to svn_ra_open3(), but with @a uuid set to @c NULL.
  *
  * @since New in 1.3.
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -695,6 +695,9 @@ svn_ra_get_session_url(svn_ra_session_t *ra_session,
  * is parented, setting @a *rel_path to that value.  If @a url is not
  * a child of the session URL, return @c SVN_ERR_RA_ILLEGAL_URL.
  *
+ * The returned path is uri decoded to allow using it with the ra or other
+ * apis as a valid relpath.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
@@ -707,6 +710,9 @@ svn_ra_get_path_relative_to_session(svn_ra_session_t *ra_session,
  * the repository with which @a ra_session is associated, setting @a
  * *rel_path to that value.  If @a url is not a child of repository
  * root URL, return @c SVN_ERR_RA_ILLEGAL_URL.
+ *
+ * The returned path is uri decoded to allow using it with the ra or other
+ * apis as a valid relpath.
  *
  * @since New in 1.7.
  */
@@ -762,7 +768,7 @@ svn_ra_get_dated_revision(svn_ra_session_t *session,
  *
  * Use @a pool for memory allocation.
  *
- * @see svn_fs_change_rev_prop2(), svn_error_has_cause().
+ * @see svn_fs_change_rev_prop2(), svn_error_find_cause().
  *
  * @since New in 1.7.
  */
@@ -1051,8 +1057,9 @@ svn_ra_get_mergeinfo2(svn_ra_session_t *session,
  * Similar to svn_ra_get_mergeinfo2(), but with
  * @a validate_inherited_mergeinfo always passed as FALSE.
  *
- * @deprecated Provided for backward compatibility with the 1.7 API.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_mergeinfo(svn_ra_session_t *session,
                      svn_mergeinfo_catalog_t *catalog,
@@ -1671,7 +1678,7 @@ svn_ra_get_file_revs2(svn_ra_session_t *session,
                       apr_pool_t *pool);
 
 /**
- * Similiar to svn_ra_get_file_revs2(), but with @a include_merged_revisions
+ * Similar to svn_ra_get_file_revs2(), but with @a include_merged_revisions
  * set to FALSE.
  *
  * @since New in 1.2.

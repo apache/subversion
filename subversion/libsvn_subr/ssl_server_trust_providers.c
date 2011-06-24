@@ -182,7 +182,7 @@ svn_auth_get_ssl_server_trust_file_provider
 
 /* Baton type for prompting to verify server ssl creds.
    There is no iteration baton type. */
-typedef struct
+typedef struct ssl_server_trust_prompt_provider_baton_t
 {
   svn_auth_ssl_server_trust_prompt_func_t prompt_func;
   void *prompt_baton;

@@ -77,12 +77,12 @@ schedule_str(svn_wc_schedule_t schedule)
 }
 
 
-/* A callback of type svn_info_receiver_t.
+/* A callback of type svn_client_info_receiver2_t.
    Prints svn info in xml mode to standard out */
 static svn_error_t *
 print_info_xml(void *baton,
                const char *target,
-               const svn_info_t *info,
+               const svn_client_info2_t *info,
                apr_pool_t *pool)
 {
   svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
@@ -94,12 +94,10 @@ print_info_xml(void *baton,
   else
     rev_str = apr_pstrdup(pool, _("Resource is not under version control."));
 
-  if (path_prefix)
-    target = svn_dirent_skip_ancestor(path_prefix, target);
-
   /* "<entry ...>" */
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
-                        "path", svn_dirent_local_style(target, pool),
+                        "path", svn_cl__local_style_skip_ancestor(
+                                  path_prefix, target, pool),
                         "kind", svn_cl__node_kind_str_xml(info->kind),
                         "revision", rev_str,
                         NULL);
@@ -121,45 +119,58 @@ print_info_xml(void *baton,
       svn_xml_make_close_tag(&sb, pool, "repository");
     }
 
-  if (info->has_wc_info)
+  if (info->wc_info)
     {
       /* "<wc-info>" */
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "wc-info", NULL);
 
       /* "<wcroot-abspath> xx </wcroot-abspath>" */
-      if (info->wcroot_abspath)
+      if (info->wc_info->wcroot_abspath)
         svn_cl__xml_tagged_cdata(&sb, pool, "wcroot-abspath",
-                                 info->wcroot_abspath);
+                                 info->wc_info->wcroot_abspath);
 
       /* "<schedule> xx </schedule>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "schedule",
-                               schedule_str(info->schedule));
+                               schedule_str(info->wc_info->schedule));
 
       /* "<depth> xx </depth>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "depth",
-                               svn_depth_to_word(info->depth));
+      {
+        svn_depth_t depth = info->wc_info->depth;
+
+        /* In the entries world info just passed depth infinity for files */
+        if (depth == svn_depth_unknown && info->kind == svn_node_file)
+          depth = svn_depth_infinity;
+
+        svn_cl__xml_tagged_cdata(&sb, pool, "depth", svn_depth_to_word(depth));
+      }
 
       /* "<copy-from-url> xx </copy-from-url>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "copy-from-url",
-                               info->copyfrom_url);
+                               info->wc_info->copyfrom_url);
 
       /* "<copy-from-rev> xx </copy-from-rev>" */
-      if (SVN_IS_VALID_REVNUM(info->copyfrom_rev))
+      if (SVN_IS_VALID_REVNUM(info->wc_info->copyfrom_rev))
         svn_cl__xml_tagged_cdata(&sb, pool, "copy-from-rev",
                                  apr_psprintf(pool, "%ld",
-                                              info->copyfrom_rev));
+                                              info->wc_info->copyfrom_rev));
 
       /* "<text-updated> xx </text-updated>" */
-      if (info->text_time)
+      if (info->wc_info->recorded_time)
         svn_cl__xml_tagged_cdata(&sb, pool, "text-updated",
-                                 svn_time_to_cstring(info->text_time, pool));
+                                 svn_time_to_cstring(
+                                          info->wc_info->recorded_time,
+                                          pool));
 
       /* "<checksum> xx </checksum>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "checksum", info->checksum);
+      /* ### Print the checksum kind. */
+      svn_cl__xml_tagged_cdata(&sb, pool, "checksum",
+                               svn_checksum_to_cstring(info->wc_info->checksum,
+                                                       pool));
 
-      if (info->changelist)
+      if (info->wc_info->changelist)
         /* "<changelist> xx </changelist>" */
-        svn_cl__xml_tagged_cdata(&sb, pool, "changelist", info->changelist);
+        svn_cl__xml_tagged_cdata(&sb, pool, "changelist",
+                                 info->wc_info->changelist);
 
       /* "</wc-info>" */
       svn_xml_make_close_tag(&sb, pool, "wc-info");
@@ -176,62 +187,62 @@ print_info_xml(void *baton,
                                pool);
     }
 
-  if (info->conflict_old || info->conflict_wrk
-      || info->conflict_new || info->prejfile)
+  if (info->wc_info && info->wc_info->conflicts)
     {
-      /* "<conflict>" */
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "conflict", NULL);
+      int i;
 
-      /* "<prev-base-file> xx </prev-base-file>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "prev-base-file",
-                               info->conflict_old);
+      for (i = 0; i < info->wc_info->conflicts->nelts; i++)
+        {
+          const svn_wc_conflict_description2_t *conflict =
+                      APR_ARRAY_IDX(info->wc_info->conflicts, i,
+                                    const svn_wc_conflict_description2_t *);
 
-      /* "<prev-wc-file> xx </prev-wc-file>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "prev-wc-file",
-                               info->conflict_wrk);
+          switch (conflict->kind)
+            {
+              case svn_wc_conflict_kind_text:
+                /* "<conflict>" */
+                svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "conflict",
+                                      NULL);
 
-      /* "<cur-base-file> xx </cur-base-file>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "cur-base-file",
-                               info->conflict_new);
+                /* "<prev-base-file> xx </prev-base-file>" */
+                svn_cl__xml_tagged_cdata(&sb, pool, "prev-base-file",
+                                         conflict->base_abspath);
 
-      /* "<prop-file> xx </prop-file>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "prop-file", info->prejfile);
+                /* "<prev-wc-file> xx </prev-wc-file>" */
+                svn_cl__xml_tagged_cdata(&sb, pool, "prev-wc-file",
+                                         conflict->my_abspath);
 
-      /* "</conflict>" */
-      svn_xml_make_close_tag(&sb, pool, "conflict");
+                /* "<cur-base-file> xx </cur-base-file>" */
+                svn_cl__xml_tagged_cdata(&sb, pool, "cur-base-file",
+                                         conflict->their_abspath);
+
+                /* "</conflict>" */
+                svn_xml_make_close_tag(&sb, pool, "conflict");
+              break;
+
+              case svn_wc_conflict_kind_property:
+                /* "<conflict>" */
+                svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "conflict",
+                                      NULL);
+
+                /* "<prop-file> xx </prop-file>" */
+                svn_cl__xml_tagged_cdata(&sb, pool, "prop-file",
+                                         conflict->their_abspath);
+
+                /* "</conflict>" */
+                svn_xml_make_close_tag(&sb, pool, "conflict");
+              break;
+
+              case svn_wc_conflict_kind_tree:
+                SVN_ERR(svn_cl__append_tree_conflict_info_xml(sb, conflict,
+                                                              pool));
+              break;
+            }
+        }
     }
 
   if (info->lock)
-    {
-      /* "<lock>" */
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "lock", NULL);
-
-      /* "<token> xx </token>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "token", info->lock->token);
-
-      /* "<owner> xx </owner>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "owner", info->lock->owner);
-
-      /* "<comment ...> xxxx </comment>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "comment", info->lock->comment);
-
-      /* "<created> xx </created>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "created",
-                               svn_time_to_cstring
-                               (info->lock->creation_date, pool));
-
-      /* "<expires> xx </expires>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "expires",
-                               svn_time_to_cstring
-                               (info->lock->expiration_date, pool));
-
-      /* "</lock>" */
-      svn_xml_make_close_tag(&sb, pool, "lock");
-    }
-
-  if (info->tree_conflict)
-    SVN_ERR(svn_cl__append_tree_conflict_info_xml(sb, info->tree_conflict,
-                                                  pool));
+    svn_cl__print_xml_lock(&sb, info->lock, pool);
 
   /* "</entry>" */
   svn_xml_make_close_tag(&sb, pool, "entry");
@@ -240,20 +251,18 @@ print_info_xml(void *baton,
 }
 
 
-/* A callback of type svn_info_receiver_t. */
+/* A callback of type svn_client_info_receiver2_t. */
 static svn_error_t *
 print_info(void *baton,
            const char *target,
-           const svn_info_t *info,
+           const svn_client_info2_t *info,
            apr_pool_t *pool)
 {
   const char *path_prefix = baton;
 
-  if (path_prefix)
-    target = svn_dirent_skip_ancestor(path_prefix, target);
-
   SVN_ERR(svn_cmdline_printf(pool, _("Path: %s\n"),
-                             svn_dirent_local_style(target, pool)));
+                             svn_cl__local_style_skip_ancestor(
+                               path_prefix, target, pool)));
 
   /* ### remove this someday:  it's only here for cmdline output
      compatibility with svn 1.1 and older.  */
@@ -261,10 +270,11 @@ print_info(void *baton,
     SVN_ERR(svn_cmdline_printf(pool, _("Name: %s\n"),
                                svn_dirent_basename(target, pool)));
 
-  if (info->wcroot_abspath)
+  if (info->wc_info && info->wc_info->wcroot_abspath)
     SVN_ERR(svn_cmdline_printf(pool, _("Working Copy Root Path: %s\n"),
-                               svn_dirent_local_style(info->wcroot_abspath,
-                                                      pool)));
+                               svn_dirent_local_style(
+                                            info->wc_info->wcroot_abspath,
+                                            pool)));
 
   if (info->URL)
     SVN_ERR(svn_cmdline_printf(pool, _("URL: %s\n"), info->URL));
@@ -300,9 +310,9 @@ print_info(void *baton,
       break;
     }
 
-  if (info->has_wc_info)
+  if (info->wc_info)
     {
-      switch (info->schedule)
+      switch (info->wc_info->schedule)
         {
         case svn_wc_schedule_normal:
           SVN_ERR(svn_cmdline_printf(pool, _("Schedule: normal\n")));
@@ -324,7 +334,7 @@ print_info(void *baton,
           break;
         }
 
-      switch (info->depth)
+      switch (info->wc_info->depth)
         {
         case svn_depth_unknown:
           /* Unknown depth is the norm for remote directories anyway
@@ -344,6 +354,10 @@ print_info(void *baton,
           SVN_ERR(svn_cmdline_printf(pool, _("Depth: immediates\n")));
           break;
 
+        case svn_depth_exclude:
+          SVN_ERR(svn_cmdline_printf(pool, _("Depth: exclude\n")));
+          break;
+
         case svn_depth_infinity:
           /* Infinity is the default depth for working copy
              directories.  Let's not print it, it's not special enough
@@ -355,13 +369,13 @@ print_info(void *baton,
           SVN_ERR(svn_cmdline_printf(pool, _("Depth: INVALID\n")));
         }
 
-      if (info->copyfrom_url)
+      if (info->wc_info->copyfrom_url)
         SVN_ERR(svn_cmdline_printf(pool, _("Copied From URL: %s\n"),
-                                   info->copyfrom_url));
+                                   info->wc_info->copyfrom_url));
 
-      if (SVN_IS_VALID_REVNUM(info->copyfrom_rev))
+      if (SVN_IS_VALID_REVNUM(info->wc_info->copyfrom_rev))
         SVN_ERR(svn_cmdline_printf(pool, _("Copied From Rev: %ld\n"),
-                                   info->copyfrom_rev));
+                                   info->wc_info->copyfrom_rev));
     }
 
   if (info->last_changed_author)
@@ -376,37 +390,89 @@ print_info(void *baton,
     SVN_ERR(svn_cl__info_print_time(info->last_changed_date,
                                     _("Last Changed Date"), pool));
 
-  if (info->has_wc_info)
+  if (info->wc_info)
     {
-      if (info->text_time)
-        SVN_ERR(svn_cl__info_print_time(info->text_time,
+      if (info->wc_info->recorded_time)
+        SVN_ERR(svn_cl__info_print_time(info->wc_info->recorded_time,
                                         _("Text Last Updated"), pool));
 
-      if (info->checksum)
+      if (info->wc_info->checksum)
         SVN_ERR(svn_cmdline_printf(pool, _("Checksum: %s\n"),
-                                   info->checksum));
+                                   svn_checksum_to_cstring(
+                                              info->wc_info->checksum, pool)));
 
-      if (info->conflict_old)
-        SVN_ERR(svn_cmdline_printf(pool,
-                                   _("Conflict Previous Base File: %s\n"),
-                                   svn_dirent_local_style(info->conflict_old,
-                                                          pool)));
+      if (info->wc_info->conflicts)
+        {
+          int i;
 
-      if (info->conflict_wrk)
-        SVN_ERR(svn_cmdline_printf
-                (pool, _("Conflict Previous Working File: %s\n"),
-                 svn_dirent_local_style(info->conflict_wrk, pool)));
+          for (i = 0; i < info->wc_info->conflicts->nelts; i++)
+            {
+                const svn_wc_conflict_description2_t *conflict =
+                      APR_ARRAY_IDX(info->wc_info->conflicts, i,
+                                    const svn_wc_conflict_description2_t *);
+                const char *desc;
+                const char *src_left_version;
+                const char *src_right_version;
 
-      if (info->conflict_new)
-        SVN_ERR(svn_cmdline_printf(pool,
-                                   _("Conflict Current Base File: %s\n"),
-                                   svn_dirent_local_style(info->conflict_new,
-                                                          pool)));
+              switch (conflict->kind)
+                {
+                  case svn_wc_conflict_kind_text:
+                    SVN_ERR(svn_cmdline_printf(pool,
+                              _("Conflict Previous Base File: %s\n"),
+                              svn_dirent_local_style(conflict->base_abspath,
+                                                     pool)));
 
-      if (info->prejfile)
-        SVN_ERR(svn_cmdline_printf(pool, _("Conflict Properties File: %s\n"),
-                                   svn_dirent_local_style(info->prejfile,
-                                                          pool)));
+                    SVN_ERR(svn_cmdline_printf(pool,
+                              _("Conflict Previous Working File: %s\n"),
+                              svn_dirent_local_style(conflict->my_abspath,
+                                                     pool)));
+
+                    SVN_ERR(svn_cmdline_printf(pool,
+                              _("Conflict Current Base File: %s\n"),
+                              svn_dirent_local_style(conflict->their_abspath,
+                                                     pool)));
+                  break;
+
+                  case svn_wc_conflict_kind_property:
+                    SVN_ERR(svn_cmdline_printf(pool,
+                              _("Conflict Properties File: %s\n"),
+                              svn_dirent_local_style(conflict->their_abspath,
+                                                     pool)));
+                  break;
+
+                  case svn_wc_conflict_kind_tree:
+                    SVN_ERR(
+                        svn_cl__get_human_readable_tree_conflict_description(
+                                                    &desc, conflict, pool));
+
+                    src_left_version =
+                          svn_cl__node_description(conflict->src_left_version,
+                                                   info->repos_root_URL, pool);
+
+                    src_right_version =
+                          svn_cl__node_description(conflict->src_right_version,
+                                                   info->repos_root_URL, pool);
+
+                    SVN_ERR(svn_cmdline_printf(pool, "%s: %s\n",
+                                               _("Tree conflict"), desc));
+
+                    if (src_left_version)
+                        SVN_ERR(svn_cmdline_printf(pool, "  %s: %s\n",
+                                   _("Source  left"), /* (1) */
+                                   src_left_version));
+                    /* (1): Sneaking in a space in "Source  left" so that
+                     * it is the same length as "Source right" while it still
+                     * starts in the same column. That's just a tiny tweak in
+                     * the English `svn'. */
+
+                    if (src_right_version)
+                        SVN_ERR(svn_cmdline_printf(pool, "  %s: %s\n",
+                                                   _("Source right"),
+                                                   src_right_version));
+                  break;
+                }
+            }
+        }
     }
 
   if (info->lock)
@@ -441,47 +507,9 @@ print_info(void *baton,
         }
     }
 
-  if (info->changelist)
+  if (info->wc_info && info->wc_info->changelist)
     SVN_ERR(svn_cmdline_printf(pool, _("Changelist: %s\n"),
-                               info->changelist));
-
-  if (info->tree_conflict)
-    {
-      const char *desc;
-      const char *src_left_version;
-      const char *src_right_version;
-
-      SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
-                &desc, info->tree_conflict, pool));
-
-      src_left_version =
-        svn_cl__node_description(info->tree_conflict->src_left_version,
-                                 info->repos_root_URL, pool);
-
-      src_right_version =
-        svn_cl__node_description(info->tree_conflict->src_right_version,
-                                 info->repos_root_URL, pool);
-
-      svn_cmdline_printf(pool,
-                         "%s: %s\n",
-                         _("Tree conflict"),
-                         desc);
-
-      if (src_left_version)
-        svn_cmdline_printf(pool,
-                           "  %s: %s\n",
-                           _("Source  left"), /* (1) */
-                           src_left_version);
-        /* (1): Sneaking in a space in "Source  left" so that it is the
-         * same length as "Source right" while it still starts in the same
-         * column. That's just a tiny tweak in the English `svn'. */
-
-      if (src_right_version)
-        svn_cmdline_printf(pool,
-                           "  %s: %s\n",
-                           _("Source right"),
-                           src_right_version);
-    }
+                               info->wc_info->changelist));
 
   /* Print extra newline separator. */
   return svn_cmdline_printf(pool, "\n");
@@ -500,14 +528,14 @@ svn_cl__info(apr_getopt_t *os,
   apr_pool_t *subpool = svn_pool_create(pool);
   int i;
   svn_error_t *err;
-  svn_boolean_t saw_a_problem = FALSE;
+  svn_boolean_t seen_nonexistent_target = FALSE;
   svn_opt_revision_t peg_revision;
-  svn_info_receiver_t receiver;
+  svn_client_info_receiver2_t receiver;
   const char *path_prefix;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   /* Add "." if user passed 0 arguments. */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -572,33 +600,20 @@ svn_cl__info(apr_getopt_t *os,
         {
           /* If one of the targets is a non-existent URL or wc-entry,
              don't bail out.  Just warn and move on to the next target. */
-          if (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE
-              || err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+          if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
+              err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
             {
-              SVN_ERR(svn_cmdline_fprintf
-                      (stderr, subpool,
-                       _("%s:  (Not a versioned resource)\n\n"),
-                       svn_path_is_url(truepath)
-                         ? truepath
-                         : svn_dirent_local_style(truepath, pool)));
-            }
-          else if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
-            {
-              SVN_ERR(svn_cmdline_fprintf
-                      (stderr, subpool,
-                       _("%s:  (Not a valid URL)\n\n"),
-                       svn_path_is_url(truepath)
-                         ? truepath
-                         : svn_dirent_local_style(truepath, pool)));
+              svn_handle_warning2(stderr, err, "svn: ");
+              svn_error_clear(svn_cmdline_fprintf(stderr, subpool, "\n"));
             }
           else
             {
-              return svn_error_return(err);
+              return svn_error_trace(err);
             }
 
           svn_error_clear(err);
           err = NULL;
-          saw_a_problem = TRUE;
+          seen_nonexistent_target = TRUE;
         }
     }
   svn_pool_destroy(subpool);
@@ -606,8 +621,11 @@ svn_cl__info(apr_getopt_t *os,
   if (opt_state->xml && (! opt_state->incremental))
     SVN_ERR(svn_cl__xml_print_footer("info", pool));
 
-  if (saw_a_problem)
-    return svn_error_create(SVN_ERR_BASE, NULL, NULL);
+  if (seen_nonexistent_target)
+    return svn_error_create(
+      SVN_ERR_ILLEGAL_TARGET, NULL,
+      _("Could not display info for all targets because some "
+        "targets don't exist"));
   else
     return SVN_NO_ERROR;
 }

@@ -44,10 +44,6 @@ svn_error_t *svn_fs_base__commit_txn(const char **conflict_p,
                                      svn_revnum_t *new_rev, svn_fs_txn_t *txn,
                                      apr_pool_t *pool);
 
-svn_error_t *svn_fs_base__commit_obliteration_txn(svn_revnum_t replacing_rev,
-                                                  svn_fs_txn_t *txn,
-                                                  apr_pool_t *pool);
-
 svn_error_t *svn_fs_base__txn_root(svn_fs_root_t **root_p, svn_fs_txn_t *txn,
                                    apr_pool_t *pool);
 
@@ -102,13 +98,6 @@ svn_fs_base__validate_mergeinfo(svn_mergeinfo_t *validated_mergeinfo,
                                 svn_mergeinfo_t mergeinfo,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
-
-/* ### Experimental obliterate-like-deltify - see implementation. */
-svn_error_t *
-svn_fs_base__obliterate_rep(svn_fs_t *fs,
-                            const char *path,
-                            svn_revnum_t revision,
-                            apr_pool_t *pool);
 
 
 #ifdef __cplusplus

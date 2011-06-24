@@ -167,7 +167,7 @@ parse_value(int *pch, parse_context_t *ctx)
   while (ch != EOF && ch != '\n')
     /* last ch seen was ':' or '=' in parse_option. */
     {
-      const char char_from_int = ch;
+      const char char_from_int = (char)ch;
       svn_stringbuf_appendbyte(ctx->value, char_from_int);
       SVN_ERR(parser_getc(ctx, &ch));
     }
@@ -223,7 +223,7 @@ parse_value(int *pch, parse_context_t *ctx)
 
                   while (ch != EOF && ch != '\n')
                     {
-                      const char char_from_int = ch;
+                      const char char_from_int = (char)ch;
                       svn_stringbuf_appendbyte(ctx->value, char_from_int);
                       SVN_ERR(parser_getc(ctx, &ch));
                     }
@@ -250,7 +250,7 @@ parse_option(int *pch, parse_context_t *ctx, apr_pool_t *pool)
   ch = *pch;   /* Yes, the first char is relevant. */
   while (ch != EOF && ch != ':' && ch != '=' && ch != '\n')
     {
-      const char char_from_int = ch;
+      const char char_from_int = (char)ch;
       svn_stringbuf_appendbyte(ctx->option, char_from_int);
       SVN_ERR(parser_getc(ctx, &ch));
     }
@@ -293,7 +293,7 @@ parse_section_name(int *pch, parse_context_t *ctx, apr_pool_t *pool)
   SVN_ERR(parser_getc(ctx, &ch));
   while (ch != EOF && ch != ']' && ch != '\n')
     {
-      const char char_from_int = ch;
+      const char char_from_int = (char)ch;
       svn_stringbuf_appendbyte(ctx->section, char_from_int);
       SVN_ERR(parser_getc(ctx, &ch));
     }
@@ -463,7 +463,7 @@ ensure_auth_subdir(const char *auth_dir,
   const char *subdir_full_path;
   svn_node_kind_t kind;
 
-  subdir_full_path = svn_dirent_join_many(pool, auth_dir, subdir, NULL);
+  subdir_full_path = svn_dirent_join(auth_dir, subdir, pool);
   err = svn_io_check_path(subdir_full_path, &kind, pool);
   if (err || kind == svn_node_none)
     {
@@ -485,7 +485,7 @@ ensure_auth_dirs(const char *path,
   svn_error_t *err;
 
   /* Ensure ~/.subversion/auth/ */
-  auth_dir = svn_dirent_join_many(pool, path, SVN_CONFIG__AUTH_SUBDIR, NULL);
+  auth_dir = svn_dirent_join(path, SVN_CONFIG__AUTH_SUBDIR, pool);
   err = svn_io_check_path(auth_dir, &kind, pool);
   if (err || kind == svn_node_none)
     {
@@ -1009,8 +1009,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   accepts the '--diff-program' option."                         NL
         "# diff3-has-program-arg = [yes | no]"                               NL
         "### Set merge-tool-cmd to the command used to invoke your external" NL
-        "### merging tool of choice. Subversion will pass 4 arguments to"    NL
-        "### the specified command: base theirs mine merged"                 NL
+        "### merging tool of choice. Subversion will pass 5 arguments to"    NL
+        "### the specified command: base theirs mine merged wcfile"          NL
         "# merge-tool-cmd = merge_command"                                   NL
         ""                                                                   NL
         "### Section for configuring tunnel agents."                         NL

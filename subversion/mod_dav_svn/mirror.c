@@ -28,6 +28,8 @@
 #include <httpd.h>
 #include <http_core.h>
 
+#include "private/svn_fspath.h"
+
 #include "dav_svn.h"
 
 
@@ -147,10 +149,7 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
        (that is, if our root path matches that of the master server). */
     apr_uri_parse(r->pool, master_uri, &uri);
     root_dir = dav_svn__get_root_dir(r);
-    if (uri.path)
-        canonicalized_uri = svn_uri_canonicalize(uri.path, r->pool);
-    else
-        canonicalized_uri = uri.path;
+    canonicalized_uri = svn_urlpath__canonicalize(uri.path, r->pool);
     if (strcmp(canonicalized_uri, root_dir) == 0) {
         ap_remove_input_filter(f);
         return ap_get_brigade(f->next, bb, mode, block, readbytes);
@@ -242,7 +241,6 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
                                                dav_svn__get_root_dir(r), "/",
                                                start_foo, (char *)NULL),
                                    r);
-        new_uri = svn_path_uri_encode(new_uri, r->pool);
         apr_table_set(r->headers_out, "Location", new_uri);
     }
     return ap_pass_brigade(f->next, bb);
@@ -269,10 +267,7 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
        (that is, if our root path matches that of the master server). */
     apr_uri_parse(r->pool, master_uri, &uri);
     root_dir = dav_svn__get_root_dir(r);
-    if (uri.path)
-        canonicalized_uri = svn_uri_canonicalize(uri.path, r->pool);
-    else
-        canonicalized_uri = uri.path;
+    canonicalized_uri = svn_urlpath__canonicalize(uri.path, r->pool);
     if (strcmp(canonicalized_uri, root_dir) == 0) {
         ap_remove_output_filter(f);
         return ap_pass_brigade(f->next, bb);

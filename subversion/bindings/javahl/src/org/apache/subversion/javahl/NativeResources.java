@@ -63,7 +63,6 @@ public class NativeResources
      * @throws LinkageError If the version of the loaded native
      * library is not compatible with this version of JavaHL's Java
      * APIs.
-     * @since 1.3.0
      */
     public static synchronized void loadNativeLibrary()
     {
@@ -141,7 +140,6 @@ public class NativeResources
 
     /**
      * Initialize the native library layer.
-     * @since 1.5.0
      */
     private static native void initNativeLibrary();
 }

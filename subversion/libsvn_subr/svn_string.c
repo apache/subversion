@@ -33,6 +33,7 @@
 #include "svn_string.h"  /* loads "svn_types.h" and <apr_pools.h> */
 #include "svn_ctype.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_string_private.h"
 
 #include "svn_private_config.h"
 
@@ -135,9 +136,18 @@ create_string(const char *data, apr_size_t size,
 svn_string_t *
 svn_string_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
 {
+  void *mem;
   char *data;
+  svn_string_t *new_string;
 
-  data = apr_palloc(pool, size + 1);
+  /* Allocate memory for svn_string_t and data in one chunk. */
+  mem = apr_palloc(pool, sizeof(*new_string) + size + 1);
+  data = (char*)mem + sizeof(*new_string);
+
+  new_string = mem;
+  new_string->data = data;
+  new_string->len = size;
+
   memcpy(data, bytes, size);
 
   /* Null termination is the convention -- even if we suspect the data
@@ -145,8 +155,7 @@ svn_string_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
      call.  Heck, that's why they call it the caller! */
   data[size] = '\0';
 
-  /* wrap an svn_string_t around the new data */
-  return create_string(data, size, pool);
+  return new_string;
 }
 
 
@@ -227,6 +236,35 @@ svn_string_find_char_backward(const svn_string_t *str, char ch)
   return find_char_backward(str->data, str->len, ch);
 }
 
+svn_string_t *
+svn_stringbuf__morph_into_string(svn_stringbuf_t *strbuf)
+{
+  /* In debug mode, detect attempts to modify the original STRBUF object.
+   */
+#ifdef SVN_DEBUG
+  strbuf->pool = NULL;
+  strbuf->blocksize = strbuf->len;
+#endif
+
+  /* Both, svn_string_t and svn_stringbuf_t are public API structures
+   * since a couple of releases now. Thus, we can rely on their precise
+   * layout not to change.
+   *
+   * It just so happens that svn_string_t is structurally equivalent
+   * to the (data, len) sub-set of svn_stringbuf_t. There is also no
+   * difference in alignment and padding. So, we can just re-interpret
+   * that part of STRBUF as a svn_string_t.
+   *
+   * However, since svn_string_t does not know about the blocksize
+   * member in svn_stringbuf_t, any attempt to re-size the returned
+   * svn_string_t might invalidate the STRBUF struct. Hence, we consider
+   * the source STRBUF "consumed".
+   *
+   * Modifying the string character content is fine, though.
+   */
+  return (svn_string_t *)&strbuf->data;
+}
+
 
 
 /* svn_stringbuf functions */
@@ -250,7 +288,8 @@ create_stringbuf(char *data, apr_size_t size, apr_size_t blocksize,
 svn_stringbuf_t *
 svn_stringbuf_create_ensure(apr_size_t blocksize, apr_pool_t *pool)
 {
-  char *data;
+  void *mem;
+  svn_stringbuf_t *new_string;
 
   /* apr_palloc will allocate multiples of 8.
    * Thus, we would waste some of that memory if we stuck to the
@@ -258,12 +297,21 @@ svn_stringbuf_create_ensure(apr_size_t blocksize, apr_pool_t *pool)
    * use some other aligment or none at all. */
 
   ++blocksize; /* + space for '\0' */
-  data = apr_palloc(pool, APR_ALIGN_DEFAULT(blocksize));
+  blocksize = APR_ALIGN_DEFAULT(blocksize);
 
-  data[0] = '\0';
+  /* Allocate memory for svn_string_t and data in one chunk. */
+  mem = apr_palloc(pool, sizeof(*new_string) + blocksize);
 
-  /* wrap an svn_stringbuf_t around the new data buffer. */
-  return create_stringbuf(data, 0, blocksize, pool);
+  /* Initialize header and string */
+  new_string = mem;
+
+  new_string->data = (char*)mem + sizeof(*new_string);
+  new_string->data[0] = '\0';
+  new_string->len = 0;
+  new_string->blocksize = blocksize;
+  new_string->pool = pool;
+
+  return new_string;
 }
 
 svn_stringbuf_t *
@@ -404,8 +452,8 @@ svn_stringbuf_ensure(svn_stringbuf_t *str, apr_size_t minimum_size)
 }
 
 
-/* WARNING - Optimized code ahead! 
- * This function has been hand-tuned for performance. Please read 
+/* WARNING - Optimized code ahead!
+ * This function has been hand-tuned for performance. Please read
  * the comments below before modifying the code.
  */
 void
@@ -423,7 +471,7 @@ svn_stringbuf_appendbyte(svn_stringbuf_t *str, char byte)
       /* The following read does not depend this write, so we
        * can issue the write first to minimize register pressure:
        * The value of old_len+1 is no longer needed; on most processors,
-       * dest[old_len+1] will be calculated implicitly as part of 
+       * dest[old_len+1] will be calculated implicitly as part of
        * the addressing scheme.
        */
       str->len = old_len+1;
@@ -441,7 +489,7 @@ svn_stringbuf_appendbyte(svn_stringbuf_t *str, char byte)
        *
        * Including the "byte" fetch, all operations so far could be
        * issued at once and be scheduled at the CPU's descression.
-       * Most likely, no-one will soon depend on the data that will be 
+       * Most likely, no-one will soon depend on the data that will be
        * written in this function. So, no stalls there, either.
        */
       dest[old_len] = byte;
@@ -631,6 +679,22 @@ svn_boolean_t svn_cstring_match_glob_list(const char *str,
   return FALSE;
 }
 
+svn_boolean_t
+svn_cstring_match_list(const char *str, const apr_array_header_t *list)
+{
+  int i;
+
+  for (i = 0; i < list->nelts; i++)
+    {
+      const char *this_str = APR_ARRAY_IDX(list, i, char *);
+
+      if (strcmp(this_str, str) == 0)
+        return TRUE;
+    }
+
+  return FALSE;
+}
+
 int svn_cstring_count_newlines(const char *msg)
 {
   int count = 0;
@@ -701,16 +765,16 @@ svn_cstring_strtoui64(apr_uint64_t *n, const char *str,
    * ### APR needs a apr_strtoui64() function. */
   val = apr_strtoi64(str, &endptr, base);
   if (errno == EINVAL || endptr == str || str[0] == '\0' || *endptr != '\0')
-    return svn_error_return(
-             svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                               _("Could not convert '%s' into a number"),
-                               str));
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             _("Could not convert '%s' into a number"),
+                             str);
   if ((errno == ERANGE && (val == APR_INT64_MIN || val == APR_INT64_MAX)) ||
       val < 0 || (apr_uint64_t)val < minval || (apr_uint64_t)val > maxval)
-    return svn_error_return(
-             svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                               _("Number '%s' is out of range '[%llu, %llu]'"),
-                               str, minval, maxval));
+    /* ### Mark this for translation when gettext doesn't choke on macros. */
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             "Number '%s' is out of range "
+                             "'[%" APR_UINT64_T_FMT ", %" APR_UINT64_T_FMT "]'",
+                             str, minval, maxval);
   *n = val;
   return SVN_NO_ERROR;
 }
@@ -718,7 +782,7 @@ svn_cstring_strtoui64(apr_uint64_t *n, const char *str,
 svn_error_t *
 svn_cstring_atoui64(apr_uint64_t *n, const char *str)
 {
-  return svn_error_return(svn_cstring_strtoui64(n, str, 0,
+  return svn_error_trace(svn_cstring_strtoui64(n, str, 0,
                                                 APR_UINT64_MAX, 10));
 }
 
@@ -745,16 +809,16 @@ svn_cstring_strtoi64(apr_int64_t *n, const char *str,
 
   val = apr_strtoi64(str, &endptr, base);
   if (errno == EINVAL || endptr == str || str[0] == '\0' || *endptr != '\0')
-    return svn_error_return(
-             svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                               _("Could not convert '%s' into a number"),
-                               str));
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             _("Could not convert '%s' into a number"),
+                             str);
   if ((errno == ERANGE && (val == APR_INT64_MIN || val == APR_INT64_MAX)) ||
       val < minval || val > maxval)
-    return svn_error_return(
-             svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                               _("Number '%s' is out of range '[%lld, %lld]'"),
-                               str, minval, maxval));
+    /* ### Mark this for translation when gettext doesn't choke on macros. */
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             "Number '%s' is out of range "
+                             "'[%" APR_INT64_T_FMT ", %" APR_INT64_T_FMT "]'",
+                             str, minval, maxval);
   *n = val;
   return SVN_NO_ERROR;
 }
@@ -762,7 +826,7 @@ svn_cstring_strtoi64(apr_int64_t *n, const char *str,
 svn_error_t *
 svn_cstring_atoi64(apr_int64_t *n, const char *str)
 {
-  return svn_error_return(svn_cstring_strtoi64(n, str, APR_INT64_MIN,
+  return svn_error_trace(svn_cstring_strtoi64(n, str, APR_INT64_MIN,
                                                APR_INT64_MAX, 10));
 }
 

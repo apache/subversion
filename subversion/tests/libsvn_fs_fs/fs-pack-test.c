@@ -50,7 +50,7 @@ write_format(const char *path,
 {
   const char *contents;
 
-  path = svn_path_join(path, "format", pool);
+  path = svn_dirent_join(path, "format", pool);
 
   if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
     {
@@ -74,7 +74,7 @@ write_format(const char *path,
       const char *path_tmp;
 
       SVN_ERR(svn_io_write_unique(&path_tmp,
-                                  svn_path_dirname(path, pool),
+                                  svn_dirent_dirname(path, pool),
                                   contents, strlen(contents),
                                   svn_io_file_del_none, pool));
 
@@ -114,6 +114,7 @@ create_packed_filesystem(const char *dir,
   svn_revnum_t after_rev;
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_pool_t *iterpool;
+  int version;
 
   /* Create a filesystem, then close it */
   SVN_ERR(svn_test__create_fs(&fs, dir, opts, subpool));
@@ -122,8 +123,10 @@ create_packed_filesystem(const char *dir,
   subpool = svn_pool_create(pool);
 
   /* Rewrite the format file */
-  SVN_ERR(write_format(dir, SVN_FS_FS__FORMAT_NUMBER,
-                       shard_size, subpool));
+  SVN_ERR(svn_io_read_version_file(&version,
+                                   svn_dirent_join(dir, "format", subpool),
+                                   subpool));
+  SVN_ERR(write_format(dir, version, shard_size, subpool));
 
   /* Reopen the filesystem */
   SVN_ERR(svn_fs_open(&fs, dir, NULL, subpool));
@@ -133,6 +136,7 @@ create_packed_filesystem(const char *dir,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, subpool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
 
   /* Revisions 2 thru NUM_REVS-1: content tweaks to "iota". */
   iterpool = svn_pool_create(subpool);
@@ -146,6 +150,7 @@ create_packed_filesystem(const char *dir,
                                                            iterpool),
                                           iterpool));
       SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, iterpool));
+      SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
     }
   svn_pool_destroy(iterpool);
   svn_pool_destroy(subpool);
@@ -184,9 +189,9 @@ pack_filesystem(const svn_test_opts_t *opts,
      don't. */
   for (i = 0; i < (MAX_REV + 1) / SHARD_SIZE; i++)
     {
-      path = svn_path_join_many(pool, REPO_NAME, "revs",
-                                apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
-                                "pack", NULL);
+      path = svn_dirent_join_many(pool, REPO_NAME, "revs",
+                                  apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
+                                  "pack", NULL);
 
       /* These files should exist. */
       SVN_ERR(svn_io_check_path(path, &kind, pool));
@@ -194,9 +199,9 @@ pack_filesystem(const svn_test_opts_t *opts,
         return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
                                  "Expected pack file '%s' not found", path);
 
-      path = svn_path_join_many(pool, REPO_NAME, "revs",
-                                apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
-                                "manifest", NULL);
+      path = svn_dirent_join_many(pool, REPO_NAME, "revs",
+                                  apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
+                                  "manifest", NULL);
       SVN_ERR(svn_io_check_path(path, &kind, pool));
       if (kind != svn_node_file)
         return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
@@ -204,9 +209,9 @@ pack_filesystem(const svn_test_opts_t *opts,
                                  path);
 
       /* This directory should not exist. */
-      path = svn_path_join_many(pool, REPO_NAME, "revs",
-                                apr_psprintf(pool, "%d", i / SHARD_SIZE),
-                                NULL);
+      path = svn_dirent_join_many(pool, REPO_NAME, "revs",
+                                  apr_psprintf(pool, "%d", i / SHARD_SIZE),
+                                  NULL);
       SVN_ERR(svn_io_check_path(path, &kind, pool));
       if (kind != svn_node_none)
         return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
@@ -215,8 +220,8 @@ pack_filesystem(const svn_test_opts_t *opts,
 
   /* Ensure the min-unpacked-rev jives with the above operations. */
   SVN_ERR(svn_io_file_open(&file,
-                           svn_path_join(REPO_NAME, PATH_MIN_UNPACKED_REV,
-                                         pool),
+                           svn_dirent_join(REPO_NAME, PATH_MIN_UNPACKED_REV,
+                                           pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
   len = sizeof(buf);
   SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
@@ -226,9 +231,9 @@ pack_filesystem(const svn_test_opts_t *opts,
                              "Bad '%s' contents", PATH_MIN_UNPACKED_REV);
 
   /* Finally, make sure the final revision directory does exist. */
-  path = svn_path_join_many(pool, REPO_NAME, "revs",
-                            apr_psprintf(pool, "%d", (i / SHARD_SIZE) + 1),
-                            NULL);
+  path = svn_dirent_join_many(pool, REPO_NAME, "revs",
+                              apr_psprintf(pool, "%d", (i / SHARD_SIZE) + 1),
+                              NULL);
   SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind != svn_node_none)
     return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
@@ -260,7 +265,7 @@ pack_even_filesystem(const svn_test_opts_t *opts,
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE,
                                    pool));
 
-  path = svn_path_join_many(pool, REPO_NAME, "revs", "2.pack", NULL);
+  path = svn_dirent_join_many(pool, REPO_NAME, "revs", "2.pack", NULL);
   SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind != svn_node_dir)
     return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
@@ -348,6 +353,7 @@ commit_packed_fs(const svn_test_opts_t *opts,
           "How much better is it to get wisdom than gold! and to get "
           "understanding rather to be chosen than silver!", pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
 
   return SVN_NO_ERROR;
 }
@@ -386,6 +392,7 @@ get_set_revprop_packed_fs(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "iota", "new-iota",  subpool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
   svn_pool_clear(subpool);
 
   /* Pack the repository. */
@@ -441,6 +448,7 @@ recover_fully_packed(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "A/mu", "new-mu", subpool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
   svn_pool_destroy(subpool);
   SVN_ERR(svn_fs_pack(REPO_NAME, NULL, NULL, NULL, NULL, pool));
   SVN_ERR(svn_fs_recover(REPO_NAME, NULL, NULL, pool));

@@ -48,9 +48,9 @@ print_log_rev(void *baton,
               apr_pool_t *pool)
 {
   if (log_entry->non_inheritable)
-    svn_cmdline_printf(pool, "r%ld*\n", log_entry->revision);
+    SVN_ERR(svn_cmdline_printf(pool, "r%ld*\n", log_entry->revision));
   else
-    svn_cmdline_printf(pool, "r%ld\n", log_entry->revision);
+    SVN_ERR(svn_cmdline_printf(pool, "r%ld\n", log_entry->revision));
 
   return SVN_NO_ERROR;
 }
@@ -72,7 +72,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   /* We expect a single source URL followed by a single target --
      nothing more, nothing less. */

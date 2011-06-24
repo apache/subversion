@@ -120,7 +120,7 @@ get_wid(void)
     {
       apr_int64_t wid_env;
       svn_error_t *err;
-      
+
       err = svn_cstring_atoi64(&wid_env, wid_env_string);
       if (err)
         svn_error_clear(err);

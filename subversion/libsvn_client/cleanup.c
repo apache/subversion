@@ -60,7 +60,7 @@ svn_client_cleanup(const char *path,
   err = svn_wc_cleanup3(ctx->wc_ctx, local_abspath, ctx->cancel_func,
                         ctx->cancel_baton, scratch_pool);
   svn_io_sleep_for_timestamps(path, scratch_pool);
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -88,7 +88,7 @@ fetch_repos_info(const char **repos_root,
   svn_ra_session_t *ra_session;
 
   /* The same info is likely to retrieved multiple times (e.g. externals) */
-  if (ri->last_repos && svn_uri_is_child(ri->last_repos, url, NULL))
+  if (ri->last_repos && svn_uri__is_child(ri->last_repos, url, NULL))
     {
       *repos_root = apr_pstrdup(result_pool, ri->last_repos);
       *repos_uuid = apr_pstrdup(result_pool, ri->last_uuid);
@@ -143,9 +143,9 @@ svn_client_upgrade(const char *path,
      upgrade to avoid that errors in the externals causes the wc upgrade to
      fail. Thanks to caching the performance penalty of walking the wc a
      second time shouldn't be too severe */
-  SVN_ERR(svn_client_propget3(&externals, SVN_PROP_EXTERNALS, path, &rev,
-                              &rev, NULL, svn_depth_infinity, NULL, ctx,
-                              scratch_pool));
+  SVN_ERR(svn_client_propget4(&externals, SVN_PROP_EXTERNALS, local_abspath,
+                              &rev, &rev, NULL, svn_depth_infinity, NULL, ctx,
+                              scratch_pool, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
 
@@ -174,7 +174,7 @@ svn_client_upgrade(const char *path,
 
           item = APR_ARRAY_IDX(externals_p, i, svn_wc_external_item2_t*);
 
-          external_path = svn_dirent_join(externals_parent, item->target_dir, 
+          external_path = svn_dirent_join(externals_parent, item->target_dir,
                                           iterpool);
 
           SVN_ERR(svn_dirent_get_absolute(&external_abspath, external_path,

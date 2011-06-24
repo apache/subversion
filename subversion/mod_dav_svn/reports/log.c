@@ -37,6 +37,7 @@
 #include "svn_props.h"
 
 #include "private/svn_log.h"
+#include "private/svn_fspath.h"
 
 #include "../dav_svn.h"
 
@@ -157,6 +158,10 @@ log_receiver(void *baton,
       lrb->stack_depth++;
     }
 
+  if (log_entry->subtractive_merge)
+    SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output,
+                                  "<S:subtractive-merge/>"));
+
   if (log_entry->changed_paths2)
     {
       apr_hash_index_t *hi;
@@ -239,8 +244,8 @@ log_receiver(void *baton,
                      " text-mods=\"%s\""
                      " prop-mods=\"%s\">%s</%s>" DEBUG_CR,
                      svn_node_kind_to_word(log_item->node_kind),
-                     svn_tristate_to_word(log_item->text_modified),
-                     svn_tristate_to_word(log_item->props_modified),
+                     svn_tristate__to_word(log_item->text_modified),
+                     svn_tristate__to_word(log_item->props_modified),
                      apr_xml_quote_string(iterpool, path, 0),
                      close_element));
         }
@@ -359,8 +364,14 @@ dav_svn__log_report(const dav_resource *resource,
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
           if ((derr = dav_svn__test_canonical(rel_path, resource->pool)))
             return derr;
-          target = svn_path_join(resource->info->repos_path, rel_path,
-                                 resource->pool);
+
+          /* Force REL_PATH to be a relative path, not an fspath. */
+          rel_path = svn_relpath_canonicalize(rel_path, resource->pool);
+
+          /* Append the REL_PATH to the base FS path to get an
+             absolute repository path. */
+          target = svn_fspath__join(resource->info->repos_path, rel_path,
+                                    resource->pool);
           APR_ARRAY_PUSH(paths, const char *) = target;
         }
       /* else unknown element; skip it */

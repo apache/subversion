@@ -67,7 +67,7 @@ svn_cl__merge(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   /* For now, we require at least one source.  That may change in
      future versions of Subversion, for example if we have support for
@@ -238,24 +238,23 @@ svn_cl__merge(apr_getopt_t *os,
      sourcepaths. */
   if (sourcepath1 && sourcepath2 && strcmp(targetpath, "") == 0)
     {
-      /* If the sourcepath is a URL, it can only refer to a target in the
-         current working directory.
-         However, if the sourcepath is a local path, it can refer to a target
-         somewhere deeper in the directory structure. */
+      /* If the sourcepath is a URL, it can only refer to a target in
+         the current working directory.  However, if the sourcepath is
+         a local path, it can refer to a target somewhere deeper in
+         the directory structure. */
       if (svn_path_is_url(sourcepath1))
         {
-          const char *sp1_basename, *sp2_basename;
-          sp1_basename = svn_uri_basename(sourcepath1, pool);
-          sp2_basename = svn_uri_basename(sourcepath2, pool);
+          const char *sp1_basename = svn_uri_basename(sourcepath1, pool);
+          const char *sp2_basename = svn_uri_basename(sourcepath2, pool);
 
           if (strcmp(sp1_basename, sp2_basename) == 0)
             {
               svn_node_kind_t kind;
-              const char *decoded_path = svn_path_uri_decode(sp1_basename, pool);
-              SVN_ERR(svn_io_check_path(decoded_path, &kind, pool));
+
+              SVN_ERR(svn_io_check_path(sp1_basename, &kind, pool));
               if (kind == svn_node_file)
                 {
-                  targetpath = decoded_path;
+                  targetpath = sp1_basename;
                 }
             }
         }
@@ -343,10 +342,9 @@ svn_cl__merge(apr_getopt_t *os,
   else
     {
       if (svn_path_is_url(sourcepath1) != svn_path_is_url(sourcepath2))
-        return svn_error_return(svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR,
-                                                 NULL,
-                                                 _("Merge sources must both be "
-                                                   "either paths or URLs")));
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("Merge sources must both be "
+                                  "either paths or URLs"));
       err = svn_client_merge4(sourcepath1,
                               &first_range_start,
                               sourcepath2,
@@ -366,8 +364,20 @@ svn_cl__merge(apr_getopt_t *os,
   if (! opt_state->quiet)
     SVN_ERR(svn_cl__print_conflict_stats(ctx->notify_baton2, pool));
 
-  if (err && (! opt_state->reintegrate))
-    return svn_cl__may_need_force(err);
+  if (err)
+    {
+      if(err->apr_err == SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING)
+        {
+          err = svn_error_quick_wrap(
+            err,
+            _("Merge tracking not possible, use --ignore-ancestry or\n"
+              "fix invalid mergeinfo in target with 'svn propset'"));
+        }
+      else if (! opt_state->reintegrate)
+        {
+          return svn_cl__may_need_force(err);
+        }
+    }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }

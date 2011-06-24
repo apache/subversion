@@ -35,8 +35,12 @@ import svntest
 from svntest import wc
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = wc.StateItem
 
 # For errors setting up the depthy working copies.
@@ -1015,6 +1019,7 @@ def commit_propmods_with_depth_empty(sbox):
   commit_propmods_with_depth_empty_helper(sbox2, '--depth=empty')
 
 # Test for issue #2845.
+@Issue(2845)
 def diff_in_depthy_wc(sbox):
   "diff at various depths in non-infinity wc"
 
@@ -1062,12 +1067,12 @@ def diff_in_depthy_wc(sbox):
     "@@ -1 +1 @@\n",
     "-new text\n",
     "+This is the file 'iota'.\n",
-    "Index: \n",
+    "Index: .\n",
     "===================================================================\n",
-    "--- \t(revision 2)\n",
-    "+++ \t(working copy)\n",
+    "--- .\t(revision 2)\n",
+    "+++ .\t(working copy)\n",
     "\n",
-    "Property changes on: \n",
+    "Property changes on: .\n",
     "___________________________________________________________________\n",
     "Deleted: foo\n",
     "## -1 +0,0 ##\n",
@@ -1119,6 +1124,7 @@ def diff_in_depthy_wc(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                     'diff', '--depth', 'immediates', '-rHEAD')
 
+@Issue(2882)
 def commit_depth_immediates(sbox):
   "commit some files with --depth=immediates"
   sbox.build()
@@ -1242,6 +1248,7 @@ def depth_immediates_receive_new_dir(sbox):
   # Check that the new directory was added at depth=empty.
   verify_depth(None, "empty", other_I_path)
 
+@Issue(2931)
 def add_tree_with_depth(sbox):
   "add multi-subdir tree with --depth options"  # For issue #2931
   sbox.build()
@@ -1415,6 +1422,7 @@ def status_in_depthy_wc(sbox):
 #----------------------------------------------------------------------
 
 # Issue #3039.
+@Issue(3039)
 def depthy_update_above_dir_to_be_deleted(sbox):
   "'update -N' above a WC path deleted in repos HEAD"
   sbox.build()
@@ -2058,6 +2066,7 @@ def depth_empty_update_on_file(sbox):
   svntest.actions.run_and_verify_info([expected_infos], iota_path)
 
 
+@Issue(3544)
 def excluded_path_update_operation(sbox):
   """make sure update handle svn_depth_exclude properly"""
 
@@ -2212,7 +2221,11 @@ def excluded_path_misc_operation(sbox):
   #verify_depth(None, "empty", LE_path)
 
   # revert A/L, with an excluded item in the tree
-  expected_output = ["Reverted '"+L_path+"'\n"]
+  revert_paths = [L_path] + [os.path.join(L_path, child)
+                             for child in ['E', 'F', 'lambda']]
+  expected_output = svntest.verify.UnorderedOutput([
+    "Reverted '%s'\n" % path for path in revert_paths])
+
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'revert', '--depth=infinity', L_path)
 
@@ -2319,7 +2332,7 @@ def excluded_receive_remote_removal(sbox):
                                      'cp', C_path, B_path)
 
 
-# Regression test for r36686.
+# Regression test for r876760.
 def exclude_keeps_hidden_entries(sbox):
   "'up --set-depth exclude' doesn't lose entries"
 
@@ -2334,11 +2347,12 @@ def exclude_keeps_hidden_entries(sbox):
   svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', 'D')
   # we could grep the 'entries' file, but...
   # or we could use 'info', but info_excluded() is XFail.
-  expected_stderr = ".*svn: '.*C' is already under version control.*"
+  expected_stderr = ".*svn: E150002: '.*C' is already under version control.*"
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'mkdir', 'C')
 
 
+@Issue(3792)
 def info_excluded(sbox):
   "'info' should treat excluded item as versioned"
 
@@ -2726,7 +2740,7 @@ def sparse_update_with_dash_dash_parents(sbox):
   alpha_path = os.path.join(sbox.wc_dir, 'A', 'B', 'E', 'alpha')
   pi_path = os.path.join(sbox.wc_dir, 'A', 'D', 'G', 'pi')
   omega_path = os.path.join(sbox.wc_dir, 'A', 'D', 'H', 'omega')
-  
+
   # Start with a depth=empty root checkout.
   svntest.actions.run_and_verify_svn(
       "Unexpected error from co --depth=empty",
@@ -2774,14 +2788,14 @@ def sparse_update_with_dash_dash_parents(sbox):
     'A/D'          : Item(status='  ', wc_rev=1),
     'A/D/G'        : Item(status='  ', wc_rev=1),
     'A/D/G/pi'     : Item(status='  ', wc_rev=1),
-    })    
+    })
   svntest.actions.run_and_verify_update(sbox.wc_dir,
                                         expected_output,
                                         expected_disk,
                                         expected_status,
                                         None, None, None, None, None, False,
                                         '--parents', pi_path)
-                    
+
   expected_output = svntest.wc.State(sbox.wc_dir, {
     'A/D/H'        : Item(status='A '),
     'A/D/H/omega'  : Item(status='A '),
@@ -2793,14 +2807,14 @@ def sparse_update_with_dash_dash_parents(sbox):
   expected_status.add({
     'A/D/H'        : Item(status='  ', wc_rev=1),
     'A/D/H/omega'  : Item(status='  ', wc_rev=1),
-    })    
+    })
   svntest.actions.run_and_verify_update(sbox.wc_dir,
                                         expected_output,
                                         expected_disk,
                                         expected_status,
                                         None, None, None, None, None, False,
                                         '--parents', omega_path)
-  
+
 
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
@@ -2840,7 +2854,7 @@ test_list = [ None,
               excluded_path_misc_operation,
               excluded_receive_remote_removal,
               exclude_keeps_hidden_entries,
-              XFail(info_excluded),
+              info_excluded,
               tree_conflicts_resolved_depth_empty,
               tree_conflicts_resolved_depth_files,
               tree_conflicts_resolved_depth_immediates,

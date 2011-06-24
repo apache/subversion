@@ -42,6 +42,9 @@
 
 #include "ra_svn.h"
 
+#include "private/svn_string_private.h"
+#include "private/svn_dep_compat.h"
+
 #define svn_iswhitespace(c) ((c) == ' ' || (c) == '\n')
 
 /* If we receive data that *claims* to be followed by a very long string,
@@ -52,10 +55,11 @@
 
 /* --- CONNECTION INITIALIZATION --- */
 
-svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
-                                          apr_file_t *in_file,
-                                          apr_file_t *out_file,
-                                          apr_pool_t *pool)
+svn_ra_svn_conn_t *svn_ra_svn_create_conn2(apr_socket_t *sock,
+                                           apr_file_t *in_file,
+                                           apr_file_t *out_file,
+                                           int compression_level,
+                                           apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = apr_palloc(pool, sizeof(*conn));
 
@@ -71,6 +75,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
   conn->block_handler = NULL;
   conn->block_baton = NULL;
   conn->capabilities = apr_hash_make(pool);
+  conn->compression_level = compression_level;
   conn->pool = pool;
 
   if (sock != NULL)
@@ -88,6 +93,16 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
     }
 
   return conn;
+}
+
+/* backward-compatible implementation using the default compression level */
+svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
+                                          apr_file_t *in_file,
+                                          apr_file_t *out_file,
+                                          apr_pool_t *pool)
+{
+  return svn_ra_svn_create_conn2(sock, in_file, out_file,
+                                 SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, pool);
 }
 
 svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
@@ -114,6 +129,12 @@ svn_boolean_t svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
 {
   return (apr_hash_get(conn->capabilities, capability,
                        APR_HASH_KEY_STRING) != NULL);
+}
+
+int
+svn_ra_svn_compression_level(svn_ra_svn_conn_t *conn)
+{
+  return conn->compression_level;
 }
 
 const char *svn_ra_svn_conn_remote_host(svn_ra_svn_conn_t *conn)
@@ -168,10 +189,8 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     {
       count = end - data;
 
-      if (session && session->callbacks &&
-          session->callbacks->cancel_func)
-        SVN_ERR((session->callbacks->cancel_func)
-                   (session->callbacks_baton));
+      if (session && session->callbacks && session->callbacks->cancel_func)
+        SVN_ERR((session->callbacks->cancel_func)(session->callbacks_baton));
 
       SVN_ERR(svn_ra_svn__stream_write(conn->stream, data, &count));
       if (count == 0)
@@ -266,10 +285,8 @@ static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
 {
   svn_ra_svn__session_baton_t *session = conn->session;
 
-  if (session && session->callbacks &&
-      session->callbacks->cancel_func)
-    SVN_ERR((session->callbacks->cancel_func)
-              (session->callbacks_baton));
+  if (session && session->callbacks && session->callbacks->cancel_func)
+    SVN_ERR((session->callbacks->cancel_func)(session->callbacks_baton));
 
   SVN_ERR(svn_ra_svn__stream_read(conn->stream, data, len));
   if (*len == 0)
@@ -321,6 +338,7 @@ static svn_error_t *readbuf_getchar_skip_whitespace(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+/* Read the next LEN bytes from CONN and copy them to *DATA. */
 static svn_error_t *readbuf_read(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                  char *data, apr_size_t len)
 {
@@ -543,88 +561,68 @@ svn_error_t *svn_ra_svn_write_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 /* --- READING DATA ITEMS --- */
 
-/* Read LEN bytes from CONN into a supposedly empty STRINGBUF.
- * POOL will be used for temporary allocations. */
-static svn_error_t *
-read_long_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                 svn_stringbuf_t *stringbuf, apr_uint64_t len)
-{
-  char readbuf[4096];
-  apr_size_t readbuf_len;
-
-  /* We can't store strings longer than the maximum size of apr_size_t,
-   * so check for wrapping */
-  if (((apr_size_t) len) < len)
-    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                            _("String length larger than maximum"));
-
-  while (len)
-    {
-      readbuf_len = len > sizeof(readbuf) ? sizeof(readbuf) : (apr_size_t)len;
-
-      SVN_ERR(readbuf_read(conn, pool, readbuf, readbuf_len));
-      /* Read into a stringbuf_t to so we don't allow the sender to allocate
-       * an arbitrary amount of memory without actually sending us that much
-       * data */
-      svn_stringbuf_appendbytes(stringbuf, readbuf, readbuf_len);
-      len -= readbuf_len;
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Read LEN bytes from CONN into already-allocated structure ITEM.
  * Afterwards, *ITEM is of type 'SVN_RA_SVN_STRING', and its string
  * data is allocated in POOL. */
 static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                svn_ra_svn_item_t *item, apr_uint64_t len)
+                                svn_ra_svn_item_t *item, apr_uint64_t len64)
 {
   svn_stringbuf_t *stringbuf;
+  apr_size_t len = (apr_size_t)len64;
+  apr_size_t readbuf_len;
+  char *dest;
 
-  /* We should not use large strings in our protocol. However, we may
-   * receive a claim that a very long string is going to follow. In that
-   * case, we start small and wait for all that data to actually show up.
-   * This does not fully prevent DOS attacs but makes them harder (you
-   * have to actually send gigabytes of data).
-   */
-  if (len > SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD)
+  /* We can't store strings longer than the maximum size of apr_size_t,
+   * so check for wrapping */
+  if (len64 > APR_SIZE_MAX)
+    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                            _("String length larger than maximum"));
+
+  /* Read the string in chunks.  The chunk size is large enough to avoid
+   * re-allocation in typical cases, and small enough to ensure we do not
+   * pre-allocate an unreasonable amount of memory if (perhaps due to
+   * network data corruption or a DOS attack), we receive a bogus claim that
+   * a very long string is going to follow.  In that case, we start small
+   * and wait for all that data to actually show up.  This does not fully
+   * prevent DOS attacks but makes them harder (you have to actually send
+   * gigabytes of data). */
+  readbuf_len = len < SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD
+                    ? len
+                    : SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD;
+  stringbuf = svn_stringbuf_create_ensure(readbuf_len, pool);
+  dest = stringbuf->data;
+
+  /* Read remaining string data directly into the string structure.
+   * Do it iteratively, if necessary.  */
+  while (readbuf_len)
     {
-      /* This string might take a large amount of memory. Don't allocate
-       * the whole buffer at once, so to prevent OOM issues by corrupted
-       * network data.
-       */
-      stringbuf = svn_stringbuf_create("", pool);
-      SVN_ERR(read_long_string(conn, pool, stringbuf, len));
-    }
-  else
-    {
-      /* This is a reasonably sized string. So, provide a buffer large
-       * enough to prevent re-allocation as long as the data transmission
-       * is not flawed.
-       */
-      stringbuf = svn_stringbuf_create_ensure(len, pool);
+      SVN_ERR(readbuf_read(conn, pool, dest, readbuf_len));
 
-      /* Read the string data directly into the string structure.
-       * Do it iteratively, if necessary.
-       */
-      while (len)
-        {
-          apr_size_t readbuf_len = (apr_size_t)len;
-          char *dest = stringbuf->data + stringbuf->len;
-          SVN_ERR(readbuf_read(conn, pool, dest, readbuf_len));
+      stringbuf->len += readbuf_len;
+      len -= readbuf_len;
 
-          stringbuf->len += readbuf_len;
-          stringbuf->data[stringbuf->len] = '\0';
-          len -= readbuf_len;
-        }
+      /* Early exit. In most cases, strings can be read in the first
+       * iteration. */
+      if (len == 0)
+        break;
+
+      /* Prepare next iteration: determine length of chunk to read
+       * and re-alloc the string buffer. */
+      readbuf_len
+        = len < SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD
+              ? len
+              : SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD;
+
+      svn_stringbuf_ensure(stringbuf, stringbuf->len + readbuf_len + 1);
+      dest = stringbuf->data + stringbuf->len;
     }
 
-  /* Return the string properly wrapped into an RA_SVN item.
-   */
+  /* zero-terminate the string */
+  stringbuf->data[stringbuf->len] = '\0';
+
+  /* Return the string properly wrapped into an RA_SVN item. */
   item->kind = SVN_RA_SVN_STRING;
-  item->u.string = apr_palloc(pool, sizeof(*item->u.string));
-  item->u.string->data = stringbuf->data;
-  item->u.string->len = stringbuf->len;
+  item->u.string = svn_stringbuf__morph_into_string(stringbuf);
 
   return SVN_NO_ERROR;
 }
@@ -932,7 +930,7 @@ svn_error_t *svn_ra_svn__handle_failure_status(const apr_array_header_t *params,
          easily change that, so "" means a nonexistent message. */
       if (!*message)
         message = NULL;
-      
+
       /* Skip over links in the error chain that were intended only to
          exist on the server (to wrap real errors intended for the
          client) but accidentally got included in the server's actual
@@ -952,7 +950,7 @@ svn_error_t *svn_ra_svn__handle_failure_status(const apr_array_header_t *params,
   if (! err)
     err = svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                            _("Malformed error list"));
-    
+
   return err;
 }
 

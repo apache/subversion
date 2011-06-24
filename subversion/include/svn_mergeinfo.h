@@ -61,7 +61,7 @@ extern "C" {
  *
  * If a path has no @c SVN_PROP_MERGEINFO of its own, it inherits mergeinfo
  * from its nearest parent that has @c SVN_PROP_MERGEINFO set.  The
- * exception to this is @c SVN_PROP_MERGEINFO with non-ineritable revision
+ * exception to this is @c SVN_PROP_MERGEINFO with non-inheritable revision
  * ranges.  These non-inheritable ranges apply only to the path which they
  * are set on.
  *
@@ -192,8 +192,8 @@ svn_mergeinfo_diff(svn_mergeinfo_t *deleted, svn_mergeinfo_t *added,
                    svn_boolean_t consider_inheritance,
                    apr_pool_t *pool);
 
-/** Merge one mergeinfo, @a changes, into another mergeinfo @a
- * mergeinfo.
+/** Merge a shallow copy of one mergeinfo, @a changes, into another mergeinfo
+ * @a mergeinfo.
  *
  * When intersecting rangelists for a path are merged, the inheritability of
  * the resulting svn_merge_range_t depends on the inheritability of the
@@ -410,7 +410,9 @@ svn_rangelist_inheritable2(apr_array_header_t **inheritable_rangelist,
 /** Like svn_rangelist_inheritable2, but always finds inheritable ranges.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
                           const apr_array_header_t *rangelist,
@@ -445,7 +447,9 @@ svn_mergeinfo_inheritable2(svn_mergeinfo_t *inheritable_mergeinfo,
 /** Like svn_mergeinfo_inheritable2, but always finds inheritable mergeinfo.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_mergeinfo_inheritable(svn_mergeinfo_t *inheritable_mergeinfo,
                           svn_mergeinfo_t mergeinfo,
@@ -507,7 +511,7 @@ svn_rangelist_dup(const apr_array_header_t *rangelist, apr_pool_t *pool);
  *
  * @since New in 1.5.
  */
-typedef enum
+typedef enum svn_mergeinfo_inheritance_t
 {
   /** Explicit mergeinfo only. */
   svn_mergeinfo_explicit,
@@ -518,7 +522,7 @@ typedef enum
   svn_mergeinfo_inherited,
 
   /** Mergeinfo on target's nearest (path-wise, not history-wise)
-      ancestor, regardless of whether target has explict mergeinfo. */
+      ancestor, regardless of whether target has explicit mergeinfo. */
   svn_mergeinfo_nearest_ancestor
 } svn_mergeinfo_inheritance_t;
 
