@@ -657,11 +657,14 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
             }
 
           c = line->data[0];
-          /* Tolerate chopped leading spaces on empty lines. */
           if (original_lines > 0 && modified_lines > 0 &&
-              ((c == ' ') || (! eof && line->len == 0) ||
-               (ignore_whitespace && c != del && c != add)))
+              ((c == ' ')
+               /* Tolerate chopped leading spaces on empty lines. */
+               || (! eof && line->len == 0)
+               /* Maybe tolerate chopped leading spaces on non-empty lines. */
+               || (ignore_whitespace && c != del && c != add)))
             {
+              /* It's a "context" line in the hunk. */
               hunk_seen = TRUE;
               original_lines--;
               modified_lines--;
@@ -672,6 +675,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
             }
           else if (original_lines > 0 && c == del)
             {
+              /* It's a "deleted" line in the hunk. */
               hunk_seen = TRUE;
               changed_line_seen = TRUE;
 
@@ -684,6 +688,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
             }
           else if (modified_lines > 0 && c == add)
             {
+              /* It's an "added" line in the hunk. */
               hunk_seen = TRUE;
               changed_line_seen = TRUE;
 
