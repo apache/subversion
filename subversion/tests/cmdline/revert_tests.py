@@ -1574,6 +1574,7 @@ def revert_with_unversioned_targets(sbox):
   # revert
   expected_output = svntest.verify.UnorderedOutput([
     "Reverted '%s'\n" % sbox.ospath('A/D/H/chi'),
+    "Skipped '%s'\n" % sbox.ospath('A/D/H/delta'),
     "Reverted '%s'\n" % sbox.ospath('A/D/H/psi'),
   ])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
