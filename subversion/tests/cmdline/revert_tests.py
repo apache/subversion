@@ -1579,6 +1579,13 @@ def revert_with_unversioned_targets(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'revert', chi_path, delta_path, psi_path)
 
+  # verify status
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/D/H/delta': Item(status='? '),
+    })
+  svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
+
   # verify disk
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
