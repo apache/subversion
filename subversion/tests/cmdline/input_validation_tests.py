@@ -90,8 +90,7 @@ def invalid_wcpath_commit(sbox):
   "non-working copy paths for 'commit'"
   sbox.build(read_only=True)
   for target in _invalid_wc_path_targets:
-    run_and_verify_svn_in_wc(sbox, "svn: E205000: '.*' is a URL, but URLs cannot be " +
-                             "commit targets", 'commit', target)
+    run_and_verify_svn_in_wc(sbox, "svn: E205000: '.*' is not a local path", 'commit', target)
 
 def invalid_copy_sources(sbox):
   "invalid sources for 'copy'"
