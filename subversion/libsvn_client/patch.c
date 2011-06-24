@@ -2922,7 +2922,7 @@ apply_patches(void *baton,
 
 svn_error_t *
 svn_client_patch(const char *patch_abspath,
-                 const char *local_abspath,
+                 const char *wc_dir_abspath,
                  svn_boolean_t dry_run,
                  int strip_count,
                  svn_boolean_t reverse,
@@ -2941,10 +2941,10 @@ svn_client_patch(const char *patch_abspath,
     return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
                             _("strip count must be positive"));
 
-  if (svn_path_is_url(local_abspath))
+  if (svn_path_is_url(wc_dir_abspath))
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                              _("'%s' is not a local path"),
-                             svn_dirent_local_style(local_abspath,
+                             svn_dirent_local_style(wc_dir_abspath,
                                                     scratch_pool));
 
   SVN_ERR(svn_io_check_path(patch_abspath, &kind, scratch_pool));
@@ -2959,20 +2959,20 @@ svn_client_patch(const char *patch_abspath,
                              svn_dirent_local_style(patch_abspath,
                                                     scratch_pool));
 
-  SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
+  SVN_ERR(svn_io_check_path(wc_dir_abspath, &kind, scratch_pool));
   if (kind == svn_node_none)
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                              _("'%s' does not exist"),
-                             svn_dirent_local_style(local_abspath,
+                             svn_dirent_local_style(wc_dir_abspath,
                                                     scratch_pool));
   if (kind != svn_node_dir)
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                              _("'%s' is not a directory"),
-                             svn_dirent_local_style(local_abspath,
+                             svn_dirent_local_style(wc_dir_abspath,
                                                     scratch_pool));
 
   baton.patch_abspath = patch_abspath;
-  baton.abs_wc_path = local_abspath;
+  baton.abs_wc_path = wc_dir_abspath;
   baton.dry_run = dry_run;
   baton.ctx = ctx;
   baton.strip_count = strip_count;
@@ -2984,6 +2984,6 @@ svn_client_patch(const char *patch_abspath,
 
   return svn_error_trace(
            svn_wc__call_with_write_lock(apply_patches, &baton,
-                                        ctx->wc_ctx, local_abspath, FALSE,
+                                        ctx->wc_ctx, wc_dir_abspath, FALSE,
                                         result_pool, scratch_pool));
 }
