@@ -2492,7 +2492,7 @@ test_file_url_from_dirent(apr_pool_t *pool)
 #else
     { "/a/b",                      "file:///a/b" },
     { "/a",                        "file:///a" },
-    { "/",                         "file:///" },
+    { "/",                         "file://" },
     { "/File#$",                   "file:///File%23$" },
 #endif
   };
