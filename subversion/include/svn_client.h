@@ -5598,8 +5598,6 @@ typedef svn_error_t *(*svn_client_patch_func_t)(
  *
  * If @a reverse is @c TRUE, apply patches in reverse, deleting lines
  * the patch would add and adding lines the patch would delete.
- * This is useful when applying a unidiff which was created with the
- * original and modified files swapped due to human error.
  *
  * If @a ignore_whitespace is TRUE, allow patches to be applied if they
  * only differ from the target by whitespace.
@@ -5633,7 +5631,6 @@ svn_client_patch(const char *patch_abspath,
                  svn_client_patch_func_t patch_func,
                  void *patch_baton,
                  svn_client_ctx_t *ctx,
-                 apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool);
 
 /** @} */

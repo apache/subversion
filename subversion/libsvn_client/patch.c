@@ -2931,7 +2931,6 @@ svn_client_patch(const char *patch_abspath,
                  svn_client_patch_func_t patch_func,
                  void *patch_baton,
                  svn_client_ctx_t *ctx,
-                 apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
   apply_patches_baton_t baton;
@@ -2985,5 +2984,5 @@ svn_client_patch(const char *patch_abspath,
   return svn_error_trace(
            svn_wc__call_with_write_lock(apply_patches, &baton,
                                         ctx->wc_ctx, wc_dir_abspath, FALSE,
-                                        result_pool, scratch_pool));
+                                        scratch_pool, scratch_pool));
 }
