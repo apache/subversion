@@ -1943,7 +1943,7 @@ get_paths_history_as_mergeinfo(svn_mergeinfo_t *paths_history_mergeinfo,
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(start_rev));
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(end_rev));
 
-  /* Ensure START_REV is the oldest revision, as required by
+  /* Ensure START_REV is the youngest revision, as required by
      svn_repos_node_location_segments, for which this is an iterative
      wrapper. */
   if (start_rev < end_rev)
