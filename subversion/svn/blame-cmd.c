@@ -389,7 +389,7 @@ svn_cl__blame(apr_getopt_t *os,
             }
           else
             {
-              return svn_error_return(err);
+              return svn_error_trace(err);
             }
         }
       else if (opt_state->xml)

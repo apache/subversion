@@ -496,7 +496,7 @@ apply_textdelta(void *file_baton,
             original_md5 = eb->original_checksum;
 
           if (!svn_checksum_match(expected_checksum, original_md5))
-            return svn_error_return(svn_checksum_mismatch_err(
+            return svn_error_trace(svn_checksum_mismatch_err(
                                     expected_checksum,
                                     original_md5,
                                     pool,
@@ -974,7 +974,7 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
       || !update_root)
     {
       if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       svn_error_clear(err);
 
@@ -1009,7 +1009,7 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
               if (err)
                 {
                   if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
-                    return svn_error_return(err);
+                    return svn_error_trace(err);
 
                   svn_error_clear(err);
                 }
@@ -1036,7 +1036,7 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
                                   scratch_pool));
     }
 
-  return svn_error_return(reporter->finish_report(report_baton, scratch_pool));
+  return svn_error_trace(reporter->finish_report(report_baton, scratch_pool));
 }
 
 svn_error_t *
@@ -1067,7 +1067,7 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND || !ignore_enoent)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       svn_error_clear(err);
 
@@ -1122,7 +1122,7 @@ svn_wc__externals_defined_below(apr_hash_t **externals,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
 {
-  return svn_error_return(
+  return svn_error_trace(
             svn_wc__db_externals_defined_below(externals,
                                                wc_ctx->db, local_abspath,
                                                result_pool, scratch_pool));
@@ -1141,7 +1141,7 @@ svn_wc__external_register(svn_wc_context_t *wc_ctx,
                           apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(kind == svn_node_dir);
-  return svn_error_return(
+  return svn_error_trace(
             svn_wc__db_external_add_dir(wc_ctx->db, local_abspath,
                                         defining_abspath,
                                         repos_root_url,
@@ -1199,7 +1199,7 @@ svn_wc__externals_gather_definitions(apr_hash_t **externals,
   if (depth == svn_depth_infinity
       || depth == svn_depth_unknown)
     {
-      return svn_error_return(
+      return svn_error_trace(
         svn_wc__db_externals_gather_definitions(externals, depths,
                                                 wc_ctx->db, local_abspath,
                                                 result_pool, scratch_pool));
@@ -1218,7 +1218,7 @@ svn_wc__externals_gather_definitions(apr_hash_t **externals,
       if (err)
         {
           if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-            return svn_error_return(err);
+            return svn_error_trace(err);
 
           svn_error_clear(err);
           value = NULL;

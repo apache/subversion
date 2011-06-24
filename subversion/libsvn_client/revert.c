@@ -102,7 +102,7 @@ revert(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
           svn_error_clear(err);
         }
       else
-        return svn_error_return(err);
+        return svn_error_trace(err);
     }
 
   return SVN_NO_ERROR;
@@ -192,5 +192,5 @@ svn_client_revert2(const apr_array_header_t *paths,
 
   svn_pool_destroy(subpool);
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }

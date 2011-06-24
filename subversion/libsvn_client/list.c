@@ -238,7 +238,7 @@ svn_client_list2(const char *path_or_url,
         dirent = NULL;
     }
   else if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   if (! dirent)
     return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
@@ -258,7 +258,7 @@ svn_client_list2(const char *path_or_url,
           locks = NULL;
         }
       else if (err)
-        return svn_error_return(err);
+        return svn_error_trace(err);
     }
   else
     locks = NULL;

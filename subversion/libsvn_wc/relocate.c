@@ -164,7 +164,7 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
   SVN_ERR(validator(validator_baton, uuid, new_url, new_repos_root,
                     scratch_pool));
 
-  return svn_error_return(svn_wc__db_global_relocate(wc_ctx->db, local_abspath,
+  return svn_error_trace(svn_wc__db_global_relocate(wc_ctx->db, local_abspath,
                                                      new_repos_root,
                                                      scratch_pool));
 }

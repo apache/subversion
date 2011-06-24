@@ -268,7 +268,7 @@ dump_node(struct edit_baton *eb,
 
           /* Return the error in addition to notifying about it. */
           if (eb->verify)
-            return svn_error_return(err);
+            return svn_error_trace(err);
           else
             svn_error_clear(err);
         }

@@ -270,7 +270,7 @@ switch_internal(svn_revnum_t *result_rev,
       /* Don't rely on the error handling to handle the sleep later, do
          it now */
       svn_io_sleep_for_timestamps(local_abspath, pool);
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
   *use_sleep = TRUE;
 
@@ -300,7 +300,7 @@ switch_internal(svn_revnum_t *result_rev,
 
   /* Return errors we might have sustained. */
   if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)
@@ -352,7 +352,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                    ctx->wc_ctx, local_abspath, TRUE,
                                    pool, pool);
   if (err && err->apr_err != SVN_ERR_WC_LOCKED)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   acquired_lock = (err == SVN_NO_ERROR);
   svn_error_clear(err);

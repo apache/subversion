@@ -161,7 +161,7 @@ svn_wc__internal_get_repos_info(const char **repos_root_url,
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
           && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       /* This node is not versioned. Return NULL repos info.  */
       svn_error_clear(err);
@@ -225,7 +225,7 @@ svn_wc__node_get_repos_info(const char **repos_root_url,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  return svn_error_return(svn_wc__internal_get_repos_info(
+  return svn_error_trace(svn_wc__internal_get_repos_info(
             repos_root_url, repos_uuid, wc_ctx->db, local_abspath,
             result_pool, scratch_pool));
 }
@@ -317,7 +317,7 @@ svn_wc__node_get_depth(svn_depth_t *depth,
                        const char *local_abspath,
                        apr_pool_t *scratch_pool)
 {
-  return svn_error_return(
+  return svn_error_trace(
     svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                          NULL, NULL, depth, NULL, NULL, NULL, NULL,
                          NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -335,7 +335,7 @@ svn_wc__node_get_changed_info(svn_revnum_t *changed_rev,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
-  return svn_error_return(
+  return svn_error_trace(
     svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, changed_rev,
                          changed_date, changed_author, NULL, NULL, NULL,
                          NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -351,7 +351,7 @@ svn_wc__node_get_url(const char **url,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
-  return svn_error_return(svn_wc__db_read_url(url, wc_ctx->db, local_abspath,
+  return svn_error_trace(svn_wc__db_read_url(url, wc_ctx->db, local_abspath,
                                               result_pool, scratch_pool));
 }
 
@@ -714,7 +714,7 @@ svn_wc__internal_walk_children(svn_wc__db_t *db,
 
   if (db_kind == svn_wc__db_kind_dir)
     {
-      return svn_error_return(
+      return svn_error_trace(
         walker_helper(db, local_abspath, show_hidden, changelist_hash,
                       walk_callback, walk_baton,
                       walk_depth, cancel_func, cancel_baton, scratch_pool));
@@ -863,7 +863,7 @@ get_base_rev(svn_revnum_t *base_revision,
                                  scratch_pool, scratch_pool);
 
   if (!err || err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   svn_error_clear(err);
 
@@ -884,7 +884,7 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
                           const char *local_abspath,
                           apr_pool_t *scratch_pool)
 {
-  return svn_error_return(get_base_rev(base_revision, wc_ctx->db,
+  return svn_error_trace(get_base_rev(base_revision, wc_ctx->db,
                                        local_abspath, scratch_pool));
 }
 
@@ -1034,7 +1034,7 @@ svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
                                  const char *local_abspath,
                                  apr_pool_t *scratch_pool)
 {
-  return svn_error_return(svn_wc__internal_get_commit_base_rev(
+  return svn_error_trace(svn_wc__internal_get_commit_base_rev(
                             commit_base_revision, wc_ctx->db, local_abspath,
                             scratch_pool));
 }
@@ -1061,7 +1061,7 @@ svn_wc__node_get_lock_info(const char **lock_token,
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       svn_error_clear(err);
       lock = NULL;
@@ -1197,7 +1197,7 @@ svn_wc__node_get_schedule(svn_wc_schedule_t *schedule,
                           const char *local_abspath,
                           apr_pool_t *scratch_pool)
 {
-  return svn_error_return(
+  return svn_error_trace(
            svn_wc__internal_node_get_schedule(schedule,
                                               copied,
                                               wc_ctx->db,
@@ -1282,7 +1282,7 @@ svn_wc__node_clear_dav_cache_recursive(svn_wc_context_t *wc_ctx,
                                        const char *local_abspath,
                                        apr_pool_t *scratch_pool)
 {
-  return svn_error_return(svn_wc__db_base_clear_dav_cache_recursive(
+  return svn_error_trace(svn_wc__db_base_clear_dav_cache_recursive(
                               wc_ctx->db, local_abspath, scratch_pool));
 }
 
@@ -1294,7 +1294,7 @@ svn_wc__node_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
                                        apr_pool_t *result_pool,
                                        apr_pool_t *scratch_pool)
 {
-  return svn_error_return(svn_wc__db_base_get_lock_tokens_recursive(
+  return svn_error_trace(svn_wc__db_base_get_lock_tokens_recursive(
                               lock_tokens, wc_ctx->db, local_abspath,
                               result_pool, scratch_pool));
 }
@@ -1306,7 +1306,7 @@ svn_wc__get_absent_subtrees(apr_hash_t **absent_subtrees,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  return svn_error_return(svn_wc__db_get_absent_subtrees(absent_subtrees,
+  return svn_error_trace(svn_wc__db_get_absent_subtrees(absent_subtrees,
                                                          wc_ctx->db,
                                                          local_abspath,
                                                          result_pool,
@@ -1435,7 +1435,7 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  return svn_error_return(svn_wc__internal_get_origin(is_copy, revision,
+  return svn_error_trace(svn_wc__internal_get_origin(is_copy, revision,
                             repos_relpath, repos_root_url, repos_uuid,
                             wc_ctx->db, local_abspath, scan_deleted,
                             result_pool, scratch_pool));
@@ -1565,7 +1565,7 @@ svn_wc__node_get_md5_from_sha1(const svn_checksum_t **md5_checksum,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
-  return svn_error_return(svn_wc__db_pristine_get_md5(md5_checksum,
+  return svn_error_trace(svn_wc__db_pristine_get_md5(md5_checksum,
                                                       wc_ctx->db,
                                                       wri_abspath,
                                                       sha1_checksum,
@@ -1580,7 +1580,7 @@ svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool)
 {
-  return svn_error_return(
+  return svn_error_trace(
                 svn_wc__db_get_not_present_descendants(descendants,
                                                        wc_ctx->db,
                                                        local_abspath,

@@ -675,7 +675,7 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
                            void *authz_read_baton,
                            apr_pool_t *pool)
 {
-  return svn_error_return(svn_repos_fs_get_mergeinfo2(mergeinfo, repos,
+  return svn_error_trace(svn_repos_fs_get_mergeinfo2(mergeinfo, repos,
                                                       paths, rev, inherit,
                                                       FALSE,
                                                       include_descendants,

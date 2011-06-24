@@ -171,7 +171,7 @@ svn_sqlite__exec_statements(svn_sqlite__db_t *db, int stmt_idx)
 {
   SVN_ERR_ASSERT(stmt_idx < db->nbr_statements);
 
-  return svn_error_return(exec_sql(db, db->statement_strings[stmt_idx]));
+  return svn_error_trace(exec_sql(db, db->statement_strings[stmt_idx]));
 }
 
 
@@ -189,7 +189,7 @@ svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
   *stmt = db->prepared_stmts[stmt_idx];
 
   if ((*stmt)->needs_reset)
-    return svn_error_return(svn_sqlite__reset(*stmt));
+    return svn_error_trace(svn_sqlite__reset(*stmt));
 
   return SVN_NO_ERROR;
 }
@@ -217,13 +217,13 @@ svn_error_t *
 svn_sqlite__step_done(svn_sqlite__stmt_t *stmt)
 {
   SVN_ERR(step_with_expectation(stmt, FALSE));
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 svn_error_t *
 svn_sqlite__step_row(svn_sqlite__stmt_t *stmt)
 {
-  return svn_error_return(step_with_expectation(stmt, TRUE));
+  return svn_error_trace(step_with_expectation(stmt, TRUE));
 }
 
 
@@ -257,7 +257,7 @@ svn_sqlite__insert(apr_int64_t *row_id, svn_sqlite__stmt_t *stmt)
   if (row_id)
     *row_id = sqlite3_last_insert_rowid(stmt->db->db3);
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 svn_error_t *
@@ -268,7 +268,7 @@ svn_sqlite__update(int *affected_rows, svn_sqlite__stmt_t *stmt)
   if (affected_rows)
     *affected_rows = sqlite3_changes(stmt->db->db3);
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 
@@ -332,7 +332,7 @@ svn_sqlite__bindf(svn_sqlite__stmt_t *stmt, const char *fmt, ...)
   va_start(ap, fmt);
   err = vbindf(stmt, fmt, ap);
   va_end(ap);
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 svn_error_t *
@@ -412,12 +412,12 @@ svn_sqlite__bind_properties(svn_sqlite__stmt_t *stmt,
   svn_stringbuf_t *properties;
 
   if (props == NULL)
-    return svn_error_return(svn_sqlite__bind_blob(stmt, slot, NULL, 0));
+    return svn_error_trace(svn_sqlite__bind_blob(stmt, slot, NULL, 0));
 
   SVN_ERR(svn_skel__unparse_proplist(&skel, (apr_hash_t *)props,
                                      scratch_pool));
   properties = svn_skel__unparse(skel, scratch_pool);
-  return svn_error_return(svn_sqlite__bind_blob(stmt,
+  return svn_error_trace(svn_sqlite__bind_blob(stmt,
                                                 slot,
                                                 properties->data,
                                                 properties->len));
@@ -436,7 +436,7 @@ svn_sqlite__bind_checksum(svn_sqlite__stmt_t *stmt,
   else
     csum_str = svn_checksum_serialize(checksum, scratch_pool, scratch_pool);
 
-  return svn_error_return(svn_sqlite__bind_text(stmt, slot, csum_str));
+  return svn_error_trace(svn_sqlite__bind_text(stmt, slot, csum_str));
 }
 
 
@@ -582,7 +582,7 @@ svn_sqlite__set_schema_version(svn_sqlite__db_t *db,
                                         "PRAGMA user_version = %d;",
                                         version);
 
-  return svn_error_return(exec_sql(db, pragma_cmd));
+  return svn_error_trace(exec_sql(db, pragma_cmd));
 }
 
 
@@ -687,7 +687,7 @@ svn_sqlite__read_schema_version(int *version,
 
   *version = svn_sqlite__column_int(stmt, 0);
 
-  return svn_error_return(svn_sqlite__finalize(stmt));
+  return svn_error_trace(svn_sqlite__finalize(stmt));
 }
 
 
@@ -717,7 +717,7 @@ check_format(svn_sqlite__db_t *db,
       ub.latest_schema = latest_schema;
       ub.upgrade_sql = upgrade_sql;
 
-      return svn_error_return(svn_sqlite__with_transaction(
+      return svn_error_trace(svn_sqlite__with_transaction(
                                 db, upgrade_format, &ub, scratch_pool));
     }
 
@@ -1048,7 +1048,7 @@ with_transaction(svn_sqlite__db_t *db,
                                       err2);
     }
 
-  return svn_error_return(exec_sql(db, "COMMIT TRANSACTION;"));
+  return svn_error_trace(exec_sql(db, "COMMIT TRANSACTION;"));
 }
 
 svn_error_t *
@@ -1058,7 +1058,7 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
                              apr_pool_t *scratch_pool /* NULL allowed */)
 {
   SVN_ERR(exec_sql(db, "BEGIN TRANSACTION;"));
-  return svn_error_return(with_transaction(db, cb_func, cb_baton,
+  return svn_error_trace(with_transaction(db, cb_func, cb_baton,
                                            scratch_pool));
 }
 
@@ -1070,7 +1070,7 @@ svn_sqlite__with_immediate_transaction(
   apr_pool_t *scratch_pool /* NULL allowed */)
 {
   SVN_ERR(exec_sql(db, "BEGIN IMMEDIATE TRANSACTION;"));
-  return svn_error_return(with_transaction(db, cb_func, cb_baton,
+  return svn_error_trace(with_transaction(db, cb_func, cb_baton,
                                            scratch_pool));
 }
 
@@ -1111,11 +1111,11 @@ svn_sqlite__with_lock(svn_sqlite__db_t *db,
       snprintf(buf, sizeof(buf), "RELEASE   s%u", savepoint);
       err2 = svn_error_compose_create(exec_sql(db, buf), err2);
 
-      return svn_error_return(svn_error_compose_create(err, err2));
+      return svn_error_trace(svn_error_compose_create(err, err2));
     }
 
   snprintf(buf, sizeof(buf), "RELEASE   s%u", savepoint);
-  return svn_error_return(exec_sql(db, buf));
+  return svn_error_trace(exec_sql(db, buf));
 }
 
 svn_error_t *

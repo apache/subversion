@@ -52,7 +52,7 @@ svn_client_url_from_path2(const char **url,
       SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url,
                                       scratch_pool));
 
-      return svn_error_return(
+      return svn_error_trace(
                  svn_wc__node_get_url(url, ctx->wc_ctx, path_or_url,
                                       result_pool, scratch_pool));
     }
@@ -72,7 +72,7 @@ svn_client_root_url_from_path(const char **url,
   if (!svn_path_is_url(path_or_url))
     SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url, pool));
 
-  return svn_error_return(
+  return svn_error_trace(
            svn_client__get_repos_root(url, path_or_url,
                                       ctx, pool, pool));
 }

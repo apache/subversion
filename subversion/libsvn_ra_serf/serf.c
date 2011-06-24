@@ -770,7 +770,7 @@ path_dirent_walker(void *baton,
 
   dwb.entry = entry;
   dwb.result_pool = pool;  /* ### fix this!  */
-  return svn_error_return(dirent_walker(&dwb, ns, name, val, pool));
+  return svn_error_trace(dirent_walker(&dwb, ns, name, val, pool));
 }
 
 static const svn_ra_serf__dav_props_t *
@@ -856,7 +856,7 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
           return SVN_NO_ERROR;
         }
       else
-        return svn_error_return(err);
+        return svn_error_trace(err);
     }
 
   dwb.entry = apr_pcalloc(pool, sizeof(*dwb.entry));

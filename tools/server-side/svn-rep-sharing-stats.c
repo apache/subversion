@@ -93,7 +93,7 @@ check_lib_versions(void)
     };
 
   SVN_VERSION_DEFINE(my_version);
-  return svn_error_return(svn_ver_check_list(&my_version, checklist));
+  return svn_error_trace(svn_ver_check_list(&my_version, checklist));
 }
 
 

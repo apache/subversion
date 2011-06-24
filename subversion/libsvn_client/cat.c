@@ -218,7 +218,7 @@ svn_client_cat2(svn_stream_t *out,
       /* We don't promise to close output, so disown it to ensure we don't. */
       output = svn_stream_disown(output, pool);
 
-      return svn_error_return(svn_stream_copy3(normal_stream, output,
+      return svn_error_trace(svn_stream_copy3(normal_stream, output,
                                                ctx->cancel_func,
                                                ctx->cancel_baton, pool));
     }
@@ -241,7 +241,7 @@ svn_client_cat2(svn_stream_t *out,
         }
       else
         {
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
     }
 

@@ -241,7 +241,7 @@ svn_client_relocate2(const char *wcroot_dir,
   /* If we're ignoring externals, just relocate and get outta here. */
   if (ignore_externals)
     {
-      return svn_error_return(svn_wc_relocate4(ctx->wc_ctx, local_abspath,
+      return svn_error_trace(svn_wc_relocate4(ctx->wc_ctx, local_abspath,
                                                from_prefix, to_prefix,
                                                validator_func, &vb, pool));
     }

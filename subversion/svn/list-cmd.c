@@ -298,7 +298,7 @@ svn_cl__list(apr_getopt_t *os,
               err->apr_err == SVN_ERR_FS_NOT_FOUND)
               svn_handle_warning2(stderr, err, "svn: ");
           else
-              return svn_error_return(err);
+              return svn_error_trace(err);
 
           svn_error_clear(err);
           err = NULL;

@@ -367,7 +367,7 @@ add_file(const char *local_abspath,
                                              NULL /* changelists */,
                                              NULL, NULL, NULL, NULL,
                                              pool));
-              return svn_error_return(err);
+              return svn_error_trace(err);
             }
         }
     }
@@ -429,7 +429,7 @@ add_dir_recursive(const char *dir_abspath,
   if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
     svn_error_clear(err);
   else if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   if (!no_ignore)
     {
@@ -607,7 +607,7 @@ add(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
       svn_error_clear(err);
       err = SVN_NO_ERROR;
     }
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -902,7 +902,7 @@ mkdir_urls(const apr_array_header_t *urls,
     {
       /* At least try to abort the edit (and fs txn) before throwing err. */
       svn_error_clear(editor->abort_edit(edit_baton, pool));
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   /* Close the edit. */
@@ -943,7 +943,7 @@ svn_client__make_local_parents(const char *path,
       svn_error_clear(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 

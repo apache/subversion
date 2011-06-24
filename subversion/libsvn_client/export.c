@@ -241,7 +241,7 @@ copy_one_versioned_file(const char *from_abspath,
          details into the destination stream. */
       SVN_ERR(svn_subst_create_specialfile(&dst_stream, to_abspath,
                                            scratch_pool, scratch_pool));
-      return svn_error_return(
+      return svn_error_trace(
         svn_stream_copy3(source, dst_stream, NULL, NULL, scratch_pool));
     }
 
@@ -448,7 +448,7 @@ copy_versioned_files(const char *from_abspath,
       if (err)
         {
           if (! APR_STATUS_IS_EEXIST(err->apr_err))
-            return svn_error_return(err);
+            return svn_error_trace(err);
           if (! force)
             SVN_ERR_W(err, _("Destination directory exists, and will not be "
                              "overwritten unless forced"));
@@ -843,7 +843,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       svn_error_clear(svn_io_remove_file2(hb->tmppath, TRUE, hb->pool));
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 

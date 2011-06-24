@@ -652,7 +652,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
           && status != svn_wc__db_status_incomplete))
     {
       if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       svn_error_clear(err);
 
@@ -841,7 +841,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
     }
 
   /* Finish the report, which causes the update editor to be driven. */
-  return svn_error_return(reporter->finish_report(report_baton, scratch_pool));
+  return svn_error_trace(reporter->finish_report(report_baton, scratch_pool));
 
  abort_report:
   /* Clean up the fs transaction. */
@@ -850,7 +850,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       fserr = svn_error_quick_wrap(fserr, _("Error aborting report"));
       svn_error_compose(err, fserr);
     }
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 /*** Copying stream ***/
@@ -1161,7 +1161,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
     }
 
   /* Close the file baton, and get outta here. */
-  return svn_error_return(
+  return svn_error_trace(
              editor->close_file(file_baton,
                                 svn_checksum_to_cstring(local_md5_checksum,
                                                         scratch_pool),

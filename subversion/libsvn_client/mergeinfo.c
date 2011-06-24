@@ -494,7 +494,7 @@ svn_client__get_repos_mergeinfo_catalog(
           repos_mergeinfo = NULL;
         }
       else
-        return svn_error_return(err);
+        return svn_error_trace(err);
     }
 
   *mergeinfo_cat = repos_mergeinfo;
@@ -924,7 +924,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
             }
           else
             {
-              return svn_error_return(err);
+              return svn_error_trace(err);
             }
         }
 
@@ -949,7 +949,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
             }
           else
             {
-              return svn_error_return(err);
+              return svn_error_trace(err);
             }
         }
 
@@ -973,7 +973,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
                 }
               else
                 {
-                  return svn_error_return(err);
+                  return svn_error_trace(err);
                 }
             }
         }

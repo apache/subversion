@@ -912,7 +912,7 @@ apply_textdelta(void *file_baton,
                                      base_md5_digest, scratch_pool));
 
       if (!svn_checksum_match(base_md5_checksum, b->start_md5_checksum))
-        return svn_error_return(svn_checksum_mismatch_err(
+        return svn_error_trace(svn_checksum_mismatch_err(
                                       base_md5_checksum,
                                       b->start_md5_checksum,
                                       scratch_pool,
@@ -980,7 +980,7 @@ close_file(void *file_baton,
                                      expected_md5_digest, scratch_pool));
 
       if (!svn_checksum_match(expected_md5_checksum, b->result_md5_checksum))
-        return svn_error_return(svn_checksum_mismatch_err(
+        return svn_error_trace(svn_checksum_mismatch_err(
                                       expected_md5_checksum,
                                       b->result_md5_checksum,
                                       pool,

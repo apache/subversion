@@ -1578,7 +1578,7 @@ detranslate_special_file(const char *src, const char *dst,
                            cancel_func, cancel_baton, scratch_pool));
 
   /* Do the atomic rename from our temporary location. */
-  return svn_error_return(svn_io_file_rename(dst_tmp, dst, scratch_pool));
+  return svn_error_trace(svn_io_file_rename(dst_tmp, dst, scratch_pool));
 }
 
 /* Creates a special file DST from the "normal form" located in SOURCE.
@@ -1700,12 +1700,12 @@ svn_subst_copy_and_translate4(const char *src,
               SVN_ERR(svn_stream_open_readonly(&src_stream, src, pool, pool));
             }
 
-          return svn_error_return(create_special_file_from_stream(src_stream,
+          return svn_error_trace(create_special_file_from_stream(src_stream,
                                                                   dst, pool));
         }
       /* else !expand */
 
-      return svn_error_return(detranslate_special_file(src, dst,
+      return svn_error_trace(detranslate_special_file(src, dst,
                                                        cancel_func,
                                                        cancel_baton,
                                                        pool));
@@ -1713,7 +1713,7 @@ svn_subst_copy_and_translate4(const char *src,
 
   /* The easy way out:  no translation needed, just copy. */
   if (! (eol_str || (keywords && (apr_hash_count(keywords) > 0))))
-    return svn_error_return(svn_io_copy_file(src, dst, FALSE, pool));
+    return svn_error_trace(svn_io_copy_file(src, dst, FALSE, pool));
 
   /* Open source file. */
   SVN_ERR(svn_stream_open_readonly(&src_stream, src, pool, pool));
@@ -1742,7 +1742,7 @@ svn_subst_copy_and_translate4(const char *src,
     }
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
-  return svn_error_return(svn_io_file_rename(dst_tmp, dst, pool));
+  return svn_error_trace(svn_io_file_rename(dst_tmp, dst, pool));
 }
 
 

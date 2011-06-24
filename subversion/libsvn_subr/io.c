@@ -827,7 +827,7 @@ svn_io_copy_file(const char *src,
   if (copy_perms)
     SVN_ERR(svn_io_copy_perms(src, dst_tmp, pool));
 
-  return svn_error_return(svn_io_file_rename(dst_tmp, dst, pool));
+  return svn_error_trace(svn_io_file_rename(dst_tmp, dst, pool));
 }
 
 #if !defined(WIN32) && !defined(__OS2__)
@@ -1108,7 +1108,7 @@ svn_error_t *svn_io_file_create(const char *file,
                                  &written, pool);
 
 
-  return svn_error_return(
+  return svn_error_trace(
                         svn_error_compose_create(err,
                                                  svn_io_file_close(f, pool)));
 }
@@ -1326,7 +1326,7 @@ reown_file(const char *path,
                                    svn_io_file_del_none, pool, pool));
   SVN_ERR(svn_io_file_rename(path, unique_name, pool));
   SVN_ERR(svn_io_copy_file(unique_name, path, TRUE, pool));
-  return svn_error_return(svn_io_remove_file2(unique_name, FALSE, pool));
+  return svn_error_trace(svn_io_remove_file2(unique_name, FALSE, pool));
 }
 
 /* Determine what the PERMS for a new file should be by looking at the
@@ -2212,7 +2212,7 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
           svn_error_clear(err);
           return SVN_NO_ERROR;
         }
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   for (hi = apr_hash_first(subpool, dirents); hi; hi = apr_hash_next(hi))
@@ -2251,7 +2251,7 @@ svn_io_get_dir_filenames(apr_hash_t **dirents,
                          const char *path,
                          apr_pool_t *pool)
 {
-  return svn_error_return(svn_io_get_dirents3(dirents, path, TRUE,
+  return svn_error_trace(svn_io_get_dirents3(dirents, path, TRUE,
                                               pool, pool));
 }
 
@@ -3161,7 +3161,7 @@ svn_error_t *
 svn_io_file_write(apr_file_t *file, const void *buf,
                   apr_size_t *nbytes, apr_pool_t *pool)
 {
-  return svn_error_return(do_io_file_wrapper_cleanup(
+  return svn_error_trace(do_io_file_wrapper_cleanup(
      file, apr_file_write(file, buf, nbytes),
      N_("Can't write to file '%s'"),
      N_("Can't write to stream"),
@@ -3208,7 +3208,7 @@ svn_io_file_write_full(apr_file_t *file, const void *buf,
   apr_status_t rv = apr_file_write_full(file, buf, nbytes, bytes_written);
 #endif
 
-  return svn_error_return(do_io_file_wrapper_cleanup(
+  return svn_error_trace(do_io_file_wrapper_cleanup(
      file, rv,
      N_("Can't write to file '%s'"),
      N_("Can't write to stream"),
@@ -3244,7 +3244,7 @@ svn_io_write_unique(const char **tmp_path,
     err = svn_io_file_flush_to_disk(new_file, pool);
 #endif
 
-  return svn_error_return(
+  return svn_error_trace(
                   svn_error_compose_create(err,
                                            svn_io_file_close(new_file, pool)));
 }
@@ -3911,7 +3911,7 @@ contents_identical_p(svn_boolean_t *identical_p,
                          pool);
 
   if (err)
-    return svn_error_return(
+    return svn_error_trace(
                svn_error_compose_create(err,
                                         svn_io_file_close(file1_h, pool)));
 
@@ -3942,7 +3942,7 @@ contents_identical_p(svn_boolean_t *identical_p,
   if (!err && (eof1 != eof2))
     *identical_p = FALSE;
 
-  return svn_error_return(
+  return svn_error_trace(
            svn_error_compose_create(
                 err,
                 svn_error_compose_create(svn_io_file_close(file1_h, pool),
@@ -4013,7 +4013,7 @@ temp_file_create(apr_file_t **new_file,
                               "template '%s'"), templ);
 
   /* Translate the returned path back to utf-8 before returning it */
-  return svn_error_return(svn_path_cstring_to_utf8(new_file_name,
+  return svn_error_trace(svn_path_cstring_to_utf8(new_file_name,
                                                    templ_apr,
                                                    result_pool));
 #else

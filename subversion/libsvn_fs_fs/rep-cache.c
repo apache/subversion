@@ -174,7 +174,7 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
   if (err)
     {
       if (err->apr_err != SVN_ERR_SQLITE_CONSTRAINT)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       svn_error_clear(err);
 

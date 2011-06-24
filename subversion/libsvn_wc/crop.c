@@ -45,7 +45,7 @@
         if (__temp->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)        \
           svn_error_clear(__temp);                               \
         else                                                     \
-          return svn_error_return(__temp);                       \
+          return svn_error_trace(__temp);                       \
       }                                                          \
   } while (0)
 

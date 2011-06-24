@@ -407,7 +407,7 @@ svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
                              svn_dirent_local_style(conflict->local_abspath,
                                                     scratch_pool));
 
-  return svn_error_return(
+  return svn_error_trace(
     svn_wc__db_op_set_tree_conflict(wc_ctx->db, conflict->local_abspath,
                                           conflict, scratch_pool));
 }
@@ -422,7 +422,7 @@ svn_wc__get_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
 {
   SVN_ERR_ASSERT(svn_dirent_is_absolute(victim_abspath));
 
-  return svn_error_return(
+  return svn_error_trace(
     svn_wc__db_op_read_tree_conflict(tree_conflict, wc_ctx->db, victim_abspath,
                                      result_pool, scratch_pool));
 }

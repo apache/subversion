@@ -1327,7 +1327,7 @@ subcommand_pack(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (! opt_state->quiet)
     progress_stream = recode_stream_create(stderr, pool);
 
-  return svn_error_return(
+  return svn_error_trace(
     svn_repos_fs_pack2(repos, !opt_state->quiet ? repos_notify_handler : NULL,
                        progress_stream, check_cancel, NULL, pool));
 }

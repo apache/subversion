@@ -490,5 +490,5 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                                          parser_ctx->location),
             err);
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }

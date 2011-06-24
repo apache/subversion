@@ -442,7 +442,7 @@ svn_diff_hunk_readline_original_text(svn_diff_hunk_t *hunk,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool)
 {
-  return svn_error_return(
+  return svn_error_trace(
     hunk_readline_original_or_modified(hunk->apr_file,
                                        hunk->patch->reverse ?
                                          &hunk->modified_text_range :
@@ -460,7 +460,7 @@ svn_diff_hunk_readline_modified_text(svn_diff_hunk_t *hunk,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool)
 {
-  return svn_error_return(
+  return svn_error_trace(
     hunk_readline_original_or_modified(hunk->apr_file,
                                        hunk->patch->reverse ?
                                          &hunk->original_text_range :
@@ -1388,6 +1388,6 @@ svn_error_t *
 svn_diff_close_patch_file(svn_patch_file_t *patch_file,
                           apr_pool_t *scratch_pool)
 {
-  return svn_error_return(svn_io_file_close(patch_file->apr_file,
+  return svn_error_trace(svn_io_file_close(patch_file->apr_file,
                                             scratch_pool));
 }

@@ -120,7 +120,7 @@ svn_client__can_delete(const char *path,
      status callback function find_undeletables() makes the
      determination, returning an error if it finds anything that shouldn't
      be deleted. */
-  return svn_error_return(svn_client_status5(NULL, ctx, path, &revision,
+  return svn_error_trace(svn_client_status5(NULL, ctx, path, &revision,
                                              svn_depth_infinity, FALSE,
                                              FALSE, FALSE, FALSE, FALSE,
                                              NULL,
@@ -201,13 +201,13 @@ single_repos_delete(svn_ra_session_t *ra_session,
 
   if (err)
     {
-      return svn_error_return(
+      return svn_error_trace(
                svn_error_compose_create(err,
                                         editor->abort_edit(edit_baton, pool)));
     }
 
   /* Close the edit. */
-  return svn_error_return(editor->close_edit(edit_baton, pool));
+  return svn_error_trace(editor->close_edit(edit_baton, pool));
 }
 
 static svn_error_t *
@@ -321,7 +321,7 @@ svn_client__wc_delete(const char *path,
 
   if (!dry_run)
     /* Mark the entry for commit deletion and perform wc deletion */
-    return svn_error_return(svn_wc_delete4(ctx->wc_ctx, local_abspath,
+    return svn_error_trace(svn_wc_delete4(ctx->wc_ctx, local_abspath,
                                            keep_local, TRUE,
                                            ctx->cancel_func, ctx->cancel_baton,
                                            notify_func, notify_baton, pool));

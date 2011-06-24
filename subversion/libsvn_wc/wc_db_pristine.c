@@ -364,7 +364,7 @@ pristine_install_txn(void *baton,
 
       if (err2)
         /* Creating directory didn't work: Return all errors */
-        return svn_error_return(svn_error_compose_create(err, err2));
+        return svn_error_trace(svn_error_compose_create(err, err2));
       else
         /* We could create a directory: retry install */
         svn_error_clear(err);
@@ -473,7 +473,7 @@ svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
   SVN_ERR(svn_sqlite__column_checksum(md5_checksum, stmt, 0, result_pool));
   SVN_ERR_ASSERT((*md5_checksum)->kind == svn_checksum_md5);
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 
@@ -512,7 +512,7 @@ svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
   SVN_ERR(svn_sqlite__column_checksum(sha1_checksum, stmt, 0, result_pool));
   SVN_ERR_ASSERT((*sha1_checksum)->kind == svn_checksum_sha1);
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 

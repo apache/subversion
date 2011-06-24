@@ -153,7 +153,7 @@ process_committed_leaf(svn_wc__db_t *db,
 
   if (status == svn_wc__db_status_deleted)
     {
-      return svn_error_return(
+      return svn_error_trace(
                 svn_wc__db_op_remove_node(
                                 db, local_abspath,
                                 (have_base && !via_recurse)
@@ -898,7 +898,7 @@ check_can_add_node(svn_node_kind_t *kind_p,
     if (err)
       {
         if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-          return svn_error_return(err);
+          return svn_error_trace(err);
 
         svn_error_clear(err);
         exists = FALSE;
@@ -1331,7 +1331,7 @@ revert_restore(svn_wc__db_t *db,
       return SVN_NO_ERROR;
     }
   else if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   err = svn_io_stat(&finfo, local_abspath,
                     APR_FINFO_TYPE | APR_FINFO_LINK
@@ -1776,7 +1776,7 @@ svn_wc_revert4(svn_wc_context_t *wc_ctx,
 
       SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelist_filter,
                                          scratch_pool));
-      return svn_error_return(new_revert_changelist(wc_ctx->db, local_abspath,
+      return svn_error_trace(new_revert_changelist(wc_ctx->db, local_abspath,
                                                     depth, use_commit_times,
                                                     changelist_hash,
                                                     cancel_func, cancel_baton,
@@ -1785,7 +1785,7 @@ svn_wc_revert4(svn_wc_context_t *wc_ctx,
     }
 
   if (depth == svn_depth_empty || depth == svn_depth_infinity)
-    return svn_error_return(new_revert_internal(wc_ctx->db, local_abspath,
+    return svn_error_trace(new_revert_internal(wc_ctx->db, local_abspath,
                                                 depth, use_commit_times,
                                                 cancel_func, cancel_baton,
                                                 notify_func, notify_baton,
@@ -1798,7 +1798,7 @@ svn_wc_revert4(svn_wc_context_t *wc_ctx,
      revert too much we could invoke the recursive call above. */
 
   if (depth == svn_depth_files || depth == svn_depth_immediates)
-    return svn_error_return(new_revert_partial(wc_ctx->db, local_abspath,
+    return svn_error_trace(new_revert_partial(wc_ctx->db, local_abspath,
                                                depth, use_commit_times,
                                                cancel_func, cancel_baton,
                                                notify_func, notify_baton,
@@ -1862,7 +1862,7 @@ svn_wc_get_pristine_contents2(svn_stream_t **contents,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
-  return svn_error_return(svn_wc__get_pristine_contents(contents, NULL,
+  return svn_error_trace(svn_wc__get_pristine_contents(contents, NULL,
                                                         wc_ctx->db,
                                                         local_abspath,
                                                         result_pool,
@@ -2011,7 +2011,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
           if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
             {
               if (instant_error)
-                return svn_error_return(err);
+                return svn_error_trace(err);
               else
                 {
                   svn_error_clear(err);
@@ -2019,7 +2019,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                 }
             }
           else if (err)
-            return svn_error_return(err);
+            return svn_error_trace(err);
         }
 
       /* At this point, every directory below this one has been
@@ -2092,7 +2092,7 @@ svn_wc_remove_from_revision_control2(svn_wc_context_t *wc_ctx,
                                     void *cancel_baton,
                                     apr_pool_t *scratch_pool)
 {
-  return svn_error_return(
+  return svn_error_trace(
       svn_wc__internal_remove_from_revision_control(wc_ctx->db,
                                                     local_abspath,
                                                     destroy_wf,
@@ -2123,7 +2123,7 @@ svn_wc_add_lock2(svn_wc_context_t *wc_ctx,
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       /* Remap the error.  */
       svn_error_clear(err);
@@ -2158,7 +2158,7 @@ svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       /* Remap the error.  */
       svn_error_clear(err);
@@ -2257,7 +2257,7 @@ svn_wc_get_changelists(svn_wc_context_t *wc_ctx,
     SVN_ERR(svn_hash_from_cstring_keys(&gnb.clhash, changelist_filter,
                                        scratch_pool));
 
-  return svn_error_return(
+  return svn_error_trace(
     svn_wc__internal_walk_children(wc_ctx->db, local_abspath, FALSE,
                                    changelist_filter, get_node_changelist,
                                    &gnb, depth,

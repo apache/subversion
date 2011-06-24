@@ -428,7 +428,7 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
                        void *authz_read_baton,
                        apr_pool_t *pool)
 {
-  return svn_error_return(svn_repos_fs_get_locks2(locks, repos, path,
+  return svn_error_trace(svn_repos_fs_get_locks2(locks, repos, path,
                                                   svn_depth_infinity,
                                                   authz_read_func,
                                                   authz_read_baton, pool));
@@ -676,7 +676,7 @@ svn_repos_dump_fs2(svn_repos_t *repos,
                    void *cancel_baton,
                    apr_pool_t *pool)
 {
-  return svn_error_return(svn_repos_dump_fs3(repos,
+  return svn_error_trace(svn_repos_dump_fs3(repos,
                                              stream,
                                              start_rev,
                                              end_rev,
@@ -700,7 +700,7 @@ svn_repos_verify_fs(svn_repos_t *repos,
                     void *cancel_baton,
                     apr_pool_t *pool)
 {
-  return svn_error_return(svn_repos_verify_fs2(repos,
+  return svn_error_trace(svn_repos_verify_fs2(repos,
                                                start_rev,
                                                end_rev,
                                                feedback_stream

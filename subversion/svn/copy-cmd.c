@@ -131,7 +131,7 @@ svn_cl__copy(apr_getopt_t *os,
   if (ctx->log_msg_func3)
     SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err, pool));
   else if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   return SVN_NO_ERROR;
 }

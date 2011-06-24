@@ -139,7 +139,7 @@ check_root_url_of_target(const char **root_url,
           return SVN_NO_ERROR;
         }
       else
-        return svn_error_return(err);
+        return svn_error_trace(err);
      }
 
    if (*root_url != NULL)
@@ -401,5 +401,5 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
                               _("'%s' ends in a reserved name"),
                               APR_ARRAY_IDX(reserved_names, i, const char *));
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }

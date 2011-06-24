@@ -71,7 +71,7 @@ svn_wc__db_util_fetch_wc_id(apr_int64_t *wc_id,
   SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 0));
   *wc_id = svn_sqlite__column_int64(stmt, 0);
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 
@@ -166,7 +166,7 @@ run_txn(void *baton, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
 {
   struct txn_baton_t *tb = baton;
 
-  return svn_error_return(
+  return svn_error_trace(
     tb->cb_func(tb->cb_baton, tb->wcroot, tb->local_relpath, scratch_pool));
 }
 
@@ -183,6 +183,6 @@ svn_wc__db_with_txn(svn_wc__db_wcroot_t *wcroot,
 {
   struct txn_baton_t tb = { wcroot, local_relpath, cb_func, cb_baton };
 
-  return svn_error_return(
+  return svn_error_trace(
     svn_sqlite__with_lock(wcroot->sdb, run_txn, &tb, scratch_pool));
 }

@@ -602,7 +602,7 @@ static svn_error_t * do_proppatch(resource_baton_t *rb,
     apr_hash_set(extra_headers, "If", APR_HASH_KEY_STRING,
                  apr_psprintf(pool, "(<%s>)", rb->token));
 
-  return svn_error_return(svn_ra_neon__do_proppatch(rb->cc->ras,
+  return svn_error_trace(svn_ra_neon__do_proppatch(rb->cc->ras,
                                                     proppatch_target,
                                                     rb->prop_changes,
                                                     rb->prop_deletes,
@@ -709,7 +709,7 @@ apply_revprops(commit_ctx_t *cc,
       proppatch_url = vcc_rsrc.wr_url;
     }
 
-  return svn_error_return(svn_ra_neon__do_proppatch(cc->ras, proppatch_url,
+  return svn_error_trace(svn_ra_neon__do_proppatch(cc->ras, proppatch_url,
                                                     cc->revprop_table,
                                                     NULL, NULL, NULL, pool));
 }

@@ -569,14 +569,14 @@ test_access_baton_like_locking(apr_pool_t *pool)
   err = svn_wc__db_wclock_obtain(wc_ctx2->db, D3, 0, FALSE, pool);
 
   if (err && err->apr_err != SVN_ERR_WC_LOCKED)
-    return svn_error_return(err);
+    return svn_error_trace(err);
   svn_error_clear(err);
 
   SVN_TEST_ASSERT(err != NULL); /* Can't lock, as it is still locked */
 
   err = svn_wc__db_wclock_release(wc_ctx2->db, D4, pool);
   if (err && err->apr_err != SVN_ERR_WC_NOT_LOCKED)
-    return svn_error_return(err);
+    return svn_error_trace(err);
   svn_error_clear(err);
 
   SVN_TEST_ASSERT(err != NULL); /* Can't unlock, as it is not ours */
@@ -590,7 +590,7 @@ test_access_baton_like_locking(apr_pool_t *pool)
 
   err = svn_wc__db_wclock_release(wc_ctx2->db, D4, pool);
   if (err && err->apr_err != SVN_ERR_WC_NOT_LOCKED)
-    return svn_error_return(err);
+    return svn_error_trace(err);
   svn_error_clear(err);
 
   SVN_TEST_ASSERT(err != NULL); /* Can't unlock a not locked path */

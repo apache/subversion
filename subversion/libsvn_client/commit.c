@@ -165,7 +165,7 @@ send_file_contents(const char *path,
     }
 
   /* Send the file's contents to the delta-window handler. */
-  return svn_error_return(svn_txdelta_send_stream(contents, handler,
+  return svn_error_trace(svn_txdelta_send_stream(contents, handler,
                                                   handler_baton, digest,
                                                   pool));
 }
@@ -1061,7 +1061,7 @@ determine_lock_targets(apr_array_header_t **lock_targets,
               svn_error_clear(err);
               continue;
             }
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
 
       wc_targets = apr_hash_get(wc_items, wcroot_abspath, APR_HASH_KEY_STRING);
@@ -1165,7 +1165,7 @@ check_url_kind(void *baton,
   else
     SVN_ERR(svn_ra_reparent(cukb->session, url, scratch_pool));
 
-  return svn_error_return(
+  return svn_error_trace(
                 svn_ra_check_path(cukb->session, "", revision,
                                   kind, scratch_pool));
 }
@@ -1248,7 +1248,7 @@ svn_client_commit5(const apr_array_header_t *targets,
 
       svn_pool_clear(iterpool);
 
-      cmt_err = svn_error_return(
+      cmt_err = svn_error_trace(
                     svn_wc__acquire_write_lock(&lock_root, ctx->wc_ctx, target,
                                            FALSE, pool, iterpool));
 
@@ -1276,7 +1276,7 @@ svn_client_commit5(const apr_array_header_t *targets,
 
         target_abspath = svn_dirent_join(base_abspath, relpath, iterpool);
 
-        cmt_err = svn_error_return(
+        cmt_err = svn_error_trace(
           check_nonrecursive_dir_delete(ctx->wc_ctx, target_abspath,
                                         depth, iterpool));
 
@@ -1294,7 +1294,7 @@ svn_client_commit5(const apr_array_header_t *targets,
     cukb.repos_root_url = NULL;
     cukb.ctx = ctx;
 
-    cmt_err = svn_error_return(
+    cmt_err = svn_error_trace(
                    svn_client__harvest_committables(&committables,
                                                     &lock_tokens,
                                                     base_abspath,
@@ -1361,7 +1361,7 @@ svn_client_commit5(const apr_array_header_t *targets,
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
     {
       const char *tmp_file;
-      cmt_err = svn_error_return(
+      cmt_err = svn_error_trace(
                      svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
                                              ctx, pool));
 
@@ -1372,7 +1372,7 @@ svn_client_commit5(const apr_array_header_t *targets,
     log_msg = "";
 
   /* Sort and condense our COMMIT_ITEMS. */
-  cmt_err = svn_error_return(svn_client__condense_commit_items(&base_url,
+  cmt_err = svn_error_trace(svn_client__condense_commit_items(&base_url,
                                                                commit_items,
                                                                pool));
 
@@ -1380,7 +1380,7 @@ svn_client_commit5(const apr_array_header_t *targets,
     goto cleanup;
 
   /* Collect our lock tokens with paths relative to base_url. */
-  cmt_err = svn_error_return(collect_lock_tokens(&lock_tokens, lock_tokens,
+  cmt_err = svn_error_trace(collect_lock_tokens(&lock_tokens, lock_tokens,
                                                  base_url, pool));
 
   if (cmt_err)
@@ -1391,7 +1391,7 @@ svn_client_commit5(const apr_array_header_t *targets,
   cb.info = &commit_info;
   cb.pool = pool;
 
-  cmt_err = svn_error_return(
+  cmt_err = svn_error_trace(
                  get_ra_editor(&ra_session, &editor, &edit_baton, ctx,
                                base_url, base_abspath, log_msg,
                                commit_items, revprop_table, TRUE, lock_tokens,
@@ -1405,7 +1405,7 @@ svn_client_commit5(const apr_array_header_t *targets,
   commit_in_progress = TRUE;
 
   /* Perform the commit. */
-  cmt_err = svn_error_return(
+  cmt_err = svn_error_trace(
             svn_client__do_commit(base_url, commit_items, editor, edit_baton,
                                   notify_prefix, NULL,
                                   &sha1_checksums, ctx, pool, iterpool));
@@ -1478,6 +1478,6 @@ svn_client_commit5(const apr_array_header_t *targets,
 
   svn_pool_destroy(iterpool);
 
-  return svn_error_return(reconcile_errors(cmt_err, unlock_err, bump_err,
+  return svn_error_trace(reconcile_errors(cmt_err, unlock_err, bump_err,
                                            pool));
 }

@@ -342,7 +342,7 @@ svn_cl__merge(apr_getopt_t *os,
   else
     {
       if (svn_path_is_url(sourcepath1) != svn_path_is_url(sourcepath2))
-        return svn_error_return(svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR,
+        return svn_error_trace(svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR,
                                                  NULL,
                                                  _("Merge sources must both be "
                                                    "either paths or URLs")));
@@ -380,5 +380,5 @@ svn_cl__merge(apr_getopt_t *os,
         }
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }

@@ -766,7 +766,7 @@ do_initialize(svn_ra_session_t *to_session,
                                                SVN_RA_CAPABILITY_PARTIAL_REPLAY,
                                                pool);
       if (err && err->apr_err != SVN_ERR_UNKNOWN_CAPABILITY)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       if (err || !server_supports_partial_replay)
         return svn_error_create(SVN_ERR_RA_PARTIAL_REPLAY_NOT_SUPPORTED, err,

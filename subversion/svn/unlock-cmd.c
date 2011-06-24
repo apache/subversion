@@ -63,6 +63,6 @@ svn_cl__unlock(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__assert_homogeneous_target_type(targets));
 
-  return svn_error_return(
+  return svn_error_trace(
     svn_client_unlock(targets, opt_state->force, ctx, scratch_pool));
 }
