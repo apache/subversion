@@ -10698,10 +10698,9 @@ merge_peg_locked(const char *source,
   SVN_ERR(svn_wc_read_kind(&target_kind, ctx->wc_ctx, target_abspath, FALSE,
                            scratch_pool));
   if (target_kind != svn_node_dir && target_kind != svn_node_file)
-    return svn_error_trace(svn_error_createf(
-                              SVN_ERR_ILLEGAL_TARGET, NULL,
-                              _("Merge target '%s' does not exist in the "
-                                "working copy"), target_abspath));
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("Merge target '%s' does not exist in the "
+                               "working copy"), target_abspath);
 
   SVN_ERR(ensure_wc_is_suitable_merge_target(target_abspath, ctx,
                                              allow_mixed_rev, TRUE, TRUE,

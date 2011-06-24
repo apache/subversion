@@ -1580,7 +1580,7 @@ svn_fs_fs__hotcopy(const char *src_path,
                                    "repository. Please create this file, for "
                                    "instance by running 'svnadmin upgrade %s'"),
                                  dst_abspath, config_relpath, src_abspath);
-              return svn_error_trace(svn_error_quick_wrap(err, msg));
+              return svn_error_quick_wrap(err, msg);
             }
           else
             return svn_error_trace(err);
