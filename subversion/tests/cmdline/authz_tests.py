@@ -1240,6 +1240,27 @@ def wc_delete(sbox):
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
 
 
+@Skip(svntest.main.is_ra_type_file)
+def wc_commit_mkdir(sbox):
+  "commit a mkdir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  write_authz_file(sbox, {'/'   : '* = rw',
+                          '/A'  : '* = r', })
+
+  sbox.simple_mkdir('A/Z')
+
+  # Allow the generic 'nice' error and the ra_svn specif one that is returned
+  # on editor->edit_close().
+  expected_err = "(svn: E195023|: Changing directory '.*Z' is forbidden.)|" + \
+                 "(svn: E220004: Access denied)"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'ci', wc_dir, '-m', '')
+
+
 ########################################################################
 # Run the tests
 
@@ -1267,6 +1288,7 @@ test_list = [ None,
               case_sensitive_authz,
               authz_tree_conflict,
               wc_delete,
+              wc_commit_mkdir,
              ]
 serial_only = True
 

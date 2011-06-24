@@ -1362,7 +1362,18 @@ open_root(void *edit_baton,
 
       if (post_ctx->status != 201)
         {
-          return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+          apr_status_t status = SVN_ERR_RA_DAV_REQUEST_FAILED;
+          switch(post_ctx->status)
+            {
+              case 403:
+                status = SVN_ERR_RA_DAV_FORBIDDEN;
+                break;
+              case 404:
+                status = SVN_ERR_FS_NOT_FOUND;
+                break;
+            }
+
+          return svn_error_createf(status, NULL,
                                    _("%s of '%s': %d %s (%s://%s)"),
                                    handler->method, handler->path,
                                    post_ctx->status, post_ctx->reason,
@@ -1440,7 +1451,18 @@ open_root(void *edit_baton,
 
       if (mkact_ctx->status != 201)
         {
-          return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+          apr_status_t status = SVN_ERR_RA_DAV_REQUEST_FAILED;
+          switch(mkact_ctx->status)
+            {
+              case 403:
+                status = SVN_ERR_RA_DAV_FORBIDDEN;
+                break;
+              case 404:
+                status = SVN_ERR_FS_NOT_FOUND;
+                break;
+            }
+
+          return svn_error_createf(status, NULL,
                                    _("%s of '%s': %d %s (%s://%s)"),
                                    handler->method, handler->path,
                                    mkact_ctx->status, mkact_ctx->reason,
@@ -1707,17 +1729,24 @@ add_directory(const char *path,
   SVN_ERR(svn_ra_serf__context_run_wait(&add_dir_ctx->done,
                                         dir->commit->session, dir->pool));
 
-  /* 201 Created:    item was successfully copied
-     204 No Content: item successfully replaced an existing target */
-  if (add_dir_ctx->status != 201 &&
-      add_dir_ctx->status != 204)
+  switch (add_dir_ctx->status)
     {
-      SVN_ERR(add_dir_ctx->server_error.error);
-      return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                               _("Adding a directory failed: %s on %s "
-                                 "(%d %s)"),
-                               handler->method, handler->path,
-                               add_dir_ctx->status, add_dir_ctx->reason);
+      case 201: /* Created:    item was successfully copied */
+      case 204: /* No Content: item successfully replaced an existing target */
+        break;
+
+      case 403:
+        SVN_ERR(add_dir_ctx->server_error.error);
+        return svn_error_createf(SVN_ERR_RA_DAV_FORBIDDEN, NULL,
+                                _("Access to '%s' forbidden"),
+                                 handler->path);
+      default:
+        SVN_ERR(add_dir_ctx->server_error.error);
+        return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                 _("Adding directory failed: %s on %s "
+                                   "(%d %s)"),
+                                 handler->method, handler->path,
+                                 add_dir_ctx->status, add_dir_ctx->reason);
     }
 
   *child_baton = dir;
