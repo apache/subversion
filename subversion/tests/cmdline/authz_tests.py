@@ -1241,21 +1241,91 @@ def wc_delete(sbox):
 
 
 @Skip(svntest.main.is_ra_type_file)
-def wc_commit_mkdir(sbox):
-  "commit a mkdir"
+def wc_commit_error_handling(sbox):
+  "verify commit error reporting"
 
   sbox.build()
   wc_dir = sbox.wc_dir
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
+  sbox.simple_mkdir('A/Z')
+
+  write_authz_file(sbox, {'/'   : '* = r', })
+
+  # Creating editor fail: unfriendly error
+  expected_err = "(svn: E175013: .*orbidden.*)|" + \
+                 "(svn: E170001: Authorization failed)"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'ci', wc_dir, '-m', '')
+
   write_authz_file(sbox, {'/'   : '* = rw',
                           '/A'  : '* = r', })
 
-  sbox.simple_mkdir('A/Z')
+  # Allow the informative error for dav and the ra_svn specific one that is
+  # returned on editor->edit_close().
+  expected_err = "(svn: E195023: Changing directory '.*Z' is forbidden)|" + \
+                 "(svn: E220004: Access denied)"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'ci', wc_dir, '-m', '')
 
-  # Allow the generic 'nice' error and the ra_svn specif one that is returned
+  sbox.simple_revert('A/Z')
+
+  svntest.main.file_write(sbox.ospath('A/zeta'), "Zeta")
+  sbox.simple_add('A/zeta')
+
+  # Allow the informative error for dav and the ra_svn specific one that is
+  # returned on editor->edit_close().
+  expected_err = "(svn: E195023: Changing file '.*zeta' is forbidden)|" + \
+                 "(svn: E220004: Access denied)"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'ci', wc_dir, '-m', '')
+  sbox.simple_revert('A/zeta')
+
+  sbox.simple_propset('a', 'b', 'A/D')
+
+  # Allow a generic dav error and the ra_svn specific one that is returned
   # on editor->edit_close().
-  expected_err = "(svn: E195023|: Changing directory '.*Z' is forbidden.)|" + \
+  expected_err = "(svn: E175013: .*orbidden.*)|" + \
+                 "(svn: E220004: Access denied)"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'ci', wc_dir, '-m', '')
+
+  sbox.simple_revert('A/D')
+
+  sbox.simple_propset('a', 'b', 'A/B/lambda')
+
+  # Allow the informative error for dav and the ra_svn specific one that is
+  # returned on editor->edit_close().
+  expected_err = "(svn: E195023: Changing file '.*lambda' is forbidden.*)|" + \
+                 "(svn: E220004: Access denied)"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'ci', wc_dir, '-m', '')
+
+  sbox.simple_revert('A/B/lambda')
+
+  svntest.main.file_write(sbox.ospath('A/B/lambda'), "New lambda")
+  # Allow the informative error for dav and the ra_svn specific one that is
+  # returned on editor->edit_close().
+  expected_err = "(svn: E195023: Changing file '.*lambda' is forbidden.*)|" + \
+                 "(svn: E220004: Access denied)"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'ci', wc_dir, '-m', '')
+
+  sbox.simple_revert('A/B/lambda')
+
+  sbox.simple_rm('A/B/F')
+  # Allow the informative error for dav and the ra_svn specific one that is
+  # returned on editor->edit_close().
+  expected_err = "(svn: E195023: Changing directory '.*F' is forbidden.*)|" + \
+                 "(svn: E220004: Access denied)"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'ci', wc_dir, '-m', '')
+  sbox.simple_revert('A/B/F')
+
+  svntest.main.file_write(sbox.ospath('A/mu'), "Updated mu")
+  # Allow the informative error for dav and the ra_svn specific one that is
+  # returned on editor->edit_close().
+  expected_err = "(svn: E195023: Changing file '.*mu' is forbidden.*)|" + \
                  "(svn: E220004: Access denied)"
   svntest.actions.run_and_verify_svn(None, None, expected_err,
                                      'ci', wc_dir, '-m', '')
@@ -1288,7 +1358,7 @@ test_list = [ None,
               case_sensitive_authz,
               authz_tree_conflict,
               wc_delete,
-              wc_commit_mkdir,
+              wc_commit_error_handling,
              ]
 serial_only = True
 
