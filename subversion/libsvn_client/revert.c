@@ -95,8 +95,8 @@ revert(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
           || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
         {
           if (b->ctx->notify_func2)
-            (*b->ctx->notify_func2)
-              (b->ctx->notify_baton2,
+            (*b->ctx->notify_func2)(
+               b->ctx->notify_baton2,
                svn_wc_create_notify(b->local_abspath, svn_wc_notify_skip,
                                     scratch_pool),
                scratch_pool);
