@@ -135,7 +135,7 @@ fixup_commit_error(const char *local_abspath,
                                                     path,
                                                     scratch_pool));
     }
-  else if (err->apr_err == SVN_ERR_RA_DAV_FORBIDDEN
+  else if (svn_error_find_cause(err, SVN_ERR_RA_DAV_FORBIDDEN)
            || err->apr_err == SVN_ERR_AUTHZ_UNWRITABLE)
     {
       if (ctx->notify_func2)
