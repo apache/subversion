@@ -1548,6 +1548,45 @@ def revert_no_text_change_conflict_recursive(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@XFail()
+@Issue(3938)
+def revert_with_unversioned_targets(sbox):
+  "revert with unversioned targets"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  chi_path = sbox.ospath('A/D/H/chi')
+  delta_path = sbox.ospath('A/D/H/delta')
+  psi_path = sbox.ospath('A/D/H/psi')
+
+  chi_contents = "modified chi\n"
+  delta_contents = "This is the unversioned file 'delta'.\n"
+  psi_contents = "modified psi\n"
+
+  # touch delta
+  open(delta_path, 'w').write(delta_contents)
+
+  # modify chi psi
+  open(chi_path, 'w').write(chi_contents)
+  open(psi_path, 'w').write(psi_contents)
+
+  # revert
+  expected_output = svntest.verify.UnorderedOutput([
+    "Reverted '%s'\n" % sbox.ospath('A/D/H/chi'),
+    "Reverted '%s'\n" % sbox.ospath('A/D/H/psi'),
+  ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', chi_path, delta_path, psi_path)
+
+  # verify disk
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/D/H/delta': Item(delta_contents),
+  })
+  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
+  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
+
 ########################################################################
 # Run the tests
 
@@ -1585,6 +1624,7 @@ test_list = [ None,
               revert_empty_actual_recursive,
               revert_no_text_change_conflict,
               revert_no_text_change_conflict_recursive,
+              revert_with_unversioned_targets,
              ]
 
 if __name__ == '__main__':
