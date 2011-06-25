@@ -343,6 +343,10 @@ conn_setup(apr_socket_t *sock,
         {
           conn->ssl_context = serf_bucket_ssl_encrypt_context_get(*read_bkt);
 
+#ifdef serf_ssl_set_hostname
+          serf_ssl_set_hostname(conn->ssl_context, conn->hostinfo);
+#endif
+
           serf_ssl_client_cert_provider_set(conn->ssl_context,
                                             svn_ra_serf__handle_client_cert,
                                             conn, conn->session->pool);
