@@ -41,9 +41,62 @@ TEMPDIR=$BASEDIR/temp
 # be downloaded are no longer available on the general mirrors.
 APACHE_MIRROR=http://archive.apache.org/dist
 
+get_apr() {
+    cd $TEMPDIR
+    wget -nc $APACHE_MIRROR/apr/$APR.tar.bz2
+    wget -nc $APACHE_MIRROR/apr/$APR_UTIL.tar.bz2
+    cd $BASEDIR
+
+    bzip2 -dc $TEMPDIR/$APR.tar.bz2 | tar -xf -
+    bzip2 -dc $TEMPDIR/$APR_UTIL.tar.bz2 | tar -xf -
+
+    mv $APR apr
+    mv $APR_UTIL apr-util
+}
+
+get_neon() {
+    cd $TEMPDIR
+    wget -nc http://webdav.org/neon/$NEON.tar.gz
+    cd $BASEDIR
+
+    gzip  -dc $TEMPDIR/$NEON.tar.gz | tar -xf -
+
+    mv $NEON neon
+}
+
+get_serf() {
+    cd $TEMPDIR
+    wget -nc http://serf.googlecode.com/files/$SERF.tar.bz2
+    cd $BASEDIR
+
+    bzip2 -dc $TEMPDIR/$SERF.tar.bz2 | tar -xf -
+
+    mv $SERF serf
+}
+
+get_zlib() {
+    cd $TEMPDIR
+    wget -nc http://www.zlib.net/$ZLIB.tar.bz2
+    cd $BASEDIR
+
+    bzip2 -dc $TEMPDIR/$ZLIB.tar.bz2 | tar -xf -
+
+    mv $ZLIB zlib
+}
+
+get_sqlite() {
+    cd $TEMPDIR
+    wget -nc http://www.sqlite.org/$SQLITE.zip
+    cd $BASEDIR
+
+    unzip -q $TEMPDIR/$SQLITE.zip
+
+    mv $SQLITE sqlite-amalgamation
+
+}
+
 get_deps() {
     mkdir -p $TEMPDIR
-    cd $TEMPDIR
 
     for d in neon zlib serf sqlite-amalgamation apr apr-util; do
       if [ -d $i ]; then
@@ -51,29 +104,11 @@ get_deps() {
       fi
     done
 
-    wget -nc $APACHE_MIRROR/apr/$APR.tar.bz2
-    wget -nc $APACHE_MIRROR/apr/$APR_UTIL.tar.bz2
-    wget -nc http://webdav.org/neon/$NEON.tar.gz
-    wget -nc http://serf.googlecode.com/files/$SERF.tar.bz2
-    wget -nc http://www.zlib.net/$ZLIB.tar.bz2
-    wget -nc http://www.sqlite.org/$SQLITE.zip
-
-    cd $BASEDIR
-    gzip  -dc $TEMPDIR/$NEON.tar.gz | tar -xf -
-    bzip2 -dc $TEMPDIR/$ZLIB.tar.bz2 | tar -xf -
-    bzip2 -dc $TEMPDIR/$SERF.tar.bz2 | tar -xf -
-    unzip -q $TEMPDIR/$SQLITE.zip
-
-    mv $NEON neon
-    mv $ZLIB zlib
-    mv $SERF serf
-    mv $SQLITE sqlite-amalgamation
-
-    bzip2 -dc $TEMPDIR/$APR.tar.bz2 | tar -xf -
-    bzip2 -dc $TEMPDIR/$APR_UTIL.tar.bz2 | tar -xf -
-    mv $APR apr
-    mv $APR_UTIL apr-util
-    cd $BASEDIR
+    get_apr
+    get_neon
+    get_serf
+    get_zlib
+    get_sqlite
 
     echo
     echo "If you require mod_dav_svn, the recommended version of httpd is:"
