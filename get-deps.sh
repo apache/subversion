@@ -37,14 +37,19 @@ APR_ICONV=apr-iconv-1.2.1
 BASEDIR=`pwd`
 TEMPDIR=$BASEDIR/temp
 
+HTTP_FETCH=
+[ -z "$HTTP_FETCH" ] && type wget >/dev/null 2>&1 && HTTP_FETCH="wget -nc"
+[ -z "$HTTP_FETCH" ] && type wget >/dev/null 2>&1 && HTTP_FETCH="curl -O"
+[ -z "$HTTP_FETCH" ] && type wget >/dev/null 2>&1 && HTTP_FETCH="fetch"
+
 # Need this uncommented if any of the specific versions of the ASF tarballs to
 # be downloaded are no longer available on the general mirrors.
 APACHE_MIRROR=http://archive.apache.org/dist
 
 get_apr() {
     cd $TEMPDIR
-    wget -nc $APACHE_MIRROR/apr/$APR.tar.bz2
-    wget -nc $APACHE_MIRROR/apr/$APR_UTIL.tar.bz2
+    $HTTP_FETCH $APACHE_MIRROR/apr/$APR.tar.bz2
+    $HTTP_FETCH $APACHE_MIRROR/apr/$APR_UTIL.tar.bz2
     cd $BASEDIR
 
     bzip2 -dc $TEMPDIR/$APR.tar.bz2 | tar -xf -
@@ -56,7 +61,7 @@ get_apr() {
 
 get_neon() {
     cd $TEMPDIR
-    wget -nc http://webdav.org/neon/$NEON.tar.gz
+    $HTTP_FETCH http://webdav.org/neon/$NEON.tar.gz
     cd $BASEDIR
 
     gzip  -dc $TEMPDIR/$NEON.tar.gz | tar -xf -
@@ -66,7 +71,7 @@ get_neon() {
 
 get_serf() {
     cd $TEMPDIR
-    wget -nc http://serf.googlecode.com/files/$SERF.tar.bz2
+    $HTTP_FETCH http://serf.googlecode.com/files/$SERF.tar.bz2
     cd $BASEDIR
 
     bzip2 -dc $TEMPDIR/$SERF.tar.bz2 | tar -xf -
@@ -76,7 +81,7 @@ get_serf() {
 
 get_zlib() {
     cd $TEMPDIR
-    wget -nc http://www.zlib.net/$ZLIB.tar.bz2
+    $HTTP_FETCH http://www.zlib.net/$ZLIB.tar.bz2
     cd $BASEDIR
 
     bzip2 -dc $TEMPDIR/$ZLIB.tar.bz2 | tar -xf -
@@ -86,7 +91,7 @@ get_zlib() {
 
 get_sqlite() {
     cd $TEMPDIR
-    wget -nc http://www.sqlite.org/$SQLITE.zip
+    $HTTP_FETCH http://www.sqlite.org/$SQLITE.zip
     cd $BASEDIR
 
     unzip -q $TEMPDIR/$SQLITE.zip
