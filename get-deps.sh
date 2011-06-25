@@ -46,6 +46,14 @@ HTTP_FETCH=
 # be downloaded are no longer available on the general mirrors.
 APACHE_MIRROR=http://archive.apache.org/dist
 
+# helpers
+usage() {
+    echo "Usage: $0"
+    echo "Usage: $0 [ apr | neon | serf | zlib | sqlite ] ..."
+    return $1
+}
+
+# getters
 get_apr() {
     cd $TEMPDIR
     $HTTP_FETCH $APACHE_MIRROR/apr/$APR.tar.bz2
@@ -100,6 +108,7 @@ get_sqlite() {
 
 }
 
+# main()
 get_deps() {
     mkdir -p $TEMPDIR
 
@@ -109,21 +118,27 @@ get_deps() {
       fi
     done
 
-    get_apr
-    get_neon
-    get_serf
-    get_zlib
-    get_sqlite
+    if [ $# -gt 0 ]; then
+      for target; do
+        get_$target || usage
+      done
+    else
+      get_apr
+      get_neon
+      get_serf
+      get_zlib
+      get_sqlite
 
-    echo
-    echo "If you require mod_dav_svn, the recommended version of httpd is:"
-    echo "   $APACHE_MIRROR/httpd/$HTTPD.tar.bz2"
+      echo
+      echo "If you require mod_dav_svn, the recommended version of httpd is:"
+      echo "   $APACHE_MIRROR/httpd/$HTTPD.tar.bz2"
 
-    echo
-    echo "If you require apr-iconv, its recommended version is:"
-    echo "   $APACHE_MIRROR/apr/$APR_ICONV.tar.bz2"
+      echo
+      echo "If you require apr-iconv, its recommended version is:"
+      echo "   $APACHE_MIRROR/apr/$APR_ICONV.tar.bz2"
+    fi
 
     rm -rf $TEMPDIR
 }
 
-get_deps
+get_deps "$@"
