@@ -144,7 +144,13 @@ zlib_encode(const char *data,
   append_encoded_int(out, len);
   intlen = out->len;
 
-  if (len < MIN_COMPRESS_SIZE)
+  /* Compression initialization overhead is considered to large for
+     short buffers.  Also, if we don't actually want to compress data,
+     ZLIB will produce an output no shorter than the input.  Hence,
+     the DATA would directly appended to OUT, so we can do that directly
+     without calling ZLIB before. */
+  if (   (len < MIN_COMPRESS_SIZE) 
+      || (compression_level == SVN_DELTA_COMPRESSION_LEVEL_NONE))
     {
       svn_stringbuf_appendbytes(out, data, len);
     }
