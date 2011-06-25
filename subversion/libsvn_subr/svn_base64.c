@@ -131,7 +131,7 @@ encode_bytes(svn_stringbuf_t *str, const void *data, apr_size_t len,
   if (break_lines)
     {
       /* Add an extra space for line breaks. */
-      buflen = buflen + buflen / BASE64_LINELEN;
+      buflen += buflen / BASE64_LINELEN;
     }
   svn_stringbuf_ensure(str, buflen);
 
@@ -162,7 +162,7 @@ encode_bytes(svn_stringbuf_t *str, const void *data, apr_size_t len,
           *linelen += 4;
         }
 
-      /* Adc line breaks as necessary. */
+      /* Add line breaks as necessary. */
       if (break_lines && *linelen == BASE64_LINELEN)
         {
           svn_stringbuf_appendbyte(str, '\n');
