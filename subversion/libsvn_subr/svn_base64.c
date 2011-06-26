@@ -94,7 +94,7 @@ static void
 encode_line(svn_stringbuf_t *str, const char *data)
 {
   /* Translate directly from DATA to STR->DATA. */
-  const unsigned char *in = data;
+  const unsigned char *in = (const unsigned char *)data;
   char *out = str->data + str->len;
   char *end = out + BASE64_LINELEN;
 
@@ -368,7 +368,7 @@ static svn_boolean_t
 decode_line(svn_stringbuf_t *str, const char **data)
 {
   /* Decode up to BYTES_PER_LINE bytes directly from *DATA into STR->DATA. */
-  const char *p = *data;
+  const unsigned char *p = *(const unsigned char **)data;
   char *out = str->data + str->len;
   char *end = out + BYTES_PER_LINE;
 
@@ -382,7 +382,7 @@ decode_line(svn_stringbuf_t *str, const char **data)
   /* Update string sizes and positions. */
   str->len = out - str->data;
   *out = '\0';
-  *data = p;
+  *data = (const char *)p;
   
   /* Return FALSE, if the caller should continue the decoding process
      using the slow standard method. */
