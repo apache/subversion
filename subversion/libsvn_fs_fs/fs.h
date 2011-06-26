@@ -238,8 +238,10 @@ typedef struct fs_fs_data_t
      rep key to svn_string_t. */
   svn_cache__t *fulltext_cache;
 
-  /* Pack manifest cache; maps revision numbers to offsets in their respective
-     pack files. */
+  /* Pack manifest cache; a cache mapping (svn_revnum_t) shard number to
+     a manifest; and a manifest is a mapping from (svn_revnum_t) revision
+     number offset within a shard to (apr_off_t) byte-offset in the
+     respective pack file. */
   svn_cache__t *packed_offset_cache;
 
   /* Cache for txdelta_window_t objects; the key is (revFilePath, offset) */
