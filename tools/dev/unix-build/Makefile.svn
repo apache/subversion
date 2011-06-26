@@ -377,7 +377,7 @@ $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff:
 	echo >>$@.tmp '               "ASCII",                  /* IANA, JDK 1.1 */'
 	echo >>$@.tmp '               "ISO646-US",              /* IANA */'
 	echo >>$@.tmp '               "ISO_646.IRV:1991",       /* IANA */'
-	mv $@.tmp $@
+	mv -f $@.tmp $@
 
 $(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff:
 	mkdir -p $(dirname $@)
@@ -391,7 +391,7 @@ $(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff:
 	echo >>$@.tmp ' ASCII, ei_ascii'
 	echo >>$@.tmp ' ISO646-US, ei_ascii'
 	echo >>$@.tmp ' ISO_646.IRV:1991, ei_ascii'
-	mv $@.tmp $@
+	mv -f $@.tmp $@
 
 # retrieve gnu-iconv
 # Add 646 as an alias for ASCII to fix prop_test 22 on OpenBSD
@@ -550,7 +550,7 @@ $(HTTPD_OBJDIR)/.installed: $(HTTPD_OBJDIR)/.compiled
 # create a httpd.conf for mod_dav_svn
 $(HTTPD_CONF):
 	mkdir -p $(dirname $@)
-	echo >>$@.tmp '# httpd config for use with mod_dav_svn'
+	echo > $@.tmp '# httpd config for use with mod_dav_svn'
 	echo >>$@.tmp 'ServerRoot "$(PREFIX)/httpd"'
 	echo >>$@.tmp 'Listen localhost:8080'
 	echo >>$@.tmp 'LoadModule dav_svn_module modules/svn-$(WC)/mod_dav_svn.so'
