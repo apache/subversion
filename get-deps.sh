@@ -50,7 +50,7 @@ APACHE_MIRROR=http://archive.apache.org/dist
 usage() {
     echo "Usage: $0"
     echo "Usage: $0 [ apr | neon | serf | zlib | sqlite ] ..."
-    return $1
+    exit $1
 }
 
 # getters
