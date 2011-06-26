@@ -108,12 +108,14 @@ encode_line(svn_stringbuf_t *str, const char *data)
   str->len += BASE64_LINELEN;
 }
 
-/* Base64-encode a byte string which may or may not be the totality of
-   the data being encoded.  INBUF and *INBUFLEN carry the leftover
-   data from call to call, and *LINELEN carries the length of the
-   current output line.  Make INBUF have room for three characters and
-   initialize *INBUFLEN and *LINELEN to 0.  Output will be appended to
-   STR.  Include newlines every so often if BREAK_LINES is true. */
+/* (Continue to) Base64-encode the byte string DATA (of length LEN)
+   into STR. Include newlines every so often if BREAK_LINES is true.
+   INBUF, INBUFLEN, and LINELEN are used internally; the caller shall
+   make INBUF have room for three characters and initialize *INBUFLEN
+   and *LINELEN to 0.
+
+   INBUF and *INBUFLEN carry the leftover data from call to call, and
+   *LINELEN carries the length of the current output line. */
 static void
 encode_bytes(svn_stringbuf_t *str, const void *data, apr_size_t len,
              unsigned char *inbuf, size_t *inbuflen, size_t *linelen,
@@ -390,12 +392,14 @@ decode_line(svn_stringbuf_t *str, const char **data)
 }
 
 
-/* Decode a byte string which may or may not be the total amount of
-   data being decoded.  INBUF and *INBUFLEN carry the leftover bytes
-   from call to call, and *DONE keeps track of whether we've seen an
-   '=' which terminates the encoded data.  Have room for four bytes in
-   INBUF and initialize *INBUFLEN to 0 and *DONE to FALSE.  Output
-   will be appended to STR.  */
+/* (Continue to) Base64-decode the byte string DATA (of length LEN)
+   into STR. INBUF, INBUFLEN, and DONE are used internally; the
+   caller shall have room for four bytes in INBUF and initialize
+   *INBUFLEN to 0 and *DONE to FALSE.
+
+   INBUF and *INBUFLEN carry the leftover bytes from call to call, and
+   *DONE keeps track of whether we've seen an '=' which terminates the
+   encoded data. */
 static void
 decode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
              unsigned char *inbuf, int *inbuflen, svn_boolean_t *done)
