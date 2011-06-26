@@ -115,8 +115,7 @@ Commit access for specific areas:
     jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
       jlonestar   Martin Maurer <martin.maurer@email.de>      (svnshow) [EMAIL
                                                              IS BOUNCING]
-       shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push) [EMAIL
-                                                             IS BOUNCING]
+       shlomif   Shlomi Fish <shlomif@shlomifish.org>        (svn-push)
        mthelen   Michael W Thelen <mike@pietdepsi.com>       (doc)
   jeremybettis   Jeremy Bettis <jeremy@deadbeef.com>         (case-insensitive)
       martinto   Martin Tomes <lists@tomes.org>              (case-insensitive)
