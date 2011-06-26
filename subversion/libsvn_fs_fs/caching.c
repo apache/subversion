@@ -28,7 +28,6 @@
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_config.h"
-#include "svn_cmdline.h"
 #include "svn_cache_config.h"
 
 #include "svn_private_config.h"
