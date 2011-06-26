@@ -366,30 +366,32 @@ $(DISTDIR)/$(GNU_ICONV_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(GNU_ICONV_URL)
 
 $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff:
-	[ -d $(GNU_ICONV_OBJDIR) ] || mkdir -p $(GNU_ICONV_OBJDIR)
-	echo "--- lib/encodings.def.orig	Wed Oct 24 23:41:41 2007" > $@
-	echo "+++ lib/encodings.def	Wed Oct 24 23:43:47 2007" >> $@
-	echo "@@ -37,6 +37,7 @@" >> $@
-	echo " " >> $@
-	echo " " >> $@
-	echo " DEFENCODING(( \"US-ASCII\",               /* IANA */" >> $@
-	echo "+              \"646\"," >> $@
-	echo "               \"ASCII\",                  /* IANA, JDK 1.1 */" >> $@
-	echo "               \"ISO646-US\",              /* IANA */" >> $@
-	echo "               \"ISO_646.IRV:1991\",       /* IANA */" >> $@
+	mkdir -p $(dirname $@)
+	echo > $@.tmp '--- lib/encodings.def.orig	Wed Oct 24 23:41:41 2007'
+	echo >>$@.tmp '+++ lib/encodings.def	Wed Oct 24 23:43:47 2007'
+	echo >>$@.tmp '@@ -37,6 +37,7 @@'
+	echo >>$@.tmp ' '
+	echo >>$@.tmp ' '
+	echo >>$@.tmp ' DEFENCODING(( "US-ASCII",               /* IANA */'
+	echo >>$@.tmp '+              "646",'
+	echo >>$@.tmp '               "ASCII",                  /* IANA, JDK 1.1 */'
+	echo >>$@.tmp '               "ISO646-US",              /* IANA */'
+	echo >>$@.tmp '               "ISO_646.IRV:1991",       /* IANA */'
+	mv $@.tmp $@
 
 $(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff:
-	[ -d $(GNU_ICONV_OBJDIR) ] || mkdir -p $(GNU_ICONV_OBJDIR)
-	echo "--- lib/aliases.gperf.orig	Wed Oct 24 23:41:32 2007" > $@
-	echo "+++ lib/aliases.gperf	Wed Oct 24 23:47:38 2007" >> $@
-	echo "@@ -10,6 +10,7 @@ struct alias { int name; unsigned int encoding_index; " >> $@
-	echo " %pic" >> $@
-	echo " %%" >> $@
-	echo " US-ASCII, ei_ascii" >> $@
-	echo "+646, ei_ascii" >> $@
-	echo " ASCII, ei_ascii" >> $@
-	echo " ISO646-US, ei_ascii" >> $@
-	echo " ISO_646.IRV:1991, ei_ascii" >> $@
+	mkdir -p $(dirname $@)
+	echo > $@.tmp '--- lib/aliases.gperf.orig	Wed Oct 24 23:41:32 2007'
+	echo >>$@.tmp '+++ lib/aliases.gperf	Wed Oct 24 23:47:38 2007'
+	echo >>$@.tmp '@@ -10,6 +10,7 @@ struct alias { int name; unsigned int encoding_index; '
+	echo >>$@.tmp ' %pic'
+	echo >>$@.tmp ' %%'
+	echo >>$@.tmp ' US-ASCII, ei_ascii'
+	echo >>$@.tmp '+646, ei_ascii'
+	echo >>$@.tmp ' ASCII, ei_ascii'
+	echo >>$@.tmp ' ISO646-US, ei_ascii'
+	echo >>$@.tmp ' ISO_646.IRV:1991, ei_ascii'
+	mv $@.tmp $@
 
 # retrieve gnu-iconv
 # Add 646 as an alias for ASCII to fix prop_test 22 on OpenBSD
@@ -546,24 +548,26 @@ $(HTTPD_OBJDIR)/.installed: $(HTTPD_OBJDIR)/.compiled
 	touch $@
 
 # create a httpd.conf for mod_dav_svn
-$(PREFIX)/httpd/conf/httpd-$(SVN_REL_WC).conf: $(HTTPD_OBJDIR)/.installed
-	echo "# httpd config for use with mod_dav_svn" > $@
-	echo "ServerRoot \"$(PREFIX)/httpd\"" >> $@
-	echo "Listen localhost:8080" >> $@
-	echo "LoadModule dav_svn_module modules/svn-$(WC)/mod_dav_svn.so" >> $@
-	echo "LoadModule authz_svn_module modules/svn-$(WC)/mod_authz_svn.so" >> $@
-	echo "DocumentRoot "$(PREFIX)/httpd/htdocs"" >> $@
-	echo "<Directory />" >> $@
-	echo "    Options FollowSymLinks" >> $@
-	echo "    AllowOverride None" >> $@
-	echo "    Order deny,allow" >> $@
-	echo "    Deny from all" >> $@
-	echo "</Directory>" >> $@
-	echo "<Location /repos>" >> $@
-	echo "    DAV svn" >> $@
-	echo "    SVNPath /tmp/svn-sandbox/repos" >> $@
-	echo "    Allow from localhost" >> $@
-	echo "</Location>" >> $@
+$(HTTPD_CONF):
+	mkdir -p $(dirname $@)
+	echo >>$@.tmp '# httpd config for use with mod_dav_svn'
+	echo >>$@.tmp 'ServerRoot "$(PREFIX)/httpd"'
+	echo >>$@.tmp 'Listen localhost:8080'
+	echo >>$@.tmp 'LoadModule dav_svn_module modules/svn-$(WC)/mod_dav_svn.so'
+	echo >>$@.tmp 'LoadModule authz_svn_module modules/svn-$(WC)/mod_authz_svn.so'
+	echo >>$@.tmp 'DocumentRoot "$(PREFIX)/httpd/htdocs"'
+	echo >>$@.tmp '<Directory />'
+	echo >>$@.tmp '    Options FollowSymLinks'
+	echo >>$@.tmp '    AllowOverride None'
+	echo >>$@.tmp '    Order deny,allow'
+	echo >>$@.tmp '    Deny from all'
+	echo >>$@.tmp '</Directory>'
+	echo >>$@.tmp '<Location /repos>'
+	echo >>$@.tmp '    DAV svn'
+	echo >>$@.tmp '    SVNPath /tmp/svn-sandbox/repos'
+	echo >>$@.tmp '    Allow from localhost'
+	echo >>$@.tmp '</Location>'
+	mv -f $@.tmp $@
 
 #######################################################################
 # neon
@@ -1083,67 +1087,70 @@ HTTPD_CHECK_USERS=$(PREFIX)/httpd/conf/httpd-svn-check-users
 HTTPD_CHECK_PORT=8081
 
 $(HTTPD_CHECK_USERS):
-	echo "jrandom:xCGl35kV9oWCY" > $(HTTPD_CHECK_USERS)
-	echo "jconstant:xCGl35kV9oWCY" >> $(HTTPD_CHECK_USERS)
+	mkdir -p $(dirname $@)
+	echo > $@.tmp 'jrandom:xCGl35kV9oWCY'
+	echo >>$@.tmp 'jconstant:xCGl35kV9oWCY'
+	mv -f $@.tmp $@
 
 $(HTTPD_CHECK_CONF): $(HTTPD_CHECK_USERS)
-	echo "# httpd config for make check" > $(HTTPD_CHECK_CONF)
-	echo "ServerRoot \"$(PREFIX)/httpd\"" >> $(HTTPD_CHECK_CONF)
-	echo "Listen localhost:$(HTTPD_CHECK_PORT)" >> $(HTTPD_CHECK_CONF)
-	echo "LoadModule dav_svn_module $(MOD_DAV_SVN)" >> $(HTTPD_CHECK_CONF)
-	echo "LoadModule authz_svn_module $(MOD_AUTHZ_SVN)" >> $(HTTPD_CHECK_CONF)
-	echo "DocumentRoot "$(PREFIX)/httpd/htdocs"" >> $(HTTPD_CHECK_CONF)
-	echo "# These two Locations are used for 'make check'" >> $(HTTPD_CHECK_CONF)
-	echo "<Directory />" >> $(HTTPD_CHECK_CONF)
-	echo "    Options FollowSymLinks" >> $(HTTPD_CHECK_CONF)
-	echo "    AllowOverride None" >> $(HTTPD_CHECK_CONF)
-	echo "    Order deny,allow" >> $(HTTPD_CHECK_CONF)
-	echo "    Allow from all" >> $(HTTPD_CHECK_CONF)
-	echo "</Directory>" >> $(HTTPD_CHECK_CONF)
-	echo "<Location /svn-test-work/repositories>" >> $(HTTPD_CHECK_CONF)
-	echo "    DAV svn" >> $(HTTPD_CHECK_CONF)
-	echo "    SVNParentPath $(SVN_WC)/subversion/tests/cmdline/svn-test-work/repositories" >> $(HTTPD_CHECK_CONF)
-	echo "    AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz" >> $(HTTPD_CHECK_CONF)
-	echo "    AuthType Basic" >> $(HTTPD_CHECK_CONF)
-	echo "    AuthName \"Subversion Repository\"" >> $(HTTPD_CHECK_CONF)
-	echo "    AuthUserFile $(HTTPD_CHECK_USERS)" >> $(HTTPD_CHECK_CONF)
-	echo "    Require valid-user" >> $(HTTPD_CHECK_CONF)
+	echo > $@.tmp '# httpd config for make check'
+	echo >>$@.tmp 'ServerRoot "$(PREFIX)/httpd"'
+	echo >>$@.tmp 'Listen localhost:$(HTTPD_CHECK_PORT)'
+	echo >>$@.tmp 'LoadModule dav_svn_module $(MOD_DAV_SVN)'
+	echo >>$@.tmp 'LoadModule authz_svn_module $(MOD_AUTHZ_SVN)'
+	echo >>$@.tmp 'DocumentRoot "$(PREFIX)/httpd/htdocs"'
+	echo >>$@.tmp '# These two Locations are used for "make check"'
+	echo >>$@.tmp '<Directory />'
+	echo >>$@.tmp '    Options FollowSymLinks'
+	echo >>$@.tmp '    AllowOverride None'
+	echo >>$@.tmp '    Order deny,allow'
+	echo >>$@.tmp '    Allow from all'
+	echo >>$@.tmp '</Directory>'
+	echo >>$@.tmp '<Location /svn-test-work/repositories>'
+	echo >>$@.tmp '    DAV svn'
+	echo >>$@.tmp '    SVNParentPath $(SVN_WC)/subversion/tests/cmdline/svn-test-work/repositories'
+	echo >>$@.tmp '    AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+	echo >>$@.tmp '    AuthType Basic'
+	echo >>$@.tmp '    AuthName "Subversion Repository"'
+	echo >>$@.tmp '    AuthUserFile $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '    Require valid-user'
 ifeq ($(USE_HTTPV1),yes)
-	echo "    SVNAdvertiseV2Protocol off" >> $(HTTPD_CHECK_CONF)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
 endif
 ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
-	echo "    SVNPathAuthz short_circuit" >> $(HTTPD_CHECK_CONF)
+	echo >>$@.tmp '    SVNPathAuthz short_circuit'
 endif
-	echo "</Location>" >> $(HTTPD_CHECK_CONF)
-	echo "<Location /svn-test-work/local_tmp/repos>" >> $(HTTPD_CHECK_CONF)
-	echo "    DAV svn" >> $(HTTPD_CHECK_CONF)
-	echo "    SVNPath $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp/repos" >> $(HTTPD_CHECK_CONF)
-	echo "    AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz" >> $(HTTPD_CHECK_CONF)
-	echo "    AuthType Basic" >> $(HTTPD_CHECK_CONF)
-	echo "    AuthName \"Subversion Repository\"" >> $(HTTPD_CHECK_CONF)
-	echo "    AuthUserFile $(HTTPD_CHECK_USERS)" >> $(HTTPD_CHECK_CONF)
-	echo "    Require valid-user" >> $(HTTPD_CHECK_CONF)
+	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '<Location /svn-test-work/local_tmp/repos>'
+	echo >>$@.tmp '    DAV svn'
+	echo >>$@.tmp '    SVNPath $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp/repos'
+	echo >>$@.tmp '    AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+	echo >>$@.tmp '    AuthType Basic'
+	echo >>$@.tmp '    AuthName "Subversion Repository"'
+	echo >>$@.tmp '    AuthUserFile $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '    Require valid-user'
 ifeq ($(USE_HTTPV1),yes)
-	echo "    SVNAdvertiseV2Protocol off" >> $(HTTPD_CHECK_CONF)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
 endif
 ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
-	echo "    SVNPathAuthz short_circuit" >> $(HTTPD_CHECK_CONF)
+	echo >>$@.tmp '    SVNPathAuthz short_circuit'
 endif
-	echo "</Location>" >> $(HTTPD_CHECK_CONF)
-	echo "# This Location lets you access repositories dropped in /tmp/" >> $(HTTPD_CHECK_CONF)
-	echo "<Location /svn>" >> $(HTTPD_CHECK_CONF)
-	echo "    DAV svn" >> $(HTTPD_CHECK_CONF)
-	echo "    SVNParentPath /tmp" >> $(HTTPD_CHECK_CONF)
-	echo "    Allow from all" >> $(HTTPD_CHECK_CONF)
+	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '# This Location lets you access repositories dropped in /tmp/'
+	echo >>$@.tmp '<Location /svn>'
+	echo >>$@.tmp '    DAV svn'
+	echo >>$@.tmp '    SVNParentPath /tmp'
+	echo >>$@.tmp '    Allow from all'
 ifeq ($(USE_HTTPV1),yes)
-	echo "    SVNAdvertiseV2Protocol off" >> $(HTTPD_CHECK_CONF)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
 endif
 ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
-	echo "    SVNPathAuthz short_circuit" >> $(HTTPD_CHECK_CONF)
+	echo >>$@.tmp '    SVNPathAuthz short_circuit'
 endif
-	echo "</Location>" >> $(HTTPD_CHECK_CONF)
-	echo 'RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)$$ /svn-test-work/repositories/$$1' >> $(HTTPD_CHECK_CONF)
-	echo 'RedirectMatch ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)$$ /svn-test-work/repositories/$$1' >> $(HTTPD_CHECK_CONF)
+	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp 'RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)$$ /svn-test-work/repositories/$$1'
+	echo >>$@.tmp 'RedirectMatch ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)$$ /svn-test-work/repositories/$$1'
+	mv -f $@.tmp $@
 
 # We need this to make sure some targets below pick up the right libraries
 LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/cyrus-sasl/lib:$(PREFIX)/iconv/lib:$(PREFIX)/libmagic/lib:$(PREFIX)/svn-$(WC)/lib
