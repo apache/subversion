@@ -1081,9 +1081,12 @@ $(SVN_OBJDIR)/.bindings-installed: $(SVN_OBJDIR)/.bindings-compiled
 HTTPD_CHECK_CONF=$(PREFIX)/httpd/conf/httpd-svn-check-$(WC).conf
 HTTPD_CHECK_USERS=$(PREFIX)/httpd/conf/httpd-svn-check-users
 HTTPD_CHECK_PORT=8081
-httpd-conf:
+
+$(HTTPD_CHECK_USERS):
 	echo "jrandom:xCGl35kV9oWCY" > $(HTTPD_CHECK_USERS)
 	echo "jconstant:xCGl35kV9oWCY" >> $(HTTPD_CHECK_USERS)
+
+$(HTTPD_CHECK_CONF): $(HTTPD_CHECK_USERS)
 	echo "# httpd config for make check" > $(HTTPD_CHECK_CONF)
 	echo "ServerRoot \"$(PREFIX)/httpd\"" >> $(HTTPD_CHECK_CONF)
 	echo "Listen localhost:$(HTTPD_CHECK_PORT)" >> $(HTTPD_CHECK_CONF)
@@ -1152,8 +1155,7 @@ libpath:
 .PHONY: start-svnserve stop-svnserve start-httpd stop-httpd
 
 HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-			$(PREFIX)/httpd/bin/apachectl \
-			-f conf/httpd-svn-check-$(WC).conf
+		$(PREFIX)/httpd/bin/apachectl -f $(HTTPD_CHECK_CONF)
 HTTPD_START_CMD = $(HTTPD_CMD) -k start
 HTTPD_START_CMD_DEBUG = $(HTTPD_START_CMD) -X
 HTTPD_STOP_CMD = $(HTTPD_CMD) -k stop; sleep 3
@@ -1165,14 +1167,14 @@ SVNSERVE_START_CMD = $(SVN_PREFIX)/bin/svnserve \
 SVNSERVE_STOP_CMD = kill `cat $(PWD)/svnserve-$(WC).pid`; sleep 3; \
 			rm -f $(PWD)/svnserve-$(WC).pid
 
-start-httpd: httpd-conf
+start-httpd: $(HTTPD_CHECK_CONF)
 	$(HTTPD_START_CMD)
 	@echo "To run tests over http, run:"
 	@echo "    make check BASE_URL=http://localhost:$(HTTPD_CHECK_PORT)"
 	@echo "The URL http://localhost:$(HTTPD_CHECK_PORT)/svn/"
 	@echo "lets you access repositories dropped into /tmp"
 
-start-httpd-debug: httpd-conf
+start-httpd-debug: $(HTTPD_CHECK_CONF)
 	$(HTTPD_START_CMD_DEBUG) &
 	@echo "To run tests over http, run:"
 	@echo "    make check BASE_URL=http://localhost:$(HTTPD_CHECK_PORT)"
@@ -1217,12 +1219,12 @@ svn-check-prepare-ramdisk:
 			mkdir -p "$(RAMDISK)/tmp"; \
 	fi
 
-svn-check-neon: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled svn-check-prepare-ramdisk
+svn-check-neon: $(HTTPD_CHECK_CONF) $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled svn-check-prepare-ramdisk
 	$(HTTPD_START_CMD)
 	$(call do_check,BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon)
 	$(HTTPD_STOP_CMD)
 
-svn-check-serf: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled svn-check-prepare-ramdisk
+svn-check-serf: $(HTTPD_CHECK_CONF) $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled svn-check-prepare-ramdisk
 	$(HTTPD_START_CMD)
 	$(call do_check,BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf)
 	$(HTTPD_STOP_CMD)
