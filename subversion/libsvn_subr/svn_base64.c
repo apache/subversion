@@ -135,7 +135,7 @@ encode_bytes(svn_stringbuf_t *str, const void *data, apr_size_t len,
       /* Add an extra space for line breaks. */
       buflen += buflen / BASE64_LINELEN;
     }
-  svn_stringbuf_ensure(str, buflen);
+  svn_stringbuf_ensure(str, str->len + buflen);
 
   /* Keep encoding three-byte groups until we run out.  */
   while (*inbuflen + (end - p) >= 3)
@@ -412,7 +412,7 @@ decode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
   /* Resize the stringbuf to make room for the (approximate) size of
      output, to avoid repeated resizes later. 
      The optimizations in decode_line rely on no resizes being necessary! */
-  svn_stringbuf_ensure(str, (len / 4) * 3 + 3);
+  svn_stringbuf_ensure(str, str->len + (len / 4) * 3 + 3);
 
   while ( !*done && p < end )
     {
