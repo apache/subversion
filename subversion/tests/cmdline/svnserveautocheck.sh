@@ -32,7 +32,6 @@
 # svnserveautocheck".  Like "make check", you can specify further options
 # like "make svnserveautocheck FS_TYPE=bdb TESTS=subversion/tests/cmdline/basic.py".
 
-echo "PYTHON=$PYTHON" >&2
 PYTHON=${PYTHON:-python}
 
 SCRIPTDIR=$(dirname $0)
