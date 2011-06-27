@@ -1,8 +1,7 @@
-I'm happy to announce Subversion [version], available from:
+I'm happy to announce the release of Apache Subversion [version].
+Please choose the mirror closest to you by visiting:
 
-    http://subversion.tigris.org/downloads/subversion-[version].tar.bz2
-    http://subversion.tigris.org/downloads/subversion-[version].tar.gz
-    http://subversion.tigris.org/downloads/subversion-[version].zip
+    http://subversion.apache.org/download/#recommended-release
 
 The SHA1 checksums are:
 
@@ -10,9 +9,9 @@ The SHA1 checksums are:
 
 PGP Signatures are available at:
 
-    http://subversion.tigris.org/downloads/subversion-[version].tar.bz2.asc
-    http://subversion.tigris.org/downloads/subversion-[version].tar.gz.asc
-    http://subversion.tigris.org/downloads/subversion-[version].zip.asc
+    http://www.apache.org/dist/subversion/subversion-[version].tar.bz2.asc
+    http://www.apache.org/dist/subversion/subversion-[version].tar.gz.asc
+    http://www.apache.org/dist/subversion/subversion-[version].zip.asc
 
 For this release, the following people have provided PGP signatures:
 
