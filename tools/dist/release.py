@@ -113,7 +113,7 @@ def split_version(version):
     if len(parts) == 1:
         return (version, None)
 
-    return (parts[0], parts[1])
+    return parts[0], parts[1]
 
 #----------------------------------------------------------------------
 # Cleaning up the environment
@@ -266,7 +266,7 @@ def build_env(base_dir, args):
 def roll_tarballs(base_dir, args):
     'Create the release artifacts.'
     extns = ['zip', 'tar.gz', 'tar.bz2']
-    (version_base, version_extra) = split_version(args.version)
+    version_base, version_extra = split_version(args.version)
 
     if args.branch:
         branch = args.branch
@@ -348,7 +348,7 @@ def roll_tarballs(base_dir, args):
 
 def post_candidates(base_dir, args):
     'Post the generated tarballs to web-accessible directory.'
-    (version_base, version_extra) = split_version(args.version)
+    version_base, version_extra = split_version(args.version)
 
     if args.target:
         target = args.target
@@ -393,7 +393,7 @@ def post_candidates(base_dir, args):
 
 def write_news(base_dir, args):
     'Write text for the Subversion website.'
-    (version_base, version_extra) = split_version(args.version)
+    version_base, version_extra = split_version(args.version)
 
     data = { 'date' : datetime.date.today().strftime('%Y%m%d'),
              'date_pres' : datetime.date.today().strftime('%Y-%m-%d'),
@@ -414,7 +414,7 @@ def write_news(base_dir, args):
 
 def write_announcement(base_dir, args):
     'Write the release announcement.'
-    (version_base, version_extra) = split_version(args.version)
+    version_base, version_extra = split_version(args.version)
 
     data = { 'version'      : args.version,
              'sha1info'     : 'foo',
