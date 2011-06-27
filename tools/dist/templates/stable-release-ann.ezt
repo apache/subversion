@@ -1,0 +1,32 @@
+I'm happy to announce Subversion [version], available from:
+
+    http://subversion.tigris.org/downloads/subversion-[version].tar.bz2
+    http://subversion.tigris.org/downloads/subversion-[version].tar.gz
+    http://subversion.tigris.org/downloads/subversion-[version].zip
+
+The SHA1 checksums are:
+
+[sha1info]
+
+PGP Signatures are available at:
+
+    http://subversion.tigris.org/downloads/subversion-[version].tar.bz2.asc
+    http://subversion.tigris.org/downloads/subversion-[version].tar.gz.asc
+    http://subversion.tigris.org/downloads/subversion-[version].zip.asc
+
+For this release, the following people have provided PGP signatures:
+
+[siginfo]
+
+Release notes for the [major-minor].x release series may be found at:
+
+    http://subversion.apache.org/docs/release-notes/[major-minor].html
+
+You can find the list of changes between [version] and earlier versions at:
+
+    http://svn.apache.org/repos/asf/subversion/tags/[version]/CHANGES
+
+Questions, comments, and bug reports to users@subversion.apache.org.
+
+Thanks,
+- The Subversion Team
