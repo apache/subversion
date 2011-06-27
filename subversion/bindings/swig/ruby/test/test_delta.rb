@@ -19,7 +19,7 @@
 
 require "util"
 require "stringio"
-require 'md5'
+require "digest/md5"
 require 'tempfile'
 
 require "svn/info"
