@@ -39,13 +39,15 @@ AC_DEFUN(SVN_LIB_SERF,
     elif test "$withval" != "no" ; then
       AC_MSG_NOTICE([serf library configuration])
       serf_prefix=$withval
-      save_cppflags="$CPPFLAGS"
-      CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES -I$serf_prefix/include/serf-0"
-      AC_CHECK_HEADERS(serf.h,[
-        save_ldflags="$LDFLAGS"
-        LDFLAGS="$LDFLAGS -L$serf_prefix/lib"
-        AC_CHECK_LIB(serf-0, serf_context_create,[
-          AC_TRY_COMPILE([
+      for serf_major in serf-1 serf-0; do
+        if ! test -d $serf_prefix/include/$serf_major; then continue; fi
+        save_cppflags="$CPPFLAGS"
+        CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES -I$serf_prefix/include/$serf_major"
+        AC_CHECK_HEADERS(serf.h,[
+          save_ldflags="$LDFLAGS"
+          LDFLAGS="$LDFLAGS -L$serf_prefix/lib"
+          AC_CHECK_LIB($serf_major, serf_context_create,[
+            AC_TRY_COMPILE([
 #include <stdlib.h>
 #include "serf.h"
 ],[
@@ -53,10 +55,12 @@ AC_DEFUN(SVN_LIB_SERF,
 #error Serf version too old: need $serf_check_major.$serf_check_minor.$serf_check_patch
 #endif
 ], [serf_found=yes], [AC_MSG_WARN([Serf version too old: need $serf_check_major.$serf_check_minor.$serf_check_patch])
-        serf_found=no])], ,
-          $SVN_APRUTIL_LIBS $SVN_APR_LIBS -lz)
-        LDFLAGS="$save_ldflags"])
-      CPPFLAGS="$save_cppflags"
+          serf_found=no])], ,
+            $SVN_APRUTIL_LIBS $SVN_APR_LIBS -lz)
+          LDFLAGS="$save_ldflags"])
+        CPPFLAGS="$save_cppflags"
+        test $serf_found = yes && break
+      done
     fi
   ], [
        if test -d "$srcdir/serf"; then
@@ -67,19 +71,20 @@ AC_DEFUN(SVN_LIB_SERF,
 
   if test $serf_found = "reconfig"; then
     SVN_EXTERNAL_PROJECT([serf], [--with-apr=$apr_config --with-apr-util=$apu_config])
+    serf_major=serf-`$srcdir/serf/build/get-version.sh major $srcdir/serf/serf.h SERF`
     serf_prefix=$prefix
     SVN_SERF_PREFIX="$serf_prefix"
     SVN_SERF_INCLUDES="-I$srcdir/serf"
-    SVN_SERF_LIBS="$abs_builddir/serf/libserf-0.la"
+    SVN_SERF_LIBS="$abs_builddir/serf/lib$serf_major.la"
   fi
 
   if test $serf_found = "yes"; then
     SVN_SERF_PREFIX="$serf_prefix"
-    SVN_SERF_INCLUDES="-I$serf_prefix/include/serf-0"
-    if test -e "$serf_prefix/lib/libserf-0.la"; then
-      SVN_SERF_LIBS="$serf_prefix/lib/libserf-0.la"
+    SVN_SERF_INCLUDES="-I$serf_prefix/include/$serf_major"
+    if test -e "$serf_prefix/lib/lib$serf_major.la"; then
+      SVN_SERF_LIBS="$serf_prefix/lib/lib$serf_major.la"
     else
-      SVN_SERF_LIBS="-lserf-0"
+      SVN_SERF_LIBS="-l$serf_major"
       LDFLAGS="$LDFLAGS -L$serf_prefix/lib"
     fi
   elif test $serf_found = "reconfig"; then
