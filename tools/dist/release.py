@@ -412,8 +412,25 @@ def write_news(base_dir, args):
     template.generate(sys.stdout, data)
 
 
-def announce(base_dir, args):
+def write_announcement(base_dir, args):
     'Write the release announcement.'
+    (version_base, version_extra) = split_version(args.version)
+
+    data = { 'version'      : args.version,
+             'sha1info'     : 'foo',
+             'siginfo'      : 'bar', 
+             'major-minor'  : 'boo',
+           }
+
+    if version_extra:
+        if version_extra.startswith('alpha'):
+            template_filename = 'rc-release-ann.ezt'
+    else:
+        template_filename = 'stable-release-ann.ezt'
+
+    template = ezt.Template(compress_whitespace = False)
+    template.parse(get_tmplfile(template_filename).read())
+    template.generate(sys.stdout, data)
 
 
 #----------------------------------------------------------------------
@@ -480,6 +497,13 @@ def main():
                     help='''Output to stdout template text for use in the news
                             section of the Subversion website.''')
     subparser.set_defaults(func=write_news)
+    subparser.add_argument('version',
+                    help='''The release label, such as '1.7.0-alpha1'.''')
+
+    subparser = subparsers.add_parser('write-announcement',
+                    help='''Output to stdout template text for the emailed
+                            release announcement.''')
+    subparser.set_defaults(func=write_announcement)
     subparser.add_argument('version',
                     help='''The release label, such as '1.7.0-alpha1'.''')
 
