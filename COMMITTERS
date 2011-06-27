@@ -153,6 +153,7 @@ Commit access for specific areas:
      gmcdonald   Gavin McDonald <gavin@16degrees.com.au>     (build/hudson,
                                                               tools/buildbot)
       artagnon   Ramkumar Ramachandra <artagnon@gmail.com>   (svnrdump, svntest)
+         arwin   Arwin Arni <arwin@collab.net>               (svn-bisect)
 
   Translation of message files:
 
