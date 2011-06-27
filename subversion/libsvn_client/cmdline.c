@@ -347,20 +347,10 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
         {
           err = svn_client_root_url_from_path(&root_url, "", ctx, pool);
           if (err || root_url == NULL)
-            {
-              if (reserved_names)
-                for (i = 0; i < reserved_names->nelts; ++i)
-                  err = svn_error_createf(SVN_ERR_RESERVED_FILENAME_SPECIFIED,
-                                          err,
-                                          _("'%s' ends in a reserved name"),
-                                          APR_ARRAY_IDX(reserved_names, i,
-                                                        const char *));
-
-              return svn_error_create(SVN_ERR_WC_NOT_WORKING_COPY, err,
-                                      _("Resolving '^/': no repository root "
-                                        "found in the target arguments or "
-                                        "in the current directory"));
-            }
+            return svn_error_create(SVN_ERR_WC_NOT_WORKING_COPY, err,
+                                    _("Resolving '^/': no repository root "
+                                      "found in the target arguments or "
+                                      "in the current directory"));
         }
 
       *targets_p = apr_array_make(pool, output_targets->nelts,
@@ -395,7 +385,7 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
   else
     *targets_p = output_targets;
 
-  if (reserved_names)
+  if (reserved_names && ! err)
     for (i = 0; i < reserved_names->nelts; ++i)
       err = svn_error_createf(SVN_ERR_RESERVED_FILENAME_SPECIFIED, err,
                               _("'%s' ends in a reserved name"),
