@@ -77,6 +77,7 @@ struct svn_diff__snake_t
     apr_off_t             y;
     svn_diff__lcs_t      *lcs;
     svn_diff__position_t *position[2];
+    svn_diff__token_index_t uniquematchcount;
 };
 
 static APR_INLINE void
@@ -89,6 +90,7 @@ svn_diff__snake(svn_diff__snake_t *fp_k,
   svn_diff__position_t *position[2];
   svn_diff__lcs_t *lcs;
   svn_diff__lcs_t *previous_lcs;
+  svn_diff__token_index_t uniquematchcount;
 
   /* The previous entry at fp[k] is going to be replaced.  See if we
    * can mark that lcs node for reuse, because the sequence up to this
@@ -111,6 +113,7 @@ svn_diff__snake(svn_diff__snake_t *fp_k,
     {
       start_position[0] = fp_k[-1].position[0];
       start_position[1] = fp_k[-1].position[1]->next;
+      uniquematchcount = fp_k[-1].uniquematchcount;
 
       previous_lcs = fp_k[-1].lcs;
     }
@@ -118,6 +121,7 @@ svn_diff__snake(svn_diff__snake_t *fp_k,
     {
       start_position[0] = fp_k[1].position[0]->next;
       start_position[1] = fp_k[1].position[1];
+      uniquematchcount = fp_k[1].uniquematchcount;
 
       previous_lcs = fp_k[1].lcs;
     }
@@ -139,6 +143,8 @@ svn_diff__snake(svn_diff__snake_t *fp_k,
     {
       while (position[0]->token_index == position[1]->token_index)
         {
+          if (token_counts[0][position[0]->token_index] == 1 && token_counts[1][position[0]->token_index] == 1)
+            uniquematchcount++;
           position[0] = position[0]->next;
           position[1] = position[1]->next;
         }
@@ -181,6 +187,7 @@ svn_diff__snake(svn_diff__snake_t *fp_k,
   fp_k[0].position[1] = position[1];
 
   fp_k[0].y = position[1]->offset;
+  fp_k[0].uniquematchcount = uniquematchcount;
 }
 
 
@@ -228,6 +235,42 @@ prepend_lcs(svn_diff__lcs_t *lcs, apr_off_t lines,
 }
 
 
+static void
+clear_fp(svn_diff__snake_t *fp,
+         const apr_off_t k,
+         const apr_off_t min_index,
+         const apr_off_t max_index,
+         svn_diff__lcs_t **lcs_freelist)
+{
+  svn_diff__snake_t best;
+  svn_diff__lcs_t *lcs, *prev_lcs;
+  apr_off_t index;
+
+  best = fp[k];
+  best.lcs->refcount++;
+  for (index = min_index; index <= max_index; index++)
+    {
+      lcs = fp[index].lcs;
+      fp[index].y = 0;
+      fp[index].lcs = NULL;
+      fp[index].uniquematchcount = 0;
+      while (lcs)
+      {
+        lcs->refcount--;
+        if (lcs->refcount)
+        break;
+
+        prev_lcs = lcs->next;
+        lcs->next = lcs_freelist;
+        lcs_freelist = lcs;
+        lcs = prev_lcs;
+      }
+    }
+  fp[k] = best;
+  fp[k].uniquematchcount = 0;
+}
+
+
 svn_diff__lcs_t *
 svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
               svn_diff__position_t *position_list2, /* pointer to tail (ring) */
@@ -245,6 +288,9 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
   svn_diff__snake_t *fp;
   apr_off_t d;
   apr_off_t k;
+  svn_diff__token_index_t limit;
+  apr_off_t min_index;
+  apr_off_t max_index;
   apr_off_t p = 0;
   svn_diff__lcs_t *lcs, *lcs_freelist = NULL;
 
@@ -340,17 +386,39 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
   p = 0;
   do
     {
+      min_index = (d<0 ? d : 0) - p;
+      max_index = (d>0 ? d : 0) + p;
+      limit = (d >= 0 ? 2 * p + d : 2 * p - d);
       /* For k < 0, insertions are free */
-      for (k = (d < 0 ? d : 0) - p; k < 0; k++)
+      for (k = min_index; k < 0; k++)
         {
           svn_diff__snake(fp + k, token_counts, &lcs_freelist, pool);
+          if (fp[k].uniquematchcount > limit + k)
+            {
+              d = k;
+              if (p == 0)
+                max_index = k;
+              clear_fp(fp, k, min_index, max_index, &lcs_freelist);
+              p = 0;
+              min_index = d;
+              max_index = 0;
+            }
         }
-	  /* for k > 0, deletions are free */
-      for (k = (d > 0 ? d : 0) + p; k >= 0; k--)
+      /* for k > 0, deletions are free */
+      for (k = max_index; k >= 0; k--)
         {
           svn_diff__snake(fp + k, token_counts, &lcs_freelist, pool);
+          if (fp[k].uniquematchcount > limit - k)
+            {
+              d = k;
+              if (p == 0)
+                min_index = k;
+              clear_fp(fp, k, min_index, max_index, &lcs_freelist);
+              p = 0;
+              min_index = 0;
+              max_index = d;
+            }
         }
-
       p++;
     }
   while (fp[0].position[1] != &sentinel_position[1]);
