@@ -30,7 +30,6 @@
 #   |______________________________________________________________|
 
 ENABLE_PYTHON_BINDINGS ?= yes
-ENABLE_RUBY_BINDINGS ?= yes
 ENABLE_PERL_BINDINGS ?= yes
 ENABLE_JAVA_BINDINGS ?= no # they don't build with thread-less APR...
 USE_APR_ICONV ?= no # set to yes to use APR iconv instead of GNU iconv
@@ -73,6 +72,7 @@ SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.23
 SQLITE_VER	= 3070603
 LIBMAGIC_VER	= 5.07
+RUBY_VER	= 1.8.7-p334
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
@@ -82,6 +82,7 @@ SQLITE_DIST	= sqlite-autoconf-$(SQLITE_VER).tar.gz
 CYRUS_SASL_DIST	= cyrus-sasl-$(CYRUS_SASL_VER).tar.gz
 HTTPD_DIST	= httpd-$(HTTPD_VER).tar.bz2
 LIBMAGIC_DIST	= file-$(LIBMAGIC_VER).tar.gz
+RUBY_DIST	= ruby-$(RUBY_VER).tar.gz
 
 DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(SERF_DIST) \
@@ -90,7 +91,8 @@ DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(APR_ICONV_DIST) \
 		$(DISTDIR)/$(GNU_ICONV_DIST) \
 		$(DISTDIR)/$(CYRUS_SASL_DIST) \
-		$(DISTDIR)/$(LIBMAGIC_DIST)
+		$(DISTDIR)/$(LIBMAGIC_DIST) \
+		$(DISTDIR)/$(RUBY_DIST)
 
 FETCH_CMD	= wget -c
 
@@ -108,6 +110,7 @@ SERF_OLD_URL	= http://serf.googlecode.com/svn/tags/$(SERF_OLD_VER)
 SQLITE_URL	= http://www.sqlite.org/$(SQLITE_DIST)
 CYRUS_SASL_URL	= ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/$(CYRUS_SASL_DIST)
 LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
+RUBY_URL	= http://ftp.ruby-lang.org/pub/ruby/1.8/$(RUBY_DIST)
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
 APR_SRCDIR	= $(SRCDIR)/apr-$(APR_VER)
@@ -121,6 +124,7 @@ SERF_OLD_SRCDIR	= $(SRCDIR)/serf-$(SERF_OLD_VER)
 SQLITE_SRCDIR	= $(SRCDIR)/sqlite-autoconf-$(SQLITE_VER)
 CYRUS_SASL_SRCDIR	= $(SRCDIR)/cyrus-sasl-$(CYRUS_SASL_VER)
 LIBMAGIC_SRCDIR	= $(SRCDIR)/file-$(LIBMAGIC_VER)
+RUBY_SRCDIR	= $(SRCDIR)/ruby-$(RUBY_VER)
 SVN_SRCDIR	= $(SVN_WC)
 
 BDB_OBJDIR	= $(OBJDIR)/db-$(BDB_VER)
@@ -135,6 +139,7 @@ SERF_OLD_OBJDIR	= $(OBJDIR)/serf-$(SERF_OLD_VER)
 SQLITE_OBJDIR	= $(OBJDIR)/sqlite-$(SQLITE_VER)
 CYRUS_SASL_OBJDIR	= $(OBJDIR)/cyrus-sasl-$(CYRUS_SASL_VER)
 LIBMAGIC_OBJDIR	= $(OBJDIR)/file-$(LIBMAGIC_VER)
+RUBY_OBJDIR	= $(OBJDIR)/ruby-$(RUBY_VER)
 SVN_OBJDIR	= $(OBJDIR)/$(SVN_REL_WC)
 
 # Tweak this for out-of-tree builds. Note that running individual
@@ -155,7 +160,7 @@ endif
 all: dirs-create bdb-install apr-install iconv-install apr-util-install \
 	httpd-install neon-install serf-install serf-old-install \
 	sqlite-install cyrus-sasl-install libmagic-install \
-	svn-install svn-bindings-install
+	ruby-install svn-install svn-bindings-install
 
 # Use these to start a build from the beginning.
 reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
@@ -888,6 +893,51 @@ $(LIBMAGIC_OBJDIR)/.installed: $(LIBMAGIC_OBJDIR)/.compiled
 	(cd $(LIBMAGIC_OBJDIR) && make install)
 	touch $@
 
+#######################################################################
+# ruby
+#######################################################################
+
+ruby-retrieve:	$(RUBY_OBJDIR)/.retrieved
+ruby-configure:	$(RUBY_OBJDIR)/.configured
+ruby-compile:	$(RUBY_OBJDIR)/.compiled
+ruby-install:	$(RUBY_OBJDIR)/.installed
+ruby-reset:
+	$(foreach f, .retrieved .configured .compiled .installed, \
+		rm -f $(RUBY_OBJDIR)/$(f);)
+
+ruby-clean:
+	-(cd $(RUBY_OBJDIR) && make distclean)
+
+# fetch distfile for ruby
+$(DISTDIR)/$(RUBY_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(RUBY_URL)
+
+# retrieve ruby
+#
+$(RUBY_OBJDIR)/.retrieved: $(DISTDIR)/$(RUBY_DIST)
+	[ -d $(RUBY_OBJDIR) ] || mkdir -p $(RUBY_OBJDIR)
+	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(RUBY_DIST)
+	touch $@
+
+# configure ruby
+$(RUBY_OBJDIR)/.configured: $(RUBY_OBJDIR)/.retrieved
+	cd $(RUBY_OBJDIR) \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		$(RUBY_SRCDIR)/configure \
+		--prefix=$(PREFIX)/ruby \
+		--enable-shared \
+		--disable-pthread
+	touch $@
+
+# compile ruby
+$(RUBY_OBJDIR)/.compiled: $(RUBY_OBJDIR)/.configured
+	(cd $(RUBY_OBJDIR) && make)
+	touch $@
+
+# install ruby and the test-unit gem needed to run SVN bindings tests
+$(RUBY_OBJDIR)/.installed: $(RUBY_OBJDIR)/.compiled
+	(cd $(RUBY_OBJDIR) && make install)
+	touch $@
 
 #######################################################################
 # svn
@@ -1012,6 +1062,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
 		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib" \
 			LD_LIBRARY_PATH="$(PREFIX)/bdb/lib:$(PREFIX)/iconv/lib:$$LD_LIBRARY_PATH" \
 			GREP="`which grep`" \
+			PATH=$(PREFIX)/ruby/bin:$$PATH \
 			$(SVN_SRCDIR)/configure \
 			--enable-maintainer-mode \
 			--with-ssl \
@@ -1049,10 +1100,8 @@ $(SVN_OBJDIR)/.bindings-compiled: $(SVN_OBJDIR)/.installed
 		cd $(svn_builddir) \
 			&& make swig-py; \
 	fi
-	if [ $(ENABLE_RUBY_BINDINGS) = yes ]; then \
-		cd $(svn_builddir) \
-			&& make swig-rb; \
-	fi
+	cd $(svn_builddir) && \
+		PATH=$(PREFIX)/ruby/bin:$$PATH make swig-rb
 	if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
 			&& make swig-pl; \
@@ -1068,10 +1117,8 @@ $(SVN_OBJDIR)/.bindings-installed: $(SVN_OBJDIR)/.bindings-compiled
 		cd $(svn_builddir) \
 		  && make install-swig-py; \
 	fi
-	if [ $(ENABLE_RUBY_BINDINGS) = yes ]; then \
-		cd $(svn_builddir) \
-			&& make install-swig-rb; \
-	fi
+	cd $(svn_builddir) && \
+		PATH=$(PREFIX)/ruby/bin:$$PATH make install-swig-rb
 	if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
 	    && make install-swig-pl-lib; \
@@ -1157,7 +1204,7 @@ endif
 	mv -f $@.tmp $@
 
 # We need this to make sure some targets below pick up the right libraries
-LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/cyrus-sasl/lib:$(PREFIX)/iconv/lib:$(PREFIX)/libmagic/lib:$(PREFIX)/svn-$(WC)/lib
+LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/cyrus-sasl/lib:$(PREFIX)/iconv/lib:$(PREFIX)/libmagic/lib:$(PREFIX)/ruby/lib:$(PREFIX)/svn-$(WC)/lib
 
 .PHONY: libpath
 libpath:
@@ -1276,14 +1323,13 @@ svn-check-swig-py:
 # We add the svn prefix to PATH here because the ruby tests
 # attempt to start an svnserve binary found in PATH.
 svn-check-swig-rb:
-	-if [ $(ENABLE_RUBY_BINDINGS) = yes ]; then \
-		(cd $(svn_builddir)/subversion/bindings/swig/ruby/test && \
-			env RUBYLIB=$(RUBYLIB) \
-			LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-			PATH=$(SVN_PREFIX)/bin:$$PATH \
-			ruby run-test.rb --verbose=normal 2>&1) | \
-				tee $(svn_builddir)/tests.log.bindings.rb; \
-	fi
+	(cd $(svn_builddir)/subversion/bindings/swig/ruby/test && \
+		env RUBYLIB=$(RUBYLIB) \
+		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+		PATH=$(SVN_PREFIX)/bin:$$PATH \
+		$(PREFIX)/ruby/bin/ruby run-test.rb \
+			--verbose=verbose 2>&1) | \
+			tee $(svn_builddir)/tests.log.bindings.rb
 
 svn-check-javahl:
 	-if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
@@ -1328,7 +1374,7 @@ endif
 	@echo "swig:       `swig -version | grep Version | cut -d' ' -f3`"
 	@echo "python:     `python --version 2>&1 | cut -d' ' -f2`"
 	@echo "perl:       `eval \`perl -V:version\`; echo $$version`"
-	@echo "ruby:       `ruby --version | cut -d' ' -f2`"
+	@echo "ruby:       $(RUBY_VER)"
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
 	@echo "java:       `java -version 2>&1 | grep version | cut -d' ' -f3  | sed -e 's/\"//g'`"
 endif
