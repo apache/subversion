@@ -165,12 +165,12 @@ all: dirs-create bdb-install apr-install iconv-install apr-util-install \
 # Use these to start a build from the beginning.
 reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
 	httpd-reset neon-reset serf-reset serf-old-reset sqlite-reset \
-	cyrus-sasl-reset libmagic-reset svn-reset
+	cyrus-sasl-reset libmagic-reset ruby-reset svn-reset
 
 # Use to save disk space.
 clean: bdb-clean apr-clean iconv-clean apr-util-clean httpd-clean \
 	neon-clean serf-clean serf-old-clean sqlite-clean cyrus-sasl-clean \
-	libmagic-clean svn-clean
+	libmagic-clean ruby-clean svn-clean
 
 # Nukes everything (including installed binaries!)
 # Use this to start ALL OVER AGAIN! Use with caution!
