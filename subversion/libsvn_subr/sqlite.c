@@ -915,7 +915,15 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 #endif
 
   /* Work around a bug in SQLite 3.7.7.
-     See message <BANLkTimDypWGY-8tHFgJsTxN6ty6OkdJ0Q@mail.gmail.com> on dev@.
+
+     See:
+
+       Date: Sun, 26 Jun 2011 18:52:14 -0400
+       From: Richard Hipp <drh@sqlite.org>
+       To: General Discussion of SQLite Database <sqlite-users@sqlite.org>
+       Cc: dev@subversion.apache.org
+       Subject: Re: [sqlite] PRAGMA bug in 3.7.7 (but fine in 3.7.6.3)
+       Message-ID: <BANLkTimDypWGY-8tHFgJsTxN6ty6OkdJ0Q@mail.gmail.com>
    */
   {
     int ignored_err = SQLITE_OK;
