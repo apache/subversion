@@ -1021,7 +1021,10 @@ class WinGeneratorBase(GeneratorBase):
       neonlib = self.neon_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
 
     if self.serf_lib:
-      serflib = 'serf.lib'
+      if self.serf_ver_maj == 1:
+        serflib = 'serf-1.lib'
+      else:
+        serflib = 'serf.lib'
 
     zlib = (cfg == 'Debug' and 'zlibstatD.lib' or 'zlibstat.lib')
     sasllib = None
@@ -1433,13 +1436,13 @@ class WinGeneratorBase(GeneratorBase):
     # shouldn't be called unless serf is there
     assert self.serf_path and os.path.exists(self.serf_path)
 
+    self.serf_ver_maj = None
+    self.serf_ver_min = None
+    self.serf_ver_patch = None
+
     # serf.h should be present
     if not os.path.exists(os.path.join(self.serf_path, 'serf.h')):
       return None, None, None
-
-    ver_maj = None
-    ver_min = None
-    ver_patch = None
 
     txt = open(os.path.join(self.serf_path, 'serf.h')).read()
 
@@ -1447,13 +1450,13 @@ class WinGeneratorBase(GeneratorBase):
     min_match = re.search(r'SERF_MINOR_VERSION\s+(\d+)', txt)
     patch_match = re.search(r'SERF_PATCH_VERSION\s+(\d+)', txt)
     if maj_match:
-      ver_maj = int(maj_match.group(1))
+      self.serf_ver_maj = int(maj_match.group(1))
     if min_match:
-      ver_min = int(min_match.group(1))
+      self.serf_ver_min = int(min_match.group(1))
     if patch_match:
-      ver_patch = int(patch_match.group(1))
+      self.serf_ver_patch = int(patch_match.group(1))
 
-    return ver_maj, ver_min, ver_patch
+    return self.serf_ver_maj, self.serf_ver_min, self.serf_ver_patch
 
   def _find_serf(self):
     "Check if serf and its dependencies are available"
