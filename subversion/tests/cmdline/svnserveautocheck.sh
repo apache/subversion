@@ -39,7 +39,7 @@ SCRIPT=$(basename $0)
 
 set +e
 
-trap trap_cleanup SIGHUP SIGTERM SIGINT
+trap trap_cleanup HUP TERM INT
 
 # Ensure the server uses a known locale.
 LC_ALL=C
