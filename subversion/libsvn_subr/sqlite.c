@@ -914,14 +914,18 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   sqlite3_profile((*db)->db3, sqlite_profiler, (*db)->db3);
 #endif
 
-#if SQLITE_VERSION_AT_LEAST(3,7,7) \
-    && !SQLITE_VERSION_AT_LEAST(3,7,8) \
-    && defined(SQLITE_SCHEMA)
-  /* See message <BANLkTimDypWGY-8tHFgJsTxN6ty6OkdJ0Q@mail.gmail.com> on dev@ */
-  SVN_ERR(exec_sql2(*db, "PRAGMA case_sensitive_like=1;", SQLITE_SCHEMA));
-#else
-  SVN_ERR(exec_sql2(*db, "PRAGMA case_sensitive_like=1;", SQLITE_OK));
-#endif /* 3.7.7 && SQLITE_SCHEMA */
+  /* Work around a bug in SQLite 3.7.7.
+     See message <BANLkTimDypWGY-8tHFgJsTxN6ty6OkdJ0Q@mail.gmail.com> on dev@.
+   */
+  {
+    int ignored_err = SQLITE_OK;
+#ifdef SQLITE_SCHEMA
+    if (!strcmp(sqlite3_libversion(), "3.7.7"))
+      ignored_err = SQLITE_SCHEMA;
+#endif
+
+    SVN_ERR(exec_sql2(*db, "PRAGMA case_sensitive_like=1;", ignored_err));
+  }
 
   SVN_ERR(exec_sql(*db,
               /* Disable synchronization to disable the explicit disk flushes
