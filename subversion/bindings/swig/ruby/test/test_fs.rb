@@ -20,7 +20,7 @@
 require "my-assertions"
 require "util"
 require "time"
-require "digest/md5"
+require "md5"
 
 require "svn/core"
 require "svn/fs"

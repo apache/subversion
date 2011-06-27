@@ -19,13 +19,6 @@
 #    under the License.
 # ====================================================================
 
-# Test::Unit became a separate gem in Ruby-1.9, so we might need to load it
-begin
-  require "rubygems"
-  gem "test-unit"
-rescue NoMethodError
-end
-
 require "test/unit"
 require "fileutils"
 
