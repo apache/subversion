@@ -366,7 +366,7 @@ $(DISTDIR)/$(GNU_ICONV_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(GNU_ICONV_URL)
 
 $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff:
-	mkdir -p $(dirname $@)
+	mkdir -p $(GNU_ICONV_OBJDIR)
 	echo > $@.tmp '--- lib/encodings.def.orig	Wed Oct 24 23:41:41 2007'
 	echo >>$@.tmp '+++ lib/encodings.def	Wed Oct 24 23:43:47 2007'
 	echo >>$@.tmp '@@ -37,6 +37,7 @@'
@@ -380,7 +380,7 @@ $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff:
 	mv -f $@.tmp $@
 
 $(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff:
-	mkdir -p $(dirname $@)
+	mkdir -p $(GNU_ICONV_OBJDIR)
 	echo > $@.tmp '--- lib/aliases.gperf.orig	Wed Oct 24 23:41:32 2007'
 	echo >>$@.tmp '+++ lib/aliases.gperf	Wed Oct 24 23:47:38 2007'
 	echo >>$@.tmp '@@ -10,6 +10,7 @@ struct alias { int name; unsigned int encoding_index; '
@@ -549,7 +549,7 @@ $(HTTPD_OBJDIR)/.installed: $(HTTPD_OBJDIR)/.compiled
 
 # create a httpd.conf for mod_dav_svn
 $(HTTPD_CONF):
-	mkdir -p $(dirname $@)
+	mkdir -p $(PREFIX)/httpd/conf
 	echo > $@.tmp '# httpd config for use with mod_dav_svn'
 	echo >>$@.tmp 'ServerRoot "$(PREFIX)/httpd"'
 	echo >>$@.tmp 'Listen localhost:8080'
@@ -1087,7 +1087,7 @@ HTTPD_CHECK_USERS=$(PREFIX)/httpd/conf/httpd-svn-check-users
 HTTPD_CHECK_PORT=8081
 
 $(HTTPD_CHECK_USERS):
-	mkdir -p $(dirname $@)
+	mkdir -p $(PREFIX)/httpd/conf
 	echo > $@.tmp 'jrandom:xCGl35kV9oWCY'
 	echo >>$@.tmp 'jconstant:xCGl35kV9oWCY'
 	mv -f $@.tmp $@
