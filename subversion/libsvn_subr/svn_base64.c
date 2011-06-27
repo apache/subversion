@@ -33,6 +33,7 @@
 #include "svn_io.h"
 #include "svn_error.h"
 #include "svn_base64.h"
+#include "private/svn_string_private.h"
 
 /* When asked to format the the base64-encoded output as multiple lines, 
    we put this many chars in each line (plus one new line char) unless
@@ -267,7 +268,6 @@ svn_base64_encode_string2(const svn_string_t *str,
                           apr_pool_t *pool)
 {
   svn_stringbuf_t *encoded = svn_stringbuf_create("", pool);
-  svn_string_t *retval = apr_pcalloc(pool, sizeof(*retval));
   unsigned char ingroup[3];
   size_t ingrouplen = 0;
   size_t linelen = 0;
@@ -276,9 +276,7 @@ svn_base64_encode_string2(const svn_string_t *str,
                break_lines);
   encode_partial_group(encoded, ingroup, ingrouplen, linelen,
                        break_lines);
-  retval->data = encoded->data;
-  retval->len = encoded->len;
-  return retval;
+  return svn_stringbuf__morph_into_string(encoded);
 }
 
 const svn_string_t *
@@ -510,15 +508,12 @@ const svn_string_t *
 svn_base64_decode_string(const svn_string_t *str, apr_pool_t *pool)
 {
   svn_stringbuf_t *decoded = svn_stringbuf_create("", pool);
-  svn_string_t *retval = apr_pcalloc(pool, sizeof(*retval));
   unsigned char ingroup[4];
   int ingrouplen = 0;
   svn_boolean_t done = FALSE;
 
   decode_bytes(decoded, str->data, str->len, ingroup, &ingrouplen, &done);
-  retval->data = decoded->data;
-  retval->len = decoded->len;
-  return retval;
+  return svn_stringbuf__morph_into_string(decoded);
 }
 
 
