@@ -1,0 +1,70 @@
+This branch exists for the implementation of the svn bisect command.
+It is maintained as a reintegrate-able branch with regular catch-up
+merges from trunk.
+
+PURPOSE
+=======
+
+For years, subversion users have used third-party scripts to do what
+should rightfully be a part of subversion itself. This branch aims
+to implement bisect functionality and make it available via the
+public API.
+
+
+SPEC
+====
+
+svn bisect start [-rN[:M]]
+
+Initialize the bisection state.
+If a state already exists, clean it up and create a fresh one.
+If a revision range is specified, limit bisection to this range.
+If a single revision is specified, bisect from that revision to HEAD.
+If no revision is specified, bisect from revision 1 to HEAD.
+
+svn bisect bad [-rN]
+
+If used before "svn bisect run", mark the specified revision as "bad".
+
+If used during interactive bisection, no revision should be specified.
+The current revision is marked as "bad".
+
+svn bisect good [-rN]
+
+If used before "svn bisect run", mark the specified revision as
+"good".
+
+If used during interactive bisection, no revision should be
+specified. The current revision is marked as "good".
+
+svn bisect skip [-rN[:M]]
+
+If specified before "svn bisect run", mark the specified revision or
+revision range as "skip".
+
+If used during the interactive bisection, the current revision will
+be marked "skip", and a nearby revision will be chosen.
+#TODO: How to choose the nearby revision?
+
+svn bisect reset [-rN]
+
+Update the working copy to the specified revision and clean the
+bisection state. If no revision is specified, it takes the working
+copy to the revision before "svn bisect start" was run.
+
+svn bisect run [my_script [args]]
+
+Start the bisection. If no script is given, start the bisect in
+interactive mode. i.e after updating to a specific revision, wait 
+for the user to manually run tests and mark the revision as good,
+bad or skip.
+
+The script should follow the following spec:
+
+Good revision   : Exit Code 0
+Bad revision    : Exit Code 1 thru 127 (except 125)
+Skip revision   : Exit Code 125
+Abort bisection : Any other Exit Code
+
+The above mentioned exit codes conform to the way git bisect does
+things.
