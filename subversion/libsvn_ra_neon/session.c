@@ -451,8 +451,12 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                                         apr_pool_t *pool)
 {
   const char *exceptions, *port_str, *timeout_str, *server_group;
-  const char *debug_str, *http_auth_types;
+  const char *debug_str;
   svn_boolean_t is_exception = FALSE;
+#ifdef SVN_NEON_0_26
+  const char *http_auth_types = NULL;
+#endif
+
   /* If we find nothing, default to nulls. */
   *proxy_host     = NULL;
   *proxy_port     = (unsigned int) -1;
@@ -461,7 +465,6 @@ static svn_error_t *get_server_settings(const char **proxy_host,
   port_str        = NULL;
   timeout_str     = NULL;
   debug_str       = NULL;
-  http_auth_types = NULL;
   *pk11_provider  = NULL;
 
   /* Use the default proxy-specific settings if and only if
