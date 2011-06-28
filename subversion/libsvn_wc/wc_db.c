@@ -8431,6 +8431,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
 }
 
 
+#if 0
 struct update_baton_t {
   const char *new_repos_relpath;
   svn_revnum_t new_revision;
@@ -8444,6 +8445,7 @@ struct update_baton_t {
   const svn_skel_t *conflict;
   const svn_skel_t *work_items;
 };
+#endif
 
 
 svn_error_t *
