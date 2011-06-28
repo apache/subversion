@@ -649,10 +649,10 @@ def missing_dirs(sbox):
       'A'                 : Item(status='  ', wc_rev='1'),
       'A/mu'              : Item(status='  ', wc_rev='1'),
       'A/C'               : Item(status='  ', wc_rev='1'),
-      'A/D'               : Item(status='! ', wc_rev='-'),
+      'A/D'               : Item(status='! ', wc_rev='1'),
       'A/B'               : Item(status='  ', wc_rev='1'),
       'A/B/F'             : Item(status='  ', wc_rev='1'),
-      'A/B/E'             : Item(status='! ', wc_rev='-'),
+      'A/B/E'             : Item(status='! ', wc_rev='1'),
       'A/B/lambda'        : Item(status='  ', wc_rev='1'),
       'iota'              : Item(status='  ', wc_rev='1'),
       'A/B_new'           : Item(status='A ', wc_rev='-', copied='+'),
@@ -678,10 +678,10 @@ def missing_dirs2(sbox):
       'A'                 : Item(status='  ', wc_rev='1'),
       'A/mu'              : Item(status='  ', wc_rev='1'),
       'A/C'               : Item(status='  ', wc_rev='1'),
-      'A/D'               : Item(status='! ', wc_rev='-'),
+      'A/D'               : Item(status='! ', wc_rev='1'),
       'A/B'               : Item(status='  ', wc_rev='1'),
       'A/B/F'             : Item(status='  ', wc_rev='1'),
-      'A/B/E'             : Item(status='! ', wc_rev='-'),
+      'A/B/E'             : Item(status='! ', wc_rev='1'),
       'A/B/lambda'        : Item(status='  ', wc_rev='1'),
       'iota'              : Item(status='  ', wc_rev='1'),
       'A/B_new'           : Item(status='A ', wc_rev='-', copied='+'),
@@ -1037,7 +1037,6 @@ def add_add_x2(sbox):
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
 @Issue(3940)
-@XFail()
 def upgrade_with_missing_subdir(sbox):
   "test upgrading a working copy with missing subdir"
 
