@@ -989,12 +989,6 @@ UPDATE actual_node SET tree_conflict_data = NULL
 SELECT DISTINCT local_relpath FROM nodes
 WHERE kind = 'file' AND parent_relpath = ?1
 
--- STMT_SELECT_NODE_UPGRADE
-SELECT op_depth, presence, wc_id, kind
-FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2
-ORDER BY op_depth DESC
-
 -- STMT_UPDATE_NODE_PROPS
 UPDATE nodes SET properties = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
