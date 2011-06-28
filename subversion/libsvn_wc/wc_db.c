@@ -9605,11 +9605,11 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
                                apr_hash_t *revert_props,
                                apr_hash_t *working_props,
                                int original_format,
+                               apr_int64_t wc_id,
                                apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  apr_int64_t wc_id;
   apr_int64_t top_op_depth = -1;
   apr_int64_t below_op_depth = -1;
   svn_wc__db_status_t top_presence;
@@ -9645,13 +9645,12 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
   */
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_NODE_UPGRADE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "s", local_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     {
       top_op_depth = svn_sqlite__column_int64(stmt, 0);
       top_presence = svn_sqlite__column_token(stmt, 1, presence_map);
-      wc_id = svn_sqlite__column_int64(stmt, 2);
       kind = svn_sqlite__column_token(stmt, 3, kind_map);
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
       if (have_row)
