@@ -9644,19 +9644,19 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
      the handling of our inputs, relative to the state of this node.
   */
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_NODE_UPGRADE));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_NODE_INFO));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     {
       top_op_depth = svn_sqlite__column_int64(stmt, 0);
-      top_presence = svn_sqlite__column_token(stmt, 1, presence_map);
-      kind = svn_sqlite__column_token(stmt, 3, kind_map);
+      top_presence = svn_sqlite__column_token(stmt, 3, presence_map);
+      kind = svn_sqlite__column_token(stmt, 4, kind_map);
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
       if (have_row)
         {
           below_op_depth = svn_sqlite__column_int64(stmt, 0);
-          below_presence = svn_sqlite__column_token(stmt, 1, presence_map);
+          below_presence = svn_sqlite__column_token(stmt, 3, presence_map);
         }
     }
   SVN_ERR(svn_sqlite__reset(stmt));
