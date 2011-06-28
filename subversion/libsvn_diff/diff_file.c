@@ -528,9 +528,11 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
   apr_off_t suffix_min_offset0;
   apr_off_t min_file_size;
   int suffix_lines_to_keep = SUFFIX_LINES_TO_KEEP;
-  svn_boolean_t is_match, reached_prefix;
+  svn_boolean_t is_match;
+  svn_boolean_t reached_prefix;
   apr_off_t lines = 0;
-  svn_boolean_t had_cr, had_nl = FALSE;
+  svn_boolean_t had_cr;
+  svn_boolean_t had_nl;
   apr_size_t i;
 
   /* Initialize file_for_suffix[].
@@ -586,6 +588,7 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
     /* Count an extra line for the last line not ending in an eol. */
     lines++;
 
+  had_nl = FALSE;
   while (is_match)
     {
       /* Initialize the minimum pointer positions. */
