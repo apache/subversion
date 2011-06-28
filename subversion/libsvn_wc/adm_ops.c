@@ -1289,7 +1289,7 @@ revert_restore(svn_wc__db_t *db,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   svn_node_kind_t on_disk;
-  svn_boolean_t special, notify_required;
+  svn_boolean_t notify_required;
   const char *conflict_old;
   const char *conflict_new;
   const char *conflict_working;
@@ -1297,6 +1297,9 @@ revert_restore(svn_wc__db_t *db,
   svn_filesize_t recorded_size;
   apr_time_t recorded_mod_time;
   apr_finfo_t finfo;
+#ifdef HAVE_SYMLINK
+  svn_boolean_t special;
+#endif
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
@@ -1345,7 +1348,9 @@ revert_restore(svn_wc__db_t *db,
     {
       svn_error_clear(err);
       on_disk = svn_node_none;
+#ifdef HAVE_SYMLINK
       special = FALSE;
+#endif
     }
   else
     {
@@ -1356,7 +1361,9 @@ revert_restore(svn_wc__db_t *db,
       else
         on_disk = svn_node_unknown;
 
+#ifdef HAVE_SYMLINK
       special = (finfo.filetype == APR_LNK);
+#endif
     }
 
   /* If we expect a versioned item to be present then check that any
