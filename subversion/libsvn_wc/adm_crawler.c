@@ -495,6 +495,16 @@ report_revisions_and_depths(svn_wc__db_t *db,
           is_incomplete = (ths->status == svn_wc__db_status_incomplete);
           start_empty = is_incomplete;
 
+          /* When a <= 1.6 working copy is upgraded without some of its
+             subdirectories we miss some information in the database. If we
+             report the revision as -1, the update editor will receive an
+             add_directory() while it still knows the directory.
+
+             This would raise strange tree conflicts and probably assertions
+             as it would a BASE vs BASE conflict */
+          if (is_incomplete && !SVN_IS_VALID_REVNUM(ths->revnum))
+            ths->revnum = dir_rev;
+
           if (depth_compatibility_trick
               && ths->depth <= svn_depth_files
               && depth > ths->depth)
