@@ -72,8 +72,7 @@ svn_cl__checkout(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_pool_t *subpool;
   apr_array_header_t *targets;
-  const char *local_dir;
-  const char *repos_url;
+  const char *last_target, *local_dir;
   int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
@@ -81,39 +80,43 @@ svn_cl__checkout(apr_getopt_t *os,
                                                       ctx, FALSE, pool));
 
   if (! targets->nelts)
-    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL, NULL);
 
-  /* Add a path if the user only specified URLs */
-  local_dir = APR_ARRAY_IDX(targets, targets->nelts - 1, const char *);
-  if (svn_path_is_url(local_dir))
+  /* Determine LOCAL_DIR (case 1: URL basename; 2,4: specified; 3: "")
+   * and leave TARGETS holding just the source URLs. */
+  last_target = APR_ARRAY_IDX(targets, targets->nelts - 1, const char *);
+  if (svn_path_is_url(last_target))
     {
       if (targets->nelts == 1)
         {
           svn_opt_revision_t pegrev;
 
-          /* Discard the peg-revision, if one was provided. */
-          SVN_ERR(svn_opt_parse_path(&pegrev, &local_dir, local_dir, pool));
+          /* Use the URL basename, discarding any peg revision. */
+          SVN_ERR(svn_opt_parse_path(&pegrev, &local_dir, last_target, pool));
           local_dir = svn_uri_basename(local_dir, pool);
         }
       else
         {
           local_dir = "";
         }
-      APR_ARRAY_PUSH(targets, const char *) = local_dir;
     }
   else
     {
-      /* What?  They gave us one target, and it wasn't a URL. */
       if (targets->nelts == 1)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
+        /* What?  They gave us one target, and it wasn't a URL. */
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, NULL);
+
+      apr_array_pop(targets);
+      local_dir = last_target;
     }
 
   if (! opt_state->quiet)
     SVN_ERR(svn_cl__notifier_mark_checkout(ctx->notify_baton2));
 
   subpool = svn_pool_create(pool);
-  for (i = 0; i < targets->nelts - 1; ++i)
+  for (i = 0; i < targets->nelts; ++i)
     {
+      const char *repos_url = APR_ARRAY_IDX(targets, i, const char *);
       const char *target_dir;
       const char *true_url;
       svn_opt_revision_t revision = opt_state->start_revision;
@@ -124,7 +127,6 @@ svn_cl__checkout(apr_getopt_t *os,
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
       /* Validate the REPOS_URL */
-      repos_url = APR_ARRAY_IDX(targets, i, const char *);
       if (! svn_path_is_url(repos_url))
         return svn_error_createf
           (SVN_ERR_BAD_URL, NULL,
@@ -137,7 +139,7 @@ svn_cl__checkout(apr_getopt_t *os,
       true_url = svn_uri_canonicalize(true_url, subpool);
 
       /* Use sub-directory of destination if checking-out multiple URLs */
-      if (targets->nelts == 2)
+      if (targets->nelts == 1)
         {
           target_dir = local_dir;
         }
