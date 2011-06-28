@@ -357,6 +357,7 @@ static svn_error_t *
 get_versioned_files(const apr_array_header_t **children,
                     const char *parent_relpath,
                     svn_sqlite__db_t *sdb,
+                    apr_int64_t wc_id,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
@@ -366,7 +367,7 @@ get_versioned_files(const apr_array_header_t **children,
 
   /* ### just select 'file' children. do we need 'symlink' in the future?  */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ALL_FILES));
-  SVN_ERR(svn_sqlite__bindf(stmt, "s", parent_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, parent_relpath));
 
   /* ### 10 is based on Subversion's average of 8.5 files per versioned
      ### directory in its repository. maybe use a different value? or
@@ -953,7 +954,7 @@ migrate_props(const char *dir_abspath,
                              original_format, wc_id, iterpool));
 
   /* Iterate over all the files in this SDB.  */
-  SVN_ERR(get_versioned_files(&children, dir_relpath, sdb, scratch_pool,
+  SVN_ERR(get_versioned_files(&children, dir_relpath, sdb, wc_id, scratch_pool,
                               iterpool));
   for (i = 0; i < children->nelts; i++)
     {
