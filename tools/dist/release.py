@@ -118,13 +118,13 @@ def split_version(version):
 #----------------------------------------------------------------------
 # Cleaning up the environment
 
-def cleanup(base_dir, args):
+def cleanup(args):
     'Remove generated files and folders.'
     logging.info('Cleaning')
 
-    shutil.rmtree(get_prefix(base_dir), True)
-    shutil.rmtree(get_tempdir(base_dir), True)
-    shutil.rmtree(get_deploydir(base_dir), True)
+    shutil.rmtree(get_prefix(args.base_dir), True)
+    shutil.rmtree(get_tempdir(args.base_dir), True)
+    shutil.rmtree(get_deploydir(args.base_dir), True)
 
 
 #----------------------------------------------------------------------
@@ -237,20 +237,21 @@ class SwigDep(RollDep):
         return self.have_usable()
 
 
-def build_env(base_dir, args):
+def build_env(args):
     'Download prerequisites for a release and prepare the environment.'
     logging.info('Creating release environment')
 
     try:
-        os.mkdir(get_prefix(base_dir))
-        os.mkdir(get_tempdir(base_dir))
+        os.mkdir(get_prefix(args.base_dir))
+        os.mkdir(get_tempdir(args.base_dir))
     except OSError:
         if not args.use_existing:
             raise
 
-    autoconf = AutoconfDep(base_dir, args.use_existing, args.verbose)
-    libtool = LibtoolDep(base_dir, args.use_existing, args.verbose)
-    swig = SwigDep(base_dir, args.use_existing, args.verbose, args.sf_mirror)
+    autoconf = AutoconfDep(args.base_dir, args.use_existing, args.verbose)
+    libtool = LibtoolDep(args.base_dir, args.use_existing, args.verbose)
+    swig = SwigDep(args.base_dir, args.use_existing, args.verbose,
+                   args.sf_mirror)
 
     # iterate over our rolling deps, and build them if needed
     for dep in [autoconf, libtool, swig]:
@@ -263,7 +264,7 @@ def build_env(base_dir, args):
 #----------------------------------------------------------------------
 # Create release artifacts
 
-def roll_tarballs(base_dir, args):
+def roll_tarballs(args):
     'Create the release artifacts.'
     extns = ['zip', 'tar.gz', 'tar.bz2']
     version_base, version_extra = split_version(args.version)
@@ -277,9 +278,9 @@ def roll_tarballs(base_dir, args):
                                                            branch, args.revnum))
 
     # Ensure we've got the appropriate rolling dependencies available
-    autoconf = AutoconfDep(base_dir, False, args.verbose)
-    libtool = LibtoolDep(base_dir, False, args.verbose)
-    swig = SwigDep(base_dir, False, args.verbose, None)
+    autoconf = AutoconfDep(args.base_dir, False, args.verbose)
+    libtool = LibtoolDep(args.base_dir, False, args.verbose)
+    swig = SwigDep(args.base_dir, False, args.verbose, None)
 
     for dep in [autoconf, libtool, swig]:
         if not dep.have_usable():
@@ -301,8 +302,8 @@ def roll_tarballs(base_dir, args):
             raise RuntimeError('CHANGES not synced between trunk and branch')
 
     # Create the output directory
-    if not os.path.exists(get_deploydir(base_dir)):
-        os.mkdir(get_deploydir(base_dir))
+    if not os.path.exists(get_deploydir(args.base_dir)):
+        os.mkdir(get_deploydir(args.base_dir))
 
     # For now, just delegate to dist.sh to create the actual artifacts
     extra_args = ''
@@ -332,13 +333,13 @@ def roll_tarballs(base_dir, args):
         else:
             filename = 'subversion-%s.%s' % (args.version, e)
 
-        shutil.move(filename, get_deploydir(base_dir))
-        filename = os.path.join(get_deploydir(base_dir), filename)
+        shutil.move(filename, get_deploydir(args.base_dir))
+        filename = os.path.join(get_deploydir(args.base_dir), filename)
         m = hashlib.sha1()
         m.update(open(filename, 'r').read())
         open(filename + '.sha1', 'w').write(m.hexdigest())
 
-    shutil.move('svn_version.h.dist', get_deploydir(base_dir))
+    shutil.move('svn_version.h.dist', get_deploydir(args.base_dir))
 
     # And we're done!
 
@@ -346,7 +347,7 @@ def roll_tarballs(base_dir, args):
 #----------------------------------------------------------------------
 # Post the candidate release artifacts
 
-def post_candidates(base_dir, args):
+def post_candidates(args):
     'Post the generated tarballs to web-accessible directory.'
     version_base, version_extra = split_version(args.version)
 
@@ -385,13 +386,13 @@ def post_candidates(base_dir, args):
     logging.info('Moving tarballs to %s' % os.path.join(target, dirname))
     if os.path.exists(os.path.join(target, dirname)):
         shutil.rmtree(os.path.join(target, dirname))
-    shutil.copytree(get_deploydir(base_dir), os.path.join(target, dirname))
+    shutil.copytree(get_deploydir(args.base_dir), os.path.join(target, dirname))
 
 
 #----------------------------------------------------------------------
 # Write announcements
 
-def write_news(base_dir, args):
+def write_news(args):
     'Write text for the Subversion website.'
     version_base, version_extra = split_version(args.version)
 
@@ -412,7 +413,7 @@ def write_news(base_dir, args):
     template.generate(sys.stdout, data)
 
 
-def write_announcement(base_dir, args):
+def write_announcement(args):
     'Write the release announcement.'
     version_base, version_extra = split_version(args.version)
 
@@ -518,7 +519,7 @@ def main():
 
     # first, process any global operations
     if args.clean:
-        cleanup(args.base_dir, args)
+        cleanup(args)
 
     # Set up logging
     logger = logging.getLogger()
@@ -532,7 +533,7 @@ def main():
                                                             + os.environ['PATH']
 
     # finally, run the subcommand, and give it the parsed arguments
-    args.func(args.base_dir, args)
+    args.func(args)
 
 
 if __name__ == '__main__':
