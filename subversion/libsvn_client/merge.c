@@ -9874,13 +9874,11 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
 
       svn_pool_clear(iterpool);
 
-      source_path = path + strlen(target_repos_rel_path);
-      if (source_path[0] == '/')  /* Remove leading '/'. */
-        source_path++;
-      source_path = svn_relpath_join(source_repos_rel_path, source_path,
-                                     iterpool);
-      source_path_rel_to_session =
-        svn_relpath_skip_ancestor(source_repos_rel_path, source_path);
+      source_path_rel_to_session = path + strlen(target_repos_rel_path);
+      if (source_path_rel_to_session[0] == '/')  /* Remove leading '/'. */
+        source_path_rel_to_session++;
+      source_path = svn_relpath_join(source_repos_rel_path,
+                                     source_path_rel_to_session, iterpool);
 
       /* Convert this target path's natural history into mergeinfo. */
       SVN_ERR(svn_mergeinfo__mergeinfo_from_segments(
