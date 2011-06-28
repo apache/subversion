@@ -1392,15 +1392,17 @@ revert_restore(svn_wc__db_t *db,
           svn_boolean_t executable;
           svn_boolean_t read_only;
           apr_hash_t *props;
+#ifdef HAVE_SYMLINK
           svn_string_t *special_prop;
+#endif
 
           SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
                                                  scratch_pool, scratch_pool));
 
+#ifdef HAVE_SYMLINK
           special_prop = apr_hash_get(props, SVN_PROP_SPECIAL,
                                       APR_HASH_KEY_STRING);
 
-#ifdef HAVE_SYMLINK
           if ((special_prop != NULL) != special)
             {
               /* File/symlink mismatch. */
