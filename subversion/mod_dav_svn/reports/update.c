@@ -353,8 +353,8 @@ add_helper(svn_boolean_t is_dir,
                              "copyfrom-path=\"%s\" copyfrom-rev=\"%ld\">"
                              DEBUG_CR,
                              DIR_OR_FILE(is_dir),
-                             bc_url, sha1_checksum_str,
-                             qname, qcopy, copyfrom_revision);
+                             bc_url, qname,
+                             sha1_checksum_str, qcopy, copyfrom_revision);
           child->copyfrom = TRUE;
         }
 
