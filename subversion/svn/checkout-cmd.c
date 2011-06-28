@@ -136,8 +136,6 @@ svn_cl__checkout(apr_getopt_t *os,
       SVN_ERR(svn_opt_parse_path(&peg_revision, &true_url, repos_url,
                                  subpool));
 
-      true_url = svn_uri_canonicalize(true_url, subpool);
-
       /* Use sub-directory of destination if checking-out multiple URLs */
       if (targets->nelts == 1)
         {
