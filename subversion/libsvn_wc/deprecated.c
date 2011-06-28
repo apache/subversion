@@ -2414,7 +2414,7 @@ conflict_func_1to2_wrapper(svn_wc_conflict_result_t **result,
                                                         scratch_pool);
 
   return svn_error_trace(btn->inner_func(result, cd, btn->inner_baton,
-                                          result_pool));
+                                         result_pool));
 }
 
 svn_error_t *

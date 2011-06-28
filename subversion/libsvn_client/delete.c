@@ -121,11 +121,11 @@ svn_client__can_delete(const char *path,
      determination, returning an error if it finds anything that shouldn't
      be deleted. */
   return svn_error_trace(svn_client_status5(NULL, ctx, path, &revision,
-                                             svn_depth_infinity, FALSE,
-                                             FALSE, FALSE, FALSE, FALSE,
-                                             NULL,
-                                             find_undeletables, NULL,
-                                             scratch_pool));
+                                            svn_depth_infinity, FALSE,
+                                            FALSE, FALSE, FALSE, FALSE,
+                                            NULL,
+                                            find_undeletables, NULL,
+                                            scratch_pool));
 }
 
 
@@ -322,9 +322,9 @@ svn_client__wc_delete(const char *path,
   if (!dry_run)
     /* Mark the entry for commit deletion and perform wc deletion */
     return svn_error_trace(svn_wc_delete4(ctx->wc_ctx, local_abspath,
-                                           keep_local, TRUE,
-                                           ctx->cancel_func, ctx->cancel_baton,
-                                           notify_func, notify_baton, pool));
+                                          keep_local, TRUE,
+                                          ctx->cancel_func, ctx->cancel_baton,
+                                          notify_func, notify_baton, pool));
 
   return SVN_NO_ERROR;
 }

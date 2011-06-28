@@ -87,9 +87,9 @@ get_and_record_fileinfo(svn_wc__db_t *db,
     }
 
   return svn_error_trace(svn_wc__db_global_record_fileinfo(
-                            db, local_abspath,
-                            dirent->filesize, dirent->mtime,
-                            scratch_pool));
+                           db, local_abspath,
+                           dirent->filesize, dirent->mtime,
+                           scratch_pool));
 }
 
 
@@ -828,7 +828,7 @@ run_file_remove(svn_wc__db_t *db,
 
   /* Remove the path, no worrying if it isn't there.  */
   return svn_error_trace(svn_io_remove_file2(local_abspath, TRUE,
-                                              scratch_pool));
+                                             scratch_pool));
 }
 
 
@@ -1204,8 +1204,8 @@ run_record_fileinfo(svn_wc__db_t *db,
 
 
   return svn_error_trace(get_and_record_fileinfo(db, local_abspath,
-                                                  TRUE /* ignore_enoent */,
-                                                  scratch_pool));
+                                                 TRUE /* ignore_enoent */,
+                                                 scratch_pool));
 }
 
 
@@ -1379,9 +1379,9 @@ run_set_property_conflict_marker(svn_wc__db_t *db,
 
   return svn_error_trace(
           svn_wc__db_temp_op_set_property_conflict_marker_file(db,
-                                                                local_abspath,
-                                                                prej_abspath,
-                                                                scratch_pool));
+                                                               local_abspath,
+                                                               prej_abspath,
+                                                               scratch_pool));
 }
 
 svn_error_t *

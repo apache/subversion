@@ -1093,12 +1093,12 @@ read_entries(apr_hash_t **entries,
 
   if (wc_format < SVN_WC__WC_NG_VERSION)
     return svn_error_trace(svn_wc__read_entries_old(entries,
-                                                     wcroot_abspath,
-                                                     result_pool,
-                                                     scratch_pool));
+                                                    wcroot_abspath,
+                                                    result_pool,
+                                                    scratch_pool));
 
   return svn_error_trace(read_entries_new(entries, db, wcroot_abspath,
-                                           result_pool, scratch_pool));
+                                          result_pool, scratch_pool));
 }
 
 

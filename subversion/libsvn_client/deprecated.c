@@ -2078,8 +2078,8 @@ svn_client_checkout(svn_revnum_t *result_rev,
   peg_revision.kind = svn_opt_revision_unspecified;
 
   return svn_error_trace(svn_client_checkout2(result_rev, URL, path,
-                                               &peg_revision, revision, recurse,
-                                               FALSE, ctx, pool));
+                                              &peg_revision, revision, recurse,
+                                              FALSE, ctx, pool));
 }
 
 /*** From info.c ***/

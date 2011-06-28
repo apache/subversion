@@ -1570,9 +1570,9 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
   /* A conflict was detected. Append log commands to the log accumulator
    * to record it. */
   return svn_error_trace(create_tree_conflict(pconflict, eb, local_abspath,
-                                               reason, action, their_node_kind,
-                                               their_relpath,
-                                               result_pool, scratch_pool));
+                                              reason, action, their_node_kind,
+                                              their_relpath,
+                                              result_pool, scratch_pool));
 }
 
 
@@ -5047,9 +5047,9 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
                             apr_pool_t *scratch_pool)
 {
   return svn_error_trace(svn_wc__db_is_wcroot(wc_root,
-                                               wc_ctx->db,
-                                               local_abspath,
-                                               scratch_pool));
+                                              wc_ctx->db,
+                                              local_abspath,
+                                              scratch_pool));
 }
 
 
@@ -5391,6 +5391,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                   pool));
 
   return svn_error_trace(svn_wc__wq_run(db, dir_abspath,
-                                         cancel_func, cancel_baton,
-                                         pool));
+                                        cancel_func, cancel_baton,
+                                        pool));
 }

@@ -648,9 +648,9 @@ ensure_repos_info(svn_wc_entry_t *entry,
         svn_dirent_local_style(local_abspath, scratch_pool));
 
    return svn_error_trace((*repos_info_func)(&entry->repos, &entry->uuid,
-                                              repos_info_baton,
-                                              entry->url,
-                                              result_pool, scratch_pool));
+                                             repos_info_baton,
+                                             entry->url,
+                                             result_pool, scratch_pool));
 }
 
 

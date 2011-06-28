@@ -1262,12 +1262,12 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
     }
 
   return svn_error_trace(merge_props_changed(state,
-                                              tree_conflicted,
-                                              local_abspath,
-                                              propchanges,
-                                              original_props,
-                                              diff_baton,
-                                              scratch_pool));
+                                             tree_conflicted,
+                                             local_abspath,
+                                             propchanges,
+                                             original_props,
+                                             diff_baton,
+                                             scratch_pool));
 }
 
 /* Contains any state collected while resolving conflicts. */

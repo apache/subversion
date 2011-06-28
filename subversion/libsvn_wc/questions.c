@@ -496,11 +496,11 @@ svn_wc_conflicted_p3(svn_boolean_t *text_conflicted_p,
                      apr_pool_t *scratch_pool)
 {
   return svn_error_trace(svn_wc__internal_conflicted_p(text_conflicted_p,
-                                                        prop_conflicted_p,
-                                                        tree_conflicted_p,
-                                                        wc_ctx->db,
-                                                        local_abspath,
-                                                        scratch_pool));
+                                                       prop_conflicted_p,
+                                                       tree_conflicted_p,
+                                                       wc_ctx->db,
+                                                       local_abspath,
+                                                       scratch_pool));
 }
 
 svn_error_t *
@@ -512,11 +512,11 @@ svn_wc__min_max_revisions(svn_revnum_t *min_revision,
                           apr_pool_t *scratch_pool)
 {
   return svn_error_trace(svn_wc__db_min_max_revisions(min_revision,
-                                                       max_revision,
-                                                       wc_ctx->db,
-                                                       local_abspath,
-                                                       committed,
-                                                       scratch_pool));
+                                                      max_revision,
+                                                      wc_ctx->db,
+                                                      local_abspath,
+                                                      committed,
+                                                      scratch_pool));
 }
 
 
@@ -527,9 +527,9 @@ svn_wc__is_sparse_checkout(svn_boolean_t *is_sparse_checkout,
                            apr_pool_t *scratch_pool)
 {
   return svn_error_trace(svn_wc__db_is_sparse_checkout(is_sparse_checkout,
-                                                        wc_ctx->db,
-                                                        local_abspath,
-                                                        scratch_pool));
+                                                       wc_ctx->db,
+                                                       local_abspath,
+                                                       scratch_pool));
 }
 
 
@@ -541,10 +541,10 @@ svn_wc__has_switched_subtrees(svn_boolean_t *is_switched,
                               apr_pool_t *scratch_pool)
 {
   return svn_error_trace(svn_wc__db_has_switched_subtrees(is_switched,
-                                                           wc_ctx->db,
-                                                           local_abspath,
-                                                           trail_url,
-                                                           scratch_pool));
+                                                          wc_ctx->db,
+                                                          local_abspath,
+                                                          trail_url,
+                                                          scratch_pool));
 }
 
 
@@ -557,9 +557,9 @@ svn_wc__has_local_mods(svn_boolean_t *is_modified,
                        apr_pool_t *scratch_pool)
 {
   return svn_error_trace(svn_wc__db_has_local_mods(is_modified,
-                                                    wc_ctx->db,
-                                                    local_abspath,
-                                                    cancel_func,
-                                                    cancel_baton,
-                                                    scratch_pool));
+                                                   wc_ctx->db,
+                                                   local_abspath,
+                                                   cancel_func,
+                                                   cancel_baton,
+                                                   scratch_pool));
 }
