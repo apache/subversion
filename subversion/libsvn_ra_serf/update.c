@@ -464,9 +464,9 @@ set_file_props(void *baton,
   prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
   if (prop_name != NULL)
     return svn_error_trace(editor->change_file_prop(info->file_baton,
-                                                     prop_name,
-                                                     val,
-                                                     scratch_pool));
+                                                    prop_name,
+                                                    val,
+                                                    scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -485,9 +485,9 @@ set_dir_props(void *baton,
   prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
   if (prop_name != NULL)
     return svn_error_trace(editor->change_dir_prop(dir->dir_baton,
-                                                    prop_name,
-                                                    val,
-                                                    scratch_pool));
+                                                   prop_name,
+                                                   val,
+                                                   scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -506,9 +506,9 @@ remove_file_props(void *baton,
   prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
   if (prop_name != NULL)
     return svn_error_trace(editor->change_file_prop(info->file_baton,
-                                                     prop_name,
-                                                     NULL,
-                                                     scratch_pool));
+                                                    prop_name,
+                                                    NULL,
+                                                    scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -527,9 +527,9 @@ remove_dir_props(void *baton,
   prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
   if (prop_name != NULL)
     return svn_error_trace(editor->change_dir_prop(dir->dir_baton,
-                                                    prop_name,
-                                                    NULL,
-                                                    scratch_pool));
+                                                   prop_name,
+                                                   NULL,
+                                                   scratch_pool));
   return SVN_NO_ERROR;
 }
 

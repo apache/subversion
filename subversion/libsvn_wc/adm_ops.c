@@ -1777,19 +1777,19 @@ svn_wc_revert4(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelist_filter,
                                          scratch_pool));
       return svn_error_trace(new_revert_changelist(wc_ctx->db, local_abspath,
-                                                    depth, use_commit_times,
-                                                    changelist_hash,
-                                                    cancel_func, cancel_baton,
-                                                    notify_func, notify_baton,
-                                                    scratch_pool));
+                                                   depth, use_commit_times,
+                                                   changelist_hash,
+                                                   cancel_func, cancel_baton,
+                                                   notify_func, notify_baton,
+                                                   scratch_pool));
     }
 
   if (depth == svn_depth_empty || depth == svn_depth_infinity)
     return svn_error_trace(new_revert_internal(wc_ctx->db, local_abspath,
-                                                depth, use_commit_times,
-                                                cancel_func, cancel_baton,
-                                                notify_func, notify_baton,
-                                                scratch_pool));
+                                               depth, use_commit_times,
+                                               cancel_func, cancel_baton,
+                                               notify_func, notify_baton,
+                                               scratch_pool));
 
   /* The user may expect svn_depth_files/svn_depth_immediates to work
      on copied dirs with one level of children.  It doesn't, the user
@@ -1799,10 +1799,10 @@ svn_wc_revert4(svn_wc_context_t *wc_ctx,
 
   if (depth == svn_depth_files || depth == svn_depth_immediates)
     return svn_error_trace(new_revert_partial(wc_ctx->db, local_abspath,
-                                               depth, use_commit_times,
-                                               cancel_func, cancel_baton,
-                                               notify_func, notify_baton,
-                                               scratch_pool));
+                                              depth, use_commit_times,
+                                              cancel_func, cancel_baton,
+                                              notify_func, notify_baton,
+                                              scratch_pool));
 
   /* Bogus depth. Tell the caller.  */
   return svn_error_create(SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL, NULL);
@@ -1863,10 +1863,10 @@ svn_wc_get_pristine_contents2(svn_stream_t **contents,
                               apr_pool_t *scratch_pool)
 {
   return svn_error_trace(svn_wc__get_pristine_contents(contents, NULL,
-                                                        wc_ctx->db,
-                                                        local_abspath,
-                                                        result_pool,
-                                                        scratch_pool));
+                                                       wc_ctx->db,
+                                                       local_abspath,
+                                                       result_pool,
+                                                       scratch_pool));
 }
 
 

@@ -3176,7 +3176,7 @@ svn_wc__db_externals_gather_definitions(apr_hash_t **externals,
   svn_pool_destroy(iterpool);
 
   return svn_error_trace(svn_error_compose_create(err,
-                                                   svn_sqlite__reset(stmt)));
+                                                  svn_sqlite__reset(stmt)));
 }
 
 /* Copy the ACTUAL data for SRC_RELPATH and tweak it to refer to DST_RELPATH.
@@ -4650,8 +4650,8 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
   spb.work_items = work_items;
 
   return svn_error_trace(svn_wc__db_with_txn(wcroot, local_relpath,
-                                              set_props_txn, &spb,
-                                              scratch_pool));
+                                             set_props_txn, &spb,
+                                             scratch_pool));
 }
 
 
@@ -5003,12 +5003,12 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
   /* Perform the set-changelist operation (transactionally), perform any
      notifications necessary, and then clean out our temporary tables.  */
   return svn_error_trace(with_finalization(wcroot, local_relpath,
-                                            set_changelist_txn, &scb,
-                                            do_changelist_notify, NULL,
-                                            cancel_func, cancel_baton,
-                                            notify_func, notify_baton,
-                                            STMT_FINALIZE_CHANGELIST,
-                                            scratch_pool));
+                                           set_changelist_txn, &scb,
+                                           do_changelist_notify, NULL,
+                                           cancel_func, cancel_baton,
+                                           notify_func, notify_baton,
+                                           STMT_FINALIZE_CHANGELIST,
+                                           scratch_pool));
 }
 
 
@@ -6231,12 +6231,12 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
   /* Perform the deletion operation (transactionally), perform any
      notifications necessary, and then clean out our temporary tables.  */
   return svn_error_trace(with_finalization(wcroot, local_relpath,
-                                            op_delete_txn, &odb,
-                                            do_delete_notify, NULL,
-                                            cancel_func, cancel_baton,
-                                            notify_func, notify_baton,
-                                            STMT_FINALIZE_DELETE,
-                                            scratch_pool));
+                                           op_delete_txn, &odb,
+                                           do_delete_notify, NULL,
+                                           cancel_func, cancel_baton,
+                                           notify_func, notify_baton,
+                                           STMT_FINALIZE_DELETE,
+                                           scratch_pool));
 }
 
 
@@ -7355,7 +7355,7 @@ svn_wc__db_read_url(const char **url,
   VERIFY_USABLE_WCROOT(wcroot);
 
   return svn_error_trace(read_url(url, wcroot, local_relpath, result_pool,
-                                   scratch_pool));
+                                  scratch_pool));
 }
 
 
@@ -8625,7 +8625,7 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
               revision != new_rev)))
     {
       return svn_error_trace(db_base_remove(NULL, wcroot, local_relpath,
-                                             scratch_pool));
+                                            scratch_pool));
     }
 
   if (new_repos_relpath != NULL && strcmp(repos_relpath, new_repos_relpath))
@@ -9211,8 +9211,8 @@ scan_addition(svn_wc__db_status_t *status,
   sab.result_pool = result_pool;
 
   return svn_error_trace(svn_wc__db_with_txn(wcroot, local_relpath,
-                                              scan_addition_txn,
-                                              &sab, scratch_pool));
+                                             scan_addition_txn,
+                                             &sab, scratch_pool));
 }
 
 
@@ -9486,8 +9486,8 @@ scan_deletion(const char **base_del_relpath,
   sd_baton.result_pool = result_pool;
 
   return svn_error_trace(svn_wc__db_with_txn(wcroot, local_relpath,
-                                              scan_deletion_txn, &sd_baton,
-                                              scratch_pool));
+                                             scan_deletion_txn, &sd_baton,
+                                             scratch_pool));
 }
 
 
@@ -9551,9 +9551,9 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                          apr_pool_t *scratch_pool)
 {
   return svn_error_trace(create_db(sdb, repos_id, wc_id, dir_abspath,
-                                    repos_root_url, repos_uuid,
-                                    SDB_FILE,
-                                    result_pool, scratch_pool));
+                                   repos_root_url, repos_uuid,
+                                   SDB_FILE,
+                                   result_pool, scratch_pool));
 }
 
 
@@ -9837,7 +9837,7 @@ svn_wc__db_wq_add(svn_wc__db_t *db,
 
   /* Add the work item(s) to the WORK_QUEUE.  */
   return svn_error_trace(add_work_items(wcroot->sdb, work_item,
-                                         scratch_pool));
+                                        scratch_pool));
 }
 
 /* Baton for wq_fetch_next */
@@ -10703,8 +10703,8 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
   baton.levels_to_lock = levels_to_lock;
 
   return svn_error_trace(svn_wc__db_with_txn(wcroot, local_relpath,
-                                              wclock_obtain_cb, &baton,
-                                              scratch_pool));
+                                             wclock_obtain_cb, &baton,
+                                             scratch_pool));
 }
 
 
@@ -11572,8 +11572,8 @@ svn_wc__db_min_max_revisions(svn_revnum_t *min_revision,
   VERIFY_USABLE_WCROOT(wcroot);
 
   return svn_error_trace(get_min_max_revisions(min_revision, max_revision,
-                                                wcroot, local_relpath,
-                                                committed, scratch_pool));
+                                               wcroot, local_relpath,
+                                               committed, scratch_pool));
 }
 
 
@@ -11621,8 +11621,8 @@ svn_wc__db_is_sparse_checkout(svn_boolean_t *is_sparse_checkout,
   VERIFY_USABLE_WCROOT(wcroot);
 
   return svn_error_trace(is_sparse_checkout_internal(is_sparse_checkout,
-                                                      wcroot, local_relpath,
-                                                      scratch_pool));
+                                                     wcroot, local_relpath,
+                                                     scratch_pool));
 }
 
 
@@ -11732,8 +11732,8 @@ svn_wc__db_has_switched_subtrees(svn_boolean_t *is_switched,
   VERIFY_USABLE_WCROOT(wcroot);
 
   return svn_error_trace(has_switched_subtrees(is_switched, wcroot,
-                                                local_relpath, trail_url,
-                                                scratch_pool));
+                                               local_relpath, trail_url,
+                                               scratch_pool));
 }
 
 svn_error_t *
@@ -11918,8 +11918,8 @@ svn_wc__db_has_local_mods(svn_boolean_t *is_modified,
   VERIFY_USABLE_WCROOT(wcroot);
 
   return svn_error_trace(has_local_mods(is_modified, wcroot, local_relpath,
-                                         db, cancel_func, cancel_baton,
-                                         scratch_pool));
+                                        db, cancel_func, cancel_baton,
+                                        scratch_pool));
 }
 
 
@@ -12029,8 +12029,8 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
   VERIFY_USABLE_WCROOT(wcroot);
 
   return svn_error_trace(svn_wc__db_with_txn(wcroot, local_relpath,
-                                              revision_status_txn, &rsb,
-                                              scratch_pool));
+                                             revision_status_txn, &rsb,
+                                             scratch_pool));
 }
 
 

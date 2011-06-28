@@ -225,7 +225,7 @@ svn_wc__db_close(svn_wc__db_t *db)
 
   /* Run the cleanup for each WCROOT.  */
   return svn_error_trace(svn_wc__db_close_many_wcroots(roots, db->state_pool,
-                                                        scratch_pool));
+                                                       scratch_pool));
 }
 
 

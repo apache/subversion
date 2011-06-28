@@ -423,9 +423,9 @@ svn_sqlite__bind_properties(svn_sqlite__stmt_t *stmt,
                                      scratch_pool));
   properties = svn_skel__unparse(skel, scratch_pool);
   return svn_error_trace(svn_sqlite__bind_blob(stmt,
-                                                slot,
-                                                properties->data,
-                                                properties->len));
+                                               slot,
+                                               properties->data,
+                                               properties->len));
 }
 
 svn_error_t *
@@ -723,7 +723,7 @@ check_format(svn_sqlite__db_t *db,
       ub.upgrade_sql = upgrade_sql;
 
       return svn_error_trace(svn_sqlite__with_transaction(
-                                db, upgrade_format, &ub, scratch_pool));
+                               db, upgrade_format, &ub, scratch_pool));
     }
 
   return svn_error_createf(SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA, NULL,
@@ -1084,7 +1084,7 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
 {
   SVN_ERR(exec_sql(db, "BEGIN TRANSACTION;"));
   return svn_error_trace(with_transaction(db, cb_func, cb_baton,
-                                           scratch_pool));
+                                          scratch_pool));
 }
 
 svn_error_t *
@@ -1096,7 +1096,7 @@ svn_sqlite__with_immediate_transaction(
 {
   SVN_ERR(exec_sql(db, "BEGIN IMMEDIATE TRANSACTION;"));
   return svn_error_trace(with_transaction(db, cb_func, cb_baton,
-                                           scratch_pool));
+                                          scratch_pool));
 }
 
 svn_error_t *

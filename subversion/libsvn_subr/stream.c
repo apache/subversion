@@ -462,7 +462,7 @@ svn_stream_readline(svn_stream_t *stream,
                     apr_pool_t *pool)
 {
   return svn_error_trace(stream_readline(stringbuf, eof, eol, stream,
-                                          pool));
+                                         pool));
 }
 
 svn_error_t *svn_stream_copy3(svn_stream_t *from, svn_stream_t *to,

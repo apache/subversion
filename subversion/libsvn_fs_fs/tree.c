@@ -2110,7 +2110,7 @@ fs_copy(svn_fs_root_t *from_root,
         apr_pool_t *pool)
 {
   return svn_error_trace(copy_helper(from_root, from_path, to_root, to_path,
-                                    TRUE, pool));
+                                     TRUE, pool));
 }
 
 
@@ -2127,7 +2127,7 @@ fs_revision_link(svn_fs_root_t *from_root,
     return SVN_FS__NOT_TXN(to_root);
 
   return svn_error_trace(copy_helper(from_root, path, to_root, path,
-                                      FALSE, pool));
+                                     FALSE, pool));
 }
 
 

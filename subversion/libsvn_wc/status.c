@@ -821,7 +821,7 @@ send_status_structure(const struct walk_status_baton *wb,
 
   if (statstruct && status_func)
     return svn_error_trace((*status_func)(status_baton, local_abspath,
-                                           statstruct, scratch_pool));
+                                          statstruct, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -964,7 +964,7 @@ send_unversioned_item(const struct walk_status_baton *wb,
      entry to the status func. */
   if (no_ignore || (! is_ignored) || is_external)
     return svn_error_trace((*status_func)(status_baton, local_abspath,
-                                           status, scratch_pool));
+                                          status, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2454,10 +2454,10 @@ internal_status(svn_wc_status3_t **status,
 
   if (node_kind == svn_wc__db_kind_unknown)
     return svn_error_trace(assemble_unversioned(status,
-                                                 db, local_abspath,
-                                                 dirent->kind,
-                                                 FALSE /* is_ignored */,
-                                                 result_pool, scratch_pool));
+                                                db, local_abspath,
+                                                dirent->kind,
+                                                FALSE /* is_ignored */,
+                                                result_pool, scratch_pool));
 
   if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
     is_root = TRUE;
@@ -2505,14 +2505,14 @@ internal_status(svn_wc_status3_t **status,
     }
 
   return svn_error_trace(assemble_status(status, db, local_abspath,
-                                          parent_repos_root_url,
-                                          parent_repos_relpath,
-                                          NULL,
-                                          dirent,
-                                          TRUE /* get_all */,
-                                          FALSE,
-                                          NULL /* repos_lock */,
-                                          result_pool, scratch_pool));
+                                         parent_repos_root_url,
+                                         parent_repos_relpath,
+                                         NULL,
+                                         dirent,
+                                         TRUE /* get_all */,
+                                         FALSE,
+                                         NULL /* repos_lock */,
+                                         result_pool, scratch_pool));
 }
 
 
@@ -2579,7 +2579,7 @@ svn_wc_get_ignores2(apr_array_header_t **patterns,
 
   SVN_ERR(svn_wc_get_default_ignores(&default_ignores, config, scratch_pool));
   return svn_error_trace(collect_ignore_patterns(patterns, wc_ctx->db,
-                                                  local_abspath,
-                                                  default_ignores,
-                                                  result_pool, scratch_pool));
+                                                 local_abspath,
+                                                 default_ignores,
+                                                 result_pool, scratch_pool));
 }

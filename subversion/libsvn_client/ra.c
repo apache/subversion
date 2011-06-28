@@ -108,8 +108,8 @@ get_wc_prop(void *baton,
             {
               SVN_ERR_ASSERT(svn_dirent_is_absolute(item->path));
               return svn_error_trace(svn_wc_prop_get2(value, cb->ctx->wc_ctx,
-                                                       item->path, name,
-                                                       pool, pool));
+                                                      item->path, name,
+                                                      pool, pool));
             }
         }
 
@@ -123,7 +123,7 @@ get_wc_prop(void *baton,
   local_abspath = svn_dirent_join(cb->base_dir_abspath, relpath, pool);
 
   return svn_error_trace(svn_wc_prop_get2(value, cb->ctx->wc_ctx,
-                                           local_abspath, name, pool, pool));
+                                          local_abspath, name, pool, pool));
 }
 
 /* This implements the 'svn_ra_push_wc_prop_func_t' interface. */
@@ -194,13 +194,13 @@ set_wc_prop(void *baton,
      Unfortunately, we don't have a clean mechanism for doing that
      here, so we just set the property and hope for the best. */
   return svn_error_trace(svn_wc_prop_set4(cb->ctx->wc_ctx, local_abspath,
-                                           name,
-                                           value, svn_depth_empty,
-                                           TRUE /* skip_checks */,
-                                           NULL /* changelist_filter */,
-                                           NULL, NULL /* cancellation */,
-                                           NULL, NULL /* notification */,
-                                           pool));
+                                          name,
+                                          value, svn_depth_empty,
+                                          TRUE /* skip_checks */,
+                                          NULL /* changelist_filter */,
+                                          NULL, NULL /* cancellation */,
+                                          NULL, NULL /* notification */,
+                                          pool));
 }
 
 

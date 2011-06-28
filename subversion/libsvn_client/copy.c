@@ -2257,7 +2257,7 @@ try_copy(const apr_array_header_t *sources,
       /* Copy or move all targets. */
       if (is_move)
         return svn_error_trace(do_wc_to_wc_moves(copy_pairs, dst_path_in, ctx,
-                                                  pool));
+                                                 pool));
       else
         return svn_error_trace(do_wc_to_wc_copies(copy_pairs, ctx, pool));
     }

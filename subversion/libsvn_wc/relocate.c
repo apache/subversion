@@ -165,6 +165,6 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
                     scratch_pool));
 
   return svn_error_trace(svn_wc__db_global_relocate(wc_ctx->db, local_abspath,
-                                                     new_repos_root,
-                                                     scratch_pool));
+                                                    new_repos_root,
+                                                    scratch_pool));
 }
