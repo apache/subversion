@@ -985,7 +985,6 @@ WHERE tree_conflict_data IS NOT NULL
 UPDATE actual_node SET tree_conflict_data = NULL
 
 -- STMT_SELECT_ALL_FILES
-/* Should this select on wc_id as well? */
 SELECT DISTINCT local_relpath FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND kind = 'file'
 
