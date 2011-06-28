@@ -365,7 +365,6 @@ svn_client_delete4(const apr_array_header_t *paths,
                    apr_pool_t *pool)
 {
   svn_boolean_t is_url;
-  int i;
 
   if (! paths->nelts)
     return SVN_NO_ERROR;
@@ -381,6 +380,7 @@ svn_client_delete4(const apr_array_header_t *paths,
   else
     {
       apr_pool_t *subpool = svn_pool_create(pool);
+      int i;
 
       for (i = 0; i < paths->nelts; i++)
         {
