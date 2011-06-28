@@ -382,6 +382,25 @@ def xml_entries_relocate(path, from_url, to_url):
     if os.path.isdir(os.path.join(item_path, adm_name)):
       xml_entries_relocate(item_path, from_url, to_url)
 
+# Poor mans relocate to fix up an working copy to refer to a
+# valid repository, so svn upgrade can do its work on it
+def simple_entries_replace(path, from_url, to_url):
+  adm_name = svntest.main.get_admin_name()
+  entries = os.path.join(path, adm_name, 'entries')
+  txt = open(entries).read().replace(from_url, to_url)
+  os.chmod(entries, 0777)
+  open(entries, 'wb').write(txt)
+
+  for dirent in os.listdir(path):
+    item_path = os.path.join(path, dirent)
+
+    if dirent == svntest.main.get_admin_name():
+      continue
+
+    if os.path.isdir(os.path.join(item_path, adm_name)):
+      simple_entries_replace(item_path, from_url, to_url)
+
+
 def basic_upgrade_1_0(sbox):
   "test upgrading a working copy created with 1.0.0"
 
@@ -1017,6 +1036,49 @@ def add_add_x2(sbox):
     })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
+@Issue(3940)
+@XFail()
+def upgrade_with_missing_subdir(sbox):
+  "test upgrading a working copy with missing subdir"
+
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'basic_upgrade.tar.bz2')
+
+  simple_entries_replace(sbox.wc_dir,
+                         'file:///Users/Hyrum/dev/test/greek-1.6.repo',
+                         sbox.repo_url)
+
+  svntest.main.run_svnadmin('setuuid', sbox.repo_dir,
+                            'cafefeed-babe-face-dead-beeff00dfade')
+
+  url = sbox.repo_url
+
+  # Attempt to use the working copy, this should give an error
+  expected_stderr = wc_is_too_old_regex
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'info', sbox.wc_dir)
+
+  # Now remove a subdirectory
+  svntest.main.safe_rmtree(sbox.ospath('A/B'))
+
+  # Now upgrade the working copy and expect a missing subdir
+  expected_output = [
+    "Upgraded '%s'.\n" % sbox.wc_dir,
+    "Upgraded '%s'.\n" % sbox.ospath('A'),
+    "Skipped '%s'\n" % sbox.ospath('A/B'),
+    "Upgraded '%s'.\n" % sbox.ospath('A/C'),
+    "Upgraded '%s'.\n" % sbox.ospath('A/D'),
+    "Upgraded '%s'.\n" % sbox.ospath('A/D/G'),
+    "Upgraded '%s'.\n" % sbox.ospath('A/D/H'),
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'upgrade', sbox.wc_dir)
+
+  # And now perform an update. (This currently fails with an assertion)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', sbox.wc_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -1063,6 +1125,7 @@ test_list = [ None,
               depth_exclude_2,
               add_add_del_del_tc,
               add_add_x2,
+              upgrade_with_missing_subdir,
              ]
 
 
