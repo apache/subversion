@@ -1383,7 +1383,7 @@ upgrade_to_wcng(void **dir_baton,
                 svn_wc_upgrade_get_repos_info_t repos_info_func,
                 void *repos_info_baton,
                 apr_hash_t *repos_cache,
-                struct upgrade_data_t *data,
+                const struct upgrade_data_t *data,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
@@ -1654,7 +1654,7 @@ upgrade_working_copy(void *parent_baton,
                      svn_wc_upgrade_get_repos_info_t repos_info_func,
                      void *repos_info_baton,
                      apr_hash_t *repos_cache,
-                     struct upgrade_data_t *data,
+                     const struct upgrade_data_t *data,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      svn_wc_notify_func2_t notify_func,
@@ -1813,7 +1813,7 @@ typedef struct upgrade_working_copy_baton_t
   svn_wc_upgrade_get_repos_info_t repos_info_func;
   void *repos_info_baton;
   apr_hash_t *repos_cache;
-  struct upgrade_data_t *data;
+  const struct upgrade_data_t *data;
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
   svn_wc_notify_func2_t notify_func;
