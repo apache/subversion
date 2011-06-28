@@ -276,10 +276,20 @@ insert_prop(const dav_resource *resource,
   const char *value = NULL;
   const char *s;
   apr_pool_t *response_pool = resource->pool;
-  apr_pool_t *p = resource->info->pool;
+  apr_pool_t *p;
   const dav_liveprop_spec *info;
   int global_ns;
   svn_error_t *serr;
+
+  if (resource->info->scratch_pool)
+    {
+      svn_pool_clear(resource->info->scratch_pool);
+    }
+  else
+    {
+      resource->info->scratch_pool = svn_pool_create(response_pool);
+    }
+  p = resource->info->scratch_pool;
 
   /*
   ** Almost none of the SVN provider properties are defined if the
@@ -841,8 +851,6 @@ dav_svn__insert_all_liveprops(request_rec *r,
                               apr_text_header *phdr)
 {
   const dav_liveprop_spec *spec;
-  apr_pool_t *pool;
-  apr_pool_t *subpool;
 
   /* don't insert any liveprops if this isn't "our" resource */
   if (resource->hooks != &dav_svn__hooks_repository)
@@ -859,18 +867,10 @@ dav_svn__insert_all_liveprops(request_rec *r,
       return;
     }
 
-  pool = resource->info->pool;
-  subpool = svn_pool_create(pool);
-  resource->info->pool = subpool;
-
   for (spec = props; spec->name != NULL; ++spec)
     {
-      svn_pool_clear(subpool);
       (void) insert_prop(resource, spec->propid, what, phdr);
     }
-
-  resource->info->pool = pool;
-  svn_pool_destroy(subpool);
 
   /* ### we know the others aren't defined as liveprops */
 }
