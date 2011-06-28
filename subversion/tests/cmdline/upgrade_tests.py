@@ -1051,6 +1051,7 @@ def upgrade_with_missing_subdir(sbox):
                             'cafefeed-babe-face-dead-beeff00dfade')
 
   url = sbox.repo_url
+  wc_dir = sbox.wc_dir
 
   # Attempt to use the working copy, this should give an error
   expected_stderr = wc_is_too_old_regex
@@ -1073,9 +1074,23 @@ def upgrade_with_missing_subdir(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'upgrade', sbox.wc_dir)
 
-  # And now perform an update. (This currently fails with an assertion)
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'up', sbox.wc_dir)
+  # And now perform an update. (This used to fail with an assertion)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'             : Item(status='A '),
+    'A/B/E/alpha'       : Item(status='A '),
+    'A/B/E/beta'        : Item(status='A '),
+    'A/B/lambda'        : Item(status='A '),
+    'A/B/F'             : Item(status='A '),
+  })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # Do the update and check the results in three ways.
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
 
 
 ########################################################################
