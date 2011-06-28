@@ -371,7 +371,6 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
                       svn_merge_range_t *r2 = svn_merge_range_dup(new_range,
                                                                   result_pool);
                       svn_merge_range_t *r3 = NULL;
-                      svn_revnum_t tmp_revnum;
 
                       /* Pop off *LASTRANGE to make our manipulations
                          easier. */
@@ -395,6 +394,8 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
                         }
                       else if (r1->start == r2->start)
                         {
+                          svn_revnum_t tmp_revnum;
+
                           /* *LASTRANGE and NEW_RANGE share an end point. */
                           tmp_revnum = r1->end;
                           r1->end = r2->end;

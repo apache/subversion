@@ -161,7 +161,6 @@ svn_auth__simple_first_creds_helper(void **credentials,
   apr_hash_t *creds_hash = NULL;
   svn_error_t *err;
   svn_string_t *str;
-  svn_boolean_t have_passtype = FALSE;
 
   /* Try to load credentials from a file on disk, based on the
      realmstring.  Don't throw an error, though: if something went
@@ -178,6 +177,8 @@ svn_auth__simple_first_creds_helper(void **credentials,
   else if (creds_hash)
     {
       /* We have something in the auth cache for this realm. */
+      svn_boolean_t have_passtype = FALSE;
+
       /* The password type in the auth data must match the
          mangler's type, otherwise the password must be
          interpreted by another provider. */

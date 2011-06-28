@@ -849,7 +849,6 @@ check_can_add_node(svn_node_kind_t *kind_p,
   const char *base_name = svn_dirent_basename(local_abspath, scratch_pool);
   svn_boolean_t is_wc_root;
   svn_node_kind_t kind;
-  svn_boolean_t exists;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(!copyfrom_url || (svn_uri_is_canonical(copyfrom_url,
@@ -886,6 +885,7 @@ check_can_add_node(svn_node_kind_t *kind_p,
   {
     svn_wc__db_status_t status;
     svn_boolean_t conflicted;
+    svn_boolean_t exists;
     svn_error_t *err
       = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,

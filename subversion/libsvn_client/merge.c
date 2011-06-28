@@ -6105,7 +6105,6 @@ remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
   int i;
   svn_revnum_t oldest_rev = SVN_INVALID_REVNUM;
   svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
-  svn_revnum_t oldest_changed_rev, youngest_changed_rev;
   apr_array_header_t *changed_revs =
     apr_array_make(pool, ranges->nelts, sizeof(svn_revnum_t *));
   apr_array_header_t *operative_ranges =
@@ -6137,6 +6136,8 @@ remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
   /* Are there *any* changes? */
   if (changed_revs->nelts)
     {
+      svn_revnum_t oldest_changed_rev, youngest_changed_rev;
+
       /* Our list of changed revisions should be in youngest-to-oldest
          order. */
       youngest_changed_rev = *(APR_ARRAY_IDX(changed_revs,
@@ -8217,7 +8218,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
 
   if (honor_mergeinfo && !merge_b->reintegrate_merge)
     {
-      svn_revnum_t new_range_start, start_rev, end_rev;
+      svn_revnum_t new_range_start, start_rev;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
       /* The merge target TARGET_ABSPATH and/or its subtrees may not need all
@@ -8260,7 +8261,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
           /* Now examine NOTIFY_B->CHILDREN_WITH_MERGEINFO to find the youngest
              ending revision that actually needs to be merged (for reverse
              merges this is the oldest starting revision). */
-           end_rev =
+           svn_revnum_t end_rev =
              get_most_inclusive_end_rev(notify_b->children_with_mergeinfo,
                                         is_rollback);
 
