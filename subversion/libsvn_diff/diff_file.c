@@ -530,7 +530,7 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
   int suffix_lines_to_keep = SUFFIX_LINES_TO_KEEP;
   svn_boolean_t is_match, reached_prefix;
   apr_off_t lines = 0;
-  svn_boolean_t had_cr, had_nl;
+  svn_boolean_t had_cr, had_nl = FALSE;
   apr_size_t i;
 
   /* Initialize file_for_suffix[].
