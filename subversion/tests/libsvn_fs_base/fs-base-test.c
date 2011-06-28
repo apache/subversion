@@ -1087,13 +1087,6 @@ delete(const svn_test_opts_t *opts,
 }
 
 
-
-struct node_created_rev_args {
-  const char *path;
-  svn_revnum_t rev;
-};
-
-
 static svn_error_t *
 canonicalize_abspath(const svn_test_opts_t *opts,
                      apr_pool_t *pool)
