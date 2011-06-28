@@ -559,9 +559,11 @@ parse_args(apr_array_header_t **args,
   if (args)
     {
       *args = apr_array_make(pool, num_args, sizeof(const char *));
-      while (os->ind < os->argc)
-        APR_ARRAY_PUSH(*args, const char *) =
-          apr_pstrdup(pool, os->argv[os->ind++]);
+
+      if (num_args)
+        while (os->ind < os->argc)
+          APR_ARRAY_PUSH(*args, const char *) =
+            apr_pstrdup(pool, os->argv[os->ind++]);
     }
 
   return SVN_NO_ERROR;
