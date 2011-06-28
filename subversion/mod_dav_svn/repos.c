@@ -2403,7 +2403,6 @@ get_parent_resource(const dav_resource *resource,
       parent->uri = get_parent_path(resource->uri, TRUE, resource->pool);
       parent->info = parentinfo;
 
-      parentinfo->pool = resource->info->pool;
       parentinfo->uri_path =
         svn_stringbuf_create(get_parent_path(resource->info->uri_path->data,
                                              TRUE, resource->pool),
@@ -4047,9 +4046,6 @@ do_walk(walker_ctx_t *ctx, int depth)
   apr_hash_t *children;
   apr_pool_t *iterpool;
 
-  /* Clear the temporary pool. */
-  svn_pool_clear(ctx->info.pool);
-
   /* The current resource is a collection (possibly here thru recursion)
      and this is the invocation for the collection. Alternatively, this is
      the first [and only] entry to do_walk() for a member resource, so
@@ -4253,9 +4249,6 @@ walk(const dav_walk_params *params, int depth, dav_response **response)
   /* the current resource's repos_path is stored in ctx.repos_path */
   if (ctx.repos_path != NULL)
     ctx.info.repos_path = ctx.repos_path->data;
-
-  /* Create a pool usable by the response. */
-  ctx.info.pool = svn_pool_create(params->pool);
 
   /* ### is the root already/always open? need to verify */
 
