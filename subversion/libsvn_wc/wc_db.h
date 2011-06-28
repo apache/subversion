@@ -2597,6 +2597,7 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
                                apr_hash_t *revert_props,
                                apr_hash_t *working_props,
                                int original_format,
+                               apr_int64_t wc_id,
                                apr_pool_t *scratch_pool);
 
 

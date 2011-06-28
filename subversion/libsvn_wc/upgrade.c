@@ -838,6 +838,7 @@ migrate_node_props(const char *dir_abspath,
                    const char *name,
                    svn_sqlite__db_t *sdb,
                    int original_format,
+                   apr_int64_t wc_id,
                    apr_pool_t *scratch_pool)
 {
   const char *base_abspath;  /* old name. nowadays: "pristine"  */
@@ -904,7 +905,7 @@ migrate_node_props(const char *dir_abspath,
                             sdb, new_wcroot_abspath,
                             svn_relpath_join(dir_relpath, name, scratch_pool),
                             base_props, revert_props, working_props,
-                            original_format,
+                            original_format, wc_id,
                             scratch_pool));
 }
 
@@ -915,6 +916,7 @@ migrate_props(const char *dir_abspath,
               const char *new_wcroot_abspath,
               svn_sqlite__db_t *sdb,
               int original_format,
+              apr_int64_t wc_id,
               apr_pool_t *scratch_pool)
 {
   /* General logic here: iterate over all the immediate children of the root
@@ -948,7 +950,7 @@ migrate_props(const char *dir_abspath,
 
   /* Migrate the props for "this dir".  */
   SVN_ERR(migrate_node_props(dir_abspath, new_wcroot_abspath, "", sdb,
-                             original_format, iterpool));
+                             original_format, wc_id, iterpool));
 
   /* Iterate over all the files in this SDB.  */
   SVN_ERR(get_versioned_files(&children, dir_relpath, sdb, scratch_pool,
@@ -960,7 +962,7 @@ migrate_props(const char *dir_abspath,
       svn_pool_clear(iterpool);
 
       SVN_ERR(migrate_node_props(dir_abspath, new_wcroot_abspath,
-                                 name, sdb, original_format, iterpool));
+                                 name, sdb, original_format, wc_id, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -1376,6 +1378,7 @@ upgrade_to_wcng(void **dir_baton,
                 svn_wc__db_t *db,
                 const char *dir_abspath,
                 int old_format,
+                apr_int64_t wc_id,
                 svn_wc_upgrade_get_repos_info_t repos_info_func,
                 void *repos_info_baton,
                 apr_hash_t *repos_cache,
@@ -1490,7 +1493,7 @@ upgrade_to_wcng(void **dir_baton,
      database. The upgrade process needs the children in BASE_NODE and
      WORKING_NODE, and to examine the resultant WORKING state.  */
   SVN_ERR(migrate_props(dir_abspath, data->root_abspath, data->sdb, old_format,
-                        scratch_pool));
+                        wc_id, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1703,7 +1706,8 @@ upgrade_working_copy(void *parent_baton,
     }
 
 
-  SVN_ERR(upgrade_to_wcng(&dir_baton, parent_baton, db, dir_abspath, old_format,
+  SVN_ERR(upgrade_to_wcng(&dir_baton, parent_baton, db, dir_abspath,
+                          old_format, data->wc_id,
                           repos_info_func, repos_info_baton,
                           repos_cache, data, scratch_pool, iterpool));
 

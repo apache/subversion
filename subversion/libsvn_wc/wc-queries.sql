@@ -992,7 +992,7 @@ WHERE kind = 'file' AND parent_relpath = ?1
 -- STMT_SELECT_NODE_UPGRADE
 SELECT op_depth, presence, wc_id, kind
 FROM nodes
-WHERE local_relpath = ?1
+WHERE wc_id = ?1 AND local_relpath = ?2
 ORDER BY op_depth DESC
 
 -- STMT_UPDATE_NODE_PROPS
