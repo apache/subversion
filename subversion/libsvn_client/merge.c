@@ -9938,6 +9938,8 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
           svn_node_kind_t kind;
           svn_mergeinfo_catalog_t subtree_catalog;
           apr_array_header_t *source_repos_rel_path_as_array;
+          svn_boolean_t validate_inherited_mergeinfo = FALSE;
+
           SVN_ERR(svn_ra_check_path(source_ra_session,
                                     source_path_rel_to_session,
                                     source_rev, &kind, iterpool));
@@ -9953,7 +9955,8 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
           SVN_ERR(svn_ra_get_mergeinfo2(source_ra_session, &subtree_catalog,
                                         source_repos_rel_path_as_array,
                                         source_rev, svn_mergeinfo_inherited,
-                                        FALSE, FALSE, iterpool));
+                                        &validate_inherited_mergeinfo, FALSE,
+                                        iterpool));
           if (subtree_catalog)
             source_mergeinfo = apr_hash_get(subtree_catalog, source_path,
                                             APR_HASH_KEY_STRING);
@@ -10195,6 +10198,7 @@ calculate_left_hand_side(const char **url_left,
   svn_revnum_t youngest_merged_rev;
   const char *yc_ancestor_path;
   svn_revnum_t yc_ancestor_rev;
+  svn_boolean_t validate_inherited_mergeinfo = FALSE;
   const char *source_url;
   const char *target_url;
 
@@ -10297,7 +10301,8 @@ calculate_left_hand_side(const char **url_left,
   APR_ARRAY_PUSH(source_repos_rel_path_as_array, const char *) = "";
   SVN_ERR(svn_ra_get_mergeinfo2(source_ra_session, &mergeinfo_catalog,
                                 source_repos_rel_path_as_array, source_rev,
-                                svn_mergeinfo_inherited, FALSE, TRUE,
+                                svn_mergeinfo_inherited,
+                                &validate_inherited_mergeinfo, TRUE,
                                 iterpool));
 
   if (mergeinfo_catalog)
