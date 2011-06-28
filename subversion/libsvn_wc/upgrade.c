@@ -265,40 +265,20 @@ read_wcprops(apr_hash_t **all_wcprops,
   return svn_error_trace(svn_stream_close(stream));
 }
 
-
-/* If the versioned child (which should be a directory) exists on disk as
-   an actual directory, then add it to the array of subdirs.  */
-static svn_error_t *
-maybe_add_subdir(apr_array_header_t *subdirs,
-                 const char *dir_abspath,
-                 const char *child_name,
-                 apr_pool_t *result_pool,
-                 apr_pool_t *scratch_pool)
-{
-  const char *child_abspath = svn_dirent_join(dir_abspath, child_name,
-                                              scratch_pool);
-  svn_node_kind_t kind;
-
-  SVN_ERR(svn_io_check_path(child_abspath, &kind, scratch_pool));
-  if (kind == svn_node_dir)
-    {
-      APR_ARRAY_PUSH(subdirs, const char *) = apr_pstrdup(result_pool,
-                                                          child_abspath);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Return in CHILDREN, the list of all 1.6 versioned subdirectories
    which also exist on disk as directories.
 
    If DELETE_DIR is not NULL set *DELETE_DIR to TRUE if the directory
-   should be deleted after migrating to WC-NG, otherwise to FALSE. */
+   should be deleted after migrating to WC-NG, otherwise to FALSE.
+
+   If SKIP_MISSING is TRUE, don't add missing or obstructed subdirectories
+   to the list of children.
+   */
 static svn_error_t *
 get_versioned_subdirs(apr_array_header_t **children,
                       svn_boolean_t *delete_dir,
                       const char *dir_abspath,
+                      svn_boolean_t skip_missing,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
@@ -316,6 +296,9 @@ get_versioned_subdirs(apr_array_header_t **children,
        hi = apr_hash_next(hi))
     {
       const char *name = svn__apr_hash_index_key(hi);
+      const svn_wc_entry_t *entry = svn__apr_hash_index_val(hi);
+      const char *child_abspath;
+      svn_boolean_t hidden;
 
       /* skip "this dir"  */
       if (*name == '\0')
@@ -323,11 +306,29 @@ get_versioned_subdirs(apr_array_header_t **children,
           this_dir = svn__apr_hash_index_val(hi);
           continue;
         }
+      else if (entry->kind != svn_node_dir)
+        continue;
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(maybe_add_subdir(*children, dir_abspath, name,
-                               result_pool, iterpool));
+      /* If a directory is 'hidden' skip it as subdir */
+      SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
+      if (hidden)
+        continue;
+
+      child_abspath = svn_dirent_join(dir_abspath, name, scratch_pool);
+
+      if (skip_missing)
+        {
+          svn_node_kind_t kind;
+          SVN_ERR(svn_io_check_path(child_abspath, &kind, scratch_pool));
+
+          if (kind != svn_node_dir)
+            continue;
+        }
+
+      APR_ARRAY_PUSH(*children, const char *) = apr_pstrdup(result_pool,
+                                                            child_abspath);
     }
 
   svn_pool_destroy(iterpool);
@@ -536,7 +537,7 @@ svn_wc__wipe_postupgrade(const char *dir_abspath,
   if (cancel_func)
     SVN_ERR((*cancel_func)(cancel_baton));
 
-  err = get_versioned_subdirs(&subdirs, &delete_dir, dir_abspath,
+  err = get_versioned_subdirs(&subdirs, &delete_dir, dir_abspath, TRUE,
                               scratch_pool, iterpool);
   if (err)
     {
@@ -1681,7 +1682,7 @@ upgrade_working_copy(void *parent_baton,
       return SVN_NO_ERROR;
     }
 
-  err = get_versioned_subdirs(&subdirs, NULL, dir_abspath,
+  err = get_versioned_subdirs(&subdirs, NULL, dir_abspath, FALSE,
                               scratch_pool, iterpool);
   if (err)
     {
