@@ -725,8 +725,8 @@ def dirs_only_upgrade(sbox):
 
   replace_sbox_with_tarfile(sbox, 'dirs-only.tar.bz2')
 
-  expected_output = ["Upgraded '%s'.\n" % (sbox.ospath('').rstrip(os.path.sep)),
-                     "Upgraded '%s'.\n" % (sbox.ospath('A'))]
+  expected_output = ["Upgraded '%s'\n" % (sbox.ospath('').rstrip(os.path.sep)),
+                     "Upgraded '%s'\n" % (sbox.ospath('A'))]
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'upgrade', sbox.wc_dir)
@@ -1063,13 +1063,13 @@ def upgrade_with_missing_subdir(sbox):
 
   # Now upgrade the working copy and expect a missing subdir
   expected_output = [
-    "Upgraded '%s'.\n" % sbox.wc_dir,
-    "Upgraded '%s'.\n" % sbox.ospath('A'),
+    "Upgraded '%s'\n" % sbox.wc_dir,
+    "Upgraded '%s'\n" % sbox.ospath('A'),
     "Skipped '%s'\n" % sbox.ospath('A/B'),
-    "Upgraded '%s'.\n" % sbox.ospath('A/C'),
-    "Upgraded '%s'.\n" % sbox.ospath('A/D'),
-    "Upgraded '%s'.\n" % sbox.ospath('A/D/G'),
-    "Upgraded '%s'.\n" % sbox.ospath('A/D/H'),
+    "Upgraded '%s'\n" % sbox.ospath('A/C'),
+    "Upgraded '%s'\n" % sbox.ospath('A/D'),
+    "Upgraded '%s'\n" % sbox.ospath('A/D/G'),
+    "Upgraded '%s'\n" % sbox.ospath('A/D/H'),
   ]
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'upgrade', sbox.wc_dir)
