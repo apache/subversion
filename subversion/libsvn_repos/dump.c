@@ -714,7 +714,7 @@ open_directory(const char *path,
 
   /* If the parent directory has explicit comparison path and rev,
      record the same for this one. */
-  if (pb && ARE_VALID_COPY_ARGS(pb->cmp_path, pb->cmp_rev))
+  if (ARE_VALID_COPY_ARGS(pb->cmp_path, pb->cmp_rev))
     {
       cmp_path = svn_relpath_join(pb->cmp_path,
                                   svn_relpath_basename(path, pool), pool);
@@ -811,7 +811,7 @@ open_file(const char *path,
 
   /* If the parent directory has explicit comparison path and rev,
      record the same for this one. */
-  if (pb && ARE_VALID_COPY_ARGS(pb->cmp_path, pb->cmp_rev))
+  if (ARE_VALID_COPY_ARGS(pb->cmp_path, pb->cmp_rev))
     {
       cmp_path = svn_relpath_join(pb->cmp_path,
                                   svn_relpath_basename(path, pool), pool);
