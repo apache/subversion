@@ -1686,7 +1686,8 @@ upgrade_working_copy(void *parent_baton,
                               scratch_pool, iterpool);
   if (err)
     {
-      if (APR_STATUS_IS_ENOENT(err->apr_err))
+      if (APR_STATUS_IS_ENOENT(err->apr_err)
+          || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err))
         {
           /* An unversioned dir is obstructing a versioned dir */
           svn_error_clear(err);
