@@ -346,9 +346,13 @@ SVNPathAuthz_cmd(cmd_parms *cmd, void *config, const char *arg1)
                                AUTHZ_SVN__SUBREQ_BYPASS_PROV_VER);
         }
     }
-  else
+  else if (apr_strnatcasecmp("on", arg1) == 0)
     {
       conf->path_authz_method = CONF_PATHAUTHZ_ON;
+    }
+  else
+    {
+      return "Unknown value for SVNPathAuthz directive";
     }
 
   return NULL;
