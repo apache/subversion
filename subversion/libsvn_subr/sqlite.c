@@ -914,7 +914,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   sqlite3_profile((*db)->db3, sqlite_profiler, (*db)->db3);
 #endif
 
-  /* Work around a bug in SQLite 3.7.7.
+  /* Work around a bug in SQLite 3.7.7.  The bug was fixed in SQLite 3.7.7.1.
 
      See:
 
@@ -927,7 +927,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
    */
   {
     int ignored_err = SQLITE_OK;
-#ifdef SQLITE_SCHEMA
+#if !SQLITE_VERSION_AT_LEAST(3,7,8) && defined(SQLITE_SCHEMA)
     if (!strcmp(sqlite3_libversion(), "3.7.7"))
       ignored_err = SQLITE_SCHEMA;
 #endif
