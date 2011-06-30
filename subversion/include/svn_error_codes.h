@@ -383,7 +383,9 @@ SVN_ERROR_START
 
   /** @deprecated Provided for backward compatibility with the 1.6 API.
    * Use #SVN_ERR_WC_NOT_WORKING_COPY. */
-#define SVN_ERR_WC_NOT_DIRECTORY SVN_ERR_WC_NOT_WORKING_COPY
+  SVN_ERRDEF(SVN_ERR_WC_NOT_DIRECTORY,
+             SVN_ERR_WC_NOT_WORKING_COPY,
+             "Path is not a working copy directory")
 
   SVN_ERRDEF(SVN_ERR_WC_NOT_FILE,
              SVN_ERR_WC_CATEGORY_START + 8,
