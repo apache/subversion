@@ -3130,8 +3130,9 @@ revision_proplist(apr_hash_t **proplist_p,
       SVN_ERR(svn_sqlite__bind_int64(stmt, 1, rev));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
       if (!have_row)
-        return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                 _("No such revision %ld"), rev);
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                 _("Missing %ld line in %s"),
+                                 rev, PATH_REVPROPS_DB);
 
       SVN_ERR(svn_sqlite__column_properties(&proplist, stmt, 0, pool, pool));
       SVN_ERR(svn_sqlite__reset(stmt));
