@@ -352,7 +352,7 @@ SVNPathAuthz_cmd(cmd_parms *cmd, void *config, const char *arg1)
     }
   else
     {
-      return "Unknown value for SVNPathAuthz directive";
+      return "Unrecognized value for SVNPathAuthz directive";
     }
 
   return NULL;
