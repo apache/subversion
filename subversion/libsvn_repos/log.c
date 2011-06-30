@@ -522,41 +522,37 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
                      svn_mergeinfo_catalog_t *added_mergeinfo_catalog,
                      svn_fs_t *fs,
                      svn_revnum_t rev,
-                     apr_pool_t *pool)
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 
 {
   apr_hash_t *changes;
   svn_fs_root_t *root;
-  apr_pool_t *subpool = NULL, *iterpool;
+  apr_pool_t *iterpool;
   apr_hash_index_t *hi;
 
   /* Initialize return variables. */
-  *deleted_mergeinfo_catalog = apr_hash_make(pool);
-  *added_mergeinfo_catalog = apr_hash_make(pool);
+  *deleted_mergeinfo_catalog = apr_hash_make(result_pool);
+  *added_mergeinfo_catalog = apr_hash_make(result_pool);
 
   /* Revision 0 has no mergeinfo and no mergeinfo changes. */
   if (rev == 0)
     return SVN_NO_ERROR;
 
-  subpool = svn_pool_create(pool);
-
   /* We're going to use the changed-paths information for REV to
      narrow down our search. */
-  SVN_ERR(svn_fs_revision_root(&root, fs, rev, subpool));
-  SVN_ERR(svn_fs_paths_changed2(&changes, root, subpool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, scratch_pool));
+  SVN_ERR(svn_fs_paths_changed2(&changes, root, scratch_pool));
 
   /* No changed paths?  We're done. */
   if (apr_hash_count(changes) == 0)
-    {
-      svn_pool_destroy(subpool);
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
 
   /* Loop over changes, looking for anything that might carry an
      svn:mergeinfo change and is one of our paths of interest, or a
      child or [grand]parent directory thereof. */
-  iterpool = svn_pool_create(subpool);
-  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+  iterpool = svn_pool_create(scratch_pool);
+  for (hi = apr_hash_first(scratch_pool, changes); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       void *val;
@@ -598,7 +594,7 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
                                        root, changed_path, iterpool));
             if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
               {
-                base_path = apr_pstrdup(subpool, copyfrom_path);
+                base_path = apr_pstrdup(scratch_pool, copyfrom_path);
                 base_rev = copyfrom_rev;
               }
             break;
@@ -719,15 +715,17 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
                                      mergeinfo, FALSE, iterpool));
 
           /* Toss interesting stuff into our return catalogs. */
-          hash_path = apr_pstrdup(pool, changed_path);
+          hash_path = apr_pstrdup(result_pool, changed_path);
           apr_hash_set(*deleted_mergeinfo_catalog, hash_path,
-                       APR_HASH_KEY_STRING, svn_mergeinfo_dup(deleted, pool));
+                       APR_HASH_KEY_STRING, svn_mergeinfo_dup(deleted,
+                                                              result_pool));
           apr_hash_set(*added_mergeinfo_catalog, hash_path,
-                       APR_HASH_KEY_STRING, svn_mergeinfo_dup(added, pool));
+                       APR_HASH_KEY_STRING, svn_mergeinfo_dup(added,
+                                                              result_pool));
         }
     }
-  /* ### UNNECESSARY ###: svn_pool_destroy(iterpool); */
-  svn_pool_destroy(subpool);
+
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -742,18 +740,19 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
                                svn_fs_t *fs,
                                const apr_array_header_t *paths,
                                svn_revnum_t rev,
-                               apr_pool_t *pool)
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
 {
   svn_mergeinfo_catalog_t added_mergeinfo_catalog, deleted_mergeinfo_catalog;
   apr_hash_index_t *hi;
   svn_fs_root_t *root;
-  apr_pool_t *subpool, *iterpool;
+  apr_pool_t *iterpool;
   int i;
   svn_error_t *err;
 
   /* Initialize return value. */
-  *added_mergeinfo = apr_hash_make(pool);
-  *deleted_mergeinfo = apr_hash_make(pool);
+  *added_mergeinfo = apr_hash_make(result_pool);
+  *deleted_mergeinfo = apr_hash_make(result_pool);
 
   /* If we're asking about revision 0, there's no mergeinfo to be found. */
   if (rev == 0)
@@ -764,13 +763,12 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
     return SVN_NO_ERROR;
 
   /* Create a work subpool and get a root for REV. */
-  subpool = svn_pool_create(pool);
-  SVN_ERR(svn_fs_revision_root(&root, fs, rev, subpool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, scratch_pool));
 
   /* Fetch the mergeinfo changes for REV. */
   err = fs_mergeinfo_changed(&deleted_mergeinfo_catalog,
                              &added_mergeinfo_catalog,
-                             fs, rev, subpool);
+                             fs, rev, scratch_pool, scratch_pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
@@ -779,7 +777,6 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
              best we can do is ignore it and act as if there were
              no mergeinfo modifications. */
           svn_error_clear(err);
-          svn_pool_destroy(subpool);
           return SVN_NO_ERROR;
         }
       else
@@ -791,7 +788,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
   /* Check our PATHS for any changes to their inherited mergeinfo.
      (We deal with changes to mergeinfo directly *on* the paths in the
      following loop.)  */
-  iterpool = svn_pool_create(subpool);
+  iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < paths->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
@@ -864,15 +861,17 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
       SVN_ERR(svn_mergeinfo_diff(&deleted, &added, prev_mergeinfo,
                                  mergeinfo, FALSE, iterpool));
       SVN_ERR(svn_mergeinfo_merge(*deleted_mergeinfo,
-                                  svn_mergeinfo_dup(deleted, pool), pool));
+                                  svn_mergeinfo_dup(deleted, result_pool),
+                                  result_pool));
       SVN_ERR(svn_mergeinfo_merge(*added_mergeinfo,
-                                  svn_mergeinfo_dup(added, pool), pool));
+                                  svn_mergeinfo_dup(added, result_pool),
+                                  result_pool));
      }
   svn_pool_destroy(iterpool);
 
   /* Merge all the mergeinfos which are, or are children of, one of
      our paths of interest into one giant delta mergeinfo.  */
-  for (hi = apr_hash_first(subpool, added_mergeinfo_catalog);
+  for (hi = apr_hash_first(scratch_pool, added_mergeinfo_catalog);
        hi; hi = apr_hash_next(hi))
     {
       const void *key;
@@ -893,16 +892,16 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
             continue;
           deleted = apr_hash_get(deleted_mergeinfo_catalog, key, klen);
           SVN_ERR(svn_mergeinfo_merge(*deleted_mergeinfo,
-                                      svn_mergeinfo_dup(deleted, pool),
-                                      pool));
+                                      svn_mergeinfo_dup(deleted, result_pool),
+                                      result_pool));
           SVN_ERR(svn_mergeinfo_merge(*added_mergeinfo,
-                                      svn_mergeinfo_dup(added, pool),
-                                      pool));
+                                      svn_mergeinfo_dup(added, result_pool),
+                                      result_pool));
 
           break;
         }
     }
-  svn_pool_clear(subpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -1752,7 +1751,8 @@ do_logs(svn_fs_t *fs,
               SVN_ERR(get_combined_mergeinfo_changes(&added_mergeinfo,
                                                      &deleted_mergeinfo,
                                                      fs, cur_paths,
-                                                     current, iterpool));
+                                                     current, iterpool,
+                                                     iterpool));
               has_children = (apr_hash_count(added_mergeinfo) > 0
                               || apr_hash_count(deleted_mergeinfo) > 0);
             }
