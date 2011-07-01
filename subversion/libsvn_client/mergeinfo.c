@@ -438,7 +438,7 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
                                 svn_revnum_t rev,
                                 svn_mergeinfo_inheritance_t inherit,
                                 svn_boolean_t squelch_incapable,
-                                svn_boolean_t *validate_inherited_mergeinfo,
+                                svn_boolean_t validate_inherited_mergeinfo,
                                 apr_pool_t *pool)
 {
   svn_mergeinfo_catalog_t tgt_mergeinfo_cat;
@@ -471,7 +471,7 @@ svn_client__get_repos_mergeinfo_catalog(
   svn_mergeinfo_inheritance_t inherit,
   svn_boolean_t squelch_incapable,
   svn_boolean_t include_descendants,
-  svn_boolean_t *validate_inherited_mergeinfo,
+  svn_boolean_t validate_inherited_mergeinfo,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool)
 {
@@ -628,7 +628,7 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
               SVN_ERR(svn_client__get_repos_mergeinfo_catalog(
                         target_mergeinfo_catalog, ra_session,
                         "", target_rev, inherit,
-                        TRUE, FALSE, &validate_inherited_mergeinfo,
+                        TRUE, FALSE, validate_inherited_mergeinfo,
                         result_pool, scratch_pool));
 
               if (*target_mergeinfo_catalog
@@ -1071,7 +1071,7 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
       rev = peg_rev;
       SVN_ERR(svn_client__get_repos_mergeinfo_catalog(
         &tmp_catalog, ra_session, "", rev, svn_mergeinfo_inherited,
-        FALSE, include_descendants, &validate_inherited_mergeinfo,
+        FALSE, include_descendants, validate_inherited_mergeinfo,
         result_pool, scratch_pool));
 
       /* If we're not querying the root of the repository, the catalog

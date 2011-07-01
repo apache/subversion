@@ -54,6 +54,9 @@ extern "C" {
 #define SVN_RA_SVN_CAP_COMMIT_REVPROPS "commit-revprops"
 /* maps to SVN_RA_CAPABILITY_MERGEINFO: */
 #define SVN_RA_SVN_CAP_MERGEINFO "mergeinfo"
+/* maps to SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO: */
+#define SVN_RA_SVN_CAP_VALIDATE_INHERITED_MERGEINFO \
+  "validate-inherited-mergeinfo"
 /* maps to SVN_RA_CAPABILITY_DEPTH: */
 #define SVN_RA_SVN_CAP_DEPTH "depth"
 /* maps to SVN_RA_CAPABILITY_LOG_REVPROPS */
