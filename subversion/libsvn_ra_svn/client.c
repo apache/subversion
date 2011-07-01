@@ -1185,7 +1185,7 @@ static svn_error_t *ra_svn_get_mergeinfo(
   const apr_array_header_t *paths,
   svn_revnum_t revision,
   svn_mergeinfo_inheritance_t inherit,
-  svn_boolean_t *validate_inherited_mergeinfo,
+  svn_boolean_t validate_inherited_mergeinfo,
   svn_boolean_t include_descendants,
   apr_pool_t *pool)
 {
@@ -1195,7 +1195,6 @@ static svn_error_t *ra_svn_get_mergeinfo(
   apr_array_header_t *mergeinfo_tuple;
   svn_ra_svn_item_t *elt;
   const char *path;
-  apr_uint64_t validated_inherited_mergeinfo;
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "get-mergeinfo"));
   for (i = 0; i < paths->nelts; i++)
@@ -1206,14 +1205,10 @@ static svn_error_t *ra_svn_get_mergeinfo(
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)wbb)", revision,
                                  svn_inheritance_to_word(inherit),
                                  include_descendants,
-                                 *validate_inherited_mergeinfo));
+                                 validate_inherited_mergeinfo));
 
   SVN_ERR(handle_auth_request(sess_baton, pool));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l?B", &mergeinfo_tuple,
-                                       &validated_inherited_mergeinfo));
-
-  *validate_inherited_mergeinfo =
-    (optbool_to_tristate(validated_inherited_mergeinfo) == svn_tristate_true);
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l", &mergeinfo_tuple));
 
   *catalog = NULL;
   if (mergeinfo_tuple->nelts > 0)
@@ -2471,6 +2466,10 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
     *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_DEPTH);
   else if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
     *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_MERGEINFO);
+  else if (strcmp(capability,
+                  SVN_RA_SVN_CAP_VALIDATE_INHERITED_MERGEINFO) == 0)
+    *has = svn_ra_svn_has_capability(
+      sess->conn, SVN_RA_SVN_CAP_VALIDATE_INHERITED_MERGEINFO);
   else if (strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0)
     *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_LOG_REVPROPS);
   else if (strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0)

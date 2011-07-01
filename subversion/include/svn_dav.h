@@ -266,6 +266,11 @@ extern "C" {
  */
 #define SVN_DAV_NS_DAV_SVN_MERGEINFO SVN_DAV_PROP_NS_DAV "svn/mergeinfo"
 
+/** Similar SVN_DAV_NS_DAV_SVN_MERGEINFO but indicates that the server
+ * knows how to handle requests to validate inherited mergeinfo. */
+#define SVN_DAV_NS_DAV_SVN_MERGEINFO_VALIDATION \
+  SVN_DAV_PROP_NS_DAV "svn/mergeinfo-validation"
+
 /** Presence of this in a DAV header in an OPTIONS response indicates
  * that the transmitter (in this case, the server) knows how to send
  * custom revprops in log responses. */
