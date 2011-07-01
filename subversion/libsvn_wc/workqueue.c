@@ -763,6 +763,8 @@ run_file_install(svn_wc__db_t *db,
       
         SVN_ERR(svn_io_file_rename(dst_abspath, local_abspath, scratch_pool));
       }
+    else
+      SVN_ERR(err);
   }
 
   /* Tweak the on-disk file according to its properties.  */
