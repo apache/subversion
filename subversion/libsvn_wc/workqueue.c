@@ -737,7 +737,33 @@ run_file_install(svn_wc__db_t *db,
 
   /* All done. Move the file into place.  */
   /* ### fix this. we should delay the rename.  */
-  SVN_ERR(svn_io_file_rename(dst_abspath, local_abspath, scratch_pool));
+
+  {
+    svn_error_t *err;
+
+    err = svn_io_file_rename(dst_abspath, local_abspath, scratch_pool);
+
+    /* With a single db we might want to install files in a missing directory.
+       Simply trying this scenario on error won't do any harm and at least
+       one user reported this problem on IRC. */
+    if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+      {
+        svn_error_t *err2;
+
+        err2 = svn_io_make_dir_recursively(svn_dirent_dirname(dst_abspath,
+                                                              scratch_pool),
+                                           scratch_pool);
+      
+        if (err2)
+          /* Creating directory didn't work: Return all errors */
+          return svn_error_trace(svn_error_compose_create(err, err2));
+        else
+          /* We could create a directory: retry install */
+          svn_error_clear(err);
+      
+        SVN_ERR(svn_io_file_rename(dst_abspath, local_abspath, scratch_pool));
+      }
+  }
 
   /* Tweak the on-disk file according to its properties.  */
   if (props
