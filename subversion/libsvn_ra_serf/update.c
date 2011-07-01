@@ -115,8 +115,12 @@ typedef struct report_dir_t
   /* the expanded directory name (including all parent names) */
   const char *name;
 
-  /* the canonical url for this directory. */
+  /* the canonical url for this directory after updating. (received) */
   const char *url;
+
+  /* The original repos_relpath of this url (from the workingcopy)
+     or NULL if the repos_relpath can be calculated from the edit root. */
+  const char *repos_relpath;
 
   /* Our base revision - SVN_INVALID_REVNUM if we're adding this dir. */
   svn_revnum_t base_rev;
@@ -314,6 +318,13 @@ struct report_context_t {
 
   /* Path -> lock token mapping. */
   apr_hash_t *lock_path_tokens;
+
+  /* Path -> const char *repos_relpath mapping */
+  apr_hash_t *switched_paths;
+
+  /* Boolean indicating whether "" is switched.
+     (This indicates that the we are updating a single file) */
+  svn_boolean_t root_is_switched;
 
   /* Our master update editor and baton. */
   const svn_delta_editor_t *update_editor;
@@ -1361,6 +1372,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info->base_name = info->dir->base_name;
       info->name = info->dir->name;
+
+      info->dir->repos_relpath = apr_hash_get(ctx->switched_paths, "",
+                                              APR_HASH_KEY_STRING);
     }
   else if (state == NONE)
     {
@@ -1408,6 +1422,15 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       dir->name = svn_relpath_join(dir->parent_dir->name, dir->base_name,
                                    dir->pool);
       info->name = dir->name;
+
+      dir->repos_relpath = apr_hash_get(ctx->switched_paths, dir->name,
+                                        APR_HASH_KEY_STRING);
+
+      if (!dir->repos_relpath
+          && dir->parent_dir
+          && dir->parent_dir->repos_relpath)
+        dir->repos_relpath = svn_relpath_join(dir->parent_dir->repos_relpath,
+                                               dir->base_name, dir->pool);
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "add-directory") == 0)
@@ -1855,8 +1878,44 @@ end_report(svn_ra_serf__xml_parser_t *parser,
                              svn_path_uri_encode(info->name, info->pool),
                              info->pool);
 
+#if 0
+          /* If this file is switched vs the editor root we should provide
+             its real url instead of the one calculated from the session root.
+           */
+          fs_path = apr_hash_get(ctx->switched_paths, info->name,
+                                 APR_HASH_KEY_STRING);
+
+          if (!fs_path)
+            {
+              if (ctx->root_is_switched)
+                {
+                  /* ### BH: Needs more review.
+
+                     We are updating a direct target (most likely a file)
+                     that is switched vs its parent url */
+                  SVN_ERR_ASSERT(*svn_relpath_dirname(info->name, info->pool)
+                                    == '\0');
+
+                  fs_path = apr_hash_get(ctx->switched_paths, "",
+                                         APR_HASH_KEY_STRING);
+                }
+              else if (info->dir->repos_relpath)
+                fs_path = svn_relpath_join(info->dir->repos_relpath,
+                                           info->base_name, info->pool);
+              else if (!fs_path)
+                SVN_ERR(svn_ra_serf__get_relative_path(&fs_path, full_path,
+                                                       ctx->sess, NULL,
+                                                       info->pool));
+            }
+#else
+          /* This code path is broken for files where fs_path is not
+             the same as the repository path. (E.g. when the file is switched)
+             */
           SVN_ERR(svn_ra_serf__get_relative_path(&fs_path, full_path,
                                                  ctx->sess, NULL, info->pool));
+#endif
+
+
           info->delta_base = svn_string_createf(info->pool, "%s/%ld/%s",
                                                 ctx->sess->rev_root_stub,
                                                 info->base_rev, fs_path);
@@ -2214,11 +2273,18 @@ link_path(void *report_baton,
   SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
                                  NULL, pool));
 
+  /* Store the switch roots to allow generating repos_relpaths from just
+     the working copy paths. (Needed for HTTPv2) */
+  path = apr_pstrdup(report->pool, path);
+  apr_hash_set(report->switched_paths, path, APR_HASH_KEY_STRING,
+               apr_pstrdup(report->pool, link+1));
+
+  if (!*path)
+    report->root_is_switched = TRUE;
+
   if (lock_token)
     {
-      apr_hash_set(report->lock_path_tokens,
-                   apr_pstrdup(report->pool, path),
-                   APR_HASH_KEY_STRING,
+      apr_hash_set(report->lock_path_tokens, path, APR_HASH_KEY_STRING,
                    apr_pstrdup(report->pool, lock_token));
     }
 
@@ -2639,6 +2705,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
   report->send_copyfrom_args = send_copyfrom_args;
   report->text_deltas = text_deltas;
   report->lock_path_tokens = apr_hash_make(report->pool);
+  report->switched_paths = apr_hash_make(report->pool);
 
   report->source = src_path;
   report->destination = dest_path;
