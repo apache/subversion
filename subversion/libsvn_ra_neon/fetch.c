@@ -2290,7 +2290,8 @@ static svn_error_t * reporter_set_path(void *report_baton,
                          "%s</S:entry>" DEBUG_CR,
                          revision, depthstring, tokenstring, qpath->data);
 
-  return svn_io_file_write_full(rb->tmpfile, entry, strlen(entry), NULL, pool);
+  return svn_error_trace(svn_io_file_write_full(rb->tmpfile, entry,
+                                                strlen(entry), NULL, pool));
 }
 
 
@@ -2343,7 +2344,8 @@ static svn_error_t * reporter_link_path(void *report_baton,
                          revision, depthstring, tokenstring,
                          qlinkpath->data, qpath->data);
 
-  return svn_io_file_write_full(rb->tmpfile, entry, strlen(entry), NULL, pool);
+  return svn_error_trace(svn_io_file_write_full(rb->tmpfile, entry,
+                                                strlen(entry), NULL, pool));
 }
 
 
@@ -2360,7 +2362,8 @@ static svn_error_t * reporter_delete_path(void *report_baton,
                    "<S:missing>%s</S:missing>" DEBUG_CR,
                    qpath->data);
 
-  return svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool);
+  return svn_error_trace(svn_io_file_write_full(rb->tmpfile, s, strlen(s),
+                                                NULL, pool));
 }
 
 
@@ -2369,7 +2372,7 @@ static svn_error_t * reporter_abort_report(void *report_baton,
 {
   report_baton_t *rb = report_baton;
 
-  (void) apr_file_close(rb->tmpfile);
+  SVN_ERR(svn_io_file_close(rb->tmpfile, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2414,8 +2417,10 @@ static svn_error_t * reporter_finish_report(void *report_baton,
       /* We're done with the file.  this should delete it. Note: it
          isn't a big deal if this line is never executed -- the pool
          will eventually get it. We're just being proactive here. */
-      (void) apr_file_close(rb->tmpfile);
-      return err;
+      return svn_error_trace(
+                svn_error_compose_create(err,
+                                         svn_io_file_close(rb->tmpfile,
+                                                           pool)));
     }
 
   /* dispatch the REPORT. */
@@ -2429,17 +2434,16 @@ static svn_error_t * reporter_finish_report(void *report_baton,
                                     rb->spool_response, pool);
 
   /* We're done with the file. Proactively close/delete the thing. */
-  (void) apr_file_close(rb->tmpfile);
-
-  SVN_ERR(err);
+  SVN_ERR(svn_error_compose_create(err,
+                                   svn_io_file_close(rb->tmpfile, pool)));
 
   /* We got the whole HTTP response thing done.  *Whew*.  Our edit
      baton should have been closed by now, so return a failure if it
      hasn't been. */
   if (rb->edit_baton)
     {
-      return svn_error_createf
-        (SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+      return svn_error_createf(
+         SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
          _("REPORT response handling failed to complete the editor drive"));
     }
 
