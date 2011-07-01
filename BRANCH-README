@@ -1,0 +1,19 @@
+svn_mutex__t is supposed to be an almost zero-overhead
+wrapper around apr_thread_mutex_t. And if it wasn't for
+the 1.7 stabilization, this change would be developed
+directly on /trunk.
+
+The basic idea is to move code patterns like
+
+#if APR_HAS_THREADS
+  if (my_struct->mutex)
+    {
+      status = apr_thread_mutex_lock(my_struct->mutex);
+      if (status)
+        return svn_error_wrap_apr(...)
+    }
+#endif
+
+into a dedicated function such that callers may simply do
+
+  SVN_ERR(svn_mutex__lock(my_struct->mutex));
