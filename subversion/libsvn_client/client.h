@@ -292,7 +292,7 @@ svn_client__default_walker_error_handler(const char *path,
    in *CORRECTED_URL.  (This function mirrors svn_ra_open4(), which
    see, regarding the interpretation and handling of these two parameters.)
 
-   The root of the session is specified by BASE_URL and BASE_DIR.
+   The root of the session is specified by BASE_URL and BASE_DIR_ABSPATH.
 
    Additional control parameters:
 
@@ -758,7 +758,7 @@ typedef svn_error_t *(*svn_client__check_url_kind_t)(void *baton,
                                                      svn_revnum_t revision,
                                                      apr_pool_t *scratch_pool);
 
-/* Recursively crawl a set of working copy paths (DIR_ABSPATH + each
+/* Recursively crawl a set of working copy paths (BASE_DIR_ABSPATH + each
    item in the TARGETS array) looking for commit candidates, locking
    working copy directories as the crawl progresses.  For each
    candidate found:
