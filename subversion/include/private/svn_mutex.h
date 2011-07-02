@@ -90,6 +90,20 @@ svn_error_t *
 svn_mutex__unlock(svn_mutex__t *mutex,
                   svn_error_t *err);
 
+/** Callback function to for use with @ref svn_mutex__with_lock.
+ * @a baton contains all the actual function parameters.
+ */
+typedef svn_error_t *(*svn_mutex__callback_t)(void *baton);
+
+/** Executes the function @a func with parameters given in @a cb_baton
+ * while locking @a mutex just before and unlocking it immediately after
+ * @a func has been executed.
+ */
+svn_error_t *
+svn_mutex__with_lock(svn_mutex__t *mutex,
+                     svn_mutex__callback_t func,
+                     void *cb_baton);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
