@@ -131,7 +131,9 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
   if (status != svn_wc__db_status_normal
       && status != svn_wc__db_status_copied
       && status != svn_wc__db_status_moved_here
-      && !(status == svn_wc__db_status_added && kind == svn_wc__db_kind_dir))
+      && !(kind == svn_wc__db_kind_dir
+           && (status == svn_wc__db_status_added
+               || status == svn_wc__db_status_incomplete)))
     {
       return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                                _("The node '%s' can not be restored."),
@@ -388,7 +390,10 @@ report_revisions_and_depths(svn_wc__db_t *db,
 
           if (wrk_status == svn_wc__db_status_normal
               || wrk_status == svn_wc__db_status_copied
-              || wrk_status == svn_wc__db_status_moved_here)
+              || wrk_status == svn_wc__db_status_moved_here
+              || (wrk_kind == svn_wc__db_kind_dir
+                  && (wrk_status == svn_wc__db_status_added
+                      || wrk_status == svn_wc__db_status_incomplete)))
             {
               svn_node_kind_t dirent_kind;
 
@@ -736,7 +741,10 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
 
       if (wrk_status == svn_wc__db_status_normal
           || wrk_status == svn_wc__db_status_copied
-          || wrk_status == svn_wc__db_status_moved_here)
+          || wrk_status == svn_wc__db_status_moved_here
+          || (wrk_kind == svn_wc__db_kind_dir
+              && (wrk_status == svn_wc__db_status_added
+                  || wrk_status == svn_wc__db_status_incomplete))) 
         {
           SVN_ERR(restore_node(wc_ctx->db, local_abspath,
                                wrk_kind, use_commit_times,
