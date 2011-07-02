@@ -27,19 +27,19 @@
 /* Destructor to be called as part of the pool cleanup procedure. */
 static apr_status_t uninit(void *data)
 {
-  svn_mutex__t *mutex = data;
-  mutex->mutex = NULL;
+  svn_mutex__t **mutex = data;
+  *mutex = NULL;
 
   return APR_SUCCESS;
 }
 
 svn_error_t *
-svn_mutex__init(svn_mutex__t *mutex, 
+svn_mutex__init(svn_mutex__t **mutex, 
                 svn_boolean_t enable_mutex, 
                 apr_pool_t *pool)
 {
 #if APR_HAS_THREADS
-  mutex->mutex = NULL;
+  *mutex = NULL;
   if (enable_mutex)
     {
       apr_thread_mutex_t *apr_mutex;
@@ -50,24 +50,25 @@ svn_mutex__init(svn_mutex__t *mutex,
       if (status)
         return svn_error_wrap_apr(status, _("Can't create mutex"));
 
-      mutex->mutex = apr_mutex;
+      *mutex = apr_mutex;
       apr_pool_cleanup_register(pool, mutex, uninit, apr_pool_cleanup_null);
     }
 #else
   if (enable_mutex)
-    return svn_error_wrap_apr(APR_ENOTIMPL, _("APR doesn't support threads"));
+    return svn_error_wrap_apr(SVN_ERR_UNSUPPORTED_FEATURE,
+                              _("APR doesn't support threads"));
 #endif
     
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_mutex__lock(svn_mutex__t mutex)
+svn_mutex__lock(svn_mutex__t *mutex)
 {
 #if APR_HAS_THREADS
-  if (mutex.mutex)
+  if (mutex)
     {
-      apr_status_t status = apr_thread_mutex_lock(mutex.mutex);
+      apr_status_t status = apr_thread_mutex_lock(mutex);
       if (status)
         return svn_error_wrap_apr(status, _("Can't lock mutex"));
     }
@@ -77,13 +78,13 @@ svn_mutex__lock(svn_mutex__t mutex)
 }
 
 svn_error_t *
-svn_mutex__unlock(svn_mutex__t mutex, 
+svn_mutex__unlock(svn_mutex__t *mutex, 
                   svn_error_t *err)
 {
 #if APR_HAS_THREADS
-  if (mutex.mutex)
+  if (mutex)
     {
-      apr_status_t status = apr_thread_mutex_unlock(mutex.mutex);
+      apr_status_t status = apr_thread_mutex_unlock(mutex);
       if (status && !err)
         return svn_error_wrap_apr(status, _("Can't unlock mutex"));
     }

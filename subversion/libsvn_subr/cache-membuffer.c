@@ -428,7 +428,7 @@ struct svn_membuffer_t
    * the cache's creator doesn't feel the cache needs to be
    * thread-safe.
    */
-  svn_mutex__t mutex;
+  svn_mutex__t *mutex;
 };
 
 /* Align integer VALUE to the next ITEM_ALIGNMENT boundary.

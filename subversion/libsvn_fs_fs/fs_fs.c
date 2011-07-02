@@ -554,7 +554,7 @@ with_some_lock(svn_fs_t *fs,
                void *baton,
                const char *lock_filename,
 #if SVN_FS_FS__USE_LOCK_MUTEX
-               svn_mutex__t lock_mutex,
+               svn_mutex__t *lock_mutex,
 #endif
                apr_pool_t *pool)
 {
