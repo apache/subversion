@@ -24,6 +24,15 @@
 #include "svn_private_config.h"
 #include "private/svn_mutex.h"
 
+/* Destructor to be called as part of the pool cleanup procedure. */
+static apr_status_t uninit(void *data)
+{
+  svn_mutex__t *mutex = data;
+  mutex->mutex = NULL;
+
+  return APR_SUCCESS;
+}
+
 svn_error_t *
 svn_mutex__init(svn_mutex__t *mutex, 
                 svn_boolean_t enable_mutex, 
@@ -33,12 +42,16 @@ svn_mutex__init(svn_mutex__t *mutex,
   mutex->mutex = NULL;
   if (enable_mutex)
     {
+      apr_thread_mutex_t *apr_mutex;
       apr_status_t status =
-          apr_thread_mutex_create(&mutex->mutex,
+          apr_thread_mutex_create(&apr_mutex,
                                   APR_THREAD_MUTEX_DEFAULT,
                                   pool);
       if (status)
         return svn_error_wrap_apr(status, _("Can't create mutex"));
+
+      mutex->mutex = apr_mutex;
+      apr_pool_cleanup_register(pool, mutex, uninit, apr_pool_cleanup_null);
     }
 #else
   if (enable_mutex)
