@@ -1076,6 +1076,7 @@ def upgrade_with_missing_subdir(sbox):
 
   # And now perform an update. (This used to fail with an assertion)
   expected_output = svntest.wc.State(wc_dir, {
+    'A/B'               : Item(verb='Restored'),
     'A/B/E'             : Item(status='A '),
     'A/B/E/alpha'       : Item(status='A '),
     'A/B/E/beta'        : Item(status='A '),
