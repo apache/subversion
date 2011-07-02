@@ -92,3 +92,12 @@ svn_mutex__unlock(svn_mutex__t *mutex,
 
   return err;
 }
+
+svn_error_t *
+svn_mutex__with_lock(svn_mutex__t *mutex,
+                     svn_mutex__callback_t func,
+                     void *cb_baton)
+{
+  SVN_ERR(svn_mutex__lock(mutex));
+  return svn_mutex__unlock(mutex, func(cb_baton));
+}
