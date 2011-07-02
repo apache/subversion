@@ -29,7 +29,7 @@
 #include "private/svn_mutex.h"
 
 /* A mutex to protect our global pool and cache. */
-static svn_mutex__t dso_mutex;
+static svn_mutex__t *dso_mutex = NULL;
 
 /* Global pool to allocate DSOs in. */
 static apr_pool_t *dso_pool;

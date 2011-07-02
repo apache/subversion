@@ -25,7 +25,6 @@
 
 #include <apr_pools.h>
 #include <apr_hash.h>
-#include <apr_thread_mutex.h>
 #include <apr_network_io.h>
 
 #include "svn_fs.h"
@@ -184,15 +183,15 @@ typedef struct fs_fs_shared_data_t
   fs_fs_shared_txn_data_t *free_txn;
 
   /* A lock for intra-process synchronization when accessing the TXNS list. */
-  svn_mutex__t txn_list_lock;
+  svn_mutex__t *txn_list_lock;
 #if SVN_FS_FS__USE_LOCK_MUTEX
   /* A lock for intra-process synchronization when grabbing the
      repository write lock. */
-  svn_mutex__t fs_write_lock;
+  svn_mutex__t *fs_write_lock;
 
   /* A lock for intra-process synchronization when locking the
      txn-current file. */
-  svn_mutex__t txn_current_lock;
+  svn_mutex__t *txn_current_lock;
 #endif
 
   /* The common pool, under which this object is allocated, subpools

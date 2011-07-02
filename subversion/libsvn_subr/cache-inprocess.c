@@ -84,7 +84,7 @@ typedef struct inprocess_cache_t {
   /* A lock for intra-process synchronization to the cache, or NULL if
    * the cache's creator doesn't feel the cache needs to be
    * thread-safe. */
-  svn_mutex__t mutex;
+  svn_mutex__t *mutex;
 } inprocess_cache_t;
 
 /* A cache page; all items on the page are allocated from the same

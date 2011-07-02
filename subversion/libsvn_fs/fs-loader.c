@@ -58,7 +58,7 @@
 /* A pool common to all FS objects.  See the documentation on the
    open/create functions in fs-loader.h and for svn_fs_initialize(). */
 static apr_pool_t *common_pool;
-svn_mutex__t common_pool_lock;
+svn_mutex__t *common_pool_lock;
 
 
 /* --- Utility functions for the loader --- */
