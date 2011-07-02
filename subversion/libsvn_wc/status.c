@@ -704,36 +704,23 @@ static svn_error_t *
 assemble_unversioned(svn_wc_status3_t **status,
                      svn_wc__db_t *db,
                      const char *local_abspath,
-                     svn_node_kind_t path_kind,
+                     const svn_io_dirent2_t *dirent,
+                     svn_boolean_t tree_conflicted,
                      svn_boolean_t is_ignored,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
   svn_wc_status3_t *stat;
-  const svn_wc_conflict_description2_t *tree_conflict;
-  svn_error_t *err;
-
-  /* Find out whether the path is a tree conflict victim.
-     This function will set tree_conflict to NULL if the path
-     is not a victim. */
-  err = svn_wc__db_op_read_tree_conflict(&tree_conflict,
-                                         db, local_abspath,
-                                         scratch_pool, scratch_pool);
-
-  if (path_kind == svn_node_dir &&
-      err &&
-      err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
-    svn_error_clear(err);
-  else
-    SVN_ERR(err);
 
   /* return a fairly blank structure. */
-  stat = apr_pcalloc(result_pool, sizeof(**status));
+  stat = apr_pcalloc(result_pool, sizeof(*stat));
 
   /*stat->versioned = FALSE;*/
   stat->kind = svn_node_unknown; /* not versioned */
   stat->depth = svn_depth_unknown;
-  stat->filesize = SVN_INVALID_FILESIZE;
+  stat->filesize = (dirent && dirent->kind == svn_node_file)
+                        ? dirent->filesize
+                        : SVN_INVALID_FILESIZE;
   stat->node_status = svn_wc_status_none;
   stat->text_status = svn_wc_status_none;
   stat->prop_status = svn_wc_status_none;
@@ -746,18 +733,18 @@ assemble_unversioned(svn_wc_status3_t **status,
      to matching an ignore-pattern), the node_status is set to
      svn_wc_status_ignored.  Otherwise the node_status is set to
      svn_wc_status_unversioned. */
-  if (path_kind != svn_node_none)
+  if (dirent && dirent->kind != svn_node_none)
     {
       if (is_ignored)
         stat->node_status = svn_wc_status_ignored;
       else
         stat->node_status = svn_wc_status_unversioned;
     }
-  else if (tree_conflict != NULL)
+  else if (tree_conflicted)
     {
       /* If this path has no entry, is NOT present on disk, and IS a
-         tree conflict victim, count it as missing. */
-      stat->node_status = svn_wc_status_missing;
+         tree conflict victim, report it as conflicted. */
+      stat->node_status = svn_wc_status_conflicted;
     }
 
   stat->revision = SVN_INVALID_REVNUM;
@@ -767,7 +754,7 @@ assemble_unversioned(svn_wc_status3_t **status,
 
   /* For the case of an incoming delete to a locally deleted path during
      an update, we get a tree conflict. */
-  stat->conflicted = (tree_conflict != NULL);
+  stat->conflicted = tree_conflicted;
   stat->changelist = NULL;
 
   *status = stat;
@@ -930,7 +917,8 @@ is_external_path(apr_hash_t *externals,
 static svn_error_t *
 send_unversioned_item(const struct walk_status_baton *wb,
                       const char *local_abspath,
-                      svn_node_kind_t path_kind,
+                      const svn_io_dirent2_t *dirent,
+                      svn_boolean_t tree_conflicted,
                       const apr_array_header_t *patterns,
                       svn_boolean_t no_ignore,
                       svn_wc_status_func4_t status_func,
@@ -947,7 +935,7 @@ send_unversioned_item(const struct walk_status_baton *wb,
 
   SVN_ERR(assemble_unversioned(&status,
                                wb->db, local_abspath,
-                               path_kind, is_ignored,
+                               dirent, tree_conflicted, is_ignored,
                                scratch_pool, scratch_pool));
 
   is_external = is_external_path(wb->externals, local_abspath, scratch_pool);
@@ -1176,8 +1164,7 @@ get_dir_status(const struct walk_status_baton *wb,
 
           SVN_ERR(send_unversioned_item(wb,
                                         node_abspath,
-                                        dirent_p ? dirent_p->kind
-                                                 : svn_node_none,
+                                        dirent_p, TRUE,
                                         patterns,
                                         no_ignore,
                                         status_func,
@@ -1204,7 +1191,7 @@ get_dir_status(const struct walk_status_baton *wb,
 
       SVN_ERR(send_unversioned_item(wb,
                                     node_abspath,
-                                    dirent_p->kind,
+                                    dirent_p, FALSE,
                                     patterns,
                                     no_ignore || selected,
                                     status_func, status_baton,
@@ -1557,6 +1544,9 @@ is_sendable_status(const svn_wc_status3_t *status,
   if (status->repos_lock)
     return TRUE;
 
+  if (status->conflicted)
+    return TRUE;
+
   /* If the item is ignored, and we don't want ignores, skip it. */
   if ((status->node_status == svn_wc_status_ignored) && (! no_ignore))
     return FALSE;
@@ -1573,8 +1563,6 @@ is_sendable_status(const svn_wc_status3_t *status,
   /* If the text, property or tree state is interesting, send it. */
   if ((status->node_status != svn_wc_status_none
        && (status->node_status != svn_wc_status_normal)))
-    return TRUE;
-  if (status->conflicted)
     return TRUE;
 
   /* If it's switched, send it. */
@@ -2426,6 +2414,7 @@ internal_status(svn_wc_status3_t **status,
   const char *parent_repos_relpath;
   const char *parent_repos_root_url;
   svn_wc__db_status_t node_status;
+  svn_boolean_t conflicted;
   svn_boolean_t is_root = FALSE;
   svn_error_t *err;
 
@@ -2436,8 +2425,8 @@ internal_status(svn_wc_status3_t **status,
 
   err = svn_wc__db_read_info(&node_status, &node_kind, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, &conflicted,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
                              db, local_abspath,
                              scratch_pool, scratch_pool);
 
@@ -2448,6 +2437,11 @@ internal_status(svn_wc_status3_t **status,
     {
       svn_error_clear(err);
       node_kind = svn_wc__db_kind_unknown;
+
+      /* Ensure conflicted is always set, but don't hide tree conflicts
+         on 'hidden' nodes. */
+      if (err)
+        conflicted = FALSE;
     }
   else
     SVN_ERR(err);
@@ -2455,7 +2449,7 @@ internal_status(svn_wc_status3_t **status,
   if (node_kind == svn_wc__db_kind_unknown)
     return svn_error_trace(assemble_unversioned(status,
                                                 db, local_abspath,
-                                                dirent->kind,
+                                                dirent, conflicted,
                                                 FALSE /* is_ignored */,
                                                 result_pool, scratch_pool));
 
