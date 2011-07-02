@@ -42,6 +42,7 @@
 #include "private/svn_fs_private.h"
 #include "private/svn_fs_util.h"
 #include "private/svn_utf_private.h"
+#include "private/svn_mutex.h"
 
 #include "fs-loader.h"
 #include "svn_hash.h"
@@ -57,9 +58,7 @@
 /* A pool common to all FS objects.  See the documentation on the
    open/create functions in fs-loader.h and for svn_fs_initialize(). */
 static apr_pool_t *common_pool;
-#if APR_HAS_THREADS
-static apr_thread_mutex_t *common_pool_lock;
-#endif
+svn_mutex__t common_pool_lock;
 
 
 /* --- Utility functions for the loader --- */
@@ -126,25 +125,13 @@ load_module(fs_init_func_t *initfunc, const char *name, apr_pool_t *pool)
 static svn_error_t *
 acquire_fs_mutex(void)
 {
-#if APR_HAS_THREADS
-  apr_status_t status;
-  status = apr_thread_mutex_lock(common_pool_lock);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't grab FS mutex"));
-#endif
-  return SVN_NO_ERROR;
+  return svn_mutex__lock(common_pool_lock);
 }
 
 static svn_error_t *
-release_fs_mutex(void)
+release_fs_mutex(svn_error_t *err)
 {
-#if APR_HAS_THREADS
-  apr_status_t status;
-  status = apr_thread_mutex_unlock(common_pool_lock);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't ungrab FS mutex"));
-#endif
-  return SVN_NO_ERROR;
+  return svn_mutex__unlock(common_pool_lock, err);
 }
 
 /* Fetch a library vtable by a pointer into the library definitions array. */
@@ -168,7 +155,6 @@ get_library_vtable_direct(fs_library_vtable_t **vtable,
 
   {
     svn_error_t *err;
-    svn_error_t *err2;
 
     /* Per our API compatibility rules, we cannot ensure that
        svn_fs_initialize is called by the application.  If not, we
@@ -184,14 +170,7 @@ get_library_vtable_direct(fs_library_vtable_t **vtable,
        pool protected by a lock. */
     SVN_ERR(acquire_fs_mutex());
     err = initfunc(my_version, vtable, common_pool);
-    err2 = release_fs_mutex();
-    if (err)
-      {
-        svn_error_clear(err2);
-        return err;
-      }
-    if (err2)
-      return err2;
+    SVN_ERR(release_fs_mutex(err));
   }
   fs_version = (*vtable)->get_version();
   if (!svn_ver_equal(my_version, fs_version))
@@ -289,30 +268,18 @@ write_fs_type(const char *path, const char *fs_type, apr_pool_t *pool)
 static apr_status_t uninit(void *data)
 {
   common_pool = NULL;
-#if APR_HAS_THREADS
-  common_pool_lock = NULL;
-#endif
   return APR_SUCCESS;
 }
 
 svn_error_t *
 svn_fs_initialize(apr_pool_t *pool)
 {
-#if APR_HAS_THREADS
-  apr_status_t status;
-#endif
-
   /* Protect against multiple calls. */
   if (common_pool)
     return SVN_NO_ERROR;
 
   common_pool = svn_pool_create(pool);
-#if APR_HAS_THREADS
-  status = apr_thread_mutex_create(&common_pool_lock,
-                                   APR_THREAD_MUTEX_DEFAULT, common_pool);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't allocate FS mutex"));
-#endif
+  SVN_ERR(svn_mutex__init(&common_pool_lock, TRUE, common_pool));
 
   /* ### This won't work if POOL is NULL and libsvn_fs is loaded as a DSO
      ### (via libsvn_ra_local say) since the global common_pool will live
@@ -392,7 +359,6 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
               apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_error_t *err2;
   fs_library_vtable_t *vtable;
 
   const char *fs_type = svn_hash__get_cstring(fs_config,
@@ -408,13 +374,7 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   *fs_p = fs_new(fs_config, pool);
   SVN_ERR(acquire_fs_mutex());
   err = vtable->create(*fs_p, path, pool, common_pool);
-  err2 = release_fs_mutex();
-  if (err)
-    {
-      svn_error_clear(err2);
-      return svn_error_trace(err);
-    }
-  return svn_error_trace(err2);
+  return svn_error_trace(release_fs_mutex(err));
 }
 
 svn_error_t *
@@ -422,27 +382,19 @@ svn_fs_open(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
             apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_error_t *err2;
   fs_library_vtable_t *vtable;
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   *fs_p = fs_new(fs_config, pool);
   SVN_ERR(acquire_fs_mutex());
   err = vtable->open_fs(*fs_p, path, pool, common_pool);
-  err2 = release_fs_mutex();
-  if (err)
-    {
-      svn_error_clear(err2);
-      return svn_error_trace(err);
-    }
-  return svn_error_trace(err2);
+  return svn_error_trace(release_fs_mutex(err));
 }
 
 svn_error_t *
 svn_fs_upgrade(const char *path, apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_error_t *err2;
   fs_library_vtable_t *vtable;
   svn_fs_t *fs;
 
@@ -450,13 +402,7 @@ svn_fs_upgrade(const char *path, apr_pool_t *pool)
   fs = fs_new(NULL, pool);
   SVN_ERR(acquire_fs_mutex());
   err = vtable->upgrade_fs(fs, path, pool, common_pool);
-  err2 = release_fs_mutex();
-  if (err)
-    {
-      svn_error_clear(err2);
-      return svn_error_trace(err);
-    }
-  return svn_error_trace(err2);
+  return svn_error_trace(release_fs_mutex(err));
 }
 
 const char *
@@ -496,7 +442,6 @@ svn_fs_pack(const char *path,
             apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_error_t *err2;
   fs_library_vtable_t *vtable;
   svn_fs_t *fs;
 
@@ -505,13 +450,7 @@ svn_fs_pack(const char *path,
   SVN_ERR(acquire_fs_mutex());
   err = vtable->pack_fs(fs, path, notify_func, notify_baton,
                         cancel_func, cancel_baton, pool);
-  err2 = release_fs_mutex();
-  if (err)
-    {
-      svn_error_clear(err2);
-      return svn_error_trace(err);
-    }
-  return svn_error_trace(err2);
+  return svn_error_trace(release_fs_mutex(err));
 }
 
 svn_error_t *
@@ -520,7 +459,6 @@ svn_fs_recover(const char *path,
                apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_error_t *err2;
   fs_library_vtable_t *vtable;
   svn_fs_t *fs;
 
@@ -528,15 +466,10 @@ svn_fs_recover(const char *path,
   fs = fs_new(NULL, pool);
   SVN_ERR(acquire_fs_mutex());
   err = vtable->open_fs_for_recovery(fs, path, pool, common_pool);
-  err2 = release_fs_mutex();
-  if (err)
-    {
-      svn_error_clear(err2);
-      return svn_error_trace(err);
-    }
-  if (! err2)
-    err2 = vtable->recover(fs, cancel_func, cancel_baton, pool);
-  return svn_error_trace(err2);
+  err = release_fs_mutex(err);
+  if (! err)
+    err = vtable->recover(fs, cancel_func, cancel_baton, pool);
+  return svn_error_trace(err);
 }
 
 
@@ -546,7 +479,6 @@ svn_error_t *
 svn_fs_create_berkeley(svn_fs_t *fs, const char *path)
 {
   svn_error_t *err;
-  svn_error_t *err2;
   fs_library_vtable_t *vtable;
 
   SVN_ERR(get_library_vtable(&vtable, SVN_FS_TYPE_BDB, fs->pool));
@@ -558,32 +490,19 @@ svn_fs_create_berkeley(svn_fs_t *fs, const char *path)
   /* Perform the actual creation. */
   SVN_ERR(acquire_fs_mutex());
   err = vtable->create(fs, path, fs->pool, common_pool);
-  err2 = release_fs_mutex();
-  if (err)
-    {
-      svn_error_clear(err2);
-      return svn_error_trace(err);
-    }
-  return svn_error_trace(err2);
+  return svn_error_trace(release_fs_mutex(err));
 }
 
 svn_error_t *
 svn_fs_open_berkeley(svn_fs_t *fs, const char *path)
 {
   svn_error_t *err;
-  svn_error_t *err2;
   fs_library_vtable_t *vtable;
 
   SVN_ERR(fs_library_vtable(&vtable, path, fs->pool));
   SVN_ERR(acquire_fs_mutex());
   err = vtable->open_fs(fs, path, fs->pool, common_pool);
-  err2 = release_fs_mutex();
-  if (err)
-    {
-      svn_error_clear(err2);
-      return svn_error_trace(err);
-    }
-  return svn_error_trace(err2);
+  return svn_error_trace(release_fs_mutex(err));
 }
 
 const char *
