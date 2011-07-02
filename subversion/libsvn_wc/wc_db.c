@@ -9008,7 +9008,7 @@ scan_addition_txn(void *baton,
       {
         /* Calculate the path of the operation root */
         repos_prefix_path =
-          svn_relpath_join(svn_dirent_basename(current_relpath, NULL),
+          svn_relpath_join(svn_relpath_basename(current_relpath, NULL),
                            repos_prefix_path,
                            scratch_pool);
         current_relpath = svn_relpath_dirname(current_relpath, scratch_pool);
@@ -9087,7 +9087,7 @@ scan_addition_txn(void *baton,
 
         /* Pointing at op_depth, look at the parent */
         repos_prefix_path =
-          svn_relpath_join(svn_dirent_basename(current_relpath, NULL),
+          svn_relpath_join(svn_relpath_basename(current_relpath, NULL),
                            repos_prefix_path,
                            scratch_pool);
         current_relpath = svn_relpath_dirname(current_relpath, scratch_pool);
@@ -9106,7 +9106,7 @@ scan_addition_txn(void *baton,
           {
             /* Calculate the path of the operation root */
             repos_prefix_path =
-              svn_relpath_join(svn_dirent_basename(current_relpath, NULL),
+              svn_relpath_join(svn_relpath_basename(current_relpath, NULL),
                                repos_prefix_path,
                                scratch_pool);
             current_relpath =
@@ -10145,7 +10145,7 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
       const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
 
       APR_ARRAY_PUSH(new_victims, const char *) =
-                            svn_dirent_basename(child_relpath, result_pool);
+                            svn_relpath_basename(child_relpath, result_pool);
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
@@ -10197,7 +10197,7 @@ svn_wc__db_get_conflict_marker_files(apr_hash_t **marker_files,
           marker_relpath = svn_sqlite__column_text(stmt, i, scratch_pool);
           if (marker_relpath)
             {
-              base_name = svn_dirent_basename(marker_relpath, result_pool);
+              base_name = svn_relpath_basename(marker_relpath, result_pool);
               apr_hash_set(*marker_files, base_name, APR_HASH_KEY_STRING,
                            base_name);
             }
