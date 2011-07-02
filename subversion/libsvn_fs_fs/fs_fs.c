@@ -511,25 +511,14 @@ with_txnlist_lock(svn_fs_t *fs,
                   apr_pool_t *pool)
 {
   svn_error_t *err;
-#if APR_HAS_THREADS
   fs_fs_data_t *ffd = fs->fsap_data;
   fs_fs_shared_data_t *ffsd = ffd->shared;
-  apr_status_t apr_err;
 
-  apr_err = apr_thread_mutex_lock(ffsd->txn_list_lock);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, _("Can't grab FSFS txn list mutex"));
-#endif
+  SVN_ERR(svn_mutex__lock(ffsd->txn_list_lock));
 
   err = body(fs, baton, pool);
 
-#if APR_HAS_THREADS
-  apr_err = apr_thread_mutex_unlock(ffsd->txn_list_lock);
-  if (apr_err && !err)
-    return svn_error_wrap_apr(apr_err, _("Can't ungrab FSFS txn list mutex"));
-#endif
-
-  return svn_error_trace(err);
+  return svn_error_trace(svn_mutex__unlock(ffsd->txn_list_lock, err));
 }
 
 
@@ -565,7 +554,7 @@ with_some_lock(svn_fs_t *fs,
                void *baton,
                const char *lock_filename,
 #if SVN_FS_FS__USE_LOCK_MUTEX
-               apr_thread_mutex_t *lock_mutex,
+               svn_mutex__t lock_mutex,
 #endif
                apr_pool_t *pool)
 {
@@ -573,15 +562,7 @@ with_some_lock(svn_fs_t *fs,
   svn_error_t *err;
 
 #if SVN_FS_FS__USE_LOCK_MUTEX
-  apr_status_t status;
-
-  /* POSIX fcntl locks are per-process, so we need to serialize locks
-     within the process. */
-  status = apr_thread_mutex_lock(lock_mutex);
-  if (status)
-    return svn_error_wrap_apr(status,
-                              _("Can't grab FSFS mutex for '%s'"),
-                              lock_filename);
+  SVN_ERR(svn_mutex__lock(lock_mutex));
 #endif
 
   err = get_lock_on_filesystem(lock_filename, subpool);
@@ -602,15 +583,7 @@ with_some_lock(svn_fs_t *fs,
 
   svn_pool_destroy(subpool);
 
-#if SVN_FS_FS__USE_LOCK_MUTEX
-  status = apr_thread_mutex_unlock(lock_mutex);
-  if (status && !err)
-    return svn_error_wrap_apr(status,
-                              _("Can't ungrab FSFS mutex for '%s'"),
-                              lock_filename);
-#endif
-
-  return svn_error_trace(err);
+  return svn_error_trace(svn_mutex__unlock(lock_mutex, err));
 }
 
 svn_error_t *
@@ -623,13 +596,12 @@ svn_fs_fs__with_write_lock(svn_fs_t *fs,
 #if SVN_FS_FS__USE_LOCK_MUTEX
   fs_fs_data_t *ffd = fs->fsap_data;
   fs_fs_shared_data_t *ffsd = ffd->shared;
-  apr_thread_mutex_t *mutex = ffsd->fs_write_lock;
 #endif
 
   return with_some_lock(fs, body, baton,
                         path_lock(fs, pool),
 #if SVN_FS_FS__USE_LOCK_MUTEX
-                        mutex,
+                        ffsd->fs_write_lock,
 #endif
                         pool);
 }
@@ -646,13 +618,12 @@ with_txn_current_lock(svn_fs_t *fs,
 #if SVN_FS_FS__USE_LOCK_MUTEX
   fs_fs_data_t *ffd = fs->fsap_data;
   fs_fs_shared_data_t *ffsd = ffd->shared;
-  apr_thread_mutex_t *mutex = ffsd->txn_current_lock;
 #endif
 
   return with_some_lock(fs, body, baton,
                         path_txn_current_lock(fs, pool),
 #if SVN_FS_FS__USE_LOCK_MUTEX
-                        mutex,
+                        ffsd->txn_current_lock,
 #endif
                         pool);
 }
