@@ -30,6 +30,7 @@
 #include "cache.h"
 #include "svn_string.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_mutex.h"
 
 /*
  * This svn_cache__t implementation actually consists of two parts:
@@ -423,13 +424,11 @@ struct svn_membuffer_t
    */
   apr_uint64_t total_hits;
 
-#if APR_HAS_THREADS
   /* A lock for intra-process synchronization to the cache, or NULL if
    * the cache's creator doesn't feel the cache needs to be
    * thread-safe.
    */
-  apr_thread_mutex_t *mutex;
-#endif
+  svn_mutex__t mutex;
 };
 
 /* Align integer VALUE to the next ITEM_ALIGNMENT boundary.
@@ -439,43 +438,6 @@ struct svn_membuffer_t
 /* Align POINTER value to the next ITEM_ALIGNMENT boundary.
  */
 #define ALIGN_POINTER(pointer) ((void*)ALIGN_VALUE((apr_size_t)(char*)(pointer)))
-
-/* Acquire the cache mutex, if necessary.
- */
-static svn_error_t *
-lock_cache(svn_membuffer_t *cache)
-{
-#if APR_HAS_THREADS
-  if (cache->mutex)
-  {
-    apr_status_t status = apr_thread_mutex_lock(cache->mutex);
-    if (status)
-      return svn_error_wrap_apr(status, _("Can't lock cache mutex"));
-  }
-#endif
-
-  return SVN_NO_ERROR;
-}
-
-/* Release the cache mutex, if necessary.
- */
-static svn_error_t *
-unlock_cache(svn_membuffer_t *cache, svn_error_t *err)
-{
-#if APR_HAS_THREADS
-  if (cache->mutex)
-  {
-    apr_status_t status = apr_thread_mutex_unlock(cache->mutex);
-    if (err)
-      return err;
-
-    if (status)
-      return svn_error_wrap_apr(status, _("Can't unlock cache mutex"));
-  }
-#endif
-
-  return err;
-}
 
 /* Resolve a dictionary entry reference, i.e. return the entry
  * for the given IDX.
@@ -1076,25 +1038,10 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
           return svn_error_wrap_apr(APR_ENOMEM, _("OOM"));
         }
 
-#if APR_HAS_THREADS
       /* A lock for intra-process synchronization to the cache, or NULL if
        * the cache's creator doesn't feel the cache needs to be
        * thread-safe. */
-
-      c[seg].mutex = NULL;
-      if (thread_safe)
-        {
-          apr_status_t status =
-              apr_thread_mutex_create(&(c[seg].mutex),
-                                      APR_THREAD_MUTEX_DEFAULT,
-                                      pool);
-          if (status)
-            return svn_error_wrap_apr(status, _("Can't create cache mutex"));
-        }
-#else
-      if (thread_safe)
-        return svn_error_wrap_apr(APR_ENOTIMPL, _("APR doesn't support threads"));
-#endif
+      SVN_ERR(svn_mutex__init(&c[seg].mutex, thread_safe, pool));
     }
 
   /* done here
@@ -1141,7 +1088,7 @@ membuffer_cache_set(svn_membuffer_t *cache,
 
   /* The actual cache data access needs to sync'ed
    */
-  SVN_ERR(lock_cache(cache));
+  SVN_ERR(svn_mutex__lock(cache->mutex));
 
   /* if necessary, enlarge the insertion window.
    */
@@ -1185,7 +1132,7 @@ membuffer_cache_set(svn_membuffer_t *cache,
 
   /* done here -> unlock the cache
    */
-  return unlock_cache(cache, SVN_NO_ERROR);
+  return svn_mutex__unlock(cache->mutex, SVN_NO_ERROR);
 }
 
 /* Look for the *ITEM identified by KEY. If no item has been stored
@@ -1219,7 +1166,7 @@ membuffer_cache_get(svn_membuffer_t *cache,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(lock_cache(cache));
+  SVN_ERR(svn_mutex__lock(cache->mutex));
 
   /* The actual cache data access needs to sync'ed
    */
@@ -1230,7 +1177,7 @@ membuffer_cache_get(svn_membuffer_t *cache,
       /* no such entry found.
        */
       *item = NULL;
-      return unlock_cache(cache, SVN_NO_ERROR);
+      return svn_mutex__unlock(cache->mutex, SVN_NO_ERROR);
     }
 
   size = ALIGN_VALUE(entry->size);
@@ -1258,7 +1205,7 @@ membuffer_cache_get(svn_membuffer_t *cache,
   cache->hit_count++;
   cache->total_hits++;
 
-  SVN_ERR(unlock_cache(cache, SVN_NO_ERROR));
+  SVN_ERR(svn_mutex__unlock(cache->mutex, SVN_NO_ERROR));
 
   /* re-construct the original data object from its serialized form.
    */
@@ -1289,7 +1236,7 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
 
   group_index = get_group_index(&cache, key, key_len, to_find, result_pool);
 
-  SVN_ERR(lock_cache(cache));
+  SVN_ERR(svn_mutex__lock(cache->mutex));
 
   entry = find_entry(cache, group_index, to_find, FALSE);
   cache->total_reads++;
@@ -1333,7 +1280,7 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
 
   /* done here -> unlock the cache
    */
-  return unlock_cache(cache, err);
+  return svn_mutex__unlock(cache->mutex, err);
 }
 
 /* Look for the cache entry identified by KEY and KEY_LEN. If no entry
@@ -1359,7 +1306,7 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
    */
   group_index = get_group_index(&cache, key, key_len, to_find, scratch_pool);
 
-  SVN_ERR(lock_cache(cache));
+  SVN_ERR(svn_mutex__lock(cache->mutex));
 
   entry = find_entry(cache, group_index, to_find, FALSE);
   cache->total_reads++;
@@ -1443,7 +1390,7 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
 
   /* done here -> unlock the cache
    */
-  return unlock_cache(cache, err);
+  return svn_mutex__unlock(cache->mutex, err);
 }
 
 /* Implement the svn_cache__t interface on top of a shared membuffer cache.
@@ -1652,6 +1599,8 @@ svn_membuffer_cache_iter(svn_boolean_t *completed,
                           _("Can't iterate a membuffer-based cache"));
 }
 
+/* Implement svn_cache__vtable_t.get_partial
+ */
 static svn_error_t *
 svn_membuffer_cache_get_partial(void **value_p,
                                 svn_boolean_t *found,
@@ -1695,6 +1644,8 @@ svn_membuffer_cache_get_partial(void **value_p,
   return SVN_NO_ERROR;
 }
 
+/* Implement svn_cache__vtable_t.set_partial
+ */
 static svn_error_t *
 svn_membuffer_cache_set_partial(void *cache_void,
                                 const void *key,
@@ -1728,6 +1679,8 @@ svn_membuffer_cache_set_partial(void *cache_void,
   return SVN_NO_ERROR;
 }
 
+/* Implement svn_cache__vtable_t.is_cachable
+ */
 static svn_boolean_t
 svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
 {
@@ -1740,6 +1693,8 @@ svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
       && (size < APR_UINT32_MAX - ITEM_ALIGNMENT);
 }
 
+/* Implement svn_cache__vtable_t.get_info
+ */
 static svn_error_t *
 svn_membuffer_cache_get_info(void *cache_void,
                              svn_cache__info_t *info,
@@ -1766,7 +1721,7 @@ svn_membuffer_cache_get_info(void *cache_void,
     {
       svn_membuffer_t *segment = cache->membuffer + i;
 
-      SVN_ERR(lock_cache(segment));
+      SVN_ERR(svn_mutex__lock(segment->mutex));
 
       info->data_size += segment->data_size;
       info->used_size += segment->data_used;
@@ -1776,7 +1731,7 @@ svn_membuffer_cache_get_info(void *cache_void,
       info->used_entries += segment->used_entries;
       info->total_entries += segment->group_count * GROUP_SIZE;
 
-      SVN_ERR(unlock_cache(segment, SVN_NO_ERROR));
+      SVN_ERR(svn_mutex__unlock(segment->mutex, SVN_NO_ERROR));
     }
 
   return SVN_NO_ERROR;

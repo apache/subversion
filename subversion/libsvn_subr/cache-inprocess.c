@@ -30,6 +30,7 @@
 #include "svn_private_config.h"
 
 #include "cache.h"
+#include "private/svn_mutex.h"
 
 /* The (internal) cache object. */
 typedef struct inprocess_cache_t {
@@ -80,12 +81,10 @@ typedef struct inprocess_cache_t {
    */
   apr_size_t data_size;
 
-#if APR_HAS_THREADS
   /* A lock for intra-process synchronization to the cache, or NULL if
    * the cache's creator doesn't feel the cache needs to be
    * thread-safe. */
-  apr_thread_mutex_t *mutex;
-#endif
+  svn_mutex__t mutex;
 } inprocess_cache_t;
 
 /* A cache page; all items on the page are allocated from the same
@@ -182,41 +181,6 @@ duplicate_key(inprocess_cache_t *cache,
     return apr_pmemdup(pool, key, cache->klen);
 }
 
-/* If applicable, locks CACHE's mutex. */
-static svn_error_t *
-lock_cache(inprocess_cache_t *cache)
-{
-#if APR_HAS_THREADS
-  apr_status_t status;
-  if (! cache->mutex)
-    return SVN_NO_ERROR;
-
-  status = apr_thread_mutex_lock(cache->mutex);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't lock cache mutex"));
-#endif
-
-  return SVN_NO_ERROR;
-}
-
-/* If applicable, unlocks CACHE's mutex, then returns ERR. */
-static svn_error_t *
-unlock_cache(inprocess_cache_t *cache,
-             svn_error_t *err)
-{
-#if APR_HAS_THREADS
-  apr_status_t status;
-  if (! cache->mutex)
-    return err;
-
-  status = apr_thread_mutex_unlock(cache->mutex);
-  if (status && !err)
-    return svn_error_wrap_apr(status, _("Can't unlock cache mutex"));
-#endif
-
-  return err;
-}
-
 static svn_error_t *
 inprocess_cache_get(void **value_p,
                     svn_boolean_t *found,
@@ -229,13 +193,13 @@ inprocess_cache_get(void **value_p,
   struct cache_entry *entry;
   char* buffer;
 
-  SVN_ERR(lock_cache(cache));
+  SVN_ERR(svn_mutex__lock(cache->mutex));
 
   entry = apr_hash_get(cache->hash, key, cache->klen);
   if (! entry)
     {
       *found = FALSE;
-      return unlock_cache(cache, SVN_NO_ERROR);
+      return svn_mutex__unlock(cache->mutex, SVN_NO_ERROR);
     }
 
   SVN_ERR(move_page_to_front(cache, entry->page));
@@ -245,7 +209,7 @@ inprocess_cache_get(void **value_p,
   memcpy(buffer, entry->value, entry->size);
 
   /* the cache is no longer being accessed */
-  SVN_ERR(unlock_cache(cache, SVN_NO_ERROR));
+  SVN_ERR(svn_mutex__unlock(cache->mutex, SVN_NO_ERROR));
 
   /* deserialize the buffer content. Usually, this will directly
      modify the buffer content directly.
@@ -301,7 +265,7 @@ inprocess_cache_set(void *cache_void,
   struct cache_entry *existing_entry;
   svn_error_t *err = SVN_NO_ERROR;
 
-  SVN_ERR(lock_cache(cache));
+  SVN_ERR(svn_mutex__lock(cache->mutex));
 
   existing_entry = apr_hash_get(cache->hash, key, cache->klen);
 
@@ -419,7 +383,7 @@ inprocess_cache_set(void *cache_void,
   }
 
  cleanup:
-  return unlock_cache(cache, err);
+  return svn_mutex__unlock(cache->mutex, err);
 }
 
 /* Baton type for svn_cache__iter. */
@@ -455,10 +419,10 @@ inprocess_cache_iter(svn_boolean_t *completed,
   b.user_cb = user_cb;
   b.user_baton = user_baton;
 
-  SVN_ERR(lock_cache(cache));
-  return unlock_cache(cache,
-                      svn_iter_apr_hash(completed, cache->hash, iter_cb, &b,
-                                        scratch_pool));
+  SVN_ERR(svn_mutex__lock(cache->mutex));
+  return svn_mutex__unlock(cache->mutex,
+                           svn_iter_apr_hash(completed, cache->hash, 
+                                             iter_cb, &b, scratch_pool));
 }
 
 static svn_error_t *
@@ -473,21 +437,21 @@ inprocess_cache_get_partial(void **value_p,
   inprocess_cache_t *cache = cache_void;
   struct cache_entry *entry;
 
-  SVN_ERR(lock_cache(cache));
+  SVN_ERR(svn_mutex__lock(cache->mutex));
 
   entry = apr_hash_get(cache->hash, key, cache->klen);
   if (! entry)
     {
       *found = FALSE;
-      return unlock_cache(cache, SVN_NO_ERROR);
+      return svn_mutex__unlock(cache->mutex, SVN_NO_ERROR);
     }
 
   SVN_ERR(move_page_to_front(cache, entry->page));
 
   *found = TRUE;
-  return unlock_cache(cache,
-                      func(value_p, entry->value, entry->size, baton,
-                           result_pool));
+  return svn_mutex__unlock(cache->mutex,
+                           func(value_p, entry->value, entry->size,
+                                baton, result_pool));
 }
 
 static svn_error_t *
@@ -501,11 +465,11 @@ inprocess_cache_set_partial(void *cache_void,
   struct cache_entry *entry;
   svn_error_t *err = SVN_NO_ERROR;
 
-  SVN_ERR(lock_cache(cache));
+  SVN_ERR(svn_mutex__lock(cache->mutex));
 
   entry = apr_hash_get(cache->hash, key, cache->klen);
   if (! entry)
-    return unlock_cache(cache, err);
+    return svn_mutex__unlock(cache->mutex, err);
 
   SVN_ERR(move_page_to_front(cache, entry->page));
 
@@ -516,7 +480,7 @@ inprocess_cache_set_partial(void *cache_void,
              entry->page->page_pool);
   cache->data_size += entry->size;
 
-  return unlock_cache(cache, err);
+  return svn_mutex__unlock(cache->mutex, err);
 }
 
 static svn_boolean_t
@@ -539,7 +503,7 @@ inprocess_cache_get_info(void *cache_void,
 {
   inprocess_cache_t *cache = cache_void;
 
-  SVN_ERR(lock_cache(cache));
+  SVN_ERR(svn_mutex__lock(cache->mutex));
 
   info->id = apr_pstrdup(result_pool, cache->id);
 
@@ -552,7 +516,7 @@ inprocess_cache_get_info(void *cache_void,
                    + cache->items_per_page * sizeof(struct cache_page)
                    + info->used_entries * sizeof(struct cache_entry);
 
-  return unlock_cache(cache, SVN_NO_ERROR);
+  return svn_mutex__unlock(cache->mutex, SVN_NO_ERROR);
 }
 
 
@@ -602,17 +566,7 @@ svn_cache__create_inprocess(svn_cache__t **cache_p,
   /* The sentinel doesn't need a pool.  (We're happy to crash if we
    * accidentally try to treat it like a real page.) */
 
-#if APR_HAS_THREADS
-  if (thread_safe)
-    {
-      apr_status_t status = apr_thread_mutex_create(&(cache->mutex),
-                                                    APR_THREAD_MUTEX_DEFAULT,
-                                                    pool);
-      if (status)
-        return svn_error_wrap_apr(status,
-                                  _("Can't create cache mutex"));
-    }
-#endif
+  SVN_ERR(svn_mutex__init(&cache->mutex, thread_safe, pool));
 
   cache->cache_pool = pool;
 
