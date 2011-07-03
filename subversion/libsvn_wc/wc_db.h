@@ -1817,6 +1817,7 @@ struct svn_wc__db_info_t {
   svn_revnum_t revnum;
   const char *repos_relpath;
   const char *repos_root_url;
+  const char *repos_uuid;
   svn_revnum_t changed_rev;
   const char *changed_author;
   apr_time_t changed_date;

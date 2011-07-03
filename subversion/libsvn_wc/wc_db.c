@@ -6665,6 +6665,7 @@ read_children_info(void *baton,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   const char *repos_root_url = NULL;
+  const char *repos_uuid = NULL;
   apr_int64_t last_repos_id;
   apr_hash_t *nodes = rci->nodes;
   apr_hash_t *conflicts = rci->conflicts;
@@ -6727,13 +6728,14 @@ read_children_info(void *baton,
           if (op_depth != 0 || svn_sqlite__column_is_null(stmt, 1))
             {
               child->repos_root_url = NULL;
+              child->repos_uuid = NULL;
             }
           else
             {
               apr_int64_t repos_id = svn_sqlite__column_int64(stmt, 1);
               if (!repos_root_url)
                 {
-                  err = fetch_repos_info(&repos_root_url, NULL,
+                  err = fetch_repos_info(&repos_root_url, &repos_uuid,
                                          wcroot->sdb, repos_id, result_pool);
                   if (err)
                     SVN_ERR(svn_error_compose_create(err,
@@ -6745,6 +6747,7 @@ read_children_info(void *baton,
                  single cached value is sufficient. */
               SVN_ERR_ASSERT(repos_id == last_repos_id);
               child->repos_root_url = repos_root_url;
+              child->repos_uuid = repos_uuid;
             }
 
           child->changed_rev = svn_sqlite__column_revnum(stmt, 8);
