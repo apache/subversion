@@ -2115,6 +2115,9 @@ typedef struct svn_client_status_t
   /** The URL of the repository root. */
   const char *repos_root_url;
 
+  /** The UUID of the repository */
+  const char *repos_uuid;
+
   /** The in-repository path relative to the repository root. */
   const char *repos_relpath;
 

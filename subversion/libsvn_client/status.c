@@ -542,6 +542,9 @@ svn_client_status_dup(const svn_client_status_t *status,
   if (status->repos_root_url)
     st->repos_root_url = apr_pstrdup(result_pool, status->repos_root_url);
 
+  if (status->repos_uuid)
+    st->repos_uuid = apr_pstrdup(result_pool, status->repos_uuid);
+
   if (status->repos_relpath)
     st->repos_relpath = apr_pstrdup(result_pool, status->repos_relpath);
 
@@ -603,6 +606,7 @@ svn_client__create_status(svn_client_status_t **cst,
   (*cst)->changed_author = status->changed_author;
 
   (*cst)->repos_root_url = status->repos_root_url;
+  (*cst)->repos_uuid = status->repos_uuid;
   (*cst)->repos_relpath = status->repos_relpath;
 
   (*cst)->switched = status->switched;
