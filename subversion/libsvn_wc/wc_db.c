@@ -4032,7 +4032,7 @@ catch_copy_of_absent(svn_wc__db_wcroot_t *wcroot,
   const char *absent_relpath;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_HAS_ABSENT_NODES));
+                                    STMT_HAS_SERVER_EXCLUDED_NODES));
   SVN_ERR(svn_sqlite__bindf(stmt, "is",
                             wcroot->wc_id,
                             local_relpath));
@@ -6050,7 +6050,7 @@ op_delete_txn(void *baton,
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_HAS_ABSENT_NODES));
+                                    STMT_HAS_SERVER_EXCLUDED_NODES));
   SVN_ERR(svn_sqlite__bindf(stmt, "is",
                             wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -11743,7 +11743,7 @@ svn_wc__db_get_absent_subtrees(apr_hash_t **absent_subtrees,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_ALL_ABSENT_NODES));
+                                    STMT_SELECT_ALL_SERVER_EXCLUDED_NODES));
   SVN_ERR(svn_sqlite__bindf(stmt, "is",
                             wcroot->wc_id,
                             local_relpath));
