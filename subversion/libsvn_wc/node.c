@@ -1306,11 +1306,12 @@ svn_wc__get_absent_subtrees(apr_hash_t **absent_subtrees,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(svn_wc__db_get_absent_subtrees(absent_subtrees,
-                                                        wc_ctx->db,
-                                                        local_abspath,
-                                                        result_pool,
-                                                        scratch_pool));
+  return svn_error_trace(
+           svn_wc__db_get_server_excluded_subtrees(absent_subtrees,
+                                                   wc_ctx->db,
+                                                   local_abspath,
+                                                   result_pool,
+                                                   scratch_pool));
 }
 
 svn_error_t *

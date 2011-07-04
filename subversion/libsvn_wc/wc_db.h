@@ -2983,18 +2983,19 @@ svn_wc__db_has_switched_subtrees(svn_boolean_t *is_switched,
                                  const char *trail_url,
                                  apr_pool_t *scratch_pool);
 
-/* Set @a *absent_subtrees to a hash mapping <tt>const char *</tt> local
- * absolute paths to <tt>const char *</tt> local absolute paths for every
- * path at or under @a local_abspath in @a db which are absent (excluded
- * by authz).  If no absent paths are found then @a *absent_subtrees is set
- * to @c NULL.  Allocate the hash and all items therein from @a result_pool.
+/* Set @a *server_excluded_subtrees to a hash mapping <tt>const char *</tt>
+ * local absolute paths to <tt>const char *</tt> local absolute paths for
+ * every path at or under @a local_abspath in @a db which are excluded by
+ * the server (e.g. due to authz).  If no such paths are found then
+ * @a *server_excluded_subtrees is set to @c NULL.
+ * Allocate the hash and all items therein from @a result_pool.
  */
 svn_error_t *
-svn_wc__db_get_absent_subtrees(apr_hash_t **absent_subtrees,
-                               svn_wc__db_t *db,
-                               const char *local_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
+svn_wc__db_get_server_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
+                                        svn_wc__db_t *db,
+                                        const char *local_abspath,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool);
 
 /* Indicate in *IS_MODIFIED whether the working copy has local modifications,
  * using DB. Use SCRATCH_POOL for temporary allocations.
