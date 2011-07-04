@@ -842,7 +842,7 @@ WHERE wc_id = ?1
 SELECT 1 FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2
 LIMIT 1
 
--- STMT_HAS_ABSENT_NODES
+-- STMT_HAS_SERVER_EXCLUDED_NODES
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1
   AND (?2 = ''
@@ -851,8 +851,8 @@ WHERE wc_id = ?1
   AND op_depth = 0 AND presence = 'absent'
 LIMIT 1
 
-/* ### Select all absent nodes. */
--- STMT_SELECT_ALL_ABSENT_NODES
+/* ### Select all server-excluded nodes. */
+-- STMT_SELECT_ALL_SERVER_EXCLUDED_NODES
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1
   AND (?2 = ''
