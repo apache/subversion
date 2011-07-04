@@ -1867,17 +1867,17 @@ add_excluded_or_not_present_node(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                const char *repos_relpath,
-                                const char *repos_root_url,
-                                const char *repos_uuid,
-                                svn_revnum_t revision,
-                                svn_wc__db_kind_t kind,
-                                svn_wc__db_status_t status,
-                                const svn_skel_t *conflict,
-                                const svn_skel_t *work_items,
-                                apr_pool_t *scratch_pool)
+svn_wc__db_base_add_excluded_node(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  const char *repos_relpath,
+                                  const char *repos_root_url,
+                                  const char *repos_uuid,
+                                  svn_revnum_t revision,
+                                  svn_wc__db_kind_t kind,
+                                  svn_wc__db_status_t status,
+                                  const svn_skel_t *conflict,
+                                  const svn_skel_t *work_items,
+                                  apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(status == svn_wc__db_status_server_excluded
                  || status == svn_wc__db_status_excluded);

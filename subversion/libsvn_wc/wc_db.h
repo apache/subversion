@@ -610,7 +610,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
    at revision REVISION.
 
    The node's kind is described by KIND, and the reason for its absence
-   is specified by STATUS. Only three values are allowed for STATUS:
+   is specified by STATUS. Only these values are allowed for STATUS:
 
      svn_wc__db_status_server_excluded
      svn_wc__db_status_excluded
@@ -624,17 +624,17 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
    All temporary allocations will be made in SCRATCH_POOL.
 */
 svn_error_t *
-svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                const char *repos_relpath,
-                                const char *repos_root_url,
-                                const char *repos_uuid,
-                                svn_revnum_t revision,
-                                svn_wc__db_kind_t kind,
-                                svn_wc__db_status_t status,
-                                const svn_skel_t *conflict,
-                                const svn_skel_t *work_items,
-                                apr_pool_t *scratch_pool);
+svn_wc__db_base_add_excluded_node(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  const char *repos_relpath,
+                                  const char *repos_root_url,
+                                  const char *repos_uuid,
+                                  svn_revnum_t revision,
+                                  svn_wc__db_kind_t kind,
+                                  svn_wc__db_status_t status,
+                                  const svn_skel_t *conflict,
+                                  const svn_skel_t *work_items,
+                                  apr_pool_t *scratch_pool);
 
 
 /* Create a node in the BASE tree that is present in name only.
