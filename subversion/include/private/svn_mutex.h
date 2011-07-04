@@ -51,7 +51,7 @@ typedef apr_thread_mutex_t svn_mutex__t;
 
 /** Dummy definition. The content will never be actually accessed.
  */
-typedef int svn_mutex__t;
+typedef void svn_mutex__t;
 
 #endif
 
