@@ -283,11 +283,6 @@ struct dav_resource_private {
 
   /* Cache any revprop change error */
   svn_error_t *revprop_error;
-
-  /* Scratch pool for temporary allocations. This pool created on demand or
-     cleared if already created in mod_dav callbacks. Currently used only by
-     insert_liveprop() callback. */
-  apr_pool_t *scratch_pool;
 };
 
 
