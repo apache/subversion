@@ -2885,16 +2885,16 @@ absent_node(const char *path,
     const char *repos_relpath;
     repos_relpath = svn_relpath_join(pb->new_relpath, name, scratch_pool);
 
-    /* Insert an absent node below the parent node to note that this child
+    /* Insert an excluded node below the parent node to note that this child
        is absent. (This puts it in the parent db if the child is obstructed) */
-    SVN_ERR(svn_wc__db_base_add_absent_node(eb->db, local_abspath,
-                                            repos_relpath, eb->repos_root,
-                                            eb->repos_uuid,
-                                            *(eb->target_revision),
-                                            absent_kind,
-                                            svn_wc__db_status_server_excluded,
-                                            NULL, NULL,
-                                            scratch_pool));
+    SVN_ERR(svn_wc__db_base_add_excluded_node(eb->db, local_abspath,
+                                              repos_relpath, eb->repos_root,
+                                              eb->repos_uuid,
+                                              *(eb->target_revision),
+                                              absent_kind,
+                                              svn_wc__db_status_server_excluded,
+                                              NULL, NULL,
+                                              scratch_pool));
   }
 
   svn_pool_destroy(scratch_pool);
