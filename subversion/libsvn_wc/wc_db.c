@@ -1795,17 +1795,17 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
 
 
 static svn_error_t *
-add_absent_excluded_not_present_node(svn_wc__db_t *db,
-                                     const char *local_abspath,
-                                     const char *repos_relpath,
-                                     const char *repos_root_url,
-                                     const char *repos_uuid,
-                                     svn_revnum_t revision,
-                                     svn_wc__db_kind_t kind,
-                                     svn_wc__db_status_t status,
-                                     const svn_skel_t *conflict,
-                                     const svn_skel_t *work_items,
-                                     apr_pool_t *scratch_pool)
+add_excluded_or_not_present_node(svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 const char *repos_relpath,
+                                 const char *repos_root_url,
+                                 const char *repos_uuid,
+                                 svn_revnum_t revision,
+                                 svn_wc__db_kind_t kind,
+                                 svn_wc__db_status_t status,
+                                 const svn_skel_t *conflict,
+                                 const svn_skel_t *work_items,
+                                 apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
@@ -1882,7 +1882,7 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
   SVN_ERR_ASSERT(status == svn_wc__db_status_server_excluded
                  || status == svn_wc__db_status_excluded);
 
-  return add_absent_excluded_not_present_node(
+  return add_excluded_or_not_present_node(
     db, local_abspath, repos_relpath, repos_root_url, repos_uuid, revision,
     kind, status, conflict, work_items, scratch_pool);
 }
@@ -1900,7 +1900,7 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
                                      const svn_skel_t *work_items,
                                      apr_pool_t *scratch_pool)
 {
-  return add_absent_excluded_not_present_node(
+  return add_excluded_or_not_present_node(
     db, local_abspath, repos_relpath, repos_root_url, repos_uuid, revision,
     kind, svn_wc__db_status_not_present, conflict, work_items, scratch_pool);
 }
