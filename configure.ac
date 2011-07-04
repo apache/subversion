@@ -215,15 +215,21 @@ AC_DEFINE_UNQUOTED(SVN_LOCALE_DIR, "${svn_localedir}",
                    [Defined to be the path to the installed locale dirs])
 
 dnl Check for libtool -- we'll definitely need it for all our shared libs!
-AC_ARG_WITH(custom-libtool,
-AS_HELP_STRING([--with-custom-libtool=PATH],
-               [Specify the command to run libtool]),
-               [ AC_MSG_NOTICE([using $withval as libtool])
-                 sh_libtool="$withval" ],
-               [ AC_MSG_NOTICE([using APR's libtool])
-                 sh_libtool="`$apr_config --apr-libtool`" ])
-LIBTOOL="$sh_libtool"
-SVN_LIBTOOL="$sh_libtool"
+echo "configuring libtool now"
+ifdef([LT_INIT], [LT_INIT], [AC_PROG_LIBTOOL])
+AC_ARG_ENABLE(experimental-libtool,
+  AS_HELP_STRING([--enable-experimental-libtool],[Use APR's libtool]),
+  [experimental_libtool=$enableval],[experimental_libtool=no])
+
+if test "$experimental_libtool" = "yes"; then
+  echo "using APR's libtool"
+  sh_libtool="`$apr_config --apr-libtool`"
+  LIBTOOL="$sh_libtool"
+  SVN_LIBTOOL="$sh_libtool"
+else
+  sh_libtool="$abs_builddir/libtool"
+  SVN_LIBTOOL="\$(SHELL) $sh_libtool"
+fi
 AC_SUBST(SVN_LIBTOOL)
 
 dnl Determine the libtool version
