@@ -1106,12 +1106,12 @@ SVN_CHECK_JDK($JAVA_OLDEST_WORKING_VER)
 
 AC_PATH_PROG(PERL, perl, none)
 
-AC_PATH_PROGS(RUBY, "$RUBY" ruby ruby1.9 ruby19 ruby1.8 ruby18, none)
+AC_PATH_PROGS(RUBY, "$RUBY" ruby ruby1.8 ruby18, none)
 if test "$RUBY" != "none"; then
   AC_MSG_CHECKING([rb_hash_foreach])
   if "$RUBY" -r mkmf -e 'exit(have_func("rb_hash_foreach") ? 0 : 1)' >/dev/null; then
     AC_MSG_RESULT([yes])
-    AC_PATH_PROGS(RDOC, "$RDOC" rdoc rdoc1.9 rdoc19 rdoc1.8 rdoc18, none)
+    AC_PATH_PROGS(RDOC, "$RDOC" rdoc rdoc1.8 rdoc18, none)
     AC_CACHE_CHECK([for Ruby major version], [svn_cv_ruby_major],[
     svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(MAJOR))'`"
     ])
@@ -1124,6 +1124,13 @@ if test "$RUBY" != "none"; then
 
     AC_SUBST(RUBY_MAJOR)
     AC_SUBST(RUBY_MINOR)
+    if test ! \( "$RUBY_MAJOR" -eq "1" -a "$RUBY_MINOR" -eq "8" \); then
+      # Disallow Ruby 1.9 or later until the binding tests get fixed
+      # to run with those versions.
+      RUBY="none"
+      AC_MSG_WARN([The detected Ruby is too new for Subversion to use])
+      AC_MSG_WARN([Only 1.8.x releases are supported at this time])
+    fi
   else
     AC_MSG_RESULT([no])
     RUBY="none"
