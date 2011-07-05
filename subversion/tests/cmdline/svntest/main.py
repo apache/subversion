@@ -1111,6 +1111,9 @@ def server_gets_client_capabilities():
 def server_has_partial_replay():
   return options.server_minor_version >= 5
 
+def server_enforces_UTF8_fspaths_in_verify():
+  return options.server_minor_version >= 6
+
 def server_enforces_date_syntax():
   return options.server_minor_version >= 5
 

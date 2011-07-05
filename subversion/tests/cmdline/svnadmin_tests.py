@@ -1320,6 +1320,7 @@ text
 # However, the verification triggered by this test is in the repos layer
 # so it will trigger with either backend anyway.
 @SkipUnless(svntest.main.is_fs_type_fsfs)
+@SkipUnless(svntest.main.server_enforces_UTF8_fspaths_in_verify)
 def verify_non_utf8_paths(sbox):
   "svnadmin verify with non-UTF-8 paths"
 
