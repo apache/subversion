@@ -1878,7 +1878,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
                              svn_path_uri_encode(info->name, info->pool),
                              info->pool);
 
-#if 0
+#if 1
           /* If this file is switched vs the editor root we should provide
              its real url instead of the one calculated from the session root.
            */
