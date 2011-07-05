@@ -1522,6 +1522,9 @@ def _parse_options(arglist=sys.argv[1:]):
     parser.error("'verbose' and 'quiet' are incompatible")
   if options.fsfs_packing and not options.fsfs_sharding:
     parser.error("--fsfs-packing requires --fsfs-sharding")
+
+  # If you change the below condition then change
+  # ../../../../build/run_tests.py too.
   if options.server_minor_version < 4 or options.server_minor_version > 7:
     parser.error("test harness only supports server minor versions 4-7")
 

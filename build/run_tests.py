@@ -108,6 +108,12 @@ class TestHarness:
     self.fs_type = fs_type
     self.http_library = http_library
     self.server_minor_version = server_minor_version
+    # If you change the below condition then change in
+    # ../subversion/tests/cmdline/svntest/main.py too.
+    if server_minor_version is not None:
+      if int(server_minor_version) < 4 or int(serer_minor_version) > 7:
+        sys.stderr.write("Test harness only supports server minor versions 4-7\n")
+        sys.exit(1)
     self.verbose = verbose
     self.cleanup = cleanup
     self.enable_sasl = enable_sasl
