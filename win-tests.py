@@ -79,6 +79,7 @@ def _usage_exit():
   print("  --http-library         : dav library to use, neon (default) or serf")
   print("  --http-short-circuit   : Use SVNPathAuthz short_circuit on HTTP server")
   print("  --disable-http-v2      : Do not advertise support for HTTPv2 on server")
+  print("  --disable-bulk-updates : Disable bulk updates on HTTP server")
   print("  --javahl               : Run the javahl tests instead of the normal tests")
   print("  --list                 : print test doc strings only")
   print("  --milestone-filter=RE  : RE is a regular expression pattern that (when")
@@ -126,7 +127,7 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                         'test=', 'url=', 'svnserve-args=', 'fs-type=', 'asp.net-hack',
                         'httpd-dir=', 'httpd-port=', 'httpd-daemon',
                         'httpd-server', 'http-library=', 'http-short-circuit',
-                        'disable-http-v2', 'help',
+                        'disable-http-v2', 'disable-bulk-updates', 'help',
                         'fsfs-packing', 'fsfs-sharding=', 'javahl',
                         'list', 'enable-sasl', 'bin=', 'parallel',
                         'config-file=', 'server-minor-version=',
@@ -148,6 +149,7 @@ httpd_service = None
 http_library = 'neon'
 http_short_circuit = False
 advertise_httpv2 = True
+http_bulk_updates = True
 list_tests = None
 milestone_filter = None
 test_javahl = None
@@ -199,8 +201,10 @@ for opt, val in opts:
     http_library = val
   elif opt == '--http-short-circuit':
     http_short_circuit = True
-  elif opt == 'disable-http-v2':
+  elif opt == '--disable-http-v2':
     advertise_httpv2 = False
+  elif opt == '--disable-bulk-updates':
+    http_bulk_updates = False
   elif opt == '--fsfs-sharding':
     fsfs_sharding = int(val)
   elif opt == '--fsfs-packing':
@@ -424,7 +428,7 @@ class Svnserve:
 class Httpd:
   "Run httpd for DAV tests"
   def __init__(self, abs_httpd_dir, abs_objdir, abs_builddir, httpd_port,
-               service, httpv2, short_circuit):
+               service, httpv2, short_circuit, bulk_updates):
     self.name = 'apache.exe'
     self.httpd_port = httpd_port
     self.httpd_dir = abs_httpd_dir
@@ -433,6 +437,11 @@ class Httpd:
       self.httpv2_option = 'on'
     else:
       self.httpv2_option = 'off'
+      
+    if bulk_updates:
+      self.bulkupdates_option = 'on'
+    else:
+      self.bulkupdates_option = 'off'
 
     self.service = service
     self.proc_handle = None
@@ -578,6 +587,7 @@ class Httpd:
       '  SVNParentPath   ' + self._quote(path) + '\n' \
       '  SVNAdvertiseV2Protocol ' + self.httpv2_option + '\n' \
       '  SVNPathAuthz ' + self.path_authz_option + '\n' \
+      '  SVNAllowBulkUpdates ' + self.bulkupdates_option + '\n' \
       '  AuthzSVNAccessFile ' + self._quote(self.authz_file) + '\n' \
       '  AuthType        Basic\n' \
       '  AuthName        "Subversion Repository"\n' \
@@ -668,7 +678,8 @@ if not list_tests:
 
   if run_httpd:
     daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, httpd_port,
-                   httpd_service, advertise_httpv2, http_short_circuit)
+                   httpd_service, advertise_httpv2, http_short_circuit,
+                   http_bulk_updates)
 
   # Start service daemon, if any
   if daemon:
