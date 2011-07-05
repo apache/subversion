@@ -90,6 +90,7 @@ get_wc_prop(void *baton,
 {
   callback_baton_t *cb = baton;
   const char *local_abspath;
+  svn_error_t *err;
 
   *value = NULL;
 
@@ -107,9 +108,14 @@ get_wc_prop(void *baton,
           if (! strcmp(relpath, item->session_relpath))
             {
               SVN_ERR_ASSERT(svn_dirent_is_absolute(item->path));
-              return svn_error_trace(svn_wc_prop_get2(value, cb->ctx->wc_ctx,
-                                                      item->path, name,
-                                                      pool, pool));
+               err = svn_wc_prop_get2(value, cb->ctx->wc_ctx, item->path, name,
+                                      pool, pool);
+               if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+                 {
+                   svn_error_clear(err);
+                   err = NULL;
+                 }
+               return svn_error_trace(err);
             }
         }
 
@@ -122,8 +128,14 @@ get_wc_prop(void *baton,
 
   local_abspath = svn_dirent_join(cb->base_dir_abspath, relpath, pool);
 
-  return svn_error_trace(svn_wc_prop_get2(value, cb->ctx->wc_ctx,
-                                          local_abspath, name, pool, pool));
+  err = svn_wc_prop_get2(value, cb->ctx->wc_ctx, local_abspath, name,
+                         pool, pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      err = NULL;
+    }
+  return svn_error_trace(err);
 }
 
 /* This implements the 'svn_ra_push_wc_prop_func_t' interface. */

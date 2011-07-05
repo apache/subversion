@@ -2360,11 +2360,10 @@ svn_wc_prop_list(apr_hash_t **props,
     {
       *props = apr_hash_make(pool);
       svn_error_clear(err);
+      err = NULL;
     }
-  else if (err)
-    return svn_error_trace(err);
 
-  return svn_error_trace(svn_wc_context_destroy(wc_ctx));
+  return svn_error_compose_create(err, svn_wc_context_destroy(wc_ctx));
 }
 
 svn_error_t *
@@ -2386,11 +2385,13 @@ svn_wc_prop_get(const svn_string_t **value,
   err = svn_wc_prop_get2(value, wc_ctx, local_abspath, name, pool, pool);
 
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    svn_error_clear(err);
-  else
-    SVN_ERR(err);
+    {
+      *value = NULL;
+      svn_error_clear(err);
+      err = NULL;
+    }
 
-  return svn_error_trace(svn_wc_context_destroy(wc_ctx));
+  return svn_error_compose_create(err, svn_wc_context_destroy(wc_ctx));
 }
 
 /* baton for conflict_func_1to2_wrapper */
