@@ -97,7 +97,7 @@ else
   esac
 fi
 
-libtool=`./build/PrintPath glibtool libtool libtool15`
+libtool=${LIBTOOL:-`./build/PrintPath glibtool libtool libtool15`}
 # Extract the libtool version number: everything from the first number in
 # the version text until a hyphen or space.
 lt_pversion=`$libtool --version 2>/dev/null |
