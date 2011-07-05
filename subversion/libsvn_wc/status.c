@@ -537,7 +537,7 @@ assemble_status(svn_wc_status3_t **status,
 
               if (err)
                 {
-                  if (!APR_STATUS_IS_EACCES(err->apr_err))
+                  if (err->apr_err != SVN_ERR_WC_PATH_ACCESS_DENIED)
                     return svn_error_trace(err);
 
                   /* An access denied is very common on Windows when another

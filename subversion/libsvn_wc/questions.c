@@ -335,12 +335,22 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
                                    scratch_pool, scratch_pool));
 
   /* Check all bytes, and verify checksum if requested. */
-  SVN_ERR(compare_and_verify(modified_p, db,
+  {
+    svn_error_t *err;
+    err = compare_and_verify(modified_p, db,
                              local_abspath, dirent->filesize,
                              pristine_stream, pristine_size,
                              has_props, props_mod,
                              exact_comparison,
-                             scratch_pool));
+                             scratch_pool);
+
+    /* At this point we already opened the pristine file, so we know that
+       the access denied applies to the working copy path */
+    if (err && APR_STATUS_IS_EACCES(err->apr_err))
+      return svn_error_create(SVN_ERR_WC_PATH_ACCESS_DENIED, err, NULL);
+    else
+      SVN_ERR(err);
+  }
 
   if (!*modified_p)
     {
