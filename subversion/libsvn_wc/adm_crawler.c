@@ -729,6 +729,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
         {
           svn_error_clear(err);
           wrk_status = svn_wc__db_status_not_present;
+          wrk_kind = svn_wc__db_kind_file;
         }
       else
         SVN_ERR(err);
