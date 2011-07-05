@@ -89,7 +89,7 @@ get_wc_prop(void *baton,
             apr_pool_t *pool)
 {
   callback_baton_t *cb = baton;
-  const char *local_abspath;
+  const char *local_abspath = NULL;
   svn_error_t *err;
 
   *value = NULL;
@@ -102,31 +102,28 @@ get_wc_prop(void *baton,
       for (i = 0; i < cb->commit_items->nelts; i++)
         {
           svn_client_commit_item3_t *item
-            = APR_ARRAY_IDX(cb->commit_items, i,
-                            svn_client_commit_item3_t *);
+            = APR_ARRAY_IDX(cb->commit_items, i, svn_client_commit_item3_t *);
 
           if (! strcmp(relpath, item->session_relpath))
             {
               SVN_ERR_ASSERT(svn_dirent_is_absolute(item->path));
-               err = svn_wc_prop_get2(value, cb->ctx->wc_ctx, item->path, name,
-                                      pool, pool);
-               if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-                 {
-                   svn_error_clear(err);
-                   err = NULL;
-                 }
-               return svn_error_trace(err);
+              local_abspath = item->path;
+              break;
             }
         }
 
-      return SVN_NO_ERROR;
+      /* ### Why are commits only allowed to query relpaths in the
+             commit_items list?  It's been like that since 1.0. */
+      if (! local_abspath)
+        return SVN_NO_ERROR;
     }
 
   /* If we don't have a base directory, then there are no properties. */
   else if (cb->base_dir_abspath == NULL)
     return SVN_NO_ERROR;
 
-  local_abspath = svn_dirent_join(cb->base_dir_abspath, relpath, pool);
+  else
+    local_abspath = svn_dirent_join(cb->base_dir_abspath, relpath, pool);
 
   err = svn_wc_prop_get2(value, cb->ctx->wc_ctx, local_abspath, name,
                          pool, pool);
