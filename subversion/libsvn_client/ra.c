@@ -112,8 +112,10 @@ get_wc_prop(void *baton,
             }
         }
 
-      /* ### Why are commits only allowed to query relpaths in the
-             commit_items list?  It's been like that since 1.0. */
+      /* Commits can only query relpaths in the commit_items list
+         since the commit driver traverses paths as they are, or will
+         be, in the repository.  Non-commits query relpaths in the
+         working copy. */
       if (! local_abspath)
         return SVN_NO_ERROR;
     }
