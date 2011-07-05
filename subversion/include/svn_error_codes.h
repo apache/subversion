@@ -530,6 +530,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 38,
              "This operation can not be performed with just this depth.")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_WC_PATH_ACCESS_DENIED,
+             SVN_ERR_WC_CATEGORY_START + 39,
+             "Couldn't open a working copy file because access was denied")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,

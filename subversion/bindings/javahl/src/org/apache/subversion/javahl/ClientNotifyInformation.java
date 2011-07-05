@@ -468,6 +468,9 @@ public class ClientNotifyInformation extends EventObject
         /** Skipping a working only node */
         update_skip_working_only ("update skip working only"),
 
+        /** Skipped a file or directory to which access couldn't be obtained */
+        update_skip_access_denied ("update skip access denied"),
+
         /** An update operation removed an external working copy.  */
         update_external_removed ("update external removed"),
 

@@ -1107,6 +1107,10 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.7. */
   svn_wc_notify_update_skip_working_only,
 
+  /** An update tried to update a file or directory to which access could
+   * not be obtained. @since New in 1.7. */
+  svn_wc_notify_update_skip_access_denied,
+
   /** An update operation removed an external working copy.
    * @since New in 1.7. */
   svn_wc_notify_update_external_removed,

@@ -5342,6 +5342,57 @@ def revive_children_of_copy(sbox):
   if not os.path.exists(psi2_path):
     raise svntest.Failure('psi unexpectedly non-existent')
 
+@SkipUnless(svntest.main.is_os_windows)
+def skip_access_denied(sbox):
+  """access denied paths should be skipped"""
+
+  # We need something to lock the file. 'msvcrt' looks common on Windows
+  try:
+    import msvcrt
+  except ImportError:
+    raise svntest.Skip
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota = sbox.ospath('iota')
+
+  svntest.main.file_write(iota, 'Q')
+  sbox.simple_commit()
+  sbox.simple_update() # Update to r2
+
+  # Open iota for writing to keep an handle open
+  f = open(iota, 'w')
+
+  # Write new text of exactly the same size to avoid the early out
+  # on a different size without properties.
+  f.write('R')
+  f.flush()
+
+  # And lock the first byte of the file
+  msvcrt.locking(f.fileno(), 1, 1)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Skipped'),
+    })
+
+  # Create expected status tree: iota isn't updated
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status='M ', wc_rev=2)
+
+  # And now check that update skips the path
+  # *and* status shows the path as modified.
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None, None, wc_dir, '-r', '1')
+
+  f.close()
+
+
 
 #######################################################################
 # Run the tests
@@ -5407,6 +5458,7 @@ test_list = [ None,
               update_with_file_lock_and_keywords_property_set,
               update_nonexistent_child_of_copy,
               revive_children_of_copy,
+              skip_access_denied,
              ]
 
 if __name__ == '__main__':

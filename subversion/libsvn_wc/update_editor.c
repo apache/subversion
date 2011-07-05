@@ -4114,9 +4114,37 @@ close_file(void *file_baton,
       /* Merge the text. This will queue some additional work.  */
       if (!fb->obstruction_found)
         {
-          SVN_ERR(merge_file(&work_item, &install_pristine, &install_from,
-                             &content_state, fb, current_actual_props,
-                             fb->changed_date, scratch_pool, scratch_pool));
+          svn_error_t *err;
+          err = merge_file(&work_item, &install_pristine, &install_from,
+                           &content_state, fb, current_actual_props,
+                           fb->changed_date, scratch_pool, scratch_pool);
+
+          if (err && err->apr_err == SVN_ERR_WC_PATH_ACCESS_DENIED)
+            {
+              if (eb->notify_func)
+                {
+                  svn_wc_notify_t *notify =svn_wc_create_notify(
+                                fb->local_abspath,
+                                svn_wc_notify_update_skip_access_denied,
+                                scratch_pool);
+
+                  notify->kind = svn_node_file;
+                  notify->err = err;
+
+                  eb->notify_func(eb->notify_baton, notify, scratch_pool);
+                }
+              svn_error_clear(err);
+
+              SVN_ERR(remember_skipped_tree(eb, fb->local_abspath,
+                                            scratch_pool));
+              fb->skip_this = TRUE;
+
+              SVN_ERR(maybe_release_dir_info(fb->bump_info));
+              svn_pool_destroy(fb->pool);
+              return SVN_NO_ERROR;
+            }
+          else
+            SVN_ERR(err);
 
           all_work_items = svn_wc__wq_merge(all_work_items, work_item,
                                             scratch_pool);
