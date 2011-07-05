@@ -215,7 +215,7 @@ AC_DEFINE_UNQUOTED(SVN_LOCALE_DIR, "${svn_localedir}",
                    [Defined to be the path to the installed locale dirs])
 
 dnl Check for libtool -- we'll definitely need it for all our shared libs!
-echo "configuring libtool now"
+AC_MSG_NOTICE([configuring libtool now])
 ifdef([LT_INIT], [LT_INIT], [AC_PROG_LIBTOOL])
 AC_ARG_ENABLE(experimental-libtool,
   AS_HELP_STRING([--enable-experimental-libtool],[Use APR's libtool]),
