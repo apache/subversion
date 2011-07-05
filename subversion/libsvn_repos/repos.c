@@ -1262,9 +1262,13 @@ svn_repos_create(svn_repos_t **repos_p,
       /* If there was an error making the filesytem, e.g. unknown/supported
        * filesystem type.  Clean up after ourselves.  Yes this is safe because
        * create_repos_structure will fail if the path existed before we started
-       * so we can't accidentally remove a directory that previously existed. */
-      svn_error_clear(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
-      return svn_error_trace(err);
+       * so we can't accidentally remove a directory that previously existed.
+       */
+
+      return svn_error_trace(
+                   svn_error_compose_create(
+                        err,
+                        svn_io_remove_dir2(path, FALSE, NULL, NULL, pool)));
     }
 
   /* This repository is ready.  Stamp it with a format number. */

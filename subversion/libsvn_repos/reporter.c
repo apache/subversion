@@ -1331,9 +1331,12 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
   {
     svn_error_t *err = drive(b, s_rev, info, pool);
     if (err == SVN_NO_ERROR)
-      return b->editor->close_edit(b->edit_baton, pool);
-    svn_error_clear(b->editor->abort_edit(b->edit_baton, pool));
-    return svn_error_trace(err);
+      return svn_error_trace(b->editor->close_edit(b->edit_baton, pool));
+
+    return svn_error_trace(
+                svn_error_compose_create(err,
+                                         b->editor->abort_edit(b->edit_baton,
+                                                               pool)));
   }
 }
 
@@ -1421,9 +1424,8 @@ svn_repos_finish_report(void *baton, apr_pool_t *pool)
 
   finish_err = finish_report(b, pool);
   close_err = svn_io_file_close(b->tempfile, pool);
-  if (finish_err)
-    svn_error_clear(close_err);
-  return finish_err ? finish_err : close_err;
+
+  return svn_error_trace(svn_error_compose_create(finish_err, close_err));
 }
 
 svn_error_t *
@@ -1431,7 +1433,7 @@ svn_repos_abort_report(void *baton, apr_pool_t *pool)
 {
   report_baton_t *b = baton;
 
-  return svn_io_file_close(b->tempfile, pool);
+  return svn_error_trace(svn_io_file_close(b->tempfile, pool));
 }
 
 /* --- BEGINNING THE REPORT --- */
