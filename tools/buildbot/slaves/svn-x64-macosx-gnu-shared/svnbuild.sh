@@ -24,7 +24,7 @@ echo "========= autogen.sh"
 ./autogen.sh || exit $?
 
 echo "========= configure"
-./configure --with-apxs=/usr/local/apache2/bin/apxs --without-berkeley-db --prefix=/Users/buildslave17/slave17/osx10.4-gcc4.0.1-ia32/build/svninstall || exit $?
+./configure --without-serf=./serf --with-apxs=/usr/sbin/apxs --without-berkeley-db || exit $?
 
 echo "========= make"
 make || exit $?
