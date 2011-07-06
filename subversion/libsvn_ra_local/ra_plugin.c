@@ -256,7 +256,6 @@ make_reporter(svn_ra_session_t *session,
   svn_ra_local__session_baton_t *sess = session->priv;
   void *rbaton;
   const char *other_fs_path = NULL;
-  const char *repos_url_decoded;
 
   /* Get the HEAD revision if one is not supplied. */
   if (! SVN_IS_VALID_REVNUM(revision))
@@ -266,22 +265,19 @@ make_reporter(svn_ra_session_t *session,
      regular filesystem path. */
   if (other_url)
     {
-      size_t repos_url_len;
-
-      other_url = svn_path_uri_decode(other_url, pool);
-      repos_url_decoded = svn_path_uri_decode(sess->repos_url, pool);
-      repos_url_len = strlen(repos_url_decoded);
+      const char *other_relpath
+        = svn_uri_skip_ancestor(sess->repos_url, other_url, pool);
 
       /* Sanity check:  the other_url better be in the same repository as
          the original session url! */
-      if (strncmp(other_url, repos_url_decoded, repos_url_len) != 0)
+      if (! other_relpath)
         return svn_error_createf
           (SVN_ERR_RA_ILLEGAL_URL, NULL,
            _("'%s'\n"
              "is not the same repository as\n"
              "'%s'"), other_url, sess->repos_url);
 
-      other_fs_path = other_url + repos_url_len;
+      other_fs_path = apr_pstrcat(pool, "/", other_relpath, (char *)NULL);
     }
 
   /* Pass back our reporter */
