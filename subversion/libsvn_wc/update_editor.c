@@ -773,6 +773,7 @@ make_file_baton(struct file_baton **f_p,
                 svn_boolean_t adding,
                 apr_pool_t *scratch_pool)
 {
+  struct edit_baton *eb = pb->edit_baton;
   apr_pool_t *file_pool = svn_pool_create(pb->pool);
 
   struct file_baton *f = apr_pcalloc(file_pool, sizeof(*f));
@@ -785,17 +786,35 @@ make_file_baton(struct file_baton **f_p,
   SVN_ERR(path_join_under_root(&f->local_abspath,
                                pb->local_abspath, f->name, file_pool));
 
-  /* Figure out the new_URL for this file. */
-  if (adding || pb->edit_baton->switch_relpath)
-    f->new_relpath = svn_relpath_join(pb->new_relpath, f->name, file_pool);
-  else
+  /* Figure out the new URL for this file. */
+  if (eb->switch_relpath)
     {
-      SVN_ERR(svn_wc__db_scan_base_repos(&f->new_relpath, NULL, NULL,
-                                         pb->edit_baton->db,
-                                         f->local_abspath,
-                                         file_pool, scratch_pool));
+      /* Handle switches... */
 
-      SVN_ERR_ASSERT(f->new_relpath);
+      /* This file has a parent directory. If there is
+         no grandparent, then we may have anchored at the parent,
+         and self is the target. If we match the target, then set
+         NEW_RELPATH to the SWITCH_RELPATH.
+
+         Otherwise, we simply extend NEW_RELPATH from the parent.  */
+      if (pb->parent_baton == NULL
+          && strcmp(eb->target_basename, f->name) == 0)
+        f->new_relpath = eb->switch_relpath;
+      else
+        f->new_relpath = svn_relpath_join(pb->new_relpath, f->name,
+                                          file_pool);
+    }
+  else  /* must be an update */
+    {
+      if (adding)
+        f->new_relpath = svn_relpath_join(pb->new_relpath, f->name, file_pool);
+      else
+        {
+          SVN_ERR(svn_wc__db_scan_base_repos(&f->new_relpath, NULL, NULL,
+                                             eb->db, f->local_abspath,
+                                             file_pool, scratch_pool));
+          SVN_ERR_ASSERT(f->new_relpath);
+        }
     }
 
   f->pool              = file_pool;
@@ -1046,7 +1065,6 @@ set_target_revision(void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
 
-  /* Stashing a target_revision in the baton */
   *(eb->target_revision) = target_revision;
   return SVN_NO_ERROR;
 }
