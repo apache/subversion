@@ -2367,8 +2367,10 @@ main(int argc, const char *argv[])
                               opt_state.config_dir, pool);
   if (err)
     {
-      /* Fallback to default config if the config directory isn't readable. */
-      if (err->apr_err == APR_EACCES)
+      /* Fallback to default config if the config directory isn't readable
+         or is not a directory. */
+      if (APR_STATUS_IS_EACCES(err->apr_err)
+          || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err))
         {
           svn_handle_warning2(stderr, err, "svn: ");
           svn_error_clear(err);
