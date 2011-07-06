@@ -350,6 +350,10 @@ def run_and_verify_svnrdump(dumpfile_content, expected_stdout,
   if sys.platform == 'win32':
     err = map(lambda x : x.replace('\r\n', '\n'), err)
 
+  for index, line in enumerate(err[:]):
+    if re.search("warning: W200007", line):
+      del err[index]
+
   verify.verify_outputs("Unexpected output", output, err,
                         expected_stdout, expected_stderr)
   verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
