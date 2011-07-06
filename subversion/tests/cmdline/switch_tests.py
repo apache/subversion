@@ -2856,6 +2856,56 @@ def up_to_old_rev_with_subtree_switched_to_root(sbox):
   # Now update the WC to r1.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r1', wc_dir)
 
+def different_node_kind(sbox):
+  "switch to a different node kind"
+  sbox.build(read_only = True)
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  pristine_disk = svntest.main.greek_state
+  pristine_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_disk = pristine_disk.copy()
+  expected_status = pristine_status.copy()
+
+  def switch_to_dir(sbox, rel_url, rel_path):
+    full_url = sbox.repo_url + '/' + rel_url
+    full_path = sbox.ospath(rel_path)
+    expected_disk.remove(rel_path)
+    expected_disk.add({ rel_path : pristine_disk.desc[rel_url] })
+    expected_disk.add_state(rel_path, pristine_disk.subtree(rel_url))
+    expected_status.tweak(rel_path, switched='S')
+    expected_status.add_state(rel_path, pristine_status.subtree(rel_url))
+    svntest.actions.run_and_verify_switch(sbox.wc_dir, full_path, full_url,
+                                          None, expected_disk, expected_status,
+                                          None, None, None, None, None, False,
+                                          '--ignore-ancestry')
+    svntest.actions.run_and_verify_svn(None, None, [], 'info', full_path)
+    if not os.path.isdir(full_path):
+      raise svntest.Failure
+
+  def switch_to_file(sbox, rel_url, rel_path):
+    full_url = sbox.repo_url + '/' + rel_url
+    full_path = sbox.ospath(rel_path)
+    expected_disk.remove_subtree(rel_path)
+    expected_disk.add({ rel_path : pristine_disk.desc[rel_url] })
+    expected_status.remove_subtree(rel_path)
+    expected_status.add({ rel_path : pristine_status.desc[rel_url] })
+    expected_status.tweak(rel_path, switched='S')
+    svntest.actions.run_and_verify_switch(sbox.wc_dir, full_path, full_url,
+                                          None, expected_disk, expected_status,
+                                          None, None, None, None, None, False,
+                                          '--ignore-ancestry')
+    svntest.actions.run_and_verify_svn(None, None, [], 'info', full_path)
+    if not os.path.isfile(full_path):
+      raise svntest.Failure
+
+  # Switch two files to dirs and two dirs to files.
+  # 'A/C' is an empty dir; 'A/D/G' is a non-empty dir.
+  switch_to_dir(sbox, 'A/C', 'iota')
+  switch_to_dir(sbox, 'A/D/G', 'A/D/gamma')
+  switch_to_file(sbox, 'iota', 'A/C')
+  switch_to_file(sbox, 'A/D/gamma', 'A/D/G')
+
 ########################################################################
 # Run the tests
 
@@ -2895,6 +2945,7 @@ test_list = [ None,
               tree_conflicts_on_switch_3,
               copy_with_switched_subdir,
               up_to_old_rev_with_subtree_switched_to_root,
+              different_node_kind,
               ]
 
 if __name__ == '__main__':
