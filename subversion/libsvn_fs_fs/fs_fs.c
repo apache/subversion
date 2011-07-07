@@ -1677,17 +1677,26 @@ svn_fs_fs__hotcopy(const char *src_path,
 
   SVN_ERR(svn_io_make_dir_recursively(dst_subdir, pool));
 
-  /* Copy the packed revprop db. */
-  if (format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
+  /* First, copy packed shards. */
+  for (rev = 0; rev < min_unpacked_revprop; rev += max_files_per_dir)
     {
-      const char *src_file = svn_dirent_join(src_subdir, PATH_REVPROPS_DB,
-                                             pool);
-      const char *dst_file = svn_dirent_join(dst_subdir, PATH_REVPROPS_DB,
-                                             pool);
-      SVN_ERR(svn_sqlite__hotcopy(src_file, dst_file, pool));
+      const char *packed_shard = apr_psprintf(iterpool, "%ld.pack",
+                                              rev / max_files_per_dir);
+      const char *src_subdir_packed_shard;
+      src_subdir_packed_shard = svn_dirent_join(src_subdir, packed_shard,
+                                                iterpool);
+
+      SVN_ERR(svn_io_copy_dir_recursively(src_subdir_packed_shard,
+                                          dst_subdir, packed_shard,
+                                          TRUE /* copy_perms */,
+                                          NULL /* cancel_func */, NULL,
+                                          iterpool));
+      svn_pool_clear(iterpool);
     }
 
-  for (rev = min_unpacked_revprop; rev <= youngest; rev++)
+  /* Then, copy non-packed shards. */
+  SVN_ERR_ASSERT(rev == min_unpacked_revprop);
+  for (; rev <= youngest; rev++)
     {
       const char *src_subdir_shard = src_subdir,
                  *dst_subdir_shard = dst_subdir;
