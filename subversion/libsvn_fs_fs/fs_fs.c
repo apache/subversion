@@ -3106,20 +3106,52 @@ revision_proplist(apr_hash_t **proplist_p,
     }
   else
     {
-      /*svn_sqlite__stmt_t *stmt;
-      svn_boolean_t have_row;
+      /* ### Our Windows friend may require some kind of retry loop here.
+       * ### As that's not my speciality, I'll leave it to somebody else to
+       * ### implement.  Hint: you may consider abstracting out the above
+       * ### loop into something more generalizable. */
+      svn_revnum_t shard;
+      apr_int64_t shard_pos;
+      apr_file_t *pack_file;
+      const char *pack_file_path;
+      const char *pack_file_dir;
+      const char *revprops_dir;
+      char buf[REVPROP_MANIFEST_FIELD_WIDTH + 1];
+      apr_size_t len = REVPROP_MANIFEST_FIELD_WIDTH;
+      apr_off_t offset;
 
-      SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->revprop_db,
-                                        STMT_GET_REVPROP));
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 1, rev));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-      if (!have_row)
-        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                 _("Missing %ld row in %s"),
-                                 rev, PATH_REVPROPS_DB);
+      proplist = apr_hash_make(pool);
 
-      SVN_ERR(svn_sqlite__column_properties(&proplist, stmt, 0, pool, pool));
-      SVN_ERR(svn_sqlite__reset(stmt));*/
+      shard = rev / ffd->max_files_per_dir;
+
+      /* position of the shard within the manifest */
+      shard_pos = rev % ffd->max_files_per_dir;
+
+      revprops_dir = svn_dirent_join(fs->path, PATH_REVPROPS_DIR, pool);
+      pack_file_dir = svn_dirent_join(revprops_dir,
+                        apr_psprintf(pool, "%" APR_INT64_T_FMT ".pack", shard),
+                        pool);
+      pack_file_path = svn_dirent_join(pack_file_dir, "pack", pool);
+
+      /* Open the pack file and seek to the manifest offset. */
+      SVN_ERR(svn_io_file_open(&pack_file, pack_file_path,
+                               APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+      offset = shard_pos * REVPROP_MANIFEST_FIELD_WIDTH;
+      SVN_ERR(svn_io_file_seek(pack_file, APR_SET, &offset, pool));
+
+      /* Read the revprop offset. */
+      SVN_ERR(svn_stream_read(svn_stream_from_aprfile2(pack_file, TRUE, pool),
+                              buf, &len));
+
+      /* Seek to the revprop offset, and read the props. */
+      offset = REVPROP_MANIFEST_FIELD_WIDTH * ffd->max_files_per_dir
+                          + apr_atoi64(buf);
+      SVN_ERR(svn_io_file_seek(pack_file, APR_SET, &offset, pool));
+      SVN_ERR(svn_hash_read2(proplist,
+                             svn_stream_from_aprfile2(pack_file, TRUE, pool),
+                             SVN_HASH_TERMINATOR, pool));
+
+      SVN_ERR(svn_io_file_close(pack_file, pool));
     }
 
   *proplist_p = proplist;
