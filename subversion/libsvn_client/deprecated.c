@@ -2302,10 +2302,11 @@ svn_client_info2(const char *path_or_url,
   SVN_ERR(svn_client_info3(abspath_or_url,
                            peg_revision,
                            revision,
+                           depth,
+                           FALSE, TRUE,
+                           changelists,
                            info_receiver_relpath_wrapper,
                            &rb,
-                           depth,
-                           changelists,
                            ctx,
                            pool));
 

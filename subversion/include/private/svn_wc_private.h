@@ -1077,14 +1077,19 @@ typedef svn_error_t *(*svn_wc__info_receiver2_t)(void *baton,
 
 /* Walk the children of LOCAL_ABSPATH and push svn_wc__info2_t's through
    RECEIVER/RECEIVER_BATON.  Honor DEPTH while crawling children, and
-   filter the pushed items against CHANGELISTS.  */
+   filter the pushed items against CHANGELISTS.
+
+   If FETCH_EXCLUDED is TRUE, also fetch excluded nodes.
+   If FETCH_ACTUAL_ONLY is TRUE, also fetch actual-only nodes. */
 svn_error_t *
 svn_wc__get_info(svn_wc_context_t *wc_ctx,
                  const char *local_abspath,
                  svn_depth_t depth,
+                 svn_boolean_t fetch_excluded,
+                 svn_boolean_t fetch_actual_only,
+                 const apr_array_header_t *changelists,
                  svn_wc__info_receiver2_t receiver,
                  void *receiver_baton,
-                 const apr_array_header_t *changelists,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool);
