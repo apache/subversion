@@ -471,13 +471,14 @@ def info_show_exclude(sbox):
   sbox.simple_rm('iota')
   sbox.simple_commit()
 
-  # Expect no output for iota (status = not-present)
-  # ### BH: This should give the same error as below!
-  svntest.actions.run_and_verify_svn(None, [], [], 'info', iota)
+  # Expect error on iota (status = not-present)
+  svntest.actions.run_and_verify_svn(None, [],
+       'svn: E200009: Could not display info for all targets.*',
+        'info', iota)
 
   sbox.simple_update()
 
-  # Expect error iota
+  # Expect error on iota (unversioned)
   svntest.actions.run_and_verify_svn(None, [],
        'svn: E200009: Could not display info for all targets.*',
         'info', iota)

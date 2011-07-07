@@ -327,6 +327,7 @@ struct found_entry_baton
   void *receiver_baton;
   svn_wc__db_t *db;
   svn_boolean_t actual_only;
+  svn_boolean_t first;
   /* The set of tree conflicts that have been found but not (yet) visited by
    * the tree walker.  Map of abspath -> svn_wc_conflict_description2_t. */
   apr_hash_t *tree_conflicts;
@@ -349,7 +350,18 @@ info_found_node_callback(const char *local_abspath,
                                kind, scratch_pool, scratch_pool));
 
   if (info == NULL)
-    return SVN_NO_ERROR; /* not present or server excluded node */
+    {
+      if (!fe_baton->first)
+        return SVN_NO_ERROR; /* not present or server excluded descendant */
+
+      /* If the info root is not found, that is an error */
+      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                               _("The node '%s' was not found."),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
+    }
+
+  fe_baton->first = FALSE;
 
   SVN_ERR_ASSERT(info->wc_info != NULL);
   SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, local_abspath,
@@ -431,6 +443,7 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
   fe_baton.receiver_baton = receiver_baton;
   fe_baton.db = wc_ctx->db;
   fe_baton.actual_only = fetch_actual_only;
+  fe_baton.first = TRUE;
   fe_baton.tree_conflicts = apr_hash_make(scratch_pool);
   fe_baton.pool = scratch_pool;
 
