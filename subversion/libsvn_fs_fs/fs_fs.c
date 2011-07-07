@@ -59,8 +59,6 @@
 #include "rep-cache.h"
 #include "temp_serializer.h"
 
-#include "revprops-db.h"
-
 #include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
 
@@ -138,9 +136,6 @@ static txn_vtable_t txn_vtable = {
   svn_fs_fs__txn_root,
   svn_fs_fs__change_txn_props
 };
-
-/* SQL bits for revprops. */
-REVPROPS_DB_SQL_DECLARE_STATEMENTS(statements);
 
 /* Declarations. */
 
