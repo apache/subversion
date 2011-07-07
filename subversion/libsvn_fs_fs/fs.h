@@ -266,9 +266,6 @@ typedef struct fs_fs_data_t
   /* Thread-safe boolean */
   svn_atomic_t rep_cache_db_opened;
 
-   /* The sqlite database used for revprops. */
-   svn_sqlite__db_t *revprop_db;
-
   /* The oldest revision not in a pack file. */
   svn_revnum_t min_unpacked_rev;
 
