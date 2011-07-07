@@ -4331,7 +4331,6 @@ close_file(void *file_baton,
      about files which were already notified for another reason.) */
   if (eb->notify_func && !fb->already_notified && fb->edited)
     {
-      const svn_string_t *mime_type;
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action = svn_wc_notify_update_update;
 
@@ -4358,12 +4357,8 @@ close_file(void *file_baton,
       notify->old_revision = fb->old_revision;
 
       /* Fetch the mimetype from the actual properties */
-      mime_type = (new_actual_props != NULL)
-                        ? apr_hash_get(new_actual_props, SVN_PROP_MIME_TYPE,
-                                       APR_HASH_KEY_STRING)
-                        : NULL;
-
-      notify->mime_type = mime_type == NULL ? NULL : mime_type->data;
+      notify->mime_type = svn_prop_get_value(new_actual_props,
+                                             SVN_PROP_MIME_TYPE);
 
       eb->notify_func(eb->notify_baton, notify, scratch_pool);
     }

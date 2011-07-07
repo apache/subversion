@@ -803,7 +803,6 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
                             apr_pool_t *scratch_pool)
 {
   svn_wc_conflict_result_t *result = NULL;
-  svn_string_t *mime_propval = NULL;
   apr_pool_t *filepool = svn_pool_create(scratch_pool);
   svn_wc_conflict_description2_t *cdesc;
   const char *dirpath = svn_dirent_dirname(local_abspath, filepool);
@@ -930,12 +929,10 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
     }
 
   /* Build the rest of the description object: */
-  if (!is_dir && working_props)
-    mime_propval = apr_hash_get(working_props, SVN_PROP_MIME_TYPE,
-                                APR_HASH_KEY_STRING);
-  cdesc->mime_type = mime_propval ? mime_propval->data : NULL;
-  cdesc->is_binary = mime_propval ?
-      svn_mime_type_is_binary(mime_propval->data) : FALSE;
+  cdesc->mime_type = (is_dir ? NULL : svn_prop_get_value(working_props,
+                                                         SVN_PROP_MIME_TYPE));
+  cdesc->is_binary = (cdesc->mime_type
+                      && svn_mime_type_is_binary(cdesc->mime_type));
 
   if (!incoming_old_val && incoming_new_val)
     cdesc->action = svn_wc_conflict_action_add;
