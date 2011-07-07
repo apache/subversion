@@ -244,7 +244,7 @@ The pack+manifest file consists of:
 * The concatenated hunks for all revisions in the shard.
 
 The sequence number and the offsets are stored as ASCII decimal, followed by
-newline.  They are space-padded from the left such that the least-significant
+newline.  They are space-padded from the right such that the least-significant
 digit is on the tenth byte of the line for the sequence number, and on the
 twentieth byte of the line for the offsets.  Each revprop's hunk takes the same
 format as an unpacked revprop file: namely, it is a svn_hash_write()-serialized
