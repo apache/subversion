@@ -500,11 +500,11 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath,
     if (ctx == NULL)
         return -1;
 
-    SVN_JNI_ERR(svn_client_export4(&rev, sourcePath.c_str(),
+    SVN_JNI_ERR(svn_client_export5(&rev, sourcePath.c_str(),
                                    destinationPath.c_str(),
                                    pegRevision.revision(),
                                    revision.revision(), force,
-                                   ignoreExternals,
+                                   ignoreExternals, FALSE,
                                    depth,
                                    nativeEOL, ctx,
                                    requestPool.pool()),
@@ -613,12 +613,12 @@ void SVNClient::merge(const char *path1, Revision &revision1,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_merge3(srcPath1.c_str(), revision1.revision(),
+    SVN_JNI_ERR(svn_client_merge4(srcPath1.c_str(), revision1.revision(),
                                   srcPath2.c_str(), revision2.revision(),
                                   intLocalPath.c_str(),
                                   depth,
                                   ignoreAncestry, force, recordOnly, dryRun,
-                                  NULL, ctx, requestPool.pool()), );
+                                  TRUE, NULL, ctx, requestPool.pool()), );
 }
 
 void SVNClient::merge(const char *path, Revision &pegRevision,
@@ -668,13 +668,13 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
             return;
     }
 
-    SVN_JNI_ERR(svn_client_merge_peg3(srcPath.c_str(),
+    SVN_JNI_ERR(svn_client_merge_peg4(srcPath.c_str(),
                                       ranges,
                                       pegRevision.revision(),
                                       intLocalPath.c_str(),
                                       depth,
                                       ignoreAncestry, force, recordOnly,
-                                      dryRun, NULL, ctx,
+                                      dryRun, TRUE, NULL, ctx,
                                       requestPool.pool()), );
 }
 
