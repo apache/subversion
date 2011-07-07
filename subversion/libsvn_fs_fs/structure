@@ -135,7 +135,7 @@ The formats are:
   Format 2, understood by Subversion 1.4+
   Format 3, understood by Subversion 1.5+
   Format 4, understood by Subversion 1.6+
-  Format 6, understood by Subversion 1.7-dev, never released
+  Format 5, understood by Subversion 1.7-dev, never released
   Format 6, understood by Subversion 1.7+
 
 The differences between the formats are:
