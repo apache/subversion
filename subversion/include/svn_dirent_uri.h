@@ -575,6 +575,9 @@ svn_uri__is_child(const char *parent_uri,
  * the same as @a parent_dirent, it is not considered a child, so the result
  * is @c NULL; an empty string is never returned.
  *
+ * ### TODO: Deprecate, as the semantics are trivially
+ * obtainable from *_skip_ancestor().
+ *
  * @since New in 1.6.
  */
 const char *
@@ -593,6 +596,9 @@ svn_relpath__is_child(const char *parent_relpath,
 
 /** Return TRUE if @a parent_dirent is an ancestor of @a child_dirent or
  * the dirents are equal, and FALSE otherwise.
+ *
+ * ### TODO: Deprecate, as the semantics are trivially
+ * obtainable from *_skip_ancestor().
  *
  * @since New in 1.6.
  */
