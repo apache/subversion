@@ -465,7 +465,7 @@ def fsfs_file(repo_dir, kind, rev):
     if svntest.main.options.fsfs_sharding is None:
       return os.path.join(repo_dir, 'db', kind, '0', rev)
     else:
-      shard = int(rev) // svntest.main.fsfs_sharding
+      shard = int(rev) // svntest.main.options.fsfs_sharding
       path = os.path.join(repo_dir, 'db', kind, str(shard), rev)
 
       if svntest.main.options.fsfs_packing is None or kind == 'revprops':
