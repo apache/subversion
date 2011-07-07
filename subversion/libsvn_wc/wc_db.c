@@ -3128,7 +3128,7 @@ svn_wc__db_externals_gather_definitions(apr_hash_t **externals,
   while (have_row)
     {
       apr_hash_t *node_props;
-      const svn_string_t *external_value;
+      const char *external_value;
 
       svn_pool_clear(iterpool);
       err = svn_sqlite__column_properties(&node_props, stmt, 0, iterpool,
@@ -3137,10 +3137,7 @@ svn_wc__db_externals_gather_definitions(apr_hash_t **externals,
       if (err)
         break;
 
-      external_value = node_props
-                            ? apr_hash_get(node_props, SVN_PROP_EXTERNALS,
-                                           APR_HASH_KEY_STRING)
-                            : NULL;
+      external_value = svn_prop_get_value(node_props, SVN_PROP_EXTERNALS);
 
       if (external_value)
         {
@@ -3150,9 +3147,8 @@ svn_wc__db_externals_gather_definitions(apr_hash_t **externals,
           node_abspath = svn_dirent_join(wcroot->abspath, node_relpath,
                                          result_pool);
 
-          apr_hash_set(*externals, node_abspath,
-                       APR_HASH_KEY_STRING,
-                       apr_pstrdup(result_pool, external_value->data));
+          apr_hash_set(*externals, node_abspath, APR_HASH_KEY_STRING,
+                       apr_pstrdup(result_pool, external_value));
 
           if (depths)
             {
@@ -9735,15 +9731,13 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
 
   if (kind == svn_wc__db_kind_dir)
     {
-      const svn_string_t *externals = NULL;
+      const char *externals;
       apr_hash_t *props = working_props;
 
       if (props == NULL)
         props = base_props;
 
-      if (props != NULL)
-        externals = apr_hash_get(props, SVN_PROP_EXTERNALS,
-                                 APR_HASH_KEY_STRING);
+      externals = svn_prop_get_value(props, SVN_PROP_EXTERNALS);
 
       if (externals != NULL)
         {
@@ -9755,7 +9749,7 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
           SVN_ERR(svn_wc_parse_externals_description3(
                             &ext, svn_dirent_join(dir_abspath, local_relpath,
                                                   scratch_pool),
-                            externals->data, FALSE, scratch_pool));
+                            externals, FALSE, scratch_pool));
           for (i = 0; i < ext->nelts; i++)
             {
               const svn_wc_external_item2_t *item;

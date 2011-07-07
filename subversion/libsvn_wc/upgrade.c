@@ -1273,16 +1273,14 @@ upgrade_externals(struct bump_baton *bb,
   while (have_row)
     {
       apr_hash_t *props;
-      const svn_string_t *externals = NULL;
+      const char *externals;
 
       svn_pool_clear(iterpool);
 
       SVN_ERR(svn_sqlite__column_properties(&props, stmt, 0,
                                             iterpool, iterpool));
 
-      if (props)
-        externals = apr_hash_get(props, SVN_PROP_EXTERNALS,
-                                 APR_HASH_KEY_STRING);
+      externals = svn_prop_get_value(props, SVN_PROP_EXTERNALS);
 
       if (externals)
         {
@@ -1296,7 +1294,7 @@ upgrade_externals(struct bump_baton *bb,
                                           iterpool);
 
           SVN_ERR(svn_wc_parse_externals_description3(&ext, local_abspath,
-                                                      externals->data, FALSE,
+                                                      externals, FALSE,
                                                       iterpool));
 
           for (i = 0; i < ext->nelts; i++)

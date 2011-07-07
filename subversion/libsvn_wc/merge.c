@@ -161,11 +161,10 @@ detranslate_wc_file(const char **detranslated_abspath,
   const char *eol;
   apr_hash_t *keywords;
   svn_boolean_t special;
-  const svn_string_t *mime_value;
-  mime_value = apr_hash_get(mt->actual_props, SVN_PROP_MIME_TYPE,
-                            APR_HASH_KEY_STRING);
+  const char *mime_value = svn_prop_get_value(mt->actual_props,
+                                              SVN_PROP_MIME_TYPE);
 
-  is_binary = (mime_value && svn_mime_type_is_binary(mime_value->data));
+  is_binary = (mime_value && svn_mime_type_is_binary(mime_value));
 
   /* See if we need to do a straight copy:
      - old and new mime-types are binary, or
@@ -1349,11 +1348,10 @@ svn_wc__internal_merge(svn_skel_t **work_items,
     is_binary = svn_mime_type_is_binary(mimeprop->value->data);
   else
     {
-      const svn_string_t *value = apr_hash_get(mt.actual_props,
-                                               SVN_PROP_MIME_TYPE,
-                                               APR_HASH_KEY_STRING);
+      const char *value = svn_prop_get_value(mt.actual_props,
+                                             SVN_PROP_MIME_TYPE);
 
-      is_binary = value && svn_mime_type_is_binary(value->data);
+      is_binary = value && svn_mime_type_is_binary(value);
     }
 
   SVN_ERR(detranslate_wc_file(&detranslated_target_abspath, &mt,
