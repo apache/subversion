@@ -1462,10 +1462,10 @@ SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
     SVN_JNI_ERR(svn_client_info3(checkedPath.c_str(),
                                  pegRevision.revision(),
                                  revision.revision(),
-                                 InfoCallback::callback,
-                                 callback, depth,
-                                 changelists.array(requestPool), ctx,
-                                 requestPool.pool()), );
+                                 depth, FALSE, TRUE,
+                                 changelists.array(requestPool),
+                                 InfoCallback::callback, callback,
+                                 ctx, requestPool.pool()), );
 }
 
 void
