@@ -589,9 +589,8 @@ svn_cl__info(apr_getopt_t *os,
 
       err = svn_client_info3(truepath,
                              &peg_revision, &(opt_state->start_revision),
-                             opt_state->depth, TRUE, opt_state->changelists,
-                             receiver, (void *) path_prefix,
-                             ctx, subpool);
+                             receiver, (void *) path_prefix, opt_state->depth,
+                             opt_state->changelists, ctx, subpool);
 
       if (err)
         {
