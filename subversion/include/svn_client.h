@@ -356,8 +356,9 @@ typedef struct svn_client_proplist_item_t
 
 /**
  * The callback invoked by svn_client_proplist3().  Each invocation
- * describes the property specified by @a item.  Use @a pool for all
- * temporary allocation.
+ * provides the regular properties of @a path which is either a WC path or
+ * a URL.  @a prop_hash maps property names (char *) to property
+   values (svn_string_t *).  Use @a pool for all temporary allocation.
  *
  * @since New in 1.5.
  */
