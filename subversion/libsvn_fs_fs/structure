@@ -253,6 +253,44 @@ The manifest for the zeroth shard contains the literal ASCII text "zerothshard"
 the shard.
 
 
+Readers operate as follows:
+
+* They ignore the sequence number.
+* For r0, they always read revprops/0/0 read the non-packed file
+  (e.g., revprops/0/0 if sharding is in use).
+* To read a packed revision's properties:
+  + open() the pack file
+  + seek() to the right offset within the manifest
+  + seek() to the offset indicated by the manifest record
+  + read() the serialized hash
+    (as in the non-packed case)
+
+Reading an unpacked revision remains unaltered, modulo the necessity to account
+for ffd->min_unpacked_revprop being out-of-date with respect to the
+'min-unpacked-revprop' file (i.e., a concurrent 'pack' process had run).
+
+
+Editing a packed revision's properties proceeds as follows:
+
+* Lock the revprop shard.  (via ./revprops/42.revpack/lock)
+* Prepare a revprop pack file, with an incremented sequence number.
+* Lock the filesystem.  (via ./write-lock)
+* Check the sequence number of the revprop pack file.
+* Atomically move-into-place the new pack file.
+* Release the filesystem lock.
+* Release the revprop shard lock.
+
+This has the following properties:
+
+* Having a per-shard lock minimizes writers' I/O.  (They have to rewrite
+  a full shard file.)
+
+* Grabbing the filesystem-wide lock enables blocking /all/ writers to the
+  filesystem in a single place.
+
+* Atomicity for readers is achieved via the atomic move-into-place.
+
+
 Node-revision IDs
 -----------------
 
