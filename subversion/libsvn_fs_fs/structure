@@ -40,7 +40,9 @@ repository) is:
   revprops/           Subdirectory containing rev-props
     <shard>/          Shard directory, if sharding is in use (see below)
       <revnum>        File containing rev-props for <revnum>
-    revprops.db       SQLite database of the packed revision properties
+    <shard>.revpack/  Pack directory, if the repo has been packed (see below)
+      revpack         Revprops pack file, contains inline manifest (see below)
+      lock            Revprops shard lock file (see below)
   transactions/       Subdirectory containing transactions
     <txnid>.txn/      Directory containing transaction <txnid>
   txn-protorevs/      Subdirectory containing transaction proto-revision files
@@ -63,8 +65,8 @@ repository) is:
   min-unpacked-revprop File containing the oldest revision of unpacked revprop
   rep-cache.db        SQLite database mapping rep checksums to locations
 
-Files in the revprops directory are in the hash dump format used by
-svn_hash_write.
+Non-packed files in the revprops directory are in the hash dump format used by
+svn_hash_write.  
 
 The format of the "current" file is:
 
@@ -171,6 +173,10 @@ Revision changed paths list:
   Format 1-3: Does not contain the node's kind.
   Format 4-5: Contains the node's kind.
 
+Revprop packing:
+  Format 1-4: revprops are not packed
+  Format 5: revprops are packed
+
 # Incomplete list.  See SVN_FS_FS__MIN_*_FORMAT
 
 
@@ -225,13 +231,27 @@ Packing revision properties
 ---------------------------
 
 Revprop shards may be packed too.  The packing process moves all revprops from
-a the oldest unpacked shard to the SQLite database "revprops/revprops.db".  The
-sequel documents the schema of FSFS format 5, which corresponds to schema
-version USER_VERSION=1:
+each completed shard S to a single pack file.  As a special-case, r0 revprops
+are never packed, in consideration of performance of 'svnsync' and other
+consumers that propedit r0.
 
-The database maps revision numbers to serialized "proplist" skels.  Every 
-packed revision must have a mapping entry (a table row), even if it maps the
-revnum to an empty skel.
+The pack+manifest file consists of:
+
+* A 32-bit sequence number
+* A list of offsets, one for each revision's hunk in the pack file.
+* The concatenated hunks for all revisions in the shard.
+
+The sequence number and the offsets are stored as ASCII decimal, followed by
+newline.  They are space-padded from the left such that the least-significant
+digit is on the tenth byte of the line for the sequence number, and on the
+twentieth byte of the line for the offsets.  Each revprop's hunk takes the same
+format as an unpacked revprop file: namely, it is a svn_hash_write()-serialized
+revprops hash.
+
+The manifest for the zeroth shard contains the literal ASCII text "zerothshard"
+(with no following newline) in place of the offset for the zeroth revision of
+the shard.
+
 
 Node-revision IDs
 -----------------

@@ -1,3 +1,9 @@
-This branch exists to reimplement the revprop-packing without SQLite.  Several
-strategies have been discussed on the mailing list here:
+This branch exists to reimplement the revprop-packing in FSFS f5 without
+SQLite.  Several strategies have been discussed on the mailing list here:
 http://svn.haxx.se/dev/archive-2011-07/0134.shtml
+
+The concrete design proposal has been patched into the 'structure' file; you
+may review it via
+
+   svn diff ^/subversion/trunk/subversion/libsvn_fs_fs/structure@r1143816 \
+            ^/subversion/branches/revprop-packing/subversion/libsvn_fs_fs/structure
