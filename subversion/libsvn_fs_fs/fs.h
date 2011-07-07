@@ -90,7 +90,7 @@ extern "C" {
 /* The format number of this filesystem.
    This is independent of the repository format number, and
    independent of any other FS back ends. */
-#define SVN_FS_FS__FORMAT_NUMBER   5
+#define SVN_FS_FS__FORMAT_NUMBER   6
 
 /* The minimum format number that supports svndiff version 1.  */
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
@@ -122,8 +122,11 @@ extern "C" {
 /* The minimum format number that stores node kinds in changed-paths lists. */
 #define SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT 4
 
+/* The 1.7-dev format that packed revprops into SQLite revprops.db . */
+#define SVN_FS_FS__MIN_PACKED_REVPROP_SQLITE_DEV_FORMAT 5
+
 /* The minimum format number that supports packed revprop shards. */
-#define SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT 5
+#define SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT 6
 
 /* The minimum format number that supports a configuration file (fsfs.conf) */
 #define SVN_FS_FS__MIN_CONFIG_FILE 4

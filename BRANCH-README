@@ -1,4 +1,4 @@
-This branch exists to reimplement the revprop-packing in FSFS f5 without
+This branch exists to reimplement the revprop-packing in FSFS f6 without
 SQLite.  Several strategies have been discussed on the mailing list here:
 http://svn.haxx.se/dev/archive-2011-07/0134.shtml
 
