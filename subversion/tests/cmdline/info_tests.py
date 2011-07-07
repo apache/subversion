@@ -412,6 +412,77 @@ def info_repos_root_url(sbox):
   svntest.actions.run_and_verify_info(expected_info, sbox.repo_url,
                                       '--depth', 'files')
 
+@Issue(3787)
+def info_show_exclude(sbox):
+  "tests 'info --depth' variants on excluded node"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(wc_dir, 'A')
+  iota = os.path.join(wc_dir, 'iota')
+  svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', A_path)
+  wc_uuid = svntest.actions.get_wc_uuid(wc_dir)
+  
+  expected_info = []
+  expected_info = [{
+      'Path' : '.',
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : wc_uuid,
+  }]
+
+  svntest.actions.run_and_verify_info(expected_info, '--depth', 'empty',
+                                      wc_dir)
+
+  expected_info = [{
+      'Path' : 'A',
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : wc_uuid,
+      'Depth' : 'exclude',
+  }]
+
+  svntest.actions.run_and_verify_info(expected_info, '--depth',
+                                      'empty', A_path)
+  svntest.actions.run_and_verify_info(expected_info, '--depth',
+                                      'infinity', A_path)
+  svntest.actions.run_and_verify_info(expected_info, '--depth',
+                                      'immediates', A_path)
+
+  expected_info = [{
+     'Path' : re.escape("iota"),
+     'Repository Root' : sbox.repo_url,
+     'Repository UUID' : wc_uuid,
+  }]
+  svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', iota)
+  svntest.actions.run_and_verify_info(expected_info, iota)
+
+  # And now get iota back, to allow testing other states
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='A '),
+    })
+
+  expected_status = svntest.wc.State(iota, {
+    '' : Item(status='  ', wc_rev='1')
+  })
+
+  svntest.actions.run_and_verify_update(iota,
+                                        expected_output, None, expected_status)
+
+  sbox.simple_rm('iota')
+  sbox.simple_commit()
+
+  # Expect no output for iota (status = not-present)
+  # ### BH: This should give the same error as below!
+  svntest.actions.run_and_verify_svn(None, [], [], 'info', iota)
+
+  sbox.simple_update()
+
+  # Expect error iota
+  svntest.actions.run_and_verify_svn(None, [],
+       'svn: E200009: Could not display info for all targets.*',
+        'info', iota)
+
+
 ########################################################################
 # Run the tests
 
@@ -424,6 +495,7 @@ test_list = [ None,
               info_url_special_characters,
               info_multiple_targets,
               info_repos_root_url,
+              info_show_exclude,
              ]
 
 if __name__ == '__main__':
