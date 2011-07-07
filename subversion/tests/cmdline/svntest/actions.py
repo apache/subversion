@@ -925,7 +925,7 @@ def run_and_verify_info(expected_infos, *args):
         if value is not None and key not in actual:
           raise main.SVNLineUnequal("Expected key '%s' (with value '%s') "
                                     "not found" % (key, value))
-        if value is not None and not re.search(value, actual[key]):
+        if value is not None and not re.match(value, actual[key]):
           raise verify.SVNUnexpectedStdout("Values of key '%s' don't match:\n"
                                            "  Expected: '%s' (regex)\n"
                                            "  Found:    '%s' (string)\n"

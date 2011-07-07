@@ -424,9 +424,8 @@ def info_show_exclude(sbox):
   svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', A_path)
   wc_uuid = svntest.actions.get_wc_uuid(wc_dir)
   
-  expected_info = []
   expected_info = [{
-      'Path' : '.',
+      'Path' : re.escape(wc_dir),
       'Repository Root' : sbox.repo_url,
       'Repository UUID' : wc_uuid,
   }]
@@ -435,7 +434,7 @@ def info_show_exclude(sbox):
                                       wc_dir)
 
   expected_info = [{
-      'Path' : 'A',
+      'Path' : '.*%sA' % re.escape(os.sep),
       'Repository Root' : sbox.repo_url,
       'Repository UUID' : wc_uuid,
       'Depth' : 'exclude',
@@ -449,7 +448,7 @@ def info_show_exclude(sbox):
                                       'immediates', A_path)
 
   expected_info = [{
-     'Path' : re.escape("iota"),
+      'Path' : '.*%siota' % re.escape(os.sep),
      'Repository Root' : sbox.repo_url,
      'Repository UUID' : wc_uuid,
   }]
