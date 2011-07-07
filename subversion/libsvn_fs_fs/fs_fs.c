@@ -166,6 +166,15 @@ is_packed_rev(svn_fs_t *fs, svn_revnum_t rev)
   return (rev < ffd->min_unpacked_rev);
 }
 
+/* Return TRUE is REV is packed in FS, FALSE otherwise. */
+static svn_boolean_t
+is_packed_revprop(svn_fs_t *fs, svn_revnum_t rev)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  return (rev < ffd->min_unpacked_revprop);
+}
+
 static const char *
 path_format(svn_fs_t *fs, apr_pool_t *pool)
 {
@@ -6523,29 +6532,12 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_fs_fs__change_txn_prop(cb->txn, SVN_PROP_REVISION_DATE,
                                      &date, pool));
 
-  if (ffd->format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT ||
-      new_rev >= ffd->min_unpacked_revprop)
-    {
-      /* Move the revprops file into place. */
-      revprop_filename = path_txn_props(cb->fs, cb->txn->id, pool);
-      final_revprop = path_revprops(cb->fs, new_rev, pool);
-      SVN_ERR(move_into_place(revprop_filename, final_revprop,
-                              old_rev_filename, pool));
-    }
-  else
-    {
-      /* Read the revprops, and commit them to the permenant sqlite db. */
-      apr_hash_t *proplist = apr_hash_make(pool);
-      svn_sqlite__stmt_t *stmt;
-
-      SVN_ERR(get_txn_proplist(proplist, cb->fs, cb->txn->id, pool));
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->revprop_db,
-                                        STMT_SET_REVPROP));
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 1, new_rev));
-      SVN_ERR(svn_sqlite__bind_properties(stmt, 2, proplist, pool));
-      SVN_ERR(svn_sqlite__insert(NULL, stmt));
-    }
+  /* Move the revprops file into place. */
+  assert(! is_packed_revprop(cb->fs, new_rev));
+  revprop_filename = path_txn_props(cb->fs, cb->txn->id, pool);
+  final_revprop = path_revprops(cb->fs, new_rev, pool);
+  SVN_ERR(move_into_place(revprop_filename, final_revprop,
+                          old_rev_filename, pool));
 
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
