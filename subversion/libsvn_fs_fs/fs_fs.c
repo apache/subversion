@@ -3034,15 +3034,17 @@ set_revision_proplist(svn_fs_t *fs,
     }
   else
     {
-      /*svn_sqlite__stmt_t *stmt;
+      /* Here's how this works:
+          - Open a new pack file and manifest file
+          - We copy all the existing revprops, upto the one being edited
+          - Copy the new prop content into the the target file
+          - Copy the remaining revprops into the target file
+          - Append the pack file to the manifest file (just like we do when
+            packing).
+          - Move the new packed file into place. */
 
-      SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->revprop_db,
-                                        STMT_SET_REVPROP));
-
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 1, rev));
-      SVN_ERR(svn_sqlite__bind_properties(stmt, 2, proplist, pool));
-
-      SVN_ERR(svn_sqlite__insert(NULL, stmt));*/
+      /* ### We need some locking here, so that folks editing props in the
+         ### same shard don't clobber each other. */
     }
 
   return SVN_NO_ERROR;
