@@ -5,5 +5,5 @@ http://svn.haxx.se/dev/archive-2011-07/0134.shtml
 The concrete design proposal has been patched into the 'structure' file; you
 may review it via
 
-   svn diff ^/subversion/trunk/subversion/libsvn_fs_fs/structure@r1143816 \
+   svn diff ^/subversion/trunk/subversion/libsvn_fs_fs/structure \
             ^/subversion/branches/revprop-packing/subversion/libsvn_fs_fs/structure
