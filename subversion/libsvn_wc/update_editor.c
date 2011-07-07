@@ -2514,84 +2514,88 @@ close_directory(void *dir_baton,
 
   /* If this directory has property changes stored up, now is the time
      to deal with them. */
-  if (regular_prop_changes->nelts || entry_prop_changes->nelts
-      || dav_prop_changes->nelts)
+  if (regular_prop_changes->nelts)
     {
-      if (regular_prop_changes->nelts)
+      svn_skel_t *work_item;
+
+      /* If recording traversal info, then see if the
+         SVN_PROP_EXTERNALS property on this directory changed,
+         and record before and after for the change. */
+      if (eb->external_func)
         {
-          svn_skel_t *work_item;
+          const svn_prop_t *change
+            = externals_prop_changed(regular_prop_changes);
 
-          /* If recording traversal info, then see if the
-             SVN_PROP_EXTERNALS property on this directory changed,
-             and record before and after for the change. */
-          if (eb->external_func)
+          if (change)
             {
-              const svn_prop_t *change
-                = externals_prop_changed(regular_prop_changes);
+              const svn_string_t *new_val_s = change->value;
+              const svn_string_t *old_val_s;
 
-              if (change)
+              old_val_s = apr_hash_get(base_props, SVN_PROP_EXTERNALS,
+                                       APR_HASH_KEY_STRING);
+
+              if ((new_val_s == NULL) && (old_val_s == NULL))
+                ; /* No value before, no value after... so do nothing. */
+              else if (new_val_s && old_val_s
+                       && (svn_string_compare(old_val_s, new_val_s)))
+                ; /* Value did not change... so do nothing. */
+              else if (old_val_s || new_val_s)
+                /* something changed, record the change */
                 {
-                  const svn_string_t *new_val_s = change->value;
-                  const svn_string_t *old_val_s;
-
-                  old_val_s = apr_hash_get(base_props, SVN_PROP_EXTERNALS,
-                                           APR_HASH_KEY_STRING);
-
-                  if ((new_val_s == NULL) && (old_val_s == NULL))
-                    ; /* No value before, no value after... so do nothing. */
-                  else if (new_val_s && old_val_s
-                           && (svn_string_compare(old_val_s, new_val_s)))
-                    ; /* Value did not change... so do nothing. */
-                  else if (old_val_s || new_val_s)
-                    /* something changed, record the change */
-                    {
-                      SVN_ERR((eb->external_func)(
-                                           eb->external_baton,
-                                           db->local_abspath,
-                                           old_val_s,
-                                           new_val_s,
-                                           db->ambient_depth,
-                                           db->pool));
-                    }
+                  SVN_ERR((eb->external_func)(
+                                       eb->external_baton,
+                                       db->local_abspath,
+                                       old_val_s,
+                                       new_val_s,
+                                       db->ambient_depth,
+                                       db->pool));
                 }
             }
-
-          /* Merge pending properties into temporary files (ignoring
-             conflicts). */
-          SVN_ERR_W(svn_wc__merge_props(&work_item,
-                                        &prop_state,
-                                        &new_base_props,
-                                        &new_actual_props,
-                                        eb->db,
-                                        db->local_abspath,
-                                        svn_wc__db_kind_dir,
-                                        NULL, /* left_version */
-                                        NULL, /* right_version */
-                                        NULL /* use baseprops */,
-                                        base_props,
-                                        actual_props,
-                                        regular_prop_changes,
-                                        TRUE /* base_merge */,
-                                        FALSE /* dry_run */,
-                                        eb->conflict_func,
-                                        eb->conflict_baton,
-                                        eb->cancel_func,
-                                        eb->cancel_baton,
-                                        db->pool,
-                                        scratch_pool),
-                    _("Couldn't do property merge"));
-          /* After a (not-dry-run) merge, we ALWAYS have props to save.  */
-          SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
-          all_work_items = svn_wc__wq_merge(all_work_items, work_item,
-                                            scratch_pool);
         }
 
-      SVN_ERR(accumulate_last_change(&new_changed_rev,
-                                     &new_changed_date,
-                                     &new_changed_author,
-                                     entry_prop_changes,
-                                     scratch_pool, scratch_pool));
+      if (db->shadowed)
+        {
+          /* We don't have a relevant actual row, but we need actual properties
+             to allow property merging without conflicts. */
+          if (db->adding_dir)
+            actual_props = apr_hash_make(scratch_pool);
+          else
+            actual_props = base_props;
+        }
+
+      /* Merge pending properties into temporary files (ignoring
+         conflicts). */
+      SVN_ERR_W(svn_wc__merge_props(&work_item,
+                                    &prop_state,
+                                    &new_base_props,
+                                    &new_actual_props,
+                                    eb->db,
+                                    db->local_abspath,
+                                    svn_wc__db_kind_dir,
+                                    NULL, /* left_version */
+                                    NULL, /* right_version */
+                                    NULL /* use baseprops */,
+                                    base_props,
+                                    actual_props,
+                                    regular_prop_changes,
+                                    TRUE /* base_merge */,
+                                    FALSE /* dry_run */,
+                                    eb->conflict_func,
+                                    eb->conflict_baton,
+                                    eb->cancel_func,
+                                    eb->cancel_baton,
+                                    db->pool,
+                                    scratch_pool),
+                _("Couldn't do property merge"));
+      /* After a (not-dry-run) merge, we ALWAYS have props to save.  */
+      SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
+      all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                        scratch_pool);
     }
+
+  SVN_ERR(accumulate_last_change(&new_changed_rev, &new_changed_date,
+                                 &new_changed_author, entry_prop_changes,
+                                 scratch_pool, scratch_pool));
 
   /* Check if we should add some not-present markers before marking the
      directory complete (Issue #3569) */
