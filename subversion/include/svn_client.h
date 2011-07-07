@@ -5451,6 +5451,11 @@ typedef svn_error_t *(*svn_client_info_receiver2_t)(
  * recurse fully, invoking @a receiver on @a abspath_or_url and
  * everything beneath it.
  *
+ * If @a fetch_excluded is TRUE, also also send excluded nodes in the working
+ * copy to @a receiver, otherwise these are skipped. If @a fetch_actual_only
+ * is TRUE also send nodes that don't exist as versioned but are still
+ * tree conflicted.
+ *
  * @a changelists is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose info is
  * reported; that is, don't report info about any item unless
@@ -5463,10 +5468,12 @@ svn_error_t *
 svn_client_info3(const char *abspath_or_url,
                  const svn_opt_revision_t *peg_revision,
                  const svn_opt_revision_t *revision,
+                 svn_depth_t depth,
+                 svn_boolean_t fetch_excluded,
+                 svn_boolean_t fetch_actual_only,
+                 const apr_array_header_t *changelists,
                  svn_client_info_receiver2_t receiver,
                  void *receiver_baton,
-                 svn_depth_t depth,
-                 const apr_array_header_t *changelists,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *scratch_pool);
 
