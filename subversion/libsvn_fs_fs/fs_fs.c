@@ -1077,6 +1077,16 @@ write_format(const char *path, int format, int max_files_per_dir,
 static svn_error_t *
 check_format(int format)
 {
+  /* Blacklist.  These formats may be either younger or older than
+     SVN_FS_FS__FORMAT_NUMBER, but we don't support them. */
+  if (format == SVN_FS_FS__PACKED_REVPROP_SQLITE_DEV_FORMAT)
+    return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+                             _("Found format '%d', only created by "
+                               "unreleased dev builds; see "
+                               "http://subversion.apache.org"
+                               "/docs/release-notes/1.7#revprop-packing"),
+                             format);
+
   /* We support all formats from 1-current simultaneously */
   if (1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER)
     return SVN_NO_ERROR;
@@ -1247,11 +1257,11 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   /* Read the FS format number. */
   SVN_ERR(read_format(&format, &max_files_per_dir,
                       path_format(fs, pool), pool));
+  SVN_ERR(check_format(format));
 
   /* Now we've got a format number no matter what. */
   ffd->format = format;
   ffd->max_files_per_dir = max_files_per_dir;
-  SVN_ERR(check_format(format));
 
   /* Read in and cache the repository uuid. */
   SVN_ERR(svn_io_file_open(&uuid_file, path_uuid(fs, pool),
@@ -1314,6 +1324,7 @@ upgrade_body(void *baton, apr_pool_t *pool)
 
   /* Read the FS format number and max-files-per-dir setting. */
   SVN_ERR(read_format(&format, &max_files_per_dir, format_path, pool));
+  SVN_ERR(check_format(format));
 
   /* If the config file does not exist, create one. */
   SVN_ERR(svn_io_check_path(svn_dirent_join(fs->path, PATH_CONFIG, pool),
@@ -7931,6 +7942,7 @@ pack_body(void *baton,
 
   SVN_ERR(read_format(&format, &max_files_per_dir, path_format(pb->fs, pool),
                       pool));
+  SVN_ERR(check_format(format));
 
   /* If the repository isn't a new enough format, we don't support packing.
      Return a friendly error to that effect. */
