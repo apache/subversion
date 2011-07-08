@@ -233,6 +233,8 @@ character.
 
 Packing revision properties (format 5: SQLite)
 ---------------------------
+ 
+This was supported by 1.7-dev builds but never included in a blessed release.
 
 See r1143829 of this file:
 http://svn.apache.org/viewvc/subversion/trunk/subversion/libsvn_fs_fs/structure?view=markup&pathrev=1143829
