@@ -34,6 +34,8 @@ TODO:
 * when reading revprops, try the pack file when the non-pack is ENOENT
   (concurrent packer scenario)
 
+* drop heuristic in recover_body() uhohs=True
+
 
 Suggested:
 
