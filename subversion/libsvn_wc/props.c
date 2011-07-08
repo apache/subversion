@@ -1393,7 +1393,9 @@ apply_single_generic_prop_change(svn_wc_notify_state_t *state,
   if (working_val && new_val
       && svn_string_compare(working_val, new_val))
     {
-       set_prop_merge_state(state, svn_wc_notify_state_merged);
+      /* All values identical is a trivial, non-notifiable merge */
+      if (! old_val || ! svn_string_compare(old_val, new_val))
+        set_prop_merge_state(state, svn_wc_notify_state_merged);
     }
   /* If working_val is the same as old_val... */
   else if (working_val && old_val
