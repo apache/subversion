@@ -477,7 +477,7 @@ PREWRITTEN_HOOKS_TEXT
 "# arguments:"                                                               NL
 "#"                                                                          NL
 "#   [1] REPOS-PATH   (the path to this repository)"                         NL
-"#   [2] REVISION     (the revision being tweaked)"                          NL
+"#   [2] REV          (the revision being tweaked)"                          NL
 "#   [3] USER         (the username of the person tweaking the property)"    NL
 "#   [4] PROPNAME     (the property being set on the revision)"              NL
 "#   [5] ACTION       (the property is being 'A'dded, 'M'odified, or 'D'eleted)"
