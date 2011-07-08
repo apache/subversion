@@ -249,27 +249,6 @@ static svn_error_t *simple_store_vsn_url(const char *vsn_url,
   return NULL;
 }
 
-static svn_error_t *get_delta_base(const char **delta_base,
-                                   const char *relpath,
-                                   svn_ra_get_wc_prop_func_t get_wc_prop,
-                                   void *cb_baton,
-                                   apr_pool_t *pool)
-{
-  const svn_string_t *value;
-
-  if (relpath == NULL || get_wc_prop == NULL)
-    {
-      *delta_base = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR((*get_wc_prop)(cb_baton, relpath, SVN_RA_NEON__LP_VSN_URL,
-                         &value, pool));
-
-  *delta_base = value ? value->data : NULL;
-  return SVN_NO_ERROR;
-}
-
 /* helper func which maps certain DAV: properties to svn:wc:
    properties.  Used during checkouts and updates.  */
 static svn_error_t *set_special_wc_prop(const char *key,
@@ -364,21 +343,27 @@ static svn_error_t *custom_get_request(svn_ra_neon__session_t *ras,
                                        apr_pool_t *pool)
 {
   custom_get_ctx_t cgc = { 0 };
-  const char *delta_base;
+  const char *delta_base = NULL;
   svn_ra_neon__request_t *request;
   svn_error_t *err;
 
-  if (use_base)
+  if (use_base && relpath != NULL)
     {
       /* See if we can get a version URL for this resource. This will
          refer to what we already have in the working copy, thus we
          can get a diff against this particular resource. */
-      SVN_ERR(get_delta_base(&delta_base, relpath,
-                             get_wc_prop, cb_baton, pool));
-    }
-  else
-    {
-      delta_base = NULL;
+
+      if (get_wc_prop != NULL)
+        {
+          const svn_string_t *value;
+
+          SVN_DBG(("Asking the WC for %s\n", relpath));
+
+          SVN_ERR(get_wc_prop(cb_baton, relpath, SVN_RA_NEON__LP_VSN_URL,
+                              &value, pool));
+
+          delta_base = value ? value->data : NULL;
+        }
     }
 
   SVN_ERR(svn_ra_neon__request_create(&request, ras, "GET", url, pool));
