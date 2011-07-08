@@ -41,6 +41,7 @@
 #include "svn_string.h"
 #include "svn_utf.h"
 #include "svn_checksum.h"
+#include "svn_sorts.h"
 #include "svn_path.h"
 #include "private/svn_eol_private.h"
 #include "private/svn_io_private.h"
@@ -465,21 +466,28 @@ svn_stream_readline(svn_stream_t *stream,
                                          pool));
 }
 
-svn_error_t *svn_stream_copy3(svn_stream_t *from, svn_stream_t *to,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_pool_t *scratch_pool)
+svn_error_t *
+svn_stream_copy4(svn_stream_t *from,
+                 svn_stream_t *to,
+                 apr_ssize_t len_in,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *scratch_pool)
 {
   char *buf = apr_palloc(scratch_pool, SVN__STREAM_CHUNK_SIZE);
   svn_error_t *err;
   svn_error_t *err2;
+  svn_boolean_t read_everything = (len_in == -1);
+
+  if (read_everything)
+    len_in = SVN__STREAM_CHUNK_SIZE;
 
   /* Read and write chunks until we get a short read, indicating the
      end of the stream.  (We can't get a short write without an
      associated error.) */
   while (1)
     {
-      apr_size_t len = SVN__STREAM_CHUNK_SIZE;
+      apr_size_t len = MIN(SVN__STREAM_CHUNK_SIZE, len_in);
 
       if (cancel_func)
         {
@@ -497,12 +505,27 @@ svn_error_t *svn_stream_copy3(svn_stream_t *from, svn_stream_t *to,
 
       if (err || (len != SVN__STREAM_CHUNK_SIZE))
           break;
+
+      if (!read_everything)
+        len_in -= SVN__STREAM_CHUNK_SIZE;
     }
 
   err2 = svn_error_compose_create(svn_stream_close(from),
                                   svn_stream_close(to));
 
   return svn_error_compose_create(err, err2);
+}
+
+svn_error_t *
+svn_stream_copy3(svn_stream_t *from,
+                 svn_stream_t *to,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_stream_copy4(from, to, -1,
+                                          cancel_func, cancel_baton,
+                                          scratch_pool));
 }
 
 svn_error_t *

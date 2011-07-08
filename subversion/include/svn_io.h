@@ -1183,6 +1183,12 @@ svn_stream_readline(svn_stream_t *stream,
  * Read the contents of the readable stream @a from and write them to the
  * writable stream @a to calling @a cancel_func before copying each chunk.
  *
+ * If @a len is -1, then the entire source stream will be copied, otherwise,
+ * up to @a len bytes will be copied from @a from to @a to.
+ *
+ * @todo ### Should this API return the number of bytes actually copied,
+ * a la svn_stream_read()?
+ *
  * @a cancel_func may be @c NULL.
  *
  * @note both @a from and @a to will be closed upon successful completion of
@@ -1191,8 +1197,23 @@ svn_stream_readline(svn_stream_t *stream,
  * svn_stream_disown() to protect either or both of the streams from
  * being closed.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_stream_copy4(svn_stream_t *from,
+                 svn_stream_t *to,
+                 apr_ssize_t len,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool);
+
+/** Same as svn_stream_copy4(), but copies the source to the destination in
+ * its entirety.
+ *
+ * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_stream_copy3(svn_stream_t *from,
                  svn_stream_t *to,

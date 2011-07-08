@@ -568,6 +568,49 @@ test_stream_base64(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_stream_copy(apr_pool_t *pool)
+{
+#define TEST_BUF_SIZE 100
+
+  static const char * const string =
+        "My Bonnie lies over the ocean,\n"
+        "My Bonnie lies over the sea,\n"
+        "My Bonnie lies over the ocean,\n"
+        "Oh bring back my Bonnie to me!\n"
+        "\n"
+        "Bring back, bring back,\n"
+        "Bring back my Bonnie to me, to me.\n"
+        "Bring back, bring back,\n"
+        "Bring back my Bonnie to me!\n";
+
+  svn_stringbuf_t *orig = svn_stringbuf_create(string, pool);
+  svn_stringbuf_t *actual = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *expected = svn_stringbuf_create(string, pool);
+  svn_stream_t *src;
+  svn_stream_t *dst;
+
+  src = svn_stream_from_stringbuf(orig, pool);
+  dst = svn_stream_from_stringbuf(actual, pool);
+
+  /* Copy all of the original stream. */
+  SVN_ERR(svn_stream_copy4(src, dst, -1, NULL, NULL, pool));
+
+  SVN_TEST_STRING_ASSERT(actual->data, expected->data);
+
+  /* Now, try copying only a subset of the stream. */
+  actual = svn_stringbuf_create("", pool);
+  expected = svn_stringbuf_ncreate(string, TEST_BUF_SIZE, pool);
+  src = svn_stream_from_stringbuf(orig, pool);
+  dst = svn_stream_from_stringbuf(actual, pool);
+
+  SVN_ERR(svn_stream_copy4(src, dst, TEST_BUF_SIZE, NULL, NULL, pool));
+
+  SVN_TEST_STRING_ASSERT(actual->data, expected->data);
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -591,5 +634,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test compressed streams with empty files"),
     SVN_TEST_PASS2(test_stream_base64,
                    "test base64 encoding/decoding streams"),
+    SVN_TEST_PASS2(test_stream_copy,
+                   "test copying streams"),
     SVN_TEST_NULL
   };
