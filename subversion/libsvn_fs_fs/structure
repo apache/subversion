@@ -133,7 +133,7 @@ The formats are:
   Format 2, understood by Subversion 1.4+
   Format 3, understood by Subversion 1.5+
   Format 4, understood by Subversion 1.6+
-  Format 5, understood by Subversion 1.7+
+  Format 5, understood by Subversion 1.7-dev, never released
 
 The differences between the formats are:
 
@@ -223,17 +223,14 @@ The manifest file consists of a list of offsets, one for each revision in the
 pack file.  The offsets are stored as ASCII decimal, and separated by a newline
 character.
 
-Packing revision properties
+Packing revision properties (format 5: SQLite)
 ---------------------------
 
-Revprop shards may be packed too.  The packing process moves all revprops from
-a the oldest unpacked shard to the SQLite database "revprops/revprops.db".  The
-sequel documents the schema of FSFS format 5, which corresponds to schema
-version USER_VERSION=1:
+This was supported by 1.7-dev builds but never included in a blessed release.
 
-The database maps revision numbers to serialized "proplist" skels.  Every 
-packed revision must have a mapping entry (a table row), even if it maps the
-revnum to an empty skel.
+See r1143829 of this file:
+http://svn.apache.org/viewvc/subversion/trunk/subversion/libsvn_fs_fs/structure?view=markup&pathrev=1143829
+
 
 Node-revision IDs
 -----------------
