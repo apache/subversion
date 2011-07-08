@@ -446,7 +446,7 @@ check-javahl: javahl javahl-compat
 # "make check CLEANUP=true" will clean up directories for successful tests.
 # "make check TESTS=subversion/tests/cmdline/basic_tests.py"
 #  will perform only basic tests (likewise for other tests).
-check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
+check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
 	@if test "$(PYTHON)" != "none"; then                                 \
 	  flags="--verbose";                                                 \
 	  if test "$(CLEANUP)" != ""; then                                   \
@@ -495,38 +495,38 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 
 # First, set up Apache as documented in
 # subversion/tests/cmdline/README.
-davcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod
+davcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod svnmucc
 	@$(MAKE) check BASE_URL=http://localhost
 
 # Automatically configure and run Apache httpd on a random port, and then
 # run make check.
-davautocheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod
+davautocheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod svnmucc
 	@# Takes MODULE_PATH, USE_HTTPV1 and SVN_PATH_AUTHZ in the environment.
 	@APXS=$(APXS) bash $(top_srcdir)/subversion/tests/cmdline/davautocheck.sh
 
 # First, run:
 #   subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
-svncheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
+svncheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
 	@$(MAKE) check BASE_URL=svn://127.0.0.1
 
 # 'make svnserveautocheck' runs svnserve for you and kills it.
-svnserveautocheck: svnserve bin $(TEST_DEPS) @BDB_TEST_DEPS@
+svnserveautocheck: svnserve bin $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
 	@env PYTHON=$(PYTHON) THREADED=$(THREADED) \
 	  $(top_srcdir)/subversion/tests/cmdline/svnserveautocheck.sh
 
 # First, run:
 #   subversion/svnserve/svnserve --listen-host "::1" -d -r `pwd`/subversion/tests/cmdline
 
-svncheck6: bin $(TEST_DEPS) @BDB_TEST_DEPS@
+svncheck6: bin $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
 	@$(MAKE) check BASE_URL=svn://\[::1\]
 
 # First make sure you can ssh to localhost and that "svnserve" is in
 # the path of the resulting shell.
-svnsshcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
+svnsshcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
 	@$(MAKE) check \
 	  BASE_URL=svn+ssh://localhost`pwd`/subversion/tests/cmdline
 
-bdbcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
+bdbcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
 	@$(MAKE) check FS_TYPE=bdb
 
 check-clean:
