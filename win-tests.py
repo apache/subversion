@@ -656,6 +656,8 @@ if create_dirs:
     baton = copied_execs
     for dirpath, dirs, files in os.walk('subversion'):
       copy_execs(baton, dirpath, dirs + files)
+    for dirpath, dirs, files in os.walk('tools/client-side/svnmucc'):
+      copy_execs(baton, dirpath, dirs + files)
   except:
     os.chdir(old_cwd)
     raise
