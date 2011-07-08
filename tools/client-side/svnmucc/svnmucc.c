@@ -1,31 +1,30 @@
 /*
+ * svnmucc.c: Subversion Multiple URL Client
  *
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * ====================================================================
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
+ * ====================================================================
  *
  */
 
 /*  Multiple URL Command Client
 
     Combine a list of mv, cp and rm commands on URLs into a single commit.
-
-    Copyright 2005 Philip Martin <philip@codematters.co.uk>
-
-    Licenced under the same terms as Subversion.
 
     How it works: the command line arguments are parsed into an array of
     action structures.  The action structures are interpreted to build a
@@ -783,7 +782,8 @@ usage(apr_pool_t *pool, int exit_val)
     "                        use \"-\" to read from standard input)\n"
     "  --config-dir ARG      use ARG to override the config directory\n"
     "  --config-option ARG   use ARG so override a configuration option\n"
-    "  --no-auth-cache       do not cache authentication tokens\n";
+    "  --no-auth-cache       do not cache authentication tokens\n"
+    "  --version             print version information\n";
   svn_error_clear(svn_cmdline_fputs(msg, stream, pool));
   apr_pool_destroy(pool);
   exit(exit_val);
@@ -795,6 +795,22 @@ insufficient(apr_pool_t *pool)
   handle_error(svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
                                 "insufficient arguments"),
                pool);
+}
+
+static svn_error_t *
+display_version(apr_getopt_t *os, apr_pool_t *pool)
+{
+  const char *ra_desc_start
+    = "The following repository access (RA) modules are available:\n\n";
+  svn_stringbuf_t *version_footer;
+
+  version_footer = svn_stringbuf_create(ra_desc_start, pool);
+  SVN_ERR(svn_ra_print_modules(version_footer, pool));
+
+  SVN_ERR(svn_opt_print_help3(os, "svnmucc", TRUE, FALSE, version_footer->data,
+                              NULL, NULL, NULL, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
 }
 
 int
@@ -809,7 +825,8 @@ main(int argc, const char **argv)
   enum {
     config_dir_opt = SVN_OPT_FIRST_LONGOPT_ID,
     config_inline_opt,
-    config_no_auth_cache_opt,
+    no_auth_cache_opt,
+    version_opt,
     with_revprop_opt
   };
   const apr_getopt_option_t options[] = {
@@ -825,7 +842,8 @@ main(int argc, const char **argv)
     {"non-interactive", 'n', 0, ""},
     {"config-dir", config_dir_opt, 1, ""},
     {"config-option",  config_inline_opt, 1, ""},
-    {"no-auth-cache",  config_no_auth_cache_opt, 0, ""},
+    {"no-auth-cache",  no_auth_cache_opt, 0, ""},
+    {"version", version_opt, 0, ""},
     {NULL, 0, 0, NULL}
   };
   const char *message = NULL;
@@ -930,8 +948,12 @@ main(int argc, const char **argv)
           if (err)
             handle_error(err, pool);
           break;
-        case config_no_auth_cache_opt:
+        case no_auth_cache_opt:
           no_auth_cache = TRUE;
+          break;
+        case version_opt:
+          SVN_INT_ERR(display_version(getopt, pool));
+          exit(EXIT_SUCCESS);
           break;
         case 'h':
           usage(pool, EXIT_SUCCESS);
