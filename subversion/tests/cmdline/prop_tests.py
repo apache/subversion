@@ -138,6 +138,7 @@ def commit_props(sbox):
 
 #----------------------------------------------------------------------
 
+@Issue(3951)
 def update_props(sbox):
   "receive properties via update"
 
