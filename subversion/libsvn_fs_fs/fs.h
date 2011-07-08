@@ -60,10 +60,6 @@ extern "C" {
 #define PATH_LOCKS_DIR        "locks"            /* Directory of locks */
 #define PATH_MIN_UNPACKED_REV "min-unpacked-rev" /* Oldest revision which
                                                     has not been packed. */
-#define PATH_MIN_UNPACKED_REVPROP "min-unpacked-revprop" /* Oldest revision
-                                                            property which has
-                                                            not been packed. */
-#define PATH_REVPROPS_DB "revprops.db"
 /* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
 #define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 
@@ -270,14 +266,8 @@ typedef struct fs_fs_data_t
   /* Thread-safe boolean */
   svn_atomic_t rep_cache_db_opened;
 
-   /* The sqlite database used for revprops. */
-   svn_sqlite__db_t *revprop_db;
-
   /* The oldest revision not in a pack file. */
   svn_revnum_t min_unpacked_rev;
-
-   /* The oldest revision property not in a pack db. */
-   svn_revnum_t min_unpacked_revprop;
 
   /* Whether rep-sharing is supported by the filesystem
    * and allowed by the configuration. */
