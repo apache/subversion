@@ -562,9 +562,8 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
                             capability, APR_HASH_KEY_STRING);
 
   /* Some capabilities depend on the repository as well as the server.
-     NOTE: ../libsvn_ra_neon/session.c:svn_ra_neon__has_capability()
-     has a very similar code block.  If you change something here,
-     check there as well. */
+     NOTE: svn_ra_neon__has_capability() has a very similar code block.  If
+     you change something here, check there as well. */
   if (cap_result == capability_server_yes)
     {
       if ((strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
@@ -577,7 +576,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
              didn't even know which repository we were interested in
              -- it just told us whether the server supports mergeinfo.
              If the answer was 'no', there's no point checking the
-             particular repository; but if it was 'yes, we still must
+             particular repository; but if it was 'yes', we still must
              change it to 'no' iff the repository itself doesn't
              support mergeinfo. */
           svn_mergeinfo_catalog_t ignored;
