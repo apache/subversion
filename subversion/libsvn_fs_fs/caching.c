@@ -189,10 +189,11 @@ init_callbacks(svn_cache__t *cache,
   return SVN_NO_ERROR;
 }
 
-/* Sets CACHE_P with a pointer to cache instance based on provided options.
+/* Sets *CACHE_P to cache instance based on provided options.
  * Creates memcache if MEMCACHE is not NULL. Creates membuffer cache if
  * MEMBUFFER is not NULL. Fallbacks to inprocess cache if MEMCACHE and
- * MEMBUFFER is NULL and pages is non-zero.
+ * MEMBUFFER are NULL and pages is non-zero.  Sets *CACHE_P to NULL
+ * otherwise.
  *
  * Cache is allocated in POOL.
  * */
