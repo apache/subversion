@@ -39,6 +39,9 @@
 
 #include "ra_serf.h"
 
+
+/* In a debug build, setting this environment variable to "yes" will force
+   the client to speak v1, even if the server is capable of speaking v2. */
 #define SVN_IGNORE_V2_ENV_VAR "SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2"
 
 
@@ -349,10 +352,6 @@ capabilities_headers_iterator_callback(void *baton,
       else if (svn_cstring_casecmp(key, SVN_DAV_ME_RESOURCE_HEADER) == 0)
         {
 #ifdef SVN_DEBUG
-          /* ### This section is throw in here for development use.  It
-             ### allows devs the chance to force the client to speak v1,
-             ### even if the server is capable of speaking v2.  We should
-             ### probably remove it before 1.7 goes final. */
           char *ignore_v2_env_var = getenv(SVN_IGNORE_V2_ENV_VAR);
 
           if (!(ignore_v2_env_var
