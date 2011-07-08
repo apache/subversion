@@ -235,7 +235,7 @@ svn_client__get_repos_mergeinfo_catalog(
 
    If TARGET_WCPATH inherited its mergeinfo from a working copy ancestor
    or if it was obtained from the repository, set *INDIRECT to TRUE, set it
-   to FALSE *otherwise. */
+   to FALSE otherwise. */
 svn_error_t *
 svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                       svn_boolean_t *indirect,
