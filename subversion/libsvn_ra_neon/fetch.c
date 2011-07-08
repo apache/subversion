@@ -357,8 +357,6 @@ static svn_error_t *custom_get_request(svn_ra_neon__session_t *ras,
         {
           const svn_string_t *value;
 
-          SVN_DBG(("Asking the WC for %s\n", relpath));
-
           SVN_ERR(get_wc_prop(cb_baton, relpath, SVN_RA_NEON__LP_VSN_URL,
                               &value, pool));
 
