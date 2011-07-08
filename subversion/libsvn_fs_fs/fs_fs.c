@@ -6509,8 +6509,7 @@ commit_body(void *baton, apr_pool_t *pool)
                                     new_dir, pool));
         }
 
-      if (ffd->format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT ||
-          new_rev >= ffd->min_unpacked_revprop)
+      assert(! is_packed_revprop(cb->fs, new_rev));
         {
           const char *new_dir = path_revprops_shard(cb->fs, new_rev, pool);
           svn_error_t *err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
