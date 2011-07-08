@@ -3121,7 +3121,7 @@ revision_proplist(apr_hash_t **proplist_p,
        * ### As that's not my speciality, I'll leave it to somebody else to
        * ### implement.  Hint: you may consider abstracting out the above
        * ### loop into something more generalizable. */
-      svn_revnum_t shard;
+      apr_int64_t shard;
       apr_int64_t shard_pos;
       apr_file_t *pack_file;
       const char *pack_file_path;
