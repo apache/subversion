@@ -110,13 +110,14 @@ create_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                     const char *username,
                     const char *password,
                     svn_boolean_t non_interactive,
+                    svn_boolean_t no_auth_cache,
                     apr_pool_t *pool)
 {
   SVN_ERR(svn_ra_create_callbacks(callbacks, pool));
 
   SVN_ERR(svn_cmdline_create_auth_baton(&(*callbacks)->auth_baton,
                                         non_interactive,
-                                        username, password, NULL, FALSE,
+                                        username, password, NULL, no_auth_cache,
                                         FALSE, NULL, NULL, NULL, pool));
 
   (*callbacks)->open_tmp_file = open_tmp_file;
@@ -618,6 +619,7 @@ execute(const apr_array_header_t *actions,
         const char *config_dir,
         const apr_array_header_t *config_options,
         svn_boolean_t non_interactive,
+        svn_boolean_t no_auth_cache,
         svn_revnum_t base_revision,
         apr_pool_t *pool)
 {
@@ -635,7 +637,7 @@ execute(const apr_array_header_t *actions,
   SVN_ERR(svn_cmdline__apply_config_options(config, config_options,
                                             "svnmucc: ", "--config-option"));
   SVN_ERR(create_ra_callbacks(&ra_callbacks, username, password,
-                              non_interactive, pool));
+                              non_interactive, no_auth_cache, pool));
   SVN_ERR(svn_ra_open4(&session, NULL, anchor, NULL, ra_callbacks,
                        NULL, config, pool));
 
@@ -780,7 +782,8 @@ usage(apr_pool_t *pool, int exit_val)
     "  -X, --extra-args ARG  append arguments from file ARG (one per line;\n"
     "                        use \"-\" to read from standard input)\n"
     "  --config-dir ARG      use ARG to override the config directory\n"
-    "  --config-option ARG   use ARG so override a configuration option\n";
+    "  --config-option ARG   use ARG so override a configuration option\n"
+    "  --no-auth-cache       do not cache authentication tokens\n";
   svn_error_clear(svn_cmdline_fputs(msg, stream, pool));
   apr_pool_destroy(pool);
   exit(exit_val);
@@ -806,6 +809,7 @@ main(int argc, const char **argv)
   enum {
     config_dir_opt = SVN_OPT_FIRST_LONGOPT_ID,
     config_inline_opt,
+    config_no_auth_cache_opt,
     with_revprop_opt
   };
   const apr_getopt_option_t options[] = {
@@ -821,6 +825,7 @@ main(int argc, const char **argv)
     {"non-interactive", 'n', 0, ""},
     {"config-dir", config_dir_opt, 1, ""},
     {"config-option",  config_inline_opt, 1, ""},
+    {"no-auth-cache",  config_no_auth_cache_opt, 0, ""},
     {NULL, 0, 0, NULL}
   };
   const char *message = NULL;
@@ -829,6 +834,7 @@ main(int argc, const char **argv)
   const char *config_dir = NULL;
   apr_array_header_t *config_options;
   svn_boolean_t non_interactive = FALSE;
+  svn_boolean_t no_auth_cache = FALSE;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
   apr_array_header_t *action_args;
   apr_hash_t *revprops = apr_hash_make(pool);
@@ -923,6 +929,9 @@ main(int argc, const char **argv)
                                                  pool);
           if (err)
             handle_error(err, pool);
+          break;
+        case config_no_auth_cache_opt:
+          no_auth_cache = TRUE;
           break;
         case 'h':
           usage(pool, EXIT_SUCCESS);
@@ -1159,7 +1168,7 @@ main(int argc, const char **argv)
 
   if ((err = execute(actions, anchor, revprops, username, password,
                      config_dir, config_options, non_interactive,
-                     base_revision, pool)))
+                     no_auth_cache, base_revision, pool)))
     handle_error(err, pool);
 
   svn_pool_destroy(pool);
