@@ -273,8 +273,8 @@ typedef struct fs_fs_data_t
   /* The oldest revision not in a pack file. */
   svn_revnum_t min_unpacked_rev;
 
-   /* The oldest revision property not in a pack db. */
-   svn_revnum_t min_unpacked_revprop;
+  /* The oldest revision property not in a pack db. */
+  svn_revnum_t min_unpacked_revprop;
 
   /* Whether rep-sharing is supported by the filesystem
    * and allowed by the configuration. */
