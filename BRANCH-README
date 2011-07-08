@@ -7,3 +7,59 @@ may review it via
 
    svn diff ^/subversion/trunk/subversion/libsvn_fs_fs/structure \
             ^/subversion/branches/revprop-packing/subversion/libsvn_fs_fs/structure
+
+See issue #3944: http://subversion.tigris.org/issues/show_bug.cgi?id=3944
+
+
+TODO:
+
+* merge removal of f5 code from trunk
+
+* add code catering for virus scanners during atomic move-into-place
+
+* add r0 special case
+
+* implement packed revprop editing
+  + add sequence number; adjust readers accordingly
+
+* sync 'structure' with the implementation
+  + manifest record alignment
+  + manifest record width (bytes)
+
+* check for offset overflow (in manifest)
+
+* add some explicit tests for svnadmin upgrade/pack
+  (both revs and revrops)
+
+* when reading revprops, try the pack file when the non-pack is ENOENT
+  (concurrent packer scenario)
+
+
+Suggested:
+
+* each revprops blob should include its rev number, length, and checksum,
+  prepended to the blob itself.  (Or if it's awkward to prepend
+  a checksum, put those things at the end, and omit the length as it is
+  redundant by then.)
+
+* store edits in non-packed files
+
+* edit the revpack file in-place
+  (requires aligning the manifest records to powers of 2)
+
+* multiple offsets per manifest record
+
+* append edits directly to the pack file, never have non-packed revprops
+
+* manifest offsets as s/ASCII/unserialized integers/
+
+
+Wishlist or out-of-scope:
+
+* keep old revprop values for auditing
+
+* script to downgrade f5 to f4
+
+* finer-grained (two-staged) locks for other operations
+  (eg, packing revision shards)
+
