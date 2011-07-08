@@ -216,6 +216,8 @@ prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
 /* Examine the mergeinfo in INITIAL_VAL, renumber revisions in rangelists
    as appropriate, and return the (possibly new) mergeinfo in *FINAL_VAL
    (allocated from POOL). */
+/* ### FIXME:  Consider somehow sharing code with
+   ### svnrdump/load_editor.c:renumber_mergeinfo_revs() */
 static svn_error_t *
 renumber_mergeinfo_revs(svn_string_t **final_val,
                         const svn_string_t *initial_val,
