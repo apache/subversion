@@ -3055,7 +3055,7 @@ set_revision_proplist(svn_fs_t *fs,
       svn_stream_t *source_stream;
       svn_stream_t *target_stream;
       const char *target_path;
-      svn_revnum_t shard;
+      apr_int64_t shard;
       apr_int64_t shard_pos;
       apr_int64_t i;
       const char *pack_file_path;
