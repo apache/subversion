@@ -17,7 +17,7 @@ TODO:
 
 * add code catering for virus scanners during atomic move-into-place
 
-* implement packed revprop editing
+* implement per-shard locking
   + add sequence number; adjust readers accordingly
 
 * sync 'structure' with the implementation
@@ -28,9 +28,6 @@ TODO:
 
 * add some explicit tests for svnadmin upgrade/pack
   (both revs and revrops)
-
-* when reading revprops, try the pack file when the non-pack is ENOENT
-  (concurrent packer scenario)
 
 * drop heuristic in recover_body() uhohs=True
 
