@@ -70,7 +70,7 @@
 #define FSFS_MAX_PATH_LEN 4096
 
 /* Revprop packing uses a fixed-width manifest field size.  This is that
- * width. */
+ * width, not including the terminating newline. */
 #define REVPROP_MANIFEST_FIELD_WIDTH 16
 
 /* The default maximum number of files per directory to store in the
@@ -3032,6 +3032,14 @@ read_revprop_manifest_record(apr_off_t *offset,
                                "for r%ld"),
                              rev);
 
+  len = 1;
+  SVN_ERR(svn_stream_read(source_stream, buf, &len));
+  if (len != 1 || *buf != '\n')
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Improperly terminated revprops manifest record "
+                               "for r%ld"),
+                             rev);
+
   if (outbuf)
     memcpy(outbuf, buf, sizeof(buf));
 
@@ -3131,7 +3139,7 @@ set_revision_proplist(svn_fs_t *fs,
       /* Copy manifest info up to the new prop's offset value. */
       SVN_ERR(svn_stream_copy4(svn_stream_disown(source_stream, pool),
                                svn_stream_disown(target_stream, pool),
-                               shard_pos * REVPROP_MANIFEST_FIELD_WIDTH,
+                               shard_pos * (REVPROP_MANIFEST_FIELD_WIDTH + 1),
                                NULL, NULL, pool));
 
       /* Read the old offset value from the existing pack file, and compute
@@ -3143,6 +3151,7 @@ set_revision_proplist(svn_fs_t *fs,
       SVN_ERR(read_revprop_manifest_record(&old_offset, buf, rev,
                                            source_stream));
       SVN_ERR(svn_stream_write(target_stream, buf, &len));
+      SVN_ERR(svn_stream_printf(target_stream, pool, "\n"));
 
       /* In this corner case, the editted prop is the last one in the
          shard, so there is no further offset to read or bump. */
@@ -3152,7 +3161,8 @@ set_revision_proplist(svn_fs_t *fs,
                                                source_stream));
           offset_diff = sb->len - (next_offset - old_offset);
           SVN_ERR(svn_stream_printf(target_stream, pool,
-                "%0" APR_STRINGIFY(REVPROP_MANIFEST_FIELD_WIDTH) APR_OFF_T_FMT,
+                "%0" APR_STRINGIFY(REVPROP_MANIFEST_FIELD_WIDTH) APR_OFF_T_FMT
+                "\n",
                 next_offset + offset_diff));
         }
       else
@@ -3166,7 +3176,8 @@ set_revision_proplist(svn_fs_t *fs,
           SVN_ERR(read_revprop_manifest_record(&next_offset, NULL, rev,
                                                source_stream));
           SVN_ERR(svn_stream_printf(target_stream, pool,
-                "%0" APR_STRINGIFY(REVPROP_MANIFEST_FIELD_WIDTH) APR_OFF_T_FMT,
+                "%0" APR_STRINGIFY(REVPROP_MANIFEST_FIELD_WIDTH) APR_OFF_T_FMT
+                "\n",
                 next_offset + offset_diff));
         }
 
@@ -3291,7 +3302,7 @@ revision_proplist(apr_hash_t **proplist_p,
       /* Open the pack file and seek to the manifest offset. */
       SVN_ERR(svn_io_file_open(&pack_file, pack_file_path,
                                APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
-      offset = shard_pos * REVPROP_MANIFEST_FIELD_WIDTH;
+      offset = shard_pos * (REVPROP_MANIFEST_FIELD_WIDTH + 1);
       SVN_ERR(svn_io_file_seek(pack_file, APR_SET, &offset, pool));
 
       /* Read the revprop offset. */
@@ -3301,7 +3312,7 @@ revision_proplist(apr_hash_t **proplist_p,
                                                                     pool)));
 
       /* Seek to the revprop offset, and read the props. */
-      offset = REVPROP_MANIFEST_FIELD_WIDTH * ffd->max_files_per_dir
+      offset = ffd->max_files_per_dir * (REVPROP_MANIFEST_FIELD_WIDTH + 1)
                + manifest_record;
       SVN_ERR(svn_io_file_seek(pack_file, APR_SET, &offset, pool));
       SVN_ERR(svn_hash_read2(proplist,
@@ -8057,7 +8068,7 @@ pack_revprop_shard(svn_fs_t *fs,
       memset(buf, '@', REVPROP_MANIFEST_FIELD_WIDTH);
       buf[REVPROP_MANIFEST_FIELD_WIDTH] = '\0';
 
-      SVN_ERR(svn_stream_printf(manifest_stream, iterpool, "%s", buf));
+      SVN_ERR(svn_stream_printf(manifest_stream, iterpool, "%s\n", buf));
 
       /* Don't dump r0 in the revpack file. */
       start_rev++;
@@ -8082,7 +8093,8 @@ pack_revprop_shard(svn_fs_t *fs,
 
       /* Update the manifest. */
       SVN_ERR(svn_stream_printf(manifest_stream, iterpool,
-              "%0" APR_STRINGIFY(REVPROP_MANIFEST_FIELD_WIDTH) APR_OFF_T_FMT,
+              "%0" APR_STRINGIFY(REVPROP_MANIFEST_FIELD_WIDTH) APR_OFF_T_FMT
+              "\n",
               next_offset));
       next_offset += finfo.size;
 
