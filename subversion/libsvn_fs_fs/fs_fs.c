@@ -3136,25 +3136,15 @@ set_revision_proplist(svn_fs_t *fs,
                                svn_stream_disown(target_stream, pool),
                                old_offset, NULL, NULL, pool));
 
+      /* Write the new data. */
       len = sb->len;
       SVN_ERR(svn_stream_write(target_stream, sb->data, &len));
+      len = sb->len - offset_diff;
+      SVN_ERR(svn_stream_skip(source_stream, len));
 
-      if (offset_diff)
-        {
-          /* If we have an offset, it means we aren't the last rev in the
-             shard, and need copy the rest of the content from source to
-             target. */
-          len = sb->len - offset_diff;
-          SVN_ERR(svn_stream_skip(source_stream, len));
-          SVN_ERR(svn_stream_copy4(source_stream, target_stream, -1,
-                                   NULL, NULL, pool));
-        }
-      else
-        {
-          /* Otherwise, just close everything up. */
-          SVN_ERR(svn_stream_close(source_stream));
-          SVN_ERR(svn_stream_close(target_stream));
-        }
+      /* Copy the remaining existing data. */
+      SVN_ERR(svn_stream_copy4(source_stream, target_stream, -1,
+                               NULL, NULL, pool));
 
       /* Move it all into place. */
       SVN_ERR(move_into_place(target_path, pack_file_path, pack_file_path,
