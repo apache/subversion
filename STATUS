@@ -50,6 +50,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1144717
+   Include SVN_ERR_FS_NOT_FOUND in SVN_ERR_IS_LOCK_ERROR().
+   Justification:
+     Consistent behaviour of the 1.7 client with 1.6/1.7 servers. (issue #3949)
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
