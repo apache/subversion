@@ -165,13 +165,16 @@ is_packed_rev(svn_fs_t *fs, svn_revnum_t rev)
   return (rev < ffd->min_unpacked_rev);
 }
 
+/* grep-friendly name for r0, whose revprop isn't packed. */
+#define REVPROP_ZERO 0
+
 /* Return TRUE is REV is packed in FS, FALSE otherwise. */
 static svn_boolean_t
 is_packed_revprop(svn_fs_t *fs, svn_revnum_t rev)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  return (rev < ffd->min_unpacked_revprop);
+  return (rev != REVPROP_ZERO) && (rev < ffd->min_unpacked_revprop);
 }
 
 static const char *
@@ -1696,6 +1699,7 @@ svn_fs_fs__hotcopy(const char *src_path,
 
   /* Then, copy non-packed shards. */
   SVN_ERR_ASSERT(rev == min_unpacked_revprop);
+  rev = REVPROP_ZERO;
   for (; rev <= youngest; rev++)
     {
       const char *src_subdir_shard = src_subdir,
@@ -1722,6 +1726,13 @@ svn_fs_fs__hotcopy(const char *src_path,
       SVN_ERR(svn_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
                                    apr_psprintf(iterpool, "%ld", rev),
                                    iterpool));
+
+      /* ### This causes the body of the 'for' loop to run
+         ### for r0 and for r<min_unpacked_revprop> through r<youngest>. */
+      if (rev == REVPROP_ZERO)
+        /* Don't run twice for r0. */
+        if (REVPROP_ZERO != min_unpacked_revprop)
+          rev = min_unpacked_revprop - 1; /* rev++ done by the loop */
     }
 
   svn_pool_destroy(iterpool);
@@ -3040,7 +3051,7 @@ set_revision_proplist(svn_fs_t *fs,
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
   if (ffd->format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT ||
-      rev >= ffd->min_unpacked_revprop)
+      ! is_packed_revprop(fs, rev))
     {
       const char *final_path = path_revprops(fs, rev, pool);
       const char *tmp_path;
@@ -3194,7 +3205,7 @@ revision_proplist(apr_hash_t **proplist_p,
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
   if (ffd->format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT ||
-      rev >= ffd->min_unpacked_revprop)
+      ! is_packed_revprop(fs, rev))
     {
       apr_file_t *revprop_file = NULL;
       svn_error_t *err = SVN_NO_ERROR;
@@ -3314,7 +3325,8 @@ svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
 
   err = revision_proplist(proplist_p, fs, rev, pool);
   if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION
-      && ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
+      && ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT
+      && rev != REVPROP_ZERO)
     {
       /* If a pack is occurring simultaneously, the min-unpacked-revprop value
          could change, so reload it and then attempt to fetch these revprops
@@ -7306,7 +7318,8 @@ recover_body(void *baton, apr_pool_t *pool)
 
          ### TODO: Could we check for revprops in the revprops.db?
          ###       What if rNNN legitimately has no revprops? */
-      if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
+      if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT
+          && max_rev != REVPROP_ZERO)
         {
           svn_revnum_t min_unpacked_revprop;
 
@@ -7997,6 +8010,7 @@ pack_revprop_shard(svn_fs_t *fs,
   apr_off_t next_offset;
   apr_file_t *manifest_file;
   apr_pool_t *iterpool;
+  svn_boolean_t started_at_r0 = FALSE;
 
   pack_file_dir = svn_dirent_join(revprops_dir,
                         apr_psprintf(pool, "%" APR_INT64_T_FMT ".pack", shard),
@@ -8031,6 +8045,24 @@ pack_revprop_shard(svn_fs_t *fs,
   end_rev = (svn_revnum_t) ((shard + 1) * (max_files_per_dir) - 1);
   next_offset = 0;
   iterpool = svn_pool_create(pool);
+
+  /* Special case r0. */
+  if (start_rev == REVPROP_ZERO)
+    {
+      /* Insert a placeholder manifest entry:
+         write "@@@@@@@@@@@@@@@@" for r0's manifest record.*/
+      char buf[REVPROP_MANIFEST_FIELD_WIDTH + 1];
+      memset(buf, '@', REVPROP_MANIFEST_FIELD_WIDTH);
+      buf[REVPROP_MANIFEST_FIELD_WIDTH] = '\0';
+
+      SVN_ERR(svn_stream_printf(manifest_stream, iterpool, "%s", buf));
+
+      /* Don't dump r0 in the revpack file. */
+      start_rev++;
+
+      /* Remember not to remove r0's sharded file. */
+      started_at_r0 = TRUE;
+    }
 
   /* Iterate over the revisions in this shard, squashing them together. */
   for (rev = start_rev; rev <= end_rev; rev++)
@@ -8080,16 +8112,29 @@ pack_revprop_shard(svn_fs_t *fs,
   SVN_ERR(write_revnum_file(fs_path, PATH_MIN_UNPACKED_REVPROP,
                             (svn_revnum_t)((shard + 1) * max_files_per_dir),
                             iterpool));
-  svn_pool_destroy(iterpool);
 
   /* Finally, remove the existing shard directory. */
-  SVN_ERR(svn_io_remove_dir2(shard_path, TRUE, cancel_func, cancel_baton,
-                             pool));
+  if (started_at_r0)
+    {
+      SVN_ERR_ASSERT(start_rev-1 == REVPROP_ZERO);
+      for (rev = start_rev; rev <= end_rev; rev++)
+        {
+          const char *path = svn_dirent_join(shard_path,
+                                             apr_psprintf(iterpool, "%ld",
+                                                          rev),
+                                             iterpool);
+          SVN_ERR(svn_io_remove_file2(path, TRUE, iterpool));
+        }
+    }
+  else
+    SVN_ERR(svn_io_remove_dir2(shard_path, TRUE, cancel_func, cancel_baton,
+                               pool));
 
   /* Notify caller we're starting to pack this shard. */
   if (notify_func)
     SVN_ERR(notify_func(notify_baton, shard, svn_fs_pack_notify_end_revprop,
                         pool));
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }

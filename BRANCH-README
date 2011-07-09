@@ -17,8 +17,6 @@ TODO:
 
 * add code catering for virus scanners during atomic move-into-place
 
-* add r0 special case
-
 * implement packed revprop editing
   + add sequence number; adjust readers accordingly
 
