@@ -970,7 +970,7 @@ def verify_with_invalid_revprops(sbox):
 
   if svntest.verify.verify_outputs(
     "Output of 'svnadmin verify' is unexpected.", None, errput, None,
-    ".*Malformed file"):
+    ".*svnadmin: E200002:.*"):
     raise svntest.Failure
 
 #----------------------------------------------------------------------

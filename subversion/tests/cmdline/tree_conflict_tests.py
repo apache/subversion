@@ -479,7 +479,7 @@ def ensure_tree_conflict(sbox, operation,
         incoming_right_rev = source_right_rev
       else:
         incoming_right_rev = head_rev
-      expected_info = { 'Tree conflict' : operation +
+      expected_info = { 'Tree conflict' : '.* upon ' + operation +
           r'.* \((none|(file|dir).*' +
             re.escape(victim_name + '@' + str(incoming_left_rev)) + r')' +
           r'.* \((none|(file|dir).*' +

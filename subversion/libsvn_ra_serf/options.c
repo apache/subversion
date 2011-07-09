@@ -39,6 +39,9 @@
 
 #include "ra_serf.h"
 
+
+/* In a debug build, setting this environment variable to "yes" will force
+   the client to speak v1, even if the server is capable of speaking v2. */
 #define SVN_IGNORE_V2_ENV_VAR "SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2"
 
 
@@ -349,10 +352,6 @@ capabilities_headers_iterator_callback(void *baton,
       else if (svn_cstring_casecmp(key, SVN_DAV_ME_RESOURCE_HEADER) == 0)
         {
 #ifdef SVN_DEBUG
-          /* ### This section is throw in here for development use.  It
-             ### allows devs the chance to force the client to speak v1,
-             ### even if the server is capable of speaking v2.  We should
-             ### probably remove it before 1.7 goes final. */
           char *ignore_v2_env_var = getenv(SVN_IGNORE_V2_ENV_VAR);
 
           if (!(ignore_v2_env_var
@@ -562,9 +561,8 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
                             capability, APR_HASH_KEY_STRING);
 
   /* Some capabilities depend on the repository as well as the server.
-     NOTE: ../libsvn_ra_neon/session.c:svn_ra_neon__has_capability()
-     has a very similar code block.  If you change something here,
-     check there as well. */
+     NOTE: svn_ra_neon__has_capability() has a very similar code block.  If
+     you change something here, check there as well. */
   if (cap_result == capability_server_yes)
     {
       if ((strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
@@ -577,7 +575,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
              didn't even know which repository we were interested in
              -- it just told us whether the server supports mergeinfo.
              If the answer was 'no', there's no point checking the
-             particular repository; but if it was 'yes, we still must
+             particular repository; but if it was 'yes', we still must
              change it to 'no' iff the repository itself doesn't
              support mergeinfo. */
           svn_mergeinfo_catalog_t ignored;

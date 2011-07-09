@@ -3170,7 +3170,7 @@ fix_deleted_subtree_ranges(const char *url1,
    If no mergeinfo is inherited set *INVALID_INHERITED_MERGEINFO to NULL.
 
    If only empty mergeinfo is inherited set *INVALID_INHERITED_MERGEINFO to
-   and empty hash.
+   an empty hash.
 
    If non-empty inherited mergeinfo is inherited then, if the server
    supports the SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO capability,
@@ -3270,8 +3270,8 @@ get_invalid_inherited_mergeinfo(svn_mergeinfo_t *invalid_inherited_mergeinfo,
    INDIRECT is ignored.
 
    If the server supports the SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO
-   capability, the resulting *RECORDED_MERGEINFO is inherited, and
-   VALIDATE_INHERITED us TRUE, then *RECORDED_MERGEINFO is validated as per
+   capability, and the resulting *RECORDED_MERGEINFO is inherited, and
+   VALIDATE_INHERITED is TRUE, then *RECORDED_MERGEINFO is validated as per
    svn_ra_get_mergeinfo2().
 
    If IMPLICIT_MERGEINFO is not NULL then START and END are limits on the

@@ -113,6 +113,7 @@ if __name__ == "__main__":
   else:
     for code in sys.argv[1:]:
       try:
+        code = code.lstrip('EW')
         codes.append(int(code))
       except ValueError:
         usage_and_exit()

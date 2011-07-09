@@ -359,6 +359,28 @@ def run_and_verify_svnrdump(dumpfile_content, expected_stdout,
   verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
   return output
 
+
+def run_and_verify_svnmucc(message, expected_stdout, expected_stderr,
+                           *varargs):
+  """Run svnmucc command and check its output"""
+
+  expected_exit = 0
+  if expected_stderr is not None and expected_stderr != []:
+    expected_exit = 1
+  return run_and_verify_svnmucc2(message, expected_stdout, expected_stderr,
+                                 expected_exit, *varargs)
+
+def run_and_verify_svnmucc2(message, expected_stdout, expected_stderr,
+                            expected_exit, *varargs):
+  """Run svnmucc command and check its output and exit code."""
+
+  exit_code, out, err = main.run_svnmucc(*varargs)
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_stdout, expected_stderr)
+  verify.verify_exit_code(message, exit_code, expected_exit)
+  return exit_code, out, err
+
+
 def load_repo(sbox, dumpfile_path = None, dump_str = None,
               bypass_prop_validation = False):
   "Loads the dumpfile into sbox"
@@ -925,7 +947,7 @@ def run_and_verify_info(expected_infos, *args):
         if value is not None and key not in actual:
           raise main.SVNLineUnequal("Expected key '%s' (with value '%s') "
                                     "not found" % (key, value))
-        if value is not None and not re.search(value, actual[key]):
+        if value is not None and not re.match(value, actual[key]):
           raise verify.SVNUnexpectedStdout("Values of key '%s' don't match:\n"
                                            "  Expected: '%s' (regex)\n"
                                            "  Found:    '%s' (string)\n"

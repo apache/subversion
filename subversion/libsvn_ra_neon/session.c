@@ -794,7 +794,6 @@ svn_ra_neon__open(svn_ra_session_t *session,
   const char *pkcs11_provider;
   const char *useragent = NULL;
   const char *client_string = NULL;
-  svn_revnum_t ignored_revnum;
 
   SVN_ERR_ASSERT(svn_uri_is_canonical(repos_URL, pool));
 
@@ -1079,8 +1078,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
 
   session->priv = ras;
 
-  return svn_ra_neon__exchange_capabilities(ras, corrected_url,
-                                            &ignored_revnum, pool);
+  return svn_ra_neon__exchange_capabilities(ras, corrected_url, NULL, pool);
 }
 
 

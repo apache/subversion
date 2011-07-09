@@ -5609,7 +5609,7 @@ write_change_entry(apr_file_t *file,
 
   if (include_node_kind)
     {
-      assert(change->node_kind == svn_node_dir
+      SVN_ERR_ASSERT(change->node_kind == svn_node_dir
                      || change->node_kind == svn_node_file);
       kind_string = apr_psprintf(pool, "-%s",
                                  change->node_kind == svn_node_dir
@@ -6636,24 +6636,25 @@ commit_body(void *baton, apr_pool_t *pool)
      fails because the shard already existed for some reason. */
   if (ffd->max_files_per_dir && new_rev % ffd->max_files_per_dir == 0)
     {
-      svn_error_t *err;
-      const char *new_dir = path_rev_shard(cb->fs, new_rev, pool);
-      err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
-      if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
-        return svn_error_trace(err);
-      svn_error_clear(err);
-      SVN_ERR(svn_io_copy_perms(svn_dirent_join(cb->fs->path,
-                                                PATH_REVS_DIR,
-                                                pool),
-                                new_dir, pool));
-
-      if (ffd->format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT ||
-          new_rev >= ffd->min_unpacked_revprop)
+      if (1)
         {
-          new_dir = path_revprops_shard(cb->fs, new_rev, pool);
-          err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
+          const char *new_dir = path_rev_shard(cb->fs, new_rev, pool);
+          svn_error_t *err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
           if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
-            SVN_ERR(err);
+            return svn_error_trace(err);
+          svn_error_clear(err);
+          SVN_ERR(svn_io_copy_perms(svn_dirent_join(cb->fs->path,
+                                                    PATH_REVS_DIR,
+                                                    pool),
+                                    new_dir, pool));
+        }
+
+      SVN_ERR_ASSERT(! is_packed_revprop(cb->fs, new_rev));
+        {
+          const char *new_dir = path_revprops_shard(cb->fs, new_rev, pool);
+          svn_error_t *err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
+          if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
+            return svn_error_trace(err);
           svn_error_clear(err);
           SVN_ERR(svn_io_copy_perms(svn_dirent_join(cb->fs->path,
                                                     PATH_REVPROPS_DIR,
@@ -6684,7 +6685,7 @@ commit_body(void *baton, apr_pool_t *pool)
                                      &date, pool));
 
   /* Move the revprops file into place. */
-  assert(! is_packed_revprop(cb->fs, new_rev));
+  SVN_ERR_ASSERT(! is_packed_revprop(cb->fs, new_rev));
   revprop_filename = path_txn_props(cb->fs, cb->txn->id, pool);
   final_revprop = path_revprops(cb->fs, new_rev, pool);
   SVN_ERR(move_into_place(revprop_filename, final_revprop,
@@ -7163,12 +7164,12 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
 
       if (svn_fs_fs__key_compare(node_id, max_node_id) > 0)
         {
-          assert(strlen(node_id) < MAX_KEY_SIZE);
+          SVN_ERR_ASSERT(strlen(node_id) < MAX_KEY_SIZE);
           apr_cpystrn(max_node_id, node_id, MAX_KEY_SIZE);
         }
       if (svn_fs_fs__key_compare(copy_id, max_copy_id) > 0)
         {
-          assert(strlen(copy_id) < MAX_KEY_SIZE);
+          SVN_ERR_ASSERT(strlen(copy_id) < MAX_KEY_SIZE);
           apr_cpystrn(max_copy_id, copy_id, MAX_KEY_SIZE);
         }
 

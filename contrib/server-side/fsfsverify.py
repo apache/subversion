@@ -665,7 +665,7 @@ class NodeRev(object):
       currentOffset = f.tell()
       line = f.readline()
       if line == '':
-        raise IOError, "Unexpected end of file"
+        raise IOError, "Unexpected end of file at offset %d" % currentOffset
       if line == '\n':
         break
 
