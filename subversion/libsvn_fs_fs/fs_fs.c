@@ -3099,6 +3099,7 @@ set_revision_proplist(svn_fs_t *fs,
          it's only subsequent prophashes' offsets that need to be adjusted. */
       SVN_ERR(svn_stream_read(source_stream, buf, &len));
       SVN_ERR(svn_stream_write(target_stream, buf, &len));
+      buf[len] = '\0';
       old_offset = apr_atoi64(buf);
 
       /* In this corner case, the editted prop is the last one in the
@@ -3106,6 +3107,7 @@ set_revision_proplist(svn_fs_t *fs,
       if (shard_pos != (ffd->max_files_per_dir - 1) )
         {
           SVN_ERR(svn_stream_read(source_stream, buf, &len));
+          buf[len] = '\0';
           next_offset = apr_atoi64(buf);
           offset_diff = sb->len - (next_offset - old_offset);
           SVN_ERR(svn_stream_printf(target_stream, pool,
@@ -3121,6 +3123,7 @@ set_revision_proplist(svn_fs_t *fs,
       for (i = (shard_pos + 2); i < ffd->max_files_per_dir; i++)
         {
           SVN_ERR(svn_stream_read(source_stream, buf, &len));
+          buf[len] = '\0';
           next_offset = apr_atoi64(buf);
           SVN_ERR(svn_stream_printf(target_stream, pool,
                 "%0" APR_STRINGIFY(REVPROP_MANIFEST_FIELD_WIDTH) APR_OFF_T_FMT,
