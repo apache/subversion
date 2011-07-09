@@ -383,14 +383,15 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
  * Return TRUE if @a err is an error specifically related to locking a
  * path in the repository, FALSE otherwise.
  *
- * SVN_ERR_FS_OUT_OF_DATE is in here because it's a non-fatal error
- * that can be thrown when attempting to lock an item.
+ * SVN_ERR_FS_OUT_OF_DATE and SVN_ERR_FS_NOT_FOUND are in here because it's a
+ * non-fatal error that can be thrown when attempting to lock an item.
  *
  * @since New in 1.2.
  */
 #define SVN_ERR_IS_LOCK_ERROR(err)                          \
   (err->apr_err == SVN_ERR_FS_PATH_ALREADY_LOCKED ||        \
-   err->apr_err == SVN_ERR_FS_OUT_OF_DATE)                  \
+   err->apr_err == SVN_ERR_FS_NOT_FOUND           ||        \
+   err->apr_err == SVN_ERR_FS_OUT_OF_DATE)
 
 /**
  * Return TRUE if @a err is an error specifically related to unlocking
