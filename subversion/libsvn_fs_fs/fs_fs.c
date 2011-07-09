@@ -3114,6 +3114,7 @@ set_revision_proplist(svn_fs_t *fs,
       /* position of the shard within the manifest */
       shard_pos = rev % ffd->max_files_per_dir;
 
+      /* Compute paths. */
       revprops_dir = svn_dirent_join(fs->path, PATH_REVPROPS_DIR, pool);
       pack_file_dir = svn_dirent_join(revprops_dir,
                         apr_psprintf(pool, "%" APR_INT64_T_FMT ".pack", shard),
@@ -3280,6 +3281,7 @@ revision_proplist(apr_hash_t **proplist_p,
       /* position of the shard within the manifest */
       shard_pos = rev % ffd->max_files_per_dir;
 
+      /* Compute paths. */
       revprops_dir = svn_dirent_join(fs->path, PATH_REVPROPS_DIR, pool);
       pack_file_dir = svn_dirent_join(revprops_dir,
                         apr_psprintf(pool, "%" APR_INT64_T_FMT ".pack", shard),
