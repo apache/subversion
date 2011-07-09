@@ -3000,10 +3000,12 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
 /* Parse a manifest entry from SOURCE_STREAM (which must be already
    sought to the manifest record) into *OFFSET.  If not NULL, copy
    the raw record into the provided BUF, which must have room for
-   REVPROP_MANIFEST_FIELD_WIDTH+1 bytes. */   
+   REVPROP_MANIFEST_FIELD_WIDTH+1 bytes.  REV is only used for error
+   messages. */   
 static svn_error_t *
 read_revprop_manifest_record(apr_off_t *offset,
                              char *outbuf,
+                             svn_revnum_t rev,
                              svn_stream_t *source_stream)
 {
   char buf[REVPROP_MANIFEST_FIELD_WIDTH + 1];
@@ -3012,6 +3014,12 @@ read_revprop_manifest_record(apr_off_t *offset,
   SVN_ERR(svn_stream_read(source_stream, buf, &len));
   buf[len] = '\0';
   *offset = apr_atoi64(buf);
+
+  if (len != REVPROP_MANIFEST_FIELD_WIDTH)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("End-of-file within revprops manifest "
+                               "for r%ld"),
+                             rev);
 
   if (outbuf)
     memcpy(outbuf, buf, sizeof(buf));
@@ -3120,14 +3128,15 @@ set_revision_proplist(svn_fs_t *fs,
          Note: the new proppash has the same offset as the existing one,
          it's only subsequent prophashes' offsets that need to be adjusted. */
       len = REVPROP_MANIFEST_FIELD_WIDTH;
-      SVN_ERR(read_revprop_manifest_record(&old_offset, buf, source_stream));
+      SVN_ERR(read_revprop_manifest_record(&old_offset, buf, rev,
+                                           source_stream));
       SVN_ERR(svn_stream_write(target_stream, buf, &len));
 
       /* In this corner case, the editted prop is the last one in the
          shard, so there is no further offset to read or bump. */
       if (shard_pos != (ffd->max_files_per_dir - 1) )
         {
-          SVN_ERR(read_revprop_manifest_record(&next_offset, NULL,
+          SVN_ERR(read_revprop_manifest_record(&next_offset, NULL, rev,
                                                source_stream));
           offset_diff = sb->len - (next_offset - old_offset);
           SVN_ERR(svn_stream_printf(target_stream, pool,
@@ -3142,7 +3151,7 @@ set_revision_proplist(svn_fs_t *fs,
          above.  This should also handle our corner case. */
       for (i = (shard_pos + 2); i < ffd->max_files_per_dir; i++)
         {
-          SVN_ERR(read_revprop_manifest_record(&next_offset, NULL,
+          SVN_ERR(read_revprop_manifest_record(&next_offset, NULL, rev,
                                                source_stream));
           SVN_ERR(svn_stream_printf(target_stream, pool,
                 "%0" APR_STRINGIFY(REVPROP_MANIFEST_FIELD_WIDTH) APR_OFF_T_FMT,
@@ -3273,7 +3282,7 @@ revision_proplist(apr_hash_t **proplist_p,
       SVN_ERR(svn_io_file_seek(pack_file, APR_SET, &offset, pool));
 
       /* Read the revprop offset. */
-      SVN_ERR(read_revprop_manifest_record(&manifest_record, NULL,
+      SVN_ERR(read_revprop_manifest_record(&manifest_record, NULL, rev,
                                            svn_stream_from_aprfile2(pack_file,
                                                                     TRUE,
                                                                     pool)));
