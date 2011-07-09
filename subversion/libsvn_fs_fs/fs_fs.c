@@ -3047,7 +3047,7 @@ set_revision_proplist(svn_fs_t *fs,
       /* ### We need some locking here, so that folks editing props in the
          ### same shard don't clobber each other. */
 
-      svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+      svn_stringbuf_t *sb = svn_stringbuf_create_ensure(512, pool);
       svn_stream_t *stream = svn_stream_from_stringbuf(sb, pool);
       apr_off_t offset_diff;
       apr_off_t old_offset;
