@@ -3032,6 +3032,9 @@ read_revprop_manifest_record(apr_off_t *offset,
                                "for r%ld"),
                              rev);
 
+  if (outbuf)
+    memcpy(outbuf, buf, sizeof(buf));
+
   len = 1;
   SVN_ERR(svn_stream_read(source_stream, buf, &len));
   if (len != 1 || *buf != '\n')
@@ -3039,9 +3042,6 @@ read_revprop_manifest_record(apr_off_t *offset,
                              _("Improperly terminated revprops manifest record "
                                "for r%ld"),
                              rev);
-
-  if (outbuf)
-    memcpy(outbuf, buf, sizeof(buf));
 
   return SVN_NO_ERROR;
 }
