@@ -3093,10 +3093,10 @@ set_revision_proplist(svn_fs_t *fs,
                                NULL, NULL, pool));
 
       /* Read the old offset value from the existing pack file, and compute
-         the difference, given the new
+         the difference.
 
-         Note: the new property has the same offset as the existing one,
-         it's only subsequent properties' offsets that need to be adjusted. */
+         Note: the new proppash has the same offset as the existing one,
+         it's only subsequent prophashes' offsets that need to be adjusted. */
       SVN_ERR(svn_stream_read(source_stream, buf, &len));
       SVN_ERR(svn_stream_write(target_stream, buf, &len));
       old_offset = apr_atoi64(buf);
