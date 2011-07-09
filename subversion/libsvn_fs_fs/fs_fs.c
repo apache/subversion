@@ -3264,6 +3264,7 @@ revision_proplist(apr_hash_t **proplist_p,
       /* Read the revprop offset. */
       SVN_ERR(svn_stream_read(svn_stream_from_aprfile2(pack_file, TRUE, pool),
                               buf, &len));
+      buf[len] = '\0';
 
       /* Seek to the revprop offset, and read the props. */
       offset = REVPROP_MANIFEST_FIELD_WIDTH * ffd->max_files_per_dir
