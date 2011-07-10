@@ -4018,6 +4018,10 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
  * If @a cancel_func is non-NULL, call it with @a cancel_baton while building
  * the @a statushash to determine if the client has canceled the operation.
  *
+ * If @a depth_as_sticky is set handle @a depth like when depth_is_sticky is
+ * passed for updating. This will show excluded nodes show up as added in the
+ * repository.
+ *
  * If @a server_performs_filtering is TRUE, assume that the server handles
  * the ambient depth filtering, so this doesn't have to be handled in the
  * editor.
@@ -4039,6 +4043,7 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           svn_depth_t depth,
                           svn_boolean_t get_all,
                           svn_boolean_t no_ignore,
+                          svn_boolean_t depth_as_sticky,
                           svn_boolean_t server_performs_filtering,
                           const apr_array_header_t *ignore_patterns,
                           svn_wc_status_func4_t status_func,

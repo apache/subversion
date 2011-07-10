@@ -2631,10 +2631,15 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
       swb->anchor_relpath = NULL;
     }
 
+  /* Before subversion 1.7 status always handled depth as sticky. 1.7 made
+     the output of svn status by default match the result of what would be
+     updated by a similar svn update. (Following the documentation) */
+
   SVN_ERR(svn_wc_get_status_editor5(editor, edit_baton, set_locks_baton,
                                     edit_revision, wc_ctx, anchor_abspath,
                                     target, depth, get_all,
                                     no_ignore,
+                                    (depth != svn_depth_unknown) /*as_sticky*/,
                                     FALSE /* server_performs_filtering */,
                                     ignore_patterns,
                                     status4_wrapper_func, swb,
