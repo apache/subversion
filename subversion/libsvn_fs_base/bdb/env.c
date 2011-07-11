@@ -488,7 +488,7 @@ bdb_close(bdb_env_t *bdb)
 }
 
 
-svn_error_t *
+static svn_error_t *
 svn_fs_bdb__close_internal(bdb_env_t *bdb)
 {
   svn_error_t *err = SVN_NO_ERROR;
