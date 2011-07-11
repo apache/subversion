@@ -72,6 +72,9 @@ svn_mutex__init(svn_mutex__t **mutex,
 /** Acquire the @a mutex, if that has been enabled in @ref svn_mutex__init.
  * Make sure to call @ref svn_mutex__unlock some time later in the same 
  * thread to release the mutex again. Recursive locking are not supported.
+ * 
+ * @note You should use @ref SVN_MUTEX__WITH_LOCK instead of explicit lock
+ * aquisition and release.
  */
 svn_error_t *
 svn_mutex__lock(svn_mutex__t *mutex);
@@ -85,24 +88,31 @@ svn_mutex__lock(svn_mutex__t *mutex);
  * irrespective of the possible internal failures during unlock. If @a err
  * is @ref SVN_NO_ERROR, internal failures of this function will be 
  * reported in the return value.
+ * 
+ * @note You should use @ref SVN_MUTEX__WITH_LOCK instead of explicit lock
+ * aquisition and release.
  */
 svn_error_t *
 svn_mutex__unlock(svn_mutex__t *mutex,
                   svn_error_t *err);
 
-/** Callback function to for use with @ref svn_mutex__with_lock.
- * @a baton contains all the actual function parameters.
+/** Aquires the @a mutex, executes the expression @a expr and finally
+ * releases the @a mutex. If any of these steps fail, the function using
+ * this macro will return an @ref svn_error_t. This macro guarantees that
+ * the @a mutex will always be unlocked again if it got locked successfully
+ * locked by the first step.
+ * 
+ * @note Prefer using this macro instead of explicit lock aquisition and
+ * release.
  */
-typedef svn_error_t *(*svn_mutex__callback_t)(void *baton);
-
-/** Executes the function @a func with parameters given in @a cb_baton
- * while locking @a mutex just before and unlocking it immediately after
- * @a func has been executed.
- */
-svn_error_t *
-svn_mutex__with_lock(svn_mutex__t *mutex,
-                     svn_mutex__callback_t func,
-                     void *cb_baton);
+#define SVN_MUTEX__WITH_LOCK(mutex, expr) \
+do {                                      \
+  svn_mutex__t *m = (mutex);              \
+  svn_error_t *e = svn_mutex__lock(m);    \
+  if (e) return svn_error_trace(e);       \
+  e = svn_mutex__unlock(m, expr);         \
+  if (e) return svn_error_trace(e);       \
+} while (0);
 
 #ifdef __cplusplus
 }
