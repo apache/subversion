@@ -57,6 +57,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1144316
+   Issue 3953: reject invalid svn:mergeinfo at commit time over DAV.
+   Justification:
+     Issue 3895, already merged, was supposed to cover DAV but did not.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
