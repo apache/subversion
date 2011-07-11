@@ -85,15 +85,16 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
       ffsd = apr_pcalloc(common_pool, sizeof(*ffsd));
       ffsd->common_pool = common_pool;
 
-#if SVN_FS_FS__USE_LOCK_MUTEX
       /* POSIX fcntl locks are per-process, so we need a mutex for
          intra-process synchronization when grabbing the repository write
          lock. */
-      SVN_ERR(svn_mutex__init(&ffsd->fs_write_lock, TRUE, common_pool));
+      SVN_ERR(svn_mutex__init(&ffsd->fs_write_lock,
+                              SVN_FS_FS__USE_LOCK_MUTEX, common_pool));
 
       /* ... not to mention locking the txn-current file. */
-      SVN_ERR(svn_mutex__init(&ffsd->txn_current_lock, TRUE, common_pool));
-#endif
+      SVN_ERR(svn_mutex__init(&ffsd->txn_current_lock, 
+                              SVN_FS_FS__USE_LOCK_MUTEX, common_pool));
+
       SVN_ERR(svn_mutex__init(&ffsd->txn_list_lock, TRUE, common_pool));
 
       key = apr_pstrdup(common_pool, key);

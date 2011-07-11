@@ -184,7 +184,7 @@ typedef struct fs_fs_shared_data_t
 
   /* A lock for intra-process synchronization when accessing the TXNS list. */
   svn_mutex__t *txn_list_lock;
-#if SVN_FS_FS__USE_LOCK_MUTEX
+
   /* A lock for intra-process synchronization when grabbing the
      repository write lock. */
   svn_mutex__t *fs_write_lock;
@@ -192,7 +192,6 @@ typedef struct fs_fs_shared_data_t
   /* A lock for intra-process synchronization when locking the
      txn-current file. */
   svn_mutex__t *txn_current_lock;
-#endif
 
   /* The common pool, under which this object is allocated, subpools
      of which are used to allocate the transaction objects. */
