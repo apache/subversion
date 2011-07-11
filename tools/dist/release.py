@@ -37,6 +37,7 @@
 # Stuff we need
 import os
 import sys
+import glob
 import shutil
 import urllib2
 import hashlib
@@ -413,15 +414,34 @@ def write_news(args):
     template.generate(sys.stdout, data)
 
 
+def get_sha1info(args):
+    'Return a list of sha1 info for the release'
+    sha1s = glob.glob(os.path.join(get_deploydir(args.base_dir), '*.sha1'))
+
+    class info(object):
+        pass
+
+    sha1info = []
+    for s in sha1s:
+        i = info()
+        i.filename = os.path.basename(s)[:-5]
+        i.sha1 = open(s, 'r').read()
+        sha1info.append(i)
+
+    return sha1info
+
+
 def write_announcement(args):
     'Write the release announcement.'
     version_base, version_extra = split_version(args.version)
 
+    sha1info = get_sha1info(args)
+
     data = { 'version'              : args.version,
-             'sha1info'             : 'foo',
+             'sha1info'             : sha1info,
              'siginfo'              : 'bar', 
-             'major-minor'          : 'boo',
-             'major-minor-patch'    : 'baz',
+             'major-minor'          : version_base[:3],
+             'major-minor-patch'    : version_base,
            }
 
     if version_extra:
