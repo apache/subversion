@@ -60,7 +60,7 @@ chomp $apr_shlib_path_var;
 my %config = (
     ABSTRACT => 'Perl bindings for Subversion',
     DEFINE => $cppflags,
-    CCFLAGS => $cflags,
+    CCFLAGS => join(' ', $cflags, $Config{ccflags}),
     INC  => join(' ',$apr_cflags, $apu_cflags, 
                  " -I$swig_srcdir/perl/libsvn_swig_perl",
                  " -I$svnlib_srcdir/include",
