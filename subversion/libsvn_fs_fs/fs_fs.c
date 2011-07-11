@@ -510,15 +510,13 @@ with_txnlist_lock(svn_fs_t *fs,
                   const void *baton,
                   apr_pool_t *pool)
 {
-  svn_error_t *err;
   fs_fs_data_t *ffd = fs->fsap_data;
   fs_fs_shared_data_t *ffsd = ffd->shared;
 
-  SVN_ERR(svn_mutex__lock(ffsd->txn_list_lock));
+  SVN_MUTEX__WITH_LOCK(ffsd->txn_list_lock,
+                       body(fs, baton, pool));
 
-  err = body(fs, baton, pool);
-
-  return svn_error_trace(svn_mutex__unlock(ffsd->txn_list_lock, err));
+  return SVN_NO_ERROR;
 }
 
 
@@ -548,24 +546,15 @@ get_lock_on_filesystem(const char *lock_filename,
    BATON and that subpool, destroy the subpool (releasing the write
    lock) and return what BODY returned. */
 static svn_error_t *
-with_some_lock(svn_fs_t *fs,
-               svn_error_t *(*body)(void *baton,
-                                    apr_pool_t *pool),
-               void *baton,
-               const char *lock_filename,
-#if SVN_FS_FS__USE_LOCK_MUTEX
-               svn_mutex__t *lock_mutex,
-#endif
-               apr_pool_t *pool)
+with_some_lock_file(svn_fs_t *fs,
+                    svn_error_t *(*body)(void *baton,
+                                         apr_pool_t *pool),
+                    void *baton,
+                    const char *lock_filename,
+                    apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
-  svn_error_t *err;
-
-#if SVN_FS_FS__USE_LOCK_MUTEX
-  SVN_ERR(svn_mutex__lock(lock_mutex));
-#endif
-
-  err = get_lock_on_filesystem(lock_filename, subpool);
+  svn_error_t *err = get_lock_on_filesystem(lock_filename, subpool);
 
   if (!err)
     {
@@ -583,7 +572,7 @@ with_some_lock(svn_fs_t *fs,
 
   svn_pool_destroy(subpool);
 
-  return svn_error_trace(svn_mutex__unlock(lock_mutex, err));
+  return svn_error_trace(err);
 }
 
 svn_error_t *
@@ -593,17 +582,15 @@ svn_fs_fs__with_write_lock(svn_fs_t *fs,
                            void *baton,
                            apr_pool_t *pool)
 {
-#if SVN_FS_FS__USE_LOCK_MUTEX
   fs_fs_data_t *ffd = fs->fsap_data;
   fs_fs_shared_data_t *ffsd = ffd->shared;
-#endif
 
-  return with_some_lock(fs, body, baton,
-                        path_lock(fs, pool),
-#if SVN_FS_FS__USE_LOCK_MUTEX
-                        ffsd->fs_write_lock,
-#endif
-                        pool);
+  SVN_MUTEX__WITH_LOCK(ffsd->fs_write_lock,
+                       with_some_lock_file(fs, body, baton,
+                                           path_lock(fs, pool),
+                                           pool));
+
+  return SVN_NO_ERROR;
 }
 
 /* Run BODY (with BATON and POOL) while the txn-current file
@@ -615,17 +602,15 @@ with_txn_current_lock(svn_fs_t *fs,
                       void *baton,
                       apr_pool_t *pool)
 {
-#if SVN_FS_FS__USE_LOCK_MUTEX
   fs_fs_data_t *ffd = fs->fsap_data;
   fs_fs_shared_data_t *ffsd = ffd->shared;
-#endif
 
-  return with_some_lock(fs, body, baton,
-                        path_txn_current_lock(fs, pool),
-#if SVN_FS_FS__USE_LOCK_MUTEX
-                        ffsd->txn_current_lock,
-#endif
-                        pool);
+  SVN_MUTEX__WITH_LOCK(ffsd->txn_current_lock,
+                       with_some_lock_file(fs, body, baton,
+                                           path_txn_current_lock(fs, pool),
+                                           pool));
+
+  return SVN_NO_ERROR;
 }
 
 /* A structure used by unlock_proto_rev() and unlock_proto_rev_body(),
