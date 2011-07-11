@@ -3265,9 +3265,9 @@ get_invalid_inherited_mergeinfo(svn_mergeinfo_t *invalid_inherited_mergeinfo,
    *RECORDED_MERGEINFO is inherited, then *IMPLICIT_MERGEINFO will be
    removed from *RECORDED_MERGEINFO.
 
-   If INDIRECT is not NULL set *INDIRECT to TRUE if *RECORDED_MERGEINFO
-   is inherited and not explicit.  If RECORDED_MERGEINFO is NULL then
-   INDIRECT is ignored.
+   If INHERITED is not NULL set *INHERITED to TRUE if *RECORDED_MERGEINFO
+   is inherited rather than explicit.  If RECORDED_MERGEINFO is NULL then
+   INHERITED is ignored.
 
    If the server supports the SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO
    capability, and the resulting *RECORDED_MERGEINFO is inherited, and
@@ -3288,7 +3288,7 @@ get_invalid_inherited_mergeinfo(svn_mergeinfo_t *invalid_inherited_mergeinfo,
 static svn_error_t *
 get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                    svn_mergeinfo_t *implicit_mergeinfo,
-                   svn_boolean_t *indirect,
+                   svn_boolean_t *inherited,
                    svn_mergeinfo_inheritance_t inherit,
                    svn_boolean_t validate_inherited,
                    svn_ra_session_t *ra_session,
@@ -3299,7 +3299,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
-  svn_boolean_t inherited = FALSE;
+  svn_boolean_t inherited_mergeinfo = FALSE;
 
   /* First, we get the real mergeinfo.  We use SCRATCH_POOL throughout this
      block because we'll make a final copy of *RECORDED_MERGEINFO only after
@@ -3307,16 +3307,17 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
   if (recorded_mergeinfo)
     {
       SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(recorded_mergeinfo,
-                                                    &inherited, FALSE,
+                                                    &inherited_mergeinfo,
+                                                    FALSE,
                                                     inherit, ra_session,
                                                     target_abspath,
                                                     ctx, scratch_pool));
-      if (indirect)
-        *indirect = inherited;
+      if (inherited)
+        *inherited = inherited_mergeinfo;
 
       /* Issue #3669: Remove any non-existent mergeinfo sources
          from TARGET_ABSPATH's inherited mergeinfo. */
-      if (inherited && validate_inherited)
+      if (inherited_mergeinfo && validate_inherited)
         {
           svn_mergeinfo_t invalid_inherited_mergeinfo;
 
@@ -3416,7 +3417,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
          up with fragmented mergeinfo, see
          http://subversion.tigris.org/issues/show_bug.cgi?id=3668#desc5 */
       if (implicit_mergeinfo
-          && inherited
+          && inherited_mergeinfo
           && validate_inherited)
         SVN_ERR(svn_mergeinfo_remove2(recorded_mergeinfo,
                                       *implicit_mergeinfo,
@@ -4193,7 +4194,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
             {
               SVN_ERR(get_full_mergeinfo(NULL, /* child->pre_merge_mergeinfo */
                                          &(child->implicit_mergeinfo),
-                                         NULL, /* child->indirect_mergeinfo */
+                                         NULL, /* child->inherited_mergeinfo */
                                          merge_b->mergeinfo_validation_capable,
                                          svn_mergeinfo_inherited, ra_session,
                                          child->abspath,
@@ -4293,7 +4294,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
         child->pre_merge_mergeinfo ? NULL : &(child->pre_merge_mergeinfo),
         /* Get implicit only for merge target. */
         (i == 0) ? &(child->implicit_mergeinfo) : NULL,
-        &(child->indirect_mergeinfo),
+        &(child->inherited_mergeinfo),
         svn_mergeinfo_inherited,
         merge_b->mergeinfo_validation_capable, ra_session,
         child->abspath,
@@ -6720,7 +6721,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
   svn_merge_range_t range;
   svn_mergeinfo_t target_mergeinfo;
   svn_merge_range_t *conflicted_range = NULL;
-  svn_boolean_t indirect = FALSE;
+  svn_boolean_t inherited = FALSE;
   svn_boolean_t is_rollback = (revision1 > revision2);
   const char *primary_url = is_rollback ? url1 : url2;
   const char *target_url;
@@ -6764,7 +6765,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
                               iterpool));
       err = get_full_mergeinfo(&target_mergeinfo,
                                &(merge_target->implicit_mergeinfo),
-                               &indirect, svn_mergeinfo_inherited,
+                               &inherited, svn_mergeinfo_inherited,
                                merge_b->mergeinfo_validation_capable,
                                merge_b->ra_session1, target_abspath,
                                MAX(revision1, revision2),
@@ -7007,9 +7008,9 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
         {
           apr_hash_t *merges = apr_hash_make(iterpool);
 
-          /* If merge target has indirect mergeinfo set it before
+          /* If merge target has inherited mergeinfo set it before
              recording the first merge range. */
-          if (indirect)
+          if (inherited)
             SVN_ERR(svn_client__record_wc_mergeinfo(target_abspath,
                                                     target_mergeinfo,
                                                     FALSE, ctx,
@@ -7105,7 +7106,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
       const char *path_url;
       svn_mergeinfo_t path_inherited_mergeinfo;
       svn_mergeinfo_t path_explicit_mergeinfo;
-      svn_boolean_t indirect;
+      svn_boolean_t inherited;
       svn_client__merge_path_t *new_child;
 
       apr_pool_clear(iterpool);
@@ -7115,7 +7116,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
 
       /* Get the path's new explicit mergeinfo... */
       SVN_ERR(svn_client__get_wc_mergeinfo(&path_explicit_mergeinfo,
-                                           &indirect,
+                                           &inherited,
                                            svn_mergeinfo_explicit,
                                            abspath_with_new_mergeinfo,
                                            NULL, NULL, FALSE,
@@ -7135,7 +7136,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
              the merge. */
           SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(
             &path_inherited_mergeinfo,
-            &indirect,
+            &inherited,
             FALSE,
             svn_mergeinfo_nearest_ancestor, /* We only want inherited MI */
             merge_b->ra_session2,
@@ -7604,9 +7605,9 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
                                               merge_b->ctx->wc_ctx,
                                               iterpool));
 
-          /* If CHILD has indirect mergeinfo set it before
+          /* If CHILD has inherited mergeinfo set it before
              recording the first merge range. */
-          if (child->indirect_mergeinfo)
+          if (child->inherited_mergeinfo)
             SVN_ERR(svn_client__record_wc_mergeinfo(
               child->abspath,
               child->pre_merge_mergeinfo,

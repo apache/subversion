@@ -69,7 +69,7 @@ typedef struct svn_client__merge_path_t
                                            May be NULL. */
   svn_mergeinfo_t implicit_mergeinfo;   /* Implicit mergeinfo on ABSPATH
                                            prior to a merge.  May be NULL. */
-  svn_boolean_t indirect_mergeinfo;     /* Whether PRE_MERGE_MERGEINFO was
+  svn_boolean_t inherited_mergeinfo;    /* Whether PRE_MERGE_MERGEINFO was
                                            explicit or inherited. */
   svn_boolean_t scheduled_for_deletion; /* ABSPATH is scheduled for
                                            deletion. */
@@ -234,11 +234,11 @@ svn_client__get_repos_mergeinfo_catalog(
    inherited mergeinfo for TARGET_WCPATH is retrieved.
 
    If TARGET_WCPATH inherited its mergeinfo from a working copy ancestor
-   or if it was obtained from the repository, set *INDIRECT to TRUE, set it
+   or if it was obtained from the repository, set *INHERITED to TRUE, set it
    to FALSE otherwise. */
 svn_error_t *
 svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
-                                      svn_boolean_t *indirect,
+                                      svn_boolean_t *inherited,
                                       svn_boolean_t repos_only,
                                       svn_mergeinfo_inheritance_t inherit,
                                       svn_ra_session_t *ra_session,
@@ -260,7 +260,7 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
 svn_error_t *
 svn_client__get_wc_or_repos_mergeinfo_catalog(
   svn_mergeinfo_catalog_t *target_mergeinfo_catalog,
-  svn_boolean_t *indirect,
+  svn_boolean_t *inherited,
   svn_boolean_t include_descendants,
   svn_boolean_t repos_only,
   svn_boolean_t ignore_invalid_mergeinfo,
