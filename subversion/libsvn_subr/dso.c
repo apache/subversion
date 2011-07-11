@@ -61,14 +61,9 @@ svn_dso_initialize2(void)
 }
 
 #if APR_HAS_DSO
-svn_error_t *
-svn_dso_load(apr_dso_handle_t **dso, const char *fname)
+static svn_error_t *
+svn_dso_load_internal(apr_dso_handle_t **dso, const char *fname)
 {
-  if (! dso_pool)
-    SVN_ERR(svn_dso_initialize2());
-
-  SVN_ERR(svn_mutex__lock(dso_mutex));
-
   *dso = apr_hash_get(dso_cache, fname, APR_HASH_KEY_STRING);
 
   /* First check to see if we've been through this before...  We do this
@@ -77,7 +72,7 @@ svn_dso_load(apr_dso_handle_t **dso, const char *fname)
   if (*dso == NOT_THERE)
     {
       *dso = NULL;
-      return svn_mutex__unlock(dso_mutex, SVN_NO_ERROR);
+      return SVN_NO_ERROR;
     }
 
   /* If we got nothing back from the cache, try and load the library. */
@@ -98,7 +93,7 @@ svn_dso_load(apr_dso_handle_t **dso, const char *fname)
                        APR_HASH_KEY_STRING,
                        NOT_THERE);
 
-          return svn_mutex__unlock(dso_mutex, SVN_NO_ERROR);
+          return SVN_NO_ERROR;
         }
 
       /* Stash the dso so we can use it next time. */
@@ -108,6 +103,17 @@ svn_dso_load(apr_dso_handle_t **dso, const char *fname)
                    *dso);
     }
 
-  return svn_mutex__unlock(dso_mutex, SVN_NO_ERROR);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_dso_load(apr_dso_handle_t **dso, const char *fname)
+{
+  if (! dso_pool)
+    SVN_ERR(svn_dso_initialize2());
+
+  SVN_MUTEX__WITH_LOCK(dso_mutex, svn_dso_load_internal(dso, fname));
+
+  return SVN_NO_ERROR;
 }
 #endif /* APR_HAS_DSO */
