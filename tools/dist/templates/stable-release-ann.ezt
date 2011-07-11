@@ -5,8 +5,8 @@ Please choose the mirror closest to you by visiting:
 
 The SHA1 checksums are:
 
-[sha1info]
-
+[for sha1info]    [sha1info.sha1] [sha1info.filename]
+[end]
 PGP Signatures are available at:
 
     http://www.apache.org/dist/subversion/subversion-[version].tar.bz2.asc
