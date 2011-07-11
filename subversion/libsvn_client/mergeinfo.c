@@ -504,7 +504,7 @@ svn_client__get_repos_mergeinfo_catalog(
 
 svn_error_t *
 svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
-                                      svn_boolean_t *indirect,
+                                      svn_boolean_t *inherited,
                                       svn_boolean_t repos_only,
                                       svn_mergeinfo_inheritance_t inherit,
                                       svn_ra_session_t *ra_session,
@@ -517,7 +517,7 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
   *target_mergeinfo = NULL;
 
   SVN_ERR(svn_client__get_wc_or_repos_mergeinfo_catalog(&tgt_mergeinfo_cat,
-                                                        indirect, FALSE,
+                                                        inherited, FALSE,
                                                         repos_only,
                                                         FALSE, inherit,
                                                         ra_session,
@@ -541,7 +541,7 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
 svn_error_t *
 svn_client__get_wc_or_repos_mergeinfo_catalog(
   svn_mergeinfo_catalog_t *target_mergeinfo_catalog,
-  svn_boolean_t *indirect,
+  svn_boolean_t *inherited,
   svn_boolean_t include_descendants,
   svn_boolean_t repos_only,
   svn_boolean_t ignore_invalid_mergeinfo,
@@ -579,7 +579,7 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
     *target_mergeinfo_catalog = NULL;
   else
     SVN_ERR(svn_client__get_wc_mergeinfo_catalog(target_mergeinfo_catalog,
-                                                 indirect,
+                                                 inherited,
                                                  include_descendants,
                                                  inherit,
                                                  local_abspath,
@@ -634,7 +634,7 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
               if (*target_mergeinfo_catalog
                   && apr_hash_get(*target_mergeinfo_catalog, "",
                                   APR_HASH_KEY_STRING))
-                *indirect = TRUE;
+                *inherited = TRUE;
 
               /* If we created an RA_SESSION above, destroy it.
                  Otherwise, if reparented an existing session, point
@@ -1104,11 +1104,11 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
     }
   else /* ! svn_path_is_url() */
     {
-      svn_boolean_t indirect;
+      svn_boolean_t inherited;
 
       /* Acquire return values. */
       SVN_ERR(svn_client__get_wc_or_repos_mergeinfo_catalog(
-        mergeinfo_catalog, &indirect, include_descendants, FALSE,
+        mergeinfo_catalog, &inherited, include_descendants, FALSE,
         ignore_invalid_mergeinfo, svn_mergeinfo_inherited,
         ra_session, path_or_url, ctx,
         result_pool, scratch_pool));
