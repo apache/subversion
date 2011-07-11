@@ -417,10 +417,11 @@ def write_announcement(args):
     'Write the release announcement.'
     version_base, version_extra = split_version(args.version)
 
-    data = { 'version'      : args.version,
-             'sha1info'     : 'foo',
-             'siginfo'      : 'bar', 
-             'major-minor'  : 'boo',
+    data = { 'version'              : args.version,
+             'sha1info'             : 'foo',
+             'siginfo'              : 'bar', 
+             'major-minor'          : 'boo',
+             'major-minor-patch'    : 'baz',
            }
 
     if version_extra:
