@@ -439,7 +439,7 @@ def write_announcement(args):
 
     data = { 'version'              : args.version,
              'sha1info'             : sha1info,
-             'siginfo'              : 'bar', 
+             'siginfo'              : open('getsigs-output', 'r').read(), 
              'major-minor'          : version_base[:3],
              'major-minor-patch'    : version_base,
            }
