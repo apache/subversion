@@ -168,17 +168,11 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
    doesn't support a mergeinfo capability and SQUELCH_INCAPABLE is
    TRUE, set *TARGET_MERGEINFO to NULL.
 
-   If the *TARGET_MERGEINFO for REL_PATH path is inherited and
-   *VALIDATE_INHERITED_MERGEINFO is TRUE, then *TARGET_MERGEINFO
-   will only contain merge source path-revisions that actually
-   exist in repository.
-
-   If the *TARGET_MERGEINFO for REL_PATH path is inherited,
+   If the mergeinfo for REL_PATH path is inherited,
    VALIDATE_INHERITED_MERGEINFO is TRUE, and the server supports
    the #SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO capability,
-   then request that the server validate the mergeinfo in
-   *TARGET_MERGEINFO, so it contains only merge source path-revisions
-   that actually exist in repository. */
+   then *TARGET_MERGEINFO will only contain merge source path-revisions
+   that actually exist in the repository. */
 svn_error_t *
 svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
                                 svn_mergeinfo_t *target_mergeinfo,
