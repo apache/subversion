@@ -110,7 +110,7 @@ do {                                      \
   svn_mutex__t *m = (mutex);              \
   svn_error_t *e = svn_mutex__lock(m);    \
   if (e) return svn_error_trace(e);       \
-  e = svn_mutex__unlock(m, expr);         \
+  e = svn_mutex__unlock(m, (expr));       \
   if (e) return svn_error_trace(e);       \
 } while (0);
 
