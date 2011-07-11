@@ -94,7 +94,7 @@ extern "C" {
  *
  * Always change this at the same time as SVN_VER_NUMTAG.
  */
-#define SVN_VER_TAG        " (under development)"
+#define SVN_VER_TAG        " (Alpha 3)"
 
 
 /** Number tag: a string describing the version.
@@ -109,7 +109,7 @@ extern "C" {
  *
  * Always change this at the same time as SVN_VER_TAG.
  */
-#define SVN_VER_NUMTAG     "-dev"
+#define SVN_VER_NUMTAG     "-alpha3"
 
 
 /** Revision number: The repository revision number of this release.
