@@ -186,6 +186,8 @@ build_info_for_node(svn_wc__info2_t **info,
     }
   else if (status == svn_wc__db_status_deleted)
     {
+      const char *work_del_abspath;
+
       SVN_ERR(svn_wc__db_read_pristine_info(NULL, NULL,
                                             &tmpinfo->last_changed_rev,
                                             &tmpinfo->last_changed_date,
@@ -197,53 +199,49 @@ build_info_for_node(svn_wc__info2_t **info,
                                             result_pool, scratch_pool));
 
       /* And now fetch the url and revision of what will be deleted */
-      {
-        const char *work_del_abspath;
-        const char *repos_relpath;
+      SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
+                                       &work_del_abspath,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
+      if (work_del_abspath != NULL)
+        {
+          /* This is a deletion within a copied subtree. Get the copied-from
+           * revision. */
+          const char *added_abspath = svn_dirent_dirname(work_del_abspath,
+                                                         scratch_pool);
 
-        SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
-                                         &work_del_abspath,
-                                         db, local_abspath,
-                                         scratch_pool, scratch_pool));
-        if (work_del_abspath != NULL)
-          {
-            /* This is a deletion within a copied subtree. Get the copied-from
-             * revision. */
-            const char *added_abspath = svn_dirent_dirname(work_del_abspath,
-                                                           scratch_pool);
+          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
+                                           &tmpinfo->repos_root_URL,
+                                           &tmpinfo->repos_UUID,
+                                           NULL, NULL, NULL,
+                                           &tmpinfo->rev,
+                                           db, added_abspath,
+                                           result_pool, scratch_pool));
 
-            SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
-                                             &tmpinfo->repos_root_URL,
-                                             &tmpinfo->repos_UUID,
-                                             NULL, NULL, NULL,
-                                             &tmpinfo->rev,
-                                             db, added_abspath,
-                                             result_pool, scratch_pool));
+          tmpinfo->URL = svn_path_url_add_component2(
+                              tmpinfo->repos_root_URL,
+                              svn_relpath_join(repos_relpath,
+                                    svn_dirent_skip_ancestor(added_abspath,
+                                                             local_abspath),
+                                    scratch_pool),
+                              result_pool);
+        }
+      else
+        {
+          SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &tmpinfo->rev,
+                                           &repos_relpath,
+                                           &tmpinfo->repos_root_URL,
+                                           &tmpinfo->repos_UUID, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL,
+                                           db, local_abspath,
+                                           result_pool, scratch_pool));
 
-            tmpinfo->URL = svn_path_url_add_component2(
-                                tmpinfo->repos_root_URL,
-                                svn_relpath_join(repos_relpath,
-                                      svn_dirent_skip_ancestor(added_abspath,
-                                                               local_abspath),
-                                      scratch_pool),
-                                result_pool);
-          }
-        else
-          {
-            SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &tmpinfo->rev,
-                                             &repos_relpath,
-                                             &tmpinfo->repos_root_URL,
-                                             &tmpinfo->repos_UUID, NULL, NULL,
-                                             NULL, NULL, NULL, NULL,
-                                             NULL, NULL, NULL,
-                                             db, local_abspath,
-                                             result_pool, scratch_pool));
+          tmpinfo->URL = svn_path_url_add_component2(tmpinfo->repos_root_URL,
+                                                     repos_relpath,
+                                                     result_pool);
+        }
 
-            tmpinfo->URL = svn_path_url_add_component2(tmpinfo->repos_root_URL,
-                                                       repos_relpath,
-                                                       result_pool);
-          }
-      }
       wc_info->schedule = svn_wc_schedule_delete;
     }
   else if (status == svn_wc__db_status_not_present
