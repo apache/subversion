@@ -225,9 +225,9 @@ create_cache(svn_cache__t **cache_p,
       {
         SVN_ERR(svn_cache__create_inprocess(
                   cache_p, serializer, deserializer, klen, pages,
-                  items_per_page, FALSE, prefix, pool)); 
+                  items_per_page, FALSE, prefix, pool));
       }
-    else 
+    else
     {
       *cache_p = NULL;
     }

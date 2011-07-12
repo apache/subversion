@@ -283,10 +283,10 @@ static svn_error_t* assert_equal_tags(const entry_tag_t *lhs,
 
 #endif /* SVN_DEBUG_CACHE_MEMBUFFER */
 
-/* A single dictionary entry. Since all entries will be allocated once 
- * during cache creation, those entries might be either used or unused. 
- * An entry is used if and only if it is contained in the doubly-linked 
- * list of used entries. An entry is unused if and only if its OFFSET 
+/* A single dictionary entry. Since all entries will be allocated once
+ * during cache creation, those entries might be either used or unused.
+ * An entry is used if and only if it is contained in the doubly-linked
+ * list of used entries. An entry is unused if and only if its OFFSET
  * member is NO_OFFSET.
  */
 typedef struct entry_t

@@ -333,7 +333,7 @@ add_helper(svn_boolean_t is_dir,
               apr_psprintf(pool, " sha1-checksum=\"%s\"",
                            svn_checksum_to_cstring(sha1_checksum, pool));
         }
-          
+
       if (bc_url)
         bc_url_str = apr_psprintf(pool, " bc-url=\"%s\"", bc_url);
 

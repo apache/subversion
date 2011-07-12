@@ -2283,7 +2283,7 @@ typedef svn_error_t *(*svn_client_status_func_t)(
  *
  * If @a path is an absolute path then the @c path parameter passed in each
  * call to @a status_func will be an absolute path.
- * 
+ *
  * All temporary allocations are performed in @a scratch_pool.
  *
  * @since New in 1.7.

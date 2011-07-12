@@ -131,7 +131,7 @@ typedef struct svn_error_t
 
 } svn_error_t;
 
-/* See svn_version.h. 
+/* See svn_version.h.
    Defined here to avoid including svn_version.h from all public headers. */
 typedef struct svn_version_t svn_version_t;
 

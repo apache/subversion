@@ -112,7 +112,7 @@ hash_read(apr_hash_t *hash, svn_stream_t *stream, const char *terminator,
 
       /* Check for unexpected end of stream */
       if (eof)
-        return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, 
+        return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
                                 _("Serialized hash missing terminator"));
 
       if ((buf->len >= 3) && (buf->data[0] == 'K') && (buf->data[1] == ' '))
@@ -120,7 +120,7 @@ hash_read(apr_hash_t *hash, svn_stream_t *stream, const char *terminator,
           /* Get the length of the key */
           keylen = (size_t) strtoul(buf->data + 2, &end, 10);
           if (keylen == (size_t) ULONG_MAX || *end != '\0')
-            return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, 
+            return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
                                     _("Serialized hash malformed"));
 
           /* Now read that much into a buffer. */
@@ -132,7 +132,7 @@ hash_read(apr_hash_t *hash, svn_stream_t *stream, const char *terminator,
           len = 1;
           SVN_ERR(svn_stream_read(stream, &c, &len));
           if (c != '\n')
-            return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, 
+            return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
                                     _("Serialized hash malformed"));
 
           /* Read a val length line */
