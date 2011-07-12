@@ -357,6 +357,8 @@ def compare_and_display_lines(message, label, expected, actual,
   actual = [line for line in actual if not line.startswith('DBG:')]
 
   if not expected.matches(actual, except_re):
+    print expected
+    print actual
     expected.display_differences(message, label, actual)
     raise raisable
 

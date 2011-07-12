@@ -7610,18 +7610,6 @@ db_read_pristine_props(apr_hash_t **props,
   /* Examine the presence: */
   presence = svn_sqlite__column_token(stmt, 1, presence_map);
 
-  /* For "base-deleted", it is obvious the pristine props are located
-     in the BASE table. Fall through to fetch them.
-     ### BH: Is this really the behavior we want here? */
-  if (presence == svn_wc__db_status_base_deleted)
-    {
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-      SVN_ERR_ASSERT(have_row);
-
-      presence = svn_sqlite__column_token(stmt, 1, presence_map);
-    }
-
   /* normal or copied: Fetch properties (during update we want
      properties for incomplete as well) */
   if (presence == svn_wc__db_status_normal
