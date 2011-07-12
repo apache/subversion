@@ -169,30 +169,6 @@ copy_pristine_text_if_necessary(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-/* Copy the versioned node SRC_ABSPATH in DB to the path DST_ABSPATH in DB.
-
-   This is a specific variant of copy_versioned_file and copy_versioned_dir
-   specifically handling deleted nodes.
- */
-static svn_error_t *
-copy_deleted_node(svn_wc__db_t *db,
-                  const char *src_abspath,
-                  const char *dst_abspath,
-                  const char *dst_op_root_abspath,
-                  svn_cancel_func_t cancel_func,
-                  void *cancel_baton,
-                  svn_wc_notify_func2_t notify_func,
-                  void *notify_baton,
-                  apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath, dst_op_root_abspath,
-                             NULL, scratch_pool));
-
-  /* Don't recurse on children while all we do is creating not-present
-     children */
-
-  return SVN_NO_ERROR;
-}
 
 /* Copy the versioned file SRC_ABSPATH in DB to the path DST_ABSPATH in DB.
    If METADATA_ONLY is true, copy only the versioned metadata,
@@ -503,11 +479,12 @@ copy_versioned_dir(svn_wc__db_t *db,
         {
           /* This will be copied as some kind of deletion. Don't touch
              any actual files */
-          SVN_ERR(copy_deleted_node(db,
-                                    child_src_abspath, child_dst_abspath,
-                                    dst_op_root_abspath,
-                                    cancel_func, cancel_baton, NULL, NULL,
-                                    iterpool));
+          SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath,
+                                     dst_op_root_abspath,
+                                     NULL, scratch_pool));
+
+          /* Don't recurse on children while all we do is creating not-present
+             children */
         }
       else
         {
