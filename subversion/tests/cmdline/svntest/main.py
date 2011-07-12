@@ -761,8 +761,6 @@ def create_repos(path):
     opts += ("--pre-1.5-compatible",)
   elif options.server_minor_version < 6:
     opts += ("--pre-1.6-compatible",)
-  elif options.server_minor_version < 7:
-    opts += ("--pre-1.7-compatible",)
   if options.fs_type is not None:
     opts += ("--fs-type=" + options.fs_type,)
   exit_code, stdout, stderr = run_command(svnadmin_binary, 1, 0, "create",
