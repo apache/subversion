@@ -505,6 +505,7 @@ svn_client__get_repos_mergeinfo_catalog(
 svn_error_t *
 svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                       svn_boolean_t *inherited,
+                                      svn_boolean_t *from_repos,
                                       svn_boolean_t repos_only,
                                       svn_mergeinfo_inheritance_t inherit,
                                       svn_ra_session_t *ra_session,
@@ -517,7 +518,8 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
   *target_mergeinfo = NULL;
 
   SVN_ERR(svn_client__get_wc_or_repos_mergeinfo_catalog(&tgt_mergeinfo_cat,
-                                                        inherited, FALSE,
+                                                        inherited, from_repos,
+                                                        FALSE,
                                                         repos_only,
                                                         FALSE, inherit,
                                                         ra_session,
@@ -542,6 +544,7 @@ svn_error_t *
 svn_client__get_wc_or_repos_mergeinfo_catalog(
   svn_mergeinfo_catalog_t *target_mergeinfo_catalog,
   svn_boolean_t *inherited,
+  svn_boolean_t *from_repos,
   svn_boolean_t include_descendants,
   svn_boolean_t repos_only,
   svn_boolean_t ignore_invalid_mergeinfo,
@@ -560,6 +563,9 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, target_wcpath,
                                   scratch_pool));
+
+  if (from_repos)
+    *from_repos = FALSE;
 
   /* We may get an entry with abbreviated information from TARGET_WCPATH's
      parent if TARGET_WCPATH is missing.  These limited entries do not have
@@ -609,7 +615,6 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
             {
               const char *session_url = NULL;
               apr_pool_t *sesspool = NULL;
-              svn_boolean_t validate_inherited_mergeinfo = FALSE;
 
               if (ra_session)
                 {
@@ -628,13 +633,17 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
               SVN_ERR(svn_client__get_repos_mergeinfo_catalog(
                         target_mergeinfo_catalog, ra_session,
                         "", target_rev, inherit,
-                        TRUE, FALSE, validate_inherited_mergeinfo,
+                        TRUE, FALSE, TRUE,
                         result_pool, scratch_pool));
 
               if (*target_mergeinfo_catalog
                   && apr_hash_get(*target_mergeinfo_catalog, "",
                                   APR_HASH_KEY_STRING))
-                *inherited = TRUE;
+                {
+                  *inherited = TRUE;
+                  if (from_repos)
+                    *from_repos = TRUE;
+                }
 
               /* If we created an RA_SESSION above, destroy it.
                  Otherwise, if reparented an existing session, point
@@ -959,7 +968,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
       if (!mergeinfo && !wc_elision_limit_path)
         {
           err = svn_client__get_wc_or_repos_mergeinfo(
-            &mergeinfo, &inherited, TRUE,
+            &mergeinfo, &inherited, NULL, TRUE,
             svn_mergeinfo_nearest_ancestor,
             NULL, target_wcpath, ctx, pool);
           if (err)
@@ -1066,12 +1075,11 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
   if (use_url)
     {
       svn_mergeinfo_catalog_t tmp_catalog;
-      svn_boolean_t validate_inherited_mergeinfo = FALSE;
 
       rev = peg_rev;
       SVN_ERR(svn_client__get_repos_mergeinfo_catalog(
         &tmp_catalog, ra_session, "", rev, svn_mergeinfo_inherited,
-        FALSE, include_descendants, validate_inherited_mergeinfo,
+        FALSE, include_descendants, TRUE,
         result_pool, scratch_pool));
 
       /* If we're not querying the root of the repository, the catalog
@@ -1108,7 +1116,7 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
 
       /* Acquire return values. */
       SVN_ERR(svn_client__get_wc_or_repos_mergeinfo_catalog(
-        mergeinfo_catalog, &inherited, include_descendants, FALSE,
+        mergeinfo_catalog, &inherited, NULL, include_descendants, FALSE,
         ignore_invalid_mergeinfo, svn_mergeinfo_inherited,
         ra_session, path_or_url, ctx,
         result_pool, scratch_pool));

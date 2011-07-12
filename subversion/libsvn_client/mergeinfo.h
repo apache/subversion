@@ -227,12 +227,24 @@ svn_client__get_repos_mergeinfo_catalog(
    INHERIT indicates whether explicit, explicit or inherited, or only
    inherited mergeinfo for TARGET_WCPATH is retrieved.
 
+   If FROM_REPOS is not NULL, then set *FROM_REPOS to true if
+   *TARGET_MERGEINFO is inherted and the repository was contacted to
+   obtain it.  Set *FROM_REPOS to false otherwise.
+
    If TARGET_WCPATH inherited its mergeinfo from a working copy ancestor
    or if it was obtained from the repository, set *INHERITED to TRUE, set it
-   to FALSE otherwise. */
+   to FALSE otherwise.
+
+   Note: If the repository is contacted to find inherited mergeinfo, then
+   inherited mergeinfo validation is requested by defaul (see the
+   VALIDATE_INHERITED_MERGEINFO parameter to svn_client__get_repos_mergeinfo).
+   If the caller needs to know if validation actually occurred then it should
+   check if the server supports the
+   SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO capability. */
 svn_error_t *
 svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                       svn_boolean_t *inherited,
+                                      svn_boolean_t *from_repos,
                                       svn_boolean_t repos_only,
                                       svn_mergeinfo_inheritance_t inherit,
                                       svn_ra_session_t *ra_session,
@@ -259,6 +271,7 @@ svn_error_t *
 svn_client__get_wc_or_repos_mergeinfo_catalog(
   svn_mergeinfo_catalog_t *target_mergeinfo_catalog,
   svn_boolean_t *inherited,
+  svn_boolean_t *from_repos,
   svn_boolean_t include_descendants,
   svn_boolean_t repos_only,
   svn_boolean_t ignore_invalid_mergeinfo,
