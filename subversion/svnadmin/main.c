@@ -1405,7 +1405,8 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                                        sizeof(const char *)),
                                         pool));
   if (targets->nelts > 1)
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, 
+                            _("Too many arguments given"));
   if (targets->nelts)
     fs_path = APR_ARRAY_IDX(targets, 0, const char *);
 
