@@ -745,7 +745,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
           || wrk_status == svn_wc__db_status_moved_here
           || (wrk_kind == svn_wc__db_kind_dir
               && (wrk_status == svn_wc__db_status_added
-                  || wrk_status == svn_wc__db_status_incomplete))) 
+                  || wrk_status == svn_wc__db_status_incomplete)))
         {
           SVN_ERR(restore_node(wc_ctx->db, local_abspath,
                                wrk_kind, use_commit_times,

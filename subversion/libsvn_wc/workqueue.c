@@ -753,14 +753,14 @@ run_file_install(svn_wc__db_t *db,
         err2 = svn_io_make_dir_recursively(svn_dirent_dirname(dst_abspath,
                                                               scratch_pool),
                                            scratch_pool);
-      
+
         if (err2)
           /* Creating directory didn't work: Return all errors */
           return svn_error_trace(svn_error_compose_create(err, err2));
         else
           /* We could create a directory: retry install */
           svn_error_clear(err);
-      
+
         SVN_ERR(svn_io_file_rename(dst_abspath, local_abspath, scratch_pool));
       }
     else

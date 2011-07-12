@@ -2259,7 +2259,7 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
   inner_editor = tree_editor;
   inner_baton = eb;
 
-  if (!server_performs_filtering 
+  if (!server_performs_filtering
       && !depth_as_sticky)
     SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
                                                 &inner_baton,

@@ -437,7 +437,7 @@ class Httpd:
       self.httpv2_option = 'on'
     else:
       self.httpv2_option = 'off'
-      
+
     if bulk_updates:
       self.bulkupdates_option = 'on'
     else:
