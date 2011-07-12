@@ -2040,8 +2040,7 @@ end_element(void *userdata, int state,
                                     rb->file_baton,
                                     NULL,  /* no base checksum in an add */
                                     rb->editor,
-                                    rb->ras->callbacks->get_wc_prop,
-                                    rb->ras->callback_baton,
+                                    NULL, NULL, /* dav_prop callback */
                                     rb->file_pool));
 
           /* fetch node props as necessary. */
