@@ -282,13 +282,12 @@ svn_client_status5(svn_revnum_t *result_rev,
 
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, path, pool));
   {
-    svn_node_kind_t kind, disk_kind;
+    svn_node_kind_t kind;
 
-    SVN_ERR(svn_io_check_path(target_abspath, &disk_kind, pool));
     SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE, pool));
 
-    /* Dir must be an existing directory or the status editor fails */
-    if (kind == svn_node_dir && disk_kind == svn_node_dir)
+    /* Dir must be a working copy directory or the status editor fails */
+    if (kind == svn_node_dir)
       {
         dir_abspath = target_abspath;
         target_basename = "";
@@ -308,15 +307,6 @@ svn_client_status5(svn_revnum_t *result_rev,
             svn_error_clear(err);
 
             if (err || kind != svn_node_dir)
-              {
-                return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                                         _("'%s' is not a working copy"),
-                                         svn_dirent_local_style(path, pool));
-              }
-
-            /* Check for issue #1617 and stat_tests.py 14
-               "status on '..' where '..' is not versioned". */
-            if (strcmp(path, "..") == 0)
               {
                 return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                          _("'%s' is not a working copy"),
