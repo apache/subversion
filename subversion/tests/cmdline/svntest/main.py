@@ -755,7 +755,9 @@ def create_repos(path):
     os.makedirs(path) # this creates all the intermediate dirs, if neccessary
 
   opts = ("--bdb-txn-nosync",)
-  if options.server_minor_version < 5:
+  if options.server_minor_version < 4:
+    opts += ("--pre-1.4-compatible",)
+  elif options.server_minor_version < 5:
     opts += ("--pre-1.5-compatible",)
   elif options.server_minor_version < 6:
     opts += ("--pre-1.6-compatible",)
@@ -1540,8 +1542,8 @@ def _parse_options(arglist=sys.argv[1:]):
 
   # If you change the below condition then change
   # ../../../../build/run_tests.py too.
-  if options.server_minor_version < 4 or options.server_minor_version > 7:
-    parser.error("test harness only supports server minor versions 4-7")
+  if options.server_minor_version < 3 or options.server_minor_version > 7:
+    parser.error("test harness only supports server minor versions 3-7")
 
   if options.url:
     if options.url[-1:] == '/': # Normalize url to have no trailing slash
