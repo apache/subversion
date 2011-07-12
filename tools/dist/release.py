@@ -76,7 +76,7 @@ people_dist_dir = '/www/www.apache.org/dist/subversion'
 # Utility functions
 
 class Version(object):
-    regex = re.compile('(\d+).(\d+).(\d+)(?:-(?:(rc|alpha|beta)(\d+)))?')
+    regex = re.compile('subversion-(\d+).(\d+).(\d+)(?:-(?:(rc|alpha|beta)(\d+)))?')
 
     def __init__(self, ver_str):
         match = self.regex.search(ver_str)
@@ -94,11 +94,6 @@ class Version(object):
         else:
             self.pre = None
             self.pre_num = None
-
-        self.base = '%d.%d.%d' % (self.major, self.minor, self.patch)
-
-    def is_prerelease(self):
-        return self.pre != None
 
     def __lt__(self, that):
         if self.major < that.major: return True
@@ -121,12 +116,13 @@ class Version(object):
             return self.pre_num < that.pre_num
 
     def __str(self):
+        base = '%d.%d.%d' % (self.major, self.minor, self.patch)
         if self.pre:
             extra = '-%s%d' % (self.pre, self.pre_num)
         else:
             extra = ''
 
-        return self.base + extra
+        return base + extra
 
     def __repr__(self):
 
@@ -174,6 +170,13 @@ def download_file(url, target):
     response = urllib2.urlopen(url)
     target_file = open(target, 'w')
     target_file.write(response.read())
+
+def split_version(version):
+    parts = version.split('-')
+    if len(parts) == 1:
+        return (version, None)
+
+    return parts[0], parts[1]
 
 def assert_people():
     if os.uname()[1] != people_host:
@@ -331,11 +334,12 @@ def build_env(args):
 def roll_tarballs(args):
     'Create the release artifacts.'
     extns = ['zip', 'tar.gz', 'tar.bz2']
+    version_base, version_extra = split_version(args.version)
 
     if args.branch:
         branch = args.branch
     else:
-        branch = args.version.base[:-1] + 'x'
+        branch = version_base[:-1] + 'x'
 
     logging.info('Rolling release %s from branch %s@%d' % (args.version,
                                                            branch, args.revnum))
@@ -370,21 +374,28 @@ def roll_tarballs(args):
 
     # For now, just delegate to dist.sh to create the actual artifacts
     extra_args = ''
-    if args.version.is_prerelease():
-        extra_args = '-%s %d' % (args.version.pre, args.version.pre_num)
+    if version_extra:
+        if version_extra.startswith('alpha'):
+            extra_args = '-alpha %s' % version_extra[5:]
+        elif version_extra.startswith('beta'):
+            extra_args = '-beta %s' % version_extra[4:]
+        elif version_extra.startswith('rc'):
+            extra_args = '-rc %s' % version_extra[2:]
+        elif version_extra.startswith('nightly'):
+            extra_args = '-nightly'
     logging.info('Building UNIX tarballs')
     run_script(args.verbose, '%s/dist.sh -v %s -pr %s -r %d %s'
-                     % (sys.path[0], args.version.base, branch, args.revnum,
+                     % (sys.path[0], version_base, branch, args.revnum,
                         extra_args) )
     logging.info('Buildling Windows tarballs')
     run_script(args.verbose, '%s/dist.sh -v %s -pr %s -r %d -zip %s'
-                     % (sys.path[0], args.version.base, branch, args.revnum,
+                     % (sys.path[0], version_base, branch, args.revnum,
                         extra_args) )
 
     # Move the results to the deploy directory
     logging.info('Moving artifacts and calculating checksums')
     for e in extns:
-        if args.version.pre == 'nightly':
+        if version_extra and version_extra.startswith('nightly'):
             filename = 'subversion-trunk.%s' % e
         else:
             filename = 'subversion-%s.%s' % (args.version, e)
@@ -405,6 +416,8 @@ def roll_tarballs(args):
 
 def post_candidates(args):
     'Post the generated tarballs to web-accessible directory.'
+    version_base, version_extra = split_version(args.version)
+
     if args.target:
         target = args.target
     else:
@@ -425,8 +438,8 @@ def post_candidates(args):
            }
 
     # Choose the right template text
-    if args.version.is_prerelease():
-        if args.version.pre == 'nightly':
+    if version_extra:
+        if version_extra.startswith('nightly'):
             template_filename = 'nightly-candidates.ezt'
         else:
             template_filename = 'rc-candidates.ezt'
@@ -479,14 +492,17 @@ def clean_dist(args):
 
 def write_news(args):
     'Write text for the Subversion website.'
+    version_base, version_extra = split_version(args.version)
+
     data = { 'date' : datetime.date.today().strftime('%Y%m%d'),
              'date_pres' : datetime.date.today().strftime('%Y-%m-%d'),
-             'version' : str(args.version),
-             'version_base' : args.version.base,
+             'version' : args.version,
+             'version_base' : version_base[0:3],
            }
 
-    if args.version.is_prerelease():
-        template_filename = 'rc-news.ezt'
+    if version_extra:
+        if version_extra.startswith('alpha'):
+            template_filename = 'rc-news.ezt'
     else:
         template_filename = 'stable-news.ezt'
 
@@ -514,17 +530,20 @@ def get_sha1info(args):
 
 def write_announcement(args):
     'Write the release announcement.'
+    version_base, version_extra = split_version(args.version)
+
     sha1info = get_sha1info(args)
 
     data = { 'version'              : args.version,
              'sha1info'             : sha1info,
              'siginfo'              : open('getsigs-output', 'r').read(),
-             'major-minor'          : args.version.base[:3],
-             'major-minor-patch'    : args.version.base,
+             'major-minor'          : version_base[:3],
+             'major-minor-patch'    : version_base,
            }
 
-    if args.version.is_prerelease():
-        template_filename = 'rc-release-ann.ezt'
+    if version_extra:
+        if version_extra.startswith('alpha'):
+            template_filename = 'rc-release-ann.ezt'
     else:
         template_filename = 'stable-release-ann.ezt'
 
@@ -569,7 +588,7 @@ def main():
     subparser = subparsers.add_parser('roll',
                     help='''Create the release artifacts.''')
     subparser.set_defaults(func=roll_tarballs)
-    subparser.add_argument('version', type=Version,
+    subparser.add_argument('version',
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('revnum', type=int,
                     help='''The revision number to base the release on.''')
@@ -582,7 +601,7 @@ def main():
                             The default location is somewhere in ~/public_html.
                             ''')
     subparser.set_defaults(func=post_candidates)
-    subparser.add_argument('version', type=Version,
+    subparser.add_argument('version',
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('revnum', type=int,
                     help='''The revision number to base the release on.''')
@@ -607,14 +626,14 @@ def main():
                     help='''Output to stdout template text for use in the news
                             section of the Subversion website.''')
     subparser.set_defaults(func=write_news)
-    subparser.add_argument('version', type=Version,
+    subparser.add_argument('version',
                     help='''The release label, such as '1.7.0-alpha1'.''')
 
     subparser = subparsers.add_parser('write-announcement',
                     help='''Output to stdout template text for the emailed
                             release announcement.''')
     subparser.set_defaults(func=write_announcement)
-    subparser.add_argument('version', type=Version,
+    subparser.add_argument('version',
                     help='''The release label, such as '1.7.0-alpha1'.''')
 
     # A meta-target
