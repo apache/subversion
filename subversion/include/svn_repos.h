@@ -2329,7 +2329,7 @@ typedef struct svn_repos_node_t
  * svn_repos_replay2() is preferred.
  *
  * Invoke svn_repos_node_from_baton() on @a edit_baton to obtain the root
- * node afterwords.
+ * node afterwards.
  *
  * Note that the delta includes "bubbled-up" directories; that is,
  * many of the directory nodes will have no prop_mods.
