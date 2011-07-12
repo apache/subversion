@@ -334,7 +334,7 @@ static svn_error_t *add_props(apr_hash_t *props,
 
 static svn_error_t *custom_get_request(svn_ra_neon__session_t *ras,
                                        const char *url,
-                                       const char *relpath,
+                                       const char *editor_relpath,
                                        svn_ra_neon__block_reader reader,
                                        void *subctx,
                                        svn_ra_get_wc_prop_func_t get_wc_prop,
@@ -347,7 +347,7 @@ static svn_error_t *custom_get_request(svn_ra_neon__session_t *ras,
   svn_ra_neon__request_t *request;
   svn_error_t *err;
 
-  if (use_base && relpath != NULL)
+  if (use_base && editor_relpath != NULL)
     {
       /* See if we can get a version URL for this resource. This will
          refer to what we already have in the working copy, thus we
@@ -357,7 +357,8 @@ static svn_error_t *custom_get_request(svn_ra_neon__session_t *ras,
         {
           const svn_string_t *value;
 
-          SVN_ERR(get_wc_prop(cb_baton, relpath, SVN_RA_NEON__LP_VSN_URL,
+          SVN_ERR(get_wc_prop(cb_baton, editor_relpath,
+                              SVN_RA_NEON__LP_VSN_URL,
                               &value, pool));
 
           delta_base = value ? value->data : NULL;
