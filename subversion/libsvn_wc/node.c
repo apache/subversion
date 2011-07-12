@@ -1300,14 +1300,14 @@ svn_wc__node_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
 }
 
 svn_error_t *
-svn_wc__get_absent_subtrees(apr_hash_t **absent_subtrees,
-                            svn_wc_context_t *wc_ctx,
-                            const char *local_abspath,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
+svn_wc__get_server_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
+                                     svn_wc_context_t *wc_ctx,
+                                     const char *local_abspath,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool)
 {
   return svn_error_trace(
-           svn_wc__db_get_server_excluded_subtrees(absent_subtrees,
+           svn_wc__db_get_server_excluded_subtrees(server_excluded_subtrees,
                                                    wc_ctx->db,
                                                    local_abspath,
                                                    result_pool,
