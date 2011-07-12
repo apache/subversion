@@ -221,6 +221,10 @@ WHERE wc_id = ?1 AND parent_relpath = ?2
 SELECT properties FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
+-- STMT_SELECT_CURRENT_PROPS
+SELECT properties FROM nodes_current
+WHERE wc_id = ?1 AND local_relpath = ?2
+
 -- STMT_SELECT_NODE_PROPS
 SELECT properties, presence FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2

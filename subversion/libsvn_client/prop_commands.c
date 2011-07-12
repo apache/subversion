@@ -567,50 +567,6 @@ svn_client_revprop_set2(const char *propname,
 }
 
 
-/* Set *PROPS to the pristine (base) properties at LOCAL_ABSPATH, if PRISTINE
- * is true, or else the working value if PRISTINE is false.
- *
- * The keys of *PROPS will be 'const char *' property names, and the
- * values 'const svn_string_t *' property values.  Allocate *PROPS
- * and its contents in RESULT_POOL.  Use SCRATCH_POOL for temporary
- * allocations.
- */
-static svn_error_t *
-pristine_or_working_props(apr_hash_t **props,
-                          svn_wc_context_t *wc_ctx,
-                          const char *local_abspath,
-                          svn_boolean_t pristine,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool)
-{
-  if (pristine)
-    {
-      return svn_error_trace(svn_wc_get_pristine_props(props,
-                                                       wc_ctx,
-                                                       local_abspath,
-                                                       result_pool,
-                                                       scratch_pool));
-    }
-
-  /* ### until svn_wc_prop_list2() returns a NULL value for locally-deleted
-     ### nodes, then let's check manually.  */
-  {
-    svn_boolean_t deleted;
-
-    SVN_ERR(svn_wc__node_is_status_deleted(&deleted, wc_ctx, local_abspath,
-                                           scratch_pool));
-    if (deleted)
-      {
-        *props = NULL;
-        return SVN_NO_ERROR;
-      }
-  }
-
-  return svn_error_trace(svn_wc_prop_list2(props, wc_ctx, local_abspath,
-                                           result_pool, scratch_pool));
-}
-
-
 /* Helper for the remote case of svn_client_propget.
  *
  * Get the value of property PROPNAME in REVNUM, using RA_LIB and
@@ -1122,8 +1078,8 @@ svn_client_proplist3(const char *path_or_url,
     {
       svn_boolean_t pristine;
       svn_node_kind_t kind;
-      apr_hash_t *changelist_hash = NULL;
       const char *local_abspath;
+      struct recursive_proplist_receiver_baton rb;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
 
@@ -1143,48 +1099,28 @@ svn_client_proplist3(const char *path_or_url,
                                                           pool));
         }
 
-      if (changelists && changelists->nelts)
-        SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
-                                           changelists, pool));
 
-      /* Fetch, recursively or not. */
-      if (kind == svn_node_dir)
-        {
-          struct recursive_proplist_receiver_baton rb;
+        rb.wc_ctx = ctx->wc_ctx;
+        rb.wrapped_receiver = receiver;
+        rb.wrapped_receiver_baton = receiver_baton;
 
-          rb.wc_ctx = ctx->wc_ctx;
-          rb.wrapped_receiver = receiver;
-          rb.wrapped_receiver_baton = receiver_baton;
+        if (strcmp(path_or_url, local_abspath) != 0)
+          {
+            rb.anchor = path_or_url;
+            rb.anchor_abspath = local_abspath;
+          }
+        else
+          {
+            rb.anchor = NULL;
+            rb.anchor_abspath = NULL;
+          }
 
-          if (strcmp(path_or_url, local_abspath) != 0)
-            {
-              rb.anchor = path_or_url;
-              rb.anchor_abspath = local_abspath;
-            }
-          else
-            {
-              rb.anchor = NULL;
-              rb.anchor_abspath = NULL;
-            }
-
-          SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, local_abspath, NULL,
-                                              depth,
-                                              FALSE, pristine, changelists,
-                                              recursive_proplist_receiver, &rb,
-                                              ctx->cancel_func,
-                                              ctx->cancel_baton, pool));
-        }
-      else if (svn_wc__changelist_match(ctx->wc_ctx, local_abspath,
-                                        changelist_hash, pool))
-        {
-          apr_hash_t *hash;
-
-          SVN_ERR(pristine_or_working_props(&hash, ctx->wc_ctx, local_abspath,
-                                            pristine, pool, pool));
-          SVN_ERR(call_receiver(path_or_url, hash,
-                                receiver, receiver_baton, pool));
-
-        }
+        SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, local_abspath, NULL,
+                                            depth,
+                                            FALSE, pristine, changelists,
+                                            recursive_proplist_receiver, &rb,
+                                            ctx->cancel_func,
+                                            ctx->cancel_baton, pool));
     }
   else /* remote target */
     {
