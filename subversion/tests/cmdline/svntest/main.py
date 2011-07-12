@@ -759,8 +759,8 @@ def create_repos(path):
     opts += ("--pre-1.5-compatible",)
   elif options.server_minor_version < 6:
     opts += ("--pre-1.6-compatible",)
-  elif options.server_minor_version < 7:
-    opts += ("--pre-1.7-compatible",)
+  elif options.server_minor_version < 8:
+    opts += ("--pre-1.8-compatible",)
   if options.fs_type is not None:
     opts += ("--fs-type=" + options.fs_type,)
   exit_code, stdout, stderr = run_command(svnadmin_binary, 1, 0, "create",
@@ -1134,6 +1134,9 @@ def server_enforces_date_syntax():
 
 def server_has_atomic_revprop():
   return options.server_minor_version >= 7
+
+def server_has_fsfs_revprop_packing():
+  return options.server_minor_version >= 8
 
 ######################################################################
 
