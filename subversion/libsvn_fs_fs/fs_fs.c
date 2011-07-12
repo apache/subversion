@@ -7709,7 +7709,7 @@ pack_body(void *baton,
   apr_int64_t i;
   svn_revnum_t youngest;
   apr_pool_t *iterpool;
-  const char *data_path, *revprops_path;
+  const char *data_path;
   svn_revnum_t min_unpacked_rev;
 
   SVN_ERR(read_format(&format, &max_files_per_dir, path_format(pb->fs, pool),
@@ -7739,7 +7739,6 @@ pack_body(void *baton,
     return SVN_NO_ERROR;
 
   data_path = svn_dirent_join(pb->fs->path, PATH_REVS_DIR, pool);
-  revprops_path = svn_dirent_join(pb->fs->path, PATH_REVPROPS_DIR, pool);
 
   iterpool = svn_pool_create(pool);
   for (i = min_unpacked_rev / max_files_per_dir; i < completed_shards; i++)
