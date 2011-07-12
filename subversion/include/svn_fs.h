@@ -2016,7 +2016,7 @@ svn_fs_get_uuid(svn_fs_t *fs,
 
 /** If not @c NULL, associate @a *uuid with @a fs.  Otherwise (if @a
  * uuid is @c NULL), generate a new UUID for @a fs.  Use @a pool for
- * any scratchwork.
+ * any scratch work.
  */
 svn_error_t *
 svn_fs_set_uuid(svn_fs_t *fs,

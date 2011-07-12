@@ -1625,7 +1625,7 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a paths will also be returned, unless these
  * revisions are already part of @a start to @a end in @a repos's
- * filesystem, as limted by @a paths. In the latter case those revisions
+ * filesystem, as limited by @a paths. In the latter case those revisions
  * are skipped and @a receiver is not invoked.
  *
  * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
@@ -2329,7 +2329,7 @@ typedef struct svn_repos_node_t
  * svn_repos_replay2() is preferred.
  *
  * Invoke svn_repos_node_from_baton() on @a edit_baton to obtain the root
- * node afterwards.
+ * node afterwords.
  *
  * Note that the delta includes "bubbled-up" directories; that is,
  * many of the directory nodes will have no prop_mods.
