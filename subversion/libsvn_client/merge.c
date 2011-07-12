@@ -3161,26 +3161,27 @@ fix_deleted_subtree_ranges(const char *url1,
 /*** Determining What Remains To Be Merged ***/
 
 
-/* Attempt to determine if a working copy path inherits any invalid
-   mergeinfo.
+/* Contact the repository to get the portion of a working copy path's
+   inherited mergeinfo (if any) which contains non-existent mergeinfo
+   sources -- see http://subversion.tigris.org/issues/show_bug.cgi?id=3669
+
+   Note: This function should only be called if the server supports the
+   SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO capability.
 
    Query the repository for the mergeinfo TARGET_ABSPATH inherits at its
-   base revision and set *VALIDATED to indicate to the caller if we can
-   determine what portions of that inherited mergeinfo are invalid.
+   base revision.
 
    If no mergeinfo is inherited set *INVALID_INHERITED_MERGEINFO to NULL.
 
    If only empty mergeinfo is inherited set *INVALID_INHERITED_MERGEINFO to
    an empty hash.
 
-   If non-empty inherited mergeinfo is inherited then, if the server
-   supports the SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO capability,
-   remove all valid path-revisions from the raw inherited mergeinfo, and set
-   *INVALID_INHERITED_MERGEINFO to the remainder.
-
-   Note that if validation occurs, but all inherited mergeinfo describes
-   non-existent paths, then *INVALID_INHERITED_MERGEINFO is set to an empty
-   hash.
+   If non-empty mergeinfo is inherited then, if the server supports the
+   SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO capability, remove all
+   existing path-revisions from the inherited mergeinfo, and set
+   *INVALID_INHERITED_MERGEINFO to the remainder.  If all of the inherited
+   inherited mergeinfo describes non-existent paths, then set
+   *INVALID_INHERITED_MERGEINFO to an empty hash.
 
    RA_SESSION is an open session that points to TARGET_ABSPATH's repository
    location or to the location of one of TARGET_ABSPATH's parents.  It may
@@ -3307,8 +3308,11 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
      removing any self-referential mergeinfo. */
   if (recorded_mergeinfo)
     {
+      svn_boolean_t inherited_from_repos;
+
       SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(recorded_mergeinfo,
                                                     &inherited_mergeinfo,
+                                                    &inherited_from_repos,
                                                     FALSE,
                                                     inherit, ra_session,
                                                     target_abspath,
@@ -3316,9 +3320,20 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
       if (inherited)
         *inherited = inherited_mergeinfo;
 
-      /* Issue #3669: Remove any non-existent mergeinfo sources
-         from TARGET_ABSPATH's inherited mergeinfo. */
-      if (inherited_mergeinfo && validate_inherited)
+      /* Issue #3669: If TARGET_ABSPATH inherited its mergeinfo from a
+         working copy parent, then contact the repository to discover what
+         portion (if any) of that inherited mergeinfo describes non-existent
+         mergeinfo sources and remove it.
+
+         If we already contacted the repository for inherited mergeinfo then
+         we've done all we can since svn_client__get_wc_or_repos_mergeinfo
+         will request validation by default when asking the repository.
+
+         ### [PTB] Issue #3756 is still a problem here, i.e. TARGET_ABSPATH
+         ### inherits working mergeinfo from a working copy parent. */
+      if (inherited_mergeinfo
+          && validate_inherited
+          && !inherited_from_repos)
         {
           svn_mergeinfo_t invalid_inherited_mergeinfo;
 
@@ -7137,7 +7152,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
              the merge. */
           SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(
             &path_inherited_mergeinfo,
-            &inherited,
+            &inherited, NULL,
             FALSE,
             svn_mergeinfo_nearest_ancestor, /* We only want inherited MI */
             merge_b->ra_session2,
