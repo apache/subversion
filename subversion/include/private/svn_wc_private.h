@@ -310,7 +310,7 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
  * absolute paths.
  *
  * Include children that are scheduled for deletion.  Iff @a show_hidden
- * is true, also include children that are 'excluded' or 'absent' or
+ * is true, also include children that are 'excluded' or 'server-excluded' or
  * 'not-present'.
  *
  * Return every path that refers to a child of the working node at
@@ -980,7 +980,7 @@ svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
  * direct parent does not exist or is deleted return _state_obstructed. When
  * a node doesn't exist but should exist return svn_wc_notify_state_missing.
  *
- * A node is also obstructed if it is marked excluded or absent or when
+ * A node is also obstructed if it is marked excluded or server-excluded or when
  * an unversioned file or directory exists. And if NO_WCROOT_CHECK is FALSE,
  * the root of a working copy is also obstructed; this to allow detecting
  * obstructing working copies.
