@@ -36,6 +36,7 @@
 
 # Stuff we need
 import os
+import re
 import sys
 import glob
 import shutil
@@ -44,6 +45,8 @@ import hashlib
 import tarfile
 import logging
 import datetime
+import operator
+import itertools
 import subprocess
 import argparse       # standard in Python 2.7
 
@@ -65,10 +68,69 @@ swig_ver = '2.0.4'
 
 # Some constants
 repos = 'http://svn.apache.org/repos/asf/subversion'
+people_host = 'minotaur.apache.org'
+people_dist_dir = '/www/www.apache.org/dist/subversion'
 
 
 #----------------------------------------------------------------------
 # Utility functions
+
+class Version(object):
+    regex = re.compile('subversion-(\d+).(\d+).(\d+)(?:-(?:(rc|alpha|beta)(\d+)))?')
+
+    def __init__(self, ver_str):
+        match = self.regex.search(ver_str)
+
+        if not match:
+            raise RuntimeError("Bad version string '%s'" % ver_str)
+
+        self.major = int(match.group(1))
+        self.minor = int(match.group(2))
+        self.patch = int(match.group(3))
+
+        if match.group(4):
+            self.pre = match.group(4)
+            self.pre_num = int(match.group(5))
+        else:
+            self.pre = None
+            self.pre_num = None
+
+    def __lt__(self, that):
+        if self.major < that.major: return True
+        if self.major > that.major: return False
+
+        if self.minor < that.minor: return True
+        if self.minor > that.minor: return False
+
+        if self.patch < that.patch: return True
+        if self.patch > that.patch: return False
+
+        if not self.pre and not that.pre: return False
+        if not self.pre and that.pre: return False
+        if self.pre and not that.pre: return True
+
+        # We are both pre-releases
+        if self.pre != that.pre:
+            return self.pre < that.pre
+        else:
+            return self.pre_num < that.pre_num
+
+    def __str(self):
+        base = '%d.%d.%d' % (self.major, self.minor, self.patch)
+        if self.pre:
+            extra = '-%s%d' % (self.pre, self.pre_num)
+        else:
+            extra = ''
+
+        return base + extra
+
+    def __repr__(self):
+
+        return "Version('%s')" % self.__str()
+
+    def __str__(self):
+        return self.__str()
+
 
 def get_prefix(base_dir):
     return os.path.join(base_dir, 'prefix')
@@ -115,6 +177,10 @@ def split_version(version):
         return (version, None)
 
     return parts[0], parts[1]
+
+def assert_people():
+    if os.uname()[1] != people_host:
+        raise RuntimeError('Not running on expected host "%s"' % people_host)
 
 #----------------------------------------------------------------------
 # Cleaning up the environment
@@ -391,6 +457,37 @@ def post_candidates(args):
 
 
 #----------------------------------------------------------------------
+# Clean dist
+
+def clean_dist(args):
+    'Clean the distribution directory of all but the most recent artifacts.'
+
+    regex = re.compile('subversion-(\d+).(\d+).(\d+)(?:-(?:(rc|alpha|beta)(\d+)))?')
+
+    if not args.dist_dir:
+        assert_people()
+        args.dist_dir = people_dist_dir
+
+    logging.info('Cleaning dist dir \'%s\'' % args.dist_dir)
+
+    filenames = glob.glob(os.path.join(args.dist_dir, 'subversion-*.tar.gz'))
+    versions = []
+    for filename in filenames:
+        versions.append(Version(filename))
+
+    for k, g in itertools.groupby(sorted(versions),
+                                  lambda x: (x.major, x.minor)):
+        releases = list(g)
+        logging.info("Saving release '%s'", releases[-1])
+
+        for r in releases[:-1]:
+            for filename in glob.glob(os.path.join(args.dist_dir,
+                                                   'subversion-%s.*' % r)):
+                logging.info("Removing '%s'" % filename)
+                os.remove(filename)
+
+
+#----------------------------------------------------------------------
 # Write announcements
 
 def write_news(args):
@@ -513,6 +610,16 @@ def main():
     subparser.add_argument('--code-name',
                     help='''A whimsical name for the release, used only for
                             naming the download directory.''')
+
+    # The clean-dist subcommand
+    subparser = subparsers.add_parser('clean-dist',
+                    help='''Clean the distribution directory (and mirrors) of
+                            all but the most recent MAJOR.MINOR release.  If no
+                            dist-dir is given, this command will assume it is
+                            running on people.apache.org.''')
+    subparser.set_defaults(func=clean_dist)
+    subparser.add_argument('--dist-dir',
+                    help='''The directory to clean.''')
 
     # The write-news subcommand
     subparser = subparsers.add_parser('write-news',
