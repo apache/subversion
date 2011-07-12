@@ -5633,7 +5633,7 @@ pre_merge_status_cb(void *baton,
         the child is switched or absent from the WC, or due to a sparse
         checkout.
      5) Path has a sibling (or siblings) missing from the WC because the
-        sibling is switched, absent, schduled for deletion, or missing due to
+        sibling is switched, absent, scheduled for deletion, or missing due to
         a sparse checkout.
      6) Path is absent from disk due to an authz restriction.
      7) Path is equal to MERGE_CMD_BATON->TARGET_ABSPATH.
