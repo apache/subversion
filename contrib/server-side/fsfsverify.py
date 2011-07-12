@@ -673,10 +673,16 @@ class NodeRev(object):
       try:
         (field, value) = line.split(':', 1)
       except:
-        print repr(line)
-        print self.nodeOffset
-        print f.tell()
+        print("line: '%s'" % repr(line))
+        print("Node revision offset: %i" % self.nodeOffset)
+        print("Current file position: %i" % f.tell())
         raise
+
+      if field == "":
+        print("line: '%s'" % repr(line))
+        print("Node revision offset: %i" % self.nodeOffset)
+        print("Current file position: %i" % f.tell())
+        raise Exception("Empty field in node revision")
 
       # pull of the leading space and trailing new line
       if len(value) < 2:
@@ -742,6 +748,10 @@ class NodeRev(object):
         self.copyroot = value
       elif field == 'copyfrom':
         self.copyfrom = value
+      elif field == 'count' or field == 'minfo-cnt' or field == 'minfo-here':
+        pass
+      else:
+        raise Exception("Unrecognized field '%s'\n" % field)
 
     if self.type.type == 'dir':
       if self.text:
