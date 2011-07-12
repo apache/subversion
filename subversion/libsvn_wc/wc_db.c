@@ -3655,7 +3655,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                    const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool)
 {
-   struct op_copy_baton ocb = {0};
+  struct op_copy_baton ocb = {0};
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
