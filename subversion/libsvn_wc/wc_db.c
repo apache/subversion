@@ -8606,9 +8606,9 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
   /* If the node is still marked 'not-present', then the server did not
      re-add it.  So it's really gone in this revision, thus we remove the node.
 
-     If the node is still marked 'absent' and yet is not the same
+     If the node is still marked 'server-excluded' and yet is not the same
      revision as new_rev, then the server did not re-add it, nor
-     re-absent it, so we can remove the node. */
+     re-server-exclude it, so we can remove the node. */
   if (!is_root
       && (status == svn_wc__db_status_not_present
           || (status == svn_wc__db_status_server_excluded &&
