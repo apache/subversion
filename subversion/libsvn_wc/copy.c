@@ -479,9 +479,9 @@ copy_versioned_dir(svn_wc__db_t *db,
         {
           /* This will be copied as some kind of deletion. Don't touch
              any actual files */
-          SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath,
+          SVN_ERR(svn_wc__db_op_copy(db, child_src_abspath, child_dst_abspath,
                                      dst_op_root_abspath,
-                                     NULL, scratch_pool));
+                                     NULL, iterpool));
 
           /* Don't recurse on children while all we do is creating not-present
              children */
