@@ -1407,7 +1407,7 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
                                                          local_abspath),
                                 result_pool);
       }
-    else /* Deleted, excluded, not-present, absent, ... */
+    else /* Deleted, excluded, not-present, server-excluded, ... */
       {
         if (is_copy)
           *is_copy = FALSE;
