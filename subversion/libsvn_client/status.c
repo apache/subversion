@@ -457,10 +457,11 @@ svn_client_status5(svn_revnum_t *result_rev,
              working copy and HEAD. */
           SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx,
                                           target_abspath,
-                                          &lock_fetch_reporter, &rb, FALSE,
-                                          depth, TRUE,
+                                          &lock_fetch_reporter, &rb,
+                                          FALSE /* restore_files */,
+                                          depth, (! depth_as_sticky),
                                           (! server_supports_depth),
-                                          FALSE,
+                                          FALSE /* use_commit_times */,
                                           ctx->cancel_func, ctx->cancel_baton,
                                           NULL, NULL, pool));
         }
