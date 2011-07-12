@@ -115,8 +115,12 @@ typedef struct report_dir_t
   /* the expanded directory name (including all parent names) */
   const char *name;
 
-  /* the canonical url for this directory. */
+  /* the canonical url for this directory after updating. (received) */
   const char *url;
+
+  /* The original repos_relpath of this url (from the workingcopy)
+     or NULL if the repos_relpath can be calculated from the edit root. */
+  const char *repos_relpath;
 
   /* Our base revision - SVN_INVALID_REVNUM if we're adding this dir. */
   svn_revnum_t base_rev;
@@ -199,7 +203,7 @@ typedef struct report_info_t
   svn_revnum_t target_rev;
 
   /* our delta base, if present (NULL if we're adding the file) */
-  const svn_string_t *delta_base;
+  const char *delta_base;
 
   /* Path of original item if add with history */
   const char *copyfrom_path;
@@ -314,6 +318,13 @@ struct report_context_t {
 
   /* Path -> lock token mapping. */
   apr_hash_t *lock_path_tokens;
+
+  /* Path -> const char *repos_relpath mapping */
+  apr_hash_t *switched_paths;
+
+  /* Boolean indicating whether "" is switched.
+     (This indicates that the we are updating a single file) */
+  svn_boolean_t root_is_switched;
 
   /* Our master update editor and baton. */
   const svn_delta_editor_t *update_editor;
@@ -716,7 +727,7 @@ headers_fetch(serf_bucket_t *headers,
       fetch_ctx->info->delta_base)
     {
       serf_bucket_headers_setn(headers, SVN_DAV_DELTA_BASE_HEADER,
-                               fetch_ctx->info->delta_base->data);
+                               fetch_ctx->info->delta_base);
       serf_bucket_headers_setn(headers, "Accept-Encoding",
                                "svndiff1;q=0.9,svndiff;q=0.8");
     }
@@ -1361,6 +1372,15 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info->base_name = info->dir->base_name;
       info->name = info->dir->name;
+
+      info->dir->repos_relpath = apr_hash_get(ctx->switched_paths, "",
+                                              APR_HASH_KEY_STRING);
+
+      if (!info->dir->repos_relpath)
+        SVN_ERR(svn_ra_serf__get_relative_path(&info->dir->repos_relpath,
+                                               ctx->sess->session_url.path,
+                                               ctx->sess, ctx->conn,
+                                               info->dir->pool));
     }
   else if (state == NONE)
     {
@@ -1408,6 +1428,13 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       dir->name = svn_relpath_join(dir->parent_dir->name, dir->base_name,
                                    dir->pool);
       info->name = dir->name;
+
+      dir->repos_relpath = apr_hash_get(ctx->switched_paths, dir->name,
+                                        APR_HASH_KEY_STRING);
+
+      if (!dir->repos_relpath)
+        dir->repos_relpath = svn_relpath_join(dir->parent_dir->repos_relpath,
+                                               dir->base_name, dir->pool);
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "add-directory") == 0)
@@ -1446,6 +1473,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       dir->base_rev = info->base_rev;
       dir->target_rev = ctx->target_rev;
       dir->fetch_props = TRUE;
+
+      dir->repos_relpath = svn_relpath_join(dir->parent_dir->repos_relpath,
+                                            dir->base_name, dir->pool);
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "open-file") == 0)
@@ -1840,14 +1870,59 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       if (info->lock_token && info->fetch_props == FALSE)
         info->fetch_props = TRUE;
 
-      /* If we have a WC, we might be able to dive all the way into the WC to
-         get the previous URL so we can do a differential GET with the base URL.
+      /* If possible, we'd like to fetch only a delta against a
+       * version of the file we already have in our working copy,
+       * rather than fetching a fulltext.
+       *
+       * In HTTP v2, we can simply construct the URL we need given the
+       * repos_relpath and base revision number.
+       */
+      if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(ctx->sess))
+        {
+          const char *repos_relpath;
+
+          /* If this file is switched vs the editor root we should provide
+             its real url instead of the one calculated from the session root.
+           */
+          repos_relpath = apr_hash_get(ctx->switched_paths, info->name,
+                                       APR_HASH_KEY_STRING);
+
+          if (!repos_relpath)
+            {
+              if (ctx->root_is_switched)
+                {
+                  /* We are updating a direct target (most likely a file)
+                     that is switched vs its parent url */
+                  SVN_ERR_ASSERT(*svn_relpath_dirname(info->name, info->pool)
+                                    == '\0');
+
+                  repos_relpath = apr_hash_get(ctx->switched_paths, "",
+                                               APR_HASH_KEY_STRING);
+                }
+              else
+                repos_relpath = svn_relpath_join(info->dir->repos_relpath,
+                                                 info->base_name, info->pool);
+            }
+
+          info->delta_base = apr_psprintf(info->pool, "%s/%ld/%s",
+                                          ctx->sess->rev_root_stub,
+                                          info->base_rev,
+                                          svn_path_uri_encode(repos_relpath,
+                                                              info->pool));
+        }
+
+      /* Still no base URL?  If we have a WC, we might be able to dive all
+       * the way into the WC to get the previous URL so we can do a
+       * differential GET with the base URL.
        */
       if ((! info->delta_base) && (ctx->sess->wc_callbacks->get_wc_prop))
         {
+          const svn_string_t *value = NULL;
           SVN_ERR(ctx->sess->wc_callbacks->get_wc_prop(
             ctx->sess->wc_callback_baton, info->name,
-            SVN_RA_SERF__WC_CHECKED_IN_URL, &info->delta_base, info->pool));
+            SVN_RA_SERF__WC_CHECKED_IN_URL, &value, info->pool));
+
+          info->delta_base = value ? value->data : NULL;
         }
 
       SVN_ERR(fetch_file(ctx, info));
@@ -2098,11 +2173,18 @@ link_path(void *report_baton,
   SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
                                  NULL, pool));
 
+  /* Store the switch roots to allow generating repos_relpaths from just
+     the working copy paths. (Needed for HTTPv2) */
+  path = apr_pstrdup(report->pool, path);
+  apr_hash_set(report->switched_paths, path, APR_HASH_KEY_STRING,
+               apr_pstrdup(report->pool, link+1));
+
+  if (!*path)
+    report->root_is_switched = TRUE;
+
   if (lock_token)
     {
-      apr_hash_set(report->lock_path_tokens,
-                   apr_pstrdup(report->pool, path),
-                   APR_HASH_KEY_STRING,
+      apr_hash_set(report->lock_path_tokens, path, APR_HASH_KEY_STRING,
                    apr_pstrdup(report->pool, lock_token));
     }
 
@@ -2523,6 +2605,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
   report->send_copyfrom_args = send_copyfrom_args;
   report->text_deltas = text_deltas;
   report->lock_path_tokens = apr_hash_make(report->pool);
+  report->switched_paths = apr_hash_make(report->pool);
 
   report->source = src_path;
   report->destination = dest_path;
