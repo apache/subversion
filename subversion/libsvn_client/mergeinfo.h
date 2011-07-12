@@ -246,6 +246,10 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
    TARGET_MERGEINFO_CATALOG, mapped from TARGET_WCPATH's repository
    root-relative path.
 
+   IGNORE_INVALID_MERGEINFO behaves as per the argument of the same
+   name to svn_client__get_wc_mergeinfo().  It is applicable only if
+   the mergeinfo for TARGET_WCPATH is obtained from the working copy.
+
    If INCLUDE_DESCENDANTS is true, then any subtrees under
    TARGET_WCPATH with explicit mergeinfo are also included in
    TARGET_MERGEINFO_CATALOG and again the keys are the repository
