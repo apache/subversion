@@ -4015,17 +4015,17 @@ op_depth_of(apr_int64_t *op_depth,
 }
 
 
-/* If there are any absent (excluded by authz) base nodes then the
-   copy must fail as it's not possible to commit such a copy.  Return
-   an error if there are any absent nodes. */
+/* If there are any server-excluded base nodes then the copy must fail
+   as it's not possible to commit such a copy.
+   Return an error if there are any server-excluded nodes. */
 static svn_error_t *
-catch_copy_of_absent(svn_wc__db_wcroot_t *wcroot,
-                     const char *local_relpath,
-                     apr_pool_t *scratch_pool)
+catch_copy_of_server_excluded(svn_wc__db_wcroot_t *wcroot,
+                              const char *local_relpath,
+                              apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  const char *absent_relpath;
+  const char *server_excluded_relpath;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_HAS_SERVER_EXCLUDED_NODES));
@@ -4034,12 +4034,13 @@ catch_copy_of_absent(svn_wc__db_wcroot_t *wcroot,
                             local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
-    absent_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
+    server_excluded_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
   SVN_ERR(svn_sqlite__reset(stmt));
   if (have_row)
     return svn_error_createf(SVN_ERR_AUTHZ_UNREADABLE, NULL,
                              _("Cannot copy '%s' excluded by server"),
-                             path_for_error_message(wcroot, absent_relpath,
+                             path_for_error_message(wcroot,
+                                                    server_excluded_relpath,
                                                     scratch_pool));
 
   return SVN_NO_ERROR;
@@ -11197,9 +11198,9 @@ svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
                                                     local_relpath,
                                                     scratch_pool));
 
-  /* We don't allow copies to contain absent (denied by authz) nodes;
+  /* We don't allow copies to contain server-excluded nodes;
      the update editor is going to have to bail out. */
-  SVN_ERR(catch_copy_of_absent(wcroot, local_relpath, scratch_pool));
+  SVN_ERR(catch_copy_of_server_excluded(wcroot, local_relpath, scratch_pool));
 
   mcb.op_depth = relpath_depth(local_relpath);
 
