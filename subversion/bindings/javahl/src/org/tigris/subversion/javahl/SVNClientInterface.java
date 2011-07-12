@@ -436,7 +436,7 @@ public interface SVNClientInterface
 
     /**
      * Sets the commit message handler. This allows more complex commit message
-     * with the list of the elements to be commited as input.
+     * with the list of the elements to be committed as input.
      * @param messageHandler    callback for entering commit messages
      *                          if this is set the message parameter is ignored.
      * @since 1.0

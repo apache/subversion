@@ -145,7 +145,7 @@ public class Revision implements java.io.Serializable
     }
 
     /**
-     * last commited revision
+     * last committed revision
      */
     public static final Revision HEAD = new Revision(Kind.head);
 

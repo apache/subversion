@@ -127,7 +127,7 @@ changes to files.
 These example scenarios are implemented in the provided example
 configuration file "enforcer.conf".
 
-When writing hooks, it is usually easier to test the hooks on commited
+When writing hooks, it is usually easier to test the hooks on committed
 transactions already in the repository, rather than installing the
 hook and making commits to test the them.  Enforcer allows you to
 specify either a transaction ID (for use in a hook script) or a

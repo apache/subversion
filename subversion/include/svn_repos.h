@@ -300,10 +300,10 @@ typedef struct svn_repos_notify_t
       #svn_repos_notify_pack_shard_end_revprop, the shard processed. */
   apr_int64_t shard;
 
-  /** For #svn_repos_notify_load_commited_rev, the revision committed. */
+  /** For #svn_repos_notify_load_committed_rev, the revision committed. */
   svn_revnum_t new_revision;
 
-  /** For #svn_repos_notify_load_commited_rev, the source revision, if
+  /** For #svn_repos_notify_load_committed_rev, the source revision, if
       different from @a new_revision, otherwise #SVN_INVALID_REVNUM.
       For #svn_repos_notify_load_txn_start, the source revision. */
   svn_revnum_t old_revision;
