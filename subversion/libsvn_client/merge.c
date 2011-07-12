@@ -360,7 +360,8 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
  *   - Return 'obstructed' if there is a node on disk where none or a
  *     different kind is expected, or if the disk node cannot be read.
  *   - Return 'missing' if there is no node on disk but one is expected.
- *     Also return 'missing' for absent nodes (not here due to authz).
+ *     Also return 'missing' for server-excluded nodes (not here due to
+ *     authz or other reasons determined by the server).
  *
  * Optionally return a bit more info for interested users.
  **/
