@@ -228,7 +228,7 @@ svn_client__get_repos_mergeinfo_catalog(
    inherited mergeinfo for TARGET_WCPATH is retrieved.
 
    If FROM_REPOS is not NULL, then set *FROM_REPOS to true if
-   *TARGET_MERGEINFO is inherted and the repository was contacted to
+   *TARGET_MERGEINFO is inherited and the repository was contacted to
    obtain it.  Set *FROM_REPOS to false otherwise.
 
    If TARGET_WCPATH inherited its mergeinfo from a working copy ancestor
@@ -236,7 +236,7 @@ svn_client__get_repos_mergeinfo_catalog(
    to FALSE otherwise.
 
    Note: If the repository is contacted to find inherited mergeinfo, then
-   inherited mergeinfo validation is requested by defaul (see the
+   inherited mergeinfo validation is requested by default (see the
    VALIDATE_INHERITED_MERGEINFO parameter to svn_client__get_repos_mergeinfo).
    If the caller needs to know if validation actually occurred then it should
    check if the server supports the
