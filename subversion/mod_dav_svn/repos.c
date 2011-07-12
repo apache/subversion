@@ -3557,8 +3557,10 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                                         resource->pool);
           if (!is_file)
             return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-                                      "the delta base does not refer to a "
-                                      "file");
+                                      apr_psprintf(resource->pool,
+                                      "the delta base of '%s' does not refer "
+                                      "to a file in revision %ld",
+                                      info.repos_path, info.rev));
 
           /* Okay. Let's open up a delta stream for the client to read. */
           serr = svn_fs_get_file_delta_stream(&txd_stream,
