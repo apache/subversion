@@ -72,7 +72,7 @@ public class ChangePath implements java.io.Serializable, Comparable
         return path.compareTo(((ChangePath)other).path);
     }
 
-    /** Path of commited item */
+    /** Path of committed item */
     private String path;
 
     /** Source revision of copy (if any). */
@@ -88,8 +88,8 @@ public class ChangePath implements java.io.Serializable, Comparable
     private int nodeKind;
 
     /**
-     * Retrieve the path to the commited item
-     * @return  the path to the commited item
+     * Retrieve the path to the committed item
+     * @return  the path to the committed item
      */
     public String getPath()
     {

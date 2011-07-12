@@ -28,7 +28,7 @@ import java.util.Date;
 import org.apache.subversion.javahl.types.LogDate;
 
 /**
- * This class describes a item which will be commited.
+ * This class describes a item which will be committed.
  */
 public class CommitInfo implements java.io.Serializable
 {
@@ -41,7 +41,7 @@ public class CommitInfo implements java.io.Serializable
     // http://java.sun.com/javase/6/docs/platform/serialization/spec/version.html#6678
     private static final long serialVersionUID = 1L;
 
-    /** the revision commited */
+    /** the revision committed */
     long revision;
 
     /** the date of the revision */
