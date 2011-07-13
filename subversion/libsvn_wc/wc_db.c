@@ -3422,14 +3422,15 @@ op_depth_for_copy(apr_int64_t *op_depth,
                   apr_pool_t *scratch_pool);
 
 
-/* Like svn_wc__db_op_copy(), but with WCROOT+LOCAL_RELPATH instead of
-   DB+LOCAL_ABSPATH.  */
+/* Like svn_wc__db_op_copy()/svn_wc__db_op_move(), but with
+   WCROOT+LOCAL_RELPATH instead of DB+LOCAL_ABSPATH.  */
 static svn_error_t *
 db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
            const char *src_relpath,
            svn_wc__db_wcroot_t *dst_wcroot,
            const char *dst_relpath,
            const svn_skel_t *work_items,
+           svn_boolean_t is_move,
            apr_pool_t *scratch_pool)
 {
   const char *copyfrom_relpath;
@@ -3544,12 +3545,13 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
         SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
                           STMT_INSERT_WORKING_NODE_COPY_FROM_BASE));
 
-      SVN_ERR(svn_sqlite__bindf(stmt, "issist",
+      SVN_ERR(svn_sqlite__bindf(stmt, "issisti",
                     src_wcroot->wc_id, src_relpath,
                     dst_relpath,
                     dst_op_depth,
                     dst_parent_relpath,
-                    presence_map, dst_presence));
+                    presence_map, dst_presence,
+                    (apr_int64_t)(is_move ? 1 : 0)));
 
       SVN_ERR(svn_sqlite__step_done(stmt));
 
@@ -3619,6 +3621,7 @@ struct op_copy_baton
   const char *dst_relpath;
 
   const svn_skel_t *work_items;
+  svn_boolean_t is_move;
 };
 
 /* Helper for svn_wc__db_op_copy.
@@ -3642,7 +3645,7 @@ op_copy_txn(void * baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   SVN_ERR(db_op_copy(ocb->src_wcroot, ocb->src_relpath,
                      ocb->dst_wcroot, ocb->dst_relpath,
-                     ocb->work_items, scratch_pool));
+                     ocb->work_items, ocb->is_move, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3673,6 +3676,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
   VERIFY_USABLE_WCROOT(ocb.dst_wcroot);
 
   ocb.work_items = work_items;
+  ocb.is_move = FALSE;
 
   /* Call with the sdb in src_wcroot. It might call itself again to
      also obtain a lock in dst_wcroot */
@@ -3812,15 +3816,16 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
         SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
                              STMT_INSERT_WORKING_NODE_COPY_FROM_BASE));
 
-      SVN_ERR(svn_sqlite__bindf(stmt, "issist",
+      SVN_ERR(svn_sqlite__bindf(stmt, "issisti",
                         src_wcroot->wc_id, src_relpath,
                         dst_relpath,
                         dst_op_depth,
                         svn_relpath_dirname(dst_relpath, iterpool),
-                        presence_map, dst_presence));
+                        presence_map, dst_presence,
+                        (apr_int64_t)0));
 
       if (src_op_depth > 0)
-        SVN_ERR(svn_sqlite__bind_int64(stmt, 7, src_op_depth));
+        SVN_ERR(svn_sqlite__bind_int64(stmt, 8, src_op_depth));
 
       SVN_ERR(svn_sqlite__step_done(stmt));
 
@@ -4713,12 +4718,36 @@ svn_error_t *
 svn_wc__db_op_move(svn_wc__db_t *db,
                    const char *src_abspath,
                    const char *dst_abspath,
+                   const char *dst_op_root_abspath,
+                   const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool)
 {
+  struct op_copy_baton ocb = {0};
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
 
-  NOT_IMPLEMENTED();
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&ocb.src_wcroot,
+                                                &ocb.src_relpath, db,
+                                                src_abspath,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(ocb.src_wcroot);
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&ocb.dst_wcroot,
+                                                &ocb.dst_relpath,
+                                                db, dst_abspath,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(ocb.dst_wcroot);
+
+  ocb.work_items = work_items;
+  ocb.is_move = TRUE;
+
+  /* Call with the sdb in src_wcroot. It might call itself again to
+     also obtain a lock in dst_wcroot */
+  SVN_ERR(svn_sqlite__with_lock(ocb.src_wcroot->sdb, op_copy_txn, &ocb,
+                                scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 

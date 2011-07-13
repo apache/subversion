@@ -637,7 +637,10 @@ read_one_entry(const svn_wc_entry_t **new_entry,
           /* ### scan_addition may need to be updated to avoid returning
              ### status_copied in this case.  */
         }
-      else if (work_status == svn_wc__db_status_copied)
+      /* For backwards-compatiblity purposes we treat moves just like
+       * regular copies. */
+      else if (work_status == svn_wc__db_status_copied ||
+               work_status == svn_wc__db_status_moved_here)
         {
           entry->copied = TRUE;
 
@@ -662,7 +665,8 @@ read_one_entry(const svn_wc_entry_t **new_entry,
           svn_boolean_t is_copied_child;
           svn_boolean_t is_mixed_rev = FALSE;
 
-          SVN_ERR_ASSERT(work_status == svn_wc__db_status_copied);
+          SVN_ERR_ASSERT(work_status == svn_wc__db_status_copied ||
+                         work_status == svn_wc__db_status_moved_here);
 
           /* If this node inherits copyfrom information from an
              ancestor node, then it must be a copied child.  */
