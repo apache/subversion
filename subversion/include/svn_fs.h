@@ -246,6 +246,21 @@ svn_fs_upgrade(const char *path,
                apr_pool_t *pool);
 
 /**
+ * Perform backend-specific data consistency and correctness validations
+ * to the Subversion filesystem located in the directory @a path.
+ * Use @a pool for necessary allocations.
+ *
+ * @note You probably don't want to use this directly.  Take a look at
+ * svn_repos_verify_fs2() instead, which does non-backend-specific
+ * verificatiosn as well.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_verify(const char *path,
+              apr_pool_t *pool);
+
+/**
  * Return, in @a *fs_type, a string identifying the back-end type of
  * the Subversion filesystem located in @a path.  Allocate @a *fs_type
  * in @a pool.
