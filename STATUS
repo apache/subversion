@@ -21,7 +21,8 @@ Candidate changes:
      API change.  Having this will enable verifying offsets in rep-cache.db in
      the 1.7.x line (i.e., in a subsequent patch release).
    Votes:
-     +1: danielsh, rhuijben
+     +1: danielsh
+     -0: rhuijben (+1 when it performs at least some verifications)
      -1: stsp (this change intends to introduce a new feature)
      -1: cmpilato (no-op API change -- will reconsider if real utility is added)
      -1: gstein (callers have no idea if the function will do anything
@@ -46,7 +47,7 @@ Candidate changes:
      and it makes it hard to rev APIs when clients may be monkeying
      with the data we pass along.
    Votes:
-     +1: gstein
+     +1: gstein, rhuijben
 
 
 Approved changes:
@@ -73,7 +74,7 @@ Approved changes:
    Justification
      Avoids segfaults.
    Votes:
-     +1: danielsh, gstein, stsp
+     +1: danielsh, gstein, stsp, rhuijben
 
  * r1146274
    Make svn_client_infoX() return proper results for tree conflicts. Without
