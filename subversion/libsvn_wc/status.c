@@ -278,7 +278,8 @@ read_info(const struct svn_wc__db_info_t **info,
   mtb->has_checksum = (checksum != NULL);
 
 #ifdef HAVE_SYMLINK
-  if (mtb->had_props || mtb->props_mod)
+  if (mtb->kind == svn_wc__db_kind_file
+      && (mtb->had_props || mtb->props_mod))
     {
       apr_hash_t *properties;
 
@@ -2300,7 +2301,8 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
   const svn_io_dirent2_t *dirent;
   const char *anchor_abspath, *target_name;
   svn_boolean_t skip_root;
-  svn_wc__db_kind_t kind;
+  const struct svn_wc__db_info_t *dir_info;
+  svn_error_t *err;
 
   wb.db = db;
   wb.target_abspath = local_abspath;
@@ -2321,35 +2323,37 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
       ignore_patterns = ignores;
     }
 
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
-  SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
-                             scratch_pool, scratch_pool));
+  err = read_info(&dir_info, local_abspath, db, scratch_pool, scratch_pool);
 
-  if (kind == svn_wc__db_kind_file && dirent->kind == svn_node_file)
-    {
-      anchor_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-      target_name = svn_dirent_basename(local_abspath, NULL);
-      skip_root = TRUE;
-    }
-  else if (kind == svn_wc__db_kind_dir && dirent->kind == svn_node_dir)
+  if (!err && dir_info->kind == svn_wc__db_kind_dir)
     {
       anchor_abspath = local_abspath;
       target_name = NULL;
       skip_root = FALSE;
     }
+  else if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+    return svn_error_trace(err);
   else
     {
+      svn_error_clear(err);
+      dir_info = NULL; /* Don't pass information of the child */
+
+      /* Walk the status of the parent of LOCAL_ABSPATH, but only report
+         status on its child LOCAL_ABSPATH. */
       anchor_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
       target_name = svn_dirent_basename(local_abspath, NULL);
-      skip_root = FALSE;
+      skip_root = TRUE;
     }
+
+  SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
+                             scratch_pool, scratch_pool));
 
   SVN_ERR(get_dir_status(&wb,
                          anchor_abspath,
                          target_name,
                          skip_root,
                          NULL, NULL, NULL,
-                         NULL, /* parent info */
+                         dir_info,
                          dirent,
                          ignore_patterns,
                          depth,
