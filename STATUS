@@ -15,9 +15,17 @@ Status of 1.7.0:
 ================
 
 Candidate changes:
+==================
 
-  No candidate changes at the moment!
+ * r1146013
+   Improve notifications of paths skipped because they were conflicted
+   Justification:
+     Improves general usability of the svn client and the libsvn_client api
+     and would have to wait for 1.8.0 if it doesn't get in 1.7.0.
+   Votes:
+     +1: rhuijben     
 
 Approved changes:
+==================
 
   No approved changes at the moment!
