@@ -1301,11 +1301,10 @@ def actual_only_node_behaviour(sbox):
                      "propget", "svn:eol-style", foo_path)
 
   # proplist (plist, pl)
-  ### proplist does exit(0) -- is that expected?
   expected_stdout = None
   expected_stderr = ".*foo.*is not under version control.*"
-  svntest.actions.run_and_verify_svn2(None, expected_stdout, expected_stderr,
-                                      0, "proplist", foo_path)
+  svntest.actions.run_and_verify_svn(None, expected_stdout, expected_stderr,
+                                     "proplist", foo_path)
 
   # propset (pset, ps)
   expected_stdout = None
