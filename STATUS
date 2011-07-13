@@ -15,21 +15,6 @@ Status of 1.7.0:
 Candidate changes:
 ==================
 
- * r1146131, r1146134
-   Add svn_fs_verify() API.
-   Justification:
-     API change.  Having this will enable verifying offsets in rep-cache.db in
-     the 1.7.x line (i.e., in a subsequent patch release).
-   Votes:
-     +1: danielsh
-     -0: rhuijben (+1 when it performs at least some verifications)
-     -1: stsp (this change intends to introduce a new feature)
-     -1: cmpilato (no-op API change -- will reconsider if real utility is added)
-     -1: gstein (callers have no idea if the function will do anything
-                 since they don't know if they're working with 1.7.0 or
-                 1.7.10, so why bother to call it at all? cross your
-                 fingers and hope?)
-
  * r1146214, r1146381
    Handle NULL inputs when stringifying svn_checksum_t.
    Justification:
