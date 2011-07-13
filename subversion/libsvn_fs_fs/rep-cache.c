@@ -39,6 +39,9 @@
 REP_CACHE_DB_SQL_DECLARE_STATEMENTS(statements);
 
 
+/* Body of svn_fs_fs__open_rep_cache().
+   Implements svn_atomic__init_once().init_func.
+ */
 static svn_error_t *
 open_rep_cache(void *baton,
                apr_pool_t *pool)
