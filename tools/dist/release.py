@@ -425,7 +425,7 @@ def post_candidates(args):
         target = args.target
     else:
         target = os.path.join(os.getenv('HOME'), 'public_html', 'svn',
-                              args.version)
+                              str(args.version))
 
     if args.code_name:
         dirname = args.code_name
@@ -435,7 +435,7 @@ def post_candidates(args):
     if not os.path.exists(target):
         os.makedirs(target)
 
-    data = { 'version'      : args.version,
+    data = { 'version'      : str(args.version),
              'revnum'       : args.revnum,
              'dirname'      : dirname,
            }
@@ -532,7 +532,7 @@ def write_announcement(args):
     'Write the release announcement.'
     sha1info = get_sha1info(args)
 
-    data = { 'version'              : args.version,
+    data = { 'version'              : str(args.version),
              'sha1info'             : sha1info,
              'siginfo'              : open('getsigs-output', 'r').read(),
              'major-minor'          : args.version.base[:3],
