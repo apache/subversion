@@ -39,17 +39,6 @@ Candidate changes:
                                      not implementation)
      
 
-Candidate changes for 1.7.x (can be backported post-1.7.0 too):
-===========================
-
- * r1146219
-   Fix the generated notification.
-   Justification:
-     Allow API users to more easily distinguish dump from verify.
-   Votes:
-     +1: danielsh
-     +1: rhuijben (I think this should just go in 1.7.0)
-
 Approved changes:
 =================
 
@@ -60,6 +49,14 @@ Approved changes:
      and would have to wait for 1.8.0 if it doesn't get in 1.7.0.
    Votes:
      +1: rhuijben, cmpilato, gstein
+
+ * r1146219
+   Fix the generated notification.
+   Justification:
+     Allow API users to more easily distinguish dump from verify.
+   Votes:
+     +1: danielsh
+     +1: rhuijben, gstein (I think this should just go in 1.7.0)
 
  * r1146222
    Add a NULL check in an error path.
