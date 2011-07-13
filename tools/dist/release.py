@@ -79,6 +79,16 @@ class Version(object):
     regex = re.compile('(\d+).(\d+).(\d+)(?:-(?:(rc|alpha|beta)(\d+)))?')
 
     def __init__(self, ver_str):
+        # Special case the 'trunk-nightly' version
+        if ver_str == 'trunk-nightly':
+            self.major = None
+            self.minor = None
+            self.patch = None
+            self.pre = 'nightly'
+            self.pre_num = None
+            self.base = 'nightly'
+            return
+
         match = self.regex.search(ver_str)
 
         if not match:
