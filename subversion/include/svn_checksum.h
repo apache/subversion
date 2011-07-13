@@ -110,9 +110,11 @@ svn_checksum_dup(const svn_checksum_t *checksum,
 
 
 /** Return the hex representation of @a checksum, allocating the string
- * in @a pool.
+ * in @a pool.  In 1.8+, @a checksum may be NULL
+ * and NULL will be returned in that case.
  *
  * @since New in 1.6.
+ * @note Passing NULL for @a checksum in 1.6/1.7 will cause a segfault.
  */
 const char *
 svn_checksum_to_cstring_display(const svn_checksum_t *checksum,
