@@ -1,0 +1,23 @@
+      * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      *                                                     *
+      *  THIS RELEASE STREAM IS OPEN TO BUG FIXES.          *
+      *                                                     *
+      * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+This file tracks the status of releases in the 1.7.x line.
+
+See http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
+for details on how release lines and voting work, what kinds of bugs can
+delay a release, etc.
+
+
+Status of 1.7.0:
+================
+
+Candidate changes:
+
+  No candidate changes at the moment!
+
+Approved changes:
+
+  No approved changes at the moment!
