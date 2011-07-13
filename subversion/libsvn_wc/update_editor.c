@@ -1107,7 +1107,7 @@ open_root(void *edit_baton,
       /* Notify that we skipped the target, while we actually skipped
          the anchor */
       do_notification(eb, eb->target_abspath, svn_node_unknown,
-                      svn_wc_notify_skip, pool);
+                      svn_wc_notify_skip_conflicted, pool);
 
       return SVN_NO_ERROR;
     }
@@ -1758,7 +1758,8 @@ delete_entry(const char *path,
     {
       SVN_ERR(remember_skipped_tree(eb, local_abspath, scratch_pool));
 
-      do_notification(eb, local_abspath, svn_node_unknown, svn_wc_notify_skip,
+      do_notification(eb, local_abspath, svn_node_unknown,
+                      svn_wc_notify_skip_conflicted,
                       scratch_pool);
 
       svn_pool_destroy(scratch_pool);
@@ -2100,7 +2101,7 @@ add_directory(const char *path,
 
       /* ### TODO: Also print victim_path in the skip msg. */
       do_notification(eb, db->local_abspath, svn_node_dir,
-                      svn_wc_notify_skip, pool);
+                      svn_wc_notify_skip_conflicted, pool);
       return SVN_NO_ERROR;
     }
 
@@ -2331,7 +2332,7 @@ open_directory(const char *path,
       db->already_notified = TRUE;
 
       do_notification(eb, db->local_abspath, svn_node_unknown,
-                      svn_wc_notify_skip, pool);
+                      svn_wc_notify_skip_conflicted, pool);
 
       return SVN_NO_ERROR;
     }
@@ -3122,7 +3123,7 @@ add_file(const char *path,
                    APR_HASH_KEY_STRING, (void*)1);
 
       do_notification(eb, fb->local_abspath, svn_node_unknown,
-                      svn_wc_notify_skip, scratch_pool);
+                      svn_wc_notify_skip_conflicted, scratch_pool);
 
       svn_pool_destroy(scratch_pool);
 
@@ -3323,7 +3324,7 @@ open_file(const char *path,
       fb->already_notified = TRUE;
 
       do_notification(eb, fb->local_abspath, svn_node_unknown,
-                      svn_wc_notify_skip, scratch_pool);
+                      svn_wc_notify_skip_conflicted, scratch_pool);
 
       svn_pool_destroy(scratch_pool);
 
