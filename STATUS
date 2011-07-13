@@ -41,6 +41,16 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+Candidate changes for 1.7.x:
+============================
+
+ * r1146219
+   Fix the generated notification.
+   Justification:
+     Allow API users to more easily distinguish dump from verify.
+   Votes:
+     +1: danielsh
+
 Approved changes:
 =================
 
