@@ -7779,6 +7779,8 @@ svn_fs_fs__pack(svn_fs_t *fs,
 
 /** Verifying. **/
 
+/* Body of svn_fs_fs__verify().
+   Implements svn_fs_fs__walk_rep_reference().walker.  */
 static svn_error_t *
 verify_walker(representation_t *rep,
               svn_fs_t *fs,
