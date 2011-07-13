@@ -39,6 +39,42 @@
 REP_CACHE_DB_SQL_DECLARE_STATEMENTS(statements);
 
 
+
+/** Helper functions. **/
+
+
+/* Check that REP refers to a revision that exists in FS. */
+static svn_error_t *
+rep_has_been_born(representation_t *rep,
+                  svn_fs_t *fs,
+                  apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_revnum_t youngest;
+
+  SVN_ERR_ASSERT(rep);
+
+  youngest = ffd->youngest_rev_cache;
+  if (youngest < rep->revision)
+  {
+    /* Stale cache. */
+    SVN_ERR(svn_fs_fs__youngest_rev(&youngest, fs, pool));
+
+    /* Fresh cache. */
+    if (youngest < rep->revision)
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               _("Youngest revision is r%ld, but "
+                                 "rep-cache contains r%ld"),
+                               youngest, rep->revision);
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/** Library-private API's. **/
+
 /* Body of svn_fs_fs__open_rep_cache().
    Implements svn_atomic__init_once().init_func.
  */
@@ -121,25 +157,8 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
   else
     *rep = NULL;
 
-  /* Sanity check. */
   if (*rep)
-    {
-      svn_revnum_t youngest;
-
-      youngest = ffd->youngest_rev_cache;
-      if (youngest < (*rep)->revision)
-      {
-        /* Stale cache. */
-        SVN_ERR(svn_fs_fs__youngest_rev(&youngest, fs, pool));
-
-        /* Fresh cache. */
-        if (youngest < (*rep)->revision)
-          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                   _("Youngest revision is r%ld, but "
-                                     "rep-cache contains r%ld"),
-                                   youngest, (*rep)->revision);
-      }
-    }
+    SVN_ERR(rep_has_been_born(*rep, fs, pool));
 
   return svn_sqlite__reset(stmt);
 }
