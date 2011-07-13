@@ -10,9 +10,7 @@ See http://subversion.apache.org/docs/community-guide/releasing.html#release-sta
 for details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-
 Status of 1.7.0:
-================
 
 Candidate changes:
 ==================
@@ -41,8 +39,8 @@ Candidate changes:
    Votes:
      +1: danielsh
 
-Candidate changes for 1.7.x:
-============================
+Candidate changes for 1.7.x (post-1.7.0):
+=========================================
 
  * r1146219
    Fix the generated notification.
