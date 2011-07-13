@@ -20,6 +20,8 @@
  * ====================================================================
  */
 
+#include "svn_pools.h"
+
 #include "svn_private_config.h"
 
 #include "fs_fs.h"
@@ -117,6 +119,66 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
   return svn_error_quick_wrap(err, _("Couldn't open rep-cache database"));
 }
 
+svn_error_t *
+svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
+                              svn_error_t *(*walker)(representation_t *,
+                                                     svn_fs_t *, 
+                                                     apr_pool_t *),
+                              apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  int iterations = 0;
+
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* Don't check ffd->rep_sharing_allowed. */
+  SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT);
+
+  if (! ffd->rep_cache_db)
+    SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
+
+  /* Get the statement. (There are no arguments to bind.) */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db,
+                                    STMT_GET_ALL_REPS));
+
+  /* Walk the cache entries. */
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      representation_t *rep;
+      const char *sha1_digest;
+      
+      /* Clear ITERPOOL occasionally. */
+      if (iterations++ % 16 == 0)
+        svn_pool_clear(iterpool);
+
+      /* Construct a representation_t. */
+      rep = apr_pcalloc(pool, sizeof(*rep));
+      sha1_digest = svn_sqlite__column_text(stmt, 0, iterpool);
+      SVN_ERR(svn_checksum_parse_hex(&rep->sha1_checksum,
+                                     svn_checksum_sha1, sha1_digest,
+                                     iterpool));
+      rep->revision = svn_sqlite__column_revnum(stmt, 1);
+      rep->offset = svn_sqlite__column_int64(stmt, 2);
+      rep->size = svn_sqlite__column_int64(stmt, 3);
+      rep->expanded_size = svn_sqlite__column_int64(stmt, 4);
+
+      /* Sanity check. */
+      if (rep)
+        SVN_ERR(rep_has_been_born(rep, fs, pool));
+
+      /* Walk. */
+      SVN_ERR(walker(rep, fs, iterpool));
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
 /* This function's caller ignores most errors it returns.
    If you extend this function, check the callsite to see if you have
    to make it not-ignore additional error codes.  */
