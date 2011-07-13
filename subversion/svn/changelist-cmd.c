@@ -45,6 +45,7 @@ svn_cl__changelist(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   svn_depth_t depth = opt_state->depth;
+  svn_boolean_t success = TRUE;
 
   /* If we're not removing changelists, then our first argument should
      be the name of a changelist. */
@@ -98,24 +99,31 @@ svn_cl__changelist(apr_getopt_t *os,
 
   if (changelist_name)
     {
-      return svn_cl__try
-              (svn_client_add_to_changelist(targets, changelist_name,
+      SVN_ERR(svn_cl__try(
+               svn_client_add_to_changelist(targets, changelist_name,
                                             depth, opt_state->changelists,
                                             ctx, pool),
-               NULL, opt_state->quiet,
+               &success, opt_state->quiet,
                SVN_ERR_UNVERSIONED_RESOURCE,
                SVN_ERR_WC_PATH_NOT_FOUND,
-               SVN_NO_ERROR);
+               SVN_NO_ERROR));
     }
   else
     {
-      return svn_cl__try
-              (svn_client_remove_from_changelists(targets, depth,
+      SVN_ERR(svn_cl__try(
+               svn_client_remove_from_changelists(targets, depth,
                                                   opt_state->changelists,
                                                   ctx, pool),
-               NULL, opt_state->quiet,
+               &success, opt_state->quiet,
                SVN_ERR_UNVERSIONED_RESOURCE,
                SVN_ERR_WC_PATH_NOT_FOUND,
-               SVN_NO_ERROR);
+               SVN_NO_ERROR));
     }
+
+  if (!success)
+    return svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
+                            _("Could not display info for all targets because "
+                              "some targets don't exist"));
+  else
+    return SVN_NO_ERROR;
 }

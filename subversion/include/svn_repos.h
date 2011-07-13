@@ -300,10 +300,10 @@ typedef struct svn_repos_notify_t
       #svn_repos_notify_pack_shard_end_revprop, the shard processed. */
   apr_int64_t shard;
 
-  /** For #svn_repos_notify_load_commited_rev, the revision committed. */
+  /** For #svn_repos_notify_load_committed_rev, the revision committed. */
   svn_revnum_t new_revision;
 
-  /** For #svn_repos_notify_load_commited_rev, the source revision, if
+  /** For #svn_repos_notify_load_committed_rev, the source revision, if
       different from @a new_revision, otherwise #SVN_INVALID_REVNUM.
       For #svn_repos_notify_load_txn_start, the source revision. */
   svn_revnum_t old_revision;
@@ -1625,7 +1625,7 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a paths will also be returned, unless these
  * revisions are already part of @a start to @a end in @a repos's
- * filesystem, as limted by @a paths. In the latter case those revisions
+ * filesystem, as limited by @a paths. In the latter case those revisions
  * are skipped and @a receiver is not invoked.
  *
  * If @a revprops is NULL, retrieve all revprops; else, retrieve only the

@@ -169,6 +169,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
             path_local)))
         goto print_error;
       break;
+    case svn_wc_notify_skip_conflicted:
+      nb->skipped_paths++;
+      if ((err = svn_cmdline_printf(
+            pool, _("Skipped '%s' -- Node remains in conflict\n"),
+            path_local)))
+        goto print_error;
+      break;
     case svn_wc_notify_update_delete:
     case svn_wc_notify_exclude:
       nb->received_some_change = TRUE;

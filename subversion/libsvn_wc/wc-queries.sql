@@ -473,7 +473,10 @@ WHERE wc_id = ?1 AND (parent_relpath = ?2 OR local_relpath = ?2)
 INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
 SELECT wc_id, local_relpath, parent_relpath, kind
 FROM nodes_current
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+WHERE wc_id = ?1
+       AND (?2 = ''
+            OR local_relpath = ?2 
+            OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
 
 -- STMT_INSERT_TARGET_WITH_CHANGELIST
 INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
@@ -503,8 +506,11 @@ INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
 SELECT N.wc_id, N.local_relpath, N.parent_relpath, N.kind
   FROM actual_node AS A JOIN nodes_current AS N
     ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
- WHERE N.wc_id = ?1 AND A.changelist = ?3
-       AND (N.local_relpath = ?2 OR N.local_relpath LIKE ?4 ESCAPE '#')
+ WHERE N.wc_id = ?1
+       AND (?2 = ''
+            OR N.local_relpath = ?2 
+            OR (N.local_relpath > ?2 || '/' AND N.local_relpath < ?2 || '0'))
+       AND A.changelist = ?3
 
 -- STMT_SELECT_TARGETS
 SELECT local_relpath, parent_relpath from targets_list
@@ -864,11 +870,11 @@ WHERE wc_id = ?1
 -- STMT_INSERT_WORKING_NODE_COPY_FROM_BASE
 INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, repos_id,
-    repos_path, revision, presence, depth, kind, changed_revision,
+    repos_path, revision, presence, depth, moved_here, kind, changed_revision,
     changed_date, changed_author, checksum, properties, translated_size,
     last_mod_time, symlink_target )
 SELECT wc_id, ?3 /*local_relpath*/, ?4 /*op_depth*/, ?5 /*parent_relpath*/,
-    repos_id, repos_path, revision, ?6 /*presence*/, depth,
+    repos_id, repos_path, revision, ?6 /*presence*/, depth, ?7/*moved_here*/,
     kind, changed_revision, changed_date, changed_author, checksum, properties,
     translated_size, last_mod_time, symlink_target
 FROM nodes
@@ -877,11 +883,11 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 -- STMT_INSERT_WORKING_NODE_COPY_FROM_WORKING
 INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
-    revision, presence, depth, kind, changed_revision, changed_date,
+    revision, presence, depth, moved_here, kind, changed_revision, changed_date,
     changed_author, checksum, properties, translated_size, last_mod_time,
     symlink_target )
 SELECT wc_id, ?3 /*local_relpath*/, ?4 /*op_depth*/, ?5 /*parent_relpath*/,
-    repos_id, repos_path, revision, ?6 /*presence*/, depth,
+    repos_id, repos_path, revision, ?6 /*presence*/, depth, ?7 /*moved_here*/,
     kind, changed_revision, changed_date, changed_author, checksum, properties,
     translated_size, last_mod_time, symlink_target
 FROM nodes
@@ -892,15 +898,15 @@ LIMIT 1
 -- STMT_INSERT_WORKING_NODE_COPY_FROM_DEPTH
 INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
-    revision, presence, depth, kind, changed_revision, changed_date,
+    revision, presence, depth, moved_here, kind, changed_revision, changed_date,
     changed_author, checksum, properties, translated_size, last_mod_time,
     symlink_target )
 SELECT wc_id, ?3 /*local_relpath*/, ?4 /*op_depth*/, ?5 /*parent_relpath*/,
-    repos_id, repos_path, revision, ?6 /*presence*/,
-    depth, kind, changed_revision, changed_date, changed_author, checksum,
+    repos_id, repos_path, revision, ?6 /*presence*/, depth, ?7 /*moved_here*/,
+    kind, changed_revision, changed_date, changed_author, checksum,
     properties, translated_size, last_mod_time, symlink_target
 FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?7
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?8
 
 -- STMT_INSERT_ACTUAL_NODE_FROM_ACTUAL_NODE
 INSERT OR REPLACE INTO actual_node (

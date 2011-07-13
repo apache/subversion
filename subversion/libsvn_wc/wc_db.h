@@ -1227,7 +1227,8 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
  * properly deleted.
  *
  * Usually this operation is directly followed by a call to svn_wc__db_op_copy
- * which performs the real copy from src_abspath to dst_abspath.
+ * or svn_wc__db_op_move which performs the real copy from src_abspath to
+ * dst_abspath.
  */
 svn_error_t *
 svn_wc__db_op_copy_shadowed_layer(svn_wc__db_t *db,
@@ -1427,12 +1428,20 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 
-/* ### KFF: Would like to know behavior when dst_path already exists
-   ### and is a) a dir or b) a non-dir. */
+/* Move the node at SRC_ABSPATH (in NODES and ACTUAL_NODE tables) to
+ * DST_ABSPATH, both in DB but not necessarily in the same WC.  The parent
+ * of DST_ABSPATH must be a versioned directory.
+ *
+ * This move is NOT recursive. It simply establishes this one node, plus
+ * incomplete nodes for the children.
+ *
+ * Add WORK_ITEMS to the work queue. */
 svn_error_t *
 svn_wc__db_op_move(svn_wc__db_t *db,
                    const char *src_abspath,
                    const char *dst_abspath,
+                   const char *dst_op_root_abspath,
+                   const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool);
 
 

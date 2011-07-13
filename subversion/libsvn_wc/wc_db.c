@@ -3422,14 +3422,15 @@ op_depth_for_copy(apr_int64_t *op_depth,
                   apr_pool_t *scratch_pool);
 
 
-/* Like svn_wc__db_op_copy(), but with WCROOT+LOCAL_RELPATH instead of
-   DB+LOCAL_ABSPATH.  */
+/* Like svn_wc__db_op_copy()/svn_wc__db_op_move(), but with
+   WCROOT+LOCAL_RELPATH instead of DB+LOCAL_ABSPATH.  */
 static svn_error_t *
 db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
            const char *src_relpath,
            svn_wc__db_wcroot_t *dst_wcroot,
            const char *dst_relpath,
            const svn_skel_t *work_items,
+           svn_boolean_t is_move,
            apr_pool_t *scratch_pool)
 {
   const char *copyfrom_relpath;
@@ -3539,17 +3540,18 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
 
       if (have_work)
         SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
-                         STMT_INSERT_WORKING_NODE_COPY_FROM_WORKING));
+                          STMT_INSERT_WORKING_NODE_COPY_FROM_WORKING));
       else
         SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
                           STMT_INSERT_WORKING_NODE_COPY_FROM_BASE));
 
-      SVN_ERR(svn_sqlite__bindf(stmt, "issist",
+      SVN_ERR(svn_sqlite__bindf(stmt, "issisti",
                     src_wcroot->wc_id, src_relpath,
                     dst_relpath,
                     dst_op_depth,
                     dst_parent_relpath,
-                    presence_map, dst_presence));
+                    presence_map, dst_presence,
+                    (apr_int64_t)(is_move ? 1 : 0)));
 
       SVN_ERR(svn_sqlite__step_done(stmt));
 
@@ -3619,6 +3621,7 @@ struct op_copy_baton
   const char *dst_relpath;
 
   const svn_skel_t *work_items;
+  svn_boolean_t is_move;
 };
 
 /* Helper for svn_wc__db_op_copy.
@@ -3642,7 +3645,7 @@ op_copy_txn(void * baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   SVN_ERR(db_op_copy(ocb->src_wcroot, ocb->src_relpath,
                      ocb->dst_wcroot, ocb->dst_relpath,
-                     ocb->work_items, scratch_pool));
+                     ocb->work_items, ocb->is_move, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3655,7 +3658,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                    const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool)
 {
-   struct op_copy_baton ocb = {0};
+  struct op_copy_baton ocb = {0};
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
@@ -3673,6 +3676,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
   VERIFY_USABLE_WCROOT(ocb.dst_wcroot);
 
   ocb.work_items = work_items;
+  ocb.is_move = FALSE;
 
   /* Call with the sdb in src_wcroot. It might call itself again to
      also obtain a lock in dst_wcroot */
@@ -3812,15 +3816,16 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
         SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
                              STMT_INSERT_WORKING_NODE_COPY_FROM_BASE));
 
-      SVN_ERR(svn_sqlite__bindf(stmt, "issist",
+      SVN_ERR(svn_sqlite__bindf(stmt, "issisti",
                         src_wcroot->wc_id, src_relpath,
                         dst_relpath,
                         dst_op_depth,
                         svn_relpath_dirname(dst_relpath, iterpool),
-                        presence_map, dst_presence));
+                        presence_map, dst_presence,
+                        (apr_int64_t)0));
 
       if (src_op_depth > 0)
-        SVN_ERR(svn_sqlite__bind_int64(stmt, 7, src_op_depth));
+        SVN_ERR(svn_sqlite__bind_int64(stmt, 8, src_op_depth));
 
       SVN_ERR(svn_sqlite__step_done(stmt));
 
@@ -4015,17 +4020,17 @@ op_depth_of(apr_int64_t *op_depth,
 }
 
 
-/* If there are any absent (excluded by authz) base nodes then the
-   copy must fail as it's not possible to commit such a copy.  Return
-   an error if there are any absent nodes. */
+/* If there are any server-excluded base nodes then the copy must fail
+   as it's not possible to commit such a copy.
+   Return an error if there are any server-excluded nodes. */
 static svn_error_t *
-catch_copy_of_absent(svn_wc__db_wcroot_t *wcroot,
-                     const char *local_relpath,
-                     apr_pool_t *scratch_pool)
+catch_copy_of_server_excluded(svn_wc__db_wcroot_t *wcroot,
+                              const char *local_relpath,
+                              apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  const char *absent_relpath;
+  const char *server_excluded_relpath;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_HAS_SERVER_EXCLUDED_NODES));
@@ -4034,12 +4039,13 @@ catch_copy_of_absent(svn_wc__db_wcroot_t *wcroot,
                             local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
-    absent_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
+    server_excluded_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
   SVN_ERR(svn_sqlite__reset(stmt));
   if (have_row)
     return svn_error_createf(SVN_ERR_AUTHZ_UNREADABLE, NULL,
                              _("Cannot copy '%s' excluded by server"),
-                             path_for_error_message(wcroot, absent_relpath,
+                             path_for_error_message(wcroot,
+                                                    server_excluded_relpath,
                                                     scratch_pool));
 
   return SVN_NO_ERROR;
@@ -4712,12 +4718,36 @@ svn_error_t *
 svn_wc__db_op_move(svn_wc__db_t *db,
                    const char *src_abspath,
                    const char *dst_abspath,
+                   const char *dst_op_root_abspath,
+                   const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool)
 {
+  struct op_copy_baton ocb = {0};
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
 
-  NOT_IMPLEMENTED();
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&ocb.src_wcroot,
+                                                &ocb.src_relpath, db,
+                                                src_abspath,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(ocb.src_wcroot);
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&ocb.dst_wcroot,
+                                                &ocb.dst_relpath,
+                                                db, dst_abspath,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(ocb.dst_wcroot);
+
+  ocb.work_items = work_items;
+  ocb.is_move = TRUE;
+
+  /* Call with the sdb in src_wcroot. It might call itself again to
+     also obtain a lock in dst_wcroot */
+  SVN_ERR(svn_sqlite__with_lock(ocb.src_wcroot->sdb, op_copy_txn, &ocb,
+                                scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -4740,14 +4770,7 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
                       apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-  const char *like_arg;
-
-  if (depth == svn_depth_infinity)
-    {
-      /* Calculate a value we're going to need later. */
-      like_arg = construct_like_arg(local_relpath, scratch_pool);
-    }
-
+  int affected_rows = 0;
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_CREATE_TARGETS_LIST));
 
@@ -4785,15 +4808,16 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
 
       for (i = 0; i < changelist_filter->nelts; i++)
         {
+          int sub_affected;
           const char *changelist = APR_ARRAY_IDX(changelist_filter, i,
                                                  const char *);
 
           SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_idx));
           SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
                                     local_relpath, changelist));
-          if (depth == svn_depth_infinity)
-            SVN_ERR(svn_sqlite__bind_text(stmt, 4, like_arg));
-          SVN_ERR(svn_sqlite__step_done(stmt));
+          SVN_ERR(svn_sqlite__update(&sub_affected, stmt));
+
+          affected_rows += sub_affected;
         }
     }
   else /* No changelist filtering */
@@ -4826,9 +4850,21 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_idx));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      if (depth == svn_depth_infinity)
-        SVN_ERR(svn_sqlite__bind_text(stmt, 3, like_arg));
-      SVN_ERR(svn_sqlite__step_done(stmt));
+      SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+    }
+
+  /* Does the target exist? */
+  if (affected_rows == 0)
+    {
+      svn_boolean_t exists;
+      SVN_ERR(does_node_exist(&exists, wcroot, local_relpath));
+
+      if (!exists)
+        return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                 _("The node '%s' was not found."),
+                                 path_for_error_message(wcroot,
+                                                        local_relpath,
+                                                        scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -8605,9 +8641,9 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
   /* If the node is still marked 'not-present', then the server did not
      re-add it.  So it's really gone in this revision, thus we remove the node.
 
-     If the node is still marked 'absent' and yet is not the same
+     If the node is still marked 'server-excluded' and yet is not the same
      revision as new_rev, then the server did not re-add it, nor
-     re-absent it, so we can remove the node. */
+     re-server-exclude it, so we can remove the node. */
   if (!is_root
       && (status == svn_wc__db_status_not_present
           || (status == svn_wc__db_status_server_excluded &&
@@ -11197,9 +11233,9 @@ svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
                                                     local_relpath,
                                                     scratch_pool));
 
-  /* We don't allow copies to contain absent (denied by authz) nodes;
+  /* We don't allow copies to contain server-excluded nodes;
      the update editor is going to have to bail out. */
-  SVN_ERR(catch_copy_of_absent(wcroot, local_relpath, scratch_pool));
+  SVN_ERR(catch_copy_of_server_excluded(wcroot, local_relpath, scratch_pool));
 
   mcb.op_depth = relpath_depth(local_relpath);
 

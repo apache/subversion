@@ -255,7 +255,7 @@ update_internal(svn_revnum_t *result_rev,
 
           nt = svn_wc_create_notify(local_abspath,
                                     tree_conflicted
-                                      ? svn_wc_notify_skip
+                                      ? svn_wc_notify_skip_conflicted
                                       : svn_wc_notify_update_skip_working_only,
                                     pool);
 

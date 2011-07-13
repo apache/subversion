@@ -797,13 +797,14 @@ def status_on_unversioned_dotdot(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  new_dir = os.path.join(wc_dir, 'new_dir')
-  new_subdir = os.path.join(new_dir, 'new_subdir')
+  new_dir = sbox.ospath('new')
+  new_sub = sbox.ospath('new/sub')
+  new_subsub = sbox.ospath('new/sub/sub')
   os.mkdir(new_dir)
-  os.mkdir(new_subdir)
+  os.mkdir(new_sub)
+  os.mkdir(new_subsub)
 
-  os.chdir(new_subdir)
-
+  os.chdir(new_subsub)
   exit_code, out, err = svntest.main.run_svn(1, 'st', '..')
   for line in err:
     if line.find('svn: warning: W155007: \'..\' is not a working copy') != -1:

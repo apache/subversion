@@ -2333,20 +2333,15 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
             {
               svn_stream_t *stream;
               svn_stream_t *patched_stream;
-              apr_file_t *file;
 
-              SVN_ERR(svn_io_file_open(&file, target->patched_path,
-                                       APR_READ | APR_BINARY, APR_OS_DEFAULT,
-                                       pool));
-
-              patched_stream = svn_stream_from_aprfile2(file, FALSE /* disown */,
-                                                pool);
+              SVN_ERR(svn_stream_open_readonly(&patched_stream,
+                                               target->patched_path,
+                                               pool, pool));
               SVN_ERR(svn_subst_create_specialfile(&stream,
                                                    target->local_abspath,
                                                    pool, pool));
               SVN_ERR(svn_stream_copy3(patched_stream, stream,
-                                       NULL, /* cancel_func */
-                                       NULL, /* cancel_baton */
+                                       ctx->cancel_func, ctx->cancel_baton,
                                        pool));
             }
           else

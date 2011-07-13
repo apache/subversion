@@ -122,35 +122,35 @@ svn_magic__detect_binary_mimetype(const char **mimetype,
           if (strncmp(magic_mimetype, "text/", 5) == 0)
             magic_mimetype = NULL;
           else
-           {
-             svn_error_t *err;
+            {
+              svn_error_t *err;
 #ifndef MAGIC_MIME_TYPE
-             char *p;
+              char *p;
 
-             /* Strip off trailing stuff like " charset=ascii". */
-             p = strchr(magic_mimetype, ' ');
-             if (p)
-              *p = '\0';
+              /* Strip off trailing stuff like " charset=ascii". */
+              p = strchr(magic_mimetype, ' ');
+              if (p)
+                *p = '\0';
 #endif
-            /* Make sure we got a valid mime type. */
-            err = svn_mime_type_validate(magic_mimetype, scratch_pool);
-            if (err)
-              {
-                if (err->apr_err == SVN_ERR_BAD_MIME_TYPE)
-                  {
-                    svn_error_clear(err);
-                    magic_mimetype = NULL;
-                  }
-                else
-                  return svn_error_trace(err);
-              }
-            else
-              {
-                /* The string is allocated from memory managed by libmagic
-                 * so we must copy it to the result pool. */
-                magic_mimetype = apr_pstrdup(result_pool, magic_mimetype);
-              }
-           }
+              /* Make sure we got a valid mime type. */
+              err = svn_mime_type_validate(magic_mimetype, scratch_pool);
+              if (err)
+                {
+                  if (err->apr_err == SVN_ERR_BAD_MIME_TYPE)
+                    {
+                      svn_error_clear(err);
+                      magic_mimetype = NULL;
+                    }
+                  else
+                    return svn_error_trace(err);
+                }
+              else
+                {
+                  /* The string is allocated from memory managed by libmagic
+                   * so we must copy it to the result pool. */
+                  magic_mimetype = apr_pstrdup(result_pool, magic_mimetype);
+                }
+            }
         }
     }
 #endif

@@ -360,7 +360,8 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
  *   - Return 'obstructed' if there is a node on disk where none or a
  *     different kind is expected, or if the disk node cannot be read.
  *   - Return 'missing' if there is no node on disk but one is expected.
- *     Also return 'missing' for absent nodes (not here due to authz).
+ *     Also return 'missing' for server-excluded nodes (not here due to
+ *     authz or other reasons determined by the server).
  *
  * Optionally return a bit more info for interested users.
  **/
@@ -3160,26 +3161,27 @@ fix_deleted_subtree_ranges(const char *url1,
 /*** Determining What Remains To Be Merged ***/
 
 
-/* Attempt to determine if a working copy path inherits any invalid
-   mergeinfo.
+/* Contact the repository to get the portion of a working copy path's
+   inherited mergeinfo (if any) which contains non-existent mergeinfo
+   sources -- see http://subversion.tigris.org/issues/show_bug.cgi?id=3669
+
+   Note: This function should only be called if the server supports the
+   SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO capability.
 
    Query the repository for the mergeinfo TARGET_ABSPATH inherits at its
-   base revision and set *VALIDATED to indicate to the caller if we can
-   determine what portions of that inherited mergeinfo are invalid.
+   base revision.
 
    If no mergeinfo is inherited set *INVALID_INHERITED_MERGEINFO to NULL.
 
    If only empty mergeinfo is inherited set *INVALID_INHERITED_MERGEINFO to
    an empty hash.
 
-   If non-empty inherited mergeinfo is inherited then, if the server
-   supports the SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO capability,
-   remove all valid path-revisions from the raw inherited mergeinfo, and set
-   *INVALID_INHERITED_MERGEINFO to the remainder.
-
-   Note that if validation occurs, but all inherited mergeinfo describes
-   non-existent paths, then *INVALID_INHERITED_MERGEINFO is set to an empty
-   hash.
+   If non-empty mergeinfo is inherited then, if the server supports the
+   SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO capability, remove all
+   existing path-revisions from the inherited mergeinfo, and set
+   *INVALID_INHERITED_MERGEINFO to the remainder.  If all of the inherited
+   inherited mergeinfo describes non-existent paths, then set
+   *INVALID_INHERITED_MERGEINFO to an empty hash.
 
    RA_SESSION is an open session that points to TARGET_ABSPATH's repository
    location or to the location of one of TARGET_ABSPATH's parents.  It may
@@ -3265,9 +3267,9 @@ get_invalid_inherited_mergeinfo(svn_mergeinfo_t *invalid_inherited_mergeinfo,
    *RECORDED_MERGEINFO is inherited, then *IMPLICIT_MERGEINFO will be
    removed from *RECORDED_MERGEINFO.
 
-   If INDIRECT is not NULL set *INDIRECT to TRUE if *RECORDED_MERGEINFO
-   is inherited and not explicit.  If RECORDED_MERGEINFO is NULL then
-   INDIRECT is ignored.
+   If INHERITED is not NULL set *INHERITED to TRUE if *RECORDED_MERGEINFO
+   is inherited rather than explicit.  If RECORDED_MERGEINFO is NULL then
+   INHERITED is ignored.
 
    If the server supports the SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO
    capability, and the resulting *RECORDED_MERGEINFO is inherited, and
@@ -3288,7 +3290,7 @@ get_invalid_inherited_mergeinfo(svn_mergeinfo_t *invalid_inherited_mergeinfo,
 static svn_error_t *
 get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                    svn_mergeinfo_t *implicit_mergeinfo,
-                   svn_boolean_t *indirect,
+                   svn_boolean_t *inherited,
                    svn_mergeinfo_inheritance_t inherit,
                    svn_boolean_t validate_inherited,
                    svn_ra_session_t *ra_session,
@@ -3299,24 +3301,39 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
-  svn_boolean_t inherited = FALSE;
+  svn_boolean_t inherited_mergeinfo = FALSE;
 
   /* First, we get the real mergeinfo.  We use SCRATCH_POOL throughout this
      block because we'll make a final copy of *RECORDED_MERGEINFO only after
      removing any self-referential mergeinfo. */
   if (recorded_mergeinfo)
     {
+      svn_boolean_t inherited_from_repos;
+
       SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(recorded_mergeinfo,
-                                                    &inherited, FALSE,
+                                                    &inherited_mergeinfo,
+                                                    &inherited_from_repos,
+                                                    FALSE,
                                                     inherit, ra_session,
                                                     target_abspath,
                                                     ctx, scratch_pool));
-      if (indirect)
-        *indirect = inherited;
+      if (inherited)
+        *inherited = inherited_mergeinfo;
 
-      /* Issue #3669: Remove any non-existent mergeinfo sources
-         from TARGET_ABSPATH's inherited mergeinfo. */
-      if (inherited && validate_inherited)
+      /* Issue #3669: If TARGET_ABSPATH inherited its mergeinfo from a
+         working copy parent, then contact the repository to discover what
+         portion (if any) of that inherited mergeinfo describes non-existent
+         mergeinfo sources and remove it.
+
+         If we already contacted the repository for inherited mergeinfo then
+         we've done all we can since svn_client__get_wc_or_repos_mergeinfo
+         will request validation by default when asking the repository.
+
+         ### [PTB] Issue #3756 is still a problem here, i.e. TARGET_ABSPATH
+         ### inherits working mergeinfo from a working copy parent. */
+      if (inherited_mergeinfo
+          && validate_inherited
+          && !inherited_from_repos)
         {
           svn_mergeinfo_t invalid_inherited_mergeinfo;
 
@@ -3416,7 +3433,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
          up with fragmented mergeinfo, see
          http://subversion.tigris.org/issues/show_bug.cgi?id=3668#desc5 */
       if (implicit_mergeinfo
-          && inherited
+          && inherited_mergeinfo
           && validate_inherited)
         SVN_ERR(svn_mergeinfo_remove2(recorded_mergeinfo,
                                       *implicit_mergeinfo,
@@ -4193,7 +4210,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
             {
               SVN_ERR(get_full_mergeinfo(NULL, /* child->pre_merge_mergeinfo */
                                          &(child->implicit_mergeinfo),
-                                         NULL, /* child->indirect_mergeinfo */
+                                         NULL, /* child->inherited_mergeinfo */
                                          merge_b->mergeinfo_validation_capable,
                                          svn_mergeinfo_inherited, ra_session,
                                          child->abspath,
@@ -4293,7 +4310,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
         child->pre_merge_mergeinfo ? NULL : &(child->pre_merge_mergeinfo),
         /* Get implicit only for merge target. */
         (i == 0) ? &(child->implicit_mergeinfo) : NULL,
-        &(child->indirect_mergeinfo),
+        &(child->inherited_mergeinfo),
         svn_mergeinfo_inherited,
         merge_b->mergeinfo_validation_capable, ra_session,
         child->abspath,
@@ -5616,7 +5633,7 @@ pre_merge_status_cb(void *baton,
         the child is switched or absent from the WC, or due to a sparse
         checkout.
      5) Path has a sibling (or siblings) missing from the WC because the
-        sibling is switched, absent, schduled for deletion, or missing due to
+        sibling is switched, absent, scheduled for deletion, or missing due to
         a sparse checkout.
      6) Path is absent from disk due to an authz restriction.
      7) Path is equal to MERGE_CMD_BATON->TARGET_ABSPATH.
@@ -5666,7 +5683,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   int i;
   apr_pool_t *iterpool = NULL;
   apr_hash_t *subtrees_with_mergeinfo;
-  apr_hash_t *absent_subtrees;
+  apr_hash_t *server_excluded_subtrees;
   apr_hash_t *switched_subtrees;
   apr_hash_t *shallow_subtrees;
   apr_hash_t *missing_subtrees;
@@ -5867,16 +5884,16 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
        }
     }
 
-  /* Case 6: Paths absent from disk due to an authz restrictions. */
-  SVN_ERR(svn_wc__get_absent_subtrees(&absent_subtrees,
-                                      merge_cmd_baton->ctx->wc_ctx,
-                                      merge_cmd_baton->target_abspath,
-                                      result_pool, scratch_pool));
-  if (absent_subtrees)
+  /* Case 6: Paths absent from disk due to server-side exclusion. */
+  SVN_ERR(svn_wc__get_server_excluded_subtrees(&server_excluded_subtrees,
+                                               merge_cmd_baton->ctx->wc_ctx,
+                                               merge_cmd_baton->target_abspath,
+                                               result_pool, scratch_pool));
+  if (server_excluded_subtrees)
     {
       apr_hash_index_t *hi;
 
-      for (hi = apr_hash_first(scratch_pool, absent_subtrees);
+      for (hi = apr_hash_first(scratch_pool, server_excluded_subtrees);
            hi;
            hi = apr_hash_next(hi))
         {
@@ -6720,7 +6737,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
   svn_merge_range_t range;
   svn_mergeinfo_t target_mergeinfo;
   svn_merge_range_t *conflicted_range = NULL;
-  svn_boolean_t indirect = FALSE;
+  svn_boolean_t inherited = FALSE;
   svn_boolean_t is_rollback = (revision1 > revision2);
   const char *primary_url = is_rollback ? url1 : url2;
   const char *target_url;
@@ -6764,7 +6781,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
                               iterpool));
       err = get_full_mergeinfo(&target_mergeinfo,
                                &(merge_target->implicit_mergeinfo),
-                               &indirect, svn_mergeinfo_inherited,
+                               &inherited, svn_mergeinfo_inherited,
                                merge_b->mergeinfo_validation_capable,
                                merge_b->ra_session1, target_abspath,
                                MAX(revision1, revision2),
@@ -7007,9 +7024,9 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
         {
           apr_hash_t *merges = apr_hash_make(iterpool);
 
-          /* If merge target has indirect mergeinfo set it before
+          /* If merge target has inherited mergeinfo set it before
              recording the first merge range. */
-          if (indirect)
+          if (inherited)
             SVN_ERR(svn_client__record_wc_mergeinfo(target_abspath,
                                                     target_mergeinfo,
                                                     FALSE, ctx,
@@ -7105,7 +7122,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
       const char *path_url;
       svn_mergeinfo_t path_inherited_mergeinfo;
       svn_mergeinfo_t path_explicit_mergeinfo;
-      svn_boolean_t indirect;
+      svn_boolean_t inherited;
       svn_client__merge_path_t *new_child;
 
       apr_pool_clear(iterpool);
@@ -7115,7 +7132,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
 
       /* Get the path's new explicit mergeinfo... */
       SVN_ERR(svn_client__get_wc_mergeinfo(&path_explicit_mergeinfo,
-                                           &indirect,
+                                           &inherited,
                                            svn_mergeinfo_explicit,
                                            abspath_with_new_mergeinfo,
                                            NULL, NULL, FALSE,
@@ -7135,7 +7152,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
              the merge. */
           SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(
             &path_inherited_mergeinfo,
-            &indirect,
+            &inherited, NULL,
             FALSE,
             svn_mergeinfo_nearest_ancestor, /* We only want inherited MI */
             merge_b->ra_session2,
@@ -7604,9 +7621,9 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
                                               merge_b->ctx->wc_ctx,
                                               iterpool));
 
-          /* If CHILD has indirect mergeinfo set it before
+          /* If CHILD has inherited mergeinfo set it before
              recording the first merge range. */
-          if (child->indirect_mergeinfo)
+          if (child->inherited_mergeinfo)
             SVN_ERR(svn_client__record_wc_mergeinfo(
               child->abspath,
               child->pre_merge_mergeinfo,

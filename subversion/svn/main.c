@@ -1382,11 +1382,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ("Upgrade the metadata storage format for a working copy.\n"
      "usage: upgrade WCPATH...\n"
      "\n"
-     "  Local modifications are preserved.\n"
-     "\n"
-     "  Note: Upgrading a working copy from the format used in Subversion 1.6\n"
-     "  to the format used in Subversion 1.7 takes much more time than checking\n" 
-     "  out a new working copy with the 1.7 client.\n"),
+     "  Local modifications are preserved.\n"),
     { 'q' } },
 
   { NULL, NULL, {0}, NULL, {0} }
