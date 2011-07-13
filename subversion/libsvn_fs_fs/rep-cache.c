@@ -179,6 +179,8 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
 
   return SVN_NO_ERROR;
 }
+
+
 /* This function's caller ignores most errors it returns.
    If you extend this function, check the callsite to see if you have
    to make it not-ignore additional error codes.  */
