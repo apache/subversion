@@ -3539,7 +3539,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
 
       if (have_work)
         SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
-                         STMT_INSERT_WORKING_NODE_COPY_FROM_WORKING));
+                          STMT_INSERT_WORKING_NODE_COPY_FROM_WORKING));
       else
         SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
                           STMT_INSERT_WORKING_NODE_COPY_FROM_BASE));
