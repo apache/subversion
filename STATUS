@@ -39,7 +39,16 @@ Candidate changes:
      Avoids segfaults.
    Votes:
      +1: danielsh
-     -0: cmpilato (problem is with callers, not implementation)
+     -0: cmpilato, rhuijben (problem is with callers, not implementation)
+     
+ * r1146274
+   Make svn_client_infoX() return proper results for tree conflicts. Without
+   this patch the structure is just memcleared instead of properly set to
+   uninitialized.
+   Justification:
+     Resolve regression and remove confusion by future callers.
+   Votes:
+     +1: rhuijben
 
 Candidate changes for 1.7.x (post-1.7.0):
 =========================================
@@ -49,7 +58,8 @@ Candidate changes for 1.7.x (post-1.7.0):
    Justification:
      Allow API users to more easily distinguish dump from verify.
    Votes:
-     +1: danielsh, rhuijben
+     +1: danielsh
+     +1: rhuijben (I think this should just go in 1.7.0)
 
 Approved changes:
 =================
