@@ -335,7 +335,7 @@ def roll_tarballs(args):
     if args.branch:
         branch = args.branch
     else:
-        branch = args.version.base[:-1] + 'x'
+        branch = 'branches/' + args.version.base[:-1] + 'x'
 
     logging.info('Rolling release %s from branch %s@%d' % (args.version,
                                                            branch, args.revnum))
@@ -352,7 +352,7 @@ def roll_tarballs(args):
     # Make sure CHANGES is sync'd
     if branch != 'trunk':
         trunk_CHANGES = '%s/trunk/CHANGES@%d' % (repos, args.revnum)
-        branch_CHANGES = '%s/branches/%s/CHANGES@%d' % (repos, branch,
+        branch_CHANGES = '%s/%s/CHANGES@%d' % (repos, branch,
                                                         args.revnum)
         proc = subprocess.Popen(['svn', 'diff', '--summarize', branch_CHANGES,
                                    trunk_CHANGES],
