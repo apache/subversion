@@ -66,6 +66,11 @@ Some existing interfaces will be extended, e.g. the _scan_addition()
 and _scan_deletion() interfaces will be extended to differentiate
 moved nodes from copied, added, and deleted nodes.
 
+### gstein: note that scan_addition() already returns status_moved_here,
+###   and scan_deletion() returns a MOVED_TO_ABSPATH. these functions
+###   should already do what you're asking (with bitrot and "untested"
+###   caveats since I first implemented them).
+
 There might be some public API changes (TBD).
 
 We might require a working copy upgrade when going from 1.7 to 1.8,
