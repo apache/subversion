@@ -457,24 +457,16 @@ svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
     }
 
   /* create a txn-local directory cache */
-  if (svn_cache__get_global_membuffer_cache())
-    SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->txn_dir_cache),
-                                              svn_cache__get_global_membuffer_cache(),
-                                              svn_fs_fs__serialize_dir_entries,
-                                              svn_fs_fs__deserialize_dir_entries,
-                                              APR_HASH_KEY_STRING,
-                                              apr_pstrcat(pool, prefix, "TXNDIR",
-                                                          (char *)NULL),
-                                              pool));
-  else
-    SVN_ERR(svn_cache__create_inprocess(&(ffd->txn_dir_cache),
-                                        svn_fs_fs__serialize_dir_entries,
-                                        svn_fs_fs__deserialize_dir_entries,
-                                        APR_HASH_KEY_STRING,
-                                        1024, 8, FALSE,
-                                        apr_pstrcat(pool, prefix, "TXNDIR",
-                                            (char *)NULL),
-                                        pool));
+  SVN_ERR(create_cache(&ffd->txn_dir_cache,
+                       NULL,
+                       svn_cache__get_global_membuffer_cache(),
+                       1024, 8,
+                       svn_fs_fs__serialize_dir_entries,
+                       svn_fs_fs__deserialize_dir_entries,
+                       APR_HASH_KEY_STRING,
+                       apr_pstrcat(pool, prefix, "TXNDIR",
+                                   (char *)NULL),
+                       pool));
 
   /* reset the transaction-specific cache if the pool gets cleaned up. */
   init_txn_callbacks(&(ffd->txn_dir_cache), pool);
