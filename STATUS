@@ -47,7 +47,7 @@ Candidate changes:
      and it makes it hard to rev APIs when clients may be monkeying
      with the data we pass along.
    Votes:
-     +1: gstein, rhuijben
+     +1: gstein, rhuijben, blair
 
 
 Approved changes:
