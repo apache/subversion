@@ -5388,10 +5388,10 @@ typedef struct svn_client_info2_t
   const char *last_changed_author;
 
   /** An exclusive lock, if present.  Could be either local or remote. */
-  svn_lock_t *lock;
+  const svn_lock_t *lock;
 
   /* Possible information about the working copy, NULL if not valid. */
-  struct svn_wc_info_t *wc_info;
+  const struct svn_wc_info_t *wc_info;
 
 } svn_client_info2_t;
 
