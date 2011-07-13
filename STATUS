@@ -22,7 +22,7 @@ Candidate changes:
      the 1.7.x line (i.e., in a subsequent patch release).
    Votes:
      +1: danielsh, rhuijben
-     -1: stsp (no-op API change)
+     -1: stsp (this change intends to introduce a new feature)
      -1: cmpilato (no-op API change -- will reconsider if real utility is added)
      -1: gstein (callers have no idea if the function will do anything
                  since they don't know if they're working with 1.7.0 or
@@ -38,22 +38,6 @@ Candidate changes:
      -0: cmpilato, rhuijben, gstein (problem is with callers,
                                      not implementation)
      
- * r1146274
-   Make svn_client_infoX() return proper results for tree conflicts. Without
-   this patch the structure is just memcleared instead of properly set to
-   uninitialized.
-   Justification:
-     Resolve regression and remove confusion by future callers.
-   Votes:
-     +1: rhuijben, gstein
-
- * r1146222
-   Add a NULL check in an error path.
-   Justification
-     Avoids segfaults.
-   Votes:
-     +1: danielsh, gstein
-
 
 Candidate changes for 1.7.x (can be backported post-1.7.0 too):
 ===========================
@@ -76,3 +60,19 @@ Approved changes:
      and would have to wait for 1.8.0 if it doesn't get in 1.7.0.
    Votes:
      +1: rhuijben, cmpilato, gstein
+
+ * r1146222
+   Add a NULL check in an error path.
+   Justification
+     Avoids segfaults.
+   Votes:
+     +1: danielsh, gstein, stsp
+
+ * r1146274
+   Make svn_client_infoX() return proper results for tree conflicts. Without
+   this patch the structure is just memcleared instead of properly set to
+   uninitialized.
+   Justification:
+     Resolve regression and remove confusion by future callers.
+   Votes:
+     +1: rhuijben, gstein, stsp
