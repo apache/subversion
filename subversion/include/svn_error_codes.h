@@ -528,7 +528,7 @@ SVN_ERROR_START
   /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_WC_INVALID_OPERATION_DEPTH,
              SVN_ERR_WC_CATEGORY_START + 38,
-             "The operation can not be performed with the specified depth")
+             "The operation cannot be performed with the specified depth")
 
   /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_WC_PATH_ACCESS_DENIED,
