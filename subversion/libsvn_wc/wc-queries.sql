@@ -473,7 +473,10 @@ WHERE wc_id = ?1 AND (parent_relpath = ?2 OR local_relpath = ?2)
 INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
 SELECT wc_id, local_relpath, parent_relpath, kind
 FROM nodes_current
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+WHERE wc_id = ?1
+       AND (?2 = ''
+            OR local_relpath = ?2 
+            OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
 
 -- STMT_INSERT_TARGET_WITH_CHANGELIST
 INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
@@ -503,8 +506,11 @@ INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
 SELECT N.wc_id, N.local_relpath, N.parent_relpath, N.kind
   FROM actual_node AS A JOIN nodes_current AS N
     ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
- WHERE N.wc_id = ?1 AND A.changelist = ?3
-       AND (N.local_relpath = ?2 OR N.local_relpath LIKE ?4 ESCAPE '#')
+ WHERE N.wc_id = ?1
+       AND (?2 = ''
+            OR N.local_relpath = ?2 
+            OR (N.local_relpath > ?2 || '/' AND N.local_relpath < ?2 || '0'))
+       AND A.changelist = ?3
 
 -- STMT_SELECT_TARGETS
 SELECT local_relpath, parent_relpath from targets_list
