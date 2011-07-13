@@ -31,7 +31,7 @@ Candidate changes:
      API change.  Having this will enable verifying offsets in rep-cache.db in
      the 1.7.x line (i.e., in a subsequent patch release).
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
      -1: stsp (no-op API change)
 
  * r1146214
@@ -49,7 +49,7 @@ Candidate changes for 1.7.x:
    Justification:
      Allow API users to more easily distinguish dump from verify.
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
 
 Approved changes:
 =================
