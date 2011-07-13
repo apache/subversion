@@ -1,0 +1,57 @@
+For the 1.7 release, ra_serf grew a new internal feature to "pause"
+the parsing of (large) XML response bodies. This file intends to
+document the strategy for testing this new feature.
+
+[ We've simply shipped more invasive and difficult code before.
+  However, due to the current attempts to stabilize, and the near-ness
+  of our 1.7.x branch... it seems warranted to apply a bit of
+  testing.  ]
+
+
+RAW NOTES (from some earlier thinking)
+/* Testing strategy for the PAUSED feature:
+
+   It may be possible to arrange for writing a white box test, but I'll
+   leave that to somebody with a more masochistic bent. This section will
+   outline the different scenarios to test, and then how we can adjust
+   the various control parameters to make that happen.
+
+   There are seven states to the PENDING structure:
+
+     1) pending == NULL
+     2) pending->head == NULL && pending->spill == NULL
+        (this should only happen when some data has been placed into the
+         pending membuf structure, then emptied)
+     3) pending->head != NULL && pending->spill == NULL
+     4) pending->head != NULL && pending->spill != NULL. content in file
+     5) pending->head != NULL && pending->spill != NULL. no content in file
+     6) pending->head == NULL && pending->spill != NULL. content in file
+     7) pending->head == NULL && pending->spill != NULL. nocontent in file
+
+   Most of the above states are doubled, based on the PAUSED flag.
+
+   There are two operations that occur:
+
+     1) network content arrives
+     2) process content from the pending structures
+
+   These combine into the following test scenarios to exercise the two
+   actions against each of the ten data states.
+
+     1) REPORT completes with no pausing
+     2) REPORT requires in-memory (only) buffering:
+        a) buffer empties while network content arrives again
+        b) network content completes while buffer has content
+        c) buffer empties, then later needs buffering again
+        d) partial in-mem consumption, new content lands into membuf
+     3) REPORT requires on-disk buffering:
+        a) diskbuf empties while network content arrives again
+        b) network content completes while diskbuf has content
+        c) diskbuf empties, then more buffering is needed again
+           (note: due to the code, this will go onto the disk rather
+            than back to the in-mem buffer)
+        d) partial in-mem consumption, new content lands in diskbuf
+        e) partial diskbuf consumption, new content lands in diskbuf
+
+   
+*/
