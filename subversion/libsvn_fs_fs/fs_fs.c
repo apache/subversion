@@ -1323,17 +1323,6 @@ svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
 }
 
 
-/** Verifying. **/
-svn_error_t *
-svn_fs_fs__verify(svn_fs_t *fs,
-                  svn_cancel_func_t cancel_func,
-                  void *cancel_baton,
-                  apr_pool_t *pool)
-{
-  return SVN_NO_ERROR; /* ### Not implemented. Should dereference rep-cache */
-}
-
-
 /* SVN_ERR-like macros for dealing with recoverable errors on mutable files
  *
  * Revprops, current, and txn-current files are mutable; that is, they
@@ -7785,4 +7774,38 @@ svn_fs_fs__pack(svn_fs_t *fs,
   pb.cancel_func = cancel_func;
   pb.cancel_baton = cancel_baton;
   return svn_fs_fs__with_write_lock(fs, pack_body, &pb, pool);
+}
+
+
+/** Verifying. **/
+
+static svn_error_t *
+verify_walker(representation_t *rep,
+              svn_fs_t *fs,
+              apr_pool_t *scratch_pool)
+{
+  struct rep_state *rs;
+  struct rep_args *rep_args;
+
+  /* ### Should this be using read_rep_line() directly? */
+  SVN_ERR(create_rep_state(&rs, &rep_args, rep, fs, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__verify(svn_fs_t *fs,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  if (ffd->rep_sharing_allowed == FALSE)
+    return SVN_NO_ERROR;
+
+  /* Don't take any lock. */
+  SVN_ERR(svn_fs_fs__walk_rep_reference(fs, verify_walker, pool));
+
+  return SVN_NO_ERROR;
 }
