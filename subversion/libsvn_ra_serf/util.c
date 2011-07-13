@@ -102,6 +102,9 @@ struct svn_ra_serf__pending_t {
    into a temporary file.  */
 #define SPILL_SIZE 1000000
 
+/* See notes/ra-serf-testing.txt for some information on testing this
+   new "paused" feature.  */
+
 
 
 static const apr_uint32_t serf_failure_map[][2] =
