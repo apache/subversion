@@ -1323,6 +1323,14 @@ svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
 }
 
 
+/** Verifying. **/
+svn_error_t *
+svn_fs_fs__verify(svn_fs_t *fs, apr_pool_t *pool)
+{
+  return SVN_NO_ERROR; /* ### Not implemented. Should dereference rep-cache */
+}
+
+
 /* SVN_ERR-like macros for dealing with recoverable errors on mutable files
  *
  * Revprops, current, and txn-current files are mutable; that is, they

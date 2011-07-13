@@ -459,6 +459,27 @@ svn_fs_upgrade(const char *path, apr_pool_t *pool)
   return svn_error_trace(err2);
 }
 
+svn_error_t *
+svn_fs_verify(const char *path, apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_error_t *err2;
+  fs_library_vtable_t *vtable;
+  svn_fs_t *fs;
+
+  SVN_ERR(fs_library_vtable(&vtable, path, pool));
+  fs = fs_new(NULL, pool);
+  SVN_ERR(acquire_fs_mutex());
+  err = vtable->verify_fs(fs, path, pool, common_pool);
+  err2 = release_fs_mutex();
+  if (err)
+    {
+      svn_error_clear(err2);
+      return svn_error_trace(err);
+    }
+  return svn_error_trace(err2);
+}
+
 const char *
 svn_fs_path(svn_fs_t *fs, apr_pool_t *pool)
 {
