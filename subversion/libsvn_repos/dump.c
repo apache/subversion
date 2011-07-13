@@ -1333,6 +1333,10 @@ svn_repos_verify_fs2(svn_repos_t *repos,
       notify_func(notify_baton, notify, iterpool);
     }
 
+  SVN_ERR(svn_fs_verify(svn_fs_path(fs, pool), cancel_func, cancel_baton,
+                        pool));
+
+  /* Per-backend verification. */
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
