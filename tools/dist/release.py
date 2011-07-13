@@ -384,7 +384,10 @@ def roll_tarballs(args):
     # For now, just delegate to dist.sh to create the actual artifacts
     extra_args = ''
     if args.version.is_prerelease():
-        extra_args = '-%s %d' % (args.version.pre, args.version.pre_num)
+        if args.version.pre == 'nightly':
+            extra_args = '-nightly'
+        else:
+            extra_args = '-%s %d' % (args.version.pre, args.version.pre_num)
     logging.info('Building UNIX tarballs')
     run_script(args.verbose, '%s/dist.sh -v %s -pr %s -r %d %s'
                      % (sys.path[0], args.version.base, branch, args.revnum,
