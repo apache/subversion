@@ -33,7 +33,7 @@ Candidate changes:
      -1: stsp (no-op API change)
      -1: cmpilato (no-op API change -- will reconsider if real utility is added)
 
- * r1146214
+ * r1146214, r1146381
    Handle NULL inputs when stringifying svn_checksum_t.
    Justification:
      Avoids segfaults.
