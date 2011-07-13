@@ -1329,7 +1329,7 @@ svn_repos_verify_fs2(svn_repos_t *repos,
   /* We're done. */
   if (notify_func)
     {
-      notify = svn_repos_notify_create(svn_repos_notify_dump_end, iterpool);
+      notify = svn_repos_notify_create(svn_repos_notify_verify_end, iterpool);
       notify_func(notify_baton, notify, iterpool);
     }
 
