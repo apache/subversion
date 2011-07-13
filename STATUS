@@ -21,7 +21,7 @@ Candidate changes:
      Improves general usability of the svn client and the libsvn_client api
      and would have to wait for 1.8.0 if it doesn't get in 1.7.0.
    Votes:
-     +1: rhuijben     
+     +1: rhuijben, cmpilato
 
  * r1146131, r1146134
    Add svn_fs_verify() API.
@@ -31,6 +31,7 @@ Candidate changes:
    Votes:
      +1: danielsh, rhuijben
      -1: stsp (no-op API change)
+     -1: cmpilato (no-op API change -- will reconsider if real utility is added)
 
  * r1146214
    Handle NULL inputs when stringifying svn_checksum_t.
@@ -38,6 +39,7 @@ Candidate changes:
      Avoids segfaults.
    Votes:
      +1: danielsh
+     -0: cmpilato (problem is with callers, not implementation)
 
 Candidate changes for 1.7.x (post-1.7.0):
 =========================================
