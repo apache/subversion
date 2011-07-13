@@ -1197,7 +1197,7 @@ svn_stream_readline(svn_stream_t *stream,
  * svn_stream_disown() to protect either or both of the streams from
  * being closed.
  *
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_stream_copy4(svn_stream_t *from,
@@ -1211,7 +1211,7 @@ svn_stream_copy4(svn_stream_t *from,
  * its entirety.
  *
  * @since New in 1.6.
- * @deprecated Provided for backward compatibility with the 1.6 API.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 SVN_DEPRECATED
 svn_error_t *
