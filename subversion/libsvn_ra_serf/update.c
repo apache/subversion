@@ -1910,13 +1910,12 @@ end_report(svn_ra_serf__xml_parser_t *parser,
                                           svn_path_uri_encode(repos_relpath,
                                                               info->pool));
         }
-
-      /* Still no base URL?  If we have a WC, we might be able to dive all
-       * the way into the WC to get the previous URL so we can do a
-       * differential GET with the base URL.
-       */
-      if ((! info->delta_base) && (ctx->sess->wc_callbacks->get_wc_prop))
+      else if (ctx->sess->wc_callbacks->get_wc_prop)
         {
+          /* If we have a WC, we might be able to dive all the way into the WC
+           * to get the previous URL so we can do a differential GET with the
+           * base URL.
+           */
           const svn_string_t *value = NULL;
           SVN_ERR(ctx->sess->wc_callbacks->get_wc_prop(
             ctx->sess->wc_callback_baton, info->name,
