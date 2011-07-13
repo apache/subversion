@@ -15,14 +15,6 @@ Status of 1.7.0:
 Candidate changes:
 ==================
 
- * r1146013
-   Improve notifications of paths skipped because they were conflicted
-   Justification:
-     Improves general usability of the svn client and the libsvn_client api
-     and would have to wait for 1.8.0 if it doesn't get in 1.7.0.
-   Votes:
-     +1: rhuijben, cmpilato
-
  * r1146131, r1146134
    Add svn_fs_verify() API.
    Justification:
@@ -32,6 +24,10 @@ Candidate changes:
      +1: danielsh, rhuijben
      -1: stsp (no-op API change)
      -1: cmpilato (no-op API change -- will reconsider if real utility is added)
+     -1: gstein (callers have no idea if the function will do anything
+                 since they don't know if they're working with 1.7.0 or
+                 1.7.10, so why bother to call it at all? cross your
+                 fingers and hope?)
 
  * r1146214, r1146381
    Handle NULL inputs when stringifying svn_checksum_t.
@@ -39,7 +35,8 @@ Candidate changes:
      Avoids segfaults.
    Votes:
      +1: danielsh
-     -0: cmpilato, rhuijben (problem is with callers, not implementation)
+     -0: cmpilato, rhuijben, gstein (problem is with callers,
+                                     not implementation)
      
  * r1146274
    Make svn_client_infoX() return proper results for tree conflicts. Without
@@ -48,14 +45,14 @@ Candidate changes:
    Justification:
      Resolve regression and remove confusion by future callers.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, gstein
 
  * r1146222
    Add a NULL check in an error path.
    Justification
      Avoids segfaults.
    Votes:
-     +1: danielsh
+     +1: danielsh, gstein
 
 
 Candidate changes for 1.7.x (can be backported post-1.7.0 too):
@@ -72,4 +69,10 @@ Candidate changes for 1.7.x (can be backported post-1.7.0 too):
 Approved changes:
 =================
 
-  No approved changes at the moment!
+ * r1146013
+   Improve notifications of paths skipped because they were conflicted
+   Justification:
+     Improves general usability of the svn client and the libsvn_client api
+     and would have to wait for 1.8.0 if it doesn't get in 1.7.0.
+   Votes:
+     +1: rhuijben, cmpilato, gstein
