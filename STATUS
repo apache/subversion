@@ -58,8 +58,8 @@ Candidate changes:
      +1: danielsh
 
 
-Candidate changes for 1.7.x (post-1.7.0):
-=========================================
+Candidate changes for 1.7.x (can be backported post-1.7.0 too):
+===========================
 
  * r1146219
    Fix the generated notification.
