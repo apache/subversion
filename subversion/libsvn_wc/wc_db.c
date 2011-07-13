@@ -4741,14 +4741,7 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
                       apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-  const char *like_arg;
-
-  if (depth == svn_depth_infinity)
-    {
-      /* Calculate a value we're going to need later. */
-      like_arg = construct_like_arg(local_relpath, scratch_pool);
-    }
-
+  int affected_rows = 0;
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_CREATE_TARGETS_LIST));
 
@@ -4786,15 +4779,16 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
 
       for (i = 0; i < changelist_filter->nelts; i++)
         {
+          int sub_affected;
           const char *changelist = APR_ARRAY_IDX(changelist_filter, i,
                                                  const char *);
 
           SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_idx));
           SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
                                     local_relpath, changelist));
-          if (depth == svn_depth_infinity)
-            SVN_ERR(svn_sqlite__bind_text(stmt, 4, like_arg));
-          SVN_ERR(svn_sqlite__step_done(stmt));
+          SVN_ERR(svn_sqlite__update(&sub_affected, stmt));
+
+          affected_rows += sub_affected;
         }
     }
   else /* No changelist filtering */
@@ -4827,9 +4821,21 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_idx));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      if (depth == svn_depth_infinity)
-        SVN_ERR(svn_sqlite__bind_text(stmt, 3, like_arg));
-      SVN_ERR(svn_sqlite__step_done(stmt));
+      SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+    }
+
+  /* Does the target exist? */
+  if (affected_rows == 0)
+    {
+      svn_boolean_t exists;
+      SVN_ERR(does_node_exist(&exists, wcroot, local_relpath));
+
+      if (!exists)
+        return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                 _("The node '%s' was not found."),
+                                 path_for_error_message(wcroot,
+                                                        local_relpath,
+                                                        scratch_pool));
     }
 
   return SVN_NO_ERROR;
