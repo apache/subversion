@@ -252,7 +252,7 @@ svn_fs_upgrade(const char *path,
  *
  * @note You probably don't want to use this directly.  Take a look at
  * svn_repos_verify_fs2() instead, which does non-backend-specific
- * verificatiosn as well.
+ * verifications as well.
  *
  * @since New in 1.8.
  */
