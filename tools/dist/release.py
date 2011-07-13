@@ -132,7 +132,10 @@ class Version(object):
 
     def __str(self):
         if self.pre:
-            extra = '-%s%d' % (self.pre, self.pre_num)
+            if self.pre == 'nightly':
+                return 'nightly'
+            else:
+                extra = '-%s%d' % (self.pre, self.pre_num)
         else:
             extra = ''
 
