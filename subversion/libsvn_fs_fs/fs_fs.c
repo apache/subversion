@@ -7803,7 +7803,7 @@ svn_fs_fs__verify(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  if (ffd->rep_sharing_allowed == FALSE)
+  if (ffd->format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     return SVN_NO_ERROR;
 
   /* Don't take any lock. */
