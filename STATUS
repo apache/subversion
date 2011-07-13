@@ -50,6 +50,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1146222
+   Add a NULL check in an error path.
+   Justification
+     Avoids segfaults.
+   Votes:
+     +1: danielsh
+
+
 Candidate changes for 1.7.x (post-1.7.0):
 =========================================
 
