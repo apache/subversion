@@ -13,7 +13,6 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * Less verbose HTTP-based repository access protocol (issue #1161, #3371)
     * Rewritten working copy metadata storage (issue #3357)
     * New 'svn patch' subcommand (issue #511)
-    * Property packing on FSFS backends (issue #3444)
     * Limit FSFS memory consumption (issue #3478, #3593)
 
   - Minor new features and improvements:
