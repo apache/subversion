@@ -24,23 +24,6 @@ Candidate changes:
      -0: cmpilato, rhuijben, gstein (problem is with callers,
                                      not implementation)
 
- * r1146620
-   Simple consistency for the 'svn_client_info2_t' structure; no functional
-   change.  On the 'wc_info' member, remove 'struct' keyword, as we don't
-   use it in any other similar situation.
-   Notes:
-     This change also marks the doc string for Doxygen, an 'obvious fix'.
-   Votes:
-     +1: julianfoad, rhuijben
-     
- * r1146684
-   Report the right wcroot in an 'svn upgrade' error message.
-   Justification:
-     Telling users they should upgrade the wrong directory is not
-     what I call user friendly.
-   Votes:
-     +1: rhuijben, philip
-
  * r1146131 and followups
    Add svn_fs_verify() and implement rep-cache verification in FSFS using it.
    Branch:
@@ -52,6 +35,7 @@ Candidate changes:
      is still a moving target.
    Votes:
      +0: danielsh
+     +0: gstein (progress would be nice)
 
  * r1146832, r1146834
    Resolve several whitespace issues and a warning that is always visible
@@ -62,6 +46,8 @@ Candidate changes:
      Binding change rules apply
    Votes:
      +0: rhuijben (I think it should be backported, but I can't test this)
+     +0: gstein (likewise)
+
      
 Approved changes:
 =================
@@ -101,3 +87,19 @@ Approved changes:
      +1: gstein, rhuijben, julianfoad
      +1: blair (voted on r1146492 only)
 
+ * r1146620
+   Simple consistency for the 'svn_client_info2_t' structure; no functional
+   change.  On the 'wc_info' member, remove 'struct' keyword, as we don't
+   use it in any other similar situation.
+   Notes:
+     This change also marks the doc string for Doxygen, an 'obvious fix'.
+   Votes:
+     +1: julianfoad, rhuijben, gstein
+     
+ * r1146684
+   Report the right wcroot in an 'svn upgrade' error message.
+   Justification:
+     Telling users they should upgrade the wrong directory is not
+     what I call user friendly.
+   Votes:
+     +1: rhuijben, philip, gstein
