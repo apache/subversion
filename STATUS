@@ -64,6 +64,21 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r894014, 894029, 896247, 905705
+   Use serf_connection_create2 instead of serf_connection_create so that
+   1.6.x will be prepared to work with serf's upcoming ssl tunnel support
+   (https over http proxy).
+   Justification:
+     Make use of new feature provided by the serf library, stop using
+     an API that will be deprecated (although isn't yet).
+   Note: this change doesn't require a change of the minimum serf requirements
+     for this branch. r894014 is the main revision, the others are follow-up
+     fixes.
+   Votes:
+     +1: lgo
+     +0: gstein (haven't reviewed these specific revisions yet)
+
+
 Veto-blocked changes:
 =====================
 
@@ -204,19 +219,6 @@ Veto-blocked changes:
                    works correctly. I think the not interactive code path
                    needs the same fix).
      -1: markphip (tested multiple builds of this and never saw it work).
-
- * r894014, 894029, 896247, 905705
-   Use serf_connection_create2 instead of serf_connection_create so that
-   1.6.x will be prepared to work with serf's upcoming ssl tunnel support
-   (https over http proxy).
-   Justification:
-     Make use of new feature provided by the serf library, stop using
-     an API that will be deprecated (although isn't yet).
-   Note: this change doesn't require a change of the minimum serf requirements
-     for this branch. r894014 is the main revision, the others are follow-up
-     fixes.
-   Votes:
-     +1: lgo
 
 
 Approved changes:
