@@ -988,6 +988,7 @@ $(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST)
 	mv $(PYTHON_SRCDIR)/setup.py.patched $(PYTHON_SRCDIR)/setup.py
 	chmod +x $(PYTHON_SRCDIR)/setup.py
 	# Fixes shared library linking on OpenBSD
+	# http://bugs.python.org/issue12560
 	sed -e '4930s#NetBSD\*|#NetBSD*|OpenBSD*|#' \
 		< $(PYTHON_SRCDIR)/configure \
 		> $(PYTHON_SRCDIR)/configure.patched
