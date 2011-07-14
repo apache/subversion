@@ -52,7 +52,7 @@ my $apu_cflags = '@SVN_APRUTIL_INCLUDES@';
 
 # According to the log of r7937, the flags guarded by the conditional break
 # the build on FreeBSD if not conditionalized.
-my $apr_ldflags = '@SVN_APR_LIBS@' 
+my $apr_ldflags = '@SVN_APR_LIBS@'
    if $^O eq 'darwin' or $^O eq 'cygwin';
 
 chomp $apr_shlib_path_var;
@@ -61,7 +61,7 @@ my %config = (
     ABSTRACT => 'Perl bindings for Subversion',
     DEFINE => $cppflags,
     CCFLAGS => join(' ', $cflags, $Config{ccflags}),
-    INC  => join(' ',$apr_cflags, $apu_cflags, 
+    INC  => join(' ',$apr_cflags, $apu_cflags,
                  " -I$swig_srcdir/perl/libsvn_swig_perl",
                  " -I$svnlib_srcdir/include",
                  " -I$svnlib_builddir",
@@ -104,8 +104,8 @@ for (@modules) {
 # the dependencies need to be fixed
 
 sub MY::postamble {
-    my $module_c_files = join (' ',map { "svn_$_.c"} @modules);
-    my $module_make_commands = join ('',map {"\t\$(MAKE) -f Makefile.$_\n"} @modules);
+    my $module_c_files = join(' ',map { "svn_$_.c"} @modules);
+    my $module_make_commands = join('',map {"\t\$(MAKE) -f Makefile.$_\n"} @modules);
 
     my $fullperlrun = "$apr_shlib_path_var=" .
                       join(':', "\$($apr_shlib_path_var)", @ldpaths);

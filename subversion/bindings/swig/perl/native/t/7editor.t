@@ -48,21 +48,21 @@ sub committed {
 
 my $editor = SVN::Delta::Editor->
     new(SVN::Repos::get_commit_editor($repos, "file://$repospath",
-				      '/', 'root', 'FOO', \&committed));
+                                      '/', 'root', 'FOO', \&committed));
 my $rootbaton = $editor->open_root(0);
-my $dirbaton = $editor->add_directory ('trunk', $rootbaton, undef, 0);
-my $fbaton = $editor->add_file ('trunk/filea', $dirbaton, undef, -1);
-my $ret = $editor->apply_textdelta ($fbaton, undef);
+my $dirbaton = $editor->add_directory('trunk', $rootbaton, undef, 0);
+my $fbaton = $editor->add_file('trunk/filea', $dirbaton, undef, -1);
+my $ret = $editor->apply_textdelta($fbaton, undef);
 SVN::TxDelta::send_string("FILEA CONTENT", @$ret);
 $editor->close_edit();
 eval {
 my $pool = SVN::Pool->new_default;
-SVN::Repos::dir_delta ($fs->revision_root (0), '/', '',
-		       $fs->revision_root (1), '/',
-		       MyEditor->new (crap => bless {}, 'something'),
-		       undef, 1, 1, 0, 0);
+SVN::Repos::dir_delta($fs->revision_root(0), '/', '',
+                      $fs->revision_root(1), '/',
+                      MyEditor->new(crap => bless {}, 'something'),
+                      undef, 1, 1, 0, 0);
 };
-ok ($main::something_destroyed, 'editor');
+ok($main::something_destroyed, 'editor');
 
 package something;
 
