@@ -122,8 +122,10 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
 svn_error_t *
 svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
                               svn_error_t *(*walker)(representation_t *,
+                                                     void *,
                                                      svn_fs_t *, 
                                                      apr_pool_t *),
+                              void *walker_baton,
                               svn_cancel_func_t cancel_func,
                               void *cancel_baton,
                               apr_pool_t *pool)
@@ -176,7 +178,7 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
         SVN_ERR(rep_has_been_born(rep, fs, pool));
 
       /* Walk. */
-      SVN_ERR(walker(rep, fs, iterpool));
+      SVN_ERR(walker(rep, walker_baton, fs, iterpool));
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }

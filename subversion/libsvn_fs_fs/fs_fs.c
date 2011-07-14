@@ -7784,6 +7784,7 @@ svn_fs_fs__pack(svn_fs_t *fs,
    Implements svn_fs_fs__walk_rep_reference().walker.  */
 static svn_error_t *
 verify_walker(representation_t *rep,
+              void *baton,
               svn_fs_t *fs,
               apr_pool_t *scratch_pool)
 {
@@ -7808,7 +7809,7 @@ svn_fs_fs__verify(svn_fs_t *fs,
     return SVN_NO_ERROR;
 
   /* Don't take any lock. */
-  SVN_ERR(svn_fs_fs__walk_rep_reference(fs, verify_walker,
+  SVN_ERR(svn_fs_fs__walk_rep_reference(fs, verify_walker, NULL,
                                         cancel_func, cancel_baton,
                                         pool));
 
