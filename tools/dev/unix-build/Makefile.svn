@@ -940,7 +940,7 @@ $(RUBY_OBJDIR)/.compiled: $(RUBY_OBJDIR)/.configured
 	(cd $(RUBY_OBJDIR) && make)
 	touch $@
 
-# install ruby and the test-unit gem needed to run SVN bindings tests
+# install ruby
 $(RUBY_OBJDIR)/.installed: $(RUBY_OBJDIR)/.compiled
 	(cd $(RUBY_OBJDIR) && make install)
 	touch $@
