@@ -46,8 +46,8 @@ SVN::Client - Subversion client functions
               SVN::Client::get_username_provider()]
               );
 
-    $ctx->cat (\*STDOUT, 'http://svn.apache.org/repos/asf/subversion/trunk/README',
-               'HEAD');
+    $ctx->cat(\*STDOUT, 'http://svn.apache.org/repos/asf/subversion/trunk/README',
+              'HEAD');
 
     sub simple_prompt {
       my $cred = shift;
@@ -197,7 +197,7 @@ sub new
     my $self = bless {}, $class;
     my %args = @_;
 
-    $self->{'ctx'} = SVN::_Client::svn_client_create_context ();
+    $self->{'ctx'} = SVN::_Client::svn_client_create_context();
 
     if (defined($args{'auth'}))
     {

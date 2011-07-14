@@ -80,7 +80,7 @@ ok($root->is_file($path), 'is_file');
     my $stream = $root->file_contents($path);
     local $/;
     is(<$stream>, $text, 'content verified');
-    is($root->file_md5_checksum ($path), 'dd2314129f81675e95b940ff94ddc935',
+    is($root->file_md5_checksum($path), 'dd2314129f81675e95b940ff94ddc935',
        'md5 verified');
 }
 
