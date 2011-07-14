@@ -1205,6 +1205,10 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.7. */
   svn_wc_notify_failed_forbidden_by_server,
 
+  /** The operation skipped the path because it was conflicted.
+   * @since New in 1.7. */
+  svn_wc_notify_skip_conflicted,
+
 } svn_wc_notify_action_t;
 
 

@@ -1362,7 +1362,7 @@ def actual_only_node_behaviour(sbox):
 
   # update (up)
   expected_stdout = [
-   "Skipped '%s'\n" % sbox.ospath('A/foo'),
+   "Skipped '%s' -- Node remains in conflict\n" % sbox.ospath('A/foo'),
    "Summary of conflicts:\n",
    "  Skipped paths: 1\n",
   ]

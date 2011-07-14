@@ -56,14 +56,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r1146013
-   Improve notifications of paths skipped because they were conflicted
-   Justification:
-     Improves general usability of the svn client and the libsvn_client api
-     and would have to wait for 1.8.0 if it doesn't get in 1.7.0.
-   Votes:
-     +1: rhuijben, cmpilato, gstein
-
  * r1146219
    Fix the generated notification.
    Justification:
