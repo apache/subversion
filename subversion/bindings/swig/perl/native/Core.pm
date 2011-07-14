@@ -581,7 +581,8 @@ sub expanded_message {
 
     my $error_message = $svn_error->strerror();
     while ($svn_error) {
-        $error_message .= ': ' . $svn_error->message();
+        my $msg = $svn_error->message();
+        $error_message .= ": $msg" if $msg;
         $svn_error = $svn_error->child();
     }
     return $error_message;
