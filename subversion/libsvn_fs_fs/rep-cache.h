@@ -40,12 +40,14 @@ svn_error_t *
 svn_fs_fs__open_rep_cache(svn_fs_t *fs,
                           apr_pool_t *pool);
 
-/* Iterate all representations currently in FS's cache. */
+/* Iterate all representations currently in FS's cache.
+   REPS_COUNT is approximate only. */
 svn_error_t *
 svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
                               svn_error_t *(*walker)(representation_t *rep,
                                                      void *walker_baton,
                                                      svn_fs_t *fs, 
+                                                     apr_int64_t reps_count,
                                                      apr_pool_t *scratch_pool),
                               void *walker_baton,
                               svn_cancel_func_t cancel_func,

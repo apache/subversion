@@ -7786,6 +7786,7 @@ static svn_error_t *
 verify_walker(representation_t *rep,
               void *baton,
               svn_fs_t *fs,
+              apr_int64_t reps_count,
               apr_pool_t *scratch_pool)
 {
   struct rep_state *rs;

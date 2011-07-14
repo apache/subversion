@@ -52,3 +52,8 @@ SELECT hash, revision, offset, size, expanded_size
 FROM rep_cache
 
 
+-- STMT_COUNT_REPS
+SELECT COUNT(*)
+FROM rep_cache
+
+

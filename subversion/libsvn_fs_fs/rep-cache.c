@@ -124,6 +124,7 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
                               svn_error_t *(*walker)(representation_t *,
                                                      void *,
                                                      svn_fs_t *, 
+                                                     apr_int64_t,
                                                      apr_pool_t *),
                               void *walker_baton,
                               svn_cancel_func_t cancel_func,
@@ -134,6 +135,7 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   int iterations = 0;
+  apr_int64_t reps_count;
 
   apr_pool_t *iterpool = svn_pool_create(pool);
 
@@ -142,6 +144,15 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
 
   if (! ffd->rep_cache_db)
     SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
+
+  /* Count the statements. (This is done without a transaction, so the number
+     might change by the time we get to STMT_GET_ALL_REPS.) */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db,
+                                    STMT_COUNT_REPS));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  SVN_ERR_ASSERT(have_row);
+  reps_count = svn_sqlite__column_int64(stmt, 0);
+  SVN_ERR(svn_sqlite__reset(stmt));
 
   /* Get the statement. (There are no arguments to bind.) */
   SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db,
@@ -178,7 +189,7 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
         SVN_ERR(rep_has_been_born(rep, fs, pool));
 
       /* Walk. */
-      SVN_ERR(walker(rep, walker_baton, fs, iterpool));
+      SVN_ERR(walker(rep, walker_baton, fs, reps_count, iterpool));
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
