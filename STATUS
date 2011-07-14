@@ -48,7 +48,12 @@ Candidate changes:
      +0: rhuijben (I think it should be backported, but I can't test this)
      +0: gstein (likewise)
 
-     
+ * r1146899, r1146904
+   Minor improvements in build system.
+   Votes:
+     +1: arfrever
+
+
 Approved changes:
 =================
 
@@ -70,7 +75,7 @@ Approved changes:
      This change also marks the doc string for Doxygen, an 'obvious fix'.
    Votes:
      +1: julianfoad, rhuijben, gstein
-     
+
  * r1146684
    Report the right wcroot in an 'svn upgrade' error message.
    Justification:
