@@ -23,17 +23,15 @@ Candidate changes:
      +1: danielsh
      -0: cmpilato, rhuijben, gstein (problem is with callers,
                                      not implementation)
-     
- * r1146492, r1146555
-   Add const to a couple members of svn_client_info2_t
-   Justification:
-     We don't want clients to think they can modify the underlying
-     structures. We had similar problems with the svn_wc_status_t,
-     and it makes it hard to rev APIs when clients may be monkeying
-     with the data we pass along.
+
+ * r1146620
+   Simple consistency for the 'svn_client_info2_t' structure; no functional
+   change.  On the 'wc_info' member, remove 'struct' keyword, as we don't
+   use it in any other similar situation.
+   Notes:
+     This change also marks the doc string for Doxygen, an 'obvious fix'.
    Votes:
-     +1: gstein, rhuijben
-     +1: blair (voted on r1146492 only)
+     +1: julianfoad
 
 
 Approved changes:
@@ -70,3 +68,15 @@ Approved changes:
      Resolve regression and remove confusion by future callers.
    Votes:
      +1: rhuijben, gstein, stsp
+
+ * r1146492, r1146555
+   Add const to a couple members of svn_client_info2_t
+   Justification:
+     We don't want clients to think they can modify the underlying
+     structures. We had similar problems with the svn_wc_status_t,
+     and it makes it hard to rev APIs when clients may be monkeying
+     with the data we pass along.
+   Votes:
+     +1: gstein, rhuijben, julianfoad
+     +1: blair (voted on r1146492 only)
+
