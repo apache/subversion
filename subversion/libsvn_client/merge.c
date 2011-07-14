@@ -2903,21 +2903,34 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
                                                 scratch_pool));
                 }
 
-              /* Create a rangelist describing the range PRIMARY_URL@older_rev
-                 exists and find the intersection of that and
-                 CHILD->REMAINING_RANGES. */
-              exists_rangelist =
-                svn_rangelist__initialize(older_rev,
-                                          revision_primary_url_deleted - 1,
-                                          TRUE, scratch_pool);
-              SVN_ERR(svn_rangelist_intersect(&(child->remaining_ranges),
-                                              exists_rangelist,
-                                              child->remaining_ranges,
-                                              FALSE, scratch_pool));
+              /* Find the intersection of CHILD->REMAINING_RANGES with the
+                 range over which PRIMARY_URL@older_rev exists (ending at
+                 the youngest revision at which it still exists). */
+              if (revision_primary_url_deleted - 1 > older_rev)
+                {
+                  /* It was not deleted immediately after OLDER_REV, so
+                     it has some relevant changes. */
+                  exists_rangelist =
+                    svn_rangelist__initialize(older_rev,
+                                              revision_primary_url_deleted - 1,
+                                              TRUE, scratch_pool);
+                  SVN_ERR(svn_rangelist_intersect(&(child->remaining_ranges),
+                                                  exists_rangelist,
+                                                  child->remaining_ranges,
+                                                  FALSE, scratch_pool));
+                }
+              else
+                {
+                  /* It was deleted immediately after the OLDER rev, so
+                     it has no relevant changes. */
+                  child->remaining_ranges
+                    = apr_array_make(scratch_pool, 0,
+                                     sizeof(svn_merge_range_t *));
+                }
 
-              /* Create a second rangelist describing the range beginning when
-                 PRIMARY_URL@older_rev was deleted until younger_rev.  Then
-                 find the intersection of that and PARENT->REMAINING_RANGES.
+              /* Find the intersection of PARENT->REMAINING_RANGES with the
+                 range beginning when PRIMARY_URL@older_rev was deleted
+                 until younger_rev.
                  Finally merge this rangelist with the rangelist above and
                  store the result in CHILD->REMANING_RANGES. */
               deleted_rangelist =
