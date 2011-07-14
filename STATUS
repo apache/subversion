@@ -52,6 +52,16 @@ Candidate changes:
      is still a moving target.
    Votes:
      +0: danielsh
+
+ * r1146832, r1146834
+   Resolve several whitespace issues and a warning that is always visible
+   for git-svn users.
+   Justification:
+     Trivial fix which suppresses warning.
+   Notes:
+     Binding change rules apply
+   Votes:
+     +0: rhuijben (I think it should be backported, but I can't test this)
      
 Approved changes:
 =================
