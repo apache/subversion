@@ -84,8 +84,7 @@ Approved changes:
      and it makes it hard to rev APIs when clients may be monkeying
      with the data we pass along.
    Votes:
-     +1: gstein, rhuijben, julianfoad
-     +1: blair (voted on r1146492 only)
+     +1: gstein, rhuijben, julianfoad, blair
 
  * r1146620
    Simple consistency for the 'svn_client_info2_t' structure; no functional
