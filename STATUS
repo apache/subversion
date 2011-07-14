@@ -24,7 +24,7 @@ Candidate changes:
      -0: cmpilato, rhuijben, gstein (problem is with callers,
                                      not implementation)
      
- * r1146492
+ * r1146492, r1146555
    Add const to a couple members of svn_client_info2_t
    Justification:
      We don't want clients to think they can modify the underlying
@@ -32,7 +32,8 @@ Candidate changes:
      and it makes it hard to rev APIs when clients may be monkeying
      with the data we pass along.
    Votes:
-     +1: gstein, rhuijben, blair
+     +1: gstein
+     +1: rhuijben, blair (voted on r1146492 only)
 
 
 Approved changes:
