@@ -83,7 +83,7 @@ PHASE 1
 
 Task                                        Status
 
-1.1 Write skeleton code with bare minimum   [Not Started]
+1.1 Write skeleton code with bare minimum   [Started]
     implementation. This involves creating
     the new source files in the various
     modules and the skeleton API.
