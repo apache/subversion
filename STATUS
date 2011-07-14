@@ -52,13 +52,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r1146222
-   Add a NULL check in an error path.
-   Justification
-     Avoids segfaults.
-   Votes:
-     +1: danielsh, gstein, stsp, rhuijben
-
  * r1146274
    Make svn_client_infoX() return proper results for tree conflicts. Without
    this patch the structure is just memcleared instead of properly set to
