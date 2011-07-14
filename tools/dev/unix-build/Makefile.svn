@@ -73,6 +73,7 @@ CYRUS_SASL_VER	= 2.1.23
 SQLITE_VER	= 3070603
 LIBMAGIC_VER	= 5.07
 RUBY_VER	= 1.8.7-p334
+PYTHON_VER	= 2.7.2
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
@@ -83,6 +84,7 @@ CYRUS_SASL_DIST	= cyrus-sasl-$(CYRUS_SASL_VER).tar.gz
 HTTPD_DIST	= httpd-$(HTTPD_VER).tar.bz2
 LIBMAGIC_DIST	= file-$(LIBMAGIC_VER).tar.gz
 RUBY_DIST	= ruby-$(RUBY_VER).tar.gz
+PYTHON_DIST	= Python-$(PYTHON_VER).tgz
 
 DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(SERF_DIST) \
@@ -92,7 +94,8 @@ DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(GNU_ICONV_DIST) \
 		$(DISTDIR)/$(CYRUS_SASL_DIST) \
 		$(DISTDIR)/$(LIBMAGIC_DIST) \
-		$(DISTDIR)/$(RUBY_DIST)
+		$(DISTDIR)/$(RUBY_DIST) \
+		$(DISTDIR)/$(PYTHON_DIST)
 
 FETCH_CMD	= wget -c
 
@@ -111,6 +114,7 @@ SQLITE_URL	= http://www.sqlite.org/$(SQLITE_DIST)
 CYRUS_SASL_URL	= ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/$(CYRUS_SASL_DIST)
 LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
 RUBY_URL	= http://ftp.ruby-lang.org/pub/ruby/1.8/$(RUBY_DIST)
+PYTHON_URL	= http://python.org/ftp/python/2.7.2/$(PYTHON_DIST)
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
 APR_SRCDIR	= $(SRCDIR)/apr-$(APR_VER)
@@ -125,6 +129,7 @@ SQLITE_SRCDIR	= $(SRCDIR)/sqlite-autoconf-$(SQLITE_VER)
 CYRUS_SASL_SRCDIR	= $(SRCDIR)/cyrus-sasl-$(CYRUS_SASL_VER)
 LIBMAGIC_SRCDIR	= $(SRCDIR)/file-$(LIBMAGIC_VER)
 RUBY_SRCDIR	= $(SRCDIR)/ruby-$(RUBY_VER)
+PYTHON_SRCDIR	= $(SRCDIR)/Python-$(PYTHON_VER)
 SVN_SRCDIR	= $(SVN_WC)
 
 BDB_OBJDIR	= $(OBJDIR)/db-$(BDB_VER)
@@ -140,6 +145,7 @@ SQLITE_OBJDIR	= $(OBJDIR)/sqlite-$(SQLITE_VER)
 CYRUS_SASL_OBJDIR	= $(OBJDIR)/cyrus-sasl-$(CYRUS_SASL_VER)
 LIBMAGIC_OBJDIR	= $(OBJDIR)/file-$(LIBMAGIC_VER)
 RUBY_OBJDIR	= $(OBJDIR)/ruby-$(RUBY_VER)
+PYTHON_OBJDIR	= $(OBJDIR)/python-$(PYTHON_VER)
 SVN_OBJDIR	= $(OBJDIR)/$(SVN_REL_WC)
 
 # Tweak this for out-of-tree builds. Note that running individual
@@ -160,17 +166,17 @@ endif
 all: dirs-create bdb-install apr-install iconv-install apr-util-install \
 	httpd-install neon-install serf-install serf-old-install \
 	sqlite-install cyrus-sasl-install libmagic-install \
-	ruby-install svn-install svn-bindings-install
+	ruby-install python-install svn-install svn-bindings-install
 
 # Use these to start a build from the beginning.
 reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
 	httpd-reset neon-reset serf-reset serf-old-reset sqlite-reset \
-	cyrus-sasl-reset libmagic-reset ruby-reset svn-reset
+	cyrus-sasl-reset libmagic-reset ruby-reset python-reset svn-reset
 
 # Use to save disk space.
 clean: bdb-clean apr-clean iconv-clean apr-util-clean httpd-clean \
 	neon-clean serf-clean serf-old-clean sqlite-clean cyrus-sasl-clean \
-	libmagic-clean ruby-clean svn-clean
+	libmagic-clean ruby-clean python-clean svn-clean
 
 # Nukes everything (including installed binaries!)
 # Use this to start ALL OVER AGAIN! Use with caution!
@@ -946,6 +952,73 @@ $(RUBY_OBJDIR)/.installed: $(RUBY_OBJDIR)/.compiled
 	touch $@
 
 #######################################################################
+# python
+#######################################################################
+
+python-retrieve:	$(PYTHON_OBJDIR)/.retrieved
+python-configure:	$(PYTHON_OBJDIR)/.configured
+python-compile:	$(PYTHON_OBJDIR)/.compiled
+python-install:	$(PYTHON_OBJDIR)/.installed
+python-reset:
+	$(foreach f, .retrieved .configured .compiled .installed, \
+		rm -f $(PYTHON_OBJDIR)/$(f);)
+
+python-clean:
+	-(cd $(PYTHON_OBJDIR) && make distclean)
+
+# fetch distfile for python
+$(DISTDIR)/$(PYTHON_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(PYTHON_URL)
+
+# retrieve python
+#
+$(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST)
+	[ -d $(PYTHON_OBJDIR) ] || mkdir -p $(PYTHON_OBJDIR)
+	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(PYTHON_DIST)
+	# Make setup.py use our own dependencies instead of system ones
+	sed -e "s#sqlite_inc_paths = \[ '/usr/include',#sqlite_inc_paths = [ '$(PREFIX)/sqlite/include',#" \
+		-e "s#'/usr/include/db4'#'$(PREFIX)/bdb/include'#" \
+		-e "s|\(add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')\)|#\1|" \
+		-e "s|\(add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')\)|#\1|" \
+		< $(PYTHON_SRCDIR)/setup.py \
+		> $(PYTHON_SRCDIR)/setup.py.patched
+	mv $(PYTHON_SRCDIR)/setup.py.patched $(PYTHON_SRCDIR)/setup.py
+	chmod +x $(PYTHON_SRCDIR)/setup.py
+	# Fixes shared library linking on OpenBSD
+	sed -e '4930s#NetBSD\*|#NetBSD*|OpenBSD*|#' \
+		< $(PYTHON_SRCDIR)/configure \
+		> $(PYTHON_SRCDIR)/configure.patched
+	mv $(PYTHON_SRCDIR)/configure.patched $(PYTHON_SRCDIR)/configure
+	chmod +x $(PYTHON_SRCDIR)/configure
+	touch $@
+
+# configure python
+ifdef PROFILE
+PYTHON_PROFILING=--enable-profiling
+endif
+$(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved
+	cd $(PYTHON_OBJDIR) \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		$(PYTHON_SRCDIR)/configure \
+		--prefix=$(PREFIX)/python \
+		--enable-shared \
+		--with-system-expat \
+		--with-dbmliborder=bdb \
+		$(PYTHON_PROFILING)
+	touch $@
+
+# compile python
+$(PYTHON_OBJDIR)/.compiled: $(PYTHON_OBJDIR)/.configured
+	(cd $(PYTHON_OBJDIR) && make)
+	touch $@
+
+# install python
+$(PYTHON_OBJDIR)/.installed: $(PYTHON_OBJDIR)/.compiled
+	(cd $(PYTHON_OBJDIR) && make install)
+	touch $@
+
+
+#######################################################################
 # svn
 #######################################################################
 
@@ -1066,9 +1139,9 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
 	cd $(SVN_SRCDIR) && ./autogen.sh
 	cd $(svn_builddir) && \
 		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib" \
-			LD_LIBRARY_PATH="$(PREFIX)/bdb/lib:$(PREFIX)/iconv/lib:$$LD_LIBRARY_PATH" \
+			LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
 			GREP="`which grep`" \
-			PATH=$(PREFIX)/ruby/bin:$$PATH \
+			PATH=$(PREFIX)/ruby/bin:$(PREFIX)/python/bin:$$PATH \
 			$(SVN_SRCDIR)/configure \
 			--enable-maintainer-mode \
 			--with-ssl \
@@ -1104,7 +1177,8 @@ $(SVN_OBJDIR)/.installed: $(SVN_OBJDIR)/.compiled
 $(SVN_OBJDIR)/.bindings-compiled: $(SVN_OBJDIR)/.installed
 	if [ $(ENABLE_PYTHON_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
-			&& make swig-py; \
+			&& env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+				make swig-py; \
 	fi
 	cd $(svn_builddir) && \
 		PATH=$(PREFIX)/ruby/bin:$$PATH make swig-rb
@@ -1121,7 +1195,8 @@ $(SVN_OBJDIR)/.bindings-compiled: $(SVN_OBJDIR)/.installed
 $(SVN_OBJDIR)/.bindings-installed: $(SVN_OBJDIR)/.bindings-compiled
 	if [ $(ENABLE_PYTHON_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
-		  && make install-swig-py; \
+		  && env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+		  	make install-swig-py; \
 	fi
 	cd $(svn_builddir) && \
 		PATH=$(PREFIX)/ruby/bin:$$PATH make install-swig-rb
@@ -1210,7 +1285,7 @@ endif
 	mv -f $@.tmp $@
 
 # We need this to make sure some targets below pick up the right libraries
-LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/cyrus-sasl/lib:$(PREFIX)/iconv/lib:$(PREFIX)/libmagic/lib:$(PREFIX)/ruby/lib:$(PREFIX)/svn-$(WC)/lib
+LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/cyrus-sasl/lib:$(PREFIX)/iconv/lib:$(PREFIX)/libmagic/lib:$(PREFIX)/ruby/lib:$(PREFIX)/python/lib:$(PREFIX)/svn-$(WC)/lib
 
 .PHONY: libpath
 libpath:
