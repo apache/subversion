@@ -78,7 +78,7 @@ def generate_asc_files(target_dir='.'):
   curs.execute('SELECT filename, signature FROM signatures;')
   for filename, signature in curs:
     fd = _open(filename)
-    fd.write(signature + "\n")
+    fd.write(signature)
 
   for fd in fds.values():
     fd.flush()
@@ -181,8 +181,11 @@ def list_signatures():
 
   lines = ""
   curs = db.cursor()
+  like_filename = 'subversion-%s%%' % config.version
   curs.execute('''SELECT filename, COUNT(*) FROM signatures
-                  GROUP BY filename ORDER BY filename''')
+                  WHERE filename LIKE ?
+                  GROUP BY filename ORDER BY filename''',
+               (like_filename, ) )
   for filename, count in curs:
     lines += '<a href="%s/%s.asc">%s.asc</a>: %d signature%s<br/>\n' \
              % (os.getenv('SCRIPT_NAME'), filename, filename,
