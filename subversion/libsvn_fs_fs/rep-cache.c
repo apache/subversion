@@ -163,7 +163,7 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
         SVN_ERR(cancel_func(cancel_baton));
 
       /* Construct a representation_t. */
-      rep = apr_pcalloc(pool, sizeof(*rep));
+      rep = apr_pcalloc(iterpool, sizeof(*rep));
       sha1_digest = svn_sqlite__column_text(stmt, 0, iterpool);
       SVN_ERR(svn_checksum_parse_hex(&rep->sha1_checksum,
                                      svn_checksum_sha1, sha1_digest,
@@ -175,7 +175,7 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
 
       /* Sanity check. */
       if (rep)
-        SVN_ERR(rep_has_been_born(rep, fs, pool));
+        SVN_ERR(rep_has_been_born(rep, fs, iterpool));
 
       /* Walk. */
       SVN_ERR(walker(rep, walker_baton, fs, iterpool));
@@ -184,6 +184,7 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
     }
 
   SVN_ERR(svn_sqlite__reset(stmt));
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
