@@ -79,6 +79,15 @@ Candidate changes:
      +0: gstein (haven't reviewed these specific revisions yet)
 
 
+ * r1146121, r1146870
+   Fix issue #3957 'reintegrate fails with no subtree mergeinfo on source'.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3957
+   Justification:
+     Fixes a reintegrate merge use case.
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
