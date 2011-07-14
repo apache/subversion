@@ -820,6 +820,12 @@ ifeq ($(UNAME),OpenBSD)
 	done
 	chmod +x $(CYRUS_SASL_SRCDIR)/configure
 endif
+	# Fixes excessive auth log spam from sasl if broken .la files exist
+	sed 's/SASL_LOG_WARN/SASL_LOG_DEBUG/' \
+		< $(CYRUS_SASL_SRCDIR)/lib/dlopen.c \
+		> $(CYRUS_SASL_SRCDIR)/lib/dlopen.c.patched
+	mv $(CYRUS_SASL_SRCDIR)/lib/dlopen.c.patched \
+		$(CYRUS_SASL_SRCDIR)/lib/dlopen.c
 	touch $@
 
 # configure cyrus-sasl
