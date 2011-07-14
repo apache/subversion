@@ -2444,23 +2444,28 @@ representation_string(representation_t *rep,
   if (rep->txn_id && mutable_rep_truncated)
     return "-1";
 
+#define DISPLAY_MAYBE_NULL_CHECKSUM(checksum)          \
+  ((checksum) != NULL                                  \
+   ? svn_checksum_to_cstring_display((checksum), pool) \
+   : "(null)")
+
   if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT || rep->sha1_checksum == NULL)
     return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
                         " %" SVN_FILESIZE_T_FMT " %s",
                         rep->revision, rep->offset, rep->size,
                         rep->expanded_size,
-                        svn_checksum_to_cstring_display(rep->md5_checksum,
-                                                        pool));
+                        DISPLAY_MAYBE_NULL_CHECKSUM(rep->md5_checksum));
 
   return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
                       " %" SVN_FILESIZE_T_FMT " %s %s %s",
                       rep->revision, rep->offset, rep->size,
                       rep->expanded_size,
-                      svn_checksum_to_cstring_display(rep->md5_checksum,
-                                                      pool),
-                      svn_checksum_to_cstring_display(rep->sha1_checksum,
-                                                      pool),
+                      DISPLAY_MAYBE_NULL_CHECKSUM(rep->md5_checksum),
+                      DISPLAY_MAYBE_NULL_CHECKSUM(rep->sha1_checksum),
                       rep->uniquifier);
+
+#undef DISPLAY_MAYBE_NULL_CHECKSUM
+
 }
 
 
