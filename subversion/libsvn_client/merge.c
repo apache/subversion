@@ -10035,7 +10035,8 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
                                         FALSE, FALSE,
                                         iterpool));
           if (subtree_catalog)
-            source_mergeinfo = apr_hash_get(subtree_catalog, source_path,
+            source_mergeinfo = apr_hash_get(subtree_catalog,
+                                            source_path_rel_to_session,
                                             APR_HASH_KEY_STRING);
 
           /* A path might not have any inherited mergeinfo either. */
