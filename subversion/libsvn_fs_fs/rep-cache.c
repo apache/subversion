@@ -124,6 +124,8 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
                               svn_error_t *(*walker)(representation_t *,
                                                      svn_fs_t *, 
                                                      apr_pool_t *),
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
                               apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -153,6 +155,10 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
       /* Clear ITERPOOL occasionally. */
       if (iterations++ % 16 == 0)
         svn_pool_clear(iterpool);
+
+      /* Check for cancellation. */
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
 
       /* Construct a representation_t. */
       rep = apr_pcalloc(pool, sizeof(*rep));

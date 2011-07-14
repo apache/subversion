@@ -46,6 +46,8 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
                               svn_error_t *(*walker)(representation_t *rep,
                                                      svn_fs_t *fs, 
                                                      apr_pool_t *scratch_pool),
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
                               apr_pool_t *pool);
 
 /* Return the representation REP in FS which has fulltext CHECKSUM.
