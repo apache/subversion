@@ -7807,7 +7807,9 @@ svn_fs_fs__verify(svn_fs_t *fs,
     return SVN_NO_ERROR;
 
   /* Don't take any lock. */
-  SVN_ERR(svn_fs_fs__walk_rep_reference(fs, verify_walker, pool));
+  SVN_ERR(svn_fs_fs__walk_rep_reference(fs, verify_walker,
+                                        cancel_func, cancel_baton,
+                                        pool));
 
   return SVN_NO_ERROR;
 }
