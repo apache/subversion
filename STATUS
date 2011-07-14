@@ -39,7 +39,7 @@ Candidate changes:
      Telling users they should upgrade the wrong directory is not
      what I call user friendly.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1146131 and followups
    Add svn_fs_verify() and implement rep-cache verification in FSFS using it.
