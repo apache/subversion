@@ -41,6 +41,18 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1146131 and followups
+   Add svn_fs_verify() and implement rep-cache verification in FSFS using it.
+   Branch:
+     1.7.x-fs-verify
+   Justification:
+     Would be nice to extend verify already in 1.7.x.
+   Notes:
+     This does not include progress reporting, since as of this writing that
+     is still a moving target.
+   Votes:
+     +0: danielsh
+     
 Approved changes:
 =================
 
