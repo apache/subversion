@@ -1224,8 +1224,6 @@ def actual_only_node_behaviour(sbox):
     'Name': 'foo',
     'Schedule': 'normal',
     'Node Kind': 'none',
-    'Depth': 'empty', ### is this right?
-    'Copied From Rev': '0',
     'Path': re.escape(sbox.ospath('A/foo')),
   }
   run_and_verify_info([expected_info], foo_path)

@@ -52,15 +52,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r1146274
-   Make svn_client_infoX() return proper results for tree conflicts. Without
-   this patch the structure is just memcleared instead of properly set to
-   uninitialized.
-   Justification:
-     Resolve regression and remove confusion by future callers.
-   Votes:
-     +1: rhuijben, gstein, stsp
-
  * r1146492, r1146555
    Add const to a couple members of svn_client_info2_t
    Justification:
