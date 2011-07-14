@@ -449,11 +449,15 @@ def verify_windows_paths_in_repos(sbox):
 
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         sbox.repo_dir)
+  expected_stderr = [
+    "* Verifying global structures.\n",
+    "* Verified revision 0.\n",
+    "* Verified revision 1.\n",
+    "* Verified revision 2.\n"
+  ]
   svntest.verify.compare_and_display_lines(
     "Error while running 'svnadmin verify'.",
-    'STDERR', ["* Verified revision 0.\n",
-               "* Verified revision 1.\n",
-               "* Verified revision 2.\n"], errput)
+    'STDERR', expected_stderr, errput)
 
 #----------------------------------------------------------------------
 

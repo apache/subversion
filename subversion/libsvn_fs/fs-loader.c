@@ -461,6 +461,8 @@ svn_fs_upgrade(const char *path, apr_pool_t *pool)
 
 svn_error_t *
 svn_fs_verify(const char *path,
+              svn_fs_progress_notify_func_t progress_func,
+              void *progress_baton,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
               apr_pool_t *pool) 
@@ -473,7 +475,9 @@ svn_fs_verify(const char *path,
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   fs = fs_new(NULL, pool);
   SVN_ERR(acquire_fs_mutex());
-  err = vtable->verify_fs(fs, path, cancel_func, cancel_baton,
+  err = vtable->verify_fs(fs, path,
+                          progress_func, progress_baton,
+                          cancel_func, cancel_baton,
                           pool, common_pool);
   err2 = release_fs_mutex();
   if (err)

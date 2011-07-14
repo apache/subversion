@@ -242,7 +242,19 @@ typedef enum svn_repos_notify_action_t
   svn_repos_notify_recover_start,
 
   /** Upgrade has started. */
-  svn_repos_notify_upgrade_start
+  svn_repos_notify_upgrade_start,
+
+  /** Verifying global data has commenced
+   * @since New in 1.8. */
+  svn_repos_notify_verify_aux_start,
+
+  /** Verifying global data is progressing
+   * @since New in 1.8. */
+  svn_repos_notify_verify_aux_progress,
+
+  /** Verifying global data has finished
+   * @since New in 1.8. */
+  svn_repos_notify_verify_aux_end
 
 } svn_repos_notify_action_t;
 
@@ -314,6 +326,12 @@ typedef struct svn_repos_notify_t
 
   /** For #svn_repos_notify_load_node_start, the path of the node. */
   const char *path;
+
+  /** For #svn_repos_notify_verify_aux_progress;
+      see svn_fs_progress_notify_func_t. */
+  apr_off_t progress_progress;
+  apr_off_t progress_total;
+  int progress_stage;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update

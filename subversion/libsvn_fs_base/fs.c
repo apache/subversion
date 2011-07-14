@@ -875,6 +875,8 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 
 static svn_error_t *
 base_verify(svn_fs_t *fs, const char *path,
+            svn_fs_progress_notify_func_t progress_func,
+            void *progress_baton,
             svn_cancel_func_t cancel_func,
             void *cancel_baton,
             apr_pool_t *pool,

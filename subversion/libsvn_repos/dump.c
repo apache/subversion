@@ -1245,6 +1245,28 @@ verify_close_directory(void *dir_baton,
   return close_directory(dir_baton, pool);
 }
 
+struct progress_to_notify_baton
+{
+  svn_repos_notify_func_t notify_func;
+  void *notify_baton;
+  svn_repos_notify_t *notify;
+};
+
+/* Implements svn_fs_progress_notify_func_t. */
+static void
+progress_to_notify(apr_off_t progress,
+                   apr_off_t total,
+                   int stage,
+                   void *baton,
+                   apr_pool_t *scratch_pool)
+{
+  struct progress_to_notify_baton *ptnb = baton;
+  ptnb->notify->progress_progress = progress;
+  ptnb->notify->progress_total = total;
+  ptnb->notify->progress_stage = stage;
+  ptnb->notify_func(ptnb->notify_baton, ptnb->notify, scratch_pool);
+}
+
 svn_error_t *
 svn_repos_verify_fs2(svn_repos_t *repos,
                      svn_revnum_t start_rev,
@@ -1284,8 +1306,37 @@ svn_repos_verify_fs2(svn_repos_t *repos,
 
   /* Verify global/auxiliary data before verifying revisions. */
   if (start_rev == 0)
-    SVN_ERR(svn_fs_verify(svn_fs_path(fs, pool), cancel_func, cancel_baton,
-                          pool));
+    {
+      struct progress_to_notify_baton ptnb = {
+        notify_func, notify_baton, NULL
+      };
+
+      /* Create a notify object that we can reuse within the callback. */
+      if (notify_func)
+        ptnb.notify = svn_repos_notify_create(svn_repos_notify_verify_aux_progress,
+                                              iterpool);
+
+      /* We're starting. */
+      if (notify_func)
+        notify_func(notify_baton,
+                    svn_repos_notify_create(svn_repos_notify_verify_aux_start,
+                                            iterpool),
+                    iterpool);
+
+      /* Do the work. */
+      SVN_ERR(svn_fs_verify(svn_fs_path(fs, iterpool), 
+                            (notify_func ? progress_to_notify : NULL), &ptnb,
+                            cancel_func, cancel_baton,
+                            iterpool));
+
+      /* We're finished. */
+      if (notify_func)
+        notify_func(notify_baton,
+                    svn_repos_notify_create(svn_repos_notify_verify_aux_end,
+                                            iterpool),
+                    iterpool);
+
+    }
 
   /* Create a notify object that we can reuse within the loop. */
   if (notify_func)

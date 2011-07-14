@@ -87,7 +87,8 @@ typedef struct fs_library_vtable_t
   svn_error_t *(*upgrade_fs)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
                              apr_pool_t *common_pool);
   svn_error_t *(*verify_fs)(svn_fs_t *fs, const char *path,
-                            /* ### notification? */
+                            svn_fs_progress_notify_func_t progress_func,
+                            void *progress_baton,
                             svn_cancel_func_t cancel_func, void *cancel_baton,
                             apr_pool_t *pool,
                             apr_pool_t *common_pool);

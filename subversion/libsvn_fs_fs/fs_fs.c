@@ -7780,6 +7780,13 @@ svn_fs_fs__pack(svn_fs_t *fs,
 
 /** Verifying. **/
 
+struct verify_baton
+{
+  svn_fs_progress_notify_func_t progress_func;
+  void *progress_baton;
+  apr_int64_t reps_seen;
+};
+
 /* Body of svn_fs_fs__verify().
    Implements svn_fs_fs__walk_rep_reference().walker.  */
 static svn_error_t *
@@ -7789,8 +7796,15 @@ verify_walker(representation_t *rep,
               apr_int64_t reps_count,
               apr_pool_t *scratch_pool)
 {
+  struct verify_baton *vb = baton;
   struct rep_state *rs;
   struct rep_args *rep_args;
+
+  if (vb->progress_func && (vb->reps_seen++ % 1024 == 0))
+    /* ### Symbolic names for the stages? */
+    vb->progress_func(vb->reps_seen, reps_count, 1,
+                      vb->progress_baton,
+                      scratch_pool);
 
   /* ### Should this be using read_rep_line() directly? */
   SVN_ERR(create_rep_state(&rs, &rep_args, rep, fs, scratch_pool));
@@ -7800,17 +7814,20 @@ verify_walker(representation_t *rep,
 
 svn_error_t *
 svn_fs_fs__verify(svn_fs_t *fs,
+                  svn_fs_progress_notify_func_t progress_func,
+                  void *progress_baton,
                   svn_cancel_func_t cancel_func,
                   void *cancel_baton,
                   apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  struct verify_baton vb = { progress_func, progress_baton, 0 };
 
   if (ffd->format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     return SVN_NO_ERROR;
 
   /* Don't take any lock. */
-  SVN_ERR(svn_fs_fs__walk_rep_reference(fs, verify_walker, NULL,
+  SVN_ERR(svn_fs_fs__walk_rep_reference(fs, verify_walker, &vb,
                                         cancel_func, cancel_baton,
                                         pool));
 

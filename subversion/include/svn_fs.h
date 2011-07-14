@@ -246,6 +246,24 @@ svn_fs_upgrade(const char *path,
                apr_pool_t *pool);
 
 /**
+ * Callback function type for progress notification.
+ *
+ * @a progress is the number of steps already completed, @a total is
+ * the total number of steps in this stage, @a stage is the number of
+ * stages (for extensibility), @a baton is the callback baton.
+ *
+ * @note The number of stages may vary depending on the backend, library
+ * version, and so on.  @a total may be a best-effort estimate.
+ *
+ * @since New in 1.8.
+ */
+typedef void (*svn_fs_progress_notify_func_t)(apr_off_t progress,
+                                              apr_off_t total,
+                                              int stage,
+                                              void *baton,
+                                              apr_pool_t *scratch_pool);
+
+/**
  * Perform backend-specific data consistency and correctness validations
  * to the Subversion filesystem located in the directory @a path.
  * Use @a pool for necessary allocations.
@@ -258,6 +276,8 @@ svn_fs_upgrade(const char *path,
  */
 svn_error_t *
 svn_fs_verify(const char *path,
+              svn_fs_progress_notify_func_t progress_func,
+              void *progress_baton,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
               apr_pool_t *pool);
@@ -2292,7 +2312,6 @@ svn_fs_pack(const char *db_path,
             svn_cancel_func_t cancel_func,
             void *cancel_baton,
             apr_pool_t *pool);
-
 
 /** @} */
 
