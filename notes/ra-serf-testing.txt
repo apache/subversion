@@ -8,50 +8,106 @@ document the strategy for testing this new feature.
   testing.  ]
 
 
-RAW NOTES (from some earlier thinking)
-/* Testing strategy for the PAUSED feature:
+TESTING STRATEGY
 
-   It may be possible to arrange for writing a white box test, but I'll
-   leave that to somebody with a more masochistic bent. This section will
-   outline the different scenarios to test, and then how we can adjust
-   the various control parameters to make that happen.
+It may be possible to arrange for writing a white box test, but I'll
+leave that to somebody with a more masochistic bent. This section will
+outline the different scenarios to test, and then how we can adjust
+the various control parameters to make that happen.
 
-   There are seven states to the PENDING structure:
+There are seven states to the PENDING structure:
 
-     1) pending == NULL
-     2) pending->head == NULL && pending->spill == NULL
-        (this should only happen when some data has been placed into the
-         pending membuf structure, then emptied)
-     3) pending->head != NULL && pending->spill == NULL
-     4) pending->head != NULL && pending->spill != NULL. content in file
-     5) pending->head != NULL && pending->spill != NULL. no content in file
-     6) pending->head == NULL && pending->spill != NULL. content in file
-     7) pending->head == NULL && pending->spill != NULL. nocontent in file
+  1) pending == NULL
 
-   Most of the above states are doubled, based on the PAUSED flag.
+     No pause has (ever) occurred, OR no content has arrived since
+     the parser was paused.
 
-   There are two operations that occur:
+  2) pending->head == NULL && pending->spill == NULL
 
-     1) network content arrives
-     2) process content from the pending structures
+     This should only happen when some data has been placed into the
+     pending membuf structure, then emptied).
+     
+     The parser may be paused and no content has arrived (yet), or
+     the parser is not in a paused state.
 
-   These combine into the following test scenarios to exercise the two
-   actions against each of the ten data states.
+  3) pending->head != NULL && pending->spill == NULL
 
-     1) REPORT completes with no pausing
-     2) REPORT requires in-memory (only) buffering:
-        a) buffer empties while network content arrives again
-        b) network content completes while buffer has content
-        c) buffer empties, then later needs buffering again
-        d) partial in-mem consumption, new content lands into membuf
-     3) REPORT requires on-disk buffering:
-        a) diskbuf empties while network content arrives again
-        b) network content completes while diskbuf has content
-        c) diskbuf empties, then more buffering is needed again
-           (note: due to the code, this will go onto the disk rather
-            than back to the in-mem buffer)
-        d) partial in-mem consumption, new content lands in diskbuf
-        e) partial diskbuf consumption, new content lands in diskbuf
+     A pause occurred, and some content was placed into the
+     membuf. Not enough to spill to a file, however.
+     
+     The parser may be paused, or not-paused.
 
-   
-*/
+  4) pending->head != NULL && pending->spill != NULL. content in file
+  
+     Enought content has orrived during a paused state that it was
+     spilled into a file. Playback of the pending content *may*
+     have occurred, but it has not (yet) emptied the memory buffer.
+     
+     The parser may be paused, or not-paused.
+
+  5) pending->head != NULL && pending->spill != NULL. no content in file
+
+     THEORETICAL.
+     
+     If a spill file gets created, then *some* content will be
+     written into the file. The content will not be read/removed
+     from the file until the memory buffer is exhausted. Thus, this
+     state is not possible since the spill file could not be
+     emptied since the membuf has not been emptied.
+     
+     Also, once the spill file has been created, we will never
+     write into the memory buffer (for ordering reasons). Thus, we
+     cannot empty both membuf and spill file, and place more
+     content into the memory buffer.
+     
+     At some point in the future, we may decide to place arriving
+     content back into the membuf after the spill file has been
+     exhausted. The code does not do this today.
+     
+     The parser may be paused, or not-paused.
+
+  6) pending->head == NULL && pending->spill != NULL. content in file
+
+     At some point, enough content arrived to construct a spill
+     file. Since that point, the memory buffer contents have been
+     injected into the parser, emptying the membuf.
+     
+     The parser may be paused, or not-paused.
+
+  7) pending->head == NULL && pending->spill != NULL. no content in file
+
+     At some point, enough content arrived to construct a spill
+     file. Since that point, all content (from memory and file) has
+     been injected into the parser.
+     
+     The parser may be paused, or not-paused.
+
+Note that all states are doubled, based on the PAUSED flag.
+
+There are four operations that occur:
+
+  1) network content is present
+  2) network content is not present [at this time]
+  3) network content completed
+  4) process content from the pending structures
+
+These combine into the following test scenarios to exercise the two
+actions against each of the ten data states.
+
+  #### redo this list
+
+
+  1) REPORT completes with no pausing
+  2) REPORT requires in-memory (only) buffering:
+     a) buffer empties while network content arrives again
+     b) network content completes while buffer has content
+     c) buffer empties, then later needs buffering again
+     d) partial in-mem consumption, new content lands into membuf
+  3) REPORT requires on-disk buffering:
+     a) diskbuf empties while network content arrives again
+     b) network content completes while diskbuf has content
+     c) diskbuf empties, then more buffering is needed again
+        (note: due to the code, this will go onto the disk rather
+         than back to the in-mem buffer)
+     d) partial in-mem consumption, new content lands in diskbuf
+     e) partial diskbuf consumption, new content lands in diskbuf
