@@ -37,17 +37,6 @@ Candidate changes:
      +0: danielsh
      +0: gstein (progress would be nice)
 
- * r1146832, r1146834
-   Resolve several whitespace issues and a warning that is always visible
-   for git-svn users.
-   Justification:
-     Trivial fix which suppresses warning.
-   Notes:
-     Binding change rules apply
-   Votes:
-     +0: rhuijben (I think it should be backported, but I can't test this)
-     +0: gstein (likewise)
-
  * r1146899, r1146904
    Minor improvements in build system.
    Votes:
@@ -83,3 +72,15 @@ Approved changes:
      what I call user friendly.
    Votes:
      +1: rhuijben, philip, gstein
+
+ * r1146832, r1146834
+   Resolve several whitespace issues and a warning that is always visible
+   for git-svn users.
+   Justification:
+     Trivial fix which suppresses warning.
+   Notes:
+     Binding change rules apply
+   Votes:
+     +1: peters
+     +0: rhuijben (I think it should be backported, but I can't test this)
+     +0: gstein (likewise)
