@@ -257,8 +257,8 @@ svn_fs_upgrade(const char *path,
  *
  * @since New in 1.8.
  */
-typedef void (*svn_fs_progress_notify_func_t)(apr_off_t progress,
-                                              apr_off_t total,
+typedef void (*svn_fs_progress_notify_func_t)(apr_int64_t progress,
+                                              apr_int64_t total,
                                               int stage,
                                               void *baton,
                                               apr_pool_t *scratch_pool);
