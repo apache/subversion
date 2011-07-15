@@ -25,7 +25,7 @@ Candidate changes:
      a specific jdk.
      (Which then fixes building 1.6.x on the Windows buildbots)
    Votes:
-     +1: rhuijben     
+     +1: rhuijben, pburba
 
  * r1138975, r1138977
    Add a sanity check to get-deps.sh.
@@ -50,7 +50,7 @@ Candidate changes:
    Justification:
      Issue 3895, already merged, was supposed to cover DAV but did not.
    Votes:
-     +1: philip
+     +1: philip, pburba
 
  * r894014, 894029, 896247, 905705
    Use serf_connection_create2 instead of serf_connection_create so that
