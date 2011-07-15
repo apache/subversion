@@ -1256,7 +1256,7 @@ struct progress_to_notify_baton
 static void
 progress_to_notify(apr_int64_t progress,
                    apr_int64_t total,
-                   svn_fs_progress_info_t *stage,
+                   const svn_fs_progress_info_t *stage,
                    void *baton,
                    apr_pool_t *scratch_pool)
 {
