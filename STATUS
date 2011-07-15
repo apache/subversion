@@ -57,6 +57,16 @@ Candidate changes:
    Votes:
      +1: arfrever (with r1146899), philip
 
+ * r1146781
+   Fix a bug in subtree merging.  See email thread by Barry Scott, 2011-07-02,
+   "Assert in svn-1.7-alpha2 svn_client_merge3",
+   <http://svn.haxx.se/dev/archive-2011-07/0052.shtml>.
+   Justification:
+   Notes:
+     Also applicable to 1.6.x?
+   Votes:
+     +1: julianfoad
+
 
 Approved changes:
 =================
