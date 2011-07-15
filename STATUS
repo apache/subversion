@@ -37,10 +37,18 @@ Candidate changes:
      +0: danielsh
      +0: gstein (progress would be nice)
 
- * r1146899, r1146904
-   Minor improvements in build system.
+ * r1146899
+   Improve configure detection of Ruby.
+   Justification:
+     Saner configure output, and don't override user's choice of a ruby when
+     multiple are available.
    Votes:
-     +1: arfrever
+     +1: arfrever (with r1146904), danielsh
+ 
+ * r1146904
+   Fix the 'extraclean' target of the Makefile.
+   Votes:
+     +1: arfrever (with r1146899)
 
 
 Approved changes:
