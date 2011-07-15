@@ -477,6 +477,7 @@ typedef struct svn_client_commit_item3_t
   /**
    * When processing the commit this contains the relative path for
    * the commit session. #NULL until the commit item is preprocessed.
+   * @since New in 1.7.
    */
   const char *session_relpath;
 } svn_client_commit_item3_t;
