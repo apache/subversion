@@ -331,7 +331,7 @@ typedef struct svn_repos_notify_t
       see svn_fs_progress_notify_func_t. */
   apr_int64_t progress_progress;
   apr_int64_t progress_total;
-  int progress_stage;
+  svn_fs_progress_info_t *progress_stage;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update

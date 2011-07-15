@@ -246,20 +246,26 @@ svn_fs_upgrade(const char *path,
                apr_pool_t *pool);
 
 /**
+ * This is an opaque struct passed to #svn_fs_progress_notify_func_t.  In
+ * a future release it may be defined.
+ *
+ * @since New in 1.8.
+ */
+typedef struct svn_fs_progress_info_t svn_fs_progress_info_t;
+
+/**
  * Callback function type for progress notification.
  *
- * @a progress is the number of steps already completed, @a total is
- * the total number of steps in this stage, @a stage is the number of
- * stages (for extensibility), @a baton is the callback baton.
+ * @a progress is the number of steps already completed, out of @a total steps.
+ * @a info must be @c NULL in Subversion 1.8.  @a baton is the callback baton.
  *
- * @note The number of stages may vary depending on the backend, library
- * version, and so on.  @a total may be a best-effort estimate.
+ * @note @a total may be a best-effort estimate.
  *
  * @since New in 1.8.
  */
 typedef void (*svn_fs_progress_notify_func_t)(apr_int64_t progress,
                                               apr_int64_t total,
-                                              int stage,
+                                              svn_fs_progress_info_t *info,
                                               void *baton,
                                               apr_pool_t *scratch_pool);
 

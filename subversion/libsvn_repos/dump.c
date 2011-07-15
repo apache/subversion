@@ -1256,11 +1256,14 @@ struct progress_to_notify_baton
 static void
 progress_to_notify(apr_int64_t progress,
                    apr_int64_t total,
-                   int stage,
+                   svn_fs_progress_info_t *stage,
                    void *baton,
                    apr_pool_t *scratch_pool)
 {
   struct progress_to_notify_baton *ptnb = baton;
+
+  SVN_ERR_ASSERT_NO_RETURN(stage == NULL);
+
   ptnb->notify->progress_progress = progress;
   ptnb->notify->progress_total = total;
   ptnb->notify->progress_stage = stage;
