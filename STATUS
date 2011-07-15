@@ -15,15 +15,6 @@ Status of 1.7.0:
 Candidate changes:
 ==================
 
- * r1146214, r1146381
-   Handle NULL inputs when stringifying svn_checksum_t.
-   Justification:
-     Avoids segfaults.
-   Votes:
-     +1: danielsh
-     -0: cmpilato, rhuijben, gstein (problem is with callers,
-                                     not implementation)
-
  * r1146131 and followups
    Add svn_fs_verify() and implement rep-cache verification in FSFS using it.
    Branch:
