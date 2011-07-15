@@ -1307,21 +1307,25 @@ svn_repos_verify_fs2(svn_repos_t *repos,
   /* Verify global/auxiliary data before verifying revisions. */
   if (start_rev == 0)
     {
-      struct progress_to_notify_baton ptnb = {
-        notify_func, notify_baton, NULL
-      };
+      struct progress_to_notify_baton ptnb;
 
-      /* Create a notify object that we can reuse within the callback. */
       if (notify_func)
-        ptnb.notify = svn_repos_notify_create(svn_repos_notify_verify_aux_progress,
-                                              iterpool);
+        {
+          /* Stash NOTIFY_FUNC for the callback. */
+          ptnb.notify_func = notify_func;
+          ptnb.notify_baton = notify_baton;
 
-      /* We're starting. */
-      if (notify_func)
-        notify_func(notify_baton,
-                    svn_repos_notify_create(svn_repos_notify_verify_aux_start,
-                                            iterpool),
-                    iterpool);
+          /* Create a notify object that we can reuse within the callback. */
+          ptnb.notify =
+            svn_repos_notify_create(svn_repos_notify_verify_aux_progress,
+                                    iterpool);
+
+          /* We're starting. */
+          notify_func(notify_baton,
+                      svn_repos_notify_create(svn_repos_notify_verify_aux_start,
+                                              iterpool),
+                      iterpool);
+        }
 
       /* Do the work. */
       SVN_ERR(svn_fs_verify(svn_fs_path(fs, iterpool), 
@@ -1329,12 +1333,14 @@ svn_repos_verify_fs2(svn_repos_t *repos,
                             cancel_func, cancel_baton,
                             iterpool));
 
-      /* We're finished. */
       if (notify_func)
-        notify_func(notify_baton,
-                    svn_repos_notify_create(svn_repos_notify_verify_aux_end,
-                                            iterpool),
-                    iterpool);
+        {
+          /* We're finished. */
+          notify_func(notify_baton,
+                      svn_repos_notify_create(svn_repos_notify_verify_aux_end,
+                                              iterpool),
+                      iterpool);
+        }
 
     }
 
