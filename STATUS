@@ -56,16 +56,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r1146492, r1146555
-   Add const to a couple members of svn_client_info2_t
-   Justification:
-     We don't want clients to think they can modify the underlying
-     structures. We had similar problems with the svn_wc_status_t,
-     and it makes it hard to rev APIs when clients may be monkeying
-     with the data we pass along.
-   Votes:
-     +1: gstein, rhuijben, julianfoad, blair
-
  * r1146620
    Simple consistency for the 'svn_client_info2_t' structure; no functional
    change.  On the 'wc_info' member, remove 'struct' keyword, as we don't
