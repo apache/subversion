@@ -95,6 +95,7 @@ svn_cl__copy(apr_getopt_t *os,
   else if ((! srcs_are_urls) && (dst_is_url))
     {
       /* WC->URL : Use notification. */
+      if (! opt_state->quiet)
         SVN_ERR(svn_cl__notifier_mark_wc_to_repos_copy(ctx->notify_baton2));
     }
   else if ((srcs_are_urls) && (! dst_is_url))
