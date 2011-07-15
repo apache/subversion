@@ -27,19 +27,19 @@
 /* Destructor to be called as part of the pool cleanup procedure. */
 static apr_status_t uninit(void *data)
 {
-  svn_mutex__t **mutex = data;
-  *mutex = NULL;
+  svn_mutex__t **mutex_p = data;
+  *mutex_p = NULL;
 
   return APR_SUCCESS;
 }
 
 svn_error_t *
-svn_mutex__init(svn_mutex__t **mutex, 
+svn_mutex__init(svn_mutex__t **mutex_p, 
                 svn_boolean_t enable_mutex, 
                 apr_pool_t *pool)
 {
 #if APR_HAS_THREADS
-  *mutex = NULL;
+  *mutex_p = NULL;
   if (enable_mutex)
     {
       apr_thread_mutex_t *apr_mutex;
@@ -50,8 +50,8 @@ svn_mutex__init(svn_mutex__t **mutex,
       if (status)
         return svn_error_wrap_apr(status, _("Can't create mutex"));
 
-      *mutex = apr_mutex;
-      apr_pool_cleanup_register(pool, mutex, uninit, apr_pool_cleanup_null);
+      *mutex_p = apr_mutex;
+      apr_pool_cleanup_register(pool, mutex_p, uninit, apr_pool_cleanup_null);
     }
 #else
   if (enable_mutex)
