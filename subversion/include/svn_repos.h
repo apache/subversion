@@ -2533,8 +2533,8 @@ svn_repos_dump_fs3(svn_repos_t *repos,
                    apr_pool_t *scratch_pool);
 
 /**
- * Similar to svn_repos_dump_fs3(), but with a feedback_stream instead of
- * handling feedback via the notify_func handler
+ * Similar to svn_repos_dump_fs3(), but with a @a feedback_stream instead of
+ * handling feedback via the @a notify_func handler
  *
  * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.6 API.
