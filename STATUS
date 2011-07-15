@@ -50,7 +50,7 @@ Candidate changes:
    bug for WC-to-URL copies, albeit one which doesn't result in a
    segfault.
    Votes:
-     +1: pburba
+     +1: pburba, danielsh
 
 Approved changes:
 =================
