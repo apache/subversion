@@ -56,15 +56,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r1146620
-   Simple consistency for the 'svn_client_info2_t' structure; no functional
-   change.  On the 'wc_info' member, remove 'struct' keyword, as we don't
-   use it in any other similar situation.
-   Notes:
-     This change also marks the doc string for Doxygen, an 'obvious fix'.
-   Votes:
-     +1: julianfoad, rhuijben, gstein
-
  * r1146684
    Report the right wcroot in an 'svn upgrade' error message.
    Justification:
