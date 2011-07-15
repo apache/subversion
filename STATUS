@@ -51,9 +51,11 @@ Candidate changes:
      +1: arfrever (with r1146904), danielsh
  
  * r1146904
-   Fix the 'extraclean' target of the Makefile.
+   Fix the 'extraclean' target of the Makefile to remove config.{guess,sub}
+   Justification:
+     1.6 removes these.
    Votes:
-     +1: arfrever (with r1146899)
+     +1: arfrever (with r1146899), philip
 
 
 Approved changes:
