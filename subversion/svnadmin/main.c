@@ -815,18 +815,18 @@ repos_notify_handler(void *baton,
                                " repository may take some time...\n")));
       return;
 
-    case svn_repos_notify_verify_aux_start:
+    case svn_repos_notify_verify_global_start:
       /* ### Somehow use PROGRESS_TOTAL here? */
       svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
                                         _("* Verifying global structures")
                                         ));
       return;
 
-    case svn_repos_notify_verify_aux_progress:
+    case svn_repos_notify_verify_global_progress:
       svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool, "."));
       return;
 
-    case svn_repos_notify_verify_aux_end:
+    case svn_repos_notify_verify_global_end:
       svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool, "\n"));
       return;
 

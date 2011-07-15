@@ -1304,7 +1304,7 @@ svn_repos_verify_fs2(svn_repos_t *repos,
                                "(youngest revision is %ld)"),
                              end_rev, youngest);
 
-  /* Verify global/auxiliary data before verifying revisions. */
+  /* Verify global data before verifying revisions. */
   if (start_rev == 0)
     {
       struct progress_to_notify_baton ptnb;
@@ -1317,13 +1317,14 @@ svn_repos_verify_fs2(svn_repos_t *repos,
 
           /* Create a notify object that we can reuse within the callback. */
           ptnb.notify =
-            svn_repos_notify_create(svn_repos_notify_verify_aux_progress,
+            svn_repos_notify_create(svn_repos_notify_verify_global_progress,
                                     iterpool);
 
           /* We're starting. */
           notify_func(notify_baton,
-                      svn_repos_notify_create(svn_repos_notify_verify_aux_start,
-                                              iterpool),
+                      svn_repos_notify_create(
+                        svn_repos_notify_verify_global_start,
+                        iterpool),
                       iterpool);
         }
 
@@ -1337,7 +1338,7 @@ svn_repos_verify_fs2(svn_repos_t *repos,
         {
           /* We're finished. */
           notify_func(notify_baton,
-                      svn_repos_notify_create(svn_repos_notify_verify_aux_end,
+                      svn_repos_notify_create(svn_repos_notify_verify_global_end,
                                               iterpool),
                       iterpool);
         }
