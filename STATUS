@@ -42,21 +42,6 @@ Candidate changes:
    Votes:
      +0: danielsh
 
- * r1146899
-   Improve configure detection of Ruby.
-   Justification:
-     Saner configure output, and don't override user's choice of a ruby when
-     multiple are available.
-   Votes:
-     +1: arfrever (with r1146904), danielsh
- 
- * r1146904
-   Fix the 'extraclean' target of the Makefile to remove config.{guess,sub}
-   Justification:
-     1.6 removes these.
-   Votes:
-     +1: arfrever (with r1146899), philip
-
  * r1146781
    Fix a bug in subtree merging.  See email thread by Barry Scott, 2011-07-02,
    "Assert in svn-1.7-alpha2 svn_client_merge3",
@@ -109,3 +94,19 @@ Approved changes:
      +1: peters
      +0: rhuijben (I think it should be backported, but I can't test this)
      +0: gstein (likewise)
+
+ * r1146899
+   Improve configure detection of Ruby.
+   Justification:
+     Saner configure output, and don't override user's choice of a ruby when
+     multiple are available.
+   Votes:
+     +1: arfrever (with r1146904), danielsh, julianfoad
+
+ * r1146904
+   Fix the 'extraclean' target of the Makefile to remove config.{guess,sub}
+   Justification:
+     1.6 removes these.
+   Votes:
+     +1: arfrever (with r1146899), philip, julianfoad
+
