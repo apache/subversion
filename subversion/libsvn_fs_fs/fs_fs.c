@@ -7801,7 +7801,7 @@ verify_walker(representation_t *rep,
   struct rep_args *rep_args;
 
   if (vb->progress_func && (vb->reps_seen++ % 1024 == 0))
-    vb->progress_func(vb->reps_seen, reps_count, 1,
+    vb->progress_func(vb->reps_seen, reps_count, NULL,
                       vb->progress_baton,
                       scratch_pool);
 
