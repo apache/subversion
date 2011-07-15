@@ -25,7 +25,7 @@ There are seven states to the PENDING structure:
   2) pending->head == NULL && pending->spill == NULL
 
      This should only happen when some data has been placed into the
-     pending membuf structure, then emptied).
+     pending membuf structure, then emptied.
      
      The parser may be paused and no content has arrived (yet), or
      the parser is not in a paused state.
@@ -87,9 +87,70 @@ Note that all states are doubled, based on the PAUSED flag.
 There are four operations that occur:
 
   1) network content is present
+     a) If parser is paused, then append content to PENDING. All six(*)
+        PAUSED states must be considered.
+     b) If parser is NOT paused, then:
+        i) If PENDING contains data, then append content to
+           PENDING. Three of the NOT-PAUSED states must be
+           considered: (3), (4), (6)
+        ii) PENDING is empty, so inject content into the parser
+
   2) network content is not present [at this time]
+     a) Exit network processing. The PENDING states are irrelevant.
+
   3) network content completed
+     a) Exit network processing. The PENDING states are irrelevant.
+
   4) process content from the pending structures
+     a) When parser is NOT paused, and PENDING contains data, then
+        take content from the start of PENDING and inject it into the
+        parser. Three of the NOT-PAUSED states must be considered:
+        (3), (4), (6)
+
+
+(*) we don't need to test state (5).
+
+
+
+INDIVIDUAL TESTS
+
+Normal operation will cover: 1(b)(ii), (2), and (3). Thus, we must
+arrange to test:
+
+  1) operation 1(a) with six states
+  2) operation 1(b)(i) with three states
+  3) operation 4(a) with three states
+
+
+TEST 1.1
+
+A simple pause with arriving data will test this.
+
+Exits in state (3).
+
+
+TEST 1.2
+
+TEST 1.3
+
+TEST 1.4
+
+TEST 1.6
+
+TEST 1.7
+
+TEST 2.3
+
+TEST 2.4
+
+TEST 2.6
+
+TEST 3.3
+
+TEST 3.4
+
+TEST 3.6
+
 
 These combine into the following test scenarios to exercise the two
 actions against each of the ten data states.
