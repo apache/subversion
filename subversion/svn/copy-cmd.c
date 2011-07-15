@@ -99,8 +99,9 @@ svn_cl__copy(apr_getopt_t *os,
     }
   else if ((srcs_are_urls) && (! dst_is_url))
     {
-      /* URL->WC : Use checkout-style notification. */
-      SVN_ERR(svn_cl__notifier_mark_checkout(ctx->notify_baton2));
+     /* URL->WC : Use checkout-style notification. */
+     if (! opt_state->quiet)
+       SVN_ERR(svn_cl__notifier_mark_checkout(ctx->notify_baton2));
     }
   else
     {
