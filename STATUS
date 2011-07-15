@@ -72,14 +72,14 @@ Approved changes:
      Saner configure output, and don't override user's choice of a ruby when
      multiple are available.
    Votes:
-     +1: arfrever (with r1146904), danielsh, julianfoad
+     +1: arfrever, danielsh, julianfoad
 
  * r1146904
    Fix the 'extraclean' target of the Makefile to remove config.{guess,sub}
    Justification:
      1.6 removes these.
    Votes:
-     +1: arfrever (with r1146899), philip, julianfoad
+     +1: arfrever, philip, julianfoad
 
  * r1146781
    Fix a bug in subtree merging.  See email thread by Barry Scott, 2011-07-02,
