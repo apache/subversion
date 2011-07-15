@@ -257,7 +257,8 @@ typedef struct svn_fs_progress_info_t svn_fs_progress_info_t;
  * Callback function type for progress notification.
  *
  * @a progress is the number of steps already completed, out of @a total steps.
- * @a info must be @c NULL in Subversion 1.8.  @a baton is the callback baton.
+ * @a total may be -1 if it's unknown or unavailable. @a info must be @c NULL
+ * in Subversion 1.8.  @a baton is the callback baton.
  *
  * @note @a total may be a best-effort estimate.
  *
