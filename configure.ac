@@ -1106,12 +1106,20 @@ SVN_CHECK_JDK($JAVA_OLDEST_WORKING_VER)
 
 AC_PATH_PROG(PERL, perl, none)
 
-AC_PATH_PROGS(RUBY, "$RUBY" ruby ruby1.8 ruby18, none)
+if test -n "$RUBY"; then
+  AC_PATH_PROG(RUBY, "$RUBY", none)
+else
+  AC_PATH_PROGS(RUBY, ruby ruby1.8 ruby18, none)
+fi
 if test "$RUBY" != "none"; then
   AC_MSG_CHECKING([rb_hash_foreach])
   if "$RUBY" -r mkmf -e 'exit(have_func("rb_hash_foreach") ? 0 : 1)' >/dev/null; then
     AC_MSG_RESULT([yes])
-    AC_PATH_PROGS(RDOC, "$RDOC" rdoc rdoc1.8 rdoc18, none)
+    if test -n "$RDOC"; then
+      AC_PATH_PROG(RDOC, "$RDOC", none)
+    else
+      AC_PATH_PROGS(RDOC, rdoc rdoc1.8 rdoc18, none)
+    fi
     AC_CACHE_CHECK([for Ruby major version], [svn_cv_ruby_major],[
     svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(MAJOR))'`"
     ])

@@ -45,14 +45,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r1146899
-   Improve configure detection of Ruby.
-   Justification:
-     Saner configure output, and don't override user's choice of a ruby when
-     multiple are available.
-   Votes:
-     +1: arfrever, danielsh, julianfoad
-
  * r1146904
    Fix the 'extraclean' target of the Makefile to remove config.{guess,sub}
    Justification:
