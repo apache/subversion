@@ -45,14 +45,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r1146684
-   Report the right wcroot in an 'svn upgrade' error message.
-   Justification:
-     Telling users they should upgrade the wrong directory is not
-     what I call user friendly.
-   Votes:
-     +1: rhuijben, philip, gstein
-
  * r1146832, r1146834
    Resolve several whitespace issues and a warning that is always visible
    for git-svn users.
