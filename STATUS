@@ -45,13 +45,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r1146904
-   Fix the 'extraclean' target of the Makefile to remove config.{guess,sub}
-   Justification:
-     1.6 removes these.
-   Votes:
-     +1: arfrever, philip, julianfoad
-
  * r1146781
    Fix a bug in subtree merging.  See email thread by Barry Scott, 2011-07-02,
    "Assert in svn-1.7-alpha2 svn_client_merge3",
