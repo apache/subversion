@@ -45,16 +45,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r1146781
-   Fix a bug in subtree merging.  See email thread by Barry Scott, 2011-07-02,
-   "Assert in svn-1.7-alpha2 svn_client_merge3",
-   <http://svn.haxx.se/dev/archive-2011-07/0052.shtml>.
-   Justification:
-   Notes:
-     Not applicable to 1.6.x.
-   Votes:
-     +1: julianfoad, rhuijben, philip
-
  * r1147293, r1147309
    Fix issue #3960 'URL-to-WC copy with --quiet segfaults'.
    Justification:
