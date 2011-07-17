@@ -105,7 +105,6 @@ if test `expr $apr_version : 2` -ne 0; then
   AC_SUBST(SVN_APRUTIL_INCLUDES)
   AC_SUBST(SVN_APRUTIL_CONFIG, ["$apu_config"])
   AC_SUBST(SVN_APRUTIL_LIBS)
-  AC_SUBST(SVN_APRUTIL_PREFIX)
 else
   SVN_LT_SOVERSION="-version-info 0"
   APU_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]

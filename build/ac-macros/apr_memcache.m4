@@ -70,19 +70,16 @@ dnl   Try just looking in apr-util (>= 1.3 has it already).
   if test $apr_memcache_found = "reconfig"; then
     SVN_EXTERNAL_PROJECT([apr_memcache], [--with-apr=$apr_config --with-apr-util=$apu_config])
     apr_memcache_prefix=$prefix
-    SVN_APR_MEMCACHE_PREFIX="$apr_memcache_prefix"
     SVN_APR_MEMCACHE_INCLUDES="-I$srcdir/memcache"
     SVN_APR_MEMCACHE_LIBS="$abs_builddir/memcache/libapr_memcache.la"
   fi
 
   if test $apr_memcache_found = "standalone"; then
-    SVN_APR_MEMCACHE_PREFIX="$apr_memcache_prefix"
     SVN_APR_MEMCACHE_INCLUDES="-I$apr_memcache_prefix/include/apr_memcache-0"
     SVN_APR_MEMCACHE_LIBS="$apr_memcache_prefix/lib/libapr_memcache.la"
     svn_lib_apr_memcache=yes
   elif test $apr_memcache_found = "aprutil"; then
 dnl We are already linking apr-util everywhere, so no special treatement needed.
-    SVN_APR_MEMCACHE_PREFIX=""
     SVN_APR_MEMCACHE_INCLUDES=""
     SVN_APR_MEMCACHE_LIBS=""
     svn_lib_apr_memcache=yes
@@ -92,7 +89,6 @@ dnl We are already linking apr-util everywhere, so no special treatement needed.
     svn_lib_apr_memcache=no
   fi
 
-  AC_SUBST(SVN_APR_MEMCACHE_PREFIX)
   AC_SUBST(SVN_APR_MEMCACHE_INCLUDES)
   AC_SUBST(SVN_APR_MEMCACHE_LIBS)
 ])
