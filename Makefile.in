@@ -153,7 +153,9 @@ JAVAHL_JAR=subversion/bindings/javahl/svn-javahl.jar
 JAVAHL_INCLUDES= @JNI_INCLUDES@ -I$(abs_builddir)/subversion/bindings/javahl/include
 
 SVN_APR_CONFIG = @SVN_APR_CONFIG@
+SVN_APR_INCLUDES = @SVN_APR_INCLUDES@
 SVN_APRUTIL_CONFIG = @SVN_APRUTIL_CONFIG@
+SVN_APRUTIL_INCLUDES = @SVN_APRUTIL_INCLUDES@
 
 MKDIR = @MKDIR@
 
