@@ -39,7 +39,7 @@ AC_DEFUN(SVN_LIB_SERF,
     elif test "$withval" != "no" ; then
       AC_MSG_NOTICE([serf library configuration])
       serf_prefix=$withval
-      for serf_major in serf-1 serf-0; do
+      for serf_major in serf-2 serf-1 serf-0; do
         if ! test -d $serf_prefix/include/$serf_major; then continue; fi
         save_cppflags="$CPPFLAGS"
         CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES -I$serf_prefix/include/$serf_major"
