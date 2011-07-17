@@ -1185,7 +1185,8 @@ $(SVN_OBJDIR)/.bindings-compiled: $(SVN_OBJDIR)/.installed
 				make swig-py; \
 	fi
 	cd $(svn_builddir) && \
-		PATH=$(PREFIX)/ruby/bin:$$PATH make swig-rb
+		env PATH=$(PREFIX)/ruby/bin:$$PATH \
+		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) make swig-rb
 	if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
 			&& make swig-pl; \
@@ -1203,7 +1204,8 @@ $(SVN_OBJDIR)/.bindings-installed: $(SVN_OBJDIR)/.bindings-compiled
 		  	make install-swig-py; \
 	fi
 	cd $(svn_builddir) && \
-		PATH=$(PREFIX)/ruby/bin:$$PATH make install-swig-rb
+		env PATH=$(PREFIX)/ruby/bin:$$PATH \
+		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) make install-swig-rb
 	if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
 	    && make install-swig-pl-lib; \
