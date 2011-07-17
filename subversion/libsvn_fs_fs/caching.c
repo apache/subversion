@@ -289,7 +289,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        svn_fs_fs__dag_serialize,
                        svn_fs_fs__dag_deserialize,
                        APR_HASH_KEY_STRING,
-                       apr_pstrcat(pool, prefix, "DAG", NULL),
+                       apr_pstrcat(pool, prefix, "DAG", (char *)NULL),
                        fs->pool));
 
   SVN_ERR(init_callbacks(ffd->rev_node_cache, fs, no_handler, pool));
