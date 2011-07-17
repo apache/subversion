@@ -1456,7 +1456,7 @@ endif
 	@echo "sqlite:     $(SQLITE_VER)"
 	@echo "openssl:    `openssl version | cut -d' ' -f2`"
 	@echo "swig:       `swig -version | grep Version | cut -d' ' -f3`"
-	@echo "python:     `python --version 2>&1 | cut -d' ' -f2`"
+	@echo "python:     $(PYTHON_VER)"
 	@echo "perl:       `eval \`perl -V:version\`; echo $$version`"
 	@echo "ruby:       $(RUBY_VER)"
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
