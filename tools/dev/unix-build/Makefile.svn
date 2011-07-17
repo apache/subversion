@@ -1002,6 +1002,7 @@ endif
 $(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved
 	cd $(PYTHON_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		LDFLAGS="-Wl,-rpath=$(PREFIX)/python/lib" \
 		$(PYTHON_SRCDIR)/configure \
 		--prefix=$(PREFIX)/python \
 		--enable-shared \
