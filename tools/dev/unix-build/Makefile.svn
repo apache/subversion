@@ -1392,7 +1392,7 @@ svn-check-swig-pl:
 	fi
 
 svn-check-swig-py:
-	(cd $(svn_builddir) && \
+	-(cd $(svn_builddir) && \
 		env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 		make check-swig-py 2>&1) | \
 			tee $(svn_builddir)/tests.log.bindings.py; \
