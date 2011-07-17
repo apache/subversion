@@ -1339,7 +1339,8 @@ define do_check
 -cd $(svn_builddir) && for fs in fsfs bdb; do \
     echo "Begin test: $(subst svn-check-,,$@) x $$fs"; \
     test -d "$(RAMDISK)/tmp" && export TMPDIR="$(RAMDISK)/tmp"; \
-    make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) $1 FS_TYPE=$$fs; \
+    env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+        make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) $1 FS_TYPE=$$fs; \
     for log in tests.log fails.log; do \
         test -f $$log && mv -f $$log $$log.$@-$$fs; \
     done; \
