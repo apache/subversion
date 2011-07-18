@@ -548,7 +548,7 @@ DIR=`pwd`
 
   def _get_all_lib_deps(self, target_name, libdep_cache, paths):
     if not target_name in libdep_cache:
-      libs = {}
+      libs = set()
       path = None
       if target_name in self.sections:
         section = self.sections[target_name]
@@ -557,11 +557,10 @@ DIR=`pwd`
         if opt_libs:
           for lib_name in opt_libs.split():
             if lib_name.startswith('libsvn_'):
-              libs[lib_name] = True
+              libs.add(lib_name)
             for lib in self._get_all_lib_deps(lib_name, libdep_cache, paths):
-              libs[lib] = True
-      libdep_cache[target_name] = libs.keys()[:]
-      libdep_cache[target_name].sort()
+              libs.add(lib)
+      libdep_cache[target_name] = sorted(libs)
     return libdep_cache[target_name]
 
 class UnknownDependency(Exception):
