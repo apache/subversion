@@ -3196,9 +3196,8 @@ fix_deleted_subtree_ranges(const char *url1,
    inherited mergeinfo describes non-existent paths, then set
    *INVALID_INHERITED_MERGEINFO to an empty hash.
 
-   RA_SESSION is an open session that points to TARGET_ABSPATH's repository
-   location or to the location of one of TARGET_ABSPATH's parents.  It may
-   be temporarily reparented.
+   RA_SESSION is an open session that may be temporarily reparented as
+   needed by this function.
 
    RESULT_POOL is used to allocate *INVALID_INHERITED_MERGEINFO, SCRATCH_POOL
    is used for any temporary allocations. */
@@ -3260,8 +3259,12 @@ get_invalid_inherited_mergeinfo(svn_mergeinfo_t *invalid_inherited_mergeinfo,
                                         repos_raw_inherited, FALSE,
                                         result_pool, scratch_pool));
         }
-      SVN_ERR(svn_client__ensure_ra_session_url(&session_url, ra_session,
-                                                session_url, scratch_pool));
+
+      /* If we needed to temporarily reparent RA_SESSION, then point it
+         back to its original URL. */
+      if (session_url)
+        SVN_ERR(svn_client__ensure_ra_session_url(&session_url, ra_session,
+                                                  session_url, scratch_pool));
     }
   return SVN_NO_ERROR;
 }
