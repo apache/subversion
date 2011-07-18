@@ -64,5 +64,13 @@ Candidate changes:
                    libsvn_repos/libsvn_fs token validation bug, or both;
                    see dev@)
 
+ * r1148071
+   Don't needlessly reparent a RA session to the repository root.
+   Justification:
+     Prevents possible issue #3242 'Subversion demands unnecessary access
+     to parent directories' problems.
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
