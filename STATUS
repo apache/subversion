@@ -53,7 +53,7 @@ Candidate changes:
      make reintegrate merges more tolerant of subtree mergeinfo, see
      http://subversion.tigris.org/issues/show_bug.cgi?id=3957#desc8
    Votes:
-     +1: pburba
+     +1: pburba, rhuijben
 
 Approved changes:
 =================
