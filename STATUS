@@ -60,7 +60,9 @@ Candidate changes:
    Justification:
      (zhakov, please fill in)
    Votes:
-     +0: danielsh (pending justification)
+     -0: danielsh (pending clarification whether it's a mod_dav_svn bug,
+                   libsvn_repos/libsvn_fs token validation bug, or both;
+                   see dev@)
 
 Approved changes:
 =================
