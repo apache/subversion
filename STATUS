@@ -51,6 +51,18 @@ Candidate changes:
                    libsvn_repos/libsvn_fs token validation bug, or both;
                    see dev@)
 
+ * r1148424
+   Resolve issue 3963, 'svn update -r{R>HEAD}' hangs client over ra_svn.
+   Justification:
+     Subversion and svnserve shouldn't hang waiting for IO that will
+     never come when a user passes a revision that hasn't been committed
+     yet.
+   Votes:
+     +0.5: rhuijben (I think this patch is ok as it resolves the problem
+                     and fixes the error reporting. But I like to see some
+                     confirmation from an ra_svn developer that this is the
+                     right way to fix this problem)
+
 Approved changes:
 =================
 
