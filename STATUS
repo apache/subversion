@@ -42,19 +42,6 @@ Candidate changes:
    Votes:
      +0: danielsh
 
- * r1146121, r1146870
-   Fix issue #3957 'reintegrate fails with no subtree mergeinfo on source'.
-   Justification:
-     Fixes an obvious bug in the issue #3242 fix (r1146870), albeit a bug
-     with no readily apparent manifestation on 1.7.x.
-   Notes:
-     r1146121 is a test, r1146870 is the fix.  The new test only failed on
-     1.6.x.  It doesn't fail on 1.7.x because of other changes in 1.7 which
-     make reintegrate merges more tolerant of subtree mergeinfo, see
-     http://subversion.tigris.org/issues/show_bug.cgi?id=3957#desc8
-   Votes:
-     +1: pburba, rhuijben
-
  * r1147882
    Convert (pre-lock hook)-specified lock tokens to UTF-8.
    Justification:
@@ -74,3 +61,16 @@ Candidate changes:
 
 Approved changes:
 =================
+
+ * r1146121, r1146870
+   Fix issue #3957 'reintegrate fails with no subtree mergeinfo on source'.
+   Justification:
+     Fixes an obvious bug in the issue #3242 fix (r1146870), albeit a bug
+     with no readily apparent manifestation on 1.7.x.
+   Notes:
+     r1146121 is a test, r1146870 is the fix.  The new test only failed on
+     1.6.x.  It doesn't fail on 1.7.x because of other changes in 1.7 which
+     make reintegrate merges more tolerant of subtree mergeinfo, see
+     http://subversion.tigris.org/issues/show_bug.cgi?id=3957#desc8
+   Votes:
+     +1: pburba, rhuijben, philip
