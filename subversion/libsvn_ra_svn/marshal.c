@@ -44,6 +44,7 @@
 
 #include "private/svn_string_private.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_error_private.h"
 
 #define svn_iswhitespace(c) ((c) == ' ' || (c) == '\n')
 
@@ -1096,7 +1097,14 @@ svn_error_t *svn_ra_svn_write_cmd_failure(svn_ra_svn_conn_t *conn,
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
   for (; err; err = err->child)
     {
-      const char *msg = svn_err_best_message(err, buffer, sizeof(buffer));
+      const char *msg;
+
+#ifdef SVN_DEBUG
+      if (svn_error__is_tracing_link(err))
+        msg = err->message;
+      else
+#endif
+        msg = svn_err_best_message(err, buffer, sizeof(buffer));
 
       /* The message string should have been optional, but we can't
          easily change that, so marshal nonexistent messages as "". */
