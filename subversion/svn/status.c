@@ -68,8 +68,15 @@ combined_status(const svn_client_status_t *status)
 
   switch (status->node_status)
     {
-      case svn_wc_status_modified:
       case svn_wc_status_conflicted:
+        if (!status->versioned && status->conflicted)
+          {
+            /* Report unversioned tree conflict victims as missing: '!' */
+            new_status = svn_wc_status_missing;
+            break;
+          }
+        /* fall through */
+      case svn_wc_status_modified:
         /* This value might be the property status */
         new_status = status->text_status;
         break;
@@ -158,22 +165,32 @@ print_status(const char *path,
       svn_boolean_t text_conflicted;
       svn_boolean_t prop_conflicted;
       svn_boolean_t tree_conflicted;
-      svn_error_t *err;
 
-      err = svn_wc_conflicted_p3(&text_conflicted,
-                                 &prop_conflicted,
-                                 &tree_conflicted, ctx->wc_ctx,
-                                 local_abspath, pool);
-
-      if (err && err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
+      if (status->versioned)
         {
-          svn_error_clear(err);
-          text_conflicted = FALSE;
-          prop_conflicted = FALSE;
-          tree_conflicted = FALSE;
+          svn_error_t *err;
+
+          err = svn_wc_conflicted_p3(&text_conflicted,
+                                     &prop_conflicted,
+                                     &tree_conflicted, ctx->wc_ctx,
+                                     local_abspath, pool);
+
+          if (err && err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
+            {
+              svn_error_clear(err);
+              text_conflicted = FALSE;
+              prop_conflicted = FALSE;
+              tree_conflicted = FALSE;
+            }
+          else
+            SVN_ERR(err);
         }
       else
-        SVN_ERR(err);
+        {
+          text_conflicted = FALSE;
+          prop_conflicted = FALSE;
+          tree_conflicted = TRUE;
+        }
 
       if (tree_conflicted)
         {

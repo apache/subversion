@@ -89,7 +89,8 @@ get_wc_prop(void *baton,
             apr_pool_t *pool)
 {
   callback_baton_t *cb = baton;
-  const char *local_abspath;
+  const char *local_abspath = NULL;
+  svn_error_t *err;
 
   *value = NULL;
 
@@ -101,29 +102,39 @@ get_wc_prop(void *baton,
       for (i = 0; i < cb->commit_items->nelts; i++)
         {
           svn_client_commit_item3_t *item
-            = APR_ARRAY_IDX(cb->commit_items, i,
-                            svn_client_commit_item3_t *);
+            = APR_ARRAY_IDX(cb->commit_items, i, svn_client_commit_item3_t *);
 
           if (! strcmp(relpath, item->session_relpath))
             {
               SVN_ERR_ASSERT(svn_dirent_is_absolute(item->path));
-              return svn_error_trace(svn_wc_prop_get2(value, cb->ctx->wc_ctx,
-                                                       item->path, name,
-                                                       pool, pool));
+              local_abspath = item->path;
+              break;
             }
         }
 
-      return SVN_NO_ERROR;
+      /* Commits can only query relpaths in the commit_items list
+         since the commit driver traverses paths as they are, or will
+         be, in the repository.  Non-commits query relpaths in the
+         working copy. */
+      if (! local_abspath)
+        return SVN_NO_ERROR;
     }
 
   /* If we don't have a base directory, then there are no properties. */
   else if (cb->base_dir_abspath == NULL)
     return SVN_NO_ERROR;
 
-  local_abspath = svn_dirent_join(cb->base_dir_abspath, relpath, pool);
+  else
+    local_abspath = svn_dirent_join(cb->base_dir_abspath, relpath, pool);
 
-  return svn_error_trace(svn_wc_prop_get2(value, cb->ctx->wc_ctx,
-                                           local_abspath, name, pool, pool));
+  err = svn_wc_prop_get2(value, cb->ctx->wc_ctx, local_abspath, name,
+                         pool, pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      err = NULL;
+    }
+  return svn_error_trace(err);
 }
 
 /* This implements the 'svn_ra_push_wc_prop_func_t' interface. */
@@ -194,13 +205,13 @@ set_wc_prop(void *baton,
      Unfortunately, we don't have a clean mechanism for doing that
      here, so we just set the property and hope for the best. */
   return svn_error_trace(svn_wc_prop_set4(cb->ctx->wc_ctx, local_abspath,
-                                           name,
-                                           value, svn_depth_empty,
-                                           TRUE /* skip_checks */,
-                                           NULL /* changelist_filter */,
-                                           NULL, NULL /* cancellation */,
-                                           NULL, NULL /* notification */,
-                                           pool));
+                                          name,
+                                          value, svn_depth_empty,
+                                          TRUE /* skip_checks */,
+                                          NULL /* changelist_filter */,
+                                          NULL, NULL /* cancellation */,
+                                          NULL, NULL /* notification */,
+                                          pool));
 }
 
 

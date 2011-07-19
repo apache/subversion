@@ -105,7 +105,6 @@ if test `expr $apr_version : 2` -ne 0; then
   AC_SUBST(SVN_APRUTIL_INCLUDES)
   AC_SUBST(SVN_APRUTIL_CONFIG, ["$apu_config"])
   AC_SUBST(SVN_APRUTIL_LIBS)
-  AC_SUBST(SVN_APRUTIL_PREFIX)
 else
   SVN_LT_SOVERSION="-version-info 0"
   APU_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
@@ -215,15 +214,21 @@ AC_DEFINE_UNQUOTED(SVN_LOCALE_DIR, "${svn_localedir}",
                    [Defined to be the path to the installed locale dirs])
 
 dnl Check for libtool -- we'll definitely need it for all our shared libs!
-AC_ARG_WITH(custom-libtool,
-AS_HELP_STRING([--with-custom-libtool=PATH],
-               [Specify the command to run libtool]),
-               [ AC_MSG_NOTICE([using $withval as libtool])
-                 sh_libtool="$withval" ],
-               [ AC_MSG_NOTICE([using APR's libtool])
-                 sh_libtool="`$apr_config --apr-libtool`" ])
-LIBTOOL="$sh_libtool"
-SVN_LIBTOOL="$sh_libtool"
+AC_MSG_NOTICE([configuring libtool now])
+ifdef([LT_INIT], [LT_INIT], [AC_PROG_LIBTOOL])
+AC_ARG_ENABLE(experimental-libtool,
+  AS_HELP_STRING([--enable-experimental-libtool],[Use APR's libtool]),
+  [experimental_libtool=$enableval],[experimental_libtool=no])
+
+if test "$experimental_libtool" = "yes"; then
+  echo "using APR's libtool"
+  sh_libtool="`$apr_config --apr-libtool`"
+  LIBTOOL="$sh_libtool"
+  SVN_LIBTOOL="$sh_libtool"
+else
+  sh_libtool="$abs_builddir/libtool"
+  SVN_LIBTOOL="\$(SHELL) $sh_libtool"
+fi
 AC_SUBST(SVN_LIBTOOL)
 
 dnl Determine the libtool version
@@ -1125,12 +1130,20 @@ SVN_CHECK_JDK($JAVA_OLDEST_WORKING_VER)
 
 AC_PATH_PROG(PERL, perl, none)
 
-AC_PATH_PROGS(RUBY, "$RUBY" ruby ruby1.9 ruby19 ruby1.8 ruby18, none)
+if test -n "$RUBY"; then
+  AC_PATH_PROG(RUBY, "$RUBY", none)
+else
+  AC_PATH_PROGS(RUBY, ruby ruby1.8 ruby18, none)
+fi
 if test "$RUBY" != "none"; then
   AC_MSG_CHECKING([rb_hash_foreach])
   if "$RUBY" -r mkmf -e 'exit(have_func("rb_hash_foreach") ? 0 : 1)' >/dev/null; then
     AC_MSG_RESULT([yes])
-    AC_PATH_PROGS(RDOC, "$RDOC" rdoc rdoc1.9 rdoc19 rdoc1.8 rdoc18, none)
+    if test -n "$RDOC"; then
+      AC_PATH_PROG(RDOC, "$RDOC", none)
+    else
+      AC_PATH_PROGS(RDOC, rdoc rdoc1.8 rdoc18, none)
+    fi
     AC_CACHE_CHECK([for Ruby major version], [svn_cv_ruby_major],[
     svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(MAJOR))'`"
     ])
@@ -1143,6 +1156,13 @@ if test "$RUBY" != "none"; then
 
     AC_SUBST(RUBY_MAJOR)
     AC_SUBST(RUBY_MINOR)
+    if test ! \( "$RUBY_MAJOR" -eq "1" -a "$RUBY_MINOR" -eq "8" \); then
+      # Disallow Ruby 1.9 or later until the binding tests get fixed
+      # to run with those versions.
+      RUBY="none"
+      AC_MSG_WARN([The detected Ruby is too new for Subversion to use])
+      AC_MSG_WARN([Only 1.8.x releases are supported at this time])
+    fi
   else
     AC_MSG_RESULT([no])
     RUBY="none"

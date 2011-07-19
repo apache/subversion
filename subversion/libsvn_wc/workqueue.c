@@ -87,9 +87,9 @@ get_and_record_fileinfo(svn_wc__db_t *db,
     }
 
   return svn_error_trace(svn_wc__db_global_record_fileinfo(
-                            db, local_abspath,
-                            dirent->filesize, dirent->mtime,
-                            scratch_pool));
+                           db, local_abspath,
+                           dirent->filesize, dirent->mtime,
+                           scratch_pool));
 }
 
 
@@ -737,7 +737,35 @@ run_file_install(svn_wc__db_t *db,
 
   /* All done. Move the file into place.  */
   /* ### fix this. we should delay the rename.  */
-  SVN_ERR(svn_io_file_rename(dst_abspath, local_abspath, scratch_pool));
+
+  {
+    svn_error_t *err;
+
+    err = svn_io_file_rename(dst_abspath, local_abspath, scratch_pool);
+
+    /* With a single db we might want to install files in a missing directory.
+       Simply trying this scenario on error won't do any harm and at least
+       one user reported this problem on IRC. */
+    if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+      {
+        svn_error_t *err2;
+
+        err2 = svn_io_make_dir_recursively(svn_dirent_dirname(dst_abspath,
+                                                              scratch_pool),
+                                           scratch_pool);
+
+        if (err2)
+          /* Creating directory didn't work: Return all errors */
+          return svn_error_trace(svn_error_compose_create(err, err2));
+        else
+          /* We could create a directory: retry install */
+          svn_error_clear(err);
+
+        SVN_ERR(svn_io_file_rename(dst_abspath, local_abspath, scratch_pool));
+      }
+    else
+      SVN_ERR(err);
+  }
 
   /* Tweak the on-disk file according to its properties.  */
   if (props
@@ -828,7 +856,7 @@ run_file_remove(svn_wc__db_t *db,
 
   /* Remove the path, no worrying if it isn't there.  */
   return svn_error_trace(svn_io_remove_file2(local_abspath, TRUE,
-                                              scratch_pool));
+                                             scratch_pool));
 }
 
 
@@ -1204,8 +1232,8 @@ run_record_fileinfo(svn_wc__db_t *db,
 
 
   return svn_error_trace(get_and_record_fileinfo(db, local_abspath,
-                                                  TRUE /* ignore_enoent */,
-                                                  scratch_pool));
+                                                 TRUE /* ignore_enoent */,
+                                                 scratch_pool));
 }
 
 
@@ -1379,9 +1407,9 @@ run_set_property_conflict_marker(svn_wc__db_t *db,
 
   return svn_error_trace(
           svn_wc__db_temp_op_set_property_conflict_marker_file(db,
-                                                                local_abspath,
-                                                                prej_abspath,
-                                                                scratch_pool));
+                                                               local_abspath,
+                                                               prej_abspath,
+                                                               scratch_pool));
 }
 
 svn_error_t *

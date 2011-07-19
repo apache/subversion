@@ -2110,7 +2110,7 @@ fs_copy(svn_fs_root_t *from_root,
         apr_pool_t *pool)
 {
   return svn_error_trace(copy_helper(from_root, from_path, to_root, to_path,
-                                    TRUE, pool));
+                                     TRUE, pool));
 }
 
 
@@ -2127,7 +2127,7 @@ fs_revision_link(svn_fs_root_t *from_root,
     return SVN_FS__NOT_TXN(to_root);
 
   return svn_error_trace(copy_helper(from_root, path, to_root, path,
-                                      FALSE, pool));
+                                     FALSE, pool));
 }
 
 
@@ -3105,7 +3105,6 @@ history_prev(void *baton, apr_pool_t *pool)
   dag_node_t *node;
   svn_fs_root_t *root;
   svn_boolean_t reported = fhd->is_interesting;
-  svn_boolean_t retry = FALSE;
   svn_revnum_t copyroot_rev;
   const char *copyroot_path;
 
@@ -3224,6 +3223,8 @@ history_prev(void *baton, apr_pool_t *pool)
      'copy-style' history object. */
   if (src_path && SVN_IS_VALID_REVNUM(src_rev))
     {
+      svn_boolean_t retry = FALSE;
+
       /* It's possible for us to find a copy location that is the same
          as the history point we've just reported.  If that happens,
          we simply need to take another trip through this history

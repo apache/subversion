@@ -36,13 +36,17 @@
 
 # Stuff we need
 import os
+import re
 import sys
+import glob
 import shutil
 import urllib2
 import hashlib
 import tarfile
 import logging
 import datetime
+import operator
+import itertools
 import subprocess
 import argparse       # standard in Python 2.7
 
@@ -64,10 +68,86 @@ swig_ver = '2.0.4'
 
 # Some constants
 repos = 'http://svn.apache.org/repos/asf/subversion'
+people_host = 'minotaur.apache.org'
+people_dist_dir = '/www/www.apache.org/dist/subversion'
 
 
 #----------------------------------------------------------------------
 # Utility functions
+
+class Version(object):
+    regex = re.compile('(\d+).(\d+).(\d+)(?:-(?:(rc|alpha|beta)(\d+)))?')
+
+    def __init__(self, ver_str):
+        # Special case the 'trunk-nightly' version
+        if ver_str == 'trunk-nightly':
+            self.major = None
+            self.minor = None
+            self.patch = None
+            self.pre = 'nightly'
+            self.pre_num = None
+            self.base = 'nightly'
+            return
+
+        match = self.regex.search(ver_str)
+
+        if not match:
+            raise RuntimeError("Bad version string '%s'" % ver_str)
+
+        self.major = int(match.group(1))
+        self.minor = int(match.group(2))
+        self.patch = int(match.group(3))
+
+        if match.group(4):
+            self.pre = match.group(4)
+            self.pre_num = int(match.group(5))
+        else:
+            self.pre = None
+            self.pre_num = None
+
+        self.base = '%d.%d.%d' % (self.major, self.minor, self.patch)
+
+    def is_prerelease(self):
+        return self.pre != None
+
+    def __lt__(self, that):
+        if self.major < that.major: return True
+        if self.major > that.major: return False
+
+        if self.minor < that.minor: return True
+        if self.minor > that.minor: return False
+
+        if self.patch < that.patch: return True
+        if self.patch > that.patch: return False
+
+        if not self.pre and not that.pre: return False
+        if not self.pre and that.pre: return False
+        if self.pre and not that.pre: return True
+
+        # We are both pre-releases
+        if self.pre != that.pre:
+            return self.pre < that.pre
+        else:
+            return self.pre_num < that.pre_num
+
+    def __str(self):
+        if self.pre:
+            if self.pre == 'nightly':
+                return 'nightly'
+            else:
+                extra = '-%s%d' % (self.pre, self.pre_num)
+        else:
+            extra = ''
+
+        return self.base + extra
+
+    def __repr__(self):
+
+        return "Version('%s')" % self.__str()
+
+    def __str__(self):
+        return self.__str()
+
 
 def get_prefix(base_dir):
     return os.path.join(base_dir, 'prefix')
@@ -108,16 +188,20 @@ def download_file(url, target):
     target_file = open(target, 'w')
     target_file.write(response.read())
 
+def assert_people():
+    if os.uname()[1] != people_host:
+        raise RuntimeError('Not running on expected host "%s"' % people_host)
+
 #----------------------------------------------------------------------
 # Cleaning up the environment
 
-def cleanup(base_dir, args):
+def cleanup(args):
     'Remove generated files and folders.'
     logging.info('Cleaning')
 
-    shutil.rmtree(get_prefix(base_dir), True)
-    shutil.rmtree(get_tempdir(base_dir), True)
-    shutil.rmtree(get_deploydir(base_dir), True)
+    shutil.rmtree(get_prefix(args.base_dir), True)
+    shutil.rmtree(get_tempdir(args.base_dir), True)
+    shutil.rmtree(get_deploydir(args.base_dir), True)
 
 
 #----------------------------------------------------------------------
@@ -230,20 +314,21 @@ class SwigDep(RollDep):
         return self.have_usable()
 
 
-def build_env(base_dir, args):
+def build_env(args):
     'Download prerequisites for a release and prepare the environment.'
     logging.info('Creating release environment')
 
     try:
-        os.mkdir(get_prefix(base_dir))
-        os.mkdir(get_tempdir(base_dir))
+        os.mkdir(get_prefix(args.base_dir))
+        os.mkdir(get_tempdir(args.base_dir))
     except OSError:
         if not args.use_existing:
             raise
 
-    autoconf = AutoconfDep(base_dir, args.use_existing, args.verbose)
-    libtool = LibtoolDep(base_dir, args.use_existing, args.verbose)
-    swig = SwigDep(base_dir, args.use_existing, args.verbose, args.sf_mirror)
+    autoconf = AutoconfDep(args.base_dir, args.use_existing, args.verbose)
+    libtool = LibtoolDep(args.base_dir, args.use_existing, args.verbose)
+    swig = SwigDep(args.base_dir, args.use_existing, args.verbose,
+                   args.sf_mirror)
 
     # iterate over our rolling deps, and build them if needed
     for dep in [autoconf, libtool, swig]:
@@ -256,24 +341,22 @@ def build_env(base_dir, args):
 #----------------------------------------------------------------------
 # Create release artifacts
 
-def roll_tarballs(base_dir, args):
+def roll_tarballs(args):
     'Create the release artifacts.'
     extns = ['zip', 'tar.gz', 'tar.bz2']
-    version_base = args.version.split('-')[0]
-    version_extra = args.version.split('-')[1]
 
     if args.branch:
         branch = args.branch
     else:
-        branch = version_base[:-1] + 'x'
+        branch = 'branches/' + args.version.base[:-1] + 'x'
 
     logging.info('Rolling release %s from branch %s@%d' % (args.version,
                                                            branch, args.revnum))
 
     # Ensure we've got the appropriate rolling dependencies available
-    autoconf = AutoconfDep(base_dir, False, args.verbose)
-    libtool = LibtoolDep(base_dir, False, args.verbose)
-    swig = SwigDep(base_dir, False, args.verbose, None)
+    autoconf = AutoconfDep(args.base_dir, False, args.verbose)
+    libtool = LibtoolDep(args.base_dir, False, args.verbose)
+    swig = SwigDep(args.base_dir, False, args.verbose, None)
 
     for dep in [autoconf, libtool, swig]:
         if not dep.have_usable():
@@ -282,7 +365,7 @@ def roll_tarballs(base_dir, args):
     # Make sure CHANGES is sync'd
     if branch != 'trunk':
         trunk_CHANGES = '%s/trunk/CHANGES@%d' % (repos, args.revnum)
-        branch_CHANGES = '%s/branches/%s/CHANGES@%d' % (repos, branch,
+        branch_CHANGES = '%s/%s/CHANGES@%d' % (repos, branch,
                                                         args.revnum)
         proc = subprocess.Popen(['svn', 'diff', '--summarize', branch_CHANGES,
                                    trunk_CHANGES],
@@ -295,44 +378,40 @@ def roll_tarballs(base_dir, args):
             raise RuntimeError('CHANGES not synced between trunk and branch')
 
     # Create the output directory
-    if not os.path.exists(get_deploydir(base_dir)):
-        os.mkdir(get_deploydir(base_dir))
+    if not os.path.exists(get_deploydir(args.base_dir)):
+        os.mkdir(get_deploydir(args.base_dir))
 
     # For now, just delegate to dist.sh to create the actual artifacts
     extra_args = ''
-    if version_extra:
-        if version_extra.startswith('alpha'):
-            extra_args = '-alpha %s' % version_extra[5:]
-        elif version_extra.startswith('beta'):
-            extra_args = '-beta %s' % version_extra[4:]
-        elif version_extra.startswith('rc'):
-            extra_args = '-rc %s' % version_extra[2:]
-        elif version_extra.startswith('nightly'):
+    if args.version.is_prerelease():
+        if args.version.pre == 'nightly':
             extra_args = '-nightly'
+        else:
+            extra_args = '-%s %d' % (args.version.pre, args.version.pre_num)
     logging.info('Building UNIX tarballs')
     run_script(args.verbose, '%s/dist.sh -v %s -pr %s -r %d %s'
-                     % (sys.path[0], version_base, branch, args.revnum,
+                     % (sys.path[0], args.version.base, branch, args.revnum,
                         extra_args) )
     logging.info('Buildling Windows tarballs')
     run_script(args.verbose, '%s/dist.sh -v %s -pr %s -r %d -zip %s'
-                     % (sys.path[0], version_base, branch, args.revnum,
+                     % (sys.path[0], args.version.base, branch, args.revnum,
                         extra_args) )
 
     # Move the results to the deploy directory
     logging.info('Moving artifacts and calculating checksums')
     for e in extns:
-        if version_extra and version_extra.startswith('nightly'):
+        if args.version.pre == 'nightly':
             filename = 'subversion-trunk.%s' % e
         else:
             filename = 'subversion-%s.%s' % (args.version, e)
 
-        shutil.move(filename, get_deploydir(base_dir))
-        filename = os.path.join(get_deploydir(base_dir), filename)
+        shutil.move(filename, get_deploydir(args.base_dir))
+        filename = os.path.join(get_deploydir(args.base_dir), filename)
         m = hashlib.sha1()
         m.update(open(filename, 'r').read())
         open(filename + '.sha1', 'w').write(m.hexdigest())
 
-    shutil.move('svn_version.h.dist', get_deploydir(base_dir))
+    shutil.move('svn_version.h.dist', get_deploydir(args.base_dir))
 
     # And we're done!
 
@@ -340,16 +419,13 @@ def roll_tarballs(base_dir, args):
 #----------------------------------------------------------------------
 # Post the candidate release artifacts
 
-def post_candidates(base_dir, args):
+def post_candidates(args):
     'Post the generated tarballs to web-accessible directory.'
-    version_base = args.version.split('-')[0]
-    version_extra = args.version.split('-')[1]
-
     if args.target:
         target = args.target
     else:
         target = os.path.join(os.getenv('HOME'), 'public_html', 'svn',
-                              args.version)
+                              str(args.version))
 
     if args.code_name:
         dirname = args.code_name
@@ -359,14 +435,14 @@ def post_candidates(base_dir, args):
     if not os.path.exists(target):
         os.makedirs(target)
 
-    data = { 'version'      : args.version,
+    data = { 'version'      : str(args.version),
              'revnum'       : args.revnum,
              'dirname'      : dirname,
            }
 
     # Choose the right template text
-    if version_extra:
-        if version_extra.startswith('nightly'):
+    if args.version.is_prerelease():
+        if args.version.pre == 'nightly':
             template_filename = 'nightly-candidates.ezt'
         else:
             template_filename = 'rc-candidates.ezt'
@@ -380,26 +456,53 @@ def post_candidates(base_dir, args):
     logging.info('Moving tarballs to %s' % os.path.join(target, dirname))
     if os.path.exists(os.path.join(target, dirname)):
         shutil.rmtree(os.path.join(target, dirname))
-    shutil.copytree(get_deploydir(base_dir), os.path.join(target, dirname))
+    shutil.copytree(get_deploydir(args.base_dir), os.path.join(target, dirname))
+
+
+#----------------------------------------------------------------------
+# Clean dist
+
+def clean_dist(args):
+    'Clean the distribution directory of all but the most recent artifacts.'
+
+    regex = re.compile('subversion-(\d+).(\d+).(\d+)(?:-(?:(rc|alpha|beta)(\d+)))?')
+
+    if not args.dist_dir:
+        assert_people()
+        args.dist_dir = people_dist_dir
+
+    logging.info('Cleaning dist dir \'%s\'' % args.dist_dir)
+
+    filenames = glob.glob(os.path.join(args.dist_dir, 'subversion-*.tar.gz'))
+    versions = []
+    for filename in filenames:
+        versions.append(Version(filename))
+
+    for k, g in itertools.groupby(sorted(versions),
+                                  lambda x: (x.major, x.minor)):
+        releases = list(g)
+        logging.info("Saving release '%s'", releases[-1])
+
+        for r in releases[:-1]:
+            for filename in glob.glob(os.path.join(args.dist_dir,
+                                                   'subversion-%s.*' % r)):
+                logging.info("Removing '%s'" % filename)
+                os.remove(filename)
 
 
 #----------------------------------------------------------------------
 # Write announcements
 
-def write_news(base_dir, args):
+def write_news(args):
     'Write text for the Subversion website.'
-    version_base = args.version.split('-')[0]
-    version_extra = args.version.split('-')[1]
-
     data = { 'date' : datetime.date.today().strftime('%Y%m%d'),
              'date_pres' : datetime.date.today().strftime('%Y-%m-%d'),
-             'version' : args.version,
-             'version_base' : version_base[0:3],
+             'version' : str(args.version),
+             'version_base' : args.version.base,
            }
 
-    if version_extra:
-        if version_extra.startswith('alpha'):
-            template_filename = 'rc-news.ezt'
+    if args.version.is_prerelease():
+        template_filename = 'rc-news.ezt'
     else:
         template_filename = 'stable-news.ezt'
 
@@ -408,8 +511,42 @@ def write_news(base_dir, args):
     template.generate(sys.stdout, data)
 
 
-def announce(base_dir, args):
+def get_sha1info(args):
+    'Return a list of sha1 info for the release'
+    sha1s = glob.glob(os.path.join(get_deploydir(args.base_dir), '*.sha1'))
+
+    class info(object):
+        pass
+
+    sha1info = []
+    for s in sha1s:
+        i = info()
+        i.filename = os.path.basename(s)[:-5]
+        i.sha1 = open(s, 'r').read()
+        sha1info.append(i)
+
+    return sha1info
+
+
+def write_announcement(args):
     'Write the release announcement.'
+    sha1info = get_sha1info(args)
+
+    data = { 'version'              : str(args.version),
+             'sha1info'             : sha1info,
+             'siginfo'              : open('getsigs-output', 'r').read(),
+             'major-minor'          : args.version.base[:3],
+             'major-minor-patch'    : args.version.base,
+           }
+
+    if args.version.is_prerelease():
+        template_filename = 'rc-release-ann.ezt'
+    else:
+        template_filename = 'stable-release-ann.ezt'
+
+    template = ezt.Template(compress_whitespace = False)
+    template.parse(get_tmplfile(template_filename).read())
+    template.generate(sys.stdout, data)
 
 
 #----------------------------------------------------------------------
@@ -448,7 +585,7 @@ def main():
     subparser = subparsers.add_parser('roll',
                     help='''Create the release artifacts.''')
     subparser.set_defaults(func=roll_tarballs)
-    subparser.add_argument('version',
+    subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('revnum', type=int,
                     help='''The revision number to base the release on.''')
@@ -461,7 +598,7 @@ def main():
                             The default location is somewhere in ~/public_html.
                             ''')
     subparser.set_defaults(func=post_candidates)
-    subparser.add_argument('version',
+    subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('revnum', type=int,
                     help='''The revision number to base the release on.''')
@@ -471,12 +608,29 @@ def main():
                     help='''A whimsical name for the release, used only for
                             naming the download directory.''')
 
+    # The clean-dist subcommand
+    subparser = subparsers.add_parser('clean-dist',
+                    help='''Clean the distribution directory (and mirrors) of
+                            all but the most recent MAJOR.MINOR release.  If no
+                            dist-dir is given, this command will assume it is
+                            running on people.apache.org.''')
+    subparser.set_defaults(func=clean_dist)
+    subparser.add_argument('--dist-dir',
+                    help='''The directory to clean.''')
+
     # The write-news subcommand
     subparser = subparsers.add_parser('write-news',
                     help='''Output to stdout template text for use in the news
                             section of the Subversion website.''')
     subparser.set_defaults(func=write_news)
-    subparser.add_argument('version',
+    subparser.add_argument('version', type=Version,
+                    help='''The release label, such as '1.7.0-alpha1'.''')
+
+    subparser = subparsers.add_parser('write-announcement',
+                    help='''Output to stdout template text for the emailed
+                            release announcement.''')
+    subparser.set_defaults(func=write_announcement)
+    subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
 
     # A meta-target
@@ -490,7 +644,7 @@ def main():
 
     # first, process any global operations
     if args.clean:
-        cleanup(args.base_dir, args)
+        cleanup(args)
 
     # Set up logging
     logger = logging.getLogger()
@@ -504,7 +658,7 @@ def main():
                                                             + os.environ['PATH']
 
     # finally, run the subcommand, and give it the parsed arguments
-    args.func(args.base_dir, args)
+    args.func(args)
 
 
 if __name__ == '__main__':

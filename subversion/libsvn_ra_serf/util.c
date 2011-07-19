@@ -102,6 +102,9 @@ struct svn_ra_serf__pending_t {
    into a temporary file.  */
 #define SPILL_SIZE 1000000
 
+/* See notes/ra-serf-testing.txt for some information on testing this
+   new "paused" feature.  */
+
 
 
 static const apr_uint32_t serf_failure_map[][2] =
@@ -197,7 +200,9 @@ ssl_server_cert(void *baton, int failures,
   const char *realmstring;
   apr_uint32_t svn_failures;
   apr_hash_t *issuer, *subject, *serf_cert;
+  apr_array_header_t *san;
   void *creds;
+  int found_matching_hostname = 0;
 
   /* Implicitly approve any non-server certs. */
   if (serf_ssl_cert_depth(cert) > 0)
@@ -211,6 +216,7 @@ ssl_server_cert(void *baton, int failures,
   serf_cert = serf_ssl_cert_certificate(cert, scratch_pool);
 
   cert_info.hostname = apr_hash_get(subject, "CN", APR_HASH_KEY_STRING);
+  san = apr_hash_get(serf_cert, "subjectAltName", APR_HASH_KEY_STRING);
   cert_info.fingerprint = apr_hash_get(serf_cert, "sha1", APR_HASH_KEY_STRING);
   if (! cert_info.fingerprint)
     cert_info.fingerprint = apr_pstrdup(scratch_pool, "<unknown>");
@@ -227,8 +233,22 @@ ssl_server_cert(void *baton, int failures,
 
   svn_failures = ssl_convert_serf_failures(failures);
 
+  /* Try to find matching server name via subjectAltName first... */
+  if (san) {
+      int i;
+      for (i = 0; i < san->nelts; i++) {
+          char *s = APR_ARRAY_IDX(san, i, char*);
+          if (apr_fnmatch(s, conn->hostinfo,
+                          APR_FNM_PERIOD) == APR_SUCCESS) {
+              found_matching_hostname = 1;
+              cert_info.hostname = s;
+              break;
+          }
+      }
+  }
+
   /* Match server certificate CN with the hostname of the server */
-  if (cert_info.hostname)
+  if (!found_matching_hostname && cert_info.hostname)
     {
       if (apr_fnmatch(cert_info.hostname, conn->hostinfo,
                       APR_FNM_PERIOD) == APR_FNM_NOMATCH)
@@ -342,6 +362,10 @@ conn_setup(apr_socket_t *sock,
       if (!conn->ssl_context)
         {
           conn->ssl_context = serf_bucket_ssl_encrypt_context_get(*read_bkt);
+
+#if SERF_VERSION_AT_LEAST(1,0,0)
+          serf_ssl_set_hostname(conn->ssl_context, conn->hostinfo);
+#endif
 
           serf_ssl_client_cert_provider_set(conn->ssl_context,
                                             svn_ra_serf__handle_client_cert,

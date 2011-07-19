@@ -610,7 +610,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
    at revision REVISION.
 
    The node's kind is described by KIND, and the reason for its absence
-   is specified by STATUS. Only three values are allowed for STATUS:
+   is specified by STATUS. Only these values are allowed for STATUS:
 
      svn_wc__db_status_server_excluded
      svn_wc__db_status_excluded
@@ -624,17 +624,17 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
    All temporary allocations will be made in SCRATCH_POOL.
 */
 svn_error_t *
-svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                const char *repos_relpath,
-                                const char *repos_root_url,
-                                const char *repos_uuid,
-                                svn_revnum_t revision,
-                                svn_wc__db_kind_t kind,
-                                svn_wc__db_status_t status,
-                                const svn_skel_t *conflict,
-                                const svn_skel_t *work_items,
-                                apr_pool_t *scratch_pool);
+svn_wc__db_base_add_excluded_node(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  const char *repos_relpath,
+                                  const char *repos_root_url,
+                                  const char *repos_uuid,
+                                  svn_revnum_t revision,
+                                  svn_wc__db_kind_t kind,
+                                  svn_wc__db_status_t status,
+                                  const svn_skel_t *conflict,
+                                  const svn_skel_t *work_items,
+                                  apr_pool_t *scratch_pool);
 
 
 /* Create a node in the BASE tree that is present in name only.
@@ -1227,7 +1227,8 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
  * properly deleted.
  *
  * Usually this operation is directly followed by a call to svn_wc__db_op_copy
- * which performs the real copy from src_abspath to dst_abspath.
+ * or svn_wc__db_op_move which performs the real copy from src_abspath to
+ * dst_abspath.
  */
 svn_error_t *
 svn_wc__db_op_copy_shadowed_layer(svn_wc__db_t *db,
@@ -1427,12 +1428,20 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 
-/* ### KFF: Would like to know behavior when dst_path already exists
-   ### and is a) a dir or b) a non-dir. */
+/* Move the node at SRC_ABSPATH (in NODES and ACTUAL_NODE tables) to
+ * DST_ABSPATH, both in DB but not necessarily in the same WC.  The parent
+ * of DST_ABSPATH must be a versioned directory.
+ *
+ * This move is NOT recursive. It simply establishes this one node, plus
+ * incomplete nodes for the children.
+ *
+ * Add WORK_ITEMS to the work queue. */
 svn_error_t *
 svn_wc__db_op_move(svn_wc__db_t *db,
                    const char *src_abspath,
                    const char *dst_abspath,
+                   const char *dst_op_root_abspath,
+                   const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool);
 
 
@@ -1817,6 +1826,7 @@ struct svn_wc__db_info_t {
   svn_revnum_t revnum;
   const char *repos_relpath;
   const char *repos_root_url;
+  const char *repos_uuid;
   svn_revnum_t changed_rev;
   const char *changed_author;
   apr_time_t changed_date;
@@ -2597,6 +2607,7 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
                                apr_hash_t *revert_props,
                                apr_hash_t *working_props,
                                int original_format,
+                               apr_int64_t wc_id,
                                apr_pool_t *scratch_pool);
 
 
@@ -2981,18 +2992,19 @@ svn_wc__db_has_switched_subtrees(svn_boolean_t *is_switched,
                                  const char *trail_url,
                                  apr_pool_t *scratch_pool);
 
-/* Set @a *absent_subtrees to a hash mapping <tt>const char *</tt> local
- * absolute paths to <tt>const char *</tt> local absolute paths for every
- * path at or under @a local_abspath in @a db which are absent (excluded
- * by authz).  If no absent paths are found then @a *absent_subtrees is set
- * to @c NULL.  Allocate the hash and all items therein from @a result_pool.
+/* Set @a *server_excluded_subtrees to a hash mapping <tt>const char *</tt>
+ * local absolute paths to <tt>const char *</tt> local absolute paths for
+ * every path at or under @a local_abspath in @a db which are excluded by
+ * the server (e.g. due to authz).  If no such paths are found then
+ * @a *server_excluded_subtrees is set to @c NULL.
+ * Allocate the hash and all items therein from @a result_pool.
  */
 svn_error_t *
-svn_wc__db_get_absent_subtrees(apr_hash_t **absent_subtrees,
-                               svn_wc__db_t *db,
-                               const char *local_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
+svn_wc__db_get_server_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
+                                        svn_wc__db_t *db,
+                                        const char *local_abspath,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool);
 
 /* Indicate in *IS_MODIFIED whether the working copy has local modifications,
  * using DB. Use SCRATCH_POOL for temporary allocations.

@@ -40,6 +40,18 @@ svn_error_t *
 svn_fs_fs__open_rep_cache(svn_fs_t *fs,
                           apr_pool_t *pool);
 
+/* Iterate all representations currently in FS's cache. */
+svn_error_t *
+svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
+                              svn_error_t *(*walker)(representation_t *rep,
+                                                     void *walker_baton,
+                                                     svn_fs_t *fs, 
+                                                     apr_pool_t *scratch_pool),
+                              void *walker_baton,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool);
+
 /* Return the representation REP in FS which has fulltext CHECKSUM.
    REP is allocated in POOL.  If the rep cache database has not been
    opened, just set *REP to NULL. */

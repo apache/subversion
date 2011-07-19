@@ -43,7 +43,7 @@ ok($repos = SVN::Repos::create("$repospath", undef, undef, undef, undef),
 my $fs = $repos->fs;
 
 my $acc = SVN::Fs::create_access('foo');
-is ($acc->get_username, 'foo');
+is($acc->get_username, 'foo');
 $fs->set_access($acc);
 
 my $txn = $fs->begin_txn($fs->youngest_rev);
@@ -54,18 +54,18 @@ print $stream 'orz';
 }
 $txn->commit;
 
-$fs->lock ('/testfile', 'hate software', 'we hate software', 0, 0, $fs->youngest_rev, 0);
+$fs->lock('/testfile', 'hate software', 'we hate software', 0, 0, $fs->youngest_rev, 0);
 
 ok(my $lock = $fs->get_lock('/testfile'));
-is ($lock->token, 'hate software');
-is ($lock->owner, 'foo');
+is($lock->token, 'hate software');
+is($lock->owner, 'foo');
 
 $acc = SVN::Fs::create_access('fnord');
-is ($acc->get_username, 'fnord');
+is($acc->get_username, 'fnord');
 $fs->set_access($acc);
 
 eval {
-$fs->lock ('/testfile', 'hate software', 'we hate software', 0, 0, $fs->youngest_rev, 0);
+$fs->lock('/testfile', 'hate software', 'we hate software', 0, 0, $fs->youngest_rev, 0);
 };
 
 like($@, qr/already locked/);

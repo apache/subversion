@@ -1132,6 +1132,43 @@ def revert_deleted_in_changelist(sbox):
                                      'revert', '-R', sbox.ospath('A'))
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
 
+def add_remove_non_existent_target(sbox):
+  "add and remove non-existent target to changelist"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  bogus_path = os.path.join(wc_dir, 'A', 'bogus')
+
+  expected_err = "svn: warning: W155010: The node '" + \
+                 re.escape(os.path.abspath(bogus_path)) + \
+                 "' was not found"
+
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'changelist', 'testlist',
+                                     bogus_path)
+
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'changelist', bogus_path,
+                                      '--remove')
+
+def add_remove_unversioned_target(sbox):
+  "add and remove unversioned target to changelist"
+
+  sbox.build(read_only = True)
+  unversioned = sbox.ospath('unversioned')
+  svntest.main.file_write(unversioned, "dummy contents", 'w+')
+
+  expected_err = "svn: warning: W155010: The node '" + \
+                 re.escape(os.path.abspath(unversioned)) + \
+                 "' was not found"
+
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'changelist', 'testlist',
+                                     unversioned)
+
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'changelist', unversioned,
+                                      '--remove')
 
 
 ########################################################################
@@ -1153,6 +1190,8 @@ test_list = [ None,
               move_added_keeps_changelist,
               change_to_dir,
               revert_deleted_in_changelist,
+              add_remove_non_existent_target,
+              add_remove_unversioned_target,
              ]
 
 if __name__ == '__main__':

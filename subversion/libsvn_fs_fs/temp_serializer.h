@@ -93,8 +93,8 @@ svn_fs_fs__deserialize_txdelta_window(void **item,
                                       apr_pool_t *pool);
 
 /**
- * Implements #svn_cache__serialize_func_t for manifests
- * (#apr_array_header_t).
+ * Implements #svn_cache__serialize_func_t for a manifest
+ * (@a in is an #apr_array_header_t of apr_off_t elements).
  */
 svn_error_t *
 svn_fs_fs__serialize_manifest(char **data,
@@ -103,8 +103,8 @@ svn_fs_fs__serialize_manifest(char **data,
                               apr_pool_t *pool);
 
 /**
- * Implements #svn_cache__deserialize_func_t for manifests
- * (#apr_array_header_t).
+ * Implements #svn_cache__deserialize_func_t for a manifest
+ * (@a *out is an #apr_array_header_t of apr_off_t elements).
  */
 svn_error_t *
 svn_fs_fs__deserialize_manifest(void **out,
@@ -167,9 +167,9 @@ svn_fs_fs__deserialize_dir_entries(void **out,
                                    apr_pool_t *pool);
 
 /**
- * Implements #svn_cache__partial_getter_func_t for a single element
- * identified by its offset in @a baton within a serialized manifest array.
- */
+ * Implements #svn_cache__partial_getter_func_t.  Set (apr_off_t) @a *out
+ * to the element indexed by (apr_int64_t) @a *baton within the
+ * serialized manifest array @a data and @a data_len. */
 svn_error_t *
 svn_fs_fs__get_sharded_offset(void **out,
                               const char *data,
@@ -180,7 +180,7 @@ svn_fs_fs__get_sharded_offset(void **out,
 /**
  * Implements #svn_cache__partial_getter_func_t for a single
  * #svn_fs_dirent_t within a serialized directory contents hash,
- * identified by its name in @a baton.
+ * identified by its name (const char @a *baton).
  */
 svn_error_t *
 svn_fs_fs__extract_dir_entry(void **out,

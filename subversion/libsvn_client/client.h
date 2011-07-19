@@ -223,7 +223,21 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
    NULL.
 
    If SESSION_URL is NULL, treat this as a magic value meaning "point
-   the RA session to the root of the repository".  */
+   the RA session to the root of the repository".
+
+   NOTE: The typical usage pattern for this functions is:
+
+       const char *old_session_url;
+       SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
+                                                 ra_session,
+                                                 new_session_url,
+                                                 pool);
+
+       [...]
+
+       if (old_session_url)
+         SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
+*/
 svn_error_t *
 svn_client__ensure_ra_session_url(const char **old_session_url,
                                   svn_ra_session_t *ra_session,
@@ -292,7 +306,7 @@ svn_client__default_walker_error_handler(const char *path,
    in *CORRECTED_URL.  (This function mirrors svn_ra_open4(), which
    see, regarding the interpretation and handling of these two parameters.)
 
-   The root of the session is specified by BASE_URL and BASE_DIR.
+   The root of the session is specified by BASE_URL and BASE_DIR_ABSPATH.
 
    Additional control parameters:
 
@@ -758,7 +772,7 @@ typedef svn_error_t *(*svn_client__check_url_kind_t)(void *baton,
                                                      svn_revnum_t revision,
                                                      apr_pool_t *scratch_pool);
 
-/* Recursively crawl a set of working copy paths (DIR_ABSPATH + each
+/* Recursively crawl a set of working copy paths (BASE_DIR_ABSPATH + each
    item in the TARGETS array) looking for commit candidates, locking
    working copy directories as the crawl progresses.  For each
    candidate found:

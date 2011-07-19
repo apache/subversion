@@ -786,8 +786,8 @@ svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
     }
 
   return svn_error_trace(open_all(adm_access, path, db, db_provided,
-                                   write_lock, levels_to_lock,
-                                   cancel_func, cancel_baton, pool));
+                                  write_lock, levels_to_lock,
+                                  cancel_func, cancel_baton, pool));
 }
 
 
@@ -1322,9 +1322,9 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
                        apr_pool_t *pool)
 {
   return svn_error_trace(open_anchor(anchor_access, target_access, target,
-                                      NULL, FALSE, path, write_lock,
-                                      levels_to_lock, cancel_func,
-                                      cancel_baton, pool));
+                                     NULL, FALSE, path, write_lock,
+                                     levels_to_lock, cancel_func,
+                                     cancel_baton, pool));
 }
 
 
@@ -1380,7 +1380,7 @@ do_close(svn_wc_adm_access_t *adm_access,
     }
 
   return svn_error_trace(close_single(adm_access, preserve_lock,
-                                       scratch_pool));
+                                      scratch_pool));
 }
 
 

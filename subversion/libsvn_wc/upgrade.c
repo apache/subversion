@@ -265,40 +265,20 @@ read_wcprops(apr_hash_t **all_wcprops,
   return svn_error_trace(svn_stream_close(stream));
 }
 
-
-/* If the versioned child (which should be a directory) exists on disk as
-   an actual directory, then add it to the array of subdirs.  */
-static svn_error_t *
-maybe_add_subdir(apr_array_header_t *subdirs,
-                 const char *dir_abspath,
-                 const char *child_name,
-                 apr_pool_t *result_pool,
-                 apr_pool_t *scratch_pool)
-{
-  const char *child_abspath = svn_dirent_join(dir_abspath, child_name,
-                                              scratch_pool);
-  svn_node_kind_t kind;
-
-  SVN_ERR(svn_io_check_path(child_abspath, &kind, scratch_pool));
-  if (kind == svn_node_dir)
-    {
-      APR_ARRAY_PUSH(subdirs, const char *) = apr_pstrdup(result_pool,
-                                                          child_abspath);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Return in CHILDREN, the list of all 1.6 versioned subdirectories
    which also exist on disk as directories.
 
    If DELETE_DIR is not NULL set *DELETE_DIR to TRUE if the directory
-   should be deleted after migrating to WC-NG, otherwise to FALSE. */
+   should be deleted after migrating to WC-NG, otherwise to FALSE.
+
+   If SKIP_MISSING is TRUE, don't add missing or obstructed subdirectories
+   to the list of children.
+   */
 static svn_error_t *
 get_versioned_subdirs(apr_array_header_t **children,
                       svn_boolean_t *delete_dir,
                       const char *dir_abspath,
+                      svn_boolean_t skip_missing,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
@@ -316,6 +296,9 @@ get_versioned_subdirs(apr_array_header_t **children,
        hi = apr_hash_next(hi))
     {
       const char *name = svn__apr_hash_index_key(hi);
+      const svn_wc_entry_t *entry = svn__apr_hash_index_val(hi);
+      const char *child_abspath;
+      svn_boolean_t hidden;
 
       /* skip "this dir"  */
       if (*name == '\0')
@@ -323,11 +306,29 @@ get_versioned_subdirs(apr_array_header_t **children,
           this_dir = svn__apr_hash_index_val(hi);
           continue;
         }
+      else if (entry->kind != svn_node_dir)
+        continue;
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(maybe_add_subdir(*children, dir_abspath, name,
-                               result_pool, iterpool));
+      /* If a directory is 'hidden' skip it as subdir */
+      SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
+      if (hidden)
+        continue;
+
+      child_abspath = svn_dirent_join(dir_abspath, name, scratch_pool);
+
+      if (skip_missing)
+        {
+          svn_node_kind_t kind;
+          SVN_ERR(svn_io_check_path(child_abspath, &kind, scratch_pool));
+
+          if (kind != svn_node_dir)
+            continue;
+        }
+
+      APR_ARRAY_PUSH(*children, const char *) = apr_pstrdup(result_pool,
+                                                            child_abspath);
     }
 
   svn_pool_destroy(iterpool);
@@ -356,6 +357,7 @@ static svn_error_t *
 get_versioned_files(const apr_array_header_t **children,
                     const char *parent_relpath,
                     svn_sqlite__db_t *sdb,
+                    apr_int64_t wc_id,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
@@ -365,7 +367,7 @@ get_versioned_files(const apr_array_header_t **children,
 
   /* ### just select 'file' children. do we need 'symlink' in the future?  */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ALL_FILES));
-  SVN_ERR(svn_sqlite__bindf(stmt, "s", parent_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, parent_relpath));
 
   /* ### 10 is based on Subversion's average of 8.5 files per versioned
      ### directory in its repository. maybe use a different value? or
@@ -536,7 +538,7 @@ svn_wc__wipe_postupgrade(const char *dir_abspath,
   if (cancel_func)
     SVN_ERR((*cancel_func)(cancel_baton));
 
-  err = get_versioned_subdirs(&subdirs, &delete_dir, dir_abspath,
+  err = get_versioned_subdirs(&subdirs, &delete_dir, dir_abspath, TRUE,
                               scratch_pool, iterpool);
   if (err)
     {
@@ -647,9 +649,9 @@ ensure_repos_info(svn_wc_entry_t *entry,
         svn_dirent_local_style(local_abspath, scratch_pool));
 
    return svn_error_trace((*repos_info_func)(&entry->repos, &entry->uuid,
-                                              repos_info_baton,
-                                              entry->url,
-                                              result_pool, scratch_pool));
+                                             repos_info_baton,
+                                             entry->url,
+                                             result_pool, scratch_pool));
 }
 
 
@@ -837,6 +839,7 @@ migrate_node_props(const char *dir_abspath,
                    const char *name,
                    svn_sqlite__db_t *sdb,
                    int original_format,
+                   apr_int64_t wc_id,
                    apr_pool_t *scratch_pool)
 {
   const char *base_abspath;  /* old name. nowadays: "pristine"  */
@@ -903,7 +906,7 @@ migrate_node_props(const char *dir_abspath,
                             sdb, new_wcroot_abspath,
                             svn_relpath_join(dir_relpath, name, scratch_pool),
                             base_props, revert_props, working_props,
-                            original_format,
+                            original_format, wc_id,
                             scratch_pool));
 }
 
@@ -914,6 +917,7 @@ migrate_props(const char *dir_abspath,
               const char *new_wcroot_abspath,
               svn_sqlite__db_t *sdb,
               int original_format,
+              apr_int64_t wc_id,
               apr_pool_t *scratch_pool)
 {
   /* General logic here: iterate over all the immediate children of the root
@@ -947,10 +951,10 @@ migrate_props(const char *dir_abspath,
 
   /* Migrate the props for "this dir".  */
   SVN_ERR(migrate_node_props(dir_abspath, new_wcroot_abspath, "", sdb,
-                             original_format, iterpool));
+                             original_format, wc_id, iterpool));
 
   /* Iterate over all the files in this SDB.  */
-  SVN_ERR(get_versioned_files(&children, dir_relpath, sdb, scratch_pool,
+  SVN_ERR(get_versioned_files(&children, dir_relpath, sdb, wc_id, scratch_pool,
                               iterpool));
   for (i = 0; i < children->nelts; i++)
     {
@@ -959,7 +963,7 @@ migrate_props(const char *dir_abspath,
       svn_pool_clear(iterpool);
 
       SVN_ERR(migrate_node_props(dir_abspath, new_wcroot_abspath,
-                                 name, sdb, original_format, iterpool));
+                                 name, sdb, original_format, wc_id, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -1269,16 +1273,14 @@ upgrade_externals(struct bump_baton *bb,
   while (have_row)
     {
       apr_hash_t *props;
-      const svn_string_t *externals = NULL;
+      const char *externals;
 
       svn_pool_clear(iterpool);
 
       SVN_ERR(svn_sqlite__column_properties(&props, stmt, 0,
                                             iterpool, iterpool));
 
-      if (props)
-        externals = apr_hash_get(props, SVN_PROP_EXTERNALS,
-                                 APR_HASH_KEY_STRING);
+      externals = svn_prop_get_value(props, SVN_PROP_EXTERNALS);
 
       if (externals)
         {
@@ -1292,7 +1294,7 @@ upgrade_externals(struct bump_baton *bb,
                                           iterpool);
 
           SVN_ERR(svn_wc_parse_externals_description3(&ext, local_abspath,
-                                                      externals->data, FALSE,
+                                                      externals, FALSE,
                                                       iterpool));
 
           for (i = 0; i < ext->nelts; i++)
@@ -1375,10 +1377,11 @@ upgrade_to_wcng(void **dir_baton,
                 svn_wc__db_t *db,
                 const char *dir_abspath,
                 int old_format,
+                apr_int64_t wc_id,
                 svn_wc_upgrade_get_repos_info_t repos_info_func,
                 void *repos_info_baton,
                 apr_hash_t *repos_cache,
-                struct upgrade_data_t *data,
+                const struct upgrade_data_t *data,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
@@ -1489,7 +1492,7 @@ upgrade_to_wcng(void **dir_baton,
      database. The upgrade process needs the children in BASE_NODE and
      WORKING_NODE, and to examine the resultant WORKING state.  */
   SVN_ERR(migrate_props(dir_abspath, data->root_abspath, data->sdb, old_format,
-                        scratch_pool));
+                        wc_id, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1649,7 +1652,7 @@ upgrade_working_copy(void *parent_baton,
                      svn_wc_upgrade_get_repos_info_t repos_info_func,
                      void *repos_info_baton,
                      apr_hash_t *repos_cache,
-                     struct upgrade_data_t *data,
+                     const struct upgrade_data_t *data,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      svn_wc_notify_func2_t notify_func,
@@ -1681,11 +1684,12 @@ upgrade_working_copy(void *parent_baton,
       return SVN_NO_ERROR;
     }
 
-  err = get_versioned_subdirs(&subdirs, NULL, dir_abspath,
+  err = get_versioned_subdirs(&subdirs, NULL, dir_abspath, FALSE,
                               scratch_pool, iterpool);
   if (err)
     {
-      if (APR_STATUS_IS_ENOENT(err->apr_err))
+      if (APR_STATUS_IS_ENOENT(err->apr_err)
+          || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err))
         {
           /* An unversioned dir is obstructing a versioned dir */
           svn_error_clear(err);
@@ -1701,7 +1705,8 @@ upgrade_working_copy(void *parent_baton,
     }
 
 
-  SVN_ERR(upgrade_to_wcng(&dir_baton, parent_baton, db, dir_abspath, old_format,
+  SVN_ERR(upgrade_to_wcng(&dir_baton, parent_baton, db, dir_abspath,
+                          old_format, data->wc_id,
                           repos_info_func, repos_info_baton,
                           repos_cache, data, scratch_pool, iterpool));
 
@@ -1749,6 +1754,8 @@ is_old_wcroot(const char *local_abspath,
         _("Can't upgrade '%s' as it is not a pre-1.7 working copy directory"),
         svn_dirent_local_style(local_abspath, scratch_pool));
     }
+  else if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
+    return SVN_NO_ERROR;
 
   svn_dirent_split(&parent_abspath, &name, local_abspath, scratch_pool);
 
@@ -1763,14 +1770,15 @@ is_old_wcroot(const char *local_abspath,
   entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
   if (!entry
       || entry->absent
-      || (entry->deleted && entry->schedule != svn_wc_schedule_add))
+      || (entry->deleted && entry->schedule != svn_wc_schedule_add)
+      || entry->depth == svn_depth_exclude)
     {
       return SVN_NO_ERROR;
     }
 
-  svn_dirent_split(&parent_abspath, &name, parent_abspath, scratch_pool);
   while (!svn_dirent_is_root(parent_abspath, strlen(parent_abspath)))
     {
+      svn_dirent_split(&parent_abspath, &name, parent_abspath, scratch_pool);
       err = svn_wc__read_entries_old(&entries, parent_abspath,
                                      scratch_pool, scratch_pool);
       if (err)
@@ -1782,12 +1790,12 @@ is_old_wcroot(const char *local_abspath,
       entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
       if (!entry
           || entry->absent
-          || (entry->deleted && entry->schedule != svn_wc_schedule_add))
+          || (entry->deleted && entry->schedule != svn_wc_schedule_add)
+          || entry->depth == svn_depth_exclude)
         {
           parent_abspath = svn_dirent_join(parent_abspath, name, scratch_pool);
           break;
         }
-      svn_dirent_split(&parent_abspath, &name, parent_abspath, scratch_pool);
     }
 
   return svn_error_createf(
@@ -1806,7 +1814,7 @@ typedef struct upgrade_working_copy_baton_t
   svn_wc_upgrade_get_repos_info_t repos_info_func;
   void *repos_info_baton;
   apr_hash_t *repos_cache;
-  struct upgrade_data_t *data;
+  const struct upgrade_data_t *data;
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
   svn_wc_notify_func2_t notify_func;

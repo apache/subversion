@@ -2360,11 +2360,10 @@ svn_wc_prop_list(apr_hash_t **props,
     {
       *props = apr_hash_make(pool);
       svn_error_clear(err);
+      err = NULL;
     }
-  else if (err)
-    return svn_error_trace(err);
 
-  return svn_error_trace(svn_wc_context_destroy(wc_ctx));
+  return svn_error_compose_create(err, svn_wc_context_destroy(wc_ctx));
 }
 
 svn_error_t *
@@ -2386,11 +2385,13 @@ svn_wc_prop_get(const svn_string_t **value,
   err = svn_wc_prop_get2(value, wc_ctx, local_abspath, name, pool, pool);
 
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    svn_error_clear(err);
-  else
-    SVN_ERR(err);
+    {
+      *value = NULL;
+      svn_error_clear(err);
+      err = NULL;
+    }
 
-  return svn_error_trace(svn_wc_context_destroy(wc_ctx));
+  return svn_error_compose_create(err, svn_wc_context_destroy(wc_ctx));
 }
 
 /* baton for conflict_func_1to2_wrapper */
@@ -2414,7 +2415,7 @@ conflict_func_1to2_wrapper(svn_wc_conflict_result_t **result,
                                                         scratch_pool);
 
   return svn_error_trace(btn->inner_func(result, cd, btn->inner_baton,
-                                          result_pool));
+                                         result_pool));
 }
 
 svn_error_t *
@@ -2630,10 +2631,15 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
       swb->anchor_relpath = NULL;
     }
 
+  /* Before subversion 1.7 status always handled depth as sticky. 1.7 made
+     the output of svn status by default match the result of what would be
+     updated by a similar svn update. (Following the documentation) */
+
   SVN_ERR(svn_wc_get_status_editor5(editor, edit_baton, set_locks_baton,
                                     edit_revision, wc_ctx, anchor_abspath,
                                     target, depth, get_all,
                                     no_ignore,
+                                    (depth != svn_depth_unknown) /*as_sticky*/,
                                     FALSE /* server_performs_filtering */,
                                     ignore_patterns,
                                     status4_wrapper_func, swb,

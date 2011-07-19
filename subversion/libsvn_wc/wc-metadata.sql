@@ -763,6 +763,10 @@ PRAGMA user_version = 29;
    number will be, however, so we're just marking it as 99 for now.  */
 -- format: 99
 
+/* TODO: Rename the "absent" presence value to "server-excluded" before
+   the 1.7 release. wc_db.c and this file have references to "absent" which
+   still need to be changed to "server-excluded". */
+
 /* Now "drop" the tree_conflict_data column from actual_node. */
 CREATE TABLE ACTUAL_NODE_BACKUP (
   wc_id  INTEGER NOT NULL,

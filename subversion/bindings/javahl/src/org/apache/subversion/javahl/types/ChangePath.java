@@ -55,7 +55,7 @@ public class ChangePath implements java.io.Serializable
         this.propMods = propMods;
     }
 
-    /** Path of commited item */
+    /** Path of committed item */
     private String path;
 
     /** Source revision of copy (if any). */
@@ -77,8 +77,8 @@ public class ChangePath implements java.io.Serializable
     private Tristate propMods;
 
     /**
-     * Retrieve the path to the commited item
-     * @return  the path to the commited item
+     * Retrieve the path to the committed item
+     * @return  the path to the committed item
      */
     public String getPath()
     {

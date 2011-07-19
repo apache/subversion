@@ -92,11 +92,6 @@ AC_DEFUN(SVN_LIB_APRUTIL,
     AC_MSG_ERROR([apu-config --includes failed])
   fi
 
-  SVN_APRUTIL_PREFIX="`$apu_config --prefix`"
-  if test $? -ne 0; then
-    AC_MSG_ERROR([apu-config --prefix failed])
-  fi
-
   if test "$enable_all_static" = "yes"; then
     SVN_APRUTIL_LIBS="`$apu_config --link-ld --libs`"
     if test $? -ne 0; then
@@ -113,7 +108,6 @@ AC_DEFUN(SVN_LIB_APRUTIL,
   AC_SUBST(SVN_APRUTIL_INCLUDES)
   AC_SUBST(SVN_APRUTIL_CONFIG, ["$apu_config"])
   AC_SUBST(SVN_APRUTIL_LIBS)
-  AC_SUBST(SVN_APRUTIL_PREFIX)
 
   dnl What version of Expat are we using? -----------------
   SVN_HAVE_OLD_EXPAT="`$apu_config --old-expat`"

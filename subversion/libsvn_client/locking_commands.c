@@ -60,6 +60,8 @@ struct lock_baton
  * (depending on whether DO_LOCK is true or false respectively), but
  * only if RA_ERR is null, or (in the unlock case) is something other
  * than SVN_ERR_FS_LOCK_OWNER_MISMATCH.
+ *
+ * Implements svn_ra_lock_callback_t.
  */
 static svn_error_t *
 store_locks_callback(void *baton,

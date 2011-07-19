@@ -242,8 +242,8 @@ svn_client_relocate2(const char *wcroot_dir,
   if (ignore_externals)
     {
       return svn_error_trace(svn_wc_relocate4(ctx->wc_ctx, local_abspath,
-                                               from_prefix, to_prefix,
-                                               validator_func, &vb, pool));
+                                              from_prefix, to_prefix,
+                                              validator_func, &vb, pool));
     }
 
   /* Fetch our current root URL. */

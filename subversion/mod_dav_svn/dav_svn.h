@@ -283,9 +283,6 @@ struct dav_resource_private {
 
   /* Cache any revprop change error */
   svn_error_t *revprop_error;
-
-  /* Pool to allocate temporary data from */
-  apr_pool_t *pool;
 };
 
 

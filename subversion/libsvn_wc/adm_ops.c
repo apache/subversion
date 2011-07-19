@@ -849,7 +849,6 @@ check_can_add_node(svn_node_kind_t *kind_p,
   const char *base_name = svn_dirent_basename(local_abspath, scratch_pool);
   svn_boolean_t is_wc_root;
   svn_node_kind_t kind;
-  svn_boolean_t exists;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(!copyfrom_url || (svn_uri_is_canonical(copyfrom_url,
@@ -886,6 +885,7 @@ check_can_add_node(svn_node_kind_t *kind_p,
   {
     svn_wc__db_status_t status;
     svn_boolean_t conflicted;
+    svn_boolean_t exists;
     svn_error_t *err
       = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -1289,7 +1289,7 @@ revert_restore(svn_wc__db_t *db,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   svn_node_kind_t on_disk;
-  svn_boolean_t special, notify_required;
+  svn_boolean_t notify_required;
   const char *conflict_old;
   const char *conflict_new;
   const char *conflict_working;
@@ -1297,6 +1297,9 @@ revert_restore(svn_wc__db_t *db,
   svn_filesize_t recorded_size;
   apr_time_t recorded_mod_time;
   apr_finfo_t finfo;
+#ifdef HAVE_SYMLINK
+  svn_boolean_t special;
+#endif
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
@@ -1345,7 +1348,9 @@ revert_restore(svn_wc__db_t *db,
     {
       svn_error_clear(err);
       on_disk = svn_node_none;
+#ifdef HAVE_SYMLINK
       special = FALSE;
+#endif
     }
   else
     {
@@ -1356,7 +1361,9 @@ revert_restore(svn_wc__db_t *db,
       else
         on_disk = svn_node_unknown;
 
+#ifdef HAVE_SYMLINK
       special = (finfo.filetype == APR_LNK);
+#endif
     }
 
   /* If we expect a versioned item to be present then check that any
@@ -1385,15 +1392,17 @@ revert_restore(svn_wc__db_t *db,
           svn_boolean_t executable;
           svn_boolean_t read_only;
           apr_hash_t *props;
+#ifdef HAVE_SYMLINK
           svn_string_t *special_prop;
+#endif
 
           SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
                                                  scratch_pool, scratch_pool));
 
+#ifdef HAVE_SYMLINK
           special_prop = apr_hash_get(props, SVN_PROP_SPECIAL,
                                       APR_HASH_KEY_STRING);
 
-#ifdef HAVE_SYMLINK
           if ((special_prop != NULL) != special)
             {
               /* File/symlink mismatch. */
@@ -1777,19 +1786,19 @@ svn_wc_revert4(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelist_filter,
                                          scratch_pool));
       return svn_error_trace(new_revert_changelist(wc_ctx->db, local_abspath,
-                                                    depth, use_commit_times,
-                                                    changelist_hash,
-                                                    cancel_func, cancel_baton,
-                                                    notify_func, notify_baton,
-                                                    scratch_pool));
+                                                   depth, use_commit_times,
+                                                   changelist_hash,
+                                                   cancel_func, cancel_baton,
+                                                   notify_func, notify_baton,
+                                                   scratch_pool));
     }
 
   if (depth == svn_depth_empty || depth == svn_depth_infinity)
     return svn_error_trace(new_revert_internal(wc_ctx->db, local_abspath,
-                                                depth, use_commit_times,
-                                                cancel_func, cancel_baton,
-                                                notify_func, notify_baton,
-                                                scratch_pool));
+                                               depth, use_commit_times,
+                                               cancel_func, cancel_baton,
+                                               notify_func, notify_baton,
+                                               scratch_pool));
 
   /* The user may expect svn_depth_files/svn_depth_immediates to work
      on copied dirs with one level of children.  It doesn't, the user
@@ -1799,10 +1808,10 @@ svn_wc_revert4(svn_wc_context_t *wc_ctx,
 
   if (depth == svn_depth_files || depth == svn_depth_immediates)
     return svn_error_trace(new_revert_partial(wc_ctx->db, local_abspath,
-                                               depth, use_commit_times,
-                                               cancel_func, cancel_baton,
-                                               notify_func, notify_baton,
-                                               scratch_pool));
+                                              depth, use_commit_times,
+                                              cancel_func, cancel_baton,
+                                              notify_func, notify_baton,
+                                              scratch_pool));
 
   /* Bogus depth. Tell the caller.  */
   return svn_error_create(SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL, NULL);
@@ -1863,10 +1872,10 @@ svn_wc_get_pristine_contents2(svn_stream_t **contents,
                               apr_pool_t *scratch_pool)
 {
   return svn_error_trace(svn_wc__get_pristine_contents(contents, NULL,
-                                                        wc_ctx->db,
-                                                        local_abspath,
-                                                        result_pool,
-                                                        scratch_pool));
+                                                       wc_ctx->db,
+                                                       local_abspath,
+                                                       result_pool,
+                                                       scratch_pool));
 }
 
 

@@ -38,6 +38,12 @@ svn_error_t *svn_fs_fs__open(svn_fs_t *fs,
 svn_error_t *svn_fs_fs__upgrade(svn_fs_t *fs,
                                 apr_pool_t *pool);
 
+/* Verify the fsfs filesystem FS.  Use POOL for temporary allocations. */
+svn_error_t *svn_fs_fs__verify(svn_fs_t *fs,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *pool);
+
 /* Copy the fsfs filesystem at SRC_PATH into a new copy at DST_PATH.
    Use POOL for temporary allocations. */
 svn_error_t *svn_fs_fs__hotcopy(const char *src_path,

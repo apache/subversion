@@ -131,7 +131,7 @@ typedef struct svn_ra__vtable_t {
                                 const apr_array_header_t *paths,
                                 svn_revnum_t revision,
                                 svn_mergeinfo_inheritance_t inherit,
-                                svn_boolean_t *validate_inherited_mergeinfo,
+                                svn_boolean_t validate_inherited_mergeinfo,
                                 svn_boolean_t include_merged_revisions,
                                 apr_pool_t *pool);
   /* See svn_ra_do_update2(). */

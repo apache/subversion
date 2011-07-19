@@ -656,7 +656,7 @@ test_inserting_nodes(apr_pool_t *pool)
             pool));
 
   /* Replace an incomplete node with an absent file node. */
-  SVN_ERR(svn_wc__db_base_add_absent_node(
+  SVN_ERR(svn_wc__db_base_add_excluded_node(
             db, svn_dirent_join(local_abspath, "N/N-b", pool),
             "N/N-b", ROOT_ONE, UUID_ONE, 3,
             svn_wc__db_kind_file, svn_wc__db_status_server_excluded,
@@ -664,7 +664,7 @@ test_inserting_nodes(apr_pool_t *pool)
             pool));
 
   /* Create a new excluded directory node. */
-  SVN_ERR(svn_wc__db_base_add_absent_node(
+  SVN_ERR(svn_wc__db_base_add_excluded_node(
             db, svn_dirent_join(local_abspath, "P", pool),
             "P", ROOT_ONE, UUID_ONE, 3,
             svn_wc__db_kind_dir, svn_wc__db_status_excluded,
@@ -680,7 +680,7 @@ test_inserting_nodes(apr_pool_t *pool)
             pool));
 
   /* Create a new absent unknown-kind node. */
-  SVN_ERR(svn_wc__db_base_add_absent_node(
+  SVN_ERR(svn_wc__db_base_add_excluded_node(
             db, svn_dirent_join(local_abspath, "R", pool),
             "R", ROOT_ONE, UUID_ONE, 3,
             svn_wc__db_kind_unknown, svn_wc__db_status_server_excluded,
@@ -856,14 +856,14 @@ test_pdh(apr_pool_t *pool)
      some internal functionality of wc_db.  This is a handy driver for
      debugging wc_db to ensure it manages per-directory handles properly.  */
 
-  SVN_ERR(svn_wc__db_base_add_absent_node(
+  SVN_ERR(svn_wc__db_base_add_excluded_node(
             db, svn_dirent_join(local_abspath, "sub", pool),
             "sub", ROOT_ONE, UUID_ONE, 1,
             svn_wc__db_kind_file, svn_wc__db_status_server_excluded,
             NULL, NULL,
             pool));
 
-  SVN_ERR(svn_wc__db_base_add_absent_node(
+  SVN_ERR(svn_wc__db_base_add_excluded_node(
             db, svn_dirent_join(local_abspath, "sub/A", pool),
             "sub/A", ROOT_ONE, UUID_ONE, 1,
             svn_wc__db_kind_file, svn_wc__db_status_server_excluded,

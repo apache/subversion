@@ -215,6 +215,39 @@ svn_repos__validate_prop(const char *name,
 }
 
 
+/* Verify the mergeinfo property value VALUE and return an error if it
+ * is invalid. The PATH on which that property is set is used for error
+ * messages only.  Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+verify_mergeinfo(const svn_string_t *value,
+                 const char *path,
+                 apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  svn_mergeinfo_t mergeinfo;
+
+  /* It's okay to delete svn:mergeinfo. */
+  if (value == NULL)
+    return SVN_NO_ERROR;
+
+  /* Mergeinfo is UTF-8 encoded so the number of bytes returned by strlen()
+   * should match VALUE->LEN. Prevents trailing garbage in the property. */
+  if (strlen(value->data) != value->len)
+    return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+                             _("Commit rejected because mergeinfo on '%s' "
+                               "contains unexpected string terminator"),
+                             path);
+
+  err = svn_mergeinfo_parse(&mergeinfo, value->data, scratch_pool);
+  if (err)
+    return svn_error_createf(err->apr_err, err,
+                             _("Commit rejected because mergeinfo on '%s' "
+                               "is syntactically invalid"),
+                             path);
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_repos_fs_change_node_prop(svn_fs_root_t *root,
                               const char *path,
@@ -222,6 +255,9 @@ svn_repos_fs_change_node_prop(svn_fs_root_t *root,
                               const svn_string_t *value,
                               apr_pool_t *pool)
 {
+  if (value && strcmp(name, SVN_PROP_MERGEINFO) == 0)
+    SVN_ERR(verify_mergeinfo(value, path, pool));
+
   /* Validate the property, then call the wrapped function. */
   SVN_ERR(svn_repos__validate_prop(name, value, pool));
   return svn_fs_change_node_prop(root, path, name, value, pool);
@@ -676,12 +712,12 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
                            apr_pool_t *pool)
 {
   return svn_error_trace(svn_repos_fs_get_mergeinfo2(mergeinfo, repos,
-                                                      paths, rev, inherit,
-                                                      FALSE,
-                                                      include_descendants,
-                                                      authz_read_func,
-                                                      authz_read_baton,
-                                                      pool));
+                                                     paths, rev, inherit,
+                                                     FALSE,
+                                                     include_descendants,
+                                                     authz_read_func,
+                                                     authz_read_baton,
+                                                     pool));
 }
 
 struct pack_notify_baton

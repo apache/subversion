@@ -586,10 +586,10 @@ pristine_or_working_props(apr_hash_t **props,
   if (pristine)
     {
       return svn_error_trace(svn_wc_get_pristine_props(props,
-                                                        wc_ctx,
-                                                        local_abspath,
-                                                        result_pool,
-                                                        scratch_pool));
+                                                       wc_ctx,
+                                                       local_abspath,
+                                                       result_pool,
+                                                       scratch_pool));
     }
 
   /* ### until svn_wc_prop_list2() returns a NULL value for locally-deleted
@@ -607,7 +607,7 @@ pristine_or_working_props(apr_hash_t **props,
   }
 
   return svn_error_trace(svn_wc_prop_list2(props, wc_ctx, local_abspath,
-                                            result_pool, scratch_pool));
+                                           result_pool, scratch_pool));
 }
 
 
@@ -1093,7 +1093,7 @@ recursive_proplist_receiver(void *baton,
     path = local_abspath;
 
   return svn_error_trace(b->wrapped_receiver(b->wrapped_receiver_baton,
-                                              path, props, scratch_pool));
+                                             path, props, scratch_pool));
 }
 
 svn_error_t *

@@ -330,12 +330,12 @@ svn_wc__resolve_text_conflict(svn_wc__db_t *db,
   svn_boolean_t ignored_result;
 
   return svn_error_trace(resolve_conflict_on_node(
-                            db, local_abspath,
-                            TRUE /* resolve_text */,
-                            FALSE /* resolve_props */,
-                            svn_wc_conflict_choose_merged,
-                            &ignored_result,
-                            scratch_pool));
+                           db, local_abspath,
+                           TRUE /* resolve_text */,
+                           FALSE /* resolve_props */,
+                           svn_wc_conflict_choose_merged,
+                           &ignored_result,
+                           scratch_pool));
 }
 
 
@@ -629,15 +629,15 @@ svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
     depth = svn_depth_infinity;
 
   return svn_error_trace(recursive_resolve_conflict(
-                            wc_ctx->db,
-                            local_abspath,
-                            conflicted,
-                            depth,
-                            resolve_text,
-                            resolve_prop,
-                            resolve_tree,
-                            conflict_choice,
-                            cancel_func, cancel_baton,
-                            notify_func, notify_baton,
-                            scratch_pool));
+                           wc_ctx->db,
+                           local_abspath,
+                           conflicted,
+                           depth,
+                           resolve_text,
+                           resolve_prop,
+                           resolve_tree,
+                           conflict_choice,
+                           cancel_func, cancel_baton,
+                           notify_func, notify_baton,
+                           scratch_pool));
 }

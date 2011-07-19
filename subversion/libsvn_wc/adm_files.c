@@ -316,7 +316,7 @@ svn_wc__open_adm_stream(svn_stream_t **stream,
 
   local_abspath = svn_wc__adm_child(dir_abspath, fname, scratch_pool);
   return svn_error_trace(svn_stream_open_readonly(stream, local_abspath,
-                                                   result_pool, scratch_pool));
+                                                  result_pool, scratch_pool));
 }
 
 
@@ -450,8 +450,8 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
      just create one. */
   if (format == 0)
     return svn_error_trace(init_adm(db, local_abspath,
-                                     repos_relpath, repos_root_url, repos_uuid,
-                                     revision, depth, scratch_pool));
+                                    repos_relpath, repos_root_url, repos_uuid,
+                                    revision, depth, scratch_pool));
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL,
                                &db_revision, &db_repos_relpath,

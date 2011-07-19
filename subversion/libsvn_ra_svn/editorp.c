@@ -914,6 +914,17 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
         }
       if (ra_svn_edit_cmds[i].cmd)
         err = (*ra_svn_edit_cmds[i].handler)(conn, subpool, params, &state);
+      else if (strcmp(cmd, "failure") == 0)
+        {
+          /* While not really an editor command this can occur when
+             reporter->finish_report() fails before the first editor command */
+          if (aborted)
+            *aborted = TRUE;
+          err = svn_ra_svn__handle_failure_status(params, pool);
+          return svn_error_compose_create(
+                            err,
+                            editor->abort_edit(edit_baton, subpool));
+        }
       else
         {
           err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,

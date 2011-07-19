@@ -719,7 +719,7 @@ svn_fs_fs__get_sharded_offset(void **out,
   apr_off_t *manifest = (apr_off_t *)data;
   apr_int64_t shard_pos = *(apr_int64_t *)baton;
 
-  *(apr_int64_t *)out = manifest[shard_pos];
+  *(apr_off_t *)out = manifest[shard_pos];
 
   return SVN_NO_ERROR;
 }
