@@ -59,6 +59,14 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r1148374
+   Silence a debug message in the DSO loading code.
+   Justification:
+     The message could lead to spurious test failures in some situations.
+     It is also confusing because it is printed without any context information.
+   Votes:
+     +1: stsp
+
 Approved changes:
 =================
 
