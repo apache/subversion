@@ -3263,8 +3263,7 @@ get_invalid_inherited_mergeinfo(svn_mergeinfo_t *invalid_inherited_mergeinfo,
       /* If we needed to temporarily reparent RA_SESSION, then point it
          back to its original URL. */
       if (session_url)
-        SVN_ERR(svn_client__ensure_ra_session_url(&session_url, ra_session,
-                                                  session_url, scratch_pool));
+        SVN_ERR(svn_ra_reparent(ra_session, session_url, scratch_pool));
     }
   return SVN_NO_ERROR;
 }
@@ -3434,9 +3433,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                                                        result_pool));
 
           /* Return RA_SESSION back to where it was when we were called. */
-         SVN_ERR(svn_client__ensure_ra_session_url(&session_url,
-                                                   ra_session, session_url,
-                                                   scratch_pool));
+          SVN_ERR(svn_ra_reparent(ra_session, session_url, scratch_pool));
         }
     } /*if (implicit_mergeinfo) */
 
