@@ -57,15 +57,16 @@ Candidate changes:
      Prevents possible issue #3242 'Subversion demands unnecessary access
      to parent directories' problems.
    Votes:
-     +1: pburba
+     +1: pburba, rhuijben
 
  * r1148374
    Silence a debug message in the DSO loading code.
    Justification:
      The message could lead to spurious test failures in some situations.
      It is also confusing because it is printed without any context information.
+     (Normal library functions should never use stdio)
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
 Approved changes:
 =================
