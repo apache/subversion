@@ -565,8 +565,9 @@ fi
 dnl GPG Agent -------------------
 
 AC_ARG_WITH(gpg_agent,
-AS_HELP_STRING([--with-gpg-agent], 
-               [Enable use of GPG AGENT for auth credentials]))
+AS_HELP_STRING([--without-gpg-agent], 
+               [Disable support for GPG-Agent]),
+               [with_gpg_agent=no], [with_gpg_agent=yes])
 AC_MSG_CHECKING([whether to support GPG-Agent])
 if test "$with_gpg_agent" = "yes"; then
   AC_MSG_RESULT([yes])
