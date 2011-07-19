@@ -72,6 +72,7 @@ CYRUS_SASL_VER	= 2.1.23
 SQLITE_VER	= 3070603
 LIBMAGIC_VER	= 5.07
 RUBY_VER	= 1.8.7-p334
+BZ2_VER	= 1.0.6
 PYTHON_VER	= 2.7.2
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
@@ -83,6 +84,7 @@ CYRUS_SASL_DIST	= cyrus-sasl-$(CYRUS_SASL_VER).tar.gz
 HTTPD_DIST	= httpd-$(HTTPD_VER).tar.bz2
 LIBMAGIC_DIST	= file-$(LIBMAGIC_VER).tar.gz
 RUBY_DIST	= ruby-$(RUBY_VER).tar.gz
+BZ2_DIST	= bzip2-$(BZ2_VER).tar.gz
 PYTHON_DIST	= Python-$(PYTHON_VER).tgz
 
 DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
@@ -94,6 +96,7 @@ DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(CYRUS_SASL_DIST) \
 		$(DISTDIR)/$(LIBMAGIC_DIST) \
 		$(DISTDIR)/$(RUBY_DIST) \
+		$(DISTDIR)/$(BZ2_DIST) \
 		$(DISTDIR)/$(PYTHON_DIST)
 
 FETCH_CMD	= wget -c
@@ -113,6 +116,7 @@ SQLITE_URL	= http://www.sqlite.org/$(SQLITE_DIST)
 CYRUS_SASL_URL	= ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/$(CYRUS_SASL_DIST)
 LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
 RUBY_URL	= http://ftp.ruby-lang.org/pub/ruby/1.8/$(RUBY_DIST)
+BZ2_URL		= http://bzip.org/$(BZ2_VER)/$(BZ2_DIST)
 PYTHON_URL	= http://python.org/ftp/python/2.7.2/$(PYTHON_DIST)
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
@@ -128,6 +132,7 @@ SQLITE_SRCDIR	= $(SRCDIR)/sqlite-autoconf-$(SQLITE_VER)
 CYRUS_SASL_SRCDIR	= $(SRCDIR)/cyrus-sasl-$(CYRUS_SASL_VER)
 LIBMAGIC_SRCDIR	= $(SRCDIR)/file-$(LIBMAGIC_VER)
 RUBY_SRCDIR	= $(SRCDIR)/ruby-$(RUBY_VER)
+BZ2_SRCDIR	= $(SRCDIR)/bzip2-$(BZ2_VER)
 PYTHON_SRCDIR	= $(SRCDIR)/Python-$(PYTHON_VER)
 SVN_SRCDIR	= $(SVN_WC)
 
@@ -144,6 +149,7 @@ SQLITE_OBJDIR	= $(OBJDIR)/sqlite-$(SQLITE_VER)
 CYRUS_SASL_OBJDIR	= $(OBJDIR)/cyrus-sasl-$(CYRUS_SASL_VER)
 LIBMAGIC_OBJDIR	= $(OBJDIR)/file-$(LIBMAGIC_VER)
 RUBY_OBJDIR	= $(OBJDIR)/ruby-$(RUBY_VER)
+BZ2_OBJDIR	= $(OBJDIR)/bzip2-$(BZ2_VER)
 PYTHON_OBJDIR	= $(OBJDIR)/python-$(PYTHON_VER)
 SVN_OBJDIR	= $(OBJDIR)/$(SVN_REL_WC)
 
@@ -168,17 +174,19 @@ LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX
 all: dirs-create bdb-install apr-install iconv-install apr-util-install \
 	httpd-install neon-install serf-install serf-old-install \
 	sqlite-install cyrus-sasl-install libmagic-install \
-	ruby-install python-install svn-install svn-bindings-install
+	ruby-install bz2-install python-install \
+	svn-install svn-bindings-install
 
 # Use these to start a build from the beginning.
 reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
 	httpd-reset neon-reset serf-reset serf-old-reset sqlite-reset \
-	cyrus-sasl-reset libmagic-reset ruby-reset python-reset svn-reset
+	cyrus-sasl-reset libmagic-reset ruby-reset python-reset \
+	bz2-install svn-reset
 
 # Use to save disk space.
 clean: bdb-clean apr-clean iconv-clean apr-util-clean httpd-clean \
 	neon-clean serf-clean serf-old-clean sqlite-clean cyrus-sasl-clean \
-	libmagic-clean ruby-clean python-clean svn-clean
+	libmagic-clean ruby-clean bz2-clean python-clean svn-clean
 
 # Nukes everything (including installed binaries!)
 # Use this to start ALL OVER AGAIN! Use with caution!
@@ -954,6 +962,41 @@ $(RUBY_OBJDIR)/.installed: $(RUBY_OBJDIR)/.compiled
 	touch $@
 
 #######################################################################
+# bz2
+#######################################################################
+
+bz2-retrieve:	$(BZ2_OBJDIR)/.retrieved
+bz2-compile:	$(BZ2_OBJDIR)/.compiled
+bz2-install:	$(BZ2_OBJDIR)/.installed
+bz2-reset:
+	$(foreach f, .retrieved .configured .compiled .installed, \
+		rm -f $(BZ2_OBJDIR)/$(f);)
+
+bz2-clean:
+	-(cd $(BZ2_SRCDIR) && make distclean)
+
+# fetch distfile for bz2
+$(DISTDIR)/$(BZ2_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(BZ2_URL)
+
+# retrieve bz2
+$(BZ2_OBJDIR)/.retrieved: $(DISTDIR)/$(BZ2_DIST)
+	[ -d $(BZ2_OBJDIR) ] || mkdir -p $(BZ2_OBJDIR)
+	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(BZ2_DIST)
+	touch $@
+
+# compile bz2
+$(BZ2_OBJDIR)/.compiled: $(BZ2_OBJDIR)/.retrieved
+	(cd $(BZ2_SRCDIR) && make CFLAGS="-g $(PROFILE_CFLAGS) -fPIC")
+	touch $@
+
+# install bz2
+$(BZ2_OBJDIR)/.installed: $(BZ2_OBJDIR)/.compiled
+	(cd $(BZ2_SRCDIR) && make install PREFIX=$(PREFIX)/bz2)
+	touch $@
+
+
+#######################################################################
 # python
 #######################################################################
 
@@ -982,6 +1025,7 @@ $(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST)
 		-e "s#'/usr/include/db4'#'$(PREFIX)/bdb/include'#" \
 		-e "s|\(add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')\)|#\1|" \
 		-e "s|\(add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')\)|#\1|" \
+		-e "s#find_library_file(lib_dirs, 'bz2'#find_library_file(['$(PREFIX)/bz2/lib'] + lib_dirs, 'bz2'#" \
 		< $(PYTHON_SRCDIR)/setup.py \
 		> $(PYTHON_SRCDIR)/setup.py.patched
 	mv $(PYTHON_SRCDIR)/setup.py.patched $(PYTHON_SRCDIR)/setup.py
@@ -1002,7 +1046,8 @@ endif
 $(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved
 	cd $(PYTHON_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
-		LDFLAGS="-Wl,-rpath=$(PREFIX)/python/lib" \
+		CPPFLAGS="-I$(PREFIX)/bz2/include" \
+		LDFLAGS="-Wl,-rpath=$(PREFIX)/python/lib -L$(PREFIX)/bz2/lib" \
 		$(PYTHON_SRCDIR)/configure \
 		--prefix=$(PREFIX)/python \
 		--enable-shared \
