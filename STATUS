@@ -66,14 +66,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r1148071
-   Don't needlessly reparent a RA session to the repository root.
-   Justification:
-     Prevents possible issue #3242 'Subversion demands unnecessary access
-     to parent directories' problems.
-   Votes:
-     +1: pburba, rhuijben, cmpilato
-
  * r1148374
    Silence a debug message in the DSO loading code.
    Justification:
