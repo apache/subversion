@@ -133,13 +133,18 @@ struct svn_sqlite__value_t
 } while (0)
 
 
+/* Convenience wrapper around exec_sql2(). */
+#define exec_sql(db, sql) exec_sql2((db), (sql), SQLITE_OK)
+
+/* Run the statement SQL on DB, ignoring SQLITE_OK and IGNORED_ERR.
+   (Note: the IGNORED_ERR parameter itself is not ignored.) */
 static svn_error_t *
-exec_sql(svn_sqlite__db_t *db, const char *sql)
+exec_sql2(svn_sqlite__db_t *db, const char *sql, int ignored_err)
 {
   char *err_msg;
   int sqlite_err = sqlite3_exec(db->db3, sql, NULL, NULL, &err_msg);
 
-  if (sqlite_err != SQLITE_OK)
+  if (sqlite_err != SQLITE_OK && sqlite_err != ignored_err)
     {
       svn_error_t *err = svn_error_createf(SQLITE_ERROR_CODE(sqlite_err), NULL,
                                            _("%s, executing statement '%s'"),
@@ -418,9 +423,9 @@ svn_sqlite__bind_properties(svn_sqlite__stmt_t *stmt,
                                      scratch_pool));
   properties = svn_skel__unparse(skel, scratch_pool);
   return svn_error_trace(svn_sqlite__bind_blob(stmt,
-                                                slot,
-                                                properties->data,
-                                                properties->len));
+                                               slot,
+                                               properties->data,
+                                               properties->len));
 }
 
 svn_error_t *
@@ -718,7 +723,7 @@ check_format(svn_sqlite__db_t *db,
       ub.upgrade_sql = upgrade_sql;
 
       return svn_error_trace(svn_sqlite__with_transaction(
-                                db, upgrade_format, &ub, scratch_pool));
+                               db, upgrade_format, &ub, scratch_pool));
     }
 
   return svn_error_createf(SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA, NULL,
@@ -909,8 +914,28 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   sqlite3_profile((*db)->db3, sqlite_profiler, (*db)->db3);
 #endif
 
+  /* Work around a bug in SQLite 3.7.7.  The bug was fixed in SQLite 3.7.7.1.
+
+     See:
+
+       Date: Sun, 26 Jun 2011 18:52:14 -0400
+       From: Richard Hipp <drh@sqlite.org>
+       To: General Discussion of SQLite Database <sqlite-users@sqlite.org>
+       Cc: dev@subversion.apache.org
+       Subject: Re: [sqlite] PRAGMA bug in 3.7.7 (but fine in 3.7.6.3)
+       Message-ID: <BANLkTimDypWGY-8tHFgJsTxN6ty6OkdJ0Q@mail.gmail.com>
+   */
+  {
+    int ignored_err = SQLITE_OK;
+#if !SQLITE_VERSION_AT_LEAST(3,7,8) && defined(SQLITE_SCHEMA)
+    if (!strcmp(sqlite3_libversion(), "3.7.7"))
+      ignored_err = SQLITE_SCHEMA;
+#endif
+
+    SVN_ERR(exec_sql2(*db, "PRAGMA case_sensitive_like=1;", ignored_err));
+  }
+
   SVN_ERR(exec_sql(*db,
-              "PRAGMA case_sensitive_like=1;"
               /* Disable synchronization to disable the explicit disk flushes
                  that make Sqlite up to 50 times slower; especially on small
                  transactions.
@@ -1059,7 +1084,7 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
 {
   SVN_ERR(exec_sql(db, "BEGIN TRANSACTION;"));
   return svn_error_trace(with_transaction(db, cb_func, cb_baton,
-                                           scratch_pool));
+                                          scratch_pool));
 }
 
 svn_error_t *
@@ -1071,7 +1096,7 @@ svn_sqlite__with_immediate_transaction(
 {
   SVN_ERR(exec_sql(db, "BEGIN IMMEDIATE TRANSACTION;"));
   return svn_error_trace(with_transaction(db, cb_func, cb_baton,
-                                           scratch_pool));
+                                          scratch_pool));
 }
 
 svn_error_t *

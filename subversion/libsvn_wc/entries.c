@@ -637,7 +637,10 @@ read_one_entry(const svn_wc_entry_t **new_entry,
           /* ### scan_addition may need to be updated to avoid returning
              ### status_copied in this case.  */
         }
-      else if (work_status == svn_wc__db_status_copied)
+      /* For backwards-compatiblity purposes we treat moves just like
+       * regular copies. */
+      else if (work_status == svn_wc__db_status_copied ||
+               work_status == svn_wc__db_status_moved_here)
         {
           entry->copied = TRUE;
 
@@ -662,7 +665,8 @@ read_one_entry(const svn_wc_entry_t **new_entry,
           svn_boolean_t is_copied_child;
           svn_boolean_t is_mixed_rev = FALSE;
 
-          SVN_ERR_ASSERT(work_status == svn_wc__db_status_copied);
+          SVN_ERR_ASSERT(work_status == svn_wc__db_status_copied ||
+                         work_status == svn_wc__db_status_moved_here);
 
           /* If this node inherits copyfrom information from an
              ancestor node, then it must be a copied child.  */
@@ -1093,12 +1097,12 @@ read_entries(apr_hash_t **entries,
 
   if (wc_format < SVN_WC__WC_NG_VERSION)
     return svn_error_trace(svn_wc__read_entries_old(entries,
-                                                     wcroot_abspath,
-                                                     result_pool,
-                                                     scratch_pool));
+                                                    wcroot_abspath,
+                                                    result_pool,
+                                                    scratch_pool));
 
   return svn_error_trace(read_entries_new(entries, db, wcroot_abspath,
-                                           result_pool, scratch_pool));
+                                          result_pool, scratch_pool));
 }
 
 
@@ -1538,7 +1542,7 @@ struct write_baton {
    ### time being, we'll need both parameters. */
 static svn_error_t *
 write_entry(struct write_baton **entry_node,
-            struct write_baton *parent_node,
+            const struct write_baton *parent_node,
             svn_wc__db_t *db,
             svn_sqlite__db_t *sdb,
             apr_int64_t wc_id,
@@ -1883,6 +1887,12 @@ write_entry(struct write_baton **entry_node,
                   && strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR))
                 {
                   base_node->presence = svn_wc__db_status_incomplete;
+
+                  /* Store the most likely revision in the node to avoid
+                     base nodes without a valid revision. Of course
+                     we remember that the data is still incomplete. */
+                  if (parent_node->base)
+                    base_node->revision = parent_node->base->revision;
                 }
               else if (entry->incomplete)
                 {

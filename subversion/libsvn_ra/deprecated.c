@@ -426,10 +426,8 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
                                   svn_boolean_t include_descendants,
                                   apr_pool_t *pool)
 {
-  svn_boolean_t validate_inherited_mergeinfo = FALSE;
-
   return svn_error_trace(svn_ra_get_mergeinfo2(session, catalog, paths,
-                          revision, inherit, &validate_inherited_mergeinfo,
+                          revision, inherit, FALSE,
                           include_descendants, pool));
 }
 

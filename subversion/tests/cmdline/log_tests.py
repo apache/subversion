@@ -2012,7 +2012,7 @@ def log_with_unrelated_peg_and_operative_revs(sbox):
 def log_on_nonexistent_path_and_valid_rev(sbox):
   "log on nonexistent path does not error out"
 
-  sbox.build()#create_wc=False)
+  sbox.build(create_wc=False)
   real_path_real_rev   = sbox.repo_url + '/A@1'
   real_path_bad_rev    = sbox.repo_url + '/A@99'
   bad_url_bad_rev      = sbox.repo_url + '/Z@99'

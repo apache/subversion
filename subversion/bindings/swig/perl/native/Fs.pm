@@ -166,10 +166,10 @@ The oldest revision in any filesystem is numbered zero.
 
 =cut
 
-our @methods = qw/youngest_rev revision_root revision_prop revision_proplist
-		  change_rev_prop list_transactions open_txn begin_txn
-		  get_uuid set_uuid set_access get_access
-                  lock unlock get_lock get_locks generate_lock_token path/;
+our @methods = qw/ youngest_rev revision_root revision_prop revision_proplist
+                   change_rev_prop list_transactions open_txn begin_txn
+                   get_uuid set_uuid set_access get_access
+                   lock unlock get_lock get_locks generate_lock_token path /;
 
 for (@methods) {
     no strict 'refs';
@@ -270,14 +270,14 @@ For transaction roots, returns C<$SVN::Core::INVALID_REVNUM>.
 
 =cut
 
-our @methods = qw/apply_textdelta apply_text change_node_prop
-		 check_path close_root copied_from copy
-		 dir_entries delete file_contents closest_copy
-		 file_length file_md5_checksum is_dir is_file
-		 is_revision_root is_txn_root make_dir make_file
-		 node_created_rev node_history node_id node_prop
-		 node_proplist paths_changed revision_link
-		 revision_root_revision/;
+our @methods = qw/ apply_textdelta apply_text change_node_prop
+                   check_path close_root copied_from copy
+                   dir_entries delete file_contents closest_copy
+                   file_length file_md5_checksum is_dir is_file
+                   is_revision_root is_txn_root make_dir make_file
+                   node_created_rev node_history node_id node_prop
+                   node_proplist paths_changed revision_link
+                   revision_root_revision /;
 
 *fs = *SVN::Fs::root_fs;
 *txn_name = *_p_svn_fs_txn_t::root_name;

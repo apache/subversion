@@ -669,9 +669,6 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
       else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
                                         APR_HASH_KEY_STRING))
         format = 3;
-      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_7_COMPATIBLE,
-                                        APR_HASH_KEY_STRING))
-        format = 4;
     }
 
   /* Create the environment and databases. */
@@ -873,6 +870,18 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
       svn_pool_destroy(subpool);
     }
 
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+base_verify(svn_fs_t *fs, const char *path,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            apr_pool_t *pool,
+            apr_pool_t *common_pool)
+{
+  /* ### Any boilerplate needed here? */
+  /* Verifying is currently a no op for BDB. */
   return SVN_NO_ERROR;
 }
 
@@ -1345,6 +1354,7 @@ static fs_library_vtable_t library_vtable = {
   base_open,
   base_open_for_recovery,
   base_upgrade,
+  base_verify,
   base_delete_fs,
   base_hotcopy,
   base_get_description,

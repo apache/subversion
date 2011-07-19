@@ -88,11 +88,6 @@ AC_DEFUN(SVN_LIB_APR,
     AC_MSG_ERROR([apr-config --includes failed])
   fi
 
-  SVN_APR_PREFIX="`$apr_config --prefix`"
-  if test $? -ne 0; then
-    AC_MSG_ERROR([apr-config --prefix failed])
-  fi
-
   if test "$enable_all_static" = "yes"; then
     SVN_APR_LIBS="`$apr_config --link-ld --libs`"
     if test $? -ne 0; then
@@ -111,7 +106,6 @@ AC_DEFUN(SVN_LIB_APR,
     AC_MSG_ERROR([apr-config --shlib-path-var failed])
   fi
 
-  AC_SUBST(SVN_APR_PREFIX)
   AC_SUBST(SVN_APR_CONFIG, ["$apr_config"])
   AC_SUBST(SVN_APR_INCLUDES)
   AC_SUBST(SVN_APR_LIBS)

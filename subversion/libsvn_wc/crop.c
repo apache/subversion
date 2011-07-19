@@ -283,16 +283,16 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
                                     cancel_func, cancel_baton,
                                     scratch_pool));
 
-  SVN_ERR(svn_wc__db_base_add_absent_node(wc_ctx->db,
-                                          local_abspath,
-                                          repos_relpath,
-                                          repos_root,
-                                          repos_uuid,
-                                          revision,
-                                          kind,
-                                          svn_wc__db_status_excluded,
-                                          NULL, NULL,
-                                          scratch_pool));
+  SVN_ERR(svn_wc__db_base_add_excluded_node(wc_ctx->db,
+                                            local_abspath,
+                                            repos_relpath,
+                                            repos_root,
+                                            repos_uuid,
+                                            revision,
+                                            kind,
+                                            svn_wc__db_status_excluded,
+                                            NULL, NULL,
+                                            scratch_pool));
 
   if (notify_func)
     {

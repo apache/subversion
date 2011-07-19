@@ -1087,13 +1087,6 @@ delete(const svn_test_opts_t *opts,
 }
 
 
-
-struct node_created_rev_args {
-  const char *path;
-  svn_revnum_t rev;
-};
-
-
 static svn_error_t *
 canonicalize_abspath(const svn_test_opts_t *opts,
                      apr_pool_t *pool)
@@ -1155,7 +1148,6 @@ create_within_copy(const svn_test_opts_t *opts,
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root, *rev_root;
-  int i;
   svn_revnum_t youngest_rev = 0;
 
   /* Create a filesystem and repository. */
@@ -1230,6 +1222,7 @@ create_within_copy(const svn_test_opts_t *opts,
           "A/D3/down",
           "A/D3/J" }
       };
+    int i;
 
     SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev, spool));
 

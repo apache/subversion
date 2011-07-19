@@ -337,7 +337,7 @@ serialize_id_private(svn_temp_serializer__context_t *context,
   svn_temp_serializer__pop(context);
 }
 
-/* Serialize an ID within the serialization CONTECT.
+/* Serialize an ID within the serialization CONTEXT.
  */
 void
 svn_fs_fs__id_serialize(svn_temp_serializer__context_t *context,

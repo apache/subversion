@@ -1701,14 +1701,14 @@ svn_subst_copy_and_translate4(const char *src,
             }
 
           return svn_error_trace(create_special_file_from_stream(src_stream,
-                                                                  dst, pool));
+                                                                 dst, pool));
         }
       /* else !expand */
 
       return svn_error_trace(detranslate_special_file(src, dst,
-                                                       cancel_func,
-                                                       cancel_baton,
-                                                       pool));
+                                                      cancel_func,
+                                                      cancel_baton,
+                                                      pool));
     }
 
   /* The easy way out:  no translation needed, just copy. */

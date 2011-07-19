@@ -1361,22 +1361,6 @@ svn_cl__eat_peg_revisions(apr_array_header_t **true_targets_p,
 }
 
 svn_error_t *
-svn_cl__opt_parse_path(svn_opt_revision_t *rev,
-                       const char **truepath,
-                       const char *path /* UTF-8! */,
-                       apr_pool_t *pool)
-{
-  SVN_ERR(svn_opt_parse_path(rev, truepath, path, pool));
-
-  if (svn_path_is_url(*truepath))
-    *truepath = svn_uri_canonicalize(*truepath, pool);
-  else
-    *truepath = svn_dirent_canonicalize(*truepath, pool);
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets)
 {
   svn_error_t *err;
@@ -1390,6 +1374,15 @@ svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets)
 }
 
 svn_error_t *
+svn_cl__check_target_is_local_path(const char *target)
+{
+  if (svn_path_is_url(target))
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("'%s' is not a local path"), target);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_cl__check_targets_are_local_paths(const apr_array_header_t *targets)
 {
   int i;
@@ -1398,9 +1391,7 @@ svn_cl__check_targets_are_local_paths(const apr_array_header_t *targets)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
-      if (svn_path_is_url(target))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("'%s' is not a local path"), target);
+      SVN_ERR(svn_cl__check_target_is_local_path(target));
     }
   return SVN_NO_ERROR;
 }

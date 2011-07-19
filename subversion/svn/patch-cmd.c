@@ -70,9 +70,7 @@ svn_cl__patch(apr_getopt_t *os,
 
   patch_path = APR_ARRAY_IDX(targets, 0, const char *);
 
-  if (svn_path_is_url(patch_path))
-    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("'%s' is not a local path"), patch_path);
+  SVN_ERR(svn_cl__check_target_is_local_path(patch_path));
 
   SVN_ERR(svn_dirent_get_absolute(&abs_patch_path, patch_path, pool));
 
@@ -82,9 +80,7 @@ svn_cl__patch(apr_getopt_t *os,
     {
       target_path = APR_ARRAY_IDX(targets, 1, const char *);
 
-      if (svn_path_is_url(target_path))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("'%s' is not a local path"), target_path);
+      SVN_ERR(svn_cl__check_target_is_local_path(target_path));
     }
   SVN_ERR(svn_dirent_get_absolute(&abs_target_path, target_path, pool));
 

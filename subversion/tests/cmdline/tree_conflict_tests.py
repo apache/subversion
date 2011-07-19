@@ -479,7 +479,7 @@ def ensure_tree_conflict(sbox, operation,
         incoming_right_rev = source_right_rev
       else:
         incoming_right_rev = head_rev
-      expected_info = { 'Tree conflict' : operation +
+      expected_info = { 'Tree conflict' : '.* upon ' + operation +
           r'.* \((none|(file|dir).*' +
             re.escape(victim_name + '@' + str(incoming_left_rev)) + r')' +
           r'.* \((none|(file|dir).*' +
@@ -1164,10 +1164,8 @@ def actual_only_node_behaviour(sbox):
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "cat", "-r", "BASE", foo_path)
   # changelist (cl)
-  ### this does not error out -- needs review
-  ### the item does not end up in the changelist so this is a cosmetic problem
   expected_stdout = None
-  expected_stderr = []
+  expected_stderr = ".*svn: warning: W155010: The node '.*foo' was not found."
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "changelist", "my_changelist", foo_path)
 
@@ -1226,8 +1224,6 @@ def actual_only_node_behaviour(sbox):
     'Name': 'foo',
     'Schedule': 'normal',
     'Node Kind': 'none',
-    'Depth': 'empty', ### is this right?
-    'Copied From Rev': '0',
     'Path': re.escape(sbox.ospath('A/foo')),
   }
   run_and_verify_info([expected_info], foo_path)
@@ -1303,11 +1299,10 @@ def actual_only_node_behaviour(sbox):
                      "propget", "svn:eol-style", foo_path)
 
   # proplist (plist, pl)
-  ### proplist does exit(0) -- is that expected?
   expected_stdout = None
   expected_stderr = ".*foo.*is not under version control.*"
-  svntest.actions.run_and_verify_svn2(None, expected_stdout, expected_stderr,
-                                      0, "proplist", foo_path)
+  svntest.actions.run_and_verify_svn(None, expected_stdout, expected_stderr,
+                                     "proplist", foo_path)
 
   # propset (pset, ps)
   expected_stdout = None
@@ -1365,7 +1360,7 @@ def actual_only_node_behaviour(sbox):
 
   # update (up)
   expected_stdout = [
-   "Skipped '%s'\n" % sbox.ospath('A/foo'),
+   "Skipped '%s' -- Node remains in conflict\n" % sbox.ospath('A/foo'),
    "Summary of conflicts:\n",
    "  Skipped paths: 1\n",
   ]

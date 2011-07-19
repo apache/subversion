@@ -30,6 +30,7 @@
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_error.h"
+#include "svn_opt.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -72,8 +73,8 @@ svn_cl__cat(apr_getopt_t *os,
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
       /* Get peg revisions. */
-      SVN_ERR(svn_cl__opt_parse_path(&peg_revision, &truepath, target,
-                                     subpool));
+      SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
+                                 subpool));
 
       SVN_ERR(svn_cl__try(svn_client_cat2(out, truepath, &peg_revision,
                                           &(opt_state->start_revision),

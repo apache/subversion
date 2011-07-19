@@ -773,6 +773,7 @@ make_file_baton(struct file_baton **f_p,
                 svn_boolean_t adding,
                 apr_pool_t *scratch_pool)
 {
+  struct edit_baton *eb = pb->edit_baton;
   apr_pool_t *file_pool = svn_pool_create(pb->pool);
 
   struct file_baton *f = apr_pcalloc(file_pool, sizeof(*f));
@@ -785,17 +786,35 @@ make_file_baton(struct file_baton **f_p,
   SVN_ERR(path_join_under_root(&f->local_abspath,
                                pb->local_abspath, f->name, file_pool));
 
-  /* Figure out the new_URL for this file. */
-  if (adding || pb->edit_baton->switch_relpath)
-    f->new_relpath = svn_relpath_join(pb->new_relpath, f->name, file_pool);
-  else
+  /* Figure out the new URL for this file. */
+  if (eb->switch_relpath)
     {
-      SVN_ERR(svn_wc__db_scan_base_repos(&f->new_relpath, NULL, NULL,
-                                         pb->edit_baton->db,
-                                         f->local_abspath,
-                                         file_pool, scratch_pool));
+      /* Handle switches... */
 
-      SVN_ERR_ASSERT(f->new_relpath);
+      /* This file has a parent directory. If there is
+         no grandparent, then we may have anchored at the parent,
+         and self is the target. If we match the target, then set
+         NEW_RELPATH to the SWITCH_RELPATH.
+
+         Otherwise, we simply extend NEW_RELPATH from the parent.  */
+      if (pb->parent_baton == NULL
+          && strcmp(eb->target_basename, f->name) == 0)
+        f->new_relpath = eb->switch_relpath;
+      else
+        f->new_relpath = svn_relpath_join(pb->new_relpath, f->name,
+                                          file_pool);
+    }
+  else  /* must be an update */
+    {
+      if (adding)
+        f->new_relpath = svn_relpath_join(pb->new_relpath, f->name, file_pool);
+      else
+        {
+          SVN_ERR(svn_wc__db_scan_base_repos(&f->new_relpath, NULL, NULL,
+                                             eb->db, f->local_abspath,
+                                             file_pool, scratch_pool));
+          SVN_ERR_ASSERT(f->new_relpath);
+        }
     }
 
   f->pool              = file_pool;
@@ -1046,7 +1065,6 @@ set_target_revision(void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
 
-  /* Stashing a target_revision in the baton */
   *(eb->target_revision) = target_revision;
   return SVN_NO_ERROR;
 }
@@ -1089,7 +1107,7 @@ open_root(void *edit_baton,
       /* Notify that we skipped the target, while we actually skipped
          the anchor */
       do_notification(eb, eb->target_abspath, svn_node_unknown,
-                      svn_wc_notify_skip, pool);
+                      svn_wc_notify_skip_conflicted, pool);
 
       return SVN_NO_ERROR;
     }
@@ -1144,6 +1162,7 @@ modcheck_callback(void *baton,
       case svn_wc_status_ignored:
       case svn_wc_status_none:
       case svn_wc_status_unversioned:
+      case svn_wc_status_external:
         break;
 
       case svn_wc_status_deleted:
@@ -1570,9 +1589,9 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
   /* A conflict was detected. Append log commands to the log accumulator
    * to record it. */
   return svn_error_trace(create_tree_conflict(pconflict, eb, local_abspath,
-                                               reason, action, their_node_kind,
-                                               their_relpath,
-                                               result_pool, scratch_pool));
+                                              reason, action, their_node_kind,
+                                              their_relpath,
+                                              result_pool, scratch_pool));
 }
 
 
@@ -1739,7 +1758,8 @@ delete_entry(const char *path,
     {
       SVN_ERR(remember_skipped_tree(eb, local_abspath, scratch_pool));
 
-      do_notification(eb, local_abspath, svn_node_unknown, svn_wc_notify_skip,
+      do_notification(eb, local_abspath, svn_node_unknown,
+                      svn_wc_notify_skip_conflicted,
                       scratch_pool);
 
       svn_pool_destroy(scratch_pool);
@@ -2081,7 +2101,7 @@ add_directory(const char *path,
 
       /* ### TODO: Also print victim_path in the skip msg. */
       do_notification(eb, db->local_abspath, svn_node_dir,
-                      svn_wc_notify_skip, pool);
+                      svn_wc_notify_skip_conflicted, pool);
       return SVN_NO_ERROR;
     }
 
@@ -2312,7 +2332,7 @@ open_directory(const char *path,
       db->already_notified = TRUE;
 
       do_notification(eb, db->local_abspath, svn_node_unknown,
-                      svn_wc_notify_skip, pool);
+                      svn_wc_notify_skip_conflicted, pool);
 
       return SVN_NO_ERROR;
     }
@@ -2495,84 +2515,88 @@ close_directory(void *dir_baton,
 
   /* If this directory has property changes stored up, now is the time
      to deal with them. */
-  if (regular_prop_changes->nelts || entry_prop_changes->nelts
-      || dav_prop_changes->nelts)
+  if (regular_prop_changes->nelts)
     {
-      if (regular_prop_changes->nelts)
+      svn_skel_t *work_item;
+
+      /* If recording traversal info, then see if the
+         SVN_PROP_EXTERNALS property on this directory changed,
+         and record before and after for the change. */
+      if (eb->external_func)
         {
-          svn_skel_t *work_item;
+          const svn_prop_t *change
+            = externals_prop_changed(regular_prop_changes);
 
-          /* If recording traversal info, then see if the
-             SVN_PROP_EXTERNALS property on this directory changed,
-             and record before and after for the change. */
-          if (eb->external_func)
+          if (change)
             {
-              const svn_prop_t *change
-                = externals_prop_changed(regular_prop_changes);
+              const svn_string_t *new_val_s = change->value;
+              const svn_string_t *old_val_s;
 
-              if (change)
+              old_val_s = apr_hash_get(base_props, SVN_PROP_EXTERNALS,
+                                       APR_HASH_KEY_STRING);
+
+              if ((new_val_s == NULL) && (old_val_s == NULL))
+                ; /* No value before, no value after... so do nothing. */
+              else if (new_val_s && old_val_s
+                       && (svn_string_compare(old_val_s, new_val_s)))
+                ; /* Value did not change... so do nothing. */
+              else if (old_val_s || new_val_s)
+                /* something changed, record the change */
                 {
-                  const svn_string_t *new_val_s = change->value;
-                  const svn_string_t *old_val_s;
-
-                  old_val_s = apr_hash_get(base_props, SVN_PROP_EXTERNALS,
-                                           APR_HASH_KEY_STRING);
-
-                  if ((new_val_s == NULL) && (old_val_s == NULL))
-                    ; /* No value before, no value after... so do nothing. */
-                  else if (new_val_s && old_val_s
-                           && (svn_string_compare(old_val_s, new_val_s)))
-                    ; /* Value did not change... so do nothing. */
-                  else if (old_val_s || new_val_s)
-                    /* something changed, record the change */
-                    {
-                      SVN_ERR((eb->external_func)(
-                                           eb->external_baton,
-                                           db->local_abspath,
-                                           old_val_s,
-                                           new_val_s,
-                                           db->ambient_depth,
-                                           db->pool));
-                    }
+                  SVN_ERR((eb->external_func)(
+                                       eb->external_baton,
+                                       db->local_abspath,
+                                       old_val_s,
+                                       new_val_s,
+                                       db->ambient_depth,
+                                       db->pool));
                 }
             }
-
-          /* Merge pending properties into temporary files (ignoring
-             conflicts). */
-          SVN_ERR_W(svn_wc__merge_props(&work_item,
-                                        &prop_state,
-                                        &new_base_props,
-                                        &new_actual_props,
-                                        eb->db,
-                                        db->local_abspath,
-                                        svn_wc__db_kind_dir,
-                                        NULL, /* left_version */
-                                        NULL, /* right_version */
-                                        NULL /* use baseprops */,
-                                        base_props,
-                                        actual_props,
-                                        regular_prop_changes,
-                                        TRUE /* base_merge */,
-                                        FALSE /* dry_run */,
-                                        eb->conflict_func,
-                                        eb->conflict_baton,
-                                        eb->cancel_func,
-                                        eb->cancel_baton,
-                                        db->pool,
-                                        scratch_pool),
-                    _("Couldn't do property merge"));
-          /* After a (not-dry-run) merge, we ALWAYS have props to save.  */
-          SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
-          all_work_items = svn_wc__wq_merge(all_work_items, work_item,
-                                            scratch_pool);
         }
 
-      SVN_ERR(accumulate_last_change(&new_changed_rev,
-                                     &new_changed_date,
-                                     &new_changed_author,
-                                     entry_prop_changes,
-                                     scratch_pool, scratch_pool));
+      if (db->shadowed)
+        {
+          /* We don't have a relevant actual row, but we need actual properties
+             to allow property merging without conflicts. */
+          if (db->adding_dir)
+            actual_props = apr_hash_make(scratch_pool);
+          else
+            actual_props = base_props;
+        }
+
+      /* Merge pending properties into temporary files (ignoring
+         conflicts). */
+      SVN_ERR_W(svn_wc__merge_props(&work_item,
+                                    &prop_state,
+                                    &new_base_props,
+                                    &new_actual_props,
+                                    eb->db,
+                                    db->local_abspath,
+                                    svn_wc__db_kind_dir,
+                                    NULL, /* left_version */
+                                    NULL, /* right_version */
+                                    NULL /* use baseprops */,
+                                    base_props,
+                                    actual_props,
+                                    regular_prop_changes,
+                                    TRUE /* base_merge */,
+                                    FALSE /* dry_run */,
+                                    eb->conflict_func,
+                                    eb->conflict_baton,
+                                    eb->cancel_func,
+                                    eb->cancel_baton,
+                                    db->pool,
+                                    scratch_pool),
+                _("Couldn't do property merge"));
+      /* After a (not-dry-run) merge, we ALWAYS have props to save.  */
+      SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
+      all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                        scratch_pool);
     }
+
+  SVN_ERR(accumulate_last_change(&new_changed_rev, &new_changed_date,
+                                 &new_changed_author, entry_prop_changes,
+                                 scratch_pool, scratch_pool));
 
   /* Check if we should add some not-present markers before marking the
      directory complete (Issue #3569) */
@@ -2884,16 +2908,16 @@ absent_node(const char *path,
     const char *repos_relpath;
     repos_relpath = svn_relpath_join(pb->new_relpath, name, scratch_pool);
 
-    /* Insert an absent node below the parent node to note that this child
+    /* Insert an excluded node below the parent node to note that this child
        is absent. (This puts it in the parent db if the child is obstructed) */
-    SVN_ERR(svn_wc__db_base_add_absent_node(eb->db, local_abspath,
-                                            repos_relpath, eb->repos_root,
-                                            eb->repos_uuid,
-                                            *(eb->target_revision),
-                                            absent_kind,
-                                            svn_wc__db_status_server_excluded,
-                                            NULL, NULL,
-                                            scratch_pool));
+    SVN_ERR(svn_wc__db_base_add_excluded_node(eb->db, local_abspath,
+                                              repos_relpath, eb->repos_root,
+                                              eb->repos_uuid,
+                                              *(eb->target_revision),
+                                              absent_kind,
+                                              svn_wc__db_status_server_excluded,
+                                              NULL, NULL,
+                                              scratch_pool));
   }
 
   svn_pool_destroy(scratch_pool);
@@ -3099,7 +3123,7 @@ add_file(const char *path,
                    APR_HASH_KEY_STRING, (void*)1);
 
       do_notification(eb, fb->local_abspath, svn_node_unknown,
-                      svn_wc_notify_skip, scratch_pool);
+                      svn_wc_notify_skip_conflicted, scratch_pool);
 
       svn_pool_destroy(scratch_pool);
 
@@ -3300,7 +3324,7 @@ open_file(const char *path,
       fb->already_notified = TRUE;
 
       do_notification(eb, fb->local_abspath, svn_node_unknown,
-                      svn_wc_notify_skip, scratch_pool);
+                      svn_wc_notify_skip_conflicted, scratch_pool);
 
       svn_pool_destroy(scratch_pool);
 
@@ -4113,9 +4137,37 @@ close_file(void *file_baton,
       /* Merge the text. This will queue some additional work.  */
       if (!fb->obstruction_found)
         {
-          SVN_ERR(merge_file(&work_item, &install_pristine, &install_from,
-                             &content_state, fb, current_actual_props,
-                             fb->changed_date, scratch_pool, scratch_pool));
+          svn_error_t *err;
+          err = merge_file(&work_item, &install_pristine, &install_from,
+                           &content_state, fb, current_actual_props,
+                           fb->changed_date, scratch_pool, scratch_pool);
+
+          if (err && err->apr_err == SVN_ERR_WC_PATH_ACCESS_DENIED)
+            {
+              if (eb->notify_func)
+                {
+                  svn_wc_notify_t *notify =svn_wc_create_notify(
+                                fb->local_abspath,
+                                svn_wc_notify_update_skip_access_denied,
+                                scratch_pool);
+
+                  notify->kind = svn_node_file;
+                  notify->err = err;
+
+                  eb->notify_func(eb->notify_baton, notify, scratch_pool);
+                }
+              svn_error_clear(err);
+
+              SVN_ERR(remember_skipped_tree(eb, fb->local_abspath,
+                                            scratch_pool));
+              fb->skip_this = TRUE;
+
+              SVN_ERR(maybe_release_dir_info(fb->bump_info));
+              svn_pool_destroy(fb->pool);
+              return SVN_NO_ERROR;
+            }
+          else
+            SVN_ERR(err);
 
           all_work_items = svn_wc__wq_merge(all_work_items, work_item,
                                             scratch_pool);
@@ -4280,7 +4332,6 @@ close_file(void *file_baton,
      about files which were already notified for another reason.) */
   if (eb->notify_func && !fb->already_notified && fb->edited)
     {
-      const svn_string_t *mime_type;
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action = svn_wc_notify_update_update;
 
@@ -4307,12 +4358,8 @@ close_file(void *file_baton,
       notify->old_revision = fb->old_revision;
 
       /* Fetch the mimetype from the actual properties */
-      mime_type = (new_actual_props != NULL)
-                        ? apr_hash_get(new_actual_props, SVN_PROP_MIME_TYPE,
-                                       APR_HASH_KEY_STRING)
-                        : NULL;
-
-      notify->mime_type = mime_type == NULL ? NULL : mime_type->data;
+      notify->mime_type = svn_prop_get_value(new_actual_props,
+                                             SVN_PROP_MIME_TYPE);
 
       eb->notify_func(eb->notify_baton, notify, scratch_pool);
     }
@@ -5047,9 +5094,9 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
                             apr_pool_t *scratch_pool)
 {
   return svn_error_trace(svn_wc__db_is_wcroot(wc_root,
-                                               wc_ctx->db,
-                                               local_abspath,
-                                               scratch_pool));
+                                              wc_ctx->db,
+                                              local_abspath,
+                                              scratch_pool));
 }
 
 
@@ -5391,6 +5438,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                   pool));
 
   return svn_error_trace(svn_wc__wq_run(db, dir_abspath,
-                                         cancel_func, cancel_baton,
-                                         pool));
+                                        cancel_func, cancel_baton,
+                                        pool));
 }

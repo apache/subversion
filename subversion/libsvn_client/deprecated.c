@@ -38,6 +38,7 @@
 #include "svn_compat.h"
 #include "svn_props.h"
 #include "svn_utf.h"
+#include "svn_string.h"
 
 #include "client.h"
 #include "mergeinfo.h"
@@ -1721,6 +1722,40 @@ svn_client_propget(apr_hash_t **props,
 }
 
 
+/* Duplicate a HASH containing (char * -> svn_string_t *) key/value
+   pairs using POOL. */
+static apr_hash_t *
+string_hash_dup(apr_hash_t *hash, apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_hash_t *new_hash = apr_hash_make(pool);
+
+  for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
+    {
+      const char *key = apr_pstrdup(pool, svn__apr_hash_index_key(hi));
+      apr_ssize_t klen = svn__apr_hash_index_klen(hi);
+      svn_string_t *val = svn_string_dup(svn__apr_hash_index_val(hi), pool);
+
+      apr_hash_set(new_hash, key, klen, val);
+    }
+  return new_hash;
+}
+
+svn_client_proplist_item_t *
+svn_client_proplist_item_dup(const svn_client_proplist_item_t *item,
+                             apr_pool_t * pool)
+{
+  svn_client_proplist_item_t *new_item = apr_pcalloc(pool, sizeof(*new_item));
+
+  if (item->node_name)
+    new_item->node_name = svn_stringbuf_dup(item->node_name, pool);
+
+  if (item->prop_hash)
+    new_item->prop_hash = string_hash_dup(item->prop_hash, pool);
+
+  return new_item;
+}
+
 /* Receiver baton used by proplist2() */
 struct proplist_receiver_baton {
   apr_array_header_t *props;
@@ -2078,8 +2113,8 @@ svn_client_checkout(svn_revnum_t *result_rev,
   peg_revision.kind = svn_opt_revision_unspecified;
 
   return svn_error_trace(svn_client_checkout2(result_rev, URL, path,
-                                               &peg_revision, revision, recurse,
-                                               FALSE, ctx, pool));
+                                              &peg_revision, revision, recurse,
+                                              FALSE, ctx, pool));
 }
 
 /*** From info.c ***/
@@ -2142,7 +2177,9 @@ info_from_info2(svn_info_t **new_info,
   info->last_changed_rev    = info2->last_changed_rev;
   info->last_changed_date   = info2->last_changed_date;
   info->last_changed_author = info2->last_changed_author;
-  info->lock                = info2->lock;
+
+  /* Stupid old structure has a non-const LOCK member. Sigh.  */
+  info->lock                = (svn_lock_t *)info2->lock;
 
   info->size64              = info2->size;
   if (info2->size == SVN_INVALID_FILESIZE)
@@ -2302,10 +2339,11 @@ svn_client_info2(const char *path_or_url,
   SVN_ERR(svn_client_info3(abspath_or_url,
                            peg_revision,
                            revision,
+                           depth,
+                           FALSE, TRUE,
+                           changelists,
                            info_receiver_relpath_wrapper,
                            &rb,
-                           depth,
-                           changelists,
                            ctx,
                            pool));
 

@@ -28,7 +28,6 @@
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_config.h"
-#include "svn_cmdline.h"
 #include "svn_cache_config.h"
 
 #include "svn_private_config.h"
@@ -190,6 +189,52 @@ init_callbacks(svn_cache__t *cache,
   return SVN_NO_ERROR;
 }
 
+/* Sets *CACHE_P to cache instance based on provided options.
+ * Creates memcache if MEMCACHE is not NULL. Creates membuffer cache if
+ * MEMBUFFER is not NULL. Fallbacks to inprocess cache if MEMCACHE and
+ * MEMBUFFER are NULL and pages is non-zero.  Sets *CACHE_P to NULL
+ * otherwise.
+ *
+ * Cache is allocated in POOL.
+ * */
+static svn_error_t *
+create_cache(svn_cache__t **cache_p,
+             svn_memcache_t *memcache,
+             svn_membuffer_t *membuffer,
+             apr_int64_t pages,
+             apr_int64_t items_per_page,
+             svn_cache__serialize_func_t serializer,
+             svn_cache__deserialize_func_t deserializer,
+             apr_ssize_t klen,
+             const char *prefix,
+             apr_pool_t *pool)
+{
+    if (memcache)
+      {
+        SVN_ERR(svn_cache__create_memcache(cache_p, memcache,
+                                           serializer, deserializer, klen,
+                                           prefix, pool));
+      }
+    else if (membuffer)
+      {
+        SVN_ERR(svn_cache__create_membuffer_cache(
+                  cache_p, membuffer, serializer, deserializer,
+                  klen, prefix, pool));
+      }
+    else if (pages)
+      {
+        SVN_ERR(svn_cache__create_inprocess(
+                  cache_p, serializer, deserializer, klen, pages,
+                  items_per_page, FALSE, prefix, pool));
+      }
+    else
+    {
+      *cache_p = NULL;
+    }
+
+    return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_fs__initialize_caches(svn_fs_t *fs,
                              apr_pool_t *pool)
@@ -200,6 +245,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                                    "/", fs->path, ":",
                                    (char *)NULL);
   svn_memcache_t *memcache;
+  svn_membuffer_t *membuffer;
   svn_boolean_t no_handler;
   svn_boolean_t cache_txdeltas;
   svn_boolean_t cache_fulltexts;
@@ -212,6 +258,8 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                       fs,
                       pool));
 
+  membuffer = svn_cache__get_global_membuffer_cache();
+
   /* Make the cache for revision roots.  For the vast majority of
    * commands, this is only going to contain a few entries (svnadmin
    * dump/verify is an exception here), so to reduce overhead let's
@@ -220,92 +268,57 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
    * id_private_t + 3 strings for value, and the cache_entry); the
    * default pool size is 8192, so about a hundred should fit
    * comfortably. */
-  if (svn_cache__get_global_membuffer_cache())
-      SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->rev_root_id_cache),
-                                                svn_cache__get_global_membuffer_cache(),
-                                                svn_fs_fs__serialize_id,
-                                                svn_fs_fs__deserialize_id,
-                                                sizeof(svn_revnum_t),
-                                                apr_pstrcat(pool, prefix, "RRI",
-                                                            (char *)NULL),
-                                                fs->pool));
-  else
-      SVN_ERR(svn_cache__create_inprocess(&(ffd->rev_root_id_cache),
-                                          svn_fs_fs__serialize_id,
-                                          svn_fs_fs__deserialize_id,
-                                          sizeof(svn_revnum_t),
-                                          1, 100, FALSE,
-                                          apr_pstrcat(pool, prefix, "RRI",
-                                              (char *)NULL),
-                                          fs->pool));
+  SVN_ERR(create_cache(&(ffd->rev_root_id_cache),
+                       NULL,
+                       membuffer,
+                       1, 100,
+                       svn_fs_fs__serialize_id,
+                       svn_fs_fs__deserialize_id,
+                       sizeof(svn_revnum_t),
+                       apr_pstrcat(pool, prefix, "RRI", (char *)NULL),
+                       fs->pool));
 
   SVN_ERR(init_callbacks(ffd->rev_root_id_cache, fs, no_handler, pool));
 
   /* Rough estimate: revision DAG nodes have size around 320 bytes, so
    * let's put 16 on a page. */
-  if (svn_cache__get_global_membuffer_cache())
-    SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->rev_node_cache),
-                                              svn_cache__get_global_membuffer_cache(),
-                                              svn_fs_fs__dag_serialize,
-                                              svn_fs_fs__dag_deserialize,
-                                              APR_HASH_KEY_STRING,
-                                              apr_pstrcat(pool, prefix, "DAG",
-                                                          (char *)NULL),
-                                              fs->pool));
-  else
-    SVN_ERR(svn_cache__create_inprocess(&(ffd->rev_node_cache),
-                                        svn_fs_fs__dag_serialize,
-                                        svn_fs_fs__dag_deserialize,
-                                        APR_HASH_KEY_STRING,
-                                        1024, 16, FALSE,
-                                        apr_pstrcat(pool, prefix, "DAG",
-                                                    (char *)NULL),
-                                        fs->pool));
+  SVN_ERR(create_cache(&(ffd->rev_node_cache),
+                       NULL,
+                       membuffer,
+                       1024, 16,
+                       svn_fs_fs__dag_serialize,
+                       svn_fs_fs__dag_deserialize,
+                       APR_HASH_KEY_STRING,
+                       apr_pstrcat(pool, prefix, "DAG", (char *)NULL),
+                       fs->pool));
 
   SVN_ERR(init_callbacks(ffd->rev_node_cache, fs, no_handler, pool));
 
   /* Very rough estimate: 1K per directory. */
-  if (svn_cache__get_global_membuffer_cache())
-    SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->dir_cache),
-                                              svn_cache__get_global_membuffer_cache(),
-                                              svn_fs_fs__serialize_dir_entries,
-                                              svn_fs_fs__deserialize_dir_entries,
-                                              APR_HASH_KEY_STRING,
-                                              apr_pstrcat(pool, prefix, "DIR",
-                                                          (char *)NULL),
-                                              fs->pool));
-  else
-    SVN_ERR(svn_cache__create_inprocess(&(ffd->dir_cache),
-                                        svn_fs_fs__serialize_dir_entries,
-                                        svn_fs_fs__deserialize_dir_entries,
-                                        APR_HASH_KEY_STRING,
-                                        1024, 8, FALSE,
-                                        apr_pstrcat(pool, prefix, "DIR",
-                                            (char *)NULL),
-                                        fs->pool));
+  SVN_ERR(create_cache(&(ffd->dir_cache),
+                       NULL,
+                       membuffer,
+                       1024, 8,
+                       svn_fs_fs__serialize_dir_entries,
+                       svn_fs_fs__deserialize_dir_entries,
+                       APR_HASH_KEY_STRING,
+                       apr_pstrcat(pool, prefix, "DIR", (char *)NULL),
+                       fs->pool));
 
   SVN_ERR(init_callbacks(ffd->dir_cache, fs, no_handler, pool));
 
   /* Only 16 bytes per entry (a revision number + the corresponding offset).
      Since we want ~8k pages, that means 512 entries per page. */
-  if (svn_cache__get_global_membuffer_cache())
-    SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->packed_offset_cache),
-                                              svn_cache__get_global_membuffer_cache(),
-                                              svn_fs_fs__serialize_manifest,
-                                              svn_fs_fs__deserialize_manifest,
-                                              sizeof(svn_revnum_t),
-                                              apr_pstrcat(pool, prefix, "PACK-MANIFEST",
-                                                          (char *)NULL),
-                                              fs->pool));
-  else
-    SVN_ERR(svn_cache__create_inprocess(&(ffd->packed_offset_cache),
-                                        svn_fs_fs__serialize_manifest,
-                                        svn_fs_fs__deserialize_manifest,
-                                        sizeof(svn_revnum_t),
-                                        32, 1, FALSE,
-                                        apr_pstrcat(pool, prefix, "PACK-MANIFEST",
-                                                    (char *)NULL),
-                                        fs->pool));
+  SVN_ERR(create_cache(&(ffd->packed_offset_cache),
+                       NULL,
+                       membuffer,
+                       32, 1,
+                       svn_fs_fs__serialize_manifest,
+                       svn_fs_fs__deserialize_manifest,
+                       sizeof(svn_revnum_t),
+                       apr_pstrcat(pool, prefix, "PACK-MANIFEST",
+                                   (char *)NULL),
+                       fs->pool));
 
   SVN_ERR(init_callbacks(ffd->packed_offset_cache, fs, no_handler, pool));
 
@@ -313,43 +326,32 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   ffd->fulltext_cache = NULL;
   if (cache_fulltexts)
     {
-      if (memcache)
-        {
-          SVN_ERR(svn_cache__create_memcache(&(ffd->fulltext_cache),
-                                            memcache,
-                                            /* Values are svn_string_t */
-                                            NULL, NULL,
-                                            APR_HASH_KEY_STRING,
-                                            apr_pstrcat(pool, prefix, "TEXT",
-                                                        (char *)NULL),
-                                            fs->pool));
-        }
-      else if (svn_cache__get_global_membuffer_cache())
-        {
-          SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->fulltext_cache),
-                                                    svn_cache__get_global_membuffer_cache(),
-                                                    /* Values are svn_string_t */
-                                                    NULL, NULL,
-                                                    APR_HASH_KEY_STRING,
-                                                    apr_pstrcat(pool, prefix, "TEXT",
-                                                                (char *)NULL),
-                                                    fs->pool));
-        }
+      SVN_ERR(create_cache(&(ffd->fulltext_cache),
+                           memcache,
+                           membuffer,
+                           0, 0, /* Do not use inprocess cache */
+                           /* Values are svn_string_t */
+                           NULL, NULL,
+                           APR_HASH_KEY_STRING,
+                           apr_pstrcat(pool, prefix, "TEXT", (char *)NULL),
+                           fs->pool));
     }
 
   SVN_ERR(init_callbacks(ffd->fulltext_cache, fs, no_handler, pool));
 
   /* initialize txdelta window cache, if that has been enabled */
-  if (svn_cache__get_global_membuffer_cache() && cache_txdeltas)
+  if (cache_txdeltas)
     {
-      SVN_ERR(svn_cache__create_membuffer_cache
-                (&(ffd->txdelta_window_cache),
-                 svn_cache__get_global_membuffer_cache(),
-                 svn_fs_fs__serialize_txdelta_window,
-                 svn_fs_fs__deserialize_txdelta_window,
-                 APR_HASH_KEY_STRING,
-                 apr_pstrcat(pool, prefix, "TXDELTA_WINDOW", (char *)NULL),
-                 fs->pool));
+      SVN_ERR(create_cache(&(ffd->txdelta_window_cache),
+                           NULL,
+                           membuffer,
+                           0, 0, /* Do not use inprocess cache */
+                           svn_fs_fs__serialize_txdelta_window,
+                           svn_fs_fs__deserialize_txdelta_window,
+                           APR_HASH_KEY_STRING,
+                           apr_pstrcat(pool, prefix, "TXDELTA_WINDOW",
+                                       (char *)NULL),
+                           fs->pool));
     }
   else
     {
@@ -359,23 +361,15 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   SVN_ERR(init_callbacks(ffd->txdelta_window_cache, fs, no_handler, pool));
 
   /* initialize node revision cache, if caching has been enabled */
-  if (svn_cache__get_global_membuffer_cache())
-    {
-      SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->node_revision_cache),
-                                                svn_cache__get_global_membuffer_cache(),
-                                                svn_fs_fs__serialize_node_revision,
-                                                svn_fs_fs__deserialize_node_revision,
-                                                APR_HASH_KEY_STRING,
-                                                apr_pstrcat(pool,
-                                                            prefix,
-                                                            "NODEREVS",
-                                                            (char *)NULL),
-                                                fs->pool));
-    }
-  else
-    {
-      ffd->node_revision_cache = NULL;
-    }
+  SVN_ERR(create_cache(&(ffd->node_revision_cache),
+                       NULL,
+                       membuffer,
+                       0, 0, /* Do not use inprocess cache */
+                       svn_fs_fs__serialize_node_revision,
+                       svn_fs_fs__deserialize_node_revision,
+                       APR_HASH_KEY_STRING,
+                       apr_pstrcat(pool, prefix, "NODEREVS", (char *)NULL),
+                       fs->pool));
 
   SVN_ERR(init_callbacks(ffd->node_revision_cache, fs, no_handler, pool));
 
@@ -463,24 +457,16 @@ svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
     }
 
   /* create a txn-local directory cache */
-  if (svn_cache__get_global_membuffer_cache())
-    SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->txn_dir_cache),
-                                              svn_cache__get_global_membuffer_cache(),
-                                              svn_fs_fs__serialize_dir_entries,
-                                              svn_fs_fs__deserialize_dir_entries,
-                                              APR_HASH_KEY_STRING,
-                                              apr_pstrcat(pool, prefix, "TXNDIR",
-                                                          (char *)NULL),
-                                              pool));
-  else
-    SVN_ERR(svn_cache__create_inprocess(&(ffd->txn_dir_cache),
-                                        svn_fs_fs__serialize_dir_entries,
-                                        svn_fs_fs__deserialize_dir_entries,
-                                        APR_HASH_KEY_STRING,
-                                        1024, 8, FALSE,
-                                        apr_pstrcat(pool, prefix, "TXNDIR",
-                                            (char *)NULL),
-                                        pool));
+  SVN_ERR(create_cache(&ffd->txn_dir_cache,
+                       NULL,
+                       svn_cache__get_global_membuffer_cache(),
+                       1024, 8,
+                       svn_fs_fs__serialize_dir_entries,
+                       svn_fs_fs__deserialize_dir_entries,
+                       APR_HASH_KEY_STRING,
+                       apr_pstrcat(pool, prefix, "TXNDIR",
+                                   (char *)NULL),
+                       pool));
 
   /* reset the transaction-specific cache if the pool gets cleaned up. */
   init_txn_callbacks(&(ffd->txn_dir_cache), pool);

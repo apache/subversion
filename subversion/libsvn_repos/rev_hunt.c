@@ -997,8 +997,9 @@ get_path_mergeinfo(apr_hash_t **mergeinfo,
   /* We do not need to call svn_repos_fs_get_mergeinfo() (which performs authz)
      because we will filter out unreadable revisions in
      find_interesting_revision(), above */
-  SVN_ERR(svn_fs_get_mergeinfo(&tmp_catalog, root, paths,
-                               svn_mergeinfo_inherited, FALSE, subpool));
+  SVN_ERR(svn_fs_get_mergeinfo2(&tmp_catalog, root, paths,
+                                svn_mergeinfo_inherited, FALSE, FALSE,
+                                subpool));
 
   *mergeinfo = apr_hash_get(tmp_catalog, path, APR_HASH_KEY_STRING);
   if (*mergeinfo)

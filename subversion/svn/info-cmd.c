@@ -579,22 +579,20 @@ svn_cl__info(apr_getopt_t *os,
       /* If no peg-rev was attached to a URL target, then assume HEAD. */
       if (svn_path_is_url(truepath))
         {
-          truepath = svn_uri_canonicalize(truepath, subpool);
-
           if (peg_revision.kind == svn_opt_revision_unspecified)
             peg_revision.kind = svn_opt_revision_head;
         }
       else
         {
-          truepath = svn_dirent_canonicalize(truepath, subpool);
-
           SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, subpool));
         }
 
       err = svn_client_info3(truepath,
                              &peg_revision, &(opt_state->start_revision),
-                             receiver, (void *) path_prefix, opt_state->depth,
-                             opt_state->changelists, ctx, subpool);
+                             opt_state->depth, TRUE, TRUE,
+                             opt_state->changelists,
+                             receiver, (void *) path_prefix,
+                             ctx, subpool);
 
       if (err)
         {

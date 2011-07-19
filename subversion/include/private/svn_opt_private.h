@@ -67,7 +67,7 @@ svn_opt__split_arg_at_peg_revision(const char **true_target,
  * valid URL:
  *   - escape IRI characters and some other non-URI characters
  *   - check that no back-path ("..") components are present
- *   - canonicalize the separator ("/") characters
+ *   - call svn_uri_canonicalize()
  * URL_IN is in UTF-8 encoding and has no peg revision specifier.
  * Set *URL_OUT to the result, allocated from POOL.
  */
@@ -84,6 +84,7 @@ svn_opt__arg_canonicalize_url(const char **url_out,
  *   - If the path does not exist (which is valid) the given capitalization
  *     is used.
  *   - canonicalize the separator ("/") characters
+ *   - call svn_dirent_canonicalize()
  * PATH_IN is in UTF-8 encoding and has no peg revision specifier.
  * Set *PATH_OUT to the result, allocated from POOL.
  */

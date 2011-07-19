@@ -308,7 +308,7 @@ svn_error_t * svn_ra_neon__get_mergeinfo(
   const apr_array_header_t *paths,
   svn_revnum_t revision,
   svn_mergeinfo_inheritance_t inherit,
-  svn_boolean_t *validate_inherited_mergeinfo,
+  svn_boolean_t validate_inherited_mergeinfo,
   svn_boolean_t include_descendants,
   apr_pool_t *pool);
 
@@ -1125,7 +1125,8 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
 
    If the server is kind enough to tell us the current youngest
    revision of the target repository, set *YOUNGEST_REV to that value;
-   set it to SVN_INVALID_REVNUM otherwise.
+   set it to SVN_INVALID_REVNUM otherwise.  YOUNGEST_REV may be NULL if
+   the caller is not interested in receiving this information.
 
    NOTE:  This function also expects the server to announce the
    activity collection.  */

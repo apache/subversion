@@ -57,14 +57,12 @@ AC_DEFUN(SVN_LIB_Z,
   fi
 
   if test "$zlib_found" = "yes"; then
-    SVN_ZLIB_PREFIX="$zlib_prefix"
     SVN_ZLIB_INCLUDES="-I$zlib_prefix/include"
     LDFLAGS="$LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS(-L$zlib_prefix/lib)`"
   fi
 
   SVN_ZLIB_LIBS="-lz"
 
-  AC_SUBST(SVN_ZLIB_PREFIX)
   AC_SUBST(SVN_ZLIB_INCLUDES)
   AC_SUBST(SVN_ZLIB_LIBS)
 ])

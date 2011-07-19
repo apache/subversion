@@ -37,53 +37,108 @@ APR_ICONV=apr-iconv-1.2.1
 BASEDIR=`pwd`
 TEMPDIR=$BASEDIR/temp
 
+HTTP_FETCH=
+[ -z "$HTTP_FETCH" ] && type wget  >/dev/null 2>&1 && HTTP_FETCH="wget -nc"
+[ -z "$HTTP_FETCH" ] && type curl  >/dev/null 2>&1 && HTTP_FETCH="curl -O"
+[ -z "$HTTP_FETCH" ] && type fetch >/dev/null 2>&1 && HTTP_FETCH="fetch"
+
 # Need this uncommented if any of the specific versions of the ASF tarballs to
 # be downloaded are no longer available on the general mirrors.
 APACHE_MIRROR=http://archive.apache.org/dist
 
+# helpers
+usage() {
+    echo "Usage: $0"
+    echo "Usage: $0 [ apr | neon | serf | zlib | sqlite ] ..."
+    exit $1
+}
+
+# getters
+get_apr() {
+    cd $TEMPDIR
+    $HTTP_FETCH $APACHE_MIRROR/apr/$APR.tar.bz2
+    $HTTP_FETCH $APACHE_MIRROR/apr/$APR_UTIL.tar.bz2
+    cd $BASEDIR
+
+    bzip2 -dc $TEMPDIR/$APR.tar.bz2 | tar -xf -
+    bzip2 -dc $TEMPDIR/$APR_UTIL.tar.bz2 | tar -xf -
+
+    mv $APR apr
+    mv $APR_UTIL apr-util
+}
+
+get_neon() {
+    cd $TEMPDIR
+    $HTTP_FETCH http://webdav.org/neon/$NEON.tar.gz
+    cd $BASEDIR
+
+    gzip  -dc $TEMPDIR/$NEON.tar.gz | tar -xf -
+
+    mv $NEON neon
+}
+
+get_serf() {
+    cd $TEMPDIR
+    $HTTP_FETCH http://serf.googlecode.com/files/$SERF.tar.bz2
+    cd $BASEDIR
+
+    bzip2 -dc $TEMPDIR/$SERF.tar.bz2 | tar -xf -
+
+    mv $SERF serf
+}
+
+get_zlib() {
+    cd $TEMPDIR
+    $HTTP_FETCH http://www.zlib.net/$ZLIB.tar.bz2
+    cd $BASEDIR
+
+    bzip2 -dc $TEMPDIR/$ZLIB.tar.bz2 | tar -xf -
+
+    mv $ZLIB zlib
+}
+
+get_sqlite() {
+    cd $TEMPDIR
+    $HTTP_FETCH http://www.sqlite.org/$SQLITE.zip
+    cd $BASEDIR
+
+    unzip -q $TEMPDIR/$SQLITE.zip
+
+    mv $SQLITE sqlite-amalgamation
+
+}
+
+# main()
 get_deps() {
     mkdir -p $TEMPDIR
-    cd $TEMPDIR
 
-    for d in neon zlib serf sqlite-amalgamation apr apr-util; do
+    for i in neon zlib serf sqlite-amalgamation apr apr-util; do
       if [ -d $i ]; then
         echo "Local directory '$i' already exists; the downloaded copy won't be used" >&2
       fi
     done
 
-    wget -nc $APACHE_MIRROR/apr/$APR.tar.bz2
-    wget -nc $APACHE_MIRROR/apr/$APR_UTIL.tar.bz2
-    wget -nc http://webdav.org/neon/$NEON.tar.gz
-    wget -nc http://serf.googlecode.com/files/$SERF.tar.bz2
-    wget -nc http://www.zlib.net/$ZLIB.tar.bz2
-    wget -nc http://www.sqlite.org/$SQLITE.zip
+    if [ $# -gt 0 ]; then
+      for target; do
+        get_$target || usage
+      done
+    else
+      get_apr
+      get_neon
+      get_serf
+      get_zlib
+      get_sqlite
 
-    cd $BASEDIR
-    gzip  -dc $TEMPDIR/$NEON.tar.gz | tar -xf -
-    bzip2 -dc $TEMPDIR/$ZLIB.tar.bz2 | tar -xf -
-    bzip2 -dc $TEMPDIR/$SERF.tar.bz2 | tar -xf -
-    unzip -q $TEMPDIR/$SQLITE.zip
+      echo
+      echo "If you require mod_dav_svn, the recommended version of httpd is:"
+      echo "   $APACHE_MIRROR/httpd/$HTTPD.tar.bz2"
 
-    mv $NEON neon
-    mv $ZLIB zlib
-    mv $SERF serf
-    mv $SQLITE sqlite-amalgamation
-
-    bzip2 -dc $TEMPDIR/$APR.tar.bz2 | tar -xf -
-    bzip2 -dc $TEMPDIR/$APR_UTIL.tar.bz2 | tar -xf -
-    mv $APR apr
-    mv $APR_UTIL apr-util
-    cd $BASEDIR
-
-    echo
-    echo "If you require mod_dav_svn, the recommended version of httpd is:"
-    echo "   $APACHE_MIRROR/httpd/$HTTPD.tar.bz2"
-
-    echo
-    echo "If you require apr-iconv, its recommended version is:"
-    echo "   $APACHE_MIRROR/apr/$APR_ICONV.tar.bz2"
+      echo
+      echo "If you require apr-iconv, its recommended version is:"
+      echo "   $APACHE_MIRROR/apr/$APR_ICONV.tar.bz2"
+    fi
 
     rm -rf $TEMPDIR
 }
 
-get_deps
+get_deps "$@"

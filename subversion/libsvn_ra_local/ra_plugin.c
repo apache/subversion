@@ -238,6 +238,15 @@ static const svn_ra_reporter3_t ra_local_reporter =
 };
 
 
+/* ...
+ *
+ * Wrap a cancellation editor using SESSION's cancellation function around
+ * the supplied EDITOR.  ### Some callers (via svn_ra_do_update2() etc.)
+ * don't appear to know that we do this, and are supplying an editor that
+ * they have already wrapped with the same cancellation editor, so it ends
+ * up double-wrapped.
+ *
+ * ... */
 static svn_error_t *
 make_reporter(svn_ra_session_t *session,
               const svn_ra_reporter3_t **reporter,
@@ -256,7 +265,6 @@ make_reporter(svn_ra_session_t *session,
   svn_ra_local__session_baton_t *sess = session->priv;
   void *rbaton;
   const char *other_fs_path = NULL;
-  const char *repos_url_decoded;
 
   /* Get the HEAD revision if one is not supplied. */
   if (! SVN_IS_VALID_REVNUM(revision))
@@ -266,22 +274,19 @@ make_reporter(svn_ra_session_t *session,
      regular filesystem path. */
   if (other_url)
     {
-      size_t repos_url_len;
-
-      other_url = svn_path_uri_decode(other_url, pool);
-      repos_url_decoded = svn_path_uri_decode(sess->repos_url, pool);
-      repos_url_len = strlen(repos_url_decoded);
+      const char *other_relpath
+        = svn_uri_skip_ancestor(sess->repos_url, other_url, pool);
 
       /* Sanity check:  the other_url better be in the same repository as
          the original session url! */
-      if (strncmp(other_url, repos_url_decoded, repos_url_len) != 0)
+      if (! other_relpath)
         return svn_error_createf
           (SVN_ERR_RA_ILLEGAL_URL, NULL,
            _("'%s'\n"
              "is not the same repository as\n"
              "'%s'"), other_url, sess->repos_url);
 
-      other_fs_path = other_url + repos_url_len;
+      other_fs_path = apr_pstrcat(pool, "/", other_relpath, (char *)NULL);
     }
 
   /* Pass back our reporter */
@@ -700,7 +705,7 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
                             const apr_array_header_t *paths,
                             svn_revnum_t revision,
                             svn_mergeinfo_inheritance_t inherit,
-                            svn_boolean_t *validate_inherited_mergeinfo,
+                            svn_boolean_t validate_inherited_mergeinfo,
                             svn_boolean_t include_descendants,
                             apr_pool_t *pool)
 {
@@ -719,7 +724,7 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
 
   SVN_ERR(svn_repos_fs_get_mergeinfo2(&tmp_catalog, sess->repos, abs_paths,
                                       revision, inherit,
-                                      *validate_inherited_mergeinfo,
+                                      validate_inherited_mergeinfo,
                                       include_descendants,
                                       NULL, NULL, pool));
   if (apr_hash_count(tmp_catalog) > 0)
@@ -1422,7 +1427,9 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
     {
       *has = TRUE;
     }
-  else if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+  else if ((strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+           || (strcmp(capability,
+                      SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO) == 0))
     {
       /* With mergeinfo, the code's capabilities may not reflect the
          repository's, so inquire further. */

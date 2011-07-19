@@ -204,16 +204,18 @@ class Sandbox:
       target = self.ospath(target)
     svntest.main.run_svn(False, 'switch', url, target, '--ignore-ancestry')
 
-  def simple_commit(self, target=None):
-    """Commit the WC or TARGET with a default log message.
+  def simple_commit(self, target=None, message=None):
+    """Commit the WC or TARGET, with a default or supplied log message.
+       Raise if the exit code is non-zero or there is output on stderr.
        TARGET is a relpath relative to the WC."""
     assert not self.read_only
     if target is None:
       target = self.wc_dir
     else:
       target = self.ospath(target)
-    svntest.main.run_svn(False, 'commit',
-                         '-m', svntest.main.make_log_msg(),
+    if message is None:
+      message = svntest.main.make_log_msg()
+    svntest.main.run_svn(False, 'commit', '-m', message,
                          target)
 
   def simple_rm(self, *targets):

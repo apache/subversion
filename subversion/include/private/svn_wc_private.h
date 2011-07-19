@@ -310,7 +310,7 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
  * absolute paths.
  *
  * Include children that are scheduled for deletion.  Iff @a show_hidden
- * is true, also include children that are 'excluded' or 'absent' or
+ * is true, also include children that are 'excluded' or 'server-excluded' or
  * 'not-present'.
  *
  * Return every path that refers to a child of the working node at
@@ -875,18 +875,20 @@ svn_wc__has_switched_subtrees(svn_boolean_t *is_switched,
                               const char *trail_url,
                               apr_pool_t *scratch_pool);
 
-/* Set @a *absent_subtrees to a hash mapping <tt>const char *</tt> local
- * absolute paths to <tt>const char *</tt> local absolute paths for every
- * path at or under @a local_abspath in @a wc_ctx which are absent (excluded
- * by authz).  If no absent paths are found then @a *absent_subtrees is set
- * to @c NULL.  Allocate the hash and all items therein from @a result_pool.
+/* Set @a *server_excluded_subtrees to a hash mapping <tt>const char *</tt>
+ * local * absolute paths to <tt>const char *</tt> local absolute paths for
+ * every path at or under @a local_abspath in @a wc_ctx which are excluded
+ * by the server (e.g. because of authz).
+ * If no server-excluded paths are found then @a *server_excluded_subtrees
+ * is set to @c NULL.
+ * Allocate the hash and all items therein from @a result_pool.
  */
 svn_error_t *
-svn_wc__get_absent_subtrees(apr_hash_t **absent_subtrees,
-                            svn_wc_context_t *wc_ctx,
-                            const char *local_abspath,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
+svn_wc__get_server_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
+                                     svn_wc_context_t *wc_ctx,
+                                     const char *local_abspath,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
 
 /* Indicate in @a *is_modified whether the working copy has local
  * modifications, using context @a wc_ctx.
@@ -978,7 +980,7 @@ svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
  * direct parent does not exist or is deleted return _state_obstructed. When
  * a node doesn't exist but should exist return svn_wc_notify_state_missing.
  *
- * A node is also obstructed if it is marked excluded or absent or when
+ * A node is also obstructed if it is marked excluded or server-excluded or when
  * an unversioned file or directory exists. And if NO_WCROOT_CHECK is FALSE,
  * the root of a working copy is also obstructed; this to allow detecting
  * obstructing working copies.
@@ -1077,14 +1079,19 @@ typedef svn_error_t *(*svn_wc__info_receiver2_t)(void *baton,
 
 /* Walk the children of LOCAL_ABSPATH and push svn_wc__info2_t's through
    RECEIVER/RECEIVER_BATON.  Honor DEPTH while crawling children, and
-   filter the pushed items against CHANGELISTS.  */
+   filter the pushed items against CHANGELISTS.
+
+   If FETCH_EXCLUDED is TRUE, also fetch excluded nodes.
+   If FETCH_ACTUAL_ONLY is TRUE, also fetch actual-only nodes. */
 svn_error_t *
 svn_wc__get_info(svn_wc_context_t *wc_ctx,
                  const char *local_abspath,
                  svn_depth_t depth,
+                 svn_boolean_t fetch_excluded,
+                 svn_boolean_t fetch_actual_only,
+                 const apr_array_header_t *changelists,
                  svn_wc__info_receiver2_t receiver,
                  void *receiver_baton,
-                 const apr_array_header_t *changelists,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool);
