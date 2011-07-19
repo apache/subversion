@@ -238,6 +238,15 @@ static const svn_ra_reporter3_t ra_local_reporter =
 };
 
 
+/* ...
+ *
+ * Wrap a cancellation editor using SESSION's cancellation function around
+ * the supplied EDITOR.  ### Some callers (via svn_ra_do_update2() etc.)
+ * don't appear to know that we do this, and are supplying an editor that
+ * they have already wrapped with the same cancellation editor, so it ends
+ * up double-wrapped.
+ *
+ * ... */
 static svn_error_t *
 make_reporter(svn_ra_session_t *session,
               const svn_ra_reporter3_t **reporter,
