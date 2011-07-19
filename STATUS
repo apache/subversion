@@ -51,23 +51,6 @@ Candidate changes:
                    libsvn_repos/libsvn_fs token validation bug, or both;
                    see dev@)
 
- * r1148071
-   Don't needlessly reparent a RA session to the repository root.
-   Justification:
-     Prevents possible issue #3242 'Subversion demands unnecessary access
-     to parent directories' problems.
-   Votes:
-     +1: pburba, rhuijben
-
- * r1148374
-   Silence a debug message in the DSO loading code.
-   Justification:
-     The message could lead to spurious test failures in some situations.
-     It is also confusing because it is printed without any context information.
-     (Normal library functions should never use stdio)
-   Votes:
-     +1: stsp, rhuijben
-
 Approved changes:
 =================
 
@@ -83,3 +66,20 @@ Approved changes:
      http://subversion.tigris.org/issues/show_bug.cgi?id=3957#desc8
    Votes:
      +1: pburba, rhuijben, philip
+
+ * r1148071
+   Don't needlessly reparent a RA session to the repository root.
+   Justification:
+     Prevents possible issue #3242 'Subversion demands unnecessary access
+     to parent directories' problems.
+   Votes:
+     +1: pburba, rhuijben, cmpilato
+
+ * r1148374
+   Silence a debug message in the DSO loading code.
+   Justification:
+     The message could lead to spurious test failures in some situations.
+     It is also confusing because it is printed without any context information.
+     (Normal library functions should never use stdio)
+   Votes:
+     +1: stsp, rhuijben, cmpilato
