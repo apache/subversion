@@ -1099,7 +1099,7 @@ svn_error_t *svn_ra_svn_write_cmd_failure(svn_ra_svn_conn_t *conn,
     {
       const char *msg;
 
-#ifdef SVN_DEBUG
+#ifdef SVN_ERR__TRACING
       if (svn_error__is_tracing_link(err))
         msg = err->message;
       else
