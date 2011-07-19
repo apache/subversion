@@ -7889,6 +7889,18 @@ log_noop_revs(void *baton,
   apr_hash_index_t *hi;
   svn_revnum_t revision;
   svn_boolean_t log_entry_rev_required = FALSE;
+  apr_array_header_t *rl1;
+  apr_array_header_t *rl2;
+
+  /* The baton's pool is essentially an iterpool so we must clear it
+   * for each invocation of this function. */
+  rl1 = svn_rangelist_dup(log_gap_baton->operative_ranges, pool);
+  rl2 = svn_rangelist_dup(log_gap_baton->merged_ranges, pool);
+  svn_pool_clear(log_gap_baton->pool);
+  log_gap_baton->operative_ranges = svn_rangelist_dup(rl1,
+                                                      log_gap_baton->pool);
+  log_gap_baton->merged_ranges = svn_rangelist_dup(rl2,
+                                                   log_gap_baton->pool);
 
   revision = log_entry->revision;
 
@@ -8116,7 +8128,7 @@ remove_noop_subtree_ranges(const char *url1,
                     result_pool, scratch_pool));
   log_gap_baton.merged_ranges = merged_ranges;
   log_gap_baton.operative_ranges = operative_ranges;
-  log_gap_baton.pool = scratch_pool;
+  log_gap_baton.pool = svn_pool_create(scratch_pool);
 
   APR_ARRAY_PUSH(log_targets, const char *) = "";
 
