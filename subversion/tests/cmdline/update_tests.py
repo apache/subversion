@@ -5392,6 +5392,17 @@ def skip_access_denied(sbox):
 
   f.close()
 
+def update_to_HEAD_plus_1(sbox):
+  "updating to HEAD+1 should fail"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        None, None, None,
+                                        ".*No such revision",
+                                        None, None,
+                                        None, None, None, wc_dir, '-r', '2')
 
 
 #######################################################################
@@ -5459,6 +5470,7 @@ test_list = [ None,
               update_nonexistent_child_of_copy,
               revive_children_of_copy,
               skip_access_denied,
+              update_to_HEAD_plus_1,
              ]
 
 if __name__ == '__main__':
