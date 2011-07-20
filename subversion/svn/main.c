@@ -393,6 +393,12 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      opt_no_autoprops, opt_parents },
      {{opt_parents, N_("add intermediate parents")}} },
 
+  { "bisect", svn_cl__bisect, {0}, N_
+    ("Bisect command description line 1.\n"
+     "Bisect command description line 2.\n"
+     "usage: bisect usage information\n"),
+    {'q', 'r'} },
+
   { "blame", svn_cl__blame, {"praise", "annotate", "ann"}, N_
     ("Output the content of specified files or\n"
      "URLs with revision and author information in-line.\n"

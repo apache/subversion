@@ -5645,6 +5645,15 @@ svn_client_patch(const char *patch_abspath,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *scratch_pool);
 
+/**
+ * Doc for svn_client_bisect
+ */
+svn_error_t *
+svn_client_bisect(const char *target,
+                  const char *option,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
 /** @} */
 
 /** @} end group: Client working copy management */

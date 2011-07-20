@@ -243,6 +243,7 @@ typedef struct svn_cl__cmd_baton_t
 /* Declare all the command procedures */
 svn_opt_subcommand_t
   svn_cl__add,
+  svn_cl__bisect,
   svn_cl__blame,
   svn_cl__cat,
   svn_cl__changelist,
