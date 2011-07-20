@@ -871,7 +871,9 @@ log_receiver_wrapper(void *baton,
     SVN_ERR((sess->callbacks->cancel_func)(sess->callback_baton));
 
   /* For consistency with the other RA layers, replace an empty
-     changed-paths hash with a NULL one. */
+     changed-paths hash with a NULL one.
+
+     ### Should this be done by svn_ra_get_log2() instead, then? */
   if ((log_entry->changed_paths2)
       && (apr_hash_count(log_entry->changed_paths2) == 0))
     {
