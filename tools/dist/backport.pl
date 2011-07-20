@@ -69,7 +69,7 @@ sub merge {
     $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
     print $logmsg_fh "Reintergrate the $BRANCHES/$entry{branch} branch:";
     print $logmsg_fh "";
-  } else {
+  } elsif (@{$entry{revisions}}) {
     $mergeargs = join " ", (map { "-c$_" } @{$entry{revisions}}), '^/subversion/trunk';
     if (@{$entry{revisions}} > 1) {
       print $logmsg_fh "Merge the r$entry{revisions}->[0] group from trunk:";
@@ -78,6 +78,8 @@ sub merge {
       print $logmsg_fh "Merge r$entry{revisions}->[0] from trunk:";
       print $logmsg_fh "";
     }
+  } else {
+    die "Don't know how to call $entry{header}";
   }
   print $logmsg_fh $_ for @{$entry{entry}};
   close $logmsg_fh or die "Can't close $logmsg_filename: $!";
@@ -147,10 +149,17 @@ sub parse_entry {
     $branch = sanitize_branch (shift || shift || die "Branch header found without value");
   }
 
+  # Compute a header.
+  my $header;
+  $header = "r$revisions[0] group" if @revisions;
+  $header = "$branch branch" if $branch;
+  warn "No header for [@lines]" unless $header;
+
   return (
     revisions => [@revisions],
     logsummary => [@logsummary],
     branch => $branch,
+    header => $header,
     votes => [@votes],
     entry => [@lines],
   );
@@ -160,7 +169,7 @@ sub handle_entry {
   my %entry = parse_entry @_;
 
   print "";
-  print "\n>>> The r$entry{revisions}->[0] group:";
+  print "\n>>> The $entry{header}:";
   print join ", ", map { "r$_" } @{$entry{revisions}};
   print "$BRANCHES/$entry{branch}" if $entry{branch};
   print "";
