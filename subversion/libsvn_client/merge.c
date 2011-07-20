@@ -7861,7 +7861,7 @@ typedef struct log_noop_baton_t
   const char *source_repos_abs;
 
   /* Initially empty rangelists allocated in POOL. The rangelists are
-   * populated across multiple invocations of the log_noop_revs(). */
+   * populated across multiple invocations of log_noop_revs(). */
   apr_array_header_t *operative_ranges;
   apr_array_header_t *merged_ranges;
 
