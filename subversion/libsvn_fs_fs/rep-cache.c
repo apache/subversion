@@ -43,7 +43,12 @@ REP_CACHE_DB_SQL_DECLARE_STATEMENTS(statements);
 
 
 /** Helper functions. **/
-
+static APR_INLINE const char *
+path_rep_cache_db(const char *fs_path,
+                  apr_pool_t *result_pool)
+{
+  return svn_dirent_join(fs_path, REP_CACHE_DB_NAME, result_pool);
+}
 
 /* Check that REP refers to a revision that exists in FS. */
 static svn_error_t *
@@ -91,7 +96,7 @@ open_rep_cache(void *baton,
 
   /* Open (or create) the sqlite database.  It will be automatically
      closed when fs->pool is destoyed. */
-  db_path = svn_dirent_join(fs->path, REP_CACHE_DB_NAME, pool);
+  db_path = path_rep_cache_db(fs->path, pool);
   SVN_ERR(svn_sqlite__open(&ffd->rep_cache_db, db_path,
                            svn_sqlite__mode_rwcreate, statements,
                            0, NULL,
