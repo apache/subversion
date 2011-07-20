@@ -368,7 +368,7 @@ def compare_changes(repos, branch, revision):
     import difflib
     for diff_line in difflib.unified_diff(trunk_CHANGES, branch_CHANGES):
         saw_diff = True
-        logging.debug(diff_line)
+        logging.debug('%s', diff_line)
     if saw_diff:
         raise RuntimeError('CHANGES not synced between trunk and branch')
 
