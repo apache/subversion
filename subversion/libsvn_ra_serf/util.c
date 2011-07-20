@@ -164,7 +164,7 @@ static const pbtest_desc_t pbtest_description[] = {
 #define PBTEST_SET_PAUSED(ctx)  /* empty */
 #define PBTEST_MAYBE_STEP(ctx, force)  /* empty */
 
-#define PBTEST_FORCE_SPILL() FALSE
+#define PBTEST_FORCE_SPILL(ctx) FALSE
 #define PBTEST_THIS_REQ(ctx) FALSE
 
 #endif /* PBTEST_ACTIVE  */
