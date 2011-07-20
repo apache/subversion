@@ -281,24 +281,44 @@ possible.
 9a. network: unpaused. extra content is TEST 1.4.
 9b. loop: unpaused. inject all memory content. TEST 3.4. step on state (6)
 10. paused. content arrival is TEST 1.6.
-11a. network: unpaused. content arrival is TEST 2.6. step on state (6)
+11a. network: unpaused. content arrival is TEST 2.6.
 11b. loop: no injection
 12a. network: unpaused. extra content is TEST 2.6.
 12b. loop: unpaused. inject all disk content. TEST 3.6. step on state (7)
-13. paused. content arrival is TEST 1.7
+13. paused. content arrival is TEST 1.7. step on state (6)
 14. return to default/normal processing
 
 note: "extra content" means that TEST has been previously tested, so
       we don't really need this particular test. but since the network
       content is uncontrolled, we may end up (re)testing.
+note: we advance the step when reaching a particular state. if the
+      state is not mentioned, then we advance once new content has
+      been received (which actually means the same state as before),
+      or we advance after injection to the parser.
+note: we cannot detect whether content exists in the spill file due to
+      the information we (currently) record. thus, we have to do the
+      transition manually:
+        step 6: writing the spill moves us to state (4)
+        step 9b: injecting all moves us to state (6)
+        step 12b: injecting all moves us to state (7)
+        step 13: appending to spill moves us to state (6)
+note: after each injection of pending content into the parser, we
+      will pause the parser. that will immediately cause the
+      processing of the PENDING data to stop.
 
 
 IMPLEMENTATION NOTES
 
-* gotta figure out low-impact
+* gotta figure out low-impact (this can all live in util.c)
 * array of structures with: paused, inject, force_spill
-* set ->paused on each step increment, since we don't know if the next
+* set ->paused on each step increment since we don't know if the next
   entry point will be the network or the processing loop
+* set ->paused on each return from the xml parser callbacks so that we
+  do not have to invade update.c (which wouldn't know when we turn off
+  the debugging at step 14)
+* the processing loop may clear ->paused and call the pending
+  processing function, which can then reset ->paused and exit if
+  necessary for the current step
 * there are three content injection steps. transition to next step is
   straight-forward after injection is complete
 * transition based on network has three transitions from the unpaused
@@ -310,29 +330,5 @@ IMPLEMENTATION NOTES
   independent of the memory_size. since we will put further pending
   data into the spill file, we don't need to check force_spill ever
   again. oh... we can just look for step==6 rather than a flag.
+* transitions occur on five of the seven states (not 1 or 5)
 
-
-
-------------
-OLD NOTES
-
-These combine into the following test scenarios to exercise the two
-actions against each of the ten data states.
-
-  #### redo this list
-
-
-  1) REPORT completes with no pausing
-  2) REPORT requires in-memory (only) buffering:
-     a) buffer empties while network content arrives again
-     b) network content completes while buffer has content
-     c) buffer empties, then later needs buffering again
-     d) partial in-mem consumption, new content lands into membuf
-  3) REPORT requires on-disk buffering:
-     a) diskbuf empties while network content arrives again
-     b) network content completes while diskbuf has content
-     c) diskbuf empties, then more buffering is needed again
-        (note: due to the code, this will go onto the disk rather
-         than back to the in-mem buffer)
-     d) partial in-mem consumption, new content lands in diskbuf
-     e) partial diskbuf consumption, new content lands in diskbuf
