@@ -59,7 +59,7 @@
 #define DEFAULT_FS_TYPE "fsfs"
 
 /* The default HTTP library to use */
-#define DEFAULT_HTTP_LIBRARY "serf"
+#define DEFAULT_HTTP_LIBRARY "neon"
 
 /* Define to the Python/C API format character suitable for apr_int64_t */
 #if defined(_WIN64)
