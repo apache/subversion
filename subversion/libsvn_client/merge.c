@@ -7877,13 +7877,13 @@ typedef struct log_noop_baton_t
    MERGE_B->TARGET_ABSPATH per the mergeinfo in CHILDREN_WITH_MERGEINFO,
    then add LOG_ENTRY->REVISION to BATON->MERGED_RANGES.
 
-   Use POOL for temporary allocations.  Allocate additions to
+   Use SCRATCH_POOL for temporary allocations.  Allocate additions to
    BATON->MERGED_RANGES and BATON->OPERATIVE_RANGES in BATON->POOL.
 */
 static svn_error_t *
 log_noop_revs(void *baton,
               svn_log_entry_t *log_entry,
-              apr_pool_t *pool)
+              apr_pool_t *scratch_pool)
 {
   log_noop_baton_t *log_gap_baton = baton;
   apr_hash_index_t *hi;
@@ -7895,8 +7895,8 @@ log_noop_revs(void *baton,
 
   /* The baton's pool is essentially an iterpool so we must clear it
    * for each invocation of this function. */
-  rl1 = svn_rangelist_dup(log_gap_baton->operative_ranges, pool);
-  rl2 = svn_rangelist_dup(log_gap_baton->merged_ranges, pool);
+  rl1 = svn_rangelist_dup(log_gap_baton->operative_ranges, scratch_pool);
+  rl2 = svn_rangelist_dup(log_gap_baton->merged_ranges, scratch_pool);
   svn_pool_clear(log_gap_baton->pool);
   log_gap_baton->operative_ranges = svn_rangelist_dup(rl1,
                                                       log_gap_baton->pool);
@@ -7916,7 +7916,7 @@ log_noop_revs(void *baton,
      inherited mergeinfo for *all* of the corresponding paths under
      MERGE_B->TARGET_ABSPATH reflects that LOG_ENTRY->REVISION has been
      merged, then add LOG_ENTRY->REVISION to BATON->MERGED_RANGES. */
-  for (hi = apr_hash_first(pool, log_entry->changed_paths2);
+  for (hi = apr_hash_first(scratch_pool, log_entry->changed_paths2);
        hi;
        hi = apr_hash_next(hi))
     {
@@ -7935,7 +7935,7 @@ log_noop_revs(void *baton,
       if (rel_path == NULL)
         continue;
       cwmi_path = svn_dirent_join(log_gap_baton->merge_b->target_abspath,
-                                  rel_path, pool);
+                                  rel_path, scratch_pool);
 
       /* Find any explicit or inherited mergeinfo for PATH. */
       while (!log_entry_rev_required)
@@ -7963,8 +7963,8 @@ log_noop_revs(void *baton,
             }
 
           /* Didn't find anything so crawl up to the parent. */
-          cwmi_path = svn_dirent_dirname(cwmi_path, pool);
-          path = svn_dirent_dirname(path, pool);
+          cwmi_path = svn_dirent_dirname(cwmi_path, scratch_pool);
+          path = svn_dirent_dirname(path, scratch_pool);
 
           /* At this point *if* we find mergeinfo it will be inherited. */
           mergeinfo_inherited = TRUE;
@@ -7979,7 +7979,7 @@ log_noop_revs(void *baton,
           SVN_ERR(svn_rangelist_intersect(&intersecting_range,
                                           paths_explicit_rangelist,
                                           rangelist,
-                                          mergeinfo_inherited, pool));
+                                          mergeinfo_inherited, scratch_pool));
 
           if (intersecting_range->nelts == 0)
             log_entry_rev_required = TRUE;
