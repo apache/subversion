@@ -71,7 +71,7 @@ Candidate changes:
      -0: rhuijben (r1148588 fixes the immediate problems and this code can use
                    a bit more cleanup before backporting. See also the
                    dev@s.a.o thread for gstein's concerns) (r1148566 only)
-     +1: stsp (r1148588 alone does *not* fix the leak)
+     +1: stsp (r1148588 alone does *not* fix the leak), philip
      -0: gstein (per the dev@ thread, a distinctive third pool in the mix
                  could help to make all this clear; at a minimum, we can
                  use the provided scratch_pool better) (r1148566 only)
