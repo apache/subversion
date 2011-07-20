@@ -76,7 +76,15 @@ Candidate changes:
    Justification:
      Avoid calling into a library incompatible with the one compiled against.
    Votes:
-     +1: danielsh
+     +1: danielsh, gstein
+
+ * 1.7.x-issue3888 branch
+   Fix issue 3888 for 1.7.x
+   Justification:
+     For very large checkouts/updates/switches, ra_serf may consume
+     unbounded memory. That is not good.
+   Votes:
+     +1: gstein
 
 
 Approved changes:
