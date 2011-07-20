@@ -219,8 +219,8 @@ svn_client_cat2(svn_stream_t *out,
       output = svn_stream_disown(output, pool);
 
       return svn_error_trace(svn_stream_copy3(normal_stream, output,
-                                               ctx->cancel_func,
-                                               ctx->cancel_baton, pool));
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton, pool));
     }
 
   /* Get an RA plugin for this filesystem object. */

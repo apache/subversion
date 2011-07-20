@@ -135,9 +135,17 @@ class State:
       self.desc[path] = item
 
   def remove(self, *paths):
-    "Remove a path from the state (the path must exist)."
+    "Remove PATHS from the state (the paths must exist)."
     for path in paths:
       del self.desc[to_relpath(path)]
+
+  def remove_subtree(self, *paths):
+    "Remove PATHS recursively from the state (the paths must exist)."
+    for subtree_path in paths:
+      subtree_path = to_relpath(subtree_path)
+      for path, item in self.desc.items():
+        if path == subtree_path or path[:len(subtree_path) + 1] == subtree_path + '/':
+          del self.desc[path]
 
   def copy(self, new_root=None):
     """Make a deep copy of self.  If NEW_ROOT is not None, then set the
@@ -180,13 +188,12 @@ class State:
 
   def subtree(self, subtree_path):
     """Return a State object which is a deep copy of the sub-tree
-    identified by SUBTREE_PATH (which is assumed to contain only one
-    element rooted at the tree of this State object's WC_DIR)."""
+    beneath SUBTREE_PATH (which is assumed to be rooted at the tree of
+    this State object's WC_DIR).  Exclude SUBTREE_PATH itself."""
     desc = { }
     for path, item in self.desc.items():
-      path_elements = path.split("/")
-      if len(path_elements) > 1 and path_elements[0] == subtree_path:
-        desc["/".join(path_elements[1:])] = item.copy()
+      if path[:len(subtree_path) + 1] == subtree_path + '/':
+        desc[path[len(subtree_path) + 1:]] = item.copy()
     return State(self.wc_dir, desc)
 
   def write_to_disk(self, target_dir):

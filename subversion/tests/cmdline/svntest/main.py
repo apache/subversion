@@ -164,6 +164,8 @@ entriesdump_binary = os.path.abspath('entries-dump' + _exe)
 atomic_ra_revprop_change_binary = os.path.abspath('atomic-ra-revprop-change' + \
                                                   _exe)
 wc_lock_tester_binary = os.path.abspath('../libsvn_wc/wc-lock-tester' + _exe)
+svnmucc_binary=os.path.abspath('../../../tools/client-side/svnmucc/svnmucc' + \
+                               _exe)
 
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
@@ -579,6 +581,13 @@ def _with_auth(args):
   else:
     return args + ('--username', wc_author )
 
+def _with_log_message(args):
+
+  if '-m' in args or '--message' in args or '-F' in args:
+    return args
+  else:
+    return args + ('--message', 'default log message')
+
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
   """Run svn with VARARGS; return exit code as int; stdout, stderr as
@@ -606,7 +615,7 @@ def run_svnrdump(stdin_input, *varargs):
   """Run svnrdump with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators).  Use binary mode for output."""
   if stdin_input:
-    return run_command_stdin(svnrdump_binary, 0, 1, 1, stdin_input,
+    return run_command_stdin(svnrdump_binary, 1, 1, 1, stdin_input,
                              *(_with_auth(_with_config_dir(varargs))))
   else:
     return run_command(svnrdump_binary, 1, 1,
@@ -621,6 +630,12 @@ def run_svnversion(*varargs):
   """Run svnversion with VARARGS, returns exit code as int; stdout, stderr
   as list of lines (including line terminators)."""
   return run_command(svnversion_binary, 1, 0, *varargs)
+
+def run_svnmucc(*varargs):
+  """Run svnmucc with VARARGS, returns exit code as int; stdout, stderr as
+  list of lines (including line terminators).  Use binary mode for output."""
+  return run_command(svnmucc_binary, 1, 1,
+                     *(_with_auth(_with_config_dir(_with_log_message(varargs)))))
 
 def run_entriesdump(path):
   """Run the entries-dump helper, returning a dict of Entry objects."""
@@ -740,12 +755,12 @@ def create_repos(path):
     os.makedirs(path) # this creates all the intermediate dirs, if neccessary
 
   opts = ("--bdb-txn-nosync",)
-  if options.server_minor_version < 5:
+  if options.server_minor_version < 4:
+    opts += ("--pre-1.4-compatible",)
+  elif options.server_minor_version < 5:
     opts += ("--pre-1.5-compatible",)
   elif options.server_minor_version < 6:
     opts += ("--pre-1.6-compatible",)
-  elif options.server_minor_version < 7:
-    opts += ("--pre-1.7-compatible",)
   if options.fs_type is not None:
     opts += ("--fs-type=" + options.fs_type,)
   exit_code, stdout, stderr = run_command(svnadmin_binary, 1, 0, "create",
@@ -1110,6 +1125,9 @@ def server_gets_client_capabilities():
 
 def server_has_partial_replay():
   return options.server_minor_version >= 5
+
+def server_enforces_UTF8_fspaths_in_verify():
+  return options.server_minor_version >= 6
 
 def server_enforces_date_syntax():
   return options.server_minor_version >= 5
@@ -1519,8 +1537,11 @@ def _parse_options(arglist=sys.argv[1:]):
     parser.error("'verbose' and 'quiet' are incompatible")
   if options.fsfs_packing and not options.fsfs_sharding:
     parser.error("--fsfs-packing requires --fsfs-sharding")
-  if options.server_minor_version < 4 or options.server_minor_version > 7:
-    parser.error("test harness only supports server minor versions 4-7")
+
+  # If you change the below condition then change
+  # ../../../../build/run_tests.py too.
+  if options.server_minor_version < 3 or options.server_minor_version > 7:
+    parser.error("test harness only supports server minor versions 3-7")
 
   if options.url:
     if options.url[-1:] == '/': # Normalize url to have no trailing slash
@@ -1600,6 +1621,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   global svnsync_binary
   global svndumpfilter_binary
   global svnversion_binary
+  global svnmucc_binary
   global options
 
   if test_name:
@@ -1675,6 +1697,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                                         'jsvndumpfilter' + _bat)
     svnversion_binary = os.path.join(options.svn_bin,
                                      'jsvnversion' + _bat)
+    svnversion_binary = os.path.join(options.svn_bin, 'jsvnmucc' + _bat)
   else:
     if options.svn_bin:
       svn_binary = os.path.join(options.svn_bin, 'svn' + _exe)
@@ -1684,6 +1707,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
       svndumpfilter_binary = os.path.join(options.svn_bin,
                                           'svndumpfilter' + _exe)
       svnversion_binary = os.path.join(options.svn_bin, 'svnversion' + _exe)
+      svnmucc_binary = os.path.join(options.svn_bin, 'svnmucc' + _exe)
 
   ######################################################################
 

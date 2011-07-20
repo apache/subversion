@@ -2340,6 +2340,268 @@ def reintegrate_creates_bogus_mergeinfo(sbox):
                                        None, None, None, None, None,
                                        1, 1, "--reintegrate", A_path)
 
+
+#----------------------------------------------------------------------
+# Test for regression on 1.6.x branch, merge fails when source without
+# subtree mergeinfo is reintegrated into a target with subtree
+# mergeinfo.  Deliberately written in a style that works with the 1.6
+# testsuite.
+@Issue(3957)
+def no_source_subtree_mergeinfo(sbox):
+  "source without subtree mergeinfo"
+
+  sbox.build()
+  wc_dir=sbox.wc_dir
+
+  svntest.main.file_write(os.path.join(wc_dir, 'A', 'B', 'E', 'alpha'),
+                          'AAA\n' +
+                          'BBB\n' +
+                          'CCC\n')
+  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
+  svntest.main.run_svn(None, 'update', wc_dir)
+
+  # Create branch-1
+  svntest.main.run_svn(None, 'copy',
+                       os.path.join(wc_dir, 'A', 'B'),
+                       os.path.join(wc_dir, 'A', 'B1'))
+  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
+
+  # Create branch-1
+  svntest.main.run_svn(None, 'copy',
+                       os.path.join(wc_dir, 'A', 'B'),
+                       os.path.join(wc_dir, 'A', 'B2'))
+  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
+
+  # Change on trunk
+  svntest.main.file_write(os.path.join(wc_dir, 'A', 'B', 'E', 'alpha'),
+                          'AAAxx\n' +
+                          'BBB\n' +
+                          'CCC\n')
+  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
+
+  # Change on branch-1
+  svntest.main.file_write(os.path.join(wc_dir, 'A', 'B1', 'E', 'alpha'),
+                          'AAA\n' +
+                          'BBBxx\n' +
+                          'CCC\n')
+  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
+
+  # Change on branch-2
+  svntest.main.file_write(os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha'),
+                          'AAA\n' +
+                          'BBB\n' +
+                          'CCCxx\n')
+  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
+  svntest.main.run_svn(None, 'update', wc_dir)
+
+  # Merge trunk to branch-1
+  svntest.main.run_svn(None, 'merge', '^/A/B', os.path.join(wc_dir, 'A', 'B1'))
+  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
+  svntest.main.run_svn(None, 'update', wc_dir)
+
+  # Reintegrate branch-1 subtree to trunk subtree
+  svntest.main.run_svn(None, 'merge', '--reintegrate',
+                       '^/A/B1/E', os.path.join(wc_dir, 'A', 'B', 'E'))
+  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
+  svntest.main.run_svn(None, 'update', wc_dir)
+
+  # Merge trunk to branch-2
+  svntest.main.run_svn(None, 'merge', '^/A/B', os.path.join(wc_dir, 'A', 'B2'))
+  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
+  svntest.main.run_svn(None, 'update', wc_dir)
+
+  # Reverse merge branch-1 subtree to branch-2 subtree, this removes
+  # the subtree mergeinfo from branch 2
+  svntest.main.run_svn(None, 'merge', '-r8:2',
+                       '^/A/B1/E', os.path.join(wc_dir, 'A', 'B2', 'E'))
+  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
+  svntest.main.run_svn(None, 'update', wc_dir)
+
+  # Verify that merge results in no subtree mergeinfo
+  svntest.actions.run_and_verify_svn(None, [], [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/A/B2/E')
+
+  # Merge trunk to branch-2
+  svntest.main.run_svn(None, 'merge', '^/A/B', os.path.join(wc_dir, 'A', 'B2'))
+  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
+  svntest.main.run_svn(None, 'update', wc_dir)
+
+  # Verify that there is still no subtree mergeinfo
+  svntest.actions.run_and_verify_svn(None, [], [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/A/B2/E')
+
+  # Reintegrate branch-2 to trunk, this fails in 1.6.x from 1.6.13.
+  # The error message states revisions /A/B/E:3-11 are missing from
+  # /A/B2/E and yet the mergeinfo on /A/B2 is /A/B:3-11 and /A/B2/E
+  # has no mergeinfo.
+  expected_output = wc.State(os.path.join(wc_dir, 'A', 'B'), {
+      'E'       : Item(status=' U'),
+      'E/alpha' : Item(status='U '),
+      })
+  expected_mergeinfo = wc.State(os.path.join(wc_dir, 'A', 'B'), {
+      '' : Item(status=' U'),
+      })
+  expected_elision = wc.State(os.path.join(wc_dir, 'A', 'B'), {
+      })
+  expected_disk = wc.State('', {
+      ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B2:3-12'}),
+      'E'       : Item(),
+      'E/alpha' : Item("AAA\n" +
+                       "BBB\n" +
+                       "CCCxx\n"),
+      'E/beta'  : Item("This is the file 'beta'.\n"),
+      'F'       : Item(),
+      'lambda'  : Item("This is the file 'lambda'.\n"),
+      })
+  expected_skip = wc.State(os.path.join(wc_dir, 'A', 'B'), {
+      })
+  svntest.actions.run_and_verify_merge(os.path.join(wc_dir, 'A', 'B'),
+                                       None, None, '^/A/B2', None,
+                                       expected_output, expected_mergeinfo,
+                                       expected_elision, expected_disk,
+                                       None, expected_skip,
+                                       None, None, None, None, None,
+                                       1, 1, '--reintegrate',
+                                       os.path.join(wc_dir, 'A', 'B'))
+  # For 1.6 testsuite use:
+  # svntest.actions.run_and_verify_merge(os.path.join(wc_dir, 'A', 'B'),
+  #                                      None, None, '^/A/B2',
+  #                                      expected_output,
+  #                                      expected_disk,
+  #                                      None, expected_skip,
+  #                                      None, None, None, None, None,
+  #                                      1, 1, '--reintegrate')
+
+#----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
+@Issue(3961)
+@XFail()
+def reintegrate_replaced_source(sbox):
+  "reintegrate a replaced source branch"
+
+  # Make A_COPY branch in r2, and do a few more commits to A in r3-6.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_disk, expected_status = set_up_branch(sbox)
+
+  A_path         = os.path.join(sbox.wc_dir, "A")
+  A_COPY_path    = os.path.join(sbox.wc_dir, "A_COPY")
+  beta_COPY_path = os.path.join(sbox.wc_dir, "A_COPY", "B", "E", "beta")
+  mu_COPY_path   = os.path.join(sbox.wc_dir, "A_COPY", "mu")  
+
+  # Using cherrypick merges, simulate a series of sync merges from A to
+  # A_COPY with a replace of A_COPY along the way.
+  #
+  # r6 - Merge r3 from A to A_COPY
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path,
+                       '-c3')
+  svntest.main.run_svn(None, 'ci', '-m', 'Merge r3 from A to A_COPY', wc_dir)
+
+  # r8 - Merge r4 from A to A_COPY
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path,
+                       '-c4')
+  svntest.main.run_svn(None, 'ci', '-m', 'Merge r4 from A to A_COPY', wc_dir)
+
+  # r9 - Merge r5 from A to A_COPY. Make an additional edit to
+  # A_COPY/B/E/beta.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path,
+                       '-c5')
+  svntest.main.file_write(beta_COPY_path, "Branch edit mistake.\n")
+  svntest.main.run_svn(None, 'ci', '-m', 'Merge r5 from A to A_COPY', wc_dir)
+
+  # r10 - Delete A_COPY and replace it with A_COPY@8. This removes the edit
+  # we made above in r9 to A_COPY/B/E/beta.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'delete', A_COPY_path)
+  svntest.main.run_svn(None, 'copy', sbox.repo_url + '/A_COPY@8',
+                       A_COPY_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'Replace A_COPY with A_COPY@8',
+                       wc_dir)
+
+  # r11 - Make an edit on A_COPY/mu.
+  svntest.main.file_write(mu_COPY_path, "Branch edit.\n")
+  svntest.main.run_svn(None, 'ci', '-m', 'Branch edit',
+                       wc_dir)
+
+  # r12 - Do a final sync merge of A to A_COPY in preparation for
+  # reintegration.  
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'Sycn A_COPY with A', wc_dir)
+
+  # Reintegrate A_COPY to A.  The resulting mergeinfo should be
+  # '/A_COPY:2-8,10-12' because of the replacement which removed /A_COPY:9
+  # from the reintegrate source's history.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  expected_output = wc.State(A_path, {
+    'mu' : Item(status='U '),
+    })
+  expected_mergeinfo_output = wc.State(A_path, {
+    ''   : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_path, {
+    })
+  expected_status = wc.State(A_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='M '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='  '),
+    'B/lambda'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=12)
+  expected_disk = wc.State('', {
+    # This test currently fails because the resulting mergeinfo is
+    # /A_COPY:2-12, even though the changes in A_COPY:9 are *not*
+    # present on A.
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A_COPY:2-8,10-12'}),
+    'B'         : Item(),
+    'mu'        : Item("Branch edit.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("New content"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("New content"),
+    'D/H/omega' : Item("New content"),
+    })
+  expected_skip = wc.State(A_path, { })
+  svntest.actions.run_and_verify_merge(A_path, None, None,
+                                       sbox.repo_url + '/A_COPY', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       [], None, None, None, None, True, True,
+                                       '--reintegrate', A_path)
+  
 ########################################################################
 # Run the tests
 
@@ -2361,6 +2623,8 @@ test_list = [ None,
               added_subtrees_with_mergeinfo_break_reintegrate,
               two_URL_merge_removes_valid_mergeinfo_from_target,
               reintegrate_creates_bogus_mergeinfo,
+              no_source_subtree_mergeinfo,
+              reintegrate_replaced_source,
              ]
 
 if __name__ == '__main__':

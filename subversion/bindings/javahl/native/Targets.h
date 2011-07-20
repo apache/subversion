@@ -32,7 +32,6 @@
 #include "StringArray.h"
 
 struct apr_array_header_t;
-struct svn_error_t;
 
 #include "Path.h"
 #include <vector>

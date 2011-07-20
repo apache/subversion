@@ -249,27 +249,6 @@ static svn_error_t *simple_store_vsn_url(const char *vsn_url,
   return NULL;
 }
 
-static svn_error_t *get_delta_base(const char **delta_base,
-                                   const char *relpath,
-                                   svn_ra_get_wc_prop_func_t get_wc_prop,
-                                   void *cb_baton,
-                                   apr_pool_t *pool)
-{
-  const svn_string_t *value;
-
-  if (relpath == NULL || get_wc_prop == NULL)
-    {
-      *delta_base = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR((*get_wc_prop)(cb_baton, relpath, SVN_RA_NEON__LP_VSN_URL,
-                         &value, pool));
-
-  *delta_base = value ? value->data : NULL;
-  return SVN_NO_ERROR;
-}
-
 /* helper func which maps certain DAV: properties to svn:wc:
    properties.  Used during checkouts and updates.  */
 static svn_error_t *set_special_wc_prop(const char *key,
@@ -355,7 +334,7 @@ static svn_error_t *add_props(apr_hash_t *props,
 
 static svn_error_t *custom_get_request(svn_ra_neon__session_t *ras,
                                        const char *url,
-                                       const char *relpath,
+                                       const char *editor_relpath,
                                        svn_ra_neon__block_reader reader,
                                        void *subctx,
                                        svn_ra_get_wc_prop_func_t get_wc_prop,
@@ -364,21 +343,26 @@ static svn_error_t *custom_get_request(svn_ra_neon__session_t *ras,
                                        apr_pool_t *pool)
 {
   custom_get_ctx_t cgc = { 0 };
-  const char *delta_base;
+  const char *delta_base = NULL;
   svn_ra_neon__request_t *request;
   svn_error_t *err;
 
-  if (use_base)
+  if (use_base && editor_relpath != NULL)
     {
       /* See if we can get a version URL for this resource. This will
          refer to what we already have in the working copy, thus we
          can get a diff against this particular resource. */
-      SVN_ERR(get_delta_base(&delta_base, relpath,
-                             get_wc_prop, cb_baton, pool));
-    }
-  else
-    {
-      delta_base = NULL;
+
+      if (get_wc_prop != NULL)
+        {
+          const svn_string_t *value;
+
+          SVN_ERR(get_wc_prop(cb_baton, editor_relpath,
+                              SVN_RA_NEON__LP_VSN_URL,
+                              &value, pool));
+
+          delta_base = value ? value->data : NULL;
+        }
     }
 
   SVN_ERR(svn_ra_neon__request_create(&request, ras, "GET", url, pool));
@@ -2056,8 +2040,7 @@ end_element(void *userdata, int state,
                                     rb->file_baton,
                                     NULL,  /* no base checksum in an add */
                                     rb->editor,
-                                    rb->ras->callbacks->get_wc_prop,
-                                    rb->ras->callback_baton,
+                                    NULL, NULL, /* dav_prop callback */
                                     rb->file_pool));
 
           /* fetch node props as necessary. */
@@ -2290,7 +2273,8 @@ static svn_error_t * reporter_set_path(void *report_baton,
                          "%s</S:entry>" DEBUG_CR,
                          revision, depthstring, tokenstring, qpath->data);
 
-  return svn_io_file_write_full(rb->tmpfile, entry, strlen(entry), NULL, pool);
+  return svn_error_trace(svn_io_file_write_full(rb->tmpfile, entry,
+                                                strlen(entry), NULL, pool));
 }
 
 
@@ -2343,7 +2327,8 @@ static svn_error_t * reporter_link_path(void *report_baton,
                          revision, depthstring, tokenstring,
                          qlinkpath->data, qpath->data);
 
-  return svn_io_file_write_full(rb->tmpfile, entry, strlen(entry), NULL, pool);
+  return svn_error_trace(svn_io_file_write_full(rb->tmpfile, entry,
+                                                strlen(entry), NULL, pool));
 }
 
 
@@ -2360,7 +2345,8 @@ static svn_error_t * reporter_delete_path(void *report_baton,
                    "<S:missing>%s</S:missing>" DEBUG_CR,
                    qpath->data);
 
-  return svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool);
+  return svn_error_trace(svn_io_file_write_full(rb->tmpfile, s, strlen(s),
+                                                NULL, pool));
 }
 
 
@@ -2369,7 +2355,7 @@ static svn_error_t * reporter_abort_report(void *report_baton,
 {
   report_baton_t *rb = report_baton;
 
-  (void) apr_file_close(rb->tmpfile);
+  SVN_ERR(svn_io_file_close(rb->tmpfile, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2414,8 +2400,10 @@ static svn_error_t * reporter_finish_report(void *report_baton,
       /* We're done with the file.  this should delete it. Note: it
          isn't a big deal if this line is never executed -- the pool
          will eventually get it. We're just being proactive here. */
-      (void) apr_file_close(rb->tmpfile);
-      return err;
+      return svn_error_trace(
+                svn_error_compose_create(err,
+                                         svn_io_file_close(rb->tmpfile,
+                                                           pool)));
     }
 
   /* dispatch the REPORT. */
@@ -2429,17 +2417,16 @@ static svn_error_t * reporter_finish_report(void *report_baton,
                                     rb->spool_response, pool);
 
   /* We're done with the file. Proactively close/delete the thing. */
-  (void) apr_file_close(rb->tmpfile);
-
-  SVN_ERR(err);
+  SVN_ERR(svn_error_compose_create(err,
+                                   svn_io_file_close(rb->tmpfile, pool)));
 
   /* We got the whole HTTP response thing done.  *Whew*.  Our edit
      baton should have been closed by now, so return a failure if it
      hasn't been. */
   if (rb->edit_baton)
     {
-      return svn_error_createf
-        (SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+      return svn_error_createf(
+         SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
          _("REPORT response handling failed to complete the editor drive"));
     }
 

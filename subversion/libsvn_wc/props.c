@@ -370,17 +370,17 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
                     apr_pool_t *scratch_pool)
 {
   return svn_error_trace(svn_wc__perform_props_merge(
-                            state,
-                            wc_ctx->db,
-                            local_abspath,
-                            left_version, right_version,
-                            baseprops,
-                            propchanges,
-                            FALSE /* base_merge */,
-                            dry_run,
-                            conflict_func, conflict_baton,
-                            cancel_func, cancel_baton,
-                            scratch_pool));
+                           state,
+                           wc_ctx->db,
+                           local_abspath,
+                           left_version, right_version,
+                           baseprops,
+                           propchanges,
+                           FALSE /* base_merge */,
+                           dry_run,
+                           conflict_func, conflict_baton,
+                           cancel_func, cancel_baton,
+                           scratch_pool));
 }
 
 
@@ -803,7 +803,6 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
                             apr_pool_t *scratch_pool)
 {
   svn_wc_conflict_result_t *result = NULL;
-  svn_string_t *mime_propval = NULL;
   apr_pool_t *filepool = svn_pool_create(scratch_pool);
   svn_wc_conflict_description2_t *cdesc;
   const char *dirpath = svn_dirent_dirname(local_abspath, filepool);
@@ -930,12 +929,10 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
     }
 
   /* Build the rest of the description object: */
-  if (!is_dir && working_props)
-    mime_propval = apr_hash_get(working_props, SVN_PROP_MIME_TYPE,
-                                APR_HASH_KEY_STRING);
-  cdesc->mime_type = mime_propval ? mime_propval->data : NULL;
-  cdesc->is_binary = mime_propval ?
-      svn_mime_type_is_binary(mime_propval->data) : FALSE;
+  cdesc->mime_type = (is_dir ? NULL : svn_prop_get_value(working_props,
+                                                         SVN_PROP_MIME_TYPE));
+  cdesc->is_binary = (cdesc->mime_type
+                      && svn_mime_type_is_binary(cdesc->mime_type));
 
   if (!incoming_old_val && incoming_new_val)
     cdesc->action = svn_wc_conflict_action_add;
@@ -1396,7 +1393,9 @@ apply_single_generic_prop_change(svn_wc_notify_state_t *state,
   if (working_val && new_val
       && svn_string_compare(working_val, new_val))
     {
-       set_prop_merge_state(state, svn_wc_notify_state_merged);
+      /* All values identical is a trivial, non-notifiable merge */
+      if (! old_val || ! svn_string_compare(old_val, new_val))
+        set_prop_merge_state(state, svn_wc_notify_state_merged);
     }
   /* If working_val is the same as old_val... */
   else if (working_val && old_val
@@ -1766,8 +1765,8 @@ wcprop_set(svn_wc__db_t *db,
 
   apr_hash_set(prophash, name, APR_HASH_KEY_STRING, value);
   return svn_error_trace(svn_wc__db_base_set_dav_cache(db, local_abspath,
-                                                        prophash,
-                                                        scratch_pool));
+                                                       prophash,
+                                                       scratch_pool));
 }
 
 
@@ -1785,7 +1784,7 @@ svn_wc__get_actual_props(apr_hash_t **props,
      ### should not have any ACTUAL props.  */
 
   return svn_error_trace(svn_wc__db_read_props(props, db, local_abspath,
-                                                result_pool, scratch_pool));
+                                               result_pool, scratch_pool));
 }
 
 
@@ -1797,10 +1796,10 @@ svn_wc_prop_list2(apr_hash_t **props,
                   apr_pool_t *scratch_pool)
 {
   return svn_error_trace(svn_wc__get_actual_props(props,
-                                                   wc_ctx->db,
-                                                   local_abspath,
-                                                   result_pool,
-                                                   scratch_pool));
+                                                  wc_ctx->db,
+                                                  local_abspath,
+                                                  result_pool,
+                                                  scratch_pool));
 }
 
 struct propname_filter_baton_t {
@@ -1965,10 +1964,10 @@ svn_wc_get_pristine_props(apr_hash_t **props,
                           apr_pool_t *scratch_pool)
 {
   return svn_error_trace(svn_wc__get_pristine_props(props,
-                                                     wc_ctx->db,
-                                                     local_abspath,
-                                                     result_pool,
-                                                     scratch_pool));
+                                                    wc_ctx->db,
+                                                    local_abspath,
+                                                    result_pool,
+                                                    scratch_pool));
 }
 
 
@@ -2435,7 +2434,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
     {
       SVN_ERR_ASSERT(depth == svn_depth_empty);
       return svn_error_trace(wcprop_set(wc_ctx->db, local_abspath,
-                                         name, value, scratch_pool));
+                                        name, value, scratch_pool));
     }
 
   /* We have to do this little DIR_ABSPATH dance for backwards compat.

@@ -465,7 +465,7 @@ def fsfs_file(repo_dir, kind, rev):
     if svntest.main.options.fsfs_sharding is None:
       return os.path.join(repo_dir, 'db', kind, '0', rev)
     else:
-      shard = int(rev) // svntest.main.fsfs_sharding
+      shard = int(rev) // svntest.main.options.fsfs_sharding
       path = os.path.join(repo_dir, 'db', kind, str(shard), rev)
 
       if svntest.main.options.fsfs_packing is None or kind == 'revprops':
@@ -970,7 +970,7 @@ def verify_with_invalid_revprops(sbox):
 
   if svntest.verify.verify_outputs(
     "Output of 'svnadmin verify' is unexpected.", None, errput, None,
-    ".*Malformed file"):
+    ".*svnadmin: E200002:.*"):
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -1320,6 +1320,7 @@ text
 # However, the verification triggered by this test is in the repos layer
 # so it will trigger with either backend anyway.
 @SkipUnless(svntest.main.is_fs_type_fsfs)
+@SkipUnless(svntest.main.server_enforces_UTF8_fspaths_in_verify)
 def verify_non_utf8_paths(sbox):
   "svnadmin verify with non-UTF-8 paths"
 

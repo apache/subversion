@@ -168,6 +168,7 @@ svn_cl__proplist(apr_getopt_t *os,
       int i;
       apr_pool_t *iterpool;
       svn_proplist_receiver_t pl_receiver;
+      svn_boolean_t had_errors = FALSE;
 
       if (opt_state->xml)
         {
@@ -189,6 +190,7 @@ svn_cl__proplist(apr_getopt_t *os,
           proplist_baton_t pl_baton;
           const char *truepath;
           svn_opt_revision_t peg_revision;
+          svn_boolean_t success;
 
           svn_pool_clear(iterpool);
           SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
@@ -200,22 +202,31 @@ svn_cl__proplist(apr_getopt_t *os,
           SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
                                      iterpool));
 
-          SVN_ERR(svn_cl__try
-                  (svn_client_proplist3(truepath, &peg_revision,
+          SVN_ERR(svn_cl__try(
+                   svn_client_proplist3(truepath, &peg_revision,
                                         &(opt_state->start_revision),
                                         opt_state->depth,
                                         opt_state->changelists,
                                         pl_receiver, &pl_baton,
                                         ctx, iterpool),
-                   NULL, opt_state->quiet,
+                   &success, opt_state->quiet,
                    SVN_ERR_UNVERSIONED_RESOURCE,
                    SVN_ERR_ENTRY_NOT_FOUND,
                    SVN_NO_ERROR));
+
+          if (!success)
+            had_errors = TRUE;
         }
       svn_pool_destroy(iterpool);
 
       if (opt_state->xml)
         SVN_ERR(svn_cl__xml_print_footer("properties", scratch_pool));
+
+      /* Error out *after* we closed the XML element */
+      if (had_errors)
+        return svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                _("Could not display info for all targets "
+                                  "because some targets don't exist"));
     }
 
   return SVN_NO_ERROR;

@@ -31,7 +31,6 @@
 #include <vector>
 #include "Pool.h"
 struct apr_pool_t;
-struct svn_error;
 class JNIMutex;
 class SVNBase;
 #include <jni.h>

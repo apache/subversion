@@ -12023,7 +12023,7 @@ def subtree_source_missing_in_requested_range(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Make a branche to merge to.
+  # Make a branch to merge to.
   wc_disk, wc_status = set_up_branch(sbox, False, 1)
 
   # Some paths we'll care about.
@@ -12033,16 +12033,14 @@ def subtree_source_missing_in_requested_range(sbox):
   psi_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
   omega_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "H", "omega")
 
-  # r7 Delete a A/D/H/psi.
+  # r7 Delete A/D/H/psi.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'delete', psi_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-m', 'delete psi', wc_dir)
+  sbox.simple_commit(message='delete psi')
 
   # r8 - modify A/D/H/omega.
   svntest.main.file_write(os.path.join(omega_path), "Even newer content")
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-m', 'modify omega', wc_dir)
+  sbox.simple_commit(message='modify omega')
 
   # r9 - Merge r3 to A_COPY/D/H/psi
   expected_output = expected_merge_output(
@@ -12052,9 +12050,7 @@ def subtree_source_missing_in_requested_range(sbox):
                                      'merge', '-c', '3',
                                      sbox.repo_url + '/A/D/H/psi@3',
                                      psi_COPY_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-m', 'merge r3 to A_COPY/D/H/psi',
-                                     wc_dir)
+  sbox.simple_commit(message='merge r3 to A_COPY/D/H/psi')
 
   # r10 - Merge r6 to A_COPY/D/H/omega.
   expected_output = expected_merge_output(
@@ -12064,9 +12060,7 @@ def subtree_source_missing_in_requested_range(sbox):
                                      'merge', '-c', '6',
                                      sbox.repo_url + '/A/D/H/omega',
                                      omega_COPY_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
-                                     'merge r6 to A_COPY',
-                                     wc_dir)
+  sbox.simple_commit(message='merge r6 to A_COPY')
   svntest.actions.run_and_verify_svn(None, exp_noop_up_out(10), [], 'up',
                                      wc_dir)
 
@@ -12093,17 +12087,14 @@ def subtree_source_missing_in_requested_range(sbox):
                                      'merge', '-c', '8',
                                      sbox.repo_url + '/A',
                                      A_COPY_path, '--record-only')
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
-                                     'merge r8 to A_COPY/D/H/omega',
-                                     wc_dir)
+  sbox.simple_commit(message='merge r8 to A_COPY/D/H/omega')
   svntest.actions.run_and_verify_svn(None, exp_noop_up_out(11), [], 'up',
                                      wc_dir)
 
   # r12 - modify A/D/H/omega yet again.
   svntest.main.file_write(os.path.join(omega_path),
                           "Now with fabulous new content!")
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-m', 'modify omega', wc_dir)
+  sbox.simple_commit(message='modify omega')
 
   # r13 - Merge all available revs to A_COPY/D/H/omega.
   expected_output = expected_merge_output(
@@ -12113,9 +12104,7 @@ def subtree_source_missing_in_requested_range(sbox):
                                      'merge',
                                      sbox.repo_url + '/A/D/H/omega',
                                      omega_COPY_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
-                                     'cherry harvest to A_COPY/D/H/omega',
-                                     wc_dir)
+  sbox.simple_commit(message='cherry harvest to A_COPY/D/H/omega')
   svntest.actions.run_and_verify_svn(None, exp_noop_up_out(13), [], 'up',
                                      wc_dir)
 
@@ -12276,9 +12265,7 @@ def subtree_source_missing_in_requested_range(sbox):
                                      'merge', '-c', '12',
                                      sbox.repo_url + '/A',
                                      A_COPY_path, '--record-only')
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
-                                     'Merge r12 to A_COPY',
-                                     wc_dir)
+  sbox.simple_commit(message='Merge r12 to A_COPY')
 
   # Update A_COPY/D/H/rho back to r13 so it's mergeinfo doesn't include
   # r12.  Then merge a range, -r6:12 which should delete a subtree
@@ -13759,14 +13746,12 @@ def subtree_gets_changes_even_if_ultimately_deleted(sbox):
 
   # r7: Make an additional text mod to A/D/H/psi.
   svntest.main.file_write(psi_path, "Even newer content")
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-m', 'mod psi', wc_dir)
+  sbox.simple_commit(message='mod psi')
 
   # r8: Delete A/D/H/psi.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'delete', psi_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-m', 'delete psi', wc_dir)
+  sbox.simple_commit(message='delete psi')
 
   # Update WC before merging so mergeinfo elision and inheritance
   # occur smoothly.
@@ -13812,11 +13797,8 @@ def subtree_gets_changes_even_if_ultimately_deleted(sbox):
                           ['G    ' + psi_COPY_path + '\n',
                            ' G   ' + psi_COPY_path + '\n',]),
     [], 'merge', '-c-7', sbox.repo_url + '/A/D/H/psi@7', psi_COPY_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-m',
-                                     'merge -c3,7 from A/D/H,' \
-                                     'reverse merge -c-7 from A/D/H/psi',
-                                     wc_dir)
+  sbox.simple_commit(message='merge -c3,7 from A/D/H,' \
+                             'reverse merge -c-7 from A/D/H/psi')
 
   # Merge all available revisions from A/D/H to A_COPY/D/H.  This merge
   # ultimately tries to delete A_COPY/D/H/psi, but first it should merge

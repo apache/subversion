@@ -2252,7 +2252,7 @@ svn_io_get_dir_filenames(apr_hash_t **dirents,
                          apr_pool_t *pool)
 {
   return svn_error_trace(svn_io_get_dirents3(dirents, path, TRUE,
-                                              pool, pool));
+                                             pool, pool));
 }
 
 svn_io_dirent2_t *
@@ -4014,8 +4014,8 @@ temp_file_create(apr_file_t **new_file,
 
   /* Translate the returned path back to utf-8 before returning it */
   return svn_error_trace(svn_path_cstring_to_utf8(new_file_name,
-                                                   templ_apr,
-                                                   result_pool));
+                                                  templ_apr,
+                                                  result_pool));
 #else
   /* The Windows implementation of apr_file_mktemp doesn't handle access
      denied errors correctly. Therefore we implement our own temp file

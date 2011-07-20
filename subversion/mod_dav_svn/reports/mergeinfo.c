@@ -213,22 +213,6 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
         }
     }
 
-  if (validate_inherited_mergeinfo)
-    {
-      serr = dav_svn__brigade_puts(bb, output,
-                                   "<S:" SVN_DAV__VALIDATE_INHERITED ">"
-                                   "yes"
-                                   "</S:" SVN_DAV__VALIDATE_INHERITED ">"
-                                   DEBUG_CR);
-      if (serr)
-        {
-          derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                      "Error ending REPORT response.",
-                                      resource->pool);
-          goto cleanup;
-        }
-    }
-
   if ((serr = dav_svn__brigade_puts(bb, output,
                                     "</S:" SVN_DAV__MERGEINFO_REPORT ">"
                                     DEBUG_CR)))

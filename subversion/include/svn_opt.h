@@ -616,7 +616,7 @@ svn_opt_parse_all_args(apr_array_header_t **args_p,
                        apr_pool_t *pool);
 
 /**
- * Parse a working-copy or URL in @a path, extracting any trailing
+ * Parse a working-copy path or URL in @a path, extracting any trailing
  * revision specifier of the form "@rev" from the last component of
  * the path.
  *
@@ -632,14 +632,14 @@ svn_opt_parse_all_args(apr_array_header_t **args_p,
  *   - "http://a/b@%7B1999-12-31%7D"  -> "http://a/b",    (date, 1999-12-31)
  *   - "foo/bar@1:2"                  -> error
  *   - "foo/bar@baz"                  -> error
- *   - "foo/bar@"                     -> "foo/bar",       (base)
- *   - "foo/@bar@"                    -> "foo/@bar",      (base)
+ *   - "foo/bar@"                     -> "foo/bar",       (unspecified)
+ *   - "foo/@bar@"                    -> "foo/@bar",      (unspecified)
  *   - "foo/bar/@13"                  -> "foo/bar/",      (number, 13)
  *   - "foo/bar@@13"                  -> "foo/bar@",      (number, 13)
  *   - "foo/@bar@HEAD"                -> "foo/@bar",      (head)
  *   - "foo@/bar"                     -> "foo@/bar",      (unspecified)
  *   - "foo@HEAD/bar"                 -> "foo@HEAD/bar",  (unspecified)
- *   - "@foo/bar"                     -> error
+ *   - "@foo/bar"                     -> "@foo/bar",      (unspecified)
  *   - "@foo/bar@"                    -> "@foo/bar",      (unspecified)
  *
  *   [*] Syntactically valid but probably not semantically useful.

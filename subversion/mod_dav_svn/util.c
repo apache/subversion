@@ -375,7 +375,8 @@ dav_svn__simple_parse_uri(dav_svn__uri_info *info,
       /* an activity */
       info->activity_id = path + 5;
     }
-  else if (len2 == 4 && memcmp(path, "/ver/", 5) == 0)
+  else if (len2 == 4 &&
+           (memcmp(path, "/ver/", 5) == 0 || memcmp(path, "/rvr/", 5) == 0))
     {
       /* a version resource */
       path += 5;

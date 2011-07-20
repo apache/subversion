@@ -383,7 +383,9 @@ SVN_ERROR_START
 
   /** @deprecated Provided for backward compatibility with the 1.6 API.
    * Use #SVN_ERR_WC_NOT_WORKING_COPY. */
-#define SVN_ERR_WC_NOT_DIRECTORY SVN_ERR_WC_NOT_WORKING_COPY
+  SVN_ERRDEF(SVN_ERR_WC_NOT_DIRECTORY,
+             SVN_ERR_WC_NOT_WORKING_COPY,
+             "Path is not a working copy directory")
 
   SVN_ERRDEF(SVN_ERR_WC_NOT_FILE,
              SVN_ERR_WC_CATEGORY_START + 8,
@@ -520,12 +522,18 @@ SVN_ERROR_START
   /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_WC_CLEANUP_REQUIRED,
              SVN_ERR_WC_CATEGORY_START + 37,
-             "Previous operation was interrupted; run 'svn cleanup'")
+             "Previous operation has not finished; "
+             "run 'cleanup' if it was interrupted")
 
   /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_WC_INVALID_OPERATION_DEPTH,
              SVN_ERR_WC_CATEGORY_START + 38,
-             "This operation can not be performed with just this depth.")
+             "The operation cannot be performed with the specified depth")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_WC_PATH_ACCESS_DENIED,
+             SVN_ERR_WC_CATEGORY_START + 39,
+             "Couldn't open a working copy file because access was denied")
 
   /* fs errors */
 

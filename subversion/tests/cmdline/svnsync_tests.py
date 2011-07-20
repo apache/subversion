@@ -28,7 +28,7 @@
 import sys, os
 
 # Test suite-specific modules
-import locale
+import locale, re
 
 # Our testing module
 import svntest
@@ -76,6 +76,9 @@ def run_sync(url, source_url=None, expected_error=None,
     args.append(source_prop_encoding)
 
   exit_code, output, errput = svntest.main.run_svnsync(*args)
+  for index, line in enumerate(errput[:]):
+    if re.search("warning: W200007", line):
+      del errput[index]
   if errput:
     if expected_error is None:
       raise SVNUnexpectedStderr(errput)
@@ -101,6 +104,9 @@ def run_copy_revprops(url, source_url, expected_error=None,
     args.append(source_prop_encoding)
 
   exit_code, output, errput = svntest.main.run_svnsync(*args)
+  for index, line in enumerate(errput[:]):
+    if re.search("warning: W200007", line):
+      del errput[index]
   if errput:
     if expected_error is None:
       raise SVNUnexpectedStderr(errput)
@@ -126,6 +132,9 @@ def run_init(dst_url, src_url, source_prop_encoding=None):
     args.append(source_prop_encoding)
 
   exit_code, output, errput = svntest.main.run_svnsync(*args)
+  for index, line in enumerate(errput[:]):
+    if re.search("warning: W200007", line):
+      del errput[index]
   if errput:
     raise SVNUnexpectedStderr(errput)
   if output != ['Copied properties for revision 0.\n']:

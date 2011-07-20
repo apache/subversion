@@ -39,7 +39,7 @@ AC_DEFUN(SVN_LIB_SERF,
     elif test "$withval" != "no" ; then
       AC_MSG_NOTICE([serf library configuration])
       serf_prefix=$withval
-      for serf_major in serf-1 serf-0; do
+      for serf_major in serf-2 serf-1 serf-0; do
         if ! test -d $serf_prefix/include/$serf_major; then continue; fi
         save_cppflags="$CPPFLAGS"
         CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES -I$serf_prefix/include/$serf_major"
@@ -73,13 +73,11 @@ AC_DEFUN(SVN_LIB_SERF,
     SVN_EXTERNAL_PROJECT([serf], [--with-apr=$apr_config --with-apr-util=$apu_config])
     serf_major=serf-`$srcdir/serf/build/get-version.sh major $srcdir/serf/serf.h SERF`
     serf_prefix=$prefix
-    SVN_SERF_PREFIX="$serf_prefix"
     SVN_SERF_INCLUDES="-I$srcdir/serf"
     SVN_SERF_LIBS="$abs_builddir/serf/lib$serf_major.la"
   fi
 
   if test $serf_found = "yes"; then
-    SVN_SERF_PREFIX="$serf_prefix"
     SVN_SERF_INCLUDES="-I$serf_prefix/include/$serf_major"
     if test -e "$serf_prefix/lib/lib$serf_major.la"; then
       SVN_SERF_LIBS="$serf_prefix/lib/lib$serf_major.la"
@@ -93,7 +91,6 @@ AC_DEFUN(SVN_LIB_SERF,
 
   svn_lib_serf=$serf_found
 
-  AC_SUBST(SVN_SERF_PREFIX)
   AC_SUBST(SVN_SERF_INCLUDES)
   AC_SUBST(SVN_SERF_LIBS)
 ])

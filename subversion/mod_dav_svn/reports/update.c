@@ -333,7 +333,7 @@ add_helper(svn_boolean_t is_dir,
               apr_psprintf(pool, " sha1-checksum=\"%s\"",
                            svn_checksum_to_cstring(sha1_checksum, pool));
         }
-          
+
       if (bc_url)
         bc_url_str = apr_psprintf(pool, " bc-url=\"%s\"", bc_url);
 
@@ -353,8 +353,8 @@ add_helper(svn_boolean_t is_dir,
                              "copyfrom-path=\"%s\" copyfrom-rev=\"%ld\">"
                              DEBUG_CR,
                              DIR_OR_FILE(is_dir),
-                             bc_url, sha1_checksum_str,
-                             qname, qcopy, copyfrom_revision);
+                             qname, bc_url_str, sha1_checksum_str,
+                             qcopy, copyfrom_revision);
           child->copyfrom = TRUE;
         }
 

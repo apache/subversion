@@ -1903,8 +1903,7 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      mergeinfo_string));
     }
   svn_pool_destroy(iterpool);
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)b)",
-    validate_inherited_mergeinfo));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
 
   return SVN_NO_ERROR;
 }
@@ -3230,7 +3229,12 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
     SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(cc(!",
                                    "success", uuid, b.repos_url));
     if (supports_mergeinfo)
-      SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_CAP_MERGEINFO));
+      {
+        SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_CAP_MERGEINFO));
+        SVN_ERR(svn_ra_svn_write_word(
+          conn, pool, SVN_RA_SVN_CAP_VALIDATE_INHERITED_MERGEINFO));
+      }
+
     SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
   }
 

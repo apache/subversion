@@ -1394,5 +1394,5 @@ svn_diff_close_patch_file(svn_patch_file_t *patch_file,
                           apr_pool_t *scratch_pool)
 {
   return svn_error_trace(svn_io_file_close(patch_file->apr_file,
-                                            scratch_pool));
+                                           scratch_pool));
 }

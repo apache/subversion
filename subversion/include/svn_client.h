@@ -356,8 +356,9 @@ typedef struct svn_client_proplist_item_t
 
 /**
  * The callback invoked by svn_client_proplist3().  Each invocation
- * describes the property specified by @a item.  Use @a pool for all
- * temporary allocation.
+ * provides the regular properties of @a path which is either a WC path or
+ * a URL.  @a prop_hash maps property names (char *) to property
+   values (svn_string_t *).  Use @a pool for all temporary allocation.
  *
  * @since New in 1.5.
  */
@@ -476,6 +477,7 @@ typedef struct svn_client_commit_item3_t
   /**
    * When processing the commit this contains the relative path for
    * the commit session. #NULL until the commit item is preprocessed.
+   * @since New in 1.7.
    */
   const char *session_relpath;
 } svn_client_commit_item3_t;
@@ -2115,6 +2117,9 @@ typedef struct svn_client_status_t
   /** The URL of the repository root. */
   const char *repos_root_url;
 
+  /** The UUID of the repository */
+  const char *repos_uuid;
+
   /** The in-repository path relative to the repository root. */
   const char *repos_relpath;
 
@@ -2279,7 +2284,7 @@ typedef svn_error_t *(*svn_client_status_func_t)(
  *
  * If @a path is an absolute path then the @c path parameter passed in each
  * call to @a status_func will be an absolute path.
- * 
+ *
  * All temporary allocations are performed in @a scratch_pool.
  *
  * @since New in 1.7.
@@ -5384,10 +5389,10 @@ typedef struct svn_client_info2_t
   const char *last_changed_author;
 
   /** An exclusive lock, if present.  Could be either local or remote. */
-  svn_lock_t *lock;
+  const svn_lock_t *lock;
 
-  /* Possible information about the working copy, NULL if not valid. */
-  struct svn_wc_info_t *wc_info;
+  /** Possible information about the working copy, NULL if not valid. */
+  const svn_wc_info_t *wc_info;
 
 } svn_client_info2_t;
 
@@ -5448,6 +5453,11 @@ typedef svn_error_t *(*svn_client_info_receiver2_t)(
  * recurse fully, invoking @a receiver on @a abspath_or_url and
  * everything beneath it.
  *
+ * If @a fetch_excluded is TRUE, also also send excluded nodes in the working
+ * copy to @a receiver, otherwise these are skipped. If @a fetch_actual_only
+ * is TRUE also send nodes that don't exist as versioned but are still
+ * tree conflicted.
+ *
  * @a changelists is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose info is
  * reported; that is, don't report info about any item unless
@@ -5460,10 +5470,12 @@ svn_error_t *
 svn_client_info3(const char *abspath_or_url,
                  const svn_opt_revision_t *peg_revision,
                  const svn_opt_revision_t *revision,
+                 svn_depth_t depth,
+                 svn_boolean_t fetch_excluded,
+                 svn_boolean_t fetch_actual_only,
+                 const apr_array_header_t *changelists,
                  svn_client_info_receiver2_t receiver,
                  void *receiver_baton,
-                 svn_depth_t depth,
-                 const apr_array_header_t *changelists,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *scratch_pool);
 

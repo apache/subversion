@@ -90,7 +90,7 @@ def lock_file(sbox):
 
   # --- Meanwhile, in our other working copy... ---
   err_re = "(svn\: E195022\: File '.*iota' is locked in another)|" + \
-           "(svn\: E160039: User 'jconstant' does not own lock on path.*iota')"
+           "(svn\: E160039: User '?jconstant'? does not own lock on path.*iota')"
 
   svntest.main.run_svn(None, 'update', wc_b)
   # -- Try to change a file --
@@ -111,7 +111,7 @@ def lock_file(sbox):
   svntest.main.run_svn(None, 'propset', 'sneakyuser', 'Sally', file_path_b)
 
   err_re = "(svn\: E195022\: File '.*iota' is locked in another)|" + \
-           "(svn\: E160039\: User 'jconstant' does not own lock on path)"
+           "(svn\: E160039\: User '?jconstant'? does not own lock on path)"
 
   # attempt (and fail) to commit as user Sally
   svntest.actions.run_and_verify_commit(wc_b, None, None, err_re,
@@ -1498,7 +1498,7 @@ def lock_path_not_in_head(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
                                      '-m', 'Some deletions', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r1', wc_dir)
-  expected_lock_fail_err_re = "svn: warning:.*" \
+  expected_lock_fail_err_re = "svn:.*" \
   "((Path .* doesn't exist in HEAD revision)" \
   "|(Lock request failed: 405 Method Not Allowed))"
   # Issue #3524 These lock attemtps were triggering an assert over ra_serf:

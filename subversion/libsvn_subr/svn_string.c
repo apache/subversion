@@ -783,7 +783,7 @@ svn_error_t *
 svn_cstring_atoui64(apr_uint64_t *n, const char *str)
 {
   return svn_error_trace(svn_cstring_strtoui64(n, str, 0,
-                                                APR_UINT64_MAX, 10));
+                                               APR_UINT64_MAX, 10));
 }
 
 svn_error_t *
@@ -827,7 +827,7 @@ svn_error_t *
 svn_cstring_atoi64(apr_int64_t *n, const char *str)
 {
   return svn_error_trace(svn_cstring_strtoi64(n, str, APR_INT64_MIN,
-                                               APR_INT64_MAX, 10));
+                                              APR_INT64_MAX, 10));
 }
 
 svn_error_t *

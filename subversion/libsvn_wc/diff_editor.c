@@ -481,12 +481,7 @@ get_empty_file(struct edit_baton *b,
 static const char *
 get_prop_mimetype(apr_hash_t *props)
 {
-  const svn_string_t *mimetype_val;
-
-  mimetype_val = apr_hash_get(props,
-                              SVN_PROP_MIME_TYPE,
-                              strlen(SVN_PROP_MIME_TYPE));
-  return (mimetype_val) ? mimetype_val->data : NULL;
+  return svn_prop_get_value(props, SVN_PROP_MIME_TYPE);
 }
 
 

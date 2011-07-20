@@ -535,6 +535,10 @@ struct svn_ra_serf__xml_parser_t {
   /* Temporary allocations should be made in this pool. */
   apr_pool_t *pool;
 
+  /* What kind of response are we parsing? If set, this should typically
+     define the report name.  */
+  const char *response_type;
+
   /* Caller-specific data passed to the start, end, cdata callbacks.  */
   void *user_data;
 
@@ -1376,7 +1380,7 @@ svn_error_t * svn_ra_serf__get_mergeinfo(
   const apr_array_header_t *paths,
   svn_revnum_t revision,
   svn_mergeinfo_inheritance_t inherit,
-  svn_boolean_t *validate_inherited_mergeinfo,
+  svn_boolean_t validate_inherited_mergeinfo,
   svn_boolean_t include_descendants,
   apr_pool_t *pool);
 

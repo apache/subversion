@@ -429,9 +429,9 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
                        apr_pool_t *pool)
 {
   return svn_error_trace(svn_repos_fs_get_locks2(locks, repos, path,
-                                                  svn_depth_infinity,
-                                                  authz_read_func,
-                                                  authz_read_baton, pool));
+                                                 svn_depth_infinity,
+                                                 authz_read_func,
+                                                 authz_read_baton, pool));
 }
 
 
@@ -677,18 +677,18 @@ svn_repos_dump_fs2(svn_repos_t *repos,
                    apr_pool_t *pool)
 {
   return svn_error_trace(svn_repos_dump_fs3(repos,
-                                             stream,
-                                             start_rev,
-                                             end_rev,
-                                             incremental,
-                                             use_deltas,
-                                             feedback_stream
-                                               ? repos_notify_handler
-                                               : NULL,
-                                             feedback_stream,
-                                             cancel_func,
-                                             cancel_baton,
-                                             pool));
+                                            stream,
+                                            start_rev,
+                                            end_rev,
+                                            incremental,
+                                            use_deltas,
+                                            feedback_stream
+                                              ? repos_notify_handler
+                                              : NULL,
+                                            feedback_stream,
+                                            cancel_func,
+                                            cancel_baton,
+                                            pool));
 }
 
 svn_error_t *
@@ -701,15 +701,15 @@ svn_repos_verify_fs(svn_repos_t *repos,
                     apr_pool_t *pool)
 {
   return svn_error_trace(svn_repos_verify_fs2(repos,
-                                               start_rev,
-                                               end_rev,
-                                               feedback_stream
-                                                 ? repos_notify_handler
-                                                 : NULL,
-                                               feedback_stream,
-                                               cancel_func,
-                                               cancel_baton,
-                                               pool));
+                                              start_rev,
+                                              end_rev,
+                                              feedback_stream
+                                                ? repos_notify_handler
+                                                : NULL,
+                                              feedback_stream,
+                                              cancel_func,
+                                              cancel_baton,
+                                              pool));
 }
 
 /*** From load.c ***/

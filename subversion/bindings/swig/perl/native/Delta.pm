@@ -17,21 +17,21 @@ SVN::Delta - Subversion delta functions
     # driving an editor
     my $editor = SVN::Delta::Editor->
         new(SVN::Repos::get_commit_editor($repos, "file://$repospath",
-       	                                  '/', 'root', 'FOO', \&committed));
+                                          '/', 'root', 'FOO', \&committed));
 
     my $rootbaton = $editor->open_root(0);
 
-    my $fbaton = $editor->add_file ('filea', $rootbaton,
-	 		            undef, -1);
+    my $fbaton = $editor->add_file('filea', $rootbaton,
+                                   undef, -1);
 
-    my $ret = $editor->apply_textdelta ($fbaton, undef);
+    my $ret = $editor->apply_textdelta($fbaton, undef);
     SVN::TxDelta::send_string("FILEA CONTENT", @$ret);
 
     # implement an editor in perl
     SVN::Repos::dir_delta($root1, $path, undef,
-			  $root2, $path,
-			  SVN::Delta::Editor->new(_debug=>1),
-			  1, 1, 0, 1
+                          $root2, $path,
+                          SVN::Delta::Editor->new(_debug=>1),
+                          1, 1, 0, 1
 
 =head1 DESCRIPTION
 
@@ -56,11 +56,11 @@ use and its method calls will be relayed to the native editor.
 If you want to implement an editor, subclass SVN::Delta::Editor and
 implement the editors callbacks. see the METHODS section below.
 
-=head2 CONSTRUCTOR - new (...)
+=head2 CONSTRUCTOR - new(...)
 
 =over
 
-=item new ($editor, $editor_baton)
+=item new($editor, $editor_baton)
 
 Link to the native editor
 
@@ -106,9 +106,9 @@ use SVN::Base qw(Delta svn_txdelta_ apply);
 # in Perl land.
 sub apply {
     if (@_ == 5 || (@_ == 4 && ref($_[-1]) ne 'SVN::Pool' && ref($_[-1]) ne '_p_apr_pool_t')) {
-	splice(@_, 3, 1);
-	my @ret = SVN::_Delta::svn_txdelta_apply(@_);
-	return @ret[1,2];
+        splice(@_, 3, 1);
+        my @ret = SVN::_Delta::svn_txdelta_apply(@_);
+        return @ret[1,2];
     }
     goto \&SVN::_Delta::svn_txdelta_apply;
 }
@@ -127,10 +127,10 @@ use SVN::Base qw(Delta svn_delta_editor_);
 sub convert_editor {
     my $self = shift;
     $self->{_editor} = $_[0], return 1
-	if UNIVERSAL::isa ($_[0], __PACKAGE__);
+        if UNIVERSAL::isa($_[0], __PACKAGE__);
     if (ref($_[0]) && $_[0]->isa('_p_svn_delta_editor_t')) {
-	@{$self}{qw/_editor _baton/} = @_;
-	return 1;
+        @{$self}{qw/_editor _baton/} = @_;
+        return 1;
     }
     return 0;
 }
@@ -140,9 +140,9 @@ sub new {
     my $self = bless {}, $class;
 
     unless ($self->convert_editor(@_)) {
-	%$self = @_;
-	$self->convert_editor (@{$self->{_editor}})
-	    if $self->{_editor};
+        %$self = @_;
+        $self->convert_editor(@{$self->{_editor}})
+            if $self->{_editor};
     }
 
     return $self;
@@ -160,18 +160,18 @@ sub AUTOLOAD {
     return unless $func =~ m/[^A-Z]/;
 
     my %ebaton = ( set_target_revision => 1,
-		   open_root => 1,
-		   close_edit => 1,
-		   abort_edit => 1,
-		 );
+                   open_root => 1,
+                   close_edit => 1,
+                   abort_edit => 1,
+                 );
 
     my $self = shift;
     no strict 'refs';
 
-    my @ret = UNIVERSAL::isa ($self->{_editor}, __PACKAGE__) ?
-	$self->{_editor}->$func (@_) :
+    my @ret = UNIVERSAL::isa($self->{_editor}, __PACKAGE__) ?
+        $self->{_editor}->$func(@_) :
         eval { &{"invoke_$func"}($self->{_editor},
-				 $ebaton{$func} ? $self->{_baton} : (), @_) };
+                                 $ebaton{$func} ? $self->{_baton} : (), @_) };
 
     die $@ if $@;
 

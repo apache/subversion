@@ -1087,6 +1087,9 @@ svn_ra_serf__init(const svn_version_t *loader_version,
       { "svn_delta", svn_delta_version },
       { NULL, NULL }
     };
+  int serf_major;
+  int serf_minor;
+  int serf_patch;
 
   SVN_ERR(svn_ver_check_list(ra_serf_version(), checklist));
 
@@ -1094,10 +1097,25 @@ svn_ra_serf__init(const svn_version_t *loader_version,
      VTABLE parameter. The RA loader does a more exhaustive check. */
   if (loader_version->major != SVN_VER_MAJOR)
     {
-      return svn_error_createf
-        (SVN_ERR_VERSION_MISMATCH, NULL,
+      return svn_error_createf(
+         SVN_ERR_VERSION_MISMATCH, NULL,
          _("Unsupported RA loader version (%d) for ra_serf"),
          loader_version->major);
+    }
+
+  /* Make sure that we have loaded a compatible library: the MAJOR must
+     match, and the minor must be at *least* what we compiled against.
+     The patch level is simply ignored.  */
+  serf_lib_version(&serf_major, &serf_minor, &serf_patch);
+  if (serf_major != SERF_MAJOR_VERSION
+      || serf_minor < SERF_MINOR_VERSION)
+    {
+      return svn_error_createf(
+         SVN_ERR_VERSION_MISMATCH, NULL,
+         _("ra_serf was compiled for serf %d.%d.%d but loaded "
+           "an incompatible %d.%d.%d library"),
+         SERF_MAJOR_VERSION, SERF_MINOR_VERSION, SERF_PATCH_VERSION,
+         serf_major, serf_minor, serf_patch);
     }
 
   *vtable = &serf_vtable;

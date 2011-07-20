@@ -262,10 +262,12 @@ svn_error_t *
 svn_client_info3(const char *abspath_or_url,
                  const svn_opt_revision_t *peg_revision,
                  const svn_opt_revision_t *revision,
+                 svn_depth_t depth,
+                 svn_boolean_t fetch_excluded,
+                 svn_boolean_t fetch_actual_only,
+                 const apr_array_header_t *changelists,
                  svn_client_info_receiver2_t receiver,
                  void *receiver_baton,
-                 svn_depth_t depth,
-                 const apr_array_header_t *changelists,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -294,7 +296,8 @@ svn_client_info3(const char *abspath_or_url,
       wc_info_receiver_baton_t b = { receiver, receiver_baton };
       return svn_error_trace(
         svn_wc__get_info(ctx->wc_ctx, abspath_or_url, depth,
-                         wc_info_receiver, &b, changelists,
+                        fetch_excluded, fetch_actual_only, changelists,
+                         wc_info_receiver, &b,
                          ctx->cancel_func, ctx->cancel_baton, pool));
     }
 

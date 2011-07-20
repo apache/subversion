@@ -113,13 +113,6 @@ typedef struct svn_fs_t svn_fs_t;
  * @since New in 1.6.
  */
 #define SVN_FS_CONFIG_PRE_1_6_COMPATIBLE        "pre-1.6-compatible"
-
-/** Create repository format compatible with Subversion versions
- * earlier than 1.7.
- *
- * @since New in 1.7.
- */
-#define SVN_FS_CONFIG_PRE_1_7_COMPATIBLE        "pre-1.7-compatible"
 /** @} */
 
 
@@ -251,6 +244,23 @@ svn_fs_open(svn_fs_t **fs_p,
 svn_error_t *
 svn_fs_upgrade(const char *path,
                apr_pool_t *pool);
+
+/**
+ * Perform backend-specific data consistency and correctness validations
+ * to the Subversion filesystem located in the directory @a path.
+ * Use @a pool for necessary allocations.
+ *
+ * @note You probably don't want to use this directly.  Take a look at
+ * svn_repos_verify_fs2() instead, which does non-backend-specific
+ * verifications as well.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_verify(const char *path,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *pool);
 
 /**
  * Return, in @a *fs_type, a string identifying the back-end type of
@@ -944,7 +954,7 @@ svn_fs_change_txn_prop(svn_fs_txn_t *txn,
 
 /** Change, add, and/or delete transaction property values in
  * transaction @a txn.  @a props is an array of <tt>svn_prop_t</tt>
- * elements.  This is equivalent to calling svn_fs_change_txp_prop()
+ * elements.  This is equivalent to calling svn_fs_change_txn_prop()
  * multiple times with the @c name and @c value fields of each
  * successive <tt>svn_prop_t</tt>, but may be more efficient.
  * (Properties not mentioned are left alone.)  Do any necessary
@@ -2023,7 +2033,7 @@ svn_fs_get_uuid(svn_fs_t *fs,
 
 /** If not @c NULL, associate @a *uuid with @a fs.  Otherwise (if @a
  * uuid is @c NULL), generate a new UUID for @a fs.  Use @a pool for
- * any scratchwork.
+ * any scratch work.
  */
 svn_error_t *
 svn_fs_set_uuid(svn_fs_t *fs,

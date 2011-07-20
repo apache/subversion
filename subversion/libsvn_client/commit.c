@@ -166,8 +166,8 @@ send_file_contents(const char *path,
 
   /* Send the file's contents to the delta-window handler. */
   return svn_error_trace(svn_txdelta_send_stream(contents, handler,
-                                                  handler_baton, digest,
-                                                  pool));
+                                                 handler_baton, digest,
+                                                 pool));
 }
 
 
@@ -1373,15 +1373,15 @@ svn_client_commit5(const apr_array_header_t *targets,
 
   /* Sort and condense our COMMIT_ITEMS. */
   cmt_err = svn_error_trace(svn_client__condense_commit_items(&base_url,
-                                                               commit_items,
-                                                               pool));
+                                                              commit_items,
+                                                              pool));
 
   if (cmt_err)
     goto cleanup;
 
   /* Collect our lock tokens with paths relative to base_url. */
   cmt_err = svn_error_trace(collect_lock_tokens(&lock_tokens, lock_tokens,
-                                                 base_url, pool));
+                                                base_url, pool));
 
   if (cmt_err)
     goto cleanup;
@@ -1479,5 +1479,5 @@ svn_client_commit5(const apr_array_header_t *targets,
   svn_pool_destroy(iterpool);
 
   return svn_error_trace(reconcile_errors(cmt_err, unlock_err, bump_err,
-                                           pool));
+                                          pool));
 }

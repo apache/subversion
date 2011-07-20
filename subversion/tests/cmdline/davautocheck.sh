@@ -67,6 +67,9 @@
 #
 # To prevent the server from advertising httpv2, pass USE_HTTPV1 in
 # the environment.
+# 
+# To use value for "SVNPathAuthz" directive set SVN_PATH_AUTHZ with
+# appropriate value in the environment.
 #
 # Passing --no-tests as argv[1] will have the script start a server
 # but not run any tests.
@@ -158,6 +161,12 @@ say "Using '$APXS'..."
 ADVERTISE_V2_PROTOCOL=on
 if [ ${USE_HTTPV1:+set} ]; then
  ADVERTISE_V2_PROTOCOL=off
+fi
+
+# Pick up $SVN_PATH_AUTHZ
+SVN_PATH_AUTHZ_LINE=""
+if [ ${SVN_PATH_AUTHZ:+set} ]; then
+ SVN_PATH_AUTHZ_LINE="SVNPathAuthz      ${SVN_PATH_AUTHZ}"
 fi
 
 # Find the source and build directories. The build dir can be found if it is
@@ -326,6 +335,7 @@ CustomLog           "$HTTPD_ROOT/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e" 
   AuthUserFile      $HTTPD_USERS
   Require           valid-user
   SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
+  ${SVN_PATH_AUTHZ_LINE}
 </Location>
 <Location /svn-test-work/local_tmp/repos>
   DAV               svn
@@ -336,6 +346,7 @@ CustomLog           "$HTTPD_ROOT/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e" 
   AuthUserFile      $HTTPD_USERS
   Require           valid-user
   SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
+  ${SVN_PATH_AUTHZ_LINE}
 </Location>
 RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)\$ /svn-test-work/repositories/\$1
 RedirectMatch           ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)\$ /svn-test-work/repositories/\$1

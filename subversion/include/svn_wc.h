@@ -1107,6 +1107,10 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.7. */
   svn_wc_notify_update_skip_working_only,
 
+  /** An update tried to update a file or directory to which access could
+   * not be obtained. @since New in 1.7. */
+  svn_wc_notify_update_skip_access_denied,
+
   /** An update operation removed an external working copy.
    * @since New in 1.7. */
   svn_wc_notify_update_external_removed,
@@ -1200,6 +1204,10 @@ typedef enum svn_wc_notify_action_t
   /** Operation failed because the operation was forbidden by the server.
    * @since New in 1.7. */
   svn_wc_notify_failed_forbidden_by_server,
+
+  /** The operation skipped the path because it was conflicted.
+   * @since New in 1.7. */
+  svn_wc_notify_skip_conflicted,
 
 } svn_wc_notify_action_t;
 
@@ -3539,6 +3547,9 @@ typedef struct svn_wc_status3_t
   /** The URL of the repository */
   const char *repos_root_url;
 
+  /** The UUID of the repository */
+  const char *repos_uuid;
+
   /** The in-repository path relative to the repository root. */
   const char *repos_relpath;
 
@@ -4011,6 +4022,10 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
  * If @a cancel_func is non-NULL, call it with @a cancel_baton while building
  * the @a statushash to determine if the client has canceled the operation.
  *
+ * If @a depth_as_sticky is set handle @a depth like when depth_is_sticky is
+ * passed for updating. This will show excluded nodes show up as added in the
+ * repository.
+ *
  * If @a server_performs_filtering is TRUE, assume that the server handles
  * the ambient depth filtering, so this doesn't have to be handled in the
  * editor.
@@ -4032,6 +4047,7 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           svn_depth_t depth,
                           svn_boolean_t get_all,
                           svn_boolean_t no_ignore,
+                          svn_boolean_t depth_as_sticky,
                           svn_boolean_t server_performs_filtering,
                           const apr_array_header_t *ignore_patterns,
                           svn_wc_status_func4_t status_func,
