@@ -86,14 +86,3 @@ Approved changes:
      +1: rhuijben, stsp
      +1: gstein (another iteration could make this "nicer", but is not
                  required for backport)
-
- * r1148566, r1148853
-   Fix a memory leak in svn merge.
-   Justification:
-     Memory leaks are bad.
-   Votes:
-     -0: rhuijben (r1148588 fixes the immediate problems and this code can use
-                   a bit more cleanup before backporting. See also the
-                   dev@s.a.o thread for gstein's concerns) (r1148566 only)
-     +1: stsp (r1148588 alone does *not* fix the leak)
-     +1: philip, gstein

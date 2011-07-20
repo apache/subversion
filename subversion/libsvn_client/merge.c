@@ -7872,14 +7872,27 @@ log_noop_revs(void *baton,
   apr_hash_index_t *hi;
   svn_revnum_t revision;
   svn_boolean_t log_entry_rev_required = FALSE;
+  apr_array_header_t *rl1;
+  apr_array_header_t *rl2;
+  apr_array_header_t *rangelist;
+
+  /* The baton's pool is essentially an iterpool so we must clear it
+   * for each invocation of this function. */
+  rl1 = svn_rangelist_dup(log_gap_baton->operative_ranges, pool);
+  rl2 = svn_rangelist_dup(log_gap_baton->merged_ranges, pool);
+  svn_pool_clear(log_gap_baton->pool);
+  log_gap_baton->operative_ranges = svn_rangelist_dup(rl1,
+                                                      log_gap_baton->pool);
+  log_gap_baton->merged_ranges = svn_rangelist_dup(rl2,
+                                                   log_gap_baton->pool);
 
   revision = log_entry->revision;
 
+  rangelist = svn_rangelist__initialize(revision - 1, revision, TRUE,
+                                        log_gap_baton->pool);
   /* Unconditionally add LOG_ENTRY->REVISION to BATON->OPERATIVE_MERGES. */
   SVN_ERR(svn_rangelist_merge(&(log_gap_baton->operative_ranges),
-                              svn_rangelist__initialize(revision - 1,
-                                                        revision, TRUE,
-                                                        log_gap_baton->pool),
+                              rangelist,
                               log_gap_baton->pool));
 
   /* Examine each path affected by LOG_ENTRY->REVISION.  If the explicit or
@@ -7948,10 +7961,7 @@ log_noop_revs(void *baton,
              event the inherited mergeinfo is actually non-inheritable. */
           SVN_ERR(svn_rangelist_intersect(&intersecting_range,
                                           paths_explicit_rangelist,
-                                          svn_rangelist__initialize(
-                                            revision - 1,
-                                            revision, TRUE,
-                                            pool),
+                                          rangelist,
                                           mergeinfo_inherited, pool));
 
           if (intersecting_range->nelts == 0)
@@ -7965,10 +7975,7 @@ log_noop_revs(void *baton,
 
   if (!log_entry_rev_required)
     SVN_ERR(svn_rangelist_merge(&(log_gap_baton->merged_ranges),
-                                svn_rangelist__initialize(revision - 1,
-                                                          revision,
-                                                          TRUE,
-                                                          log_gap_baton->pool),
+                                rangelist,
                                 log_gap_baton->pool));
 
   return SVN_NO_ERROR;
@@ -8099,7 +8106,7 @@ remove_noop_subtree_ranges(const char *url1,
                     result_pool, scratch_pool));
   log_gap_baton.merged_ranges = merged_ranges;
   log_gap_baton.operative_ranges = operative_ranges;
-  log_gap_baton.pool = scratch_pool;
+  log_gap_baton.pool = svn_pool_create(scratch_pool);
 
   APR_ARRAY_PUSH(log_targets, const char *) = "";
 
@@ -8136,6 +8143,8 @@ remove_noop_subtree_ranges(const char *url1,
                                        FALSE, result_pool));
         }
     }
+
+  svn_pool_destroy(log_gap_baton.pool);
 
   return SVN_NO_ERROR;
 }
