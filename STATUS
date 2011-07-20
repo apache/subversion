@@ -72,6 +72,13 @@ Candidate changes:
                    a bit more cleanup before backporting. See also the
                    dev@s.a.o thread for gstein's concerns)
      +1: stsp (r1148588 alone does *not* fix the leak)
+     -0: gstein (per the dev@ thread, a distinctive third pool in the mix
+                 could help to make all this clear; at a minimum, we can
+                 use the provided scratch_pool better)
+
+
+Approved changes:
+=================
 
  * r1148588
    Use a subpool for each log item in ra_serf instead of allocating all the
@@ -82,6 +89,5 @@ Candidate changes:
      further memory usage reduction.
    Votes:
      +1: rhuijben, stsp
-
-Approved changes:
-=================
+     +1: gstein (another iteration could make this "nicer", but is not
+                 required for backport)
