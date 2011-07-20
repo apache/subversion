@@ -71,6 +71,13 @@ Candidate changes:
      +1: philip
      -1: gstein (I see no explanation for why "serf is not ready")
 
+ * r1148131
+   Check serf library version at runtime.
+   Justification:
+     Avoid calling into a library incompatible with the one compiled against.
+   Votes:
+     +1: danielsh
+
 
 Approved changes:
 =================
