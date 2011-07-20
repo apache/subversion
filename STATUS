@@ -63,12 +63,25 @@ Candidate changes:
                      confirmation from an ra_svn developer that this is the
                      right way to fix this problem)
 
-  * r1148566
-    Fix a memory leak in svn merge.
-    Justification:
-      Memory leaks are bad.
-    Votes:
-      +1: stsp
+ * r1148566
+   Fix a memory leak in svn merge.
+   Justification:
+     Memory leaks are bad.
+   Votes:
+     +1: stsp
+     -0: rhuijben (r1148588 fixes the immediate problems and this code can use
+                   a bit more cleanup before backporting. See also the
+                   dev@s.a.o thread for gstein's concerns)
+
+ * r1148588
+   Use a subpool for each log item in ra_serf instead of allocating all the
+   structures in the main parser pool and store a variable in the right pool.
+   Justification:
+     Reduces memory consumption during log processing (E.g. svn log, svn merge,
+     svn mergeinfo), and provides a proper scratch pool to receivers for
+     further memory usage reduction.
+   Votes:
+     +1: rhuijben
 
 Approved changes:
 =================
