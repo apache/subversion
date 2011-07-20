@@ -535,6 +535,10 @@ struct svn_ra_serf__xml_parser_t {
   /* Temporary allocations should be made in this pool. */
   apr_pool_t *pool;
 
+  /* What kind of response are we parsing? If set, this should typically
+     define the report name.  */
+  const char *response_type;
+
   /* Caller-specific data passed to the start, end, cdata callbacks.  */
   void *user_data;
 

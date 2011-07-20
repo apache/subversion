@@ -1499,7 +1499,12 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
   PBTEST_SET_PAUSED(parser);
 
 #ifdef PBTEST_ACTIVE
-  SVN_DBG(("process: paused=%d\n", parser->paused));
+  /* If this step should not inject content, then fast-path exit.  */
+  if (pbtest_step < 14 && !pbtest_description[pbtest_step].inject)
+    {
+      SVN_DBG(("PBTEST: process: injection disabled\n"));
+      return SVN_NO_ERROR;
+    }
 #endif
 
   /* Fast path exit: already paused, or nothing to do.  */
@@ -1674,9 +1679,13 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
           XML_SetCharacterDataHandler(ctx->xmlp, cdata_xml);
         }
 
-      /* This is the first invocation. Possibly move to step 1 of the
-         testing sequence.  */
-      PBTEST_MAYBE_STEP(ctx);
+      /* This is the first invocation. If we're looking at an update
+         report, then move to step 1 of the testing sequence.  */
+#ifdef PBTEST_ACTIVE
+      if (ctx->response_type != NULL
+          && strcmp(ctx->response_type, "update-report") == 0)
+        PBTEST_MAYBE_STEP(ctx);
+#endif
     }
 
   /* If we are storing content into a spill file, then move to the end of
@@ -1698,10 +1707,6 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
 
       status = serf_bucket_read(response, PARSE_CHUNK_SIZE, &data, &len);
 
-#ifdef PBTEST_ACTIVE
-      SVN_DBG(("response: len=%d\n", (int)len));
-#endif
-
       if (SERF_BUCKET_READ_ERROR(status))
         {
           return svn_error_wrap_apr(status, NULL);
@@ -1710,6 +1715,12 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       /* Ensure that the parser's PAUSED state is correct before we test
          the flag.  */
       PBTEST_SET_PAUSED(ctx);
+
+#ifdef PBTEST_ACTIVE
+      SVN_DBG(("response: len=%d  paused=%d  status=%08x\n",
+               (int)len, ctx->paused, status));
+      SVN_DBG(("content=%s\n", data));
+#endif
 
       /* Note: once the callbacks invoked by inject_to_parser() sets the
          PAUSED flag, then it will not be cleared. write_to_pending() will
@@ -1720,7 +1731,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
          We want to save arriving content into the PENDING structures if
          the parser has been paused, or we already have data in there (so
          the arriving data is appended, rather than injected out of order)  */
-#ifdef DISABLE_THIS_FOR_NOW
+#ifdef PBTEST_ACTIVE
       if (ctx->paused || HAS_PENDING_DATA(ctx->pending))
         {
           err = write_to_pending(ctx, data, len, pool);
