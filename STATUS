@@ -75,6 +75,17 @@ Candidate changes:
      +1: lgo
      +0: gstein (haven't reviewed these specific revisions yet)
 
+ * r915036
+   Fix many of the links pointing to subversion.tigris.org or svn.collab.net.
+   Justification:
+     Although most of the links are just in source code documentation, some
+     are user-visible such as in the man pages and in the repository
+     'README.txt' and 'conf/svnserve.conf' files. Low risk.
+   Notes:
+     There are five trivial tree conflicts, where files aren't on the
+     branch. Resolve with 'svn resolved'.
+   Votes:
+     +1: julianfoad
 
  * r1146121, r1146870
    Fix issue #3957 'reintegrate fails with no subtree mergeinfo on source'.
