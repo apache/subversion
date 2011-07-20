@@ -74,15 +74,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r1148588
-   Use a subpool for each log item in ra_serf instead of allocating all the
-   structures in the main parser pool and store a variable in the right pool.
-   Justification:
-     Reduces memory consumption during log processing (E.g. svn log, svn merge,
-     svn mergeinfo), and provides a proper scratch pool to receivers for
-     further memory usage reduction.
-   Votes:
-     +1: rhuijben, stsp
-     +1: gstein (another iteration could make this "nicer", but is not
-                 required for backport)
