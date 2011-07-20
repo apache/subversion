@@ -63,18 +63,18 @@ Candidate changes:
                      confirmation from an ra_svn developer that this is the
                      right way to fix this problem)
 
- * r1148566
+ * r1148566, r1148853
    Fix a memory leak in svn merge.
    Justification:
      Memory leaks are bad.
    Votes:
      -0: rhuijben (r1148588 fixes the immediate problems and this code can use
                    a bit more cleanup before backporting. See also the
-                   dev@s.a.o thread for gstein's concerns)
+                   dev@s.a.o thread for gstein's concerns) (r1148566 only)
      +1: stsp (r1148588 alone does *not* fix the leak)
      -0: gstein (per the dev@ thread, a distinctive third pool in the mix
                  could help to make all this clear; at a minimum, we can
-                 use the provided scratch_pool better)
+                 use the provided scratch_pool better) (r1148566 only)
 
  * 1.7.x-neon-default branch
    Make neon the default http library.
