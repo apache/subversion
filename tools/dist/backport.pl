@@ -107,6 +107,14 @@ EOF
   unlink $logmsg_filename unless $? or $!;
 }
 
+sub sanitize_branch {
+  local $_ = shift;
+  s#.*/##;
+  s/^\s*//;
+  s/\s*$//;
+  return $_;
+}
+
 # TODO: may need to parse other headers too?
 sub parse_entry {
   my @lines = @_;
@@ -118,6 +126,7 @@ sub parse_entry {
   s/^   // for @_;
 
   # revisions
+  $branch = sanitize_branch $1 if $_[0] =~ /^(\S*) branch$/;
   while ($_[0] =~ /^r/) {
     while ($_[0] =~ s/^r(\d+)(?:,\s*)?//) {
       push @revisions, $1;
@@ -135,10 +144,7 @@ sub parse_entry {
   # branch
   while (@_) {
     shift and next unless $_[0] =~ s/^Branch:\s*//;
-    $branch = (shift || shift || die "Branch header found without value");
-    $branch =~ s#.*/##;
-    $branch =~ s/^\s*//;
-    $branch =~ s/\s*$//;
+    $branch = sanitize_branch (shift || shift || die "Branch header found without value");
   }
 
   return (
