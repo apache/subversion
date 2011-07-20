@@ -327,7 +327,20 @@ I.    INTRODUCTION
       default.  Add "http-library = neon" to the [global] section of
       your ~/.subversion/servers file to use ra_neon instead.)
 
-        a. Neon library 0.25 through 0.29 (http://www.webdav.org/neon/)
+        a. Serf library 0.7.1 or newer (http://code.google.com/p/serf/)
+
+           In order to use ra_serf, you must install serf, and run
+           Subversion's ./configure with the argument --with-serf.  If
+           serf is installed in a non-standard place, you should use
+
+               --with-serf=/path/to/serf/install
+
+           instead.
+
+           For more information on serf and Subversion's ra_serf, see
+           the file subversion/libsvn_ra_serf/README.
+
+        b. Neon library 0.25 through 0.29 (http://www.webdav.org/neon/)
 
            In order to use ra_neon, you must install neon, and run
            Subversion's ./configure with the argument --with-neon.
@@ -341,19 +354,6 @@ I.    INTRODUCTION
            then there should be a file
            "/usr/local/myneon/bin/neon-config".
 
-        b. Serf library 0.7.1 or newer (http://code.google.com/p/serf/)
-
-           In order to use ra_serf, you must install serf, and run
-           Subversion's ./configure with the argument --with-serf.  If
-           serf is installed in a non-standard place, you should use
-
-               --with-serf=/path/to/serf/install
-
-           instead.
-
-           For more information on serf and Subversion's ra_serf, see
-           the file subversion/libsvn_ra_serf/README.
-
 
       6. OpenSSL  (OPTIONAL)
 
@@ -361,46 +361,51 @@ I.    INTRODUCTION
       ### finding OpenSSL, but we may need more docco here. and w.r.t
       ### zlib.
 
-      The Neon and Serf libraries have support for SSL encryption by
+      The Serf and Neon libraries have support for SSL encryption by
       relying on the OpenSSL library.
 
-      When Neon is created with this dependency, then the Subversion
-      client inherits the ability to support SSL connections.  Neon
-      also has support for sending compressed data using the zlib
-      library which a Subversion client can take advantage of.
+        a. Using OpenSSL on the client through Serf
 
-      On Unix systems, if you are building neon as part of the
-      Subversion build process (as described in section I.4 above),
-      you can pass flags to Subversion's "./configure", and they will
-      be passed on to neon's "./configure".  You need OpenSSL
-      installed on your system, and you must add "--with-ssl" as a
-      "./configure" parameter.  If your OpenSSL installation is hard
-      for Neon to find, you may need to use "--with-libs=/path/to/lib"
-      in addition.  In particular, on Red Hat (but not Fedora Core) it
-      is necessary to specify "--with-libs=/usr/kerberos" for OpenSSL
-      to be found.  The zlib library is included in the Subversion
-      dependencies package, but if you are compiling Neon from a
-      different source you can also specify a path to the library
-      using "--with-libs".  Consult the Neon documentation for more
-      information on how to use these parameters and versions of
-      libraries you need.
+        b. Using OpenSSL on the client through Neon
 
-      Under Windows, you can specify the paths to these libraries by
-      passing the options --with-zlib and --with-openssl to gen-make.py.
+          When Neon is created with this dependency, then the Subversion
+          client inherits the ability to support SSL connections.  Neon
+          also has support for sending compressed data using the zlib
+          library which a Subversion client can take advantage of.
 
-      You can also add support for these features to an Apache httpd server
-      to be used for Subversion using the same support libraries.  The
-      Subversion build system will not provide them, however.  You add them
-      by specifying parameters to the "./configure" script of the Apache
-      Server instead.
+          On Unix systems, to build Neon with OpenSSL, you need OpenSSL
+          installed on your system, and you must add "--with-ssl" as a
+          "./configure" parameter.  If your OpenSSL installation is hard
+          for Neon to find, you may need to use "--with-libs=/path/to/lib"
+          in addition.  In particular, on Red Hat (but not Fedora Core) it
+          is necessary to specify "--with-libs=/usr/kerberos" for OpenSSL
+          to be found.  You can also specify a path to the zlib library
+          using "--with-libs".  Consult the Neon documentation for more
+          information on how to use these parameters and versions of
+          libraries you need.
 
-      For getting SSL on your server, you would add the "--enable-ssl"
-      or "--with-ssl=/path/to/lib" option to Apache's "./configure"
-      script.  Apache enables zlib support by default, but you can
-      specify a nonstandard location for the library with the
-      "--with-z=/path/to/dir" option.  Consult the Apache documentation
-      for more details, and for other modules you may wish to install
-      to enhance your Subversion server.
+          Under Windows, you can specify the paths to these libraries by
+          passing the options --with-zlib and --with-openssl to gen-make.py.
+
+            ### Is that right? In-tree build of Neon was disabled in r875974.
+                This may now apply to Serf, or else gen-make.py should be
+                updated to remove such options.
+
+        c. Using OpenSSL on the Apache server
+
+          You can also add support for these features to an Apache httpd
+          server to be used for Subversion using the same support libraries.
+          The Subversion build system will not provide them, however.  You
+          add them by specifying parameters to the "./configure" script of
+          the Apache Server instead.
+
+          For getting SSL on your server, you would add the "--enable-ssl"
+          or "--with-ssl=/path/to/lib" option to Apache's "./configure"
+          script.  Apache enables zlib support by default, but you can
+          specify a nonstandard location for the library with the
+          "--with-z=/path/to/dir" option.  Consult the Apache documentation
+          for more details, and for other modules you may wish to install
+          to enhance your Subversion server.
 
       If you don't already have it, you can get a copy of OpenSSL,
       including instructions for building and packaging on both Unix
