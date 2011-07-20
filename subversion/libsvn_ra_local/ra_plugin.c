@@ -860,14 +860,24 @@ struct log_baton
 };
 
 static svn_error_t *
-cancellation_log_receiver(void *baton,
-                          svn_log_entry_t *log_entry,
-                          apr_pool_t *pool)
+log_receiver_wrapper(void *baton,
+                     svn_log_entry_t *log_entry,
+                     apr_pool_t *pool)
 {
   struct log_baton *b = baton;
   svn_ra_local__session_baton_t *sess = b->sess;
 
-  SVN_ERR((sess->callbacks->cancel_func)(sess->callback_baton));
+  if (sess->callbacks->cancel_func)
+    SVN_ERR((sess->callbacks->cancel_func)(sess->callback_baton));
+
+  /* For consistency with the other RA layers, replace an empty
+     changed-paths hash with a NULL one. */
+  if ((log_entry->changed_paths2)
+      && (apr_hash_count(log_entry->changed_paths2) == 0))
+    {
+      log_entry->changed_paths = NULL;
+      log_entry->changed_paths2 = NULL;
+    }
 
   return b->real_cb(b->real_baton, log_entry, pool);
 }
@@ -904,16 +914,11 @@ svn_ra_local__get_log(svn_ra_session_t *session,
         }
     }
 
-  if (sess->callbacks &&
-      sess->callbacks->cancel_func)
-    {
-      lb.real_cb = receiver;
-      lb.real_baton = receiver_baton;
-      lb.sess = sess;
-
-      receiver = cancellation_log_receiver;
-      receiver_baton = &lb;
-    }
+  lb.real_cb = receiver;
+  lb.real_baton = receiver_baton;
+  lb.sess = sess;
+  receiver = log_receiver_wrapper;
+  receiver_baton = &lb;
 
   return svn_repos_get_logs4(sess->repos,
                              abs_paths,
