@@ -117,6 +117,9 @@ I.    INTRODUCTION
          http:// URLs.  To use SSL with Subversion's WebDAV server,
          Apache needs to be compiled with OpenSSL as well.
 
+         The Neon library can use the GnuTLS library as an alternative
+         to OpenSSL.
+
       * Berkeley DB (OPTIONAL for client and server)
 
          There are two different repository 'back-end'
