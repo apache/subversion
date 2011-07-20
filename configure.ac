@@ -1314,7 +1314,7 @@ DEFAULT_FS_TYPE="fsfs"
 AC_DEFINE_UNQUOTED(DEFAULT_FS_TYPE, "$DEFAULT_FS_TYPE",
                    [The fs type to use by default])
 
-DEFAULT_HTTP_LIBRARY="serf"
+DEFAULT_HTTP_LIBRARY="neon"
 AC_DEFINE_UNQUOTED(DEFAULT_HTTP_LIBRARY, "$DEFAULT_HTTP_LIBRARY",
                    [The http library to use by default])
 
