@@ -125,6 +125,19 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
 }
 
 svn_error_t *
+svn_fs_fs__exists_rep_cache(svn_boolean_t *exists,
+                            svn_fs_t *fs, apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+
+  SVN_ERR(svn_io_check_path(path_rep_cache_db(fs->path, pool),
+                            &kind, pool));
+
+  *exists = (kind != svn_node_none);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
                               svn_error_t *(*walker)(representation_t *,
                                                      void *,

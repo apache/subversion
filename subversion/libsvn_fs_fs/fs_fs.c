@@ -7804,14 +7804,19 @@ svn_fs_fs__verify(svn_fs_t *fs,
                   apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  svn_boolean_t exists;
 
   if (ffd->format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     return SVN_NO_ERROR;
 
-  /* Don't take any lock. */
-  SVN_ERR(svn_fs_fs__walk_rep_reference(fs, verify_walker, NULL,
-                                        cancel_func, cancel_baton,
-                                        pool));
+  /* Do not attempt to walk the rep-cache database if its file does not exists,
+     since doing so would create it --- which may confuse the administrator. */
+  SVN_ERR(svn_fs_fs__exists_rep_cache(&exists, fs, pool));
+  if (exists)
+    /* Don't take any lock. */
+    SVN_ERR(svn_fs_fs__walk_rep_reference(fs, verify_walker, NULL,
+                                          cancel_func, cancel_baton,
+                                          pool));
 
   return SVN_NO_ERROR;
 }
