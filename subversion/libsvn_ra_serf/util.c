@@ -1383,8 +1383,8 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
   svn_error_t *err;
   apr_off_t output_unused;
 
-  /* Fast path exit: already paused, or nothing to do.  */
-  if (parser->paused || parser->pending == NULL)
+  /* Fast path exit: already paused, nothing to do, or already done.  */
+  if (parser->paused || parser->pending == NULL || *parser->done)
     return SVN_NO_ERROR;
 
   /* ### it is possible that the XML parsing of the pending content is
@@ -1573,13 +1573,11 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
          We want to save arriving content into the PENDING structures if
          the parser has been paused, or we already have data in there (so
          the arriving data is appended, rather than injected out of order)  */
-#ifdef DISABLE_THIS_FOR_NOW
       if (ctx->paused || HAS_PENDING_DATA(ctx->pending))
         {
           err = write_to_pending(ctx, data, len, pool);
         }
       else
-#endif
         {
           err = inject_to_parser(ctx, data, len, &sl);
           if (err)
