@@ -2324,6 +2324,7 @@ finish_report(void *report_baton,
   parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
 
   parser_ctx->pool = pool;
+  parser_ctx->response_type = "update-report";
   parser_ctx->user_data = report;
   parser_ctx->start = start_report;
   parser_ctx->end = end_report;

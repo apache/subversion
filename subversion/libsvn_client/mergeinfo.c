@@ -1812,7 +1812,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
           SVN_ERR(svn_mergeinfo_intersect2(&merged_via_history,
                                            subtree_history,
                                            subtree_source_history, TRUE,
-                                           scratch_pool, scratch_pool));
+                                           scratch_pool, iterpool));
           SVN_ERR(svn_mergeinfo_merge(subtree_mergeinfo,
                                       merged_via_history,
                                       scratch_pool));

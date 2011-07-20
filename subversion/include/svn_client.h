@@ -477,6 +477,7 @@ typedef struct svn_client_commit_item3_t
   /**
    * When processing the commit this contains the relative path for
    * the commit session. #NULL until the commit item is preprocessed.
+   * @since New in 1.7.
    */
   const char *session_relpath;
 } svn_client_commit_item3_t;
@@ -5388,10 +5389,10 @@ typedef struct svn_client_info2_t
   const char *last_changed_author;
 
   /** An exclusive lock, if present.  Could be either local or remote. */
-  svn_lock_t *lock;
+  const svn_lock_t *lock;
 
-  /* Possible information about the working copy, NULL if not valid. */
-  struct svn_wc_info_t *wc_info;
+  /** Possible information about the working copy, NULL if not valid. */
+  const svn_wc_info_t *wc_info;
 
 } svn_client_info2_t;
 

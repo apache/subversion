@@ -1021,7 +1021,7 @@ class WinGeneratorBase(GeneratorBase):
       neonlib = self.neon_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
 
     if self.serf_lib:
-      if self.serf_ver_maj == 1:
+      if self.serf_ver_maj != 0:
         serflib = 'serf-1.lib'
       else:
         serflib = 'serf.lib'
@@ -1181,7 +1181,7 @@ class WinGeneratorBase(GeneratorBase):
       return
 
     serf_path = os.path.abspath(self.serf_path)
-    if self.serf_ver_maj == 1:
+    if self.serf_ver_maj != 0:
       serflib = 'serf-1.lib'
     else:
       serflib = 'serf.lib'

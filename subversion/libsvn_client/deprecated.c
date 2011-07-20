@@ -2177,7 +2177,9 @@ info_from_info2(svn_info_t **new_info,
   info->last_changed_rev    = info2->last_changed_rev;
   info->last_changed_date   = info2->last_changed_date;
   info->last_changed_author = info2->last_changed_author;
-  info->lock                = info2->lock;
+
+  /* Stupid old structure has a non-const LOCK member. Sigh.  */
+  info->lock                = (svn_lock_t *)info2->lock;
 
   info->size64              = info2->size;
   if (info2->size == SVN_INVALID_FILESIZE)

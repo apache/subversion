@@ -301,18 +301,24 @@ build_info_for_unversioned(svn_wc__info2_t **info,
                            apr_pool_t *pool)
 {
   svn_wc__info2_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
-  tmpinfo->wc_info = apr_pcalloc(pool, sizeof (*tmpinfo->wc_info));
+  svn_wc_info_t *wc_info = apr_pcalloc(pool, sizeof (*wc_info));
 
   tmpinfo->URL                  = NULL;
-  tmpinfo->rev                  = SVN_INVALID_REVNUM;
-  tmpinfo->kind                 = svn_node_none;
   tmpinfo->repos_UUID           = NULL;
   tmpinfo->repos_root_URL       = NULL;
+  tmpinfo->rev                  = SVN_INVALID_REVNUM;
+  tmpinfo->kind                 = svn_node_none;
+  tmpinfo->size                 = SVN_INVALID_FILESIZE;
   tmpinfo->last_changed_rev     = SVN_INVALID_REVNUM;
   tmpinfo->last_changed_date    = 0;
   tmpinfo->last_changed_author  = NULL;
   tmpinfo->lock                 = NULL;
-  tmpinfo->size                 = SVN_INVALID_FILESIZE;
+
+  tmpinfo->wc_info = wc_info;
+
+  wc_info->copyfrom_rev = SVN_INVALID_REVNUM;
+  wc_info->depth = svn_depth_unknown;
+  wc_info->recorded_size = SVN_INVALID_FILESIZE;
 
   *info = tmpinfo;
   return SVN_NO_ERROR;

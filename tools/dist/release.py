@@ -79,6 +79,16 @@ class Version(object):
     regex = re.compile('(\d+).(\d+).(\d+)(?:-(?:(rc|alpha|beta)(\d+)))?')
 
     def __init__(self, ver_str):
+        # Special case the 'trunk-nightly' version
+        if ver_str == 'trunk-nightly':
+            self.major = None
+            self.minor = None
+            self.patch = None
+            self.pre = 'nightly'
+            self.pre_num = None
+            self.base = 'nightly'
+            return
+
         match = self.regex.search(ver_str)
 
         if not match:
@@ -122,7 +132,10 @@ class Version(object):
 
     def __str(self):
         if self.pre:
-            extra = '-%s%d' % (self.pre, self.pre_num)
+            if self.pre == 'nightly':
+                return 'nightly'
+            else:
+                extra = '-%s%d' % (self.pre, self.pre_num)
         else:
             extra = ''
 
@@ -371,7 +384,10 @@ def roll_tarballs(args):
     # For now, just delegate to dist.sh to create the actual artifacts
     extra_args = ''
     if args.version.is_prerelease():
-        extra_args = '-%s %d' % (args.version.pre, args.version.pre_num)
+        if args.version.pre == 'nightly':
+            extra_args = '-nightly'
+        else:
+            extra_args = '-%s %d' % (args.version.pre, args.version.pre_num)
     logging.info('Building UNIX tarballs')
     run_script(args.verbose, '%s/dist.sh -v %s -pr %s -r %d %s'
                      % (sys.path[0], args.version.base, branch, args.revnum,
@@ -409,7 +425,7 @@ def post_candidates(args):
         target = args.target
     else:
         target = os.path.join(os.getenv('HOME'), 'public_html', 'svn',
-                              args.version)
+                              str(args.version))
 
     if args.code_name:
         dirname = args.code_name
@@ -419,7 +435,7 @@ def post_candidates(args):
     if not os.path.exists(target):
         os.makedirs(target)
 
-    data = { 'version'      : args.version,
+    data = { 'version'      : str(args.version),
              'revnum'       : args.revnum,
              'dirname'      : dirname,
            }
@@ -516,7 +532,7 @@ def write_announcement(args):
     'Write the release announcement.'
     sha1info = get_sha1info(args)
 
-    data = { 'version'              : args.version,
+    data = { 'version'              : str(args.version),
              'sha1info'             : sha1info,
              'siginfo'              : open('getsigs-output', 'r').read(),
              'major-minor'          : args.version.base[:3],

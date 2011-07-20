@@ -1282,6 +1282,11 @@ svn_repos_verify_fs2(svn_repos_t *repos,
                                "(youngest revision is %ld)"),
                              end_rev, youngest);
 
+  /* Verify global/auxiliary data before verifying revisions. */
+  if (start_rev == 0)
+    SVN_ERR(svn_fs_verify(svn_fs_path(fs, pool), cancel_func, cancel_baton,
+                          pool));
+
   /* Create a notify object that we can reuse within the loop. */
   if (notify_func)
     notify = svn_repos_notify_create(svn_repos_notify_verify_rev_end,
@@ -1329,10 +1334,11 @@ svn_repos_verify_fs2(svn_repos_t *repos,
   /* We're done. */
   if (notify_func)
     {
-      notify = svn_repos_notify_create(svn_repos_notify_dump_end, iterpool);
+      notify = svn_repos_notify_create(svn_repos_notify_verify_end, iterpool);
       notify_func(notify_baton, notify, iterpool);
     }
 
+  /* Per-backend verification. */
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;

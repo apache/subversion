@@ -121,11 +121,12 @@ push_state(svn_ra_serf__xml_parser_t *parser,
   if (state == ITEM)
     {
       log_info_t *info;
+      apr_pool_t *info_pool = svn_pool_create(parser->state->pool);
 
-      info = apr_pcalloc(parser->state->pool, sizeof(*info));
-      info->log_entry = svn_log_entry_create(parser->state->pool);
+      info = apr_pcalloc(info_pool, sizeof(*info));
+      info->pool = info_pool;
+      info->log_entry = svn_log_entry_create(info_pool);
 
-      info->pool = parser->state->pool;
       info->log_entry->revision = SVN_INVALID_REVNUM;
 
       parser->state->private = info;
@@ -220,11 +221,14 @@ start_log(svn_ra_serf__xml_parser_t *parser,
         }
       else if (strcmp(name.name, "revprop") == 0)
         {
+          const char *revprop_name;
           info = push_state(parser, log_ctx, REVPROP);
-          info->revprop_name = svn_xml_get_attr_value("name", attrs);
-          if (info->revprop_name == NULL)
+          revprop_name = svn_xml_get_attr_value("name", attrs);
+          if (revprop_name == NULL)
             return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                                      _("Missing name attr in revprop element"));
+
+          info->revprop_name = apr_pstrdup(info->pool, revprop_name);
         }
       else if (strcmp(name.name, "has-children") == 0)
         {
@@ -342,6 +346,7 @@ end_log(svn_ra_serf__xml_parser_t *parser,
           log_ctx->nest_level--;
         }
 
+      svn_pool_destroy(info->pool);
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == VERSION &&

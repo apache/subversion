@@ -616,8 +616,20 @@ svn_repos__hooks_pre_lock(svn_repos_t *repos,
 
       SVN_ERR(run_hook_cmd(&buf, SVN_REPOS__HOOK_PRE_LOCK, hook, args, NULL,
                            pool));
+
       if (token)
-        *token = buf->data;
+        {
+          svn_error_t *err;
+          /* Convert hook output from native encoding to UTF-8. */
+          err = svn_utf_cstring_to_utf8(token, buf->data, pool);
+          if (err)
+            {
+              return svn_error_create(SVN_ERR_REPOS_HOOK_FAILURE, err,
+                                      _("Output of pre-lock hook could not be "
+                                        "translated from the native locale to "
+                                        "UTF-8."));
+            }
+        }
     }
   else if (token)
     *token = "";

@@ -1168,6 +1168,7 @@ write_config(svn_fs_t *fs,
 "### The following parameter enables rep-sharing in the repository.  It can" NL
 "### be switched on and off at will, but for best space-saving results"      NL
 "### should be enabled consistently over the life of the repository."        NL
+"### 'svnadmin verify' will check the rep-cache regardless of this setting." NL
 "### rep-sharing is enabled by default."                                     NL
 "# " CONFIG_OPTION_ENABLE_REP_SHARING " = true"                              NL
 
@@ -3435,8 +3436,10 @@ create_rep_state(struct rep_state **rep_state,
          ### going to jump straight to this comment anyway! */
       return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
                                "Corrupt representation '%s'",
-                               representation_string(rep, ffd->format, TRUE,
-                                                     pool));
+                               rep 
+                               ? representation_string(rep, ffd->format, TRUE,
+                                                       pool)
+                               : "(null)");
     }
   /* ### Call representation_string() ? */
   return svn_error_trace(err);
@@ -8280,4 +8283,43 @@ svn_fs_fs__pack(svn_fs_t *fs,
   pb.cancel_func = cancel_func;
   pb.cancel_baton = cancel_baton;
   return svn_fs_fs__with_write_lock(fs, pack_body, &pb, pool);
+}
+
+
+/** Verifying. **/
+
+/* Body of svn_fs_fs__verify().
+   Implements svn_fs_fs__walk_rep_reference().walker.  */
+static svn_error_t *
+verify_walker(representation_t *rep,
+              void *baton,
+              svn_fs_t *fs,
+              apr_pool_t *scratch_pool)
+{
+  struct rep_state *rs;
+  struct rep_args *rep_args;
+
+  /* ### Should this be using read_rep_line() directly? */
+  SVN_ERR(create_rep_state(&rs, &rep_args, rep, fs, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__verify(svn_fs_t *fs,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  if (ffd->format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+    return SVN_NO_ERROR;
+
+  /* Don't take any lock. */
+  SVN_ERR(svn_fs_fs__walk_rep_reference(fs, verify_walker, NULL,
+                                        cancel_func, cancel_baton,
+                                        pool));
+
+  return SVN_NO_ERROR;
 }

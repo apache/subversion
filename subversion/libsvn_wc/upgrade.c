@@ -1754,6 +1754,8 @@ is_old_wcroot(const char *local_abspath,
         _("Can't upgrade '%s' as it is not a pre-1.7 working copy directory"),
         svn_dirent_local_style(local_abspath, scratch_pool));
     }
+  else if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
+    return SVN_NO_ERROR;
 
   svn_dirent_split(&parent_abspath, &name, local_abspath, scratch_pool);
 
@@ -1768,14 +1770,15 @@ is_old_wcroot(const char *local_abspath,
   entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
   if (!entry
       || entry->absent
-      || (entry->deleted && entry->schedule != svn_wc_schedule_add))
+      || (entry->deleted && entry->schedule != svn_wc_schedule_add)
+      || entry->depth == svn_depth_exclude)
     {
       return SVN_NO_ERROR;
     }
 
-  svn_dirent_split(&parent_abspath, &name, parent_abspath, scratch_pool);
   while (!svn_dirent_is_root(parent_abspath, strlen(parent_abspath)))
     {
+      svn_dirent_split(&parent_abspath, &name, parent_abspath, scratch_pool);
       err = svn_wc__read_entries_old(&entries, parent_abspath,
                                      scratch_pool, scratch_pool);
       if (err)
@@ -1787,12 +1790,12 @@ is_old_wcroot(const char *local_abspath,
       entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
       if (!entry
           || entry->absent
-          || (entry->deleted && entry->schedule != svn_wc_schedule_add))
+          || (entry->deleted && entry->schedule != svn_wc_schedule_add)
+          || entry->depth == svn_depth_exclude)
         {
           parent_abspath = svn_dirent_join(parent_abspath, name, scratch_pool);
           break;
         }
-      svn_dirent_split(&parent_abspath, &name, parent_abspath, scratch_pool);
     }
 
   return svn_error_createf(
