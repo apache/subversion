@@ -67,12 +67,12 @@ sub merge {
 
   if ($entry{branch}) {
     $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
-    print $logmsg_fh "Reintergrate the $BRANCHES/$entry{branch} branch:";
+    print $logmsg_fh "Reintergrate the $entry{header}:";
     print $logmsg_fh "";
   } elsif (@{$entry{revisions}}) {
     $mergeargs = join " ", (map { "-c$_" } @{$entry{revisions}}), '^/subversion/trunk';
     if (@{$entry{revisions}} > 1) {
-      print $logmsg_fh "Merge the r$entry{revisions}->[0] group from trunk:";
+      print $logmsg_fh "Merge the $entry{header} from trunk:";
       print $logmsg_fh "";
     } else {
       print $logmsg_fh "Merge r$entry{revisions}->[0] from trunk:";
