@@ -43,7 +43,12 @@ REP_CACHE_DB_SQL_DECLARE_STATEMENTS(statements);
 
 
 /** Helper functions. **/
-
+static APR_INLINE const char *
+path_rep_cache_db(const char *fs_path,
+                  apr_pool_t *result_pool)
+{
+  return svn_dirent_join(fs_path, REP_CACHE_DB_NAME, result_pool);
+}
 
 /* Check that REP refers to a revision that exists in FS. */
 static svn_error_t *
@@ -91,7 +96,7 @@ open_rep_cache(void *baton,
 
   /* Open (or create) the sqlite database.  It will be automatically
      closed when fs->pool is destoyed. */
-  db_path = svn_dirent_join(fs->path, REP_CACHE_DB_NAME, pool);
+  db_path = path_rep_cache_db(fs->path, pool);
   SVN_ERR(svn_sqlite__open(&ffd->rep_cache_db, db_path,
                            svn_sqlite__mode_rwcreate, statements,
                            0, NULL,
@@ -120,10 +125,25 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
 }
 
 svn_error_t *
+svn_fs_fs__exists_rep_cache(svn_boolean_t *exists,
+                            svn_fs_t *fs, apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+
+  SVN_ERR(svn_io_check_path(path_rep_cache_db(fs->path, pool),
+                            &kind, pool));
+
+  *exists = (kind != svn_node_none);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
                               svn_error_t *(*walker)(representation_t *,
+                                                     void *,
                                                      svn_fs_t *, 
                                                      apr_pool_t *),
+                              void *walker_baton,
                               svn_cancel_func_t cancel_func,
                               void *cancel_baton,
                               apr_pool_t *pool)
@@ -176,7 +196,7 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
         SVN_ERR(rep_has_been_born(rep, fs, iterpool));
 
       /* Walk. */
-      SVN_ERR(walker(rep, fs, iterpool));
+      SVN_ERR(walker(rep, walker_baton, fs, iterpool));
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
