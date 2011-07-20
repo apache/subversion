@@ -68,10 +68,10 @@ Candidate changes:
    Justification:
      Memory leaks are bad.
    Votes:
-     +1: stsp
      -0: rhuijben (r1148588 fixes the immediate problems and this code can use
                    a bit more cleanup before backporting. See also the
                    dev@s.a.o thread for gstein's concerns)
+     +1: stsp (r1148588 alone does *not* fix the leak)
 
  * r1148588
    Use a subpool for each log item in ra_serf instead of allocating all the
@@ -81,7 +81,7 @@ Candidate changes:
      svn mergeinfo), and provides a proper scratch pool to receivers for
      further memory usage reduction.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
 Approved changes:
 =================
