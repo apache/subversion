@@ -1,3 +1,12 @@
+Version 1.8.0
+(?? ??? 2011, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.0
+
+ Developer-visible changes:
+  - API changes:
+    * fix inconsistent handling of log revs without changed paths (issue #3694)
+
+
 Version 1.7.0
 (?? ??? 2011, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.0
