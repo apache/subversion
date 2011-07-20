@@ -96,9 +96,9 @@ I.    INTRODUCTION
          These diff streams are used everywhere -- over the network,
          in the repository, and in the client's working copy.
 
-      * libserf  (OPTIONAL for client)
+      * libserf or libneon  (OPTIONAL for client)
 
-         The Serf libraries both allow the Subversion client
+         The Serf and Neon libraries both allow the Subversion client
          to send HTTP requests.  This is necessary if you want your
          client to access a repository served by the Apache HTTP
          server.  There is an alternate 'svnserve' server as well,
@@ -106,14 +106,16 @@ I.    INTRODUCTION
          svnserve protocol.  Thus it's not strictly necessary for your
          client to be able to speak HTTP... though we still recommend
          that your client be built to speak both HTTP and svnserve
-         protocols.
+         protocols.  Your client can be compiled against either
+         libserf or libneon (or both), as they offer competing
+         implementations.
 
       * OpenSSL (OPTIONAL for client and server)
 
          OpenSSL enables your client to access SSL-encrypted https://
-         URLs (using libserf) in addition to unencrypted http:// URLs.
-         To use SSL with Subversion's WebDAV server, Apache needs to
-         be compiled with OpenSSL as well.
+         URLs (using libserf or libneon) in addition to unencrypted
+         http:// URLs.  To use SSL with Subversion's WebDAV server,
+         Apache needs to be compiled with OpenSSL as well.
 
       * Berkeley DB (OPTIONAL for client and server)
 
@@ -311,31 +313,43 @@ I.    INTRODUCTION
       newer. The autogen.sh script knows about that.
 
 
-      5.  An HTTP client library:  serf.  (OPTIONAL)
+      5.  An HTTP client library:  serf or neon.  (OPTIONAL)
 
       If you want your client to be able to speak to an Apache
       server (via a http:// or https:// URL), you must link against
-      serf.  Though optional, we strongly recommend this.
+      at least one of these libraries.  Though optional, we strongly
+      recommend this.
 
-      Serf is at http://code.google.com/p/serf/, and the 0.3.0
-      release is at:
-        http://serf.googlecode.com/files/serf-0.3.0.tar.bz2
+      (If you link against both, Subversion will use ra_serf by
+      default.  Add "http-library = neon" to the [global] section of
+      your ~/.subversion/servers file to use ra_neon instead.)
 
-      serf is a library for HTTP and WebDAV which is used to access
-      Subversion repositories over http:// and https:// URLs.  serf
-      is designed as an asynchronous library which can take
-      advantage of multiple connections and HTTP pipelining.
+        a. Neon library 0.25 through 0.29 (http://www.webdav.org/neon/)
 
-      In order to use ra_serf, you must install serf, and run
-      Subversion's ./configure with the argument --with-serf.  If
-      serf is installed in a non-standard place, you should use
+           In order to use ra_neon, you must install neon, and run
+           Subversion's ./configure with the argument --with-neon.
+           Subversion's configuration mechanism should then detect the
+           installed Neon.  If it does not, you may need to set the
+           LDFLAGS environment variable when you run "./configure", or
+           specify Neon's location by passing the "--with-neon="
+           option to "./configure".  Look for the "neon-config" script
+           in a "bin/" subdirectory of the target of "--with-neon".
+           For example, if you pass "--with-neon=/usr/local/myneon/",
+           then there should be a file
+           "/usr/local/myneon/bin/neon-config".
 
-          --with-serf=/path/to/serf/install
+        b. Serf library 0.7.1 or newer (http://code.google.com/p/serf/)
 
-      instead.
+           In order to use ra_serf, you must install serf, and run
+           Subversion's ./configure with the argument --with-serf.  If
+           serf is installed in a non-standard place, you should use
 
-      For more information on serf and Subversion's ra_serf, see
-      the file subversion/libsvn_ra_serf/README.
+               --with-serf=/path/to/serf/install
+
+           instead.
+
+           For more information on serf and Subversion's ra_serf, see
+           the file subversion/libsvn_ra_serf/README.
 
 
       6. OpenSSL  (OPTIONAL)
@@ -344,8 +358,8 @@ I.    INTRODUCTION
       ### finding OpenSSL, but we may need more docco here. and w.r.t
       ### zlib.
 
-      The Serf library has support for SSL encryption by relying on
-      the OpenSSL library.
+      The Neon and Serf libraries have support for SSL encryption by
+      relying on the OpenSSL library.
 
       When Neon is created with this dependency, then the Subversion
       client inherits the ability to support SSL connections.  Neon
