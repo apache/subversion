@@ -76,6 +76,12 @@ Candidate changes:
                  could help to make all this clear; at a minimum, we can
                  use the provided scratch_pool better)
 
+ * 1.7.x-neon-default branch
+   Make neon the default http library.
+   Justification:
+     Serf isn't ready.
+   Votes:
+     +1: philip
 
 Approved changes:
 =================
