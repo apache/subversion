@@ -100,6 +100,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1149240
+   Support APR 0.9.
+   Justification:
+     We still claim to support it.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
@@ -114,7 +121,8 @@ Veto-blocked changes:
      r1149141 is more pool cleanup
      r1149228 is a fix for r1149105
    Votes:
-     +1: philip, hwright, rhuijben (all but r1149228)
+     +1: philip
+     +1: hwright, rhuijben (all but r1149228)
      -1: pburba (r1149105 is wrong, see
          http://svn.haxx.se/dev/archive-2011-07/0645.shtml
          Change my vote to +1 if r1149228 is also included in this group)
