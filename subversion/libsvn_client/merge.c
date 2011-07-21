@@ -8149,7 +8149,7 @@ remove_noop_subtree_ranges(const char *url1,
                                operative_ranges,
                                inoperative_ranges, FALSE, scratch_pool));
 
-  SVN_ERR(svn_rangelist_merge(&merged_ranges,
+  SVN_ERR(svn_rangelist_merge(&log_gap_baton.merged_ranges,
                               inoperative_ranges, scratch_pool));
 
   for (i = 1; i < notify_b->children_with_mergeinfo->nelts; i++)
