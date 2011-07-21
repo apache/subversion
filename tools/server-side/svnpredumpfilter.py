@@ -225,9 +225,7 @@ def analyze_logs(included_paths):
       print "   /%s" % (path)
     print "You need to also include them (or one of their parents)."
   else:
-    print "No new dependencies found!  You might still need " \
-          "to manually create parent directories for the " \
-          "included paths before loading a filtered dump:"
+    print "No new dependencies found!"
     parents = {}
     for path in dt.include_paths:
       while 1:
@@ -237,9 +235,12 @@ def analyze_logs(included_paths):
         parents[parent] = 1
         path = parent
     parents = parents.keys()
-    parents.sort(compare_paths)
-    for parent in parents:
-      print "   /%s" % (parent)
+    if parents:
+      print "You might still need to manually create parent directories " \
+            "for the included paths before loading a filtered dump:"
+      parents.sort(compare_paths)
+      for parent in parents:
+        print "   /%s" % (parent)
 
 def usage_and_exit(errmsg=None):
   program = os.path.basename(sys.argv[0])
