@@ -71,14 +71,6 @@ Candidate changes:
      +1: philip
      -1: gstein (I see no explanation for why "serf is not ready")
 
- * 1.7.x-issue3888 branch
-   Fix issue 3888 for 1.7.x
-   Justification:
-     For very large checkouts/updates/switches, ra_serf may consume
-     unbounded memory. That is not good.
-   Votes:
-     +1: gstein, jerenkrantz
-
  * r1147540, r1147541
    Remove unused variables in build system.
    Justification:
@@ -113,3 +105,11 @@ Approved changes:
      Avoid calling into a library incompatible with the one compiled against.
    Votes:
      +1: danielsh, gstein, arfrever
+
+ * 1.7.x-issue3888 branch
+   Fix issue 3888 for 1.7.x
+   Justification:
+     For very large checkouts/updates/switches, ra_serf may consume
+     unbounded memory. That is not good.
+   Votes:
+     +1: gstein, jerenkrantz, lgo
