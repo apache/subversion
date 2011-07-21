@@ -100,10 +100,10 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
-Approved changes:
-=================
+Veto-blocked changes:
+=====================
 
- * r1148877,r1148882,r1149105,r1149141
+ * r1148877,r1148882,r1149105,r1149141, r1149228
    Issue 3966, log_noop_revs too slow.
    Justification:
      Merge is far too slow when lots of revisions have to be checked.
@@ -112,5 +112,12 @@ Approved changes:
      r1148882 is docstring cleanup
      r1149105 is the actual fix
      r1149141 is more pool cleanup
+     r1149228 is a fix for r1149105
    Votes:
-     +1: philip, hwright, rhuijben
+     +1: philip, hwright, rhuijben (all but r1149228)
+     -1: pburba (r1149105 is wrong, see
+         http://svn.haxx.se/dev/archive-2011-07/0645.shtml
+         Change my vote to +1 if r1149228 is also included in this group)
+
+Approved changes:
+=================
