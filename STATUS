@@ -42,14 +42,14 @@ Candidate changes:
    Votes:
      +0: danielsh
 
- * r1147882
-   Convert (pre-lock hook)-specified lock tokens to UTF-8.
+ * r1147882, r1149343
+   Validate consumer-supplied tokens in libsvn_fs.  (This specifically applies
+   to the output of pre-lock hook scripts.)
    Justification:
-     (zhakov, please fill in)
+     Input validations are good; arbitrary lock tokens are bad, and can result
+     in user-visible errors.
    Votes:
-     -0: danielsh (pending clarification whether it's a mod_dav_svn bug,
-                   libsvn_repos/libsvn_fs token validation bug, or both;
-                   see dev@)
+     +1: danielsh
 
  * r1148424
    Resolve issue 3963, 'svn update -r{R>HEAD}' hangs client over ra_svn.
