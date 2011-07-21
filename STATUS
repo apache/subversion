@@ -82,7 +82,7 @@ Candidate changes:
      Version mismatch errors would occur during trying to use locally built
      executables when a different version of Subversion was installed in /usr/lib.
    Votes:
-     +1: arfrever
+     +1: arfrever, philip
 
  * r1148992
    Print error messages about failures of dynamic loading of libraries when
@@ -90,7 +90,7 @@ Candidate changes:
    Justification:
      Suboptimal r1148374 was already backported in r1148488.
    Votes:
-     +1: arfrever
+     +1: arfrever, philip
 
  * r1149160
    Make serf report an error when performing 'svn log' on a non existing path
@@ -98,7 +98,7 @@ Candidate changes:
    Justifications:
      There should be no known regressions in the default http ra layer.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1149240
    Support APR 0.9.
