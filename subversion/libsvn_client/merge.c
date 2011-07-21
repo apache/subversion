@@ -7876,10 +7876,16 @@ typedef struct log_noop_baton_t
   apr_pool_t *pool;
 } log_noop_baton_t;
 
-/* Helper for log_noop_revs, this is not a general purpose rangelist
-   merge.  Merge the single revision range REVISION-1 to REVISION into
-   RANGELIST.  The existing ranges in RANGELIST must be ordered from
-   highest/youngest to lowest/oldest.  */
+/* Helper for log_noop_revs: Merge a svn_merge_range_t representation of
+   REVISION into RANGELIST. New elements added to rangelist are allocated
+   in RESULT_POOL.
+
+   This is *not* a general purpose rangelist merge but a special replacement
+   for svn_rangelist_merge when REVISION is guaranteed to be younger than any
+   element in RANGELIST.  svn_rangelist_merge is O(n) worst-case (i.e. when
+   all the ranges in output rangelist are older than the incoming changes).
+   This turns the special case of a single incoming younger range into O(1).
+   */
 static svn_error_t *
 rangelist_merge_revision(apr_array_header_t *rangelist,
                          svn_revnum_t revision,
@@ -7890,9 +7896,11 @@ rangelist_merge_revision(apr_array_header_t *rangelist,
     {
       svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, rangelist->nelts - 1,
                                                svn_merge_range_t *);
-      if (range->start == revision)
+      if (range->end == revision - 1)
         {
-          range->start = revision - 1;
+          /* REVISION is adjacent to the youngest range in RANGELIST
+             so we can simply expand that range to encompass REVISION. */
+          range->end = revision;
           return SVN_NO_ERROR;
         }
     }
@@ -8155,8 +8163,8 @@ remove_noop_subtree_ranges(const char *url1,
 
   APR_ARRAY_PUSH(log_targets, const char *) = "";
 
-  SVN_ERR(svn_ra_get_log2(ra_session, log_targets, youngest_gap_rev->end,
-                          oldest_gap_rev->start + 1, 0, TRUE, TRUE, FALSE,
+  SVN_ERR(svn_ra_get_log2(ra_session, log_targets, oldest_gap_rev->start + 1,
+                          youngest_gap_rev->end, 0, TRUE, TRUE, FALSE,
                           apr_array_make(scratch_pool, 0,
                                          sizeof(const char *)),
                           log_noop_revs, &log_gap_baton, scratch_pool));
