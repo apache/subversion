@@ -61,15 +61,17 @@ sub merge {
   my %entry = @_;
 
   my ($logmsg_fh, $logmsg_filename) = tempfile();
-  my $mergeargs;
+  my ($mergeargs, $pattern);
 
   my $backupfile = "backport_pl.$$.tmp";
 
   if ($entry{branch}) {
+    $pattern = "$entry{branch} branch";
     $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
     print $logmsg_fh "Reintergrate the $entry{header}:";
     print $logmsg_fh "";
   } elsif (@{$entry{revisions}}) {
+    $pattern = $entry{revisions}->[0];
     $mergeargs = join " ", (map { "-c$_" } @{$entry{revisions}}), '^/subversion/trunk';
     if (@{$entry{revisions}} > 1) {
       print $logmsg_fh "Merge the $entry{header} from trunk:";
@@ -91,7 +93,7 @@ $SVN diff > $backupfile
 $SVN revert -R .
 $SVN up
 $SVN merge $mergeargs
-$VIM -e -s -n -N -i NONE -u NONE -c '/^ [*] r$entry{revisions}->[0]/normal! dap' -c wq $STATUS
+$VIM -e -s -n -N -i NONE -u NONE -c '/^ [*] $pattern/normal! dap' -c wq $STATUS
 $SVN commit -F $logmsg_filename
 EOF
 
