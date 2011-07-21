@@ -139,15 +139,21 @@ def svn_log_stream_get_dependencies(stream, included_paths):
   copy_action_re = re.compile(r'^   [AR] /(.*) \(from /(.*):[0-9]+\)$')
   line_buf = None
   last_revision = 0
+  eof = False
+  path_copies = {}
+  found_changed_path = False
   
-  while 1:
+  while not eof:
     try:
       line = line_buf is not None and line_buf or readline(stream)
     except EOFError:
       break
+
+    # We should be sitting at a log divider line.
     if line != '-' * 72:
       raise LogStreamError("Expected log divider line; not found.")
 
+    # Next up is a log header line.
     try:
       line = readline(stream)
     except EOFError:
@@ -155,7 +161,6 @@ def svn_log_stream_get_dependencies(stream, included_paths):
     match = header_re.search(line)
     if not match:
       raise LogStreamError("Expected log header line; not found.")
-
     pieces = map(string.strip, line.split('|'))
     revision = int(pieces[0][1:])
     if last_revision and revision >= last_revision:
@@ -170,33 +175,41 @@ def svn_log_stream_get_dependencies(stream, included_paths):
     else:
       log_lines = 0
 
+    # Now see if there are any changed paths.  If so, parse and process them.
     line = readline(stream)
-    if line != 'Changed paths:':
-      raise LogStreamError("Expected 'Changed paths:' line; not found.  Make "
-                           "sure log stream is from 'svn log' with the "
-                           "--verbose (-v) option.")
-
-    path_copies = {}
-    while 1:
-      try:
-        line = readline(stream)
-      except EOFError:
-        break
-      match = action_re.search(line)
-      if match:
-        match = copy_action_re.search(line)
+    if line == 'Changed paths:':
+      while 1:
+        try:
+          line = readline(stream)
+        except EOFError:
+          eof = True
+          break
+        match = action_re.search(line)
         if match:
-          path_copies[sanitize_path(match.group(1))] = sanitize_path(match.group(2))
-      else:
-        dt.handle_changes(path_copies)
-        if log_lines:
-          for i in range(log_lines):
-            readline(stream)
-          line_buf = None
+          found_changed_path = True
+          match = copy_action_re.search(line)
+          if match:
+            path_copies[sanitize_path(match.group(1))] = \
+              sanitize_path(match.group(2))
         else:
-          line_buf = line
-        break
+          break
+      dt.handle_changes(path_copies)
 
+    # Finally, skip any log message lines.  (If there are none,
+    # remember the last line we read, because it probably has
+    # something important in it.)
+    if log_lines:
+      for i in range(log_lines):
+        readline(stream)
+      line_buf = None
+    else:
+      line_buf = line
+
+  if not found_changed_path:
+    raise LogStreamError("No changed paths found; did you remember to run "
+                         "'svn log' with the --verbose (-v) option when "
+                         "generating the input to this script?")
+    
   return dt
 
 def analyze_logs(included_paths):
