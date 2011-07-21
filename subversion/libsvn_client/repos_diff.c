@@ -334,11 +334,11 @@ get_file_from_ra(struct file_baton *b,
       svn_stream_t *fstream;
 
       SVN_ERR(svn_stream_open_unique(&fstream, &(b->path_start_revision), NULL,
-                                     svn_io_file_del_on_pool_cleanup, b->pool,
-                                     b->pool));
+                                     svn_io_file_del_on_pool_cleanup,
+                                     scratch_pool, scratch_pool));
 
       fstream = svn_stream_checksummed2(fstream, NULL, &b->start_md5_checksum,
-                                        svn_checksum_md5, TRUE, b->pool);
+                                        svn_checksum_md5, TRUE, scratch_pool);
 
       /* Retrieve the file and its properties */
       SVN_ERR(svn_ra_get_file(b->edit_baton->ra_session,
@@ -898,7 +898,7 @@ apply_textdelta(void *file_baton,
 
   /* We need the expected pristine file, so go get it */
   if (!b->added)
-    SVN_ERR(get_file_from_ra(b, FALSE, b->pool));
+    SVN_ERR(get_file_from_ra(b, FALSE, scratch_pool));
   else
     SVN_ERR(get_empty_file(b->edit_baton, &(b->path_start_revision)));
 
