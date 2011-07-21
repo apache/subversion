@@ -58,10 +58,7 @@ Candidate changes:
      never come when a user passes a revision that hasn't been committed
      yet.
    Votes:
-     +0.5: rhuijben (I think this patch is ok as it resolves the problem
-                     and fixes the error reporting. But I like to see some
-                     confirmation from an ra_svn developer that this is the
-                     right way to fix this problem)
+     +1: rhuijben
 
  * 1.7.x-neon-default branch
    Make neon the default http library.
@@ -95,18 +92,6 @@ Candidate changes:
    Votes:
      +1: arfrever
 
- * r1148877,r1148882,r1149105,r1149141
-   Issue 3966, log_noop_revs too slow.
-   Justification:
-     Merge is far too slow when lots of revisions have to be checked.
-   Notes:
-     r1148877 is pool cleanup
-     r1148882 is docstring cleanup
-     r1149105 is the actual fix
-     r1149141 is more pool cleanup
-   Votes:
-     +1: philip, hwright
-
  * r1149160
    Make serf report an error when performing 'svn log' on a non existing path
    aka issue #3937.
@@ -117,3 +102,15 @@ Candidate changes:
 
 Approved changes:
 =================
+
+ * r1148877,r1148882,r1149105,r1149141
+   Issue 3966, log_noop_revs too slow.
+   Justification:
+     Merge is far too slow when lots of revisions have to be checked.
+   Notes:
+     r1148877 is pool cleanup
+     r1148882 is docstring cleanup
+     r1149105 is the actual fix
+     r1149141 is more pool cleanup
+   Votes:
+     +1: philip, hwright, rhuijben
