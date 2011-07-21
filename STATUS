@@ -77,7 +77,7 @@ Candidate changes:
      For very large checkouts/updates/switches, ra_serf may consume
      unbounded memory. That is not good.
    Votes:
-     +1: gstein
+     +1: gstein, jerenkrantz
 
  * r1147540, r1147541
    Remove unused variables in build system.
