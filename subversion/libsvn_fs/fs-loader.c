@@ -1326,9 +1326,9 @@ svn_fs_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path,
 
       /* strlen(token) == c - token. */
       if (! svn_xml_is_xml_safe(token, c - token))
-        return svn_error_create(
-           SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
-           _("Lock token URI is not XML-safe"));
+        return svn_error_createf(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+                                 _("Lock token URI '%s' is not XML-safe")),
+                                 token;
     }
 
   if (expiration_date < 0)
