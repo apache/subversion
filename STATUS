@@ -91,6 +91,9 @@ Candidate changes:
      Suboptimal r1148374 was already backported in r1148488.
    Votes:
      +1: arfrever, philip
+     -0: rhuijben (A library shouldn't just write things to stderr. This needs
+                   proper error handling instead. And besides I doubt anyone is
+                   going to use this define (No veto!))
 
  * r1149160
    Make serf report an error when performing 'svn log' on a non existing path
