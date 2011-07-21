@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# encoding=utf-8
 #
 #  lock_tests.py:  testing versioned properties
 #
@@ -1720,6 +1721,26 @@ def block_unlock_if_pre_unlock_hook_fails(sbox):
                                       1, 'unlock', pi_path)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+#----------------------------------------------------------------------
+def lock_invalid_token(sbox):
+  "verify pre-lock hook returning invalid token"
+
+  sbox.build()
+
+  hook_path = os.path.join(sbox.repo_dir, 'hooks', 'pre-lock')
+  svntest.main.create_python_hook_script(hook_path,
+    '# encoding=utf-8\n'
+    'import sys\n'
+    'sys.stdout.write("тест")\n'
+    'sys.exit(0)\n')
+
+  fname = 'iota'
+  file_path = os.path.join(sbox.wc_dir, fname)
+
+  svntest.actions.run_and_verify_svn(None, None,
+                                     "svn: E160037: .*scheme.*'opaquelocktoken'",
+                                     'lock', '-m', '', file_path)
+
 
 ########################################################################
 # Run the tests
@@ -1768,6 +1789,7 @@ test_list = [ None,
               cp_isnt_ro,
               update_locked_deleted,
               block_unlock_if_pre_unlock_hook_fails,
+              lock_invalid_token,
             ]
 
 if __name__ == '__main__':

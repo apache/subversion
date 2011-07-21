@@ -28,6 +28,7 @@
 #include <apr_md5.h>
 #include <apr_thread_mutex.h>
 #include <apr_uuid.h>
+#include <apr_uri.h>
 
 #include "svn_types.h"
 #include "svn_dso.h"
@@ -1303,6 +1304,31 @@ svn_fs_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path,
         return svn_error_create
           (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
            _("Lock comment contains illegal characters"));
+    }
+
+  /* Enforce that the token be an XML-safe URI. */
+  if (token)
+    {
+      apr_uri_t uri;
+      apr_status_t status;
+
+      status = apr_uri_parse(pool, token, &uri);
+      if (status)
+        return svn_error_createf(SVN_ERR_FS_BAD_LOCK_TOKEN,
+                                 svn_error_wrap_apr(status, NULL),
+                                 _("Can't parse token '%s' as a URI"),
+                                 token);
+
+      if (uri.scheme == NULL || strcmp(uri.scheme, "opaquelocktoken"))
+        return svn_error_createf(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+                                 _("Lock token URI '%s' has bad scheme; "
+                                   "expected '%s'"),
+                                 token, "opaquelocktoken");
+                                   
+      if (! svn_xml_is_xml_safe(token, strlen(token)))
+        return svn_error_create(
+           SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+           _("Lock token URI is not XML-safe"));
     }
 
   if (expiration_date < 0)

@@ -618,18 +618,9 @@ svn_repos__hooks_pre_lock(svn_repos_t *repos,
                            pool));
 
       if (token)
-        {
-          svn_error_t *err;
-          /* Convert hook output from native encoding to UTF-8. */
-          err = svn_utf_cstring_to_utf8(token, buf->data, pool);
-          if (err)
-            {
-              return svn_error_create(SVN_ERR_REPOS_HOOK_FAILURE, err,
-                                      _("Output of pre-lock hook could not be "
-                                        "translated from the native locale to "
-                                        "UTF-8."));
-            }
-        }
+        /* No validation here; the FS will take care of that. */
+        *token = buf->data;
+
     }
   else if (token)
     *token = "";
