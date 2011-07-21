@@ -7843,12 +7843,52 @@ typedef struct log_noop_baton_t
      being diffed. */
   const char *source_repos_abs;
 
-  /* Initially empty rangelists allocated in POOL. */
+  /* Initially empty rangelists allocated in POOL. The rangelists are
+   * populated across multiple invocations of the log_noop_revs(). */
   apr_array_header_t *operative_ranges;
   apr_array_header_t *merged_ranges;
 
+  /* Pool to store the rangelists. */
   apr_pool_t *pool;
 } log_noop_baton_t;
+
+/* Helper for log_noop_revs: Merge a svn_merge_range_t representation of
+   REVISION into RANGELIST. New elements added to rangelist are allocated
+   in RESULT_POOL.
+
+   This is *not* a general purpose rangelist merge but a special replacement
+   for svn_rangelist_merge when REVISION is guaranteed to be younger than any
+   element in RANGELIST.  svn_rangelist_merge is O(n) worst-case (i.e. when
+   all the ranges in output rangelist are older than the incoming changes).
+   This turns the special case of a single incoming younger range into O(1).
+   */
+static svn_error_t *
+rangelist_merge_revision(apr_array_header_t *rangelist,
+                         svn_revnum_t revision,
+                         apr_pool_t *result_pool)
+{
+  svn_merge_range_t *new_range;
+  if (rangelist->nelts)
+    {
+      svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, rangelist->nelts - 1,
+                                               svn_merge_range_t *);
+      if (range->end == revision - 1)
+        {
+          /* REVISION is adjacent to the youngest range in RANGELIST
+             so we can simply expand that range to encompass REVISION. */
+          range->end = revision;
+          return SVN_NO_ERROR;
+        }
+    }
+  new_range = apr_palloc(result_pool, sizeof(*new_range));
+  new_range->start = revision - 1;
+  new_range->end = revision;
+  new_range->inheritable = TRUE;
+
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = new_range;
+
+  return SVN_NO_ERROR;
+}
 
 /* Implements the svn_log_entry_receiver_t interface.
 
@@ -7860,46 +7900,31 @@ typedef struct log_noop_baton_t
    MERGE_B->TARGET_ABSPATH per the mergeinfo in CHILDREN_WITH_MERGEINFO,
    then add LOG_ENTRY->REVISION to BATON->MERGED_RANGES.
 
-   Use POOL for temporary allocations.  Allocate additions to
+   Use SCRATCH_POOL for temporary allocations.  Allocate additions to
    BATON->MERGED_RANGES and BATON->OPERATIVE_RANGES in BATON->POOL.
 */
 static svn_error_t *
 log_noop_revs(void *baton,
               svn_log_entry_t *log_entry,
-              apr_pool_t *pool)
+              apr_pool_t *scratch_pool)
 {
   log_noop_baton_t *log_gap_baton = baton;
   apr_hash_index_t *hi;
   svn_revnum_t revision;
   svn_boolean_t log_entry_rev_required = FALSE;
-  apr_array_header_t *rl1;
-  apr_array_header_t *rl2;
-  apr_array_header_t *rangelist;
-
-  /* The baton's pool is essentially an iterpool so we must clear it
-   * for each invocation of this function. */
-  rl1 = svn_rangelist_dup(log_gap_baton->operative_ranges, pool);
-  rl2 = svn_rangelist_dup(log_gap_baton->merged_ranges, pool);
-  svn_pool_clear(log_gap_baton->pool);
-  log_gap_baton->operative_ranges = svn_rangelist_dup(rl1,
-                                                      log_gap_baton->pool);
-  log_gap_baton->merged_ranges = svn_rangelist_dup(rl2,
-                                                   log_gap_baton->pool);
 
   revision = log_entry->revision;
 
-  rangelist = svn_rangelist__initialize(revision - 1, revision, TRUE,
-                                        log_gap_baton->pool);
   /* Unconditionally add LOG_ENTRY->REVISION to BATON->OPERATIVE_MERGES. */
-  SVN_ERR(svn_rangelist_merge(&(log_gap_baton->operative_ranges),
-                              rangelist,
-                              log_gap_baton->pool));
+  SVN_ERR(rangelist_merge_revision(log_gap_baton->operative_ranges,
+                                   revision,
+                                   log_gap_baton->pool));
 
   /* Examine each path affected by LOG_ENTRY->REVISION.  If the explicit or
      inherited mergeinfo for *all* of the corresponding paths under
      MERGE_B->TARGET_ABSPATH reflects that LOG_ENTRY->REVISION has been
      merged, then add LOG_ENTRY->REVISION to BATON->MERGED_RANGES. */
-  for (hi = apr_hash_first(pool, log_entry->changed_paths2);
+  for (hi = apr_hash_first(scratch_pool, log_entry->changed_paths2);
        hi;
        hi = apr_hash_next(hi))
     {
@@ -7918,7 +7943,7 @@ log_noop_revs(void *baton,
       if (rel_path == NULL)
         continue;
       cwmi_path = svn_dirent_join(log_gap_baton->merge_b->target_abspath,
-                                  rel_path, pool);
+                                  rel_path, scratch_pool);
 
       /* Find any explicit or inherited mergeinfo for PATH. */
       while (!log_entry_rev_required)
@@ -7946,8 +7971,8 @@ log_noop_revs(void *baton,
             }
 
           /* Didn't find anything so crawl up to the parent. */
-          cwmi_path = svn_dirent_dirname(cwmi_path, pool);
-          path = svn_dirent_dirname(path, pool);
+          cwmi_path = svn_dirent_dirname(cwmi_path, scratch_pool);
+          path = svn_dirent_dirname(path, scratch_pool);
 
           /* At this point *if* we find mergeinfo it will be inherited. */
           mergeinfo_inherited = TRUE;
@@ -7956,13 +7981,17 @@ log_noop_revs(void *baton,
       if (paths_explicit_rangelist)
         {
           apr_array_header_t *intersecting_range;
+          apr_array_header_t *rangelist;
+
+          rangelist = svn_rangelist__initialize(revision - 1, revision, TRUE,
+                                                scratch_pool);
 
           /* If PATH inherited mergeinfo we must consider inheritance in the
              event the inherited mergeinfo is actually non-inheritable. */
           SVN_ERR(svn_rangelist_intersect(&intersecting_range,
                                           paths_explicit_rangelist,
                                           rangelist,
-                                          mergeinfo_inherited, pool));
+                                          mergeinfo_inherited, scratch_pool));
 
           if (intersecting_range->nelts == 0)
             log_entry_rev_required = TRUE;
@@ -7974,9 +8003,9 @@ log_noop_revs(void *baton,
     }
 
   if (!log_entry_rev_required)
-    SVN_ERR(svn_rangelist_merge(&(log_gap_baton->merged_ranges),
-                                rangelist,
-                                log_gap_baton->pool));
+    SVN_ERR(rangelist_merge_revision(log_gap_baton->merged_ranges,
+                                     revision,
+                                     log_gap_baton->pool));
 
   return SVN_NO_ERROR;
 }
@@ -8110,8 +8139,8 @@ remove_noop_subtree_ranges(const char *url1,
 
   APR_ARRAY_PUSH(log_targets, const char *) = "";
 
-  SVN_ERR(svn_ra_get_log2(ra_session, log_targets, youngest_gap_rev->end,
-                          oldest_gap_rev->start + 1, 0, TRUE, TRUE, FALSE,
+  SVN_ERR(svn_ra_get_log2(ra_session, log_targets, oldest_gap_rev->start + 1,
+                          youngest_gap_rev->end, 0, TRUE, TRUE, FALSE,
                           apr_array_make(scratch_pool, 0,
                                          sizeof(const char *)),
                           log_noop_revs, &log_gap_baton, scratch_pool));
