@@ -7872,11 +7872,7 @@ typedef struct log_noop_baton_t
   apr_array_header_t *operative_ranges;
   apr_array_header_t *merged_ranges;
 
-  /* Pool to store the rangelists. It stores the final result, as well
-   * as temporary copies of rangelists which get created while we compute
-   * the result across multiple invocations of log_noop_revs().
-   * This pool needs to be cleared periodically to prevent unbound
-   * growth of allocations. */
+  /* Pool to store the rangelists. */
   apr_pool_t *pool;
 } log_noop_baton_t;
 
@@ -7932,21 +7928,6 @@ log_noop_revs(void *baton,
   apr_hash_index_t *hi;
   svn_revnum_t revision;
   svn_boolean_t log_entry_rev_required = FALSE;
-  apr_array_header_t *rl1;
-  apr_array_header_t *rl2;
-
-  /* The baton's pool is essentially an iterpool so we must clear it
-   * for each invocation of this function, preserving the result
-   * we computed during the previous invocation but discarding any
-   * data allocated before the previous invocation. (Note that
-   * svn_rangelist_merge() returns a newly allocated rangelist.) */
-  rl1 = svn_rangelist_dup(log_gap_baton->operative_ranges, scratch_pool);
-  rl2 = svn_rangelist_dup(log_gap_baton->merged_ranges, scratch_pool);
-  svn_pool_clear(log_gap_baton->pool);
-  log_gap_baton->operative_ranges = svn_rangelist_dup(rl1,
-                                                      log_gap_baton->pool);
-  log_gap_baton->merged_ranges = svn_rangelist_dup(rl2,
-                                                   log_gap_baton->pool);
 
   revision = log_entry->revision;
 
@@ -8019,7 +8000,7 @@ log_noop_revs(void *baton,
           apr_array_header_t *rangelist;
 
           rangelist = svn_rangelist__initialize(revision - 1, revision, TRUE,
-                                                log_gap_baton->pool);
+                                                scratch_pool);
 
           /* If PATH inherited mergeinfo we must consider inheritance in the
              event the inherited mergeinfo is actually non-inheritable. */
