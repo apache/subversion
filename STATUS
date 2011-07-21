@@ -71,13 +71,6 @@ Candidate changes:
      +1: philip
      -1: gstein (I see no explanation for why "serf is not ready")
 
- * r1148131
-   Check serf library version at runtime.
-   Justification:
-     Avoid calling into a library incompatible with the one compiled against.
-   Votes:
-     +1: danielsh, gstein
-
  * 1.7.x-issue3888 branch
    Fix issue 3888 for 1.7.x
    Justification:
@@ -86,6 +79,37 @@ Candidate changes:
    Votes:
      +1: gstein
 
+ * r1147540, r1147541
+   Remove unused variables in build system.
+   Justification:
+     Backporting of future changes will be easier.
+   Votes:
+     +1: arfrever
+
+ * r1148083, r1148094
+   Preload libsvn_auth_gnome_keyring and libsvn_auth_kwallet in locally built
+   executables.
+   Justification:
+     Version mismatch errors would occur during trying to use locally built
+     executables when a different version of Subversion was installed in /usr/lib.
+   Votes:
+     +1: arfrever
+
+ * r1148992
+   Print error messages about failures of dynamic loading of libraries when
+   SVN_DEBUG_DSO is defined instead of never.
+   Justification:
+     Suboptimal r1148374 was already backported in r1148488.
+   Votes:
+     +1: arfrever
+
 
 Approved changes:
 =================
+
+ * r1148131
+   Check serf library version at runtime.
+   Justification:
+     Avoid calling into a library incompatible with the one compiled against.
+   Votes:
+     +1: danielsh, gstein, arfrever
