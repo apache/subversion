@@ -8146,10 +8146,10 @@ remove_noop_subtree_ranges(const char *url1,
                                                  youngest_gap_rev->end,
                                                  TRUE, scratch_pool);
   SVN_ERR(svn_rangelist_remove(&(inoperative_ranges),
-                               log_gap_baton.operative_ranges,
+                               operative_ranges,
                                inoperative_ranges, FALSE, scratch_pool));
 
-  SVN_ERR(svn_rangelist_merge(&(log_gap_baton.merged_ranges),
+  SVN_ERR(svn_rangelist_merge(&merged_ranges,
                               inoperative_ranges, scratch_pool));
 
   for (i = 1; i < notify_b->children_with_mergeinfo->nelts; i++)
@@ -8164,7 +8164,7 @@ remove_noop_subtree_ranges(const char *url1,
           /* Remove inoperative ranges from all children so we don't perform
              inoperative editor drives. */
           SVN_ERR(svn_rangelist_remove(&(child->remaining_ranges),
-                                       log_gap_baton.merged_ranges,
+                                       merged_ranges,
                                        child->remaining_ranges,
                                        FALSE, result_pool));
         }
