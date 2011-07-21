@@ -42,12 +42,19 @@ Candidate changes:
    Votes:
      +0: danielsh
 
- * r1147882, r1149343, r1149371, r1149372, r1149377
+ * r1147882, r1149343, r1149371, r1149372, r1149377, r1149398
    Validate consumer-supplied tokens in libsvn_fs.  (This specifically applies
    to the output of pre-lock hook scripts.)
    Justification:
      Input validations are good; arbitrary lock tokens are bad, and can result
      in user-visible errors.
+   Notes:
+     r1147882 is reverted by r1149343.
+     r1149343 reverts r1147882 and adds new code, which r1149371 rewrites.
+     r1149371 is the change.
+     r1149372 improves an error message.
+     r1149377 is a typo fix.
+     r1149398 fixes the bindings.
    Votes:
      +1: danielsh
 
