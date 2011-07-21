@@ -95,7 +95,7 @@ Candidate changes:
    Votes:
      +1: arfrever
 
- * r1149105
+ * r1148877,r1148882,r1149105,r1149141
    Issue 3966, log_noop_revs too slow.
    Justification:
      Merge is far too slow when lots of revisions have to be checked.
