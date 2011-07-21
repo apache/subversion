@@ -778,6 +778,9 @@ struct diff_cmd_baton {
   /* Whether we're producing a git-style diff. */
   svn_boolean_t use_git_diff_format;
 
+  /* Whether deletion of a file is summarized versus showing a full diff. */
+  svn_boolean_t no_diff_deleted;
+
   svn_wc_context_t *wc_ctx;
 
   /* The RA session used during diffs involving the repository. */
@@ -1173,28 +1176,40 @@ diff_file_added(svn_wc_notify_state_t *content_state,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-diff_file_deleted_with_diff(svn_wc_notify_state_t *state,
-                            svn_boolean_t *tree_conflicted,
-                            const char *path,
-                            const char *tmpfile1,
-                            const char *tmpfile2,
-                            const char *mimetype1,
-                            const char *mimetype2,
-                            apr_hash_t *original_props,
-                            void *diff_baton,
-                            apr_pool_t *scratch_pool)
+diff_file_deleted(svn_wc_notify_state_t *state,
+                  svn_boolean_t *tree_conflicted,
+                  const char *path,
+                  const char *tmpfile1,
+                  const char *tmpfile2,
+                  const char *mimetype1,
+                  const char *mimetype2,
+                  apr_hash_t *original_props,
+                  void *diff_baton,
+                  apr_pool_t *scratch_pool)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
 
   if (diff_cmd_baton->anchor)
     path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
 
-  if (tmpfile1)
-    SVN_ERR(diff_content_changed(path,
-                                 tmpfile1, tmpfile2, diff_cmd_baton->revnum1,
-                                 diff_cmd_baton->revnum2,
-                                 mimetype1, mimetype2,
-                                 svn_diff_op_deleted, NULL, diff_baton));
+  if (diff_cmd_baton->no_diff_deleted)
+    {
+      SVN_ERR(file_printf_from_utf8(
+                diff_cmd_baton->outfile,
+                diff_cmd_baton->header_encoding,
+                "Index: %s (deleted)" APR_EOL_STR "%s" APR_EOL_STR,
+                path, equal_string));
+    }
+  else
+    {
+      if (tmpfile1)
+        SVN_ERR(diff_content_changed(path,
+                                     tmpfile1, tmpfile2,
+                                     diff_cmd_baton->revnum1,
+                                     diff_cmd_baton->revnum2,
+                                     mimetype1, mimetype2,
+                                     svn_diff_op_deleted, NULL, diff_baton));
+    }
 
   /* We don't list all the deleted properties. */
 
@@ -1204,36 +1219,6 @@ diff_file_deleted_with_diff(svn_wc_notify_state_t *state,
     *tree_conflicted = FALSE;
 
   return SVN_NO_ERROR;
-}
-
-/* An svn_wc_diff_callbacks4_t function. */
-static svn_error_t *
-diff_file_deleted_no_diff(svn_wc_notify_state_t *state,
-                          svn_boolean_t *tree_conflicted,
-                          const char *path,
-                          const char *tmpfile1,
-                          const char *tmpfile2,
-                          const char *mimetype1,
-                          const char *mimetype2,
-                          apr_hash_t *original_props,
-                          void *diff_baton,
-                          apr_pool_t *scratch_pool)
-{
-  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
-
-  if (diff_cmd_baton->anchor)
-    path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
-
-  if (state)
-    *state = svn_wc_notify_state_unknown;
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
-
-  return file_printf_from_utf8
-          (diff_cmd_baton->outfile,
-           diff_cmd_baton->header_encoding,
-           "Index: %s (deleted)" APR_EOL_STR "%s" APR_EOL_STR,
-           path, equal_string);
 }
 
 /* An svn_wc_diff_callbacks4_t function. */
@@ -1313,6 +1298,18 @@ diff_dir_closed(svn_wc_notify_state_t *contentstate,
   return SVN_NO_ERROR;
 }
 
+static const svn_wc_diff_callbacks4_t diff_callbacks =
+{
+  diff_file_opened,
+  diff_file_changed,
+  diff_file_added,
+  diff_file_deleted,
+  diff_dir_deleted,
+  diff_dir_opened,
+  diff_dir_added,
+  diff_dir_props_changed,
+  diff_dir_closed    
+};
 
 /*-----------------------------------------------------------------*/
 
@@ -2214,24 +2211,12 @@ svn_client_diff5(const apr_array_header_t *options,
                  apr_pool_t *pool)
 {
   struct diff_cmd_baton diff_cmd_baton = { 0 };
-  svn_wc_diff_callbacks4_t diff_callbacks;
 
   /* We will never do a pegged diff from here. */
   svn_opt_revision_t peg_revision;
   peg_revision.kind = svn_opt_revision_unspecified;
 
   /* setup callback and baton */
-  diff_callbacks.file_opened = diff_file_opened;
-  diff_callbacks.file_changed = diff_file_changed;
-  diff_callbacks.file_added = diff_file_added;
-  diff_callbacks.file_deleted = no_diff_deleted ? diff_file_deleted_no_diff :
-                                                  diff_file_deleted_with_diff;
-  diff_callbacks.dir_added =  diff_dir_added;
-  diff_callbacks.dir_deleted = diff_dir_deleted;
-  diff_callbacks.dir_props_changed = diff_dir_props_changed;
-  diff_callbacks.dir_opened = diff_dir_opened;
-  diff_callbacks.dir_closed = diff_dir_closed;
-
   diff_cmd_baton.orig_path_1 = path1;
   diff_cmd_baton.orig_path_2 = path2;
 
@@ -2248,6 +2233,7 @@ svn_client_diff5(const apr_array_header_t *options,
   diff_cmd_baton.force_binary = ignore_content_type;
   diff_cmd_baton.relative_to_dir = relative_to_dir;
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
+  diff_cmd_baton.no_diff_deleted = no_diff_deleted;
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
   diff_cmd_baton.visited_paths = apr_hash_make(pool);
   diff_cmd_baton.ra_session = NULL;
@@ -2281,20 +2267,8 @@ svn_client_diff_peg5(const apr_array_header_t *options,
                      apr_pool_t *pool)
 {
   struct diff_cmd_baton diff_cmd_baton = { 0 };
-  svn_wc_diff_callbacks4_t diff_callbacks;
 
   /* setup callback and baton */
-  diff_callbacks.file_opened = diff_file_opened;
-  diff_callbacks.file_changed = diff_file_changed;
-  diff_callbacks.file_added = diff_file_added;
-  diff_callbacks.file_deleted = no_diff_deleted ? diff_file_deleted_no_diff :
-                                                  diff_file_deleted_with_diff;
-  diff_callbacks.dir_added =  diff_dir_added;
-  diff_callbacks.dir_deleted = diff_dir_deleted;
-  diff_callbacks.dir_props_changed = diff_dir_props_changed;
-  diff_callbacks.dir_opened = diff_dir_opened;
-  diff_callbacks.dir_closed = diff_dir_closed;
-
   diff_cmd_baton.orig_path_1 = path;
   diff_cmd_baton.orig_path_2 = path;
 
@@ -2311,6 +2285,7 @@ svn_client_diff_peg5(const apr_array_header_t *options,
   diff_cmd_baton.force_binary = ignore_content_type;
   diff_cmd_baton.relative_to_dir = relative_to_dir;
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
+  diff_cmd_baton.no_diff_deleted = no_diff_deleted;
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
   diff_cmd_baton.visited_paths = apr_hash_make(pool);
   diff_cmd_baton.ra_session = NULL;
