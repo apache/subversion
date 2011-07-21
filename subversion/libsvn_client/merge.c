@@ -2989,11 +2989,10 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
                                         scratch_pool));
         }
 
-      /* Since segment doesn't span older_rev:peg_rev we know
+      /* Intersect CHILD->REMAINING_RANGES with the range where PRIMARY_URL
+         exists.  Since segment doesn't span older_rev:peg_rev we know
          PRIMARY_URL@peg_rev didn't come into existence until
-         segment->range_start + 1.  Create a rangelist describing
-         range where PRIMARY_URL exists and find the intersection of that
-         range and CHILD->REMAINING_RANGELIST. */
+         segment->range_start + 1. */
       exists_rangelist = svn_rangelist__initialize(segment->range_start,
                                                    peg_rev, TRUE,
                                                    scratch_pool);
@@ -3002,11 +3001,8 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
                                       child->remaining_ranges,
                                       FALSE, scratch_pool));
 
-      /* Create a second rangelist describing the range before
-         PRIMARY_URL@peg_rev came into existence and find the intersection of
-         that range and PARENT->REMAINING_RANGES.  Then merge that rangelist
-         with exists_rangelist and store the result in
-         CHILD->REMANING_RANGES. */
+      /* Merge into CHILD->REMANING_RANGES the intersection of the range before
+         PRIMARY_URL@peg_rev came into existence and PARENT->REMAINING_RANGES. */
       non_existent_rangelist = svn_rangelist__initialize(older_rev,
                                                          segment->range_start,
                                                          TRUE, scratch_pool);
@@ -3014,7 +3010,6 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
                                       non_existent_rangelist,
                                       parent->remaining_ranges,
                                       FALSE, scratch_pool));
-
       SVN_ERR(svn_rangelist_merge(&(child->remaining_ranges),
                                   non_existent_rangelist, scratch_pool));
 
@@ -8362,7 +8357,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
           /* While END_REV is valid, do the following:
 
              1. Tweak each NOTIFY_B->CHILDREN_WITH_MERGEINFO element so that
-                the element's remaing_ranges member has as it's first element
+                the element's remaining_ranges member has as its first element
                 a range that ends with end_rev.
 
              2. Starting with start_rev, call drive_merge_report_editor()
