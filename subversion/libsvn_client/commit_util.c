@@ -587,7 +587,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
   /* Check for the deletion case.
      * We delete explicitly deleted nodes (duh!)
      * We delete not-present children of copies
-     * We delete nodes that directly replace a node in it's ancestor
+     * We delete nodes that directly replace a node in its ancestor
    */
 
   if (is_deleted || is_replaced)
