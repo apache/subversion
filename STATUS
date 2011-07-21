@@ -99,8 +99,13 @@ Candidate changes:
    Issue 3966, log_noop_revs too slow.
    Justification:
      Merge is far too slow when lots of revisions have to be checked.
+   Notes:
+     r1148877 is pool cleanup
+     r1148882 is docstring cleanup
+     r1149105 is the actual fix
+     r1149141 is more pool cleanup
    Votes:
-     +1: philip
+     +1: philip, hwright
 
  * r1149160
    Make serf report an error when performing 'svn log' on a non existing path
@@ -112,10 +117,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r1148131
-   Check serf library version at runtime.
-   Justification:
-     Avoid calling into a library incompatible with the one compiled against.
-   Votes:
-     +1: danielsh, gstein, arfrever
