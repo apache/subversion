@@ -42,7 +42,7 @@ Candidate changes:
    Votes:
      +0: danielsh
 
- * r1147882, r1149343, r1149371, r1149372
+ * r1147882, r1149343, r1149371, r1149372, r1149377
    Validate consumer-supplied tokens in libsvn_fs.  (This specifically applies
    to the output of pre-lock hook scripts.)
    Justification:
