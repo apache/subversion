@@ -7868,6 +7868,36 @@ typedef struct log_noop_baton_t
   apr_pool_t *pool;
 } log_noop_baton_t;
 
+/* Helper for log_noop_revs, this is not a general purpose rangelist
+   merge.  Merge the single revision range REVISION-1 to REVISION into
+   RANGELIST.  The existing ranges in RANGELIST must be ordered from
+   highest/youngest to lowest/oldest.  */
+static svn_error_t *
+rangelist_merge_revision(apr_array_header_t *rangelist,
+                         svn_revnum_t revision,
+                         apr_pool_t *result_pool)
+{
+  svn_merge_range_t *new_range;
+  if (rangelist->nelts)
+    {
+      svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, rangelist->nelts - 1,
+                                               svn_merge_range_t *);
+      if (range->start == revision)
+        {
+          range->start = revision - 1;
+          return SVN_NO_ERROR;
+        }
+    }
+  new_range = apr_palloc(result_pool, sizeof(*new_range));
+  new_range->start = revision - 1;
+  new_range->end = revision;
+  new_range->inheritable = TRUE;
+
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = new_range;
+
+  return SVN_NO_ERROR;
+}
+
 /* Implements the svn_log_entry_receiver_t interface.
 
    BATON is an log_noop_baton_t *.
@@ -7892,7 +7922,6 @@ log_noop_revs(void *baton,
   svn_boolean_t log_entry_rev_required = FALSE;
   apr_array_header_t *rl1;
   apr_array_header_t *rl2;
-  apr_array_header_t *rangelist;
 
   /* The baton's pool is essentially an iterpool so we must clear it
    * for each invocation of this function, preserving the result
@@ -7909,12 +7938,10 @@ log_noop_revs(void *baton,
 
   revision = log_entry->revision;
 
-  rangelist = svn_rangelist__initialize(revision - 1, revision, TRUE,
-                                        log_gap_baton->pool);
   /* Unconditionally add LOG_ENTRY->REVISION to BATON->OPERATIVE_MERGES. */
-  SVN_ERR(svn_rangelist_merge(&(log_gap_baton->operative_ranges),
-                              rangelist,
-                              log_gap_baton->pool));
+  SVN_ERR(rangelist_merge_revision(log_gap_baton->operative_ranges,
+                                   revision,
+                                   log_gap_baton->pool));
 
   /* Examine each path affected by LOG_ENTRY->REVISION.  If the explicit or
      inherited mergeinfo for *all* of the corresponding paths under
@@ -7977,6 +8004,10 @@ log_noop_revs(void *baton,
       if (paths_explicit_rangelist)
         {
           apr_array_header_t *intersecting_range;
+          apr_array_header_t *rangelist;
+
+          rangelist = svn_rangelist__initialize(revision - 1, revision, TRUE,
+                                                log_gap_baton->pool);
 
           /* If PATH inherited mergeinfo we must consider inheritance in the
              event the inherited mergeinfo is actually non-inheritable. */
@@ -7995,9 +8026,9 @@ log_noop_revs(void *baton,
     }
 
   if (!log_entry_rev_required)
-    SVN_ERR(svn_rangelist_merge(&(log_gap_baton->merged_ranges),
-                                rangelist,
-                                log_gap_baton->pool));
+    SVN_ERR(rangelist_merge_revision(log_gap_baton->merged_ranges,
+                                     revision,
+                                     log_gap_baton->pool));
 
   return SVN_NO_ERROR;
 }
