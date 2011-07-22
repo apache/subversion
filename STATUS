@@ -128,14 +128,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1149160
-   Make serf report an error when performing 'svn log' on a non existing path
-   aka issue #3937.
-   Justifications:
-     There should be no known regressions in the default http ra layer.
-   Votes:
-     +1: rhuijben, philip, hwright
-
  * r1149240
    Support APR 0.9.
    Justification:

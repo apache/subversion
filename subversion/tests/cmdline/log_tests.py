@@ -1975,7 +1975,6 @@ def merge_sensitive_log_ignores_cyclic_merges(sbox):
 
 #----------------------------------------------------------------------
 @Issue(3931,3936)
-@XFail(svntest.main.is_ra_type_dav_serf)
 def log_with_unrelated_peg_and_operative_revs(sbox):
   "log with unrelated peg and operative rev targets"
 
@@ -1983,12 +1982,8 @@ def log_with_unrelated_peg_and_operative_revs(sbox):
 
   target = sbox.repo_url + '/A/D/G/rho@2'
 
-  # Currently this test fails because ra_serf returns an SVN_ERR_FS_NOT_FOUND
-  # error from svn_ra_get_locations() that the other RA layers do not
-  # return. The test passes with all other RA layers. See issue #3936.
-
   # log for /A/D/G/rho, deleted in revision 5, recreated in revision 8
-  expected_error = ".*File not found.*"
+  expected_error = ".*(File|path) not found.*"
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'log', '-r', '6:7', target)
   svntest.actions.run_and_verify_svn(None, None, expected_error,
@@ -2008,7 +2003,6 @@ def log_with_unrelated_peg_and_operative_revs(sbox):
 
 #----------------------------------------------------------------------
 @Issue(3937)
-@XFail(svntest.main.is_ra_type_dav_serf)
 def log_on_nonexistent_path_and_valid_rev(sbox):
   "log on nonexistent path does not error out"
 
@@ -2028,8 +2022,6 @@ def log_on_nonexistent_path_and_valid_rev(sbox):
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'log', '-q', bad_url_bad_rev)
 
-  # Currently this test fails over ra_serf because the following log
-  # commands return empty logs rather than errors.
   expected_error = ".*not found.*"
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'log', '-q', bad_path_real_rev)
