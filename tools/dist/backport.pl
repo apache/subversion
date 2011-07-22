@@ -86,6 +86,7 @@ sub merge {
   print $logmsg_fh $_ for @{$entry{entry}};
   close $logmsg_fh or die "Can't close $logmsg_filename: $!";
 
+  $pattern = '\V'.$pattern;
   my $script = <<"EOF";
 #!/bin/sh
 set -e
@@ -93,7 +94,7 @@ $SVN diff > $backupfile
 $SVN revert -R .
 $SVN up
 $SVN merge $mergeargs
-$VIM -e -s -n -N -i NONE -u NONE -c '/^ [*] \V$pattern/normal! dap' -c wq $STATUS
+$VIM -e -s -n -N -i NONE -u NONE -c '/^ [*] $pattern/normal! dap' -c wq $STATUS
 $SVN commit -F $logmsg_filename
 EOF
 
