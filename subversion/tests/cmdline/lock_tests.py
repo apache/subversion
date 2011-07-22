@@ -1722,7 +1722,6 @@ def block_unlock_if_pre_unlock_hook_fails(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
-@XFail(svntest.main.is_ra_type_dav_serf)
 def lock_invalid_token(sbox):
   "verify pre-lock hook returning invalid token"
 
@@ -1738,9 +1737,10 @@ def lock_invalid_token(sbox):
   fname = 'iota'
   file_path = os.path.join(sbox.wc_dir, fname)
 
-  svntest.actions.run_and_verify_svn(None, None,
-                                     "svn: E160037: .*scheme.*'opaquelocktoken'",
-                                     'lock', '-m', '', file_path)
+  svntest.actions.run_and_verify_svn2(None, None,
+                                      "svn: warning: W160037: " \
+                                      ".*scheme.*'opaquelocktoken'", 0,
+                                      'lock', '-m', '', file_path)
 
 
 ########################################################################
