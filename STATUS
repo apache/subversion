@@ -133,6 +133,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1149572
+   Fix mod_authz_svn SEGV with AuthzForceUsernameCase and no authentication.
+   Justification:
+     It's an unusal, perhaps pointless, configuration but SEGVs are bad.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
