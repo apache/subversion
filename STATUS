@@ -58,15 +58,6 @@ Candidate changes:
    Votes:
      +1: danielsh, cmpilato
 
- * r1148424
-   Resolve issue 3963, 'svn update -r{R>HEAD}' hangs client over ra_svn.
-   Justification:
-     Subversion and svnserve shouldn't hang waiting for IO that will
-     never come when a user passes a revision that hasn't been committed
-     yet.
-   Votes:
-     +1: rhuijben, cmpilato
-
  * 1.7.x-neon-default branch
    Make neon the default http library.
    Justification:
@@ -147,7 +138,8 @@ Candidate changes:
  * r1149627
    Adjust library order in build.conf for kwallet/gnome-keyring.
    Justification:
-     Fixes "make install DESTDIR=..." which is used by packagers.
+     Fixes "make install DESTDIR=..." which is used by packagers.  I suspect
+     this is not a regression.
    Votes:
      +1: philip
 
@@ -157,3 +149,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1148424
+   Resolve issue 3963, 'svn update -r{R>HEAD}' hangs client over ra_svn.
+   Justification:
+     Subversion and svnserve shouldn't hang waiting for IO that will
+     never come when a user passes a revision that hasn't been committed
+     yet.
+   Votes:
+     +1: rhuijben, cmpilato, philip
