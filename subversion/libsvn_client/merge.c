@@ -8078,8 +8078,6 @@ remove_noop_subtree_ranges(const char *url1,
   apr_array_header_t *subtree_gap_ranges;
   apr_array_header_t *subtree_remaining_ranges;
   apr_array_header_t *log_targets;
-  apr_array_header_t *merged_ranges;
-  apr_array_header_t *operative_ranges;
   log_noop_baton_t log_gap_baton;
   svn_merge_range_t *oldest_gap_rev;
   svn_merge_range_t *youngest_gap_rev;
@@ -8099,8 +8097,6 @@ remove_noop_subtree_ranges(const char *url1,
   subtree_remaining_ranges = apr_array_make(scratch_pool, 1,
                                             sizeof(svn_merge_range_t *));
   log_targets = apr_array_make(scratch_pool, 1, sizeof(const char *));
-  merged_ranges = apr_array_make(scratch_pool, 0, sizeof(svn_revnum_t *));
-  operative_ranges = apr_array_make(scratch_pool, 0, sizeof(svn_revnum_t *));
 
   /* Given the requested merge of REVISION1:REVISION2 might there be any
      part of this range required for subtrees but not for the target? */
@@ -8170,8 +8166,10 @@ remove_noop_subtree_ranges(const char *url1,
                     &(log_gap_baton.source_repos_abs), merge_b->ctx->wc_ctx,
                     url2, repos_root_url, TRUE, NULL,
                     result_pool, scratch_pool));
-  log_gap_baton.merged_ranges = merged_ranges;
-  log_gap_baton.operative_ranges = operative_ranges;
+  log_gap_baton.merged_ranges = apr_array_make(scratch_pool, 0,
+                                               sizeof(svn_revnum_t *));
+  log_gap_baton.operative_ranges = apr_array_make(scratch_pool, 0,
+                                                  sizeof(svn_revnum_t *));
   log_gap_baton.pool = svn_pool_create(scratch_pool);
 
   APR_ARRAY_PUSH(log_targets, const char *) = "";
@@ -8186,7 +8184,7 @@ remove_noop_subtree_ranges(const char *url1,
                                                  youngest_gap_rev->end,
                                                  TRUE, scratch_pool);
   SVN_ERR(svn_rangelist_remove(&(inoperative_ranges),
-                               operative_ranges,
+                               log_gap_baton.operative_ranges,
                                inoperative_ranges, FALSE, scratch_pool));
 
   SVN_ERR(svn_rangelist_merge2(log_gap_baton.merged_ranges, inoperative_ranges,
@@ -8204,7 +8202,7 @@ remove_noop_subtree_ranges(const char *url1,
           /* Remove inoperative ranges from all children so we don't perform
              inoperative editor drives. */
           SVN_ERR(svn_rangelist_remove(&(child->remaining_ranges),
-                                       merged_ranges,
+                                       log_gap_baton.merged_ranges,
                                        child->remaining_ranges,
                                        FALSE, result_pool));
         }
