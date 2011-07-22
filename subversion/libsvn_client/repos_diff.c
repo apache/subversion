@@ -67,9 +67,6 @@ struct edit_baton {
   const svn_wc_diff_callbacks4_t *diff_callbacks;
   void *diff_cmd_baton;
 
-  /* DRY_RUN is TRUE if this is a dry-run diff, false otherwise. */
-  svn_boolean_t dry_run;
-
   /* RA_SESSION is the open session for making requests to the RA layer */
   svn_ra_session_t *ra_session;
 
@@ -1113,9 +1110,6 @@ close_directory(void *dir_baton,
   if (!b->added && b->propchanges->nelts > 0)
     remove_non_prop_changes(b->pristine_props, b->propchanges);
 
-  /* Don't do the props_changed stuff if this is a dry_run and we don't
-     have an access baton, since in that case the directory will already
-     have been recognised as added, in which case they cannot conflict. */
   if (b->propchanges->nelts > 0)
     {
       svn_boolean_t tree_conflicted = FALSE;
@@ -1316,15 +1310,13 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
                             svn_ra_session_t *ra_session,
                             svn_revnum_t revision,
                             svn_boolean_t walk_deleted_dirs,
-                            svn_boolean_t dry_run,
                             const svn_wc_diff_callbacks4_t *diff_callbacks,
                             void *diff_cmd_baton,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
                             svn_wc_notify_func2_t notify_func,
                             void *notify_baton,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
+                            apr_pool_t *result_pool)
 {
   apr_pool_t *editor_pool = svn_pool_create(result_pool);
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(editor_pool);
@@ -1339,7 +1331,6 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
   eb->depth = depth;
   eb->diff_callbacks = diff_callbacks;
   eb->diff_cmd_baton = diff_cmd_baton;
-  eb->dry_run = dry_run;
   eb->ra_session = ra_session;
 
   eb->revision = revision;
