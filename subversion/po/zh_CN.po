@@ -38,8 +38,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
-"POT-Creation-Date: 2010-12-26 12:00+0800\n"
-"PO-Revision-Date: 2010-12-26 12:00+0800\n"
+"POT-Creation-Date: 2011-07-22 12:58+0800\n"
+"PO-Revision-Date: 2011-07-22 12:55+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.apache.org>\n"
 "Language: \n"
@@ -2424,6 +2424,9 @@ msgstr "无法设定目录的文本内容"
 msgid "Corrupt current file"
 msgstr "当前文件损坏"
 
+msgid "Truncated protorev file detected"
+msgstr "检测到文件 protorev 被截断"
+
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "不能取得“%s”的状态"
@@ -2483,6 +2486,10 @@ msgstr "加锁失败: “%s”的新版本已经存在"
 
 msgid "Only SHA1 checksums can be used as keys in the rep_cache table.\n"
 msgstr "在表 rep_cache 中，只有 SHA1 校验和才能用作键。\n"
+
+#, c-format
+msgid "Youngest revision is r%ld, but rep-cache contains r%ld"
+msgstr "最小的版本是 r%ld，但是缓存中包含的是 r%ld"
 
 #, c-format
 msgid ""
@@ -3360,6 +3367,16 @@ msgstr "源 URL “%s” 来自其它版本库"
 
 #, c-format
 msgid ""
+"Commit rejected because mergeinfo on '%s' contains unexpected string "
+"terminator"
+msgstr "由于 '%s' 上的合并信息包含意外的字符串终结符，提交被拒绝"
+
+#, c-format
+msgid "Commit rejected because mergeinfo on '%s' is syntactically invalid"
+msgstr "由于 '%s' 上的合并信息非法，提交被拒绝"
+
+#, c-format
+msgid ""
 "Checksum mismatch for resulting fulltext\n"
 "(%s):\n"
 "   expected checksum:  %s\n"
@@ -3368,6 +3385,26 @@ msgstr ""
 "“%s” 的全文校验和不匹配: \n"
 "  期望校验和: %s\n"
 "  实际校验和: %s\n"
+
+msgid "(no error)"
+msgstr "(没有错误)"
+
+msgid "post-commit hook failed with no error message"
+msgstr "调用 post-commit 钩子失败 (没有错误信息)"
+
+msgid "post-commit hook failed with no error message."
+msgstr "调用 post-commit 钩子失败 (没有错误信息)。"
+
+#, c-format
+msgid "post commit FS processing had error '%s' and %s"
+msgstr "post-commit FS 处理的错误信息是 '%s' 和 '%s'"
+
+msgid "(no error message)"
+msgstr "(没有错误信息)"
+
+#, c-format
+msgid "post-commit FS processing had error '%s'."
+msgstr "post-commit FS 处理的错误信息是 '%s'。"
 
 msgid "Unable to open root of edit"
 msgstr "无法打开根来编辑"
@@ -3917,6 +3954,18 @@ msgid "Unable to make name for '%s'"
 msgstr "不能为 “%s” 产生名字"
 
 #, c-format
+msgid "Can't create temporary file from template '%s'"
+msgstr "无法从模版“%s”创建临时文件"
+
+#, c-format
+msgid "Can't set aside '%s'"
+msgstr "不能撤销“%s”"
+
+#, c-format
+msgid "Unable to make name in '%s'"
+msgstr "不能按照“%s”生成名字"
+
+#, c-format
 msgid "Can't create symbolic link '%s'"
 msgstr "无法创建符号连接 “%s”"
 
@@ -3934,6 +3983,10 @@ msgstr "无法找到临时目录"
 #, c-format
 msgid "Can't copy '%s' to '%s'"
 msgstr "不能复制 “%s” 到 “%s”"
+
+#, c-format
+msgid "Can't get file name"
+msgstr "无法获取文件名"
 
 #, c-format
 msgid "Can't set permissions on '%s'"
@@ -3970,18 +4023,6 @@ msgstr "无法创建目录 “%s”"
 #, c-format
 msgid "Can't set access time of '%s'"
 msgstr "不能设置 “%s” 的存取时间"
-
-#, c-format
-msgid "Can't get default file perms for file at '%s' (file stat error)"
-msgstr "不能获取 “%s” 文件的缺省权限(文件 stat 错误)"
-
-#, c-format
-msgid "Can't open file at '%s'"
-msgstr "不能打开文件 “%s”"
-
-#, c-format
-msgid "Can't get file perms for file at '%s' (file stat error)"
-msgstr "不能获取 “%s” 文件的权限(文件 stat 错误)"
 
 #, c-format
 msgid "Can't change perms of file '%s'"
@@ -4021,10 +4062,6 @@ msgstr "无法打开标准输入"
 
 msgid "Reading from stdin is disallowed"
 msgstr "不接受从标准输入设备读取"
-
-#, c-format
-msgid "Can't get file name"
-msgstr "无法获取文件名"
 
 #, c-format
 msgid "Can't remove file '%s'"
