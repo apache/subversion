@@ -65,7 +65,7 @@ Candidate changes:
      never come when a user passes a revision that hasn't been committed
      yet.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, cmpilato
 
  * 1.7.x-neon-default branch
    Make neon the default http library.
