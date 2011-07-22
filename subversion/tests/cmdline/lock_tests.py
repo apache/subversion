@@ -1722,6 +1722,7 @@ def block_unlock_if_pre_unlock_hook_fails(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
+@XFail(svntest.main.is_ra_type_dav_serf)
 def lock_invalid_token(sbox):
   "verify pre-lock hook returning invalid token"
 
