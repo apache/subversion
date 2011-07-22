@@ -34,10 +34,16 @@ will be filtered by a user with universal read access to the
 repository's data.  Do not use the --use-merge-history (-g) or
 --stop-on-copy when generating this revision log stream.
 
+Return errorcode 0 if there are no additional dependencies found, 1 if
+there were; any other errorcode indicates a fatal error.
+
 Options:
 
    --help (-h)           Show this usage message and exit.
-   
+
+   --targets FILE        Read INCLUDE-PATHs and EXCLUDE-PATHs from FILE,
+                         one path per line.
+
    --verbose (-v)        Provide more information.  May be used multiple
                          times for additional levels of information (-vv).
 """
@@ -50,7 +56,11 @@ verbosity = 0
 
 class LogStreamError(Exception): pass
 class EOFError(Exception): pass
-  
+
+EXIT_SUCCESS = 0
+EXIT_MOREDEPS = 1
+EXIT_FAILURE = 2
+
 def sanitize_path(path):
   return '/'.join(filter(None, path.split('/')))
 
@@ -215,16 +225,18 @@ def svn_log_stream_get_dependencies(stream, included_paths):
 def analyze_logs(included_paths):
   print "Initial include paths:"
   for path in included_paths:
-    print "   /%s" % (path)
+    print " + /%s" % (path)
 
   dt = svn_log_stream_get_dependencies(sys.stdin, included_paths)
 
   if dt.dependent_paths:
+    found_new_deps = True
     print "Dependent include paths found:"
     for path in dt.dependent_paths:
-      print "   /%s" % (path)
+      print " + /%s" % (path)
     print "You need to also include them (or one of their parents)."
   else:
+    found_new_deps = False
     print "No new dependencies found!"
     parents = {}
     for path in dt.include_paths:
@@ -242,20 +254,23 @@ def analyze_logs(included_paths):
       for parent in parents:
         print "   /%s" % (parent)
 
+  return found_new_deps and EXIT_MOREDEPS or EXIT_SUCCESS
+
 def usage_and_exit(errmsg=None):
   program = os.path.basename(sys.argv[0])
   stream = errmsg and sys.stderr or sys.stdout
   stream.write(__doc__.replace("{PROGRAM}", program))
   if errmsg:
     stream.write("\nERROR: %s\n" % (errmsg))
-  sys.exit(errmsg and 1 or 0)
+  sys.exit(errmsg and EXIT_FAILURE or EXIT_SUCCESS)
 
 def main():
   config_dir = None
+  targets_file = None
   
   try:
     opts, args = getopt.getopt(sys.argv[1:], "hv",
-                               ["help", "verbose"])
+                               ["help", "verbose", "targets="])
   except getopt.GetoptError, e:
     usage_and_exit(str(e))
     
@@ -265,20 +280,39 @@ def main():
     elif option in ['-v', '--verbose']:
       global verbosity
       verbosity = verbosity + 1
+    elif option in ['--targets']:
+      targets_file = value
 
-  if len(args) < 2:
+  if len(args) == 0:
     usage_and_exit("Not enough arguments")
+
+  if targets_file is None:
+    targets = args[1:]
+  else:
+    targets = map(lambda x: x.rstrip('\n\r'),
+                  open(targets_file, 'r').readlines())
+  if not targets:
+    usage_and_exit("No target paths specified")
 
   try:
     if args[0] == 'include':
-      analyze_logs(map(sanitize_path, args[1:]))
+      sys.exit(analyze_logs(map(sanitize_path, targets)))
     elif args[0] == 'exclude':
       usage_and_exit("Feature not implemented")
     else:
       usage_and_exit("Valid subcommands are 'include' and 'exclude'")
+  except SystemExit:
+    raise
   except (LogStreamError, EOFError), e:
     log("ERROR: " + str(e), 0)
-    sys.exit(1)
+    sys.exit(EXIT_FAILURE)
+  except:
+    import traceback
+    exc_type, exc, exc_tb = sys.exc_info()
+    tb = traceback.format_exception(exc_type, exc, exc_tb)
+    sys.stderr.write(''.join(tb))
+    sys.exit(EXIT_FAILURE)
+
 
 if __name__ == "__main__":
     main()
