@@ -149,7 +149,7 @@ Candidate changes:
      Address a segfault (and a file descriptor leak) in svnsync of an ra_serf
      source to an ra_local target.
    Votes:
-     +1: danielsh
+     +1: danielsh, stsp
 
 Veto-blocked changes:
 =====================
