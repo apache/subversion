@@ -2489,10 +2489,17 @@ svn_io_start_cmd2(apr_proc_t *cmd_proc,
 
   /* Forward request for pipes to APR. */
   if (infile_pipe || outfile_pipe || errfile_pipe)
-    apr_procattr_io_set(cmdproc_attr,
-                        infile_pipe ? APR_FULL_BLOCK : APR_NO_PIPE,
-                        outfile_pipe ? APR_FULL_BLOCK : APR_NO_PIPE,
-                        errfile_pipe ? APR_FULL_BLOCK : APR_NO_PIPE);
+    {
+      apr_err = apr_procattr_io_set(cmdproc_attr,
+                                    infile_pipe ? APR_FULL_BLOCK : APR_NO_PIPE,
+                                    outfile_pipe ? APR_FULL_BLOCK : APR_NO_PIPE,
+                                    errfile_pipe ? APR_FULL_BLOCK : APR_NO_PIPE);
+
+      if (apr_err)
+        return svn_error_wrap_apr(apr_err,
+                                  _("Can't set process '%s' stdio pipes"),
+                                  cmd);
+    }
 
   /* Have the child print any problems executing its program to errfile. */
   apr_err = apr_pool_userdata_set(errfile, ERRFILE_KEY, NULL, pool);

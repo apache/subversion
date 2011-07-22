@@ -127,11 +127,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1149675
-   Add error checking.
-   Justification:
-     Address a segfault (and a file descriptor leak) in svnsync of an ra_serf
-     source to an ra_local target.
-   Votes:
-     +1: danielsh, stsp, hwright

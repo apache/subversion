@@ -202,7 +202,8 @@ run_hook_cmd(svn_string_t **result,
 
   if (err)
     {
-      err = svn_error_createf
+      /* CMD_PROC is not safe to use. Bail. */
+      return svn_error_createf
         (SVN_ERR_REPOS_HOOK_FAILURE, err, _("Failed to start '%s' hook"), cmd);
     }
   else
