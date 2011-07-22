@@ -2362,6 +2362,9 @@ finish_report(void *report_baton,
       /* Note: this throws out the old ITERPOOL_INNER.  */
       svn_pool_clear(iterpool);
 
+      if (sess->cancel_func)
+        SVN_ERR(sess->cancel_func(sess->cancel_baton));
+
       /* We need to be careful between the outer and inner ITERPOOLs,
          and what items are allocated within.  */
       iterpool_inner = svn_pool_create(iterpool);

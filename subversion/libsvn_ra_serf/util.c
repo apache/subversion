@@ -749,9 +749,8 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
 
       svn_pool_clear(iterpool);
 
-      if (sess->wc_callbacks &&
-          sess->wc_callbacks->cancel_func)
-        SVN_ERR((sess->wc_callbacks->cancel_func)(sess->wc_callback_baton));
+      if (sess->cancel_func)
+        SVN_ERR((*sess->cancel_func)(sess->cancel_baton));
 
       status = serf_context_run(sess->context, sess->timeout, iterpool);
 
