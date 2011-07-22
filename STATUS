@@ -124,6 +124,14 @@ Candidate changes:
    Votes:
      +1: danielsh, arfrever
 
+ * r1149539
+   Resolve issue #3969: provide proper cancellation support in the network loops
+   in ra_serf.
+   Justifications:
+     GUI clients can't rely on EINTR being returned when a user tries to cancel
+     an operation, as no signal is raised.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
