@@ -93,7 +93,7 @@ $SVN diff > $backupfile
 $SVN revert -R .
 $SVN up
 $SVN merge $mergeargs
-$VIM -e -s -n -N -i NONE -u NONE -c '/^ [*] $pattern/normal! dap' -c wq $STATUS
+$VIM -e -s -n -N -i NONE -u NONE -c '/^ [*] \V$pattern/normal! dap' -c wq $STATUS
 $SVN commit -F $logmsg_filename
 EOF
 
