@@ -37,6 +37,7 @@
 #include "private/svn_string_private.h"
 #include "svn_private_config.h"
 #include "svn_hash.h"
+#include "private/svn_dep_compat.h"
 
 /* Attempt to combine two ranges, IN1 and IN2. If they are adjacent or
    overlapping, and their inheritability allows them to be combined, put
@@ -707,23 +708,26 @@ svn_mergeinfo_parse(svn_mergeinfo_t *mergeinfo,
   return err;
 }
 
-
 svn_error_t *
-svn_rangelist_merge(apr_array_header_t **rangelist,
-                    const apr_array_header_t *changes,
-                    apr_pool_t *pool)
+svn_rangelist_merge2(apr_array_header_t *rangelist,
+                     const apr_array_header_t *changes,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
   int i, j;
-  apr_array_header_t *output = apr_array_make(pool, 1,
-                                              sizeof(svn_merge_range_t *));
+  apr_array_header_t *original_rangelist;
+  
+  original_rangelist = apr_array_copy(scratch_pool, rangelist);
+  apr_array_clear(rangelist);
+
   i = 0;
   j = 0;
-  while (i < (*rangelist)->nelts && j < changes->nelts)
+  while (i < (original_rangelist)->nelts && j < changes->nelts)
     {
       svn_merge_range_t *elt1, *elt2;
       int res;
 
-      elt1 = APR_ARRAY_IDX(*rangelist, i, svn_merge_range_t *);
+      elt1 = APR_ARRAY_IDX(original_rangelist, i, svn_merge_range_t *);
       elt2 = APR_ARRAY_IDX(changes, j, svn_merge_range_t *);
 
       res = svn_sort_compare_ranges(&elt1, &elt2);
@@ -734,46 +738,45 @@ svn_rangelist_merge(apr_array_header_t **rangelist,
              result. */
           if (elt1->inheritable || elt2->inheritable)
             elt1->inheritable = TRUE;
-          SVN_ERR(combine_with_lastrange(elt1, output,
-                                         TRUE, pool, pool));
+          SVN_ERR(combine_with_lastrange(elt1, rangelist, TRUE, result_pool,
+                                         scratch_pool));
           i++;
           j++;
         }
       else if (res < 0)
         {
-          SVN_ERR(combine_with_lastrange(elt1, output,
-                                         TRUE, pool, pool));
+          SVN_ERR(combine_with_lastrange(elt1, rangelist, TRUE, result_pool,
+                                         scratch_pool));
           i++;
         }
       else
         {
-          SVN_ERR(combine_with_lastrange(elt2, output,
-                                         TRUE, pool, pool));
+          SVN_ERR(combine_with_lastrange(elt2, rangelist, TRUE, result_pool,
+                                         scratch_pool));
           j++;
         }
     }
   /* Copy back any remaining elements.
      Only one of these loops should end up running, if anything. */
 
-  SVN_ERR_ASSERT(!(i < (*rangelist)->nelts && j < changes->nelts));
+  SVN_ERR_ASSERT(!(i < (original_rangelist)->nelts && j < changes->nelts));
 
-  for (; i < (*rangelist)->nelts; i++)
+  for (; i < (original_rangelist)->nelts; i++)
     {
-      svn_merge_range_t *elt = APR_ARRAY_IDX(*rangelist, i,
+      svn_merge_range_t *elt = APR_ARRAY_IDX(original_rangelist, i,
                                              svn_merge_range_t *);
-      SVN_ERR(combine_with_lastrange(elt, output,
-                                     TRUE, pool, pool));
+      SVN_ERR(combine_with_lastrange(elt, rangelist, TRUE, result_pool,
+                                     scratch_pool));
     }
 
 
   for (; j < changes->nelts; j++)
     {
       svn_merge_range_t *elt = APR_ARRAY_IDX(changes, j, svn_merge_range_t *);
-      SVN_ERR(combine_with_lastrange(elt, output,
-                                     TRUE, pool, pool));
+      SVN_ERR(combine_with_lastrange(elt, rangelist,
+                                     TRUE, result_pool, scratch_pool));
     }
 
-  *rangelist = output;
   return SVN_NO_ERROR;
 }
 
