@@ -149,12 +149,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1148424
-   Resolve issue 3963, 'svn update -r{R>HEAD}' hangs client over ra_svn.
-   Justification:
-     Subversion and svnserve shouldn't hang waiting for IO that will
-     never come when a user passes a revision that hasn't been committed
-     yet.
-   Votes:
-     +1: rhuijben, cmpilato, philip
