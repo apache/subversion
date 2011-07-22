@@ -139,7 +139,7 @@ Candidate changes:
    Justification:
      It's an unusal, perhaps pointless, configuration but SEGVs are bad.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
 Veto-blocked changes:
 =====================
