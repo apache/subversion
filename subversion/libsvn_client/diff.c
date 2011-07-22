@@ -1737,11 +1737,11 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
   SVN_ERR(svn_client__get_diff_editor(
                 &diff_editor, &diff_edit_baton,
                 NULL, "", depth,
-                extra_ra_session, rev1, TRUE, FALSE,
+                extra_ra_session, rev1, TRUE,
                 callbacks, callback_baton,
                 ctx->cancel_func, ctx->cancel_baton,
                 NULL /* no notify_func */, NULL /* no notify_baton */,
-                pool, pool));
+                pool));
 
   /* We want to switch our txn into URL2 */
   SVN_ERR(svn_ra_do_diff3
