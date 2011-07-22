@@ -128,13 +128,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1149240
-   Support APR 0.9.
-   Justification:
-     We still claim to support it.
-   Votes:
-     +1: philip, rhuijben, hwright
-
  * r1149572
    Fix mod_authz_svn SEGV with AuthzForceUsernameCase and no authentication.
    Justification:
