@@ -97,21 +97,6 @@ Candidate changes:
                have for this code? Why do you need it in the release, or
                on trunk, for that matter?)
 
- * r1149160
-   Make serf report an error when performing 'svn log' on a non existing path
-   aka issue #3937.
-   Justifications:
-     There should be no known regressions in the default http ra layer.
-   Votes:
-     +1: rhuijben, philip
-
- * r1149240
-   Support APR 0.9.
-   Justification:
-     We still claim to support it.
-   Votes:
-     +1: philip, rhuijben
-
  * r1149401
    Fail early when attempting to build swig-pl after configuring --without-swig.
    Justification:
@@ -128,13 +113,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1149572
-   Fix mod_authz_svn SEGV with AuthzForceUsernameCase and no authentication.
-   Justification:
-     It's an unusal, perhaps pointless, configuration but SEGVs are bad.
-   Votes:
-     +1: philip, rhuijben
-
  * r1149627
    Adjust library order in build.conf for kwallet/gnome-keyring.
    Justification:
@@ -143,17 +121,39 @@ Candidate changes:
    Votes:
      +1: philip
 
- * r1149675
-   Add error checking.
-   Justification:
-     Address a segfault (and a file descriptor leak) in svnsync of an ra_serf
-     source to an ra_local target.
-   Votes:
-     +1: danielsh, stsp
-
 Veto-blocked changes:
 =====================
 
 
 Approved changes:
 =================
+
+ * r1149160
+   Make serf report an error when performing 'svn log' on a non existing path
+   aka issue #3937.
+   Justifications:
+     There should be no known regressions in the default http ra layer.
+   Votes:
+     +1: rhuijben, philip, hwright
+
+ * r1149240
+   Support APR 0.9.
+   Justification:
+     We still claim to support it.
+   Votes:
+     +1: philip, rhuijben, hwright
+
+ * r1149572
+   Fix mod_authz_svn SEGV with AuthzForceUsernameCase and no authentication.
+   Justification:
+     It's an unusal, perhaps pointless, configuration but SEGVs are bad.
+   Votes:
+     +1: philip, rhuijben, hwright
+
+ * r1149675
+   Add error checking.
+   Justification:
+     Address a segfault (and a file descriptor leak) in svnsync of an ra_serf
+     source to an ra_local target.
+   Votes:
+     +1: danielsh, stsp, hwright
