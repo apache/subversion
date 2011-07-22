@@ -7934,6 +7934,9 @@ rangelist_merge_revision(apr_array_header_t *rangelist,
 
    Use SCRATCH_POOL for temporary allocations.  Allocate additions to
    BATON->MERGED_RANGES and BATON->OPERATIVE_RANGES in BATON->POOL.
+
+   Note: This callback must be invoked from oldest LOG_ENTRY->REVISION
+   to youngest LOG_ENTRY->REVISION -- see rangelist_merge_revision().
 */
 static svn_error_t *
 log_noop_revs(void *baton,
@@ -8174,6 +8177,11 @@ remove_noop_subtree_ranges(const char *url1,
 
   APR_ARRAY_PUSH(log_targets, const char *) = "";
 
+  /* Invoke the svn_log_entry_receiver_t receiver log_noop_revs() from
+     oldest to youngest.  The receiver is optimized to add ranges to
+     log_gap_baton.merged_ranges and log_gap_baton.operative_ranges, but
+     requires that the revs arrive oldest to youngest -- see log_noop_revs()
+     and rangelist_merge_revision(). */
   SVN_ERR(svn_ra_get_log2(ra_session, log_targets, oldest_gap_rev->start + 1,
                           youngest_gap_rev->end, 0, TRUE, TRUE, FALSE,
                           apr_array_make(scratch_pool, 0,
