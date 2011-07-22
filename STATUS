@@ -56,7 +56,8 @@ Candidate changes:
      r1149377 is a typo fix.
      r1149398 fixes the bindings.
    Votes:
-     +1: danielsh, cmpilato (without r1149701, r1149713)
+     +1: danielsh
+     +1: cmpilato (without r1149701, r1149713)
      +1: rhuijben (Without r1149701, r1149713 the behavior differs between the
                    different ra layers and the tests fail on serf)
 
