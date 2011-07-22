@@ -181,7 +181,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
     # to compensate with using something like -R`$apu_config --prefix`/lib.
     #
     if test -z "$SVN_DB_LIBS"; then
-      SVN_DB_LIBS="`$apu_config --libs | $SED -e 's/.*\(-ldb[^[:space:]]*\).*/\1/' | $EGREP -- '-ldb[^[:space:]]*'`"
+      SVN_DB_LIBS=["`$apu_config --libs | $SED -e 's/.*\(-ldb[^[:space:]]*\).*/\1/' | $EGREP -- '-ldb[^[:space:]]*'`"]
     fi
 
     CPPFLAGS="$SVN_DB_INCLUDES $SVN_APRUTIL_INCLUDES $CPPFLAGS" 
