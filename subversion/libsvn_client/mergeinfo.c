@@ -1847,16 +1847,20 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
          subtrees. */
       if (apr_hash_count(merged_noninheritable))
         {
+          apr_pool_t *iterpool2 = svn_pool_create(iterpool);
+
           for (hi = apr_hash_first(iterpool, merged_noninheritable);
                hi;
                hi = apr_hash_next(hi))
             {
               apr_array_header_t *list = svn__apr_hash_index_val(hi);
-              SVN_ERR(svn_rangelist_merge(
-                &master_noninheritable_rangelist,
+              svn_pool_clear(iterpool2);
+              SVN_ERR(svn_rangelist_merge2(
+                master_noninheritable_rangelist,
                 svn_rangelist_dup(list, scratch_pool),
-                scratch_pool));
+                scratch_pool, iterpool2));
             }
+          svn_pool_destroy(iterpool2);
         }
 
       /* Find the intersection of the inheritable part of TGT_MERGEINFO
@@ -1874,6 +1878,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
              to SUBTREE_PATH. */
           apr_array_header_t *subtree_merged_rangelist =
             apr_array_make(scratch_pool, 1, sizeof(svn_merge_range_t *));
+          apr_pool_t *iterpool2 = svn_pool_create(iterpool);
 
           for (hi = apr_hash_first(iterpool, merged);
                hi;
@@ -1881,15 +1886,17 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
             {
               apr_array_header_t *list = svn__apr_hash_index_val(hi);
 
-              SVN_ERR(svn_rangelist_merge(&master_inheritable_rangelist,
-                                          svn_rangelist_dup(list,
+              svn_pool_clear(iterpool2);
+              SVN_ERR(svn_rangelist_merge2(master_inheritable_rangelist,
+                                           svn_rangelist_dup(list,
+                                                             scratch_pool),
+                                           scratch_pool, iterpool2));
+              SVN_ERR(svn_rangelist_merge2(subtree_merged_rangelist,
+                                           svn_rangelist_dup(list,
                                                             scratch_pool),
-                                          scratch_pool));
-              SVN_ERR(svn_rangelist_merge(&subtree_merged_rangelist,
-                                          svn_rangelist_dup(list,
-                                                            scratch_pool),
-                                          scratch_pool));
+                                           scratch_pool, iterpool2));
             }
+          svn_pool_destroy(iterpool2);
 
           apr_hash_set(inheritable_subtree_merges,
                        apr_pstrdup(scratch_pool, subtree_path),
@@ -1937,9 +1944,9 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
           if (deleted_rangelist->nelts)
             {
               svn_rangelist__set_inheritance(deleted_rangelist, FALSE);
-              SVN_ERR(svn_rangelist_merge(&master_noninheritable_rangelist,
-                                          deleted_rangelist,
-                                          scratch_pool));
+              SVN_ERR(svn_rangelist_merge2(master_noninheritable_rangelist,
+                                           deleted_rangelist,
+                                           scratch_pool, iterpool));
               SVN_ERR(svn_rangelist_remove(&master_inheritable_rangelist,
                                            deleted_rangelist,
                                            master_inheritable_rangelist,
@@ -1952,9 +1959,9 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
   if (finding_merged)
     {
       /* Roll all the merged revisions into one rangelist. */
-      SVN_ERR(svn_rangelist_merge(&master_inheritable_rangelist,
-                                  master_noninheritable_rangelist,
-                                  scratch_pool));
+      SVN_ERR(svn_rangelist_merge2(master_inheritable_rangelist,
+                                   master_noninheritable_rangelist,
+                                   scratch_pool, scratch_pool));
 
     }
   else
@@ -1970,9 +1977,10 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
           apr_array_header_t *subtree_merged_rangelist =
             svn__apr_hash_index_val(hi);
 
-          SVN_ERR(svn_rangelist_merge(&source_master_rangelist,
-                                      subtree_merged_rangelist,
-                                      iterpool));
+          svn_pool_clear(iterpool);
+          SVN_ERR(svn_rangelist_merge2(source_master_rangelist,
+                                       subtree_merged_rangelist,
+                                       scratch_pool, iterpool));
         }
 
       /* From what might be eligible subtract what we know is partially merged
@@ -1981,9 +1989,9 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                    master_noninheritable_rangelist,
                                    source_master_rangelist,
                                    FALSE, scratch_pool));
-      SVN_ERR(svn_rangelist_merge(&source_master_rangelist,
-                                  master_noninheritable_rangelist,
-                                  scratch_pool));
+      SVN_ERR(svn_rangelist_merge2(source_master_rangelist,
+                                   master_noninheritable_rangelist,
+                                   scratch_pool, scratch_pool));
       SVN_ERR(svn_rangelist_remove(&master_inheritable_rangelist,
                                    master_inheritable_rangelist,
                                    source_master_rangelist,
