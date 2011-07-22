@@ -2958,8 +2958,9 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
                                                 peg_rev,
                                                 FALSE,
                                                 scratch_pool, scratch_pool));
-              SVN_ERR(svn_rangelist_merge(&(child->remaining_ranges),
-                                          deleted_rangelist, scratch_pool));
+              SVN_ERR(svn_rangelist_merge2(child->remaining_ranges,
+                                           deleted_rangelist, scratch_pool,
+                                           scratch_pool));
 
               /* Return CHILD->REMAINING_RANGES and PARENT->REMAINING_RANGES
                  to reverse order if necessary. */
@@ -3022,8 +3023,9 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
                                         parent->remaining_ranges,
                                         older_rev, segment->range_start,
                                         FALSE, scratch_pool, scratch_pool));
-      SVN_ERR(svn_rangelist_merge(&(child->remaining_ranges),
-                                  non_existent_rangelist, scratch_pool));
+      SVN_ERR(svn_rangelist_merge2(child->remaining_ranges,
+                                   non_existent_rangelist, scratch_pool,
+                                   scratch_pool));
 
       /* Return CHILD->REMAINING_RANGES and PARENT->REMAINING_RANGES
          to reverse order if necessary. */
@@ -3769,8 +3771,9 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
             implicit_rangelist = apr_array_make(scratch_pool, 0,
                                                 sizeof(svn_merge_range_t *));
 
-          SVN_ERR(svn_rangelist_merge(&implicit_rangelist,
-                                      explicit_rangelist, scratch_pool));
+          SVN_ERR(svn_rangelist_merge2(implicit_rangelist,
+                                       explicit_rangelist, scratch_pool,
+                                       scratch_pool));
           SVN_ERR(svn_rangelist_reverse(implicit_rangelist, scratch_pool));
           child->remaining_ranges = svn_rangelist_dup(implicit_rangelist,
                                                       result_pool);
@@ -4157,6 +4160,7 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
         apr_array_make(scratch_pool, 2, sizeof(svn_merge_range_t *));
       apr_array_header_t *gap_rangelist;
       apr_hash_index_t *hi;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
       for (hi = apr_hash_first(scratch_pool, implicit_src_mergeinfo);
            hi;
@@ -4164,9 +4168,12 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
         {
           apr_array_header_t *value = svn__apr_hash_index_val(hi);
 
-          SVN_ERR(svn_rangelist_merge(&implicit_rangelist, value,
-                                      scratch_pool));
+          svn_pool_clear(iterpool);
+
+          SVN_ERR(svn_rangelist_merge2(implicit_rangelist, value,
+                                       scratch_pool, iterpool));
         }
+      svn_pool_destroy(iterpool);
       SVN_ERR(svn_rangelist_remove(&gap_rangelist, implicit_rangelist,
                                    requested_rangelist, FALSE,
                                    scratch_pool));
@@ -4325,6 +4332,8 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
 
       parent = NULL;
 
+      svn_pool_clear(iterpool);
+
       /* If the path is absent don't do subtree merge either. */
       SVN_ERR_ASSERT(child);
       if (child->absent)
@@ -4445,9 +4454,9 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                  to, CHILD->REMAINING_RANGES as appropriate. */
 
               if (overlaps_or_adjoins)
-                SVN_ERR(svn_rangelist_merge(&(child->remaining_ranges),
-                                            merge_b->implicit_src_gap,
-                                            result_pool));
+                SVN_ERR(svn_rangelist_merge2(child->remaining_ranges,
+                                             merge_b->implicit_src_gap,
+                                             result_pool, iterpool));
               else /* equals == TRUE */
                 SVN_ERR(svn_rangelist_remove(&(child->remaining_ranges),
                                              merge_b->implicit_src_gap,
@@ -4621,8 +4630,7 @@ update_wc_mergeinfo(svn_mergeinfo_catalog_t result_catalog,
         }
       else
         {
-          SVN_ERR(svn_rangelist_merge(&rangelist, ranges,
-                                      iterpool));
+          SVN_ERR(svn_rangelist_merge2(rangelist, ranges, iterpool, iterpool));
         }
       /* Update the mergeinfo by adjusting the path's rangelist. */
       apr_hash_set(mergeinfo, rel_path, APR_HASH_KEY_STRING, rangelist);
@@ -8077,6 +8085,7 @@ remove_noop_subtree_ranges(const char *url1,
   svn_merge_range_t *youngest_gap_rev;
   apr_array_header_t *inoperative_ranges;
   const char *repos_root_url;
+  apr_pool_t *iterpool;
 
 
   /* This function is only intended to work with forward merges. */
@@ -8107,18 +8116,22 @@ remove_noop_subtree_ranges(const char *url1,
     return SVN_NO_ERROR;
 
   /* Create a rangelist describing every range required across all subtrees. */
+  iterpool = svn_pool_create(scratch_pool);
   for (i = 1; i < notify_b->children_with_mergeinfo->nelts; i++)
     {
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(notify_b->children_with_mergeinfo, i,
                       svn_client__merge_path_t *);
 
+      svn_pool_clear(iterpool);
+
       /* CHILD->REMAINING_RANGES will be NULL if child is absent. */
       if (child->remaining_ranges && child->remaining_ranges->nelts)
-        SVN_ERR(svn_rangelist_merge(&subtree_remaining_ranges,
-                                    child->remaining_ranges,
-                                    scratch_pool));
+        SVN_ERR(svn_rangelist_merge2(subtree_remaining_ranges,
+                                     child->remaining_ranges,
+                                     scratch_pool, iterpool));
     }
+  svn_pool_destroy(iterpool);
 
   /* It's possible that none of the subtrees had any remaining ranges. */
   if (!subtree_remaining_ranges->nelts)
@@ -8176,8 +8189,8 @@ remove_noop_subtree_ranges(const char *url1,
                                operative_ranges,
                                inoperative_ranges, FALSE, scratch_pool));
 
-  SVN_ERR(svn_rangelist_merge(&log_gap_baton.merged_ranges,
-                              inoperative_ranges, scratch_pool));
+  SVN_ERR(svn_rangelist_merge2(log_gap_baton.merged_ranges, inoperative_ranges,
+                               scratch_pool, scratch_pool));
 
   for (i = 1; i < notify_b->children_with_mergeinfo->nelts; i++)
     {
@@ -9877,6 +9890,7 @@ find_unsynced_ranges(const char *source_repos_rel_path,
         {
           svn_mergeinfo_t mergeinfo = svn__apr_hash_index_val(hi_catalog);
           apr_hash_index_t *hi_mergeinfo;
+          apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
           for (hi_mergeinfo = apr_hash_first(scratch_pool, mergeinfo);
                hi_mergeinfo;
@@ -9885,9 +9899,11 @@ find_unsynced_ranges(const char *source_repos_rel_path,
               apr_array_header_t *rangelist =
                 svn__apr_hash_index_val(hi_mergeinfo);
 
-              SVN_ERR(svn_rangelist_merge(&potentially_unmerged_ranges,
-                                          rangelist, scratch_pool));
+              svn_pool_clear(iterpool);
+              SVN_ERR(svn_rangelist_merge2(potentially_unmerged_ranges,
+                                           rangelist, scratch_pool, iterpool));
             }
+          svn_pool_destroy(iterpool);
         }
     }
 
