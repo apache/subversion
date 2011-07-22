@@ -56,7 +56,7 @@ Candidate changes:
      r1149377 is a typo fix.
      r1149398 fixes the bindings.
    Votes:
-     +1: danielsh
+     +1: danielsh, cmpilato
 
  * r1148424
    Resolve issue 3963, 'svn update -r{R>HEAD}' hangs client over ra_svn.
