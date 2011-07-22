@@ -102,6 +102,9 @@ Candidate changes:
                    proper error handling instead. And besides I doubt anyone is
                    going to use this define (No veto!))
      -0: philip (changed my mind, I don't think this is needed on the branch)
+     -0: stsp (Arfrever, can you please explain precisely what use case you
+               have for this code? Why do you need it in the release, or
+               on trunk, for that matter?)
 
  * r1149160
    Make serf report an error when performing 'svn log' on a non existing path
