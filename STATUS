@@ -42,7 +42,7 @@ Candidate changes:
    Votes:
      +0: danielsh
 
- * r1147882, r1149343, r1149371, r1149372, r1149377, r1149398
+ * r1147882, r1149343, r1149371, r1149372, r1149377, r1149398, r1149701, r1149713
    Validate consumer-supplied tokens in libsvn_fs.  (This specifically applies
    to the output of pre-lock hook scripts.)
    Justification:
@@ -56,7 +56,9 @@ Candidate changes:
      r1149377 is a typo fix.
      r1149398 fixes the bindings.
    Votes:
-     +1: danielsh, cmpilato
+     +1: danielsh, cmpilato (without r1149701, r1149713)
+     +1: rhuijben (Without r1149701, r1149713 the behavior differs between the
+                   different ra layers and the tests fail on serf)
 
  * 1.7.x-neon-default branch
    Make neon the default http library.
