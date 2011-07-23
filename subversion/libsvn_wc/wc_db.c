@@ -3422,8 +3422,8 @@ op_depth_for_copy(apr_int64_t *op_depth,
                   apr_pool_t *scratch_pool);
 
 
-/* Like svn_wc__db_op_copy()/svn_wc__db_op_move(), but with
-   WCROOT+LOCAL_RELPATH instead of DB+LOCAL_ABSPATH.  */
+/* Like svn_wc__db_op_copy(), but with WCROOT+LOCAL_RELPATH
+ * instead of DB+LOCAL_ABSPATH.  */
 static svn_error_t *
 db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
            const char *src_relpath,
@@ -3655,6 +3655,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                    const char *src_abspath,
                    const char *dst_abspath,
                    const char *dst_op_root_abspath,
+                   svn_boolean_t is_move,
                    const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool)
 {
@@ -3676,7 +3677,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
   VERIFY_USABLE_WCROOT(ocb.dst_wcroot);
 
   ocb.work_items = work_items;
-  ocb.is_move = FALSE;
+  ocb.is_move = is_move;
 
   /* Call with the sdb in src_wcroot. It might call itself again to
      also obtain a lock in dst_wcroot */
@@ -4712,43 +4713,6 @@ svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
 }
 
 #endif /* SVN__SUPPORT_BASE_MERGE  */
-
-
-svn_error_t *
-svn_wc__db_op_move(svn_wc__db_t *db,
-                   const char *src_abspath,
-                   const char *dst_abspath,
-                   const char *dst_op_root_abspath,
-                   const svn_skel_t *work_items,
-                   apr_pool_t *scratch_pool)
-{
-  struct op_copy_baton ocb = {0};
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&ocb.src_wcroot,
-                                                &ocb.src_relpath, db,
-                                                src_abspath,
-                                                scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(ocb.src_wcroot);
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&ocb.dst_wcroot,
-                                                &ocb.dst_relpath,
-                                                db, dst_abspath,
-                                                scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(ocb.dst_wcroot);
-
-  ocb.work_items = work_items;
-  ocb.is_move = TRUE;
-
-  /* Call with the sdb in src_wcroot. It might call itself again to
-     also obtain a lock in dst_wcroot */
-  SVN_ERR(svn_sqlite__with_lock(ocb.src_wcroot->sdb, op_copy_txn, &ocb,
-                                scratch_pool));
-
-  return SVN_NO_ERROR;
-}
 
 
 svn_error_t *
