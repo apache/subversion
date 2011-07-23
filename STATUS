@@ -55,6 +55,8 @@ Candidate changes:
      r1149372 improves an error message.
      r1149377 is a typo fix.
      r1149398 fixes the bindings.
+     r1149701 removes an XFail from a now-working test
+     r1149713 correctly reports lock warnings
    Votes:
      +1: danielsh
      +1: cmpilato (without r1149701, r1149713)
@@ -81,7 +83,8 @@ Candidate changes:
    executables.
    Justification:
      Version mismatch errors would occur during trying to use locally built
-     executables when a different version of Subversion was installed in /usr/lib.
+     executables when a different version of Subversion was installed
+     in /usr/lib.
    Votes:
      +1: arfrever, philip
 
@@ -101,15 +104,16 @@ Candidate changes:
                on trunk, for that matter?)
 
  * r1149401
-   Fail early when attempting to build swig-pl after configuring --without-swig.
+   Fail early when attempting to build swig-pl after configuring
+   --without-swig.
    Justification:
      Convert mysterious error messages to a clean early exit.
    Votes:
      +1: danielsh, arfrever
 
  * r1149539
-   Resolve issue #3969: provide proper cancellation support in the network loops
-   in ra_serf.
+   Resolve issue #3969: provide proper cancellation support in the
+   network loops in ra_serf.
    Justifications:
      GUI clients can't rely on EINTR being returned when a user tries to cancel
      an operation, as no signal is raised.
@@ -123,6 +127,7 @@ Candidate changes:
      this is not a regression.
    Votes:
      +1: philip
+
 
 Veto-blocked changes:
 =====================
