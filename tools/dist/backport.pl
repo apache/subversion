@@ -72,7 +72,7 @@ sub merge {
     print $logmsg_fh "Reintergrate the $entry{header}:";
     print $logmsg_fh "";
   } elsif (@{$entry{revisions}}) {
-    $pattern = $entry{revisions}->[0];
+    $pattern = 'r' . $entry{revisions}->[0];
     $mergeargs = join " ", (map { "-c$_" } @{$entry{revisions}}), '^/subversion/trunk';
     if (@{$entry{revisions}} > 1) {
       print $logmsg_fh "Merge the $entry{header} from trunk:";
