@@ -28,6 +28,7 @@ my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
 my $VIM = 'vim';
 my $STATUS = './STATUS';
 my $BRANCHES = '^/subversion/branches';
+my $WET_RUN = qw[false true][1]; # don't commit
 
 sub usage {
   my $basename = $0;
@@ -95,13 +96,23 @@ $SVN revert -R .
 $SVN up
 $SVN merge $mergeargs
 $VIM -e -s -n -N -i NONE -u NONE -c '/^ [*] $pattern/normal! dap' -c wq $STATUS
-$SVN commit -F $logmsg_filename
+if $WET_RUN; then
+  $SVN commit -F $logmsg_filename
+else
+  echo "Committing:"
+  $SVN status -q
+  cat $logmsg_filename
+fi
 EOF
 
   $script .= <<"EOF" if $entry{branch};
 reinteg_rev=\`$SVN info $STATUS | sed -ne 's/Last Changed Rev: //p'\`
-$SVN rm $BRANCHES/$entry{branch}\
-        -m "Remove the '$entry{branch}' branch, reintegrated in r\$reinteg_rev."
+if $WET_RUN; then
+  $SVN rm $BRANCHES/$entry{branch}\
+          -m "Remove the '$entry{branch}' branch, reintegrated in r\$reinteg_rev."
+else
+  echo "Removing reintegrated '$entry{branch}' branch"
+fi
 EOF
 
   open SHELL, '|-', qw#/bin/sh -x# or die $!;
