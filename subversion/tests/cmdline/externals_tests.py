@@ -28,7 +28,6 @@
 import sys
 import os
 import re
-import tempfile
 
 # Our testing module
 import svntest
@@ -214,25 +213,18 @@ def externals_test_setup(sbox):
 def change_external(path, new_val, commit=True):
   """Change the value of the externals property on PATH to NEW_VAL,
   and commit the change unless COMMIT is False."""
-  (fd, tmp_f) = tempfile.mkstemp(dir=svntest.main.temp_dir)
-  svntest.main.file_append(tmp_f, new_val)
-  svntest.actions.run_and_verify_svn(None, None, [], 'pset',
-                                     '-F', tmp_f, 'svn:externals', path)
+
+  svntest.actions.set_prop('svn:externals', new_val, path)
   if commit:
     svntest.actions.run_and_verify_svn(None, None, [], 'ci',
                                        '-m', 'log msg', '--quiet', path)
-  os.close(fd)
-  os.remove(tmp_f)
 
 def change_external_expect_error(path, new_val, expected_err):
   """Try to change the value of the externals property on PATH to NEW_VAL,
   but expect to get an error message that matches EXPECTED_ERR."""
-  (fd, tmp_f) = tempfile.mkstemp(dir=svntest.main.temp_dir)
-  svntest.main.file_append(tmp_f, new_val)
-  svntest.actions.run_and_verify_svn(None, None, expected_err, 'pset',
-                                     '-F', tmp_f, 'svn:externals', path)
-  os.close(fd)
-  os.remove(tmp_f)
+
+  svntest.actions.set_prop('svn:externals', new_val, path,
+                           expected_err=expected_err)
 
 
 def probe_paths_exist(paths):
