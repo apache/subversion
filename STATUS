@@ -63,14 +63,6 @@ Candidate changes:
      +1: rhuijben (Without r1149701, r1149713 the behavior differs between the
                    different ra layers and the tests fail on serf)
 
- * 1.7.x-neon-default branch
-   Make neon the default http library.
-   Justification:
-     Serf isn't ready, new code not enabled, no proposal to enable it.
-   Votes:
-     +1: philip
-     -1: gstein (I see no explanation for why "serf is not ready")
-
  * r1147540, r1147541
    Remove unused variables in build system.
    Justification:
@@ -142,7 +134,7 @@ Candidate changes:
    Notes:
      This error is invisible to users without the r1150254 group.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, danielsh
 
  * r1150327
    Report not finding txn roots produce a 404 error in mod_dav_svn.
@@ -152,6 +144,7 @@ Candidate changes:
      This error is invisible to users without the r1150254 group.
    Votes:
      +1: rhuijben
+     +0: danielsh
      
  * r1150254, r1150260, r1150261, r1150266
    Return errors by composing instead of ignoring them.
@@ -166,6 +159,7 @@ Candidate changes:
      r1150266: Return editor abort errors when the commit processing aborts.
    Votes:
      +1: rhuijben (after r1150302 and r1150327 are backported)
+     +1: danielsh
      
  * r1150368
    Resolve an obscure locked file problem when aborting a commit.
@@ -174,10 +168,11 @@ Candidate changes:
      on a server. And locks (the needle file) should be released as soon as
      possible.
    Notes:
-     rhuijben: This problem triggered my weekend search for locked files.
- problems
+     rhuijben: This problem triggered my weekend search for locked files.  problems
    Votes:
      +1: rhuijben
+     +0: danielsh (we shouldn't depend on libsvn_client fixes to avoid
+                   accumulating tempfiles on the server)
 
  * r1150372
    When resolving to conflict-*, close the generated file before using it
@@ -185,7 +180,7 @@ Candidate changes:
      Copying unclosed/unflushed files is not nice and might cause all kinds
      of problems.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, danielsh
 
  * r1150441
    Closing a translated stream should close the inner stream.
@@ -194,10 +189,18 @@ Candidate changes:
      (And may cause different problems when behavior is attachted to stream
       close, like with checksum streams)
    Votes:
-     +1: rhuijben
+     +1: rhuijben, danielsh
 
 Veto-blocked changes:
 =====================
+
+ * 1.7.x-neon-default branch
+   Make neon the default http library.
+   Justification:
+     Serf isn't ready, new code not enabled, no proposal to enable it.
+   Votes:
+     +1: philip
+     -1: gstein (I see no explanation for why "serf is not ready")
 
 
 Approved changes:
