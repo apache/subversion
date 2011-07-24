@@ -718,12 +718,11 @@ close_edit(void *edit_baton,
          So, in a nutshell: svn commits are an all-or-nothing deal.
          Each commit creates a new fs txn which either succeeds or is
          aborted completely.  No second chances;  the user simply
-         needs to update and commit again  :)
+         needs to update and commit again  :) */
 
-         We ignore the possible error result from svn_fs_abort_txn();
-         it's more important to return the original error. */
-      svn_error_clear(svn_fs_abort_txn(eb->txn, pool));
-      return svn_error_trace(err);
+      return svn_error_trace(
+                svn_error_compose_create(err,
+                                         svn_fs_abort_txn(eb->txn, pool)));
     }
 
   /* Pass new revision information to the caller's callback. */
