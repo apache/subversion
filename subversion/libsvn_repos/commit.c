@@ -94,6 +94,9 @@ struct edit_baton
   /* The object representing the root directory of the svn txn. */
   svn_fs_root_t *txn_root;
 
+  /* Avoid aborting an fs transaction more than once */
+  svn_boolean_t txn_aborted;
+
   /** Filled in when the edit is closed: **/
 
   /* The new revision created by this commit. */
@@ -720,6 +723,8 @@ close_edit(void *edit_baton,
          aborted completely.  No second chances;  the user simply
          needs to update and commit again  :) */
 
+      eb->txn_aborted = TRUE;
+
       return svn_error_trace(
                 svn_error_compose_create(err,
                                          svn_fs_abort_txn(eb->txn, pool)));
@@ -768,9 +773,12 @@ abort_edit(void *edit_baton,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
-  if ((! eb->txn) || (! eb->txn_owner))
+  if ((! eb->txn) || (! eb->txn_owner) || eb->txn_aborted)
     return SVN_NO_ERROR;
-  return svn_fs_abort_txn(eb->txn, pool);
+
+  eb->txn_aborted = TRUE;
+
+  return svn_error_trace(svn_fs_abort_txn(eb->txn, pool));
 }
 
 
