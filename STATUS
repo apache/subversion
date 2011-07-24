@@ -55,8 +55,8 @@ Candidate changes:
      r1149372 improves an error message.
      r1149377 is a typo fix.
      r1149398 fixes the bindings.
-     r1149701 removes an XFail from a now-working test
-     r1149713 correctly reports lock warnings
+     r1149701 marks the test XFail for serf
+     r1149713 correctly reports lock warnings and removes the XFail
    Votes:
      +1: danielsh
      +1: cmpilato (without r1149701, r1149713)
@@ -128,6 +128,12 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1150242
+   Make blame close its temporary files before deleting them.
+   Justification:
+     Hitting the io retry loop on windows is very painfull.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
