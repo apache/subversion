@@ -244,6 +244,7 @@ check_patch_result(const char *path, const char **expected_lines, const char *eo
   svn_pool_destroy(iterpool);
 
   SVN_TEST_ASSERT(i == num_expected_lines);
+  SVN_ERR(svn_stream_close(stream));
   SVN_ERR(svn_io_remove_file2(path, FALSE, pool));
 
   return SVN_NO_ERROR;
