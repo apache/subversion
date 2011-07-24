@@ -153,7 +153,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
      
-  * r1150254, r1150260, r1150261, r1150266
+ * r1150254, r1150260, r1150261, r1150266
    Return errors by composing instead of ignoring them.
    Justification:
      Returning more errors makes it much easier to diagnose problems.
@@ -166,6 +166,26 @@ Candidate changes:
      r1150266: Return editor abort errors when the commit processing aborts.
    Votes:
      +1: rhuijben (after r1150302 and r1150327 are backported)
+     
+ * r1150368
+   Resolve an obscure locked file problem when aborting a commit.
+   Justification:
+     Transaction cleanup should succeed or temp files will accumulate
+     on a server. And locks (the needle file) should be released as soon as
+     possible.
+   Notes:
+     rhuijben: This problem triggered my weekend search for locked files.
+ problems
+   Votes:
+     +1: rhuijben
+
+ * r1150372
+   When resolving to conflict-*, close the generated file before using it
+   Justification:
+     Copying unclosed/unflushed files is not nice and might cause all kinds
+     of problems.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
