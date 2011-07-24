@@ -67,7 +67,8 @@ sub merge {
   my $backupfile = "backport_pl.$$.tmp";
 
   if ($entry{branch}) {
-    $pattern = "$entry{branch} branch";
+    # NOTE: This doesn't escape the branch into the pattern.
+    $pattern = printf '^ [*] %s branch\|Branch:\n *%s', $entry{branch}, $entry{branch};
     $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
     print $logmsg_fh "Reintergrate the $entry{header}:";
     print $logmsg_fh "";
