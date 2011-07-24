@@ -1267,15 +1267,16 @@ static svn_error_t *
 translated_stream_close(void *baton)
 {
   struct translated_stream_baton *b = baton;
+  svn_error_t *err = NULL;
 
   if (b->written)
-    SVN_ERR(translate_chunk(b->stream, b->out_baton, NULL, 0, b->iterpool));
+    err = translate_chunk(b->stream, b->out_baton, NULL, 0, b->iterpool);
 
-  SVN_ERR(svn_stream_close(b->stream));
+  err = svn_error_compose_create(err, svn_stream_close(b->stream));
 
   svn_pool_destroy(b->iterpool);
 
-  return SVN_NO_ERROR;
+  return svn_error_trace(err);
 }
 
 
