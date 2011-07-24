@@ -1451,6 +1451,7 @@ svn_client_commit5(const apr_array_header_t *targets,
 
  cleanup:
   /* Abort the commit if it is still in progress. */
+  svn_pool_clear(iterpool); /* Close open handles before aborting */
   if (commit_in_progress)
     cmt_err = svn_error_compose_create(cmt_err,
                                        editor->abort_edit(edit_baton, pool));
