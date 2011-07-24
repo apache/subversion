@@ -194,6 +194,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
 
       /* Create a pool for the commit editor. */
       ctx->dst_rev_pool = svn_pool_create(ctx->src_rev_pool);
+      ctx->file_pool = svn_pool_create(ctx->dst_rev_pool);
 
       /* ### it would be nice to have a proper scratch_pool.  */
       SVN_ERR(svn_ra_serf__select_revprops(&ctx->props,
@@ -650,7 +651,6 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
 
   replay_ctx = apr_pcalloc(pool, sizeof(*replay_ctx));
   replay_ctx->src_rev_pool = pool;
-  replay_ctx->file_pool = svn_pool_create(pool);
   replay_ctx->editor = editor;
   replay_ctx->editor_baton = edit_baton;
   replay_ctx->done = FALSE;
