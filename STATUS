@@ -119,6 +119,8 @@ Candidate changes:
      this is not a regression.
    Votes:
      +1: philip
+     +0: danielsh (no objection to backport if it fixes the problem, but is
+                   it a fix or a workaround around some build.conf bug?)
 
  * r1150242
    Make blame close its temporary files before deleting them.
