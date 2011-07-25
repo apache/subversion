@@ -769,7 +769,6 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
 
           replay_ctx = apr_pcalloc(ctx_pool, sizeof(*replay_ctx));
           replay_ctx->src_rev_pool = ctx_pool;
-          replay_ctx->file_pool = svn_pool_create(pool);
           replay_ctx->revstart_func = revstart_func;
           replay_ctx->revfinish_func = revfinish_func;
           replay_ctx->replay_baton = replay_baton;
