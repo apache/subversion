@@ -223,12 +223,14 @@ password_get_gpg_agent(const char **password,
       return FALSE;
     }
 
-  /* Send LC_CTYPE to the gpg-agent daemon. */
-  lc_ctype = getenv("LC_CTYPE");
+  /* Compute LC_CTYPE. */
+  lc_ctype = getenv("LC_ALL");
   if (lc_ctype == NULL)
-    lc_ctype = getenv("LC_ALL");
+    lc_ctype = getenv("LC_CTYPE");
   if (lc_ctype == NULL)
     lc_ctype = getenv("LANG");
+
+  /* Send LC_CTYPE to the gpg-agent daemon. */
   if (lc_ctype != NULL)
     {
       if (!send_option(sd, buffer, BUFFER_SIZE, "lc-ctype", lc_ctype, pool))
