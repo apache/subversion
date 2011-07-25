@@ -179,7 +179,7 @@ password_get_gpg_agent(const char **password,
 
   /* Receive the connection status from the gpg-agent daemon. */
   buffer = apr_palloc(pool, BUFFER_SIZE);
-  if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE - 1))
+  if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE))
     {
       close(sd);
       return FALSE;
@@ -195,7 +195,7 @@ password_get_gpg_agent(const char **password,
   tty_name = getenv("GPG_TTY");
   if (tty_name != NULL)
     {
-      if (!send_option(sd, buffer, BUFFER_SIZE - 1, "ttyname", tty_name, pool))
+      if (!send_option(sd, buffer, BUFFER_SIZE, "ttyname", tty_name, pool))
         {
           close(sd);
           return FALSE;
@@ -211,7 +211,7 @@ password_get_gpg_agent(const char **password,
   tty_type = getenv("TERM");
   if (tty_type != NULL)
     {
-      if (!send_option(sd, buffer, BUFFER_SIZE - 1, "ttytype", tty_type, pool))
+      if (!send_option(sd, buffer, BUFFER_SIZE, "ttytype", tty_type, pool))
         {
           close(sd);
           return FALSE;
@@ -231,7 +231,7 @@ password_get_gpg_agent(const char **password,
     lc_ctype = getenv("LANG");
   if (lc_ctype != NULL)
     {
-      if (!send_option(sd, buffer, BUFFER_SIZE - 1, "lc-ctype", lc_ctype, pool))
+      if (!send_option(sd, buffer, BUFFER_SIZE, "lc-ctype", lc_ctype, pool))
         {
           close(sd);
           return FALSE;
@@ -243,7 +243,7 @@ password_get_gpg_agent(const char **password,
   if (display != NULL)
     {
       request = apr_psprintf(pool, "OPTION display=%s\n", display);
-      if (!send_option(sd, buffer, BUFFER_SIZE - 1, "display", display, pool))
+      if (!send_option(sd, buffer, BUFFER_SIZE, "display", display, pool))
         {
           close(sd);
           return FALSE;
@@ -278,7 +278,7 @@ password_get_gpg_agent(const char **password,
       close(sd);
       return FALSE;
     }
-  if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE - 1))
+  if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE))
     {
       close(sd);
       return FALSE;
