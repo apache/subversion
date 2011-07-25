@@ -136,7 +136,7 @@ password_get_gpg_agent(const char **password,
   char *buffer;
   
   apr_array_header_t *socket_details;
-  char *request = NULL;
+  const char *request = NULL;
   const char *cache_id = NULL;
   struct sockaddr_un addr;
   const char *tty_name;
@@ -185,6 +185,47 @@ password_get_gpg_agent(const char **password,
       return FALSE;
     }
 
+  if (strncmp(buffer, "OK", 2) != 0)
+    {
+      close(sd);
+      return FALSE;
+    }
+
+  /* The GPG-Agent documentation says:
+   *  "Clients should deny to access an agent with a socket name which does
+   *   not match its own configuration". */
+  request = "GETINFO socket_name\n";
+  if (write(sd, request, strlen(request)) == -1)
+    {
+      close(sd);
+      return FALSE;
+    }
+  if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE))
+    {
+      close(sd);
+      return FALSE;
+    }
+  if (strncmp(buffer, "D", 1) == 0)
+    p = &buffer[2];
+  if (!p)
+    {
+      close(sd);
+      return FALSE;
+    }
+  ep = strchr(p, '\n');
+  if (ep != NULL)
+    *ep = '\0';
+  if (strcmp(socket_name, p) != 0)
+    {
+      close(sd);
+      return FALSE;
+    }
+  /* The agent will terminate its reponse with "OK". */
+  if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE))
+    {
+      close(sd);
+      return FALSE;
+    }
   if (strncmp(buffer, "OK", 2) != 0)
     {
       close(sd);
