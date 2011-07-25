@@ -332,6 +332,7 @@ password_get_gpg_agent(const char **password,
   if (strncmp(buffer, "ERR", 3) == 0)
     return FALSE;
   
+  p = NULL;
   if (strncmp(buffer, "D", 1) == 0)
     p = &buffer[2];
 
