@@ -109,7 +109,7 @@ send_option(int sd, char *buf, size_t n, const char *option, const char *value,
 
   request = apr_psprintf(scratch_pool, "OPTION %s=%s\n", option, value);
 
-  if (send(sd, request, strlen(request), 0) == -1)
+  if (write(sd, request, strlen(request)) == -1)
     return FALSE;
 
   if (!receive_from_gpg_agent(sd, buf, n))
@@ -273,7 +273,7 @@ password_get_gpg_agent(const char **password,
                          escape_blanks(password_prompt),
                          escape_blanks(realm_prompt));
 
-  if (send(sd, request, strlen(request) + 1, 0) == -1)
+  if (write(sd, request, strlen(request) + 1) == -1)
     {
       close(sd);
       return FALSE;
