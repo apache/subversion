@@ -391,12 +391,9 @@ svn_auth_get_platform_specific_provider
   *provider = NULL;
 
   if (apr_strnatcmp(provider_name, "gnome_keyring") == 0 ||
-      apr_strnatcmp(provider_name, "kwallet") == 0 ||
-      (apr_strnatcmp(provider_name, "gpg_agent") == 0 &&
-       strcmp(provider_type, "simple") == 0))
+      apr_strnatcmp(provider_name, "kwallet") == 0)
     {
-#if defined(SVN_HAVE_GNOME_KEYRING) || defined(SVN_HAVE_KWALLET) || \
-defined(SVN_HAVE_GPG_AGENT)
+#if defined(SVN_HAVE_GNOME_KEYRING) || defined(SVN_HAVE_KWALLET)
       apr_dso_handle_t *dso;
       apr_dso_handle_sym_t provider_function_symbol, version_function_symbol;
       const char *library_label, *library_name;
@@ -450,6 +447,13 @@ defined(SVN_HAVE_GPG_AGENT)
     }
   else
     {
+#if defined(SVN_HAVE_GPG_AGENT)
+      if (strcmp(provider_name, "gpg_agent") == 0 &&
+          strcmp(provider_type, "simple") == 0)
+        {
+          svn_auth_get_gpg_agent_simple_provider(provider, pool);
+        }
+#endif
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
       if (strcmp(provider_name, "keychain") == 0 &&
           strcmp(provider_type, "simple") == 0)

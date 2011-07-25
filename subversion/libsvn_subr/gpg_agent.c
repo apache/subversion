@@ -45,6 +45,8 @@
 
 #include "svn_private_config.h"
 
+#ifdef SVN_HAVE_GPG_AGENT
+
 #define BUFFER_SIZE 1024
 
 /* Modify STR in-place such that blanks are escaped as required by the
@@ -420,3 +422,5 @@ svn_auth_get_gpg_agent_simple_provider
   po->vtable = &gpg_agent_simple_provider;
   *provider = po;
 }
+
+#endif /* SVN_HAVE_GPG_AGENT */

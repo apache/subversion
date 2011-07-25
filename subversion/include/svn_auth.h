@@ -1070,17 +1070,9 @@ void
 svn_auth_get_kwallet_ssl_client_cert_pw_provider(
   svn_auth_provider_object_t **provider,
   apr_pool_t *pool);
+#endif /* (!DARWIN && !WIN32) || DOXYGEN */
 
-
-/**
- * Get libsvn_auth_gpg_agent version information.
- *
- * @since New in 1.8.
- */
-const svn_version_t *
-svn_auth_gpg_agent_version(void);
-
-
+#if !defined(WIN32) || defined(DOXYGEN)
 /**
  * Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
@@ -1094,13 +1086,13 @@ svn_auth_gpg_agent_version(void);
  *
  * @since New in 1.8
  * @note This function actually works only on systems with
- * libsvn_auth_gpg_agent and GNU Privacy Guard installed.
+ * GNU Privacy Guard installed.
  */
 void
 svn_auth_get_gpg_agent_simple_provider
     (svn_auth_provider_object_t **provider,
      apr_pool_t *pool);
-#endif /* (!DARWIN && !WIN32) || DOXYGEN */
+#endif /* !defined(WIN32) || defined(DOXYGEN) */
 
 
 /** Set @a *provider to an authentication provider of type @c
