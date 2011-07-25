@@ -60,7 +60,7 @@ password_get_gpg_agent(const char **password,
 {
   int sd;
   char *gpg_agent_info = NULL;
-  char *p = NULL;
+  const char *p = NULL;
   char *ep = NULL;
   char *buffer;
   
@@ -69,8 +69,8 @@ password_get_gpg_agent(const char **password,
   const char *cache_id = NULL;
   struct sockaddr_un addr;
   int recvd;
-  char *tty_name;
-  char *tty_type;
+  const char *tty_name;
+  const char *tty_type;
   const char *socket_name = NULL;
   svn_checksum_t *digest = NULL;
 
