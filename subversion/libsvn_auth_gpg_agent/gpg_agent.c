@@ -95,6 +95,29 @@ receive_from_gpg_agent(int sd, char *buf, size_t n)
     return FALSE;
 }
 
+/* Using socket SD, send the option OPTION with the specified VALUE
+ * to the gpg agent. Store the response in BUF, assumed to be N bytes
+ * in size, and evaluate the response. Return TRUE if the agent liked
+ * the smell of the option, if there is such a thing, and doesn't feel
+ * saturated by it. Else return FALSE.
+ * Do temporary allocations in scratch_pool. */
+static svn_boolean_t
+send_option(int sd, char *buf, size_t n, const char *option, const char *value,
+            apr_pool_t *scratch_pool)
+{
+  const char *request;
+
+  request = apr_psprintf(scratch_pool, "OPTION %s=%s\n", option, value);
+
+  if (send(sd, request, strlen(request), 0) == -1)
+    return FALSE;
+
+  if (!receive_from_gpg_agent(sd, buf, n))
+    return FALSE;
+
+  return (strncmp(buf, "OK", 2) == 0);
+}
+
 /* Implementation of svn_auth__password_get_t that retrieves the password
    from gpg-agent */
 static svn_boolean_t
@@ -172,15 +195,7 @@ password_get_gpg_agent(const char **password,
   tty_name = getenv("GPG_TTY");
   if (tty_name != NULL)
     {
-      request = apr_psprintf(pool, "OPTION ttyname=%s\n", tty_name);
-      send(sd, request, strlen(request), 0);
-      if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE - 1))
-        {
-          close(sd);
-          return FALSE;
-        }
-
-      if (strncmp(buffer, "OK", 2) != 0)
+      if (!send_option(sd, buffer, BUFFER_SIZE - 1, "ttyname", tty_name, pool))
         {
           close(sd);
           return FALSE;
@@ -196,15 +211,7 @@ password_get_gpg_agent(const char **password,
   tty_type = getenv("TERM");
   if (tty_type != NULL)
     {
-      request = apr_psprintf(pool, "OPTION ttytype=%s\n", tty_type);
-      send(sd, request, strlen(request), 0);
-      if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE - 1))
-        {
-          close(sd);
-          return FALSE;
-        }
-
-      if (strncmp(buffer, "OK", 2) != 0)
+      if (!send_option(sd, buffer, BUFFER_SIZE - 1, "ttytype", tty_type, pool))
         {
           close(sd);
           return FALSE;
@@ -224,14 +231,7 @@ password_get_gpg_agent(const char **password,
     lc_ctype = getenv("LANG");
   if (lc_ctype != NULL)
     {
-      request = apr_psprintf(pool, "OPTION lc-ctype=%s\n", lc_ctype);
-      send(sd, request, strlen(request), 0);
-      if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE - 1))
-        {
-          close(sd);
-          return FALSE;
-        }
-      if (strncmp(buffer, "OK", 2) != 0)
+      if (!send_option(sd, buffer, BUFFER_SIZE - 1, "lc-ctype", lc_ctype, pool))
         {
           close(sd);
           return FALSE;
@@ -243,13 +243,7 @@ password_get_gpg_agent(const char **password,
   if (display != NULL)
     {
       request = apr_psprintf(pool, "OPTION display=%s\n", display);
-      send(sd, request, strlen(request), 0);
-      if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE - 1))
-        {
-          close(sd);
-          return FALSE;
-        }
-      if (strncmp(buffer, "OK", 2) != 0)
+      if (!send_option(sd, buffer, BUFFER_SIZE - 1, "display", display, pool))
         {
           close(sd);
           return FALSE;
