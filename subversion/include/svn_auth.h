@@ -785,8 +785,8 @@ svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
  * svn_auth_provider_object_t, or return @c NULL if the provider is not
  * available for the requested platform or the requested provider is unknown.
  *
- * Valid @a provider_name values are: "gnome_keyring", "keychain", "kwallet"
- * and "windows".
+ * Valid @a provider_name values are: "gnome_keyring", "keychain", "kwallet",
+ * "gpg_agent", and "windows".
  *
  * Valid @a provider_type values are: "simple", "ssl_client_cert_pw" and
  * "ssl_server_trust".
@@ -818,9 +818,10 @@ svn_auth_get_platform_specific_provider(
  *
  * Default order of the platform-specific authentication providers:
  *   1. gnome-keyring
- *   2. kwallet
- *   3. keychain
- *   4. windows-cryptoapi
+ *   2. gpg-agent
+ *   3. kwallet
+ *   4. keychain
+ *   5. windows-cryptoapi
  *
  * @since New in 1.6.
  */
