@@ -176,7 +176,7 @@ def migrate_pristines(wc_src, target, wcroot):
   src_c = src_conn.cursor()
   dst_c = dst_conn.cursor()
 
-  regex = re.compile('\$((?:md5)|(?:sha1))\$(.*)')
+  regex = re.compile('\$((?:md5 *)|(?:sha1))\$(.*)')
   src_proot = os.path.join(wcroot, '.svn', 'pristine')
   target_proot = os.path.join(target, '.svn', 'pristine')
 
