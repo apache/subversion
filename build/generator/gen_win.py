@@ -91,7 +91,8 @@ class GeneratorBase(gen_base.GeneratorBase):
     self.skip_sections = { 'mod_dav_svn': None,
                            'mod_authz_svn': None,
                            'libsvn_auth_kwallet': None,
-                           'libsvn_auth_gnome_keyring': None }
+                           'libsvn_auth_gnome_keyring': None,
+                           'libsvn_auth_gpg_agent': None }
 
     # Instrumentation options
     self.disable_shared = None
