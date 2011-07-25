@@ -818,9 +818,9 @@ svn_auth_get_platform_specific_provider(
  *
  * Default order of the platform-specific authentication providers:
  *   1. gnome-keyring
- *   2. gpg-agent
- *   3. kwallet
- *   4. keychain
+ *   2. kwallet
+ *   3. keychain
+ *   4. gpg-agent
  *   5. windows-cryptoapi
  *
  * @since New in 1.6.
