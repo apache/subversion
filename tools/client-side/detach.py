@@ -98,7 +98,7 @@ def  migrate_sqlite(wc_src, target, wcroot):
 
   # Copy the root node
   src_c.execute('select * from nodes where local_relpath = ?',
-                local_relsrc)
+                (local_relsrc,))
   row = list(src_c.fetchone())
   row[1] = ''
   row[3] = None
