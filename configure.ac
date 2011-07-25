@@ -567,6 +567,25 @@ int main()
   fi
 fi
 
+dnl GPG Agent -------------------
+
+AC_ARG_WITH(gpg_agent,
+AS_HELP_STRING([--without-gpg-agent], 
+               [Disable support for GPG-Agent]),
+               [with_gpg_agent=no], [with_gpg_agent=yes])
+AC_MSG_CHECKING([whether to support GPG-Agent])
+if test "$svn_enable_shared" != "yes"; then
+  AC_MSG_RESULT([no (shared library support is disabled)])
+elif test "$with_gpg_agent" = "yes"; then
+  AC_MSG_RESULT([yes])
+  AC_DEFINE([SVN_HAVE_GPG_AGENT], [1], 
+            [Is GPG Agent support enabled?])
+else
+  AC_MSG_RESULT([no])
+fi
+
+AC_SUBST(SVN_HAVE_GPG_AGENT)
+
 dnl GNOME Keyring -------------------
 
 AC_ARG_WITH(gnome_keyring,
@@ -799,6 +818,12 @@ if test "$with_gnome_keyring" = "yes"; then
   BUILD_RULES="$BUILD_RULES gnome-keyring-lib"
   INSTALL_RULES="`echo $INSTALL_RULES | $SED 's/install-lib/install-lib install-gnome-keyring-lib/'`"
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-gnome-keyring-lib"
+fi
+
+if test "$with_gpg_agent" = "yes"; then
+  BUILD_RULES="$BUILD_RULES gpg-agent-lib"
+  INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-lib/install-lib install-gpg-agent-lib/'`"
+  INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-gpg-agent-lib"
 fi
 
 if test "$USE_NLS" = "yes"; then
