@@ -47,6 +47,23 @@
 
 #define BUFFER_SIZE 1024
 
+/* Modify STR in-place such that blanks are escaped as required by the
+ * gpg-agent protocol. Return a pointer to STR. */
+static char *
+escape_blanks(char *str)
+{
+  char *s = str;
+
+  while (*s)
+    {
+      if (*s == ' ')
+        *s = '+';
+      s++;
+    }
+
+  return str;
+}
+
 /* Attempt to read a gpg-agent response message from the socket SD into
  * buffer BUF. Buf is assumed to be N bytes large. Return TRUE if a response
  * message could be read that fits into the buffer. Else return FALSE.
@@ -105,6 +122,8 @@ password_get_gpg_agent(const char **password,
   const char *display;
   const char *socket_name = NULL;
   svn_checksum_t *digest = NULL;
+  char *password_prompt;
+  char *realm_prompt;
 
   gpg_agent_info = getenv("GPG_AGENT_INFO");
   if (gpg_agent_info != NULL)
@@ -244,14 +263,21 @@ password_get_gpg_agent(const char **password,
                pool);
   cache_id = svn_checksum_to_cstring(digest, pool);
 
-  if (non_interactive)
-    request = apr_psprintf(pool,
-                           "GET_PASSPHRASE --data --no-ask %s X Password: \n",
-                           cache_id);
-  else
-    request = apr_psprintf(pool,
-                           "GET_PASSPHRASE --data %s X Password: \n",
-                           cache_id);
+  /* A newline is required to terminate the GET_PASSPHRASE command.
+   * We append it to REALM_PROMPT because it is the last argument of
+   * the format string below, and because both of the prompt strings
+   * already exist elsewhere in this exact form so they will only
+   * have to be translated once for i18n. */
+  password_prompt = apr_psprintf(pool, _("Password for '%s': "), username);
+  realm_prompt = apr_psprintf(pool, _("Authentication realm: %s\n"),
+                              realmstring);
+  request = apr_psprintf(pool,
+                         "GET_PASSPHRASE --data %s--repeat=1 "
+                         "%s X %s %s",
+                         non_interactive ? "--no-ask " : "",
+                         cache_id,
+                         escape_blanks(password_prompt),
+                         escape_blanks(realm_prompt));
 
   send(sd, request, strlen(request) + 1, 0);
   if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE - 1))
