@@ -273,7 +273,11 @@ password_get_gpg_agent(const char **password,
                          escape_blanks(password_prompt),
                          escape_blanks(realm_prompt));
 
-  send(sd, request, strlen(request) + 1, 0);
+  if (send(sd, request, strlen(request) + 1, 0) == -1)
+    {
+      close(sd);
+      return FALSE;
+    }
   if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE - 1))
     {
       close(sd);
