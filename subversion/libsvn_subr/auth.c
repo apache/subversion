@@ -392,7 +392,8 @@ svn_auth_get_platform_specific_provider
 
   if (apr_strnatcmp(provider_name, "gnome_keyring") == 0 ||
       apr_strnatcmp(provider_name, "kwallet") == 0 ||
-      apr_strnatcmp(provider_name, "gpg_agent") == 0)
+      (apr_strnatcmp(provider_name, "gpg_agent") == 0 &&
+       strcmp(provider_type, "simple") == 0))
     {
 #if defined(SVN_HAVE_GNOME_KEYRING) || defined(SVN_HAVE_KWALLET) || \
 defined(SVN_HAVE_GPG_AGENT)
