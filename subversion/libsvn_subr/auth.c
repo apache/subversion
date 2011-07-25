@@ -391,9 +391,11 @@ svn_auth_get_platform_specific_provider
   *provider = NULL;
 
   if (apr_strnatcmp(provider_name, "gnome_keyring") == 0 ||
-      apr_strnatcmp(provider_name, "kwallet") == 0)
+      apr_strnatcmp(provider_name, "kwallet") == 0 ||
+      apr_strnatcmp(provider_name, "gpg_agent") == 0)
     {
-#if defined(SVN_HAVE_GNOME_KEYRING) || defined(SVN_HAVE_KWALLET)
+#if defined(SVN_HAVE_GNOME_KEYRING) || defined(SVN_HAVE_KWALLET) || \
+defined(SVN_HAVE_GPG_AGENT)
       apr_dso_handle_t *dso;
       apr_dso_handle_sym_t provider_function_symbol, version_function_symbol;
       const char *library_label, *library_name;
@@ -495,15 +497,17 @@ svn_auth_get_platform_specific_client_providers
 
   if (config)
     {
-      svn_config_get(config,
-                     &password_stores_config_option,
-                     SVN_CONFIG_SECTION_AUTH,
-                     SVN_CONFIG_OPTION_PASSWORD_STORES,
-                     "gnome-keyring,kwallet,keychain,windows-cryptoapi");
+      svn_config_get
+        (config,
+         &password_stores_config_option,
+         SVN_CONFIG_SECTION_AUTH,
+         SVN_CONFIG_OPTION_PASSWORD_STORES,
+         "gpg-agent,gnome-keyring,kwallet,keychain,windows-cryptoapi");
     }
   else
     {
-      password_stores_config_option = "gnome-keyring,kwallet,keychain,windows-cryptoapi";
+      password_stores_config_option =
+        "gpg-agent,gnome-keyring,kwallet,keychain,windows-cryptoapi";
     }
 
   *providers = apr_array_make(pool, 12, sizeof(svn_auth_provider_object_t *));
@@ -531,6 +535,20 @@ svn_auth_get_platform_specific_client_providers
           SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
                                                           "gnome_keyring",
                                                           "ssl_client_cert_pw",
+                                                          pool));
+
+          if (provider)
+            APR_ARRAY_PUSH(*providers, svn_auth_provider_object_t *) = provider;
+
+          continue;
+        }
+
+      /* GPG-AGENT */
+      if (apr_strnatcmp(password_store, "gpg-agent") == 0)
+        {
+          SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                          "gpg_agent",
+                                                          "simple",
                                                           pool));
 
           if (provider)

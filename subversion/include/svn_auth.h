@@ -1069,6 +1069,35 @@ void
 svn_auth_get_kwallet_ssl_client_cert_pw_provider(
   svn_auth_provider_object_t **provider,
   apr_pool_t *pool);
+
+
+/**
+ * Get libsvn_auth_gpg_agent version information.
+ *
+ */
+const svn_version_t *
+svn_auth_gpg_agent_version(void);
+
+
+/**
+ * Set @a *provider to an authentication provider of type @c
+ * svn_auth_cred_simple_t that gets/sets information from the user's
+ * ~/.subversion configuration directory.
+ *
+ * This is like svn_client_get_simple_provider(), except that the
+ * password is obtained from gpg_agent, which will keep it in
+ * a memory cache.
+ *
+ * Allocate @a *provider in @a pool.
+ *
+ * @since New in 1.7
+ * @note This function actually works only on systems with
+ * libsvn_auth_gpg_agent and GNU Privacy Guard installed.
+ */
+void
+svn_auth_get_gpg_agent_simple_provider
+    (svn_auth_provider_object_t **provider,
+     apr_pool_t *pool);
 #endif /* (!DARWIN && !WIN32) || DOXYGEN */
 
 
