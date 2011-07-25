@@ -531,7 +531,8 @@ DIR=`pwd`
 ''')
     libdep_cache = {}
     paths = {}
-    for lib in ('libsvn_auth_gnome_keyring', 'libsvn_auth_kwallet'):
+    for lib in ('libsvn_auth_gnome_keyring', 'libsvn_auth_kwallet',
+                'libsvn_auth_gpg_agent'):
       paths[lib] = self.sections[lib].options.get('path')
     for target_ob in install_sources:
       if not isinstance(target_ob, gen_base.TargetExe):
@@ -563,7 +564,8 @@ DIR=`pwd`
             for lib in self._get_all_lib_deps(lib_name, libdep_cache, paths):
               libs.add(lib)
       if target_name == 'libsvn_subr':
-        libs.update(('libsvn_auth_gnome_keyring', 'libsvn_auth_kwallet'))
+        libs.update(('libsvn_auth_gnome_keyring', 'libsvn_auth_kwallet',
+                     'libsvn_auth_gpg_agent'))
       libdep_cache[target_name] = sorted(libs)
     return libdep_cache[target_name]
 
