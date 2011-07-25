@@ -543,7 +543,7 @@ svn_auth_get_platform_specific_client_providers
           continue;
         }
 
-      /* GPG-AGENT Keyring */
+      /* GPG-AGENT */
       if (apr_strnatcmp(password_store, "gpg-agent") == 0)
         {
           SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
