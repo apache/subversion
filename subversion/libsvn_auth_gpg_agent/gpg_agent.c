@@ -101,6 +101,8 @@ password_get_gpg_agent(const char **password,
   struct sockaddr_un addr;
   const char *tty_name;
   const char *tty_type;
+  const char *lc_ctype;
+  const char *display;
   const char *socket_name = NULL;
   svn_checksum_t *digest = NULL;
 
@@ -193,6 +195,46 @@ password_get_gpg_agent(const char **password,
     {
       close(sd);
       return FALSE;
+    }
+
+  /* Send LC_CTYPE to the gpg-agent daemon. */
+  lc_ctype = getenv("LC_CTYPE");
+  if (lc_ctype == NULL)
+    lc_ctype = getenv("LC_ALL");
+  if (lc_ctype == NULL)
+    lc_ctype = getenv("LANG");
+  if (lc_ctype != NULL)
+    {
+      request = apr_psprintf(pool, "OPTION lc-ctype=%s\n", lc_ctype);
+      send(sd, request, strlen(request), 0);
+      if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE - 1))
+        {
+          close(sd);
+          return FALSE;
+        }
+      if (strncmp(buffer, "OK", 2) != 0)
+        {
+          close(sd);
+          return FALSE;
+        }
+    }
+
+  /* Send DISPLAY to the gpg-agent daemon. */
+  display = getenv("DISPLAY");
+  if (display != NULL)
+    {
+      request = apr_psprintf(pool, "OPTION display=%s\n", display);
+      send(sd, request, strlen(request), 0);
+      if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE - 1))
+        {
+          close(sd);
+          return FALSE;
+        }
+      if (strncmp(buffer, "OK", 2) != 0)
+        {
+          close(sd);
+          return FALSE;
+        }
     }
 
   /* Create the CACHE_ID which will be generated based on REALMSTRING similar
