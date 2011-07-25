@@ -120,7 +120,7 @@ def  migrate_sqlite(wc_src, target, wcroot):
 
   # Copy root actual_node
   src_c.execute('select * from actual_node where local_relpath = ?',
-                local_relsrc)
+                (local_relsrc, ))
   row = src_c.fetchone()
   if row:
     row = list(row)
@@ -146,7 +146,7 @@ def  migrate_sqlite(wc_src, target, wcroot):
 
   # EXTERNALS
   src_c.execute('select * from externals where local_relpath = ?',
-                local_relsrc)
+                (local_relsrc, ))
   row = src_c.fetchone()
   if row:
     row = list(row)
