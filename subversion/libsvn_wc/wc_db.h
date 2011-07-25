@@ -1209,12 +1209,17 @@ svn_wc__db_externals_gather_definitions(apr_hash_t **externals,
  * This copy is NOT recursive. It simply establishes this one node, plus
  * incomplete nodes for the children.
  *
+ * If IS_MOVE is TRUE, mark this copy operation as the copy-half of
+ * a move. The delete-half of the move needs to be created separately
+ * with svn_wc__db_op_delete().
+ *
  * Add WORK_ITEMS to the work queue. */
 svn_error_t *
 svn_wc__db_op_copy(svn_wc__db_t *db,
                    const char *src_abspath,
                    const char *dst_abspath,
                    const char *dst_op_root_abspath,
+                   svn_boolean_t is_move,
                    const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool);
 
@@ -1227,8 +1232,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
  * properly deleted.
  *
  * Usually this operation is directly followed by a call to svn_wc__db_op_copy
- * or svn_wc__db_op_move which performs the real copy from src_abspath to
- * dst_abspath.
+ * which performs the real copy from src_abspath to dst_abspath.
  */
 svn_error_t *
 svn_wc__db_op_copy_shadowed_layer(svn_wc__db_t *db,
@@ -1426,23 +1430,6 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      apr_pool_t *scratch_pool);
-
-
-/* Move the node at SRC_ABSPATH (in NODES and ACTUAL_NODE tables) to
- * DST_ABSPATH, both in DB but not necessarily in the same WC.  The parent
- * of DST_ABSPATH must be a versioned directory.
- *
- * This move is NOT recursive. It simply establishes this one node, plus
- * incomplete nodes for the children.
- *
- * Add WORK_ITEMS to the work queue. */
-svn_error_t *
-svn_wc__db_op_move(svn_wc__db_t *db,
-                   const char *src_abspath,
-                   const char *dst_abspath,
-                   const char *dst_op_root_abspath,
-                   const svn_skel_t *work_items,
-                   apr_pool_t *scratch_pool);
 
 
 /* ### mark PATH as (possibly) modified. "svn edit" ... right API here? */

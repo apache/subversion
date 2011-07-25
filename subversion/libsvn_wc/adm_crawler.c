@@ -1112,21 +1112,12 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                         NULL, NULL,
                         scratch_pool, scratch_pool);
 
-  /* Close the two streams to force writing the digest,
-     if we already have an error, ignore this one. */
-  if (err)
-    {
-      svn_error_clear(svn_stream_close(base_stream));
-      svn_error_clear(svn_stream_close(local_stream));
-    }
-  else
-    {
-      SVN_ERR(svn_stream_close(base_stream));
-      SVN_ERR(svn_stream_close(local_stream));
-    }
+  /* Close the two streams to force writing the digest */
+  err = svn_error_compose_create(err, svn_stream_close(base_stream));
+  err = svn_error_compose_create(err, svn_stream_close(local_stream));
 
-  /* If we have an error, it may be caused by a corrupt text base.
-     Check the checksum and discard `err' if they don't match. */
+  /* If we have an error, it may be caused by a corrupt text base,
+     so check the checksum. */
   if (expected_md5_checksum && verify_checksum
       && !svn_checksum_match(expected_md5_checksum, verify_checksum))
     {
@@ -1142,19 +1133,20 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
          investigate.  Other commands could be affected,
          too, such as `svn diff'.  */
 
-      /* Deliberately ignore errors; the error about the
-         checksum mismatch is more important to return. */
-      svn_error_clear(err);
       if (tempfile)
-        svn_error_clear(svn_io_remove_file2(*tempfile, TRUE, scratch_pool));
+        err = svn_error_compose_create(
+                      err,
+                      svn_io_remove_file2(*tempfile, TRUE, scratch_pool));
 
-      return svn_error_create(SVN_ERR_WC_CORRUPT_TEXT_BASE,
-            svn_checksum_mismatch_err(expected_md5_checksum, verify_checksum,
+      err = svn_error_compose_create(
+              svn_checksum_mismatch_err(expected_md5_checksum, verify_checksum,
                             scratch_pool,
                             _("Checksum mismatch for text base of '%s'"),
                             svn_dirent_local_style(local_abspath,
                                                    scratch_pool)),
-            NULL);
+              err);
+
+      return svn_error_create(SVN_ERR_WC_CORRUPT_TEXT_BASE, err, NULL);
     }
 
   /* Now, handle that delta transmission error if any, so we can stop

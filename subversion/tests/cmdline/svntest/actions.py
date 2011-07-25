@@ -1822,12 +1822,12 @@ def set_prop(name, value, path, expected_err=None):
   if value and (value[0] == '-' or '\x00' in value or sys.platform == 'win32'):
     from tempfile import mkstemp
     (fd, value_file_path) = mkstemp()
+    os.close(fd)
     value_file = open(value_file_path, 'wb')
     value_file.write(value)
     value_file.flush()
     value_file.close()
     main.run_svn(expected_err, 'propset', '-F', value_file_path, name, path)
-    os.close(fd)
     os.remove(value_file_path)
   else:
     main.run_svn(expected_err, 'propset', name, value, path)

@@ -184,7 +184,7 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   const char *relative_url, *basecoll_url, *req_url;
-  svn_error_t *err, *err2;
+  svn_error_t *err;
 
   gls_ctx = apr_pcalloc(pool, sizeof(*gls_ctx));
   gls_ctx->path = path;
@@ -233,20 +233,16 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
                             _("Location segment report failed on '%s'@'%ld'"),
                               path, peg_revision);
 
-  err2 = svn_ra_serf__error_on_status(gls_ctx->status_code,
+  err = svn_error_compose_create(
+         svn_ra_serf__error_on_status(gls_ctx->status_code,
                                       handler->path,
-                                      parser_ctx->location);
-  if (err2)
-    {
-      /* Prefer err2 to err. */
-      svn_error_clear(err);
-      return err2;
-    }
+                                      parser_ctx->location),
+         err);;
 
   svn_pool_destroy(gls_ctx->subpool);
 
   if (err && (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE))
     return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err, NULL);
 
-  return err;
+  return svn_error_trace(err);
 }

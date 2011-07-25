@@ -2324,6 +2324,7 @@ finish_report(void *report_baton,
   parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
 
   parser_ctx->pool = pool;
+  parser_ctx->response_type = "update-report";
   parser_ctx->user_data = report;
   parser_ctx->start = start_report;
   parser_ctx->end = end_report;
@@ -2360,6 +2361,9 @@ finish_report(void *report_baton,
 
       /* Note: this throws out the old ITERPOOL_INNER.  */
       svn_pool_clear(iterpool);
+
+      if (sess->cancel_func)
+        SVN_ERR(sess->cancel_func(sess->cancel_baton));
 
       /* We need to be careful between the outer and inner ITERPOOLs,
          and what items are allocated within.  */

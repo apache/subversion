@@ -40,6 +40,11 @@ svn_error_t *
 svn_fs_fs__open_rep_cache(svn_fs_t *fs,
                           apr_pool_t *pool);
 
+/* Set *EXISTS to TRUE iff the rep-cache DB file exists. */
+svn_error_t *
+svn_fs_fs__exists_rep_cache(svn_boolean_t *exists,
+                            svn_fs_t *fs, apr_pool_t *pool);
+
 /* Iterate all representations currently in FS's cache. */
 svn_error_t *
 svn_fs_fs__walk_rep_reference(svn_fs_t *fs,

@@ -181,7 +181,7 @@ all: dirs-create bdb-install apr-install iconv-install apr-util-install \
 reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
 	httpd-reset neon-reset serf-reset serf-old-reset sqlite-reset \
 	cyrus-sasl-reset libmagic-reset ruby-reset python-reset \
-	bz2-install svn-reset
+	bz2-reset svn-reset
 
 # Use to save disk space.
 clean: bdb-clean apr-clean iconv-clean apr-util-clean httpd-clean \

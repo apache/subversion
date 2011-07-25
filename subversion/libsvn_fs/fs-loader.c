@@ -29,6 +29,7 @@
 #include <apr_thread_mutex.h>
 #include <apr_uuid.h>
 
+#include "svn_ctype.h"
 #include "svn_types.h"
 #include "svn_dso.h"
 #include "svn_version.h"
@@ -1303,6 +1304,31 @@ svn_fs_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path,
         return svn_error_create
           (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
            _("Lock comment contains illegal characters"));
+    }
+
+  /* Enforce that the token be an XML-safe URI. */
+  if (token)
+    {
+      const char *c;
+
+      if (strncmp(token, "opaquelocktoken:", 16))
+        return svn_error_createf(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+                                 _("Lock token URI '%s' has bad scheme; "
+                                   "expected '%s'"),
+                                 token, "opaquelocktoken");
+
+      for (c = token; *c; c++)
+        if (! svn_ctype_isascii(*c))
+          return svn_error_createf(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+                                   _("Lock token '%s' is not ASCII "
+                                     "at byte %u"),
+                                   token, (unsigned)(c - token));
+
+      /* strlen(token) == c - token. */
+      if (! svn_xml_is_xml_safe(token, c - token))
+        return svn_error_createf(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+                                 _("Lock token URI '%s' is not XML-safe"),
+                                 token);
     }
 
   if (expiration_date < 0)

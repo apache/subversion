@@ -312,14 +312,9 @@ copy_versioned_file(svn_wc__db_t *db,
 
   /* Copy the (single) node's metadata, and move the new filesystem node
      into place. */
-  if (is_move)
-    SVN_ERR(svn_wc__db_op_move(db, src_abspath, dst_abspath,
-                               dst_op_root_abspath, work_items,
-                               scratch_pool));
-  else
-    SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath,
-                               dst_op_root_abspath, work_items,
-                               scratch_pool));
+  SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath,
+                             dst_op_root_abspath, is_move, work_items,
+                             scratch_pool));
   SVN_ERR(svn_wc__wq_run(db, dir_abspath,
                          cancel_func, cancel_baton, scratch_pool));
 
@@ -383,14 +378,9 @@ copy_versioned_dir(svn_wc__db_t *db,
 
   /* Copy the (single) node's metadata, and move the new filesystem node
      into place. */
-  if (is_move)
-    SVN_ERR(svn_wc__db_op_move(db, src_abspath, dst_abspath,
-                               dst_op_root_abspath, work_items,
-                               scratch_pool));
-  else
-    SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath,
-                               dst_op_root_abspath, work_items,
-                               scratch_pool));
+  SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath,
+                             dst_op_root_abspath, is_move, work_items,
+                             scratch_pool));
   SVN_ERR(svn_wc__wq_run(db, dir_abspath,
                          cancel_func, cancel_baton, scratch_pool));
 
@@ -499,14 +489,9 @@ copy_versioned_dir(svn_wc__db_t *db,
         {
           /* This will be copied as some kind of deletion. Don't touch
              any actual files */
-          if (is_move)
-            SVN_ERR(svn_wc__db_op_move(db, child_src_abspath,
-                                       child_dst_abspath, dst_op_root_abspath,
-                                       NULL, scratch_pool));
-          else
-            SVN_ERR(svn_wc__db_op_copy(db, child_src_abspath,
-                                       child_dst_abspath, dst_op_root_abspath,
-                                       NULL, iterpool));
+          SVN_ERR(svn_wc__db_op_copy(db, child_src_abspath,
+                                     child_dst_abspath, dst_op_root_abspath,
+                                     is_move, NULL, iterpool));
 
           /* Don't recurse on children while all we do is creating not-present
              children */

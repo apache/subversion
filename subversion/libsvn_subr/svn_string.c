@@ -839,3 +839,16 @@ svn_cstring_atoi(int *n, const char *str)
   *n = (int)val;
   return SVN_NO_ERROR;
 }
+
+
+apr_status_t
+svn__strtoff(apr_off_t *offset, const char *buf, char **end, int base)
+{
+#if !APR_VERSION_AT_LEAST(1,0,0)
+  errno = 0;
+  *offset = strtol(buf, end, base);
+  return APR_FROM_OS_ERROR(errno);
+#else
+  return apr_strtoff(offset, buf, end, base);
+#endif
+}
