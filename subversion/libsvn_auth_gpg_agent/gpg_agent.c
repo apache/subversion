@@ -294,6 +294,9 @@ password_get_gpg_agent(const char **password,
   if (strncmp(buffer, "D", 1) == 0)
     p = &buffer[2];
 
+  if (!p)
+    return FALSE;
+
   ep = strchr(p, '\n');
   if (ep != NULL)
     *ep = '\0';
