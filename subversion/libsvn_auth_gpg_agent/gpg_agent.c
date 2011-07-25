@@ -275,7 +275,7 @@ password_get_gpg_agent(const char **password,
                          escape_blanks(password_prompt),
                          escape_blanks(realm_prompt));
 
-  if (write(sd, request, strlen(request) + 1) == -1)
+  if (write(sd, request, strlen(request)) == -1)
     {
       close(sd);
       return FALSE;
