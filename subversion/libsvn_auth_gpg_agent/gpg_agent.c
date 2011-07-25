@@ -47,6 +47,37 @@
 
 #define BUFFER_SIZE 1024
 
+/* Attempt to read a gpg-agent response message from the socket SD into
+ * buffer BUF. Buf is assumed to be N bytes large. Return TRUE if a response
+ * message could be read that fits into the buffer. Else return FALSE.
+ * If a message could be read it will always be NUL-terminated and the
+ * trailing newline is retained. */
+static svn_boolean_t
+receive_from_gpg_agent(int sd, char *buf, size_t n)
+{
+  int i = 0;
+  int recvd;
+  char c;
+
+  /* Require the message to fit into the buffer and be terminated
+   * with a newline. */
+  while (i < n)
+    {
+      recvd = read(sd, &c, 1);
+      if (recvd == -1)
+        return FALSE;
+      buf[i] = c;
+      i++;
+      if (i < n && c == '\n')
+        {
+          buf[i] = '\0';
+          return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
 /* Implementation of svn_auth__password_get_t that retrieves the password
    from gpg-agent */
 static svn_boolean_t
@@ -68,7 +99,6 @@ password_get_gpg_agent(const char **password,
   char *request = NULL;
   const char *cache_id = NULL;
   struct sockaddr_un addr;
-  int recvd;
   const char *tty_name;
   const char *tty_type;
   const char *socket_name = NULL;
@@ -105,8 +135,11 @@ password_get_gpg_agent(const char **password,
 
   /* Receive the connection status from the gpg-agent daemon. */
   buffer = apr_palloc(pool, BUFFER_SIZE);
-  recvd = recv(sd, buffer, BUFFER_SIZE - 1, 0);
-  buffer[recvd] = '\0';
+  if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE - 1))
+    {
+      close(sd);
+      return FALSE;
+    }
 
   if (strncmp(buffer, "OK", 2) != 0)
     return FALSE;
@@ -117,8 +150,11 @@ password_get_gpg_agent(const char **password,
     {
       request = apr_psprintf(pool, "OPTION ttyname=%s\n", tty_name);
       send(sd, request, strlen(request), 0);
-      recvd = recv(sd, buffer, BUFFER_SIZE - 1, 0);
-      buffer[recvd] = '\0';
+      if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE - 1))
+        {
+          close(sd);
+          return FALSE;
+        }
 
       if (strncmp(buffer, "OK", 2) != 0)
         return FALSE;
@@ -132,8 +168,11 @@ password_get_gpg_agent(const char **password,
     {
       request = apr_psprintf(pool, "OPTION ttytype=%s\n", tty_type);
       send(sd, request, strlen(request), 0);
-      recvd = recv(sd, buffer, BUFFER_SIZE - 1, 0);
-      buffer[recvd] = '\0';
+      if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE - 1))
+        {
+          close(sd);
+          return FALSE;
+        }
 
       if (strncmp(buffer, "OK", 2) != 0)
         return FALSE;
@@ -158,8 +197,11 @@ password_get_gpg_agent(const char **password,
                            cache_id);
 
   send(sd, request, strlen(request) + 1, 0);
-  recvd = recv(sd, buffer, BUFFER_SIZE - 1, 0);
-  buffer[recvd] = '\0';
+  if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE - 1))
+    {
+      close(sd);
+      return FALSE;
+    }
 
   if (strncmp(buffer, "ERR", 3) == 0)
     return FALSE;
