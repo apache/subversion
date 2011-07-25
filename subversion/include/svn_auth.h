@@ -1074,6 +1074,7 @@ svn_auth_get_kwallet_ssl_client_cert_pw_provider(
 /**
  * Get libsvn_auth_gpg_agent version information.
  *
+ * @since New in 1.8.
  */
 const svn_version_t *
 svn_auth_gpg_agent_version(void);
@@ -1090,7 +1091,7 @@ svn_auth_gpg_agent_version(void);
  *
  * Allocate @a *provider in @a pool.
  *
- * @since New in 1.7
+ * @since New in 1.8
  * @note This function actually works only on systems with
  * libsvn_auth_gpg_agent and GNU Privacy Guard installed.
  */
