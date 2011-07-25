@@ -820,12 +820,6 @@ if test "$with_gnome_keyring" = "yes"; then
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-gnome-keyring-lib"
 fi
 
-if test "$with_gpg_agent" = "yes"; then
-  BUILD_RULES="$BUILD_RULES gpg-agent-lib"
-  INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-lib/install-lib install-gpg-agent-lib/'`"
-  INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-gpg-agent-lib"
-fi
-
 if test "$USE_NLS" = "yes"; then
   BUILD_RULES="$BUILD_RULES locale"
   INSTALL_RULES="$INSTALL_RULES install-locale"
