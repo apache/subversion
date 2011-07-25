@@ -1063,7 +1063,7 @@ prep_private(dav_resource_combined *comb)
             {
               svn_error_clear(serr);
               comb->res.exists = FALSE;
-              return dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+              return dav_svn__new_error(pool, HTTP_NOT_FOUND, 0,
                                         "Named transaction doesn't exist.");
             }
           return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

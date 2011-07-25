@@ -105,9 +105,12 @@ svn_dso_load(apr_dso_handle_t **dso, const char *fname)
       status = apr_dso_load(dso, fname, dso_pool);
       if (status)
         {
-#if 0
+#ifdef SVN_DEBUG_DSO
           char buf[1024];
-          fprintf(stderr, "%s\n", apr_dso_error(*dso, buf, 1024));
+          fprintf(stderr,
+                  "Dynamic loading of '%s' failed with the following error:\n%s\n",
+                  fname,
+                  apr_dso_error(*dso, buf, 1024));
 #endif
           *dso = NULL;
 

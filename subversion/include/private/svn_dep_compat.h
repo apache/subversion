@@ -62,6 +62,11 @@ extern "C" {
 #define apr_array_clear(arr)         (arr)->nelts = 0
 #endif
 
+#if !APR_VERSION_AT_LEAST(1,0,0)
+#define APR_UINT64_C(val) UINT64_C(val)
+#define APR_FPROT_OS_DEFAULT APR_OS_DEFAULT
+#endif
+
 #if !APR_VERSION_AT_LEAST(1,3,0)
 #define APR_UINT16_MAX  0xFFFFU
 #define APR_INT16_MAX   0x7FFF

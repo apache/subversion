@@ -595,8 +595,6 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
    DEPTH is the depth to recurse.
 
-   DRY_RUN is set if this is a dry-run merge. It is not relevant for diff.
-
    RA_SESSION defines the additional RA session for requesting file
    contents.
 
@@ -615,15 +613,13 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
                             svn_ra_session_t *ra_session,
                             svn_revnum_t revision,
                             svn_boolean_t walk_deleted_dirs,
-                            svn_boolean_t dry_run,
                             const svn_wc_diff_callbacks4_t *diff_callbacks,
                             void *diff_cmd_baton,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
                             svn_wc_notify_func2_t notify_func,
                             void *notify_baton,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
+                            apr_pool_t *result_pool);
 
 
 /* ---------------------------------------------------------------- */

@@ -247,28 +247,28 @@ static const char *bad_git_diff_header =
   "new file mode 100644"                                                NL;
 
 
-/* Create a PATCH_FILE with name FNAME containing the contents of DIFF. */
+/* Create a PATCH_FILE containing the contents of DIFF. */
 static svn_error_t *
-create_patch_file(svn_patch_file_t **patch_file, const char *fname,
+create_patch_file(svn_patch_file_t **patch_file,
                   const char *diff, apr_pool_t *pool)
 {
+  apr_size_t bytes;
   apr_size_t len;
-  apr_status_t status;
+  const char *path;
   apr_file_t *apr_file;
 
   /* Create a patch file. */
-  status = apr_file_open(&apr_file, fname,
-                        (APR_READ | APR_WRITE | APR_CREATE | APR_TRUNCATE |
-                         APR_DELONCLOSE), APR_OS_DEFAULT, pool);
-  if (status != APR_SUCCESS)
-    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL, "Cannot open '%s'",
-                             fname);
-  len = strlen(diff);
-  status = apr_file_write_full(apr_file, diff, len, &len);
-  if (status || len != strlen(diff))
+  SVN_ERR(svn_io_open_unique_file3(&apr_file, &path, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   pool, pool));
+
+  bytes = strlen(diff);
+  SVN_ERR(svn_io_file_write_full(apr_file, diff, bytes, &len, pool));
+  if (len != bytes)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                             "Cannot write to '%s'", fname);
-  SVN_ERR(svn_diff_open_patch_file(patch_file, fname, pool));
+                             "Cannot write to '%s'", path);
+  SVN_ERR(svn_io_file_close(apr_file, pool));
+  SVN_ERR(svn_diff_open_patch_file(patch_file, path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -314,7 +314,6 @@ static svn_error_t *
 test_parse_unidiff(apr_pool_t *pool)
 {
   svn_patch_file_t *patch_file;
-  const char *fname = "test_parse_unidiff.patch";
   svn_boolean_t reverse;
   svn_boolean_t ignore_whitespace;
   int i;
@@ -330,7 +329,7 @@ test_parse_unidiff(apr_pool_t *pool)
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(create_patch_file(&patch_file, fname, unidiff, pool));
+      SVN_ERR(create_patch_file(&patch_file, unidiff, pool));
 
       /* We have two patches with one hunk each.
        * Parse the first patch. */
@@ -393,9 +392,8 @@ test_parse_git_diff(apr_pool_t *pool)
   svn_patch_file_t *patch_file;
   svn_patch_t *patch;
   svn_diff_hunk_t *hunk;
-  const char *fname = "test_parse_git_diff.patch";
 
-  SVN_ERR(create_patch_file(&patch_file, fname, git_unidiff, pool));
+  SVN_ERR(create_patch_file(&patch_file, git_unidiff, pool));
 
   /* Parse a deleted empty file */
   SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file,
@@ -467,10 +465,8 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   svn_patch_file_t *patch_file;
   svn_patch_t *patch;
   svn_diff_hunk_t *hunk;
-  const char *fname = "test_parse_git_tree_and_text_diff.patch";
 
-  SVN_ERR(create_patch_file(&patch_file, fname, git_tree_and_text_unidiff,
-                            pool));
+  SVN_ERR(create_patch_file(&patch_file, git_tree_and_text_unidiff, pool));
 
   /* Parse a copied file with text modifications. */
   SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file,
@@ -567,10 +563,8 @@ test_bad_git_diff_headers(apr_pool_t *pool)
   svn_patch_file_t *patch_file;
   svn_patch_t *patch;
   svn_diff_hunk_t *hunk;
-  const char *fname = "test_bad_git_diff_header.patch";
 
-  SVN_ERR(create_patch_file(&patch_file, fname, bad_git_diff_header,
-                            pool));
+  SVN_ERR(create_patch_file(&patch_file, bad_git_diff_header, pool));
 
   SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file,
                                     FALSE, /* reverse */
@@ -607,9 +601,8 @@ test_parse_property_diff(apr_pool_t *pool)
   svn_prop_patch_t *prop_patch;
   svn_diff_hunk_t *hunk;
   apr_array_header_t *hunks;
-  const char *fname = "test_parse_property_diff.patch";
 
-  SVN_ERR(create_patch_file(&patch_file, fname, property_unidiff, pool));
+  SVN_ERR(create_patch_file(&patch_file, property_unidiff, pool));
 
   SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file,
                                     FALSE, /* reverse */
@@ -710,10 +703,8 @@ test_parse_property_and_text_diff(apr_pool_t *pool)
   svn_prop_patch_t *prop_patch;
   svn_diff_hunk_t *hunk;
   apr_array_header_t *hunks;
-  const char *fname = "test_parse_property_and_text_diff.patch";
 
-  SVN_ERR(create_patch_file(&patch_file, fname, property_and_text_unidiff,
-                            pool));
+  SVN_ERR(create_patch_file(&patch_file, property_and_text_unidiff, pool));
 
   SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file,
                                     FALSE, /* reverse */
@@ -766,10 +757,8 @@ test_parse_diff_symbols_in_prop_unidiff(apr_pool_t *pool)
   svn_prop_patch_t *prop_patch;
   svn_diff_hunk_t *hunk;
   apr_array_header_t *hunks;
-  const char *fname = "test_parse_diff_symbols_in_prop_unidiff.patch";
 
-  SVN_ERR(create_patch_file(&patch_file, fname, diff_symbols_in_prop_unidiff,
-                            pool));
+  SVN_ERR(create_patch_file(&patch_file, diff_symbols_in_prop_unidiff, pool));
 
   SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file,
                                     FALSE, /* reverse */
@@ -865,10 +854,8 @@ test_git_diffs_with_spaces_diff(apr_pool_t *pool)
 {
   svn_patch_file_t *patch_file;
   svn_patch_t *patch;
-  const char *fname = "test_git_diffs_with_spaces_diff.patch";
 
-  SVN_ERR(create_patch_file(&patch_file, fname, path_with_spaces_unidiff,
-                            pool));
+  SVN_ERR(create_patch_file(&patch_file, path_with_spaces_unidiff, pool));
 
   SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file,
                                     FALSE, /* reverse */

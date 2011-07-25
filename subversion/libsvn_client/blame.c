@@ -107,6 +107,7 @@ struct delta_baton {
   svn_txdelta_window_handler_t wrapped_handler;
   void *wrapped_baton;
   struct file_rev_baton *file_rev_baton;
+  svn_stream_t *source_stream;  /* the delta source */
   const char *filename;
 };
 
@@ -319,6 +320,13 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   if (window)
     return SVN_NO_ERROR;
 
+  /* Close the source file used for the delta.
+     It is important to do this early, since otherwise, they will be deleted
+     before all handles are closed, which leads to failures on some platforms
+     when new tempfiles are to be created. */
+  if (dbaton->source_stream)
+    SVN_ERR(svn_stream_close(dbaton->source_stream));
+
   /* If we are including merged revisions, we need to add each rev to the
      merged chain. */
   if (frb->include_merged_revisions)
@@ -445,11 +453,12 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
 
   /* Prepare the text delta window handler. */
   if (frb->last_filename)
-    SVN_ERR(svn_stream_open_readonly(&last_stream, frb->last_filename,
+    SVN_ERR(svn_stream_open_readonly(&delta_baton->source_stream, frb->last_filename,
                                      frb->currpool, pool));
   else
     /* Means empty stream below. */
-    last_stream = NULL;
+    delta_baton->source_stream = NULL;
+  last_stream = svn_stream_disown(delta_baton->source_stream, pool);
 
   if (frb->include_merged_revisions && !frb->merged_revision)
     filepool = frb->filepool;

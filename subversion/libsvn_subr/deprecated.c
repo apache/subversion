@@ -1126,3 +1126,12 @@ svn_xml_make_header(svn_stringbuf_t **str, apr_pool_t *pool)
 {
   svn_xml_make_header2(str, NULL, pool);
 }
+
+svn_error_t *
+svn_rangelist_merge(apr_array_header_t **rangelist,
+                    const apr_array_header_t *changes,
+                    apr_pool_t *pool)
+{
+  return svn_error_trace(svn_rangelist_merge2(*rangelist, changes,
+                                              pool, pool));
+}

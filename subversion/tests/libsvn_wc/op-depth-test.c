@@ -40,6 +40,7 @@
 
 #include "private/svn_wc_private.h"
 #include "private/svn_sqlite.h"
+#include "private/svn_dep_compat.h"
 #include "../../libsvn_wc/wc.h"
 #include "../../libsvn_wc/wc_db.h"
 #define SVN_WC__I_AM_WC_DB

@@ -270,20 +270,38 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
                    apr_pool_t *pool);
 
 /** Merge two rangelists consisting of @c svn_merge_range_t *
- * elements, @a *rangelist and @a changes, placing the results in
- * @a *rangelist.  Either rangelist may be empty.
+ * elements, @a rangelist and @a changes, placing the results in
+ * @a rangelist. New elements added to @a rangelist are allocated
+ * in @a result_pool. Either rangelist may be empty.
  *
  * When intersecting rangelists are merged, the inheritability of
  * the resulting svn_merge_range_t depends on the inheritability of the
  * operands: see svn_mergeinfo_merge().
  *
- * Note: @a *rangelist and @a changes must be sorted as said by @c
- * svn_sort_compare_ranges().  @a *rangelist is guaranteed to remain
+ * Note: @a rangelist and @a changes must be sorted as said by @c
+ * svn_sort_compare_ranges().  @a rangelist is guaranteed to remain
  * in sorted order and be compacted to the minimal number of ranges
  * needed to represent the merged result.
  *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_rangelist_merge2(apr_array_header_t *rangelist,
+                     const apr_array_header_t *changes,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
+/** Like svn_rangelist_merge2(), but with @a rangelist as an input/output
+ * argument. This function always allocates a new rangelist in @a pool and
+ * returns its result in @a *rangelist. It does not modify @a *rangelist
+ * in place. If not used carefully, this function can use up a lot of memory
+ * if called in a loop.
+ *
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_rangelist_merge(apr_array_header_t **rangelist,
                     const apr_array_header_t *changes,
