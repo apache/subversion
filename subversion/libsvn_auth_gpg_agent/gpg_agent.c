@@ -142,7 +142,10 @@ password_get_gpg_agent(const char **password,
     }
 
   if (strncmp(buffer, "OK", 2) != 0)
-    return FALSE;
+    {
+      close(sd);
+      return FALSE;
+    }
 
   /* Send TTY_NAME to the gpg-agent daemon. */
   tty_name = getenv("GPG_TTY");
@@ -157,10 +160,16 @@ password_get_gpg_agent(const char **password,
         }
 
       if (strncmp(buffer, "OK", 2) != 0)
-        return FALSE;
+        {
+          close(sd);
+          return FALSE;
+        }
     }
   else
-    return FALSE;
+    {
+      close(sd);
+      return FALSE;
+    }
 
   /* Send TTY_TYPE to the gpg-agent daemon. */
   tty_type = getenv("TERM");
@@ -175,10 +184,16 @@ password_get_gpg_agent(const char **password,
         }
 
       if (strncmp(buffer, "OK", 2) != 0)
-        return FALSE;
+        {
+          close(sd);
+          return FALSE;
+        }
     }
   else
-    return FALSE;
+    {
+      close(sd);
+      return FALSE;
+    }
 
   /* Create the CACHE_ID which will be generated based on REALMSTRING similar
      to other password caching mechanisms. */
@@ -203,6 +218,8 @@ password_get_gpg_agent(const char **password,
       return FALSE;
     }
 
+  close(sd);
+
   if (strncmp(buffer, "ERR", 3) == 0)
     return FALSE;
   
@@ -215,7 +232,6 @@ password_get_gpg_agent(const char **password,
 
   *password = p;
 
-  close(sd);
   return TRUE;
 }
 
