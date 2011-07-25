@@ -27,6 +27,8 @@
 
 /*** Includes. ***/
 
+#ifndef WIN32
+
 #include <unistd.h>
 
 #include <sys/socket.h>
@@ -424,3 +426,4 @@ svn_auth_get_gpg_agent_simple_provider
 }
 
 #endif /* SVN_HAVE_GPG_AGENT */
+#endif /* !WIN32 */
