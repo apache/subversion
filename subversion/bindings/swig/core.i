@@ -244,6 +244,8 @@
 %ignore svn_auth_kwallet_version;
 %ignore svn_auth_get_kwallet_simple_provider;
 %ignore svn_auth_get_kwallet_ssl_client_cert_pw_provider;
+%ignore svn_auth_gpg_agent_version;
+%ignore svn_auth_get_gpg_agent_simple_provider;
 
 /* bad pool convention */
 %ignore svn_opt_print_generic_help;
