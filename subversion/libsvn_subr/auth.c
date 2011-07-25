@@ -500,6 +500,9 @@ svn_auth_get_platform_specific_client_providers
   apr_array_header_t *password_stores;
   int i;
 
+#define SVN__DEFAULT_AUTH_PROVIDER_LIST \
+         "gnome-keyring,kwallet,keychain,gpg-agent,windows-cryptoapi"
+
   if (config)
     {
       svn_config_get
@@ -507,12 +510,11 @@ svn_auth_get_platform_specific_client_providers
          &password_stores_config_option,
          SVN_CONFIG_SECTION_AUTH,
          SVN_CONFIG_OPTION_PASSWORD_STORES,
-         "gpg-agent,gnome-keyring,kwallet,keychain,windows-cryptoapi");
+         SVN__DEFAULT_AUTH_PROVIDER_LIST);
     }
   else
     {
-      password_stores_config_option =
-        "gpg-agent,gnome-keyring,kwallet,keychain,windows-cryptoapi";
+      password_stores_config_option = SVN__DEFAULT_AUTH_PROVIDER_LIST;
     }
 
   *providers = apr_array_make(pool, 12, sizeof(svn_auth_provider_object_t *));
