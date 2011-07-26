@@ -168,6 +168,19 @@ Candidate changes:
    Votes:
      +1: philip, stsp
 
+* r1151177
+  Fix two bugs in ra_serf when connecting to HTTPS repository hosted on
+  non-standard port.
+  1. ra_serf complains that server certificate doesn't match hostname.
+  2. XML parsing failed: (400 Bad Request) error when working with SNI 
+     enabled server.
+     http://svn.haxx.se/users/archive-2011-07/0404.shtml
+   Justification:
+     Users are unable to use repositories over HTTPS protocol hosted on
+     non-standard TCP port.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
