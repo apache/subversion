@@ -26,6 +26,7 @@
 
 # General modules
 import os
+import re
 import shutil
 import sys
 
@@ -33,6 +34,7 @@ import sys
 import svntest
 from svntest.verify import SVNExpectedStdout, SVNExpectedStderr
 from svntest.verify import SVNUnexpectedStderr
+from svntest.verify import UnorderedOutput
 from svntest.main import SVN_PROP_MERGEINFO
 
 # (abbreviation)
@@ -1381,6 +1383,86 @@ def verify_non_utf8_paths(sbox):
     'STDERR', expected_stderr, errput):
     raise svntest.Failure
 
+def test_lslocks_and_rmlocks(sbox):
+  "test 'svnadmin lslocks' and 'svnadmin rmlocks'"
+  
+  sbox.build(create_wc=False)
+  iota_url = sbox.repo_url + '/iota'
+  lambda_url = sbox.repo_url + '/A/B/lambda'
+
+  exit_code, output, errput = svntest.main.run_svnadmin("lslocks",
+                                                        sbox.repo_dir)
+
+  if exit_code or errput or output:
+    raise svntest.Failure("Error: 'lslocks' failed")
+
+  expected_output = UnorderedOutput(
+    ["'A/B/lambda' locked by user 'jrandom'.\n",
+     "'iota' locked by user 'jrandom'.\n"])
+  
+  # Lock iota and A/B/lambda using svn client
+  svntest.actions.run_and_verify_svn(None, expected_output,
+                                     [], "lock", "-m", "Locking files",
+                                     iota_url, lambda_url)
+
+  expected_output = svntest.verify.UnorderedRegexOutput([
+      "Path: /A/B/lambda",
+      "UUID Token: opaquelocktoken",
+      "Owner: jrandom",
+      "Created:",
+      "Expires:",
+      "Comment \(1 line\):",
+      "Locking files",
+      "Path: /iota",
+      "UUID Token: opaquelocktoken.*",      
+      "\n", # empty line    
+      ])
+
+  # List all locks
+  exit_code, output, errput = svntest.main.run_svnadmin("lslocks",
+                                                        sbox.repo_dir)
+  
+  if errput:
+    raise SVNUnexpectedStderr(errput)
+    
+  svntest.verify.compare_and_display_lines('message', 'label',
+                                           expected_output, output)
+  svntest.verify.verify_exit_code(None, exit_code, 0)
+
+  # List lock in path /A
+  exit_code, output, errput = svntest.main.run_svnadmin("lslocks",
+                                                        sbox.repo_dir,
+                                                        "A")
+  if errput:
+    raise SVNUnexpectedStderr(errput)
+
+  expected_output = svntest.verify.UnorderedRegexOutput([
+    "Path: /A/B/lambda",
+    "UUID Token: opaquelocktoken",
+    "Owner: jrandom",
+    "Created:",
+    "Expires:",
+    "Comment \(1 line\):",
+    "Locking files",
+    "\n", # empty line    
+    ])
+
+  svntest.verify.compare_and_display_lines('message', 'label',
+                                           expected_output, output)
+  svntest.verify.verify_exit_code(None, exit_code, 0)
+
+  # Remove locks
+  exit_code, output, errput = svntest.main.run_svnadmin("rmlocks",
+                                                        sbox.repo_dir,
+                                                        "iota",
+                                                        "A/B/lambda")
+  expected_output = UnorderedOutput(["Removed lock on '/iota'.\n",
+                                     "Removed lock on '/A/B/lambda'.\n"])
+  
+  svntest.verify.verify_outputs(
+    "Unexpected output while running 'svnadmin rmlocks'.",
+    output, [], expected_output, None)
+
 ########################################################################
 # Run the tests
 
@@ -1410,6 +1492,7 @@ test_list = [ None,
               hotcopy_symlink,
               load_bad_props,
               verify_non_utf8_paths,
+              test_lslocks_and_rmlocks,
              ]
 
 if __name__ == '__main__':
