@@ -138,7 +138,7 @@ Candidate changes:
      on a server. And locks (the needle file) should be released as soon as
      possible.
    Notes:
-     rhuijben: This problem triggered my weekend search for locked files.  problems
+     rhuijben: This bug triggered my weekend search for locked files problems.
    Votes:
      +1: rhuijben
      +0: danielsh (we shouldn't depend on libsvn_client fixes to avoid
