@@ -575,10 +575,11 @@ def write_announcement(args):
 # Validate the signatures for a release
 
 key_start = '-----BEGIN PGP SIGNATURE-----\n'
-sig_pattern = re.compile(r'^gpg: Signature made .*? using \w+ key ID (\w+)')
 fp_pattern = re.compile(r'^pub\s+(\w+\/\w+)[^\n]*\n\s+Key\sfingerprint\s=((\s+[0-9A-F]{4}){10})\nuid\s+([^<\(]+)\s')
 
-def grab_sig_ids(args):
+def check_sigs(args):
+    'Check the signatures for the release.'
+
     import gnupg
     gpg = gnupg.GPG()
 
@@ -607,9 +608,6 @@ def grab_sig_ids(args):
                 sys.stderr.write("BAD SIGNATURE for %s\n" % filename)
                 sys.exit(1)
 
-    return good_sigs
-
-def generate_output(good_sigs):
     for id in good_sigs.keys():
         gpg = subprocess.Popen(['gpg', '--fingerprint', id],
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -626,11 +624,6 @@ def generate_output(good_sigs):
         fp = fp_pattern.match(gpg_output).groups()
         print("   %s [%s] with fingerprint:" % (fp[3], fp[0]))
         print("   %s" % fp[1])
-
-def check_sigs(args):
-    'Check the signatures for the release.'
-
-    generate_output(grab_sig_ids(args))
 
 
 #----------------------------------------------------------------------
