@@ -188,6 +188,7 @@ Approved changes:
    Justification:
      We should follow our own api documentation.
    Notes:
-     This error is invisible to users without the r1150254 group.
+     This error is invisible to users without the r1150254 group (upon which
+     this revision depends for a clean merge).
    Votes:
      +1: rhuijben, danielsh, cmpilato
