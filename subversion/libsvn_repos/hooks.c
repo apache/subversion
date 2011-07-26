@@ -617,8 +617,11 @@ svn_repos__hooks_pre_lock(svn_repos_t *repos,
 
       SVN_ERR(run_hook_cmd(&buf, SVN_REPOS__HOOK_PRE_LOCK, hook, args, NULL,
                            pool));
+
       if (token)
+        /* No validation here; the FS will take care of that. */
         *token = buf->data;
+
     }
   else if (token)
     *token = "";
