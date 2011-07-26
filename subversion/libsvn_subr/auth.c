@@ -382,11 +382,10 @@ svn_auth_ssl_server_cert_info_dup
 }
 
 svn_error_t *
-svn_auth_get_platform_specific_provider
-  (svn_auth_provider_object_t **provider,
-   const char *provider_name,
-   const char *provider_type,
-   apr_pool_t *pool)
+svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
+                                        const char *provider_name,
+                                        const char *provider_type,
+                                        apr_pool_t *pool)
 {
   *provider = NULL;
 
@@ -490,10 +489,9 @@ svn_auth_get_platform_specific_provider
 }
 
 svn_error_t *
-svn_auth_get_platform_specific_client_providers
-  (apr_array_header_t **providers,
-   svn_config_t *config,
-   apr_pool_t *pool)
+svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
+                                                svn_config_t *config,
+                                                apr_pool_t *pool)
 {
   svn_auth_provider_object_t *provider;
   const char *password_stores_config_option;
