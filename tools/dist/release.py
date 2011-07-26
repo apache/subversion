@@ -45,6 +45,7 @@ import hashlib
 import tarfile
 import logging
 import datetime
+import tempfile
 import operator
 import itertools
 import subprocess
@@ -578,6 +579,9 @@ sig_pattern = re.compile(r'^gpg: Signature made .*? using \w+ key ID (\w+)')
 fp_pattern = re.compile(r'^pub\s+(\w+\/\w+)[^\n]*\n\s+Key\sfingerprint\s=((\s+[0-9A-F]{4}){10})\nuid\s+([^<\(]+)\s')
 
 def grab_sig_ids(args):
+    import gnupg
+    gpg = gnupg.GPG()
+
     if args.target:
         target = args.target
     else:
@@ -587,33 +591,21 @@ def grab_sig_ids(args):
     good_sigs = {}
 
     for filename in glob.glob(os.path.join(target, 'subversion-*.asc')):
-        shutil.copyfile(filename, '%s.bak' % filename)
         text = open(filename).read()
         keys = text.split(key_start)
 
         for key in keys[1:]:
-            open(filename, 'w').write(key_start + key)
-            gpg = subprocess.Popen(['gpg', '--logger-fd', '1',
-                                    '--verify', filename],
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.STDOUT)
+            fd, fn = tempfile.mkstemp()
+            os.write(fd, key_start + key)
+            os.close(fd)
+            verified = gpg.verify_file(open(fn, 'rb'), filename[:-4])
+            os.unlink(fn)
 
-            rc = gpg.wait()
-            output = gpg.stdout.read()
-            if rc:
-                # gpg choked, die with an error
-                print(output)
-                sys.stderr.write("BAD SIGNATURE in %s\n" % filename)
-                shutil.move('%s.bak' % filename, filename)
+            if verified.valid:
+                good_sigs[verified.key_id[-8:]] = True
+            else:
+                sys.stderr.write("BAD SIGNATURE for %s\n" % filename)
                 sys.exit(1)
-
-            for line in output.split('\n'):
-                match = sig_pattern.match(line)
-                if match:
-                    key_id = match.groups()[0]
-                    good_sigs[key_id] = True
-
-        shutil.move('%s.bak' % filename, filename)
 
     return good_sigs
 
