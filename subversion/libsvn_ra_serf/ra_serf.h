@@ -74,7 +74,7 @@ typedef struct svn_ra_serf__connection_t {
   serf_bucket_alloc_t *bkt_alloc;
 
   /* Host name */
-  const char *hostinfo;
+  const char *hostname;
 
   /* Are we using ssl */
   svn_boolean_t using_ssl;
