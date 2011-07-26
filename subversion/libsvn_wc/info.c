@@ -285,8 +285,6 @@ build_info_for_node(svn_wc__info2_t **info,
       tmpinfo->lock->creation_date = lock->date;
     }
 
-  /* ### Temporary hacks to keep our test suite happy: */
-
   *info = tmpinfo;
   return SVN_NO_ERROR;
 }
