@@ -1602,15 +1602,15 @@ revert_restore(svn_wc__db_t *db,
 /* Revert tree LOCAL_ABSPATH to depth DEPTH and notify for all
    reverts. */
 static svn_error_t *
-new_revert_internal(svn_wc__db_t *db,
-                    const char *local_abspath,
-                    svn_depth_t depth,
-                    svn_boolean_t use_commit_times,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
-                    svn_wc_notify_func2_t notify_func,
-                    void *notify_baton,
-                    apr_pool_t *scratch_pool)
+revert_internal(svn_wc__db_t *db,
+                const char *local_abspath,
+                svn_depth_t depth,
+                svn_boolean_t use_commit_times,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                svn_wc_notify_func2_t notify_func,
+                void *notify_baton,
+                apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
 
@@ -1652,16 +1652,16 @@ new_revert_internal(svn_wc__db_t *db,
 /* Revert files in LOCAL_ABSPATH to depth DEPTH that match
    CHANGELIST_HASH and notify for all reverts. */
 static svn_error_t *
-new_revert_changelist(svn_wc__db_t *db,
-                      const char *local_abspath,
-                      svn_depth_t depth,
-                      svn_boolean_t use_commit_times,
-                      apr_hash_t *changelist_hash,
-                      svn_cancel_func_t cancel_func,
-                      void *cancel_baton,
-                      svn_wc_notify_func2_t notify_func,
-                      void *notify_baton,
-                      apr_pool_t *scratch_pool)
+revert_changelist(svn_wc__db_t *db,
+                  const char *local_abspath,
+                  svn_depth_t depth,
+                  svn_boolean_t use_commit_times,
+                  apr_hash_t *changelist_hash,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  svn_wc_notify_func2_t notify_func,
+                  void *notify_baton,
+                  apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool;
   const apr_array_header_t *children;
@@ -1673,11 +1673,11 @@ new_revert_changelist(svn_wc__db_t *db,
   /* Revert this node (depth=empty) if it matches one of the changelists.  */
   if (svn_wc__internal_changelist_match(db, local_abspath, changelist_hash,
                                         scratch_pool))
-    SVN_ERR(new_revert_internal(db, local_abspath,
-                                svn_depth_empty, use_commit_times,
-                                cancel_func, cancel_baton,
-                                notify_func, notify_baton,
-                                scratch_pool));
+    SVN_ERR(revert_internal(db, local_abspath,
+                            svn_depth_empty, use_commit_times,
+                            cancel_func, cancel_baton,
+                            notify_func, notify_baton,
+                            scratch_pool));
 
   if (depth == svn_depth_empty)
     return SVN_NO_ERROR;
@@ -1707,11 +1707,11 @@ new_revert_changelist(svn_wc__db_t *db,
                                                     const char *),
                                       iterpool);
 
-      SVN_ERR(new_revert_changelist(db, child_abspath, depth,
-                                    use_commit_times, changelist_hash,
-                                    cancel_func, cancel_baton,
-                                    notify_func, notify_baton,
-                                    iterpool));
+      SVN_ERR(revert_changelist(db, child_abspath, depth,
+                                use_commit_times, changelist_hash,
+                                cancel_func, cancel_baton,
+                                notify_func, notify_baton,
+                                iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -1729,15 +1729,15 @@ new_revert_changelist(svn_wc__db_t *db,
    ### the non-recursive revert on the dir will fail.  Not sure how a
    ### partially recursive revert should handle actual-only nodes. */
 static svn_error_t *
-new_revert_partial(svn_wc__db_t *db,
-                   const char *local_abspath,
-                   svn_depth_t depth,
-                   svn_boolean_t use_commit_times,
-                   svn_cancel_func_t cancel_func,
-                   void *cancel_baton,
-                   svn_wc_notify_func2_t notify_func,
-                   void *notify_baton,
-                   apr_pool_t *scratch_pool)
+revert_partial(svn_wc__db_t *db,
+               const char *local_abspath,
+               svn_depth_t depth,
+               svn_boolean_t use_commit_times,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool;
   const apr_array_header_t *children;
@@ -1752,9 +1752,9 @@ new_revert_partial(svn_wc__db_t *db,
 
   /* Revert the root node itself (depth=empty), then move on to the
      children.  */
-  SVN_ERR(new_revert_internal(db, local_abspath, svn_depth_empty,
-                              use_commit_times, cancel_func, cancel_baton,
-                              notify_func, notify_baton, iterpool));
+  SVN_ERR(revert_internal(db, local_abspath, svn_depth_empty,
+                          use_commit_times, cancel_func, cancel_baton,
+                          notify_func, notify_baton, iterpool));
 
   SVN_ERR(svn_wc__db_read_children_of_working_node(&children, db,
                                                    local_abspath,
@@ -1782,11 +1782,11 @@ new_revert_partial(svn_wc__db_t *db,
         }
 
       /* Revert just this node (depth=empty).  */
-      SVN_ERR(new_revert_internal(db, child_abspath,
-                                  svn_depth_empty, use_commit_times,
-                                  cancel_func, cancel_baton,
-                                  notify_func, notify_baton,
-                                  iterpool));
+      SVN_ERR(revert_internal(db, child_abspath,
+                              svn_depth_empty, use_commit_times,
+                              cancel_func, cancel_baton,
+                              notify_func, notify_baton,
+                              iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -1813,20 +1813,20 @@ svn_wc_revert4(svn_wc_context_t *wc_ctx,
 
       SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelist_filter,
                                          scratch_pool));
-      return svn_error_trace(new_revert_changelist(wc_ctx->db, local_abspath,
-                                                   depth, use_commit_times,
-                                                   changelist_hash,
-                                                   cancel_func, cancel_baton,
-                                                   notify_func, notify_baton,
-                                                   scratch_pool));
-    }
-
-  if (depth == svn_depth_empty || depth == svn_depth_infinity)
-    return svn_error_trace(new_revert_internal(wc_ctx->db, local_abspath,
+      return svn_error_trace(revert_changelist(wc_ctx->db, local_abspath,
                                                depth, use_commit_times,
+                                               changelist_hash,
                                                cancel_func, cancel_baton,
                                                notify_func, notify_baton,
                                                scratch_pool));
+    }
+
+  if (depth == svn_depth_empty || depth == svn_depth_infinity)
+    return svn_error_trace(revert_internal(wc_ctx->db, local_abspath,
+                                           depth, use_commit_times,
+                                           cancel_func, cancel_baton,
+                                           notify_func, notify_baton,
+                                           scratch_pool));
 
   /* The user may expect svn_depth_files/svn_depth_immediates to work
      on copied dirs with one level of children.  It doesn't, the user
@@ -1835,11 +1835,11 @@ svn_wc_revert4(svn_wc_context_t *wc_ctx,
      revert too much we could invoke the recursive call above. */
 
   if (depth == svn_depth_files || depth == svn_depth_immediates)
-    return svn_error_trace(new_revert_partial(wc_ctx->db, local_abspath,
-                                              depth, use_commit_times,
-                                              cancel_func, cancel_baton,
-                                              notify_func, notify_baton,
-                                              scratch_pool));
+    return svn_error_trace(revert_partial(wc_ctx->db, local_abspath,
+                                          depth, use_commit_times,
+                                          cancel_func, cancel_baton,
+                                          notify_func, notify_baton,
+                                          scratch_pool));
 
   /* Bogus depth. Tell the caller.  */
   return svn_error_create(SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL, NULL);
