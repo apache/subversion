@@ -442,8 +442,19 @@ def roll_tarballs(args):
 
 def post_candidates(args):
     'Post the generated tarballs to web-accessible directory.'
-    if not os.path.exists(args.target):
-        os.makedirs(args.target)
+    if args.target:
+        target = args.target
+    else:
+        target = os.path.join(os.getenv('HOME'), 'public_html', 'svn',
+                              str(args.version))
+
+    if args.code_name:
+        dirname = args.code_name
+    else:
+        dirname = 'deploy'
+
+    if not os.path.exists(target):
+        os.makedirs(target)
 
     data = { 'version'      : str(args.version),
              'revnum'       : args.revnum,
@@ -461,13 +472,12 @@ def post_candidates(args):
 
     template = ezt.Template()
     template.parse(get_tmplfile(template_filename).read())
-    template.generate(open(os.path.join(args.target, 'index.html'), 'w'), data)
+    template.generate(open(os.path.join(target, 'index.html'), 'w'), data)
 
-    logging.info('Moving tarballs to %s' % os.path.join(args.target, dirname))
-    if os.path.exists(os.path.join(args.target, dirname)):
-        shutil.rmtree(os.path.join(args.target, dirname))
-    shutil.copytree(get_deploydir(args.base_dir),
-                    os.path.join(args.target, dirname))
+    logging.info('Moving tarballs to %s' % os.path.join(target, dirname))
+    if os.path.exists(os.path.join(target, dirname)):
+        shutil.rmtree(os.path.join(target, dirname))
+    shutil.copytree(get_deploydir(args.base_dir), os.path.join(target, dirname))
 
 
 #----------------------------------------------------------------------
@@ -614,13 +624,10 @@ def main():
     subparser.add_argument('revnum', type=int,
                     help='''The revision number to base the release on.''')
     subparser.add_argument('--target',
-                    help='''The full path to the destination.''',
-                    default=os.path.join(os.getenv('HOME'), 'public_html',
-                                         'svn', str(args.version)))
+                    help='''The full path to the destination.''')
     subparser.add_argument('--code-name',
                     help='''A whimsical name for the release, used only for
-                            naming the download directory.''',
-                    default='deploy')
+                            naming the download directory.''')
 
     # The clean-dist subcommand
     subparser = subparsers.add_parser('clean-dist',
