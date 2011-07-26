@@ -595,15 +595,16 @@ erase_unversioned_from_wc(const char *path,
 
 
 svn_error_t *
-svn_wc_delete4(svn_wc_context_t *wc_ctx,
-               const char *local_abspath,
-               svn_boolean_t keep_local,
-               svn_boolean_t delete_unversioned_target,
-               svn_cancel_func_t cancel_func,
-               void *cancel_baton,
-               svn_wc_notify_func2_t notify_func,
-               void *notify_baton,
-               apr_pool_t *scratch_pool)
+svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
+                        svn_boolean_t keep_local,
+                        svn_boolean_t delete_unversioned_target,
+                        const char *moved_to_abspath,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        apr_pool_t *scratch_pool)
 {
   apr_pool_t *pool = scratch_pool;
   svn_wc__db_t *db = wc_ctx->db;
@@ -670,7 +671,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
     SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
                                       scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__db_op_delete(db, local_abspath,
+  SVN_ERR(svn_wc__db_op_delete(db, local_abspath, moved_to_abspath,
                                notify_func, notify_baton,
                                cancel_func, cancel_baton,
                                pool));
@@ -724,6 +725,26 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
     }
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_delete4(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               svn_boolean_t keep_local,
+               svn_boolean_t delete_unversioned_target,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_wc__delete_internal(wc_ctx, local_abspath,
+                                                 keep_local,
+                                                 delete_unversioned_target,
+                                                 NULL,
+                                                 cancel_func, cancel_baton,
+                                                 notify_func, notify_baton,
+                                                 scratch_pool));
 }
 
 

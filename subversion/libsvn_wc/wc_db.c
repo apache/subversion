@@ -6015,6 +6015,7 @@ info_below_working(svn_boolean_t *have_base,
 
 struct op_delete_baton_t {
   apr_int64_t delete_depth;  /* op-depth for root of delete */
+  const char *moved_to_relpath; /* NULL if delete is not part of a move */
 };
 
 static svn_error_t *
@@ -6128,6 +6129,22 @@ op_delete_txn(void *baton,
 
   if (add_work)
     {
+      /* Delete the node at LOCAL_RELPATH, and possibly mark it as moved. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                 STMT_INSERT_DELETE_NODE));
+      if (b->moved_to_relpath)
+        SVN_ERR(svn_sqlite__bindf(stmt, "isiis",
+                                  wcroot->wc_id, local_relpath,
+                                  select_depth, b->delete_depth,
+                                  b->moved_to_relpath));
+      else
+        SVN_ERR(svn_sqlite__bindf(stmt, "isii",
+                                  wcroot->wc_id, local_relpath,
+                                  select_depth, b->delete_depth));
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
+      /* Delete children, if any. */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                  STMT_INSERT_DELETE_FROM_NODE_RECURSIVE));
       SVN_ERR(svn_sqlite__bindf(stmt, "isii",
@@ -6190,6 +6207,7 @@ do_delete_notify(void *baton,
 svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
                      const char *local_abspath,
+                     const char *moved_to_abspath,
                      svn_wc_notify_func2_t notify_func,
                      void *notify_baton,
                      svn_cancel_func_t cancel_func,
@@ -6197,7 +6215,9 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
+  svn_wc__db_wcroot_t *moved_to_wcroot;
   const char *local_relpath;
+  const char *moved_to_relpath;
   struct op_delete_baton_t odb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -6206,8 +6226,30 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
                                                 db, local_abspath,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
+  
+  if (moved_to_abspath)
+    {
+      SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&moved_to_wcroot,
+                                                    &moved_to_relpath,
+                                                    db, moved_to_abspath,
+                                                    scratch_pool,
+                                                    scratch_pool));
+      VERIFY_USABLE_WCROOT(moved_to_wcroot);
+
+      if (wcroot->wc_id != moved_to_wcroot->wc_id)
+        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                 _("Cannot move '%s' to '%s' because they "
+                                   "are not in the same working copy"),
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool),
+                                 svn_dirent_local_style(moved_to_abspath,
+                                                        scratch_pool));
+    }
+  else
+    moved_to_relpath = NULL;
 
   odb.delete_depth = relpath_depth(local_relpath);
+  odb.moved_to_relpath = moved_to_relpath;
 
   SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_infinity,
                         scratch_pool));
@@ -9369,7 +9411,7 @@ scan_deletion_txn(void *baton,
                      || work_presence == svn_wc__db_status_base_deleted);
 
       have_base = !svn_sqlite__column_is_null(stmt,
-                                              0 /* BASE_NODE.presence */);
+                                              0 /* NODES_BASE.presence */);
       if (have_base)
         {
           svn_wc__db_status_t base_presence
