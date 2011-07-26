@@ -179,7 +179,7 @@ Candidate changes:
      Users are unable to use repositories over HTTPS protocol hosted on
      non-standard TCP port.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
 
 Veto-blocked changes:
 =====================
