@@ -23,6 +23,36 @@
 
 /* ==================================================================== */
 
+/* This auth provider stores a plaintext password in memory managed by
+ * a running gpg-agent. In contrast to other password store providers
+ * it does not save the password to disk.
+ *
+ * Prompting is performed by the gpg-agent using a "pinentry" program
+ * which needs to be installed separately. There are several pinentry
+ * implementations with different front-ends (e.g. qt, gtk, ncurses).
+ *
+ * The gpg-agent will let the password time out after a while,
+ * or immediately when it receives the SIGHUP signal.
+ * When the password has timed out it will automatically prompt the
+ * user for the password again. This is transparent to Subversion.
+ *
+ * SECURITY CONSIDERATIONS:
+ *
+ * Communication to the agent happens over a UNIX socket, which is located
+ * in a directory which only the user running Subversion can access.
+ * However, any program the user runs could access this socket and get
+ * the Subversion password if the program knows the "cache ID" Subversion
+ * uses for the password.
+ * The cache ID is very easy to obtain for programs running as the same user.
+ * Subversion uses the MD5 of the realmstring as cache ID, and these checksums
+ * are also used as filenames within ~/.subversion/auth/svn.simple.
+ * Unlike GNOME Keyring or KDE Wallet, the user is not prompted for
+ * permission if another program attempts to access the password.
+ *
+ * Therefore, while the gpg-agent is running and has the password cached,
+ * this provider is no more secure than a file storing the password in
+ * plaintext.
+ */
 
 
 /*** Includes. ***/
