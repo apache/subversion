@@ -254,7 +254,7 @@ password_get_gpg_agent(const char **password,
       close(sd);
       return FALSE;
     }
-  /* The agent will terminate its reponse with "OK". */
+  /* The agent will terminate its response with "OK". */
   if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE))
     {
       close(sd);
@@ -393,6 +393,7 @@ password_set_gpg_agent(apr_hash_t *creds,
 }
 
 
+/* An implementation of svn_auth_provider_t::first_credentials() */
 static svn_error_t *
 simple_gpg_agent_first_creds(void **credentials,
                              void **iter_baton,
@@ -410,7 +411,7 @@ simple_gpg_agent_first_creds(void **credentials,
 }
 
 
-/* Save encrypted credentials to the simple provider's cache. */
+/* An implementation of svn_auth_provider_t::save_credentials() */
 static svn_error_t *
 simple_gpg_agent_save_creds(svn_boolean_t *saved,
                             void *credentials,
