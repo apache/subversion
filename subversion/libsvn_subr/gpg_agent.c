@@ -304,17 +304,12 @@ password_get_gpg_agent(const char **password,
                pool);
   cache_id = svn_checksum_to_cstring(digest, pool);
 
-  /* A newline is required to terminate the GET_PASSPHRASE command.
-   * We append it to REALM_PROMPT because it is the last argument of
-   * the format string below, and because both of the prompt strings
-   * already exist elsewhere in this exact form so they will only
-   * have to be translated once for i18n. */
   password_prompt = apr_psprintf(pool, _("Password for '%s': "), username);
-  realm_prompt = apr_psprintf(pool, _("Authentication realm: %s\n"),
+  realm_prompt = apr_psprintf(pool, _("Enter your Subversion password for %s"),
                               realmstring);
   request = apr_psprintf(pool,
                          "GET_PASSPHRASE --data %s--repeat=1 "
-                         "%s X %s %s",
+                         "%s X %s %s\n",
                          non_interactive ? "--no-ask " : "",
                          cache_id,
                          escape_blanks(password_prompt),
