@@ -571,6 +571,77 @@ def write_announcement(args):
 
 
 #----------------------------------------------------------------------
+# Validate the signatures for a release
+
+key_start = '-----BEGIN PGP SIGNATURE-----\n'
+sig_pattern = re.compile(r'^gpg: Signature made .*? using \w+ key ID (\w+)')
+fp_pattern = re.compile(r'^pub\s+(\w+\/\w+)[^\n]*\n\s+Key\sfingerprint\s=((\s+[0-9A-F]{4}){10})\nuid\s+([^<\(]+)\s')
+
+def grab_sig_ids(args):
+    if args.target:
+        target = args.target
+    else:
+        target = os.path.join(os.getenv('HOME'), 'public_html', 'svn',
+                              str(args.version), 'deploy')
+
+    good_sigs = {}
+
+    for filename in glob.glob(os.path.join(target, 'subversion-*.asc')):
+        shutil.copyfile(filename, '%s.bak' % filename)
+        text = open(filename).read()
+        keys = text.split(key_start)
+
+        for key in keys[1:]:
+            open(filename, 'w').write(key_start + key)
+            gpg = subprocess.Popen(['gpg', '--logger-fd', '1',
+                                    '--verify', filename],
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT)
+
+            rc = gpg.wait()
+            output = gpg.stdout.read()
+            if rc:
+                # gpg choked, die with an error
+                print(output)
+                sys.stderr.write("BAD SIGNATURE in %s\n" % filename)
+                shutil.move('%s.bak' % filename, filename)
+                sys.exit(1)
+
+            for line in output.split('\n'):
+                match = sig_pattern.match(line)
+                if match:
+                    key_id = match.groups()[0]
+                    good_sigs[key_id] = True
+
+        shutil.move('%s.bak' % filename, filename)
+
+    return good_sigs
+
+def generate_output(good_sigs):
+    for id in good_sigs.keys():
+        gpg = subprocess.Popen(['gpg', '--fingerprint', id],
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        rc = gpg.wait()
+        gpg_output = gpg.stdout.read()
+        if rc:
+            print(gpg_output)
+            sys.stderr.write("UNABLE TO GET FINGERPRINT FOR %s" % id)
+            sys.exit(1)
+
+        gpg_output = "\n".join([ l for l in gpg_output.splitlines()
+                                                     if l[0:7] != 'Warning' ])
+
+        fp = fp_pattern.match(gpg_output).groups()
+        print("   %s [%s] with fingerprint:" % (fp[3], fp[0]))
+        print("   %s" % fp[1])
+
+def check_sigs(args):
+    'Check the signatures for the release.'
+
+    generate_output(grab_sig_ids(args))
+
+
+#----------------------------------------------------------------------
 # Main entry point for argument parsing and handling
 
 def main():
@@ -653,6 +724,17 @@ def main():
     subparser.set_defaults(func=write_announcement)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
+
+    # The check sigs subcommand
+    subparser = subparsers.add_parser('check-sigs',
+                    help='''Output to stdout the signatures collected for this
+                            release''')
+    subparser.set_defaults(func=check_sigs)
+    subparser.add_argument('version', type=Version,
+                    help='''The release label, such as '1.7.0-alpha1'.''')
+    subparser.add_argument('--target',
+                    help='''The full path to the destination used in
+                            'post-candiates'..''')
 
     # A meta-target
     subparser = subparsers.add_parser('clean',
