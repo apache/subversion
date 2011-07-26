@@ -1413,6 +1413,9 @@ svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
 
 /* Mark LOCAL_ABSPATH, and all children, for deletion.
  *
+ * If MOVED_TO_ABSPATH is not NULL, mark the deletion of LOCAL_ABSPATH
+ * as the delete-half of a move from LOCAL_ABSPATH to MOVED_TO_ABSPATH.
+ *
  * If NOTIFY_FUNC is not NULL, then it will be called (with NOTIFY_BATON)
  * for each node deleted. While this processing occurs, if CANCEL_FUNC is
  * not NULL, then it will be called (with CANCEL_BATON) to detect cancellation
@@ -1424,6 +1427,7 @@ svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
                      const char *local_abspath,
+                     const char *moved_to_abspath,
                      /* ### flip to CANCEL, then NOTIFY. precedent.  */
                      svn_wc_notify_func2_t notify_func,
                      void *notify_baton,

@@ -2208,7 +2208,7 @@ add_directory(const char *path,
      ### to theirs with 'svn revert'. */
   if (db->shadowed && db->obstruction_found)
     {
-      SVN_ERR(svn_wc__db_op_delete(eb->db, db->local_abspath,
+      SVN_ERR(svn_wc__db_op_delete(eb->db, db->local_abspath, NULL,
                                    NULL, NULL /* notification */,
                                    eb->cancel_func, eb->cancel_baton,
                                    pool));

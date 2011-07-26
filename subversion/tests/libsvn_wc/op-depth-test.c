@@ -2785,7 +2785,7 @@ do_delete(svn_test__sandbox_t *b,
   SVN_ERR(insert_actual(b, actual_before));
   SVN_ERR(check_db_rows(b, "", before));
   SVN_ERR(check_db_actual(b, actual_before));
-  SVN_ERR(svn_wc__db_op_delete(b->wc_ctx->db, local_abspath,
+  SVN_ERR(svn_wc__db_op_delete(b->wc_ctx->db, local_abspath, NULL,
                                NULL, NULL /* notification */,
                                NULL, NULL /* cancellation */,
                                b->pool));

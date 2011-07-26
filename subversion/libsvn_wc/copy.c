@@ -991,10 +991,11 @@ svn_wc_move(svn_wc_context_t *wc_ctx,
                                            scratch_pool));
   }
 
-  SVN_ERR(svn_wc_delete4(wc_ctx, src_abspath, TRUE, FALSE,
-                         cancel_func, cancel_baton,
-                         notify_func, notify_baton,
-                         scratch_pool));
+  SVN_ERR(svn_wc__delete_internal(wc_ctx, src_abspath, TRUE, FALSE,
+                                  dst_abspath,
+                                  cancel_func, cancel_baton,
+                                  notify_func, notify_baton,
+                                  scratch_pool));
 
   return SVN_NO_ERROR;
 }
