@@ -106,15 +106,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
      
- * r1150302
-   Avoid closing fs txns multiple times.
-   Justification:
-     We should follow our own api documentation.
-   Notes:
-     This error is invisible to users without the r1150254 group.
-   Votes:
-     +1: rhuijben, danielsh
-
  * r1150327
    Report not finding txn roots produce a 404 error in mod_dav_svn.
    Justification:
@@ -210,3 +201,11 @@ Approved changes:
    Votes:
      +1: danielsh, cmpilato, rhuijben
 
+ * r1150302
+   Avoid closing fs txns multiple times.
+   Justification:
+     We should follow our own api documentation.
+   Notes:
+     This error is invisible to users without the r1150254 group.
+   Votes:
+     +1: rhuijben, danielsh, cmpilato
