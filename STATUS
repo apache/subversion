@@ -232,11 +232,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1144316
-   Issue 3953: reject invalid svn:mergeinfo at commit time over DAV.
-   Justification:
-     Issue 3895, already merged, was supposed to cover DAV but did not.
-   Votes:
-     +1: philip, pburba, rhuijben
-     +0: julianfoad (reviewed, not tested)
