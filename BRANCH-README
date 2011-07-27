@@ -13,8 +13,6 @@ See issue #3944: http://subversion.tigris.org/issues/show_bug.cgi?id=3944
 
 TODO:
 
-* merge removal of f5 code from trunk
-
 * add code catering for virus scanners during atomic move-into-place
 
 * implement per-shard locking
