@@ -197,11 +197,3 @@ Approved changes:
      this revision depends for a clean merge).
    Votes:
      +1: rhuijben, danielsh, cmpilato
-
- * r1150372
-   When resolving to conflict-*, close the generated file before using it
-   Justification:
-     Copying unclosed/unflushed files is not nice and might cause all kinds
-     of problems.
-   Votes:
-     +1: rhuijben, danielsh, philip
