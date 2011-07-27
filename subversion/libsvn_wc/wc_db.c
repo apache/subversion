@@ -366,6 +366,8 @@ scan_addition(svn_wc__db_status_t *status,
               const char **original_repos_relpath,
               apr_int64_t *original_repos_id,
               svn_revnum_t *original_revision,
+              const char **moved_from_abspath,
+              const char **delete_op_root_abspath,
               svn_wc__db_wcroot_t *wcroot,
               const char *local_relpath,
               apr_pool_t *result_pool,
@@ -3343,7 +3345,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
       SVN_ERR(scan_addition(NULL, &op_root_relpath,
                             NULL, NULL, /* repos_* */
                             copyfrom_relpath, copyfrom_id, copyfrom_rev,
-                            wcroot, local_relpath,
+                            NULL, NULL, wcroot, local_relpath,
                             scratch_pool, scratch_pool));
       if (*copyfrom_relpath)
         {
@@ -3372,7 +3374,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
           SVN_ERR(scan_addition(NULL, &op_root_relpath,
                                 NULL, NULL, /* repos_* */
                                 copyfrom_relpath, copyfrom_id, copyfrom_rev,
-                                wcroot, parent_del_relpath,
+                                NULL, NULL, wcroot, parent_del_relpath,
                                 scratch_pool, scratch_pool));
           *copyfrom_relpath
             = svn_relpath_join(*copyfrom_relpath,
@@ -7266,7 +7268,7 @@ read_url_txn(void *baton,
       if (status == svn_wc__db_status_added)
         {
           SVN_ERR(scan_addition(NULL, NULL, &repos_relpath, &repos_id, NULL,
-                                NULL, NULL, wcroot, local_relpath,
+                                NULL, NULL, NULL, NULL, wcroot, local_relpath,
                                 scratch_pool, scratch_pool));
         }
       else if (status == svn_wc__db_status_deleted)
@@ -7299,7 +7301,7 @@ read_url_txn(void *baton,
                                                              scratch_pool);
 
               SVN_ERR(scan_addition(NULL, NULL, &repos_relpath, &repos_id,
-                                    NULL, NULL, NULL,
+                                    NULL, NULL, NULL, NULL, NULL,
                                     wcroot, work_relpath,
                                     scratch_pool, scratch_pool));
 
@@ -8048,7 +8050,7 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
       if (status == svn_wc__db_status_added)
         {
           SVN_ERR(scan_addition(NULL, NULL, NULL, &rb.old_repos_id,
-                                NULL, NULL, NULL,
+                                NULL, NULL, NULL, NULL, NULL,
                                 wcroot, local_dir_relpath,
                                 scratch_pool, scratch_pool));
         }
@@ -8959,6 +8961,113 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
 }
 
 
+/* A helper for scan_addition().
+ * Compute moved-from information for the node at LOCAL_RELPATH which
+ * has been determined as having been moved-here.
+ * Return an appropriate status in *STATUS (usually "moved-here").
+ * If MOVED_FROM_ABSPATH is not NULL, set *MOVED_FROM_ABSPATH to the
+ * absolute path of the move-source node in *MOVED_FROM_ABSPATH.
+ * If DELETE_OP_ROOT_ABSPATH is not NULL, set *DELETE_OP_ROOT_ABSPATH
+ * to the absolute path of the op-root of the delete-half of the move.
+ * If moved-from information cannot be derived, set both *MOVED_FROM_ABSPATH
+ * and *DELETE_OP_ROOT_ABSPATH to NULL, and return a "copied" status.
+ * COPY_OPT_ROOT_RELPATH is the relpath of the op-root of the copied-half
+ * of the move. */
+static svn_error_t *
+get_moved_from_info(svn_wc__db_status_t *status,
+                    const char **moved_from_abspath,
+                    const char **delete_op_root_abspath,
+                    const char *copy_op_root_relpath,
+                    svn_wc__db_wcroot_t *wcroot,
+                    const char *local_relpath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  /* Run a query to get the moved-from path from the DB. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_MOVED_FROM_RELPATH));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, copy_op_root_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (!have_row)
+    {
+      /* The move was only recorded at the copy-half, possibly because
+       * the move operation was interrupted mid-way between the copy
+       * and the delete. Treat this node as a normal copy. */
+      *status = svn_wc__db_status_copied;
+      if (moved_from_abspath)
+        *moved_from_abspath = NULL;
+      if (delete_op_root_abspath)
+        *delete_op_root_abspath = NULL;
+
+      SVN_ERR(svn_sqlite__reset(stmt));
+      return SVN_NO_ERROR;
+    }
+
+  /* It's a properly recorded move. */
+  *status = svn_wc__db_status_moved_here;
+
+  if (moved_from_abspath || delete_op_root_abspath)
+    {
+      const char *delete_op_root_relpath;
+
+      /* The moved-from path from the DB is the relpath of
+       * the op_root of the delete-half of the move. */
+      delete_op_root_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
+
+      /* Return the abspath of the op_root of the delete-half. */
+      if (delete_op_root_abspath)
+        *delete_op_root_abspath = svn_dirent_join(wcroot->abspath,
+                                                  delete_op_root_relpath,
+                                                  result_pool);
+
+      if (moved_from_abspath)
+        {
+          if (strcmp(copy_op_root_relpath, local_relpath) == 0)
+            {
+              /* LOCAL_RELPATH is the op_root of the copied-half of the
+               * move, so the correct MOVED_FROM_ABSPATH is the op-root
+               * of the delete-half. */
+              *moved_from_abspath = svn_dirent_join(wcroot->abspath,
+                                                    delete_op_root_relpath,
+                                                    result_pool);
+            }
+          else
+            {
+              const char *child_relpath;
+
+              /* LOCAL_RELPATH is a child that was copied along with the
+               * op_root of the copied-half of the move. Construct the
+               * corresponding path beneath the op_root of the delete-half. */
+
+              /* Grab the child path relative to the path of the
+               * copied-half's op_root. */
+              child_relpath = svn_relpath_skip_ancestor(copy_op_root_relpath,
+                                                        local_relpath);
+
+              SVN_ERR_ASSERT(child_relpath && strlen(child_relpath) > 0);
+
+              /* This join is valid because LOCAL_RELPATH has not been moved
+               * within the copied-half of the move yet -- else, it would
+               * be its own op_root. */
+              *moved_from_abspath = svn_dirent_join(
+                                      wcroot->abspath,
+                                      svn_relpath_join(delete_op_root_relpath,
+                                                       child_relpath,
+                                                       scratch_pool),
+                                      result_pool);
+            }
+        }
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
+
 struct scan_addition_baton_t
 {
   svn_wc__db_status_t *status;
@@ -8968,6 +9077,8 @@ struct scan_addition_baton_t
   const char **original_repos_relpath;
   apr_int64_t *original_repos_id;
   svn_revnum_t *original_revision;
+  const char **moved_from_abspath;
+  const char **delete_op_root_abspath;
   apr_pool_t *result_pool;
 };
 
@@ -9109,7 +9220,13 @@ scan_addition_txn(void *baton,
             if (sab->status)
               {
                 if (svn_sqlite__column_boolean(stmt, 13 /* moved_here */))
-                  *sab->status = svn_wc__db_status_moved_here;
+                  SVN_ERR(get_moved_from_info(sab->status,
+                                              sab->moved_from_abspath,
+                                              sab->delete_op_root_abspath,
+                                              current_relpath, wcroot,
+                                              local_relpath,
+                                              sab->result_pool,
+                                              scratch_pool));
                 else
                   *sab->status = svn_wc__db_status_copied;
               }
@@ -9225,6 +9342,8 @@ scan_addition(svn_wc__db_status_t *status,
               const char **original_repos_relpath,
               apr_int64_t *original_repos_id,
               svn_revnum_t *original_revision,
+              const char **moved_from_abspath,
+              const char **delete_op_root_abspath,
               svn_wc__db_wcroot_t *wcroot,
               const char *local_relpath,
               apr_pool_t *result_pool,
@@ -9239,6 +9358,8 @@ scan_addition(svn_wc__db_status_t *status,
   sab.original_repos_relpath = original_repos_relpath;
   sab.original_repos_id = original_repos_id;
   sab.original_revision = original_revision;
+  sab.moved_from_abspath = moved_from_abspath;
+  sab.delete_op_root_abspath = delete_op_root_abspath;
   sab.result_pool = result_pool;
 
   return svn_error_trace(svn_wc__db_with_txn(wcroot, local_relpath,
@@ -9257,6 +9378,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                          const char **original_root_url,
                          const char **original_uuid,
                          svn_revnum_t *original_revision,
+                         const char **moved_from_abspath,
+                         const char **delete_op_root_abspath,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
@@ -9280,7 +9403,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
 
   SVN_ERR(scan_addition(status, &op_root_relpath, repos_relpath, repos_id_p,
                         original_repos_relpath, original_repos_id_p,
-                        original_revision, wcroot, local_relpath,
+                        original_revision, moved_from_abspath,
+                        delete_op_root_abspath, wcroot, local_relpath,
                         result_pool, scratch_pool));
 
   if (op_root_abspath)

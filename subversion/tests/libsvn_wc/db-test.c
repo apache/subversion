@@ -228,6 +228,10 @@ static const char * const TESTING_DATA = (
   "  1, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  10, null, null, null);"
   "insert into nodes values ("
+  "  1, 'moved/file', 0, 'moved', 2, 'moved/file', 2, 'base-deleted',"
+  "  0, 'J/J-d', 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
+  "  10, null, null, null);"
+  "insert into nodes values ("
   "  1, 'J/J-e', 1, 'J', null, null, null, 'normal',"
   "  0, 'other/place', 'dir', '()', null, null, null, null, null, null,"
   "  null, null, null, null);"
@@ -888,6 +892,8 @@ test_scan_addition(apr_pool_t *pool)
   const char *original_root_url;
   const char *original_uuid;
   svn_revnum_t original_revision;
+  const char *moved_from_abspath;
+  const char *delete_op_root_abspath;
 
   SVN_ERR(create_open(&db, &local_abspath, "test_scan_addition", pool));
 
@@ -896,7 +902,7 @@ test_scan_addition(apr_pool_t *pool)
             &status, &op_root_abspath,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision,
+            &original_revision, NULL, NULL,
             db, svn_dirent_join(local_abspath, "J", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_added);
@@ -914,7 +920,7 @@ test_scan_addition(apr_pool_t *pool)
             &status, &op_root_abspath,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision,
+            &original_revision, NULL, NULL,
             db, svn_dirent_join(local_abspath, "J/J-a", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_added);
@@ -932,12 +938,16 @@ test_scan_addition(apr_pool_t *pool)
             &status, &op_root_abspath,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision,
+            &original_revision, &moved_from_abspath, &delete_op_root_abspath,
             db, svn_dirent_join(local_abspath, "J/J-d", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_moved_here);
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-d",
                                    op_root_abspath, pool));
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "moved/file",
+                                   moved_from_abspath, pool));
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "moved/file",
+                                   delete_op_root_abspath, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "J/J-d");
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_ONE);
   SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
@@ -951,7 +961,7 @@ test_scan_addition(apr_pool_t *pool)
             &status, &op_root_abspath,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision,
+            &original_revision, NULL, NULL,
             db, svn_dirent_join(local_abspath, "J/J-b", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_copied);
@@ -970,7 +980,7 @@ test_scan_addition(apr_pool_t *pool)
             &status, &op_root_abspath,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision,
+            &original_revision, NULL, NULL,
             db, svn_dirent_join(local_abspath, "J/J-b/J-b-a", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_copied);
@@ -989,7 +999,7 @@ test_scan_addition(apr_pool_t *pool)
             &status, &op_root_abspath,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision,
+            &original_revision, NULL, NULL,
             db, svn_dirent_join(local_abspath, "J/J-b/J-b-b", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_copied);
