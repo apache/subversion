@@ -144,14 +144,6 @@ Candidate changes:
      +0: danielsh (we shouldn't depend on libsvn_client fixes to avoid
                    accumulating tempfiles on the server)
 
- * r1150372
-   When resolving to conflict-*, close the generated file before using it
-   Justification:
-     Copying unclosed/unflushed files is not nice and might cause all kinds
-     of problems.
-   Votes:
-     +1: rhuijben, danielsh
-
  * r1150441
    Closing a translated stream should close the inner stream.
    Justification:
@@ -205,3 +197,11 @@ Approved changes:
      this revision depends for a clean merge).
    Votes:
      +1: rhuijben, danielsh, cmpilato
+
+ * r1150372
+   When resolving to conflict-*, close the generated file before using it
+   Justification:
+     Copying unclosed/unflushed files is not nice and might cause all kinds
+     of problems.
+   Votes:
+     +1: rhuijben, danielsh, philip
