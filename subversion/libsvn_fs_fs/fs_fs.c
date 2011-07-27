@@ -7327,36 +7327,21 @@ recover_body(void *baton, apr_pool_t *pool)
 
   /* Before setting current, verify that there is a revprops file
      for the youngest revision.  (Issue #2992) */
-  SVN_ERR(svn_io_check_path(path_revprops(fs, max_rev, pool),
-                            &youngest_revprops_kind, pool));
+  SVN_ERR(update_min_unpacked_revprop(fs, pool));
+  if (is_packed_revprop(fs, max_rev))
+    /* Possible when min_unpacked_rev == current+1 == max_rev+1. */
+    SVN_ERR(svn_io_check_path(path_revprops_pack(fs, max_rev, pool),
+                              &youngest_revprops_kind, pool));
+  else
+    SVN_ERR(svn_io_check_path(path_revprops(fs, max_rev, pool),
+                              &youngest_revprops_kind, pool));
+
   if (youngest_revprops_kind == svn_node_none)
     {
-      svn_boolean_t uhohs = TRUE;
-
-      /* No file?  Hrm... maybe that's because this repository is
-         packed and the youngest revision is in the revprops.db
-         file?  We can at least see if that's a possibility.
-
-         ### TODO: Could we check for revprops in the revprops.db?
-         ###       What if rNNN legitimately has no revprops? */
-      if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT
-          && max_rev != REVPROP_ZERO)
-        {
-          svn_revnum_t min_unpacked_revprop;
-
-          SVN_ERR(read_min_unpacked_rev(&min_unpacked_revprop,
-                                        path_min_unpacked_revprop(fs, pool),
-                                        pool));
-          if (min_unpacked_revprop == (max_rev + 1))
-            uhohs = FALSE;
-        }
-      if (uhohs)
-        {
-          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                   _("Revision %ld has a revs file but no "
-                                     "revprops file"),
-                                   max_rev);
-        }
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               _("Revision %ld has a revs file but no "
+                                 "revprops file"),
+                               max_rev);
     }
   else if (youngest_revprops_kind != svn_node_file)
     {

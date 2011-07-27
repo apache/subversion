@@ -27,8 +27,6 @@ TODO:
 * add some explicit tests for svnadmin upgrade/pack
   (both revs and revrops)
 
-* drop heuristic in recover_body() uhohs=True
-
 * ensure revprop path computations don't use the shard path for a packed revprop,
   and vice-versa
 
