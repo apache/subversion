@@ -3138,10 +3138,11 @@ set_revision_proplist(svn_fs_t *fs,
                                        pool, pool));
 
       /* Copy manifest info up to the new prop's offset value. */
-      SVN_ERR(svn_stream_copy4(svn_stream_disown(source_stream, pool),
-                               svn_stream_disown(target_stream, pool),
-                               shard_pos * (REVPROP_MANIFEST_FIELD_WIDTH + 1),
-                               NULL, NULL, pool));
+      SVN_ERR(svn_stream_bounded_copy(svn_stream_disown(source_stream, pool),
+                                      svn_stream_disown(target_stream, pool),
+                                      shard_pos * 
+                                      (REVPROP_MANIFEST_FIELD_WIDTH + 1),
+                                      NULL, NULL, pool));
 
       /* Read the old offset value from the existing pack file, and compute
          the difference.
@@ -3184,9 +3185,9 @@ set_revision_proplist(svn_fs_t *fs,
 
       /* Now we copy the existing data over, in much the same way we copied
          over the offset values. */
-      SVN_ERR(svn_stream_copy4(svn_stream_disown(source_stream, pool),
-                               svn_stream_disown(target_stream, pool),
-                               old_offset, NULL, NULL, pool));
+      SVN_ERR(svn_stream_bounded_copy(svn_stream_disown(source_stream, pool),
+                                      svn_stream_disown(target_stream, pool),
+                                      old_offset, NULL, NULL, pool));
 
       /* Write the new data. */
       len = sb->len;
@@ -3195,7 +3196,7 @@ set_revision_proplist(svn_fs_t *fs,
       SVN_ERR(svn_stream_skip(source_stream, len));
 
       /* Copy the remaining existing data. */
-      SVN_ERR(svn_stream_copy4(source_stream, target_stream, -1,
+      SVN_ERR(svn_stream_copy3(source_stream, target_stream,
                                NULL, NULL, pool));
 
       /* Move it all into place. */

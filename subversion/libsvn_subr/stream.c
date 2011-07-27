@@ -467,12 +467,12 @@ svn_stream_readline(svn_stream_t *stream,
 }
 
 svn_error_t *
-svn_stream_copy4(svn_stream_t *from,
-                 svn_stream_t *to,
-                 apr_ssize_t len_in,
-                 svn_cancel_func_t cancel_func,
-                 void *cancel_baton,
-                 apr_pool_t *scratch_pool)
+svn_stream_bounded_copy(svn_stream_t *from,
+                        svn_stream_t *to,
+                        apr_ssize_t len_in,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *scratch_pool)
 {
   char *buf = apr_palloc(scratch_pool, SVN__STREAM_CHUNK_SIZE);
   svn_error_t *err;
@@ -523,9 +523,9 @@ svn_stream_copy3(svn_stream_t *from,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(svn_stream_copy4(from, to, -1,
-                                          cancel_func, cancel_baton,
-                                          scratch_pool));
+  return svn_error_trace(svn_stream_bounded_copy(from, to, -1,
+                                                 cancel_func, cancel_baton,
+                                                 scratch_pool));
 }
 
 svn_error_t *

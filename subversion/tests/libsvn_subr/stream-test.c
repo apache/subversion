@@ -594,7 +594,7 @@ test_stream_copy(apr_pool_t *pool)
   dst = svn_stream_from_stringbuf(actual, pool);
 
   /* Copy all of the original stream. */
-  SVN_ERR(svn_stream_copy4(src, dst, -1, NULL, NULL, pool));
+  SVN_ERR(svn_stream_bounded_copy(src, dst, -1, NULL, NULL, pool));
 
   SVN_TEST_STRING_ASSERT(actual->data, expected->data);
 
@@ -604,7 +604,7 @@ test_stream_copy(apr_pool_t *pool)
   src = svn_stream_from_stringbuf(orig, pool);
   dst = svn_stream_from_stringbuf(actual, pool);
 
-  SVN_ERR(svn_stream_copy4(src, dst, TEST_BUF_SIZE, NULL, NULL, pool));
+  SVN_ERR(svn_stream_bounded_copy(src, dst, TEST_BUF_SIZE, NULL, NULL, pool));
 
   SVN_TEST_STRING_ASSERT(actual->data, expected->data);
 

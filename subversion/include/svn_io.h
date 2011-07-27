@@ -1180,13 +1180,27 @@ svn_stream_readline(svn_stream_t *stream,
                     apr_pool_t *pool);
 
 /**
+ * Like svn_stream_copy3(), but copy up to @a len bytes.  @a len must be
+ * non-negative.
+ *
+ * @since New in 1.8.
+ */
+/* NOTE: Internally, we accept a -1 argument to mean "Copy the entire stream,
+   like svn_stream_copy3().  Presently this is not part of the public promise.
+ */
+svn_error_t *
+svn_stream_bounded_copy(svn_stream_t *from,
+                        svn_stream_t *to,
+                        apr_ssize_t len,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *pool);
+
+/**
  * Read the contents of the readable stream @a from and write them to the
  * writable stream @a to calling @a cancel_func before copying each chunk.
  *
- * If @a len is -1, then the entire source stream will be copied, otherwise,
- * up to @a len bytes will be copied from @a from to @a to.
- *
- * @todo ### Should this API return the number of bytes actually copied,
+ * @todo ### Should this API, or svn_stream_ return the number of bytes actually copied,
  * a la svn_stream_read()?
  *
  * @a cancel_func may be @c NULL.
@@ -1197,23 +1211,10 @@ svn_stream_readline(svn_stream_t *stream,
  * svn_stream_disown() to protect either or both of the streams from
  * being closed.
  *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_stream_copy4(svn_stream_t *from,
-                 svn_stream_t *to,
-                 apr_ssize_t len,
-                 svn_cancel_func_t cancel_func,
-                 void *cancel_baton,
-                 apr_pool_t *pool);
-
-/** Same as svn_stream_copy4(), but copies the source to the destination in
- * its entirety.
- *
  * @since New in 1.6.
- * @deprecated Provided for backward compatibility with the 1.7 API.
+ *
+ * @see svn_stream_bounded_copy()
  */
-SVN_DEPRECATED
 svn_error_t *
 svn_stream_copy3(svn_stream_t *from,
                  svn_stream_t *to,

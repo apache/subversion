@@ -29,8 +29,6 @@ TODO:
 
 * drop heuristic in recover_body() uhohs=True
 
-* svn_stream_copy4() should not be a revv of svn_stream_copy3()
-
 
 Suggested:
 
