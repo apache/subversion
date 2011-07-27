@@ -104,7 +104,7 @@ Candidate changes:
    Justification:
      Hitting the io retry loop on windows is very painfull.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
      
  * r1150327
    Report not finding txn roots produce a 404 error in mod_dav_svn.
