@@ -180,8 +180,13 @@ Veto-blocked changes:
    Make neon the default http library.
    Justification:
      Serf isn't ready, new code not enabled, no proposal to enable it.
+     TortoiseSVN plans to ship with Neon as the default due to reports
+     of instability from users.  CollabNet will produce binaries with
+     Neon as the default for the same reasons.  Crash reports continue
+     to arrive on the list (for example,
+     http://svn.haxx.se/dev/archive-2011-07/0735.shtml).
    Votes:
-     +1: philip
+     +1: philip, cmpilato
      -1: gstein (I see no explanation for why "serf is not ready")
 
 
