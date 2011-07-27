@@ -29,6 +29,9 @@ TODO:
 
 * drop heuristic in recover_body() uhohs=True
 
+* ensure revprop path computations don't use the shard path for a packed revprop,
+  and vice-versa
+
 
 Suggested:
 
