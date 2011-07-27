@@ -1331,6 +1331,10 @@ WHERE wc_id = ?1
   AND presence='normal'
   AND file_external IS NULL
 
+-- STMT_SELECT_MOVED_FROM_RELPATH
+SELECT local_relpath FROM nodes_current
+WHERE wc_id = ?1 AND moved_to = ?2
+
 /* ------------------------------------------------------------------------- */
 
 /* Queries for verification. */

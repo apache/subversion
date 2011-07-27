@@ -336,7 +336,7 @@ get_repos_root_url_relpath(const char **repos_relpath,
       SVN_ERR(svn_wc__db_scan_addition(NULL, NULL,
                                        repos_relpath, repos_root_url,
                                        repos_uuid, NULL, NULL, NULL, NULL,
-                                       db, local_abspath,
+                                       NULL, NULL, db, local_abspath,
                                        result_pool, scratch_pool));
     }
   else if (info->have_base)

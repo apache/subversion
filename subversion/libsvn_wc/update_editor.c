@@ -1300,8 +1300,8 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
       SVN_ERR(svn_wc__db_scan_addition(&added_status, NULL,
                                        &added_repos_relpath,
                                        &repos_root_url,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       eb->db, local_abspath,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, eb->db, local_abspath,
                                        result_pool, scratch_pool));
 
       /* This better really be an added status. */
@@ -2128,7 +2128,7 @@ add_directory(const char *path,
       /* Is the local add a copy? */
       if (status == svn_wc__db_status_added)
         SVN_ERR(svn_wc__db_scan_addition(&add_status, NULL, NULL, NULL, NULL,
-                                         NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL, NULL, NULL,
                                          eb->db, db->local_abspath,
                                          pool, pool));
 
@@ -3155,7 +3155,7 @@ add_file(const char *path,
       /* Is the local node a copy or move */
       if (status == svn_wc__db_status_added)
         SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                         NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL, NULL,
                                          eb->db, fb->local_abspath,
                                          scratch_pool, scratch_pool));
 

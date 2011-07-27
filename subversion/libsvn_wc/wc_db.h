@@ -2416,6 +2416,11 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
        BASE node. And again, the REPOS_* values are implied by this node's
        position in the subtree under the ancestor unshadowed BASE node.
        ORIGINAL_* will indicate the source of the move.
+       Additionally, information about the local move source is provided.
+       If MOVED_FROM_ABSPATH is not NULL, set *MOVED_FROM_ABSPATH to the
+       absolute path of the move source node in the working copy.
+       If DELETE_OP_ROOT_ABSPATH is not NULL, set *DELETE_OP_ROOT_ABSPATH
+       to the absolute path of the op-root of the delete-half of the move.
 
    All OUT parameters may be NULL to indicate a lack of interest in
    that piece of information.
@@ -2446,6 +2451,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                          const char **original_root_url,
                          const char **original_uuid,
                          svn_revnum_t *original_revision,
+                         const char **moved_from_abspath,
+                         const char **delete_op_root_abspath,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,

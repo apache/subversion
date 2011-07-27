@@ -642,7 +642,7 @@ copy_or_move(svn_wc_context_t *wc_ctx,
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
                                            &src_repos_root_url,
                                            &src_repos_uuid, NULL, NULL, NULL,
-                                           NULL,
+                                           NULL, NULL, NULL,
                                            db, src_abspath,
                                            scratch_pool, scratch_pool));
         else
@@ -659,7 +659,7 @@ copy_or_move(svn_wc_context_t *wc_ctx,
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
                                            &dst_repos_root_url,
                                            &dst_repos_uuid, NULL, NULL, NULL,
-                                           NULL,
+                                           NULL, NULL, NULL,
                                            db, dstdir_abspath,
                                            scratch_pool, scratch_pool));
         else

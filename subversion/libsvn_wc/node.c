@@ -193,7 +193,7 @@ svn_wc__internal_get_repos_info(const char **repos_root_url,
       else if (wrk_del_abspath)
         SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
                                          repos_root_url, repos_uuid,
-                                         NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL, NULL, NULL,
                                          db, svn_dirent_dirname(
                                                    wrk_del_abspath,
                                                    scratch_pool),
@@ -205,7 +205,7 @@ svn_wc__internal_get_repos_info(const char **repos_root_url,
          repository location by scanning up the tree.  */
       SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
                                        repos_root_url, repos_uuid,
-                                       NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
                                        db, local_abspath,
                                        result_pool, scratch_pool));
     }
@@ -381,7 +381,7 @@ svn_wc__node_get_repos_relpath(const char **repos_relpath,
         {
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, repos_relpath,
                                            NULL, NULL, NULL, NULL,
-                                           NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
                                            wc_ctx->db, local_abspath,
                                            result_pool, scratch_pool));
         }
@@ -527,8 +527,8 @@ svn_wc__internal_get_copyfrom_info(const char **copyfrom_root_url,
       SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath, NULL, NULL,
                                        NULL, &original_repos_relpath,
                                        &original_root_url, NULL,
-                                       &original_revision, db, local_abspath,
-                                       result_pool, scratch_pool));
+                                       &original_revision, NULL, NULL, db,
+                                       local_abspath, result_pool, scratch_pool));
       if (status == svn_wc__db_status_copied ||
           status == svn_wc__db_status_moved_here)
         {
@@ -977,7 +977,7 @@ svn_wc__internal_get_commit_base_rev(svn_revnum_t *commit_base_revision,
          revision (not this node's base revision). */
       SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, commit_base_revision,
-                                       db, local_abspath,
+                                       NULL, NULL, db, local_abspath,
                                        scratch_pool, scratch_pool));
 
 
@@ -999,7 +999,7 @@ svn_wc__internal_get_commit_base_rev(svn_revnum_t *commit_base_revision,
            * revision. */
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL,
                                            NULL, NULL,
-                                           commit_base_revision,
+                                           commit_base_revision, NULL, NULL,
                                            db,
                                            svn_dirent_dirname(work_del_abspath,
                                                               scratch_pool),
@@ -1394,8 +1394,8 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
         SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath, NULL,
                                          NULL, NULL, &original_repos_relpath,
                                          repos_root_url,
-                                         repos_uuid,
-                                         revision, db, local_abspath,
+                                         repos_uuid, revision, NULL, NULL,
+                                         db, local_abspath,
                                          result_pool, scratch_pool));
 
         if (status == svn_wc__db_status_added)

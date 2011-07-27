@@ -124,9 +124,9 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
 
   if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                         NULL, NULL, NULL,
-                                         wc_ctx->db, local_abspath,
-                                         scratch_pool, scratch_pool));
+                                     NULL, NULL, NULL, NULL, NULL,
+                                     wc_ctx->db, local_abspath,
+                                     scratch_pool, scratch_pool));
 
   if (status != svn_wc__db_status_normal
       && status != svn_wc__db_status_copied
@@ -385,7 +385,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
           if (wrk_status == svn_wc__db_status_added)
             SVN_ERR(svn_wc__db_scan_addition(&wrk_status, NULL, NULL, NULL,
                                              NULL, NULL, NULL, NULL, NULL,
-                                             db, this_abspath,
+                                             NULL, NULL, db, this_abspath,
                                              iterpool, iterpool));
 
           if (wrk_status == svn_wc__db_status_normal
@@ -736,7 +736,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
 
       if (wrk_status == svn_wc__db_status_added)
         SVN_ERR(svn_wc__db_scan_addition(&wrk_status, NULL, NULL, NULL, NULL,
-                                         NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL, NULL, NULL,
                                          db, local_abspath,
                                          scratch_pool, scratch_pool));
 

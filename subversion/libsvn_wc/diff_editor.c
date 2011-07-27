@@ -569,7 +569,7 @@ file_diff(struct edit_baton *eb,
   if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL,
                                      &original_repos_relpath, NULL, NULL,
-                                     NULL, db, local_abspath,
+                                     NULL, NULL, NULL, db, local_abspath,
                                      scratch_pool, scratch_pool));
 
   /* A wc-wc diff of replaced files actually shows a diff against the
@@ -959,8 +959,8 @@ report_wc_file_as_added(struct edit_baton *eb,
 
   if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, db, local_abspath,
-                                     scratch_pool, scratch_pool));
+                                     NULL, NULL, NULL, NULL, NULL, db,
+                                     local_abspath, scratch_pool, scratch_pool));
 
   /* We can't show additions for files that don't exist. */
   SVN_ERR_ASSERT(status != svn_wc__db_status_deleted || eb->use_text_base);
@@ -1659,7 +1659,7 @@ close_file(void *file_baton,
 
   if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, eb->db,
+                                     NULL, NULL, NULL, NULL, NULL, eb->db,
                                      fb->local_abspath,
                                      scratch_pool, scratch_pool));
 
