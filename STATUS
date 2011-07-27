@@ -43,7 +43,7 @@ Candidate changes:
    Justification:
      Consistent behaviour of the 1.7 client with 1.6/1.7 servers. (issue #3949)
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
      -0: julianfoad (Too many loose ends.  Should SVN_ERR_IS_UNLOCK_ERROR()
          get the same treatment?  danielsh on IRC: "I'm not sure I was
          happy with the error/warning issue here.  but patching the server
@@ -52,14 +52,6 @@ Candidate changes:
          multiple targets?"  Have we analyzed whether the test properly
          reflects real life needs?  Could the bug in unlock prevent people from
          removing a lock on a nonexistent path?)
-
- * r1144316
-   Issue 3953: reject invalid svn:mergeinfo at commit time over DAV.
-   Justification:
-     Issue 3895, already merged, was supposed to cover DAV but did not.
-   Votes:
-     +1: philip, pburba
-     +0: julianfoad (reviewed, not tested)
 
  * r894014, 894029, 896247, 905705
    Use serf_connection_create2 instead of serf_connection_create so that
@@ -253,3 +245,10 @@ Approved changes:
    Votes:
      +1: danielsh, arfrever, julianfoad
 
+ * r1144316
+   Issue 3953: reject invalid svn:mergeinfo at commit time over DAV.
+   Justification:
+     Issue 3895, already merged, was supposed to cover DAV but did not.
+   Votes:
+     +1: philip, pburba, rhuijben
+     +0: julianfoad (reviewed, not tested)
