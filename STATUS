@@ -180,6 +180,11 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1151055
+   Allow building with serf trunk on windows.
+   Votes:
+     +0: danielsh
+
 Veto-blocked changes:
 =====================
 
