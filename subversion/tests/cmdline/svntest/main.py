@@ -1496,7 +1496,7 @@ def _create_parser():
                          "one; the default is " + _default_http_library)
   parser.add_option('--server-minor-version', type='int', action='store',
                     help="Set the minor version for the server ('4', " +
-                         "'5', or '6').")
+                         "'5', '6', or '7').")
   parser.add_option('--fsfs-packing', action='store_true',
                     help="Run 'svnadmin pack' automatically")
   parser.add_option('--fsfs-sharding', action='store', type='int',
