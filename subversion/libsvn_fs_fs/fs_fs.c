@@ -292,6 +292,19 @@ path_revprops_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 }
 
 static const char *
+path_revprops_pack(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  assert(ffd->max_files_per_dir);
+  return svn_dirent_join_many(pool, fs->path, PATH_REVPROPS_DIR,
+                              apr_psprintf(pool, "%ld.pack",
+                                           rev / ffd->max_files_per_dir),
+                              "pack",
+                              NULL);
+}
+
+static const char *
 path_revprops(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -3278,28 +3291,19 @@ revision_proplist(apr_hash_t **proplist_p,
        * ### As that's not my speciality, I'll leave it to somebody else to
        * ### implement.  Hint: you may consider abstracting out the above
        * ### loop into something more generalizable. */
-      apr_int64_t shard;
       apr_int64_t shard_pos;
       apr_file_t *pack_file;
       const char *pack_file_path;
-      const char *pack_file_dir;
-      const char *revprops_dir;
       apr_off_t offset;
       apr_off_t manifest_record;
 
       proplist = apr_hash_make(pool);
 
-      shard = rev / ffd->max_files_per_dir;
-
       /* position of the shard within the manifest */
       shard_pos = rev % ffd->max_files_per_dir;
 
       /* Compute paths. */
-      revprops_dir = svn_dirent_join(fs->path, PATH_REVPROPS_DIR, pool);
-      pack_file_dir = svn_dirent_join(revprops_dir,
-                        apr_psprintf(pool, "%" APR_INT64_T_FMT ".pack", shard),
-                        pool);
-      pack_file_path = svn_dirent_join(pack_file_dir, "pack", pool);
+      pack_file_path = path_revprops_pack(fs, rev, pool);
 
       /* Open the pack file and seek to the manifest offset. */
       SVN_ERR(svn_io_file_open(&pack_file, pack_file_path,
