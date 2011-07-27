@@ -233,18 +233,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1134734
-   Fix sqlite-amalgamation location and archive format.
-   Branch:
-     1.6.x-r1134734
-   Justification:
-     Users report get-deps.sh of sqlite is currently broken.
-   Notes:
-     r1134734 also bumped dependency versions; the backport branch excludes
-     those bumps.
-   Votes:
-     +1: danielsh, arfrever, julianfoad
-
  * r1144316
    Issue 3953: reject invalid svn:mergeinfo at commit time over DAV.
    Justification:
