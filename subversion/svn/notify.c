@@ -697,9 +697,9 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
     case svn_wc_notify_commit_modified:
       /* xgettext: Align the %s's on this and the following 4 messages */
       if ((err = svn_cmdline_printf(pool,
-                                    _("Sending %s       %s\n"),
                                     nb->is_wc_to_repos_copy
-                                      ? _("copy of") : "",
+                                      ? _("Sending copy of       %s\n")
+                                      : _("Sending        %s\n"),
                                     path_local)))
         goto print_error;
       break;
@@ -709,27 +709,28 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       if (n->mime_type && svn_mime_type_is_binary(n->mime_type))
         {
           if ((err = svn_cmdline_printf(pool,
-                                        _("Adding %s (bin)  %s\n"),
                                         nb->is_wc_to_repos_copy
-                                          ? _("copy of") : "",
+                                          ? _("Adding copy of (bin)  %s\n")
+                                          : _("Adding  (bin)  %s\n"),
                                         path_local)))
           goto print_error;
         }
       else
         {
           if ((err = svn_cmdline_printf(pool,
-                                        _("Adding %s        %s\n"),
                                         nb->is_wc_to_repos_copy
-                                          ? _("copy of") : "",
+                                          ? _("Adding copy of        %s\n")
+                                          : _("Adding         %s\n"),
                                         path_local)))
             goto print_error;
         }
       break;
 
     case svn_wc_notify_commit_deleted:
-      if ((err = svn_cmdline_printf(pool, _("Deleting %s      %s\n"),
+      if ((err = svn_cmdline_printf(pool,
                                     nb->is_wc_to_repos_copy
-                                      ? _("copy of") : "",
+                                      ? _("Deleting copy of      %s\n")
+                                      : _("Deleting       %s\n"),
                                     path_local)))
         goto print_error;
       break;
@@ -737,9 +738,9 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
     case svn_wc_notify_commit_replaced:
     case svn_wc_notify_commit_copied_replaced:
       if ((err = svn_cmdline_printf(pool,
-                                    _("Replacing %s     %s\n"),
                                     nb->is_wc_to_repos_copy
-                                      ? _("copy of") : "",
+                                      ? _("Replacing copy of     %s\n")
+                                      : _("Replacing      %s\n"),
                                     path_local)))
         goto print_error;
       break;
