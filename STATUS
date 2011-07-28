@@ -88,6 +88,11 @@ Candidate changes:
    Votes:
      +1: pburba, philip
 
+ * r1151911
+   Fix description of svndumpfilter's --targets option.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
