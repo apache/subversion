@@ -1516,7 +1516,7 @@ def _create_parser():
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
-        server_minor_version=7,
+        server_minor_version=8,
         url=file_scheme_prefix + pathname2url(os.path.abspath(os.getcwd())),
         http_library=_default_http_library)
 
