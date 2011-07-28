@@ -9127,6 +9127,10 @@ scan_addition_txn(void *baton,
     *sab->original_repos_id = INVALID_REPOS_ID;
   if (sab->original_revision)
     *sab->original_revision = SVN_INVALID_REVNUM;
+  if (sab->moved_from_relpath)
+    *sab->moved_from_relpath = NULL;
+  if (sab->delete_op_root_relpath)
+    *sab->delete_op_root_relpath = NULL;
 
   {
     svn_sqlite__stmt_t *stmt;
