@@ -6033,7 +6033,6 @@ op_delete_txn(void *baton,
   svn_sqlite__stmt_t *stmt;
   apr_int64_t select_depth; /* Depth of what is to be deleted */
   svn_boolean_t refetch_depth = FALSE;
-  svn_boolean_t is_valid_moved_to_relpath = TRUE;
 
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, STMT_CREATE_DELETE_LIST));
 
@@ -6096,9 +6095,6 @@ op_delete_txn(void *baton,
                                     moved_from_relpath, b->moved_to_relpath));
           SVN_ERR(svn_sqlite__step_done(stmt));
           SVN_ERR(svn_sqlite__reset(stmt));
-
-          /* Make the delete processing below ignore moved-to info. */
-          is_valid_moved_to_relpath = FALSE;
         }
     }
 
@@ -6169,7 +6165,7 @@ op_delete_txn(void *baton,
       /* Delete the node at LOCAL_RELPATH, and possibly mark it as moved. */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                  STMT_INSERT_DELETE_NODE));
-      if (b->moved_to_relpath && is_valid_moved_to_relpath)
+      if (b->moved_to_relpath)
         SVN_ERR(svn_sqlite__bindf(stmt, "isiis",
                                   wcroot->wc_id, local_relpath,
                                   select_depth, b->delete_depth,
