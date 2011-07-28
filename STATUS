@@ -153,13 +153,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, danielsh
 
- * r1150812
-   Issue 3972, spurious revert notification on symlinks
-   Justification:
-     A regression from 1.6.
-   Votes:
-     +1: philip, stsp
-
  * r1151177
    Fix two bugs in ra_serf when connecting to HTTPS repository hosted on
    non-standard port.
@@ -219,3 +212,11 @@ Approved changes:
      this revision depends for a clean merge).
    Votes:
      +1: rhuijben, danielsh, cmpilato
+
+ * r1150812
+   Issue 3972, spurious revert notification on symlinks
+   Justification:
+     A regression from 1.6.
+   Votes:
+     +1: philip, stsp, danielsh
+
