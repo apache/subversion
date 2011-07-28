@@ -111,8 +111,8 @@ class TestHarness:
     # If you change the below condition then change in
     # ../subversion/tests/cmdline/svntest/main.py too.
     if server_minor_version is not None:
-      if int(server_minor_version) < 3 or int(server_minor_version) > 7:
-        sys.stderr.write("Test harness only supports server minor versions 3-7\n")
+      if int(server_minor_version) < 3 or int(server_minor_version) > 8:
+        sys.stderr.write("Test harness only supports server minor versions 3-8\n")
         sys.exit(1)
     self.verbose = verbose
     self.cleanup = cleanup
