@@ -6631,7 +6631,7 @@ svn_fs_fs__create(svn_fs_t *fs,
                               ? "0\n" : "0 1 1\n"),
                              pool));
   SVN_ERR(svn_io_file_create(path_lock(fs, pool), "", pool));
-  SVN_ERR(svn_fs_fs__set_uuid(fs, svn_uuid_generate(pool), pool));
+  SVN_ERR(svn_fs_fs__set_uuid(fs, NULL, pool));
 
   SVN_ERR(write_revision_zero(fs));
 
