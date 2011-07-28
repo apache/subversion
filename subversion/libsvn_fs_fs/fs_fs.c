@@ -7329,7 +7329,8 @@ recover_body(void *baton, apr_pool_t *pool)
 
   /* Before setting current, verify that there is a revprops file
      for the youngest revision.  (Issue #2992) */
-  SVN_ERR(update_min_unpacked_revprop(fs, pool));
+  if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
+    SVN_ERR(update_min_unpacked_revprop(fs, pool));
   if (is_packed_revprop(fs, max_rev))
     /* Possible when min_unpacked_rev == current+1 == max_rev+1. */
     SVN_ERR(svn_io_check_path(path_revprops_pack(fs, max_rev, pool),
