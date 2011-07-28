@@ -1766,3 +1766,46 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_wc__node_was_moved_here(const char **moved_from_abspath,
+                            const char **delete_op_root_abspath,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  svn_boolean_t is_added;
+
+  if (moved_from_abspath)
+    *moved_from_abspath = NULL;
+  if (delete_op_root_abspath)
+    *delete_op_root_abspath = NULL;
+
+  SVN_ERR(svn_wc__node_is_added(&is_added, wc_ctx, local_abspath,
+                                scratch_pool));
+  if (is_added && (moved_from_abspath || delete_op_root_abspath))
+    {
+      svn_wc__db_status_t status;
+      const char *db_moved_from_abspath;
+      const char *db_delete_op_root_abspath;
+
+      SVN_ERR(svn_wc__db_scan_addition(&status, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, &db_moved_from_abspath,
+                                       &db_delete_op_root_abspath,
+                                       wc_ctx->db, local_abspath,
+                                       scratch_pool, scratch_pool));
+      if (status == svn_wc__db_status_moved_here)
+        {
+          if (moved_from_abspath)
+            *moved_from_abspath = apr_pstrdup(result_pool,
+                                              db_moved_from_abspath);
+          if (delete_op_root_abspath)
+            *delete_op_root_abspath = apr_pstrdup(result_pool,
+                                                  db_delete_op_root_abspath);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}

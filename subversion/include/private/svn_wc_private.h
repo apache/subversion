@@ -1111,6 +1111,25 @@ svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
                         void *notify_baton,
                         apr_pool_t *scratch_pool);
 
+/* If the node at LOCAL_ABSPATH was moved here set *MOVED_FROM_ABSPATH to
+ * the absolute path of the deleted move-source node, and set
+ * *DELETE_OP_ROOT_ABSPATH to the absolute path of the root node of the
+ * delete operation.
+ *
+ * If the node was not moved, set *MOVED_FROM_ABSPATH and
+ * *DELETE_OP_ROOT_ABSPATH to NULL.
+ *
+ * Either MOVED_FROM_ABSPATH or OP_ROOT_ABSPATH may be NULL to indicate
+ * that the caller is not interested in the result.
+ */
+svn_error_t *
+svn_wc__node_was_moved_here(const char **moved_from_abspath,
+                            const char **delete_op_root_abspath,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
