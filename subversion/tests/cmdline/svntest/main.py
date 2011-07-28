@@ -1495,8 +1495,7 @@ def _create_parser():
                          "it supports both, else assume it's using this " +
                          "one; the default is " + _default_http_library)
   parser.add_option('--server-minor-version', type='int', action='store',
-                    help="Set the minor version for the server ('4', " +
-                         "'5', '6', or '7').")
+                    help="Set the minor version for the server ('3'..'8').")
   parser.add_option('--fsfs-packing', action='store_true',
                     help="Run 'svnadmin pack' automatically")
   parser.add_option('--fsfs-sharding', action='store', type='int',
@@ -1540,8 +1539,8 @@ def _parse_options(arglist=sys.argv[1:]):
 
   # If you change the below condition then change
   # ../../../../build/run_tests.py too.
-  if options.server_minor_version < 3 or options.server_minor_version > 7:
-    parser.error("test harness only supports server minor versions 3-7")
+  if options.server_minor_version < 3 or options.server_minor_version > 8:
+    parser.error("test harness only supports server minor versions 3-8")
 
   if options.url:
     if options.url[-1:] == '/': # Normalize url to have no trailing slash
