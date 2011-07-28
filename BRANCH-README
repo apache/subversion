@@ -27,8 +27,6 @@ TODO:
 * add some explicit tests for svnadmin upgrade/pack
   (both revs and revrops)
 
-* assertion failure in svnadmin_tests 13 with pre-1.8-compatible
-
 
 Suggested:
 
