@@ -1356,6 +1356,47 @@ svn_client_commit5(const apr_array_header_t *targets,
       goto cleanup;
   }
 
+  /* For every target that was moved verify that both halves of the
+   * move are part of the commit. */
+  for (i = 0; i < commit_items->nelts; i++)
+    {
+      svn_client_commit_item3_t *item =
+        APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
+
+      svn_pool_clear(iterpool);
+
+      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
+        {
+          const char *moved_from_abspath;
+          const char *delete_op_root_abspath;
+
+          cmt_err = svn_error_trace(svn_wc__node_was_moved_here(
+                                      &moved_from_abspath,
+                                      &delete_op_root_abspath,
+                                      ctx->wc_ctx, item->path,
+                                      iterpool, iterpool));
+          if (cmt_err)
+            goto cleanup;
+
+          if (moved_from_abspath && delete_op_root_abspath &&
+              strcmp(moved_from_abspath, delete_op_root_abspath) == 0 &&
+              apr_hash_get(committables->by_path, delete_op_root_abspath,
+                           APR_HASH_KEY_STRING) == NULL)
+            {
+              cmt_err = svn_error_createf(
+                          SVN_ERR_ILLEGAL_TARGET, NULL,
+                          _("Cannot commit '%s' because it was moved from "
+                            "'%s' which is not part of the commit; both "
+                            "sides of the move must be committed together"),
+                          svn_dirent_local_style(item->path, iterpool),
+                          svn_dirent_local_style(delete_op_root_abspath,
+                                                 iterpool));
+              goto cleanup;
+            }
+        }
+      /* ### TODO: check the delete-half, too */
+    }
+
   /* Go get a log message.  If an error occurs, or no log message is
      specified, abort the operation. */
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
