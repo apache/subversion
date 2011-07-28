@@ -1516,7 +1516,7 @@ def _create_parser():
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
-        server_minor_version=float('+inf'), # positive infinity
+        server_minor_version=7,
         url=file_scheme_prefix + pathname2url(os.path.abspath(os.getcwd())),
         http_library=_default_http_library)
 
@@ -1540,8 +1540,7 @@ def _parse_options(arglist=sys.argv[1:]):
 
   # If you change the below condition then change
   # ../../../../build/run_tests.py too.
-  if (options.server_minor_version < 3 or options.server_minor_version > 7) \
-      and options.server_minor_version != float('inf'):
+  if options.server_minor_version < 3 or options.server_minor_version > 7:
     parser.error("test harness only supports server minor versions 3-7")
 
   if options.url:
