@@ -7,7 +7,7 @@ This file purposefully talks about 'moves' rather than 'renames'.
 This isn't about true renames as requested in issue #898.
 Rather, these ideas keep the add+delete concept while trying to make
 moves behave more in a way that one would expect if true renames were
-implemented.
+implemented, as requested in issue #3631.
 
 These ideas only cover local (client-side) moves in the working copy.
 They attempt to reuse as much existing code as possible, so new
