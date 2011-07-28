@@ -345,6 +345,10 @@ class TestHarness:
                             stderr=self.log)
     line = prog.stdout.readline()
     while line:
+      if sys.platform == 'win32':
+        # Remove CRs inserted because we parse the output as binary.
+        line = line.replace('\r', '')
+
       # If using --log-to-stdout self.log in None.
       if self.log:
         self.log.write(line)
