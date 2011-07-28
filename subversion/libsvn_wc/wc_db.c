@@ -6033,6 +6033,7 @@ op_delete_txn(void *baton,
   svn_sqlite__stmt_t *stmt;
   apr_int64_t select_depth; /* Depth of what is to be deleted */
   svn_boolean_t refetch_depth = FALSE;
+  svn_boolean_t is_valid_moved_to_relpath = TRUE;
 
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, STMT_CREATE_DELETE_LIST));
 
@@ -6066,6 +6067,40 @@ op_delete_txn(void *baton,
                                                       scratch_pool));
     }
   SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (b->moved_to_relpath)
+    {
+      const char *moved_from_relpath;
+      const char *delete_op_root_relpath;
+
+      /* ### call scan_addition_txn() directly? */
+      if (status == svn_wc__db_status_added)
+        SVN_ERR(scan_addition(&status, NULL, NULL, NULL,
+                              NULL, NULL, NULL,
+                              &moved_from_relpath,
+                              &delete_op_root_relpath,
+                              wcroot, local_relpath,
+                              scratch_pool, scratch_pool));
+
+      if (status == svn_wc__db_status_moved_here &&
+          strcmp(moved_from_relpath, delete_op_root_relpath) == 0)
+        {
+          /* The node has already been moved and is being moved again.
+           * Update the existing moved_to path at the delete-half of
+           * the prior move. The source of a move is in the BASE tree
+           * so it remains constant if a node is moved around multiple
+           * times. */
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                            STMT_UPDATE_MOVED_TO_RELPATH));
+          SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
+                                    moved_from_relpath, b->moved_to_relpath));
+          SVN_ERR(svn_sqlite__step_done(stmt));
+          SVN_ERR(svn_sqlite__reset(stmt));
+
+          /* Make the delete processing below ignore moved-to info. */
+          is_valid_moved_to_relpath = FALSE;
+        }
+    }
 
   if (op_root)
     {
@@ -6134,7 +6169,7 @@ op_delete_txn(void *baton,
       /* Delete the node at LOCAL_RELPATH, and possibly mark it as moved. */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                  STMT_INSERT_DELETE_NODE));
-      if (b->moved_to_relpath)
+      if (b->moved_to_relpath && is_valid_moved_to_relpath)
         SVN_ERR(svn_sqlite__bindf(stmt, "isiis",
                                   wcroot->wc_id, local_relpath,
                                   select_depth, b->delete_depth,
