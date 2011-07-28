@@ -9442,11 +9442,11 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                            wcroot->sdb, original_repos_id,
                            result_pool));
 
-  if (moved_from_abspath)
+  if (moved_from_abspath && moved_from_relpath)
     *moved_from_abspath = svn_dirent_join(wcroot->abspath,
                                           moved_from_relpath,
                                           result_pool);
-  if (delete_op_root_abspath)
+  if (delete_op_root_abspath && delete_op_root_relpath)
     *delete_op_root_abspath = svn_dirent_join(wcroot->abspath,
                                               delete_op_root_relpath,
                                               result_pool);
