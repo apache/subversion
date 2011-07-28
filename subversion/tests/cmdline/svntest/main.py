@@ -51,6 +51,7 @@ import svntest
 from svntest import Failure
 from svntest import Skip
 
+SVN_VER_MINOR = 8
 
 ######################################################################
 #
@@ -1495,7 +1496,8 @@ def _create_parser():
                          "it supports both, else assume it's using this " +
                          "one; the default is " + _default_http_library)
   parser.add_option('--server-minor-version', type='int', action='store',
-                    help="Set the minor version for the server ('3'..'8').")
+                    help="Set the minor version for the server ('3'..'%d')."
+                    % SVN_VER_MINOR)
   parser.add_option('--fsfs-packing', action='store_true',
                     help="Run 'svnadmin pack' automatically")
   parser.add_option('--fsfs-sharding', action='store', type='int',
@@ -1515,7 +1517,7 @@ def _create_parser():
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
-        server_minor_version=8,
+        server_minor_version=SVN_VER_MINOR,
         url=file_scheme_prefix + pathname2url(os.path.abspath(os.getcwd())),
         http_library=_default_http_library)
 
@@ -1539,8 +1541,9 @@ def _parse_options(arglist=sys.argv[1:]):
 
   # If you change the below condition then change
   # ../../../../build/run_tests.py too.
-  if options.server_minor_version < 3 or options.server_minor_version > 8:
-    parser.error("test harness only supports server minor versions 3-8")
+  if options.server_minor_version not in range(3, SVN_VER_MINOR+1):
+    parser.error("test harness only supports server minor versions 3-%d"
+                 % SVN_VER_MINOR)
 
   if options.url:
     if options.url[-1:] == '/': # Normalize url to have no trailing slash

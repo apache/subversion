@@ -44,6 +44,7 @@ separated list of test numbers; the default is to run all the tests in it.
 
 # A few useful constants
 LINE_LENGTH = 45
+SVN_VER_MINOR = 8
 
 import os, re, subprocess, sys, imp
 from datetime import datetime
@@ -111,8 +112,9 @@ class TestHarness:
     # If you change the below condition then change in
     # ../subversion/tests/cmdline/svntest/main.py too.
     if server_minor_version is not None:
-      if int(server_minor_version) < 3 or int(server_minor_version) > 8:
-        sys.stderr.write("Test harness only supports server minor versions 3-8\n")
+      if int(server_minor_version) not in range(3, 1+SVN_VER_MINOR):
+        sys.stderr.write("Test harness only supports server minor versions 3-%d\n"
+                         % SVN_VER_MINOR)
         sys.exit(1)
     self.verbose = verbose
     self.cleanup = cleanup
