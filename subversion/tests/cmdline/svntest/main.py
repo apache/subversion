@@ -25,7 +25,6 @@
 
 import sys     # for argv[]
 import os
-import math    # for math.isinf()
 import shutil  # for rmtree()
 import re
 import stat    # for ST_MODE
@@ -1542,7 +1541,7 @@ def _parse_options(arglist=sys.argv[1:]):
   # If you change the below condition then change
   # ../../../../build/run_tests.py too.
   if (options.server_minor_version < 3 or options.server_minor_version > 7) \
-      and not math.isinf(options.server_minor_version):
+      and options.server_minor_version != float('inf'):
     parser.error("test harness only supports server minor versions 3-7")
 
   if options.url:
