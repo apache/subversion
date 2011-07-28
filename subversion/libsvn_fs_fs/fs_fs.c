@@ -305,7 +305,7 @@ path_revprops_pack(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 }
 
 static const char *
-path_revprops(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+path_revprops_unpacked(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
@@ -3075,7 +3075,7 @@ set_revision_proplist(svn_fs_t *fs,
   if (ffd->format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT ||
       ! is_packed_revprop(fs, rev))
     {
-      const char *final_path = path_revprops(fs, rev, pool);
+      const char *final_path = path_revprops_unpacked(fs, rev, pool);
       const char *tmp_path;
       const char *perms_reference;
       svn_stream_t *stream;
@@ -3248,8 +3248,8 @@ revision_proplist(apr_hash_t **proplist_p,
           /* Clear err here rather than after finding a recoverable error so
            * we can return that error on the last iteration of the loop. */
           svn_error_clear(err);
-          err = svn_io_file_open(&revprop_file, path_revprops(fs, rev,
-                                                              iterpool),
+          err = svn_io_file_open(&revprop_file,
+                                 path_revprops_unpacked(fs, rev, iterpool),
                                  APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
                                  iterpool);
           if (err)
@@ -6720,7 +6720,7 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Move the revprops file into place. */
   SVN_ERR_ASSERT(! is_packed_revprop(cb->fs, new_rev));
   revprop_filename = path_txn_props(cb->fs, cb->txn->id, pool);
-  final_revprop = path_revprops(cb->fs, new_rev, pool);
+  final_revprop = path_revprops_unpacked(cb->fs, new_rev, pool);
   SVN_ERR(move_into_place(revprop_filename, final_revprop,
                           old_rev_filename, pool));
 
@@ -7333,7 +7333,7 @@ recover_body(void *baton, apr_pool_t *pool)
     SVN_ERR(svn_io_check_path(path_revprops_pack(fs, max_rev, pool),
                               &youngest_revprops_kind, pool));
   else
-    SVN_ERR(svn_io_check_path(path_revprops(fs, max_rev, pool),
+    SVN_ERR(svn_io_check_path(path_revprops_unpacked(fs, max_rev, pool),
                               &youngest_revprops_kind, pool));
 
   if (youngest_revprops_kind == svn_node_none)
