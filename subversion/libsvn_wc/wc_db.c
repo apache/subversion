@@ -9116,7 +9116,7 @@ scan_addition_txn(void *baton,
                   apr_pool_t *scratch_pool)
 {
   struct scan_addition_baton_t *sab = baton;
-  const char *current_relpath = local_relpath;
+  const char *op_root_relpath = local_relpath;
   const char *build_relpath = "";
 
   /* Initialize most of the OUT parameters. Generally, we'll only be filling
@@ -9181,20 +9181,20 @@ scan_addition_txn(void *baton,
 
     /* Calculate the op root local path components */
     op_depth = svn_sqlite__column_int64(stmt, 0);
-    current_relpath = local_relpath;
+    op_root_relpath = local_relpath;
 
     for (i = (int)relpath_depth(local_relpath); i > op_depth; --i)
       {
         /* Calculate the path of the operation root */
         repos_prefix_path =
-          svn_relpath_join(svn_relpath_basename(current_relpath, NULL),
+          svn_relpath_join(svn_relpath_basename(op_root_relpath, NULL),
                            repos_prefix_path,
                            scratch_pool);
-        current_relpath = svn_relpath_dirname(current_relpath, scratch_pool);
+        op_root_relpath = svn_relpath_dirname(op_root_relpath, scratch_pool);
       }
 
     if (sab->op_root_relpath)
-      *sab->op_root_relpath = apr_pstrdup(sab->result_pool, current_relpath);
+      *sab->op_root_relpath = apr_pstrdup(sab->result_pool, op_root_relpath);
 
     if (sab->original_repos_relpath
         || sab->original_repos_id
@@ -9202,13 +9202,13 @@ scan_addition_txn(void *baton,
                 && *sab->original_revision == SVN_INVALID_REVNUM)
         || sab->status)
       {
-        if (local_relpath != current_relpath)
+        if (local_relpath != op_root_relpath)
           /* requery to get the add/copy root */
           {
             SVN_ERR(svn_sqlite__reset(stmt));
 
             SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                                      wcroot->wc_id, current_relpath));
+                                      wcroot->wc_id, op_root_relpath));
             SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
             if (!have_row)
@@ -9220,7 +9220,7 @@ scan_addition_txn(void *baton,
                 return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                          _("The node '%s' was not found."),
                                          path_for_error_message(wcroot,
-                                                                current_relpath,
+                                                                op_root_relpath,
                                                                 scratch_pool));
               }
 
@@ -9229,8 +9229,6 @@ scan_addition_txn(void *baton,
               *sab->original_revision = svn_sqlite__column_revnum(stmt, 12);
           }
 
-        /* current_relpath / current_abspath
-           as well as the record in stmt contain the data of the op_root */
         if (sab->original_repos_relpath)
           *sab->original_repos_relpath = svn_sqlite__column_text(stmt, 11,
                                                             sab->result_pool);
@@ -9250,7 +9248,7 @@ scan_addition_txn(void *baton,
                   SVN_ERR(get_moved_from_info(sab->status,
                                               sab->moved_from_relpath,
                                               sab->delete_op_root_relpath,
-                                              current_relpath, wcroot,
+                                              op_root_relpath, wcroot,
                                               local_relpath,
                                               sab->result_pool,
                                               scratch_pool));
@@ -9272,13 +9270,13 @@ scan_addition_txn(void *baton,
 
         /* Pointing at op_depth, look at the parent */
         repos_prefix_path =
-          svn_relpath_join(svn_relpath_basename(current_relpath, NULL),
+          svn_relpath_join(svn_relpath_basename(op_root_relpath, NULL),
                            repos_prefix_path,
                            scratch_pool);
-        current_relpath = svn_relpath_dirname(current_relpath, scratch_pool);
+        op_root_relpath = svn_relpath_dirname(op_root_relpath, scratch_pool);
 
 
-        SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
+        SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, op_root_relpath));
         SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
         if (! have_row)
@@ -9287,15 +9285,15 @@ scan_addition_txn(void *baton,
         op_depth = svn_sqlite__column_int64(stmt, 0);
 
         /* Skip to op_depth */
-        for (i = (int)relpath_depth(current_relpath); i > op_depth; i--)
+        for (i = (int)relpath_depth(op_root_relpath); i > op_depth; i--)
           {
             /* Calculate the path of the operation root */
             repos_prefix_path =
-              svn_relpath_join(svn_relpath_basename(current_relpath, NULL),
+              svn_relpath_join(svn_relpath_basename(op_root_relpath, NULL),
                                repos_prefix_path,
                                scratch_pool);
-            current_relpath =
-              svn_relpath_dirname(current_relpath, scratch_pool);
+            op_root_relpath =
+              svn_relpath_dirname(op_root_relpath, scratch_pool);
           }
       }
 
@@ -9315,7 +9313,7 @@ scan_addition_txn(void *baton,
       SVN_ERR(base_get_info(NULL, NULL, NULL, &base_relpath, sab->repos_id,
                             NULL, NULL, NULL, NULL, NULL,
                             NULL, NULL, NULL, NULL,
-                            wcroot, current_relpath,
+                            wcroot, op_root_relpath,
                             scratch_pool, scratch_pool));
 
       if (sab->repos_relpath)
