@@ -1335,6 +1335,13 @@ WHERE wc_id = ?1
 SELECT local_relpath FROM nodes_current
 WHERE wc_id = ?1 AND moved_to = ?2
 
+-- STMT_UPDATE_MOVED_TO_RELPATH
+UPDATE NODES SET moved_to = ?3
+WHERE wc_id = ?1 AND local_relpath = ?2
+  AND op_depth =
+   (SELECT MAX(op_depth) FROM nodes
+    WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
+
 /* ------------------------------------------------------------------------- */
 
 /* Queries for verification. */
