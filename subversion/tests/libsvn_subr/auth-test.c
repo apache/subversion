@@ -54,6 +54,9 @@ test_platform_specific_auth_providers(apr_pool_t *pool)
 #ifdef SVN_HAVE_KWALLET
   number_of_providers += 2;
 #endif
+#ifdef SVN_HAVE_GPG_AGENT
+  number_of_providers += 1;
+#endif
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
   number_of_providers += 2;
 #endif

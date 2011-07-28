@@ -94,6 +94,9 @@ struct edit_baton
   /* The object representing the root directory of the svn txn. */
   svn_fs_root_t *txn_root;
 
+  /* Avoid aborting an fs transaction more than once */
+  svn_boolean_t txn_aborted;
+
   /** Filled in when the edit is closed: **/
 
   /* The new revision created by this commit. */
@@ -718,12 +721,13 @@ close_edit(void *edit_baton,
          So, in a nutshell: svn commits are an all-or-nothing deal.
          Each commit creates a new fs txn which either succeeds or is
          aborted completely.  No second chances;  the user simply
-         needs to update and commit again  :)
+         needs to update and commit again  :) */
 
-         We ignore the possible error result from svn_fs_abort_txn();
-         it's more important to return the original error. */
-      svn_error_clear(svn_fs_abort_txn(eb->txn, pool));
-      return svn_error_trace(err);
+      eb->txn_aborted = TRUE;
+
+      return svn_error_trace(
+                svn_error_compose_create(err,
+                                         svn_fs_abort_txn(eb->txn, pool)));
     }
 
   /* Pass new revision information to the caller's callback. */
@@ -769,9 +773,12 @@ abort_edit(void *edit_baton,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
-  if ((! eb->txn) || (! eb->txn_owner))
+  if ((! eb->txn) || (! eb->txn_owner) || eb->txn_aborted)
     return SVN_NO_ERROR;
-  return svn_fs_abort_txn(eb->txn, pool);
+
+  eb->txn_aborted = TRUE;
+
+  return svn_error_trace(svn_fs_abort_txn(eb->txn, pool));
 }
 
 

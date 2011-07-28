@@ -117,6 +117,7 @@ static int pbtest_step = 0;
                : ((p)->spill == NULL ? ((p)->head == NULL ? 2 : 3) \
                                      : ((p)->head == NULL ? 6 : 4)))
 
+/* Note: INJECT and COMPLETED are only used for debug output.  */
 typedef struct {
   svn_boolean_t paused;   /* pause the parser on this step?  */
   svn_boolean_t inject;   /* inject pending content on this step?  */
@@ -143,13 +144,17 @@ static const pbtest_desc_t pbtest_description[] = {
 };
 
 #define PBTEST_SET_PAUSED(ctx) \
-  (pbtest_step < 14                                          \
+  (PBTEST_THIS_REQ(ctx) && pbtest_step < 14                  \
    ? (ctx)->paused = pbtest_description[pbtest_step].paused  \
    : FALSE)
 
-#define PBTEST_MAYBE_STEP(ctx) maybe_next_step(ctx)
+#define PBTEST_MAYBE_STEP(ctx, force) maybe_next_step(ctx, force)
 
-#define PBTEST_FORCE_SPILL() (pbtest_step == 6)
+#define PBTEST_FORCE_SPILL(ctx) (PBTEST_THIS_REQ(ctx) && pbtest_step == 6)
+
+#define PBTEST_THIS_REQ(ctx) \
+  ((ctx)->response_type != NULL \
+   && strcmp((ctx)->response_type, "update-report") == 0)
 
 #else /* PBTEST_ACTIVE  */
 
@@ -157,9 +162,10 @@ static const pbtest_desc_t pbtest_description[] = {
    end up with "statement with no effect" warnings. Obviously, this
    depends upon particular usage, which is easy to verify.  */
 #define PBTEST_SET_PAUSED(ctx)  /* empty */
-#define PBTEST_MAYBE_STEP(ctx)  /* empty */
+#define PBTEST_MAYBE_STEP(ctx, force)  /* empty */
 
-#define PBTEST_FORCE_SPILL() FALSE
+#define PBTEST_FORCE_SPILL(ctx) FALSE
+#define PBTEST_THIS_REQ(ctx) FALSE
 
 #endif /* PBTEST_ACTIVE  */
 
@@ -296,7 +302,7 @@ ssl_server_cert(void *baton, int failures,
       int i;
       for (i = 0; i < san->nelts; i++) {
           char *s = APR_ARRAY_IDX(san, i, char*);
-          if (apr_fnmatch(s, conn->hostinfo,
+          if (apr_fnmatch(s, conn->hostname,
                           APR_FNM_PERIOD) == APR_SUCCESS) {
               found_matching_hostname = 1;
               cert_info.hostname = s;
@@ -308,7 +314,7 @@ ssl_server_cert(void *baton, int failures,
   /* Match server certificate CN with the hostname of the server */
   if (!found_matching_hostname && cert_info.hostname)
     {
-      if (apr_fnmatch(cert_info.hostname, conn->hostinfo,
+      if (apr_fnmatch(cert_info.hostname, conn->hostname,
                       APR_FNM_PERIOD) == APR_FNM_NOMATCH)
         {
           svn_failures |= SVN_AUTH_SSL_CNMISMATCH;
@@ -422,7 +428,7 @@ conn_setup(apr_socket_t *sock,
           conn->ssl_context = serf_bucket_ssl_encrypt_context_get(*read_bkt);
 
 #if SERF_VERSION_AT_LEAST(1,0,0)
-          serf_ssl_set_hostname(conn->ssl_context, conn->hostinfo);
+          serf_ssl_set_hostname(conn->ssl_context, conn->hostname);
 #endif
 
           serf_ssl_client_cert_provider_set(conn->ssl_context,
@@ -743,9 +749,8 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
 
       svn_pool_clear(iterpool);
 
-      if (sess->wc_callbacks &&
-          sess->wc_callbacks->cancel_func)
-        SVN_ERR((sess->wc_callbacks->cancel_func)(sess->wc_callback_baton));
+      if (sess->cancel_func)
+        SVN_ERR((*sess->cancel_func)(sess->cancel_baton));
 
       status = serf_context_run(sess->context, sess->timeout, iterpool);
 
@@ -1311,9 +1316,10 @@ add_done_item(svn_ra_serf__xml_parser_t *ctx)
 #ifdef PBTEST_ACTIVE
 
 /* Determine whether we should move to the next step. Print out the
-   transition for debugging purposes.  */
+   transition for debugging purposes. If FORCE is TRUE, then we
+   definitely make a step (injection has completed).  */
 static void
-maybe_next_step(svn_ra_serf__xml_parser_t *parser)
+maybe_next_step(svn_ra_serf__xml_parser_t *parser, svn_boolean_t force)
 {
   const pbtest_desc_t *desc;
   int state;
@@ -1323,10 +1329,15 @@ maybe_next_step(svn_ra_serf__xml_parser_t *parser)
   if (pbtest_step == 14)
     return;
 
+  /* If this is not the request running the test, then exit.  */
+  if (!PBTEST_THIS_REQ(parser))
+    return;
+
   desc = &pbtest_description[pbtest_step];
   state = PBTEST_STATE(parser->pending);
 
-  if (desc->inject || state == desc->when_next || pbtest_step == 0)
+  /* Forced? ... or reached target state?  */
+  if (force || state == desc->when_next)
     {
       ++pbtest_step;
 
@@ -1337,8 +1348,8 @@ maybe_next_step(svn_ra_serf__xml_parser_t *parser)
       ++desc;
       parser->paused = desc->paused;
 
-      SVN_DBG(("PBTEST: advanced: step=%d  paused=%d  inject=%d\n",
-               pbtest_step, desc->paused, desc->inject));
+      SVN_DBG(("PBTEST: advanced: step=%d  paused=%d  inject=%d  state=%d\n",
+               pbtest_step, desc->paused, desc->inject, state));
     }
   else
     {
@@ -1397,13 +1408,13 @@ write_to_pending(svn_ra_serf__xml_parser_t *ctx,
 
      For testing purposes, there are points when we may want to
      create the spill file, regardless.  */
-  if (PBTEST_FORCE_SPILL()
+  if (PBTEST_FORCE_SPILL(ctx)
       || (ctx->pending->spill == NULL
           && ctx->pending->memory_size > SPILL_SIZE))
     {
 #ifdef PBTEST_ACTIVE
       /* Only allow a spill file for steps 6 or later.  */
-      if (pbtest_step >= 6)
+      if (!PBTEST_THIS_REQ(ctx) || pbtest_step >= 6)
 #endif
       SVN_ERR(svn_io_open_unique_file3(&ctx->pending->spill,
                                        NULL /* temp_path */,
@@ -1500,15 +1511,16 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
 
 #ifdef PBTEST_ACTIVE
   /* If this step should not inject content, then fast-path exit.  */
-  if (pbtest_step < 14 && !pbtest_description[pbtest_step].inject)
+  if (PBTEST_THIS_REQ(parser)
+      && pbtest_step < 14 && !pbtest_description[pbtest_step].inject)
     {
       SVN_DBG(("PBTEST: process: injection disabled\n"));
       return SVN_NO_ERROR;
     }
 #endif
 
-  /* Fast path exit: already paused, or nothing to do.  */
-  if (parser->paused || parser->pending == NULL)
+  /* Fast path exit: already paused, nothing to do, or already done.  */
+  if (parser->paused || parser->pending == NULL || *parser->done)
     return SVN_NO_ERROR;
 
   /* ### it is possible that the XML parsing of the pending content is
@@ -1548,9 +1560,10 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
   /* For steps 4 and 9, we wait until all of the memory content has been
      injected. At that point, we can take another step which will pause
      the parser, and we'll need to exit.  */
-  if (pbtest_step == 4 || pbtest_step == 9)
+  if (PBTEST_THIS_REQ(parser)
+      && (pbtest_step == 4 || pbtest_step == 9))
     {
-      PBTEST_MAYBE_STEP(parser);
+      PBTEST_MAYBE_STEP(parser, TRUE);
       return SVN_NO_ERROR;
     }
 #endif
@@ -1609,17 +1622,25 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
      the network, then we're completely done with the parsing.  */
   if (parser->pending->network_eof)
     {
+#ifdef PBTEST_ACTIVE
+      if (PBTEST_THIS_REQ(parser))
+        SVN_DBG(("process: terminating parse.\n"));
+#endif
+
+      SVN_ERR_ASSERT(parser->xmlp != NULL);
+
       /* Tell the parser that no more content will be parsed. Ignore the
          return status. We just don't care.  */
       (void) XML_Parse(parser->xmlp, NULL, 0, 1);
 
       XML_ParserFree(parser->xmlp);
+      parser->xmlp = NULL;
       add_done_item(parser);
     }
 
   /* For testing step 12, we have written all of the disk content. This
      will advance to step 13 and pause the parser again.  */
-  PBTEST_MAYBE_STEP(parser);
+  PBTEST_MAYBE_STEP(parser, TRUE);
 
   return SVN_NO_ERROR;
 }
@@ -1682,9 +1703,8 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       /* This is the first invocation. If we're looking at an update
          report, then move to step 1 of the testing sequence.  */
 #ifdef PBTEST_ACTIVE
-      if (ctx->response_type != NULL
-          && strcmp(ctx->response_type, "update-report") == 0)
-        PBTEST_MAYBE_STEP(ctx);
+      if (PBTEST_THIS_REQ(ctx))
+        PBTEST_MAYBE_STEP(ctx, TRUE);
 #endif
     }
 
@@ -1717,9 +1737,17 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       PBTEST_SET_PAUSED(ctx);
 
 #ifdef PBTEST_ACTIVE
-      SVN_DBG(("response: len=%d  paused=%d  status=%08x\n",
-               (int)len, ctx->paused, status));
-      SVN_DBG(("content=%s\n", data));
+      if (PBTEST_THIS_REQ(ctx))
+        {
+          SVN_DBG(("response: len=%d  paused=%d  status=%08x\n",
+                   (int)len, ctx->paused, status));
+#if 0
+          /* ### DATA is not necessarily NUL-terminated, but this
+             ### generally works. so if you want to see content... */
+          if (len > 0)
+            SVN_DBG(("content=%s\n", data));
+#endif
+        }
 #endif
 
       /* Note: once the callbacks invoked by inject_to_parser() sets the
@@ -1731,7 +1759,6 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
          We want to save arriving content into the PENDING structures if
          the parser has been paused, or we already have data in there (so
          the arriving data is appended, rather than injected out of order)  */
-#ifdef PBTEST_ACTIVE
       if (ctx->paused || HAS_PENDING_DATA(ctx->pending))
         {
           err = write_to_pending(ctx, data, len, pool);
@@ -1741,10 +1768,9 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
              Note: this only happens on writing to PENDING. If the
              parser is unpaused, then we will never change state within
              this network-reading loop.  */
-          PBTEST_MAYBE_STEP(ctx);
+          PBTEST_MAYBE_STEP(ctx, FALSE);
         }
       else
-#endif
         {
           err = inject_to_parser(ctx, data, len, &sl);
           if (err)
@@ -1755,7 +1781,10 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
         }
       if (err)
         {
+          SVN_ERR_ASSERT(ctx->xmlp != NULL);
+
           XML_ParserFree(ctx->xmlp);
+          ctx->xmlp = NULL;
           add_done_item(ctx);
           return svn_error_trace(err);
         }
@@ -1770,14 +1799,27 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
           if (ctx->pending != NULL)
             ctx->pending->network_eof = TRUE;
 
+#ifdef PBTEST_ACTIVE
+          if (PBTEST_THIS_REQ(ctx))
+            SVN_DBG(("network: reached EOF.\n"));
+#endif
+
           /* We just hit the end of the network content. If we have nothing
              in the PENDING structures, then we're completely done.  */
           if (!HAS_PENDING_DATA(ctx->pending))
             {
+#ifdef PBTEST_ACTIVE
+              if (PBTEST_THIS_REQ(ctx))
+                SVN_DBG(("network: terminating parse.\n"));
+#endif
+
+              SVN_ERR_ASSERT(ctx->xmlp != NULL);
+
               /* Ignore the return status. We just don't care.  */
               (void) XML_Parse(ctx->xmlp, NULL, 0, 1);
 
               XML_ParserFree(ctx->xmlp);
+              ctx->xmlp = NULL;
               add_done_item(ctx);
             }
 

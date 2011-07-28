@@ -464,7 +464,7 @@ cdata_log(svn_ra_serf__xml_parser_t *parser,
       case DELETED_PATH:
       case MODIFIED_PATH:
         svn_ra_serf__expand_string(&info->tmp, &info->tmp_len,
-                                   data, len, parser->state->pool);
+                                   data, len, info->pool);
         break;
       default:
         break;
@@ -589,6 +589,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   svn_ra_serf__xml_parser_t *parser_ctx;
   svn_boolean_t want_custom_revprops;
   svn_revnum_t peg_rev;
+  svn_error_t *err;
   const char *relative_url, *basecoll_url, *req_url;
 
   log_ctx = apr_pcalloc(pool, sizeof(*log_ctx));
@@ -674,7 +675,13 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
 
   svn_ra_serf__request_create(handler);
 
-  SVN_ERR(svn_ra_serf__context_run_wait(&log_ctx->done, session, pool));
+  err = svn_ra_serf__context_run_wait(&log_ctx->done, session, pool);
+
+  SVN_ERR(svn_error_compose_create(
+              svn_ra_serf__error_on_status(log_ctx->status_code,
+                                           req_url,
+                                           parser_ctx->location),
+              err));
 
   return SVN_NO_ERROR;
 }

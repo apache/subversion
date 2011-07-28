@@ -146,7 +146,7 @@ if test -n "$APXS" && test "$APXS" != "no"; then
         APACHE_LDFLAGS="-shrext .so"
         ;;
     esac
-else
+elif test x"$APXS" != x"no"; then
     echo "=================================================================="
     echo "WARNING: skipping the build of mod_dav_svn"
     echo "         try using --with-apxs"

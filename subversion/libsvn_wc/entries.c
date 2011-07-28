@@ -285,7 +285,7 @@ get_info_for_deleted(svn_wc_entry_t *entry,
                                        &parent_repos_relpath,
                                        &entry->repos,
                                        &entry->uuid,
-                                       NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
                                        db, parent_abspath,
                                        result_pool, scratch_pool));
 
@@ -615,6 +615,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                                            &scanned_original_relpath,
                                            NULL, NULL, /* original_root|uuid */
                                            &original_revision,
+                                           NULL, NULL,
                                            db,
                                            entry_abspath,
                                            result_pool, scratch_pool));
@@ -716,9 +717,8 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                                              NULL, NULL, NULL,
                                              &parent_repos_relpath,
                                              &parent_root_url,
-                                             NULL, NULL,
-                                             db,
-                                             parent_abspath,
+                                             NULL, NULL, NULL, NULL,
+                                             db, parent_abspath,
                                              scratch_pool,
                                              scratch_pool);
               if (err)

@@ -54,10 +54,12 @@ print $stream 'orz';
 }
 $txn->commit;
 
-$fs->lock('/testfile', 'hate software', 'we hate software', 0, 0, $fs->youngest_rev, 0);
+my $token = "opaquelocktoken:notauuid-$$";
+
+$fs->lock('/testfile', $token, 'we hate software', 0, 0, $fs->youngest_rev, 0);
 
 ok(my $lock = $fs->get_lock('/testfile'));
-is($lock->token, 'hate software');
+is($lock->token, $token);
 is($lock->owner, 'foo');
 
 $acc = SVN::Fs::create_access('fnord');
@@ -65,7 +67,7 @@ is($acc->get_username, 'fnord');
 $fs->set_access($acc);
 
 eval {
-$fs->lock('/testfile', 'hate software', 'we hate software', 0, 0, $fs->youngest_rev, 0);
+$fs->lock('/testfile', $token, 'we hate software', 0, 0, $fs->youngest_rev, 0);
 };
 
 like($@, qr/already locked/);

@@ -529,5 +529,5 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
       err = SVN_NO_ERROR;
     }
 
-  return err;
+  return svn_error_trace(err);
 }

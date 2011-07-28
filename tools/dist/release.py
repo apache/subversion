@@ -45,6 +45,7 @@ import hashlib
 import tarfile
 import logging
 import datetime
+import tempfile
 import operator
 import itertools
 import subprocess
@@ -341,6 +342,38 @@ def build_env(args):
 #----------------------------------------------------------------------
 # Create release artifacts
 
+def fetch_changes(repos, branch, revision):
+    changes_peg_url = '%s/%s/CHANGES@%d' % (repos, branch, revision)
+    proc = subprocess.Popen(['svn', 'cat', changes_peg_url],
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    (stdout, stderr) = proc.communicate()
+    proc.wait()
+    return stdout.split('\n')
+
+
+def compare_changes(repos, branch, revision):
+    # Compare trunk's version of CHANGES with that of the branch,
+    # ignoring any lines in trunk's version precede what *should*
+    # match the contents of the branch's version.  (This allows us to
+    # continue adding new stuff at the top of trunk's CHANGES that
+    # might relate to the *next* major release line.)
+    branch_CHANGES = fetch_changes(repos, branch, revision)
+    trunk_CHANGES = fetch_changes(repos, 'trunk', revision)
+    try:
+        first_matching_line = trunk_CHANGES.index(branch_CHANGES[0])
+    except ValueError:
+        raise RuntimeError('CHANGES not synced between trunk and branch')
+
+    trunk_CHANGES = trunk_CHANGES[first_matching_line:]
+    saw_diff = False
+    import difflib
+    for diff_line in difflib.unified_diff(trunk_CHANGES, branch_CHANGES):
+        saw_diff = True
+        logging.debug('%s', diff_line)
+    if saw_diff:
+        raise RuntimeError('CHANGES not synced between trunk and branch')
+
+
 def roll_tarballs(args):
     'Create the release artifacts.'
     extns = ['zip', 'tar.gz', 'tar.bz2']
@@ -362,21 +395,10 @@ def roll_tarballs(args):
         if not dep.have_usable():
            raise RuntimeError('Cannot find usable %s' % dep.label)
 
-    # Make sure CHANGES is sync'd
     if branch != 'trunk':
-        trunk_CHANGES = '%s/trunk/CHANGES@%d' % (repos, args.revnum)
-        branch_CHANGES = '%s/%s/CHANGES@%d' % (repos, branch,
-                                                        args.revnum)
-        proc = subprocess.Popen(['svn', 'diff', '--summarize', branch_CHANGES,
-                                   trunk_CHANGES],
-                                  stdout=subprocess.PIPE,
-                                  stderr=subprocess.STDOUT)
-        (stdout, stderr) = proc.communicate()
-        proc.wait()
-
-        if stdout:
-            raise RuntimeError('CHANGES not synced between trunk and branch')
-
+        # Make sure CHANGES is sync'd.    
+        compare_changes(repos, branch, args.revnum)
+    
     # Create the output directory
     if not os.path.exists(get_deploydir(args.base_dir)):
         os.mkdir(get_deploydir(args.base_dir))
@@ -550,6 +572,61 @@ def write_announcement(args):
 
 
 #----------------------------------------------------------------------
+# Validate the signatures for a release
+
+key_start = '-----BEGIN PGP SIGNATURE-----\n'
+fp_pattern = re.compile(r'^pub\s+(\w+\/\w+)[^\n]*\n\s+Key\sfingerprint\s=((\s+[0-9A-F]{4}){10})\nuid\s+([^<\(]+)\s')
+
+def check_sigs(args):
+    'Check the signatures for the release.'
+
+    import gnupg
+    gpg = gnupg.GPG()
+
+    if args.target:
+        target = args.target
+    else:
+        target = os.path.join(os.getenv('HOME'), 'public_html', 'svn',
+                              str(args.version), 'deploy')
+
+    good_sigs = {}
+
+    for filename in glob.glob(os.path.join(target, 'subversion-*.asc')):
+        text = open(filename).read()
+        keys = text.split(key_start)
+
+        for key in keys[1:]:
+            fd, fn = tempfile.mkstemp()
+            os.write(fd, key_start + key)
+            os.close(fd)
+            verified = gpg.verify_file(open(fn, 'rb'), filename[:-4])
+            os.unlink(fn)
+
+            if verified.valid:
+                good_sigs[verified.key_id[-8:]] = True
+            else:
+                sys.stderr.write("BAD SIGNATURE for %s\n" % filename)
+                sys.exit(1)
+
+    for id in good_sigs.keys():
+        gpg = subprocess.Popen(['gpg', '--fingerprint', id],
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        rc = gpg.wait()
+        gpg_output = gpg.stdout.read()
+        if rc:
+            print(gpg_output)
+            sys.stderr.write("UNABLE TO GET FINGERPRINT FOR %s" % id)
+            sys.exit(1)
+
+        gpg_output = "\n".join([ l for l in gpg_output.splitlines()
+                                                     if l[0:7] != 'Warning' ])
+
+        fp = fp_pattern.match(gpg_output).groups()
+        print("   %s [%s] with fingerprint:" % (fp[3], fp[0]))
+        print("   %s" % fp[1])
+
+
+#----------------------------------------------------------------------
 # Main entry point for argument parsing and handling
 
 def main():
@@ -632,6 +709,17 @@ def main():
     subparser.set_defaults(func=write_announcement)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
+
+    # The check sigs subcommand
+    subparser = subparsers.add_parser('check-sigs',
+                    help='''Output to stdout the signatures collected for this
+                            release''')
+    subparser.set_defaults(func=check_sigs)
+    subparser.add_argument('version', type=Version,
+                    help='''The release label, such as '1.7.0-alpha1'.''')
+    subparser.add_argument('--target',
+                    help='''The full path to the destination used in
+                            'post-candiates'..''')
 
     # A meta-target
     subparser = subparsers.add_parser('clean',

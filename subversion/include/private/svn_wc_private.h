@@ -1096,6 +1096,40 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool);
 
+/* Internal version of svn_wc_delete4(). It has one additional parameter,
+ * MOVED_TO_ABSPATH. If not NULL, this parameter indicates that the
+ * delete operation is the delete-half of a move. */
+svn_error_t *
+svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
+                        svn_boolean_t keep_local,
+                        svn_boolean_t delete_unversioned_target,
+                        const char *moved_to_abspath,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        apr_pool_t *scratch_pool);
+
+/* If the node at LOCAL_ABSPATH was moved here set *MOVED_FROM_ABSPATH to
+ * the absolute path of the deleted move-source node, and set
+ * *DELETE_OP_ROOT_ABSPATH to the absolute path of the root node of the
+ * delete operation.
+ *
+ * If the node was not moved, set *MOVED_FROM_ABSPATH and
+ * *DELETE_OP_ROOT_ABSPATH to NULL.
+ *
+ * Either MOVED_FROM_ABSPATH or OP_ROOT_ABSPATH may be NULL to indicate
+ * that the caller is not interested in the result.
+ */
+svn_error_t *
+svn_wc__node_was_moved_here(const char **moved_from_abspath,
+                            const char **delete_op_root_abspath,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

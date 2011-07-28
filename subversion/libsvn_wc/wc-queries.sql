@@ -811,8 +811,18 @@ SELECT wc_id, local_relpath, ?4 /*op_depth*/, parent_relpath, 'base-deleted',
        kind
 FROM nodes
 WHERE wc_id = ?1
-  AND (local_relpath = ?2
-       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+  AND (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0')
+  AND op_depth = ?3
+  AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'absent')
+
+-- STMT_INSERT_DELETE_NODE
+INSERT INTO nodes (
+    wc_id, local_relpath, op_depth, parent_relpath, presence, kind, moved_to)
+SELECT wc_id, local_relpath, ?4 /*op_depth*/, parent_relpath, 'base-deleted',
+       kind, ?5 /* moved_to */
+FROM nodes
+WHERE wc_id = ?1
+  AND local_relpath = ?2
   AND op_depth = ?3
   AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'absent')
 
@@ -1320,6 +1330,17 @@ WHERE wc_id = ?1
   AND kind='file'
   AND presence='normal'
   AND file_external IS NULL
+
+-- STMT_SELECT_MOVED_FROM_RELPATH
+SELECT local_relpath FROM nodes_current
+WHERE wc_id = ?1 AND moved_to = ?2
+
+-- STMT_UPDATE_MOVED_TO_RELPATH
+UPDATE NODES SET moved_to = ?3
+WHERE wc_id = ?1 AND local_relpath = ?2
+  AND op_depth =
+   (SELECT MAX(op_depth) FROM nodes
+    WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
 
 /* ------------------------------------------------------------------------- */
 

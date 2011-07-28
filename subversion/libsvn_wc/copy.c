@@ -312,14 +312,9 @@ copy_versioned_file(svn_wc__db_t *db,
 
   /* Copy the (single) node's metadata, and move the new filesystem node
      into place. */
-  if (is_move)
-    SVN_ERR(svn_wc__db_op_move(db, src_abspath, dst_abspath,
-                               dst_op_root_abspath, work_items,
-                               scratch_pool));
-  else
-    SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath,
-                               dst_op_root_abspath, work_items,
-                               scratch_pool));
+  SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath,
+                             dst_op_root_abspath, is_move, work_items,
+                             scratch_pool));
   SVN_ERR(svn_wc__wq_run(db, dir_abspath,
                          cancel_func, cancel_baton, scratch_pool));
 
@@ -383,14 +378,9 @@ copy_versioned_dir(svn_wc__db_t *db,
 
   /* Copy the (single) node's metadata, and move the new filesystem node
      into place. */
-  if (is_move)
-    SVN_ERR(svn_wc__db_op_move(db, src_abspath, dst_abspath,
-                               dst_op_root_abspath, work_items,
-                               scratch_pool));
-  else
-    SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath,
-                               dst_op_root_abspath, work_items,
-                               scratch_pool));
+  SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath,
+                             dst_op_root_abspath, is_move, work_items,
+                             scratch_pool));
   SVN_ERR(svn_wc__wq_run(db, dir_abspath,
                          cancel_func, cancel_baton, scratch_pool));
 
@@ -499,14 +489,9 @@ copy_versioned_dir(svn_wc__db_t *db,
         {
           /* This will be copied as some kind of deletion. Don't touch
              any actual files */
-          if (is_move)
-            SVN_ERR(svn_wc__db_op_move(db, child_src_abspath,
-                                       child_dst_abspath, dst_op_root_abspath,
-                                       NULL, scratch_pool));
-          else
-            SVN_ERR(svn_wc__db_op_copy(db, child_src_abspath,
-                                       child_dst_abspath, dst_op_root_abspath,
-                                       NULL, iterpool));
+          SVN_ERR(svn_wc__db_op_copy(db, child_src_abspath,
+                                     child_dst_abspath, dst_op_root_abspath,
+                                     is_move, NULL, iterpool));
 
           /* Don't recurse on children while all we do is creating not-present
              children */
@@ -657,7 +642,7 @@ copy_or_move(svn_wc_context_t *wc_ctx,
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
                                            &src_repos_root_url,
                                            &src_repos_uuid, NULL, NULL, NULL,
-                                           NULL,
+                                           NULL, NULL, NULL,
                                            db, src_abspath,
                                            scratch_pool, scratch_pool));
         else
@@ -674,7 +659,7 @@ copy_or_move(svn_wc_context_t *wc_ctx,
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
                                            &dst_repos_root_url,
                                            &dst_repos_uuid, NULL, NULL, NULL,
-                                           NULL,
+                                           NULL, NULL, NULL,
                                            db, dstdir_abspath,
                                            scratch_pool, scratch_pool));
         else
@@ -1006,10 +991,11 @@ svn_wc_move(svn_wc_context_t *wc_ctx,
                                            scratch_pool));
   }
 
-  SVN_ERR(svn_wc_delete4(wc_ctx, src_abspath, TRUE, FALSE,
-                         cancel_func, cancel_baton,
-                         notify_func, notify_baton,
-                         scratch_pool));
+  SVN_ERR(svn_wc__delete_internal(wc_ctx, src_abspath, TRUE, FALSE,
+                                  dst_abspath,
+                                  cancel_func, cancel_baton,
+                                  notify_func, notify_baton,
+                                  scratch_pool));
 
   return SVN_NO_ERROR;
 }

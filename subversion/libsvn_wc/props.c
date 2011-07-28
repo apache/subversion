@@ -1929,7 +1929,7 @@ svn_wc__get_pristine_props(apr_hash_t **props,
          while a simple add does not.  */
       SVN_ERR(svn_wc__db_scan_addition(&status, NULL,
                                        NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
                                        db, local_abspath,
                                        scratch_pool, scratch_pool));
     }

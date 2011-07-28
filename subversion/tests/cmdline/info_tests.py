@@ -449,8 +449,8 @@ def info_show_exclude(sbox):
 
   expected_info = [{
       'Path' : '.*%siota' % re.escape(os.sep),
-     'Repository Root' : sbox.repo_url,
-     'Repository UUID' : wc_uuid,
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : wc_uuid,
   }]
   svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', iota)
   svntest.actions.run_and_verify_info(expected_info, iota)
@@ -469,19 +469,16 @@ def info_show_exclude(sbox):
 
   sbox.simple_rm('iota')
   sbox.simple_commit()
+  
+  expected_error = 'svn: E200009: Could not display info for all targets.*'
 
   # Expect error on iota (status = not-present)
-  svntest.actions.run_and_verify_svn(None, [],
-       'svn: E200009: Could not display info for all targets.*',
-        'info', iota)
+  svntest.actions.run_and_verify_svn(None, [], expected_error, 'info', iota)
 
   sbox.simple_update()
 
   # Expect error on iota (unversioned)
-  svntest.actions.run_and_verify_svn(None, [],
-       'svn: E200009: Could not display info for all targets.*',
-        'info', iota)
-
+  svntest.actions.run_and_verify_svn(None, [], expected_error, 'info', iota)
 
 ########################################################################
 # Run the tests

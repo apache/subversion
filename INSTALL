@@ -505,7 +505,7 @@ I.    INTRODUCTION
       with the C compiler. If you're using MSVC 6, and don't have MASM 6,
       a free MASM-compatible assembler is available here:
 
-          http://www.masm32.org/
+          http://www.masm32.com/
 
       You only need ML.EXE and ML.ERR from this distribution.
 
@@ -758,7 +758,7 @@ II.   INSTALLATION
 
           $ svn co https://svn.apache.org/repos/asf/subversion/trunk svn
           $ cd svn
-          $ # get neon/apr as required
+          $ # get any dependencies to be built in-tree, if required
           $ chmod +x autogen.sh
           $ ./autogen.sh
           $ mkdir ../obj

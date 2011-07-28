@@ -153,7 +153,7 @@ build_info_for_node(svn_wc__info2_t **info,
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
                                            &tmpinfo->repos_root_URL,
                                            &tmpinfo->repos_UUID,
-                                           NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
                                            db, local_abspath,
                                            result_pool, scratch_pool));
 
@@ -214,7 +214,7 @@ build_info_for_node(svn_wc__info2_t **info,
                                            &tmpinfo->repos_root_URL,
                                            &tmpinfo->repos_UUID,
                                            NULL, NULL, NULL,
-                                           &tmpinfo->rev,
+                                           &tmpinfo->rev, NULL, NULL,
                                            db, added_abspath,
                                            result_pool, scratch_pool));
 
@@ -284,8 +284,6 @@ build_info_for_node(svn_wc__info2_t **info,
       tmpinfo->lock->comment       = lock->comment;
       tmpinfo->lock->creation_date = lock->date;
     }
-
-  /* ### Temporary hacks to keep our test suite happy: */
 
   *info = tmpinfo;
   return SVN_NO_ERROR;

@@ -382,11 +382,10 @@ svn_auth_ssl_server_cert_info_dup
 }
 
 svn_error_t *
-svn_auth_get_platform_specific_provider
-  (svn_auth_provider_object_t **provider,
-   const char *provider_name,
-   const char *provider_type,
-   apr_pool_t *pool)
+svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
+                                        const char *provider_name,
+                                        const char *provider_type,
+                                        apr_pool_t *pool)
 {
   *provider = NULL;
 
@@ -447,6 +446,13 @@ svn_auth_get_platform_specific_provider
     }
   else
     {
+#if defined(SVN_HAVE_GPG_AGENT)
+      if (strcmp(provider_name, "gpg_agent") == 0 &&
+          strcmp(provider_type, "simple") == 0)
+        {
+          svn_auth_get_gpg_agent_simple_provider(provider, pool);
+        }
+#endif
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
       if (strcmp(provider_name, "keychain") == 0 &&
           strcmp(provider_type, "simple") == 0)
@@ -483,27 +489,30 @@ svn_auth_get_platform_specific_provider
 }
 
 svn_error_t *
-svn_auth_get_platform_specific_client_providers
-  (apr_array_header_t **providers,
-   svn_config_t *config,
-   apr_pool_t *pool)
+svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
+                                                svn_config_t *config,
+                                                apr_pool_t *pool)
 {
   svn_auth_provider_object_t *provider;
   const char *password_stores_config_option;
   apr_array_header_t *password_stores;
   int i;
 
+#define SVN__DEFAULT_AUTH_PROVIDER_LIST \
+         "gnome-keyring,kwallet,keychain,gpg-agent,windows-cryptoapi"
+
   if (config)
     {
-      svn_config_get(config,
-                     &password_stores_config_option,
-                     SVN_CONFIG_SECTION_AUTH,
-                     SVN_CONFIG_OPTION_PASSWORD_STORES,
-                     "gnome-keyring,kwallet,keychain,windows-cryptoapi");
+      svn_config_get
+        (config,
+         &password_stores_config_option,
+         SVN_CONFIG_SECTION_AUTH,
+         SVN_CONFIG_OPTION_PASSWORD_STORES,
+         SVN__DEFAULT_AUTH_PROVIDER_LIST);
     }
   else
     {
-      password_stores_config_option = "gnome-keyring,kwallet,keychain,windows-cryptoapi";
+      password_stores_config_option = SVN__DEFAULT_AUTH_PROVIDER_LIST;
     }
 
   *providers = apr_array_make(pool, 12, sizeof(svn_auth_provider_object_t *));
@@ -531,6 +540,20 @@ svn_auth_get_platform_specific_client_providers
           SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
                                                           "gnome_keyring",
                                                           "ssl_client_cert_pw",
+                                                          pool));
+
+          if (provider)
+            APR_ARRAY_PUSH(*providers, svn_auth_provider_object_t *) = provider;
+
+          continue;
+        }
+
+      /* GPG-AGENT */
+      if (apr_strnatcmp(password_store, "gpg-agent") == 0)
+        {
+          SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                          "gpg_agent",
+                                                          "simple",
                                                           pool));
 
           if (provider)

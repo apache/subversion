@@ -567,6 +567,25 @@ int main()
   fi
 fi
 
+dnl GPG Agent -------------------
+
+AC_ARG_WITH(gpg_agent,
+AS_HELP_STRING([--without-gpg-agent], 
+               [Disable support for GPG-Agent]),
+               [with_gpg_agent=no], [with_gpg_agent=yes])
+AC_MSG_CHECKING([whether to support GPG-Agent])
+if test "$svn_enable_shared" != "yes"; then
+  AC_MSG_RESULT([no (shared library support is disabled)])
+elif test "$with_gpg_agent" = "yes"; then
+  AC_MSG_RESULT([yes])
+  AC_DEFINE([SVN_HAVE_GPG_AGENT], [1], 
+            [Is GPG Agent support enabled?])
+else
+  AC_MSG_RESULT([no])
+fi
+
+AC_SUBST(SVN_HAVE_GPG_AGENT)
+
 dnl GNOME Keyring -------------------
 
 AC_ARG_WITH(gnome_keyring,

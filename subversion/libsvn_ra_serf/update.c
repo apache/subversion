@@ -2214,7 +2214,7 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
       sess->conns[cur] = apr_palloc(sess->pool, sizeof(*sess->conns[cur]));
       sess->conns[cur]->bkt_alloc = serf_bucket_allocator_create(sess->pool,
                                                                  NULL, NULL);
-      sess->conns[cur]->hostinfo = sess->conns[0]->hostinfo;
+      sess->conns[cur]->hostname  = sess->conns[0]->hostname;
       sess->conns[cur]->using_ssl = sess->conns[0]->using_ssl;
       sess->conns[cur]->using_compression = sess->conns[0]->using_compression;
       sess->conns[cur]->useragent = sess->conns[0]->useragent;
@@ -2361,6 +2361,9 @@ finish_report(void *report_baton,
 
       /* Note: this throws out the old ITERPOOL_INNER.  */
       svn_pool_clear(iterpool);
+
+      if (sess->cancel_func)
+        SVN_ERR(sess->cancel_func(sess->cancel_baton));
 
       /* We need to be careful between the outer and inner ITERPOOLs,
          and what items are allocated within.  */

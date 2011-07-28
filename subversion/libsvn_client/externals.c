@@ -1044,6 +1044,9 @@ handle_externals_change(const struct external_change_baton_t *eb,
 
       svn_pool_clear(iterpool);
 
+      if (eb->ctx->cancel_func)
+        SVN_ERR(eb->ctx->cancel_func(eb->ctx->cancel_baton));
+
       target_abspath = svn_dirent_join(local_abspath, new_item->target_dir,
                                        iterpool);
 

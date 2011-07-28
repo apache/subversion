@@ -587,7 +587,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
   /* Check for the deletion case.
      * We delete explicitly deleted nodes (duh!)
      * We delete not-present children of copies
-     * We delete nodes that directly replace a node in it's ancestor
+     * We delete nodes that directly replace a node in its ancestor
    */
 
   if (is_deleted || is_replaced)
@@ -1845,11 +1845,14 @@ svn_client__do_commit(const char *base_url,
                                          result_pool, iterpool);
 
       if (err)
-        return svn_error_trace(fixup_commit_error(item->path,
-                                                  base_url,
-                                                  item->session_relpath,
-                                                  svn_node_file,
-                                                  err, ctx, iterpool));
+        {
+          svn_pool_destroy(iterpool); /* Close tempfiles */
+          return svn_error_trace(fixup_commit_error(item->path,
+                                                    base_url,
+                                                    item->session_relpath,
+                                                    svn_node_file,
+                                                    err, ctx, scratch_pool));
+        }
 
       if (md5_checksums)
         apr_hash_set(*md5_checksums, item->path, APR_HASH_KEY_STRING,

@@ -199,24 +199,6 @@ def save_valid_sig(db, filename, keyid, signature):
 
   generate_asc_files(config.sigdir)
 
-  # Attempt to copy the results to a remote location
-  try:
-    import paramiko
-
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(config.ssh['host'], username = config.ssh['user'],
-                   key_filename = config.ssh['key'])
-    sftp = client.open_sftp()
-
-    sftp.put(os.path.join(config.sigdir, filename + '.asc'),
-             os.path.join(config.ssh['dir'], config.version, 'deploy',
-                          filename + '.asc'))
-    client.close()
-  except:
-    # Ignore any errors
-    pass
-
 def verify_sig_for_file(signature, filename):
   args = ['gpg', '--logger-fd', '1', '--no-tty',
           '--status-fd', '2', '--verify', '-',

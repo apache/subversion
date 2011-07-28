@@ -53,6 +53,11 @@ extern "C" {
  */
 svn_string_t *
 svn_stringbuf__morph_into_string(svn_stringbuf_t *strbuf);
+
+/** Like apr_strtoff but provided here for backward compatibility
+ *  with APR 0.9 */
+apr_status_t
+svn__strtoff(apr_off_t *offset, const char *buf, char **end, int base);
 /** @} */
 
 /** @} */
