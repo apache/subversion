@@ -5461,7 +5461,7 @@ def copy_deleted_dir(sbox):
   os.mkdir(sbox.ospath('A'))
   os.mkdir(sbox.ospath('A/D'))
 
-  # These two invocations raise an assertion.
+  # At one time these two invocations raised an assertion.
   svntest.actions.run_and_verify_svn(None, None,
                                      'svn: E155035: Deleted node.* can\'t be.*',
                                      'cp', sbox.ospath('iota'),
