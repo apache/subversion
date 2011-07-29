@@ -211,5 +211,4 @@ Approved changes:
  * r1151911
    Fix description of svndumpfilter's --targets option.
    Votes:
-     +1: cmpilato, hwright
-     
+     +1: cmpilato, hwright, rhuijben
