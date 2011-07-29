@@ -16709,6 +16709,134 @@ def foreign_repos_prop_conflict(sbox):
                                      sbox.repo_url,
                                      other_wc_dir)
 
+#----------------------------------------------------------------------
+# Test for issue #3975 'adds with explicit mergeinfo don't get mergeinfo
+# describing merge which added them'
+@Issue(3975)
+@SkipUnless(server_has_mergeinfo)
+def merge_adds_subtree_with_mergeinfo(sbox):
+  "merge adds subtree with mergeinfo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox, False, 2)
+
+  A_path       = os.path.join(wc_dir, 'A')
+  nu_path      = os.path.join(wc_dir, 'A', 'C', 'nu')
+  nu_COPY_path = os.path.join(wc_dir, 'A_COPY', 'C', 'nu')
+  A_COPY2_path = os.path.join(wc_dir, 'A_COPY_2')
+
+  # r8 - Add the file A_COPY/C/nu.
+  svntest.main.file_write(nu_COPY_path, "This is the file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', nu_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Add a file on the A_COPY branch',
+                                     wc_dir)
+
+  # r9 - Cherry pick r8 from A_COPY to A.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A_COPY',
+                                     A_path, '-c8')
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Merge r8 from A_COPY to A', wc_dir)
+
+  # r10 - Make a modification to A_COPY/C/nu
+  svntest.main.file_append(nu_COPY_path,
+                           "More work on the A_COPY branch.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Some work on the A_COPY branch', wc_dir)
+
+  # r9 - Cherry pick r10 from A_COPY/C/nu to A/C/nu.  Make some
+  # changes to A/C/nu before committing the merge.
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A_COPY/C/nu',
+                                     nu_path, '-c10')
+  svntest.main.file_append(nu_path, "A faux conflict resolution.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Merge r8 from A_COPY to A', wc_dir)
+
+  # Sync merge A to A_COPY_2
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = wc.State(A_COPY2_path, {
+    'B/E/beta'  : Item(status='U '),
+    'C/nu'      : Item(status='A '),
+    'D/G/rho'   : Item(status='U '),
+    'D/H/omega' : Item(status='U '),
+    'D/H/psi'   : Item(status='U '),
+    ''          : Item(status=' U'),
+    })
+  expected_mergeinfo_output = wc.State(A_COPY2_path, {
+    ''   : Item(status=' G'),
+    })
+  expected_elision_output = wc.State(A_COPY2_path, {
+    })
+  expected_status = wc.State(A_COPY2_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='  '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='M '),
+    'B/lambda'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'C/nu'      : Item(status='A ', copied='+'),
+    'D'         : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='M '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='M '),
+    'D/H/omega' : Item(status='M '),
+    })
+  expected_status.tweak(wc_rev=11)
+  expected_status.tweak('C/nu', wc_rev='-')
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:3-11\n/A_COPY:8'}),
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("New content"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    # Currently this test fails because A_COPY_2/C/nu gets no
+    # mergeinfo set on it to describe the merge, it only has
+    # the explicit mergeinfo from its copy source (i.e. /A_COPY/C/nu:10
+    # from ^/A/C/nu@11.
+    'C/nu'      : Item("This is the file 'nu'.\n" \
+                       "More work on the A_COPY branch.\n" \
+                       "A faux conflict resolution.\n",
+                       props={SVN_PROP_MERGEINFO :
+                              '\/A/C/nu:9-11n/A_COPY/C/nu:10'}),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("New content"),
+    'D/H/omega' : Item("New content"),
+    })
+  expected_skip = wc.State('.', { })
+  svntest.actions.run_and_verify_merge(A_COPY2_path, None, None,
+                                       sbox.repo_url + '/A', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, False)
+
 ########################################################################
 # Run the tests
 
@@ -16833,6 +16961,7 @@ test_list = [ None,
               merge_change_to_file_with_executable,
               dry_run_merge_conflicting_binary,
               foreign_repos_prop_conflict,
+              merge_adds_subtree_with_mergeinfo,
              ]
 
 if __name__ == '__main__':
