@@ -5442,6 +5442,7 @@ def copy_and_move_conflicts(sbox):
   svntest.actions.verify_disk(wc('move-dest'), expected_disk, True)
 
 
+@Issue(3631)
 def commit_copied_half_of_move(sbox):
   "attempt to commit the copied part of move"
   sbox.build(read_only = True)
@@ -5457,6 +5458,7 @@ def commit_copied_half_of_move(sbox):
                                      'commit', '-m', 'foo', D_path)
 
 
+@Issue(3631)
 @XFail()
 def commit_deleted_half_of_move(sbox):
   "attempt to commit the deleted part of move"
