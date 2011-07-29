@@ -466,6 +466,22 @@ svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
                                apr_pool_t *scratch_pool);
 
 /**
+ * Set @a *deleted_ancestor_abspath to the root of the delete operation
+ * that deleted @a local_abspath. If @a local_abspath itself was deleted
+ * and has no deleted ancestor, @a *deleted_ancestor_abspath will equal
+ * @a local_abspath. If @a local_abspath was not deleted,
+ * set @a *deleted_ancestor_abspath to @c NULL.
+ * @a *deleted_ancestor_abspath is allocated in @a result_pool.
+ * Use @a scratch_pool for all temporary allocations.
+ */ 
+svn_error_t *
+svn_wc__node_get_deleted_ancestor(const char **deleted_ancestor_abspath,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
+/**
  * Set @a *is_server_excluded to whether @a local_abspath has been
  * excluded by the server, using @a wc_ctx.  If @a local_abspath is not
  * in the working copy, return @c SVN_ERR_WC_PATH_NOT_FOUND.
