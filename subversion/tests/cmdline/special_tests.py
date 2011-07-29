@@ -711,6 +711,7 @@ def unrelated_changed_special_status(sbox):
                                      '-m', 'psi changed special status')
 
 
+@Issue(3972)
 @SkipUnless(svntest.main.is_posix_os)
 def symlink_destination_change(sbox):
   "revert a symlink destination change"
@@ -745,6 +746,10 @@ def symlink_destination_change(sbox):
   # Revert should restore the symlink to point to the original destination
   svntest.main.run_svn(None, 'revert', '-R', wc_dir)
   expected_status.tweak('newfile', status='  ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Issue 3972, repeat revert produces no output
+  svntest.actions.run_and_verify_svn(None, [], [], 'revert', '-R', wc_dir)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Now replace the symlink with a normal file and try to commit, we

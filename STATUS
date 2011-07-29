@@ -219,10 +219,3 @@ Approved changes:
      this revision depends for a clean merge).
    Votes:
      +1: rhuijben, danielsh, cmpilato
-
- * r1150812
-   Issue 3972, spurious revert notification on symlinks
-   Justification:
-     A regression from 1.6.
-   Votes:
-     +1: philip, stsp, danielsh

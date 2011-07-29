@@ -1389,8 +1389,6 @@ revert_restore(svn_wc__db_t *db,
       else if (on_disk == svn_node_file)
         {
           svn_boolean_t modified;
-          svn_boolean_t executable;
-          svn_boolean_t read_only;
           apr_hash_t *props;
 #ifdef HAVE_SYMLINK
           svn_string_t *special_prop;
@@ -1438,11 +1436,6 @@ revert_restore(svn_wc__db_t *db,
                                                          db, local_abspath,
                                                          TRUE, scratch_pool));
 
-              SVN_ERR(svn_io__is_finfo_executable(&executable, &finfo,
-                                                  scratch_pool));
-              SVN_ERR(svn_io__is_finfo_read_only(&read_only, &finfo,
-                                                 scratch_pool));
-
               if (modified)
                 {
                   SVN_ERR(svn_io_remove_file2(local_abspath, FALSE,
@@ -1451,10 +1444,12 @@ revert_restore(svn_wc__db_t *db,
                 }
               else
                 {
+                  svn_boolean_t read_only;
                   svn_string_t *needs_lock_prop;
-#if !defined(WIN32) && !defined(__OS2__)
-                  svn_string_t *executable_prop;
-#endif
+
+                  SVN_ERR(svn_io__is_finfo_read_only(&read_only, &finfo,
+                                                     scratch_pool));
+
                   needs_lock_prop = apr_hash_get(props, SVN_PROP_NEEDS_LOCK,
                                                  APR_HASH_KEY_STRING);
                   if (needs_lock_prop && !read_only)
@@ -1471,19 +1466,31 @@ revert_restore(svn_wc__db_t *db,
                     }
 
 #if !defined(WIN32) && !defined(__OS2__)
-                  executable_prop = apr_hash_get(props, SVN_PROP_EXECUTABLE,
-                                                 APR_HASH_KEY_STRING);
-                  if (executable_prop && !executable)
+#ifdef HAVE_SYMLINK
+                  if (!special)
+#endif
                     {
-                      SVN_ERR(svn_io_set_file_executable(local_abspath, TRUE,
-                                                         FALSE, scratch_pool));
-                      notify_required = TRUE;
-                    }
-                  else if (!executable_prop && executable)
-                    {
-                      SVN_ERR(svn_io_set_file_executable(local_abspath, FALSE,
-                                                         FALSE, scratch_pool));
-                      notify_required = TRUE;
+                      svn_boolean_t executable;
+                      svn_string_t *executable_prop;
+
+                      SVN_ERR(svn_io__is_finfo_executable(&executable, &finfo,
+                                                          scratch_pool));
+                      executable_prop = apr_hash_get(props, SVN_PROP_EXECUTABLE,
+                                                     APR_HASH_KEY_STRING);
+                      if (executable_prop && !executable)
+                        {
+                          SVN_ERR(svn_io_set_file_executable(local_abspath,
+                                                             TRUE, FALSE,
+                                                             scratch_pool));
+                          notify_required = TRUE;
+                        }
+                      else if (!executable_prop && executable)
+                        {
+                          SVN_ERR(svn_io_set_file_executable(local_abspath,
+                                                             FALSE, FALSE,
+                                                             scratch_pool));
+                          notify_required = TRUE;
+                        }
                     }
 #endif
                 }
