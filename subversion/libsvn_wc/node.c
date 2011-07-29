@@ -748,6 +748,33 @@ svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
 }
 
 svn_error_t *
+svn_wc__node_get_deleted_ancestor(const char **deleted_ancestor_abspath,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+
+  *deleted_ancestor_abspath = NULL;
+
+  SVN_ERR(svn_wc__db_read_info(&status,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+
+  if (status == svn_wc__db_status_deleted)
+    SVN_ERR(svn_wc__db_scan_deletion(deleted_ancestor_abspath, NULL, NULL,
+                                     wc_ctx->db, local_abspath,
+                                     result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_wc__node_is_status_server_excluded(svn_boolean_t *is_server_excluded,
                                        svn_wc_context_t *wc_ctx,
                                        const char *local_abspath,
