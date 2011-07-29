@@ -6070,7 +6070,7 @@ op_delete_txn(void *baton,
 
   if (b->moved_to_relpath)
     {
-      const char *moved_from_relpath;
+      const char *moved_from_relpath = NULL;
 
       /* ### call scan_addition_txn() directly? */
       if (status == svn_wc__db_status_added)
@@ -6113,8 +6113,8 @@ op_delete_txn(void *baton,
           while (have_row)
             {
               svn_wc__db_status_t child_status;
-              const char *child_moved_from_relpath;
-              const char *child_delete_op_root_relpath;
+              const char *child_moved_from_relpath = NULL;
+              const char *child_delete_op_root_relpath = NULL;
               const char *moved_here_child_relpath =
                 svn_sqlite__column_text(stmt, 0, scratch_pool);
 
@@ -6141,7 +6141,7 @@ op_delete_txn(void *baton,
                * It is possible to hit this during normal operation
                * if a move was interrupted mid-way so only perform
                * this check in debug mode. */
-              SVN_ERR_ASSERT(moved_from_relpath &&
+              SVN_ERR_ASSERT(child_moved_from_relpath &&
                              !strcmp(child_moved_from_relpath,
                                      svn_sqlite__column_text(stmt, 1, NULL)));
 #endif
