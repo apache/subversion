@@ -16712,6 +16712,7 @@ def foreign_repos_prop_conflict(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3975 'adds with explicit mergeinfo don't get mergeinfo
 # describing merge which added them'
+@XFail()
 @Issue(3975)
 @SkipUnless(server_has_mergeinfo)
 def merge_adds_subtree_with_mergeinfo(sbox):
