@@ -152,10 +152,10 @@ sub parse_entry {
   }
 
   # summary
-  push @logsummary, shift until $_[0] =~ /^\s*\w+:/;
+  push @logsummary, shift until $_[0] =~ /^\s*\w+:/ or not defined $_[0];
 
   # votes
-  unshift @votes, pop until $_[-1] =~ /^\s*Votes:/;
+  unshift @votes, pop until $_[-1] =~ /^\s*Votes:/ or not defined $_[-1];
   pop;
 
   # branch
