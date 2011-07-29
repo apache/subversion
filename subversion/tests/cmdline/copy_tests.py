@@ -5441,7 +5441,6 @@ def copy_and_move_conflicts(sbox):
     })
   svntest.actions.verify_disk(wc('move-dest'), expected_disk, True)
 
-@XFail()
 def copy_deleted_dir(sbox):
   "try to copy a deleted directory that exists"
   sbox.build(read_only = True)
