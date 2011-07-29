@@ -10572,6 +10572,7 @@ merge_reintegrate_locked(const char *source,
   const char *target_url;
   svn_revnum_t target_base_rev;
   svn_node_kind_t kind;
+  svn_opt_revision_t no_rev;
 
   /* Make sure the target is really there. */
   SVN_ERR(svn_io_check_path(target_abspath, &kind, scratch_pool));
@@ -10643,20 +10644,16 @@ merge_reintegrate_locked(const char *source,
                               NULL, ctx, scratch_pool, scratch_pool));
 
   /* Open two RA sessions, one to our source and one to our target. */
+  no_rev.kind = svn_opt_revision_unspecified;
+  SVN_ERR(svn_client__ra_session_from_path(&source_ra_session, &rev2, &url2,
+                                           url2, NULL, peg_revision, &no_rev,
+                                           ctx, scratch_pool));
   SVN_ERR(svn_wc__node_get_url(&target_url, ctx->wc_ctx, target_abspath,
                                scratch_pool, scratch_pool));
   SVN_ERR(svn_client__open_ra_session_internal(&target_ra_session, NULL,
                                                target_url,
                                                NULL, NULL, FALSE, FALSE,
                                                ctx, scratch_pool));
-  SVN_ERR(svn_client__open_ra_session_internal(&source_ra_session, NULL,
-                                               url2, NULL, NULL, FALSE, FALSE,
-                                               ctx, scratch_pool));
-
-  SVN_ERR(svn_client__get_revision_number(&rev2, NULL, ctx->wc_ctx,
-                                          "",
-                                          source_ra_session, peg_revision,
-                                          scratch_pool));
 
   SVN_ERR(calculate_left_hand_side(&url1, &rev1,
                                    &merged_to_source_mergeinfo_catalog,
