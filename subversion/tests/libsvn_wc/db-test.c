@@ -1033,7 +1033,6 @@ test_scan_deletion(apr_pool_t *pool)
             &base_del_abspath,
             &moved_to_abspath,
             &work_del_abspath,
-            NULL,
             db, svn_dirent_join(local_abspath, "J/J-e", pool),
             pool, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
@@ -1048,7 +1047,6 @@ test_scan_deletion(apr_pool_t *pool)
             &base_del_abspath,
             &moved_to_abspath,
             &work_del_abspath,
-            NULL,
             db, svn_dirent_join(local_abspath, "J/J-e/J-e-a", pool),
             pool, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
@@ -1063,7 +1061,6 @@ test_scan_deletion(apr_pool_t *pool)
             &base_del_abspath,
             &moved_to_abspath,
             &work_del_abspath,
-            NULL,
             db, svn_dirent_join(local_abspath, "J/J-c", pool),
             pool, pool));
   /* Implicit delete of "J" (via replacement).  */
@@ -1078,7 +1075,6 @@ test_scan_deletion(apr_pool_t *pool)
             &base_del_abspath,
             &moved_to_abspath,
             &work_del_abspath,
-            NULL,
             db, svn_dirent_join(local_abspath, "J/J-c/J-c-a", pool),
             pool, pool));
   /* Implicit delete of "J" (via replacement).  */
@@ -1093,7 +1089,6 @@ test_scan_deletion(apr_pool_t *pool)
             &base_del_abspath,
             &moved_to_abspath,
             &work_del_abspath,
-            NULL,
             db, svn_dirent_join(local_abspath, "J/J-e/J-e-b/Jeba", pool),
             pool, pool));
   /* ### I don't understand this.  "J/J-e/J-e-b/Jeba" is a deleted
@@ -1110,7 +1105,6 @@ test_scan_deletion(apr_pool_t *pool)
             &base_del_abspath,
             &moved_to_abspath,
             &work_del_abspath,
-            NULL,
             db, svn_dirent_join(local_abspath, "J/J-f/J-f-a", pool),
             pool, pool));
   /* Implicit delete of "J" (via replacement).  */
@@ -1124,7 +1118,6 @@ test_scan_deletion(apr_pool_t *pool)
             &base_del_abspath,
             &moved_to_abspath,
             &work_del_abspath,
-            NULL,
             db, svn_dirent_join(local_abspath, "K", pool),
             pool, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "K",
@@ -1137,7 +1130,6 @@ test_scan_deletion(apr_pool_t *pool)
             &base_del_abspath,
             &moved_to_abspath,
             &work_del_abspath,
-            NULL,
             db, svn_dirent_join(local_abspath, "K/K-a", pool),
             pool, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "K",
@@ -1150,7 +1142,6 @@ test_scan_deletion(apr_pool_t *pool)
             &base_del_abspath,
             &moved_to_abspath,
             &work_del_abspath,
-            NULL,
             db, svn_dirent_join(local_abspath, "K/K-b", pool),
             pool, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "K/K-b",
@@ -1164,7 +1155,6 @@ test_scan_deletion(apr_pool_t *pool)
             &base_del_abspath,
             &moved_to_abspath,
             &work_del_abspath,
-            NULL,
             db, svn_dirent_join(local_abspath, "L/L-a/L-a-a", pool),
             pool, pool));
   SVN_TEST_ASSERT(base_del_abspath == NULL);
@@ -1177,7 +1167,6 @@ test_scan_deletion(apr_pool_t *pool)
             &base_del_abspath,
             &moved_to_abspath,
             &work_del_abspath,
-            NULL,
             db, svn_dirent_join(local_abspath, "L/L-a", pool),
             pool, pool));
   SVN_TEST_ASSERT(base_del_abspath == NULL);
