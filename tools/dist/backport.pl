@@ -152,15 +152,15 @@ sub parse_entry {
   }
 
   # summary
-  push @logsummary, shift until $_[0] =~ /^\w+:/;
+  push @logsummary, shift until $_[0] =~ /^\s*\w+:/;
 
   # votes
-  unshift @votes, pop until $_[-1] =~ /^Votes:/;
+  unshift @votes, pop until $_[-1] =~ /^\s*Votes:/;
   pop;
 
   # branch
   while (@_) {
-    shift and next unless $_[0] =~ s/^Branch:\s*//;
+    shift and next unless $_[0] =~ s/^\s*Branch:\s*//;
     $branch = sanitize_branch (shift || shift || die "Branch header found without value");
   }
 
