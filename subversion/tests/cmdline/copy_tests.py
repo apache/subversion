@@ -5444,7 +5444,7 @@ def copy_and_move_conflicts(sbox):
 
 def commit_copied_half_of_move(sbox):
   "attempt to commit the copied part of move"
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   iota_path = os.path.join(wc_dir, 'iota')
@@ -5460,7 +5460,7 @@ def commit_copied_half_of_move(sbox):
 @XFail()
 def commit_deleted_half_of_move(sbox):
   "attempt to commit the deleted part of move"
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   iota_path = os.path.join(wc_dir, 'iota')
