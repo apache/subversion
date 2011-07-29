@@ -188,7 +188,7 @@ Candidate changes:
    Justification:
      Use the APR API properly.  Resolves a valgrind warning.
    Votes:
-     +1: danielsh
+     +1: danielsh, stsp
 
 Veto-blocked changes:
 =====================
