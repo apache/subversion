@@ -183,13 +183,6 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
- * r1152129
-   Plug a memory leak.
-   Justification:
-     Use the APR API properly.  Resolves a valgrind warning.
-   Votes:
-     +1: danielsh, stsp
-
 Veto-blocked changes:
 =====================
 
@@ -227,3 +220,9 @@ Approved changes:
    Votes:
      +1: philip, stsp, danielsh
 
+ * r1152129
+   Plug a memory leak.
+   Justification:
+     Use the APR API properly.  Resolves a valgrind warning.
+   Votes:
+     +1: danielsh, stsp, rhuijben
