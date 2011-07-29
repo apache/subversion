@@ -5442,6 +5442,36 @@ def copy_and_move_conflicts(sbox):
   svntest.actions.verify_disk(wc('move-dest'), expected_disk, True)
 
 
+def commit_copied_half_of_move(sbox):
+  "attempt to commit the copied part of move"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  D_path = os.path.join(wc_dir, 'A', 'D')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', iota_path, D_path)
+
+  expected_error = "svn: E200009: Cannot commit"
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'commit', '-m', 'foo', D_path)
+
+
+@XFail()
+def commit_deleted_half_of_move(sbox):
+  "attempt to commit the deleted part of move"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  D_path = os.path.join(wc_dir, 'A', 'D')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', iota_path, D_path)
+
+  expected_error = "svn: E200009: Cannot commit"
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'commit', '-m', 'foo', iota_path)
+
 ########################################################################
 # Run the tests
 
@@ -5551,6 +5581,8 @@ test_list = [ None,
               copy_base_of_deleted,
               case_only_rename,
               copy_and_move_conflicts,
+              commit_copied_half_of_move,
+              commit_deleted_half_of_move,
              ]
 
 if __name__ == '__main__':
