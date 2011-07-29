@@ -204,12 +204,3 @@ Approved changes:
      this revision depends for a clean merge).
    Votes:
      +1: rhuijben, danielsh, cmpilato
-
- * r1150441
-   Closing a translated stream should close the inner stream.
-   Justification:
-     Resolves an open file handle problem on inconsistent newlines.
-     (And may cause different problems when behavior is attachted to stream
-      close, like with checksum streams)
-   Votes:
-     +1: rhuijben, danielsh, hwright
