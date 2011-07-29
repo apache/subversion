@@ -89,7 +89,7 @@ Candidate changes:
      GUI clients can't rely on EINTR being returned when a user tries to cancel
      an operation, as no signal is raised.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, hwright
 
  * r1149627
    Adjust library order in build.conf for kwallet/gnome-keyring.
@@ -98,13 +98,6 @@ Candidate changes:
      this is not a regression.
    Votes:
      +1: philip, danielsh
-
- * r1150242
-   Make blame close its temporary files before deleting them.
-   Justification:
-     Hitting the io retry loop on windows is very painfull.
-   Votes:
-     +1: rhuijben, philip
      
  * r1150327
    Report not finding txn roots produce a 404 error in mod_dav_svn.
@@ -144,15 +137,6 @@ Candidate changes:
      +0: danielsh (we shouldn't depend on libsvn_client fixes to avoid
                    accumulating tempfiles on the server)
 
- * r1150441
-   Closing a translated stream should close the inner stream.
-   Justification:
-     Resolves an open file handle problem on inconsistent newlines.
-     (And may cause different problems when behavior is attachted to stream
-      close, like with checksum streams)
-   Votes:
-     +1: rhuijben, danielsh
-
  * r1151177
    Fix two bugs in ra_serf when connecting to HTTPS repository hosted on
    non-standard port.
@@ -171,7 +155,7 @@ Candidate changes:
    Justification:
      This is occasionally asked about; clarification will be useful.
    Votes:
-     +1: danielsh
+     +1: danielsh, hwright
 
  * r1151055
    Allow building with serf trunk on windows.
@@ -181,7 +165,7 @@ Candidate changes:
  * r1151911
    Fix description of svndumpfilter's --targets option.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, hwright
      
  * r1152189, r1152190
    Fix an assertion on copying nodes that are not presence normal.
@@ -220,3 +204,19 @@ Approved changes:
      this revision depends for a clean merge).
    Votes:
      +1: rhuijben, danielsh, cmpilato
+
+ * r1150441
+   Closing a translated stream should close the inner stream.
+   Justification:
+     Resolves an open file handle problem on inconsistent newlines.
+     (And may cause different problems when behavior is attachted to stream
+      close, like with checksum streams)
+   Votes:
+     +1: rhuijben, danielsh, hwright
+
+ * r1150242
+   Make blame close its temporary files before deleting them.
+   Justification:
+     Hitting the io retry loop on windows is very painfull.
+   Votes:
+     +1: rhuijben, philip, hwright
