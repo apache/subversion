@@ -627,6 +627,23 @@ copy_or_move(svn_wc_context_t *wc_ctx,
     else
       SVN_ERR(err);
 
+    switch (src_status)
+      {
+        case svn_wc__db_status_deleted:
+          return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                                   _("Deleted node '%s' can't be copied."),
+                                   svn_dirent_local_style(src_abspath,
+                                                          scratch_pool));
+
+        case svn_wc__db_status_excluded:
+        case svn_wc__db_status_server_excluded:
+        case svn_wc__db_status_not_present:
+          return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                   _("The node '%s' was not found."),
+                                   svn_dirent_local_style(src_abspath,
+                                                          scratch_pool));
+      }
+
     SVN_ERR(svn_wc__db_read_info(&dstdir_status, NULL, NULL, NULL,
                                  &dst_repos_root_url, &dst_repos_uuid, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
