@@ -6136,7 +6136,7 @@ op_delete_txn(void *baton,
                                       &child_delete_op_root_relpath,
                                       wcroot, moved_here_child_relpath,
                                       iterpool, iterpool));
-#if SVN_DEBUG
+#ifdef SVN_DEBUG
               /* This catches incorrectly recorded moves.
                * It is possible to hit this during normal operation
                * if a move was interrupted mid-way so only perform
