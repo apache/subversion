@@ -6070,21 +6070,19 @@ op_delete_txn(void *baton,
   if (b->moved_to_relpath)
     {
       const char *moved_from_relpath;
-      const char *delete_op_root_relpath;
 
       /* ### call scan_addition_txn() directly? */
       if (status == svn_wc__db_status_added)
         SVN_ERR(scan_addition(&status, NULL, NULL, NULL,
                               NULL, NULL, NULL,
-                              &moved_from_relpath,
-                              &delete_op_root_relpath,
+                              &moved_from_relpath, NULL,
                               wcroot, local_relpath,
                               scratch_pool, scratch_pool));
 
-      if (status == svn_wc__db_status_moved_here &&
-          strcmp(moved_from_relpath, delete_op_root_relpath) == 0)
+      if (status == svn_wc__db_status_moved_here)
         {
-          /* The node has already been moved and is being moved again.
+          /* The node has already been moved, possibly along with a parent,
+           * and is being moved again.
            * Update the existing moved_to path at the delete-half of
            * the prior move. The source of a move is in the BASE tree
            * so it remains constant if a node is moved around multiple
