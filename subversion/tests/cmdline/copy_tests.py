@@ -5486,6 +5486,46 @@ def commit_copied_half_of_move(sbox):
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'commit', '-m', 'foo', D_path)
 
+@Issue(3631)
+@XFail()
+def commit_copied_half_of_nested_move(sbox):
+  "attempt to commit the copied part of a nested move"
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  iota_path = sbox.ospath('iota')
+  D_path = sbox.ospath('A/D')
+
+  # iota -> A/D/iota; verify we cannot commit just A/D
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', iota_path, D_path)
+  expected_error = "svn: E200009: Cannot commit '.*%s' because it was " \
+                    "moved from '.*%s'" % (os.path.join(D_path, "iota"),
+                                           iota_path)
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'commit', '-m', 'foo', D_path)
+
+  # A/D -> A/C/D; verify we cannot commit just A/C
+  C_path = sbox.ospath('A/C')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', D_path, C_path)
+  expected_error = "svn: E200009: Cannot commit '.*%s' because it was " \
+                    "moved from '.*%s'" % (os.path.join(C_path, "D"),
+                                           D_path)
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'commit', '-m', 'foo', C_path)
+
+  # A/C/D/iota -> A/iota; verify that iota's moved-from hasn't changed
+  ### This currently fails because iota's moved-from info isn't updated
+  ### during the A/D->A/C/D move.
+  D_iota_path = sbox.ospath('A/C/D/iota')
+  A_iota_path = sbox.ospath('A/iota')
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', D_iota_path,
+                                     A_iota_path)
+  expected_error = "svn: E200009: Cannot commit '.*%s' because it was " \
+                    "moved from '.*%s'" % (A_iota_path, iota_path)
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'commit', '-m', 'foo', A_iota_path)
+
 
 @Issue(3631)
 @XFail()
@@ -5614,6 +5654,7 @@ test_list = [ None,
               copy_and_move_conflicts,
               copy_deleted_dir,
               commit_copied_half_of_move,
+              commit_copied_half_of_nested_move,
               commit_deleted_half_of_move,
              ]
 
