@@ -377,6 +377,7 @@ static svn_error_t *
 scan_deletion(const char **base_del_relpath,
               const char **moved_to_relpath,
               const char **work_del_relpath,
+              const char **copy_op_root_relpath,
               svn_wc__db_wcroot_t *wcroot,
               const char *local_relpath,
               apr_pool_t *result_pool,
@@ -3361,7 +3362,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
       const char *base_del_relpath, *work_del_relpath;
 
       SVN_ERR(scan_deletion(&base_del_relpath, NULL, &work_del_relpath,
-                            wcroot, local_relpath, scratch_pool,
+                            NULL, wcroot, local_relpath, scratch_pool,
                             scratch_pool));
       if (work_del_relpath)
         {
@@ -7390,7 +7391,7 @@ read_url_txn(void *baton,
           const char *work_del_relpath;
 
           SVN_ERR(scan_deletion(&base_del_relpath, NULL, &work_del_relpath,
-                                wcroot, local_relpath,
+                                NULL, wcroot, local_relpath,
                                 scratch_pool, scratch_pool));
 
           if (base_del_relpath)
@@ -8146,7 +8147,7 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
       if (status == svn_wc__db_status_deleted)
         {
           const char *work_del_relpath;
-          SVN_ERR(scan_deletion(NULL, NULL, &work_del_relpath,
+          SVN_ERR(scan_deletion(NULL, NULL, &work_del_relpath, NULL,
                                 wcroot, local_dir_relpath,
                                 scratch_pool, scratch_pool));
           if (work_del_relpath)
@@ -9545,6 +9546,7 @@ struct scan_deletion_baton_t
   const char **base_del_relpath;
   const char **moved_to_relpath;
   const char **work_del_relpath;
+  const char **copy_op_root_relpath;
   apr_pool_t *result_pool;
 };
 
@@ -9560,7 +9562,6 @@ scan_deletion_txn(void *baton,
   const char *child_relpath = NULL;
   svn_wc__db_status_t child_presence;
   svn_boolean_t child_has_base = FALSE;
-  svn_boolean_t found_moved_to = FALSE;
   apr_int64_t local_op_depth, op_depth;
 
   /* Initialize all the OUT parameters.  */
@@ -9570,6 +9571,8 @@ scan_deletion_txn(void *baton,
     *sd_baton->moved_to_relpath = NULL;
   if (sd_baton->work_del_relpath != NULL)
     *sd_baton->work_del_relpath = NULL;
+  if (sd_baton->copy_op_root_relpath != NULL)
+    *sd_baton->copy_op_root_relpath = NULL;
 
   /* Initialize to something that won't denote an important parent/child
      transition.  */
@@ -9686,25 +9689,73 @@ scan_deletion_txn(void *baton,
              gimmick, not a real node that may have been deleted.  */
         }
 
-      /* Only grab the nearest ancestor.  */
-      if (!found_moved_to &&
-          (sd_baton->moved_to_relpath != NULL
+      if ((sd_baton->moved_to_relpath != NULL
                 || sd_baton->base_del_relpath != NULL)
           && !svn_sqlite__column_is_null(stmt, 2 /* moved_to */))
         {
-          /* There better be a BASE_NODE (that was moved-away).  */
-          SVN_ERR_ASSERT(have_base);
+          const char *copy_op_root_relpath;
+          const char *moved_to_relpath;
 
-          found_moved_to = TRUE;
+          copy_op_root_relpath = svn_sqlite__column_text(stmt, 2,
+                                                         scratch_pool);
+          if (sd_baton->copy_op_root_relpath)
+            *sd_baton->copy_op_root_relpath =
+              apr_pstrdup(sd_baton->result_pool, copy_op_root_relpath);
 
-          /* This makes things easy. It's the BASE_DEL_ABSPATH!  */
-          if (sd_baton->base_del_relpath != NULL)
-            *sd_baton->base_del_relpath = apr_pstrdup(sd_baton->result_pool,
-                                                      current_relpath);
+          if (current_relpath == local_relpath)
+            {
+              /* LOCAL_RELPATH is the op_root of the delete-half of the
+               * move, so the op_root of the copied-half equals the
+               * moved-to relpath. Note that the moved-to relpath in the DB
+               * is kept up-to-date if a node is moved multiple times. */
+              if (sd_baton->moved_to_relpath)
+                *sd_baton->moved_to_relpath =
+                  apr_pstrdup(sd_baton->result_pool, copy_op_root_relpath);
 
-          if (sd_baton->moved_to_relpath != NULL)
-            *sd_baton->moved_to_relpath = apr_pstrdup(sd_baton->result_pool,
-                                    svn_sqlite__column_text(stmt, 2, NULL));
+              if (sd_baton->base_del_relpath)
+                *sd_baton->base_del_relpath =
+                  apr_pstrdup(sd_baton->result_pool, current_relpath);
+            }
+          else
+            {
+              const char *moved_child_relpath;
+              svn_wc__db_status_t moved_child_status;
+
+              /* The CURRENT_RELPATH is the op_root of the delete-half of
+               * the move. LOCAL_RELPATH is a child that was moved along.
+               * Compute the child's new location within the move target. */
+              moved_child_relpath = svn_relpath_skip_ancestor(current_relpath,
+                                                              local_relpath);
+              SVN_ERR_ASSERT(moved_child_relpath &&
+                             strlen(moved_child_relpath) > 0);
+              moved_to_relpath = svn_relpath_join(copy_op_root_relpath,
+                                                  moved_child_relpath,
+                                                  scratch_pool);
+              
+              /* Figure out what happened to the child after it was moved
+               * along. Maybe the child was moved-away further, either by
+               * itself, or along with some intermediate parent node. */
+              SVN_ERR(read_info(&moved_child_status, NULL, NULL, NULL, NULL,
+                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                NULL, NULL, NULL, NULL, NULL, NULL, wcroot,
+                                moved_to_relpath, scratch_pool, scratch_pool));
+              if (moved_child_status == svn_wc__db_status_deleted)
+                {
+                  const char *next_moved_to_relpath;
+
+                  /* Recurse. */
+                  SVN_ERR(scan_deletion(NULL, &next_moved_to_relpath, NULL,
+                                        NULL, wcroot, moved_to_relpath,
+                                        scratch_pool, scratch_pool));
+                  if (next_moved_to_relpath)
+                    moved_to_relpath = next_moved_to_relpath;
+                }
+
+              if (sd_baton->moved_to_relpath)
+                *sd_baton->moved_to_relpath =
+                  apr_pstrdup(sd_baton->result_pool, moved_to_relpath);
+            }
         }
 
       op_depth = svn_sqlite__column_int64(stmt, 3);
@@ -9745,6 +9796,7 @@ static svn_error_t *
 scan_deletion(const char **base_del_relpath,
               const char **moved_to_relpath,
               const char **work_del_relpath,
+              const char **copy_op_root_relpath,
               svn_wc__db_wcroot_t *wcroot,
               const char *local_relpath,
               apr_pool_t *result_pool,
@@ -9753,8 +9805,9 @@ scan_deletion(const char **base_del_relpath,
   struct scan_deletion_baton_t sd_baton;
 
   sd_baton.base_del_relpath = base_del_relpath;
-  sd_baton.moved_to_relpath = moved_to_relpath;
   sd_baton.work_del_relpath = work_del_relpath;
+  sd_baton.moved_to_relpath = moved_to_relpath;
+  sd_baton.copy_op_root_relpath = copy_op_root_relpath;
   sd_baton.result_pool = result_pool;
 
   return svn_error_trace(svn_wc__db_with_txn(wcroot, local_relpath,
@@ -9767,6 +9820,7 @@ svn_error_t *
 svn_wc__db_scan_deletion(const char **base_del_abspath,
                          const char **moved_to_abspath,
                          const char **work_del_abspath,
+                         const char **copy_op_root_abspath,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
@@ -9775,6 +9829,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   const char *base_del_relpath, *moved_to_relpath, *work_del_relpath;
+  const char *copy_op_root_relpath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -9783,7 +9838,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
   VERIFY_USABLE_WCROOT(wcroot);
 
   SVN_ERR(scan_deletion(&base_del_relpath, &moved_to_relpath,
-                        &work_del_relpath, wcroot,
+                        &work_del_relpath, &copy_op_root_relpath, wcroot,
                         local_relpath, scratch_pool, scratch_pool));
 
   if (base_del_abspath)
@@ -9805,6 +9860,13 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
       *work_del_abspath = (work_del_relpath
                            ? svn_dirent_join(wcroot->abspath,
                                              work_del_relpath, result_pool)
+                           : NULL);
+    }
+  if (copy_op_root_abspath)
+    {
+      *copy_op_root_abspath = (copy_op_root_relpath
+                           ? svn_dirent_join(wcroot->abspath,
+                                             copy_op_root_relpath, result_pool)
                            : NULL);
     }
 
