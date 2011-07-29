@@ -213,10 +213,3 @@ Approved changes:
       close, like with checksum streams)
    Votes:
      +1: rhuijben, danielsh, hwright
-
- * r1150242
-   Make blame close its temporary files before deleting them.
-   Justification:
-     Hitting the io retry loop on windows is very painfull.
-   Votes:
-     +1: rhuijben, philip, hwright
