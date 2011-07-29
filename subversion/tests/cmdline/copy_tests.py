@@ -5498,8 +5498,8 @@ def commit_copied_half_of_nested_move(sbox):
   # iota -> A/D/iota; verify we cannot commit just A/D
   svntest.actions.run_and_verify_svn(None, None, [], 'mv', iota_path, D_path)
   expected_error = "svn: E200009: Cannot commit '.*%s' because it was " \
-                    "moved from '.*%s'" % (os.path.join(D_path, "iota"),
-                                           iota_path)
+                    "moved from '.*%s'" % (re.escape(sbox.ospath('A/D/iota')),
+                                           re.escape(iota_path))
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'commit', '-m', 'foo', D_path)
 
@@ -5507,9 +5507,9 @@ def commit_copied_half_of_nested_move(sbox):
   C_path = sbox.ospath('A/C')
 
   svntest.actions.run_and_verify_svn(None, None, [], 'mv', D_path, C_path)
-  expected_error = "svn: E200009: Cannot commit '.*%s' because it was " \
-                    "moved from '.*%s'" % (os.path.join(C_path, "D"),
-                                           D_path)
+  expected_error = "svn: E200009: Cannot commit '.*%s' because it was moved " \
+                    "from '.*%s'" % (re.escape(os.path.join(C_path, "D")),
+                                     re.escape(D_path))
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'commit', '-m', 'foo', C_path)
 
@@ -5519,7 +5519,8 @@ def commit_copied_half_of_nested_move(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'mv', D_iota_path,
                                      A_iota_path)
   expected_error = "svn: E200009: Cannot commit '.*%s' because it was " \
-                    "moved from '.*%s'" % (A_iota_path, iota_path)
+                    "moved from '.*%s'" % (re.escape(A_iota_path),
+                                           re.escape(iota_path))
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'commit', '-m', 'foo', A_iota_path)
 
