@@ -1342,6 +1342,10 @@ WHERE wc_id = ?1 AND local_relpath = ?2
    (SELECT MAX(op_depth) FROM nodes
     WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
 
+-- STMT_SELECT_MOVED_HERE_CHILDREN
+SELECT moved_to, local_relpath FROM nodes_current
+WHERE wc_id = ?1 AND (moved_to > ?2 || '/' AND moved_to < ?2 || '0')
+
 /* ------------------------------------------------------------------------- */
 
 /* Queries for verification. */

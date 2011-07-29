@@ -5487,7 +5487,6 @@ def commit_copied_half_of_move(sbox):
                                      'commit', '-m', 'foo', D_path)
 
 @Issue(3631)
-@XFail()
 def commit_copied_half_of_nested_move(sbox):
   "attempt to commit the copied part of a nested move"
   sbox.build(read_only = True)
@@ -5515,8 +5514,6 @@ def commit_copied_half_of_nested_move(sbox):
                                      'commit', '-m', 'foo', C_path)
 
   # A/C/D/iota -> A/iota; verify that iota's moved-from hasn't changed
-  ### This currently fails because iota's moved-from info isn't updated
-  ### during the A/D->A/C/D move.
   D_iota_path = sbox.ospath('A/C/D/iota')
   A_iota_path = sbox.ospath('A/iota')
   svntest.actions.run_and_verify_svn(None, None, [], 'mv', D_iota_path,

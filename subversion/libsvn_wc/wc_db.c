@@ -6033,11 +6033,12 @@ op_delete_txn(void *baton,
   svn_sqlite__stmt_t *stmt;
   apr_int64_t select_depth; /* Depth of what is to be deleted */
   svn_boolean_t refetch_depth = FALSE;
+  svn_wc__db_kind_t kind;
 
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, STMT_CREATE_DELETE_LIST));
 
   SVN_ERR(read_info(&status,
-                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    &kind, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     &op_root, NULL, NULL,
                     NULL, NULL, NULL,
@@ -6092,6 +6093,80 @@ op_delete_txn(void *baton,
           SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
                                     moved_from_relpath, b->moved_to_relpath));
           SVN_ERR(svn_sqlite__step_done(stmt));
+          SVN_ERR(svn_sqlite__reset(stmt));
+        }
+
+      /* If a subtree is being moved-away, we need to update moved-to
+       * information in BASE for all children that were moved into this
+       * subtree. */
+      if (kind == svn_wc__db_kind_dir)
+        {
+          apr_pool_t *iterpool;
+
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                            STMT_SELECT_MOVED_HERE_CHILDREN));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+          iterpool = svn_pool_create(scratch_pool);
+          while (have_row)
+            {
+              svn_wc__db_status_t child_status;
+              const char *child_moved_from_relpath;
+              const char *child_delete_op_root_relpath;
+              const char *moved_here_child_relpath =
+                svn_sqlite__column_text(stmt, 0, scratch_pool);
+
+              svn_pool_clear(iterpool);
+
+              /* The moved-here-children query returns info based on the
+               * delete-half of the move. Check if that the copied-half of
+               * the move matches this information. */
+              SVN_ERR(read_info(&child_status, NULL, NULL, NULL, NULL,
+                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                NULL, NULL, NULL, NULL, NULL, NULL,
+                                wcroot, moved_here_child_relpath,
+                                iterpool, iterpool));
+              if (child_status == svn_wc__db_status_added)
+                SVN_ERR(scan_addition(&child_status, NULL, NULL, NULL,
+                                      NULL, NULL, NULL,
+                                      &child_moved_from_relpath,
+                                      &child_delete_op_root_relpath,
+                                      wcroot, moved_here_child_relpath,
+                                      iterpool, iterpool));
+              if (child_status == svn_wc__db_status_moved_here)
+                {
+                  const char *child_subtree_relpath;
+                  const char *new_moved_to_relpath;
+                  svn_sqlite__stmt_t *moved_to_stmt;
+
+                  /* Compute the new moved-to path for this child... */
+                  child_subtree_relpath =
+                    svn_relpath_skip_ancestor(local_relpath,
+                                              moved_here_child_relpath);
+                  SVN_ERR_ASSERT(child_subtree_relpath);
+
+                  new_moved_to_relpath =
+                    svn_relpath_join(b->moved_to_relpath,
+                                     child_subtree_relpath, iterpool);
+                  /* ... and update the BASE moved-to record. */
+                  SVN_ERR(svn_sqlite__get_statement(
+                            &moved_to_stmt, wcroot->sdb,
+                            STMT_UPDATE_MOVED_TO_RELPATH));
+                  SVN_ERR(svn_sqlite__bindf(moved_to_stmt, "iss",
+                                            wcroot->wc_id,
+                                            child_moved_from_relpath,
+                                            new_moved_to_relpath));
+                  SVN_ERR(svn_sqlite__step(&have_row, moved_to_stmt));
+                  SVN_ERR(svn_sqlite__reset(moved_to_stmt));
+                }
+
+              SVN_ERR(svn_sqlite__step(&have_row, stmt));
+            }
+          svn_pool_destroy(iterpool);
+
           SVN_ERR(svn_sqlite__reset(stmt));
         }
     }
