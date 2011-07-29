@@ -189,6 +189,7 @@ Candidate changes:
      Easy to trigger problem in tree conflict situations.
    Votes:
      +1: rhuijben
+     +0: philip (looks OK, but merge conflicts)
 
 Veto-blocked changes:
 =====================
