@@ -113,6 +113,7 @@ svn_cache__get_global_membuffer_cache(void)
       apr_pool_create_ex(&pool, NULL, NULL, allocator);
       if (pool == NULL)
         return NULL;
+      apr_allocator_owner_set(allocator, pool);
 
       err = svn_cache__membuffer_cache_create(
           &new_cache,
