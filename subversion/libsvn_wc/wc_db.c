@@ -6136,6 +6136,15 @@ op_delete_txn(void *baton,
                                       &child_delete_op_root_relpath,
                                       wcroot, moved_here_child_relpath,
                                       iterpool, iterpool));
+#if SVN_DEBUG
+              /* This catches incorrectly recorded moves.
+               * It is possible to hit this during normal operation
+               * if a move was interrupted mid-way so only perform
+               * this check in debug mode. */
+              SVN_ERR_ASSERT(moved_from_relpath &&
+                             !strcmp(child_moved_from_relpath,
+                                     svn_sqlite__column_text(stmt, 1, NULL)));
+#endif
               if (child_status == svn_wc__db_status_moved_here)
                 {
                   const char *child_subtree_relpath;
