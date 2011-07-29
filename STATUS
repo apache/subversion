@@ -226,10 +226,3 @@ Approved changes:
      A regression from 1.6.
    Votes:
      +1: philip, stsp, danielsh
-
- * r1152129
-   Plug a memory leak.
-   Justification:
-     Use the APR API properly.  Resolves a valgrind warning.
-   Votes:
-     +1: danielsh, stsp, rhuijben
