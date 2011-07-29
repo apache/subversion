@@ -1379,19 +1379,72 @@ svn_client_commit5(const apr_array_header_t *targets,
             goto cleanup;
 
           if (moved_from_abspath && delete_op_root_abspath &&
-              strcmp(moved_from_abspath, delete_op_root_abspath) == 0 &&
-              apr_hash_get(committables->by_path, delete_op_root_abspath,
-                           APR_HASH_KEY_STRING) == NULL)
+              strcmp(moved_from_abspath, delete_op_root_abspath) == 0)
+
             {
-              cmt_err = svn_error_createf(
-                          SVN_ERR_ILLEGAL_TARGET, NULL,
-                          _("Cannot commit '%s' because it was moved from "
-                            "'%s' which is not part of the commit; both "
-                            "sides of the move must be committed together"),
-                          svn_dirent_local_style(item->path, iterpool),
-                          svn_dirent_local_style(delete_op_root_abspath,
-                                                 iterpool));
-              goto cleanup;
+              svn_boolean_t found_delete_half =
+                (apr_hash_get(committables->by_path, delete_op_root_abspath,
+                               APR_HASH_KEY_STRING) != NULL);
+              
+              if (!found_delete_half)
+                {
+                  const char *delete_half_parent_abspath;
+
+                  /* The delete-half isn't in the commit target list.
+                   * However, it might itself be the child of a deleted node,
+                   * either because of another move or a deletion.
+                   *
+                   * For example, consider: mv A/B B; mv B/C C; commit;
+                   * C's moved-from A/B/C is a child of the deleted A/B.
+                   * A/B/C does not appear in the commit target list, but
+                   * A/B does appear.
+                   * (Note that moved-from information is always stored
+                   * relative to the BASE tree, so we have 'C moved-from
+                   * A/B/C', not 'C moved-from B/C'.)
+                   *
+                   * An example involving a move and a delete would be:
+                   * mv A/B C; rm A; commit;
+                   * Now C is moved-from A/B which does not appear in the
+                   * commit target list, but A does appear.
+                   */
+
+                  /* Scan upwards for a deletion op-root from the
+                   * delete-half's parent directory. */
+                  delete_half_parent_abspath =
+                    svn_dirent_dirname(delete_op_root_abspath, iterpool);
+                  if (strcmp(delete_op_root_abspath,
+                             delete_half_parent_abspath) != 0)
+                    {
+                      const char *parent_delete_op_root_abspath;
+
+                      cmt_err = svn_error_trace(
+                                  svn_wc__node_get_deleted_ancestor(
+                                    &parent_delete_op_root_abspath,
+                                    ctx->wc_ctx, delete_half_parent_abspath,
+                                    iterpool, iterpool));
+                      if (cmt_err)
+                        goto cleanup;
+
+                      if (parent_delete_op_root_abspath)
+                        found_delete_half =
+                          (apr_hash_get(committables->by_path,
+                                        parent_delete_op_root_abspath,
+                                        APR_HASH_KEY_STRING) != NULL);
+                    }
+                }
+
+              if (!found_delete_half)
+                {
+                  cmt_err = svn_error_createf(
+                              SVN_ERR_ILLEGAL_TARGET, NULL,
+                              _("Cannot commit '%s' because it was moved from "
+                                "'%s' which is not part of the commit; both "
+                                "sides of the move must be committed together"),
+                              svn_dirent_local_style(item->path, iterpool),
+                              svn_dirent_local_style(delete_op_root_abspath,
+                                                     iterpool));
+                  goto cleanup;
+                }
             }
         }
       /* ### TODO: check the delete-half, too */
