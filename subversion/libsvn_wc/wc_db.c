@@ -6117,25 +6117,34 @@ op_delete_txn(void *baton,
               const char *child_delete_op_root_relpath = NULL;
               const char *moved_here_child_relpath =
                 svn_sqlite__column_text(stmt, 0, scratch_pool);
+              svn_error_t *err;
 
               svn_pool_clear(iterpool);
 
               /* The moved-here-children query returns info based on the
                * delete-half of the move. Check if that the copied-half of
                * the move matches this information. */
-              SVN_ERR(read_info(&child_status, NULL, NULL, NULL, NULL,
-                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                NULL, NULL, NULL, NULL, NULL, NULL,
-                                wcroot, moved_here_child_relpath,
-                                iterpool, iterpool));
+              err = read_info(&child_status, NULL, NULL, NULL, NULL,
+                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                              NULL, NULL, NULL, NULL, NULL, NULL,
+                              wcroot, moved_here_child_relpath,
+                              iterpool, iterpool);
+              if (err)
+                return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+
               if (child_status == svn_wc__db_status_added)
-                SVN_ERR(scan_addition(&child_status, NULL, NULL, NULL,
+                {
+                  err = scan_addition(&child_status, NULL, NULL, NULL,
                                       NULL, NULL, NULL,
                                       &child_moved_from_relpath,
                                       &child_delete_op_root_relpath,
                                       wcroot, moved_here_child_relpath,
-                                      iterpool, iterpool));
+                                      iterpool, iterpool);
+                  if (err)
+                    return svn_error_compose_create(err,
+                                                    svn_sqlite__reset(stmt));
+                }
 #ifdef SVN_DEBUG
               /* This catches incorrectly recorded moves.
                * It is possible to hit this during normal operation
