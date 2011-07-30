@@ -5526,7 +5526,6 @@ def commit_copied_half_of_nested_move(sbox):
 
 
 @Issue(3631)
-@XFail()
 def commit_deleted_half_of_move(sbox):
   "attempt to commit the deleted part of move"
   sbox.build(read_only = True)
