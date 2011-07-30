@@ -207,8 +207,3 @@ Approved changes:
      this revision depends for a clean merge).
    Votes:
      +1: rhuijben, danielsh, cmpilato
-
- * r1151911
-   Fix description of svndumpfilter's --targets option.
-   Votes:
-     +1: cmpilato, hwright, rhuijben
