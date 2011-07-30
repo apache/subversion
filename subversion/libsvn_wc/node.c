@@ -1795,6 +1795,33 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
 
 
 svn_error_t *
+svn_wc__node_was_moved_away(const char **moved_to_abspath,
+                            const char **op_root_abspath,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  svn_boolean_t is_deleted;
+
+  if (moved_to_abspath)
+    *moved_to_abspath = NULL;
+  if (op_root_abspath)
+    *op_root_abspath = NULL;
+
+  SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, wc_ctx, local_abspath,
+                                         scratch_pool));
+  if (is_deleted)
+    SVN_ERR(svn_wc__db_scan_deletion(NULL, moved_to_abspath, NULL,
+                                     op_root_abspath, wc_ctx->db,
+                                     local_abspath,
+                                     result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc__node_was_moved_here(const char **moved_from_abspath,
                             const char **delete_op_root_abspath,
                             svn_wc_context_t *wc_ctx,
