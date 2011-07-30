@@ -1447,7 +1447,35 @@ svn_client_commit5(const apr_array_header_t *targets,
                 }
             }
         }
-      /* ### TODO: check the delete-half, too */
+      else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+        {
+          const char *moved_to_abspath;
+          const char *copy_op_root_abspath;
+
+          cmt_err = svn_error_trace(svn_wc__node_was_moved_away(
+                                      &moved_to_abspath,
+                                      &copy_op_root_abspath,
+                                      ctx->wc_ctx, item->path,
+                                      iterpool, iterpool));
+          if (cmt_err)
+            goto cleanup;
+
+          if (moved_to_abspath && copy_op_root_abspath &&
+              strcmp(moved_to_abspath, copy_op_root_abspath) == 0 &&
+              apr_hash_get(committables->by_path, copy_op_root_abspath,
+                           APR_HASH_KEY_STRING) == NULL)
+            {
+              cmt_err = svn_error_createf(
+                          SVN_ERR_ILLEGAL_TARGET, NULL,
+                         _("Cannot commit '%s' because it was moved to '%s' "
+                           "which is not part of the commit; both sides of "
+                           "the move must be committed together"),
+                         svn_dirent_local_style(item->path, iterpool),
+                         svn_dirent_local_style(copy_op_root_abspath,
+                                                iterpool));
+              goto cleanup;
+            }
+        }
     }
 
   /* Go get a log message.  If an error occurs, or no log message is
