@@ -817,9 +817,9 @@ WHERE wc_id = ?1
 
 -- STMT_INSERT_DELETE_NODE
 INSERT INTO nodes (
-    wc_id, local_relpath, op_depth, parent_relpath, presence, kind, moved_to)
+    wc_id, local_relpath, op_depth, parent_relpath, presence, kind)
 SELECT wc_id, local_relpath, ?4 /*op_depth*/, parent_relpath, 'base-deleted',
-       kind, ?5 /* moved_to */
+       kind
 FROM nodes
 WHERE wc_id = ?1
   AND local_relpath = ?2
@@ -1332,19 +1332,29 @@ WHERE wc_id = ?1
   AND file_external IS NULL
 
 -- STMT_SELECT_MOVED_FROM_RELPATH
-SELECT local_relpath FROM nodes_current
-WHERE wc_id = ?1 AND moved_to = ?2
+SELECT local_relpath FROM nodes
+WHERE wc_id = ?1 AND moved_to = ?2 AND op_depth = 0
 
 -- STMT_UPDATE_MOVED_TO_RELPATH
-UPDATE NODES SET moved_to = ?3
-WHERE wc_id = ?1 AND local_relpath = ?2
-  AND op_depth =
-   (SELECT MAX(op_depth) FROM nodes
-    WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
+UPDATE nodes SET moved_to = ?3
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
+
+-- STMT_CLEAR_MOVED_TO_RELPATH
+UPDATE nodes SET moved_to = NULL
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
+
+-- STMT_CLEAR_MOVED_TO_RELPATH_RECURSIVE
+UPDATE nodes SET moved_to = NULL
+WHERE wc_id = ?1
+  AND (?2 = ''
+       OR local_relpath = ?2
+       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+  AND op_depth = 0
 
 -- STMT_SELECT_MOVED_HERE_CHILDREN
-SELECT moved_to, local_relpath FROM nodes_current
-WHERE wc_id = ?1 AND (moved_to > ?2 || '/' AND moved_to < ?2 || '0')
+SELECT moved_to, local_relpath FROM nodes
+WHERE wc_id = ?1 AND op_depth = 0
+  AND (moved_to > ?2 || '/' AND moved_to < ?2 || '0')
 
 /* ------------------------------------------------------------------------- */
 
