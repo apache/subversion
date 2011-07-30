@@ -2536,12 +2536,17 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
    BASE_DEL_ABSPATH will specify the nearest ancestor of the explicit or
    implicit deletion (if any) that applies to the BASE tree.
 
-   MOVED_TO_ABSPATH will specify the nearest ancestor that has moved-away,
-   if any. If no ancestors have been moved-away, then this is set to NULL.
-
    WORK_DEL_ABSPATH will specify the root of a deleted subtree within
    the WORKING tree (note there is no concept of layered delete operations
    in WORKING, so there is only one deletion root in the ancestry).
+
+   MOVED_TO_ABSPATH will specify the path where this node was moved to
+   if the node has moved-away.
+
+   If the node was moved-away, COPY_OP_ROOT_ABSPATH will specify the root
+   of the copy operation that created the copy-half of the move. 
+   If LOCAL_ABSPATH itself is the root of the copy, COPY_OP_ROOT_ABSPATH
+   equals MOVED_TO_ABSPATH.
 
    All OUT parameters may be set to NULL to indicate a lack of interest in
    that piece of information.
@@ -2557,6 +2562,7 @@ svn_error_t *
 svn_wc__db_scan_deletion(const char **base_del_abspath,
                          const char **moved_to_abspath,
                          const char **work_del_abspath,
+                         const char **copy_op_root_abspath,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,

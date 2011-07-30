@@ -272,7 +272,7 @@ get_info_for_deleted(svn_wc_entry_t *entry,
 
      SVN_ERR(svn_wc__db_scan_deletion(NULL,
                                       NULL,
-                                      &work_del_abspath,
+                                      &work_del_abspath, NULL,
                                       db, entry_abspath,
                                       scratch_pool, scratch_pool));
 
@@ -525,7 +525,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
         {
           const char *work_del_abspath;
           SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
-                                           &work_del_abspath,
+                                           &work_del_abspath, NULL,
                                            db, entry_abspath,
                                            scratch_pool, scratch_pool));
 

@@ -200,7 +200,7 @@ build_info_for_node(svn_wc__info2_t **info,
 
       /* And now fetch the url and revision of what will be deleted */
       SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
-                                       &work_del_abspath,
+                                       &work_del_abspath, NULL,
                                        db, local_abspath,
                                        scratch_pool, scratch_pool));
       if (work_del_abspath != NULL)
