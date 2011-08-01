@@ -128,7 +128,7 @@ ensure_summarize(struct item_baton *ib)
 }
 
 
-/* An editor function. The root of the comparison hierarchy */
+/* An svn_delta_editor_t function. The root of the comparison hierarchy */
 static svn_error_t *
 open_root(void *edit_baton,
           svn_revnum_t base_revision,
@@ -219,7 +219,7 @@ diff_deleted_dir(const char *dir,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 delete_entry(const char *path,
              svn_revnum_t base_revision,
@@ -257,7 +257,7 @@ delete_entry(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 add_directory(const char *path,
               void *parent_baton,
@@ -277,7 +277,7 @@ add_directory(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 open_directory(const char *path,
                void *parent_baton,
@@ -295,7 +295,7 @@ open_directory(const char *path,
 }
 
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 close_directory(void *dir_baton,
                 apr_pool_t *pool)
@@ -311,7 +311,7 @@ close_directory(void *dir_baton,
 }
 
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 add_file(const char *path,
          void *parent_baton,
@@ -331,7 +331,7 @@ add_file(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 open_file(const char *path,
           void *parent_baton,
@@ -348,7 +348,7 @@ open_file(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 apply_textdelta(void *file_baton,
                 const char *base_checksum,
@@ -369,7 +369,7 @@ apply_textdelta(void *file_baton,
 }
 
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 close_file(void *file_baton,
            const char *text_checksum,
@@ -386,7 +386,7 @@ close_file(void *file_baton,
 }
 
 
-/* An editor function, implementing both change_file_prop and
+/* An svn_delta_editor_t function, implementing both change_file_prop and
  * change_dir_prop.  */
 static svn_error_t *
 change_prop(void *entry_baton,
