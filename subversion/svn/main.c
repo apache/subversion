@@ -224,9 +224,11 @@ const apr_getopt_option_t svn_cl__options[] =
   {"no-auth-cache", opt_no_auth_cache, 0,
                     N_("do not cache authentication tokens")},
   {"trust-server-cert", opt_trust_server_cert, 0,
-                    N_("accept unknown SSL server certificates without\n"
+                    N_("accept SSL server certificates from unknown\n"
                        "                             "
-                       "prompting (but only with '--non-interactive')")},
+                       "certificate authorities without prompting (but only\n"
+                       "                             "
+                       "with '--non-interactive')") },
   {"non-interactive", opt_non_interactive, 0,
                     N_("do no interactive prompting")},
   {"dry-run",       opt_dry_run, 0,

@@ -202,10 +202,3 @@ Approved changes:
       non-standard TCP port.
     Votes:
       +1: ivan, rhuijben, cmpilato
-
- * r1151610
-   Update help text.
-   Justification:
-     This is occasionally asked about; clarification will be useful.
-   Votes:
-     +1: danielsh, hwright, cmpilato
