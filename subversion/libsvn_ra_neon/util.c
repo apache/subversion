@@ -1589,8 +1589,9 @@ svn_ra_neon__uri_unparse(const ne_uri *uri,
   /* Unparse uri. */
   unparsed_uri = ne_uri_unparse(uri);
 
-  /* Copy string to result pool. */
-  result = apr_pstrdup(pool, unparsed_uri);
+  /* Copy string to result pool, and make sure it conforms to
+     Subversion rules */
+  result = svn_uri_canonicalize(unparsed_uri, pool);
 
   /* Free neon's allocated copy. */
   ne_free(unparsed_uri);
