@@ -453,7 +453,7 @@ get_empty_file(struct edit_baton *eb,
   return SVN_NO_ERROR;
 }
 
-/* An editor function. The root of the comparison hierarchy */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 set_target_revision(void *edit_baton,
                     svn_revnum_t target_revision,
@@ -465,7 +465,7 @@ set_target_revision(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
-/* An editor function. The root of the comparison hierarchy */
+/* An svn_delta_editor_t function. The root of the comparison hierarchy */
 static svn_error_t *
 open_root(void *edit_baton,
           svn_revnum_t base_revision,
@@ -567,7 +567,7 @@ diff_deleted_dir(const char *dir,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 delete_entry(const char *path,
              svn_revnum_t base_revision,
@@ -668,7 +668,7 @@ delete_entry(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 add_directory(const char *path,
               void *parent_baton,
@@ -758,7 +758,7 @@ add_directory(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 open_directory(const char *path,
                void *parent_baton,
@@ -792,7 +792,7 @@ open_directory(const char *path,
 }
 
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 add_file(const char *path,
          void *parent_baton,
@@ -822,7 +822,7 @@ add_file(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 open_file(const char *path,
           void *parent_baton,
@@ -872,7 +872,7 @@ window_handler(svn_txdelta_window_t *window,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 apply_textdelta(void *file_baton,
                 const char *base_md5_digest,
@@ -939,7 +939,7 @@ apply_textdelta(void *file_baton,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  When the file is closed we have a temporary
+/* An svn_delta_editor_t function.  When the file is closed we have a temporary
  * file containing a pristine version of the repository file. This can
  * be compared against the working copy.
  *
@@ -1086,7 +1086,7 @@ close_file(void *file_baton,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 close_directory(void *dir_baton,
                 apr_pool_t *pool)
@@ -1188,7 +1188,7 @@ close_directory(void *dir_baton,
 }
 
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 change_file_prop(void *file_baton,
                  const char *name,
@@ -1209,7 +1209,7 @@ change_file_prop(void *file_baton,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 change_dir_prop(void *dir_baton,
                 const char *name,
@@ -1231,7 +1231,7 @@ change_dir_prop(void *dir_baton,
 }
 
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 close_edit(void *edit_baton,
            apr_pool_t *pool)
@@ -1243,7 +1243,7 @@ close_edit(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 absent_directory(const char *path,
                  void *parent_baton,
@@ -1272,7 +1272,7 @@ absent_directory(const char *path,
 }
 
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 absent_file(const char *path,
             void *parent_baton,
