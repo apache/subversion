@@ -7748,15 +7748,10 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
 
 /* Helper for do_directory_merge().
 
-   Similar to record_mergeinfo_for_dir_merge in that it records mergeinfo
-   describing a merge of MERGED_RANGE->START:MERGED_RANGE->END from the
-   repository relative path MERGEINFO_PATH to MERGE->TARGET_ABSPATH.
-   Unlike record_mergeinfo_for_dir_merge() though, this
-   funtion only records mergeinfo on *new* subtrees added by the merge which
-   are children of paths with non-inheritable ranges or which have missing
-   siblings - see criteria 3 and 5 in the doc string for get_mergeinfo_paths.
-   See also issue #2829
-   http://subversion.tigris.org/issues/show_bug.cgi?id=2829#desc14.
+   Record mergeinfo describing a merge of
+   MERGED_RANGE->START:MERGED_RANGE->END from the repository relative path
+   MERGEINFO_PATH to each path in NOTIFY_B->ADDED_ABSPATHS which is the
+   immediate child of a parent with explicit non-inheritable mergeinfo.
 
    DEPTH, NOTIFY_B, MERGE_B, and SQUELCH_MERGEINFO_NOTIFICATIONS, are
    cascaded from do_directory_merge's arguments of the same names.
