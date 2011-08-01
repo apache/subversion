@@ -954,7 +954,7 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### access through http: and/or file: URLs, then this file is"              NL
 "### irrelevant.)"                                                           NL
 ""                                                                           NL
-"### Visit http://subversion.tigris.org/ for more information."              NL
+"### Visit http://subversion.apache.org/ for more information."              NL
 ""                                                                           NL
 "[general]"                                                                  NL
 "### These options control access to the repository for unauthenticated"     NL
@@ -1131,7 +1131,7 @@ create_repos_structure(svn_repos_t *repos,
       "requirements of your site."                                           NL
       ""                                                                     NL;
     const char * const readme_footer =
-      "Visit http://subversion.tigris.org/ for more information."            NL;
+      "Visit http://subversion.apache.org/ for more information."            NL;
     apr_file_t *f;
     apr_size_t written;
 
