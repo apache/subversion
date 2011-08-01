@@ -25,6 +25,7 @@ Candidate changes:
      This does not include progress reporting, since that is nominated
      separately.
    Votes:
+     +1: rhuijben
      +0: danielsh
      +0: gstein (progress would be nice)
 
@@ -144,13 +145,6 @@ Candidate changes:
      +1: rhuijben
      +1: philip (the branch)
 
- * r1152726
-   Make sure repository root URLs in ra_neon are canonical.
-   Justification:
-     A repository root at / can cause ra_neon to assert.
-   Votes:
-     +1: philip, cmpilato
-
  * r1152282
    Improve performance of "log -g".
    Justification:
@@ -187,3 +181,10 @@ Approved changes:
      this revision depends for a clean merge).
    Votes:
      +1: rhuijben, danielsh, cmpilato
+
+ * r1152726
+   Make sure repository root URLs in ra_neon are canonical.
+   Justification:
+     A repository root at / can cause ra_neon to assert.
+   Votes:
+     +1: philip, cmpilato, rhuijben 
