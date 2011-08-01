@@ -178,6 +178,13 @@ Candidate changes:
      +1: rhuijben
      +0: philip (looks OK, but merge conflicts)
 
+ * r1152726
+   Make sure repository root URLs in ra_neon are canonical.
+   Justification:
+     A repository root at / can cause ra_neon to assert.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
