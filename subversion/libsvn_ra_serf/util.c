@@ -238,7 +238,7 @@ ssl_server_cert(void *baton, int failures,
       int i;
       for (i = 0; i < san->nelts; i++) {
           char *s = APR_ARRAY_IDX(san, i, char*);
-          if (apr_fnmatch(s, conn->hostinfo,
+          if (apr_fnmatch(s, conn->hostname,
                           APR_FNM_PERIOD) == APR_SUCCESS) {
               found_matching_hostname = 1;
               cert_info.hostname = s;
@@ -250,7 +250,7 @@ ssl_server_cert(void *baton, int failures,
   /* Match server certificate CN with the hostname of the server */
   if (!found_matching_hostname && cert_info.hostname)
     {
-      if (apr_fnmatch(cert_info.hostname, conn->hostinfo,
+      if (apr_fnmatch(cert_info.hostname, conn->hostname,
                       APR_FNM_PERIOD) == APR_FNM_NOMATCH)
         {
           svn_failures |= SVN_AUTH_SSL_CNMISMATCH;
@@ -364,7 +364,7 @@ conn_setup(apr_socket_t *sock,
           conn->ssl_context = serf_bucket_ssl_encrypt_context_get(*read_bkt);
 
 #if SERF_VERSION_AT_LEAST(1,0,0)
-          serf_ssl_set_hostname(conn->ssl_context, conn->hostinfo);
+          serf_ssl_set_hostname(conn->ssl_context, conn->hostname);
 #endif
 
           serf_ssl_client_cert_provider_set(conn->ssl_context,
