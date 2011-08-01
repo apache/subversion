@@ -1,0 +1,8 @@
+This branch exists for the resolution of issue #3975 'adds with
+explicit mergeinfo don't get mergeinfo describing merge which
+added them'.  The fix for this issue will require several parts
+and I don't want to drop a code bomb on trunk with all of them.
+Plus I'm not entirely sure there *is* a fix for this issue, so
+I'm working in Branchville for now.
+
+pburba
