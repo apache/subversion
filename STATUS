@@ -137,14 +137,6 @@ Candidate changes:
      +0: danielsh (we shouldn't depend on libsvn_client fixes to avoid
                    accumulating tempfiles on the server)
 
- * r1150506, r1150853
-   Fix issue #3967, file descriptor and memory leak in svnsync and svnrdump
-   with ra_serf.
-   Justification:
-     Both tools are basically not useable with these leaks.
-   Votes:
-     +1: lgo, rhuijben
-
  * r1151177
    Fix two bugs in ra_serf when connecting to HTTPS repository hosted on
    non-standard port.
@@ -214,3 +206,11 @@ Approved changes:
      this revision depends for a clean merge).
    Votes:
      +1: rhuijben, danielsh, cmpilato
+
+ * r1150506, r1150853
+   Fix issue #3967, file descriptor and memory leak in svnsync and svnrdump
+   with ra_serf.
+   Justification:
+     Both tools are basically not useable with these leaks.
+   Votes:
+     +1: lgo, rhuijben, philip
