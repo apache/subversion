@@ -82,15 +82,6 @@ Candidate changes:
    Votes:
      +1: danielsh, arfrever
 
- * r1149539
-   Resolve issue #3969: provide proper cancellation support in the
-   network loops in ra_serf.
-   Justifications:
-     GUI clients can't rely on EINTR being returned when a user tries to cancel
-     an operation, as no signal is raised.
-   Votes:
-     +1: rhuijben, hwright
-
  * r1149627
    Adjust library order in build.conf for kwallet/gnome-keyring.
    Justification:
@@ -98,6 +89,7 @@ Candidate changes:
      this is not a regression.
    Votes:
      +1: philip, danielsh
+     +0: cmpilato
      
  * r1150327
    Report not finding txn roots produce a 404 error in mod_dav_svn.
@@ -133,29 +125,9 @@ Candidate changes:
    Notes:
      rhuijben: This bug triggered my weekend search for locked files problems.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, cmpilato
      +0: danielsh (we shouldn't depend on libsvn_client fixes to avoid
                    accumulating tempfiles on the server)
-
- * r1151177
-   Fix two bugs in ra_serf when connecting to HTTPS repository hosted on
-   non-standard port.
-   1. ra_serf complains that server certificate doesn't match hostname.
-   2. XML parsing failed: (400 Bad Request) error when working with SNI 
-      enabled server.
-      http://svn.haxx.se/users/archive-2011-07/0404.shtml
-    Justification:
-      Users are unable to use repositories over HTTPS protocol hosted on
-      non-standard TCP port.
-    Votes:
-      +1: ivan, rhuijben
-
- * r1151610
-   Update help text.
-   Justification:
-     This is occasionally asked about; clarification will be useful.
-   Votes:
-     +1: danielsh, hwright
 
  * r1151055
    Allow building with serf trunk on windows.
@@ -175,7 +147,7 @@ Candidate changes:
    Justification:
      A repository root at / can cause ra_neon to assert.
    Votes:
-     +1: philip
+     +1: philip, cmpilato
 
 Veto-blocked changes:
 =====================
@@ -206,3 +178,32 @@ Approved changes:
      this revision depends for a clean merge).
    Votes:
      +1: rhuijben, danielsh, cmpilato
+
+ * r1149539
+   Resolve issue #3969: provide proper cancellation support in the
+   network loops in ra_serf.
+   Justifications:
+     GUI clients can't rely on EINTR being returned when a user tries to cancel
+     an operation, as no signal is raised.
+   Votes:
+     +1: rhuijben, hwright, cmpilato
+
+ * r1151177
+   Fix two bugs in ra_serf when connecting to HTTPS repository hosted on
+   non-standard port.
+   1. ra_serf complains that server certificate doesn't match hostname.
+   2. XML parsing failed: (400 Bad Request) error when working with SNI 
+      enabled server.
+      http://svn.haxx.se/users/archive-2011-07/0404.shtml
+    Justification:
+      Users are unable to use repositories over HTTPS protocol hosted on
+      non-standard TCP port.
+    Votes:
+      +1: ivan, rhuijben, cmpilato
+
+ * r1151610
+   Update help text.
+   Justification:
+     This is occasionally asked about; clarification will be useful.
+   Votes:
+     +1: danielsh, hwright, cmpilato
