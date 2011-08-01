@@ -5673,10 +5673,10 @@ pre_merge_status_cb(void *baton,
      2) Path is switched.
      3) Path is a subtree of the merge target (i.e. is not equal to
         MERGE_CMD_BATON->TARGET_ABSPATH) and has no mergeinfo of its own but
-        its parent has mergeinfo with non-inheritable ranges.  If this isn't a
-        dry-run and the merge is between differences in the same repository,
-        then this function will set working mergeinfo on the path equal to
-        the mergeinfo inheritable from its parent.
+        its immediate parent has mergeinfo with non-inheritable ranges.  If
+        this isn't a dry-run and the merge is between differences in the same
+        repository, then this function will set working mergeinfo on the path
+        equal to the mergeinfo inheritable from its parent.
      4) Path has an immediate child (or children) missing from the WC because
         the child is switched or absent from the WC, or due to a sparse
         checkout.
