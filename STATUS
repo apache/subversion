@@ -151,6 +151,13 @@ Candidate changes:
    Votes:
      +1: philip, cmpilato
 
+ * r1152282
+   Improve performance of "log -g".
+   Justification:
+     Can be too slow to be useable.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
