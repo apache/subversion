@@ -136,11 +136,13 @@ Candidate changes:
 
  * r1152189, r1152190
    Fix an assertion on copying nodes that are not presence normal.
+   Branch:
+     1.7.x-r1152189
    Justification:
      Easy to trigger problem in tree conflict situations.
    Votes:
      +1: rhuijben
-     +0: philip (looks OK, but merge conflicts)
+     +1: philip (the branch)
 
  * r1152726
    Make sure repository root URLs in ra_neon are canonical.
