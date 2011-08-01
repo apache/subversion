@@ -139,9 +139,13 @@ struct svn_ra_serf__session_t {
   const svn_ra_callbacks2_t *wc_callbacks;
   void *wc_callback_baton;
 
-  /* Callback function to send info to WC */
-  svn_ra_progress_notify_func_t wc_progress_func;
-  void *wc_progress_baton;
+  /* Callback function to send progress info to the client */
+  svn_ra_progress_notify_func_t progress_func;
+  void *progress_baton;
+
+  /* Callback function to handle cancellation */
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
 
   /* Error that we've received but not yet returned upstream. */
   svn_error_t *pending_error;

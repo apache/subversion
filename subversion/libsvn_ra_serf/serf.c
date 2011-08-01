@@ -326,11 +326,11 @@ static void
 svn_ra_serf__progress(void *progress_baton, apr_off_t read, apr_off_t written)
 {
   const svn_ra_serf__session_t *serf_sess = progress_baton;
-  if (serf_sess->wc_progress_func)
+  if (serf_sess->progress_func)
     {
-      serf_sess->wc_progress_func(read + written, -1,
-                                  serf_sess->wc_progress_baton,
-                                  serf_sess->pool);
+      serf_sess->progress_func(read + written, -1,
+                               serf_sess->progress_baton,
+                               serf_sess->pool);
     }
 }
 
@@ -355,8 +355,10 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->pool = svn_pool_create(pool);
   serf_sess->wc_callbacks = callbacks;
   serf_sess->wc_callback_baton = callback_baton;
-  serf_sess->wc_progress_baton = callbacks->progress_baton;
-  serf_sess->wc_progress_func = callbacks->progress_func;
+  serf_sess->progress_func = callbacks->progress_func;
+  serf_sess->progress_baton = callbacks->progress_baton;
+  serf_sess->cancel_func = callbacks->cancel_func;
+  serf_sess->cancel_baton = callback_baton;
 
   /* todo: reuse serf context across sessions */
   serf_sess->context = serf_context_create(serf_sess->pool);

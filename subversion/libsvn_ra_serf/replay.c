@@ -756,6 +756,9 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
          to store the response status code. */
       int status_code;
 
+      if (session->cancel_func)
+        SVN_ERR(session->cancel_func(session->cancel_baton));
+
       /* Send pending requests, if any. Limit the number of outstanding
          requests to MAX_OUTSTANDING_REQUESTS. */
       if (rev <= end_revision  && active_reports < MAX_OUTSTANDING_REQUESTS)
