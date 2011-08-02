@@ -1919,7 +1919,7 @@ def file_externals_different_repos(sbox):
 
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output, None, None,
-                                        '.*svn: warning: W170000:.*')
+                                        'svn: warning: W200007: Unsupported.*')
 
 
 ########################################################################
