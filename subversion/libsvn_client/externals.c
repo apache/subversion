@@ -898,6 +898,11 @@ handle_external_item_change(const struct external_change_baton_t *eb,
                    scratch_pool));
           break;
         case svn_node_file:
+          if (strcmp(eb->repos_root_url, ra_cache.repos_root_url))
+            return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                      _("Unsupported external: "
+                        "url of file external '%s' is not in repository '%s'"),
+                      new_url, eb->repos_root_url);
           SVN_ERR(switch_file_external(local_abspath,
                                        new_url,
                                        &new_item->peg_revision,

@@ -1877,7 +1877,6 @@ def exclude_externals(sbox):
                                         None, None, None, None, False,
                                         '--set-depth', 'infinity', wc_dir)
 
-@XFail()
 def file_externals_different_repos(sbox):
   "update file externals via different url"
 
@@ -1906,7 +1905,21 @@ def file_externals_different_repos(sbox):
   # The externals from r2 should fail, but currently pass.
   # This creates a wc.db inconsistency
   svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output, None, None)
+                                        expected_output, None, None,
+                                        'svn: warning: W200007: Unsupported.*')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'relocate', r1_url, r2_url, wc_dir)
+
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'r2-e-1'            : Item(status='A '),
+    'r2-e-2'            : Item(status='A '),
+  })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None,
+                                        '.*svn: warning: W170000:.*')
 
 
 ########################################################################
