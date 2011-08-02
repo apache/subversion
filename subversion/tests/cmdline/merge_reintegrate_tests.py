@@ -1269,7 +1269,8 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                            'A    ' + gamma_moved_COPY_path + '\n',
                            'D    ' + gamma_COPY_path + '\n',
                            ' U   ' + A_COPY_path     + '\n',
-                           ' U   ' + D_COPY_path     + '\n',]),
+                           ' U   ' + D_COPY_path     + '\n',
+                           ' U   ' + gamma_moved_COPY_path + '\n']),
     [], 'merge', sbox.repo_url + '/A',  A_COPY_path)
   expected_output = wc.State(
     wc_dir,

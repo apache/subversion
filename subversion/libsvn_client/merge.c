@@ -7750,8 +7750,9 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
 
    Record mergeinfo describing a merge of
    MERGED_RANGE->START:MERGED_RANGE->END from the repository relative path
-   MERGEINFO_PATH to each path in NOTIFY_B->ADDED_ABSPATHS which is the
-   immediate child of a parent with explicit non-inheritable mergeinfo.
+   MERGEINFO_PATH to each path in NOTIFY_B->ADDED_ABSPATHS which has explicit
+   mergeinfo or is the immediate child of a parent with explicit
+   non-inheritable mergeinfo.
 
    DEPTH, NOTIFY_B, MERGE_B, and SQUELCH_MERGEINFO_NOTIFICATIONS, are
    cascaded from do_directory_merge's arguments of the same names.
@@ -7780,26 +7781,36 @@ record_mergeinfo_for_added_subtrees(
       const char *added_abspath = svn__apr_hash_index_key(hi);
       const char *dir_abspath;
       svn_mergeinfo_t parent_mergeinfo;
+      svn_mergeinfo_t added_path_mergeinfo;
       svn_boolean_t inherited; /* used multiple times, but ignored */
 
       apr_pool_clear(iterpool);
       dir_abspath = svn_dirent_dirname(added_abspath, iterpool);
 
-      /* Does ADDED_ABSPATH's immediate parent have non-inheritable
-         mergeinfo? */
-      SVN_ERR(svn_client__get_wc_mergeinfo(&parent_mergeinfo, &inherited,
+      /* Grab the added path's explicit mergeinfo. */
+      SVN_ERR(svn_client__get_wc_mergeinfo(&added_path_mergeinfo, &inherited,
                                            svn_mergeinfo_explicit,
-                                           dir_abspath, NULL, NULL, FALSE,
-                                           merge_b->ctx,
-                                           iterpool, iterpool));
-      if (svn_mergeinfo__is_noninheritable(parent_mergeinfo, iterpool))
+                                           added_abspath, NULL, NULL, FALSE,
+                                           merge_b->ctx, iterpool, iterpool));
+
+      /* If the added path doesn't have explicit mergeinfo, does its immediate
+         parent have non-inheritable mergeinfo? */
+      if (!added_path_mergeinfo)
+        SVN_ERR(svn_client__get_wc_mergeinfo(&parent_mergeinfo, &inherited,
+                                             svn_mergeinfo_explicit,
+                                             dir_abspath, NULL, NULL, FALSE,
+                                             merge_b->ctx,
+                                             iterpool, iterpool));
+
+      if (added_path_mergeinfo
+          || svn_mergeinfo__is_noninheritable(parent_mergeinfo, iterpool))
         {
           svn_client__merge_path_t *target_merge_path =
             APR_ARRAY_IDX(notify_b->children_with_mergeinfo, 0,
                           svn_client__merge_path_t *);
           svn_merge_range_t *rng;
           svn_node_kind_t added_path_kind;
-          svn_mergeinfo_t merge_mergeinfo, added_path_mergeinfo;
+          svn_mergeinfo_t merge_mergeinfo;
           apr_array_header_t *rangelist;
           const char *rel_added_path;
           const char *added_path_mergeinfo_path;
@@ -7834,11 +7845,6 @@ record_mergeinfo_for_added_subtrees(
           apr_hash_set(merge_mergeinfo, added_path_mergeinfo_path,
                        APR_HASH_KEY_STRING, rangelist);
 
-          /* Get any explicit mergeinfo the added path has. */
-          SVN_ERR(svn_client__get_wc_mergeinfo(
-            &added_path_mergeinfo, &inherited,
-            svn_mergeinfo_explicit, added_abspath,
-            NULL, NULL, FALSE, merge_b->ctx, iterpool, iterpool));
 
           /* Combine the explict mergeinfo on the added path (if any)
              with the mergeinfo for this merge. */
