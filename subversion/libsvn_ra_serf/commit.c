@@ -355,19 +355,18 @@ checkout_dir(dir_context_t *dir)
   checkout_context_t *checkout_ctx;
   svn_ra_serf__handler_t *handler;
   svn_error_t *err;
-  dir_context_t *parent_dir = dir->parent_dir;
+  dir_context_t *p_dir = dir;
 
   if (dir->checkout)
     {
       return SVN_NO_ERROR;
     }
 
-  /* Is one of our parent dirs newly added?  If so, we're already
-   * implicitly checked out.
-   */
-  while (parent_dir)
+  /* Is this directory or one of our parent dirs newly added? 
+   * If so, we're already implicitly checked out. */
+  while (p_dir)
     {
-      if (parent_dir->added)
+      if (p_dir->added)
         {
           /* Implicitly checkout this dir now. */
           dir->checkout = apr_pcalloc(dir->pool, sizeof(*dir->checkout));
@@ -381,7 +380,7 @@ checkout_dir(dir_context_t *dir)
 
           return SVN_NO_ERROR;
         }
-      parent_dir = parent_dir->parent_dir;
+      p_dir = p_dir->parent_dir;
     }
 
   /* Checkout our directory into the activity URL now. */
@@ -1922,6 +1921,7 @@ add_file(const char *path,
   else
     {
       /* Ensure our parent directory has been checked out */
+      SVN_DBG(("Checking out for %s\n", path));
       SVN_ERR(checkout_dir(dir));
 
       new_file->url =
