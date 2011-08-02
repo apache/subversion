@@ -130,10 +130,11 @@ Candidate changes:
      +0: danielsh (we shouldn't depend on libsvn_client fixes to avoid
                    accumulating tempfiles on the server)
 
- * r1151055
+ * r1148043, r1151055
    Allow building with serf trunk on windows.
    Votes:
-     +0: danielsh
+     +0: danielsh (r1151055 only)
+     +1: pburba
 
  * r1152189, r1152190
    Fix an assertion on copying nodes that are not presence normal.
@@ -150,16 +151,7 @@ Candidate changes:
    Justification:
      Can be too slow to be useable.
    Votes:
-     +1: philip
-
- * r1153138, r1153141
-   Don't CHECKOUT added directories when using a HTTPv1 server.
-   Justification:
-     Getting a HTTP 500 error while committing new directories is not nice.
-   Notes:
-     r1153141 removes an accidentally added SVN_DBG() from r1153138.
-   Votes:
-     +1: rhuijben
+     +1: philip, pburba
 
 Veto-blocked changes:
 =====================
