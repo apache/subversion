@@ -1921,7 +1921,6 @@ add_file(const char *path,
   else
     {
       /* Ensure our parent directory has been checked out */
-      SVN_DBG(("Checking out for %s\n", path));
       SVN_ERR(checkout_dir(dir));
 
       new_file->url =
