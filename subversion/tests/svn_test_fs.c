@@ -135,6 +135,9 @@ create_fs(svn_fs_t **fs_p,
   return SVN_NO_ERROR;
 }
 
+/* If OPTS specifies a filesystem type of 'fsfs' and provides a config file,
+ * copy that file into the filesystem FS and set *MUST_REOPEN to TRUE, else
+ * set *MUST_REOPEN to FALSE. */
 static svn_error_t *
 maybe_install_fsfs_conf(svn_fs_t *fs,
                         const svn_test_opts_t *opts,
@@ -149,7 +152,7 @@ maybe_install_fsfs_conf(svn_fs_t *fs,
   return svn_io_copy_file(opts->config_file,
                           svn_path_join(svn_fs_path(fs, pool),
                                         "fsfs.conf", pool),
-                          FALSE,
+                          FALSE /* copy_perms */,
                           pool);
 }
 
