@@ -268,41 +268,19 @@ wc_move(svn_test__sandbox_t *b, const char *src, const char *dst)
 static svn_error_t *
 add_and_commit_greek_tree(svn_test__sandbox_t *b)
 {
-  const char *greek_tree_dirs[8] =
-  {
-    "A",
-    "A/B",
-    "A/B/E",
-    "A/B/F",
-    "A/C",
-    "A/D",
-    "A/D/G",
-    "A/D/H"
-  };
-  const char *greek_tree_files[12][2] =
-  {
-    { "iota",         "This is the file 'iota'.\n" },
-    { "A/mu",         "This is the file 'mu'.\n" },
-    { "A/B/lambda",   "This is the file 'lambda'.\n" },
-    { "A/B/E/alpha",  "This is the file 'alpha'.\n" },
-    { "A/B/E/beta",   "This is the file 'beta'.\n" },
-    { "A/D/gamma",    "This is the file 'gamma'.\n" },
-    { "A/D/G/pi",     "This is the file 'pi'.\n" },
-    { "A/D/G/rho",    "This is the file 'rho'.\n" },
-    { "A/D/G/tau",    "This is the file 'tau'.\n" },
-    { "A/D/H/chi",    "This is the file 'chi'.\n" },
-    { "A/D/H/psi",    "This is the file 'psi'.\n" },
-    { "A/D/H/omega",  "This is the file 'omega'.\n" }
-  };
-  int i;
+  const struct svn_test__tree_entry_t *node;
 
-  for (i = 0; i < 8; i++)
-    SVN_ERR(wc_mkdir(b, greek_tree_dirs[i]));
-
-  for (i = 0; i < 12; i++)
+  for (node = svn_test__greek_tree_nodes; node->path; node++)
     {
-      file_write(b, greek_tree_files[i][0], greek_tree_files[i][1]);
-      SVN_ERR(wc_add(b, greek_tree_files[i][0]));
+      if (node->contents)
+        {
+          file_write(b, node->path, node->contents);
+          SVN_ERR(wc_add(b, node->path));
+        }
+      else
+        {
+          SVN_ERR(wc_mkdir(b, node->path));
+        }
     }
 
   SVN_ERR(wc_commit(b, ""));

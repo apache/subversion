@@ -177,6 +177,27 @@ apr_uint32_t svn_test_rand(apr_uint32_t *seed);
 void svn_test_add_dir_cleanup(const char *path);
 
 
+/* A simple representation for a tree node. */
+typedef struct svn_test__tree_entry_t
+{
+  const char *path;     /* relpath of this node */
+  const char *contents; /* text contents, or NULL for a directory */
+}
+svn_test__tree_entry_t;
+
+/* Wrapper for an array of svn_test__tree_entry_t's. */
+typedef struct svn_test__tree_t
+{
+  svn_test__tree_entry_t *entries;
+  int num_entries;
+}
+svn_test__tree_t;
+
+
+/* The standard Greek tree, terminated by a node with path=NULL. */
+const svn_test__tree_entry_t svn_test__greek_tree_nodes[21];
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
