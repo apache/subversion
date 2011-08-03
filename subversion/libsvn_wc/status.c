@@ -2464,21 +2464,24 @@ internal_status(svn_wc_status3_t **status,
                              db, local_abspath,
                              scratch_pool, scratch_pool);
 
-  if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-      || node_status == svn_wc__db_status_not_present
-      || node_status == svn_wc__db_status_server_excluded
-      || node_status == svn_wc__db_status_excluded)
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       svn_error_clear(err);
       node_kind = svn_wc__db_kind_unknown;
-
       /* Ensure conflicted is always set, but don't hide tree conflicts
          on 'hidden' nodes. */
-      if (err)
-        conflicted = FALSE;
+      conflicted = FALSE;
     }
-  else
-    SVN_ERR(err);
+  else if (err)
+    {
+        return svn_error_trace(err);
+    }
+  else if (node_status == svn_wc__db_status_not_present
+           || node_status == svn_wc__db_status_server_excluded
+           || node_status == svn_wc__db_status_excluded)
+    {
+      node_kind = svn_wc__db_kind_unknown;
+    }
 
   if (node_kind == svn_wc__db_kind_unknown)
     return svn_error_trace(assemble_unversioned(status,
