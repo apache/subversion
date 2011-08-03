@@ -195,8 +195,15 @@ Veto-blocked changes:
 
      rhuijben: Trivial problems like r1153138 should have been fixed a long
      time ago if we don't want to delay releasing 1.7 on serf.
+
+     markphip: I understand why *we* would want Serf as default, so we can
+     make it better, but it goes against all of the other conservatism in
+     this project to make this the default when we *know* it is less stable,
+     potentially lacks some of the features and is generally considerably
+     slower than Neon.
+
    Votes:
-     +1: philip, cmpilato, rhuijben
+     +1: philip, cmpilato, rhuijben, markphip
      -1: gstein (I see no explanation for why "serf is not ready")
 
 
