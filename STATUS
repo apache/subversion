@@ -162,6 +162,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+  * r1153416  
+    Fix access to uninitialized variable in svn_wc_status3().
+  Justification:
+    Unpredicitable behavior on error condition.
+  Votes:
+    +1: ivan
+
+
 Veto-blocked changes:
 =====================
 
