@@ -36,6 +36,40 @@
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
 
+
+/* Create a repository with a filesystem based on OPTS in a subdir NAME,
+ * commit the standard Greek tree as revision 1, and set *REPOS_URL to
+ * the URL we will use to access it.
+ *
+ * ### This always returns a file: URL. We should upgrade this to use the
+ *     test suite's specified URL scheme instead. */
+static svn_error_t *
+create_greek_repos(const char **repos_url,
+                   const char *name,
+                   const svn_test_opts_t *opts,
+                   apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_revnum_t committed_rev;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+
+  /* Create a filesytem and repository. */
+  SVN_ERR(svn_test__create_repos(&repos, name, opts, pool));
+
+  /* Prepare and commit a txn containing the Greek tree. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, svn_repos_fs(repos), 0 /* rev */,
+                            0 /* flags */, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
+
+  SVN_ERR(svn_uri_get_file_url_from_dirent(repos_url, name, pool));
+  return SVN_NO_ERROR;
+}
+
+
 typedef struct mergeinfo_catalog_item {
   const char *path;
   const char *unparsed_mergeinfo;
@@ -291,14 +325,9 @@ static svn_error_t *
 test_patch(const svn_test_opts_t *opts,
            apr_pool_t *pool)
 {
-  svn_repos_t *repos;
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
   const char *repos_url;
   const char *wc_path;
   const char *cwd;
-  svn_revnum_t committed_rev;
   svn_opt_revision_t rev;
   svn_opt_revision_t peg_rev;
   svn_client_ctx_t *ctx;
@@ -333,22 +362,11 @@ test_patch(const svn_test_opts_t *opts,
     "+It is really the file 'gamma'."
   };
 
-  /* Create a filesytem and repository. */
-  SVN_ERR(svn_test__create_repos(&repos, "test-patch-repos",
-                                 opts, pool));
-  fs = svn_repos_fs(repos);
-
-  /* Prepare a txn to receive the greek tree. */
-  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, 0, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
-  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
+  /* Create a filesytem and repository containing the Greek tree. */
+  SVN_ERR(create_greek_repos(&repos_url, "test-patch-repos", opts, pool));
 
   /* Check out the HEAD revision */
   SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-patch-repos",
-                                           pool));
 
   /* Put wc inside an unversioned directory.  Checking out a 1.7 wc
      directly inside a 1.6 wc doesn't work reliably, an intervening
@@ -409,10 +427,6 @@ static svn_error_t *
 test_wc_add_scenarios(const svn_test_opts_t *opts,
                       apr_pool_t *pool)
 {
-  svn_repos_t *repos;
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
   const char *repos_url;
   const char *wc_path;
   svn_revnum_t committed_rev;
@@ -423,20 +437,9 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
   const char *ex_dir_path;
   const char *ex2_dir_path;
 
-  /* Create a filesytem and repository. */
-  SVN_ERR(svn_test__create_repos(&repos, "test-wc-add-repos",
-                                 opts, pool));
-  fs = svn_repos_fs(repos);
-
-  /* Prepare a txn to receive the greek tree. */
-  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, 0, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
-  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
-
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-wc-add-repos",
-                                           pool));
+  /* Create a filesytem and repository containing the Greek tree. */
+  SVN_ERR(create_greek_repos(&repos_url, "test-wc-add-repos", opts, pool));
+  committed_rev = 1;
 
   SVN_ERR(svn_dirent_get_absolute(&wc_path, "test-wc-add", pool));
 
@@ -556,32 +559,15 @@ static svn_error_t *
 test_copy_crash(const svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
-  svn_repos_t *repos;
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
   apr_array_header_t *sources;
-  svn_revnum_t committed_rev;
   svn_opt_revision_t rev;
   svn_client_copy_source_t source;
   svn_client_ctx_t *ctx;
   const char *dest;
   const char *repos_url;
 
-  /* Create a filesytem and repository. */
-  SVN_ERR(svn_test__create_repos(&repos, "test-copy-crash",
-                                 opts, pool));
-  fs = svn_repos_fs(repos);
-
-  /* Prepare a txn to receive the greek tree. */
-  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, 0, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
-  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
-
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-copy-crash",
-                                           pool));
+  /* Create a filesytem and repository containing the Greek tree. */
+  SVN_ERR(create_greek_repos(&repos_url, "test-copy-crash", opts, pool));
 
   svn_client_create_context(&ctx, pool);
 
@@ -605,11 +591,6 @@ static svn_error_t *
 test_16k_add(const svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
-  svn_repos_t *repos;
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-  svn_revnum_t committed_rev;
   svn_opt_revision_t rev;
   svn_client_ctx_t *ctx;
   const char *repos_url;
@@ -619,22 +600,11 @@ test_16k_add(const svn_test_opts_t *opts,
   apr_pool_t *iterpool = svn_pool_create(pool);
   int i;
 
-  /* Create a filesytem and repository. */
-  SVN_ERR(svn_test__create_repos(&repos, "test-16k-repos",
-                                 opts, pool));
-  fs = svn_repos_fs(repos);
-
-  /* Prepare a txn to receive the greek tree. */
-  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, 0, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
-  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
+  /* Create a filesytem and repository containing the Greek tree. */
+  SVN_ERR(create_greek_repos(&repos_url, "test-16k-repos", opts, pool));
 
   /* Check out the HEAD revision */
   SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-16k-repos",
-                                           pool));
 
   /* Put wc inside an unversioned directory.  Checking out a 1.7 wc
      directly inside a 1.6 wc doesn't work reliably, an intervening
