@@ -162,13 +162,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1153416  
-   Fix access to uninitialized variable in svn_wc_status3().
-   Justification:
-     Unpredicitable behavior on error condition.
-   Votes:
-     +1: ivan, rhuijben
-
 
 Veto-blocked changes:
 =====================
@@ -206,3 +199,10 @@ Approved changes:
      A repository root at / can cause ra_neon to assert.
    Votes:
      +1: philip, cmpilato, rhuijben 
+
+ * r1153416  
+   Fix access to uninitialized variable in svn_wc_status3().
+   Justification:
+     Unpredicitable behavior on error condition.
+   Votes:
+     +1: ivan, rhuijben, philip
