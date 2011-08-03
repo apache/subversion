@@ -195,7 +195,7 @@ svn_test__tree_t;
 
 
 /* The standard Greek tree, terminated by a node with path=NULL. */
-const svn_test__tree_entry_t svn_test__greek_tree_nodes[21];
+extern const svn_test__tree_entry_t svn_test__greek_tree_nodes[21];
 
 
 #ifdef __cplusplus
