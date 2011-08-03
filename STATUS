@@ -169,12 +169,30 @@ Veto-blocked changes:
  * 1.7.x-neon-default branch
    Make neon the default http library.
    Justification:
-     Serf isn't ready, new code not enabled, no proposal to enable it.
-     TortoiseSVN plans to ship with Neon as the default due to reports
-     of instability from users.  CollabNet will produce binaries with
-     Neon as the default for the same reasons.  Crash reports continue
-     to arrive on the list (for example,
-     http://svn.haxx.se/dev/archive-2011-07/0735.shtml).
+     Serf's relative stability is inferior to that of the rest of
+     Subversion, and for such a critical piece of our architecture,
+     this is unacceptable.
+
+     Subversion package producers have voiced a vote of no confidence,
+     and plan to ship with Neon as the default:
+     http://svn.haxx.se/dev/archive-2011-07/0751.shtml
+     http://svn.haxx.se/dev/archive-2011-06/0796.shtml
+
+     Bug reports of the crash variety continue to be reported:
+     http://svn.haxx.se/dev/archive-2011-07/0735.shtml
+
+     Serf floods the target server with orders of magniture more
+     requests, resulting in undesirable server log bloat.
+
+     Further, the promise of performance has not been realized:
+     https://ctf.open.collab.net/sf/wiki/do/viewPage/projects.csvn/wiki/HTTPv2 
+
+     (As an aside, Serf's potential as a platform for future
+     improvement remains unproven and doubtful.  For example, HTTPv2
+     removes canonical resource URLs, which works against the caching
+     proxy concept that seems to be the strongest argument in favor of
+     Serf's approach.  But that's not strictly germane here.)
+
      rhuijben: Trivial problems like r1153138 should have been fixed a long
      time ago if we don't want to delay releasing 1.7 on serf.
    Votes:
