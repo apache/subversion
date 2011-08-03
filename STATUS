@@ -175,8 +175,10 @@ Veto-blocked changes:
      Neon as the default for the same reasons.  Crash reports continue
      to arrive on the list (for example,
      http://svn.haxx.se/dev/archive-2011-07/0735.shtml).
+     rhuijben: Trivial problems like r1153138 should have been fixed a long
+     time ago if we don't want to delay releasing 1.7 on serf.
    Votes:
-     +1: philip, cmpilato
+     +1: philip, cmpilato, rhuijben
      -1: gstein (I see no explanation for why "serf is not ready")
 
 
