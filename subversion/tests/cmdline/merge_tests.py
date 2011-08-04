@@ -16814,7 +16814,7 @@ def merge_adds_subtree_with_mergeinfo(sbox):
                        "More work on the A_COPY branch.\n" \
                        "A faux conflict resolution.\n",
                        props={SVN_PROP_MERGEINFO :
-                              '\/A/C/nu:9-11n/A_COPY/C/nu:10'}),
+                              '/A/C/nu:9-11\n/A_COPY/C/nu:10'}),
     'D'         : Item(),
     'D/G'       : Item(),
     'D/G/pi'    : Item("This is the file 'pi'.\n"),
