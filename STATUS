@@ -178,13 +178,3 @@ Approved changes:
      this revision depends for a clean merge).
    Votes:
      +1: rhuijben, danielsh, cmpilato
-     
- * r1150327
-   Report not finding txn roots produce a 404 error in mod_dav_svn.
-   Justification:
-     Removes unneeded errors that were suppressed before.
-   Notes:
-     This error is invisible to users without the r1150254 group.
-   Votes:
-     +1: rhuijben, gstein, hwright
-     +0: danielsh
