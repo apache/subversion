@@ -219,10 +219,3 @@ Approved changes:
      this revision depends for a clean merge).
    Votes:
      +1: rhuijben, danielsh, cmpilato
-
- * r1152726
-   Make sure repository root URLs in ra_neon are canonical.
-   Justification:
-     A repository root at / can cause ra_neon to assert.
-   Votes:
-     +1: philip, cmpilato, rhuijben 
