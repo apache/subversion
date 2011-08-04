@@ -220,11 +220,3 @@ Approved changes:
      Can be too slow to be useable.
    Votes:
      +1: philip, pburba, rhuijben
-
- * r1149401
-   Fail early when attempting to build swig-pl after configuring
-   --without-swig.
-   Justification:
-     Convert mysterious error messages to a clean early exit.
-   Votes:
-     +1: danielsh, arfrever, rhuijben
