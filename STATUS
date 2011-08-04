@@ -157,6 +157,13 @@ Candidate changes:
    Votes:
      +1: rhuijben, pburba
 
+ * r1153968
+   Add --trust-server-cert option to svnrdump, too.
+   Justification:
+     Consistency with our other network tools.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
