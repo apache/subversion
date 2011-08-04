@@ -364,6 +364,8 @@ PREWRITTEN_HOOKS_TEXT
 
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating start-commit hook"));
+
+    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
   }  /* end start-commit hook */
 
   /* Pre-commit hook. */
@@ -454,6 +456,8 @@ PREWRITTEN_HOOKS_TEXT
 
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating pre-commit hook"));
+
+    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
   }  /* end pre-commit hook */
 
 
@@ -530,6 +534,8 @@ PREWRITTEN_HOOKS_TEXT
 
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating pre-revprop-change hook"));
+
+    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
   }  /* end pre-revprop-change hook */
 
 
@@ -620,6 +626,8 @@ PREWRITTEN_HOOKS_TEXT
 
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               "Creating pre-lock hook");
+
+    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
   }  /* end pre-lock hook */
 
 
@@ -702,6 +710,8 @@ PREWRITTEN_HOOKS_TEXT
 
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               "Creating pre-unlock hook");
+
+    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
   }  /* end pre-unlock hook */
 
 
@@ -762,6 +772,8 @@ PREWRITTEN_HOOKS_TEXT
 
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating post-commit hook"));
+
+    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
   } /* end post-commit hook */
 
 
@@ -823,6 +835,8 @@ PREWRITTEN_HOOKS_TEXT
 
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               "Creating post-lock hook");
+
+    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
   } /* end post-lock hook */
 
 
@@ -882,6 +896,8 @@ PREWRITTEN_HOOKS_TEXT
 
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               "Creating post-unlock hook");
+
+    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
   } /* end post-unlock hook */
 
 
@@ -948,6 +964,8 @@ PREWRITTEN_HOOKS_TEXT
 
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating post-revprop-change hook"));
+
+    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
   } /* end post-revprop-change hook */
 
   return SVN_NO_ERROR;

@@ -28,6 +28,7 @@
 import sys
 import os
 import re
+import shutil
 
 # Our testing module
 import svntest
@@ -1876,6 +1877,51 @@ def exclude_externals(sbox):
                                         None, None, None, None, False,
                                         '--set-depth', 'infinity', wc_dir)
 
+def file_externals_different_repos(sbox):
+  "update file externals via different url"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  r1_url = sbox.repo_url
+
+  r2_dir, r2_url = sbox.add_repo_path('2')
+  shutil.copytree(sbox.repo_dir, r2_dir)
+
+
+  sbox.simple_propset('svn:externals',
+                      'r1-e-1   ' + r1_url + '/iota\n' +
+                      r1_url + '/iota  r1-e-2\n' +
+                      'r2-e-1   ' + r2_url + '/iota\n' +
+                      r2_url + '/iota  r2-e-2\n' +
+                      '^/iota  rr-e-1\n', '')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'r1-e-1'            : Item(status='A '),
+    'r1-e-2'            : Item(status='A '),
+    'rr-e-1'            : Item(status='A '),
+  })
+
+  # The externals from r2 should fail, but currently pass.
+  # This creates a wc.db inconsistency
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None,
+                                        'svn: warning: W200007: Unsupported.*')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'relocate', r1_url, r2_url, wc_dir)
+
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'r2-e-1'            : Item(status='A '),
+    'r2-e-2'            : Item(status='A '),
+  })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None,
+                                        'svn: warning: W200007: Unsupported.*')
+
+
 ########################################################################
 # Run the tests
 
@@ -1914,6 +1960,7 @@ test_list = [ None,
               incoming_file_on_file_external,
               incoming_file_external_on_file,
               exclude_externals,
+              file_externals_different_repos,
              ]
 
 if __name__ == '__main__':

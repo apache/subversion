@@ -121,7 +121,8 @@ int main()
               if test "$shared_linking" = "no"; then
                 NEON_LIBS=`$PKG_CONFIG neon --libs --static`
                 LIBS="$LIBS $NEON_LIBS"
-                AC_LINK_IFELSE([AC_LANG_SOURCE([[$neon_test_code]])], , AC_MSG_ERROR([cannot find Neon]))
+                AC_LINK_IFELSE([AC_LANG_SOURCE([[$neon_test_code]])], ,
+                               AC_MSG_ERROR([cannot find a usable Neon library]))
               fi
               CFLAGS="$old_CFLAGS"
               LIBS="$old_LIBS"

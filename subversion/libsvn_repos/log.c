@@ -1771,7 +1771,7 @@ store_search(svn_mergeinfo_t processed,
    do_logs()/send_logs()/handle_merge_revisions() recursions, see also the
    argument of the same name in send_logs().
 
-   If PROCESSED is a mergeinfo hash that represents the paths and
+   PROCESSED is a mergeinfo hash that represents the paths and
    revisions that have already been searched.  Allocated like
    NESTED_MERGES above.
 
