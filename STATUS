@@ -155,7 +155,7 @@ Candidate changes:
      This just replaces the assertion with a proper error. You should
      pass PATH@rev for this to work.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, pburba
 
 Veto-blocked changes:
 =====================
