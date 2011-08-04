@@ -81,12 +81,6 @@ public class BasicTests extends SVNTests
         }
     }
 
-    public void testDispose() throws Throwable
-    {
-      SVNClient cl = new SVNClient();
-      cl.dispose();
-    }
-
     /**
      * Test LogDate().
      * @throws Throwable
