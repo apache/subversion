@@ -74,15 +74,6 @@ Candidate changes:
      -0: stsp (Arfrever, can you please explain precisely what use case you
                have for this code? Why do you need it in the release, or
                on trunk, for that matter?)
-
- * r1149627
-   Adjust library order in build.conf for kwallet/gnome-keyring.
-   Justification:
-     Fixes "make install DESTDIR=..." which is used by packagers.  I suspect
-     this is not a regression.
-   Votes:
-     +1: philip, danielsh
-     +0: cmpilato
      
  * r1150327
    Report not finding txn roots produce a 404 error in mod_dav_svn.
@@ -91,7 +82,7 @@ Candidate changes:
    Notes:
      This error is invisible to users without the r1150254 group.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, gstein
      +0: danielsh
      
  * r1150254, r1150260, r1150261, r1150266
@@ -107,7 +98,7 @@ Candidate changes:
      r1150266: Return editor abort errors when the commit processing aborts.
    Votes:
      +1: rhuijben (after r1150302 and r1150327 are backported)
-     +1: danielsh
+     +1: danielsh, gstein
      
  * r1150368
    Resolve an obscure locked file problem when aborting a commit.
@@ -127,6 +118,8 @@ Candidate changes:
    Votes:
      +0: danielsh (r1151055 only)
      +1: pburba, rhuijben
+     -0: the serf 2.x API will be incompatible with 1.7.x, so this will
+         never be useful
 
  * r1152189, r1152190
    Fix an assertion on copying nodes that are not presence normal.
@@ -136,7 +129,8 @@ Candidate changes:
      Easy to trigger problem in tree conflict situations.
    Votes:
      +1: rhuijben
-     +1: philip (the branch)
+     +1: philip, gstein (the branch solves a merge conflict that arises
+                         when applying r1152190)
 
  * r1153138, r1153141
    Don't CHECKOUT added directories when using a HTTPv1 server.
@@ -145,24 +139,14 @@ Candidate changes:
    Notes:
      r1153141 removes an accidentally added SVN_DBG() from r1153138.
    Votes:
-     +1: rhuijben
-
- * r1152140
-   Resolve assertion when performing svn merge --reintegrate PATH .
-   Justification:
-     User triggerable assertions are bad.
-   Notes:
-     This just replaces the assertion with a proper error. You should
-     pass PATH@rev for this to work.
-   Votes:
-     +1: rhuijben, pburba
+     +1: rhuijben, gstein
 
  * r1153968
    Add --trust-server-cert option to svnrdump, too.
    Justification:
      Consistency with our other network tools.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, gstein
      +0: danielsh
 
 Veto-blocked changes:
@@ -208,7 +192,9 @@ Veto-blocked changes:
      by some HTTP proxies.
    Votes:
      +1: philip, cmpilato, rhuijben, markphip
-     -1: gstein (I see no explanation for why "serf is not ready")
+     -1: gstein (this backs away from previous discussions stating that
+                 serf is the desired future layer; the issue tracker has
+                 been free of 1.7.0 serf-related bugs for a while now)
 
 
 Approved changes:
@@ -223,3 +209,22 @@ Approved changes:
      this revision depends for a clean merge).
    Votes:
      +1: rhuijben, danielsh, cmpilato
+
+ * r1152140
+   Resolve assertion when performing svn merge --reintegrate PATH .
+   Justification:
+     User triggerable assertions are bad.
+   Notes:
+     This just replaces the assertion with a proper error. You should
+     pass PATH@rev for this to work.
+   Votes:
+     +1: rhuijben, pburba, gstein
+
+ * r1149627
+   Adjust library order in build.conf for kwallet/gnome-keyring.
+   Justification:
+     Fixes "make install DESTDIR=..." which is used by packagers.  I suspect
+     this is not a regression.
+   Votes:
+     +1: philip, danielsh, gstein
+     +0: cmpilato
