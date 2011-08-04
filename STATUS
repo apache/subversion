@@ -209,12 +209,3 @@ Approved changes:
      this revision depends for a clean merge).
    Votes:
      +1: rhuijben, danielsh, cmpilato
-
- * r1149627
-   Adjust library order in build.conf for kwallet/gnome-keyring.
-   Justification:
-     Fixes "make install DESTDIR=..." which is used by packagers.  I suspect
-     this is not a regression.
-   Votes:
-     +1: philip, danielsh, gstein
-     +0: cmpilato
