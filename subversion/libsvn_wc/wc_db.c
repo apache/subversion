@@ -1547,7 +1547,7 @@ svn_wc__db_get_wcroot(const char **wcroot_abspath,
 
   if (wcroot == NULL)
     return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                             _("The node '%s' is not in a workingcopy."),
+                             _("The node '%s' is not in a working copy."),
                              svn_dirent_local_style(wri_abspath,
                                                     scratch_pool));
 
