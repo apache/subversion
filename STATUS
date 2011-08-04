@@ -210,16 +210,6 @@ Approved changes:
    Votes:
      +1: rhuijben, danielsh, cmpilato
 
- * r1152140
-   Resolve assertion when performing svn merge --reintegrate PATH .
-   Justification:
-     User triggerable assertions are bad.
-   Notes:
-     This just replaces the assertion with a proper error. You should
-     pass PATH@rev for this to work.
-   Votes:
-     +1: rhuijben, pburba, gstein
-
  * r1149627
    Adjust library order in build.conf for kwallet/gnome-keyring.
    Justification:
