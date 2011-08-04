@@ -215,10 +215,3 @@ Approved changes:
      this revision depends for a clean merge).
    Votes:
      +1: rhuijben, danielsh, cmpilato
-
- * r1153799, r1153807
-   Fixes a segfault in JavaHL when the dispose() method is used.
-   Justification:
-     Users are supposed to call dispose, and crashes are bad.
-   Votes:
-    +1: rhuijben, markphip

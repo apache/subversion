@@ -3343,6 +3343,16 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test an explicit expose of SVNClient.
+     * (This used to cause a fatal exception in the Java Runtime)
+     */
+    public void testDispose() throws Throwable
+    {
+      SVNClient cl = new SVNClient();
+      cl.dispose();
+    }
+
+    /**
      * @return <code>file</code> converted into a -- possibly
      * <code>canonical</code>-ized -- Subversion-internal path
      * representation.
