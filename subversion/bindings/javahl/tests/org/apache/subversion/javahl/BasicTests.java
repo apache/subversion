@@ -81,6 +81,12 @@ public class BasicTests extends SVNTests
         }
     }
 
+    public void testDispose() throws Throwable
+    {
+      SVNClient cl = new SVNClient();
+      cl.dispose();
+    }
+
     /**
      * Test LogDate().
      * @throws Throwable
@@ -3340,6 +3346,16 @@ public class BasicTests extends SVNTests
             assertEquals("revprops check", revprops.get(key),
                          new String(fetchedProps.get(key)));
           }
+    }
+
+    /**
+     * Test an explicit expose of SVNClient.
+     * (This used to cause a fatal exception in the Java Runtime)
+     */
+    public void testDispose() throws Throwable
+    {
+      SVNClient cl = new SVNClient();
+      cl.dispose();
     }
 
     /**
