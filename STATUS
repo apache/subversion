@@ -196,6 +196,8 @@ Veto-blocked changes:
      potentially lacks some of the features and is generally considerably
      slower than Neon.
 
+     Serf's use of chunked transfer encoding means that it isn't supported
+     by some HTTP proxies.
    Votes:
      +1: philip, cmpilato, rhuijben, markphip
      -1: gstein (I see no explanation for why "serf is not ready")
