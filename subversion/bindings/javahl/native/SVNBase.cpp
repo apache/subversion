@@ -57,14 +57,17 @@ jlong SVNBase::findCppAddrForJObject(jobject jthis, jfieldID *fid,
       if (JNIUtil::isJavaExceptionThrown())
         return 0;
 
-      /* jthis is not guaranteed to be the same between JNI invocations, so
-         we do a little dance here and store the updated version in our
-         object for this invocation.
+      if (cppAddr)
+        {
+          /* jthis is not guaranteed to be the same between JNI invocations, so
+             we do a little dance here and store the updated version in our
+             object for this invocation.
 
-         findCppAddrForJObject() is, by necessity, called before any other
-         methods on the C++ object, so by doing this we can guarantee a valid
-         jthis pointer for subsequent uses. */
-      (reinterpret_cast<SVNBase *> (cppAddr))->jthis = jthis;
+             findCppAddrForJObject() is, by necessity, called before any other
+             methods on the C++ object, so by doing this we can guarantee a
+             valid jthis pointer for subsequent uses. */
+          (reinterpret_cast<SVNBase *> (cppAddr))->jthis = jthis;
+        }
       return cppAddr;
     }
 }

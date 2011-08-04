@@ -2118,12 +2118,6 @@ svn_io_remove_file2(const char *path,
   apr_status_t apr_err;
   const char *path_apr;
 
-#if defined(WIN32) || defined(__OS2__)
-  /* Set the file writable but only on Windows & OS/2, because Windows and OS/2
-     will not allow us to remove files that are read-only. */
-  SVN_ERR(svn_io_set_file_read_write(path, TRUE, scratch_pool));
-#endif /* WIN32 */
-
   SVN_ERR(cstring_from_utf8(&path_apr, path, scratch_pool));
 
   apr_err = apr_file_remove(path_apr, scratch_pool);
@@ -2132,6 +2126,19 @@ svn_io_remove_file2(const char *path,
     return SVN_NO_ERROR;
 
 #ifdef WIN32
+  /* If the target is read only NTFS reports EACCESS and FAT/FAT32
+     reports EEXIST */
+  if (APR_STATUS_IS_EACCES(apr_err) || APR_STATUS_IS_EEXIST(apr_err))
+    {
+      /* Set the destination file writable because Windows will not
+         allow us to delete when path is read-only */
+      SVN_ERR(svn_io_set_file_read_write(path, ignore_enoent, scratch_pool));
+      apr_err = apr_file_remove(path_apr, scratch_pool);
+
+      if (!apr_err)
+        return SVN_NO_ERROR;
+    }
+
     {
       apr_status_t os_err = APR_TO_OS_ERROR(apr_err);
       /* Check to make sure we aren't trying to delete a directory */
