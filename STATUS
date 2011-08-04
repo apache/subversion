@@ -188,16 +188,3 @@ Approved changes:
    Votes:
      +1: rhuijben, gstein, hwright
      +0: danielsh
-     
- * r1150368
-   Resolve an obscure locked file problem when aborting a commit.
-   Justification:
-     Transaction cleanup should succeed or temp files will accumulate
-     on a server. And locks (the needle file) should be released as soon as
-     possible.
-   Notes:
-     rhuijben: This bug triggered my weekend search for locked files problems.
-   Votes:
-     +1: rhuijben, cmpilato, hwright
-     +0: danielsh (we shouldn't depend on libsvn_client fixes to avoid
-                   accumulating tempfiles on the server)

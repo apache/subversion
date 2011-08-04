@@ -1845,11 +1845,14 @@ svn_client__do_commit(const char *base_url,
                                          result_pool, iterpool);
 
       if (err)
-        return svn_error_trace(fixup_commit_error(item->path,
-                                                  base_url,
-                                                  item->session_relpath,
-                                                  svn_node_file,
-                                                  err, ctx, iterpool));
+        {
+          svn_pool_destroy(iterpool); /* Close tempfiles */
+          return svn_error_trace(fixup_commit_error(item->path,
+                                                    base_url,
+                                                    item->session_relpath,
+                                                    svn_node_file,
+                                                    err, ctx, scratch_pool));
+        }
 
       if (md5_checksums)
         apr_hash_set(*md5_checksums, item->path, APR_HASH_KEY_STRING,
