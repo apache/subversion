@@ -7755,6 +7755,9 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
 
    DEPTH, NOTIFY_B, MERGE_B, and SQUELCH_MERGEINFO_NOTIFICATIONS, are
    cascaded from do_directory_merge's arguments of the same names.
+
+   Note: This is intended to support forward merges only, i.e.
+   MERGED_RANGE->START must be older than MERGED_RANGE->END.
 */
 static svn_error_t *
 record_mergeinfo_for_added_subtrees(
@@ -7772,6 +7775,8 @@ record_mergeinfo_for_added_subtrees(
   /* If no paths were added by the merge then we have nothing to do. */
   if (!notify_b->added_abspaths)
     return SVN_NO_ERROR;
+
+  SVN_ERR_ASSERT(merged_range->start < merged_range->end);
 
   iterpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, notify_b->added_abspaths); hi;
@@ -8604,7 +8609,9 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
          So here we look at the root path of each subtree added during the
          merge and set explicit mergeinfo on it if it meets the aforementioned
          conditions. */
-      if (err == SVN_NO_ERROR)
+      if (err == SVN_NO_ERROR
+          && (range.start < range.end)) /* Nothing to record on added subtrees
+                                           resulting from reverse merges. */
         {
           err = record_mergeinfo_for_added_subtrees(
                   &range, mergeinfo_path, depth,
