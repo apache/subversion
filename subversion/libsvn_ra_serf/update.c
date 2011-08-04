@@ -118,7 +118,7 @@ typedef struct report_dir_t
   /* the canonical url for this directory after updating. (received) */
   const char *url;
 
-  /* The original repos_relpath of this url (from the workingcopy)
+  /* The original repos_relpath of this url (from the working copy)
      or NULL if the repos_relpath can be calculated from the edit root. */
   const char *repos_relpath;
 
