@@ -75,14 +75,6 @@ Candidate changes:
                have for this code? Why do you need it in the release, or
                on trunk, for that matter?)
 
- * r1149401
-   Fail early when attempting to build swig-pl after configuring
-   --without-swig.
-   Justification:
-     Convert mysterious error messages to a clean early exit.
-   Votes:
-     +1: danielsh, arfrever
-
  * r1149627
    Adjust library order in build.conf for kwallet/gnome-keyring.
    Justification:
@@ -134,7 +126,7 @@ Candidate changes:
    Allow building with serf trunk on windows.
    Votes:
      +0: danielsh (r1151055 only)
-     +1: pburba
+     +1: pburba, rhuijben
 
  * r1152189, r1152190
    Fix an assertion on copying nodes that are not presence normal.
@@ -146,13 +138,6 @@ Candidate changes:
      +1: rhuijben
      +1: philip (the branch)
 
- * r1152282
-   Improve performance of "log -g".
-   Justification:
-     Can be too slow to be useable.
-   Votes:
-     +1: philip, pburba
-
  * r1153138, r1153141
    Don't CHECKOUT added directories when using a HTTPv1 server.
    Justification:
@@ -162,6 +147,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1152140
+   Resolve assertion when performing svn merge --reintegrate PATH .
+   Justification:
+     User triggerable assertions are bad.
+   Notes:
+     This just replaces the assertion with a proper error. You should
+     pass PATH@rev for this to work.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
@@ -219,3 +213,18 @@ Approved changes:
      this revision depends for a clean merge).
    Votes:
      +1: rhuijben, danielsh, cmpilato
+
+ * r1152282
+   Improve performance of "log -g".
+   Justification:
+     Can be too slow to be useable.
+   Votes:
+     +1: philip, pburba, rhuijben
+
+ * r1149401
+   Fail early when attempting to build swig-pl after configuring
+   --without-swig.
+   Justification:
+     Convert mysterious error messages to a clean early exit.
+   Votes:
+     +1: danielsh, arfrever, rhuijben
