@@ -154,21 +154,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1150254, r1150260, r1150261, r1150266
-   Return errors by composing instead of ignoring them.
-   Justification:
-     Returning more errors makes it much easier to diagnose problems.
-   Notes:
-     This patchgroup contains a few patches that together enable seeing
-     a few previous invisible error chains.
-     r1150254: Improve error handling in svn_wc__internal_transmit_text_deltas.
-     r1150260: Return txn unlock errors from fsfs.
-     r1150261: Return txn abort errors when the editor decides to abort itself.
-     r1150266: Return editor abort errors when the commit processing aborts.
-   Votes:
-     +1: rhuijben (after r1150302 and r1150327 are backported)
-     +1: danielsh, gstein
-
  * r1150302
    Avoid closing fs txns multiple times.
    Justification:

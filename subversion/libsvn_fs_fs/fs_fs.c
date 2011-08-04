@@ -826,8 +826,10 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
 
   if (err)
     {
-      svn_error_clear(unlock_proto_rev_list_locked(fs, txn_id, *lockcookie,
-                                                   pool));
+      err = svn_error_compose_create(
+              err,
+              unlock_proto_rev_list_locked(fs, txn_id, *lockcookie, pool));
+      
       *lockcookie = NULL;
     }
 

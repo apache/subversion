@@ -1453,7 +1453,8 @@ svn_client_commit5(const apr_array_header_t *targets,
   /* Abort the commit if it is still in progress. */
   svn_pool_clear(iterpool); /* Close open handles before aborting */
   if (commit_in_progress)
-    svn_error_clear(editor->abort_edit(edit_baton, pool));
+    cmt_err = svn_error_compose_create(cmt_err,
+                                       editor->abort_edit(edit_baton, pool));
 
   /* A bump error is likely to occur while running a working copy log file,
      explicitly unlocking and removing temporary files would be wrong in
