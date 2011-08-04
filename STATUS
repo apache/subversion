@@ -201,11 +201,3 @@ Approved changes:
      +1: rhuijben, cmpilato, hwright
      +0: danielsh (we shouldn't depend on libsvn_client fixes to avoid
                    accumulating tempfiles on the server)
-
- * r1153968
-   Add --trust-server-cert option to svnrdump, too.
-   Justification:
-     Consistency with our other network tools.
-   Votes:
-     +1: cmpilato, gstein, hwright
-     +0: danielsh
