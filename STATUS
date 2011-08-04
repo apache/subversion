@@ -213,10 +213,3 @@ Approved changes:
      this revision depends for a clean merge).
    Votes:
      +1: rhuijben, danielsh, cmpilato
-
- * r1152282
-   Improve performance of "log -g".
-   Justification:
-     Can be too slow to be useable.
-   Votes:
-     +1: philip, pburba, rhuijben
