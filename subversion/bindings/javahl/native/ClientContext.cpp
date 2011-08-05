@@ -158,7 +158,7 @@ ClientContext::getContext(CommitMessage *message, SVN::Pool &in_pool)
     if (!ctx->config)
       {
         const char *configDir = m_configDir.c_str();
-        if (m_configDir.length() == 0)
+        if (m_configDir.empty())
             configDir = NULL;
         SVN_JNI_ERR(svn_config_get_config(&(ctx->config), configDir,
                                           m_pool->getPool()),
@@ -254,10 +254,17 @@ ClientContext::getContext(CommitMessage *message, SVN::Pool &in_pool)
      * auth_baton's run-time parameter hash.  ### Same with --no-auth-cache? */
     if (!m_userName.empty())
         svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_USERNAME,
-                               m_userName.c_str());
+                               apr_pstrdup(in_pool.getPool(),
+                                           m_userName.c_str()));
     if (!m_passWord.empty())
         svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
-                               m_passWord.c_str());
+                               apr_pstrdup(in_pool.getPool(),
+                                           m_passWord.c_str()));
+    /* Store where to retrieve authentication data? */
+    if (!m_configDir.empty())
+        svn_auth_set_parameter(ab, SVN_AUTH_PARAM_CONFIG_DIR,
+                               apr_pstrdup(in_pool.getPool(),
+                                           m_configDir.c_str()));
 
     ctx->auth_baton = ab;
     ctx->log_msg_baton3 = message;
