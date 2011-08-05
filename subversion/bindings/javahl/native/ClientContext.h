@@ -48,6 +48,7 @@ class ClientContext
 {
  private:
   svn_client_ctx_t *m_context;
+  const SVN::Pool *m_pool;
   jobject m_jctx;
 
   std::string m_userName;
