@@ -42,23 +42,14 @@ namespace SVN {
     Pool(const Pool &parent_pool);
     Pool(apr_pool_t *parent_pool);
     ~Pool();
-    apr_pool_t *pool() const;
+    apr_pool_t *getPool() const;
     void clear() const;
-
-  public:
-    apr_pool_t* getPool();
 
   private:
     /**
      * The apr pool request pool.
      */
     apr_pool_t *m_pool;
-
-    /**
-     * Boolean indicating whether this pool is a request pool vs just a normal
-     * subpool.
-     */
-    bool m_request_pool;
 
     /**
      * We declare the assignment operator private here, so that the compiler
@@ -76,7 +67,7 @@ namespace SVN {
   // need to be implemented in the header file for that to happen.
 
   inline
-  apr_pool_t *Pool::pool() const
+  apr_pool_t *Pool::getPool() const
   {
     return m_pool;
   }

@@ -133,6 +133,7 @@ class JNIUtil
   static apr_pool_t *getPool();
   static bool JNIGlobalInit(JNIEnv *env);
   static bool JNIInit(JNIEnv *env);
+  static bool initializeJNIRuntime();
   enum { formatBufferSize = 2048 };
   enum { noLog, errorLog, exceptionLog, entryLog } LogLevel;
 
