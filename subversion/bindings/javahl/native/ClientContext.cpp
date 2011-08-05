@@ -95,6 +95,9 @@ ClientContext::~ClientContext()
 {
     delete m_prompter;
 
+    // close the sqlite databae
+    svn_error_clear(svn_wc_context_destroy(persistentCtx->wc_ctx));
+
     JNIEnv *env = JNIUtil::getEnv();
     env->DeleteGlobalRef(m_jctx);
 }
