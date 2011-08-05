@@ -1229,6 +1229,12 @@ if test "$svn_enable_shared" = "no" || test "$use_dso" != "yes"; then
   svn_fs_lib_install_deps="install-fsmod-lib"
   svn_fs_lib_link="\$(FS_FS_LINK)"
 
+  AC_DEFINE(SVN_LIBSVN_FS_LINKS_FS_PY, 1,
+      [Defined if libsvn_fs should link against libsvn_fs_py])
+  svn_fs_lib_deps="$svn_fs_lib_deps \$(FS_PY_DEPS)"
+  svn_fs_lib_install_deps="$svn_fs_lib_install_deps install-fspy-lib"
+  svn_fs_lib_link="$svn_fs_lib_link \$(FS_PY_LINK)"
+
   if test "$svn_lib_berkeley_db" = "yes"; then
   AC_DEFINE(SVN_LIBSVN_FS_LINKS_FS_BASE, 1,
       [Defined if libsvn_fs should link against libsvn_fs_base])
