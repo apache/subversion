@@ -29,6 +29,7 @@
 
 #include <string>
 #include <jni.h>
+#include "Pool.h"
 struct svn_error_t;
 
 /**
@@ -47,7 +48,7 @@ class Path
    *
    * @param pi_path Path string
    */
-  void init(const char *pi_path);
+  void init(const char *pi_path, SVN::Pool &in_pool);
 
  public:
   /**
@@ -57,7 +58,7 @@ class Path
    *
    * @param pi_path Path string
    */
-  Path(const std::string &pi_path = "");
+  Path(const std::string &pi_path, SVN::Pool &in_pool);
 
   /**
    * Constructor
@@ -65,14 +66,14 @@ class Path
    * @see Path::Path (const std::string &)
    * @param pi_path Path string
    */
-  Path(const char *pi_path);
+  Path(const char *pi_path, SVN::Pool &in_pool);
 
   /**
    * Copy constructor
    *
    * @param pi_path Path to be copied
    */
-  Path(const Path &pi_path);
+  Path(const Path &pi_path, SVN::Pool &in_pool);
 
   /**
    * Assignment operator

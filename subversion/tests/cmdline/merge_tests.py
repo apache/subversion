@@ -16838,6 +16838,140 @@ def merge_adds_subtree_with_mergeinfo(sbox):
                                        None, None, None, None,
                                        None, 1, False)
 
+#----------------------------------------------------------------------
+# A test for issue #3978 'reverse merge which adds subtree fails'.
+@Issue(3978)
+@SkipUnless(server_has_mergeinfo)
+def reverse_merge_adds_subtree(sbox):
+  "reverse merge adds subtree"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  A_path       = os.path.join(wc_dir, 'A')
+  chi_path     = os.path.join(wc_dir, 'A', 'D', 'H', 'chi')
+  A_COPY_path  = os.path.join(wc_dir, 'A_COPY')
+  H_COPY_path  = os.path.join(wc_dir, 'A_COPY', 'D', 'H')
+
+  # r7 - Delete A\D\H\chi
+  svntest.actions.run_and_verify_svn(None, None, [], 'delete', chi_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Delete a file', wc_dir)
+
+  # r8 - Merge r7 from A to A_COPY
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A',
+                                     A_COPY_path, '-c7')
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Cherry-pick r7 from A to A_COPY', wc_dir)
+
+  # r9 - File depth sync merge from A/D/H to A_COPY/D/H/
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A/D/H',
+                                     H_COPY_path, '--depth', 'files')
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Cherry-pick r7 from A to A_COPY', wc_dir)
+
+  # Reverse merge r7 from A to A_COPY
+  #
+  # Prior to the issue #3978 fix this merge failed with an assertion:
+  #
+  # >svn merge ^/A A_COPY -c-7
+  # --- Reverse-merging r7 into 'A_COPY\D\H':
+  # A    A_COPY\D\H\chi
+  # --- Recording mergeinfo for reverse merge of r7 into 'A_COPY':
+  #  U   A_COPY
+  # --- Recording mergeinfo for reverse merge of r7 into 'A_COPY\D\H':
+  #  U   A_COPY\D\H
+  # ..\..\..\subversion\svn\util.c:913: (apr_err=200020)
+  # ..\..\..\subversion\libsvn_client\merge.c:10990: (apr_err=200020)
+  # ..\..\..\subversion\libsvn_client\merge.c:10944: (apr_err=200020)
+  # ..\..\..\subversion\libsvn_client\merge.c:10944: (apr_err=200020)
+  # ..\..\..\subversion\libsvn_client\merge.c:10914: (apr_err=200020)
+  # ..\..\..\subversion\libsvn_client\merge.c:8928: (apr_err=200020)
+  # ..\..\..\subversion\libsvn_client\merge.c:7850: (apr_err=200020)
+  # ..\..\..\subversion\libsvn_client\mergeinfo.c:120: (apr_err=200020)
+  # ..\..\..\subversion\libsvn_wc\props.c:2472: (apr_err=200020)
+  # ..\..\..\subversion\libsvn_wc\props.c:2247: (apr_err=200020)
+  # ..\..\..\subversion\libsvn_wc\props.c:2576: (apr_err=200020)
+  # ..\..\..\subversion\libsvn_subr\mergeinfo.c:705: (apr_err=200020)
+  # svn: E200020: Could not parse mergeinfo string '-7'
+  # ..\..\..\subversion\libsvn_subr\mergeinfo.c:688: (apr_err=200022)
+  # ..\..\..\subversion\libsvn_subr\mergeinfo.c:607: (apr_err=200022)
+  # ..\..\..\subversion\libsvn_subr\mergeinfo.c:504: (apr_err=200022)
+  # ..\..\..\subversion\libsvn_subr\kitchensink.c:57: (apr_err=200022)
+  # svn: E200022: Negative revision number found parsing '-7'
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = wc.State(A_COPY_path, {
+    'D/H/chi' : Item(status='A '),
+    })
+  expected_mergeinfo_output = wc.State(A_COPY_path, {
+    ''    : Item(status=' U'),
+    'D/H' : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_COPY_path, {
+    '' : Item(status=' U'),
+    })
+  expected_status = wc.State(A_COPY_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='  '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='  '),
+    'B/lambda'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status=' M'),
+    'D/H/chi'   : Item(status='A ', copied='+'),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=9)
+  expected_status.tweak('D/H/chi', wc_rev='-')
+  expected_disk = wc.State('', {
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("This is the file 'rho'.\n"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:2-6*,8*'}),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("New content",
+                       props={SVN_PROP_MERGEINFO : '/A/D/H/psi:2-8'}),
+    'D/H/omega' : Item("New content",
+                       props={SVN_PROP_MERGEINFO : '/A/D/H/omega:2-8'}),
+    })
+  expected_skip = wc.State('.', { })
+  svntest.actions.run_and_verify_merge(A_COPY_path, 7, 6,
+                                       sbox.repo_url + '/A', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, False)
+
 ########################################################################
 # Run the tests
 
@@ -16963,6 +17097,7 @@ test_list = [ None,
               dry_run_merge_conflicting_binary,
               foreign_repos_prop_conflict,
               merge_adds_subtree_with_mergeinfo,
+              reverse_merge_adds_subtree,
              ]
 
 if __name__ == '__main__':
