@@ -75,7 +75,7 @@ class ClientContext
 
   static svn_error_t *checkCancel(void *cancelBaton);
 
-  svn_client_ctx_t *getContext(CommitMessage *message);
+  svn_client_ctx_t *getContext(CommitMessage *message, SVN::Pool &in_pool);
 
   void username(const char *pi_username);
   void password(const char *pi_password);

@@ -37,7 +37,6 @@
 SVN::Pool::Pool()
 {
   m_pool = svn_pool_create(JNIUtil::getPool());
-  JNIUtil::setRequestPool(this);
   m_request_pool = true;
 }
 
@@ -59,9 +58,6 @@ SVN::Pool::Pool(apr_pool_t *parent_pool)
  */
 SVN::Pool::~Pool()
 {
-  if (m_request_pool)
-    JNIUtil::setRequestPool(NULL);
-
   if (m_pool)
     {
       svn_pool_destroy(m_pool);
