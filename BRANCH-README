@@ -1,0 +1,22 @@
+This branch exists to attempt an implementation of the FSFS library in pure
+Python.  While some probably think that is crazy talk (and rightly so!) a
+number of people I've talked to over the past few weeks have been quite
+interested.  My main motivation in doing so is that it gives us a starting
+point to rapidly prototype new FS implementation ideas.
+
+I don't know that this work will every migrate back to trunk, but I'm putting
+it in the repo in the hopes that other interested souls can take a look and
+that it may one day be useful to somebody besides myself.  Plus, I like using
+version control. :)
+
+The overarching goal is to have a python module which implements a FS object
+which could then be used to interact with a FS filesystem directly, or via
+some higher-level repository layer.  To facilitate that, as well make
+development and testing easier, this is being done by embedding the Python
+implementation into a new library, libsvn_fs_py.  This library will have the
+same C interface as any other FS-level library, so should be easily testable
+using the existing test suite.
+
+The main tasks involve implementing each one of the fs_library_vtable_t and
+fs_vtable_t functions as Python methods, along with all the underlying
+support machinery.  We'll see how far it gets.
