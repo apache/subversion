@@ -459,7 +459,7 @@ class TestHarness:
                                           test_name=progbase,
                                           progress_func=prog_f,
                                           test_selection=test_selection)
-    except svntest.main.SVNProcessTerminatedBySignal:
+    except svntest.Failure:
       if self.log:
         os.write(old_stdout, '.' * dot_count)
       failed = True
