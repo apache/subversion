@@ -453,11 +453,16 @@ class TestHarness:
     else:
       test_selection = []
 
-    failed = svntest.main.execute_tests(prog_mod.test_list,
-                                        serial_only=serial_only,
-                                        test_name=progbase,
-                                        progress_func=prog_f,
-                                        test_selection=test_selection)
+    try:
+      failed = svntest.main.execute_tests(prog_mod.test_list,
+                                          serial_only=serial_only,
+                                          test_name=progbase,
+                                          progress_func=prog_f,
+                                          test_selection=test_selection)
+    except svntest.main.SVNProcessTerminatedBySignal:
+      if self.log:
+        os.write(old_stdout, '.' * dot_count)
+      failed = True
 
     # restore some values
     sys.path = old_path
