@@ -144,6 +144,9 @@ typedef svn_error_t *(*fs_init_func_t)(const svn_version_t *loader_version,
 svn_error_t *svn_fs_base__init(const svn_version_t *loader_version,
                                fs_library_vtable_t **vtable,
                                apr_pool_t* common_pool);
+svn_error_t *svn_fs_py__init(const svn_version_t *loader_version,
+                             fs_library_vtable_t **vtable,
+                             apr_pool_t* common_pool);
 svn_error_t *svn_fs_fs__init(const svn_version_t *loader_version,
                              fs_library_vtable_t **vtable,
                              apr_pool_t* common_pool);
