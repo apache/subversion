@@ -40,7 +40,7 @@ Targets::Targets(const char *path, SVN::Pool &in_pool)
     : m_subpool(in_pool)
 {
   m_strArray = NULL;
-  m_targets.push_back (apr_pstrdup(m_subpool.pool(), path));
+  m_targets.push_back (apr_pstrdup(m_subpool.getPool(), path));
   m_error_occured = NULL;
 }
 
@@ -59,7 +59,7 @@ const apr_array_header_t *Targets::array(const SVN::Pool &pool)
       for (it = vec.begin(); it < vec.end(); ++it)
         {
           const char *tt = it->c_str();
-          svn_error_t *err = JNIUtil::preprocessPath(tt, pool.pool());
+          svn_error_t *err = JNIUtil::preprocessPath(tt, pool.getPool());
           if (err != NULL)
             {
               m_error_occured = err;
@@ -71,7 +71,7 @@ const apr_array_header_t *Targets::array(const SVN::Pool &pool)
 
   std::vector<const char*>::const_iterator it;
 
-  apr_pool_t *apr_pool = pool.pool ();
+  apr_pool_t *apr_pool = pool.getPool();
   apr_array_header_t *apr_targets = apr_array_make (apr_pool,
                                                     m_targets.size(),
                                                     sizeof(const char *));
@@ -80,7 +80,7 @@ const apr_array_header_t *Targets::array(const SVN::Pool &pool)
     {
       const char *target = *it;
 
-      svn_error_t *err = JNIUtil::preprocessPath(target, pool.pool());
+      svn_error_t *err = JNIUtil::preprocessPath(target, pool.getPool());
       if (err != NULL)
         {
             m_error_occured = err;

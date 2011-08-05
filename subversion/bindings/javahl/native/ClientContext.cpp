@@ -236,7 +236,7 @@ ClientContext::setConfigDirectory(const char *configDir)
     // A change to the config directory may necessitate creation of
     // the config templates.
     SVN::Pool requestPool;
-    SVN_JNI_ERR(svn_config_ensure(configDir, requestPool.pool()), );
+    SVN_JNI_ERR(svn_config_ensure(configDir, requestPool.getPool()), );
 
     m_configDir = (configDir == NULL ? "" : configDir);
 }

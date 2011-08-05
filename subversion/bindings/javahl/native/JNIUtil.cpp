@@ -636,7 +636,7 @@ JNIUtil::thrownExceptionToCString(SVN::Pool &in_pool)
         }
       jstring jmsg = (jstring) env->CallObjectMethod(t, getMessage);
       JNIStringHolder tmp(jmsg);
-      msg = tmp.pstrdup(in_pool.pool());
+      msg = tmp.pstrdup(in_pool.getPool());
       // ### Conditionally add t.printStackTrace() to msg?
     }
   else

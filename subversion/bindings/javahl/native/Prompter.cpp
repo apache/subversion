@@ -363,7 +363,7 @@ bool Prompter::prompt(const char *realm, const char *pi_username, bool maySave)
 
 svn_auth_provider_object_t *Prompter::getProviderSimple(SVN::Pool &in_pool)
 {
-  apr_pool_t *pool = in_pool.pool();
+  apr_pool_t *pool = in_pool.getPool();
   svn_auth_provider_object_t *provider;
   svn_auth_get_simple_prompt_provider(&provider,
                                       simple_prompt,
@@ -376,7 +376,7 @@ svn_auth_provider_object_t *Prompter::getProviderSimple(SVN::Pool &in_pool)
 
 svn_auth_provider_object_t *Prompter::getProviderUsername(SVN::Pool &in_pool)
 {
-  apr_pool_t *pool = in_pool.pool();
+  apr_pool_t *pool = in_pool.getPool();
   svn_auth_provider_object_t *provider;
   svn_auth_get_username_prompt_provider(&provider,
                                         username_prompt,
@@ -389,7 +389,7 @@ svn_auth_provider_object_t *Prompter::getProviderUsername(SVN::Pool &in_pool)
 
 svn_auth_provider_object_t *Prompter::getProviderServerSSLTrust(SVN::Pool &in_pool)
 {
-  apr_pool_t *pool = in_pool.pool();
+  apr_pool_t *pool = in_pool.getPool();
   svn_auth_provider_object_t *provider;
   svn_auth_get_ssl_server_trust_prompt_provider
     (&provider, ssl_server_trust_prompt, this, pool);
@@ -399,7 +399,7 @@ svn_auth_provider_object_t *Prompter::getProviderServerSSLTrust(SVN::Pool &in_po
 
 svn_auth_provider_object_t *Prompter::getProviderClientSSL(SVN::Pool &in_pool)
 {
-  apr_pool_t *pool = in_pool.pool();
+  apr_pool_t *pool = in_pool.getPool();
   svn_auth_provider_object_t *provider;
   svn_auth_get_ssl_client_cert_prompt_provider(&provider,
                                                ssl_client_cert_prompt,
@@ -412,7 +412,7 @@ svn_auth_provider_object_t *Prompter::getProviderClientSSL(SVN::Pool &in_pool)
 
 svn_auth_provider_object_t *Prompter::getProviderClientSSLPassword(SVN::Pool &in_pool)
 {
-  apr_pool_t *pool = in_pool.pool();
+  apr_pool_t *pool = in_pool.getPool();
   svn_auth_provider_object_t *provider;
   svn_auth_get_ssl_client_cert_pw_prompt_provider
     (&provider, ssl_client_cert_pw_prompt, this, 2 /* retry limit */,
