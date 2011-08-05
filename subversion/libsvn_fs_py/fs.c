@@ -171,6 +171,12 @@ static svn_error_t *
 initialize_fs_struct(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
+
+  SVN_ERR(svn_fs_py__load_module(ffd));
+  apr_pool_cleanup_register(fs->pool, ffd->p_module,
+                            svn_fs_py__destroy_py_object,
+                            apr_pool_cleanup_null);
+
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
   return SVN_NO_ERROR;

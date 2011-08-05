@@ -25,3 +25,24 @@
 /* Initialize the python interpreter and load the fs module */
 svn_error_t *
 svn_fs_py__init_python(apr_pool_t *pool);
+
+/* Destroy the PyObject pointed to by DATA.
+ * This function in mainly used to cleanup Python objects on pool cleanup. */
+apr_status_t
+svn_fs_py__destroy_py_object(void *data);
+
+/* Call NAME method of P_OBJ, putting the result in *P_RESULT.  If an
+ * exception is raised by the Python method, convert it to an svn_error_t. */
+svn_error_t*
+svn_fs_py__call_method(PyObject **p_result,
+                       PyObject *p_obj,
+                       const char *name,
+                       const char *format,
+                       ...);
+
+PyObject *
+svn_fs_py__convert_hash(void *object);
+
+/* Load a reference to the FS Python module into the shared data. */
+svn_error_t *
+svn_fs_py__load_module(fs_fs_data_t *ffd);

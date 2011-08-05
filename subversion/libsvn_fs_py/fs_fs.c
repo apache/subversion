@@ -58,6 +58,7 @@
 #include "id.h"
 #include "rep-cache.h"
 #include "temp_serializer.h"
+#include "py_util.h"
 
 #include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
@@ -6577,6 +6578,13 @@ svn_fs_py__create(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
 
   fs->path = apr_pstrdup(pool, path);
+
+  SVN_ERR(svn_fs_py__call_method(&ffd->p_fs, ffd->p_module, "_create_fs",
+                                 "(sO&)", path,
+                                 svn_fs_py__convert_hash, fs->config));
+  apr_pool_cleanup_register(fs->pool, ffd->p_fs, svn_fs_py__destroy_py_object,
+                            apr_pool_cleanup_null);
+
   /* See if compatibility with older versions was explicitly requested. */
   if (fs->config)
     {

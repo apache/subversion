@@ -274,6 +274,12 @@ typedef struct fs_fs_data_t
   /* Whether rep-sharing is supported by the filesystem
    * and allowed by the configuration. */
   svn_boolean_t rep_sharing_allowed;
+
+  /* The Python FS module object. */
+  PyObject *p_module;
+
+  /* The Python FS object. */
+  PyObject *p_fs;
 } fs_fs_data_t;
 
 

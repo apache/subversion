@@ -29,6 +29,7 @@
 #include "svn_private_config.h"
 
 #define ROOT_MODULE_NAME "svn"
+#define FS_MODULE_NAME "svn.fs"
 
 static PyObject *p_exception_type;
 static PyObject *p_root_module;
@@ -195,4 +196,131 @@ svn_fs_py__init_python(apr_pool_t *pool)
                                             "SubversionException");
 
   return SVN_NO_ERROR;
+}
+
+
+apr_status_t
+svn_fs_py__destroy_py_object(void *data)
+{
+  PyObject *p_fs = data;
+  Py_XDECREF(p_fs);
+
+  return APR_SUCCESS;
+}
+
+
+svn_error_t*
+svn_fs_py__call_method(PyObject **p_result,
+                       PyObject *p_obj,
+                       const char *name,
+                       const char *format,
+                       ...)
+{
+  PyObject *p_func = NULL;
+  PyObject *p_value = NULL;
+  PyObject *p_args = NULL;
+  va_list argp;
+
+  SVN_ERR_ASSERT(p_obj != NULL);
+
+  va_start(argp, format);
+
+  p_args = Py_VaBuildValue(format, argp);
+  if (PyErr_Occurred())
+    goto create_error;
+
+  p_func = PyObject_GetAttrString(p_obj, name);
+  if (PyErr_Occurred())
+    goto create_error;
+    
+  /* ### Need a callable check here? */
+
+  p_value = PyObject_CallObject(p_func, p_args);
+  Py_DECREF(p_args);
+  p_args = NULL;
+  if (PyErr_Occurred())
+    goto create_error;
+
+  if (p_result)
+    *p_result = p_value;
+  else
+    Py_DECREF(p_value);
+
+  Py_DECREF(p_func);
+
+  va_end(argp);
+  return SVN_NO_ERROR;
+
+create_error:
+  {
+    PyObject *p_type = NULL;
+    PyObject *p_exception = NULL;
+    PyObject *p_traceback = NULL;
+    svn_error_t *err;
+
+    va_end(argp);
+    Py_XDECREF(p_args);
+    Py_XDECREF(p_func);
+
+    PyErr_Fetch(&p_type, &p_exception, &p_traceback);
+
+    if (p_exception && p_traceback)
+      err = create_py_stack(p_exception, p_traceback);
+    else
+      err = svn_error_create(SVN_ERR_BAD_PYTHON, NULL,
+                             _("Error calling method"));
+
+    PyErr_Clear();
+
+    Py_DECREF(p_type);
+    Py_XDECREF(p_exception);
+    Py_XDECREF(p_traceback);
+
+    return err;
+  }
+}
+
+PyObject *
+svn_fs_py__convert_hash(void *object)
+{
+  apr_hash_t *hash = object;
+  apr_hash_index_t *hi;
+  PyObject *p_dict;
+
+  if (hash == NULL)
+    Py_RETURN_NONE;
+
+  if ((p_dict = PyDict_New()) == NULL)
+    return NULL;
+
+  for (hi = apr_hash_first(NULL, hash); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      PyObject *value;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      value = PyString_FromString(val);
+      if (value == NULL)
+        {
+          Py_DECREF(p_dict);
+          return NULL;
+        }
+      /* ### gotta cast this thing cuz Python doesn't use "const" */
+      if (PyDict_SetItemString(p_dict, (char *)key, value) == -1)
+        {
+          Py_DECREF(value);
+          Py_DECREF(p_dict);
+          return NULL;
+        }
+      Py_DECREF(value);
+    }
+
+  return p_dict;
+}
+
+svn_error_t *
+svn_fs_py__load_module(fs_fs_data_t *ffd)
+{
+  return svn_error_trace(load_module(&ffd->p_module, FS_MODULE_NAME));
 }
