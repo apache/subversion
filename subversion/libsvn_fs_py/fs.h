@@ -28,6 +28,8 @@
 #include <apr_thread_mutex.h>
 #include <apr_network_io.h>
 
+#include <Python.h>
+
 #include "svn_fs.h"
 #include "svn_config.h"
 #include "private/svn_atomic.h"

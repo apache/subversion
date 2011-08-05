@@ -38,6 +38,7 @@
 #include "tree.h"
 #include "lock.h"
 #include "id.h"
+#include "py_util.h"
 #include "svn_private_config.h"
 #include "private/svn_fs_util.h"
 
@@ -384,6 +385,9 @@ svn_fs_py__init(const svn_version_t *loader_version,
                              _("Unsupported FS loader version (%d) for fsfs"),
                              loader_version->major);
   SVN_ERR(svn_ver_check_list(fs_version(), checklist));
+
+  /* Initialize Python */
+  SVN_ERR(svn_fs_py__init_python(common_pool));
 
   *vtable = &library_vtable;
   return SVN_NO_ERROR;
