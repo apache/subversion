@@ -48,8 +48,6 @@ create_py_stack(PyObject *p_exception,
   {
     PyObject *p_module_name;
     PyObject *p_traceback_mod;
-    PyObject *p_func;
-    PyObject *p_args;
     PyObject *p_stack;
     PyObject *p_frame;
     PyObject *p_filename;
@@ -62,13 +60,9 @@ create_py_stack(PyObject *p_exception,
     p_traceback_mod = PyImport_Import(p_module_name);
     Py_DECREF(p_module_name);
 
-    p_func = PyObject_GetAttrString(p_traceback_mod, "extract_tb");
+    p_stack = PyObject_CallMethod(p_traceback_mod, "extract_tb",
+                                  "(O)", p_traceback);
     Py_DECREF(p_traceback_mod);
-
-    p_args = Py_BuildValue("(O)", p_traceback);
-    p_stack = PyObject_CallObject(p_func, p_args);
-    Py_DECREF(p_func);
-    Py_DECREF(p_args);
 
     i = PySequence_Length(p_stack);
 
