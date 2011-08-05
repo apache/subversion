@@ -144,12 +144,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1153138, r1153141
-   Don't CHECKOUT added directories when using a HTTPv1 server.
-   Justification:
-     Getting a HTTP 500 error while committing new directories is not nice.
-   Notes:
-     r1153141 removes an accidentally added SVN_DBG() from r1153138.
-   Votes:
-     +1: rhuijben, gstein, philip
