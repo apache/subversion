@@ -7816,14 +7816,18 @@ record_mergeinfo_for_added_subtrees(
           svn_merge_range_t *rng;
           svn_node_kind_t added_path_kind;
           svn_mergeinfo_t merge_mergeinfo;
+          svn_mergeinfo_t adds_history_as_mergeinfo;
           apr_array_header_t *rangelist;
           const char *rel_added_path;
           const char *added_path_mergeinfo_path;
+          const char *old_session_url;
+          const char *added_path_mergeinfo_url;
+          svn_opt_revision_t peg_revision;
 
           SVN_ERR(svn_wc_read_kind(&added_path_kind, merge_b->ctx->wc_ctx,
                                    added_abspath, FALSE, iterpool));
 
-          /* Calculate the mergeinfo resulting from this merge. */
+          /* Calculate the naive mergeinfo describing the merge. */
           merge_mergeinfo = apr_hash_make(iterpool);
           rangelist = apr_array_make(iterpool, 1, sizeof(svn_merge_range_t *));
           rng = svn_merge_range_dup(merged_range, iterpool);
@@ -7850,9 +7854,46 @@ record_mergeinfo_for_added_subtrees(
           apr_hash_set(merge_mergeinfo, added_path_mergeinfo_path,
                        APR_HASH_KEY_STRING, rangelist);
 
+          /* Don't add new mergeinfo to describe the merge if that mergeinfo
+             contains non-existent merge sources. 
+
+             We know that MERGEINFO_PATH/rel_added_path's history does not
+             span MERGED_RANGE->START:MERGED_RANGE->END but rather that it
+             was added at some revions greater than MERGED_RANGE->START
+             (assuming this is a forward merge).  It may have been added,
+             deleted, and re-added many times.  The point is that we cannot
+             blindly apply the naive mergeinfo calculated above because it
+             will describe non-existent merge sources. To avoid this we get
+             take the intersection of the naive mergeinfo with
+             MERGEINFO_PATH/rel_added_path's history. */
+          added_path_mergeinfo_url =
+            svn_path_url_add_component2(merge_b->repos_root_url,
+                                        added_path_mergeinfo_path + 1,
+                                        iterpool);
+          peg_revision.kind = svn_opt_revision_number;
+          peg_revision.value.number = MAX(merged_range->start,
+                                          merged_range->end);
+          SVN_ERR(svn_client__ensure_ra_session_url(
+            &old_session_url, merge_b->ra_session2,
+            added_path_mergeinfo_url, iterpool));
+          SVN_ERR(svn_client__get_history_as_mergeinfo(
+            &adds_history_as_mergeinfo, NULL,
+            added_path_mergeinfo_url, &peg_revision,
+            MAX(merged_range->start, merged_range->end),
+            MIN(merged_range->start, merged_range->end),
+            merge_b->ra_session2, merge_b->ctx, iterpool));
+
+          if (old_session_url)
+            SVN_ERR(svn_ra_reparent(merge_b->ra_session2,
+                                    old_session_url, iterpool));
+
+          SVN_ERR(svn_mergeinfo_intersect2(&merge_mergeinfo,
+                                           merge_mergeinfo,
+                                           adds_history_as_mergeinfo,
+                                           FALSE, iterpool, iterpool));
 
           /* Combine the explict mergeinfo on the added path (if any)
-             with the mergeinfo for this merge. */
+             with the mergeinfo describing this merge. */
           if (added_path_mergeinfo)
             SVN_ERR(svn_mergeinfo_merge(merge_mergeinfo, added_path_mergeinfo,
                                         iterpool));

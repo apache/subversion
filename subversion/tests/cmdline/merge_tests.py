@@ -7682,7 +7682,7 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
   expected_output = svntest.verify.UnorderedOutput(
       [A_COPY_path  + ' - /A:2-13*\n',
        mu_COPY_path + ' - /A/mu:2-13\n',
-       nu_COPY_path + ' - /A/nu:2-13\n',])
+       nu_COPY_path + ' - /A/nu:10-13\n',])
   svntest.actions.run_and_verify_svn(None,
                                      expected_output,
                                      [], 'pg', SVN_PROP_MERGEINFO,
@@ -16768,7 +16768,8 @@ def merge_adds_subtree_with_mergeinfo(sbox):
     ''          : Item(status=' U'),
     })
   expected_mergeinfo_output = wc.State(A_COPY2_path, {
-    ''   : Item(status=' G'),
+    ''     : Item(status=' G'),
+    'C/nu' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_COPY2_path, {
     })
