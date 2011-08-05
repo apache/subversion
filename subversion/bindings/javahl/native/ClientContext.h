@@ -70,7 +70,7 @@ class ClientContext
                                                  apr_pool_t *pool);
 
  public:
-  ClientContext(jobject jsvnclient);
+  ClientContext(jobject jsvnclient, SVN::Pool &pool);
   ~ClientContext();
 
   static svn_error_t *checkCancel(void *cancelBaton);

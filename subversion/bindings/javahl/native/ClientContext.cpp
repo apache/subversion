@@ -38,12 +38,11 @@
 #include "CommitMessage.h"
 
 
-ClientContext::ClientContext(jobject jsvnclient)
+ClientContext::ClientContext(jobject jsvnclient, SVN::Pool &pool)
     : m_prompter(NULL),
       m_cancelOperation(false)
 {
     JNIEnv *env = JNIUtil::getEnv();
-    JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
 
     /* Grab a global reference to the Java object embedded in the parent Java
        object. */
@@ -72,8 +71,7 @@ ClientContext::ClientContext(jobject jsvnclient)
 
     env->DeleteLocalRef(jctx);
 
-    /* Create a long-lived client context object in the global pool. */
-    SVN_JNI_ERR(svn_client_create_context(&persistentCtx, JNIUtil::getPool()),
+    SVN_JNI_ERR(svn_client_create_context(&persistentCtx, pool.getPool()),
                 );
 
     /* None of the following members change during the lifetime of

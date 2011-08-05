@@ -64,7 +64,6 @@ apr_pool_t *JNIUtil::g_pool = NULL;
 std::list<SVNBase*> JNIUtil::g_finalizedObjects;
 JNIMutex *JNIUtil::g_finalizedObjectsMutex = NULL;
 JNIMutex *JNIUtil::g_logMutex = NULL;
-JNIMutex *JNIUtil::g_globalPoolMutext = NULL;
 bool JNIUtil::g_initException;
 bool JNIUtil::g_inInit;
 JNIEnv *JNIUtil::g_initEnv;
@@ -250,10 +249,6 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
   if (isExceptionThrown())
     return false;
 
-  g_globalPoolMutext = new JNIMutex(g_pool);
-  if (isExceptionThrown())
-    return false;
-
   // initialized the thread local storage
   if (!JNIThreadData::initThreadData())
     return false;
@@ -274,15 +269,6 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 apr_pool_t *JNIUtil::getPool()
 {
   return g_pool;
-}
-
-/**
- * Return the mutex securing the global pool.
- * @return the mutex for the global pool
- */
-JNIMutex *JNIUtil::getGlobalPoolMutex()
-{
-  return g_globalPoolMutext;
 }
 
 void JNIUtil::raiseThrowable(const char *name, const char *message)
