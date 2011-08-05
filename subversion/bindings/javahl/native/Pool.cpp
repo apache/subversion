@@ -31,14 +31,27 @@
 #include "svn_pools.h"
 
 /**
- * Constructor to create one apr pool as the subpool of the global pool
- * store this pool as the request pool.
+ * Constructor to create one apr pool as the subpool of the global pool.
  */
 SVN::Pool::Pool()
 {
-  JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
   m_pool = svn_pool_create(JNIUtil::getPool());
-  JNIUtil::setRequestPool(this);
+}
+
+/**
+ * Constructor to create one apr pool as a subpool of the passed pool.
+ */
+SVN::Pool::Pool(const Pool &parent_pool)
+{
+  m_pool = svn_pool_create(parent_pool.m_pool);
+}
+
+/**
+ * Constructor to create one apr pool as a subpool of the passed pool.
+ */
+SVN::Pool::Pool(apr_pool_t *parent_pool)
+{
+  m_pool = svn_pool_create(parent_pool);
 }
 
 /**
@@ -47,8 +60,10 @@ SVN::Pool::Pool()
  */
 SVN::Pool::~Pool()
 {
-  JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
-  JNIUtil::setRequestPool(NULL);
   if (m_pool)
-    svn_pool_destroy(m_pool);
+    {
+      svn_pool_destroy(m_pool);
+      m_pool = NULL;
+    }
 }
+
