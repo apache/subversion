@@ -153,3 +153,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1154023
+   Improve working copy context lifetimes in JavaHL.
+   Justification:
+     Fixes problem in Subclipse with leaving SQLite handles open.
+   Votes:
+     +1: hwright, markphip
