@@ -292,7 +292,9 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
                                                   original_target, pool));
                   err2 = svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath,
                                           FALSE, pool);
-                  if (err2 && err2->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+                  if (err2
+                      && (err2->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
+                          || err2->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED))
                     {
                       svn_error_clear(err2);
                     }
