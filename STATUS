@@ -102,6 +102,16 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r1154278, r1154379
+   Make 'svn ls' capable of listing Subversion 1.0-1.3 repositories using
+   ra_serf.
+   Justification:
+     We promised not to break backwards compatibility and it is not nice
+     that serf doesn't want to list the neon repository.
+     (Check svn ls http://svn.webdav.org/repos/projects/neon/)
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
@@ -132,8 +142,9 @@ Veto-blocked changes:
      proxy concept that seems to be the strongest argument in favor of
      Serf's approach.  But that's not strictly germane here.)
 
-     rhuijben: Trivial problems like r1153138 should have been fixed a long
-     time ago if we don't want to delay releasing 1.7 on serf.
+     rhuijben: Trivial problems like r1153138 and less trivial compatibility
+     problems like r1154278 should have been fixed a long time ago if we don't
+     want to delay releasing 1.7.0 on this kind of serf problems.
 
      markphip: I understand why *we* would want Serf as default, so we can
      make it better, but it goes against all of the other conservatism in
