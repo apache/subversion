@@ -28,6 +28,7 @@
 #define SVNBASE_H
 
 #include <jni.h>
+#include "Pool.h"
 
 class SVNBase
 {
@@ -96,6 +97,9 @@ class SVNBase
    */
   static void findCppAddrFieldID(jfieldID *fid, const char *className,
                                  JNIEnv *env);
+
+protected:
+    SVN::Pool pool;
 };
 
 #endif // SVNBASE_H

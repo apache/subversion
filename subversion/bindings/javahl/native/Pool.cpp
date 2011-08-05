@@ -36,9 +36,21 @@
  */
 SVN::Pool::Pool()
 {
-  JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
   m_pool = svn_pool_create(JNIUtil::getPool());
   JNIUtil::setRequestPool(this);
+  m_request_pool = true;
+}
+
+SVN::Pool::Pool(const Pool &parent_pool)
+{
+  m_pool = svn_pool_create(parent_pool.m_pool);
+  m_request_pool = false;
+}
+
+SVN::Pool::Pool(apr_pool_t *parent_pool)
+{
+  m_pool = svn_pool_create(parent_pool);
+  m_request_pool = false;
 }
 
 /**
@@ -47,8 +59,17 @@ SVN::Pool::Pool()
  */
 SVN::Pool::~Pool()
 {
-  JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
-  JNIUtil::setRequestPool(NULL);
+  if (m_request_pool)
+    JNIUtil::setRequestPool(NULL);
+
   if (m_pool)
-    svn_pool_destroy(m_pool);
+    {
+      svn_pool_destroy(m_pool);
+      m_pool = NULL;
+    }
+}
+
+apr_pool_t* SVN::Pool::getPool()
+{
+  return m_pool;
 }

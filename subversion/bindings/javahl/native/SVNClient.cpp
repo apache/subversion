@@ -70,7 +70,7 @@
 
 
 SVNClient::SVNClient(jobject jthis_in)
-    : context(jthis_in)
+    : context(jthis_in, pool)
 {
 }
 

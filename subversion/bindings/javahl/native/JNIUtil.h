@@ -135,7 +135,6 @@ class JNIUtil
   static apr_pool_t *getPool();
   static bool JNIGlobalInit(JNIEnv *env);
   static bool JNIInit(JNIEnv *env);
-  static JNIMutex *getGlobalPoolMutex();
   enum { formatBufferSize = 2048 };
   enum { noLog, errorLog, exceptionLog, entryLog } LogLevel;
 
@@ -202,11 +201,6 @@ class JNIUtil
    * The stream to write log messages to.
    */
   static std::ofstream g_logStream;
-
-  /**
-   * Flag to secure our global pool.
-   */
-  static JNIMutex *g_globalPoolMutext;
 };
 
 /**

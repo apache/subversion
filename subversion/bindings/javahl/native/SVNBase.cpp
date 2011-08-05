@@ -28,6 +28,7 @@
 #include "JNIUtil.h"
 
 SVNBase::SVNBase()
+    : pool(JNIUtil::getPool())
 {
   jthis = NULL;
 }
