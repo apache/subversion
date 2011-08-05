@@ -96,6 +96,7 @@ ClientContext::ClientContext(jobject jsvnclient, SVN::Pool &pool)
     m_context->conflict_baton2 = m_jctx;
 
     m_context->client_name = "javahl";
+    m_pool = &pool;
 }
 
 ClientContext::~ClientContext()
@@ -154,13 +155,21 @@ ClientContext::getContext(CommitMessage *message, SVN::Pool &in_pool)
                               clear_ctx_ptrs);
 
 
-    const char *configDir = m_configDir.c_str();
-    if (m_configDir.length() == 0)
-        configDir = NULL;
-    SVN_JNI_ERR(svn_config_get_config(&(ctx->config), configDir, pool), NULL);
+    if (!ctx->config)
+      {
+        const char *configDir = m_configDir.c_str();
+        if (m_configDir.length() == 0)
+            configDir = NULL;
+        SVN_JNI_ERR(svn_config_get_config(&(ctx->config), configDir,
+                                          m_pool->getPool()),
+                    NULL);
+
+        bt->backup->config = ctx->config;
+      }
     svn_config_t *config = (svn_config_t *) apr_hash_get(ctx->config,
                                                          SVN_CONFIG_CATEGORY_CONFIG,
                                                          APR_HASH_KEY_STRING);
+
 
     /* The whole list of registered providers */
     apr_array_header_t *providers;
@@ -289,6 +298,7 @@ ClientContext::setConfigDirectory(const char *configDir)
     SVN_JNI_ERR(svn_config_ensure(configDir, requestPool.getPool()), );
 
     m_configDir = (configDir == NULL ? "" : configDir);
+    m_context->config = NULL;
 }
 
 const char *
