@@ -153,12 +153,3 @@ Approved changes:
      r1153141 removes an accidentally added SVN_DBG() from r1153138.
    Votes:
      +1: rhuijben, gstein, philip
-
-* r1152189, r1152190
-   Fix an assertion on copying nodes that are not presence normal.
-   Branch:
-     1.7.x-r1152189
-   Justification:
-     Easy to trigger problem in tree conflict situations.
-   Votes:
-     +1: rhuijben, philip, gstein

@@ -5441,6 +5441,35 @@ def copy_and_move_conflicts(sbox):
     })
   svntest.actions.verify_disk(wc('move-dest'), expected_disk, True)
 
+def copy_deleted_dir(sbox):
+  "try to copy a deleted directory that exists"
+  sbox.build(read_only = True)
+
+  sbox.simple_rm('iota')
+  sbox.simple_rm('A')
+
+  svntest.actions.run_and_verify_svn(None, None,
+                                     'svn: E145000: Path.* does not exist',
+                                     'cp', sbox.ospath('iota'),
+                                     sbox.ospath('new_iota'))
+  svntest.actions.run_and_verify_svn(None, None,
+                                     'svn: E145000: Path.* does not exist',
+                                     'cp', sbox.ospath('A/D'),
+                                     sbox.ospath('new_D'))
+
+  svntest.main.file_write(sbox.ospath('iota'), 'Not iota!')
+  os.mkdir(sbox.ospath('A'))
+  os.mkdir(sbox.ospath('A/D'))
+
+  # These two invocations raise an assertion.
+  svntest.actions.run_and_verify_svn(None, None,
+                                     'svn: E155035: Deleted node.* can\'t be.*',
+                                     'cp', sbox.ospath('iota'),
+                                     sbox.ospath('new_iota'))
+  svntest.actions.run_and_verify_svn(None, None,
+                                     'svn: E155035: Deleted node.* can\'t be.*',
+                                     'cp', sbox.ospath('A/D'),
+                                     sbox.ospath('new_D'))
 
 ########################################################################
 # Run the tests
@@ -5551,6 +5580,7 @@ test_list = [ None,
               copy_base_of_deleted,
               case_only_rename,
               copy_and_move_conflicts,
+              copy_deleted_dir,
              ]
 
 if __name__ == '__main__':
