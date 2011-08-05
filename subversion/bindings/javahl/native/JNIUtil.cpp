@@ -619,7 +619,7 @@ bool JNIUtil::isJavaExceptionThrown()
 }
 
 const char *
-JNIUtil::thrownExceptionToCString()
+JNIUtil::thrownExceptionToCString(SVN::Pool &in_pool)
 {
   const char *msg;
   JNIEnv *env = getEnv();
@@ -636,7 +636,7 @@ JNIUtil::thrownExceptionToCString()
         }
       jstring jmsg = (jstring) env->CallObjectMethod(t, getMessage);
       JNIStringHolder tmp(jmsg);
-      msg = tmp.pstrdup(getRequestPool()->pool());
+      msg = tmp.pstrdup(in_pool.pool());
       // ### Conditionally add t.printStackTrace() to msg?
     }
   else
@@ -769,25 +769,6 @@ jobject JNIUtil::createDate(apr_time_t time)
   env->DeleteLocalRef(clazz);
 
   return ret;
-}
-
-/**
- * Return the request pool. The request pool will be destroyed after each
- * request (call).
- * @return the pool to be used for this request
- */
-SVN::Pool *JNIUtil::getRequestPool()
-{
-  return JNIThreadData::getThreadData()->m_requestPool;
-}
-
-/**
- * Set the request pool in thread local storage.
- * @param pool  the request pool
- */
-void JNIUtil::setRequestPool(SVN::Pool *pool)
-{
-  JNIThreadData::getThreadData()->m_requestPool = pool;
 }
 
 /**

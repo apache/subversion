@@ -63,8 +63,6 @@ class JNIUtil
 
   static void throwNullPointerException(const char *message);
   static jbyteArray makeJByteArray(const signed char *data, int length);
-  static void setRequestPool(SVN::Pool *pool);
-  static SVN::Pool *getRequestPool();
   static jobject createDate(apr_time_t time);
   static void logMessage(const char *message);
   static int getLogLevel();
@@ -103,7 +101,7 @@ class JNIUtil
    * occurred. Useful for converting Java @c Exceptions into @c
    * svn_error_t's.
    */
-  static const char *thrownExceptionToCString();
+  static const char *thrownExceptionToCString(SVN::Pool &in_pool);
 
   /**
    * Throw a Java exception corresponding to err, and run

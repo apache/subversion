@@ -101,10 +101,9 @@ ClientContext::~ClientContext()
 }
 
 svn_client_ctx_t *
-ClientContext::getContext(CommitMessage *message)
+ClientContext::getContext(CommitMessage *message, SVN::Pool &in_pool)
 {
-    SVN::Pool *requestPool = JNIUtil::getRequestPool();
-    apr_pool_t *pool = requestPool->pool();
+    apr_pool_t *pool = in_pool.getPool();
     svn_auth_baton_t *ab;
     svn_client_ctx_t *ctx = persistentCtx;
     //SVN_JNI_ERR(svn_client_create_context(&ctx, pool), NULL);
@@ -174,22 +173,22 @@ ClientContext::getContext(CommitMessage *message)
     if (m_prompter != NULL)
     {
         /* Two basic prompt providers: username/password, and just username.*/
-        provider = m_prompter->getProviderSimple();
+        provider = m_prompter->getProviderSimple(in_pool);
 
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
-        provider = m_prompter->getProviderUsername();
+        provider = m_prompter->getProviderUsername(in_pool);
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
         /* Three ssl prompt providers, for server-certs, client-certs,
          * and client-cert-passphrases.  */
-        provider = m_prompter->getProviderServerSSLTrust();
+        provider = m_prompter->getProviderServerSSLTrust(in_pool);
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
-        provider = m_prompter->getProviderClientSSL();
+        provider = m_prompter->getProviderClientSSL(in_pool);
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
-        provider = m_prompter->getProviderClientSSLPassword();
+        provider = m_prompter->getProviderClientSSLPassword(in_pool);
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
     }
 
@@ -387,7 +386,8 @@ ClientContext::resolve(svn_wc_conflict_result_t **result,
     {
       // If an exception is thrown by our conflict resolver, remove it
       // from the JNI env, and convert it into a Subversion error.
-      const char *msg = JNIUtil::thrownExceptionToCString();
+      SVN::Pool tmpPool(scratch_pool);
+      const char *msg = JNIUtil::thrownExceptionToCString(tmpPool);
       svn_error_t *err = svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                                           NULL, msg);
       env->PopLocalFrame(NULL);
