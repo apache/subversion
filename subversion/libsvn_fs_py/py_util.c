@@ -90,9 +90,9 @@ load_error:
 static apr_status_t
 finalize_python(void *data)
 {
-  Py_DECREF(p_exception_type);
+  Py_XDECREF(p_exception_type);
   p_exception_type = NULL;
-  Py_DECREF(p_root_module);
+  Py_XDECREF(p_root_module);
   p_root_module = NULL;
 
   /* Cleanup the python interpreter. */
