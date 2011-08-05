@@ -224,6 +224,11 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 14,
              "Invalid changelist name")
 
+  /** @since New in ??. */
+  SVN_ERRDEF(SVN_ERR_BAD_PYTHON,
+             SVN_ERR_BAD_CATEGORY_START + 15,
+             "Embedded Python exception")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,

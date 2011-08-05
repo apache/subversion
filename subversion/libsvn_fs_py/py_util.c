@@ -34,6 +34,89 @@ static PyObject *p_exception_type;
 static PyObject *p_root_module;
 
 static svn_error_t *
+create_py_stack(PyObject *p_exception,
+                PyObject *p_traceback)
+{
+  svn_error_t *err;
+  PyObject *p_reason;
+  char *reason;
+
+  p_reason = PyObject_Str(p_exception);
+  reason = PyString_AsString(p_reason);
+
+#ifdef SVN_ERR__TRACING
+  {
+    PyObject *p_module_name;
+    PyObject *p_traceback_mod;
+    PyObject *p_func;
+    PyObject *p_args;
+    PyObject *p_stack;
+    PyObject *p_frame;
+    PyObject *p_filename;
+    PyObject *p_lineno;
+    Py_ssize_t i;
+
+    /* We don't use load_module() here to avoid an infinite recursion. */
+    /* ### This could use more python error checking. */
+    p_module_name = PyString_FromString("traceback");
+    p_traceback_mod = PyImport_Import(p_module_name);
+    Py_DECREF(p_module_name);
+
+    p_func = PyObject_GetAttrString(p_traceback_mod, "extract_tb");
+    Py_DECREF(p_traceback_mod);
+
+    p_args = Py_BuildValue("(O)", p_traceback);
+    p_stack = PyObject_CallObject(p_func, p_args);
+    Py_DECREF(p_func);
+    Py_DECREF(p_args);
+
+    i = PySequence_Length(p_stack);
+
+    /* Build the "root error" for the chain. */
+    p_frame = PySequence_GetItem(p_stack, i-1);
+    p_filename = PySequence_GetItem(p_frame, 0);
+    p_lineno = PySequence_GetItem(p_frame, 1);
+    Py_DECREF(p_frame);
+
+    err = svn_error_createf(SVN_ERR_BAD_PYTHON, NULL,
+                          _("Exception while executing Python; cause: '%s'"),
+                          reason);
+
+    err->file = apr_pstrdup(err->pool, PyString_AsString(p_filename));
+    err->line = PyInt_AsLong(p_lineno);
+
+    Py_DECREF(p_filename);
+    Py_DECREF(p_lineno);
+
+    for (i = i-2; i >=0; i--)
+      {
+        p_frame = PySequence_GetItem(p_stack, i);
+        p_filename = PySequence_GetItem(p_frame, 0);
+        p_lineno = PySequence_GetItem(p_frame, 1);
+        Py_DECREF(p_frame);
+
+        err = svn_error_quick_wrap(err, SVN_ERR__TRACED);
+        err->file = apr_pstrdup(err->pool, PyString_AsString(p_filename));
+        err->line = PyInt_AsLong(p_lineno);
+        
+        Py_DECREF(p_filename);
+        Py_DECREF(p_lineno);
+      }
+
+    Py_DECREF(p_stack);
+  }
+#else
+  err = svn_error_createf(SVN_ERR_BAD_PYTHON, NULL,
+                          _("Exception while executing Python; cause: '%s'"),
+                          reason);
+#endif
+
+  Py_DECREF(p_reason);
+
+  return err;
+}
+
+static svn_error_t *
 load_module(PyObject **p_module_out,
             const char *module_name)
 {
@@ -56,8 +139,6 @@ load_module(PyObject **p_module_out,
 load_error:
   {
     PyObject *p_type, *p_exception, *p_traceback;
-    PyObject *p_reason;
-    const char *reason;
     svn_error_t *err;
 
     /* Release the values above. */
@@ -66,23 +147,18 @@ load_error:
 
     PyErr_Fetch(&p_type, &p_exception, &p_traceback);
 
-    if (p_exception)
-      {
-        p_reason = PyObject_Str(p_exception);
-        reason = PyString_AsString(p_reason);
-
-        err = svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                _("Cannot load Python module, cause: %s"),
-                                reason);
-      }
+    if (p_exception && p_traceback)
+      err = create_py_stack(p_exception, p_traceback);
     else
-      err = svn_error_create(SVN_ERR_FS_GENERAL, NULL, NULL);
+      err = svn_error_create(SVN_ERR_BAD_PYTHON, NULL,
+                             _("Cannot load Python module"));
 
+    PyErr_Clear();
+
+    Py_DECREF(p_type);
     Py_XDECREF(p_exception);
-    Py_XDECREF(p_type);
     Py_XDECREF(p_traceback);
 
-    Py_XDECREF(p_reason);
     return err;
   }
 }
@@ -114,8 +190,6 @@ svn_fs_py__init_python(apr_pool_t *pool)
 
   SVN_ERR(load_module(&p_root_module, ROOT_MODULE_NAME));
   
-  p_exception_type = PyObject_GetAttrString(p_root_module,
-                                            "SubversionException");
   if (PyErr_Occurred())
     {
       PyErr_Clear();
@@ -123,6 +197,8 @@ svn_fs_py__init_python(apr_pool_t *pool)
                               _("Cannot load Python module"));
     }
 
+  p_exception_type = PyObject_GetAttrString(p_root_module,
+                                            "SubversionException");
 
   return SVN_NO_ERROR;
 }
