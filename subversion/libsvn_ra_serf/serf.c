@@ -39,10 +39,11 @@
 #include "../libsvn_ra/ra_loader.h"
 #include "svn_config.h"
 #include "svn_delta.h"
-#include "svn_version.h"
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_time.h"
+#include "svn_version.h"
 
 #include "private/svn_dav_protocol.h"
 #include "private/svn_dep_compat.h"
@@ -1029,6 +1030,13 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
                                               get_dirent_props(dirent_fields,
                                                                session, pool),
                                               pool, pool));
+
+          SVN_ERR(svn_hash__clear(dirent_walk.full_paths, pool));
+          SVN_ERR(svn_hash__clear(dirent_walk.base_paths, pool));
+
+          SVN_ERR(svn_ra_serf__walk_all_paths(props, revision,
+                                              path_dirent_walker,
+                                              &dirent_walk, pool));
         }
 
       *dirents = dirent_walk.base_paths;
