@@ -82,7 +82,7 @@ Candidate changes:
      +1: pburba, rhuijben
      -0: the serf 2.x API will be incompatible with 1.7.x, so this will
          never be useful
-                      
+                     
  * r1154165
    Make the cmdline argument parser ignore upgrade required errors to
    allow calling 'svn upgrade c:\iNVALID' on 'C:\Invalid' without an
@@ -90,6 +90,7 @@ Candidate changes:
    Justification:
      Usually svn allows case differences, but in this case it doesn't.
      (Triggerable in other scenarios)
+     http://svn.haxx.se/users/archive-2011-08/0142.shtml
    Votes:
      +1: rhuijben
 
@@ -115,7 +116,7 @@ Veto-blocked changes:
      requests, resulting in undesirable server log bloat.
 
      Further, the promise of performance has not been realized:
-     https://ctf.open.collab.net/sf/wiki/do/viewPage/projects.csvn/wiki/HTTPv2 
+     https://ctf.open.collab.net/sf/wiki/do/viewPage/projects.csvn/wiki/HTTPv2
 
      (As an aside, Serf's potential as a platform for future
      improvement remains unproven and doubtful.  For example, HTTPv2
@@ -161,4 +162,3 @@ Approved changes:
      Easy to trigger problem in tree conflict situations.
    Votes:
      +1: rhuijben, philip, gstein
- 
