@@ -71,42 +71,88 @@ ClientContext::ClientContext(jobject jsvnclient, SVN::Pool &pool)
 
     env->DeleteLocalRef(jctx);
 
-    SVN_JNI_ERR(svn_client_create_context(&persistentCtx, pool.getPool()),
+    SVN_JNI_ERR(svn_client_create_context(&m_context, pool.getPool()),
                 );
+
+    /* Clear the wc_ctx as we don't want to maintain this unconditionally
+       for compatibility reasons */
+    SVN_JNI_ERR(svn_wc_context_destroy(m_context->wc_ctx),
+                );
+    m_context->wc_ctx = NULL;
 
     /* None of the following members change during the lifetime of
        this object. */
-    persistentCtx->notify_func = NULL;
-    persistentCtx->notify_baton = NULL;
-    persistentCtx->log_msg_func3 = CommitMessage::callback;
-    persistentCtx->cancel_func = checkCancel;
-    persistentCtx->cancel_baton = this;
-    persistentCtx->notify_func2= notify;
-    persistentCtx->notify_baton2 = m_jctx;
-    persistentCtx->progress_func = progress;
-    persistentCtx->progress_baton = m_jctx;
-    persistentCtx->conflict_func2 = resolve;
-    persistentCtx->conflict_baton2 = m_jctx;
+    m_context->notify_func = NULL;
+    m_context->notify_baton = NULL;
+    m_context->log_msg_func3 = CommitMessage::callback;
+    m_context->log_msg_baton3 = NULL;
+    m_context->cancel_func = checkCancel;
+    m_context->cancel_baton = this;
+    m_context->notify_func2= notify;
+    m_context->notify_baton2 = m_jctx;
+    m_context->progress_func = progress;
+    m_context->progress_baton = m_jctx;
+    m_context->conflict_func2 = resolve;
+    m_context->conflict_baton2 = m_jctx;
+
+    m_context->client_name = "javahl";
 }
 
 ClientContext::~ClientContext()
 {
     delete m_prompter;
 
-    // close the sqlite databae
-    svn_error_clear(svn_wc_context_destroy(persistentCtx->wc_ctx));
-
     JNIEnv *env = JNIUtil::getEnv();
     env->DeleteGlobalRef(m_jctx);
 }
+
+
+/* Helper function to make sure that we don't keep dangling pointers in ctx.
+   Note that this function might be called multiple times if getContext()
+   is called on the same pool.
+   
+   The use of this function assumes a proper subpool behavior by its user,
+   (read: SVNClient) usually per request.
+ */
+extern "C" {
+
+struct clearctx_baton_t
+{
+  svn_client_ctx_t *ctx;
+  svn_client_ctx_t *backup;
+};
+
+static apr_status_t clear_ctx_ptrs(void *ptr)
+{
+    clearctx_baton_t *bt = (clearctx_baton_t*)ptr;
+
+    /* Reset all values to those before overwriting by getContext. */
+    *bt->ctx = *bt->backup;
+
+    return APR_SUCCESS;
+}
+
+};
 
 svn_client_ctx_t *
 ClientContext::getContext(CommitMessage *message, SVN::Pool &in_pool)
 {
     apr_pool_t *pool = in_pool.getPool();
     svn_auth_baton_t *ab;
-    svn_client_ctx_t *ctx = persistentCtx;
-    //SVN_JNI_ERR(svn_client_create_context(&ctx, pool), NULL);
+    svn_client_ctx_t *ctx = m_context;
+
+    /* Make a temporary copy of ctx to restore at pool cleanup to avoid
+       leaving references to dangling pointers.
+
+       Note that this allows creating a stack of context changes if
+       the function is invoked multiple times with different pools.
+     */
+    clearctx_baton_t *bt = (clearctx_baton_t *)apr_pcalloc(pool, sizeof(*bt));
+    bt->ctx = ctx;
+    bt->backup = (svn_client_ctx_t*)apr_pmemdup(pool, ctx, sizeof(*ctx));
+    apr_pool_cleanup_register(in_pool.getPool(), bt, clear_ctx_ptrs,
+                              clear_ctx_ptrs);
+
 
     const char *configDir = m_configDir.c_str();
     if (m_configDir.length() == 0)
@@ -207,6 +253,10 @@ ClientContext::getContext(CommitMessage *message, SVN::Pool &in_pool)
     ctx->auth_baton = ab;
     ctx->log_msg_baton3 = message;
     m_cancelOperation = false;
+
+    SVN_JNI_ERR(svn_wc_context_create(&ctx->wc_ctx, NULL,
+                                      in_pool.getPool(), in_pool.getPool()),
+                NULL);
 
     return ctx;
 }
