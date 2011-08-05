@@ -80,8 +80,8 @@ Candidate changes:
    Votes:
      +0: danielsh (r1151055 only)
      +1: pburba, rhuijben
-     -0: the serf 2.x API will be incompatible with 1.7.x, so this will
-         never be useful
+     -0: gstein (the serf 2.x API will be incompatible with 1.7.x, so this
+         will never be useful)
                      
  * r1154165
    Make the cmdline argument parser ignore upgrade required errors to
