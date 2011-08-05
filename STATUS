@@ -82,17 +82,16 @@ Candidate changes:
      +1: pburba, rhuijben
      -0: the serf 2.x API will be incompatible with 1.7.x, so this will
          never be useful
-
- * r1152189, r1152190
-   Fix an assertion on copying nodes that are not presence normal.
-   Branch:
-     1.7.x-r1152189
+                      
+ * r1154165
+   Make the cmdline argument parser ignore upgrade required errors to
+   allow calling 'svn upgrade c:\iNVALID' on 'C:\Invalid' without an
+   error.
    Justification:
-     Easy to trigger problem in tree conflict situations.
+     Usually svn allows case differences, but in this case it doesn't.
+     (Triggerable in other scenarios)
    Votes:
      +1: rhuijben
-     +1: philip, gstein (the branch solves a merge conflict that arises
-                         when applying r1152190)
 
 Veto-blocked changes:
 =====================
@@ -153,3 +152,13 @@ Approved changes:
      r1153141 removes an accidentally added SVN_DBG() from r1153138.
    Votes:
      +1: rhuijben, gstein, philip
+
+* r1152189, r1152190
+   Fix an assertion on copying nodes that are not presence normal.
+   Branch:
+     1.7.x-r1152189
+   Justification:
+     Easy to trigger problem in tree conflict situations.
+   Votes:
+     +1: rhuijben, philip, gstein
+ 
