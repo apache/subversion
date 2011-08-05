@@ -179,6 +179,9 @@ struct svn_ra_serf__session_t {
   /* Connection timeout value */
   long timeout;
 
+  /* HTTPv1 flags */
+  svn_tristate_t supports_deadprop_count;
+
   /*** HTTP v2 protocol stuff. ***
    *
    * We assume that if mod_dav_svn sends one of the special v2 OPTIONs

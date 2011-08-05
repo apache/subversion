@@ -386,6 +386,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->session_url_str = apr_pstrdup(serf_sess->pool, repos_URL);
   serf_sess->using_ssl = (svn_cstring_casecmp(url.scheme, "https") == 0);
 
+  serf_sess->supports_deadprop_count = svn_tristate_unknown;
+
   serf_sess->capabilities = apr_hash_make(serf_sess->pool);
 
   SVN_ERR(load_config(serf_sess, config, serf_sess->pool));
@@ -660,6 +662,8 @@ struct dirent_walker_baton_t {
   /* Update the fields in this entry.  */
   svn_dirent_t *entry;
 
+  svn_tristate_t *supports_deadprop_count;
+
   /* If allocations are necessary, then use this pool.  */
   apr_pool_t *result_pool;
 };
@@ -685,9 +689,16 @@ dirent_walker(void *baton,
     {
       if(strcmp(name, "deadprop-count") == 0)
         {
-          apr_int64_t deadprop_count;
-          SVN_ERR(svn_cstring_atoi64(&deadprop_count, val->data));
-          dwb->entry->has_props = deadprop_count > 0;
+          if (*val->data)
+            {
+              apr_int64_t deadprop_count;
+              SVN_ERR(svn_cstring_atoi64(&deadprop_count, val->data));
+              dwb->entry->has_props = deadprop_count > 0;
+              if (dwb->supports_deadprop_count)
+                *dwb->supports_deadprop_count = svn_tristate_true;
+            }
+          else if (dwb->supports_deadprop_count)
+            *dwb->supports_deadprop_count = svn_tristate_false;
         }
     }
   else if (strcmp(ns, "DAV:") == 0)
@@ -734,6 +745,8 @@ struct path_dirent_visitor_t {
   apr_hash_t *full_paths;
   apr_hash_t *base_paths;
   const char *orig_path;
+  svn_tristate_t supports_deadprop_count;
+  apr_pool_t *result_pool;
 };
 
 static svn_error_t *
@@ -771,7 +784,8 @@ path_dirent_walker(void *baton,
     }
 
   dwb.entry = entry;
-  dwb.result_pool = pool;  /* ### fix this!  */
+  dwb.supports_deadprop_count = &dirents->supports_deadprop_count;
+  dwb.result_pool = dirents->result_pool;
   return svn_error_trace(dirent_walker(&dwb, ns, name, val, pool));
 }
 
@@ -862,7 +876,8 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
     }
 
   dwb.entry = apr_pcalloc(pool, sizeof(*dwb.entry));
-  dwb.result_pool = pool;  /* ### fix this  */
+  dwb.supports_deadprop_count = NULL;
+  dwb.result_pool = pool;
   SVN_ERR(svn_ra_serf__walk_all_props(props, path, fetched_rev,
                                       dirent_walker, &dwb,
                                       pool));
@@ -956,11 +971,15 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       dirent_walk.full_paths = apr_hash_make(pool);
       dirent_walk.base_paths = apr_hash_make(pool);
       dirent_walk.orig_path = svn_urlpath__canonicalize(path, pool);
+      dirent_walk.supports_deadprop_count = svn_tristate_unknown;
+      dirent_walk.result_pool = pool;
 
       SVN_ERR(svn_ra_serf__walk_all_paths(props, revision, path_dirent_walker,
                                           &dirent_walk, pool));
 
       *dirents = dirent_walk.base_paths;
+      if (dirent_walk.supports_deadprop_count != svn_tristate_unknown)
+        session->supports_deadprop_count = dirent_walk.supports_deadprop_count;
     }
 
   /* If we're asked for the directory properties, fetch them too. */
