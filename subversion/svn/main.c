@@ -932,7 +932,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Display information related to merges (or potential merges) between\n"
      "  SOURCE and TARGET (default: '.').  Display the type of information\n"
      "  specified by the --show-revs option.  If --show-revs isn't passed,\n"
-     "  it defaults to --show-revs='merged'.\n"),
+     "  it defaults to --show-revs='merged'.\n"
+     "\n"
+     "  The depth can be 'empty' or 'infinity'; the default is 'empty'.\n"),
     {'r', 'R', opt_depth, opt_show_revs} },
 
   { "mkdir", svn_cl__mkdir, {0}, N_
