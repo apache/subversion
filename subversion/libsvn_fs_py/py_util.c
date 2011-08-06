@@ -106,6 +106,18 @@ create_py_stack(PyObject *p_exception,
                           reason);
 #endif
 
+  /* If the exception object has a 'code' attribute, and it's an integer,
+     assume it's an apr_err code */
+  if (PyObject_HasAttrString(p_exception, "code"))
+    {
+      PyObject *p_code = PyObject_GetAttrString(p_exception, "code");
+
+      if (PyInt_Check(p_code))
+        err->apr_err = PyInt_AS_LONG(p_code);
+
+      Py_DECREF(p_code);
+    }
+
   Py_DECREF(p_reason);
 
   return err;
