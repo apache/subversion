@@ -183,12 +183,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1154461
-   Initialize the is_binary member of the svn_wc_conflict_description2_t
-   correctly, not unconditionally to false.
-   Justification:
-     Easy and obvious fix. Without this, the TSVN UI shows the wrong info and
-     doesn't resolve conflicts correctly.
-   Votes:
-     +1: steveking, rhuijben, arfrever
