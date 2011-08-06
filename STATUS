@@ -126,7 +126,7 @@ Candidate changes:
      Easy and obvious fix. Without this, the TSVN UI shows the wrong info and
      doesn't resolve conflicts correctly.
    Votes:
-     +1: steveking
+     +1: steveking, rhuijben
 
 Veto-blocked changes:
 =====================
