@@ -2925,7 +2925,7 @@ prev_location(const char **prev_path,
               const char *path,
               apr_pool_t *pool)
 {
-  const char *copy_path, *copy_src_path, *remainder = "";
+  const char *copy_path, *copy_src_path, *remainder_path = "";
   svn_fs_root_t *copy_root;
   svn_revnum_t copy_src_rev;
 
@@ -2955,8 +2955,8 @@ prev_location(const char **prev_path,
   SVN_ERR(fs_copied_from(&copy_src_rev, &copy_src_path,
                          copy_root, copy_path, pool));
   if (strcmp(copy_path, path) != 0)
-    remainder = svn_relpath__is_child(copy_path, path, pool);
-  *prev_path = svn_fspath__join(copy_src_path, remainder, pool);
+    remainder_path = svn_relpath__is_child(copy_path, path, pool);
+  *prev_path = svn_fspath__join(copy_src_path, remainder_path, pool);
   *prev_rev = copy_src_rev;
   return SVN_NO_ERROR;
 }
@@ -3184,7 +3184,7 @@ history_prev(void *baton, apr_pool_t *pool)
 
   if (copyroot_rev > commit_rev)
     {
-      const char *remainder;
+      const char *remainder_path;
       const char *copy_dst, *copy_src;
       svn_fs_root_t *copyroot_root;
 
@@ -3202,11 +3202,11 @@ history_prev(void *baton, apr_pool_t *pool)
          one of these other criteria ... ### for now just fallback to
          the old copy hunt algorithm. */
       if (strcmp(path, copy_dst) == 0)
-        remainder = "";
+        remainder_path = "";
       else
-        remainder = svn_relpath__is_child(copy_dst, path, pool);
+        remainder_path = svn_relpath__is_child(copy_dst, path, pool);
 
-      if (remainder)
+      if (remainder_path)
         {
           /* If we get here, then our current path is the destination
              of, or the child of the destination of, a copy.  Fill
@@ -3215,7 +3215,7 @@ history_prev(void *baton, apr_pool_t *pool)
           SVN_ERR(svn_fs_fs__dag_get_copyfrom_path(&copy_src, node, pool));
 
           dst_rev = copyroot_rev;
-          src_path = svn_fspath__join(copy_src, remainder, pool);
+          src_path = svn_fspath__join(copy_src, remainder_path, pool);
         }
     }
 
