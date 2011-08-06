@@ -31,7 +31,6 @@
 #define ROOT_MODULE_NAME "svn"
 #define FS_MODULE_NAME "svn.fs"
 
-static PyObject *p_exception_type;
 static PyObject *p_root_module;
 
 static svn_error_t *
@@ -173,8 +172,6 @@ load_error:
 static apr_status_t
 finalize_python(void *data)
 {
-  Py_XDECREF(p_exception_type);
-  p_exception_type = NULL;
   Py_XDECREF(p_root_module);
   p_root_module = NULL;
 
@@ -203,9 +200,6 @@ svn_fs_py__init_python(apr_pool_t *pool)
       return svn_error_create(SVN_ERR_FS_GENERAL, NULL,
                               _("Cannot load Python module"));
     }
-
-  p_exception_type = PyObject_GetAttrString(p_root_module,
-                                            "SubversionException");
 
   return SVN_NO_ERROR;
 }
