@@ -122,7 +122,7 @@ Candidate changes:
  * r1151906
    Allow proper translation of some messages.
    Votes:
-     +1: arfrever
+     +1: arfrever, rhuijben
 
  * r1154121
    Improve a message.
@@ -130,7 +130,7 @@ Candidate changes:
      Translators won't have to maintain separate translations of help message
      for 'svn mergeinfo' on trunk and 1.7.x branch.
    Votes:
-     +1: arfrever
+     +1: arfrever, rhuijben
 
 Veto-blocked changes:
 =====================
