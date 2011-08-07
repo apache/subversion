@@ -100,7 +100,7 @@ Candidate changes:
  * r1151911
    Fix description of svndumpfilter's --targets option.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, rhuijben
 
  * r1152282
    Improve performance of "log -g".
@@ -109,7 +109,14 @@ Candidate changes:
    Justification:
      Can be too slow to be useable.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
+
+ * r1154733
+   Correctly position buffer pointer when resuming an aborted transfer in serf.
+   Justification:
+     Invalid pointer operation that causes at least datastream corruption.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
