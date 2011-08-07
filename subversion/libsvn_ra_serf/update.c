@@ -1021,7 +1021,7 @@ handle_fetch(serf_request_t *request,
 
           if (err)
             {
-              return error_fetch(request, fetch_ctx, err);
+              return svn_error_trace(error_fetch(request, fetch_ctx, err));
             }
 
           fetch_ctx->done = TRUE;
