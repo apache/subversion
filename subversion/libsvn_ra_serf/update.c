@@ -918,6 +918,7 @@ handle_fetch(serf_request_t *request,
 
       if (fetch_ctx->aborted_read)
         {
+          apr_off_t skip;
           /* We haven't caught up to where we were before. */
           if (fetch_ctx->read_size < fetch_ctx->aborted_read_size)
             {
@@ -938,9 +939,10 @@ handle_fetch(serf_request_t *request,
           /* Woo-hoo.  We're back. */
           fetch_ctx->aborted_read = FALSE;
 
-          /* Increment data and len by the difference. */
-          data += fetch_ctx->read_size - fetch_ctx->aborted_read_size;
-          len = fetch_ctx->read_size - fetch_ctx->aborted_read_size;
+          /* Update data and len to just provide the new data. */
+          skip = len - (fetch_ctx->read_size - fetch_ctx->aborted_read_size);
+          data += skip;
+          len -= skip;
         }
 
       if (fetch_ctx->delta_stream)
