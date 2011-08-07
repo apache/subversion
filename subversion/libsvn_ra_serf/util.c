@@ -2249,7 +2249,7 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
           if ((err->apr_err != SVN_ERR_FS_NOT_FOUND) &&
               (err->apr_err != SVN_ERR_RA_DAV_FORBIDDEN))
             {
-              return err;  /* found a _real_ error */
+              return svn_error_trace(err);  /* found a _real_ error */
             }
           else
             {
