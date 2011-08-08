@@ -19,11 +19,15 @@
 
 # Where are the svn binaries you want to benchmark?
 if [ "$USER" = "neels" ]; then
-  SVN_1_6="$HOME/pat/stable/prefix/bin/svn"
-  SVN_trunk="$HOME/pat/trunk/prefix/bin/svn"
+  SVN_A_NAME="1.7.x"
+  SVN_A="$HOME/pat/bench/prefix/bin/svn"
+  SVN_B_NAME="trunk"
+  SVN_B="$HOME/pat/trunk/prefix/bin/svn"
 else
-  SVN_1_6="$HOME/src/svn-1.6.x/subversion/svn/svn"
-  SVN_trunk="$HOME/src/svn/subversion/svn/svn"
+  SVN_A_NAME="1.6"
+  SVN_A="$HOME/src/svn-1.6.x/subversion/svn/svn"
+  SVN_B_NAME="trunk"
+  SVN_B="$HOME/src/svn/subversion/svn/svn"
 fi
 
 benchmark="$PWD/benchmark.py"
@@ -44,9 +48,9 @@ batch(){
   echo "---------------------------------------------------------------------"
   echo
   echo "Results for dir levels: $levels  spread: $spread"
-  "$benchmark" "--svn=${SVN_1_6}" run ${pre}1.6 $levels $spread $N >/dev/null
-  "$benchmark" "--svn=${SVN_trunk}" run ${pre}trunk $levels $spread $N > /dev/null
-  "$benchmark" compare ${pre}1.6 ${pre}trunk
+  "$benchmark" "--svn=$SVN_A" run "${pre}$SVN_A_NAME" $levels $spread $N #>/dev/null
+  "$benchmark" "--svn=$SVN_B" run "${pre}$SVN_B_NAME" $levels $spread $N #>/dev/null
+  "$benchmark" compare "${pre}$SVN_A_NAME" "${pre}$SVN_B_NAME"
 }
 
 N=6
@@ -80,11 +84,11 @@ batch $cl $cs $N
 echo ""
 echo =========================================================================
 echo ""
-"$benchmark" combine total_1.6 *x*_1.6 >/dev/null
-"$benchmark" combine total_trunk *x*_trunk >/dev/null
+"$benchmark" combine "total_$SVN_A_NAME" *x*"_$SVN_A_NAME" >/dev/null
+"$benchmark" combine "total_$SVN_B_NAME" *x*"_$SVN_B_NAME" >/dev/null
 
 echo "comparing averaged totals..."
-"$benchmark" compare total_1.6 total_trunk
+"$benchmark" compare "total_$SVN_A_NAME" "total_$SVN_B_NAME"
 
 echo ""
 echo "Had started at $started,"
