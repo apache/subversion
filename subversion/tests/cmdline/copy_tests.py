@@ -5477,28 +5477,19 @@ def commit_copied_half_of_move(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  iota_path = os.path.join(wc_dir, 'iota')
-  D_path = os.path.join(wc_dir, 'A', 'D')
-
-  svntest.actions.run_and_verify_svn(None, None, [], 'mv', iota_path, D_path)
-
-  expected_error = "svn: E200009: Cannot commit '.*%s' because it was moved " \
-                    "from '.*%s'" % (re.escape(os.path.join(D_path, "iota")),
-                                     re.escape(iota_path))
-  svntest.actions.run_and_verify_svn(None, None, expected_error,
-                                     'commit', '-m', 'foo', D_path)
-
-@Issue(3631)
-def commit_copied_half_of_nested_move(sbox):
-  "attempt to commit the copied part of a nested move"
-  sbox.build(read_only = True)
-  wc_dir = sbox.wc_dir
-
   iota_path = sbox.ospath('iota')
   D_path = sbox.ospath('A/D')
 
-  # iota -> A/D/iota; verify we cannot commit just A/D
+  # iota -> A/D/iota; verify we cannot commit just A/D/iota
   svntest.actions.run_and_verify_svn(None, None, [], 'mv', iota_path, D_path)
+  expected_error = "svn: E200009: Cannot commit '.*%s' because it was " \
+                    "moved from '.*%s'" % (re.escape(sbox.ospath('A/D/iota')),
+                                           re.escape(iota_path))
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'commit', '-m', 'foo',
+                                     os.path.join(D_path, 'iota'))
+
+  # verify we cannot commit just A/D
   expected_error = "svn: E200009: Cannot commit '.*%s' because it was " \
                     "moved from '.*%s'" % (re.escape(sbox.ospath('A/D/iota')),
                                            re.escape(iota_path))
@@ -5655,7 +5646,6 @@ test_list = [ None,
               copy_and_move_conflicts,
               copy_deleted_dir,
               commit_copied_half_of_move,
-              commit_copied_half_of_nested_move,
               commit_deleted_half_of_move,
              ]
 
