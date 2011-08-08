@@ -5482,7 +5482,9 @@ def commit_copied_half_of_move(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [], 'mv', iota_path, D_path)
 
-  expected_error = "svn: E200009: Cannot commit"
+  expected_error = "svn: E200009: Cannot commit '.*%s' because it was moved " \
+                    "from '.*%s'" % (re.escape(os.path.join(D_path, "iota")),
+                                     re.escape(iota_path))
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'commit', '-m', 'foo', D_path)
 
@@ -5536,7 +5538,9 @@ def commit_deleted_half_of_move(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [], 'mv', iota_path, D_path)
 
-  expected_error = "svn: E200009: Cannot commit"
+  expected_error = "svn: E200009: Cannot commit '.*%s' because it was moved " \
+                    "to '.*%s'" % (re.escape(iota_path),
+                                   re.escape(os.path.join(D_path, "iota")))
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'commit', '-m', 'foo', iota_path)
 
