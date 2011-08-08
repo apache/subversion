@@ -869,7 +869,6 @@ purge_shared_txn_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
   const char *txn_id = baton;
 
   free_shared_txn(fs, txn_id);
-  svn_fs_py__reset_txn_caches(fs);
 
   return SVN_NO_ERROR;
 }
@@ -1881,7 +1880,6 @@ get_packed_offset(apr_off_t *rev_offset,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_stream_t *manifest_stream;
-  svn_boolean_t is_cached;
   svn_revnum_t shard;
   apr_int64_t shard_pos;
   apr_array_header_t *manifest;
@@ -1891,16 +1889,6 @@ get_packed_offset(apr_off_t *rev_offset,
 
   /* position of the shard within the manifest */
   shard_pos = rev % ffd->max_files_per_dir;
-
-  /* fetch exactly that element into *rev_offset, if the manifest is found
-     in the cache */
-  SVN_ERR(svn_cache__get_partial((void **) rev_offset, &is_cached,
-                                 ffd->packed_offset_cache, &shard,
-                                 svn_fs_py__get_sharded_offset, &shard_pos,
-                                 pool));
-
-  if (is_cached)
-      return SVN_NO_ERROR;
 
   /* Open the manifest file. */
   SVN_ERR(svn_stream_open_readonly(&manifest_stream,
@@ -1937,7 +1925,7 @@ get_packed_offset(apr_off_t *rev_offset,
 
   /* Close up shop and cache the array. */
   SVN_ERR(svn_stream_close(manifest_stream));
-  return svn_cache__set(ffd->packed_offset_cache, &shard, manifest, pool);
+  return SVN_NO_ERROR;
 }
 
 /* Open the revision file for revision REV in filesystem FS and store
@@ -2149,64 +2137,6 @@ err_dangling_id(svn_fs_t *fs, const svn_fs_id_t *id)
      id_str->data, fs->path);
 }
 
-/* Return a string that uniquely identifies the noderev with the
- * given ID, for use as a cache key.
- */
-static const char *
-get_noderev_cache_key(const svn_fs_id_t *id, apr_pool_t *pool)
-{
-  const svn_string_t *id_unparsed = svn_fs_py__id_unparse(id, pool);
-  return id_unparsed->data;
-}
-
-/* Look up the NODEREV_P for ID in FS' node revsion cache. If noderev
- * caching has been enabled and the data can be found, IS_CACHED will
- * be set to TRUE. The noderev will be allocated from POOL.
- *
- * Non-permanent ids (e.g. ids within a TXN) will not be cached.
- */
-static svn_error_t *
-get_cached_node_revision_body(node_revision_t **noderev_p,
-                              svn_fs_t *fs,
-                              const svn_fs_id_t *id,
-                              svn_boolean_t *is_cached,
-                              apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-  if (! ffd->node_revision_cache || svn_fs_py__id_txn_id(id))
-    *is_cached = FALSE;
-  else
-    SVN_ERR(svn_cache__get((void **) noderev_p,
-                           is_cached,
-                           ffd->node_revision_cache,
-                           get_noderev_cache_key(id, pool),
-                           pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* If noderev caching has been enabled, store the NODEREV_P for the given ID
- * in FS' node revsion cache. SCRATCH_POOL is used for temporary allcations.
- *
- * Non-permanent ids (e.g. ids within a TXN) will not be cached.
- */
-static svn_error_t *
-set_cached_node_revision_body(node_revision_t *noderev_p,
-                              svn_fs_t *fs,
-                              const svn_fs_id_t *id,
-                              apr_pool_t *scratch_pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  if (ffd->node_revision_cache && !svn_fs_py__id_txn_id(id))
-    return svn_cache__set(ffd->node_revision_cache,
-                          get_noderev_cache_key(id, scratch_pool),
-                          noderev_p,
-                          scratch_pool);
-
-  return SVN_NO_ERROR;
-}
-
 /* Get the node-revision for the node ID in FS.
    Set *NODEREV_P to the new node-revision structure, allocated in POOL.
    See svn_fs_py__get_node_revision, which wraps this and adds another
@@ -2219,12 +2149,6 @@ get_node_revision_body(node_revision_t **noderev_p,
 {
   apr_file_t *revision_file;
   svn_error_t *err;
-  svn_boolean_t is_cached = FALSE;
-
-  /* First, try a cache lookup. If that succeeds, we are done here. */
-  SVN_ERR(get_cached_node_revision_body(noderev_p, fs, id, &is_cached, pool));
-  if (is_cached)
-    return SVN_NO_ERROR;
 
   if (svn_fs_py__id_txn_id(id))
     {
@@ -2257,8 +2181,7 @@ get_node_revision_body(node_revision_t **noderev_p,
                                                            pool),
                                   pool));
 
-  /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
-  return set_cached_node_revision_body(*noderev_p, fs, id, pool);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -2907,18 +2830,11 @@ svn_fs_py__rev_get_root(svn_fs_id_t **root_id_p,
                         svn_revnum_t rev,
                         apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
   apr_file_t *revision_file;
   apr_off_t root_offset;
   svn_fs_id_t *root_id = NULL;
-  svn_boolean_t is_cached;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
-
-  SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached,
-                         ffd->rev_root_id_cache, &rev, pool));
-  if (is_cached)
-    return SVN_NO_ERROR;
 
   SVN_ERR(open_pack_or_rev_file(&revision_file, fs, rev, pool));
   SVN_ERR(get_root_changes_offset(&root_offset, NULL, revision_file, fs, rev,
@@ -2928,8 +2844,6 @@ svn_fs_py__rev_get_root(svn_fs_id_t **root_id_p,
                               root_offset, pool));
 
   SVN_ERR(svn_io_file_close(revision_file, pool));
-
-  SVN_ERR(svn_cache__set(ffd->rev_root_id_cache, &rev, root_id, pool));
 
   *root_id_p = root_id;
 
@@ -3060,7 +2974,6 @@ struct rep_state
 {
   apr_file_t *file;
                     /* The txdelta window cache to use or NULL. */
-  svn_cache__t *window_cache;
   apr_off_t start;  /* The starting offset for the raw
                        svndiff/plaintext data minus header. */
   apr_off_t off;    /* The current offset into the file. */
@@ -3077,13 +2990,11 @@ create_rep_state_body(struct rep_state **rep_state,
                       svn_fs_t *fs,
                       apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
   struct rep_state *rs = apr_pcalloc(pool, sizeof(*rs));
   struct rep_args *ra;
   unsigned char buf[4];
 
   SVN_ERR(open_and_seek_representation(&rs->file, fs, rep, pool));
-  rs->window_cache = ffd->txdelta_window_cache;
 
   SVN_ERR(read_rep_line(&ra, rs->file, pool));
   SVN_ERR(get_file_offset(&rs->start, rs->file, pool));
@@ -3325,78 +3236,6 @@ get_window_key(struct rep_state *rs, apr_off_t offset, apr_pool_t *pool)
   return svn_fs_py__combine_number_and_string(offset, name, pool);
 }
 
-/* Read the WINDOW_P for the rep state RS from the current FSFS session's
- * cache. This will be a no-op and IS_CACHED will be set to FALSE if no
- * cache has been given. If a cache is available IS_CACHED will inform
- * the caller about the success of the lookup. Allocations (of the window
- * in particualar) will be made from POOL.
- *
- * If the information could be found, put RS and the position within the
- * rev file into the same state as if the data had just been read from it.
- */
-static svn_error_t *
-get_cached_window(svn_txdelta_window_t **window_p,
-                  struct rep_state *rs,
-                  svn_boolean_t *is_cached,
-                  apr_pool_t *pool)
-{
-  if (! rs->window_cache)
-    {
-      /* txdelta window has not been enabled */
-      *is_cached = FALSE;
-    }
-  else
-    {
-      /* ask the cache for the desired txdelta window */
-      svn_fs_py__txdelta_cached_window_t *cached_window;
-      SVN_ERR(svn_cache__get((void **) &cached_window,
-                             is_cached,
-                             rs->window_cache,
-                             get_window_key(rs, rs->off, pool),
-                             pool));
-
-      if (*is_cached)
-        {
-          /* found it. Pass it back to the caller. */
-          *window_p = cached_window->window;
-
-          /* manipulate the RS as if we just read the data */
-          rs->chunk_index++;
-          rs->off = cached_window->end_offset;
-
-          /* manipulate the rev file as if we just read from it */
-          SVN_ERR(svn_io_file_seek(rs->file, APR_SET, &rs->off, pool));
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Store the WINDOW read at OFFSET for the rep state RS in the current
- * FSFS session's cache. This will be a no-op if no cache has been given.
- * Temporary allocations will be made from SCRATCH_POOL. */
-static svn_error_t *
-set_cached_window(svn_txdelta_window_t *window,
-                  struct rep_state *rs,
-                  apr_off_t offset,
-                  apr_pool_t *scratch_pool)
-{
-  if (rs->window_cache)
-    {
-      /* store the window and the first offset _past_ it */
-      svn_fs_py__txdelta_cached_window_t cached_window = { window, rs->off };
-
-      /* but key it with the start offset because that is the known state
-       * when we will look it up */
-      return svn_cache__set(rs->window_cache,
-                            get_window_key(rs, offset, scratch_pool),
-                            &cached_window,
-                            scratch_pool);
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Skip forwards to THIS_CHUNK in REP_STATE and then read the next delta
    window into *NWIN. */
 static svn_error_t *
@@ -3404,7 +3243,6 @@ read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
             apr_pool_t *pool)
 {
   svn_stream_t *stream;
-  svn_boolean_t is_cached;
   apr_off_t old_offset;
 
   SVN_ERR_ASSERT(rs->chunk_index <= this_chunk);
@@ -3422,11 +3260,6 @@ read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
                                   "representation"));
     }
 
-  /* Read the next window. But first, try to find it in the cache. */
-  SVN_ERR(get_cached_window(nwin, rs, &is_cached, pool));
-  if (is_cached)
-    return SVN_NO_ERROR;
-
   /* Actually read the next window. */
   old_offset = rs->off;
   stream = svn_stream_from_aprfile2(rs->file, TRUE, pool);
@@ -3439,9 +3272,7 @@ read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
                             _("Reading one svndiff window read beyond "
                               "the end of the representation"));
 
-  /* the window has not been cached before, thus cache it now
-   * (if caching is used for them at all) */
-  return set_cached_window(*nwin, rs, old_offset, pool);
+  return SVN_NO_ERROR;
 }
 
 /* Get one delta window that is a result of combining all but the last deltas
@@ -3484,16 +3315,6 @@ get_combined_window(svn_txdelta_window_t **result,
 
   *result = window;
   return SVN_NO_ERROR;
-}
-
-/* Returns whether or not the expanded fulltext of the file is cachable
- * based on its size SIZE.  The decision depends on the cache used by RB.
- */
-static svn_boolean_t
-fulltext_size_is_cachable(fs_fs_data_t *ffd, svn_filesize_t size)
-{
-  return (size < APR_SIZE_MAX)
-      && svn_cache__is_cachable(ffd->fulltext_cache, (apr_size_t)size);
 }
 
 /* Close method used on streams returned by read_representation().
@@ -3695,12 +3516,7 @@ rep_read_contents(void *baton,
     }
 
   if (rb->off == rb->len && rb->current_fulltext)
-    {
-      fs_fs_data_t *ffd = rb->fs->fsap_data;
-      SVN_ERR(svn_cache__set(ffd->fulltext_cache, rb->fulltext_cache_key,
-                             rb->current_fulltext, rb->pool));
-      rb->current_fulltext = NULL;
-    }
+    rb->current_fulltext = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -3727,26 +3543,8 @@ read_representation(svn_stream_t **contents_p,
     }
   else
     {
-      fs_fs_data_t *ffd = fs->fsap_data;
       const char *fulltext_key = NULL;
-      svn_filesize_t len = rep->expanded_size ? rep->expanded_size : rep->size;
       struct rep_read_baton *rb;
-
-      if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
-          && fulltext_size_is_cachable(ffd, len))
-        {
-          svn_string_t *fulltext;
-          svn_boolean_t is_cached;
-          fulltext_key = apr_psprintf(pool, "%ld/%" APR_OFF_T_FMT,
-                                      rep->revision, rep->offset);
-          SVN_ERR(svn_cache__get((void **) &fulltext, &is_cached,
-                                 ffd->fulltext_cache, fulltext_key, pool));
-          if (is_cached)
-            {
-              *contents_p = svn_stream_from_string(fulltext, pool);
-              return SVN_NO_ERROR;
-            }
-        }
 
       SVN_ERR(rep_read_get_baton(&rb, fs, rep, fulltext_key, pool));
 
@@ -3985,18 +3783,6 @@ parse_dir_entries(apr_hash_t **entries_p,
   return SVN_NO_ERROR;
 }
 
-/* Return the cache object in FS responsible to storing the directory
- * the NODEREV. If none exists, return NULL. */
-static svn_cache__t *
-locate_dir_cache(svn_fs_t *fs,
-                 node_revision_t *noderev)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-  return svn_fs_py__id_txn_id(noderev->id)
-      ? ffd->txn_dir_cache
-      : ffd->dir_cache;
-}
-
 svn_error_t *
 svn_fs_py__rep_contents_dir(apr_hash_t **entries_p,
                             svn_fs_t *fs,
@@ -4006,28 +3792,11 @@ svn_fs_py__rep_contents_dir(apr_hash_t **entries_p,
   const char *unparsed_id = NULL;
   apr_hash_t *unparsed_entries, *parsed_entries;
 
-  /* find the cache we may use */
-  svn_cache__t *cache = locate_dir_cache(fs, noderev);
-  if (cache)
-    {
-      svn_boolean_t found;
-
-      unparsed_id = svn_fs_py__id_unparse(noderev->id, pool)->data;
-      SVN_ERR(svn_cache__get((void **) entries_p, &found, cache,
-                             unparsed_id, pool));
-      if (found)
-        return SVN_NO_ERROR;
-    }
-
   /* Read in the directory hash. */
   unparsed_entries = apr_hash_make(pool);
   SVN_ERR(get_dir_contents(unparsed_entries, fs, noderev, pool));
   SVN_ERR(parse_dir_entries(&parsed_entries, unparsed_entries,
                             unparsed_id, pool));
-
-  /* Update the cache, if we are to use one. */
-  if (cache)
-    SVN_ERR(svn_cache__set(cache, unparsed_id, parsed_entries, pool));
 
   *entries_p = parsed_entries;
   return SVN_NO_ERROR;
@@ -4041,23 +3810,6 @@ svn_fs_py__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
                                   apr_pool_t *pool)
 {
   svn_boolean_t found = FALSE;
-
-  /* find the cache we may use */
-  svn_cache__t *cache = locate_dir_cache(fs, noderev);
-  if (cache)
-    {
-      const char *unparsed_id =
-        svn_fs_py__id_unparse(noderev->id, pool)->data;
-
-      /* Cache lookup. */
-      SVN_ERR(svn_cache__get_partial((void **)dirent,
-                                     &found,
-                                     cache,
-                                     unparsed_id,
-                                     svn_fs_py__extract_dir_entry,
-                                     (void*)name,
-                                     pool));
-    }
 
   /* fetch data from disk if we did not find it in the cache */
   if (! found)
@@ -5206,7 +4958,6 @@ svn_fs_py__set_entry(svn_fs_t *fs,
   const char *filename = path_txn_node_children(fs, parent_noderev->id, pool);
   apr_file_t *file;
   svn_stream_t *out;
-  fs_fs_data_t *ffd = fs->fsap_data;
 
   if (!rep || !rep->txn_id)
     {
@@ -5246,30 +4997,6 @@ svn_fs_py__set_entry(svn_fs_t *fs,
       SVN_ERR(svn_io_file_open(&file, filename, APR_WRITE | APR_APPEND,
                                APR_OS_DEFAULT, pool));
       out = svn_stream_from_aprfile2(file, TRUE, pool);
-    }
-
-  /* if we have a directory cache for this transaction, update it */
-  if (ffd->txn_dir_cache)
-    {
-      apr_pool_t *subpool = svn_pool_create(pool);
-
-      /* build parameters: (name, new entry) pair */
-      const char *key =
-          svn_fs_py__id_unparse(parent_noderev->id, subpool)->data;
-      replace_baton_t baton = {name, NULL};
-
-      if (id)
-        {
-          baton.new_entry = apr_pcalloc(subpool, sizeof(*baton.new_entry));
-          baton.new_entry->name = name;
-          baton.new_entry->kind = kind;
-          baton.new_entry->id = id;
-        }
-
-      /* actually update the cached directory (if cached) */
-      SVN_ERR(svn_cache__set_partial(ffd->txn_dir_cache, key, svn_fs_py__replace_dir_entry, &baton, subpool));
-
-      svn_pool_destroy(subpool);
     }
 
   /* Append an incremental hash entry for the entry change. */
@@ -7369,16 +7096,8 @@ svn_fs_py__delete_node_revision(svn_fs_t *fs,
   if (noderev->data_rep && noderev->data_rep->txn_id
       && noderev->kind == svn_node_dir)
     {
-      fs_fs_data_t *ffd = fs->fsap_data;
       SVN_ERR(svn_io_remove_file2(path_txn_node_children(fs, id, pool), FALSE,
                                   pool));
-
-      /* remove the corresponding entry from the cache, if such exists */
-      if (ffd->txn_dir_cache)
-        {
-          const char *key = svn_fs_py__id_unparse(id, pool)->data;
-          SVN_ERR(svn_cache__set(ffd->txn_dir_cache, key, NULL, pool));
-        }
     }
 
   return svn_io_remove_file2(path_txn_node_rev(fs, id, pool), FALSE, pool);

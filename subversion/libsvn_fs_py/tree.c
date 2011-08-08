@@ -132,145 +132,6 @@ static svn_error_t *make_txn_root(svn_fs_root_t **root_p,
                                   svn_revnum_t base_rev, apr_uint32_t flags,
                                   apr_pool_t *pool);
 
-
-/*** Node Caching ***/
-
-/* Find and return the DAG node cache for ROOT and the key that
-   should be used for PATH. */
-static void
-locate_cache(svn_cache__t **cache,
-             const char **key,
-             svn_fs_root_t *root,
-             const char *path,
-             apr_pool_t *pool)
-{
-  if (root->is_txn_root)
-    {
-      fs_txn_root_data_t *frd = root->fsap_data;
-      if (cache) *cache = frd->txn_node_cache;
-      if (key && path) *key = path;
-    }
-  else
-    {
-      fs_fs_data_t *ffd = root->fs->fsap_data;
-      if (cache) *cache = ffd->rev_node_cache;
-      if (key && path) *key = apr_psprintf(pool, "%ld%s",
-                                           root->rev, path);
-    }
-}
-
-/* Return NODE for PATH from ROOT's node cache, or NULL if the node
-   isn't cached; the node is copied into POOL. */
-static svn_error_t *
-dag_node_cache_get(dag_node_t **node_p,
-                   svn_fs_root_t *root,
-                   const char *path,
-                   apr_pool_t *pool)
-{
-  svn_boolean_t found;
-  dag_node_t *node;
-  svn_cache__t *cache;
-  const char *key;
-
-  SVN_ERR_ASSERT(*path == '/');
-
-  locate_cache(&cache, &key, root, path, pool);
-
-  SVN_ERR(svn_cache__get((void **) &node, &found, cache, key, pool));
-  if (found && node)
-    {
-      /* Patch up the FS, since this might have come from an old FS
-       * object. */
-      svn_fs_py__dag_set_fs(node, root->fs);
-      *node_p = node;
-    }
-  else
-    *node_p = NULL;
-  return SVN_NO_ERROR;
-}
-
-
-/* Add the NODE for PATH to ROOT's node cache. */
-static svn_error_t *
-dag_node_cache_set(svn_fs_root_t *root,
-                   const char *path,
-                   dag_node_t *node,
-                   apr_pool_t *pool)
-{
-  svn_cache__t *cache;
-  const char *key;
-
-  SVN_ERR_ASSERT(*path == '/');
-
-  locate_cache(&cache, &key, root, path, pool);
-
-  return svn_cache__set(cache, key, node, pool);
-}
-
-
-/* Baton for find_descendents_in_cache. */
-struct fdic_baton {
-  const char *path;
-  apr_array_header_t *list;
-  apr_pool_t *pool;
-};
-
-/* If the given item is a descendent of BATON->PATH, push
- * it onto BATON->LIST (copying into BATON->POOL).  Implements
- * the svn_iter_apr_hash_cb_t prototype. */
-static svn_error_t *
-find_descendents_in_cache(void *baton,
-                          const void *key,
-                          apr_ssize_t klen,
-                          void *val,
-                          apr_pool_t *pool)
-{
-  struct fdic_baton *b = baton;
-  const char *item_path = key;
-
-  if (svn_dirent_is_ancestor(b->path, item_path))
-    APR_ARRAY_PUSH(b->list, const char *) = apr_pstrdup(b->pool, item_path);
-
-  return SVN_NO_ERROR;
-}
-
-/* Invalidate cache entries for PATH and any of its children.  This
-   should *only* be called on a transaction root! */
-static svn_error_t *
-dag_node_cache_invalidate(svn_fs_root_t *root,
-                          const char *path,
-                          apr_pool_t *pool)
-{
-  struct fdic_baton b;
-  svn_cache__t *cache;
-  apr_pool_t *iterpool;
-  int i;
-
-  b.path = path;
-  b.pool = svn_pool_create(pool);
-  b.list = apr_array_make(b.pool, 1, sizeof(const char *));
-
-  SVN_ERR_ASSERT(root->is_txn_root);
-  locate_cache(&cache, NULL, root, NULL, b.pool);
-
-
-  SVN_ERR(svn_cache__iter(NULL, cache, find_descendents_in_cache,
-                          &b, b.pool));
-
-  iterpool = svn_pool_create(b.pool);
-
-  for (i = 0; i < b.list->nelts; i++)
-    {
-      const char *descendent = APR_ARRAY_IDX(b.list, i, const char *);
-      svn_pool_clear(iterpool);
-      SVN_ERR(svn_cache__set(cache, descendent, NULL, iterpool));
-    }
-
-  svn_pool_destroy(iterpool);
-  svn_pool_destroy(b.pool);
-  return SVN_NO_ERROR;
-}
-
 
 
 /* Creating transaction and revision root nodes.  */
@@ -633,16 +494,11 @@ open_path(parent_path_t **parent_path_p,
           copy_id_inherit_t inherit;
           const char *copy_path = NULL;
           svn_error_t *err = SVN_NO_ERROR;
-          dag_node_t *cached_node;
 
           /* If we found a directory entry, follow it.  First, we
              check our node cache, and, failing that, we hit the DAG
              layer. */
-          SVN_ERR(dag_node_cache_get(&cached_node, root, path_so_far, pool));
-          if (cached_node)
-            child = cached_node;
-          else
-            err = svn_fs_py__dag_open(&child, here, entry, pool);
+          err = svn_fs_py__dag_open(&child, here, entry, pool);
 
           /* "file not found" requires special handling.  */
           if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
@@ -680,10 +536,6 @@ open_path(parent_path_t **parent_path_p,
               parent_path->copy_inherit = inherit;
               parent_path->copy_src_path = apr_pstrdup(pool, copy_path);
             }
-
-          /* Cache the node we found (if it wasn't already cached). */
-          if (! cached_node)
-            SVN_ERR(dag_node_cache_set(root, path_so_far, child, pool));
         }
 
       /* Are we finished traversing the path?  */
@@ -783,10 +635,6 @@ make_path_mutable(svn_fs_root_t *root,
                                          copy_id, txn_id,
                                          is_parent_copyroot,
                                          pool));
-
-      /* Update the path cache. */
-      SVN_ERR(dag_node_cache_set(root, parent_path_path(parent_path, pool),
-                                 clone, pool));
     }
   else
     {
@@ -816,17 +664,10 @@ get_dag(dag_node_t **dag_node_p,
   /* Canonicalize the input PATH. */
   path = svn_fs__canonicalize_abspath(path, pool);
 
-  /* First we look for the DAG in our cache. */
-  SVN_ERR(dag_node_cache_get(&node, root, path, pool));
-  if (! node)
-    {
-      /* Call open_path with no flags, as we want this to return an error
-         if the node for which we are searching doesn't exist. */
-      SVN_ERR(open_path(&parent_path, root, path, 0, NULL, pool));
-      node = parent_path->node;
-
-      /* No need to cache our find -- open_path() will do that for us. */
-    }
+  /* Call open_path with no flags, as we want this to return an error
+     if the node for which we are searching doesn't exist. */
+  SVN_ERR(open_path(&parent_path, root, path, 0, NULL, pool));
+  node = parent_path->node;
 
   *dag_node_p = node;
   return SVN_NO_ERROR;
@@ -1729,8 +1570,6 @@ svn_fs_py__commit_txn(const char **conflict_p,
 
  cleanup:
 
-  svn_fs_py__reset_txn_caches(fs);
-
   svn_pool_destroy(iterpool);
   return svn_error_trace(err);
 }
@@ -1872,10 +1711,6 @@ fs_make_dir(svn_fs_root_t *root,
                                   txn_id,
                                   pool));
 
-  /* Add this directory to the path cache. */
-  SVN_ERR(dag_node_cache_set(root, parent_path_path(parent_path, pool),
-                             sub_dir, pool));
-
   /* Make a record of this modification in the changes table. */
   return add_change(root->fs, txn_id, path, svn_fs_py__dag_get_id(sub_dir),
                     svn_fs_path_change_add, FALSE, FALSE, svn_node_dir,
@@ -1921,10 +1756,6 @@ fs_delete_node(svn_fs_root_t *root,
   SVN_ERR(svn_fs_py__dag_delete(parent_path->parent->node,
                                 parent_path->entry,
                                 txn_id, pool));
-
-  /* Remove this node and any children from the path cache. */
-  SVN_ERR(dag_node_cache_invalidate(root, parent_path_path(parent_path, pool),
-                                    pool));
 
   /* Update mergeinfo counts for parents */
   if (svn_fs_py__fs_supports_mergeinfo(root->fs) && mergeinfo_count > 0)
@@ -2059,11 +1890,6 @@ copy_helper(svn_fs_root_t *from_root,
                                   from_root->rev,
                                   from_canonpath,
                                   txn_id, pool));
-
-      if (kind == svn_fs_path_change_replace)
-        SVN_ERR(dag_node_cache_invalidate(to_root,
-                                          parent_path_path(to_parent_path,
-                                                           pool), pool));
 
       if (svn_fs_py__fs_supports_mergeinfo(to_root->fs)
           && mergeinfo_start != mergeinfo_end)
@@ -2224,10 +2050,6 @@ fs_make_file(svn_fs_root_t *root,
                                    parent_path->entry,
                                    txn_id,
                                    pool));
-
-  /* Add this file to the path cache. */
-  SVN_ERR(dag_node_cache_set(root, parent_path_path(parent_path, pool), child,
-                             pool));
 
   /* Make a record of this modification in the changes table. */
   return add_change(root->fs, txn_id, path, svn_fs_py__dag_get_id(child),
@@ -3913,12 +3735,6 @@ make_txn_root(svn_fs_root_t **root_p,
                                       32, 20, FALSE,
                                       apr_pstrcat(pool, txn, ":TXN", (char *)NULL),
                                       root->pool));
-
-  /* Initialize transaction-local caches in FS.
-
-     Note that we cannot put those caches in frd because that content
-     fs root object is not available where we would need it. */
-  SVN_ERR(svn_fs_py__initialize_txn_caches(fs, txn, pool));
 
   root->fsap_data = frd;
 

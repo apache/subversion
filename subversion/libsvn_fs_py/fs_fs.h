@@ -502,31 +502,6 @@ svn_fs_py__get_node_origin(const svn_fs_id_t **origin_id,
                            const char *node_id,
                            apr_pool_t *pool);
 
-
-/* Initialize all session-local caches in FS according to the global
-   cache settings. Use POOL for allocations.
-
-   Please note that it is permissible for this function to set some
-   or all of these caches to NULL, regardless of any setting. */
-svn_error_t *
-svn_fs_py__initialize_caches(svn_fs_t *fs, apr_pool_t *pool);
-
-/* Initialize all transaction-local caches in FS according to the global
-   cache settings and make TXN_ID part of their key space. Use POOL for
-   allocations.
-
-   Please note that it is permissible for this function to set some or all
-   of these caches to NULL, regardless of any setting. */
-svn_error_t *
-svn_fs_py__initialize_txn_caches(svn_fs_t *fs,
-                                 const char *txn_id,
-                                 apr_pool_t *pool);
-
-/* Resets the svn_cache__t structures local to the current transaction in FS.
-   Calling it more than once per txn or from outside any txn is allowed. */
-void
-svn_fs_py__reset_txn_caches(svn_fs_t *fs);
-
 /* Possibly pack the repository at PATH.  This just take full shards, and
    combines all the revision files into a single one, with a manifest header.
    Use optional CANCEL_FUNC/CANCEL_BATON for cancellation support.

@@ -221,43 +221,8 @@ typedef struct fs_fs_data_t
   /* The fsfs.conf file, parsed.  Allocated in FS->pool. */
   svn_config_t *config;
 
-  /* Caches of immutable data.  (Note that if these are created with
-     svn_cache__create_memcache, the data can be shared between
-     multiple svn_fs_t's for the same filesystem.) */
-
-  /* A cache of revision root IDs, mapping from (svn_revnum_t *) to
-     (svn_fs_id_t *).  (Not threadsafe.) */
-  svn_cache__t *rev_root_id_cache;
-
-  /* DAG node cache for immutable nodes */
-  svn_cache__t *rev_node_cache;
-
-  /* A cache of the contents of immutable directories; maps from
-     unparsed FS ID to ###x. */
-  svn_cache__t *dir_cache;
-
-  /* Fulltext cache; currently only used with memcached.  Maps from
-     rep key to svn_string_t. */
-  svn_cache__t *fulltext_cache;
-
-  /* Pack manifest cache; a cache mapping (svn_revnum_t) shard number to
-     a manifest; and a manifest is a mapping from (svn_revnum_t) revision
-     number offset within a shard to (apr_off_t) byte-offset in the
-     respective pack file. */
-  svn_cache__t *packed_offset_cache;
-
-  /* Cache for txdelta_window_t objects; the key is (revFilePath, offset) */
-  svn_cache__t *txdelta_window_cache;
-
-  /* Cache for node_revision_t objects; the key is (revision, id offset) */
-  svn_cache__t *node_revision_cache;
-
   /* If set, there are or have been more than one concurrent transaction */
   svn_boolean_t concurrent_transactions;
-
-  /* Tempoary cache for changed directories yet to be committed; maps from
-     unparsed FS ID to ###x.  NULL outside transactions. */
-  svn_cache__t *txn_dir_cache;
 
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
