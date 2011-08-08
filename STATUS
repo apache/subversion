@@ -199,11 +199,3 @@ Approved changes:
    Allow proper translation of some messages.
    Votes:
      +1: arfrever, rhuijben, julianfoad
-
- * r1154121
-   Improve a message.
-   Justification:
-     Translators won't have to maintain separate translations of help message
-     for 'svn mergeinfo' on trunk and 1.7.x branch.
-   Votes:
-     +1: arfrever, rhuijben, julianfoad
