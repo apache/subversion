@@ -63,6 +63,11 @@ svn_wc_info_dup(const svn_wc_info_t *info,
     new_info->copyfrom_url = apr_pstrdup(pool, info->copyfrom_url);
   if (info->wcroot_abspath)
     new_info->wcroot_abspath = apr_pstrdup(pool, info->wcroot_abspath);
+  if (info->moved_from_relpath)
+    new_info->moved_from_relpath = apr_pstrdup(pool, info->moved_from_relpath);
+  if (info->moved_to_relpath)
+    new_info->moved_to_relpath = apr_pstrdup(pool, info->moved_to_relpath);
+
   return new_info;
 }
 
@@ -133,6 +138,8 @@ build_info_for_node(svn_wc__info2_t **info,
 
       if (original_repos_relpath)
         {
+          const char *moved_from_abspath;
+
           /* Root or child of copy */
           tmpinfo->rev = original_revision;
           repos_relpath = original_repos_relpath;
@@ -146,6 +153,26 @@ build_info_for_node(svn_wc__info2_t **info,
 
               wc_info->copyfrom_rev = original_revision;
             }
+
+          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL,
+                                           &moved_from_abspath, NULL,
+                                           db, local_abspath,
+                                           result_pool, scratch_pool));
+          if (moved_from_abspath)
+            {
+              const char *wcroot_abspath;
+              const char *relpath;
+
+              SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath, db, local_abspath,
+                                            scratch_pool, scratch_pool));
+              relpath = svn_dirent_skip_ancestor(wcroot_abspath,
+                                                 moved_from_abspath);
+              wc_info->moved_from_relpath = apr_pstrdup(result_pool,
+                                                        relpath);
+            }
+          else
+            wc_info->moved_from_relpath = NULL;
         }
       else if (op_root)
         {
@@ -187,6 +214,7 @@ build_info_for_node(svn_wc__info2_t **info,
   else if (status == svn_wc__db_status_deleted)
     {
       const char *work_del_abspath;
+      const char *moved_to_abspath;
 
       SVN_ERR(svn_wc__db_read_pristine_info(NULL, NULL,
                                             &tmpinfo->last_changed_rev,
@@ -199,7 +227,7 @@ build_info_for_node(svn_wc__info2_t **info,
                                             result_pool, scratch_pool));
 
       /* And now fetch the url and revision of what will be deleted */
-      SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
+      SVN_ERR(svn_wc__db_scan_deletion(NULL, &moved_to_abspath,
                                        &work_del_abspath, NULL,
                                        db, local_abspath,
                                        scratch_pool, scratch_pool));
@@ -241,6 +269,19 @@ build_info_for_node(svn_wc__info2_t **info,
                                                      repos_relpath,
                                                      result_pool);
         }
+
+      if (moved_to_abspath)
+        {
+          const char *wcroot_abspath;
+          const char *relpath;
+
+          SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath, db, local_abspath,
+                                        scratch_pool, scratch_pool));
+          relpath = svn_dirent_skip_ancestor(wcroot_abspath, moved_to_abspath);
+          wc_info->moved_to_relpath = apr_pstrdup(result_pool, relpath);
+        }
+      else
+        wc_info->moved_to_relpath = NULL;
 
       wc_info->schedule = svn_wc_schedule_delete;
     }
