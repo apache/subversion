@@ -135,12 +135,15 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1154982
+ * r1154982, r1155124
    Stop returning APR_EGENERAL from serf for unexpected data.
    Justification:
      Clients like AnkhSVN can't see what kind of error this is so they can
      only show a dialog with an error which in some cases is even not clear
      to normal users.
+   Notes:
+     r1154982 improves the generic errors and r1155124 restores some
+     specific 'svn lock' behavior that was broken by r1154982.
    Votes:
      +1: rhuijben
 
