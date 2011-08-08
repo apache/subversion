@@ -196,7 +196,7 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1154982
+ * r1155015
    Resolve a segfault on upgrade when we find unexpected files in the
    administrative area.
    Justification:
