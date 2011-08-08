@@ -95,6 +95,10 @@ class RemoteRepository(object):
         self.client[0].log_msg_baton2 = c_void_p()
         self._log_func = None
 
+    def close(self):
+        """Close this RemoteRepository object, releasing any resources."""
+        self.pool.clear()
+
     def txn(self):
         """Create a transaction"""
         return Txn(self)
@@ -395,6 +399,11 @@ class LocalRepository(object):
         else:
             svn_repos_open(byref(self._as_parameter_), path, self.pool)
         self.fs = _fs(self)
+
+    def close(self):
+        """Close this LocalRepository object, releasing any resources. In
+           particular, this closes the rep-cache DB."""
+        self.pool.clear()
 
     def latest_revnum(self):
         """Get the latest revision in the repository"""
