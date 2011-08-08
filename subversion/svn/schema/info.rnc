@@ -61,7 +61,9 @@ wc-info =
     depth?,
     text-updated?,
     prop-updated?,
-    checksum?
+    checksum?,
+    moved-from?,
+    moved-to?
   }
 
 wcroot-abspath = element wcroot-abspath { string }
