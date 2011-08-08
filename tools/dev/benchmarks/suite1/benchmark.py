@@ -418,7 +418,8 @@ def run(levels, spread, N):
 
       so, se = svn('--version')
       if not so:
-        print "Can't find svn."
+        ### options comes from the global namespace; it should be passed
+        print "Can't find svn at", options.svn
         exit(1)
       version = ', '.join([s.strip() for s in so.split('\n')[:2]])
 
@@ -565,6 +566,9 @@ def cmd_run(timings_path, levels, spread, N=1):
   print '\n\nHi, going to run a Subversion benchmark series of %d runs...' % N
 
   ### UGH! should pass to run()
+  ### neels: Today I contemplated doing that, but at the end of the day
+  ###        it merely blows up the code without much benefit. If this
+  ###        ever becomes part of an imported python package, call again.
   global timings
 
   if os.path.isfile(timings_path):
