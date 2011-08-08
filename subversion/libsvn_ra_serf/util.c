@@ -2022,9 +2022,17 @@ handle_response(serf_request_t *request,
 
       if (!ctx->session->pending_error)
         {
+          apr_status_t apr_err = SVN_ERR_RA_DAV_REQUEST_FAILED;
+
+          /* 405 == Method Not Allowed (Occurs when trying to lock a working
+             copy path which no longer exists at HEAD in the repository. */
+
+          if (sl.code == 405 && !strcmp(ctx->method, "LOCK"))
+            apr_err = SVN_ERR_FS_OUT_OF_DATE;
+
           return
-              svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                                _("The %s request on '%s' failed: %d %s"),
+              svn_error_createf(apr_err, NULL,
+                                _("%s request on '%s' failed: %d %s"),
                                 ctx->method, ctx->path, sl.code, sl.reason);
         }
 
