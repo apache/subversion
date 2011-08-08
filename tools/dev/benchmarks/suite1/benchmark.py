@@ -164,10 +164,10 @@ class Timings:
     s = ['COMPARE %s to %s' % (othername, selfname)]
 
     if TOTAL_RUN in self.timings and TOTAL_RUN in other.timings:
-      s.append('  %s times: %5.1f seconds avg for %s' % (TOTAL_RUN,
-                                                         othertotal, othername))
-      s.append('  %s        %5.1f seconds avg for %s' % (' ' * len(TOTAL_RUN),
-                                                         selftotal, selfname))
+      s.append('  %s timings: %5.1f seconds avg for %s'
+               % (TOTAL_RUN, othertotal, othername))
+      s.append('  %s          %5.1f seconds avg for %s'
+               % (' ' * len(TOTAL_RUN), selftotal, selfname))
 
 
     s.append('      min              max              avg         operation')
@@ -201,9 +201,9 @@ class Timings:
                  name))
 
     s.extend([
-         '("1.23|+0.45"  means factor=1.23, difference in seconds = 0.45',
-         'factor < 1 or difference < 0 means \'%s\' is faster than \'%s\')'
-           % (self.name, othername)])
+      '(legend: "1.23|+0.45" means: slower by factor 1.23 and by 0.45 seconds;',
+      ' factor < 1 and difference < 0 means \'%s\' is faster than \'%s\')'
+      % (self.name, othername)])
 
     return '\n'.join(s)
 
