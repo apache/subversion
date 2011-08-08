@@ -186,11 +186,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1154009, r1154273
-   Fix issue #3978 'Reverse merge which adds subtree fails'
-   Justification:
-     Prevents an assertion during a legitimate merge.
-   Notes: r1154009 is the fix, r1154273 is a test.
-   Votes:
-     +1: pburba, arfrever, philip
