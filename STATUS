@@ -94,14 +94,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, arfrever
 
- * r1154009, r1154273
-   Fix issue #3978 'Reverse merge which adds subtree fails'
-   Justification:
-     Prevents an assertion during a legitimate merge.
-   Notes: r1154009 is the fix, r1154273 is a test.
-   Votes:
-     +1: pburba, arfrever
-
  * r1154278, r1154379, r1154382
    Make 'svn ls' capable of listing Subversion 1.0-1.3 repositories using
    ra_serf.
@@ -194,3 +186,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1154009, r1154273
+   Fix issue #3978 'Reverse merge which adds subtree fails'
+   Justification:
+     Prevents an assertion during a legitimate merge.
+   Notes: r1154009 is the fix, r1154273 is a test.
+   Votes:
+     +1: pburba, arfrever, philip
