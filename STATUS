@@ -144,14 +144,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1154982
-   Resolve a segfault on upgrade when we find unexpected files in the
-   administrative area.
-   Justification:
-     Segfaults are bad.
-   Votes:
-     +1: rhuijben, philip.
-
 Veto-blocked changes:
 =====================
 
@@ -203,3 +195,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1154982
+   Resolve a segfault on upgrade when we find unexpected files in the
+   administrative area.
+   Justification:
+     Segfaults are bad.
+   Votes:
+     +1: rhuijben, philip, julianfoad
