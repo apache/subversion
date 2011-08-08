@@ -821,7 +821,7 @@ start_error(svn_ra_serf__xml_parser_t *parser,
         }
       else
         {
-          ctx->error->apr_err = APR_EGENERAL;
+          ctx->error->apr_err = SVN_ERR_RA_DAV_REQUEST_FAILED;
         }
 
       /* Start collecting cdata. */
@@ -2013,17 +2013,19 @@ handle_response(serf_request_t *request,
 
   ctx->conn->last_status_code = sl.code;
 
-  if (sl.code == 409 || sl.code >= 500)
+  if (sl.code == 405 || sl.code == 409 || sl.code >= 500)
     {
-      /* 409 Conflict: can indicate a hook error.
+      /* 405 Method Not allowed.
+         409 Conflict: can indicate a hook error.
          5xx (Internal) Server error. */
       SVN_ERR(svn_ra_serf__handle_server_error(request, response, pool));
 
       if (!ctx->session->pending_error)
         {
           return
-              svn_error_createf(APR_EGENERAL, NULL,
-              _("Unspecified error message: %d %s"), sl.code, sl.reason);
+              svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                _("The %s request on '%s' failed: %d %s"),
+                                ctx->method, ctx->path, sl.code, sl.reason);
         }
 
       return SVN_NO_ERROR; /* Error is set in caller */
