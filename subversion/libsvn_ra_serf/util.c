@@ -1497,6 +1497,21 @@ inject_to_parser(svn_ra_serf__xml_parser_t *ctx,
   return SVN_NO_ERROR;
 }
 
+/* Apr pool cleanup handler to release an XML_Parser in success and error
+   conditions */
+static apr_status_t
+xml_parser_cleanup(void *baton)
+{
+  XML_Parser *xmlp = baton;
+
+  if (*xmlp)
+    {
+      XML_ParserFree(*xmlp);
+      *xmlp = NULL;
+    }
+
+  return APR_SUCCESS;
+}
 
 svn_error_t *
 svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
@@ -1633,7 +1648,7 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
          return status. We just don't care.  */
       (void) XML_Parse(parser->xmlp, NULL, 0, 1);
 
-      XML_ParserFree(parser->xmlp);
+      apr_pool_cleanup_run(parser->pool, &parser->xmlp, xml_parser_cleanup);
       parser->xmlp = NULL;
       add_done_item(parser);
     }
@@ -1693,6 +1708,8 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   if (!ctx->xmlp)
     {
       ctx->xmlp = XML_ParserCreate(NULL);
+      apr_pool_cleanup_register(ctx->pool, &ctx->xmlp, xml_parser_cleanup,
+                                apr_pool_cleanup_null);
       XML_SetUserData(ctx->xmlp, ctx);
       XML_SetElementHandler(ctx->xmlp, start_xml, end_xml);
       if (ctx->cdata)
@@ -1783,8 +1800,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
         {
           SVN_ERR_ASSERT(ctx->xmlp != NULL);
 
-          XML_ParserFree(ctx->xmlp);
-          ctx->xmlp = NULL;
+          apr_pool_cleanup_run(ctx->pool, &ctx->xmlp, xml_parser_cleanup);
           add_done_item(ctx);
           return svn_error_trace(err);
         }
@@ -1818,8 +1834,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
               /* Ignore the return status. We just don't care.  */
               (void) XML_Parse(ctx->xmlp, NULL, 0, 1);
 
-              XML_ParserFree(ctx->xmlp);
-              ctx->xmlp = NULL;
+              apr_pool_cleanup_run(ctx->pool, &ctx->xmlp, xml_parser_cleanup);
               add_done_item(ctx);
             }
 
