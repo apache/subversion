@@ -5524,9 +5524,11 @@ def commit_deleted_half_of_move(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  iota_path = os.path.join(wc_dir, 'iota')
-  D_path = os.path.join(wc_dir, 'A', 'D')
+  iota_path = sbox.ospath('iota')
+  A_path = sbox.ospath('A')
+  D_path = sbox.ospath('A/D')
 
+  # iota -> A/D/iota; verify we cannot commit just iota
   svntest.actions.run_and_verify_svn(None, None, [], 'mv', iota_path, D_path)
 
   expected_error = "svn: E200009: Cannot commit '.*%s' because it was moved " \
@@ -5534,6 +5536,15 @@ def commit_deleted_half_of_move(sbox):
                                    re.escape(os.path.join(D_path, "iota")))
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'commit', '-m', 'foo', iota_path)
+
+  # A/D -> C; verify we cannot commit just A
+  C_path = sbox.ospath('C')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', D_path, C_path)
+  expected_error = "svn: E200009: Cannot commit '.*%s' because it was moved " \
+                    "to '.*%s'" % (re.escape(D_path), re.escape(C_path))
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'commit', '-m', 'foo', A_path)
 
 ########################################################################
 # Run the tests
