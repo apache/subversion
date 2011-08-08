@@ -629,6 +629,11 @@ struct svn_ra_serf__xml_parser_t {
 
      See libsvn_ra_serf/util.c  */
   struct svn_ra_serf__pending_t *pending;
+
+  /* Response restart support */
+  const void *headers_baton; /* Last pointer to headers */
+  apr_off_t skip_size; /* Number of bytes to skip */
+  apr_off_t read_size; /* Number of bytes read from response */
 };
 
 /*
