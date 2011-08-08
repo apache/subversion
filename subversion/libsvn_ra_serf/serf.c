@@ -1110,7 +1110,7 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, NULL, pool));
       if (!session->uuid)
         {
-          return svn_error_create(APR_EGENERAL, NULL,
+          return svn_error_create(SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,
                                   _("The UUID property was not found on the "
                                     "resource or any of its parents"));
         }
