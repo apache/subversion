@@ -135,6 +135,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1154908
+   Fix spurious test failures in Ruby bindings.
+   Justification:
+     Spurious test failures are a huge distraction and time sink when
+     signing releases.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
