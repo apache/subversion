@@ -122,6 +122,49 @@ create_py_stack(PyObject *p_exception,
   return err;
 }
 
+typedef void (*py_exc_func_t)(void *baton, va_list argp);
+
+/* Call FUNC with BATON, and upon returning check to see if the Python
+   interpreter has a pending exception.  If it does, convert that exception
+   to an svn_error_t and return it (or SVN_NO_ERROR if no error), resetting
+   the interpreter state and releasing the exception.
+   
+   Note: This function assumes whatever locking we need for the interpreter
+   has already happened and will be released after it is done. */
+static svn_error_t *
+catch_py_exception(py_exc_func_t func,
+                   void *baton,
+                   va_list argp)
+{
+  PyObject *p_type;
+  PyObject *p_exception;
+  PyObject *p_traceback;
+  svn_error_t *err;
+
+  /* Call the handler. */
+  func(baton, argp);
+
+  /* Early out if we didn't have any errors. */
+  if (!PyErr_Occurred())
+    return SVN_NO_ERROR;
+
+  PyErr_Fetch(&p_type, &p_exception, &p_traceback);
+
+  if (p_exception && p_traceback)
+    err = create_py_stack(p_exception, p_traceback);
+  else
+    err = svn_error_create(SVN_ERR_BAD_PYTHON, NULL,
+                           _("Python error."));
+
+  PyErr_Clear();
+
+  Py_DECREF(p_type);
+  Py_XDECREF(p_exception);
+  Py_XDECREF(p_traceback);
+
+  return err;
+}
+
 static svn_error_t *
 load_module(PyObject **p_module_out,
             const char *module_name)
@@ -215,6 +258,53 @@ svn_fs_py__destroy_py_object(void *data)
 }
 
 
+struct call_method_baton
+{
+  PyObject **p_result;
+  PyObject *p_obj;
+  const char *name;
+  const char *format;
+};
+
+
+static void
+call_method(void *baton, va_list argp)
+{
+  struct call_method_baton *cmb = baton;
+  PyObject *p_args = NULL;
+  PyObject *p_func = NULL;
+  PyObject *p_value = NULL;
+
+  p_args = Py_VaBuildValue(cmb->format, argp);
+  if (PyErr_Occurred())
+    goto cm_free_objs;
+
+  p_func = PyObject_GetAttrString(cmb->p_obj, cmb->name);
+  if (PyErr_Occurred())
+    goto cm_free_objs;
+
+  p_value = PyObject_CallObject(p_func, p_args);
+  Py_DECREF(p_args);
+  p_args = NULL;
+  Py_DECREF(p_func);
+  p_func = NULL;
+  if (PyErr_Occurred())
+    goto cm_free_objs;
+
+  if (cmb->p_result)
+    *cmb->p_result = p_value;
+  else
+    Py_DECREF(p_value);
+
+  return;
+
+cm_free_objs:
+  /* Error handler, decrefs all python objects we may have. */
+  Py_XDECREF(p_args);
+  Py_XDECREF(p_func);
+}
+
+
 svn_error_t*
 svn_fs_py__call_method(PyObject **p_result,
                        PyObject *p_obj,
@@ -222,68 +312,23 @@ svn_fs_py__call_method(PyObject **p_result,
                        const char *format,
                        ...)
 {
-  PyObject *p_func = NULL;
-  PyObject *p_value = NULL;
-  PyObject *p_args = NULL;
+  svn_error_t *err;
   va_list argp;
+  struct call_method_baton cmb;
 
   SVN_ERR_ASSERT(p_obj != NULL);
 
   va_start(argp, format);
 
-  p_args = Py_VaBuildValue(format, argp);
-  if (PyErr_Occurred())
-    goto create_error;
+  cmb.p_result = p_result;
+  cmb.p_obj = p_obj;
+  cmb.name = name;
+  cmb.format = format;
 
-  p_func = PyObject_GetAttrString(p_obj, name);
-  if (PyErr_Occurred())
-    goto create_error;
-    
-  /* ### Need a callable check here? */
-
-  p_value = PyObject_CallObject(p_func, p_args);
-  Py_DECREF(p_args);
-  p_args = NULL;
-  if (PyErr_Occurred())
-    goto create_error;
-
-  if (p_result)
-    *p_result = p_value;
-  else
-    Py_DECREF(p_value);
-
-  Py_DECREF(p_func);
+  err = catch_py_exception(call_method, &cmb, argp);
 
   va_end(argp);
-  return SVN_NO_ERROR;
-
-create_error:
-  {
-    PyObject *p_type = NULL;
-    PyObject *p_exception = NULL;
-    PyObject *p_traceback = NULL;
-    svn_error_t *err;
-
-    va_end(argp);
-    Py_XDECREF(p_args);
-    Py_XDECREF(p_func);
-
-    PyErr_Fetch(&p_type, &p_exception, &p_traceback);
-
-    if (p_exception && p_traceback)
-      err = create_py_stack(p_exception, p_traceback);
-    else
-      err = svn_error_create(SVN_ERR_BAD_PYTHON, NULL,
-                             _("Error calling method"));
-
-    PyErr_Clear();
-
-    Py_DECREF(p_type);
-    Py_XDECREF(p_exception);
-    Py_XDECREF(p_traceback);
-
-    return err;
-  }
+  return err;
 }
 
 PyObject *
