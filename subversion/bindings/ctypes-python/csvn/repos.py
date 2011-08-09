@@ -541,7 +541,6 @@ class _fs(object):
        This class represents an svn_fs_t object"""
 
     def __init__(self, repos):
-        self.repos = repos
         self.iterpool = Pool()
         self._as_parameter_ = svn_repos_fs(repos)
 
@@ -571,13 +570,6 @@ class _fs(object):
            temporary allocations. Otherwise, pool will be used for
            temporary allocations."""
         return _fs_root(self, rev, txn, pool, iterpool)
-
-    def txn(self, message, base_rev=None):
-        """Open a new transaction for commit to the specified
-           repository, assuming that our data is up to date as
-           of base_rev. Setup the author and commit message
-           revprops."""
-        return _fs_txn(self.repos, message, base_rev)
 
 class _fs_root(object):
     """NOTE: This is a private class. Don't use it outside of
