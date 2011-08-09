@@ -383,7 +383,7 @@ def import_into_foreign_repo(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [], 'import',
                                      '-m', 'Log message for new import',
-                                     sbox.ospath('A/mu'), other_repo_url)
+                                     sbox.ospath('A/mu'), other_repo_url + '/f')
 
 #----------------------------------------------------------------------
 ########################################################################
