@@ -163,6 +163,9 @@ Candidate changes:
    Justification:
      Without this patch the xml parser is only freed when http responses are
      read successfully.
+   Notes:
+     This patch requires r1148932 to be backported for a clean merge.
+     Currently accept theirs on conflict produces the right result.
    Votes:
      +1: rhuijben
 
