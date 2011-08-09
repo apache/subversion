@@ -51,7 +51,6 @@ class RemoteRepositoryTestCase(unittest.TestCase):
 
         self.repos = LocalRepository(repos_location, create=True)
         self.repos.load(dumpfile)
-        self.repos.close()
 
         self.repos = RemoteRepository(repos_url)
 
