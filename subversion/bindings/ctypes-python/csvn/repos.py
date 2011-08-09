@@ -400,6 +400,9 @@ class LocalRepository(object):
             svn_repos_open(byref(self._as_parameter_), path, self.pool)
         self.fs = _fs(self)
 
+    def __del__(self):
+        self.close()
+
     def close(self):
         """Close this LocalRepository object, releasing any resources. In
            particular, this closes the rep-cache DB."""
