@@ -3193,49 +3193,6 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   return SVN_NO_ERROR;
 }
 
-/* Combine the name of the rev file in RS with the given OFFSET to form
- * a cache lookup key. Allocations will be made from POOL. */
-static const char*
-get_window_key(struct rep_state *rs, apr_off_t offset, apr_pool_t *pool)
-{
-  const char *name;
-  const char *last_part;
-  const char *name_last;
-
-  /* the rev file name containing the txdelta window.
-   * If this fails we are in serious trouble anyways.
-   * And if nobody else detects the problems, the file content checksum
-   * comparison _will_ find them.
-   */
-  if (apr_file_name_get(&name, rs->file))
-    return "";
-
-  /* Handle packed files as well by scanning backwards until we find the
-   * revision or pack number. */
-  name_last = name + strlen(name) - 1;
-  while (! svn_ctype_isdigit(*name_last))
-    --name_last;
-
-  last_part = name_last;
-  while (svn_ctype_isdigit(*last_part))
-    --last_part;
-
-  /* We must differentiate between packed files (as of today, the number
-   * is being followed by a dot) and non-packed files (followed by \0).
-   * Otherwise, there might be overlaps in the numbering range if the
-   * repo gets packed after caching the txdeltas of non-packed revs.
-   * => add the first non-digit char to the packed number. */
-  if (name_last[1] != '\0')
-    ++name_last;
-
-  /* copy one char MORE than the actual number to mark packed files,
-   * i.e. packed revision file content uses different key space then
-   * non-packed ones: keys for packed rev file content ends with a dot
-   * for non-packed rev files they end with a digit. */
-  name = apr_pstrndup(pool, last_part + 1, name_last - last_part);
-  return svn_fs_py__combine_number_and_string(offset, name, pool);
-}
-
 /* Skip forwards to THIS_CHUNK in REP_STATE and then read the next delta
    window into *NWIN. */
 static svn_error_t *
