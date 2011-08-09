@@ -370,6 +370,22 @@ enable-auto-props = yes
                                      '--config-dir', config_dir)
 
 #----------------------------------------------------------------------
+@Issue(3983)
+@XFail()
+def import_into_foreign_repo(sbox):
+  "import into a foreign repo"
+
+  sbox.build(read_only=True)
+
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  svntest.main.safe_rmtree(other_repo_dir, 1)
+  svntest.main.create_repos(other_repo_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'import',
+                                     '-m', 'Log message for new import',
+                                     sbox.ospath('A/mu'), other_repo_url)
+
+#----------------------------------------------------------------------
 ########################################################################
 # Run the tests
 
@@ -381,6 +397,7 @@ test_list = [ None,
               import_avoid_empty_revision,
               import_no_ignores,
               import_eol_style,
+              import_into_foreign_repo,
              ]
 
 if __name__ == '__main__':
