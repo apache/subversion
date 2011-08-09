@@ -158,6 +158,24 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1155131
+   Cleanup the xml parser in serf in unexpected conditions.
+   Justification:
+     Without this patch the xml parser is only freed when http responses are
+     read successfully.
+   Votes:
+     +1: rhuijben
+
+ * r1155160
+   When serf restarts a web request, start parsing xml where we stopped in the
+   previous request to avoid xml parse errors on the <?xml.
+   Justification:
+     Without this patch it is not possible to reliable checkout neon using
+     serf. (svn co http://svn.webdav.org/repos/projects/neon/tags/0.29.6 wc).
+     I (rhuijben) call that a regression.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
