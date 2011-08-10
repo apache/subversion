@@ -1170,6 +1170,26 @@ def add_remove_unversioned_target(sbox):
                                      'changelist', unversioned,
                                       '--remove')
 
+@XFail()
+def readd_after_revert(sbox):
+  "add new file to changelist, revert and readd"
+  sbox.build(read_only = True)
+
+  dummy = sbox.ospath('dummy')
+  svntest.main.file_write(dummy, "dummy contents")
+
+  sbox.simple_add('dummy')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'changelist', 'testlist',
+                                     dummy)
+
+  sbox.simple_revert('dummy')
+
+  svntest.main.file_write(dummy, "dummy contents")
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'add', dummy)
+
 
 ########################################################################
 # Run the tests
@@ -1192,6 +1212,7 @@ test_list = [ None,
               revert_deleted_in_changelist,
               add_remove_non_existent_target,
               add_remove_unversioned_target,
+              readd_after_revert,
              ]
 
 if __name__ == '__main__':
