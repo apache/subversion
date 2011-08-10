@@ -371,7 +371,6 @@ enable-auto-props = yes
 
 #----------------------------------------------------------------------
 @Issue(3983)
-@XFail()
 def import_into_foreign_repo(sbox):
   "import into a foreign repo"
 
