@@ -1170,7 +1170,7 @@ def add_remove_unversioned_target(sbox):
                                      'changelist', unversioned,
                                       '--remove')
 
-@XFail()
+@Issue(3985)
 def readd_after_revert(sbox):
   "add new file to changelist, revert and readd"
   sbox.build(read_only = True)
