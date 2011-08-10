@@ -180,6 +180,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1155391, r1155404, r1156218
+   Fix issue 3983, import into foreign repository.
+   Justification:
+     It's a regression from 1.6.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
