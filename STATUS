@@ -188,7 +188,7 @@ Candidate changes:
    Notes:
      r1156085 adds an XFail testcase and r1156098 resolves this issue.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
 Veto-blocked changes:
 =====================
