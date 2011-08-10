@@ -1010,9 +1010,6 @@ svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
  * If DELETED is not NULL, set *DELETED to TRUE if the node is marked as
  * deleted in the working copy.
  *
- * If CONFLICTED is not NULL, set *CONFLICTED to TRUE if the node is somehow
- * conflicted.
- *
  * All output arguments except OBSTRUCTION_STATE can be NULL to ommit the
  * result.
  *
@@ -1023,7 +1020,6 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
                                svn_node_kind_t *kind,
                                svn_boolean_t *added,
                                svn_boolean_t *deleted,
-                               svn_boolean_t *conflicted,
                                svn_wc_context_t *wc_ctx,
                                const char *local_abspath,
                                svn_boolean_t no_wcroot_check,
