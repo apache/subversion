@@ -86,6 +86,10 @@ prop-updated = element prop-updated { xsd:dateTime }
 
 checksum = element checksum { md5sum.type }
 
+moved-from = element moved-from { string }
+
+moved-to = element moved-to { string }
+
 conflict =
   element conflict {
     prev-base-file,
