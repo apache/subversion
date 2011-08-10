@@ -603,8 +603,8 @@ WHERE wc_id = ?1
   AND local_relpath = ?2
   AND (changelist IS NULL
        OR NOT EXISTS (SELECT 1 FROM nodes_current c
-                      WHERE c.wc_id = ?1 AND c.local_relpath = local_relpath
-                        AND kind = 'file'))
+                      WHERE c.wc_id = ?1 AND c.local_relpath = ?2
+                        AND c.kind = 'file'))
 
 -- STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE
 DELETE FROM actual_node
@@ -614,8 +614,9 @@ WHERE wc_id = ?1
        OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
   AND (changelist IS NULL
        OR NOT EXISTS (SELECT 1 FROM nodes_current c
-                      WHERE c.wc_id = ?1 AND c.local_relpath = local_relpath
-                        AND kind = 'file'))
+                      WHERE c.wc_id = ?1 
+                        AND c.local_relpath = actual_node.local_relpath
+                        AND c.kind = 'file'))
 
 -- STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST
 UPDATE actual_node

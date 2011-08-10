@@ -231,13 +231,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1156085, r1156098
-   Resolve issue #3985, "Re: 1.7 corrupts WC when reverting add of changelist
-   member", by fixing a query
-   Justification:
-     Breaking working copies by reverting is unexpected behavior.
-   Notes:
-     r1156085 adds an XFail testcase and r1156098 resolves this issue.
-   Votes:
-     +1: rhuijben, philip, hwright
