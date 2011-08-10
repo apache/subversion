@@ -35,7 +35,10 @@ class FS(object):
             uuid_in = uuid.uuid1()
         self.uuid = uuid_in
 
-        open(self.__path_uuid, 'wb').write(str(self.uuid) + '\n')
+        f = open(self.__path_uuid, 'wb')
+        f.write(str(self.uuid) + '\n')
+        f.close()
+
         # We use the permissions of the 'current' file, because the 'uuid'
         # file does not exist during repository creation.
         shutil.copymode(self.__path_current, self.__path_uuid)
@@ -47,8 +50,9 @@ class FS(object):
 
     def _open_fs(self):
         'Open an existing Subvesion filesystem'
-        self.uuid = uuid.UUID(open(
-                                self.__path_uuid, 'rb').readline().rstrip())
+        f = open(self.__path_uuid, 'rb')
+        self.uuid = uuid.UUID(f.readline().rstrip())
+        f.close()
 
 
     def __setup_paths(self):
