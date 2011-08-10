@@ -513,6 +513,35 @@ def clean_dist(args):
 
 
 #----------------------------------------------------------------------
+# Move to dist
+
+def move_to_dist(args):
+    'Move candidate artifacts to the distribution directory.'
+
+    if not args.dist_dir:
+        assert_people()
+        args.dist_dir = people_dist_dir
+
+    if args.target:
+        target = args.target
+    else:
+        target = os.path.join(os.getenv('HOME'), 'public_html', 'svn',
+                              str(args.version), 'deploy')
+
+    if args.code_name:
+        dirname = args.code_name
+    else:
+        dirname = 'deploy'
+
+    logging.info('Moving %s to dist dir \'%s\'' % (str(args.version),
+                                                   args.dist_dir) )
+    filenames = glob.glob(os.path.join(target,
+                                       'subversion-%s.*' % str(args.version)))
+    for filename in filenames:
+        shutil.move(filename, args.dist_dir)
+
+
+#----------------------------------------------------------------------
 # Write announcements
 
 def write_news(args):
@@ -694,6 +723,24 @@ def main():
     subparser.set_defaults(func=clean_dist)
     subparser.add_argument('--dist-dir',
                     help='''The directory to clean.''')
+
+    # The move-to-dist subcommand
+    subparser = subparsers.add_parser('move-to-dist',
+                    help='''Move candiates and signatures from the temporary
+                            post location to the permanent distribution
+                            directory.  If no dist-dir is given, this command
+                            will assume it is running on people.apache.org.''')
+    subparser.set_defaults(func=move_to_dist)
+    subparser.add_argument('version', type=Version,
+                    help='''The release label, such as '1.7.0-alpha1'.''')
+    subparser.add_argument('--dist-dir',
+                    help='''The directory to clean.''')
+    subparser.add_argument('--code-name',
+                    help='''A whimsical name for the release, used only for
+                            naming the download directory.''')
+    subparser.add_argument('--target',
+                    help='''The full path to the destination used in
+                            'post-candiates'..''')
 
     # The write-news subcommand
     subparser = subparsers.add_parser('write-news',
