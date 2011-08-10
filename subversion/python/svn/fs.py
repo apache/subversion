@@ -18,8 +18,66 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import os, uuid, shutil
+
+
+# Some constants
+PATH_UUID                   = "uuid"            # Contains UUID
+PATH_CURRENT                = "current"         # Youngest revision
+
+
+class FS(object):
+    def set_uuid(self, uuid_in = None):
+        '''Set the UUID for the filesystem.  If UUID_IN is not given, generate
+           a new one a la RFC 4122.'''
+
+        if not uuid_in:
+            uuid_in = uuid.uuid1()
+        self.uuid = uuid_in
+
+        open(self.__path_uuid, 'wb').write(str(self.uuid) + '\n')
+        # We use the permissions of the 'current' file, because the 'uuid'
+        # file does not exist during repository creation.
+        shutil.copymode(self.__path_current, self.__path_uuid)
+
+
+    def _create_fs(self):
+        'Create a new Subversion filesystem'
+
+
+    def _open_fs(self):
+        'Open an existing Subvesion filesystem'
+        self.uuid = uuid.UUID(open(
+                                self.__path_uuid, 'rb').readline().rstrip())
+
+
+    def __setup_paths(self):
+        self.__path_uuid = os.path.join(self.path, PATH_UUID)
+        self.__path_current = os.path.join(self.path, PATH_CURRENT)
+
+
+    def __init__(self, path, create=False, config=None):
+        self.path = path
+        self.__setup_paths()
+
+        if config:
+            self._config = config
+        else:
+            self._config = {}
+
+        if create:
+            self._create_fs()
+        else:
+            self._open_fs()
+
 
 
 # A few helper functions for C callers
 def _create_fs(path, config=None):
-    return "this is a filesystem object"
+    return FS(path, create=True, config=config)
+
+def _open_fs(path):
+    return FS(path)
+
+def _set_uuid(fs, uuid):
+    fs.set_uuid(uuid)

@@ -55,6 +55,7 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   const char *key;
+  const char *uuid;
   void *val;
   fs_fs_shared_data_t *ffsd;
   apr_status_t status;
@@ -73,8 +74,9 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
      "svnadmin load", so this is a low-priority problem, and we don't
      know of a better way of associating such data with the
      repository. */
+  SVN_ERR(svn_fs_py__get_string_attr(&uuid, ffd->p_fs, "uuid", pool));
 
-  key = apr_pstrcat(pool, SVN_FSFS_SHARED_USERDATA_PREFIX, ffd->uuid,
+  key = apr_pstrcat(pool, SVN_FSFS_SHARED_USERDATA_PREFIX, uuid,
                     (char *) NULL);
   status = apr_pool_userdata_get(&val, key, common_pool);
   if (status)

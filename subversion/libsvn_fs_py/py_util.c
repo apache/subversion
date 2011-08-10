@@ -23,6 +23,7 @@
 #include <apr_pools.h>
 
 #include "svn_error.h"
+#include "svn_pools.h"
 
 #include "py_util.h"
 
@@ -44,65 +45,62 @@ create_py_stack(PyObject *p_exception,
   p_reason = PyObject_Str(p_exception);
   reason = PyString_AsString(p_reason);
 
-#ifdef SVN_ERR__TRACING
-  {
-    PyObject *p_module_name;
-    PyObject *p_traceback_mod;
-    PyObject *p_stack;
-    PyObject *p_frame;
-    PyObject *p_filename;
-    PyObject *p_lineno;
-    Py_ssize_t i;
-
-    /* We don't use load_module() here to avoid an infinite recursion. */
-    /* ### This could use more python error checking. */
-    p_module_name = PyString_FromString("traceback");
-    p_traceback_mod = PyImport_Import(p_module_name);
-    Py_DECREF(p_module_name);
-
-    p_stack = PyObject_CallMethod(p_traceback_mod, "extract_tb",
-                                  "(O)", p_traceback);
-    Py_DECREF(p_traceback_mod);
-
-    i = PySequence_Length(p_stack);
-
-    /* Build the "root error" for the chain. */
-    p_frame = PySequence_GetItem(p_stack, i-1);
-    p_filename = PySequence_GetItem(p_frame, 0);
-    p_lineno = PySequence_GetItem(p_frame, 1);
-    Py_DECREF(p_frame);
-
-    err = svn_error_createf(SVN_ERR_BAD_PYTHON, NULL,
-                          _("Exception while executing Python; cause: '%s'"),
-                          reason);
-
-    err->file = apr_pstrdup(err->pool, PyString_AsString(p_filename));
-    err->line = PyInt_AsLong(p_lineno);
-
-    Py_DECREF(p_filename);
-    Py_DECREF(p_lineno);
-
-    for (i = i-2; i >=0; i--)
-      {
-        p_frame = PySequence_GetItem(p_stack, i);
-        p_filename = PySequence_GetItem(p_frame, 0);
-        p_lineno = PySequence_GetItem(p_frame, 1);
-        Py_DECREF(p_frame);
-
-        err = svn_error_quick_wrap(err, SVN_ERR__TRACED);
-        err->file = apr_pstrdup(err->pool, PyString_AsString(p_filename));
-        err->line = PyInt_AsLong(p_lineno);
-        
-        Py_DECREF(p_filename);
-        Py_DECREF(p_lineno);
-      }
-
-    Py_DECREF(p_stack);
-  }
-#else
   err = svn_error_createf(SVN_ERR_BAD_PYTHON, NULL,
-                          _("Exception while executing Python; cause: '%s'"),
+                          _("Exception while executing Python; cause: \"%s\""),
                           reason);
+
+#ifdef SVN_ERR__TRACING
+  if (p_traceback)
+    {
+      PyObject *p_module_name;
+      PyObject *p_traceback_mod;
+      PyObject *p_stack;
+      PyObject *p_frame;
+      PyObject *p_filename;
+      PyObject *p_lineno;
+      Py_ssize_t i;
+
+      /* We don't use load_module() here to avoid an infinite recursion. */
+      /* ### This could use more python error checking. */
+      p_module_name = PyString_FromString("traceback");
+      p_traceback_mod = PyImport_Import(p_module_name);
+      Py_DECREF(p_module_name);
+
+      p_stack = PyObject_CallMethod(p_traceback_mod, "extract_tb",
+                                    "(O)", p_traceback);
+      Py_DECREF(p_traceback_mod);
+
+      i = PySequence_Length(p_stack);
+
+      /* Build the "root error" for the chain. */
+      p_frame = PySequence_GetItem(p_stack, i-1);
+      p_filename = PySequence_GetItem(p_frame, 0);
+      p_lineno = PySequence_GetItem(p_frame, 1);
+      Py_DECREF(p_frame);
+
+      err->file = apr_pstrdup(err->pool, PyString_AsString(p_filename));
+      err->line = PyInt_AsLong(p_lineno);
+
+      Py_DECREF(p_filename);
+      Py_DECREF(p_lineno);
+
+      for (i = i-2; i >=0; i--)
+        {
+          p_frame = PySequence_GetItem(p_stack, i);
+          p_filename = PySequence_GetItem(p_frame, 0);
+          p_lineno = PySequence_GetItem(p_frame, 1);
+          Py_DECREF(p_frame);
+
+          err = svn_error_quick_wrap(err, SVN_ERR__TRACED);
+          err->file = apr_pstrdup(err->pool, PyString_AsString(p_filename));
+          err->line = PyInt_AsLong(p_lineno);
+        
+          Py_DECREF(p_filename);
+          Py_DECREF(p_lineno);
+        }
+
+      Py_DECREF(p_stack);
+    }
 #endif
 
   /* If the exception object has a 'code' attribute, and it's an integer,
@@ -119,7 +117,7 @@ create_py_stack(PyObject *p_exception,
 
   Py_DECREF(p_reason);
 
-  return err;
+  return svn_error_trace(err);
 }
 
 typedef void (*py_exc_func_t)(void *baton, va_list argp);
@@ -150,7 +148,7 @@ catch_py_exception(py_exc_func_t func,
 
   PyErr_Fetch(&p_type, &p_exception, &p_traceback);
 
-  if (p_exception && p_traceback)
+  if (p_exception)
     err = create_py_stack(p_exception, p_traceback);
   else
     err = svn_error_create(SVN_ERR_BAD_PYTHON, NULL,
@@ -162,7 +160,7 @@ catch_py_exception(py_exc_func_t func,
   Py_XDECREF(p_exception);
   Py_XDECREF(p_traceback);
 
-  return err;
+  return svn_error_trace(err);
 }
 
 static svn_error_t *
@@ -258,6 +256,58 @@ svn_fs_py__destroy_py_object(void *data)
 }
 
 
+struct get_string_attr_baton
+{
+  const char **result;
+  PyObject *p_obj;
+  const char *name;
+  apr_pool_t *result_pool;
+};
+
+
+static void
+get_string_attr(void *baton,
+                va_list argp)
+{
+  struct get_string_attr_baton *gsab = baton;
+  PyObject *p_attr;
+  PyObject *p_str;
+
+  /* ### This needs some exception handling */
+  
+  p_attr = PyObject_GetAttrString(gsab->p_obj, gsab->name);
+  if (PyErr_Occurred())
+    return;
+
+  p_str = PyObject_Str(p_attr);
+  Py_DECREF(p_attr);
+  if (PyErr_Occurred())
+    return;
+
+  *gsab->result = PyString_AsString(p_str);
+
+  if (gsab->result)
+    *gsab->result = apr_pstrdup(gsab->result_pool, *gsab->result);
+
+  Py_DECREF(p_str);
+
+  return;
+}
+
+
+svn_error_t *
+svn_fs_py__get_string_attr(const char **result,
+                           PyObject *p_obj,
+                           const char *name,
+                           apr_pool_t *result_pool)
+{
+  struct get_string_attr_baton gsab = {
+      result, p_obj, name, result_pool
+    };
+  return svn_error_trace(catch_py_exception(get_string_attr, &gsab, NULL));
+}
+
+
 struct call_method_baton
 {
   PyObject **p_result;
@@ -302,6 +352,7 @@ cm_free_objs:
   /* Error handler, decrefs all python objects we may have. */
   Py_XDECREF(p_args);
   Py_XDECREF(p_func);
+  Py_XDECREF(p_value);
 }
 
 
@@ -314,21 +365,17 @@ svn_fs_py__call_method(PyObject **p_result,
 {
   svn_error_t *err;
   va_list argp;
-  struct call_method_baton cmb;
+  struct call_method_baton cmb = {
+      p_result, p_obj, name, format
+    };
 
   SVN_ERR_ASSERT(p_obj != NULL);
 
   va_start(argp, format);
-
-  cmb.p_result = p_result;
-  cmb.p_obj = p_obj;
-  cmb.name = name;
-  cmb.format = format;
-
   err = catch_py_exception(call_method, &cmb, argp);
-
   va_end(argp);
-  return err;
+
+  return svn_error_trace(err);
 }
 
 PyObject *

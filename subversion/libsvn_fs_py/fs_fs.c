@@ -1204,12 +1204,14 @@ svn_error_t *
 svn_fs_py__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  apr_file_t *uuid_file;
   int format, max_files_per_dir;
-  char buf[APR_UUID_FORMATTED_LENGTH + 2];
-  apr_size_t limit;
 
   fs->path = apr_pstrdup(fs->pool, path);
+
+  SVN_ERR(svn_fs_py__call_method(&ffd->p_fs, ffd->p_module, "_open_fs",
+                                 "(s)", path));
+  apr_pool_cleanup_register(fs->pool, ffd->p_fs, svn_fs_py__destroy_py_object,
+                            apr_pool_cleanup_null);
 
   /* Read the FS format number. */
   SVN_ERR(read_format(&format, &max_files_per_dir,
@@ -1219,16 +1221,6 @@ svn_fs_py__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   /* Now we've got a format number no matter what. */
   ffd->format = format;
   ffd->max_files_per_dir = max_files_per_dir;
-
-  /* Read in and cache the repository uuid. */
-  SVN_ERR(svn_io_file_open(&uuid_file, path_uuid(fs, pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
-
-  limit = sizeof(buf);
-  SVN_ERR(svn_io_read_length_line(uuid_file, buf, &limit, pool));
-  ffd->uuid = apr_pstrdup(fs->pool, buf);
-
-  SVN_ERR(svn_io_file_close(uuid_file, pool));
 
   /* Read the min unpacked revision. */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
@@ -6755,8 +6747,8 @@ svn_fs_py__get_uuid(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  *uuid_p = apr_pstrdup(pool, ffd->uuid);
-  return SVN_NO_ERROR;
+  return svn_error_trace(svn_fs_py__get_string_attr(uuid_p, ffd->p_fs,
+                                                    "uuid", pool));
 }
 
 svn_error_t *
@@ -6764,34 +6756,11 @@ svn_fs_py__set_uuid(svn_fs_t *fs,
                     const char *uuid,
                     apr_pool_t *pool)
 {
-  char *my_uuid;
-  apr_size_t my_uuid_len;
-  const char *tmp_path;
-  const char *uuid_path = path_uuid(fs, pool);
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  if (! uuid)
-    uuid = svn_uuid_generate(pool);
-
-  /* Make sure we have a copy in FS->POOL, and append a newline. */
-  my_uuid = apr_pstrcat(fs->pool, uuid, "\n", (char *)NULL);
-  my_uuid_len = strlen(my_uuid);
-
-  SVN_ERR(svn_io_write_unique(&tmp_path,
-                              svn_dirent_dirname(uuid_path, pool),
-                              my_uuid, my_uuid_len,
-                              svn_io_file_del_none, pool));
-
-  /* We use the permissions of the 'current' file, because the 'uuid'
-     file does not exist during repository creation. */
-  SVN_ERR(move_into_place(tmp_path, uuid_path,
-                          svn_fs_py__path_current(fs, pool), pool));
-
-  /* Remove the newline we added, and stash the UUID. */
-  my_uuid[my_uuid_len - 1] = '\0';
-  ffd->uuid = my_uuid;
-
-  return SVN_NO_ERROR;
+  return svn_error_trace(svn_fs_py__call_method(NULL, ffd->p_module,
+                                                "_set_uuid",
+                                                "(Os)", ffd->p_fs, uuid));
 }
 
 /** Node origin lazy cache. */

@@ -212,9 +212,6 @@ typedef struct fs_fs_data_t
      layouts) or zero (for linear layouts). */
   int max_files_per_dir;
 
-  /* The uuid of this FS. */
-  const char *uuid;
-
   /* The revision that was youngest, last time we checked. */
   svn_revnum_t youngest_rev_cache;
 

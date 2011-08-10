@@ -46,3 +46,11 @@ svn_fs_py__convert_hash(void *object);
 /* Load a reference to the FS Python module into the shared data. */
 svn_error_t *
 svn_fs_py__load_module(fs_fs_data_t *ffd);
+
+/* Get an attribute value from a Python object, and return it in *RESULT,
+   allocated in RESULT_POOL. */
+svn_error_t *
+svn_fs_py__get_string_attr(const char **result,
+                           PyObject *p_obj,
+                           const char *name,
+                           apr_pool_t *result_pool);
