@@ -560,6 +560,8 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
   const char *local_abspath;
   const char *repos_root;
   const char *repos_relpath;
+  svn_mergeinfo_catalog_t target_mergeinfo_cat_wc = NULL;
+  svn_mergeinfo_catalog_t target_mergeinfo_cat_repos = NULL;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, target_wcpath,
                                   scratch_pool));
@@ -581,23 +583,37 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
   else
     url = NULL;
 
-  if (repos_only)
-    *target_mergeinfo_catalog = NULL;
-  else
-    SVN_ERR(svn_client__get_wc_mergeinfo_catalog(target_mergeinfo_catalog,
-                                                 inherited,
-                                                 include_descendants,
-                                                 inherit,
-                                                 local_abspath,
-                                                 NULL, NULL,
-                                                 ignore_invalid_mergeinfo,
-                                                 ctx,
-                                                 result_pool, scratch_pool));
+  if (!repos_only)
+    {
+      SVN_ERR(svn_client__get_wc_mergeinfo_catalog(&target_mergeinfo_cat_wc,
+                                                   inherited,
+                                                   include_descendants,
+                                                   inherit,
+                                                   local_abspath,
+                                                   NULL, NULL,
+                                                   ignore_invalid_mergeinfo,
+                                                   ctx,
+                                                   result_pool,
+                                                   scratch_pool));
 
-  /* If there is no WC mergeinfo check the repository for inherited
-     mergeinfo, unless TARGET_WCPATH is a local addition or has a
-     local modification which has removed all of its pristine mergeinfo. */
-  if (*target_mergeinfo_catalog == NULL)
+      /* If we want LOCAL_ABSPATH's inherited mergeinfo, were we able to
+         get it from the working copy?  If not, then we must ask the
+         repository. */
+      if (! ((*inherited)
+             || (inherit == svn_mergeinfo_explicit)
+             || (repos_relpath
+                 && target_mergeinfo_cat_wc
+                 && apr_hash_get(target_mergeinfo_cat_wc, repos_relpath,
+                                 APR_HASH_KEY_STRING))))
+        {
+          repos_only = TRUE;
+          /* We already have any subtree mergeinfo from the working copy, no
+             need to ask the server for it again. */
+          include_descendants = FALSE;
+        }
+    }
+
+  if (repos_only)
     {
       /* No need to check the repos if this is a local addition. */
       if (url != NULL)
@@ -631,13 +647,13 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
                 }
 
               SVN_ERR(svn_client__get_repos_mergeinfo_catalog(
-                        target_mergeinfo_catalog, ra_session,
+                        &target_mergeinfo_cat_repos, ra_session,
                         "", target_rev, inherit,
-                        TRUE, FALSE, TRUE,
+                        TRUE, include_descendants, TRUE,
                         result_pool, scratch_pool));
 
-              if (*target_mergeinfo_catalog
-                  && apr_hash_get(*target_mergeinfo_catalog, "",
+              if (target_mergeinfo_cat_repos
+                  && apr_hash_get(target_mergeinfo_cat_repos, "",
                                   APR_HASH_KEY_STRING))
                 {
                   *inherited = TRUE;
@@ -660,6 +676,25 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
             }
         }
     }
+
+  /* Combine the mergeinfo from the working copy and repository as needed. */
+  if (target_mergeinfo_cat_wc)
+    {
+      *target_mergeinfo_catalog = target_mergeinfo_cat_wc;
+      if (target_mergeinfo_cat_repos)
+        SVN_ERR(svn_mergeinfo_catalog_merge(*target_mergeinfo_catalog,
+                                            target_mergeinfo_cat_repos,
+                                            result_pool, scratch_pool));
+    }
+  else if (target_mergeinfo_cat_repos)
+    {
+      *target_mergeinfo_catalog = target_mergeinfo_cat_repos;
+    }
+  else
+    {
+      *target_mergeinfo_catalog = NULL;
+    }
+
   return SVN_NO_ERROR;
 }
 

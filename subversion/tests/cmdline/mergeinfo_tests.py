@@ -544,9 +544,6 @@ def wc_target_inherits_mergeinfo_from_repos(sbox):
     '--show-revs', 'eligible')
 
   # Eligible : Recursive
-  #
-  # Currently this fails because r6 is shown as eligible, despite the fact
-  # that the target inherits it from ^/A_COPY
   svntest.actions.run_and_verify_mergeinfo(
     adjust_error_for_server_version(''),
     ['3',], sbox.repo_url + '/A/D', subtree_wc,
