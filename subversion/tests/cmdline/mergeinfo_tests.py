@@ -489,6 +489,86 @@ def mergeinfo_on_pegged_wc_path(sbox):
     adjust_error_for_server_version(''),
     ['4', '5'], A_path, A_COPY_path + '@PREV', '--show-revs', 'eligible')
 
+#----------------------------------------------------------------------
+# A test for issue 3986 'svn_client_mergeinfo_log API broken with WC target
+# which inherits mergeinfo from repos'.
+@Issue(3986)
+@XFail()
+@SkipUnless(server_has_mergeinfo)
+def wc_target_inherits_mergeinfo_from_repos(sbox):
+  "wc target inherits mergeinfo from repos"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  A_COPY_path   = os.path.join(wc_dir, 'A_COPY')
+  rho_COPY_path = os.path.join(wc_dir, 'A_COPY', 'D', 'G', 'rho')
+
+  # Merge -c4 ^/A/D/G/rho A_COPY\D\G\rho
+  # Merge -c6 ^/A A_COPY
+  # Commit as r7
+  #
+  # This gives us some explicit mergeinfo on the "branch" root and
+  # one of its subtrees:
+  #
+  #   Properties on 'A_COPY\D\G\rho':
+  #     svn:mergeinfo
+  #       /A/D/G/rho:4
+  #   Properties on 'A_COPY':
+  #     svn:mergeinfo
+  #       /A:6
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A/D/G/rho',
+                                     rho_COPY_path, '-c4')
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A',
+                                     A_COPY_path, '-c6')
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Cherrypicks to branch subtree and root',
+                                     wc_dir)
+
+  # Checkout a new wc rooted at ^/A_COPY/D.
+  subtree_wc = sbox.add_wc_path('D_COPY')
+  svntest.actions.run_and_verify_svn(None, None, [], 'co',
+                                     sbox.repo_url + '/A_COPY/D',
+                                     subtree_wc)
+
+  # Check the merged and eligible revisions both recursively and
+  # non-recursively.
+
+  # Eligible : Non-recursive  
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['3','4'], sbox.repo_url + '/A/D', subtree_wc,
+    '--show-revs', 'eligible')
+
+  # Eligible : Recursive
+  #
+  # Currently this fails because r6 is shown as eligible, despite the fact
+  # that the target inherits it from ^/A_COPY
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['3',], sbox.repo_url + '/A/D', subtree_wc,
+    '--show-revs', 'eligible', '-R')
+
+  # Merged : Non-recursive
+  #
+  # Currently this fails because r6 is not shown as merged, despite the fact
+  # that the target inherits it from ^/A_COPY
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['6'], sbox.repo_url + '/A/D', subtree_wc,
+    '--show-revs', 'merged')
+
+  # Merged : Recursive
+  #
+  # Currently this fails because r6 is again missing.
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['4','6'], sbox.repo_url + '/A/D', subtree_wc,
+    '--show-revs', 'merged', '-R')
+
 ########################################################################
 # Run the tests
 
@@ -503,6 +583,7 @@ test_list = [ None,
               non_inheritable_mergeinfo,
               recursive_mergeinfo,
               mergeinfo_on_pegged_wc_path,
+              wc_target_inherits_mergeinfo_from_repos,
              ]
 
 if __name__ == '__main__':
