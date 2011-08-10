@@ -67,6 +67,10 @@ class RepositoryURI(object):
         return self._as_parameter_
 
 class RemoteRepository(object):
+    """This class represents a connection from the client to a remote
+       Subversion repository."""
+    # The interface corresponds roughly to the svn_ra API, and an object of
+    # this type basically represents the C type 'svn_ra_session_t'.
 
     def __init__(self, url, user=None):
         """Open a new session to URL with the specified USER.
