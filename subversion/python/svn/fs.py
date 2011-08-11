@@ -81,10 +81,10 @@ class FS(object):
 
     def __read_current(self):
         with open(self.__path_current, 'rb') as f:
-            return int(f.readline())
+            return f.readline().split()
 
     def _get_youngest(self):
-        return self.__read_current()
+        return int(self.__read_current()[0])
 
     def set_uuid(self, uuid_in = None):
         '''Set the UUID for the filesystem.  If UUID_IN is not given, generate
