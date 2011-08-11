@@ -18,15 +18,74 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import os, uuid, shutil
+import os, uuid, shutil, tempfile
 
+import svn
+import svn.hash
 
 # Some constants
+CONFIG_PRE_1_4_COMPATIBLE   = "pre-1.4-compatible"
+CONFIG_PRE_1_5_COMPATIBLE   = "pre-1.5-compatible"
+CONFIG_PRE_1_6_COMPATIBLE   = "pre-1.6-compatible"
+
+PATH_FORMAT                 = "format"          # Contains format number
 PATH_UUID                   = "uuid"            # Contains UUID
 PATH_CURRENT                = "current"         # Youngest revision
+PATH_REVS_DIR               = "revs"            # Directory of revisions
+PATH_REVPROPS_DIR           = "revprops"        # Directory of revprops
+PATH_MIN_UNPACKED_REV       = "min-unpacked-rev" # Oldest revision which
+                                                 # has not been packed.
+
+FORMAT_NUMBER                       = 4
+
+MIN_LAYOUT_FORMAT_OPTION_FORMAT     = 3
+MIN_PROTOREVS_DIR_FORMAT            = 3
+MIN_NO_GLOBAL_IDS_FORMAT            = 3
+MIN_PACKED_FORMAT                   = 4
+
+_DEFAULT_MAX_FILES_PER_DIR = 1000
 
 
 class FS(object):
+    def __path_rev_shard(self, rev):
+        assert self.max_files_per_dir
+        return os.path.join(self.path, PATH_REVS_DIR,
+                            '%d' % (rev // self.max_files_per_dir) )
+
+    def __path_revprops_shard(self, rev):
+        assert self.max_files_per_dir
+        return os.path.join(self.path, PATH_REVPROPS_DIR,
+                            '%d' % (rev // self.max_files_per_dir) )
+
+    def __path_revprops(self, rev):
+        if self.max_files_per_dir:
+            return os.path.join(self.__path_revprops_shard(rev), str(rev))
+        else:
+            return os.path.join(self.path, PATH_REVPROPS_DIR, str(rev))
+            
+    def __path_rev_absolute(self, rev):
+        if self.format < MIN_PACKED_FORMAT or not self.__is_packed_rev(rev):
+            return self.__path_rev(rev)
+        else:
+            return self.__path_rev_packed(rev, "pack")
+
+    def __path_rev(self, rev):
+        assert not self.__is_packed_rev(rev)
+        if self.max_files_per_dir:
+            return os.path.join(self.__path_rev_shard(rev), str(rev))
+        else:
+            return os.path.join(self.path, PATH_REVS_DIR, str(rev))
+
+    def __is_packed_rev(self, rev):
+        return rev < self.__min_unpacked_rev
+
+    def __read_current(self):
+        with open(self.__path_current, 'rb') as f:
+            return int(f.readline())
+
+    def _get_youngest(self):
+        return self.__read_current()
+
     def set_uuid(self, uuid_in = None):
         '''Set the UUID for the filesystem.  If UUID_IN is not given, generate
            a new one a la RFC 4122.'''
@@ -43,8 +102,80 @@ class FS(object):
         shutil.copymode(self.__path_current, self.__path_uuid)
 
 
+    def __ensure_revision_exists(self, rev):
+        if not svn.is_valid_revnum(rev):
+            raise svn.SubversionException(svn.err.FS_NO_SUCH_REVISION,
+                                    _("Invalid revision number '%ld'") % rev)
+
+        # Did the revision exist the last time we checked the current file?
+        if rev <= self.__youngest_rev_cache:
+            return
+
+        # Check again
+        self.__youngest_rev_cache = self._get_youngest()
+        if rev <= self.__youngest_rev_cache:
+            return
+
+        raise svn.SubversionException(svn.err.FS_NO_SUCH_REVISION,
+                                      _("No such revision %ld") % rev)
+
+    def _set_revision_proplist(self, rev, props):
+        self.__ensure_revision_exists(rev)
+
+        final_path = self.__path_revprops(rev)
+        (fd, fn) = tempfile.mkstemp(dir=os.path.dirname(final_path))
+        os.write(fd, svn.hash.encode(props, svn.hash.TERMINATOR))
+        os.close(fd)
+        shutil.copystat(self.__path_rev_absolute(rev), fn)
+
+        os.rename(fn, final_path)
+
+
+    def __read_format(self):
+        try:
+            with open(self.__path_format, 'rb') as f:
+                self.format = int(f.readline())
+                self.max_files_per_dir = 0
+                for l in f:
+                    l = l.split()
+                    if self.format > MIN_LAYOUT_FORMAT_OPTION_FORMAT \
+                            and l[0] == 'layout':
+                        if l[1] == 'linear':
+                            self.max_files_per_dir = 0
+                        elif l[1] == 'sharded':
+                            self.max_files_per_dir = int(l[2])
+        except IOError:
+            # Treat an absent format file as format 1.
+            self.format = 1
+            self.max_files_per_dir = 0
+
+
+    def __update_min_unpacked_rev(self):
+        assert self.format >= MIN_PACKED_FORMAT
+        with open(self.__path_min_unpacked_rev, 'rb') as f:
+            self.__min_unpacked_rev = int(f.readline())
+
+
     def _create_fs(self):
         'Create a new Subversion filesystem'
+        self.__youngest_rev_cache = 0
+        self.__min_unpacked_rev = 0
+
+        # See if compatibility with older versions was explicitly requested.
+        if CONFIG_PRE_1_4_COMPATIBLE in self._config:
+            self.format = 1
+        elif CONFIG_PRE_1_5_COMPATIBLE in self._config:
+            self.format = 2
+        elif CONFIG_PRE_1_6_COMPATIBLE in self._config:
+            self.format = 3
+        else:
+            self.format = FORMAT_NUMBER
+
+        # Override the default linear layout if this is a new-enough format.
+        if self.format >= MIN_LAYOUT_FORMAT_OPTION_FORMAT:
+            self.max_files_per_dir = _DEFAULT_MAX_FILES_PER_DIR
+        else:
+            self.max_files_per_dir = 0
 
 
     def _open_fs(self):
@@ -52,10 +183,18 @@ class FS(object):
         with open(self.__path_uuid, 'rb') as f:
             self.uuid = uuid.UUID(f.readline().rstrip())
 
+        self.__youngest_rev_cache = self.__read_current()
+        self.__read_format()
+        if self.format >= MIN_PACKED_FORMAT:
+            self.__update_min_unpacked_rev()
+
 
     def __setup_paths(self):
         self.__path_uuid = os.path.join(self.path, PATH_UUID)
         self.__path_current = os.path.join(self.path, PATH_CURRENT)
+        self.__path_format = os.path.join(self.path, PATH_FORMAT)
+        self.__path_min_unpacked_rev = os.path.join(self.path,
+                                                    PATH_MIN_UNPACKED_REV)
 
 
     def __init__(self, path, create=False, config=None):

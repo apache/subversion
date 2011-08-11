@@ -18,15 +18,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
+TERMINATOR = "END"
 
-class SubversionException(Exception):
-    def __init__(self, msg, code = 0):
-        self.message = msg
-        self.code = code
+def encode(h, terminator):
+    output = []
+    for k in sorted(h.keys()):
+        output.append('K %d\n%s\nV %s\n%s\n' % (len(k), k, len(h[k]), h[k]))
 
-    def __str__(self):
-        return self.message
+    if terminator:
+        output.append('%s\n' % terminator)
 
-
-def is_valid_revnum(rev):
-    return rev >= 0
+    return ''.join(output)

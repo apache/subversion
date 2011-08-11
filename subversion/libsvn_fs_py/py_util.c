@@ -378,17 +378,18 @@ svn_fs_py__call_method(PyObject **p_result,
   return svn_error_trace(err);
 }
 
-PyObject *
-svn_fs_py__convert_hash(void *object)
+
+static PyObject *
+convert_hash(apr_hash_t *hash,
+             PyObject *(*converter_func)(void *value))
 {
-  apr_hash_t *hash = object;
   apr_hash_index_t *hi;
-  PyObject *p_dict;
+  PyObject *dict;
 
   if (hash == NULL)
     Py_RETURN_NONE;
 
-  if ((p_dict = PyDict_New()) == NULL)
+  if ((dict = PyDict_New()) == NULL)
     return NULL;
 
   for (hi = apr_hash_first(NULL, hash); hi; hi = apr_hash_next(hi))
@@ -398,23 +399,44 @@ svn_fs_py__convert_hash(void *object)
       PyObject *value;
 
       apr_hash_this(hi, &key, NULL, &val);
-      value = PyString_FromString(val);
+      value = (*converter_func)(val);
       if (value == NULL)
         {
-          Py_DECREF(p_dict);
+          Py_DECREF(dict);
           return NULL;
         }
       /* ### gotta cast this thing cuz Python doesn't use "const" */
-      if (PyDict_SetItemString(p_dict, (char *)key, value) == -1)
+      if (PyDict_SetItemString(dict, (char *)key, value) == -1)
         {
           Py_DECREF(value);
-          Py_DECREF(p_dict);
+          Py_DECREF(dict);
           return NULL;
         }
       Py_DECREF(value);
     }
 
-  return p_dict;
+  return dict;
+}
+
+static PyObject *
+convert_svn_string_t(void *value)
+{
+  const svn_string_t *s = value;
+
+  /* ### gotta cast this thing cuz Python doesn't use "const" */
+  return PyString_FromStringAndSize((void *)s->data, s->len);
+}
+
+PyObject *
+svn_fs_py__convert_cstring_hash(void *object)
+{
+  return convert_hash(object, PyString_FromString);
+}
+
+PyObject *
+svn_fs_py__convert_proplist(void *object)
+{
+  return convert_hash(object, convert_svn_string_t);
 }
 
 svn_error_t *

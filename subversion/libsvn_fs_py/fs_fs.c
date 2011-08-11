@@ -2850,32 +2850,11 @@ set_revision_proplist(svn_fs_t *fs,
                       apr_hash_t *proplist,
                       apr_pool_t *pool)
 {
-  SVN_ERR(ensure_revision_exists(fs, rev, pool));
+  fs_fs_data_t *ffd = fs->fsap_data;
 
-  if (1)
-    {
-      const char *final_path = path_revprops(fs, rev, pool);
-      const char *tmp_path;
-      const char *perms_reference;
-      svn_stream_t *stream;
-
-      /* ### do we have a directory sitting around already? we really shouldn't
-         ### have to get the dirname here. */
-      SVN_ERR(svn_stream_open_unique(&stream, &tmp_path,
-                                     svn_dirent_dirname(final_path, pool),
-                                     svn_io_file_del_none, pool, pool));
-      SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, pool));
-      SVN_ERR(svn_stream_close(stream));
-
-      /* We use the rev file of this revision as the perms reference,
-         because when setting revprops for the first time, the revprop
-         file won't exist and therefore can't serve as its own reference.
-         (Whereas the rev file should already exist at this point.) */
-      SVN_ERR(svn_fs_py__path_rev_absolute(&perms_reference, fs, rev, pool));
-      SVN_ERR(move_into_place(tmp_path, final_path, perms_reference, pool));
-
-      return SVN_NO_ERROR;
-    }
+  SVN_ERR(svn_fs_py__call_method(NULL, ffd->p_fs, "_set_revision_proplist",
+                                 "(lO&)", rev,
+                                 svn_fs_py__convert_proplist, proplist));
 
   return SVN_NO_ERROR;
 }
@@ -6257,7 +6236,7 @@ svn_fs_py__create(svn_fs_t *fs,
 
   SVN_ERR(svn_fs_py__call_method(&ffd->p_fs, ffd->p_module, "_create_fs",
                                  "(sO&)", path,
-                                 svn_fs_py__convert_hash, fs->config));
+                                 svn_fs_py__convert_cstring_hash, fs->config));
   apr_pool_cleanup_register(fs->pool, ffd->p_fs, svn_fs_py__destroy_py_object,
                             apr_pool_cleanup_null);
 

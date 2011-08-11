@@ -41,7 +41,10 @@ svn_fs_py__call_method(PyObject **p_result,
                        ...);
 
 PyObject *
-svn_fs_py__convert_hash(void *object);
+svn_fs_py__convert_cstring_hash(void *object);
+
+PyObject *
+svn_fs_py__convert_proplist(void *object);
 
 /* Load a reference to the FS Python module into the shared data. */
 svn_error_t *
