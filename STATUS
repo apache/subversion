@@ -187,6 +187,13 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
+ * r1156527
+   Accept --without-libmagic.
+   Justification:
+     Impossible to disable libmagic otherwise.
+   Votes:
+     +0: danielsh
+
 Veto-blocked changes:
 =====================
 
