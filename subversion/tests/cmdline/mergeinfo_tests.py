@@ -493,7 +493,6 @@ def mergeinfo_on_pegged_wc_path(sbox):
 # A test for issue 3986 'svn_client_mergeinfo_log API broken with WC target
 # which inherits mergeinfo from repos'.
 @Issue(3986)
-@XFail()
 @SkipUnless(server_has_mergeinfo)
 def wc_target_inherits_mergeinfo_from_repos(sbox):
   "wc target inherits mergeinfo from repos"
