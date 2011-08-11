@@ -213,13 +213,17 @@ path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, const char *kind,
                 apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  int max_files_per_dir;
 
-  assert(ffd->max_files_per_dir);
+  svn_error_clear(svn_fs_py__get_int_attr(&max_files_per_dir, ffd->p_fs,
+                                          "max_files_per_dir"));
+
+  assert(max_files_per_dir);
   assert(is_packed_rev(fs, rev));
 
   return svn_dirent_join_many(pool, fs->path, PATH_REVS_DIR,
                               apr_psprintf(pool, "%ld.pack",
-                                           rev / ffd->max_files_per_dir),
+                                           rev / max_files_per_dir),
                               kind, NULL);
 }
 
@@ -227,11 +231,15 @@ static const char *
 path_rev_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  int max_files_per_dir;
 
-  assert(ffd->max_files_per_dir);
+  svn_error_clear(svn_fs_py__get_int_attr(&max_files_per_dir, ffd->p_fs,
+                                          "max_files_per_dir"));
+
+  assert(max_files_per_dir);
   return svn_dirent_join_many(pool, fs->path, PATH_REVS_DIR,
                               apr_psprintf(pool, "%ld",
-                                                 rev / ffd->max_files_per_dir),
+                                                 rev / max_files_per_dir),
                               NULL);
 }
 
@@ -239,10 +247,14 @@ static const char *
 path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  int max_files_per_dir;
+
+  svn_error_clear(svn_fs_py__get_int_attr(&max_files_per_dir, ffd->p_fs,
+                                          "max_files_per_dir"));
 
   assert(! is_packed_rev(fs, rev));
 
-  if (ffd->max_files_per_dir)
+  if (max_files_per_dir)
     {
       return svn_dirent_join(path_rev_shard(fs, rev, pool),
                              apr_psprintf(pool, "%ld", rev),
@@ -280,11 +292,15 @@ static const char *
 path_revprops_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  int max_files_per_dir;
 
-  assert(ffd->max_files_per_dir);
+  svn_error_clear(svn_fs_py__get_int_attr(&max_files_per_dir, ffd->p_fs,
+                                          "max_files_per_dir"));
+
+  assert(max_files_per_dir);
   return svn_dirent_join_many(pool, fs->path, PATH_REVPROPS_DIR,
                               apr_psprintf(pool, "%ld",
-                                           rev / ffd->max_files_per_dir),
+                                           rev / max_files_per_dir),
                               NULL);
 }
 
@@ -292,8 +308,12 @@ static const char *
 path_revprops(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  int max_files_per_dir;
 
-  if (ffd->max_files_per_dir)
+  svn_error_clear(svn_fs_py__get_int_attr(&max_files_per_dir, ffd->p_fs,
+                                          "max_files_per_dir"));
+
+  if (max_files_per_dir)
     {
       return svn_dirent_join(path_revprops_shard(fs, rev, pool),
                              apr_psprintf(pool, "%ld", rev),
@@ -1103,7 +1123,7 @@ svn_fs_py__fs_supports_mergeinfo(svn_fs_t *fs)
   fs_fs_data_t *ffd = fs->fsap_data;
   int format;
 
-  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
+  svn_error_clear(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
   return format >= SVN_FS_FS__MIN_MERGEINFO_FORMAT;
 }
 
@@ -1223,7 +1243,8 @@ svn_error_t *
 svn_fs_py__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  int format, max_files_per_dir;
+  int format;
+  int max_files_per_dir;
 
   fs->path = apr_pstrdup(fs->pool, path);
 
@@ -1236,9 +1257,6 @@ svn_fs_py__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   SVN_ERR(read_format(&format, &max_files_per_dir,
                       path_format(fs, pool), pool));
   SVN_ERR(check_format(format));
-
-  /* Now we've got a format number no matter what. */
-  ffd->max_files_per_dir = max_files_per_dir;
 
   /* Read the min unpacked revision. */
   if (format >= SVN_FS_FS__MIN_PACKED_FORMAT)
@@ -1897,11 +1915,15 @@ get_packed_offset(apr_off_t *rev_offset,
   apr_int64_t shard_pos;
   apr_array_header_t *manifest;
   apr_pool_t *iterpool;
+  int max_files_per_dir;
 
-  shard = rev / ffd->max_files_per_dir;
+  SVN_ERR(svn_fs_py__get_int_attr(&max_files_per_dir, ffd->p_fs,
+                                  "max_files_per_dir"));
+
+  shard = rev / max_files_per_dir;
 
   /* position of the shard within the manifest */
-  shard_pos = rev % ffd->max_files_per_dir;
+  shard_pos = rev % max_files_per_dir;
 
   /* Open the manifest file. */
   SVN_ERR(svn_stream_open_readonly(&manifest_stream,
@@ -1911,7 +1933,7 @@ get_packed_offset(apr_off_t *rev_offset,
   /* While we're here, let's just read the entire manifest file into an array,
      so we can cache the entire thing. */
   iterpool = svn_pool_create(pool);
-  manifest = apr_array_make(pool, ffd->max_files_per_dir, sizeof(apr_off_t));
+  manifest = apr_array_make(pool, max_files_per_dir, sizeof(apr_off_t));
   while (1)
     {
       svn_stringbuf_t *sb;
@@ -1933,7 +1955,7 @@ get_packed_offset(apr_off_t *rev_offset,
     }
   svn_pool_destroy(iterpool);
 
-  *rev_offset = APR_ARRAY_IDX(manifest, rev % ffd->max_files_per_dir,
+  *rev_offset = APR_ARRAY_IDX(manifest, rev % max_files_per_dir,
                               apr_off_t);
 
   /* Close up shop and cache the array. */
@@ -2670,6 +2692,10 @@ get_root_changes_offset(apr_off_t *root_offset,
   const char *str;
   apr_size_t len;
   apr_seek_where_t seek_relative;
+  int max_files_per_dir;
+
+  SVN_ERR(svn_fs_py__get_int_attr(&max_files_per_dir, ffd->p_fs,
+                                  "max_files_per_dir"));
 
   /* Determine where to seek to in the file.
 
@@ -2680,7 +2706,7 @@ get_root_changes_offset(apr_off_t *root_offset,
      Unless the next revision is in a different file, in which case, we can
      just seek to the end of the pack file -- just like we do in the
      non-packed case. */
-  if (is_packed_rev(fs, rev) && ((rev + 1) % ffd->max_files_per_dir != 0))
+  if (is_packed_rev(fs, rev) && ((rev + 1) % max_files_per_dir != 0))
     {
       SVN_ERR(get_packed_offset(&offset, fs, rev + 1, pool));
       seek_relative = APR_SET;
@@ -5988,7 +6014,10 @@ commit_body(void *baton, apr_pool_t *pool)
   svn_prop_t prop;
   svn_string_t date;
   int format;
+  int max_files_per_dir;
 
+  SVN_ERR(svn_fs_py__get_int_attr(&max_files_per_dir, ffd->p_fs,
+                                  "max_files_per_dir"));
   SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
 
   /* Get the current youngest revision. */
@@ -6067,7 +6096,7 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Create the shard for the rev and revprop file, if we're sharding and
      this is the first revision of a new shard.  We don't care if this
      fails because the shard already existed for some reason. */
-  if (ffd->max_files_per_dir && new_rev % ffd->max_files_per_dir == 0)
+  if (max_files_per_dir && new_rev % max_files_per_dir == 0)
     {
       if (1)
         {
@@ -6253,6 +6282,7 @@ svn_fs_py__create(svn_fs_t *fs,
                   apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  int max_files_per_dir;
   int format;
 
   fs->path = apr_pstrdup(pool, path);
@@ -6264,7 +6294,7 @@ svn_fs_py__create(svn_fs_t *fs,
                             apr_pool_cleanup_null);
 
   SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
-  SVN_ERR(svn_fs_py__get_int_attr(&ffd->max_files_per_dir, ffd->p_fs,
+  SVN_ERR(svn_fs_py__get_int_attr(&max_files_per_dir, ffd->p_fs,
                                   "max_files_per_dir"));
 
   SVN_ERR(write_config(fs, pool));
@@ -6283,7 +6313,7 @@ svn_fs_py__create(svn_fs_t *fs,
 
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(write_format(path_format(fs, pool),
-                       format, ffd->max_files_per_dir, FALSE, pool));
+                       format, max_files_per_dir, FALSE, pool));
 
   ffd->youngest_rev_cache = 0;
   return SVN_NO_ERROR;
