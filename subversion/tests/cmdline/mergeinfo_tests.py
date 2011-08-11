@@ -553,17 +553,12 @@ def wc_target_inherits_mergeinfo_from_repos(sbox):
     '--show-revs', 'eligible', '-R')
 
   # Merged : Non-recursive
-  #
-  # Currently this fails because r7 is not shown as merged, despite the fact
-  # that the target inherits it from ^/A_COPY
   svntest.actions.run_and_verify_mergeinfo(
     adjust_error_for_server_version(''),
     ['7'], sbox.repo_url + '/A/D', subtree_wc,
     '--show-revs', 'merged')
 
   # Merged : Recursive
-  #
-  # Currently this fails because r7 is again missing.
   svntest.actions.run_and_verify_mergeinfo(
     adjust_error_for_server_version(''),
     ['5','7'], sbox.repo_url + '/A/D', subtree_wc,
