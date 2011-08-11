@@ -260,8 +260,10 @@ svn_fs_py__path_rev_absolute(const char **path,
                              apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  int format;
 
-  if (ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT
+  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
+  if (format < SVN_FS_FS__MIN_PACKED_FORMAT
       || ! is_packed_rev(fs, rev))
     {
       *path = path_rev(fs, rev, pool);
@@ -341,7 +343,10 @@ static APR_INLINE const char *
 path_txn_proto_rev(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
+  int format;
+
+  svn_error_clear(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
+  if (format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
     return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
                                 apr_pstrcat(pool, txn_id, PATH_EXT_REV,
                                             (char *)NULL),
@@ -354,7 +359,10 @@ static APR_INLINE const char *
 path_txn_proto_rev_lock(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
+  int format;
+
+  svn_error_clear(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
+  if (format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
     return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
                                 apr_pstrcat(pool, txn_id, PATH_EXT_REV_LOCK,
                                             (char *)NULL),
@@ -589,7 +597,10 @@ with_some_lock(svn_fs_t *fs,
   if (!err)
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
+      int format;
+
+      SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
+      if (format >= SVN_FS_FS__MIN_PACKED_FORMAT)
         SVN_ERR(update_min_unpacked_rev(fs, pool));
 #if 0 /* Might be a good idea? */
       SVN_ERR(get_youngest(&ffd->youngest_rev_cache, fs->path,
@@ -1090,7 +1101,10 @@ svn_boolean_t
 svn_fs_py__fs_supports_mergeinfo(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  return ffd->format >= SVN_FS_FS__MIN_MERGEINFO_FORMAT;
+  int format;
+
+  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
+  return format >= SVN_FS_FS__MIN_MERGEINFO_FORMAT;
 }
 
 static svn_error_t *
@@ -1098,13 +1112,15 @@ read_config(svn_fs_t *fs,
             apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  int format;
 
+  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
   SVN_ERR(svn_config_read2(&ffd->config,
                            svn_dirent_join(fs->path, PATH_CONFIG, pool),
                            FALSE, FALSE, fs->pool));
 
   /* Initialize ffd->rep_sharing_allowed. */
-  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+  if (format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     SVN_ERR(svn_config_get_bool(ffd->config, &ffd->rep_sharing_allowed,
                                 CONFIG_SECTION_REP_SHARING,
                                 CONFIG_OPTION_ENABLE_REP_SHARING, TRUE));
@@ -1189,8 +1205,11 @@ static svn_error_t *
 update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  int format;
 
-  SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT);
+  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
+
+  SVN_ERR_ASSERT(format >= SVN_FS_FS__MIN_PACKED_FORMAT);
 
   return read_min_unpacked_rev(&ffd->min_unpacked_rev,
                                path_min_unpacked_rev(fs, pool),
@@ -1219,11 +1238,10 @@ svn_fs_py__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   SVN_ERR(check_format(format));
 
   /* Now we've got a format number no matter what. */
-  ffd->format = format;
   ffd->max_files_per_dir = max_files_per_dir;
 
   /* Read the min unpacked revision. */
-  if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
+  if (format >= SVN_FS_FS__MIN_PACKED_FORMAT)
     SVN_ERR(update_min_unpacked_rev(fs, pool));
 
   /* Read the configuration file. */
@@ -1825,6 +1843,9 @@ open_pack_or_rev_file(apr_file_t **file,
   svn_error_t *err;
   const char *path;
   svn_boolean_t retry = FALSE;
+  int format;
+
+  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
 
   do
     {
@@ -1836,7 +1857,7 @@ open_pack_or_rev_file(apr_file_t **file,
                               APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
 
       if (err && APR_STATUS_IS_ENOENT(err->apr_err)
-          && ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
+          && format >= SVN_FS_FS__MIN_PACKED_FORMAT)
         {
           /* Could not open the file. This may happen if the
            * file once existed but got packed later. */
@@ -2461,6 +2482,9 @@ svn_fs_py__put_node_revision(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_file_t *noderev_file;
   const char *txn_id = svn_fs_py__id_txn_id(id);
+  int format;
+
+  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
 
   noderev->is_fresh_txn_root = fresh_txn_root;
 
@@ -2475,7 +2499,7 @@ svn_fs_py__put_node_revision(svn_fs_t *fs,
 
   SVN_ERR(svn_fs_py__write_noderev(svn_stream_from_aprfile2(noderev_file, TRUE,
                                                             pool),
-                                   noderev, ffd->format,
+                                   noderev, format,
                                    svn_fs_py__fs_supports_mergeinfo(fs),
                                    pool));
 
@@ -3007,6 +3031,9 @@ create_rep_state(struct rep_state **rep_state,
   if (err && err->apr_err == SVN_ERR_FS_CORRUPT)
     {
       fs_fs_data_t *ffd = fs->fsap_data;
+      int format;
+
+      SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
 
       /* ### This always returns "-1" for transaction reps, because
          ### this particular bit of code doesn't know if the rep is
@@ -3018,8 +3045,7 @@ create_rep_state(struct rep_state **rep_state,
       return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
                                "Corrupt representation '%s'",
                                rep 
-                               ? representation_string(rep, ffd->format, TRUE,
-                                                       pool)
+                               ? representation_string(rep, format, TRUE, pool)
                                : "(null)");
     }
   /* ### Call representation_string() ? */
@@ -4554,11 +4580,14 @@ svn_fs_py__create_txn(svn_fs_txn_t **txn_p,
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_fs_txn_t *txn;
   svn_fs_id_t *root_id;
+  int format;
+
+  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
 
   txn = apr_pcalloc(pool, sizeof(*txn));
 
   /* Get the txn_id. */
-  if (ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
+  if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     SVN_ERR(create_txn_dir(&txn->id, fs, rev, pool));
   else
     SVN_ERR(create_txn_dir_pre_1_5(&txn->id, fs, rev, pool));
@@ -4837,13 +4866,16 @@ svn_fs_py__purge_txn(svn_fs_t *fs,
                      apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  int format;
+
+  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
 
   /* Remove the shared transaction object associated with this transaction. */
   SVN_ERR(purge_shared_txn(fs, txn_id, pool));
   /* Remove the directory associated with this transaction. */
   SVN_ERR(svn_io_remove_dir2(path_txn_dir(fs, txn_id, pool), FALSE,
                              NULL, NULL, pool));
-  if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
+  if (format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
     {
       /* Delete protorev and its lock, which aren't in the txn
          directory.  It's OK if they don't exist (for example, if this
@@ -5168,7 +5200,11 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   svn_txdelta_window_handler_t wh;
   void *whb;
   fs_fs_data_t *ffd = fs->fsap_data;
-  int diff_version = ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT ? 1 : 0;
+  int diff_version;
+  int format;
+
+  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
+  diff_version = format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT ? 1 : 0;
 
   b = apr_pcalloc(pool, sizeof(*b));
 
@@ -5568,6 +5604,9 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   const svn_fs_id_t *new_id;
   const char *node_id, *copy_id, *my_node_id, *my_copy_id;
   fs_fs_data_t *ffd = fs->fsap_data;
+  int format;
+
+  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
 
   *new_id_p = NULL;
 
@@ -5659,7 +5698,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   node_id = svn_fs_py__id_node_id(noderev->id);
   if (*node_id == '_')
     {
-      if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+      if (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
         my_node_id = apr_psprintf(pool, "%s-%ld", node_id + 1, rev);
       else
         {
@@ -5673,7 +5712,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   copy_id = svn_fs_py__id_copy_id(noderev->id);
   if (*copy_id == '_')
     {
-      if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+      if (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
         my_copy_id = apr_psprintf(pool, "%s-%ld", copy_id + 1, rev);
       else
         {
@@ -5694,7 +5733,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
   /* Write out our new node-revision. */
   SVN_ERR(svn_fs_py__write_noderev(svn_stream_from_aprfile2(file, TRUE, pool),
-                                   noderev, ffd->format,
+                                   noderev, format,
                                    svn_fs_py__fs_supports_mergeinfo(fs),
                                    pool));
 
@@ -5730,8 +5769,11 @@ write_final_changed_path_info(apr_off_t *offset_p,
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(pool);
   fs_fs_data_t *ffd = fs->fsap_data;
-  svn_boolean_t include_node_kinds =
-      ffd->format >= SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT;
+  svn_boolean_t include_node_kinds;
+  int format;
+
+  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
+  include_node_kinds = format >= SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT;
 
   SVN_ERR(get_file_offset(&offset, file, pool));
 
@@ -5789,9 +5831,12 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
   char *buf;
   const char *tmp_name, *name;
   fs_fs_data_t *ffd = fs->fsap_data;
+  int format;
+
+  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
 
   /* Now we can just write out this line. */
-  if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+  if (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
     buf = apr_psprintf(pool, "%ld\n", rev);
   else
     buf = apr_psprintf(pool, "%ld %s %s\n", rev, next_node_id, next_copy_id);
@@ -5820,8 +5865,11 @@ write_final_current(svn_fs_t *fs,
   char new_node_id[MAX_KEY_SIZE + 2];
   char new_copy_id[MAX_KEY_SIZE + 2];
   fs_fs_data_t *ffd = fs->fsap_data;
+  int format;
 
-  if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
+
+  if (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
     return write_current(fs, rev, NULL, NULL, pool);
 
   /* To find the next available ids, we add the id that used to be in
@@ -5939,6 +5987,9 @@ commit_body(void *baton, apr_pool_t *pool)
   apr_array_header_t *txnprop_list;
   svn_prop_t prop;
   svn_string_t date;
+  int format;
+
+  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
 
   /* Get the current youngest revision. */
   SVN_ERR(svn_fs_py__youngest_rev(&old_rev, cb->fs, pool));
@@ -5956,7 +6007,7 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(verify_locks(cb->fs, cb->txn->id, pool));
 
   /* Get the next node_id and copy_id to use. */
-  if (ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+  if (format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
     SVN_ERR(get_next_revision_ids(&start_node_id, &start_copy_id, cb->fs,
                                   pool));
 
@@ -6202,6 +6253,7 @@ svn_fs_py__create(svn_fs_t *fs,
                   apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  int format;
 
   fs->path = apr_pstrdup(pool, path);
 
@@ -6211,7 +6263,7 @@ svn_fs_py__create(svn_fs_t *fs,
   apr_pool_cleanup_register(fs->pool, ffd->p_fs, svn_fs_py__destroy_py_object,
                             apr_pool_cleanup_null);
 
-  SVN_ERR(svn_fs_py__get_int_attr(&ffd->format, ffd->p_fs, "format"));
+  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
   SVN_ERR(svn_fs_py__get_int_attr(&ffd->max_files_per_dir, ffd->p_fs,
                                   "max_files_per_dir"));
 
@@ -6221,7 +6273,7 @@ svn_fs_py__create(svn_fs_t *fs,
 
   /* Create the txn-current file if the repository supports
      the transaction sequence file. */
-  if (ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
+  if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     {
       SVN_ERR(svn_io_file_create(path_txn_current(fs, pool),
                                  "0\n", pool));
@@ -6231,7 +6283,7 @@ svn_fs_py__create(svn_fs_t *fs,
 
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(write_format(path_format(fs, pool),
-                       ffd->format, ffd->max_files_per_dir, FALSE, pool));
+                       format, ffd->max_files_per_dir, FALSE, pool));
 
   ffd->youngest_rev_cache = 0;
   return SVN_NO_ERROR;
@@ -6501,6 +6553,9 @@ recover_body(void *baton, apr_pool_t *pool)
   char *next_node_id = NULL, *next_copy_id = NULL;
   svn_revnum_t youngest_rev;
   svn_node_kind_t youngest_revprops_kind;
+  int format;
+
+  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
 
   /* First, we need to know the largest revision in the filesystem. */
   SVN_ERR(recover_get_largest_revision(fs, &max_rev, pool));
@@ -6547,7 +6602,7 @@ recover_body(void *baton, apr_pool_t *pool)
 
   /* We only need to search for maximum IDs for old FS formats which
      se global ID counters. */
-  if (ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+  if (format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
     {
       /* Next we need to find the maximum node id and copy id in use across the
          filesystem.  Unfortunately, the only way we can get this information
@@ -7352,8 +7407,10 @@ svn_fs_py__verify(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_boolean_t exists;
+  int format;
 
-  if (ffd->format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
+  if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     return SVN_NO_ERROR;
 
   /* Do not attempt to walk the rep-cache database if its file does not exists,

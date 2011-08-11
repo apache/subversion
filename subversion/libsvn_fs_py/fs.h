@@ -206,8 +206,6 @@ typedef struct fs_fs_shared_data_t
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object. */
 typedef struct fs_fs_data_t
 {
-  /* The format number of this FS. */
-  int format;
   /* The maximum number of files to store per directory (for sharded
      layouts) or zero (for linear layouts). */
   int max_files_per_dir;

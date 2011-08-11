@@ -57,6 +57,7 @@
 #include "tree.h"
 #include "fs_fs.h"
 #include "id.h"
+#include "py_util.h"
 
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_fs_util.h"
@@ -3614,6 +3615,9 @@ fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                  apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = root->fs->fsap_data;
+  int format;
+
+  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
 
   /* We require a revision root. */
   if (root->is_txn_root)
@@ -3625,7 +3629,7 @@ fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Querying mergeinfo requires version %d of the FSFS filesystem "
          "schema; filesystem '%s' uses only version %d"),
-       SVN_FS_FS__MIN_MERGEINFO_FORMAT, root->fs->path, ffd->format);
+       SVN_FS_FS__MIN_MERGEINFO_FORMAT, root->fs->path, format);
 
   /* Retrieve a path -> mergeinfo hash mapping. */
   return get_mergeinfos_for_paths(root, catalog, paths,
