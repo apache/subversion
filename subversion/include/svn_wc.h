@@ -3069,14 +3069,12 @@ typedef struct svn_wc_info_t
   const char *wcroot_abspath;
 
   /** The path the node was moved from, if it was moved here. Else NULL.
-   * This path is relative to the working copy root.
    * @since New in 1.8. */
-  const char *moved_from_relpath;
+  const char *moved_from_abspath;
 
   /** The path the node was moved to, if it was moved away. Else NULL.
-   * This path is relative to the working copy root.
    * @since New in 1.8. */
-  const char *moved_to_relpath;
+  const char *moved_to_abspath;
 } svn_wc_info_t;
 
 /**
