@@ -500,30 +500,33 @@ def wc_target_inherits_mergeinfo_from_repos(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = set_up_branch(sbox)
+  wc_disk, wc_status = set_up_branch(sbox, nbr_of_branches=2)
 
   A_COPY_path   = os.path.join(wc_dir, 'A_COPY')
   rho_COPY_path = os.path.join(wc_dir, 'A_COPY', 'D', 'G', 'rho')
-
-  # Merge -c4 ^/A/D/G/rho A_COPY\D\G\rho
-  # Merge -c6 ^/A A_COPY
-  # Commit as r7
+  gamma_2_path  = os.path.join(wc_dir, 'A_COPY_2', 'D', 'gamma')
+  tau_path      = os.path.join(wc_dir, 'A', 'D', 'G', 'tau')
+  D_COPY_path   = os.path.join(wc_dir, 'A_COPY', 'D')
+  
+  # Merge -c5 ^/A/D/G/rho A_COPY\D\G\rho
+  # Merge -c7 ^/A A_COPY
+  # Commit as r8
   #
   # This gives us some explicit mergeinfo on the "branch" root and
   # one of its subtrees:
   #
   #   Properties on 'A_COPY\D\G\rho':
   #     svn:mergeinfo
-  #       /A/D/G/rho:4
+  #       /A/D/G/rho:5
   #   Properties on 'A_COPY':
   #     svn:mergeinfo
-  #       /A:6
+  #       /A:7
   svntest.actions.run_and_verify_svn(None, None, [], 'merge',
                                      sbox.repo_url + '/A/D/G/rho',
-                                     rho_COPY_path, '-c4')
+                                     rho_COPY_path, '-c5')
   svntest.actions.run_and_verify_svn(None, None, [], 'merge',
                                      sbox.repo_url + '/A',
-                                     A_COPY_path, '-c6')
+                                     A_COPY_path, '-c7')
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
                                      'Cherrypicks to branch subtree and root',
                                      wc_dir)
@@ -540,31 +543,93 @@ def wc_target_inherits_mergeinfo_from_repos(sbox):
   # Eligible : Non-recursive  
   svntest.actions.run_and_verify_mergeinfo(
     adjust_error_for_server_version(''),
-    ['3','4'], sbox.repo_url + '/A/D', subtree_wc,
+    ['4','5'], sbox.repo_url + '/A/D', subtree_wc,
     '--show-revs', 'eligible')
 
   # Eligible : Recursive
   svntest.actions.run_and_verify_mergeinfo(
     adjust_error_for_server_version(''),
-    ['3',], sbox.repo_url + '/A/D', subtree_wc,
+    ['4'], sbox.repo_url + '/A/D', subtree_wc,
     '--show-revs', 'eligible', '-R')
 
   # Merged : Non-recursive
   #
-  # Currently this fails because r6 is not shown as merged, despite the fact
+  # Currently this fails because r7 is not shown as merged, despite the fact
   # that the target inherits it from ^/A_COPY
   svntest.actions.run_and_verify_mergeinfo(
     adjust_error_for_server_version(''),
-    ['6'], sbox.repo_url + '/A/D', subtree_wc,
+    ['7'], sbox.repo_url + '/A/D', subtree_wc,
     '--show-revs', 'merged')
 
   # Merged : Recursive
   #
-  # Currently this fails because r6 is again missing.
+  # Currently this fails because r7 is again missing.
   svntest.actions.run_and_verify_mergeinfo(
     adjust_error_for_server_version(''),
-    ['4','6'], sbox.repo_url + '/A/D', subtree_wc,
+    ['5','7'], sbox.repo_url + '/A/D', subtree_wc,
     '--show-revs', 'merged', '-R')
+
+  # Test that intersecting revisions in the 'svn mergeinfo' target
+  # from one source don't show up as merged when asking about a different
+  # source.
+  #
+  # In r9 make a change that effects two branches:
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.main.file_write(gamma_2_path, "New content.\n")
+  svntest.main.file_write(tau_path, "New content.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Make changes under both A and A_COPY_2',
+                                     wc_dir)
+
+  # In r10 merge r9 from A_COPY_2 to A_COPY.
+  #
+  # This gives us this mergeinfo:
+  #
+  #   Properties on 'A_COPY':
+  #     svn:mergeinfo
+  #       /A:7
+  #       /A_COPY_2:9
+  #   Properties on 'A_COPY\D\G\rho':
+  #     svn:mergeinfo
+  #       /A/D/G/rho:5
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A_COPY_2',
+                                     A_COPY_path, '-c9')
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Merge r8 from A_COPY_2 to A_COPY',
+                                     wc_dir)
+ 
+  def test_svn_mergeinfo_4_way(wc_target):
+    # Eligible : Non-recursive
+    svntest.actions.run_and_verify_mergeinfo(
+      adjust_error_for_server_version(''),
+      ['4','5','9'], sbox.repo_url + '/A/D', wc_target,
+      '--show-revs', 'eligible')
+
+    # Eligible : Recursive
+    svntest.actions.run_and_verify_mergeinfo(
+      adjust_error_for_server_version(''),
+      ['4','9'], sbox.repo_url + '/A/D', wc_target,
+      '--show-revs', 'eligible', '-R')
+
+    # Merged : Non-recursive
+    svntest.actions.run_and_verify_mergeinfo(
+      adjust_error_for_server_version(''),
+      ['7'], sbox.repo_url + '/A/D', wc_target,
+      '--show-revs', 'merged')
+
+    # Merged : Recursive
+    svntest.actions.run_and_verify_mergeinfo(
+      adjust_error_for_server_version(''),
+      ['5','7'], sbox.repo_url + '/A/D', wc_target,
+      '--show-revs', 'merged', '-R')
+
+  # Test while the target is the full WC and then with the subtree WC:
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', subtree_wc)
+
+  test_svn_mergeinfo_4_way(D_COPY_path)
+  test_svn_mergeinfo_4_way(subtree_wc)
 
 ########################################################################
 # Run the tests
@@ -572,14 +637,14 @@ def wc_target_inherits_mergeinfo_from_repos(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              no_mergeinfo,
-              mergeinfo,
-              explicit_mergeinfo_source,
-              mergeinfo_non_source,
-              mergeinfo_on_unknown_url,
-              non_inheritable_mergeinfo,
-              recursive_mergeinfo,
-              mergeinfo_on_pegged_wc_path,
+              #no_mergeinfo,
+              #mergeinfo,
+              #explicit_mergeinfo_source,
+              #mergeinfo_non_source,
+              #mergeinfo_on_unknown_url,
+              #non_inheritable_mergeinfo,
+              #recursive_mergeinfo,
+              #mergeinfo_on_pegged_wc_path,
               wc_target_inherits_mergeinfo_from_repos,
              ]
 
