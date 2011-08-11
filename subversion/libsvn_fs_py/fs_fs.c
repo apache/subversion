@@ -6196,40 +6196,11 @@ svn_fs_py__reserve_copy_id(const char **copy_id_p,
   return SVN_NO_ERROR;
 }
 
-/* Write out the zeroth revision for filesystem FS. */
-static svn_error_t *
-write_revision_zero(svn_fs_t *fs)
-{
-  const char *path_revision_zero = path_rev(fs, 0, fs->pool);
-  apr_hash_t *proplist;
-  svn_string_t date;
-
-  /* Write out a rev file for revision 0. */
-  SVN_ERR(svn_io_file_create(path_revision_zero,
-                             "PLAIN\nEND\nENDREP\n"
-                             "id: 0.0.r0/17\n"
-                             "type: dir\n"
-                             "count: 0\n"
-                             "text: 0 0 4 4 "
-                             "2d2977d1c96f487abe4a1e202dd03b4e\n"
-                             "cpath: /\n"
-                             "\n\n17 107\n", fs->pool));
-  SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, fs->pool));
-
-  /* Set a date on revision 0. */
-  date.data = svn_time_to_cstring(apr_time_now(), fs->pool);
-  date.len = strlen(date.data);
-  proplist = apr_hash_make(fs->pool);
-  apr_hash_set(proplist, SVN_PROP_REVISION_DATE, APR_HASH_KEY_STRING, &date);
-  return set_revision_proplist(fs, 0, proplist, fs->pool);
-}
-
 svn_error_t *
 svn_fs_py__create(svn_fs_t *fs,
                   const char *path,
                   apr_pool_t *pool)
 {
-  int format = SVN_FS_FS__FORMAT_NUMBER;
   fs_fs_data_t *ffd = fs->fsap_data;
 
   fs->path = apr_pstrdup(pool, path);
@@ -6240,75 +6211,17 @@ svn_fs_py__create(svn_fs_t *fs,
   apr_pool_cleanup_register(fs->pool, ffd->p_fs, svn_fs_py__destroy_py_object,
                             apr_pool_cleanup_null);
 
-  /* See if compatibility with older versions was explicitly requested. */
-  if (fs->config)
-    {
-      if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                                   APR_HASH_KEY_STRING))
-        format = 1;
-      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
-                                        APR_HASH_KEY_STRING))
-        format = 2;
-      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
-                                        APR_HASH_KEY_STRING))
-        format = 3;
-    }
-  ffd->format = format;
-
-  /* Override the default linear layout if this is a new-enough format. */
-  if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
-    ffd->max_files_per_dir = SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR;
-
-  /* Create the revision data directories. */
-  if (ffd->max_files_per_dir)
-    SVN_ERR(svn_io_make_dir_recursively(path_rev_shard(fs, 0, pool), pool));
-  else
-    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_REVS_DIR,
-                                                        pool),
-                                        pool));
-
-  /* Create the revprops directory. */
-  if (ffd->max_files_per_dir)
-    SVN_ERR(svn_io_make_dir_recursively(path_revprops_shard(fs, 0, pool),
-                                        pool));
-  else
-    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path,
-                                                        PATH_REVPROPS_DIR,
-                                                        pool),
-                                        pool));
-
-  /* Create the transaction directory. */
-  SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_TXNS_DIR,
-                                                      pool),
-                                      pool));
-
-  /* Create the protorevs directory. */
-  if (format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
-    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_TXN_PROTOS_DIR,
-                                                      pool),
-                                        pool));
-
-  /* Create the 'current' file. */
-  SVN_ERR(svn_io_file_create(svn_fs_py__path_current(fs, pool),
-                             (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
-                              ? "0\n" : "0 1 1\n"),
-                             pool));
-  SVN_ERR(svn_io_file_create(path_lock(fs, pool), "", pool));
-  SVN_ERR(svn_fs_py__set_uuid(fs, NULL, pool));
-
-  SVN_ERR(write_revision_zero(fs));
+  SVN_ERR(svn_fs_py__get_int_attr(&ffd->format, ffd->p_fs, "format"));
+  SVN_ERR(svn_fs_py__get_int_attr(&ffd->max_files_per_dir, ffd->p_fs,
+                                  "max_files_per_dir"));
 
   SVN_ERR(write_config(fs, pool));
 
   SVN_ERR(read_config(fs, pool));
 
-  /* Create the min unpacked rev file. */
-  if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_file_create(path_min_unpacked_rev(fs, pool), "0\n", pool));
-
   /* Create the txn-current file if the repository supports
      the transaction sequence file. */
-  if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
+  if (ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     {
       SVN_ERR(svn_io_file_create(path_txn_current(fs, pool),
                                  "0\n", pool));

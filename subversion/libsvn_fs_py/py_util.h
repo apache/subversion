@@ -57,3 +57,8 @@ svn_fs_py__get_string_attr(const char **result,
                            PyObject *p_obj,
                            const char *name,
                            apr_pool_t *result_pool);
+
+svn_error_t *
+svn_fs_py__get_int_attr(int *result,
+                        PyObject *p_obj,
+                        const char *name);

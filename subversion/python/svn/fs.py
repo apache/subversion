@@ -18,10 +18,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import os, uuid, shutil, tempfile
+import os, uuid, stat, shutil, tempfile, datetime
 
 import svn
 import svn.hash
+import svn.prop
 
 # Some constants
 CONFIG_PRE_1_4_COMPATIBLE   = "pre-1.4-compatible"
@@ -31,8 +32,11 @@ CONFIG_PRE_1_6_COMPATIBLE   = "pre-1.6-compatible"
 PATH_FORMAT                 = "format"          # Contains format number
 PATH_UUID                   = "uuid"            # Contains UUID
 PATH_CURRENT                = "current"         # Youngest revision
+PATH_LOCK_FILE              = "write-lock"      # Revision lock file
 PATH_REVS_DIR               = "revs"            # Directory of revisions
 PATH_REVPROPS_DIR           = "revprops"        # Directory of revprops
+PATH_TXNS_DIR               = "transactions"    # Directory of transactions
+PATH_TXN_PROTOS_DIR         = "txn-protorevs"   # Directory of proto-revs
 PATH_MIN_UNPACKED_REV       = "min-unpacked-rev" # Oldest revision which
                                                  # has not been packed.
 
@@ -44,6 +48,7 @@ MIN_NO_GLOBAL_IDS_FORMAT            = 3
 MIN_PACKED_FORMAT                   = 4
 
 _DEFAULT_MAX_FILES_PER_DIR = 1000
+_TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
 
 class FS(object):
@@ -156,6 +161,28 @@ class FS(object):
             self.__min_unpacked_rev = int(f.readline())
 
 
+    def __write_revision_zero(self):
+        'Write out the zeroth revision for filesystem FS.'
+        path_revision_zero = self.__path_rev(0)
+
+        with open(path_revision_zero, 'wb') as f:
+            f.write("PLAIN\nEND\nENDREP\n" +
+                    "id: 0.0.r0/17\n" +
+                    "type: dir\n" +
+                    "count: 0\n" +
+                    "text: 0 0 4 4 " +
+                    "2d2977d1c96f487abe4a1e202dd03b4e\n" +
+                    "cpath: /\n" +
+                    "\n\n17 107\n")
+
+        # Set the file read-only
+        os.chmod(path_revision_zero, stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
+
+        now = datetime.datetime.utcnow()
+        props = { svn.prop.REVISION_DATE : now.strftime(_TIMESTAMP_FORMAT) }
+        self._set_revision_proplist(0, props)
+
+
     def _create_fs(self):
         'Create a new Subversion filesystem'
         self.__youngest_rev_cache = 0
@@ -177,6 +204,40 @@ class FS(object):
         else:
             self.max_files_per_dir = 0
 
+        # Create the revision data and revprops directories.
+        if self.max_files_per_dir:
+            os.makedirs(self.__path_rev_shard(0))
+            os.makedirs(self.__path_revprops_shard(0))
+        else:
+            os.makedirs(os.path.join(self.path, PATH_REVS_DIR))
+            os.makedirs(os.path.join(self.path, PATH_REVPROPS_DIR))
+
+        # Create the transaction directory.
+        os.makedirs(os.path.join(self.path, PATH_TXNS_DIR))
+
+        # Create the protorevs directory.
+        if self.format >= MIN_PROTOREVS_DIR_FORMAT:
+            os.makedirs(os.path.join(self.path, PATH_TXN_PROTOS_DIR))
+
+        # Create the 'current' file.
+        if self.format >= MIN_NO_GLOBAL_IDS_FORMAT:
+            current_contents = "0\n"
+        else:
+            current_contents = "0 1 1\n"
+        with open(self.__path_current, 'wb') as f:
+            f.write(current_contents)
+
+        with open(self.__path_lock, 'wb') as f:
+            f.write('')
+
+        # Create the min unpacked rev file.
+        if self.format >= MIN_PACKED_FORMAT:
+            with open(self.__path_min_unpacked_rev, 'wb') as f:
+                f.write('0\n')
+
+        self.set_uuid()
+        self.__write_revision_zero()
+
 
     def _open_fs(self):
         'Open an existing Subvesion filesystem'
@@ -195,6 +256,7 @@ class FS(object):
         self.__path_format = os.path.join(self.path, PATH_FORMAT)
         self.__path_min_unpacked_rev = os.path.join(self.path,
                                                     PATH_MIN_UNPACKED_REV)
+        self.__path_lock = os.path.join(self.path, PATH_LOCK_FILE)
 
 
     def __init__(self, path, create=False, config=None):

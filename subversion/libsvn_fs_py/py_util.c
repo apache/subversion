@@ -308,6 +308,45 @@ svn_fs_py__get_string_attr(const char **result,
 }
 
 
+
+struct get_int_attr_baton
+{
+  int *result;
+  PyObject *p_obj;
+  const char *name;
+};
+
+
+static void
+get_int_attr(void *baton,
+             va_list argp)
+{
+  struct get_int_attr_baton *giab = baton;
+  PyObject *p_int;
+
+  /* ### This needs some exception handling */
+  
+  p_int = PyObject_GetAttrString(giab->p_obj, giab->name);
+  if (PyErr_Occurred())
+    return;
+
+  *giab->result = (int) PyInt_AsLong(p_int);
+  Py_DECREF(p_int);
+
+  return;
+}
+
+
+svn_error_t *
+svn_fs_py__get_int_attr(int *result,
+                        PyObject *p_obj,
+                        const char *name)
+{
+  struct get_int_attr_baton giab = { result, p_obj, name };
+  return svn_error_trace(catch_py_exception(get_int_attr, &giab, NULL));
+}
+
+
 struct call_method_baton
 {
   PyObject **p_result;
