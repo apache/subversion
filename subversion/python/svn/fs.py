@@ -80,6 +80,3 @@ def _create_fs(path, config=None):
 
 def _open_fs(path):
     return FS(path)
-
-def _set_uuid(fs, uuid):
-    fs.set_uuid(uuid)

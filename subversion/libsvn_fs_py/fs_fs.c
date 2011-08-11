@@ -6758,9 +6758,9 @@ svn_fs_py__set_uuid(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  return svn_error_trace(svn_fs_py__call_method(NULL, ffd->p_module,
-                                                "_set_uuid",
-                                                "(Os)", ffd->p_fs, uuid));
+  return svn_error_trace(svn_fs_py__call_method(NULL, ffd->p_fs,
+                                                "set_uuid",
+                                                "(s)", uuid));
 }
 
 /** Node origin lazy cache. */
