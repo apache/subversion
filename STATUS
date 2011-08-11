@@ -193,6 +193,7 @@ Candidate changes:
      Impossible to disable libmagic otherwise.
    Votes:
      +0: danielsh
+     +1: stsp
 
 Veto-blocked changes:
 =====================
