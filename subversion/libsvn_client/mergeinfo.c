@@ -1356,6 +1356,8 @@ find_nearest_ancestor(const apr_array_header_t *depth_first_catalog_index,
    svn_log_entry_receiver_t callback. */
 struct filter_log_entry_baton_t
 {
+  /* Is TRUE if RANGELIST describes potentially merged revisions, is FALSE
+     if RANGELIST describes potentially eligible revisions. */
   svn_boolean_t filtering_merged;
 
   /* Unsorted array of repository relative paths representing the merge
@@ -1373,8 +1375,9 @@ struct filter_log_entry_baton_t
      TARGET_MERGEINFO_CATALOG. */
   apr_array_header_t *depth_first_catalog_index;
 
-  /* A rangelist describing all the ranges merged to ABS_REPOS_TARGET_PATH
-     from the */
+  /* A rangelist describing all the revisions potentially merged or
+     potentially eligible for merging (see FILTERING_MERGED) based on
+     the target's explicit or inherited mergeinfo. */
   const apr_array_header_t *rangelist;
 
   /* The wrapped svn_log_entry_receiver_t callback and baton which
@@ -1389,9 +1392,18 @@ struct filter_log_entry_baton_t
    `struct filter_log_entry_baton_t *'.
 
    Call the wrapped log receiver BATON->log_receiver (with
-   BATON->log_receiver_baton), only if the log entry falls within the
-   ranges in BATON->rangelist.
- */
+   BATON->log_receiver_baton) if:
+   
+   BATON->FILTERING_MERGED is FALSE and the changes represented by LOG_ENTRY
+   have been fully merged from BATON->MERGE_SOURCE_PATHS to the WC target
+   based on the mergeinfo for the WC contained in BATON->TARGET_MERGEINFO_CATALOG.
+
+   Or
+
+   BATON->FILTERING_MERGED is TRUE and the changes represented by LOG_ENTRY
+   have not been merged, or only partially merged, from
+   BATON->MERGE_SOURCE_PATHS to the WC target based on the mergeinfo for the
+   WC contained in BATON->TARGET_MERGEINFO_CATALOG. */
 static svn_error_t *
 filter_log_entry_with_rangelist(void *baton,
                                 svn_log_entry_t *log_entry,
@@ -1454,6 +1466,7 @@ filter_log_entry_with_rangelist(void *baton,
           apr_hash_index_t *hi2;
           svn_boolean_t found_this_revision = FALSE;
           const char *merge_source_rel_target;
+          const char *merge_source_path;
 
           svn_pool_clear(iterpool);
 
@@ -1461,8 +1474,8 @@ filter_log_entry_with_rangelist(void *baton,
              merge sources.  If not then ignore this path.  */
           for (i = 0; i < fleb->merge_source_paths->nelts; i++)
             {
-              const char *merge_source_path
-                = APR_ARRAY_IDX(fleb->merge_source_paths, i, const char *);
+              merge_source_path = APR_ARRAY_IDX(fleb->merge_source_paths,
+                                                i, const char *);
 
               merge_source_rel_target
                 = svn_fspath__skip_ancestor(merge_source_path, path);
@@ -1496,20 +1509,33 @@ filter_log_entry_with_rangelist(void *baton,
                    hi2;
                    hi2 = apr_hash_next(hi2))
                 {
+                  const char *mergeinfo_path = svn__apr_hash_index_key(hi2);
                   apr_array_header_t *rangelist = svn__apr_hash_index_val(hi2);
-                  SVN_ERR(svn_rangelist_intersect(&intersection, rangelist,
-                                                  this_rev_rangelist, FALSE,
-                                                  iterpool));
-                  if (intersection->nelts)
+
+                  /* Does the mergeinfo for PATH reflect if
+                     LOG_ENTRY->REVISION was previously merged
+                     from MERGE_SOURCE_PATH? */
+                  if (svn_fspath__is_ancestor(merge_source_path,
+                                              mergeinfo_path))
                     {
+                      /* Something was merged from MERGE_SOURCE_PATH, does
+                         it include LOG_ENTRY->REVISION? */
                       SVN_ERR(svn_rangelist_intersect(&intersection,
                                                       rangelist,
                                                       this_rev_rangelist,
-                                                      TRUE, iterpool));
+                                                      FALSE,
+                                                      iterpool));
                       if (intersection->nelts)
                         {
-                          found_this_revision = TRUE;
-                          break;
+                          SVN_ERR(svn_rangelist_intersect(&intersection,
+                                                          rangelist,
+                                                          this_rev_rangelist,
+                                                          TRUE, iterpool));
+                          if (intersection->nelts)
+                            {
+                              found_this_revision = TRUE;
+                              break;
+                            }
                         }
                     }
                 }
