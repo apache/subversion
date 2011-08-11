@@ -479,11 +479,32 @@ resolve_target_path(patch_target_t *target,
       return SVN_NO_ERROR;
     }
 
-  /* ### Shouldn't libsvn_wc flag an obstruction in this case? */
-  if (target->locally_deleted && target->kind_on_disk != svn_node_none)
+  if (target->locally_deleted)
     {
-      target->skipped = TRUE;
-      return SVN_NO_ERROR;
+      const char *moved_to_abspath;
+
+      SVN_ERR(svn_wc__node_was_moved_away(&moved_to_abspath, NULL,
+                                          wc_ctx, target->local_abspath,
+                                          result_pool, scratch_pool));
+      if (moved_to_abspath)
+        {
+          target->local_abspath = moved_to_abspath;
+          target->local_relpath = svn_dirent_skip_ancestor(wcroot_abspath,
+                                                          moved_to_abspath);
+          SVN_ERR_ASSERT(target->local_relpath &&
+                         target->local_relpath[0] != '\0');
+
+          /* As far as we are concerned this target is not locally deleted. */
+          target->locally_deleted = FALSE;
+
+          SVN_ERR(svn_io_check_path(target->local_abspath,
+                                    &target->kind_on_disk, scratch_pool));
+        }
+      else if (target->kind_on_disk != svn_node_none)
+        {
+          target->skipped = TRUE;
+          return SVN_NO_ERROR;
+        }
     }
 
   return SVN_NO_ERROR;
