@@ -490,8 +490,7 @@ def mergeinfo_on_pegged_wc_path(sbox):
     ['4', '5'], A_path, A_COPY_path + '@PREV', '--show-revs', 'eligible')
 
 #----------------------------------------------------------------------
-# A test for issue 3986 'svn_client_mergeinfo_log API broken with WC target
-# which inherits mergeinfo from repos'.
+# A test for issue 3986 'svn_client_mergeinfo_log API is broken'.
 @Issue(3986)
 @SkipUnless(server_has_mergeinfo)
 def wc_target_inherits_mergeinfo_from_repos(sbox):
