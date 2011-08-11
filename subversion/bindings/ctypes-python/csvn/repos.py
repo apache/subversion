@@ -154,7 +154,12 @@ class RemoteRepository(object):
         svn_ra_get_dir2(self, dirents.byref(), NULL, NULL, path,
                         rev, fields, dirents.pool)
         self.iterpool.clear()
-        return dirents
+        # Create a Python dict of svn_dirent_t objects from this Hash of
+        # pointers to svn_dirent_t.
+        result = {}
+        for path, dirent_p in dirents.items():
+            result[path] = dirent_p[0]
+        return result
 
     def cat(self, buffer, path, rev = SVN_INVALID_REVNUM):
         """Get PATH@REV and save it to BUFFER. BUFFER must be a Python file
@@ -178,7 +183,7 @@ class RemoteRepository(object):
             rev = self.latest_revnum()
         svn_ra_stat(self, path, rev, byref(dirent), dirent.pool)
         self.iterpool.clear()
-        return dirent
+        return dirent[0]
 
     def proplist(self, path, rev = SVN_INVALID_REVNUM):
         """Return a dictionary containing the properties on PATH@REV
