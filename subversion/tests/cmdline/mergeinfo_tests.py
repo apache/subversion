@@ -637,14 +637,14 @@ def wc_target_inherits_mergeinfo_from_repos(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              #no_mergeinfo,
-              #mergeinfo,
-              #explicit_mergeinfo_source,
-              #mergeinfo_non_source,
-              #mergeinfo_on_unknown_url,
-              #non_inheritable_mergeinfo,
-              #recursive_mergeinfo,
-              #mergeinfo_on_pegged_wc_path,
+              no_mergeinfo,
+              mergeinfo,
+              explicit_mergeinfo_source,
+              mergeinfo_non_source,
+              mergeinfo_on_unknown_url,
+              non_inheritable_mergeinfo,
+              recursive_mergeinfo,
+              mergeinfo_on_pegged_wc_path,
               wc_target_inherits_mergeinfo_from_repos,
              ]
 
