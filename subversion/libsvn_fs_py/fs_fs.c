@@ -1734,8 +1734,15 @@ svn_fs_py__youngest_rev(svn_revnum_t *youngest_p,
                         apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  PyObject *p_rev;
 
-  SVN_ERR(get_youngest(youngest_p, fs->path, pool));
+  SVN_ERR(svn_fs_py__call_method(&p_rev, ffd->p_fs,
+                                 "youngest_rev", "()"));
+
+  *youngest_p = PyInt_AsLong(p_rev);
+
+  Py_DECREF(p_rev);
+
   ffd->youngest_rev_cache = *youngest_p;
 
   return SVN_NO_ERROR;

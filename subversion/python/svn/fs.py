@@ -91,6 +91,10 @@ class FS(object):
     def _get_youngest(self):
         return int(self.__read_current()[0])
 
+    def youngest_rev(self):
+        self.__youngest_rev_cache = self._get_youngest()
+        return self.__youngest_rev_cache
+
     def set_uuid(self, uuid_in = None):
         '''Set the UUID for the filesystem.  If UUID_IN is not given, generate
            a new one a la RFC 4122.'''
