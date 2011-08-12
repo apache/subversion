@@ -403,6 +403,9 @@ assemble_status(svn_wc_status3_t **status,
   const char *repos_relpath;
   const char *repos_root_url;
   const char *repos_uuid;
+  const char *moved_from_abspath = NULL;
+  const char *moved_to_abspath = NULL;
+  const char *moved_to_op_root_abspath = NULL;
   svn_filesize_t filesize = (dirent && (dirent->kind == svn_node_file))
                                 ? dirent->filesize
                                 : SVN_INVALID_FILESIZE;
@@ -608,6 +611,24 @@ assemble_status(svn_wc_status3_t **status,
         }
     }
 
+  /* Get moved-to info. */
+  if (info->status == svn_wc__db_status_deleted)
+    SVN_ERR(svn_wc__db_scan_deletion(NULL,
+                                     &moved_to_abspath,
+                                     NULL,
+                                     &moved_to_op_root_abspath,
+                                     db, local_abspath,
+                                     result_pool, scratch_pool));
+
+  /* Get moved-from info. */
+  if (info->status == svn_wc__db_status_added)
+    SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL,
+                                     &moved_from_abspath,
+                                     NULL,
+                                     db, local_abspath,
+                                     result_pool, scratch_pool));
+
   if (node_status == svn_wc_status_normal)
     node_status = text_status;
 
@@ -699,6 +720,10 @@ assemble_status(svn_wc_status3_t **status,
   stat->repos_root_url = repos_root_url;
   stat->repos_relpath = repos_relpath;
   stat->repos_uuid = repos_uuid;
+
+  stat->moved_from_abspath = moved_from_abspath;
+  stat->moved_to_abspath = moved_to_abspath;
+  stat->moved_to_op_root_abspath = moved_to_op_root_abspath;
 
   *status = stat;
 
@@ -2590,6 +2615,18 @@ svn_wc_dup_status3(const svn_wc_status3_t *orig_stat,
   if (orig_stat->repos_uuid)
     new_stat->repos_uuid
       = apr_pstrdup(pool, orig_stat->repos_uuid);
+
+  if (orig_stat->moved_from_abspath)
+    new_stat->moved_from_abspath
+      = apr_pstrdup(pool, orig_stat->moved_from_abspath);
+
+  if (orig_stat->moved_to_abspath)
+    new_stat->moved_to_abspath
+      = apr_pstrdup(pool, orig_stat->moved_to_abspath);
+
+  if (orig_stat->moved_to_op_root_abspath)
+    new_stat->moved_to_op_root_abspath
+      = apr_pstrdup(pool, orig_stat->moved_to_op_root_abspath);
 
   /* Return the new hotness. */
   return new_stat;
