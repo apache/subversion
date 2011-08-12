@@ -201,7 +201,7 @@ Candidate changes:
      This is a regression from 1.6.  Bugs in private APIs could lead to other
      bugs.
    Votes:
-     +1: pburba
+     +1: pburba, markphip
 
 Veto-blocked changes:
 =====================
