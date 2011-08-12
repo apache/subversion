@@ -538,7 +538,7 @@ def move_to_dist(args):
     filenames = glob.glob(os.path.join(target,
                                        'subversion-%s.*' % str(args.version)))
     for filename in filenames:
-        shutil.move(filename, args.dist_dir)
+        shutil.copy(filename, args.dist_dir)
 
 
 #----------------------------------------------------------------------
