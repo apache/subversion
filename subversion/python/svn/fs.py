@@ -23,6 +23,8 @@ import os, uuid, stat, shutil, tempfile, datetime
 import svn
 import svn.hash
 import svn.prop
+import svn._cache
+import svn.err
 
 # Some constants
 CONFIG_PRE_1_4_COMPATIBLE   = "pre-1.4-compatible"
@@ -39,6 +41,7 @@ PATH_TXNS_DIR               = "transactions"    # Directory of transactions
 PATH_TXN_PROTOS_DIR         = "txn-protorevs"   # Directory of proto-revs
 PATH_MIN_UNPACKED_REV       = "min-unpacked-rev" # Oldest revision which
                                                  # has not been packed.
+PATH_CONFIG                 = "fsfs.conf"       # Configuration
 
 FORMAT_NUMBER                       = 4
 
@@ -49,6 +52,56 @@ MIN_PACKED_FORMAT                   = 4
 
 _DEFAULT_MAX_FILES_PER_DIR = 1000
 _TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
+
+# Names of sections and options in fsfs.conf.
+CONFIG_SECTION_CACHES               = "caches"
+CONFIG_OPTION_FAIL_STOP             = "fail-stop"
+CONFIG_SECTION_REP_SHARING          = "rep-sharing"
+CONFIG_OPTION_ENABLE_REP_SHARING    = "enable-rep-sharing"
+
+_DEFAULT_CONFIG_CONTENTS = \
+'''### This file controls the configuration of the FSFS filesystem.
+
+[%s]
+### These options name memcached servers used to cache internal FSFS
+### data.  See http://www.danga.com/memcached/ for more information on
+### memcached.  To use memcached with FSFS, run one or more memcached
+### servers, and specify each of them as an option like so:
+# first-server = 127.0.0.1:11211
+# remote-memcached = mymemcached.corp.example.com:11212
+### The option name is ignored; the value is of the form HOST:PORT.
+### memcached servers can be shared between multiple repositories;
+### however, if you do this, you *must* ensure that repositories have
+### distinct UUIDs and paths, or else cached data from one repository
+### might be used by another accidentally.  Note also that memcached has
+### no authentication for reads or writes, so you must ensure that your
+### memcached servers are only accessible by trusted users.
+
+[%s]
+### When a cache-related error occurs, normally Subversion ignores it
+### and continues, logging an error if the server is appropriately
+### configured (and ignoring it with file:// access).  To make
+### Subversion never ignore cache errors, uncomment this line.
+# %s = true
+
+[%s]
+### To conserve space, the filesystem can optionally avoid storing
+### duplicate representations.  This comes at a slight cost in
+### performance, as maintaining a database of shared representations can
+### increase commit times.  The space savings are dependent upon the size
+### of the repository, the number of objects it contains and the amount of
+### duplication between them, usually a function of the branching and
+### merging process.
+###
+### The following parameter enables rep-sharing in the repository.  It can
+### be switched on and off at will, but for best space-saving results
+### should be enabled consistently over the life of the repository.
+### 'svnadmin verify' will check the rep-cache regardless of this setting.
+### rep-sharing is enabled by default.
+# %s = true
+''' % (svn._cache.CONFIG_CATEGORY_MEMCACHED_SERVERS, CONFIG_SECTION_CACHES,
+       CONFIG_OPTION_FAIL_STOP, CONFIG_SECTION_REP_SHARING,
+       CONFIG_OPTION_ENABLE_REP_SHARING)
 
 
 class FS(object):
@@ -111,6 +164,10 @@ class FS(object):
         shutil.copymode(self.__path_current, self.__path_uuid)
 
 
+    def _write_config(self):
+        with open(self.__path_config, 'w') as f:
+            f.write(_DEFAULT_CONFIG_CONTENTS)
+
     def _ensure_revision_exists(self, rev):
         if not svn.is_valid_revnum(rev):
             raise svn.SubversionException(svn.err.FS_NO_SUCH_REVISION,
@@ -126,7 +183,7 @@ class FS(object):
             return
 
         raise svn.SubversionException(svn.err.FS_NO_SUCH_REVISION,
-                                      _("No such revision %ld") % rev)
+                                      "No such revision %ld" % rev)
 
     def _set_revision_proplist(self, rev, props):
         self._ensure_revision_exists(rev)
@@ -262,6 +319,7 @@ class FS(object):
         self.__path_min_unpacked_rev = os.path.join(self.path,
                                                     PATH_MIN_UNPACKED_REV)
         self.__path_lock = os.path.join(self.path, PATH_LOCK_FILE)
+        self.__path_config = os.path.join(self.path, PATH_CONFIG)
 
 
     def __init__(self, path, create=False, config=None):

@@ -18,15 +18,4 @@
 # specific language governing permissions and limitations
 # under the License.
 
-
-class SubversionException(Exception):
-    def __init__(self, code, msg):
-        self.message = msg
-        self.code = code
-
-    def __str__(self):
-        return self.message
-
-
-def is_valid_revnum(rev):
-    return rev >= 0
+CONFIG_CATEGORY_MEMCACHED_SERVERS = "memcached-servers"

@@ -6286,8 +6286,6 @@ svn_fs_py__create(svn_fs_t *fs,
   SVN_ERR(svn_fs_py__get_int_attr(&max_files_per_dir, ffd->p_fs,
                                   "max_files_per_dir"));
 
-  SVN_ERR(write_config(fs, pool));
-
   SVN_ERR(read_config(fs, pool));
 
   /* Create the txn-current file if the repository supports
