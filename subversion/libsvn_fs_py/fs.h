@@ -206,9 +206,6 @@ typedef struct fs_fs_shared_data_t
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object. */
 typedef struct fs_fs_data_t
 {
-  /* The revision that was youngest, last time we checked. */
-  svn_revnum_t youngest_rev_cache;
-
   /* The fsfs.conf file, parsed.  Allocated in FS->pool. */
   svn_config_t *config;
 

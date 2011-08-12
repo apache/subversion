@@ -1265,7 +1265,7 @@ svn_fs_py__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   /* Read the configuration file. */
   SVN_ERR(read_config(fs, pool));
 
-  return get_youngest(&(ffd->youngest_rev_cache), path, pool);
+  return SVN_NO_ERROR;
 }
 
 /* Wrapper around svn_io_file_create which ignores EEXIST. */
@@ -1742,8 +1742,6 @@ svn_fs_py__youngest_rev(svn_revnum_t *youngest_p,
   *youngest_p = PyInt_AsLong(p_rev);
 
   Py_DECREF(p_rev);
-
-  ffd->youngest_rev_cache = *youngest_p;
 
   return SVN_NO_ERROR;
 }
@@ -6156,7 +6154,7 @@ commit_body(void *baton, apr_pool_t *pool)
      created. */
   *cb->new_rev_p = new_rev;
 
-  ffd->youngest_rev_cache = new_rev;
+  SVN_ERR(svn_fs_py__set_int_attr(ffd->p_fs, "__youngest_rev_cache", new_rev));
 
   /* Remove this transaction directory. */
   SVN_ERR(svn_fs_py__purge_txn(cb->fs, cb->txn->id, pool));
@@ -6306,7 +6304,6 @@ svn_fs_py__create(svn_fs_t *fs,
   SVN_ERR(write_format(path_format(fs, pool),
                        format, max_files_per_dir, FALSE, pool));
 
-  ffd->youngest_rev_cache = 0;
   return SVN_NO_ERROR;
 }
 

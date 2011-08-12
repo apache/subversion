@@ -114,7 +114,7 @@ class FS(object):
     def _ensure_revision_exists(self, rev):
         if not svn.is_valid_revnum(rev):
             raise svn.SubversionException(svn.err.FS_NO_SUCH_REVISION,
-                                    _("Invalid revision number '%ld'") % rev)
+                                    "Invalid revision number '%ld'" % rev)
 
         # Did the revision exist the last time we checked the current file?
         if rev <= self.__youngest_rev_cache:
@@ -248,10 +248,11 @@ class FS(object):
         with open(self.__path_uuid, 'rb') as f:
             self.uuid = uuid.UUID(f.readline().rstrip())
 
-        self.__youngest_rev_cache = self.__read_current()
         self.__read_format()
         if self.format >= MIN_PACKED_FORMAT:
             self.__update_min_unpacked_rev()
+
+        self.__youngest_rev_cache = self._get_youngest()
 
 
     def __setup_paths(self):

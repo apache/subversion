@@ -34,6 +34,7 @@
 #include "private/svn_sqlite.h"
 
 #include "rep-cache-db.h"
+#include "py_util.h"
 
 /* A few magic values */
 #define REP_CACHE_SCHEMA_FORMAT   1
@@ -61,7 +62,8 @@ rep_has_been_born(representation_t *rep,
 
   SVN_ERR_ASSERT(rep);
 
-  youngest = ffd->youngest_rev_cache;
+  SVN_ERR(svn_fs_py__get_int_attr(&youngest, ffd->p_fs,
+                                  "__youngest_rev_cache"));
   if (youngest < rep->revision)
   {
     /* Stale cache. */

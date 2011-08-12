@@ -347,6 +347,42 @@ svn_fs_py__get_int_attr(int *result,
 }
 
 
+struct set_int_attr_baton
+{
+  PyObject *p_obj;
+  const char *name;
+  long int val;
+};
+
+
+static void
+set_int_attr(void *baton,
+             va_list argp)
+{
+  struct set_int_attr_baton *siab = baton;
+  PyObject *p_int;
+
+  p_int = PyInt_FromLong(siab->val);
+  if (PyErr_Occurred())
+    return;
+
+  PyObject_SetAttrString(siab->p_obj, siab->name, p_int);
+  Py_DECREF(p_int);
+
+  return;
+}
+
+
+svn_error_t *
+svn_fs_py__set_int_attr(PyObject *p_obj,
+                        const char *name,
+                        long int val)
+{
+  struct set_int_attr_baton siab = { p_obj, name, val };
+  return svn_error_trace(catch_py_exception(set_int_attr, &siab, NULL));
+}
+
+
 struct call_method_baton
 {
   PyObject **p_result;

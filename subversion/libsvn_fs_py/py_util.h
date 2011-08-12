@@ -50,6 +50,11 @@ svn_fs_py__convert_proplist(void *object);
 svn_error_t *
 svn_fs_py__load_module(fs_fs_data_t *ffd);
 
+svn_error_t *
+svn_fs_py__set_int_attr(PyObject *p_obj,
+                        const char *name,
+                        long int val);
+
 /* Get an attribute value from a Python object, and return it in *RESULT,
    allocated in RESULT_POOL. */
 svn_error_t *
