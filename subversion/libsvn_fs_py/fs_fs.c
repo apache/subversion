@@ -1827,24 +1827,8 @@ ensure_revision_exists(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  if (! SVN_IS_VALID_REVNUM(rev))
-    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                             _("Invalid revision number '%ld'"), rev);
-
-
-  /* Did the revision exist the last time we checked the current
-     file? */
-  if (rev <= ffd->youngest_rev_cache)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(get_youngest(&(ffd->youngest_rev_cache), fs->path, pool));
-
-  /* Check again. */
-  if (rev <= ffd->youngest_rev_cache)
-    return SVN_NO_ERROR;
-
-  return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                           _("No such revision %ld"), rev);
+  return svn_error_trace(svn_fs_py__call_method(NULL, ffd->p_fs,
+                                 "_ensure_revision_exists", "(l)", rev));
 }
 
 /* Open the correct revision file for REV.  If the filesystem FS has

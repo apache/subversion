@@ -111,7 +111,7 @@ class FS(object):
         shutil.copymode(self.__path_current, self.__path_uuid)
 
 
-    def __ensure_revision_exists(self, rev):
+    def _ensure_revision_exists(self, rev):
         if not svn.is_valid_revnum(rev):
             raise svn.SubversionException(svn.err.FS_NO_SUCH_REVISION,
                                     _("Invalid revision number '%ld'") % rev)
@@ -129,7 +129,7 @@ class FS(object):
                                       _("No such revision %ld") % rev)
 
     def _set_revision_proplist(self, rev, props):
-        self.__ensure_revision_exists(rev)
+        self._ensure_revision_exists(rev)
 
         final_path = self.__path_revprops(rev)
         (fd, fn) = tempfile.mkstemp(dir=os.path.dirname(final_path))
