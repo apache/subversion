@@ -548,6 +548,7 @@ def write_news(args):
     'Write text for the Subversion website.'
     data = { 'date' : datetime.date.today().strftime('%Y%m%d'),
              'date_pres' : datetime.date.today().strftime('%Y-%m-%d'),
+             'major-minor' : args.version.base[:3],
              'version' : str(args.version),
              'version_base' : args.version.base,
            }
