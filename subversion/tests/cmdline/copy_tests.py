@@ -777,9 +777,8 @@ def mv_and_revert_directory(sbox):
 
   # Issue 932: revert failed to lock the parent directory
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '--recursive',
-                                     E_path, new_E_path)
+                                     new_E_path)
   expected_status.remove('A/B/F/E', 'A/B/F/E/alpha', 'A/B/F/E/beta')
-  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='  ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
