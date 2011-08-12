@@ -412,9 +412,9 @@ print_info(void *baton,
           relpath = svn_dirent_skip_ancestor(info->wc_info->wcroot_abspath,
                                              info->wc_info->moved_from_abspath);
           if (relpath && relpath[0] != '\0')
-            SVN_ERR(svn_cmdline_printf(pool, _("Moved from: %s\n"), relpath));
+            SVN_ERR(svn_cmdline_printf(pool, _("Moved From: %s\n"), relpath));
           else
-            SVN_ERR(svn_cmdline_printf(pool, _("Moved from: %s\n"),
+            SVN_ERR(svn_cmdline_printf(pool, _("Moved From: %s\n"),
                                        info->wc_info->moved_from_abspath));
         }
 
@@ -425,9 +425,9 @@ print_info(void *baton,
           relpath = svn_dirent_skip_ancestor(info->wc_info->wcroot_abspath,
                                              info->wc_info->moved_to_abspath);
           if (relpath && relpath[0] != '\0')
-            SVN_ERR(svn_cmdline_printf(pool, _("Moved to: %s\n"), relpath));
+            SVN_ERR(svn_cmdline_printf(pool, _("Moved To: %s\n"), relpath));
           else
-            SVN_ERR(svn_cmdline_printf(pool, _("Moved to: %s\n"),
+            SVN_ERR(svn_cmdline_printf(pool, _("Moved To: %s\n"),
                                        info->wc_info->moved_to_abspath));
         }
     }
