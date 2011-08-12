@@ -192,8 +192,7 @@ Candidate changes:
    Justification:
      Impossible to disable libmagic otherwise.
    Votes:
-     +0: danielsh
-     +1: stsp
+     +1: danielsh, stsp
 
  * r1156216, r1156312, r1156717, r1156721, r1156750, r1156827, r1156838
    Fix issue #3986 'svn_client_mergeinfo_log API is broken'.
