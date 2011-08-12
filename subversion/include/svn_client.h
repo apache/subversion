@@ -2206,6 +2206,19 @@ typedef struct svn_client_status_t
    * or to other data in future versions. */
   const void *backwards_compatibility_baton;
 
+  /** Set to the local absolute path that this node was moved from, if this
+   * file or directory has been moved here locally. */
+  const char *moved_from_abspath;
+
+  /** Set to the local absolute path that this node was moved to, if this file
+   * or directory has been moved away locally. */
+  const char *moved_to_abspath;
+
+  /* If this file or directory has been moved away locally, set this to the
+   * local absolute path that was the root of the move-away, i.e. to the
+   * op-root of the delete-half of the move operation. */
+  const char *moved_to_op_root_abspath;
+
   /* NOTE! Please update svn_client_status_dup() when adding new fields here. */
 } svn_client_status_t;
 
