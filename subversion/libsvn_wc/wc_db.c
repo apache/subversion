@@ -5159,6 +5159,39 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
 }
 
 
+/* Clear moved-to information at the delete-half of the move which
+ * moved LOCAL_RELPATH here. This transforms the move into a simple delete. */
+static svn_error_t *
+clear_moved_to(const char *local_relpath,
+               svn_wc__db_wcroot_t *wcroot,
+               apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  const char *moved_from_relpath;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_MOVED_FROM_RELPATH));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    {
+      SVN_ERR(svn_sqlite__reset(stmt));
+      return SVN_NO_ERROR;
+    }
+
+  moved_from_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_CLEAR_MOVED_TO_RELPATH));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
+                            moved_from_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
 /* This implements svn_wc__db_txn_callback_t */
 static svn_error_t *
 op_revert_txn(void *baton,
@@ -5169,6 +5202,7 @@ op_revert_txn(void *baton,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_int64_t op_depth;
+  svn_boolean_t moved_here;
   int affected_rows;
 
   /* ### Similar structure to op_revert_recursive_txn, should they be
@@ -5214,6 +5248,7 @@ op_revert_txn(void *baton,
     }
 
   op_depth = svn_sqlite__column_int64(stmt, 0);
+  moved_here = svn_sqlite__column_boolean(stmt, 15);
   SVN_ERR(svn_sqlite__reset(stmt));
 
   if (op_depth > 0 && op_depth == relpath_depth(local_relpath))
@@ -5253,6 +5288,9 @@ op_revert_txn(void *baton,
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
 
+      if (moved_here)
+        SVN_ERR(clear_moved_to(local_relpath, wcroot, scratch_pool));
+
       /* Clear the moved-to path of the BASE node. */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_CLEAR_MOVED_TO_RELPATH));
@@ -5288,6 +5326,7 @@ op_revert_recursive_txn(void *baton,
   svn_boolean_t have_row;
   apr_int64_t op_depth;
   int affected_rows;
+  apr_pool_t *iterpool;
 
   /* ### Similar structure to op_revert_txn, should they be
          combined? */
@@ -5354,6 +5393,25 @@ op_revert_recursive_txn(void *baton,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
                             local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_MOVED_HERE_CHILDREN));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  iterpool = svn_pool_create(scratch_pool);
+  while (have_row)
+    {
+      const char *moved_here_child_relpath;
+
+      svn_pool_clear(iterpool);
+
+      moved_here_child_relpath = svn_sqlite__column_text(stmt, 0, iterpool);
+      SVN_ERR(clear_moved_to(moved_here_child_relpath, wcroot, iterpool));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+  svn_pool_destroy(iterpool);
 
   /* Clear any moved-to paths of the BASE nodes. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
