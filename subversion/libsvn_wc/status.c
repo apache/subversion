@@ -365,7 +365,7 @@ internal_status(svn_wc_status3_t **status,
 /* Fill in *STATUS for LOCAL_ABSPATH, using DB. Allocate *STATUS in
    RESULT_POOL and use SCRATCH_POOL for temporary allocations.
 
-   PARENT_REPOS_ROOT_URL and PARENT_REPOS_RELPATH are the the repository root
+   PARENT_REPOS_ROOT_URL and PARENT_REPOS_RELPATH are the repository root
    and repository relative path of the parent of LOCAL_ABSPATH or NULL if
    LOCAL_ABSPATH doesn't have a versioned parent directory.
 
@@ -426,7 +426,7 @@ assemble_status(svn_wc_status3_t **status,
       switched_p = !name || (strcmp(name, svn_dirent_basename(local_abspath, NULL)) != 0);
     }
 
-  /* Examine whether our target is missing or obstructed or missing.
+  /* Examine whether our target is missing or obstructed.
 
      While we are not completely in single-db mode yet, data about
      obstructed or missing nodes might be incomplete here. This is

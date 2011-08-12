@@ -48,7 +48,7 @@ svn_client__assert_homogeneous_target_type(const apr_array_header_t *targets);
 
 /* Create a svn_client_status_t structure *CST for LOCAL_ABSPATH, shallow
  * copying data from *STATUS wherever possible and retrieving the other values
- * where needed. Peform temporary allocations in SCRATCH_POOL and allocate the
+ * where needed. Perform temporary allocations in SCRATCH_POOL and allocate the
  * result in RESULT_POOL
  */
 svn_error_t *

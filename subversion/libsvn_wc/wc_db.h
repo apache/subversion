@@ -338,7 +338,7 @@ svn_wc__db_init(svn_wc__db_t *db,
    be returned.
 
    The LOCAL_RELPATH should ONLY be used for persisting paths to disk.
-   Those patsh should not be an abspath, otherwise the working copy cannot
+   Those paths should not be abspaths, otherwise the working copy cannot
    be moved. The working copy library should not make these paths visible
    in its API (which should all be abspaths), and it should not be using
    relpaths for other processing.
