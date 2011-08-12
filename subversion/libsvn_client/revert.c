@@ -109,124 +109,6 @@ revert(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
-/* Set *IS_IN_TARGET_LIST to TRUE if LOCAL_ABSPATH is an element
- * or a child of an element in TARGET_LIST. Else return FALSE. */
-static svn_error_t *
-path_is_in_target_list(svn_boolean_t *is_in_target_list,
-                       const char *local_abspath,
-                       const apr_array_header_t *target_list,
-                       apr_pool_t *scratch_pool)
-{
-  int i;
-
-  for (i = 0; i < target_list->nelts; i++)
-    {
-      const char *target = APR_ARRAY_IDX(target_list, i, const char *);
-      const char *target_abspath;
-
-      SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, scratch_pool));
-      *is_in_target_list = (svn_dirent_skip_ancestor(target_abspath,
-                                                     local_abspath) != NULL);
-      if (*is_in_target_list)
-        return SVN_NO_ERROR;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* If any children of LOCAL_ABSPATH have been moved-here
- * or moved-away, verify that both halfs of each move are
- * in the revert target list. */
-static svn_error_t *
-check_moves(const char *local_abspath,
-            const apr_array_header_t *target_list,
-            svn_wc_context_t *wc_ctx,
-            apr_pool_t *scratch_pool)
-{
-  const char *moved_to_abspath;
-  const char *copy_op_root_abspath;
-  const char *moved_from_abspath;
-  const char *delete_op_root_abspath;
-  svn_error_t *err;
-
-  err = svn_wc__node_was_moved_away(&moved_to_abspath,
-                                    &copy_op_root_abspath,
-                                    wc_ctx, local_abspath,
-                                    scratch_pool, scratch_pool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        {
-          svn_error_clear(err);
-          moved_to_abspath = NULL;
-          copy_op_root_abspath = NULL;
-        }
-      else
-        return svn_error_trace(err);
-    }
-
-  if (moved_to_abspath && copy_op_root_abspath &&
-      strcmp(moved_to_abspath, copy_op_root_abspath) == 0)
-    {  
-      svn_boolean_t is_in_target_list;
-
-      SVN_ERR(path_is_in_target_list(&is_in_target_list,
-                                     moved_to_abspath, target_list,
-                                     scratch_pool));
-      if (!is_in_target_list)
-        {
-          /* TODO: If the moved-away node has no post-move mods
-           * we can just add it to the target list. */
-          return svn_error_createf(
-                   SVN_ERR_ILLEGAL_TARGET, NULL,
-                   _("Cannot revert '%s' because it was moved to '%s' "
-                     "which is not part of the revert; both sides of "
-                     "the move must be reverted together"),
-                   svn_dirent_local_style(local_abspath, scratch_pool),
-                   svn_dirent_local_style(moved_to_abspath, scratch_pool));
-        }
-    }
-
-  err = svn_wc__node_was_moved_here(&moved_from_abspath,
-                                    &delete_op_root_abspath,
-                                    wc_ctx, local_abspath,
-                                    scratch_pool, scratch_pool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        {
-          svn_error_clear(err);
-          moved_from_abspath = NULL;
-          delete_op_root_abspath = NULL;
-        }
-      else
-        return svn_error_trace(err);
-    }
-
-  if (moved_from_abspath && delete_op_root_abspath &&
-      strcmp(moved_from_abspath, delete_op_root_abspath) == 0)
-    {  
-      svn_boolean_t is_in_target_list;
-
-      SVN_ERR(path_is_in_target_list(&is_in_target_list,
-                                     moved_from_abspath, target_list,
-                                     scratch_pool));
-      if (!is_in_target_list)
-        {
-          /* TODO: If the moved-here node has no post-move mods
-           * we can just add it to the target list. */
-          return svn_error_createf(
-                   SVN_ERR_ILLEGAL_TARGET, NULL,
-                   _("Cannot revert '%s' because it was moved from '%s' "
-                     "which is not part of the revert; both sides of "
-                     "the move must be reverted together"),
-                   svn_dirent_local_style(local_abspath, scratch_pool),
-                   svn_dirent_local_style(moved_from_abspath, scratch_pool));
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_client_revert2(const apr_array_header_t *paths,
@@ -288,13 +170,6 @@ svn_client_revert2(const apr_array_header_t *paths,
                                           local_abspath, pool));
       lock_target = wc_root ? local_abspath
                             : svn_dirent_dirname(local_abspath, pool);
-      if (!wc_root)
-        {
-          err = check_moves(local_abspath, paths, ctx->wc_ctx, subpool);
-          if (err)
-            goto errorful;
-        }
-
       err = svn_wc__call_with_write_lock(revert, &baton, ctx->wc_ctx,
                                          lock_target, FALSE, pool, pool);
       if (err)
