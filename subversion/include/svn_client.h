@@ -2105,11 +2105,11 @@ typedef struct svn_client_status_t
    * svn_wc_status_modified and svn_wc_status_conflicted. */
   enum svn_wc_status_kind prop_status;
 
-  /** a node can be 'locked' if a working copy update is in progress or
+  /** A node can be 'locked' if a working copy update is in progress or
    * was interrupted. */
   svn_boolean_t wc_is_locked;
 
-  /** a file or directory can be 'copied' if it's scheduled for
+  /** A file or directory can be 'copied' if it's scheduled for
    * addition-with-history (or part of a subtree that is scheduled as such.).
    */
   svn_boolean_t copied;
@@ -2135,7 +2135,7 @@ typedef struct svn_client_status_t
   /** Last commit author of this item */
   const char *changed_author;
 
-    /** a file or directory can be 'switched' if the switch command has been
+  /** A file or directory can be 'switched' if the switch command has been
    * used.  If this is TRUE, then file_external will be FALSE.
    */
   svn_boolean_t switched;
@@ -2201,9 +2201,9 @@ typedef struct svn_client_status_t
 
   /** @} */
 
-  /** Reserved for libsvn_client's internal use; this value is only to be used for
-   * libsvn_client backwards compatibility wrappers. This value may be NULL or
-   * to other data in future versions. */
+  /** Reserved for libsvn_client's internal use; this value is only to be used
+   * for libsvn_client backwards compatibility wrappers. This value may be NULL
+   * or to other data in future versions. */
   const void *backwards_compatibility_baton;
 
   /* NOTE! Please update svn_client_status_dup() when adding new fields here. */

@@ -385,7 +385,7 @@ svn_client_status5(svn_revnum_t *result_rev,
           svn_boolean_t added;
 
           /* Our status target does not exist in HEAD.  If we've got
-             it localled added, that's okay.  But if it was previously
+             it locally added, that's okay.  But if it was previously
              versioned, then it must have since been deleted from the
              repository.  (Note that "locally replaced" doesn't count
              as "added" in this case.)  */
