@@ -203,6 +203,14 @@ Candidate changes:
    Votes:
      +1: pburba, markphip
 
+*  r1157416
+   Fix problem with a missing JavaHL class from package renaming.
+   Justification:
+     When this error occurrs, users receive Class not found exception
+     instead of the error.
+   Votes:
+     +1: markphip
+
 Veto-blocked changes:
 =====================
 
