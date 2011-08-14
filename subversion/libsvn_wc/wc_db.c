@@ -9580,7 +9580,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                          const char **original_uuid,
                          svn_revnum_t *original_revision,
                          const char **moved_from_abspath,
-                         const char **delete_op_root_abspath,
+                         const char **moved_from_op_root_abspath,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
@@ -9632,14 +9632,15 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
         *moved_from_abspath = NULL;
     }
 
-  if (delete_op_root_abspath)
+  if (moved_from_op_root_abspath)
     {
       if (moved_from_op_root_relpath)
-        *delete_op_root_abspath = svn_dirent_join(wcroot->abspath,
-                                                  moved_from_op_root_relpath,
-                                                  result_pool);
+        *moved_from_op_root_abspath =
+          svn_dirent_join(wcroot->abspath,
+                          moved_from_op_root_relpath,
+                          result_pool);
       else
-        *delete_op_root_abspath = NULL;
+        *moved_from_op_root_abspath = NULL;
     }
 
   return SVN_NO_ERROR;
