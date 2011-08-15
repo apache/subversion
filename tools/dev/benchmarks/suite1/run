@@ -48,8 +48,8 @@ batch(){
   echo "---------------------------------------------------------------------"
   echo
   echo "Results for dir levels: $levels  spread: $spread"
-  "$benchmark" "--svn=$SVN_A" run "${pre}$SVN_A_NAME" $levels $spread $N #>/dev/null
-  "$benchmark" "--svn=$SVN_B" run "${pre}$SVN_B_NAME" $levels $spread $N #>/dev/null
+  "$benchmark" "--svn=$SVN_A" run "${pre}$SVN_A_NAME" $levels $spread $N >/dev/null
+  "$benchmark" "--svn=$SVN_B" run "${pre}$SVN_B_NAME" $levels $spread $N >/dev/null
   "$benchmark" compare "${pre}$SVN_A_NAME" "${pre}$SVN_B_NAME"
 }
 
