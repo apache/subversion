@@ -179,8 +179,8 @@ class FS(object):
         return int(self.__read_current()[0])
 
     def youngest_rev(self):
-        self.__youngest_rev_cache = self._get_youngest()
-        return self.__youngest_rev_cache
+        self._youngest_rev_cache = self._get_youngest()
+        return self._youngest_rev_cache
 
     def set_uuid(self, uuid_in = None):
         '''Set the UUID for the filesystem.  If UUID_IN is not given, generate
@@ -220,12 +220,12 @@ class FS(object):
                                     "Invalid revision number '%ld'" % rev)
 
         # Did the revision exist the last time we checked the current file?
-        if rev <= self.__youngest_rev_cache:
+        if rev <= self._youngest_rev_cache:
             return
 
         # Check again
-        self.__youngest_rev_cache = self._get_youngest()
-        if rev <= self.__youngest_rev_cache:
+        self._youngest_rev_cache = self._get_youngest()
+        if rev <= self._youngest_rev_cache:
             return
 
         raise svn.SubversionException(svn.err.FS_NO_SUCH_REVISION,
@@ -293,7 +293,7 @@ class FS(object):
 
     def _create_fs(self, config):
         'Create a new Subversion filesystem'
-        self.__youngest_rev_cache = 0
+        self._youngest_rev_cache = 0
         self.__min_unpacked_rev = 0
 
         # See if compatibility with older versions was explicitly requested.
@@ -369,7 +369,7 @@ class FS(object):
         if self.format >= MIN_PACKED_FORMAT:
             self.__update_min_unpacked_rev()
 
-        self.__youngest_rev_cache = self._get_youngest()
+        self._youngest_rev_cache = self._get_youngest()
 
 
     def __setup_paths(self):
