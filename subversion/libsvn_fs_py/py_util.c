@@ -32,8 +32,6 @@
 #define ROOT_MODULE_NAME "svn"
 #define FS_MODULE_NAME "svn.fs"
 
-static PyObject *p_root_module;
-
 static svn_error_t *
 create_py_stack(PyObject *p_exception,
                 PyObject *p_traceback)
@@ -210,18 +208,6 @@ load_error:
   }
 }
 
-static apr_status_t
-finalize_python(void *data)
-{
-  Py_XDECREF(p_root_module);
-  p_root_module = NULL;
-
-  /* Cleanup the python interpreter. */
-  Py_Finalize();
-
-  return APR_SUCCESS;
-}
-
 svn_error_t *
 svn_fs_py__init_python(apr_pool_t *pool)
 {
@@ -230,17 +216,12 @@ svn_fs_py__init_python(apr_pool_t *pool)
 
   Py_SetProgramName((char *) "svn");
   Py_InitializeEx(0);
-  apr_pool_cleanup_register(pool, NULL, finalize_python,
-                            apr_pool_cleanup_null);
 
-  SVN_ERR(load_module(&p_root_module, ROOT_MODULE_NAME));
-  
-  if (PyErr_Occurred())
-    {
-      PyErr_Clear();
-      return svn_error_create(SVN_ERR_FS_GENERAL, NULL,
-                              _("Cannot load Python module"));
-    }
+  /* Note: we don't have a matching call to Py_Finalize() because we don't
+     know if we initialize python, or if we are in an environment where
+     finalizing Python would interact with interpreters which are didn't
+     create.  The interpreter state isn't very large (1-2MB), so we essentially
+     just leak it. */
 
   return SVN_NO_ERROR;
 }
