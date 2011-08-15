@@ -814,7 +814,7 @@ setup_text_conflict_desc(const char *left_abspath,
   svn_wc_conflict_description2_t *cdesc;
 
   cdesc = svn_wc_conflict_description_create_text2(target_abspath, pool);
-  cdesc->is_binary = FALSE;
+  cdesc->is_binary = is_binary;
   cdesc->mime_type = (mimeprop && mimeprop->value)
                      ? mimeprop->value->data : NULL,
   cdesc->base_abspath = left_abspath;

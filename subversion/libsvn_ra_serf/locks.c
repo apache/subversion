@@ -385,14 +385,6 @@ handle_lock(serf_request_t *request,
           return err;
         }
 
-      /* 405 == Method Not Allowed (Occurs when trying to lock a working
-         copy path which no longer exists at HEAD in the repository. */
-      if (sl.code == 405)
-        return svn_error_createf(SVN_ERR_FS_OUT_OF_DATE,
-                                 NULL,
-                                 _("Lock request failed: %d %s"),
-                                   ctx->status_code, ctx->reason);
-
       headers = serf_bucket_response_get_headers(response);
 
       val = serf_bucket_headers_get(headers, SVN_DAV_LOCK_OWNER_HEADER);
