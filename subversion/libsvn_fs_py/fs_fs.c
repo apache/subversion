@@ -6271,8 +6271,6 @@ svn_fs_py__create(svn_fs_t *fs,
                   apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  int max_files_per_dir;
-  int format;
 
   fs->path = apr_pstrdup(pool, path);
 
@@ -6281,14 +6279,6 @@ svn_fs_py__create(svn_fs_t *fs,
                                  svn_fs_py__convert_cstring_hash, fs->config));
   apr_pool_cleanup_register(fs->pool, ffd->p_fs, svn_fs_py__destroy_py_object,
                             apr_pool_cleanup_null);
-
-  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
-  SVN_ERR(svn_fs_py__get_int_attr(&max_files_per_dir, ffd->p_fs,
-                                  "max_files_per_dir"));
-
-  /* This filesystem is ready.  Stamp it with a format number. */
-  SVN_ERR(write_format(path_format(fs, pool),
-                       format, max_files_per_dir, FALSE, pool));
 
   return SVN_NO_ERROR;
 }

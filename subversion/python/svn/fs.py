@@ -113,6 +113,31 @@ _DEFAULT_CONFIG_CONTENTS = \
        CONFIG_OPTION_ENABLE_REP_SHARING)
 
 
+def _write_format(path, format, max_files_per_dir, overwrite=True):
+    assert 1 <= format and format <= FORMAT_NUMBER
+
+    if format >= MIN_LAYOUT_FORMAT_OPTION_FORMAT:
+        if max_files_per_dir:
+            contents = "%d\nlayout sharded %d\n" % (format, max_files_per_dir)
+        else:
+            contents = "%d\nlayout linear\n" % (format, max_files_per_dir)
+    else:
+        format = "%d\n" % format
+
+    if not overwrite:
+        with open(path, 'wb') as f:
+            f.write(contents)
+    else:
+        tempf = tempfile.NamedTemporaryFile(dir=os.path.dirname(path),
+                                            delete=False)
+        tempf.write(contents)
+        tempf.close()
+        os.rename(tempf.name, path)
+
+    # And set the perms to make it read only
+    os.chmod(path, stat.S_IREAD)
+
+
 class FS(object):
     def __path_rev_shard(self, rev):
         assert self.max_files_per_dir
@@ -329,6 +354,10 @@ class FS(object):
                 f.write('0\n')
             with open(self.__path_txn_current_lock, 'wb') as f:
                 f.write('')
+
+        # This filesystem is ready.  Stamp it with a format number.
+        _write_format(self.__path_format, self.format, self.max_files_per_dir,
+                      False)
 
 
     def _open_fs(self):
