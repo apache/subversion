@@ -154,11 +154,10 @@ svn_fs_py__walk_rep_reference(svn_fs_t *fs,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   int iterations = 0;
+  apr_pool_t *iterpool = svn_pool_create(pool);
   int format;
 
   SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
-
-  apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Don't check ffd->rep_sharing_allowed. */
   SVN_ERR_ASSERT(format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT);
