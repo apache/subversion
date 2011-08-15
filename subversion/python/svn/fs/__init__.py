@@ -176,7 +176,12 @@ class FS(object):
             return f.readline().split()
 
     def _get_youngest(self):
-        return int(self.__read_current()[0])
+        try:
+            return int(self.__read_current()[0])
+        except:
+            ### This is a little bug-for-bug compat.  See svnadmin tests 13
+            ### about how atol() converts 'fish' to '0'.
+            return 0
 
     def youngest_rev(self):
         self._youngest_rev_cache = self._get_youngest()
