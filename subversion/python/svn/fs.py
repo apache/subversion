@@ -210,12 +210,13 @@ class FS(object):
         self._ensure_revision_exists(rev)
 
         final_path = self.__path_revprops(rev)
-        (fd, fn) = tempfile.mkstemp(dir=os.path.dirname(final_path))
-        os.write(fd, svn.hash.encode(props, svn.hash.TERMINATOR))
-        os.close(fd)
-        shutil.copystat(self.__path_rev_absolute(rev), fn)
+        tempf = tempfile.NamedTemporaryFile(dir=os.path.dirname(final_path),
+                                            delete=False)
+        with tempf:
+            tempf.write(svn.hash.encode(props, svn.hash.TERMINATOR))
 
-        os.rename(fn, final_path)
+        shutil.copystat(self.__path_rev_absolute(rev), tempf.name)
+        os.rename(tempf.name, final_path)
 
 
     def __read_format(self):
