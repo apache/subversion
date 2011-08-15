@@ -6286,18 +6286,6 @@ svn_fs_py__create(svn_fs_t *fs,
   SVN_ERR(svn_fs_py__get_int_attr(&max_files_per_dir, ffd->p_fs,
                                   "max_files_per_dir"));
 
-  SVN_ERR(read_config(fs, pool));
-
-  /* Create the txn-current file if the repository supports
-     the transaction sequence file. */
-  if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
-    {
-      SVN_ERR(svn_io_file_create(path_txn_current(fs, pool),
-                                 "0\n", pool));
-      SVN_ERR(svn_io_file_create(path_txn_current_lock(fs, pool),
-                                 "", pool));
-    }
-
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(write_format(path_format(fs, pool),
                        format, max_files_per_dir, FALSE, pool));

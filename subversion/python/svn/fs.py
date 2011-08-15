@@ -19,6 +19,7 @@
 # under the License.
 
 import os, uuid, stat, shutil, tempfile, datetime
+import ConfigParser
 
 import svn
 import svn.hash
@@ -39,16 +40,20 @@ PATH_REVS_DIR               = "revs"            # Directory of revisions
 PATH_REVPROPS_DIR           = "revprops"        # Directory of revprops
 PATH_TXNS_DIR               = "transactions"    # Directory of transactions
 PATH_TXN_PROTOS_DIR         = "txn-protorevs"   # Directory of proto-revs
+PATH_TXN_CURRENT            = "txn-current"     # File with next txn key */
+PATH_TXN_CURRENT_LOCK       = "txn-current-lock" # Lock for txn-current */
 PATH_MIN_UNPACKED_REV       = "min-unpacked-rev" # Oldest revision which
                                                  # has not been packed.
 PATH_CONFIG                 = "fsfs.conf"       # Configuration
 
 FORMAT_NUMBER                       = 4
 
+MIN_TXN_CURRENT_FORMAT              = 3
 MIN_LAYOUT_FORMAT_OPTION_FORMAT     = 3
 MIN_PROTOREVS_DIR_FORMAT            = 3
 MIN_NO_GLOBAL_IDS_FORMAT            = 3
 MIN_PACKED_FORMAT                   = 4
+MIN_REP_SHARING_FORMAT              = 4
 
 _DEFAULT_MAX_FILES_PER_DIR = 1000
 _TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
@@ -58,6 +63,10 @@ CONFIG_SECTION_CACHES               = "caches"
 CONFIG_OPTION_FAIL_STOP             = "fail-stop"
 CONFIG_SECTION_REP_SHARING          = "rep-sharing"
 CONFIG_OPTION_ENABLE_REP_SHARING    = "enable-rep-sharing"
+
+_CONFIG_DEFAULTS = {
+   CONFIG_OPTION_ENABLE_REP_SHARING : 'True',
+  }
 
 _DEFAULT_CONFIG_CONTENTS = \
 '''### This file controls the configuration of the FSFS filesystem.
@@ -168,6 +177,18 @@ class FS(object):
         with open(self.__path_config, 'w') as f:
             f.write(_DEFAULT_CONFIG_CONTENTS)
 
+    def _read_config(self):
+        self._config = ConfigParser.RawConfigParser(_CONFIG_DEFAULTS)
+        self._config.read(self.__path_config)
+
+        if format >= MIN_REP_SHARING_FORMAT:
+            self._rep_sharing_allowed = self._config.getboolean(
+                                               CONFIG_SECTION_REP_SHARING,
+                                               CONFIG_OPTION_ENABLE_REP_SHARING)
+        else:
+            self._rep_sharing_allowed = False
+
+
     def _ensure_revision_exists(self, rev):
         if not svn.is_valid_revnum(rev):
             raise svn.SubversionException(svn.err.FS_NO_SUCH_REVISION,
@@ -244,17 +265,17 @@ class FS(object):
         self._set_revision_proplist(0, props)
 
 
-    def _create_fs(self):
+    def _create_fs(self, config):
         'Create a new Subversion filesystem'
         self.__youngest_rev_cache = 0
         self.__min_unpacked_rev = 0
 
         # See if compatibility with older versions was explicitly requested.
-        if CONFIG_PRE_1_4_COMPATIBLE in self._config:
+        if CONFIG_PRE_1_4_COMPATIBLE in config:
             self.format = 1
-        elif CONFIG_PRE_1_5_COMPATIBLE in self._config:
+        elif CONFIG_PRE_1_5_COMPATIBLE in config:
             self.format = 2
-        elif CONFIG_PRE_1_6_COMPATIBLE in self._config:
+        elif CONFIG_PRE_1_6_COMPATIBLE in config:
             self.format = 3
         else:
             self.format = FORMAT_NUMBER
@@ -299,6 +320,15 @@ class FS(object):
         self.set_uuid()
         self.__write_revision_zero()
 
+        self._write_config()
+        self._read_config()
+
+        if self.format >= MIN_TXN_CURRENT_FORMAT:
+            with open(self.__path_txn_current, 'wb') as f:
+                f.write('0\n')
+            with open(self.__path_txn_current_lock, 'wb') as f:
+                f.write('')
+
 
     def _open_fs(self):
         'Open an existing Subvesion filesystem'
@@ -320,19 +350,20 @@ class FS(object):
                                                     PATH_MIN_UNPACKED_REV)
         self.__path_lock = os.path.join(self.path, PATH_LOCK_FILE)
         self.__path_config = os.path.join(self.path, PATH_CONFIG)
+        self.__path_txn_current = os.path.join(self.path, PATH_TXN_CURRENT)
+        self.__path_txn_current_lock = os.path.join(self.path,
+                                                    PATH_TXN_CURRENT_LOCK)
 
 
     def __init__(self, path, create=False, config=None):
         self.path = path
         self.__setup_paths()
 
-        if config:
-            self._config = config
-        else:
-            self._config = {}
+        if not config:
+            config = {}
 
         if create:
-            self._create_fs()
+            self._create_fs(config)
         else:
             self._open_fs()
 
