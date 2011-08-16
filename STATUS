@@ -218,6 +218,21 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1158193, r1158194
+   Patch svntest.main.safe_rmtree() for symlink targets.
+   Justification:
+     Required by the r1158187 group.
+   Votes:
+     +1: danielsh
+
+ * r1158187, r1158196
+   Fix issues #2557 and #3987: 'svn info symlink/to/wc'.
+   Justification:
+     That syntax should work.
+   Votes:
+     +1: danielsh (r1158196)
+     +1: rhuijben (r1158187)
+
 Veto-blocked changes:
 =====================
 
