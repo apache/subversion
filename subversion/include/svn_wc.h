@@ -1755,7 +1755,7 @@ typedef struct svn_wc_conflict_description2_t
   /** Info on the "merge-right source" or "their" version of incoming change. */
   const svn_wc_conflict_version_t *src_right_version;
 
-  /* Remember to adjust svn_wc__conflict_description_dup()
+  /* Remember to adjust svn_wc__conflict_description2_dup()
    * if you add new fields to this struct. */
 } svn_wc_conflict_description2_t;
 
@@ -1849,8 +1849,6 @@ typedef struct svn_wc_conflict_description_t
    * @since New in 1.6. */
   svn_wc_conflict_version_t *src_right_version;
 
-  /* Remember to adjust svn_wc__conflict_description_dup()
-   * if you add new fields to this struct. */
 } svn_wc_conflict_description_t;
 
 /**
@@ -3068,6 +3066,13 @@ typedef struct svn_wc_info_t
   /** The local absolute path of the working copy root.  */
   const char *wcroot_abspath;
 
+  /** The path the node was moved from, if it was moved here. Else NULL.
+   * @since New in 1.8. */
+  const char *moved_from_abspath;
+
+  /** The path the node was moved to, if it was moved away. Else NULL.
+   * @since New in 1.8. */
+  const char *moved_to_abspath;
 } svn_wc_info_t;
 
 /**
@@ -3611,6 +3616,19 @@ typedef struct svn_wc_status3_t
   const char *ood_changed_author;
 
   /** @} */
+
+  /** Set to the local absolute path that this node was moved from, if this
+   * file or directory has been moved here locally. */
+  const char *moved_from_abspath;
+
+  /** Set to the local absolute path that this node was moved to, if this file
+   * or directory has been moved away locally. */
+  const char *moved_to_abspath;
+
+  /* If this file or directory has been moved away locally, set this to the
+   * local absolute path that was the root of the move-away, i.e. to the
+   * op-root of the delete-half of the move operation. */
+  const char *moved_to_op_root_abspath;
 
   /* NOTE! Please update svn_wc_dup_status3() when adding new fields here. */
 } svn_wc_status3_t;

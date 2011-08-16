@@ -391,7 +391,8 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
 #define SVN_ERR_IS_LOCK_ERROR(err)                          \
   (err->apr_err == SVN_ERR_FS_PATH_ALREADY_LOCKED ||        \
    err->apr_err == SVN_ERR_FS_NOT_FOUND           ||        \
-   err->apr_err == SVN_ERR_FS_OUT_OF_DATE)
+   err->apr_err == SVN_ERR_FS_OUT_OF_DATE         ||        \
+   err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)
 
 /**
  * Return TRUE if @a err is an error specifically related to unlocking

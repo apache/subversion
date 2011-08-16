@@ -5441,6 +5441,110 @@ def copy_and_move_conflicts(sbox):
     })
   svntest.actions.verify_disk(wc('move-dest'), expected_disk, True)
 
+def copy_deleted_dir(sbox):
+  "try to copy a deleted directory that exists"
+  sbox.build(read_only = True)
+
+  sbox.simple_rm('iota')
+  sbox.simple_rm('A')
+
+  svntest.actions.run_and_verify_svn(None, None,
+                                     'svn: E145000: Path.* does not exist',
+                                     'cp', sbox.ospath('iota'),
+                                     sbox.ospath('new_iota'))
+  svntest.actions.run_and_verify_svn(None, None,
+                                     'svn: E145000: Path.* does not exist',
+                                     'cp', sbox.ospath('A/D'),
+                                     sbox.ospath('new_D'))
+
+  svntest.main.file_write(sbox.ospath('iota'), 'Not iota!')
+  os.mkdir(sbox.ospath('A'))
+  os.mkdir(sbox.ospath('A/D'))
+
+  # At one time these two invocations raised an assertion.
+  svntest.actions.run_and_verify_svn(None, None,
+                                     'svn: E155035: Deleted node.* can\'t be.*',
+                                     'cp', sbox.ospath('iota'),
+                                     sbox.ospath('new_iota'))
+  svntest.actions.run_and_verify_svn(None, None,
+                                     'svn: E155035: Deleted node.* can\'t be.*',
+                                     'cp', sbox.ospath('A/D'),
+                                     sbox.ospath('new_D'))
+
+@Issue(3631)
+def commit_copied_half_of_move(sbox):
+  "attempt to commit the copied part of move"
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  iota_path = sbox.ospath('iota')
+  D_path = sbox.ospath('A/D')
+
+  # iota -> A/D/iota; verify we cannot commit just A/D/iota
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', iota_path, D_path)
+  expected_error = "svn: E200009: Cannot commit '.*%s' because it was " \
+                    "moved from '.*%s'" % (re.escape(sbox.ospath('A/D/iota')),
+                                           re.escape(iota_path))
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'commit', '-m', 'foo',
+                                     os.path.join(D_path, 'iota'))
+
+  # verify we cannot commit just A/D
+  expected_error = "svn: E200009: Cannot commit '.*%s' because it was " \
+                    "moved from '.*%s'" % (re.escape(sbox.ospath('A/D/iota')),
+                                           re.escape(iota_path))
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'commit', '-m', 'foo', D_path)
+
+  # A/D -> A/C/D; verify we cannot commit just A/C
+  C_path = sbox.ospath('A/C')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', D_path, C_path)
+  expected_error = "svn: E200009: Cannot commit '.*%s' because it was moved " \
+                    "from '.*%s'" % (re.escape(os.path.join(C_path, "D")),
+                                     re.escape(D_path))
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'commit', '-m', 'foo', C_path)
+
+  # A/C/D/iota -> A/iota; verify that iota's moved-from hasn't changed
+  D_iota_path = sbox.ospath('A/C/D/iota')
+  A_iota_path = sbox.ospath('A/iota')
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', D_iota_path,
+                                     A_iota_path)
+  expected_error = "svn: E200009: Cannot commit '.*%s' because it was " \
+                    "moved from '.*%s'" % (re.escape(A_iota_path),
+                                           re.escape(iota_path))
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'commit', '-m', 'foo', A_iota_path)
+
+
+@Issue(3631)
+def commit_deleted_half_of_move(sbox):
+  "attempt to commit the deleted part of move"
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  iota_path = sbox.ospath('iota')
+  A_path = sbox.ospath('A')
+  D_path = sbox.ospath('A/D')
+
+  # iota -> A/D/iota; verify we cannot commit just iota
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', iota_path, D_path)
+
+  expected_error = "svn: E200009: Cannot commit '.*%s' because it was moved " \
+                    "to '.*%s'" % (re.escape(iota_path),
+                                   re.escape(os.path.join(D_path, "iota")))
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'commit', '-m', 'foo', iota_path)
+
+  # A/D -> C; verify we cannot commit just A
+  C_path = sbox.ospath('C')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', D_path, C_path)
+  expected_error = "svn: E200009: Cannot commit '.*%s' because it was moved " \
+                    "to '.*%s'" % (re.escape(D_path), re.escape(C_path))
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'commit', '-m', 'foo', A_path)
 
 ########################################################################
 # Run the tests
@@ -5551,6 +5655,9 @@ test_list = [ None,
               copy_base_of_deleted,
               case_only_rename,
               copy_and_move_conflicts,
+              copy_deleted_dir,
+              commit_copied_half_of_move,
+              commit_deleted_half_of_move,
              ]
 
 if __name__ == '__main__':

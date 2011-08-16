@@ -118,7 +118,7 @@ typedef struct report_dir_t
   /* the canonical url for this directory after updating. (received) */
   const char *url;
 
-  /* The original repos_relpath of this url (from the workingcopy)
+  /* The original repos_relpath of this url (from the working copy)
      or NULL if the repos_relpath can be calculated from the edit root. */
   const char *repos_relpath;
 
@@ -918,6 +918,7 @@ handle_fetch(serf_request_t *request,
 
       if (fetch_ctx->aborted_read)
         {
+          apr_off_t skip;
           /* We haven't caught up to where we were before. */
           if (fetch_ctx->read_size < fetch_ctx->aborted_read_size)
             {
@@ -938,9 +939,10 @@ handle_fetch(serf_request_t *request,
           /* Woo-hoo.  We're back. */
           fetch_ctx->aborted_read = FALSE;
 
-          /* Increment data and len by the difference. */
-          data += fetch_ctx->read_size - fetch_ctx->aborted_read_size;
-          len = fetch_ctx->read_size - fetch_ctx->aborted_read_size;
+          /* Update data and len to just provide the new data. */
+          skip = len - (fetch_ctx->read_size - fetch_ctx->aborted_read_size);
+          data += skip;
+          len -= skip;
         }
 
       if (fetch_ctx->delta_stream)
@@ -983,7 +985,12 @@ handle_fetch(serf_request_t *request,
              ### end of this block, so it will work for now.  */
           apr_pool_t *scratch_pool = info->editor_pool;
 
-          err = info->textdelta(NULL, info->textdelta_baton);
+          if (fetch_ctx->delta_stream)
+            err = svn_error_trace(svn_stream_close(fetch_ctx->delta_stream));
+          else
+            err = svn_error_trace(info->textdelta(NULL,
+                                                  info->textdelta_baton));
+
           if (err)
             {
               return error_fetch(request, fetch_ctx, err);
@@ -1021,7 +1028,7 @@ handle_fetch(serf_request_t *request,
 
           if (err)
             {
-              return error_fetch(request, fetch_ctx, err);
+              return svn_error_trace(error_fetch(request, fetch_ctx, err));
             }
 
           fetch_ctx->done = TRUE;
@@ -2214,7 +2221,7 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
       sess->conns[cur] = apr_palloc(sess->pool, sizeof(*sess->conns[cur]));
       sess->conns[cur]->bkt_alloc = serf_bucket_allocator_create(sess->pool,
                                                                  NULL, NULL);
-      sess->conns[cur]->hostinfo = sess->conns[0]->hostinfo;
+      sess->conns[cur]->hostname  = sess->conns[0]->hostname;
       sess->conns[cur]->using_ssl = sess->conns[0]->using_ssl;
       sess->conns[cur]->using_compression = sess->conns[0]->using_compression;
       sess->conns[cur]->useragent = sess->conns[0]->useragent;
@@ -2361,6 +2368,9 @@ finish_report(void *report_baton,
 
       /* Note: this throws out the old ITERPOOL_INNER.  */
       svn_pool_clear(iterpool);
+
+      if (sess->cancel_func)
+        SVN_ERR(sess->cancel_func(sess->cancel_baton));
 
       /* We need to be careful between the outer and inner ITERPOOLs,
          and what items are allocated within.  */

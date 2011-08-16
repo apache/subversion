@@ -385,7 +385,7 @@ svn_client_status5(svn_revnum_t *result_rev,
           svn_boolean_t added;
 
           /* Our status target does not exist in HEAD.  If we've got
-             it localled added, that's okay.  But if it was previously
+             it locally added, that's okay.  But if it was previously
              versioned, then it must have since been deleted from the
              repository.  (Note that "locally replaced" doesn't count
              as "added" in this case.)  */
@@ -563,6 +563,17 @@ svn_client_status_dup(const svn_client_status_t *status,
                                                              result_pool);
     }
 
+  if (status->moved_from_abspath)
+    st->moved_from_abspath =
+      apr_pstrdup(result_pool, status->moved_from_abspath);
+
+  if (status->moved_to_abspath)
+    st->moved_to_abspath = apr_pstrdup(result_pool, status->moved_to_abspath);
+
+  if (status->moved_to_op_root_abspath)
+    st->moved_to_op_root_abspath =
+      apr_pstrdup(result_pool, status->moved_to_op_root_abspath);
+
   return st;
 }
 
@@ -666,6 +677,10 @@ svn_client__create_status(svn_client_status_t **cst,
       if (text_conflicted || prop_conflicted)
         (*cst)->node_status = svn_wc_status_conflicted;
     }
+
+  (*cst)->moved_from_abspath = status->moved_from_abspath;
+  (*cst)->moved_to_abspath = status->moved_to_abspath;
+  (*cst)->moved_to_op_root_abspath = status->moved_to_op_root_abspath;
 
   return SVN_NO_ERROR;
 }

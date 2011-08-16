@@ -336,7 +336,7 @@ get_repos_root_url_relpath(const char **repos_relpath,
       SVN_ERR(svn_wc__db_scan_addition(NULL, NULL,
                                        repos_relpath, repos_root_url,
                                        repos_uuid, NULL, NULL, NULL, NULL,
-                                       db, local_abspath,
+                                       NULL, NULL, db, local_abspath,
                                        result_pool, scratch_pool));
     }
   else if (info->have_base)
@@ -365,7 +365,7 @@ internal_status(svn_wc_status3_t **status,
 /* Fill in *STATUS for LOCAL_ABSPATH, using DB. Allocate *STATUS in
    RESULT_POOL and use SCRATCH_POOL for temporary allocations.
 
-   PARENT_REPOS_ROOT_URL and PARENT_REPOS_RELPATH are the the repository root
+   PARENT_REPOS_ROOT_URL and PARENT_REPOS_RELPATH are the repository root
    and repository relative path of the parent of LOCAL_ABSPATH or NULL if
    LOCAL_ABSPATH doesn't have a versioned parent directory.
 
@@ -403,6 +403,9 @@ assemble_status(svn_wc_status3_t **status,
   const char *repos_relpath;
   const char *repos_root_url;
   const char *repos_uuid;
+  const char *moved_from_abspath = NULL;
+  const char *moved_to_abspath = NULL;
+  const char *moved_to_op_root_abspath = NULL;
   svn_filesize_t filesize = (dirent && (dirent->kind == svn_node_file))
                                 ? dirent->filesize
                                 : SVN_INVALID_FILESIZE;
@@ -426,7 +429,7 @@ assemble_status(svn_wc_status3_t **status,
       switched_p = !name || (strcmp(name, svn_dirent_basename(local_abspath, NULL)) != 0);
     }
 
-  /* Examine whether our target is missing or obstructed or missing.
+  /* Examine whether our target is missing or obstructed.
 
      While we are not completely in single-db mode yet, data about
      obstructed or missing nodes might be incomplete here. This is
@@ -608,6 +611,24 @@ assemble_status(svn_wc_status3_t **status,
         }
     }
 
+  /* Get moved-to info. */
+  if (info->status == svn_wc__db_status_deleted)
+    SVN_ERR(svn_wc__db_scan_deletion(NULL,
+                                     &moved_to_abspath,
+                                     NULL,
+                                     &moved_to_op_root_abspath,
+                                     db, local_abspath,
+                                     result_pool, scratch_pool));
+
+  /* Get moved-from info. */
+  if (info->status == svn_wc__db_status_added)
+    SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL,
+                                     &moved_from_abspath,
+                                     NULL,
+                                     db, local_abspath,
+                                     result_pool, scratch_pool));
+
   if (node_status == svn_wc_status_normal)
     node_status = text_status;
 
@@ -699,6 +720,10 @@ assemble_status(svn_wc_status3_t **status,
   stat->repos_root_url = repos_root_url;
   stat->repos_relpath = repos_relpath;
   stat->repos_uuid = repos_uuid;
+
+  stat->moved_from_abspath = moved_from_abspath;
+  stat->moved_to_abspath = moved_to_abspath;
+  stat->moved_to_op_root_abspath = moved_to_op_root_abspath;
 
   *status = stat;
 
@@ -1705,7 +1730,7 @@ handle_statii(struct edit_baton *eb,
 
 /*** The callbacks we'll plug into an svn_delta_editor_t structure. ***/
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 set_target_revision(void *edit_baton,
                     svn_revnum_t target_revision,
@@ -1717,7 +1742,7 @@ set_target_revision(void *edit_baton,
 }
 
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 open_root(void *edit_baton,
           svn_revnum_t base_revision,
@@ -1730,7 +1755,7 @@ open_root(void *edit_baton,
 }
 
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 delete_entry(const char *path,
              svn_revnum_t revision,
@@ -1766,7 +1791,7 @@ delete_entry(const char *path,
 }
 
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 add_directory(const char *path,
               void *parent_baton,
@@ -1792,7 +1817,7 @@ add_directory(const char *path,
 }
 
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 open_directory(const char *path,
                void *parent_baton,
@@ -1805,7 +1830,7 @@ open_directory(const char *path,
 }
 
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 change_dir_prop(void *dir_baton,
                 const char *name,
@@ -1836,7 +1861,7 @@ change_dir_prop(void *dir_baton,
 
 
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 close_directory(void *dir_baton,
                 apr_pool_t *pool)
@@ -1986,7 +2011,7 @@ close_directory(void *dir_baton,
 
 
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 add_file(const char *path,
          void *parent_baton,
@@ -2009,7 +2034,7 @@ add_file(const char *path,
 }
 
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 open_file(const char *path,
           void *parent_baton,
@@ -2025,7 +2050,7 @@ open_file(const char *path,
 }
 
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 apply_textdelta(void *file_baton,
                 const char *base_checksum,
@@ -2046,7 +2071,7 @@ apply_textdelta(void *file_baton,
 }
 
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 change_file_prop(void *file_baton,
                  const char *name,
@@ -2078,7 +2103,7 @@ change_file_prop(void *file_baton,
 }
 
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 close_file(void *file_baton,
            const char *text_checksum,  /* ignored, as we receive no data */
@@ -2135,7 +2160,7 @@ close_file(void *file_baton,
                           SVN_INVALID_REVNUM, repos_lock, pool);
 }
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 close_edit(void *edit_baton,
            apr_pool_t *pool)
@@ -2464,21 +2489,24 @@ internal_status(svn_wc_status3_t **status,
                              db, local_abspath,
                              scratch_pool, scratch_pool);
 
-  if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-      || node_status == svn_wc__db_status_not_present
-      || node_status == svn_wc__db_status_server_excluded
-      || node_status == svn_wc__db_status_excluded)
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       svn_error_clear(err);
       node_kind = svn_wc__db_kind_unknown;
-
       /* Ensure conflicted is always set, but don't hide tree conflicts
          on 'hidden' nodes. */
-      if (err)
-        conflicted = FALSE;
+      conflicted = FALSE;
     }
-  else
-    SVN_ERR(err);
+  else if (err)
+    {
+        return svn_error_trace(err);
+    }
+  else if (node_status == svn_wc__db_status_not_present
+           || node_status == svn_wc__db_status_server_excluded
+           || node_status == svn_wc__db_status_excluded)
+    {
+      node_kind = svn_wc__db_kind_unknown;
+    }
 
   if (node_kind == svn_wc__db_kind_unknown)
     return svn_error_trace(assemble_unversioned(status,
@@ -2587,6 +2615,18 @@ svn_wc_dup_status3(const svn_wc_status3_t *orig_stat,
   if (orig_stat->repos_uuid)
     new_stat->repos_uuid
       = apr_pstrdup(pool, orig_stat->repos_uuid);
+
+  if (orig_stat->moved_from_abspath)
+    new_stat->moved_from_abspath
+      = apr_pstrdup(pool, orig_stat->moved_from_abspath);
+
+  if (orig_stat->moved_to_abspath)
+    new_stat->moved_to_abspath
+      = apr_pstrdup(pool, orig_stat->moved_to_abspath);
+
+  if (orig_stat->moved_to_op_root_abspath)
+    new_stat->moved_to_op_root_abspath
+      = apr_pstrdup(pool, orig_stat->moved_to_op_root_abspath);
 
   /* Return the new hotness. */
   return new_stat;

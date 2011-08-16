@@ -74,7 +74,7 @@ typedef struct svn_ra_serf__connection_t {
   serf_bucket_alloc_t *bkt_alloc;
 
   /* Host name */
-  const char *hostinfo;
+  const char *hostname;
 
   /* Are we using ssl */
   svn_boolean_t using_ssl;
@@ -139,9 +139,13 @@ struct svn_ra_serf__session_t {
   const svn_ra_callbacks2_t *wc_callbacks;
   void *wc_callback_baton;
 
-  /* Callback function to send info to WC */
-  svn_ra_progress_notify_func_t wc_progress_func;
-  void *wc_progress_baton;
+  /* Callback function to send progress info to the client */
+  svn_ra_progress_notify_func_t progress_func;
+  void *progress_baton;
+
+  /* Callback function to handle cancellation */
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
 
   /* Error that we've received but not yet returned upstream. */
   svn_error_t *pending_error;
@@ -174,6 +178,9 @@ struct svn_ra_serf__session_t {
 
   /* Connection timeout value */
   long timeout;
+
+  /* HTTPv1 flags */
+  svn_tristate_t supports_deadprop_count;
 
   /*** HTTP v2 protocol stuff. ***
    *
@@ -622,6 +629,11 @@ struct svn_ra_serf__xml_parser_t {
 
      See libsvn_ra_serf/util.c  */
   struct svn_ra_serf__pending_t *pending;
+
+  /* Response restart support */
+  const void *headers_baton; /* Last pointer to headers */
+  apr_off_t skip_size; /* Number of bytes to skip */
+  apr_off_t read_size; /* Number of bytes read from response */
 };
 
 /*

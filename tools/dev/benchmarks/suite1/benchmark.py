@@ -164,10 +164,10 @@ class Timings:
     s = ['COMPARE %s to %s' % (othername, selfname)]
 
     if TOTAL_RUN in self.timings and TOTAL_RUN in other.timings:
-      s.append('  %s times: %5.1f seconds avg for %s' % (TOTAL_RUN,
-                                                         othertotal, othername))
-      s.append('  %s        %5.1f seconds avg for %s' % (' ' * len(TOTAL_RUN),
-                                                         selftotal, selfname))
+      s.append('  %s timings: %5.1f seconds avg for %s'
+               % (TOTAL_RUN, othertotal, othername))
+      s.append('  %s          %5.1f seconds avg for %s'
+               % (' ' * len(TOTAL_RUN), selftotal, selfname))
 
 
     s.append('      min              max              avg         operation')
@@ -201,9 +201,9 @@ class Timings:
                  name))
 
     s.extend([
-         '("1.23|+0.45"  means factor=1.23, difference in seconds = 0.45',
-         'factor < 1 or difference < 0 means \'%s\' is faster than \'%s\')'
-           % (self.name, othername)])
+      '(legend: "1.23|+0.45" means: slower by factor 1.23 and by 0.45 seconds;',
+      ' factor < 1 and difference < 0 means \'%s\' is faster than \'%s\')'
+      % (self.name, othername)])
 
     return '\n'.join(s)
 
@@ -418,7 +418,8 @@ def run(levels, spread, N):
 
       so, se = svn('--version')
       if not so:
-        print "Can't find svn."
+        ### options comes from the global namespace; it should be passed
+        print "Can't find svn at", options.svn
         exit(1)
       version = ', '.join([s.strip() for s in so.split('\n')[:2]])
 
@@ -565,6 +566,9 @@ def cmd_run(timings_path, levels, spread, N=1):
   print '\n\nHi, going to run a Subversion benchmark series of %d runs...' % N
 
   ### UGH! should pass to run()
+  ### neels: Today I contemplated doing that, but at the end of the day
+  ###        it merely blows up the code without much benefit. If this
+  ###        ever becomes part of an imported python package, call again.
   global timings
 
   if os.path.isfile(timings_path):

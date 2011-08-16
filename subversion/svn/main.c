@@ -224,9 +224,11 @@ const apr_getopt_option_t svn_cl__options[] =
   {"no-auth-cache", opt_no_auth_cache, 0,
                     N_("do not cache authentication tokens")},
   {"trust-server-cert", opt_trust_server_cert, 0,
-                    N_("accept unknown SSL server certificates without\n"
+                    N_("accept SSL server certificates from unknown\n"
                        "                             "
-                       "prompting (but only with '--non-interactive')")},
+                       "certificate authorities without prompting (but only\n"
+                       "                             "
+                       "with '--non-interactive')") },
   {"non-interactive", opt_non_interactive, 0,
                     N_("do no interactive prompting")},
   {"dry-run",       opt_dry_run, 0,
@@ -936,7 +938,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Display information related to merges (or potential merges) between\n"
      "  SOURCE and TARGET (default: '.').  Display the type of information\n"
      "  specified by the --show-revs option.  If --show-revs isn't passed,\n"
-     "  it defaults to --show-revs='merged'.\n"),
+     "  it defaults to --show-revs='merged'.\n"
+     "\n"
+     "  The depth can be 'empty' or 'infinity'; the default is 'empty'.\n"),
     {'r', 'R', opt_depth, opt_show_revs} },
 
   { "mkdir", svn_cl__mkdir, {0}, N_

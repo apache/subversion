@@ -130,6 +130,35 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test the JNIError class functionality
+     * @throws Throwable
+     */
+    public void testJNIError() throws Throwable
+    {
+        // build the test setup.
+        OneTest thisTest = new OneTest();
+
+        // Create a client, dispose it, then try to use it later
+        ISVNClient tempclient = new SVNClient();
+        tempclient.dispose();
+
+        // create Y and Y/Z directories in the repository
+        addExpectedCommitItem(null, thisTest.getUrl().toString(), "Y", NodeKind.none,
+                              CommitItemStateFlags.Add);
+        Set<String> urls = new HashSet<String>(1);
+        urls.add(thisTest.getUrl() + "/Y");
+        try 
+        {
+            tempclient.mkdir(urls, false, null, new ConstMsg("log_msg"), null);
+        } 
+        catch(JNIError e)
+        {
+	        return; // Test passes!
+        }
+        fail("A JNIError should have been thrown here.");
+    }
+
+    /**
      * Tests Mergeinfo and RevisionRange classes.
      * @since 1.5
      */
@@ -3340,6 +3369,16 @@ public class BasicTests extends SVNTests
             assertEquals("revprops check", revprops.get(key),
                          new String(fetchedProps.get(key)));
           }
+    }
+
+    /**
+     * Test an explicit expose of SVNClient.
+     * (This used to cause a fatal exception in the Java Runtime)
+     */
+    public void testDispose() throws Throwable
+    {
+      SVNClient cl = new SVNClient();
+      cl.dispose();
     }
 
     /**

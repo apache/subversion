@@ -245,7 +245,7 @@ static char *
 get_username_to_authorize(request_rec *r, authz_svn_config_rec *conf)
 {
   char *username_to_authorize = r->user;
-  if (conf->force_username_case)
+  if (username_to_authorize && conf->force_username_case)
     {
       username_to_authorize = apr_pstrdup(r->pool, r->user);
       convert_case(username_to_authorize,

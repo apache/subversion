@@ -67,9 +67,6 @@ struct edit_baton {
   const svn_wc_diff_callbacks4_t *diff_callbacks;
   void *diff_cmd_baton;
 
-  /* DRY_RUN is TRUE if this is a dry-run diff, false otherwise. */
-  svn_boolean_t dry_run;
-
   /* RA_SESSION is the open session for making requests to the RA layer */
   svn_ra_session_t *ra_session;
 
@@ -334,11 +331,11 @@ get_file_from_ra(struct file_baton *b,
       svn_stream_t *fstream;
 
       SVN_ERR(svn_stream_open_unique(&fstream, &(b->path_start_revision), NULL,
-                                     svn_io_file_del_on_pool_cleanup, b->pool,
-                                     b->pool));
+                                     svn_io_file_del_on_pool_cleanup,
+                                     scratch_pool, scratch_pool));
 
       fstream = svn_stream_checksummed2(fstream, NULL, &b->start_md5_checksum,
-                                        svn_checksum_md5, TRUE, b->pool);
+                                        svn_checksum_md5, TRUE, scratch_pool);
 
       /* Retrieve the file and its properties */
       SVN_ERR(svn_ra_get_file(b->edit_baton->ra_session,
@@ -456,7 +453,7 @@ get_empty_file(struct edit_baton *eb,
   return SVN_NO_ERROR;
 }
 
-/* An editor function. The root of the comparison hierarchy */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 set_target_revision(void *edit_baton,
                     svn_revnum_t target_revision,
@@ -468,7 +465,7 @@ set_target_revision(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
-/* An editor function. The root of the comparison hierarchy */
+/* An svn_delta_editor_t function. The root of the comparison hierarchy */
 static svn_error_t *
 open_root(void *edit_baton,
           svn_revnum_t base_revision,
@@ -570,7 +567,7 @@ diff_deleted_dir(const char *dir,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 delete_entry(const char *path,
              svn_revnum_t base_revision,
@@ -671,7 +668,7 @@ delete_entry(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 add_directory(const char *path,
               void *parent_baton,
@@ -761,7 +758,7 @@ add_directory(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 open_directory(const char *path,
                void *parent_baton,
@@ -795,7 +792,7 @@ open_directory(const char *path,
 }
 
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 add_file(const char *path,
          void *parent_baton,
@@ -825,7 +822,7 @@ add_file(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 open_file(const char *path,
           void *parent_baton,
@@ -875,7 +872,7 @@ window_handler(svn_txdelta_window_t *window,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 apply_textdelta(void *file_baton,
                 const char *base_md5_digest,
@@ -898,7 +895,7 @@ apply_textdelta(void *file_baton,
 
   /* We need the expected pristine file, so go get it */
   if (!b->added)
-    SVN_ERR(get_file_from_ra(b, FALSE, b->pool));
+    SVN_ERR(get_file_from_ra(b, FALSE, scratch_pool));
   else
     SVN_ERR(get_empty_file(b->edit_baton, &(b->path_start_revision)));
 
@@ -942,7 +939,7 @@ apply_textdelta(void *file_baton,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  When the file is closed we have a temporary
+/* An svn_delta_editor_t function.  When the file is closed we have a temporary
  * file containing a pristine version of the repository file. This can
  * be compared against the working copy.
  *
@@ -1089,7 +1086,7 @@ close_file(void *file_baton,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 close_directory(void *dir_baton,
                 apr_pool_t *pool)
@@ -1113,9 +1110,6 @@ close_directory(void *dir_baton,
   if (!b->added && b->propchanges->nelts > 0)
     remove_non_prop_changes(b->pristine_props, b->propchanges);
 
-  /* Don't do the props_changed stuff if this is a dry_run and we don't
-     have an access baton, since in that case the directory will already
-     have been recognised as added, in which case they cannot conflict. */
   if (b->propchanges->nelts > 0)
     {
       svn_boolean_t tree_conflicted = FALSE;
@@ -1194,7 +1188,7 @@ close_directory(void *dir_baton,
 }
 
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 change_file_prop(void *file_baton,
                  const char *name,
@@ -1215,7 +1209,7 @@ change_file_prop(void *file_baton,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 change_dir_prop(void *dir_baton,
                 const char *name,
@@ -1237,7 +1231,7 @@ change_dir_prop(void *dir_baton,
 }
 
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 close_edit(void *edit_baton,
            apr_pool_t *pool)
@@ -1249,7 +1243,7 @@ close_edit(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 absent_directory(const char *path,
                  void *parent_baton,
@@ -1278,7 +1272,7 @@ absent_directory(const char *path,
 }
 
 
-/* An editor function.  */
+/* An svn_delta_editor_t function.  */
 static svn_error_t *
 absent_file(const char *path,
             void *parent_baton,
@@ -1316,15 +1310,13 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
                             svn_ra_session_t *ra_session,
                             svn_revnum_t revision,
                             svn_boolean_t walk_deleted_dirs,
-                            svn_boolean_t dry_run,
                             const svn_wc_diff_callbacks4_t *diff_callbacks,
                             void *diff_cmd_baton,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
                             svn_wc_notify_func2_t notify_func,
                             void *notify_baton,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
+                            apr_pool_t *result_pool)
 {
   apr_pool_t *editor_pool = svn_pool_create(result_pool);
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(editor_pool);
@@ -1339,7 +1331,6 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
   eb->depth = depth;
   eb->diff_callbacks = diff_callbacks;
   eb->diff_cmd_baton = diff_cmd_baton;
-  eb->dry_run = dry_run;
   eb->ra_session = ra_session;
 
   eb->revision = revision;

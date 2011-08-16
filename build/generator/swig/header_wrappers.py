@@ -65,7 +65,13 @@ class Generator(generator.swig.Generator):
       )
     makefile.write('SWIG_WRAPPERS = %s\n\n' % ' '.join(wrapper_fnames))
     for short_name in self.short.values():
-      makefile.write('autogen-swig-%s: $(SWIG_WRAPPERS)\n' % short_name)
+      # swig-pl needs the '.swig_checked' target here; swig-rb and swig-py
+      # already reach it via a different dependency chain:
+      #
+      #    In build-outputs.mk, swig-py and swig-rb targets depend on *.la
+      #    targets, which depend on *.lo targets, which depend on *.c targets,
+      #    which depend on .swig_checked target.
+      makefile.write('autogen-swig-%s: .swig_checked $(SWIG_WRAPPERS)\n' % short_name)
     makefile.write('\n\n')
 
   def proxy_filename(self, include_filename):

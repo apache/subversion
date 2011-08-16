@@ -44,6 +44,7 @@ separated list of test numbers; the default is to run all the tests in it.
 
 # A few useful constants
 LINE_LENGTH = 45
+SVN_VER_MINOR = 8
 
 import os, re, subprocess, sys, imp
 from datetime import datetime
@@ -111,8 +112,9 @@ class TestHarness:
     # If you change the below condition then change in
     # ../subversion/tests/cmdline/svntest/main.py too.
     if server_minor_version is not None:
-      if int(server_minor_version) < 3 or int(server_minor_version) > 7:
-        sys.stderr.write("Test harness only supports server minor versions 3-7\n")
+      if int(server_minor_version) not in range(3, 1+SVN_VER_MINOR):
+        sys.stderr.write("Test harness only supports server minor versions 3-%d\n"
+                         % SVN_VER_MINOR)
         sys.exit(1)
     self.verbose = verbose
     self.cleanup = cleanup
@@ -345,6 +347,10 @@ class TestHarness:
                             stderr=self.log)
     line = prog.stdout.readline()
     while line:
+      if sys.platform == 'win32':
+        # Remove CRs inserted because we parse the output as binary.
+        line = line.replace('\r', '')
+
       # If using --log-to-stdout self.log in None.
       if self.log:
         self.log.write(line)
@@ -447,11 +453,16 @@ class TestHarness:
     else:
       test_selection = []
 
-    failed = svntest.main.execute_tests(prog_mod.test_list,
-                                        serial_only=serial_only,
-                                        test_name=progbase,
-                                        progress_func=prog_f,
-                                        test_selection=test_selection)
+    try:
+      failed = svntest.main.execute_tests(prog_mod.test_list,
+                                          serial_only=serial_only,
+                                          test_name=progbase,
+                                          progress_func=prog_f,
+                                          test_selection=test_selection)
+    except svntest.Failure:
+      if self.log:
+        os.write(old_stdout, '.' * dot_count)
+      failed = True
 
     # restore some values
     sys.path = old_path

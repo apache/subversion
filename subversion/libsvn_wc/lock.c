@@ -1104,7 +1104,7 @@ child_is_disjoint(svn_boolean_t *disjoint,
         SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &parent_repos_relpath,
                                          &parent_repos_root,
                                          &parent_repos_uuid,
-                                         NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL, NULL, NULL,
                                          db, parent_abspath,
                                          scratch_pool, scratch_pool));
       else

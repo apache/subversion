@@ -316,8 +316,8 @@ CREATE TABLE NODES (
      BASE node, the location of the initial checkout.
 
      When op_depth != 0, they indicate where this node was copied/moved from.
-     In this case, the fields are set only on the root of the operation,
-     and are NULL for all children. */
+     In this case, the fields are set for the root of the operation and for all
+     children. */
   repos_id  INTEGER REFERENCES REPOSITORY (id),
   repos_path  TEXT,
   revision  INTEGER,

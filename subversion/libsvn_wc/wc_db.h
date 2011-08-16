@@ -338,7 +338,7 @@ svn_wc__db_init(svn_wc__db_t *db,
    be returned.
 
    The LOCAL_RELPATH should ONLY be used for persisting paths to disk.
-   Those patsh should not be an abspath, otherwise the working copy cannot
+   Those paths should not be abspaths, otherwise the working copy cannot
    be moved. The working copy library should not make these paths visible
    in its API (which should all be abspaths), and it should not be using
    relpaths for other processing.
@@ -1209,12 +1209,17 @@ svn_wc__db_externals_gather_definitions(apr_hash_t **externals,
  * This copy is NOT recursive. It simply establishes this one node, plus
  * incomplete nodes for the children.
  *
+ * If IS_MOVE is TRUE, mark this copy operation as the copy-half of
+ * a move. The delete-half of the move needs to be created separately
+ * with svn_wc__db_op_delete().
+ *
  * Add WORK_ITEMS to the work queue. */
 svn_error_t *
 svn_wc__db_op_copy(svn_wc__db_t *db,
                    const char *src_abspath,
                    const char *dst_abspath,
                    const char *dst_op_root_abspath,
+                   svn_boolean_t is_move,
                    const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool);
 
@@ -1227,8 +1232,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
  * properly deleted.
  *
  * Usually this operation is directly followed by a call to svn_wc__db_op_copy
- * or svn_wc__db_op_move which performs the real copy from src_abspath to
- * dst_abspath.
+ * which performs the real copy from src_abspath to dst_abspath.
  */
 svn_error_t *
 svn_wc__db_op_copy_shadowed_layer(svn_wc__db_t *db,
@@ -1409,6 +1413,9 @@ svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
 
 /* Mark LOCAL_ABSPATH, and all children, for deletion.
  *
+ * If MOVED_TO_ABSPATH is not NULL, mark the deletion of LOCAL_ABSPATH
+ * as the delete-half of a move from LOCAL_ABSPATH to MOVED_TO_ABSPATH.
+ *
  * If NOTIFY_FUNC is not NULL, then it will be called (with NOTIFY_BATON)
  * for each node deleted. While this processing occurs, if CANCEL_FUNC is
  * not NULL, then it will be called (with CANCEL_BATON) to detect cancellation
@@ -1420,29 +1427,13 @@ svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
                      const char *local_abspath,
+                     const char *moved_to_abspath,
                      /* ### flip to CANCEL, then NOTIFY. precedent.  */
                      svn_wc_notify_func2_t notify_func,
                      void *notify_baton,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      apr_pool_t *scratch_pool);
-
-
-/* Move the node at SRC_ABSPATH (in NODES and ACTUAL_NODE tables) to
- * DST_ABSPATH, both in DB but not necessarily in the same WC.  The parent
- * of DST_ABSPATH must be a versioned directory.
- *
- * This move is NOT recursive. It simply establishes this one node, plus
- * incomplete nodes for the children.
- *
- * Add WORK_ITEMS to the work queue. */
-svn_error_t *
-svn_wc__db_op_move(svn_wc__db_t *db,
-                   const char *src_abspath,
-                   const char *dst_abspath,
-                   const char *dst_op_root_abspath,
-                   const svn_skel_t *work_items,
-                   apr_pool_t *scratch_pool);
 
 
 /* ### mark PATH as (possibly) modified. "svn edit" ... right API here? */
@@ -2425,6 +2416,12 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
        BASE node. And again, the REPOS_* values are implied by this node's
        position in the subtree under the ancestor unshadowed BASE node.
        ORIGINAL_* will indicate the source of the move.
+       Additionally, information about the local move source is provided.
+       If MOVED_FROM_ABSPATH is not NULL, set *MOVED_FROM_ABSPATH to the
+       absolute path of the move source node in the working copy.
+       If MOVED_FROM_OP_ROOT_ABSPATH is not NULL, set
+       *MOVED_FROM_OP_ROOT_ABSPATH to the absolute path of the op-root of the
+       delete-half of the move.
 
    All OUT parameters may be NULL to indicate a lack of interest in
    that piece of information.
@@ -2455,6 +2452,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                          const char **original_root_url,
                          const char **original_uuid,
                          svn_revnum_t *original_revision,
+                         const char **moved_from_abspath,
+                         const char **moved_from_oproot_abspath,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
@@ -2538,12 +2537,17 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
    BASE_DEL_ABSPATH will specify the nearest ancestor of the explicit or
    implicit deletion (if any) that applies to the BASE tree.
 
-   MOVED_TO_ABSPATH will specify the nearest ancestor that has moved-away,
-   if any. If no ancestors have been moved-away, then this is set to NULL.
-
    WORK_DEL_ABSPATH will specify the root of a deleted subtree within
    the WORKING tree (note there is no concept of layered delete operations
    in WORKING, so there is only one deletion root in the ancestry).
+
+   MOVED_TO_ABSPATH will specify the path where this node was moved to
+   if the node has moved-away.
+
+   If the node was moved-away, MOVED_TO_OP_ROOT_ABSPATH will specify the root
+   of the copy operation that created the move destination.
+   If LOCAL_ABSPATH itself is the root of the copy, MOVED_TO_OP_ROOT_ABSPATH
+   equals MOVED_TO_ABSPATH.
 
    All OUT parameters may be set to NULL to indicate a lack of interest in
    that piece of information.
@@ -2559,6 +2563,7 @@ svn_error_t *
 svn_wc__db_scan_deletion(const char **base_del_abspath,
                          const char **moved_to_abspath,
                          const char **work_del_abspath,
+                         const char **moved_to_op_root_abspath,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,

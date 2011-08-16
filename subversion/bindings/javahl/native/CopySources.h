@@ -71,6 +71,9 @@ class CopySources
    * A local reference to the Java CopySources peer.
    */
   Array &m_copySources;
+
+  CopySources(const CopySources &from);
+  CopySources & operator=(const CopySources &);
 };
 
 #endif  /* COPY_SOURCES_H */

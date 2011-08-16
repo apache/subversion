@@ -898,6 +898,11 @@ handle_external_item_change(const struct external_change_baton_t *eb,
                    scratch_pool));
           break;
         case svn_node_file:
+          if (strcmp(eb->repos_root_url, ra_cache.repos_root_url))
+            return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                      _("Unsupported external: "
+                        "url of file external '%s' is not in repository '%s'"),
+                      new_url, eb->repos_root_url);
           SVN_ERR(switch_file_external(local_abspath,
                                        new_url,
                                        &new_item->peg_revision,
@@ -947,6 +952,11 @@ handle_external_item_change(const struct external_change_baton_t *eb,
                                       scratch_pool));
           break;
         case svn_node_file:
+          if (strcmp(eb->repos_root_url, ra_cache.repos_root_url))
+            return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                      _("Unsupported external: "
+                        "url of file external '%s' is not in repository '%s'"),
+                      new_url, eb->repos_root_url);
           SVN_ERR(switch_file_external(local_abspath,
                                        new_url,
                                        &new_item->peg_revision,
@@ -1043,6 +1053,9 @@ handle_externals_change(const struct external_change_baton_t *eb,
       new_item = APR_ARRAY_IDX(new_desc, i, svn_wc_external_item2_t *);
 
       svn_pool_clear(iterpool);
+
+      if (eb->ctx->cancel_func)
+        SVN_ERR(eb->ctx->cancel_func(eb->ctx->cancel_baton));
 
       target_abspath = svn_dirent_join(local_abspath, new_item->target_dir,
                                        iterpool);

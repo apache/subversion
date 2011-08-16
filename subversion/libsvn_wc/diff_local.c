@@ -205,7 +205,7 @@ file_diff(struct diff_baton *eb,
   if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL,
                                      &original_repos_relpath, NULL, NULL,
-                                     NULL, db, local_abspath,
+                                     NULL, NULL, NULL, db, local_abspath,
                                      scratch_pool, scratch_pool));
 
 

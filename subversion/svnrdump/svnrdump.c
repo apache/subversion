@@ -79,6 +79,7 @@ enum svn_svnrdump__longopt_t
     opt_auth_nocache,
     opt_non_interactive,
     opt_incremental,
+    opt_trust_server_cert,
     opt_version,
   };
 
@@ -87,6 +88,7 @@ enum svn_svnrdump__longopt_t
                                    opt_auth_username, \
                                    opt_auth_password, \
                                    opt_auth_nocache, \
+                                   opt_trust_server_cert, \
                                    opt_non_interactive
 
 static const svn_opt_subcommand_desc2_t svnrdump__cmd_table[] =
@@ -138,6 +140,12 @@ static const apr_getopt_option_t svnrdump__options[] =
                          "For example:\n"
                          "                             "
                          "    servers:global:http-library=serf")},
+    {"trust-server-cert", opt_trust_server_cert, 0,
+                      N_("accept SSL server certificates from unknown\n"
+                         "                             "
+                         "certificate authorities without prompting (but only\n"
+                         "                             "
+                         "with '--non-interactive')") },
     {0, 0, 0, 0}
   };
 
@@ -250,6 +258,7 @@ init_client_context(svn_client_ctx_t **ctx_p,
                     const char *password,
                     const char *config_dir,
                     svn_boolean_t no_auth_cache,
+                    svn_boolean_t trust_server_cert,
                     apr_array_header_t *config_options,
                     apr_pool_t *pool)
 {
@@ -276,9 +285,9 @@ init_client_context(svn_client_ctx_t **ctx_p,
   /* Default authentication providers for non-interactive use */
   SVN_ERR(svn_cmdline_create_auth_baton(&(ctx->auth_baton), non_interactive,
                                         username, password, config_dir,
-                                        no_auth_cache, FALSE, cfg_config,
-                                        ctx->cancel_func, ctx->cancel_baton,
-                                        pool));
+                                        no_auth_cache, trust_server_cert,
+                                        cfg_config, ctx->cancel_func,
+                                        ctx->cancel_baton, pool));
   *ctx_p = ctx;
   return SVN_NO_ERROR;
 }
@@ -665,6 +674,7 @@ main(int argc, const char **argv)
   const char *username = NULL;
   const char *password = NULL;
   svn_boolean_t no_auth_cache = FALSE;
+  svn_boolean_t trust_server_cert = FALSE;
   svn_boolean_t non_interactive = FALSE;
   apr_array_header_t *config_options = NULL;
   apr_getopt_t *os;
@@ -794,6 +804,9 @@ main(int argc, const char **argv)
         case opt_incremental:
           opt_baton->incremental = TRUE;
           break;
+        case opt_trust_server_cert:
+          trust_server_cert = TRUE;
+          break;
         case opt_config_option:
           if (!config_options)
               config_options =
@@ -901,6 +914,15 @@ main(int argc, const char **argv)
       exit(EXIT_SUCCESS);
     }
 
+  /* --trust-server-cert can only be used with --non-interactive */
+  if (trust_server_cert && !non_interactive)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--trust-server-cert requires "
+                               "--non-interactive"));
+      return svn_cmdline_handle_exit_error(err, pool, "svnrdump: ");
+    }
+
   /* Expect one more non-option argument:  the repository URL. */
   if (os->ind != os->argc - 1)
     {
@@ -932,6 +954,7 @@ main(int argc, const char **argv)
                                    password,
                                    config_dir,
                                    no_auth_cache,
+                                   trust_server_cert,
                                    config_options,
                                    pool));
 

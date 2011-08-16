@@ -1012,7 +1012,6 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   expected_status.tweak('A_COPY_3/D/gamma', wc_rev=9)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
-  expected_disk.tweak('A_COPY_3/D/gamma', contents="New content")
 
   # r10 - Merge r9 from A_COPY_3/D to A/D, creating explicit subtree
   # mergeinfo under A.  For this and every subsequent merge we update the WC
@@ -1032,8 +1031,6 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   expected_status.tweak('A/D', 'A/D/gamma', wc_rev=10)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
-  expected_disk.tweak('A/D/gamma', contents="New content")
-  expected_disk.tweak('A/D', props={SVN_PROP_MERGEINFO : '/A_COPY_3/D:9'})
 
   # r11 - Make a text change to A_COPY_2/mu
   svntest.main.file_write(mu_COPY_2_path, "New content")
@@ -1041,7 +1038,6 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   expected_status.tweak('A_COPY_2/mu', wc_rev=11)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
-  expected_disk.tweak('A_COPY_2/mu', contents="New content")
 
   # r12 - Merge r11 from A_COPY_2/mu to A_COPY/mu
   svntest.actions.run_and_verify_svn(None, exp_noop_up_out(11), [], 'up',
@@ -1058,7 +1054,6 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   expected_status.tweak('A_COPY/mu', wc_rev=12)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
-  expected_disk.tweak('A_COPY/mu', contents="New content")
 
   # r13 - Do a 'synch' cherry harvest merge of all available revisions
   # from A to A_COPY
@@ -1097,16 +1092,6 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                         wc_rev=13)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
-  expected_disk.tweak('A_COPY/B/E/beta',
-                      'A_COPY/D',
-                      'A_COPY/D/G/rho',
-                      'A_COPY/D/H/omega',
-                      'A_COPY/D/H/psi',
-                      'A_COPY/D/gamma',
-                      contents="New content")
-  expected_disk.tweak('A_COPY',   props={SVN_PROP_MERGEINFO : '/A:2-12'})
-  expected_disk.tweak('A_COPY/D',
-                      props={SVN_PROP_MERGEINFO : '/A/D:2-12\n/A_COPY_3/D:9\n'})
 
   # r14 - Make a text change on A_COPY/B/E/alpha
   svntest.main.file_write(alpha_COPY_path, "New content")
@@ -1114,7 +1099,6 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   expected_status.tweak('A_COPY/B/E/alpha', wc_rev=14)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
-  expected_disk.tweak('A_COPY/B/E/alpha', contents="New content")
 
   # Now, reintegrate A_COPY to A.  This should succeed.
   svntest.actions.run_and_verify_svn(None, exp_noop_up_out(14), [], 'up',
@@ -1273,11 +1257,6 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                                      '-m', 'REPOS-to-REPOS move'
                                      )
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  expected_disk.remove('A/D/gamma')
-  expected_disk.add({
-    'A/D/gamma_moved' : Item(props={SVN_PROP_MERGEINFO: '/A_COPY_3/D/gamma:9'},
-                             contents="New content")
-    })
   expected_status.tweak(wc_rev=16)
   expected_status.remove('A/D/gamma')
   expected_status.add({'A/D/gamma_moved' : Item(status='  ', wc_rev=16)})
@@ -1310,11 +1289,6 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   expected_status.add({'A_COPY/D/gamma_moved' : Item(status='  ', wc_rev=17)})
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
-  expected_disk.remove('A_COPY/D/gamma')
-  expected_disk.add({
-    'A/D/gamma_moved' : Item(props={SVN_PROP_MERGEINFO: '/A_COPY_3/D/gamma:9'},
-                             contents="New content")
-    })
 
   # r18 - C) Text mod to A/D/gamma_moved
   svntest.main.file_write(gamma_moved_path, "Even newer content")
