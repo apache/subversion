@@ -200,6 +200,13 @@ Candidate changes:
    Votes:
      +1: danielsh, rhuijben
 
+* r1158421, r1158436, r1158455
+  JavaHL: Fix implementation of propertySetRemote method.
+  Justification:
+    The new method is not usable without these changes.
+  Votes:
+    +1: markphip
+
 Veto-blocked changes:
 =====================
 
