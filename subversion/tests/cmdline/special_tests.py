@@ -801,8 +801,6 @@ def merge_foreign_symlink(sbox):
   #     })
 
 #----------------------------------------------------------------------
-# This used to lose the special status in the target working copy
-# (disk and metadata).
 @Issue(2557,3987)
 @SkipUnless(svntest.main.is_posix_os)
 def symlink_to_wc(sbox):
