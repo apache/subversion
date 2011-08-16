@@ -235,6 +235,18 @@ Candidate changes:
    Votes:
      +1: danielsh, rhuijben
 
+ * r1158285
+   swig-py: always set ChangeCollector's ChangedPath.path.
+   Justification:
+     Consistency with all other users of ChangedPath.  ViewVC ran into this.
+   Votes:
+     +1: danielsh
+
+ * r1158288
+   swig-py: Document ChangeCollector.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
