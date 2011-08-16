@@ -148,11 +148,22 @@ make_relpath(const char *relative_to_path,
   /* An example:
    *  relative_to_path = /a/b/c
    *  target_path      = /a/x/y/z
-   *  result           = ../../x/y/z */
+   *  result           = ../../x/y/z 
+   *
+   * Another example (Windows specific):
+   *  relative_to_path = F:/wc
+   *  target_path      = C:/wc
+   *  result           = C:/wc
+   */
 
   /* Skip the common ancestor of both paths, here '/a'. */
   la = svn_dirent_get_longest_ancestor(relative_to_path, target_path,
                                        scratch_pool);
+  if (*la == '\0')
+    {
+      /* Nothing in common: E.g. C:/ vs F:/ on Windows */
+      return apr_pstrdup(result_pool, target_path);
+    }
   relative_to_path = svn_dirent_skip_ancestor(la, relative_to_path);
   target_path = svn_dirent_skip_ancestor(la, target_path);
 
