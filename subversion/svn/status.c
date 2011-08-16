@@ -279,11 +279,10 @@ print_status(const char *path,
       SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
       relpath = make_relpath(cwd, status->moved_from_abspath, pool, pool);
       relpath = svn_dirent_local_style(relpath, pool);
-      moved_from_line = apr_psprintf(pool,
-                                     apr_psprintf(pool,
-                                                  "\n        > %s",
-                                                  _("moved from %s")),
-                                     relpath);
+      moved_from_line = apr_pstrcat(pool, "\n        > ",
+                                    apr_psprintf(pool, _("moved from %s"),
+                                                 relpath),
+                                    (char *)NULL);
     }
 
   /* Only print an extra moved-to line for the op-root of a move-away.
@@ -299,11 +298,10 @@ print_status(const char *path,
       SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
       relpath = make_relpath(cwd, status->moved_to_abspath, pool, pool);
       relpath = svn_dirent_local_style(relpath, pool);
-      moved_to_line = apr_psprintf(pool,
-                                   apr_psprintf(pool,
-                                                "\n        > %s",
-                                                _("moved to %s")),
-                                   relpath);
+      moved_to_line = apr_pstrcat(pool, "\n        > ",
+                                  apr_psprintf(pool, _("moved to %s"),
+                                               relpath),
+                                  (char *)NULL);
     }
 
   if (detailed)
