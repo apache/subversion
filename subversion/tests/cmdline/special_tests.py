@@ -801,6 +801,7 @@ def merge_foreign_symlink(sbox):
   #     })
 
 #----------------------------------------------------------------------
+# See also symlink_to_wc_svnversion().
 @Issue(2557,3987)
 @SkipUnless(svntest.main.is_posix_os)
 def symlink_to_wc(sbox):
@@ -838,6 +839,28 @@ def symlink_to_wc(sbox):
   svntest.actions.run_and_verify_info(expected_info,
                                       symlink_path, symlink_path + '/iota')
 
+#----------------------------------------------------------------------
+# Similar to #2557/#3987; see symlink_to_wc().
+@XFail()
+@Issue(2557,3987)
+@SkipUnless(svntest.main.is_posix_os)
+def symlink_to_wc_svnversion(sbox):
+  "svnversion on symlink to wc"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  # Create a symlink
+  symlink_path = sbox.add_wc_path('2')
+  assert not os.path.islink(symlink_path)
+  os.symlink(os.path.basename(wc_dir), symlink_path) ### implementation detail
+  symlink_basename = os.path.basename(symlink_path)
+
+  # Some basic tests
+  svntest.actions.run_and_verify_svnversion("Unmodified symlink to wc",
+                                            symlink_path, sbox.repo_url,
+                                            [ "1\n" ], [])
+
 
 ########################################################################
 # Run the tests
@@ -864,6 +887,7 @@ test_list = [ None,
               symlink_destination_change,
               merge_foreign_symlink,
               symlink_to_wc,
+              symlink_to_wc_svnversion,
              ]
 
 if __name__ == '__main__':
