@@ -209,7 +209,7 @@ Candidate changes:
      When this error occurrs, users receive Class not found exception
      instead of the error.
    Votes:
-     +1: markphip
+     +1: markphip, rhuijben
 
  * r1158166
    Ensure 'make revision-install' works on symlinks-to-working-copies.
@@ -217,13 +217,14 @@ Candidate changes:
      Correctness of svn-revision.txt when building from a working copy.
    Votes:
      +1: danielsh
+     -0: rhuijben (Obsoleted by the r1158209 group)
 
  * r1158193, r1158194
    Patch svntest.main.safe_rmtree() for symlink targets.
    Justification:
      Required by the r1158187 group.
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
 
  * r1158187, r1158196, r1158201, r1158207
    Fix issues #2557 and #3987: 'svn info symlink/to/wc'.
@@ -231,14 +232,15 @@ Candidate changes:
      That syntax should work.
    Votes:
      +1: danielsh (without r1158187)
-     +1: rhuijben (without r1158196)
+     +1: rhuijben
 
- * r1158209, r1158210
+ * r1158209, r1158210, r1158217
    Fix another variant of issues #2557 and #3987: 'svnversion symlink/to/wc'.
    Justification:
      That syntax should work.
    Votes:
      +1: danielsh (r1158209, r1158210 only)
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
