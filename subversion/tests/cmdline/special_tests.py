@@ -804,7 +804,7 @@ def merge_foreign_symlink(sbox):
 # See also symlink_to_wc_svnversion().
 @Issue(2557,3987)
 @SkipUnless(svntest.main.is_posix_os)
-def symlink_to_wc(sbox):
+def symlink_to_wc_basic(sbox):
   "operate on symlink to wc"
 
   sbox.build(read_only = True)
@@ -840,7 +840,7 @@ def symlink_to_wc(sbox):
                                       symlink_path, symlink_path + '/iota')
 
 #----------------------------------------------------------------------
-# Similar to #2557/#3987; see symlink_to_wc().
+# Similar to #2557/#3987; see symlink_to_wc_basic().
 @XFail()
 @Issue(2557,3987)
 @SkipUnless(svntest.main.is_posix_os)
@@ -886,7 +886,7 @@ test_list = [ None,
               unrelated_changed_special_status,
               symlink_destination_change,
               merge_foreign_symlink,
-              symlink_to_wc,
+              symlink_to_wc_basic,
               symlink_to_wc_svnversion,
              ]
 
