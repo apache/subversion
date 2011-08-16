@@ -16972,6 +16972,92 @@ def reverse_merge_adds_subtree(sbox):
                                        None, None, None, None,
                                        None, 1, False)
 
+#----------------------------------------------------------------------
+# A test for issue #3989 'merge which deletes file with native eol-style
+# raises spurious tree conflict'.
+@Issue(3989)
+@XFail(svntest.main.is_os_windows)
+@SkipUnless(server_has_mergeinfo)
+def merged_deletion_causes_tree_conflict(sbox):
+  "merged deletion causes spurious tree conflict"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path        = os.path.join(wc_dir, 'A')
+  psi_path      = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
+  H_branch_path = os.path.join(wc_dir, 'branch', 'D', 'H')
+
+  # r2 - Set svn:eol-style native on A/D/H/psi
+  svntest.actions.run_and_verify_svn(None, None, [], 'ps', 'svn:eol-style',
+                                     'native', psi_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Set eol-style native on a path',
+                                     wc_dir)
+
+  # r3 - Branch ^/A to ^/branch
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
+                                     sbox.repo_url + '/A',
+                                     sbox.repo_url + '/branch',
+                                     '-m', 'Copy ^/A to ^/branch')
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # r4 - Delete A/D/H/psi 
+  svntest.actions.run_and_verify_svn(None, None, [], 'delete', psi_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Delete a a path with native eol-style',
+                                     wc_dir)
+
+  # Sync merge ^/A/D/H to branch/D/H.
+  #
+  # Currently this fails because a spurious tree conflict is raised:
+  #
+  #   >svn merge ^^/A branch
+  #   --- Merging r3 through r4 into 'branch':
+  #      C branch\D\H\psi
+  #   --- Recording mergeinfo for merge of r3 through r4 into 'branch':
+  #    U   branch
+  #   Summary of conflicts:
+  #     Tree conflicts: 1
+  #
+  #   >svn st
+  #    M      branch
+  #         C branch\D\H\psi
+  #         >   local edit, incoming delete upon merge
+  #   Summary of conflicts:
+  #     Tree conflicts: 1
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = wc.State(H_branch_path, {
+    'psi' : Item(status='D '),
+    })
+  expected_mergeinfo_output = wc.State(H_branch_path, {
+    ''    : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(H_branch_path, {})
+  expected_status = wc.State(H_branch_path, {
+    ''      : Item(status=' M'),
+    'chi'   : Item(status='  '),
+    'psi'   : Item(status='D '),
+    'omega' : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=4)
+  expected_disk = wc.State('', {
+    ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:2-4'}),
+    'chi'   : Item("This is the file 'chi'.\n"),
+    'omega' : Item("This is the file 'omega'.\n"),
+    })
+  expected_skip = wc.State('.', { })
+  svntest.actions.run_and_verify_merge(H_branch_path, None, None,
+                                       sbox.repo_url + '/A/D/H', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, False)
+
 ########################################################################
 # Run the tests
 
@@ -17098,6 +17184,7 @@ test_list = [ None,
               foreign_repos_prop_conflict,
               merge_adds_subtree_with_mergeinfo,
               reverse_merge_adds_subtree,
+              merged_deletion_causes_tree_conflict,
              ]
 
 if __name__ == '__main__':
