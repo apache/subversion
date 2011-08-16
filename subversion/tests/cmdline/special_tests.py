@@ -827,7 +827,7 @@ def symlink_to_wc(sbox):
       'Revision' : '1',
       'Node Kind' : 'directory',
       'Schedule' : 'normal',
-  }] + [{
+  }, {
       'Name' : 'iota',
       'Path' : re.escape(os.path.join(symlink_path, 'iota')),
       'Working Copy Root Path' : re.escape(os.path.abspath(symlink_path)),
