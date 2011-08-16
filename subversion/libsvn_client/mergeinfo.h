@@ -186,7 +186,7 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
 /* If INCLUDE_DESCENDANTS is FALSE, behave exactly like
    svn_client__get_repos_mergeinfo() except the mergeinfo for REL_PATH
    is put in the mergeinfo catalog MERGEINFO_CAT, with the key being
-   REL_PATH itself.
+   the repository root-relative path of REL_PATH.
 
    If INCLUDE_DESCENDANTS is true, then any subtrees under REL_PATH
    with explicit mergeinfo are also included in MERGEINFO_CAT.  The

@@ -252,15 +252,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1156216, r1156312, r1156717, r1156721, r1156750, r1156827, r1156838
-   Fix issue #3986 'svn_client_mergeinfo_log API is broken'.
-   Justification:
-     svn_client_mergeinfo_log gives the wrong answer in some basic use cases.
-     This is a regression from 1.6.  Bugs in private APIs could lead to other
-     bugs.
-   Votes:
-     +1: pburba, markphip, rhuijben
-
  * r1155044, r1155313, r1155334
    Make the ctypes-python bindings tests run properly, by clearing the pool
    in which the repository was opened so that the rep-cache DB doesn't stay
