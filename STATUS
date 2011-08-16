@@ -147,18 +147,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1155044, r1155313, r1155334
-   Make the ctypes-python bindings tests run properly, by clearing the pool
-   in which the repository was opened so that the rep-cache DB doesn't stay
-   open when the repo is deleted and recreated for each test.
-   Justification:
-     It's good to be able to test what we're releasing.
-   Notes:
-     I don't know whether this was failing on every platform; I suspect not.
-   Votes:
-     +1: julianfoad (r1155044 only)
-     +1: danielsh
-
  * r1155131
    Cleanup the xml parser in serf in unexpected conditions.
    Justification:
@@ -186,15 +174,6 @@ Candidate changes:
      It's a regression from 1.6.
    Votes:
      +1: philip, rhuijben
-
- * r1156216, r1156312, r1156717, r1156721, r1156750, r1156827, r1156838
-   Fix issue #3986 'svn_client_mergeinfo_log API is broken'.
-   Justification:
-     svn_client_mergeinfo_log gives the wrong answer in some basic use cases.
-     This is a regression from 1.6.  Bugs in private APIs could lead to other
-     bugs.
-   Votes:
-     +1: pburba, markphip
 
 *  r1157416
    Fix problem with a missing JavaHL class from package renaming.
@@ -298,3 +277,25 @@ Approved changes:
    swig-py: Document ChangeCollector.
    Votes:
      +1: danielsh, arfrever
+
+ * r1156216, r1156312, r1156717, r1156721, r1156750, r1156827, r1156838
+   Fix issue #3986 'svn_client_mergeinfo_log API is broken'.
+   Justification:
+     svn_client_mergeinfo_log gives the wrong answer in some basic use cases.
+     This is a regression from 1.6.  Bugs in private APIs could lead to other
+     bugs.
+   Votes:
+     +1: pburba, markphip, rhuijben
+
+ * r1155044, r1155313, r1155334
+   Make the ctypes-python bindings tests run properly, by clearing the pool
+   in which the repository was opened so that the rep-cache DB doesn't stay
+   open when the repo is deleted and recreated for each test.
+   Justification:
+     It's good to be able to test what we're releasing.
+   Notes:
+     I don't know whether this was failing on every platform; I suspect not.
+   Votes:
+     +1: julianfoad (r1155044 only)
+     +1: danielsh
+     +0: rhuijben (reviewed, not tested)
