@@ -251,16 +251,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1155044, r1155313, r1155334
-   Make the ctypes-python bindings tests run properly, by clearing the pool
-   in which the repository was opened so that the rep-cache DB doesn't stay
-   open when the repo is deleted and recreated for each test.
-   Justification:
-     It's good to be able to test what we're releasing.
-   Notes:
-     I don't know whether this was failing on every platform; I suspect not.
-   Votes:
-     +1: julianfoad (r1155044 only)
-     +1: danielsh
-     +0: rhuijben (reviewed, not tested)

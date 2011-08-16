@@ -95,6 +95,10 @@ class RemoteRepository(object):
         self.client[0].log_msg_baton2 = c_void_p()
         self._log_func = None
 
+    def close(self):
+        """Close this RemoteRepository object, releasing any resources."""
+        self.pool.clear()
+
     def txn(self):
         """Create a transaction"""
         return Txn(self)
@@ -396,6 +400,14 @@ class LocalRepository(object):
             svn_repos_open(byref(self._as_parameter_), path, self.pool)
         self.fs = _fs(self)
 
+    def __del__(self):
+        self.close()
+
+    def close(self):
+        """Close this LocalRepository object, releasing any resources. In
+           particular, this closes the rep-cache DB."""
+        self.pool.clear()
+
     def latest_revnum(self):
         """Get the latest revision in the repository"""
         return self.fs.latest_revnum()
@@ -532,7 +544,6 @@ class _fs(object):
        This class represents an svn_fs_t object"""
 
     def __init__(self, repos):
-        self.repos = repos
         self.iterpool = Pool()
         self._as_parameter_ = svn_repos_fs(repos)
 
@@ -562,13 +573,6 @@ class _fs(object):
            temporary allocations. Otherwise, pool will be used for
            temporary allocations."""
         return _fs_root(self, rev, txn, pool, iterpool)
-
-    def txn(self, message, base_rev=None):
-        """Open a new transaction for commit to the specified
-           repository, assuming that our data is up to date as
-           of base_rev. Setup the author and commit message
-           revprops."""
-        return _fs_txn(self.repos, message, base_rev)
 
 class _fs_root(object):
     """NOTE: This is a private class. Don't use it outside of
