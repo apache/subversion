@@ -252,11 +252,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1158288
-   swig-py: Document ChangeCollector.
-   Votes:
-     +1: danielsh, arfrever
-
  * r1156216, r1156312, r1156717, r1156721, r1156750, r1156827, r1156838
    Fix issue #3986 'svn_client_mergeinfo_log API is broken'.
    Justification:
