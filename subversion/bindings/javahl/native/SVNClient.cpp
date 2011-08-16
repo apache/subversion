@@ -898,7 +898,8 @@ void SVNClient::propertySetLocal(Targets &targets, const char *name,
                                          ctx, subPool.getPool()), );
 }
 
-void SVNClient::propertySetRemote(const char *path, const char *name,
+void SVNClient::propertySetRemote(const char *path, long base_rev,
+                                  const char *name,
                                   CommitMessage *message,
                                   JNIByteArray &value, bool force,
                                   RevpropTable &revprops,
@@ -922,7 +923,7 @@ void SVNClient::propertySetRemote(const char *path, const char *name,
         return;
 
     SVN_JNI_ERR(svn_client_propset_remote(name, val, intPath.c_str(),
-                                          force, SVN_INVALID_REVNUM,
+                                          force, base_rev,
                                           revprops.hash(subPool),
                                           CommitCallback::callback, callback,
                                           ctx, subPool.getPool()), );
