@@ -211,6 +211,13 @@ Candidate changes:
    Votes:
      +1: markphip
 
+ * r1158166
+   Ensure 'make revision-install' works on symlinks-to-working-copies.
+   Justification:
+     Correctness of svn-revision.txt when building from a working copy.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
