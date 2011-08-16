@@ -235,7 +235,7 @@ Candidate changes:
    Votes:
      +1: danielsh, rhuijben
 
- * r1158285
+ * r1158285, r1158303
    swig-py: always set ChangeCollector's ChangedPath.path.
    Justification:
      Consistency with all other users of ChangedPath.  ViewVC ran into this.
