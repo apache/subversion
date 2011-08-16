@@ -650,6 +650,7 @@ public interface ISVNClient
             throws ClientException;
 
     void propertySetRemote(String path, String name, byte[] value,
+                           CommitMessageCallback handler,
                            boolean force, Map<String, String> revpropTable,
                            CommitCallback callback)
             throws ClientException;

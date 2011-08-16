@@ -899,6 +899,7 @@ void SVNClient::propertySetLocal(Targets &targets, const char *name,
 }
 
 void SVNClient::propertySetRemote(const char *path, const char *name,
+                                  CommitMessage *message,
                                   JNIByteArray &value, bool force,
                                   RevpropTable &revprops,
                                   CommitCallback *callback)
@@ -916,7 +917,7 @@ void SVNClient::propertySetRemote(const char *path, const char *name,
     Path intPath(path, subPool);
     SVN_JNI_ERR(intPath.error_occured(), );
 
-    svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
+    svn_client_ctx_t *ctx = context.getContext(message, subPool);
     if (ctx == NULL)
         return;
 
