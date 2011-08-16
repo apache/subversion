@@ -211,14 +211,6 @@ Candidate changes:
    Votes:
      +1: markphip, rhuijben
 
- * r1158166
-   Ensure 'make revision-install' works on symlinks-to-working-copies.
-   Justification:
-     Correctness of svn-revision.txt when building from a working copy.
-   Votes:
-     +1: danielsh
-     -0: rhuijben (Obsoleted by the r1158209 group)
-
  * r1158193, r1158194
    Patch svntest.main.safe_rmtree() for symlink targets.
    Justification:
