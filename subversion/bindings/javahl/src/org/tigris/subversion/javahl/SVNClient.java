@@ -1880,6 +1880,7 @@ public class SVNClient implements SVNClientInterface
             {
                 aSVNClient.propertySetRemote(path, name,
                                        value == null ? null : value.getBytes(),
+                                       cachedHandler,
                                        force, revpropTable, null);
             }
             else

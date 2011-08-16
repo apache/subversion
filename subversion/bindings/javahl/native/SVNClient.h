@@ -82,6 +82,7 @@ class SVNClient :public SVNBase
                         svn_depth_t depth, StringArray &changelists,
                         bool force);
   void propertySetRemote(const char *path, const char *name,
+                         CommitMessage *message,
                          JNIByteArray &value, bool force,
                          RevpropTable &revprops, CommitCallback *callback);
   void properties(const char *path, Revision &revision,

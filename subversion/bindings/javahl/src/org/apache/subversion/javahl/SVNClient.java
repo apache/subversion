@@ -308,6 +308,7 @@ public class SVNClient implements ISVNClient
             throws ClientException;
 
     public native void propertySetRemote(String path, String name, byte[] value,
+                                         CommitMessageCallback handler,
                                          boolean force,
                                          Map<String, String> revpropTable,
                                          CommitCallback callback)
