@@ -841,7 +841,6 @@ def symlink_to_wc_basic(sbox):
 
 #----------------------------------------------------------------------
 # Similar to #2557/#3987; see symlink_to_wc_basic().
-@XFail()
 @Issue(2557,3987)
 @SkipUnless(svntest.main.is_posix_os)
 def symlink_to_wc_svnversion(sbox):
