@@ -136,9 +136,9 @@ class ChangeCollector(_svndelta.Editor):
     self.changes[path] = ChangedPath(item_type,
                                      False,
                                      False,
-                                     base_path,
+                                     base_path,       # base_path
                                      parent_baton[2], # base_rev
-                                     None,            # (new) path
+                                     path,            # path
                                      False,           # added
                                      CHANGE_ACTION_DELETE,
                                      )
