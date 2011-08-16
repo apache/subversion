@@ -187,13 +187,6 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
- * r1156527
-   Accept --without-libmagic.
-   Justification:
-     Impossible to disable libmagic otherwise.
-   Votes:
-     +1: danielsh, stsp
-
  * r1156216, r1156312, r1156717, r1156721, r1156750, r1156827, r1156838
    Fix issue #3986 'svn_client_mergeinfo_log API is broken'.
    Justification:
@@ -211,13 +204,6 @@ Candidate changes:
    Votes:
      +1: markphip, rhuijben
 
- * r1158193, r1158194
-   Patch svntest.main.safe_rmtree() for symlink targets.
-   Justification:
-     Required by the r1158187 group.
-   Votes:
-     +1: danielsh, rhuijben
-
  * r1158187, r1158196, r1158201, r1158207
    Fix issues #2557 and #3987: 'svn info symlink/to/wc'.
    Justification:
@@ -234,18 +220,6 @@ Candidate changes:
      That syntax should work.
    Votes:
      +1: danielsh, rhuijben
-
- * r1158285, r1158303
-   swig-py: always set ChangeCollector's ChangedPath.path.
-   Justification:
-     Consistency with all other users of ChangedPath.  ViewVC ran into this.
-   Votes:
-     +1: danielsh
-
- * r1158288
-   swig-py: Document ChangeCollector.
-   Votes:
-     +1: danielsh
 
 Veto-blocked changes:
 =====================
@@ -298,3 +272,29 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1156527
+   Accept --without-libmagic.
+   Justification:
+     Impossible to disable libmagic otherwise.
+   Votes:
+     +1: danielsh, stsp, arfrever
+
+ * r1158193, r1158194
+   Patch svntest.main.safe_rmtree() for symlink targets.
+   Justification:
+     Required by the r1158187 group.
+   Votes:
+     +1: danielsh, rhuijben, arfrever
+
+ * r1158285, r1158303
+   swig-py: always set ChangeCollector's ChangedPath.path.
+   Justification:
+     Consistency with all other users of ChangedPath.  ViewVC ran into this.
+   Votes:
+     +1: danielsh, arfrever
+
+ * r1158288
+   swig-py: Document ChangeCollector.
+   Votes:
+     +1: danielsh, arfrever
