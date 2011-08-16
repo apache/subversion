@@ -252,13 +252,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1158193, r1158194
-   Patch svntest.main.safe_rmtree() for symlink targets.
-   Justification:
-     Required by the r1158187 group.
-   Votes:
-     +1: danielsh, rhuijben, arfrever
-
  * r1158285, r1158303
    swig-py: always set ChangeCollector's ChangedPath.path.
    Justification:
