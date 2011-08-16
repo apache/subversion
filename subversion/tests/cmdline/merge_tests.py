@@ -17042,7 +17042,7 @@ def merged_deletion_causes_tree_conflict(sbox):
     })
   expected_status.tweak(wc_rev=4)
   expected_disk = wc.State('', {
-    ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:2-4'}),
+    ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:3-4'}),
     'chi'   : Item("This is the file 'chi'.\n"),
     'omega' : Item("This is the file 'omega'.\n"),
     })
