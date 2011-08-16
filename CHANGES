@@ -182,6 +182,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * notifications sent when mergeinfo changes (r877588)
     * add information on text and property mods in log APIs (r877688)
     * fixed: svn_ra_local__get_file() leaks file descriptors (issue #3290)
+    * swig-py: always set ChangedPath.path (issue #2630)
 
   - Bindings:
     * New JavaHL package: org.apache.subversion
