@@ -252,13 +252,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1156527
-   Accept --without-libmagic.
-   Justification:
-     Impossible to disable libmagic otherwise.
-   Votes:
-     +1: danielsh, stsp, arfrever
-
  * r1158193, r1158194
    Patch svntest.main.safe_rmtree() for symlink targets.
    Justification:
