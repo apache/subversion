@@ -3110,6 +3110,53 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test the basic SVNClient.propertySetRemote functionality.
+     * @throws Throwable
+     */
+    public void testPropEdit() throws Throwable
+    {
+        final String PROP = "abc";
+        final byte[] VALUE = new String("def").getBytes();
+        final byte[] NEWVALUE = new String("newvalue").getBytes();
+        // create the test working copy
+        OneTest thisTest = new OneTest();
+
+        Set<String> pathSet = new HashSet<String>();
+        // set a property on A/D/G/rho file
+        pathSet.clear();
+        pathSet.add(thisTest.getWCPath()+"/A/D/G/rho");
+        client.propertySetLocal(pathSet, PROP, VALUE,
+                                Depth.infinity, null, false);
+        thisTest.getWc().setItemPropStatus("A/D/G/rho", Status.Kind.modified);
+
+        // test the status of the working copy
+        thisTest.checkStatus();
+
+        // commit the changes
+        checkCommitRevision(thisTest, "wrong revision number from commit", 2,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+
+        thisTest.getWc().setItemPropStatus("A/D/G/rho", Status.Kind.normal);
+
+        // check the status of the working copy
+        thisTest.checkStatus();
+        
+        // now edit the propval directly in the repository
+        long baseRev = 2L;
+        client.propertySetRemote(thisTest.getUrl()+"/A/D/G/rho", baseRev, PROP, NEWVALUE,
+                                 new ConstMsg("edit prop"), false, null, null);
+        
+        // update the WC and verify that the property was changed
+        client.update(thisTest.getWCPathSet(), Revision.HEAD, Depth.infinity, false, false,
+                      false, false);
+        byte[] propVal = client.propertyGet(thisTest.getWCPath()+"/A/D/G/rho", PROP, null, null);
+
+        assertEquals(new String(propVal), new String(NEWVALUE));
+
+    }
+
+    /**
      * Test tolerance of unversioned obstructions when adding paths with
      * {@link org.apache.subversion.javahl.SVNClient#checkout()},
      * {@link org.apache.subversion.javahl.SVNClient#update()}, and
