@@ -225,13 +225,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1158187, r1158196
+ * r1158187, r1158196, r1158201
    Fix issues #2557 and #3987: 'svn info symlink/to/wc'.
    Justification:
      That syntax should work.
    Votes:
-     +1: danielsh (r1158196)
-     +1: rhuijben (r1158187)
+     +1: danielsh (without r1158187)
+     +1: rhuijben (without r1158196)
 
 Veto-blocked changes:
 =====================
