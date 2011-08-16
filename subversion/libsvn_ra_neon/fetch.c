@@ -528,7 +528,10 @@ static svn_error_t *simple_fetch_file(svn_ra_neon__session_t *ras,
                              TRUE, pool));
 
   /* close the handler, since the file reading completed successfully. */
-  return (*frc.handler)(NULL, frc.handler_baton);
+  if (frc.stream)
+    return svn_stream_close(frc.stream);
+  else
+    return (*frc.handler)(NULL, frc.handler_baton);
 }
 
 /* Helper for svn_ra_neon__get_file.  This implements

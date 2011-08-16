@@ -262,7 +262,7 @@ realm = #{@realm}
             "svn://#{@svnserve_host}:#{@svnserve_port}#{@full_repos_path}"
           # Avoid a race by waiting a short time for svnserve to start up.
           # Without this, tests can fail with "Connection refused" errors.
-          sleep 0.1
+          sleep 1
           break
         end
       end

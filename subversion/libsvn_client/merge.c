@@ -427,7 +427,6 @@ perform_obstruction_check(svn_wc_notify_state_t *obstruction_state,
                                          kind,
                                          added,
                                          deleted,
-                                         NULL,
                                          wc_ctx, local_abspath,
                                          check_root,
                                          scratch_pool));

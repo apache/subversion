@@ -737,7 +737,7 @@ AC_ARG_WITH(libmagic,AS_HELP_STRING([--with-libmagic=PREFIX],
       AC_CHECK_LIB(magic, magic_open, [libmagic_found="builtin"])
     ])
     libmagic_prefix="the default locations"
-  else
+  elif test "$withval" != "no"; then
     libmagic_prefix=$withval
     save_cppflags="$CPPFLAGS"
     CPPFLAGS="$CPPFLAGS -I$libmagic_prefix/include"
