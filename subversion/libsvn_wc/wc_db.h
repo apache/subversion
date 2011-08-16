@@ -338,7 +338,7 @@ svn_wc__db_init(svn_wc__db_t *db,
    be returned.
 
    The LOCAL_RELPATH should ONLY be used for persisting paths to disk.
-   Those patsh should not be an abspath, otherwise the working copy cannot
+   Those paths should not be abspaths, otherwise the working copy cannot
    be moved. The working copy library should not make these paths visible
    in its API (which should all be abspaths), and it should not be using
    relpaths for other processing.
@@ -2419,8 +2419,9 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
        Additionally, information about the local move source is provided.
        If MOVED_FROM_ABSPATH is not NULL, set *MOVED_FROM_ABSPATH to the
        absolute path of the move source node in the working copy.
-       If DELETE_OP_ROOT_ABSPATH is not NULL, set *DELETE_OP_ROOT_ABSPATH
-       to the absolute path of the op-root of the delete-half of the move.
+       If MOVED_FROM_OP_ROOT_ABSPATH is not NULL, set
+       *MOVED_FROM_OP_ROOT_ABSPATH to the absolute path of the op-root of the
+       delete-half of the move.
 
    All OUT parameters may be NULL to indicate a lack of interest in
    that piece of information.
@@ -2452,7 +2453,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                          const char **original_uuid,
                          svn_revnum_t *original_revision,
                          const char **moved_from_abspath,
-                         const char **delete_op_root_abspath,
+                         const char **moved_from_oproot_abspath,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
@@ -2543,9 +2544,9 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
    MOVED_TO_ABSPATH will specify the path where this node was moved to
    if the node has moved-away.
 
-   If the node was moved-away, COPY_OP_ROOT_ABSPATH will specify the root
-   of the copy operation that created the copy-half of the move. 
-   If LOCAL_ABSPATH itself is the root of the copy, COPY_OP_ROOT_ABSPATH
+   If the node was moved-away, MOVED_TO_OP_ROOT_ABSPATH will specify the root
+   of the copy operation that created the move destination.
+   If LOCAL_ABSPATH itself is the root of the copy, MOVED_TO_OP_ROOT_ABSPATH
    equals MOVED_TO_ABSPATH.
 
    All OUT parameters may be set to NULL to indicate a lack of interest in
@@ -2562,7 +2563,7 @@ svn_error_t *
 svn_wc__db_scan_deletion(const char **base_del_abspath,
                          const char **moved_to_abspath,
                          const char **work_del_abspath,
-                         const char **copy_op_root_abspath,
+                         const char **moved_to_op_root_abspath,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,

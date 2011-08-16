@@ -3935,10 +3935,13 @@ close_file(void *file_baton,
   if (fb->new_text_base_md5_checksum && expected_md5_checksum
       && !svn_checksum_match(expected_md5_checksum,
                              fb->new_text_base_md5_checksum))
-    return svn_checksum_mismatch_err(expected_md5_checksum,
-                            fb->new_text_base_md5_checksum, scratch_pool,
-                            _("Checksum mismatch for '%s'"),
-                            svn_dirent_local_style(fb->local_abspath, pool));
+    return svn_error_trace(
+                svn_checksum_mismatch_err(expected_md5_checksum,
+                                          fb->new_text_base_md5_checksum,
+                                          scratch_pool,
+                                          _("Checksum mismatch for '%s'"),
+                                          svn_dirent_local_style(
+                                                fb->local_abspath, pool)));
 
   /* Gather the changes for each kind of property.  */
   SVN_ERR(svn_categorize_props(fb->propchanges, &entry_prop_changes,

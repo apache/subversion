@@ -1499,9 +1499,9 @@ def lock_path_not_in_head(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
                                      '-m', 'Some deletions', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r1', wc_dir)
-  expected_lock_fail_err_re = "svn:.*" \
+  expected_lock_fail_err_re = "svn: warning: W160042: " \
   "((Path .* doesn't exist in HEAD revision)" \
-  "|(Lock request failed: 405 Method Not Allowed))"
+  "|(L(ock|OCK) request (on '.*' )?failed: 405 Method Not Allowed))"
   # Issue #3524 These lock attemtps were triggering an assert over ra_serf:
   #
   # working_copies\lock_tests-37>svn lock A\D

@@ -39,10 +39,11 @@
 #include "../libsvn_ra/ra_loader.h"
 #include "svn_config.h"
 #include "svn_delta.h"
-#include "svn_version.h"
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_time.h"
+#include "svn_version.h"
 
 #include "private/svn_dav_protocol.h"
 #include "private/svn_dep_compat.h"
@@ -790,52 +791,68 @@ path_dirent_walker(void *baton,
 }
 
 static const svn_ra_serf__dav_props_t *
-get_dirent_props(apr_uint32_t dirent_fields, apr_pool_t *pool)
+get_dirent_props(apr_uint32_t dirent_fields,
+                 svn_ra_serf__session_t *session,
+                 apr_pool_t *pool)
 {
   svn_ra_serf__dav_props_t *prop;
   apr_array_header_t *props = apr_array_make
     (pool, 7, sizeof(svn_ra_serf__dav_props_t));
 
-  if (dirent_fields & SVN_DIRENT_KIND)
+  if (session->supports_deadprop_count != svn_tristate_false
+      || ! (dirent_fields & SVN_DIRENT_HAS_PROPS))
     {
+      if (dirent_fields & SVN_DIRENT_KIND)
+        {
+          prop = apr_array_push(props);
+          prop->namespace = "DAV:";
+          prop->name = "resourcetype";
+        }
+
+      if (dirent_fields & SVN_DIRENT_SIZE)
+        {
+          prop = apr_array_push(props);
+          prop->namespace = "DAV:";
+          prop->name = "getcontentlength";
+        }
+
+      if (dirent_fields & SVN_DIRENT_HAS_PROPS)
+        {
+          prop = apr_array_push(props);
+          prop->namespace = SVN_DAV_PROP_NS_DAV;
+          prop->name = "deadprop-count";
+        }
+
+      if (dirent_fields & SVN_DIRENT_CREATED_REV)
+        {
+          svn_ra_serf__dav_props_t *p = apr_array_push(props);
+          p->namespace = "DAV:";
+          p->name = SVN_DAV__VERSION_NAME;
+        }
+
+      if (dirent_fields & SVN_DIRENT_TIME)
+        {
+          prop = apr_array_push(props);
+          prop->namespace = "DAV:";
+          prop->name = SVN_DAV__CREATIONDATE;
+        }
+
+      if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
+        {
+          prop = apr_array_push(props);
+          prop->namespace = "DAV:";
+          prop->name = "creator-displayname";
+        }
+    }
+  else
+    {
+      /* We found an old subversion server that can't handle
+         the deadprop-count property in the way we expect.
+
+         The neon behavior is to retrieve all properties in this case */
       prop = apr_array_push(props);
       prop->namespace = "DAV:";
-      prop->name = "resourcetype";
-    }
-
-  if (dirent_fields & SVN_DIRENT_SIZE)
-    {
-      prop = apr_array_push(props);
-      prop->namespace = "DAV:";
-      prop->name = "getcontentlength";
-    }
-
-  if (dirent_fields & SVN_DIRENT_HAS_PROPS)
-    {
-      prop = apr_array_push(props);
-      prop->namespace = SVN_DAV_PROP_NS_DAV;
-      prop->name = "deadprop-count";
-    }
-
-  if (dirent_fields & SVN_DIRENT_CREATED_REV)
-    {
-      svn_ra_serf__dav_props_t *p = apr_array_push(props);
-      p->namespace = "DAV:";
-      p->name = SVN_DAV__VERSION_NAME;
-    }
-
-  if (dirent_fields & SVN_DIRENT_TIME)
-    {
-      prop = apr_array_push(props);
-      prop->namespace = "DAV:";
-      prop->name = SVN_DAV__CREATIONDATE;
-    }
-
-  if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
-    {
-      prop = apr_array_push(props);
-      prop->namespace = "DAV:";
-      prop->name = "creator-displayname";
+      prop->name = "allprop";
     }
 
   prop = apr_array_push(props);
@@ -859,10 +876,12 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
   svn_revnum_t fetched_rev;
   svn_error_t *err;
   struct dirent_walker_baton_t dwb;
+  svn_tristate_t deadprop_count = svn_tristate_unknown;
 
   err = fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
                          session, rel_path, revision,
-                         get_dirent_props(SVN_DIRENT_ALL, pool), pool);
+                         get_dirent_props(SVN_DIRENT_ALL, session, pool),
+                         pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
@@ -876,11 +895,32 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
     }
 
   dwb.entry = apr_pcalloc(pool, sizeof(*dwb.entry));
-  dwb.supports_deadprop_count = NULL;
+  dwb.supports_deadprop_count = &deadprop_count;
   dwb.result_pool = pool;
   SVN_ERR(svn_ra_serf__walk_all_props(props, path, fetched_rev,
                                       dirent_walker, &dwb,
                                       pool));
+
+  if (deadprop_count == svn_tristate_false
+      && session->supports_deadprop_count == svn_tristate_unknown
+      && !dwb.entry->has_props)
+    {
+      /* We have to requery as the server didn't give us the right
+         information */
+      session->supports_deadprop_count = svn_tristate_false;
+
+      SVN_ERR(fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
+                               session, rel_path, fetched_rev,
+                               get_dirent_props(SVN_DIRENT_ALL, session, pool),
+                               pool));
+
+      SVN_ERR(svn_ra_serf__walk_all_props(props, path, fetched_rev,
+                                      dirent_walker, &dwb,
+                                      pool));
+    }
+
+  if (deadprop_count != svn_tristate_unknown)
+    session->supports_deadprop_count = deadprop_count;
 
   *dirent = dwb.entry;
 
@@ -958,7 +998,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__retrieve_props(&props, session, session->conns[0],
                                           path, revision, "1",
                                           get_dirent_props(dirent_fields,
-                                                           pool),
+                                                           session, pool),
                                           pool, pool));
 
       /* Check if the path is really a directory. */
@@ -977,7 +1017,30 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__walk_all_paths(props, revision, path_dirent_walker,
                                           &dirent_walk, pool));
 
+      if (dirent_walk.supports_deadprop_count == svn_tristate_false
+          && session->supports_deadprop_count == svn_tristate_unknown
+          && dirent_fields & SVN_DIRENT_HAS_PROPS)
+        {
+          /* We have to requery as the server didn't give us the right
+             information */
+          session->supports_deadprop_count = svn_tristate_false;
+          SVN_ERR(svn_ra_serf__retrieve_props(&props, session,
+                                              session->conns[0],
+                                              path, revision, "1",
+                                              get_dirent_props(dirent_fields,
+                                                               session, pool),
+                                              pool, pool));
+
+          SVN_ERR(svn_hash__clear(dirent_walk.full_paths, pool));
+          SVN_ERR(svn_hash__clear(dirent_walk.base_paths, pool));
+
+          SVN_ERR(svn_ra_serf__walk_all_paths(props, revision,
+                                              path_dirent_walker,
+                                              &dirent_walk, pool));
+        }
+
       *dirents = dirent_walk.base_paths;
+
       if (dirent_walk.supports_deadprop_count != svn_tristate_unknown)
         session->supports_deadprop_count = dirent_walk.supports_deadprop_count;
     }
@@ -1047,7 +1110,7 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, NULL, pool));
       if (!session->uuid)
         {
-          return svn_error_create(APR_EGENERAL, NULL,
+          return svn_error_create(SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,
                                   _("The UUID property was not found on the "
                                     "resource or any of its parents"));
         }
