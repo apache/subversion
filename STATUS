@@ -149,14 +149,3 @@ Approved changes:
      Merge conflicts in the test suite.
    Votes:
      +1: danielsh, rhuijben, cmpilato
-
-* r1154115, r1154119, r1154144, r1154155, r1154159, r1154215, r1154225
-  Cleanup JavaHL pool handling. This to improve thread safety, concurrency and
-  memory usage.
-  Justification:
-    This patch makes JavaHL behave better inside the JVM.
-  Branch: ^/subversion/branches/1.7.x-JavaHL-pools
-  Votes:
-    +1: rhuijben, markphip
-
-

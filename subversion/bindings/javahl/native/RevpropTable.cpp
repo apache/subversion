@@ -46,15 +46,15 @@ const apr_hash_t *RevpropTable::hash(const SVN::Pool &pool)
   if (m_revprops.size() == 0)
     return NULL;
 
-  apr_hash_t *revprop_table = apr_hash_make(pool.pool());
+  apr_hash_t *revprop_table = apr_hash_make(pool.getPool());
 
   std::map<std::string, std::string>::const_iterator it;
   for (it = m_revprops.begin(); it != m_revprops.end(); ++it)
     {
-      const char *propname = apr_pstrdup(pool.pool(), it->first.c_str());
+      const char *propname = apr_pstrdup(pool.getPool(), it->first.c_str());
       if (!svn_prop_name_is_valid(propname))
         {
-          const char *msg = apr_psprintf(pool.pool(),
+          const char *msg = apr_psprintf(pool.getPool(),
                                          "Invalid property name: '%s'",
                                          propname);
           JNIUtil::throwNativeException(JAVA_PACKAGE "/ClientException", msg,
@@ -63,7 +63,7 @@ const apr_hash_t *RevpropTable::hash(const SVN::Pool &pool)
         }
 
       svn_string_t *propval = svn_string_create(it->second.c_str(),
-                                                pool.pool());
+                                                pool.getPool());
 
       apr_hash_set(revprop_table, propname, APR_HASH_KEY_STRING, propval);
     }
