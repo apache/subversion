@@ -16975,7 +16975,6 @@ def reverse_merge_adds_subtree(sbox):
 # A test for issue #3989 'merge which deletes file with native eol-style
 # raises spurious tree conflict'.
 @Issue(3989)
-@XFail(svntest.main.is_os_windows)
 @SkipUnless(server_has_mergeinfo)
 def merged_deletion_causes_tree_conflict(sbox):
   "merged deletion causes spurious tree conflict"
@@ -17009,22 +17008,9 @@ def merged_deletion_causes_tree_conflict(sbox):
 
   # Sync merge ^/A/D/H to branch/D/H.
   #
-  # Currently this fails because a spurious tree conflict is raised:
-  #
-  #   >svn merge ^^/A branch
-  #   --- Merging r3 through r4 into 'branch':
-  #      C branch\D\H\psi
-  #   --- Recording mergeinfo for merge of r3 through r4 into 'branch':
-  #    U   branch
-  #   Summary of conflicts:
-  #     Tree conflicts: 1
-  #
-  #   >svn st
-  #    M      branch
-  #         C branch\D\H\psi
-  #         >   local edit, incoming delete upon merge
-  #   Summary of conflicts:
-  #     Tree conflicts: 1
+  # branch/D/H/psi is, ignoring differences caused by svn:eol-style, identical
+  # to ^/A/D/H/psi when the latter was deleted, so the deletion should merge
+  # cleanly.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_output = wc.State(H_branch_path, {
     'psi' : Item(status='D '),
