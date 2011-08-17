@@ -486,17 +486,13 @@ assemble_status(svn_wc_status3_t **status,
       /* A node is switched if it doesn't have the implied repos_relpath */
       const char *name = svn_relpath_skip_ancestor(parent_repos_relpath,
                                                    info->repos_relpath);
-      switched_p = !name || (strcmp(name, svn_dirent_basename(local_abspath, NULL)) != 0);
+      switched_p = !name || (strcmp(name,
+                                    svn_dirent_basename(local_abspath, NULL))
+                             != 0);
     }
 
-  /* Examine whether our target is missing or obstructed.
-
-     While we are not completely in single-db mode yet, data about
-     obstructed or missing nodes might be incomplete here. This is
-     reported by svn_wc_db_status_obstructed_XXXX. In single-db
-     mode these obstructions are no longer reported and we have
-     to detect obstructions by looking at the on disk status in DIRENT.
-     */
+  /* Examine whether our target is missing or obstructed. To detect
+   * obstructions, we have to look at the on-disk status in DIRENT. */
   if (info->kind == svn_wc__db_kind_dir)
     {
       if (info->status == svn_wc__db_status_incomplete)
@@ -1135,8 +1131,8 @@ get_dir_status(const struct walk_status_baton *wb,
          don't all map the same types, but only the keys of the result
          hash are subsequently used. */
       SVN_ERR(svn_wc__db_read_children_info(&nodes, &conflicts,
-                                        wb->db, local_abspath,
-                                        subpool, iterpool));
+                                            wb->db, local_abspath,
+                                            subpool, iterpool));
 
       all_children = apr_hash_overlay(subpool, nodes, dirents);
       if (apr_hash_count(conflicts) > 0)
