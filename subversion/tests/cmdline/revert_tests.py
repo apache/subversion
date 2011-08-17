@@ -890,13 +890,7 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert", "-R",
                                      G_path)
 
-
-  # Revert leaves these added nodes as unversioned
-  expected_output = svntest.verify.UnorderedOutput(
-    ["?       " + os.path.join(G_path, "pi") + "\n",
-     "?       " + os.path.join(G_path, "rho") + "\n",
-     "?       " + os.path.join(G_path, "tau") + "\n"])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(None, [], [],
                                      "status", wc_dir)
 
   svntest.main.safe_rmtree(G_path)
@@ -1464,8 +1458,6 @@ def revert_tree_conflicts_with_replacements(sbox):
 
   # Remove a few unversioned files that revert left behind.
   os.remove(wc('A/B/E/loc_beta'))
-  os.remove(wc('A/D/G/rho'))
-  os.remove(wc('A/D/G/tau'))
   os.remove(wc('A/D/H/loc_psi'))
 
   # The update operation should have put all incoming items in place.
