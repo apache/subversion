@@ -1243,8 +1243,6 @@ svn_error_t *
 svn_fs_py__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  int format;
-  int max_files_per_dir;
 
   fs->path = apr_pstrdup(fs->pool, path);
 
@@ -1252,18 +1250,6 @@ svn_fs_py__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
                                  "(s)", path));
   apr_pool_cleanup_register(fs->pool, ffd->p_fs, svn_fs_py__destroy_py_object,
                             apr_pool_cleanup_null);
-
-  /* Read the FS format number. */
-  SVN_ERR(read_format(&format, &max_files_per_dir,
-                      path_format(fs, pool), pool));
-  SVN_ERR(check_format(format));
-
-  /* Read the min unpacked revision. */
-  if (format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(update_min_unpacked_rev(fs, pool));
-
-  /* Read the configuration file. */
-  SVN_ERR(read_config(fs, pool));
 
   return SVN_NO_ERROR;
 }

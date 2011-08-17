@@ -54,6 +54,7 @@ MIN_PROTOREVS_DIR_FORMAT            = 3
 MIN_NO_GLOBAL_IDS_FORMAT            = 3
 MIN_PACKED_FORMAT                   = 4
 MIN_REP_SHARING_FORMAT              = 4
+PACKED_REVPROP_SQLITE_DEV_FORMAT    = 5
 
 _DEFAULT_MAX_FILES_PER_DIR = 1000
 _TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
@@ -113,6 +114,25 @@ _DEFAULT_CONFIG_CONTENTS = \
        CONFIG_OPTION_ENABLE_REP_SHARING)
 
 
+def _read_format(path):
+    try:
+        with open(path, 'rb') as f:
+            format = int(f.readline())
+            max_files_per_dir = 0
+            for l in f:
+                l = l.split()
+                if format > MIN_LAYOUT_FORMAT_OPTION_FORMAT \
+                        and l[0] == 'layout':
+                    if l[1] == 'linear':
+                        max_files_per_dir = 0
+                    elif l[1] == 'sharded':
+                        max_files_per_dir = int(l[2])
+        return (format, max_files_per_dir)
+    except IOError:
+        # Treat an absent format file as format 1.
+        return (1, 0)
+
+
 def _write_format(path, format, max_files_per_dir, overwrite=True):
     assert 1 <= format and format <= FORMAT_NUMBER
 
@@ -136,6 +156,30 @@ def _write_format(path, format, max_files_per_dir, overwrite=True):
 
     # And set the perms to make it read only
     os.chmod(path, stat.S_IREAD)
+
+
+def _check_format(format):
+    '''Return the error svn.err.FS_UNSUPPORTED_FORMAT if FS's format
+    number is not the same as a format number supported by this
+    Subversion.'''
+
+    # Blacklist.  These formats may be either younger or older than
+    # SVN_FS_FS__FORMAT_NUMBER, but we don't support them.
+    if format is PACKED_REVPROP_SQLITE_DEV_FORMAT:
+        raise svn.SubversionException(svn.err.FS_UNSUPPORTED_FORMAT,
+                                      "Found format '%d', only created by " +
+                                      "unreleased dev builds; see " +
+                                      "http://subversion.apache.org" +
+                                      "/docs/release-notes/1.7#revprop-packing"
+                                       % format)
+
+    #  We support all formats from 1-current simultaneously
+    if 1 <= format <= FORMAT_NUMBER:
+        return
+
+    raise svn.SubversionException(svn.err.FS_UNSUPPORTED_FORMAT,
+                "Expected FS format between '1' and '%d'; found format '%d'" %
+                (FORMAT_NUMBER, format))
 
 
 class FS(object):
@@ -249,25 +293,6 @@ class FS(object):
         os.rename(tempf.name, final_path)
 
 
-    def __read_format(self):
-        try:
-            with open(self.__path_format, 'rb') as f:
-                self.format = int(f.readline())
-                self.max_files_per_dir = 0
-                for l in f:
-                    l = l.split()
-                    if self.format > MIN_LAYOUT_FORMAT_OPTION_FORMAT \
-                            and l[0] == 'layout':
-                        if l[1] == 'linear':
-                            self.max_files_per_dir = 0
-                        elif l[1] == 'sharded':
-                            self.max_files_per_dir = int(l[2])
-        except IOError:
-            # Treat an absent format file as format 1.
-            self.format = 1
-            self.max_files_per_dir = 0
-
-
     def __update_min_unpacked_rev(self):
         assert self.format >= MIN_PACKED_FORMAT
         with open(self.__path_min_unpacked_rev, 'rb') as f:
@@ -370,11 +395,18 @@ class FS(object):
         with open(self.__path_uuid, 'rb') as f:
             self.uuid = uuid.UUID(f.readline().rstrip())
 
-        self.__read_format()
+        # Read the FS format number.
+        (self.format, self.max_files_per_dir) = _read_format(self.__path_format)
+        _check_format(self.format)
+
+        # Read the min unpacked revision.
         if self.format >= MIN_PACKED_FORMAT:
             self.__update_min_unpacked_rev()
 
         self._youngest_rev_cache = self._get_youngest()
+
+        # Read the configuration file
+        self._read_config()
 
 
     def __setup_paths(self):
