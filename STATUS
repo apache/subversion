@@ -265,14 +265,6 @@ Approved changes:
    Votes:
      +1: markphip, rhuijben
 
- * r1157416
-   Fix problem with a missing JavaHL class from package renaming.
-   Justification:
-     When this error occurrs, users receive Class not found exception
-     instead of the error.
-   Votes:
-     +1: markphip, rhuijben
-
  * r1154165
    Make the cmdline argument parser ignore upgrade required errors to
    allow calling 'svn upgrade c:\iNVALID' on 'C:\Invalid' without an
