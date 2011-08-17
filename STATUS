@@ -101,22 +101,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1154717, r1154718
-   Detect broken svndiff streams in serf (r1154717) and neon (r1154718), in
-   non-bulk updates before we even do the md5 checksum in the update editor.
-   Justification:
-     Some sanity checking doesn't hurt. Improves error details and avoids
-     storing invalid streams in the pristine store.
-   Votes:
-     +1: rhuijben, stsp
-
- * r1154733
-   Correctly position buffer pointer when resuming an aborted transfer in serf.
-   Justification:
-     Invalid pointer operation that causes at least datastream corruption.
-   Votes:
-     +1: rhuijben, stsp
-
  * r1154908
    Fix spurious test failures in Ruby bindings.
    Justification:
@@ -124,29 +108,6 @@ Candidate changes:
      signing releases.
    Votes:
      +1: stsp
-
- * r1154982, r1155124
-   Stop returning APR_EGENERAL from serf for unexpected data.
-   Justification:
-     Clients like AnkhSVN can't see what kind of error this is so they can
-     only show a dialog with an error which in some cases is even not clear
-     to normal users.
-   Notes:
-     r1154982 improves the generic errors and r1155124 restores some
-     specific 'svn lock' behavior that was broken by r1154982.
-   Votes:
-     +1: rhuijben, stsp
-
- * r1155131
-   Cleanup the xml parser in serf in unexpected conditions.
-   Justification:
-     Without this patch the xml parser is only freed when http responses are
-     read successfully.
-   Notes:
-     This patch requires r1148932 to be backported for a clean merge.
-     Currently accept theirs on conflict produces the right result.
-   Votes:
-     +1: rhuijben, stsp
 
  * r1155160
    When serf restarts a web request, start parsing xml where we stopped in the
@@ -157,15 +118,8 @@ Candidate changes:
      I (rhuijben) call that a regression.
    Votes:
      +1: rhuijben
-     +0: stsp (Change looks good, but there is a merge conflict.
-               Please create a backport branch.)
-
- * r1155391, r1155404, r1156218
-   Fix issue 3983, import into foreign repository.
-   Justification:
-     It's a regression from 1.6.
-   Votes:
-     +1: philip, rhuijben
+     +0: stsp, cmpilato (Change looks good, but there is a merge conflict.
+                         Please create a backport branch.)
 
  * r1158187, r1158196, r1158201, r1158207
    Fix issues #2557 and #3987: 'svn info symlink/to/wc'.
@@ -175,14 +129,7 @@ Candidate changes:
      Depends on the r1158193 group.
    Votes:
      +1: danielsh (without r1158187)
-     +1: rhuijben
-
- * r1158209, r1158210, r1158217
-   Fix another variant of issues #2557 and #3987: 'svnversion symlink/to/wc'.
-   Justification:
-     That syntax should work.
-   Votes:
-     +1: danielsh, rhuijben
+     +1: rhuijben, cmpilato
 
  * r1158616
    Recreate missing directories on file install errors.
@@ -191,15 +138,8 @@ Candidate changes:
      handled a common user problem. The result is improved the svn cleanup
      stability.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, cmpilato
 
- * r1158634
-   Fix error in help text of 'svn revert'.
-   Justification:
-     Help texts should document the current behaviour, not past behaviour.
-   Votes:
-     +1: stsp, rhuijben
-     
  * r1154115, r1154119, r1154144, r1154155, r1154159, r1154215, r1154225
    Cleanup JavaHL pool handling. This to improve thread safety, concurrency and
    memory usage.
@@ -215,3 +155,63 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1154717, r1154718
+   Detect broken svndiff streams in serf (r1154717) and neon (r1154718), in
+   non-bulk updates before we even do the md5 checksum in the update editor.
+   Justification:
+     Some sanity checking doesn't hurt. Improves error details and avoids
+     storing invalid streams in the pristine store.
+   Votes:
+     +1: rhuijben, stsp, cmpilato
+
+ * r1154733
+   Correctly position buffer pointer when resuming an aborted transfer in serf.
+   Justification:
+     Invalid pointer operation that causes at least datastream corruption.
+   Votes:
+     +1: rhuijben, stsp, cmpilato
+
+ * r1154982, r1155124
+   Stop returning APR_EGENERAL from serf for unexpected data.
+   Justification:
+     Clients like AnkhSVN can't see what kind of error this is so they can
+     only show a dialog with an error which in some cases is even not clear
+     to normal users.
+   Notes:
+     r1154982 improves the generic errors and r1155124 restores some
+     specific 'svn lock' behavior that was broken by r1154982.
+   Votes:
+     +1: rhuijben, stsp, cmpilato
+
+ * r1155131
+   Cleanup the xml parser in serf in unexpected conditions.
+   Justification:
+     Without this patch the xml parser is only freed when http responses are
+     read successfully.
+   Notes:
+     This patch requires r1148932 to be backported for a clean merge.
+     Currently accept theirs on conflict produces the right result.
+   Votes:
+     +1: rhuijben, stsp, cmpilato
+
+ * r1155391, r1155404, r1156218
+   Fix issue 3983, import into foreign repository.
+   Justification:
+     It's a regression from 1.6.
+   Votes:
+     +1: philip, rhuijben, cmpilato
+
+ * r1158209, r1158210, r1158217
+   Fix another variant of issues #2557 and #3987: 'svnversion symlink/to/wc'.
+   Justification:
+     That syntax should work.
+   Votes:
+     +1: danielsh, rhuijben, cmpilato
+
+ * r1158634
+   Fix error in help text of 'svn revert'.
+   Justification:
+     Help texts should document the current behaviour, not past behaviour.
+   Votes:
+     +1: stsp, rhuijben, cmpilato
