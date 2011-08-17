@@ -971,8 +971,7 @@ def revert_tree_conflicts_in_updated_files(sbox):
   expected_status.remove('A/D/G/tau')
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/D/G/rho',
-                      contents="This is the file 'rho'.\nLocal edit.\n")
+  expected_disk.remove('A/D/G/rho')
   expected_disk.tweak('A/D/G/pi',
                       contents="This is the file 'pi'.\nIncoming edit.\n")
   expected_disk.remove('A/D/G/tau')
