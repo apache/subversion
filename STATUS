@@ -141,7 +141,7 @@ Candidate changes:
    Votes:
      +1: rhuijben, hwright
 
-  * r1158617, r1158875, r1158886, r1158896, r1158919, r1158924
+  * r1158617, r1158875, r1158886, r1158896, r1158919, r1158924, r1158963
     Make 'svn revert' remove unversioned files resulting from reverting a copy.
     Fixes issue #3101.
     Justification:
@@ -156,9 +156,10 @@ Candidate changes:
       the first merge. There are various other cases where the unversioned
       files get in the way.
     Notes:
-      Instead of reviewing the individual commits I would suggest to run
-      the following merge and review the resulting diff:
-        svn merge -c1158617,1158875,1158886,1158896,1158919,1158924 \
+      All revisions depend on one another, but some amend or even undo changes
+      made in earlier revisions. Instead of reviewing the individual commits
+      I would suggest to run the following merge and review the resulting diff:
+        svn merge -c1158617,1158875,1158886,1158896,1158919,1158924,1158963 \
           ^/subversion/trunk
     Votes:
       +1: stsp (but only if this gets into 1.7.0)
