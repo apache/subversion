@@ -61,28 +61,13 @@ Candidate changes:
    Votes:
      +1: arfrever, philip
 
- * r1148992
-   Print error messages about failures of dynamic loading of libraries when
-   SVN_DEBUG_DSO is defined instead of never.
-   Justification:
-     Suboptimal r1148374 was already backported in r1148488.
-   Votes:
-     +1: arfrever
-     -0: rhuijben (A library shouldn't just write things to stderr. This needs
-                   proper error handling instead. And besides I doubt anyone is
-                   going to use this define (No veto!))
-     -0: philip (changed my mind, I don't think this is needed on the branch)
-     -0: stsp (Arfrever, can you please explain precisely what use case you
-               have for this code? Why do you need it in the release, or
-               on trunk, for that matter?)
-
  * r1148043, r1151055
    Allow building with serf trunk on windows.
    Votes:
      +0: danielsh (r1151055 only)
-     +1: pburba, rhuijben
-     -0: gstein (the serf 2.x API will be incompatible with 1.7.x, so this
-         will never be useful)
+     +1: pburba
+     -0: gstein, rhuijben (the serf 2.x API will be incompatible with 1.7.x, so
+         this will never be useful)
 
  * r1154278, r1154379, r1154382
    Make 'svn ls' capable of listing Subversion 1.0-1.3 repositories using
@@ -134,18 +119,35 @@ Candidate changes:
    Votes:
      +1: rhuijben, cmpilato
 
-Veto-blocked changes:
-=====================
-
-
-Approved changes:
-=================
-
- * r1158209, r1158210, r1158217
+ * r1158196, r1158201, r1158207, r1158209, r1158210, r1158217
    Fix another variant of issues #2557 and #3987: 'svnversion symlink/to/wc'.
    Justification:
      That syntax should work.
    Notes:
-     Merge conflicts in the test suite.
+     r1158196, r1158201, r1158207 adds (and tweaks) the test for tis problem.
    Votes:
-     +1: danielsh, rhuijben, cmpilato
+     +1: rhuijben
+     +1: danielsh, cmpilato (Without r1158209, r1158210, r1158217)
+
+Veto-blocked changes:
+=====================
+
+ * r1148992
+   Print error messages about failures of dynamic loading of libraries when
+   SVN_DEBUG_DSO is defined instead of never.
+   Justification:
+     Suboptimal r1148374 was already backported in r1148488.
+   Votes:
+     +1: arfrever
+     -1: rhuijben (A library shouldn't just write things to stderr. This needs
+                   proper error handling instead. And besides I doubt anyone is
+                   going to use this define (Soft veto. Feel free to -0 when the
+                   problems are resolved))
+     -0: philip (changed my mind, I don't think this is needed on the branch)
+     -0: stsp (Arfrever, can you please explain precisely what use case you
+               have for this code? Why do you need it in the release, or
+               on trunk, for that matter?)
+
+
+Approved changes:
+=================
