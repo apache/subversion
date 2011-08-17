@@ -1462,7 +1462,7 @@ def create_default_options():
 def _create_parser():
   """Return a parser for our test suite."""
   # set up the parser
-  _default_http_library = 'serf'
+  _default_http_library = 'neon'
   usage = 'usage: %prog [options] [<test> ...]'
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('-l', '--list', action='store_true', dest='list_tests',
