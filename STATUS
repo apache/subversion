@@ -255,12 +255,3 @@ Approved changes:
                  believe this is necessary for ra_serf as a default,
                  yet doing this *properly* is not possible for the 1.7
                  release)
-                 
- * r1158421, r1158436, r1158455
-   JavaHL: Fix implementation of propertySetRemote method.
-   Justification:
-     The new method is not usable without these changes.
-   NOTE: This has trivial merge conflicts that need to be resolved due
-   to the JavaHL pool usage changes in trunk.
-   Votes:
-     +1: markphip, rhuijben

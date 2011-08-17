@@ -307,7 +307,9 @@ public class SVNClient implements ISVNClient
                                         boolean force)
             throws ClientException;
 
-    public native void propertySetRemote(String path, String name, byte[] value,
+    public native void propertySetRemote(String path, long baseRev,
+                                         String name, byte[] value,
+                                         CommitMessageCallback handler,
                                          boolean force,
                                          Map<String, String> revpropTable,
                                          CommitCallback callback)

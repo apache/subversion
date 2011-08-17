@@ -649,7 +649,8 @@ public interface ISVNClient
                           boolean force)
             throws ClientException;
 
-    void propertySetRemote(String path, String name, byte[] value,
+    void propertySetRemote(String path, long baseRev, String name,
+                           byte[] value, CommitMessageCallback handler,
                            boolean force, Map<String, String> revpropTable,
                            CommitCallback callback)
             throws ClientException;
