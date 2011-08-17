@@ -1842,6 +1842,9 @@ struct svn_wc__db_info_t {
 
   svn_boolean_t locked;     /* WC directory lock */
   svn_wc__db_lock_t *lock;  /* Repository file lock */
+
+  const char *moved_to_abspath; /* Only on op-roots. See svn_wc_status3_t. */
+  svn_boolean_t moved_here;     /* On both op-roots and children. */
 };
 
 /* Return in *NODES a hash mapping name->struct svn_wc__db_info_t for

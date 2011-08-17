@@ -272,6 +272,10 @@ print_status(const char *path,
         (*prop_conflicts)++;
     }
 
+  /* Note that moved-from and moved-to information is only available in STATUS
+   * for (op-)roots of a move. Those are exactly the nodes we want to show
+   * move info for in 'svn status'. See also comments in svn_wc_status3_t. */
+
   if (status->moved_from_abspath)
     {
       const char *cwd;
@@ -285,13 +289,7 @@ print_status(const char *path,
                                     (char *)NULL);
     }
 
-  /* Only print an extra moved-to line for the op-root of a move-away.
-   * As each and every child node of a deleted tree is printed in status
-   * output, each of them would be "duplicated" with a moved-to line. */
-  if (status->moved_to_abspath
-      && status->moved_to_op_root_abspath
-      && 0 == strcmp(status->moved_to_op_root_abspath,
-                     status->moved_to_abspath))
+  if (status->moved_to_abspath)
     {
       const char *cwd;
       const char *relpath;
