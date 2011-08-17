@@ -1051,13 +1051,21 @@ svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
 
 /* Return a potentially translated version of local file LOCAL_ABSPATH
    in NORMAL_STREAM.  REVISION must be one of the following: BASE, COMMITTED,
-   WORKING.  Uses SCRATCH_POOL for temporary allocations. */
+   WORKING.
+
+   EXPAND_KEYWORDS operates as per the EXPAND argument to
+   svn_subst_stream_translated, which see.  If NORMALIZE_EOLS is TRUE and
+   LOCAL_ABSPATH requires translation, then normalize the line endings in
+   *NORMAL_STREAM.
+
+   Uses SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_client__get_normalized_stream(svn_stream_t **normal_stream,
                                   svn_wc_context_t *wc_ctx,
                                   const char *local_abspath,
                                   const svn_opt_revision_t *revision,
                                   svn_boolean_t expand_keywords,
+                                  svn_boolean_t normalize_eols,
                                   svn_cancel_func_t cancel_func,
                                   void *cancel_baton,
                                   apr_pool_t *result_pool,

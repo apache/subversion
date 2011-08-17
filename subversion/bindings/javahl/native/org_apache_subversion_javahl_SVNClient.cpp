@@ -922,8 +922,9 @@ Java_org_apache_subversion_javahl_SVNClient_properties
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_propertySetRemote
-(JNIEnv *env, jobject jthis, jstring jpath, jstring jname,
- jbyteArray jvalue, jboolean jforce, jobject jrevpropTable, jobject jcallback)
+(JNIEnv *env, jobject jthis, jstring jpath, jlong jbaseRev, jstring jname,
+ jbyteArray jvalue, jobject jmessage, jboolean jforce, jobject jrevpropTable,
+ jobject jcallback)
 {
   JNIEntry(SVNClient, propertySet);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -940,6 +941,10 @@ Java_org_apache_subversion_javahl_SVNClient_propertySetRemote
   if (JNIUtil::isExceptionThrown())
     return;
 
+  CommitMessage message(jmessage);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   JNIByteArray value(jvalue);
   if (JNIUtil::isExceptionThrown())
     return;
@@ -949,8 +954,9 @@ Java_org_apache_subversion_javahl_SVNClient_propertySetRemote
     return;
 
   CommitCallback callback(jcallback);
-  cl->propertySetRemote(path, name, value, jforce ? true:false, revprops,
-                        jcallback ? &callback : NULL);
+  cl->propertySetRemote(path, jbaseRev, name, &message, value,
+                        jforce ? true:false,
+                        revprops, jcallback ? &callback : NULL);
 }
 
 JNIEXPORT void JNICALL

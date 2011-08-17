@@ -1184,7 +1184,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "usage: revert PATH...\n"
      "\n"
      "  Note:  this subcommand does not require network access, and resolves\n"
-     "  any conflicted states.  However, it does not restore removed directories.\n"),
+     "  any conflicted states.\n"),
     {opt_targets, 'R', opt_depth, 'q', opt_changelist} },
 
   { "status", svn_cl__status, {"stat", "st"}, N_

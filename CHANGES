@@ -2,6 +2,9 @@ Version 1.8.0
 (?? ??? 2011, from /branches/1.8.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
+ User-visible changes:
+    * don't leave unversioned files when reverting copies (issue #3101)
+
  Developer-visible changes:
   - API changes:
     * fix inconsistent handling of log revs without changed paths (issue #3694)
@@ -182,6 +185,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * notifications sent when mergeinfo changes (r877588)
     * add information on text and property mods in log APIs (r877688)
     * fixed: svn_ra_local__get_file() leaks file descriptors (issue #3290)
+    * swig-py: always set ChangedPath.path (issue #2630)
 
   - Bindings:
     * New JavaHL package: org.apache.subversion
