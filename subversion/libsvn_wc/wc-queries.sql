@@ -1115,7 +1115,6 @@ CREATE TEMPORARY TABLE revert_list (
    op_depth INTEGER,
    repos_id INTEGER,
    kind TEXT,
-   checksum TEXT,
    PRIMARY KEY (local_relpath, actual)
    );
 DROP TRIGGER IF EXISTS   trigger_revert_list_nodes;
@@ -1123,9 +1122,8 @@ CREATE TEMPORARY TRIGGER trigger_revert_list_nodes
 BEFORE DELETE ON nodes
 BEGIN
    INSERT OR REPLACE INTO revert_list(local_relpath, actual, op_depth,
-                                      repos_id, kind, checksum)
-   SELECT OLD.local_relpath, 0, OLD.op_depth, OLD.repos_id, OLD.kind,
-          OLD.checksum;
+                                      repos_id, kind)
+   SELECT OLD.local_relpath, 0, OLD.op_depth, OLD.repos_id, OLD.kind;
 END;
 DROP TRIGGER IF EXISTS   trigger_revert_list_actual_delete;
 CREATE TEMPORARY TRIGGER trigger_revert_list_actual_delete
@@ -1163,13 +1161,13 @@ DROP TRIGGER IF EXISTS trigger_revert_list_actual_update
 
 -- STMT_SELECT_REVERT_LIST
 SELECT conflict_old, conflict_new, conflict_working, prop_reject, notify,
-       actual, op_depth, repos_id, kind, checksum
+       actual, op_depth, repos_id, kind
 FROM revert_list
 WHERE local_relpath = ?1
 ORDER BY actual DESC
 
 -- STMT_SELECT_REVERT_LIST_COPIED_CHILDREN
-SELECT local_relpath, kind, checksum
+SELECT local_relpath, kind
 FROM revert_list
 WHERE local_relpath LIKE ?1 ESCAPE '#'
   AND op_depth >= ?2

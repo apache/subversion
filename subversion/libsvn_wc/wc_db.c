@@ -5473,7 +5473,6 @@ struct revert_list_read_baton {
   const char **prop_reject;
   svn_boolean_t *copied_here;
   svn_wc__db_kind_t *kind;
-  const svn_checksum_t **pristine_checksum;
   apr_pool_t *result_pool;
 };
 
@@ -5491,7 +5490,6 @@ revert_list_read(void *baton,
   *(b->conflict_new) = *(b->conflict_old) = *(b->conflict_working) = NULL;
   *(b->prop_reject) = NULL;
   *(b->copied_here) = FALSE;
-  *(b->pristine_checksum) = NULL;
   *(b->kind) = svn_wc__db_kind_unknown;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -5500,9 +5498,10 @@ revert_list_read(void *baton,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     {
-      svn_boolean_t another_row;
+      svn_boolean_t is_actual = (svn_sqlite__column_int64(stmt, 5) != 0);
+      svn_boolean_t another_row = FALSE;
 
-      if (svn_sqlite__column_int64(stmt, 5))
+      if (is_actual)
         {
           if (!svn_sqlite__column_is_null(stmt, 4))
             *(b->reverted) = TRUE;
@@ -5532,18 +5531,9 @@ revert_list_read(void *baton,
                                 b->result_pool);
 
           SVN_ERR(svn_sqlite__step(&another_row, stmt));
-          if (another_row)
-            {
-              *(b->reverted) = TRUE;
-              *(b->kind) = svn_sqlite__column_token(stmt, 8,
-                                                    kind_map);
-              if (!svn_sqlite__column_is_null(stmt, 9))
-                SVN_ERR(svn_sqlite__column_checksum(b->pristine_checksum,
-                                                    stmt, 9,
-                                                    b->result_pool));
-            }
         }
-      else
+
+      if (!is_actual || another_row)
         {
           *(b->reverted) = TRUE;
           if (!svn_sqlite__column_is_null(stmt, 7))
@@ -5552,9 +5542,6 @@ revert_list_read(void *baton,
               *(b->copied_here) = (op_depth == relpath_depth(local_relpath));
             }
           *(b->kind) = svn_sqlite__column_token(stmt, 8, kind_map);
-          if (!svn_sqlite__column_is_null(stmt, 9))
-            SVN_ERR(svn_sqlite__column_checksum(b->pristine_checksum,
-                                                stmt, 9, b->result_pool));
         }
 
     }
@@ -5579,7 +5566,6 @@ svn_wc__db_revert_list_read(svn_boolean_t *reverted,
                             const char **prop_reject,
                             svn_boolean_t *copied_here,
                             svn_wc__db_kind_t *kind,
-                            const svn_checksum_t **pristine_checksum,
                             svn_wc__db_t *db,
                             const char *local_abspath,
                             apr_pool_t *result_pool,
@@ -5589,8 +5575,7 @@ svn_wc__db_revert_list_read(svn_boolean_t *reverted,
   const char *local_relpath;
   struct revert_list_read_baton b = {reverted, conflict_old, conflict_new,
                                      conflict_working, prop_reject,
-                                     copied_here, kind, pristine_checksum,
-                                     result_pool};
+                                     copied_here, kind, result_pool};
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                               db, local_abspath, scratch_pool, scratch_pool));
@@ -5639,16 +5624,11 @@ revert_list_read_copied_children(void *baton,
       child_info->abspath = svn_dirent_join(wcroot->abspath, child_relpath,
                                             b->result_pool);
       child_info->kind = svn_sqlite__column_token(stmt, 1, kind_map);
-      if (svn_sqlite__column_is_null(stmt, 2))
-        child_info->pristine_checksum = NULL;
-      else
-        SVN_ERR(svn_sqlite__column_checksum(&child_info->pristine_checksum,
-                                             stmt, 2, b->result_pool));
-       APR_ARRAY_PUSH(
-         children,
-         svn_wc__db_revert_list_copied_child_info_t *) = child_info;
+      APR_ARRAY_PUSH(
+        children,
+        svn_wc__db_revert_list_copied_child_info_t *) = child_info;
 
-       SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
    SVN_ERR(svn_sqlite__reset(stmt));
 
