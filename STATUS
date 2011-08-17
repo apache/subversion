@@ -142,7 +142,7 @@ Candidate changes:
      +1: rhuijben, hwright
 
   * r1158617, r1158875, r1158886, r1158896, r1158919, r1158924, r1158963
-    Make 'svn revert' remove unversioned files resulting from reverting a copy.
+    Make 'svn revert' remove unversioned nodes resulting from reverting a copy.
     Fixes issue #3101.
     Justification:
       Bert suggested to backport this to 1.7.
