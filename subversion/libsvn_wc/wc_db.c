@@ -9669,6 +9669,7 @@ scan_deletion_txn(void *baton,
   svn_wc__db_status_t child_presence;
   svn_boolean_t child_has_base = FALSE;
   apr_int64_t local_op_depth, op_depth;
+  svn_boolean_t found_moved_to = FALSE;
 
   /* Initialize all the OUT parameters.  */
   if (sd_baton->base_del_relpath != NULL)
@@ -9795,9 +9796,12 @@ scan_deletion_txn(void *baton,
              gimmick, not a real node that may have been deleted.  */
         }
 
-      if ((sd_baton->moved_to_relpath != NULL
-                || sd_baton->moved_to_op_root_relpath != NULL
-                || sd_baton->base_del_relpath != NULL)
+      /* Evaluate moved-to information. Once moved-to info has been found, it
+       * must not be overwritten with ancestors' moved-to info. */
+      if ((! found_moved_to)
+          && (sd_baton->moved_to_relpath != NULL
+              || sd_baton->moved_to_op_root_relpath != NULL
+              || sd_baton->base_del_relpath != NULL)
           && !svn_sqlite__column_is_null(stmt, 2 /* moved_to */))
         {
           const char *moved_to_op_root_relpath;
@@ -9888,6 +9892,13 @@ scan_deletion_txn(void *baton,
             *sd_baton->moved_to_op_root_relpath = moved_to_op_root_relpath ?
               apr_pstrdup(sd_baton->result_pool, moved_to_op_root_relpath)
               : NULL;
+
+          /* If all other out parameters are irrelevant, stop scanning.
+           * Happens to be only WORK_DEL_RELPATH. */
+          if (sd_baton->work_del_relpath == NULL)
+            break;
+
+          found_moved_to = TRUE;
         }
 
       op_depth = svn_sqlite__column_int64(stmt, 3);
