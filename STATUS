@@ -61,14 +61,6 @@ Candidate changes:
    Votes:
      +1: arfrever, philip
 
- * r1148043, r1151055
-   Allow building with serf trunk on windows.
-   Votes:
-     +0: danielsh (r1151055 only)
-     +1: pburba
-     -0: gstein, rhuijben (the serf 2.x API will be incompatible with 1.7.x, so
-         this will never be useful)
-
  * r1154278, r1154379, r1154382
    Make 'svn ls' capable of listing Subversion 1.0-1.3 repositories using
    ra_serf.
