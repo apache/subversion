@@ -121,6 +121,16 @@ Candidate changes:
      +1: rhuijben, danielsh
      +1 (r1158209, r1158210, r1158217): cmpilato
 
+ * r1158407, r1158419, r1158854
+   Fix issue #3989 'merge which deletes file with native eol-style raises
+     spurious tree conflict'.
+   Justification:
+     Fixes a regression from 1.6.x in a common merge use case.
+   Notes:
+     r1158407 and r1158419 are the test, r1158854 is the fix.
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
