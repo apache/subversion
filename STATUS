@@ -111,9 +111,9 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1155160
    Votes:
-     +1: rhuijben
-     +0: stsp, cmpilato (Without branch: Change looks good, but there is a
-                         merge conflict. Please create a backport branch.)
+     +1: rhuijben, stsp
+     +1: cmpilato (Without branch: Change looks good, but there is a
+                   merge conflict. Please create a backport branch.)
 
  * r1158187, r1158196, r1158201, r1158207
    Fix issues #2557 and #3987: 'svn info symlink/to/wc'.
