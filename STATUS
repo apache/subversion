@@ -150,13 +150,6 @@ Approved changes:
    Votes:
      +1: danielsh, rhuijben, cmpilato
 
- * r1158634
-   Fix error in help text of 'svn revert'.
-   Justification:
-     Help texts should document the current behaviour, not past behaviour.
-   Votes:
-     +1: stsp, rhuijben, cmpilato
-
 * r1154115, r1154119, r1154144, r1154155, r1154159, r1154215, r1154225
   Cleanup JavaHL pool handling. This to improve thread safety, concurrency and
   memory usage.
