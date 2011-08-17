@@ -108,10 +108,12 @@ Candidate changes:
      Without this patch it is not possible to reliable checkout neon using
      serf. (svn co http://svn.webdav.org/repos/projects/neon/tags/0.29.6 wc).
      I (rhuijben) call that a regression.
+   Branch:
+     ^/subversion/branches/1.7.x-r1155160
    Votes:
      +1: rhuijben
-     +0: stsp, cmpilato (Change looks good, but there is a merge conflict.
-                         Please create a backport branch.)
+     +0: stsp, cmpilato (Without branch: Change looks good, but there is a
+                         merge conflict. Please create a backport branch.)
 
  * r1158187, r1158196, r1158201, r1158207
    Fix issues #2557 and #3987: 'svn info symlink/to/wc'.
