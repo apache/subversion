@@ -260,6 +260,8 @@ Approved changes:
    JavaHL: Fix implementation of propertySetRemote method.
    Justification:
      The new method is not usable without these changes.
+   NOTE: This has trivial merge conflicts that need to be resolved due
+   to the JavaHL pool usage changes in trunk.
    Votes:
      +1: markphip, rhuijben
 
