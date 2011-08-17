@@ -100,11 +100,13 @@ get_old_version(int *version,
    of LOCAL_ABSPATH, using DB and SCRATCH_POOL as needed.
 
    This function may do strange things, but at long as it comes up with the
-   Right Answer, we should be happy.  */
+   Right Answer, we should be happy.
+
+   Sets *KIND to svn_node_dir for symlinks. */
 static svn_error_t *
-get_path_kind(svn_wc__db_t *db,
+get_path_kind(svn_node_kind_t *kind,
+              svn_wc__db_t *db,
               const char *local_abspath,
-              svn_node_kind_t *kind,
               apr_pool_t *scratch_pool)
 {
   svn_boolean_t special;
@@ -132,7 +134,11 @@ get_path_kind(svn_wc__db_t *db,
     }
 
   SVN_ERR(svn_io_check_special_path(local_abspath, &db->parse_cache.kind,
-                                    &special /* unused */, scratch_pool));
+                                    &special, scratch_pool));
+
+  /* The wcroot could be a symlink to a directory. (Issue #2557, #3987) */
+  if (special)
+    db->parse_cache.kind = svn_node_dir;
   *kind = db->parse_cache.kind;
 
   return SVN_NO_ERROR;
@@ -395,7 +401,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
      ### rid of this stat() call. it is going to happen for EVERY call
      ### into wc_db which references a file. calls for directories could
      ### get an early-exit in the hash lookup just above.  */
-  SVN_ERR(get_path_kind(db, local_abspath, &kind, scratch_pool));
+  SVN_ERR(get_path_kind(&kind, db, local_abspath, scratch_pool));
   if (kind != svn_node_dir)
     {
       /* If the node specified by the path is NOT present, then it cannot

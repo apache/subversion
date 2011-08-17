@@ -1086,7 +1086,13 @@ close_file(void *file_baton,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_editor_t function.  */
+/* Report any accumulated prop changes via the 'dir_props_changed' callback,
+ * and then call the 'dir_closed' callback.  Notify about any deleted paths
+ * within this directory that have not already been notified, and then about
+ * this directory itself (unless it was added, in which case the notification
+ * was done at that time).
+ *
+ * An svn_delta_editor_t function.  */
 static svn_error_t *
 close_directory(void *dir_baton,
                 apr_pool_t *pool)
@@ -1110,6 +1116,7 @@ close_directory(void *dir_baton,
   if (!b->added && b->propchanges->nelts > 0)
     remove_non_prop_changes(b->pristine_props, b->propchanges);
 
+  /* Report any prop changes. */
   if (b->propchanges->nelts > 0)
     {
       svn_boolean_t tree_conflicted = FALSE;
@@ -1134,8 +1141,8 @@ close_directory(void *dir_baton,
                                          b->edit_baton->diff_cmd_baton,
                                          scratch_pool));
 
-  /* Don't notify added directories as they triggered notification
-     in add_directory. */
+  /* Notify about any deleted paths within this directory that have not
+   * already been notified. */
   if (!skipped && !b->added && eb->notify_func)
     {
       apr_hash_index_t *hi;
@@ -1157,6 +1164,8 @@ close_directory(void *dir_baton,
         }
     }
 
+  /* Notify about this directory itself (unless it was added, in which
+   * case the notification was done at that time). */
   if (!b->added && eb->notify_func)
     {
       svn_wc_notify_t *notify;
@@ -1188,7 +1197,9 @@ close_directory(void *dir_baton,
 }
 
 
-/* An svn_delta_editor_t function.  */
+/* Record a prop change, which we will report later in close_file().
+ *
+ * An svn_delta_editor_t function.  */
 static svn_error_t *
 change_file_prop(void *file_baton,
                  const char *name,
@@ -1209,7 +1220,9 @@ change_file_prop(void *file_baton,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_editor_t function.  */
+/* Make a note of this prop change, to be reported when the dir is closed.
+ *
+ * An svn_delta_editor_t function.  */
 static svn_error_t *
 change_dir_prop(void *dir_baton,
                 const char *name,
@@ -1243,7 +1256,8 @@ close_edit(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_editor_t function.  */
+/* Notify that the node at PATH is 'missing'.
+ * An svn_delta_editor_t function.  */
 static svn_error_t *
 absent_directory(const char *path,
                  void *parent_baton,
@@ -1272,7 +1286,8 @@ absent_directory(const char *path,
 }
 
 
-/* An svn_delta_editor_t function.  */
+/* Notify that the node at PATH is 'missing'.
+ * An svn_delta_editor_t function.  */
 static svn_error_t *
 absent_file(const char *path,
             void *parent_baton,

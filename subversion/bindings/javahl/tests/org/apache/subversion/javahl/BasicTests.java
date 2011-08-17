@@ -130,6 +130,35 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test the JNIError class functionality
+     * @throws Throwable
+     */
+    public void testJNIError() throws Throwable
+    {
+        // build the test setup.
+        OneTest thisTest = new OneTest();
+
+        // Create a client, dispose it, then try to use it later
+        ISVNClient tempclient = new SVNClient();
+        tempclient.dispose();
+
+        // create Y and Y/Z directories in the repository
+        addExpectedCommitItem(null, thisTest.getUrl().toString(), "Y", NodeKind.none,
+                              CommitItemStateFlags.Add);
+        Set<String> urls = new HashSet<String>(1);
+        urls.add(thisTest.getUrl() + "/Y");
+        try 
+        {
+            tempclient.mkdir(urls, false, null, new ConstMsg("log_msg"), null);
+        } 
+        catch(JNIError e)
+        {
+	        return; // Test passes!
+        }
+        fail("A JNIError should have been thrown here.");
+    }
+
+    /**
      * Tests Mergeinfo and RevisionRange classes.
      * @since 1.5
      */
@@ -3077,6 +3106,53 @@ public class BasicTests extends SVNTests
         assertEquals(conflict.getSrcRightVersion().getNodeKind(), NodeKind.none);
         assertEquals(conflict.getSrcRightVersion().getReposURL(), tcTest.getUrl().toString());
         assertEquals(conflict.getSrcRightVersion().getPegRevision(), 2L);
+
+    }
+
+    /**
+     * Test the basic SVNClient.propertySetRemote functionality.
+     * @throws Throwable
+     */
+    public void testPropEdit() throws Throwable
+    {
+        final String PROP = "abc";
+        final byte[] VALUE = new String("def").getBytes();
+        final byte[] NEWVALUE = new String("newvalue").getBytes();
+        // create the test working copy
+        OneTest thisTest = new OneTest();
+
+        Set<String> pathSet = new HashSet<String>();
+        // set a property on A/D/G/rho file
+        pathSet.clear();
+        pathSet.add(thisTest.getWCPath()+"/A/D/G/rho");
+        client.propertySetLocal(pathSet, PROP, VALUE,
+                                Depth.infinity, null, false);
+        thisTest.getWc().setItemPropStatus("A/D/G/rho", Status.Kind.modified);
+
+        // test the status of the working copy
+        thisTest.checkStatus();
+
+        // commit the changes
+        checkCommitRevision(thisTest, "wrong revision number from commit", 2,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+
+        thisTest.getWc().setItemPropStatus("A/D/G/rho", Status.Kind.normal);
+
+        // check the status of the working copy
+        thisTest.checkStatus();
+        
+        // now edit the propval directly in the repository
+        long baseRev = 2L;
+        client.propertySetRemote(thisTest.getUrl()+"/A/D/G/rho", baseRev, PROP, NEWVALUE,
+                                 new ConstMsg("edit prop"), false, null, null);
+        
+        // update the WC and verify that the property was changed
+        client.update(thisTest.getWCPathSet(), Revision.HEAD, Depth.infinity, false, false,
+                      false, false);
+        byte[] propVal = client.propertyGet(thisTest.getWCPath()+"/A/D/G/rho", PROP, null, null);
+
+        assertEquals(new String(propVal), new String(NEWVALUE));
 
     }
 

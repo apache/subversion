@@ -407,7 +407,7 @@ class SubversionChangeset(Changeset):
                 else:
                     base_path = None
             action = ''
-            if not change.path:
+            if change.action == repos.CHANGE_ACTION_DELETE:
                 action = Changeset.DELETE
                 deletions[change.base_path] = idx
             elif change.added:

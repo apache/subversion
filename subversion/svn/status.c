@@ -148,11 +148,22 @@ make_relpath(const char *relative_to_path,
   /* An example:
    *  relative_to_path = /a/b/c
    *  target_path      = /a/x/y/z
-   *  result           = ../../x/y/z */
+   *  result           = ../../x/y/z 
+   *
+   * Another example (Windows specific):
+   *  relative_to_path = F:/wc
+   *  target_path      = C:/wc
+   *  result           = C:/wc
+   */
 
   /* Skip the common ancestor of both paths, here '/a'. */
   la = svn_dirent_get_longest_ancestor(relative_to_path, target_path,
                                        scratch_pool);
+  if (*la == '\0')
+    {
+      /* Nothing in common: E.g. C:/ vs F:/ on Windows */
+      return apr_pstrdup(result_pool, target_path);
+    }
   relative_to_path = svn_dirent_skip_ancestor(la, relative_to_path);
   target_path = svn_dirent_skip_ancestor(la, target_path);
 
@@ -261,6 +272,10 @@ print_status(const char *path,
         (*prop_conflicts)++;
     }
 
+  /* Note that moved-from and moved-to information is only available in STATUS
+   * for (op-)roots of a move. Those are exactly the nodes we want to show
+   * move info for in 'svn status'. See also comments in svn_wc_status3_t. */
+
   if (status->moved_from_abspath)
     {
       const char *cwd;
@@ -268,26 +283,23 @@ print_status(const char *path,
       SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
       relpath = make_relpath(cwd, status->moved_from_abspath, pool, pool);
       relpath = svn_dirent_local_style(relpath, pool);
-      moved_from_line = apr_psprintf(pool,
-                                     "\n        > moved from %s",
-                                     relpath);
+      moved_from_line = apr_pstrcat(pool, "\n        > ",
+                                    apr_psprintf(pool, _("moved from %s"),
+                                                 relpath),
+                                    (char *)NULL);
     }
 
-  /* Only print an extra moved-to line for the op-root of a move-away.
-   * As each and every child node of a deleted tree is printed in status
-   * output, each of them would be "duplicated" with a moved-to line. */
-  if (status->moved_to_abspath
-      && status->moved_to_op_root_abspath
-      && 0 == strcmp(status->moved_to_op_root_abspath,
-                     status->moved_to_abspath))
+  if (status->moved_to_abspath)
     {
       const char *cwd;
       const char *relpath;
       SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
       relpath = make_relpath(cwd, status->moved_to_abspath, pool, pool);
       relpath = svn_dirent_local_style(relpath, pool);
-      moved_to_line = apr_psprintf(pool, "\n        > moved to %s",
-                                   relpath);
+      moved_to_line = apr_pstrcat(pool, "\n        > ",
+                                  apr_psprintf(pool, _("moved to %s"),
+                                               relpath),
+                                  (char *)NULL);
     }
 
   if (detailed)
