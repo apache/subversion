@@ -7482,7 +7482,6 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
   #
   # First revert all local changes and remove A_COPY/C/nu from disk.
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
-  os.remove(os.path.join(wc_dir, "A_COPY", "nu"))
 
   # Make a text change to A_COPY_2/mu in r11 and then merge that
   # change to A/mu in r12.  This will create mergeinfo of '/A_COPY_2/mu:11'
