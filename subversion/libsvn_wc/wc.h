@@ -725,39 +725,6 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
-/* Set *MODIFIED_P to TRUE if (after translation) VERSIONED_FILE_ABSPATH
- * (of VERSIONED_FILE_SIZE bytes) differs from PRISTINE_STREAM (of
- * PRISTINE_SIZE bytes), else to FALSE if not.
- *
- * If EXACT_COMPARISON is FALSE, translate VERSIONED_FILE_ABSPATH's EOL
- * style and keywords to repository-normal form according to its properties,
- * and compare the result with PRISTINE_STREAM.  If EXACT_COMPARISON is
- * TRUE, translate PRISTINE_STREAM's EOL style and keywords to working-copy
- * form according to VERSIONED_FILE_ABSPATH's properties, and compare the
- * result with VERSIONED_FILE_ABSPATH.
- *
- * HAS_PROPS should be TRUE if the file had properties when it was not
- * modified, otherwise FALSE.
- *
- * PROPS_MOD should be TRUE if the file's properties have been changed,
- * otherwise FALSE.
- *
- * PRISTINE_STREAM will be closed before a successful return.
- *
- * DB is a wc_db; use SCRATCH_POOL for temporary allocation.
- */
-svn_error_t *
-svn_wc__compare_file_with_pristine(svn_boolean_t *modified_p,
-                                   svn_wc__db_t *db,
-                                   const char *versioned_file_abspath,
-                                   svn_filesize_t versioned_file_size,
-                                   svn_stream_t *pristine_stream,
-                                   svn_filesize_t pristine_size,
-                                   svn_boolean_t has_props,
-                                   svn_boolean_t props_mod,
-                                   svn_boolean_t exact_comparison,
-                                   apr_pool_t *scratch_pool);
-
 
 #ifdef __cplusplus
 }
