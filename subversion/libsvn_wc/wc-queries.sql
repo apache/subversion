@@ -119,7 +119,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND changelist IS NOT NULL
 SELECT op_depth, nodes.repos_id, nodes.repos_path, presence, kind, revision,
   checksum, translated_size, changed_revision, changed_date, changed_author,
   depth, symlink_target, last_mod_time, properties, lock_token, lock_owner,
-  lock_comment, lock_date, local_relpath
+  lock_comment, lock_date, local_relpath, moved_here, moved_to
 FROM nodes
 LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
   AND nodes.repos_path = lock.repos_relpath

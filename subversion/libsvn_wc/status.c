@@ -273,6 +273,68 @@ read_info(const struct svn_wc__db_info_t **info,
                                        &mtb->lock, NULL, NULL,
                                        db, local_abspath,
                                        result_pool, scratch_pool));
+
+      if (mtb->status == svn_wc__db_status_deleted)
+        {
+          const char *moved_to_abspath;
+          const char *moved_to_op_root_abspath;
+          
+          /* NOTE: we can't use op-root-ness as a condition here since a base
+           * node can be the root of a move and still not be an explicit
+           * op-root (having a working node with op_depth == pathelements).
+           *
+           * Both these (almost identical) situations showcase this:
+           *   svn mv a/b bb
+           *   svn del a
+           * and
+           *   svn mv a aa  
+           *   svn mv aa/b bb
+           * In both, 'bb' is moved from 'a/b', but 'a/b' has no op_depth>0
+           * node at all, as its parent 'a' is locally deleted. */
+
+          SVN_ERR(svn_wc__db_scan_deletion(NULL,
+                                           &moved_to_abspath,
+                                           NULL,
+                                           &moved_to_op_root_abspath,
+                                           db, local_abspath,
+                                           scratch_pool, scratch_pool));
+          if (moved_to_abspath != NULL
+              && moved_to_op_root_abspath != NULL
+              && strcmp(moved_to_abspath, moved_to_op_root_abspath) == 0)
+            {
+              mtb->moved_to_abspath = apr_pstrdup(result_pool,
+                                                  moved_to_abspath);
+            }
+          /* ### ^^^ THIS SUCKS. For at least two reasons:
+           * 1) We scan the node deletion and that's technically not necessary.
+           *    We'd be fine to know if this is an actual root of a move.
+           * 2) From the elaborately calculated results, we backwards-guess
+           *    whether this is a root.
+           * It works ok, and this code only gets called when a node is an
+           * explicit target of a 'status'. But it would be better to do this
+           * differently.
+           * We could return moved-to via svn_wc__db_base_get_info() (called
+           * just above), but as moved-to is only intended to be returned for
+           * roots of a move, that doesn't fit too well. */
+        }
+    }
+
+  /* ### svn_wc__db_read_info() could easily return the moved-here flag. But
+   * for now... (The per-dir query for recursive status is far more optimal.)
+   * Note that this actually scans around to get the full path, for a bool.
+   * This bool then gets returned, later is evaluated, and if true leads to
+   * the same paths being scanned again. We'd want to obtain this bool here as
+   * cheaply as svn_wc__db_read_children_info() does. */
+  if (mtb->status == svn_wc__db_status_added)
+    {
+      const char *moved_from_abspath = NULL;
+      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL,
+                                       &moved_from_abspath,
+                                       NULL,
+                                       db, local_abspath,
+                                       result_pool, scratch_pool));
+      mtb->moved_here = (moved_from_abspath != NULL);
     }
 
   mtb->has_checksum = (checksum != NULL);
@@ -404,8 +466,6 @@ assemble_status(svn_wc_status3_t **status,
   const char *repos_root_url;
   const char *repos_uuid;
   const char *moved_from_abspath = NULL;
-  const char *moved_to_abspath = NULL;
-  const char *moved_to_op_root_abspath = NULL;
   svn_filesize_t filesize = (dirent && (dirent->kind == svn_node_file))
                                 ? dirent->filesize
                                 : SVN_INVALID_FILESIZE;
@@ -608,26 +668,20 @@ assemble_status(svn_wc_status3_t **status,
               else if (schedule == svn_wc_schedule_replace)
                 node_status = svn_wc_status_replaced;
             }
+
+          /* Get moved-from info (only for potential op-roots of a move). */
+          if (node_status == svn_wc_status_added
+              && info->moved_here
+              && info->op_root)
+            SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL,
+                                             NULL, NULL, NULL, NULL,
+                                             &moved_from_abspath,
+                                             NULL,
+                                             db, local_abspath,
+                                             result_pool, scratch_pool));
         }
     }
 
-  /* Get moved-to info. */
-  if (info->status == svn_wc__db_status_deleted)
-    SVN_ERR(svn_wc__db_scan_deletion(NULL,
-                                     &moved_to_abspath,
-                                     NULL,
-                                     &moved_to_op_root_abspath,
-                                     db, local_abspath,
-                                     result_pool, scratch_pool));
-
-  /* Get moved-from info. */
-  if (info->status == svn_wc__db_status_added)
-    SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL,
-                                     &moved_from_abspath,
-                                     NULL,
-                                     db, local_abspath,
-                                     result_pool, scratch_pool));
 
   if (node_status == svn_wc_status_normal)
     node_status = text_status;
@@ -722,8 +776,7 @@ assemble_status(svn_wc_status3_t **status,
   stat->repos_uuid = repos_uuid;
 
   stat->moved_from_abspath = moved_from_abspath;
-  stat->moved_to_abspath = moved_to_abspath;
-  stat->moved_to_op_root_abspath = moved_to_op_root_abspath;
+  stat->moved_to_abspath = info->moved_to_abspath;
 
   *status = stat;
 
@@ -2623,10 +2676,6 @@ svn_wc_dup_status3(const svn_wc_status3_t *orig_stat,
   if (orig_stat->moved_to_abspath)
     new_stat->moved_to_abspath
       = apr_pstrdup(pool, orig_stat->moved_to_abspath);
-
-  if (orig_stat->moved_to_op_root_abspath)
-    new_stat->moved_to_op_root_abspath
-      = apr_pstrdup(pool, orig_stat->moved_to_op_root_abspath);
 
   /* Return the new hotness. */
   return new_stat;

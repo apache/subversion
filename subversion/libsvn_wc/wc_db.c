@@ -7038,6 +7038,8 @@ read_children_info(void *baton,
 
       if (op_depth == 0)
         {
+          const char *moved_to_relpath;
+
           child_item->info.have_base = TRUE;
 
           /* Get the lock info. The query only reports lock info in the row at
@@ -7045,11 +7047,20 @@ read_children_info(void *baton,
           if (op_depth == 0)
             child_item->info.lock = lock_from_columns(stmt, 15, 16, 17, 18,
                                                       result_pool);
+
+          /* Moved-to is only stored at op_depth 0. */
+          moved_to_relpath = svn_sqlite__column_text(stmt, 21, NULL); 
+          if (moved_to_relpath)
+            child_item->info.moved_to_abspath =
+              svn_dirent_join(wcroot->abspath, moved_to_relpath, result_pool);
         }
       else
         {
           child_item->nr_layers++;
           child_item->info.have_more_work = (child_item->nr_layers > 1);
+
+          /* Moved-here can only exist at op_depth > 0. */
+          child_item->info.moved_here = svn_sqlite__column_boolean(stmt, 20);
         }
 
       err = svn_sqlite__step(&have_row, stmt);
