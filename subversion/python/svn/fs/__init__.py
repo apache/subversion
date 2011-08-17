@@ -253,6 +253,11 @@ class FS(object):
 
     def _read_config(self):
         self._config = ConfigParser.RawConfigParser(_CONFIG_DEFAULTS)
+        ### We add this section manually below to get the tests running (the
+        ### tests clobber the default config file).  There may be less-hacky
+        ### ways of ensuring we don't error when attempting to read
+        ### non-existent config values.
+        self._config.add_section(CONFIG_SECTION_REP_SHARING)
         self._config.read(self.__path_config)
 
         if format >= MIN_REP_SHARING_FORMAT:
