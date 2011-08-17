@@ -148,15 +148,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1154717, r1154718
-   Detect broken svndiff streams in serf (r1154717) and neon (r1154718), in
-   non-bulk updates before we even do the md5 checksum in the update editor.
-   Justification:
-     Some sanity checking doesn't hurt. Improves error details and avoids
-     storing invalid streams in the pristine store.
-   Votes:
-     +1: rhuijben, stsp, cmpilato
-
  * r1154733
    Correctly position buffer pointer when resuming an aborted transfer in serf.
    Justification:
