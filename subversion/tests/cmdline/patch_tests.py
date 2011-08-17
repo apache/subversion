@@ -3615,6 +3615,61 @@ def patch_moved_away(sbox):
                                        1, # check-props
                                        1) # dry-run
 
+@XFail()
+@Issue(3991)
+def patch_lacking_trailing_eol(sbox):
+  "patch file lacking trailing eol"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # Prepare
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # Apply patch
+  unidiff_patch = [
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    # TODO: -1 +1
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'iota'.\n",
+    "+Some more bytes", # No trailing \n on this line!
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  gamma_contents = "It is the file 'gamma'.\n"
+  iota_contents = "This is the file 'iota'.\n"
+  new_contents = "new\n"
+
+  expected_output = [
+    'U         %s\n' % os.path.join(wc_dir, 'iota'),
+    'svn: W[0-9]+: .*', # warning about appending a newline to iota's last line
+  ]
+
+  # Expect a newline to be appended
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents=iota_contents+"Some more bytes\n")
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status='M ')
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
 
 ########################################################################
 #Run the tests
@@ -3652,6 +3707,7 @@ test_list = [ None,
               patch_set_prop_no_eol,
               patch_add_symlink,
               patch_moved_away,
+              patch_lacking_trailing_eol,
             ]
 
 if __name__ == '__main__':
