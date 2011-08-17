@@ -145,6 +145,8 @@ Approved changes:
    Fix another variant of issues #2557 and #3987: 'svnversion symlink/to/wc'.
    Justification:
      That syntax should work.
+   Notes:
+     Merge conflicts in the test suite.
    Votes:
      +1: danielsh, rhuijben, cmpilato
 
