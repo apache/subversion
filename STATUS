@@ -148,13 +148,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1154733
-   Correctly position buffer pointer when resuming an aborted transfer in serf.
-   Justification:
-     Invalid pointer operation that causes at least datastream corruption.
-   Votes:
-     +1: rhuijben, stsp, cmpilato
-
  * r1154982, r1155124
    Stop returning APR_EGENERAL from serf for unexpected data.
    Justification:
