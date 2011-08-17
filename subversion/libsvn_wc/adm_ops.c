@@ -1491,6 +1491,16 @@ revert_restore(svn_wc__db_t *db,
                                                   scratch_pool));
           return SVN_NO_ERROR;
         }
+      else
+        {
+          /* ### Initialise to values which prevent the code below from
+           * ### trying to restore anything to disk.
+           * ### 'status' should be status_unknown but that doesn't exist. */
+          status = svn_wc__db_status_normal;
+          kind = svn_wc__db_kind_unknown;
+          recorded_size = SVN_INVALID_FILESIZE;
+          recorded_mod_time = 0;
+        }
     }
   else if (err)
     return svn_error_trace(err);
