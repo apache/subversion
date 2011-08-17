@@ -175,14 +175,6 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
-*  r1157416
-   Fix problem with a missing JavaHL class from package renaming.
-   Justification:
-     When this error occurrs, users receive Class not found exception
-     instead of the error.
-   Votes:
-     +1: markphip, rhuijben
-
  * r1158187, r1158196, r1158201, r1158207
    Fix issues #2557 and #3987: 'svn info symlink/to/wc'.
    Justification:
@@ -214,7 +206,7 @@ Candidate changes:
     Justification:
       Help texts should document the current behaviour, not past behaviour.
     Votes:
-      +1: stsp
+      +1: stsp, rhuijben
 
 Veto-blocked changes:
 =====================
@@ -278,3 +270,12 @@ Approved changes:
      The new method is not usable without these changes.
    Votes:
      +1: markphip, rhuijben
+
+ * r1157416
+   Fix problem with a missing JavaHL class from package renaming.
+   Justification:
+     When this error occurrs, users receive Class not found exception
+     instead of the error.
+   Votes:
+     +1: markphip, rhuijben
+
