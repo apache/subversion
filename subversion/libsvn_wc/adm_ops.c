@@ -1332,6 +1332,7 @@ revert_restore_handle_copied_dirs(svn_node_kind_t *new_kind,
   int i;
   svn_node_kind_t on_disk;
   apr_pool_t *iterpool;
+  svn_error_t *err;
 
   if (new_kind)
     *new_kind = svn_node_dir;
@@ -1365,9 +1366,7 @@ revert_restore_handle_copied_dirs(svn_node_kind_t *new_kind,
       SVN_ERR(svn_io_remove_file2(child_info->abspath, TRUE, iterpool));
     }
 
-  /* Try to delete every child directory, ignoring errors.
-   * This is a bit crude but good enough for our purposes.
-   *
+  /* Delete every empty child directory.
    * We cannot delete children recursively since we want to keep any files
    * that still exist on disk (e.g. unversioned files within the copied tree).
    * So sort the children list such that longest paths come first and try to
@@ -1389,24 +1388,34 @@ revert_restore_handle_copied_dirs(svn_node_kind_t *new_kind,
 
       svn_pool_clear(iterpool);
 
-      svn_error_clear(svn_io_dir_remove_nonrecursive(child_info->abspath,
-                                                     iterpool));
+      err = svn_io_dir_remove_nonrecursive(child_info->abspath, iterpool);
+      if (err)
+        {
+          if (APR_STATUS_IS_ENOENT(err->apr_err) ||
+              SVN__APR_STATUS_IS_ENOTDIR(err->apr_err) ||
+              APR_STATUS_IS_ENOTEMPTY(err->apr_err))
+            svn_error_clear(err);
+          else
+            return svn_error_trace(err);
+        }
     }
 
   if (remove_self)
     {
-      apr_hash_t *remaining_children;
-
       /* Delete LOCAL_ABSPATH itself if no children are left. */
-      SVN_ERR(svn_io_get_dirents3(&remaining_children, local_abspath, TRUE,
-                                  iterpool, iterpool));
-      if (apr_hash_count(remaining_children) == 0)
+      err = svn_io_dir_remove_nonrecursive(local_abspath, iterpool);
+      if (err)
         {
-          SVN_ERR(svn_io_remove_dir2(local_abspath, FALSE, NULL, NULL,
-                                     iterpool));
-          if (new_kind)
-            *new_kind = svn_node_none;
+          if (APR_STATUS_IS_ENOENT(err->apr_err) ||
+              SVN__APR_STATUS_IS_ENOTDIR(err->apr_err) ||
+              APR_STATUS_IS_ENOTEMPTY(err->apr_err))
+            svn_error_clear(err);
+          else
+            return svn_error_trace(err);
         }
+
+      if (new_kind)
+        *new_kind = svn_node_none;
     }
 
   svn_pool_destroy(iterpool);
