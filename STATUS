@@ -131,6 +131,16 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r1158893
+   Make sure that serf doesn't insert a final '\0' in a property value
+   retrieved via svn_ra_get_file_revs().
+   Justification:
+     Unbreaks annotate in AnkhSVN when using serf. (See log message for
+     details). svn's blame receiver doesn't notice any problems as it just
+     assumes that the interesting property values are valid cstrings.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
