@@ -200,12 +200,14 @@ Candidate changes:
    Votes:
      +1: danielsh, rhuijben
 
-* r1158421, r1158436, r1158455
-  JavaHL: Fix implementation of propertySetRemote method.
-  Justification:
-    The new method is not usable without these changes.
-  Votes:
-    +1: markphip
+ * r1158616
+   Recreate missing directories on file install errors.
+   Justification:
+     Trivial patch that fixes a variable reference in a patch that should have
+     handled a common user problem. The result is improved the svn cleanup
+     stability.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
@@ -262,3 +264,10 @@ Approved changes:
                  believe this is necessary for ra_serf as a default,
                  yet doing this *properly* is not possible for the 1.7
                  release)
+                 
+ * r1158421, r1158436, r1158455
+   JavaHL: Fix implementation of propertySetRemote method.
+   Justification:
+     The new method is not usable without these changes.
+   Votes:
+     +1: markphip, rhuijben
