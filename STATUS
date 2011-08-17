@@ -101,14 +101,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1154908
-   Fix spurious test failures in Ruby bindings.
-   Justification:
-     Spurious test failures are a huge distraction and time sink when
-     signing releases.
-   Votes:
-     +1: stsp
-
  * r1155160
    When serf restarts a web request, start parsing xml where we stopped in the
    previous request to avoid xml parse errors on the <?xml.
@@ -215,3 +207,12 @@ Approved changes:
      Help texts should document the current behaviour, not past behaviour.
    Votes:
      +1: stsp, rhuijben, cmpilato
+
+ * r1154908
+   Fix spurious test failures in Ruby bindings.
+   Justification:
+     Spurious test failures are a huge distraction and time sink when
+     signing releases.
+   Votes:
+     +1: stsp
+     +1: rhuijben (safe change. Doesn't break code and probably fixes tests)
