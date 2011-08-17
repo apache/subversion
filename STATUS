@@ -264,15 +264,3 @@ Approved changes:
    to the JavaHL pool usage changes in trunk.
    Votes:
      +1: markphip, rhuijben
-
- * r1154165
-   Make the cmdline argument parser ignore upgrade required errors to
-   allow calling 'svn upgrade c:\iNVALID' on 'C:\Invalid' without an
-   error.
-   Justification:
-     Usually svn allows case differences, but in this case it doesn't.
-     (Triggerable in other scenarios)
-     http://svn.haxx.se/users/archive-2011-08/0142.shtml
-   Votes:
-     +1: rhuijben, arfrever, stsp
-
