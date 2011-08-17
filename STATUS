@@ -139,7 +139,7 @@ Candidate changes:
      details). svn's blame receiver doesn't notice any problems as it just
      assumes that the interesting property values are valid cstrings.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, hwright
 
 Veto-blocked changes:
 =====================
