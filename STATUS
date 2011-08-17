@@ -193,12 +193,21 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
-  * r1158634
-    Fix error in help text of 'svn revert'.
-    Justification:
-      Help texts should document the current behaviour, not past behaviour.
-    Votes:
-      +1: stsp, rhuijben
+ * r1158634
+   Fix error in help text of 'svn revert'.
+   Justification:
+     Help texts should document the current behaviour, not past behaviour.
+   Votes:
+     +1: stsp, rhuijben
+     
+ * r1154115, r1154119, r1154144, r1154155, r1154159, r1154215, r1154225
+   Cleanup JavaHL pool handling. This to improve thread safety, concurrency and
+   memory usage.
+   Justification:
+     This patch makes JavaHL behave better inside the JVM.
+   Branch: ^/subversion/branches/1.7.x-JavaHL-pools
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
