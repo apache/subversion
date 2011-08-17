@@ -64,7 +64,6 @@ apr_pool_t *JNIUtil::g_pool = NULL;
 std::list<SVNBase*> JNIUtil::g_finalizedObjects;
 JNIMutex *JNIUtil::g_finalizedObjectsMutex = NULL;
 JNIMutex *JNIUtil::g_logMutex = NULL;
-JNIMutex *JNIUtil::g_globalPoolMutext = NULL;
 bool JNIUtil::g_initException;
 bool JNIUtil::g_inInit;
 JNIEnv *JNIUtil::g_initEnv;
@@ -127,39 +126,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 
   apr_status_t status;
 
-  /* C programs default to the "C" locale. But because svn is supposed
-     to be i18n-aware, it should inherit the default locale of its
-     environment.  */
-  if (!setlocale(LC_ALL, ""))
-    {
-      if (stderr)
-        {
-          const char *env_vars[] = { "LC_ALL", "LC_CTYPE", "LANG", NULL };
-          const char **env_var = &env_vars[0], *env_val = NULL;
-          while (*env_var)
-            {
-              env_val = getenv(*env_var);
-              if (env_val && env_val[0])
-                break;
-              ++env_var;
-            }
 
-          if (!*env_var)
-            {
-              /* Unlikely. Can setlocale fail if no env vars are set? */
-              --env_var;
-              env_val = "not set";
-            }
-
-          fprintf(stderr,
-                  "%s: error: cannot set LC_ALL locale\n"
-                  "%s: error: environment variable %s is %s\n"
-                  "%s: error: please check that your locale name is "
-                  "correct\n",
-                  "svnjavahl", "svnjavahl", *env_var, env_val, "svnjavahl");
-        }
-      return FALSE;
-    }
 
   /* Initialize the APR subsystem, and register an atexit() function
    * to Uninitialize that subsystem at program exit. */
@@ -196,6 +163,19 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
       return FALSE;
     }
 
+  /* Create our top-level pool. */
+  g_pool = svn_pool_create(NULL);
+
+  apr_allocator_t* allocator = apr_pool_allocator_get(g_pool);
+
+  if (allocator)
+    {
+      /* Keep a maximum of 1 free block, to release memory back to the JVM
+         (and other modules). */
+      apr_allocator_max_free_set(allocator, 1);
+    }
+
+
 #ifdef ENABLE_NLS
 #ifdef WIN32
   {
@@ -207,7 +187,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     apr_size_t inwords, outbytes;
     unsigned int outlength;
 
-    apr_pool_create(&pool, 0);
+    pool = svn_pool_create(g_pool);
     /* get dll name - our locale info will be in '../share/locale' */
     inwords = sizeof(ucs2_path) / sizeof(ucs2_path[0]);
     HINSTANCE moduleHandle = GetModuleHandle("libsvnjavahl-1");
@@ -232,15 +212,12 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     internal_path = svn_dirent_join(internal_path, SVN_LOCALE_RELATIVE_PATH,
                                   pool);
     bindtextdomain(PACKAGE_NAME, internal_path);
-    apr_pool_destroy(pool);
+    svn_pool_destroy(pool);
   }
 #else
   bindtextdomain(PACKAGE_NAME, SVN_LOCALE_DIR);
 #endif
 #endif
-
-  /* Create our top-level pool. */
-  g_pool = svn_pool_create(NULL);
 
 #if defined(WIN32) || defined(__CYGWIN__)
   /* See http://svn.apache.org/repos/asf/subversion/trunk/notes/asp-dot-net-hack.txt */
@@ -272,10 +249,6 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
   if (isExceptionThrown())
     return false;
 
-  g_globalPoolMutext = new JNIMutex(g_pool);
-  if (isExceptionThrown())
-    return false;
-
   // initialized the thread local storage
   if (!JNIThreadData::initThreadData())
     return false;
@@ -296,15 +269,6 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 apr_pool_t *JNIUtil::getPool()
 {
   return g_pool;
-}
-
-/**
- * Return the mutex securing the global pool.
- * @return the mutex for the global pool
- */
-JNIMutex *JNIUtil::getGlobalPoolMutex()
-{
-  return g_globalPoolMutext;
 }
 
 void JNIUtil::raiseThrowable(const char *name, const char *message)
@@ -655,7 +619,7 @@ bool JNIUtil::isJavaExceptionThrown()
 }
 
 const char *
-JNIUtil::thrownExceptionToCString()
+JNIUtil::thrownExceptionToCString(SVN::Pool &in_pool)
 {
   const char *msg;
   JNIEnv *env = getEnv();
@@ -672,7 +636,7 @@ JNIUtil::thrownExceptionToCString()
         }
       jstring jmsg = (jstring) env->CallObjectMethod(t, getMessage);
       JNIStringHolder tmp(jmsg);
-      msg = tmp.pstrdup(getRequestPool()->pool());
+      msg = tmp.pstrdup(in_pool.getPool());
       // ### Conditionally add t.printStackTrace() to msg?
     }
   else
@@ -805,25 +769,6 @@ jobject JNIUtil::createDate(apr_time_t time)
   env->DeleteLocalRef(clazz);
 
   return ret;
-}
-
-/**
- * Return the request pool. The request pool will be destroyed after each
- * request (call).
- * @return the pool to be used for this request
- */
-SVN::Pool *JNIUtil::getRequestPool()
-{
-  return JNIThreadData::getThreadData()->m_requestPool;
-}
-
-/**
- * Set the request pool in thread local storage.
- * @param pool  the request pool
- */
-void JNIUtil::setRequestPool(SVN::Pool *pool)
-{
-  JNIThreadData::getThreadData()->m_requestPool = pool;
 }
 
 /**
