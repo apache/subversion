@@ -49,6 +49,7 @@ Candidate changes:
      Backporting of future changes will be easier.
    Votes:
      +1: arfrever
+     -0: stsp (we can backport these when we need to)
 
  * r1148083, r1148094
    Preload libsvn_auth_gnome_keyring and libsvn_auth_kwallet in locally built
@@ -83,17 +84,6 @@ Candidate changes:
      -0: gstein (the serf 2.x API will be incompatible with 1.7.x, so this
          will never be useful)
 
- * r1154165
-   Make the cmdline argument parser ignore upgrade required errors to
-   allow calling 'svn upgrade c:\iNVALID' on 'C:\Invalid' without an
-   error.
-   Justification:
-     Usually svn allows case differences, but in this case it doesn't.
-     (Triggerable in other scenarios)
-     http://svn.haxx.se/users/archive-2011-08/0142.shtml
-   Votes:
-     +1: rhuijben, arfrever
-
  * r1154278, r1154379, r1154382
    Make 'svn ls' capable of listing Subversion 1.0-1.3 repositories using
    ra_serf.
@@ -118,14 +108,14 @@ Candidate changes:
      Some sanity checking doesn't hurt. Improves error details and avoids
      storing invalid streams in the pristine store.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
  * r1154733
    Correctly position buffer pointer when resuming an aborted transfer in serf.
    Justification:
      Invalid pointer operation that causes at least datastream corruption.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
  * r1154908
    Fix spurious test failures in Ruby bindings.
@@ -145,7 +135,7 @@ Candidate changes:
      r1154982 improves the generic errors and r1155124 restores some
      specific 'svn lock' behavior that was broken by r1154982.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
  * r1155131
    Cleanup the xml parser in serf in unexpected conditions.
@@ -156,7 +146,7 @@ Candidate changes:
      This patch requires r1148932 to be backported for a clean merge.
      Currently accept theirs on conflict produces the right result.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
  * r1155160
    When serf restarts a web request, start parsing xml where we stopped in the
@@ -167,6 +157,8 @@ Candidate changes:
      I (rhuijben) call that a regression.
    Votes:
      +1: rhuijben
+     +0: stsp (Change looks good, but there is a merge conflict.
+               Please create a backport branch.)
 
  * r1155391, r1155404, r1156218
    Fix issue 3983, import into foreign repository.
@@ -278,4 +270,15 @@ Approved changes:
      instead of the error.
    Votes:
      +1: markphip, rhuijben
+
+ * r1154165
+   Make the cmdline argument parser ignore upgrade required errors to
+   allow calling 'svn upgrade c:\iNVALID' on 'C:\Invalid' without an
+   error.
+   Justification:
+     Usually svn allows case differences, but in this case it doesn't.
+     (Triggerable in other scenarios)
+     http://svn.haxx.se/users/archive-2011-08/0142.shtml
+   Votes:
+     +1: rhuijben, arfrever, stsp
 
