@@ -7042,11 +7042,9 @@ read_children_info(void *baton,
 
           child_item->info.have_base = TRUE;
 
-          /* Get the lock info. The query only reports lock info in the row at
-            * op_depth 0. */
-          if (op_depth == 0)
-            child_item->info.lock = lock_from_columns(stmt, 15, 16, 17, 18,
-                                                      result_pool);
+          /* Get the lock info, available only at op_depth 0. */
+          child_item->info.lock = lock_from_columns(stmt, 15, 16, 17, 18,
+                                                    result_pool);
 
           /* Moved-to is only stored at op_depth 0. */
           moved_to_relpath = svn_sqlite__column_text(stmt, 21, NULL); 
