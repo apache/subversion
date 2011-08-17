@@ -141,13 +141,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1155391, r1155404, r1156218
-   Fix issue 3983, import into foreign repository.
-   Justification:
-     It's a regression from 1.6.
-   Votes:
-     +1: philip, rhuijben, cmpilato
-
  * r1158209, r1158210, r1158217
    Fix another variant of issues #2557 and #3987: 'svnversion symlink/to/wc'.
    Justification:

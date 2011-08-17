@@ -696,7 +696,6 @@ svn_client_import4(const char *path,
   apr_hash_t *excludes = apr_hash_make(pool);
   svn_node_kind_t kind;
   const char *local_abspath;
-  const char *base_dir_abspath;
   apr_array_header_t *new_entries = apr_array_make(pool, 4,
                                                    sizeof(const char *));
   const char *temp;
@@ -708,7 +707,6 @@ svn_client_import4(const char *path,
                              _("'%s' is not a local path"), path);
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  base_dir_abspath = local_abspath;
 
   /* Create a new commit item and add it to the array. */
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
@@ -739,8 +737,6 @@ svn_client_import4(const char *path,
     }
 
   SVN_ERR(svn_io_check_path(local_abspath, &kind, pool));
-  if (kind == svn_node_file)
-    base_dir_abspath = svn_dirent_dirname(local_abspath, pool);
 
   /* Figure out all the path components we need to create just to have
      a place to stick our imported tree. */
@@ -770,7 +766,7 @@ svn_client_import4(const char *path,
         }
     }
   while ((err = get_ra_editor(&ra_session,
-                              &editor, &edit_baton, ctx, url, base_dir_abspath,
+                              &editor, &edit_baton, ctx, url, NULL,
                               log_msg, NULL, revprop_table, FALSE, NULL, TRUE,
                               commit_callback, commit_baton, subpool)));
 
