@@ -210,6 +210,10 @@ Candidate changes:
 Veto-blocked changes:
 =====================
 
+
+Approved changes:
+=================
+
  * 1.7.x-neon-default branch
    Make neon the default http library.
    Justification:
@@ -251,10 +255,10 @@ Veto-blocked changes:
      by some HTTP proxies.
    Votes:
      +1: philip, cmpilato, rhuijben, markphip
-     -1: gstein (this backs away from previous discussions stating that
-                 serf is the desired future layer; the issue tracker has
-                 been free of 1.7.0 serf-related bugs for a while now)
-
-
-Approved changes:
-=================
+     +0: gstein (per my comments in issue 3979, I believe we need a
+                 solution to probe the server with HTTP/1.1 support,
+                 then fall back to HTTP/1.0 support as needed;
+                 possibly some config support and other bits; I
+                 believe this is necessary for ra_serf as a default,
+                 yet doing this *properly* is not possible for the 1.7
+                 release)
