@@ -918,7 +918,7 @@ void SVNClient::propertySetRemote(const char *path, long base_rev,
     Path intPath(path, subPool);
     SVN_JNI_ERR(intPath.error_occured(), );
 
-    svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
+    svn_client_ctx_t *ctx = context.getContext(message, subPool);
     if (ctx == NULL)
         return;
 
