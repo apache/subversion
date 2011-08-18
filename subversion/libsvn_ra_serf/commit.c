@@ -149,6 +149,9 @@ typedef struct dir_context_t {
   /* The directory name; if "", we're the 'root' */
   const char *relpath;
 
+  /* The basename of the directory. "" for the 'root' */
+  const char *name;
+
   /* The base revision of the dir. */
   svn_revnum_t base_revision;
 
@@ -179,6 +182,7 @@ typedef struct file_context_t {
   dir_context_t *parent_dir;
 
   const char *relpath;
+  const char *name;
 
   /* The checked out context for this file. */
   checkout_context_t *checkout;
@@ -337,8 +341,7 @@ checkout_dir(dir_context_t *dir)
           dir->checkout->activity_url = dir->commit->activity_url;
           dir->checkout->resource_url =
             svn_path_url_add_component2(dir->parent_dir->checkout->resource_url,
-                                        svn_relpath_basename(dir->relpath, NULL),
-                                        dir->pool);
+                                        dir->name, dir->pool);
 
           return SVN_NO_ERROR;
         }
@@ -1078,9 +1081,8 @@ setup_copy_dir_headers(serf_bucket_t *headers,
   else
     {
       uri.path = (char *)svn_path_url_add_component2(
-        dir->parent_dir->checkout->resource_url,
-        svn_relpath_basename(dir->relpath, pool),
-        pool);
+                                    dir->parent_dir->checkout->resource_url,
+                                    dir->name, pool);
     }
   absolute_uri = apr_uri_unparse(pool, &uri, 0);
 
@@ -1359,6 +1361,7 @@ open_root(void *edit_baton,
       dir->commit = ctx;
       dir->base_revision = base_revision;
       dir->relpath = "";
+      dir->name = "";
       dir->changed_props = apr_hash_make(dir->pool);
       dir->removed_props = apr_hash_make(dir->pool);
       dir->url = apr_pstrdup(dir->pool, ctx->txn_root_url);
@@ -1440,6 +1443,7 @@ open_root(void *edit_baton,
       dir->commit = ctx;
       dir->base_revision = base_revision;
       dir->relpath = "";
+      dir->name = "";
       dir->changed_props = apr_hash_make(dir->pool);
       dir->removed_props = apr_hash_make(dir->pool);
 
@@ -1523,7 +1527,7 @@ delete_entry(const char *path,
       SVN_ERR(checkout_dir(dir));
       delete_target = svn_path_url_add_component2(dir->checkout->resource_url,
                                                   svn_relpath_basename(path,
-                                                                       pool),
+                                                                       NULL),
                                                   pool);
     }
 
@@ -1619,6 +1623,7 @@ add_directory(const char *path,
   dir->copy_revision = copyfrom_revision;
   dir->copy_path = copyfrom_path;
   dir->relpath = apr_pstrdup(dir->pool, path);
+  dir->name = svn_relpath_basename(dir->relpath, NULL);
   dir->changed_props = apr_hash_make(dir->pool);
   dir->removed_props = apr_hash_make(dir->pool);
 
@@ -1634,11 +1639,10 @@ add_directory(const char *path,
       SVN_ERR(checkout_dir(parent));
 
       dir->url = svn_path_url_add_component2(parent->commit->checked_in_url,
-                                             path, dir->pool);
+                                             dir->name, dir->pool);
       mkcol_target = svn_path_url_add_component2(
                                parent->checkout->resource_url,
-                               svn_relpath_basename(path, dir->pool),
-                               dir->pool);
+                               dir->name, dir->pool);
     }
 
   handler = apr_pcalloc(dir->pool, sizeof(*handler));
@@ -1733,6 +1737,7 @@ open_directory(const char *path,
   dir->added = FALSE;
   dir->base_revision = base_revision;
   dir->relpath = apr_pstrdup(dir->pool, path);
+  dir->name = svn_relpath_basename(dir->relpath, NULL);
   dir->changed_props = apr_hash_make(dir->pool);
   dir->removed_props = apr_hash_make(dir->pool);
 
@@ -1863,6 +1868,7 @@ add_file(const char *path,
   new_file->parent_dir = dir;
   new_file->commit = dir->commit;
   new_file->relpath = apr_pstrdup(new_file->pool, path);
+  new_file->name = svn_relpath_basename(new_file->relpath, NULL);
   new_file->added = TRUE;
   new_file->base_revision = SVN_INVALID_REVNUM;
   new_file->copy_path = copy_path;
@@ -1885,8 +1891,7 @@ add_file(const char *path,
 
       new_file->url =
         svn_path_url_add_component2(dir->checkout->resource_url,
-                                    svn_relpath_basename(path, new_file->pool),
-                                    new_file->pool);
+                                    new_file->name, new_file->pool);
     }
 
   while (deleted_parent && deleted_parent[0] != '\0')
@@ -1952,7 +1957,8 @@ open_file(const char *path,
 
   new_file->parent_dir = parent;
   new_file->commit = parent->commit;
-  new_file->relpath = apr_pstrdup(new_file->pool, path); /* TODO: basename? */
+  new_file->relpath = apr_pstrdup(new_file->pool, path);
+  new_file->name = svn_relpath_basename(new_file->relpath, NULL);
   new_file->added = FALSE;
   new_file->base_revision = base_revision;
   new_file->changed_props = apr_hash_make(new_file->pool);
