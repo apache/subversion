@@ -51,7 +51,8 @@ ORDER BY op_depth DESC
 -- STMT_SELECT_BASE_NODE
 SELECT repos_id, repos_path, presence, kind, revision, checksum,
   translated_size, changed_revision, changed_date, changed_author, depth,
-  symlink_target, last_mod_time, properties, file_external IS NOT NULL
+  symlink_target, last_mod_time, properties, file_external IS NOT NULL,
+  moved_to
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
@@ -59,6 +60,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 SELECT nodes.repos_id, nodes.repos_path, presence, kind, revision,
   checksum, translated_size, changed_revision, changed_date, changed_author,
   depth, symlink_target, last_mod_time, properties, file_external IS NOT NULL,
+  moved_to,
   /* All the columns until now must match those returned by
      STMT_SELECT_BASE_NODE. The implementation of svn_wc__db_base_get_info()
      assumes that these columns are followed by the lock information) */
@@ -164,9 +166,9 @@ INSERT OR REPLACE INTO nodes (
   wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
   revision, presence, depth, kind, changed_revision, changed_date,
   changed_author, checksum, properties, translated_size, last_mod_time,
-  dav_cache, symlink_target, file_external)
+  dav_cache, symlink_target, file_external, moved_to)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
-        ?15, ?16, ?17, ?18, ?19, ?20)
+        ?15, ?16, ?17, ?18, ?19, ?20, ?21)
 
 -- STMT_SELECT_OP_DEPTH_CHILDREN
 SELECT local_relpath FROM nodes
