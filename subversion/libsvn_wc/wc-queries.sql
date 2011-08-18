@@ -178,7 +178,7 @@ WHERE wc_id = ?1 AND parent_relpath = ?2
 DELETE FROM nodes
 WHERE wc_id = ?1
   AND (local_relpath = ?2
-       OR ((local_relpath > ?2 || '/') AND (local_relpath < ?2 || '0')))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND (op_depth < ?3
        OR (op_depth = ?3 AND presence = 'base-deleted'))
 
@@ -186,7 +186,7 @@ WHERE wc_id = ?1
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND op_depth = ?3
   AND (parent_relpath = ?2
-       OR ((parent_relpath > ?2 || '/') AND (parent_relpath < ?2 || '0')))
+       OR IS_STRICT_DESCENDANT_OF(parent_relpath, ?2))
   AND presence == 'not-present'
 
 -- STMT_COMMIT_DESCENDANT_TO_BASE
@@ -263,7 +263,7 @@ LEFT JOIN lock ON nodes.repos_id = lock.repos_id
 WHERE wc_id = ?1 AND op_depth = 0
   AND (?2 = ''
        OR local_relpath = ?2
-       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
 
 -- STMT_INSERT_WCROOT
 INSERT INTO wcroot (local_abspath)
@@ -298,7 +298,7 @@ UPDATE nodes SET dav_cache = NULL
 WHERE dav_cache IS NOT NULL AND wc_id = ?1 AND op_depth = 0
   AND (?2 = ''
        OR local_relpath = ?2
-       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
 
 -- STMT_RECURSIVE_UPDATE_NODE_REPO
 UPDATE nodes SET repos_id = ?4, dav_cache = NULL
@@ -306,7 +306,7 @@ WHERE wc_id = ?1
   AND repos_id = ?3
   AND (?2 = ''
        OR local_relpath = ?2
-       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
 
 -- STMT_UPDATE_LOCK_REPOS_ID
 UPDATE lock SET repos_id = ?2
@@ -476,7 +476,7 @@ FROM nodes_current
 WHERE wc_id = ?1
        AND (?2 = ''
             OR local_relpath = ?2 
-            OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+            OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
 
 -- STMT_INSERT_TARGET_WITH_CHANGELIST
 INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
@@ -509,7 +509,7 @@ SELECT N.wc_id, N.local_relpath, N.parent_relpath, N.kind
  WHERE N.wc_id = ?1
        AND (?2 = ''
             OR N.local_relpath = ?2 
-            OR (N.local_relpath > ?2 || '/' AND N.local_relpath < ?2 || '0'))
+            OR IS_STRICT_DESCENDANT_OF(N.local_relpath, ?2))
        AND A.changelist = ?3
 
 -- STMT_SELECT_TARGETS
@@ -578,7 +578,7 @@ DELETE FROM nodes
 WHERE wc_id = ?1
   AND (?2 = ''
        OR local_relpath = ?2
-       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth >= ?3
 
 -- STMT_DELETE_ACTUAL_NODE
@@ -590,7 +590,7 @@ DELETE FROM actual_node
 WHERE wc_id = ?1
   AND (?2 = ''
        OR local_relpath = ?2
-       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
 
 -- STMT_DELETE_ACTUAL_NODE_WITHOUT_CONFLICT
 DELETE FROM actual_node
@@ -611,7 +611,7 @@ DELETE FROM actual_node
 WHERE wc_id = ?1
   AND (?2 = ''
        OR local_relpath = ?2
-       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND (changelist IS NULL
        OR NOT EXISTS (SELECT 1 FROM nodes_current c
                       WHERE c.wc_id = ?1 
@@ -647,7 +647,7 @@ SET properties = NULL,
 WHERE wc_id = ?1
   AND (?2 = ''
        OR local_relpath = ?2
-       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
 
 -- STMT_UPDATE_NODE_BASE_DEPTH
 UPDATE nodes SET depth = ?3
@@ -779,7 +779,7 @@ DELETE FROM wc_lock
 WHERE wc_id = ?1
   AND (?2 = ''
        OR local_dir_relpath = ?2
-       OR (local_dir_relpath > ?2 || '/' AND local_dir_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(local_dir_relpath, ?2))
   AND NOT EXISTS (SELECT 1 FROM nodes
                    WHERE nodes.wc_id = ?1
                      AND nodes.local_relpath = wc_lock.local_dir_relpath)
@@ -813,7 +813,7 @@ SELECT wc_id, local_relpath, ?4 /*op_depth*/, parent_relpath, 'base-deleted',
 FROM nodes
 WHERE wc_id = ?1
   AND (local_relpath = ?2
-       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = ?3
   AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'absent')
 
@@ -842,7 +842,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 UPDATE nodes SET op_depth = ?3 + 1
 WHERE wc_id = ?1
   AND (?2 = ''
-       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
  AND op_depth = ?3
 
 -- STMT_DOES_NODE_EXIST
@@ -854,7 +854,7 @@ SELECT local_relpath FROM nodes
 WHERE wc_id = ?1
   AND (?2 = ''
        OR local_relpath = ?2
-       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = 0 AND presence = 'absent'
 LIMIT 1
 
@@ -864,7 +864,7 @@ SELECT local_relpath FROM nodes
 WHERE wc_id = ?1
   AND (?2 = ''
        OR local_relpath = ?2
-       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = 0
   AND presence = 'absent'
 
@@ -955,7 +955,7 @@ FROM externals
 WHERE wc_id = ?1 
   AND (?2 = ''
        OR def_local_relpath = ?2
-       OR (def_local_relpath > ?2 || '/' AND def_local_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(def_local_relpath, ?2))
 
 -- STMT_UPDATE_EXTERNAL_FILEINFO
 UPDATE externals SET recorded_size = ?3, recorded_mod_time = ?4
@@ -974,7 +974,7 @@ FROM nodes n
 WHERE wc_id = ?1
   AND (?2 = ''
        OR local_relpath = ?2
-       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND kind = 'dir' AND presence='normal'
   AND op_depth=(SELECT MAX(op_depth) FROM nodes o
                 WHERE o.wc_id = ?1 AND o.local_relpath = n.local_relpath)
@@ -1182,7 +1182,7 @@ INSERT INTO delete_list(local_relpath)
 SELECT local_relpath FROM nodes n
 WHERE wc_id = ?1
   AND (local_relpath = ?2
-       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth >= ?3
   AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'absent')
   AND op_depth = (SELECT MAX(op_depth) FROM nodes s
@@ -1207,7 +1207,7 @@ SELECT MIN(revision), MAX(revision),
   WHERE wc_id = ?1
     AND (?2 = ''
        OR local_relpath = ?2
-       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
     AND presence IN ('normal', 'incomplete')
     AND file_external IS NULL
     AND op_depth = 0
@@ -1217,7 +1217,7 @@ SELECT 1 FROM nodes
 WHERE wc_id = ?1
   AND (?2 = ''
        OR local_relpath = ?2
-       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = 0
   AND (presence IN ('absent', 'excluded')
         OR depth NOT IN ('infinity', 'unknown'))
@@ -1229,7 +1229,7 @@ SELECT 1 FROM nodes
 WHERE wc_id = ?1
   AND (?2 = ''
        OR local_relpath = ?2
-       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth > 0
 LIMIT 1
 
@@ -1238,7 +1238,7 @@ SELECT 1 FROM actual_node
 WHERE wc_id = ?1
   AND (?2 = ''
        OR local_relpath = ?2
-       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND properties IS NOT NULL
 LIMIT 1
 
@@ -1261,7 +1261,7 @@ SELECT o.repos_path || '/' || SUBSTR(s.local_relpath, LENGTH(?2)+2) AS expected
 FROM nodes AS o
 LEFT JOIN nodes AS s
 ON o.wc_id = s.wc_id
-   AND s.local_relpath > ?2 || '/' AND s.local_relpath < ?2 || '0'
+   AND IS_STRICT_DESCENDANT_OF(s.local_relpath, ?2)
    AND s.op_depth = 0
    AND s.repos_id = o.repos_id
    AND s.file_external IS NULL
@@ -1275,7 +1275,7 @@ SELECT SUBSTR(s.local_relpath, LENGTH(?2)+2) AS expected
 FROM nodes AS o
 LEFT JOIN nodes AS s
 ON o.wc_id = s.wc_id
-   AND s.local_relpath > ?2 || '/' AND s.local_relpath < ?2 || '0'
+   AND IS_STRICT_DESCENDANT_OF(s.local_relpath, ?2)
    AND s.op_depth = 0
    AND s.repos_id = o.repos_id
    AND s.file_external IS NULL
@@ -1316,7 +1316,7 @@ SELECT local_relpath, translated_size, last_mod_time FROM nodes AS n
 WHERE wc_id = ?1
   AND (?2 = ''
        OR local_relpath = ?2
-       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = 0
   AND kind='file'
   AND presence='normal'

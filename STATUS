@@ -149,13 +149,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1159093
-   Use a macro in wc-queries.sql.
-   Justification:
-     Source code readability.  Avoid conflicts in future backports.
-   Branch:
-     1.7.x-r1159093
-   Votes:
-     +1: danielsh, rhuijben, cmpilato
-     -0: stsp (we can backport this when we need to)
