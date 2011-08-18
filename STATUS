@@ -145,17 +145,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1148083, r1148094
-   Preload libsvn_auth_gnome_keyring and libsvn_auth_kwallet in locally built
-   executables.
-   Justification:
-     Version mismatch errors would occur during trying to use locally built
-     executables when a different version of Subversion was installed
-     in /usr/lib.
-   Votes:
-     +1: arfrever, philip
-     +1: rhuijben (untested, but looks like a safe fix)
-
  * r1155160
    When serf restarts a web request, start parsing xml where we stopped in the
    previous request to avoid xml parse errors on the <?xml.
