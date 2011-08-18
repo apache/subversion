@@ -113,11 +113,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1159230
-   Fix issue #2872: Don't let committers set arbitrary HTTP headers on files.
-   Votes:
-     +1: danielsh, arfrever
-
 Veto-blocked changes:
 =====================
 
@@ -132,3 +127,8 @@ Approved changes:
      stability.
    Votes:
      +1: rhuijben, cmpilato, arfrever
+
+ * r1159230
+   Fix issue #2872: Don't let committers set arbitrary HTTP headers on files.
+   Votes:
+     +1: danielsh, arfrever, rhuijben
