@@ -812,18 +812,8 @@ SELECT wc_id, local_relpath, ?4 /*op_depth*/, parent_relpath, 'base-deleted',
        kind
 FROM nodes
 WHERE wc_id = ?1
-  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
-  AND op_depth = ?3
-  AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'absent')
-
--- STMT_INSERT_DELETE_NODE
-INSERT INTO nodes (
-    wc_id, local_relpath, op_depth, parent_relpath, presence, kind)
-SELECT wc_id, local_relpath, ?4 /*op_depth*/, parent_relpath, 'base-deleted',
-       kind
-FROM nodes
-WHERE wc_id = ?1
-  AND local_relpath = ?2
+  AND (local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = ?3
   AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'absent')
 
