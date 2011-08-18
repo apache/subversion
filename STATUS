@@ -113,6 +113,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1159400
+   Document a neat trick to better handle patch rejects in 'svn help patch'.
+   Justification:
+     Might save a poor soul from lots of manual copy-paste/editing some day.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
