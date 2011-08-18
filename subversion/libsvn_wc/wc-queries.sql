@@ -1365,6 +1365,9 @@ WHERE wc_id = ?1
        OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
   AND op_depth = 0
 
+/* This statement returns pairs of move-roots below the path ?2 in WC_ID ?1.
+ * Each row returns a moved-here path (always a child of ?2) in the first
+ * column, and its matching moved-away (deleted) path in the second column. */
 -- STMT_SELECT_MOVED_HERE_CHILDREN
 SELECT moved_to, local_relpath FROM nodes
 WHERE wc_id = ?1 AND op_depth = 0
