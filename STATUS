@@ -165,6 +165,7 @@ Candidate changes:
      1.7.x-r1159093
    Votes:
      +1: danielsh, rhuijben
+     -0: stsp (we can backport this when we need to)
 
  * r1159132, r1159136, r1159148
    Make serf provide a sensible path for out of date items with HTTPv1 servers.
