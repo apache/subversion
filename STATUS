@@ -122,6 +122,11 @@ Candidate changes:
    Votes:
      +1: rhuijben
    
+ * r1159230
+   Don't let committers set arbitrary HTTP headers on files.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
