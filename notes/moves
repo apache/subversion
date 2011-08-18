@@ -66,19 +66,19 @@ More queries might be needed (TBD).
 == libsvn_wc ==
 
 In the internal wc_db API, the _scan_addition() and _scan_deletion()
-interfaces were be extended to make use of new DB queries to differentiate
+interfaces were extended to make use of new DB queries to differentiate
 moved nodes from copied, added, and deleted nodes.
 
 Two functions were built on top of the wc_db API and added to the
 private libsvn_wc API:
   svn_wc__node_was_moved_away() provides, for a given local_abspath:
     - the moved_to abspath within the working copy
-    - the relpath of the op-root of the copy operation that created
-      the node at the moved_to relpath
+    - the abspath of the op-root of the copy operation that created
+      the node at the moved_to abspath
   svn_wc__node_was_moved_here() provides, for a given local_abspath:
     - the moved_from abspath within the working copy
-    - the relpath of the op-root of the delete operation that deleted
-      the node at the moved_from relpath
+    - the abspath of the op-root of the delete operation that deleted
+      the node at the moved_from abspath
 
 More API changes might be needed (TBD).
 
@@ -110,8 +110,7 @@ Interfaces which have changed behaviour:
  - svn_client_status: Status provides the moved-to abspath for a moved-away
      nodes, and the moved-from abspath for a moved-here node.
      Note that, mostly due to performance reasons, only information about
-     roots of moves is provided. Children of moved nodes aren't marked as
-     such in some special way.
+     roots of moves is provided. Children of moved nodes aren't marked as such.
 
  - svn_client_info: Like status, except that it also provides move
      information about children of moved nodes.
