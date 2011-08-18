@@ -145,18 +145,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1155160
-   When serf restarts a web request, start parsing xml where we stopped in the
-   previous request to avoid xml parse errors on the <?xml.
-   Justification:
-     Without this patch it is not possible to reliable checkout neon using
-     serf. (svn co http://svn.webdav.org/repos/projects/neon/tags/0.29.6 wc).
-     I (rhuijben) call that a regression.
-   Branch:
-     ^/subversion/branches/1.7.x-r1155160
-   Votes:
-     +1: rhuijben, stsp, cmpilato
-
  * r1158196, r1158201, r1158207, r1158209, r1158210, r1158217
    Fix another variant of issues #2557 and #3987: 'svnversion symlink/to/wc'.
    Justification:
