@@ -1207,6 +1207,7 @@ def empty_pseudo_changelist(sbox):
   def find_nodes(nodeset, *args):
     assert isinstance(nodeset, set)
     foundset = found_nodes(*args)
+    nodeset = set(map(lambda path: path.replace('/', os.path.sep), nodeset))
     if nodeset != foundset:
       raise svntest.Failure("Expected nodeset %s but found %s"
                             % (nodeset, foundset))
