@@ -157,6 +157,15 @@ Candidate changes:
     Votes:
       +1: stsp, rhuijben (but only if this gets into 1.7.0)
 
+ * r1159093
+   Use a macro in wc-queries.sql.
+   Justification:
+     Source code readability.  Avoid conflicts in future backports.
+   Branch:
+     1.7.x-r1159093
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
