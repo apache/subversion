@@ -5325,6 +5325,8 @@ op_revert_recursive_txn(void *baton,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_int64_t op_depth;
+  apr_int64_t select_op_depth;
+  svn_boolean_t moved_here;
   int affected_rows;
   apr_pool_t *iterpool;
 
@@ -5356,6 +5358,7 @@ op_revert_recursive_txn(void *baton,
     }
 
   op_depth = svn_sqlite__column_int64(stmt, 0);
+  moved_here = svn_sqlite__column_boolean(stmt, 15);
   SVN_ERR(svn_sqlite__reset(stmt));
 
   if (op_depth > 0 && op_depth != relpath_depth(local_relpath))
@@ -5366,13 +5369,13 @@ op_revert_recursive_txn(void *baton,
                                                     local_relpath,
                                                     scratch_pool));
 
-  if (!op_depth)
-    op_depth = 1; /* Don't delete BASE nodes */
+  /* Don't delete BASE nodes */
+  select_op_depth = op_depth ? op_depth : 1;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_NODES_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id,
-                            local_relpath, op_depth));
+                            local_relpath, select_op_depth));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -5413,7 +5416,12 @@ op_revert_recursive_txn(void *baton,
     }
   svn_pool_destroy(iterpool);
 
-  /* Clear any moved-to paths of the BASE nodes. */
+  /* Clear potential moved-to pointing at the target node itself. */
+  if (op_depth > 0 && op_depth == relpath_depth(local_relpath)
+      && moved_here)
+    SVN_ERR(clear_moved_to(local_relpath, wcroot, scratch_pool));
+
+  /* Clear any moved-to paths of potentially 'moved-away' nodes. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_CLEAR_MOVED_TO_RELPATH_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
