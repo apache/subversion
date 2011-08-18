@@ -118,12 +118,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1158616
-   Recreate missing directories on file install errors.
-   Justification:
-     Trivial patch that fixes a variable reference in a patch that should have
-     handled a common user problem. The result is improved the svn cleanup
-     stability.
-   Votes:
-     +1: rhuijben, cmpilato, arfrever
