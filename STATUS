@@ -25,7 +25,7 @@ Candidate changes:
      This does not include progress reporting, since that is nominated
      separately.
    Votes:
-     +1: rhuijben
+     +1: rhuijben (only for 1.7.0)
      +0: danielsh
      +0: gstein (progress would be nice)
 
@@ -41,6 +41,7 @@ Candidate changes:
      If this proposal passes, the docstrings @since would have to be fixed
      in a new commit.
    Votes:
+     +1: rhuijben (only for 1.7.0)
      +0: danielsh
 
  * r1147540, r1147541
@@ -50,16 +51,6 @@ Candidate changes:
    Votes:
      +1: arfrever
      -0: stsp (we can backport these when we need to)
-
- * r1148083, r1148094
-   Preload libsvn_auth_gnome_keyring and libsvn_auth_kwallet in locally built
-   executables.
-   Justification:
-     Version mismatch errors would occur during trying to use locally built
-     executables when a different version of Subversion was installed
-     in /usr/lib.
-   Votes:
-     +1: arfrever, philip
 
  * r1154278, r1154379, r1154382
    Make 'svn ls' capable of listing Subversion 1.0-1.3 repositories using
@@ -130,6 +121,8 @@ Candidate changes:
      r1158407 and r1158419 are the test, r1158854 is the fix.
    Votes:
      +1: pburba
+     +1: rhuijben (patch is ok, but I think libsvn_wc should provide some
+                   support instead of some reimplementation in libsvn_client)
 
  * r1158893
    Make sure that serf doesn't insert a final '\0' in a property value
@@ -162,7 +155,7 @@ Candidate changes:
         svn merge -c1158617,1158875,1158886,1158896,1158919,1158924,1158963 \
           ^/subversion/trunk
     Votes:
-      +1: stsp (but only if this gets into 1.7.0)
+      +1: stsp, rhuijben (but only if this gets into 1.7.0)
 
 Veto-blocked changes:
 =====================
@@ -186,3 +179,14 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1148083, r1148094
+   Preload libsvn_auth_gnome_keyring and libsvn_auth_kwallet in locally built
+   executables.
+   Justification:
+     Version mismatch errors would occur during trying to use locally built
+     executables when a different version of Subversion was installed
+     in /usr/lib.
+   Votes:
+     +1: arfrever, philip
+     +1: rhuijben (untested, but looks like a safe fix)
