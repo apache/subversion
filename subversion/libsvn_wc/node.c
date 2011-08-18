@@ -1484,6 +1484,7 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
                                const char **original_repos_relpath,
                                svn_boolean_t *conflicted,
                                const char **changelist,
+                               svn_boolean_t *had_props,
                                svn_boolean_t *props_mod,
                                svn_boolean_t *update_root,
                                const char **lock_token,
@@ -1495,12 +1496,16 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t db_kind;
   svn_wc__db_lock_t *lock;
-  svn_boolean_t had_props;
+  svn_boolean_t had_props_tmp;
   svn_boolean_t props_mod_tmp;
   svn_boolean_t have_base;
   svn_boolean_t have_more_work;
   svn_boolean_t op_root;
 
+  /* ### Since there is only one caller, checking out-parameters for NULL is
+   * actually an exercise in futility. Just going with the flow here. */
+  if (!had_props)
+    had_props = &had_props_tmp;
   if (!props_mod)
     props_mod = &props_mod_tmp;
 
@@ -1510,7 +1515,7 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
                                original_repos_relpath, NULL, NULL,
                                original_revision, &lock, NULL, NULL,
                                changelist, conflicted,
-                               &op_root, &had_props, props_mod,
+                               &op_root, had_props, props_mod,
                                &have_base, &have_more_work, NULL,
                                wc_ctx->db, local_abspath,
                                result_pool, scratch_pool));
@@ -1553,7 +1558,7 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
       *symlink = FALSE;
 
       if (db_kind == svn_wc__db_kind_file
-          && (had_props || *props_mod))
+          && (*had_props || *props_mod))
         {
           SVN_ERR(svn_wc__db_read_props(&props, wc_ctx->db, local_abspath,
                                         scratch_pool, scratch_pool));

@@ -321,6 +321,9 @@ svn_prop_name_is_valid(const char *prop_name);
 /** Set if the file should be treated as a special file. */
 #define SVN_PROP_SPECIAL  SVN_PROP_PREFIX "special"
 
+/** Set if the file should be held back from a commit. */
+#define SVN_PROP_HOLD  SVN_PROP_PREFIX "hold"
+
 /** The value to force the special property to when set.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.

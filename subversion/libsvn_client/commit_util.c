@@ -438,6 +438,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
                      apr_pool_t *scratch_pool)
 {
   svn_boolean_t text_mod = FALSE;
+  svn_boolean_t had_props = FALSE;
   svn_boolean_t prop_mod = FALSE;
   apr_byte_t state_flags = 0;
   svn_node_kind_t working_kind;
@@ -488,7 +489,8 @@ harvest_committables(svn_wc_context_t *wc_ctx,
                                          &original_rev, &original_relpath,
                                          &conflicted,
                                          &node_changelist,
-                                         &prop_mod, &is_update_root,
+                                         &had_props, &prop_mod,
+                                         &is_update_root,
                                          &node_lock_token,
                                          wc_ctx, local_abspath,
                                          scratch_pool, scratch_pool));
@@ -742,27 +744,46 @@ harvest_committables(svn_wc_context_t *wc_ctx,
     {
       if (matches_changelists)
         {
-          /* Finally, add the committable item. */
-          SVN_ERR(add_committable(committables, local_abspath, db_kind,
-                                  repos_root_url,
-                                  copy_mode
-                                      ? commit_relpath
-                                      : node_relpath,
-                                  copy_mode
-                                      ? SVN_INVALID_REVNUM
-                                      : node_rev,
-                                  cf_relpath,
-                                  cf_rev,
-                                  state_flags,
-                                  result_pool, scratch_pool));
-          if (state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
-            apr_hash_set(lock_tokens,
-                         svn_path_url_add_component2(
-                             repos_root_url, node_relpath,
-                             apr_hash_pool_get(lock_tokens)),
-                         APR_HASH_KEY_STRING,
-                         apr_pstrdup(apr_hash_pool_get(lock_tokens),
-                                     node_lock_token));
+          svn_boolean_t held = FALSE;
+
+          if (db_kind != svn_node_dir
+              && (had_props || prop_mod))
+            {
+              /* Is the svn:hold property set on this file?
+               * (Determine this only for items that are committable to avoid
+               * reading in props for all files in the WC.) */
+
+              const svn_string_t *propval;
+              SVN_ERR(svn_wc_prop_get2(&propval, wc_ctx, local_abspath,
+                                       SVN_PROP_HOLD,
+                                       scratch_pool, scratch_pool));
+              held = (propval != NULL);
+            }
+
+          if (!held)
+            {
+              /* Finally, add the committable item. */
+              SVN_ERR(add_committable(committables, local_abspath, db_kind,
+                                      repos_root_url,
+                                      copy_mode
+                                          ? commit_relpath
+                                          : node_relpath,
+                                      copy_mode
+                                          ? SVN_INVALID_REVNUM
+                                          : node_rev,
+                                      cf_relpath,
+                                      cf_rev,
+                                      state_flags,
+                                      result_pool, scratch_pool));
+              if (state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
+                apr_hash_set(lock_tokens,
+                             svn_path_url_add_component2(
+                                 repos_root_url, node_relpath,
+                                 apr_hash_pool_get(lock_tokens)),
+                             APR_HASH_KEY_STRING,
+                             apr_pstrdup(apr_hash_pool_get(lock_tokens),
+                                         node_lock_token));
+            }
         }
     }
 
