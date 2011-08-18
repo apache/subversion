@@ -69,20 +69,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1155160
-   When serf restarts a web request, start parsing xml where we stopped in the
-   previous request to avoid xml parse errors on the <?xml.
-   Justification:
-     Without this patch it is not possible to reliable checkout neon using
-     serf. (svn co http://svn.webdav.org/repos/projects/neon/tags/0.29.6 wc).
-     I (rhuijben) call that a regression.
-   Branch:
-     ^/subversion/branches/1.7.x-r1155160
-   Votes:
-     +1: rhuijben, stsp
-     +1: cmpilato (Without branch: Change looks good, but there is a
-                   merge conflict. Please create a backport branch.)
-
  * r1158187, r1158196, r1158201, r1158207
    Fix issues #2557 and #3987: 'svn info symlink/to/wc'.
    Justification:
@@ -101,38 +87,6 @@ Candidate changes:
      stability.
    Votes:
      +1: rhuijben, cmpilato
-
- * r1158196, r1158201, r1158207, r1158209, r1158210, r1158217
-   Fix another variant of issues #2557 and #3987: 'svnversion symlink/to/wc'.
-   Justification:
-     That syntax should work.
-   Notes:
-     r1158196, r1158201, r1158207 adds (and tweaks) the test for tis problem.
-   Votes:
-     +1: rhuijben, danielsh
-     +1 (r1158209, r1158210, r1158217): cmpilato
-
- * r1158407, r1158419, r1158854
-   Fix issue #3989 'merge which deletes file with native eol-style raises
-     spurious tree conflict'.
-   Justification:
-     Fixes a regression from 1.6.x in a common merge use case.
-   Notes:
-     r1158407 and r1158419 are the test, r1158854 is the fix.
-   Votes:
-     +1: pburba
-     +1: rhuijben (patch is ok, but I think libsvn_wc should provide some
-                   support instead of some reimplementation in libsvn_client)
-
- * r1158893
-   Make sure that serf doesn't insert a final '\0' in a property value
-   retrieved via svn_ra_get_file_revs().
-   Justification:
-     Unbreaks annotate in AnkhSVN when using serf. (See log message for
-     details). svn's blame receiver doesn't notice any problems as it just
-     assumes that the interesting property values are valid cstrings.
-   Votes:
-     +1: rhuijben, hwright
 
   * r1158617, r1158875, r1158886, r1158896, r1158919, r1158924, r1158963
     Make 'svn revert' remove unversioned nodes resulting from reverting a copy.
@@ -156,16 +110,6 @@ Candidate changes:
           ^/subversion/trunk
     Votes:
       +1: stsp, rhuijben (but only if this gets into 1.7.0)
-
- * r1159093
-   Use a macro in wc-queries.sql.
-   Justification:
-     Source code readability.  Avoid conflicts in future backports.
-   Branch:
-     1.7.x-r1159093
-   Votes:
-     +1: danielsh, rhuijben
-     -0: stsp (we can backport this when we need to)
 
  * r1159132, r1159136, r1159148
    Make serf provide a sensible path for out of date items with HTTPv1 servers.
@@ -211,3 +155,56 @@ Approved changes:
    Votes:
      +1: arfrever, philip
      +1: rhuijben (untested, but looks like a safe fix)
+
+ * r1155160
+   When serf restarts a web request, start parsing xml where we stopped in the
+   previous request to avoid xml parse errors on the <?xml.
+   Justification:
+     Without this patch it is not possible to reliable checkout neon using
+     serf. (svn co http://svn.webdav.org/repos/projects/neon/tags/0.29.6 wc).
+     I (rhuijben) call that a regression.
+   Branch:
+     ^/subversion/branches/1.7.x-r1155160
+   Votes:
+     +1: rhuijben, stsp, cmpilato
+
+ * r1158196, r1158201, r1158207, r1158209, r1158210, r1158217
+   Fix another variant of issues #2557 and #3987: 'svnversion symlink/to/wc'.
+   Justification:
+     That syntax should work.
+   Notes:
+     r1158196, r1158201, r1158207 adds (and tweaks) the test for tis problem.
+   Votes:
+     +1: rhuijben, danielsh, cmpilato
+
+ * r1158407, r1158419, r1158854
+   Fix issue #3989 'merge which deletes file with native eol-style raises
+     spurious tree conflict'.
+   Justification:
+     Fixes a regression from 1.6.x in a common merge use case.
+   Notes:
+     r1158407 and r1158419 are the test, r1158854 is the fix.
+   Votes:
+     +1: pburba, cmpilato
+     +1: rhuijben (patch is ok, but I think libsvn_wc should provide some
+                   support instead of some reimplementation in libsvn_client)
+
+ * r1158893
+   Make sure that serf doesn't insert a final '\0' in a property value
+   retrieved via svn_ra_get_file_revs().
+   Justification:
+     Unbreaks annotate in AnkhSVN when using serf. (See log message for
+     details). svn's blame receiver doesn't notice any problems as it just
+     assumes that the interesting property values are valid cstrings.
+   Votes:
+     +1: rhuijben, hwright, cmpilato
+
+ * r1159093
+   Use a macro in wc-queries.sql.
+   Justification:
+     Source code readability.  Avoid conflicts in future backports.
+   Branch:
+     1.7.x-r1159093
+   Votes:
+     +1: danielsh, rhuijben, cmpilato
+     -0: stsp (we can backport this when we need to)
