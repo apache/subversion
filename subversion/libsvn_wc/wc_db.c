@@ -6777,7 +6777,7 @@ read_info(svn_wc__db_status_t *status,
           if (op_depth != 0)
             *lock = NULL;
           else
-            *lock = lock_from_columns(stmt_info, 15, 16, 17, 18, result_pool);
+            *lock = lock_from_columns(stmt_info, 16, 17, 18, 19, result_pool);
         }
 
       if (have_work)

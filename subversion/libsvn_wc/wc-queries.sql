@@ -37,8 +37,11 @@ ORDER BY op_depth DESC
 -- STMT_SELECT_NODE_INFO_WITH_LOCK
 SELECT op_depth, nodes.repos_id, nodes.repos_path, presence, kind, revision,
   checksum, translated_size, changed_revision, changed_date, changed_author,
-  depth, symlink_target, last_mod_time, properties, lock_token, lock_owner,
-  lock_comment, lock_date, moved_here
+  depth, symlink_target, last_mod_time, properties, moved_here,
+  /* All the columns until now must match those returned by
+     STMT_SELECT_NODE_INFO. The implementation of svn_wc__db_read_info()
+     assumes that these columns are followed by the lock information) */
+  lock_token, lock_owner, lock_comment, lock_date
 FROM nodes
 LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
   AND nodes.repos_path = lock.repos_relpath
@@ -56,6 +59,9 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 SELECT nodes.repos_id, nodes.repos_path, presence, kind, revision,
   checksum, translated_size, changed_revision, changed_date, changed_author,
   depth, symlink_target, last_mod_time, properties, file_external IS NOT NULL,
+  /* All the columns until now must match those returned by
+     STMT_SELECT_BASE_NODE. The implementation of svn_wc__db_base_get_info()
+     assumes that these columns are followed by the lock information) */
   lock_token, lock_owner, lock_comment, lock_date
 FROM nodes
 LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
