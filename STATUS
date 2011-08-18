@@ -79,15 +79,6 @@ Candidate changes:
      +1: danielsh (without r1158187)
      +1: rhuijben, cmpilato
 
- * r1158616
-   Recreate missing directories on file install errors.
-   Justification:
-     Trivial patch that fixes a variable reference in a patch that should have
-     handled a common user problem. The result is improved the svn cleanup
-     stability.
-   Votes:
-     +1: rhuijben, cmpilato
-
   * r1158617, r1158875, r1158886, r1158896, r1158919, r1158924, r1158963
     Make 'svn revert' remove unversioned nodes resulting from reverting a copy.
     Fixes issue #3101.
@@ -116,36 +107,28 @@ Candidate changes:
    Justifications:
      Bad errors are bad.
    Notes:
-     r1159132 is a nonfunctional rename to make the code clearer. 
+     r1159132 is a nonfunctional rename to make the code clearer.
      r1159136 is the real fix.
      r1159148 is a further cleanup (Not required, but makes patching easier)
    Votes:
      +1: rhuijben
-   
+
  * r1159230
    Don't let committers set arbitrary HTTP headers on files.
    Votes:
-     +1: danielsh
+     +1: danielsh, arfrever
 
 Veto-blocked changes:
 =====================
 
- * r1148992
-   Print error messages about failures of dynamic loading of libraries when
-   SVN_DEBUG_DSO is defined instead of never.
-   Justification:
-     Suboptimal r1148374 was already backported in r1148488.
-   Votes:
-     +1: arfrever
-     -1: rhuijben (A library shouldn't just write things to stderr. This needs
-                   proper error handling instead. And besides I doubt anyone is
-                   going to use this define (Soft veto. Feel free to -0 when the
-                   problems are resolved))
-     -0: philip (changed my mind, I don't think this is needed on the branch)
-     -0: stsp (Arfrever, can you please explain precisely what use case you
-               have for this code? Why do you need it in the release, or
-               on trunk, for that matter?)
-
-
 Approved changes:
 =================
+
+ * r1158616
+   Recreate missing directories on file install errors.
+   Justification:
+     Trivial patch that fixes a variable reference in a patch that should have
+     handled a common user problem. The result is improved the svn cleanup
+     stability.
+   Votes:
+     +1: rhuijben, cmpilato, arfrever
