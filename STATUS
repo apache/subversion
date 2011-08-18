@@ -164,8 +164,19 @@ Candidate changes:
    Branch:
      1.7.x-r1159093
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
 
+ * r1159132, r1159136, r1159148
+   Make serf provide a sensible path for out of date items with HTTPv1 servers.
+   Justifications:
+     Bad errors are bad.
+   Notes:
+     r1159132 is a nonfunctional rename to make the code clearer. 
+     r1159136 is the real fix.
+     r1159148 is a further cleanup (Not required, but makes patching easier)
+   Votes:
+     +1: rhuijben
+   
 Veto-blocked changes:
 =====================
 
