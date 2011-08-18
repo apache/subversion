@@ -384,7 +384,8 @@ CREATE TABLE NODES (
      perhaps add a column called "moved_from". */
 
   /* Boolean value, specifying if this node was moved here (rather than just
-     copied). The source of the move is specified in copyfrom_*.  */
+     copied). The source of the move is implied by a different node with
+     a moved_to column pointing at this node. */
   moved_here  INTEGER,
 
   /* If the underlying node was moved away (rather than just deleted), this
@@ -392,8 +393,8 @@ CREATE TABLE NODES (
      This is set only on the root of a move, and is NULL for all children.
 
      Note that moved_to never refers to *this* node. It always refers
-     to the "underlying" node, whether that is BASE or a child node
-     implied from a parent's move/copy.  */
+     to the "underlying" node in the BASE tree. A non-NULL moved_to column
+     is only valid in rows where op_depth == 0. */
   moved_to  TEXT,
 
 
