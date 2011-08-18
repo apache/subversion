@@ -145,18 +145,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1158407, r1158419, r1158854
-   Fix issue #3989 'merge which deletes file with native eol-style raises
-     spurious tree conflict'.
-   Justification:
-     Fixes a regression from 1.6.x in a common merge use case.
-   Notes:
-     r1158407 and r1158419 are the test, r1158854 is the fix.
-   Votes:
-     +1: pburba, cmpilato
-     +1: rhuijben (patch is ok, but I think libsvn_wc should provide some
-                   support instead of some reimplementation in libsvn_client)
-
  * r1158893
    Make sure that serf doesn't insert a final '\0' in a property value
    retrieved via svn_ra_get_file_revs().
