@@ -120,6 +120,19 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1159760
+   Oops!  Swap some output variations that were keyed on
+   reversed logic.  (--patterns mode was talking about "Path
+   prefixes", while the regular path prefix mode was talking about
+   "Path prefix patterns")
+   Justification:
+     Output mode should match execution mode, dontcha think?
+   Notes:
+     This is pretty close to being an "obvious fix", but let's get more eyes
+     just in case I missed something.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
