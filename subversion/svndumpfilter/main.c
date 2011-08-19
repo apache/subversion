@@ -1106,12 +1106,12 @@ do_filter(apr_getopt_t *os,
                                       do_exclude
                                       ? opt_state->drop_empty_revs
                                       ? _("Excluding (and dropping empty "
-                                          "revisions for) prefixes:\n")
-                                      : _("Excluding prefixes:\n")
+                                          "revisions for) prefix patterns:\n")
+                                      : _("Excluding prefix patterns:\n")
                                       : opt_state->drop_empty_revs
                                       ? _("Including (and dropping empty "
-                                          "revisions for) prefixes:\n")
-                                      : _("Including prefixes:\n")));
+                                          "revisions for) prefix patterns:\n")
+                                      : _("Including prefix patterns:\n")));
         }
       else
         {
@@ -1119,12 +1119,12 @@ do_filter(apr_getopt_t *os,
                                       do_exclude
                                       ? opt_state->drop_empty_revs
                                       ? _("Excluding (and dropping empty "
-                                          "revisions for) prefix patterns:\n")
-                                      : _("Excluding prefix patterns:\n")
+                                          "revisions for) prefixes:\n")
+                                      : _("Excluding prefixes:\n")
                                       : opt_state->drop_empty_revs
                                       ? _("Including (and dropping empty "
-                                          "revisions for) prefix patterns:\n")
-                                      : _("Including prefix patterns:\n")));
+                                          "revisions for) prefixes:\n")
+                                      : _("Including prefixes:\n")));
         }
 
       for (i = 0; i < opt_state->prefixes->nelts; i++)
