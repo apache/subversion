@@ -319,7 +319,7 @@ get_file_mime_types(const char **mimetype1,
  * Set B->path_start_revision to the path of a new temporary file containing
  * the file's text.  Set B->pristine_props to a new hash containing the
  * file's properties.  Install a pool cleanup handler on B->pool to delete
- * the file.
+ * the file.  Allocate all results in B->pool.
  */
 static svn_error_t *
 get_file_from_ra(struct file_baton *b,
@@ -332,7 +332,7 @@ get_file_from_ra(struct file_baton *b,
 
       SVN_ERR(svn_stream_open_unique(&fstream, &(b->path_start_revision), NULL,
                                      svn_io_file_del_on_pool_cleanup,
-                                     scratch_pool, scratch_pool));
+                                     b->pool, scratch_pool));
 
       fstream = svn_stream_checksummed2(fstream, NULL, &b->start_md5_checksum,
                                         svn_checksum_md5, TRUE, scratch_pool);
