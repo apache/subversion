@@ -1128,29 +1128,6 @@ svn_fs_py__fs_supports_mergeinfo(svn_fs_t *fs)
 }
 
 static svn_error_t *
-read_config(svn_fs_t *fs,
-            apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-  int format;
-
-  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
-  SVN_ERR(svn_config_read2(&ffd->config,
-                           svn_dirent_join(fs->path, PATH_CONFIG, pool),
-                           FALSE, FALSE, fs->pool));
-
-  /* Initialize ffd->rep_sharing_allowed. */
-  if (format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
-    SVN_ERR(svn_config_get_bool(ffd->config, &ffd->rep_sharing_allowed,
-                                CONFIG_SECTION_REP_SHARING,
-                                CONFIG_OPTION_ENABLE_REP_SHARING, TRUE));
-  else
-    ffd->rep_sharing_allowed = FALSE;
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 write_config(svn_fs_t *fs,
              apr_pool_t *pool)
 {
