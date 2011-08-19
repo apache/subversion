@@ -428,6 +428,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
                      apr_hash_t *changelists,
                      svn_boolean_t skip_files,
                      svn_boolean_t skip_dirs,
+                     svn_boolean_t ignore_hold,
                      svn_client__check_url_kind_t check_url_func,
                      void *check_url_baton,
                      svn_cancel_func_t cancel_func,
@@ -746,7 +747,8 @@ harvest_committables(svn_wc_context_t *wc_ctx,
         {
           svn_boolean_t held = FALSE;
 
-          if (db_kind != svn_node_dir
+          if ((! ignore_hold)
+              && db_kind != svn_node_dir
               && (had_props || prop_mod))
             {
               /* Is the svn:hold property set on this file?
@@ -862,6 +864,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
                                        changelists,
                                        (depth < svn_depth_files),
                                        (depth < svn_depth_immediates),
+                                       ignore_hold,
                                        check_url_func, check_url_baton,
                                        cancel_func, cancel_baton,
                                        notify_func, notify_baton,
@@ -1007,6 +1010,7 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
                                  const apr_array_header_t *targets,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
+                                 svn_boolean_t ignore_hold,
                                  const apr_array_header_t *changelists,
                                  svn_client__check_url_kind_t check_url_func,
                                  void *check_url_baton,
@@ -1145,7 +1149,7 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
                                    NULL /* COMMIT_RELPATH */,
                                    FALSE /* COPY_MODE_ROOT */,
                                    depth, just_locked, changelist_hash,
-                                   FALSE, FALSE,
+                                   FALSE, FALSE, ignore_hold,
                                    check_url_func, check_url_baton,
                                    ctx->cancel_func, ctx->cancel_baton,
                                    ctx->notify_func2, ctx->notify_baton2,
@@ -1239,6 +1243,7 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
                                FALSE,  /* JUST_LOCKED */
                                NULL,
                                FALSE, FALSE, /* skip files, dirs */
+                               TRUE, /* ignore svn:hold */
                                btn->check_url_func,
                                btn->check_url_baton,
                                btn->ctx->cancel_func,

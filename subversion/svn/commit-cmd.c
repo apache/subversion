@@ -166,11 +166,12 @@ svn_cl__commit(apr_getopt_t *os,
     }
 
   /* Commit. */
-  err = svn_client_commit5(targets,
+  err = svn_client_commit6(targets,
                            opt_state->depth,
                            no_unlock,
                            opt_state->keep_changelists,
                            TRUE /* commit_as_operations */,
+                           opt_state->ignore_hold,
                            opt_state->changelists,
                            opt_state->revprop_table,
                            ! opt_state->quiet
