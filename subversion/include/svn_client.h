@@ -1956,10 +1956,10 @@ svn_client_import(svn_client_commit_info_t **commit_info_p,
  * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
  * the commit.
  *
- * If @a ignore_hold is FALSE, all files that have an @c svn:hold property
- * will be excluded from the commit ("the default"). If @a ignore_hold is
+ * If @a do_not_hold is FALSE, all files that have an @c svn:hold property
+ * will be excluded from the commit ("the default"). If @a do_not_hold is
  * TRUE, all paths will be committed regardless of having an svn:hold
- * property.  Notably, setting @a ignore_hold to TRUE is the only way that
+ * property.  Notably, setting @a do_not_hold to TRUE is the only way that
  * the addition of an svn:hold property can be committed to the repository
  * with this function.
  *
@@ -1976,7 +1976,7 @@ svn_client_commit6(const apr_array_header_t *targets,
                    svn_boolean_t keep_locks,
                    svn_boolean_t keep_changelists,
                    svn_boolean_t commit_as_operations,
-                   svn_boolean_t ignore_hold,
+                   svn_boolean_t do_not_hold,
                    const apr_array_header_t *changelists,
                    const apr_hash_t *revprop_table,
                    svn_commit_callback2_t commit_callback,
@@ -1985,7 +1985,7 @@ svn_client_commit6(const apr_array_header_t *targets,
                    apr_pool_t *pool);
 
 /**
- * Similar to svn_client_commit6(), but with @a ignore_hold set to @c TRUE.
+ * Similar to svn_client_commit6(), but with @a do_not_hold set to @c TRUE.
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.7 API.
  */

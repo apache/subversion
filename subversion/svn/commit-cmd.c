@@ -171,7 +171,7 @@ svn_cl__commit(apr_getopt_t *os,
                            no_unlock,
                            opt_state->keep_changelists,
                            TRUE /* commit_as_operations */,
-                           opt_state->ignore_hold,
+                           opt_state->do_not_hold,
                            opt_state->changelists,
                            opt_state->revprop_table,
                            ! opt_state->quiet
