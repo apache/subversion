@@ -76,7 +76,7 @@ Candidate changes:
    Notes:
      Depends on the r1158193 group.
    Votes:
-     +1: danielsh (without r1158187)
+     +1: danielsh (without r1158187, so just the tests and not the fix)
      +1: rhuijben, cmpilato
 
   * r1158617, r1158875, r1158886, r1158896, r1158919, r1158924, r1158963
@@ -131,9 +131,9 @@ Approved changes:
    Justification:
      That syntax should work.
    Notes:
-     r1158196, r1158201, r1158207 adds (and tweaks) the test for tis problem.
+     r1158196, r1158201, r1158207 adds (and tweaks) the test for this problem.
    Notes:
-     Tests fail.  Depends on the r1159226 group?
+     Tests fail.  Requires r1158187, which needs one more vote.
    Votes:
      +1: rhuijben, cmpilato
      +1 (once tests pass): danielsh
