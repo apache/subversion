@@ -120,7 +120,7 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1159760
+ * r1159760, r1159772
    Oops!  Swap some output variations that were keyed on
    reversed logic.  (--patterns mode was talking about "Path
    prefixes", while the regular path prefix mode was talking about
@@ -131,7 +131,7 @@ Candidate changes:
      This is pretty close to being an "obvious fix", but let's get more eyes
      just in case I missed something.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, danielsh
 
 Veto-blocked changes:
 =====================
