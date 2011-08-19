@@ -125,3 +125,15 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1158196, r1158201, r1158207, r1158209, r1158210, r1158217
+   Fix another variant of issues #2557 and #3987: 'svnversion symlink/to/wc'.
+   Justification:
+     That syntax should work.
+   Notes:
+     r1158196, r1158201, r1158207 adds (and tweaks) the test for tis problem.
+   Notes:
+     Tests fail.  Depends on the r1159226 group?
+   Votes:
+     +1: rhuijben, cmpilato
+     +1 (once tests pass): danielsh
