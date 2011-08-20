@@ -595,10 +595,16 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
    DEPTH is the depth to recurse.
 
-   RA_SESSION defines the additional RA session for requesting file
-   contents.
+   RA_SESSION is an RA session through which this editor may fetch
+   properties, file contents and directory listings of the 'old' side of the
+   diff. It is a separate RA session from the one through which this editor
+   is being driven.
 
    REVISION is the start revision in the comparison.
+
+   For each deleted directory, if WALK_DELETED_DIRS is true then just call
+   the 'dir_deleted' callback once, otherwise call the 'file_deleted' or
+   'dir_deleted' callback for each individual node in that subtree.
 
    If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
    file and directory operated on during the edit.
