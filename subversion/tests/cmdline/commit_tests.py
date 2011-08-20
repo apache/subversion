@@ -2803,6 +2803,44 @@ def commit_multiple_nested_deletes(sbox):
 
   svntest.main.run_svn(None, 'ci', A, A_B, '-m', 'Q')
 
+#----------------------------------------------------------------------
+@Issue(2858)
+def commit_hold_one_file(sbox):
+  "commit one file, with svn:hold on another"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  G_path = sbox.ospath('A/D/G')
+  rho_path = sbox.ospath('A/D/G/rho')
+  pi_path = sbox.ospath('A/D/G/pi')
+
+  # Make changes.
+  sbox.simple_propset('arbitrary', 'change', 'A/D/G/rho', 'A/D/G/pi')
+
+  # Create expected state.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/rho' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G/pi', status=' M')
+  expected_status.tweak('A/D/G/rho', wc_rev=2, status='  ')
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/D/G/pi', props={'arbitrary': 'change',
+                                         'svn:hold': 'yes'})
+  expected_disk.tweak('A/D/G/rho', props={'arbitrary': 'change'})
+
+  # Commit one file.
+  sbox.simple_propset('svn:hold', 'yes', 'A/D/G/pi')
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+  svntest.actions.verify_disk(wc_dir, expected_disk, check_props=True)
+
 
 ########################################################################
 # Run the tests
@@ -2871,6 +2909,7 @@ test_list = [ None,
               tree_conflicts_block_commit,
               tree_conflicts_resolved,
               commit_multiple_nested_deletes,
+              commit_hold_one_file,
              ]
 
 if __name__ == '__main__':
