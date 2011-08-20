@@ -1753,7 +1753,8 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
   SVN_ERR(svn_client__get_diff_editor(
                 &diff_editor, &diff_edit_baton,
                 NULL, "", depth,
-                extra_ra_session, rev1, TRUE,
+                extra_ra_session, rev1, TRUE /* walk_deleted_dirs */,
+                TRUE /* text_deltas */,
                 callbacks, callback_baton,
                 ctx->cancel_func, ctx->cancel_baton,
                 NULL /* no notify_func */, NULL /* no notify_baton */,
@@ -1762,7 +1763,7 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
   /* We want to switch our txn into URL2 */
   SVN_ERR(svn_ra_do_diff3
           (ra_session, &reporter, &reporter_baton, rev2, target1,
-           depth, ignore_ancestry, TRUE,
+           depth, ignore_ancestry, TRUE /* text_deltas */,
            url2, diff_editor, diff_edit_baton, pool));
 
   /* Drive the reporter; do the diff. */
@@ -2038,6 +2039,8 @@ diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
   const char *target1;
   const char *target2;
   svn_ra_session_t *ra_session;
+  svn_wc_diff_callbacks4_t *callbacks;
+  void *callback_baton;
 
   /* Prepare info for the repos repos diff. */
   SVN_ERR(diff_prepare_repos_repos(&url1, &url2, &base_path, &rev1, &rev2,
@@ -2046,6 +2049,10 @@ diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
                                    path1, path2, revision1, revision2,
                                    peg_revision, pool));
 
+  SVN_ERR(svn_client__get_diff_summarize_callbacks(
+            &callbacks, &callback_baton,
+            target1, summarize_func, summarize_baton, pool));
+
   /* Now, we open an extra RA session to the correct anchor
      location for URL1.  This is used to get the kind of deleted paths.  */
   SVN_ERR(svn_client__open_ra_session_internal(&extra_ra_session, NULL,
@@ -2053,10 +2060,13 @@ diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
                                                TRUE, ctx, pool));
 
   /* Set up the repos_diff editor. */
-  SVN_ERR(svn_client__get_diff_summarize_editor
-          (target2, summarize_func,
-           summarize_baton, extra_ra_session, rev1, ctx->cancel_func,
-           ctx->cancel_baton, &diff_editor, &diff_edit_baton, pool));
+  SVN_ERR(svn_client__get_diff_editor(&diff_editor, &diff_edit_baton,
+            NULL /* wc_ctx */, "", depth,
+            extra_ra_session, rev1, TRUE /* walk_deleted_dirs */,
+            FALSE /* text_deltas */,
+            callbacks, callback_baton,
+            ctx->cancel_func, ctx->cancel_baton,
+            NULL /* notify_func */, NULL /* notify_baton */, pool));
 
   /* We want to switch our txn into URL2 */
   SVN_ERR(svn_ra_do_diff3
