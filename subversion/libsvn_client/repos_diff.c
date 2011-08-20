@@ -315,11 +315,19 @@ get_file_mime_types(const char **mimetype1,
 }
 
 
-/* Get revision REVISION of the file described by B from the repository.
- * Set B->path_start_revision to the path of a new temporary file containing
- * the file's text.  Set B->pristine_props to a new hash containing the
- * file's properties.  Install a pool cleanup handler on B->pool to delete
- * the file.  Allocate all results in B->pool.
+/* Get revision B->base_revision of the file described by B from the
+ * repository, through B->edit_baton->ra_session.
+ *
+ * Unless PROPS_ONLY is true:
+ *   Set B->path_start_revision to the path of a new temporary file containing
+ *   the file's text.
+ *   Set B->start_md5_checksum to that file's MD-5 checksum.
+ *   Install a pool cleanup handler on B->pool to delete the file.
+ *
+ * Always:
+ *   Set B->pristine_props to a new hash containing the file's properties.
+ *
+ * Allocate all results in B->pool.
  */
 static svn_error_t *
 get_file_from_ra(struct file_baton *b,
