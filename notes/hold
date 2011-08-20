@@ -1,0 +1,186 @@
+Feature Outline: Issue #2858 / svn:hold
+=======================================
+
+This text describes plans and concerns about creating an svn:hold property that 
+automatically omits paths from commits that have this property set. WIP.
+$Date$
+
+When there are multiple options, I made my preferred solution the a) option,
+and the less preferred one the b) option. This is just my personal opinion.
+Actually, at the time of writing, this whole file is ;)
+
+
+USE CASES
+=========
+
+Do not commit modifications on selected files, which do have to be versioned,
+because...
+
+(1) CONVENIENCE
+File 'foo' is modified with every click made in my IDE. I want 'foo' to be
+skipped on commits unless I explicitly ask svn to commit it. (Instead of
+having to take explicit care on every commit to omit the file.)
+
+(2) LOCAL/GLOBAL
+Since all other developers use the same IDE, I want to have the option to tell
+all other working copies to hold back 'foo' as well -- but only if all agreed
+to that. Else I want to just hold locally.
+
+(3) SECRET
+Every user must locally add their passwords and PIN numbers to file 'foo'.
+By default, every working copy should exclude 'foo' from commits. We don't
+want any user's mods of 'foo' to even go over the wire (ruling out hooks).
+
+
+LEGEND:
+  'held-back file': A file that's excluded from a commit by svn:hold.
+
+
+DETAILS
+=======
+
+(4) NAME
+    The property is called "svn:hold".
+
+(5) VALUE
+(5a) BOOLEAN
+     A file is held-back iff it has an svn:hold property, with whichever
+     value, even empty. A fixed set of subcommands heeds svn:hold.
+ OR
+(5b) LIST OF STRINGS
+     The value of 'svn:hold' determines which subcommands hold the file:
+     - commit: holding back upon commit is *always* implied.
+     - diff:   Omit local mods of held-back files from diff.
+     - status: Entirely omit the file from 'svn status' output.
+     - copy:   The file should only be copied without the local modifications.
+     - merge:  Don't merge onto the file.
+     - update: Don't update the file, and, in consequence, don't commit it.
+     - ...?
+
+
+(6) NODE KINDS
+Only files should be held-back. 'svn:hold' should not act recursively (for
+performance and implementation complexity reasons?), and actually, 'svn:hold'
+should not be allowed to be set on directories. If an entire subtree should be
+put on hold, users can do 'svn propset -R'. Such a recursive propset should
+not error out on the first dir encountered, but instead print a warning that
+svn:hold was only added to the files, ignoring the dirs.
+
+(7) LOCAL HOLD
+The svn:hold property already acts when it is added locally. This provides a
+way to hold back files in only the local working copy, no other users nor the
+repository is affected. See [2].
+
+(8) GLOBAL HOLD
+There must be a --do-not-hold option to 'svn commit'. This allows committing
+the 'svn:hold' propadd to the repository, so that it is added to every other
+working copy, resulting in a global hold-by-default.
+NOTE: My preferred option names would have been --ignore-hold or --no-hold,
+but unfortunately, both are ambiguous. Depending on the user's intuition, they
+could mean "ignore the held-back files" or "ignore that files are held-back"
+or even "commit everything except the svn:hold propadd". --do-not-hold and
+--disable-hold are the only ones I found that aren't ambiguous like that.
+
+
+SUBCOMMANDS
+So far, no real point has been made to justify ignoring file mods on any other
+command except 'commit'. I am adding some as I type:
+
+  (10) DIFF: if local modifications don't get committed, then there's no need
+  to read about them in a diff of local mods. (Held-back files should *not*
+  omit already-committed modifications.)
+
+  (11) COPY:
+    (12) WC-TO-URL: Copying locally added secrets [3] to a URL is fatal. Any
+    WC-to-URL copy of held-back files should
+      (12a) exclude local mods, or
+      (12b) just bail if there are local mods, unless they get a --do-not-hold
+            option. (probably easier to do, until [12a] gets implemented)
+    (13) WC-TO-WC: A WC copy or move will also copy the svn:hold property, and
+    thus isn't that dangerous for [3]. But when a WC-to-WC copy of a subtree
+    that has a held-back file inside is finally committed, the BASE node of
+    the held-back file should indeed be added. Omitting the held-back file
+    completely would imply a delete within the added tree. So a commit
+    should take care to add files that are held-back, but skip all local
+    modifications.
+    (14a) Committing BASE nodes for added held-back files should be limited to
+          copied/moved files, i.e. where the BASE is nonempty. Simply-added
+          held-back files should not be added to the repos at all.
+     OR
+    (14b) If a held-back file is simply-added (not copied/moved), just add an
+          empty file with no props except svn:hold to the repository.
+
+  (15) STATUS:
+  (15a) 'svn status' should show mods on held-back files iff they are
+        modified, with an added status indicator like 'H'.
+   OR
+  (15b) 'svn status' should omit held-back files even if modified,
+        unless --show-hold is supplied.
+
+  (16) UPDATE: Holding off updates from a file could be desirable, but I can't
+  think of any real situation that needs this. If holding back updates is ever
+  implemented, it should definitely be optional, as in [5b]. See also [19]!
+
+  (17) MERGE: Holding off merges from single files is pure madness. Alas, the
+  whole topic of svn:hold is a nightmare in merge land. Users have to take
+  great care to do The Right Thing: If you merge committed modifications on a
+  locally held-back file, the merge result for it will not be committed --
+  even if there had not been any local modifications on the held-back file.
+  'svn merge' should issue a warning that it has merged files that (now) have
+  the 'svn:hold' property in the local working copy, and that, for basic
+  sanity, --do-not-hold should be supplied at commit time. See also [19]!
+
+  (18) SWITCH: Switch should go ahead as always. All it does is pull other
+  BASE nodes in under the local mods, so there is no danger of anything
+  leaking around. But see [19]!
+
+  (19) UPSTREAM REMOVES 'svn:hold': Users must be warned when update, switch
+  or merge remove the 'svn:hold' property from a file that had local mods.
+  They should maybe even flag some (new??) kind of conflict. See also [31].
+
+
+PERFORMANCE DURING COMMIT
+  (20) USUALLY FAST:
+  In the current trial implementation on the 'hold' branch, the 'svn:hold'
+  property is evaluated only on the files that have made it all the way
+  through harvest_committables() with a modified status. Usually, only very
+  few files compared to the entire WC tree get committed, and this feature
+  only adds CPU time for those very few files that are modified.
+
+  (21) NON-USUALLY O(n):
+  When merging, or sometimes anyway, it can happen that up to *all* files of a
+  WC are modified and would be committed. This would add a little propget CPU
+  time to every file walked over. (Perf-loss is linear to the amount of files)
+
+  (22) WORK AROUND PERF LOSS:
+  Issuing --do-not-hold on the commit commandline makes commit
+  as fast as it was before svn:hold. Could make sense if a lot of files are
+  modified and none of them are / need to be held-back.
+
+  (23) OPTIMIZATION:
+  Assuming props will always be stored as a skeld BLOB in wc.db, and assuming
+  users get noticeable slowness from svn:hold, a column could be added to
+  the NODES table indicating presence of an 'svn:hold' prop per node.
+  - (24) A commit could quickly scan if there are any nodes on hold in the WC
+    at all and pass --do-not-hold implicitly to obtain [22].
+  - (25) A commit would already get a held-back flag during read_info, making
+    the propget superfluous if [5a] svn:hold is a boolean, and even in [5b]
+    (list-of-strings), as hold-back on commit would always be implied.
+
+
+PERFORMANCE DURING OTHER SUBCOMMANDS
+  (30) PERF LOSS BY CHECKS
+  There are additional checks added to merge, switch and update by [19].
+  All those checks are still O(n), and checks can be skipped by certain
+  already-known indicators (like no local mods, no propchanges, ...).
+
+  (31) WORK AROUND PERF LOSS
+  A --no-hold-warnings option for update/merge/switch could disable above
+  checks. Useful if the user knows there are no local mods that need hold
+  protection and wants speedup, or even just nonverbosity.
+  Note that a step like [24] won't work here, as update/merge/switch may bring
+  in new svn:hold properties.
+
+  (32) STATUS
+  'svn status' has to evaluate one more prop per modified file.
+
