@@ -98,6 +98,9 @@ struct edit_baton {
      FALSE otherwise. */
   svn_boolean_t walk_deleted_repos_dirs;
 
+  /* Whether to report text deltas */
+  svn_boolean_t text_deltas;
+
   /* A callback used to see if the client wishes to cancel the running
      operation. */
   svn_cancel_func_t cancel_func;
@@ -493,7 +496,7 @@ open_root(void *edit_baton,
 }
 
 /* Recursively walk tree rooted at DIR (at REVISION) in the repository,
- * reporting all files as deleted.  Part of a workaround for issue 2333.
+ * reporting all children as deleted.  Part of a workaround for issue 2333.
  *
  * DIR is a repository path relative to the URL in RA_SESSION.  REVISION
  * must be a valid revision number, not SVN_INVALID_REVNUM.  EB is the
@@ -562,13 +565,20 @@ diff_deleted_dir(const char *dir,
         }
 
       if (dirent->kind == svn_node_dir)
-        SVN_ERR(diff_deleted_dir(path,
-                                 revision,
-                                 ra_session,
-                                 eb,
-                                 cancel_func,
-                                 cancel_baton,
-                                 iterpool));
+        {
+          const char *wcpath = svn_dirent_join(eb->target, path, iterpool);
+
+          SVN_ERR(eb->diff_callbacks->dir_deleted(
+                                NULL, NULL, wcpath,
+                                eb->diff_cmd_baton, iterpool));
+          SVN_ERR(diff_deleted_dir(path,
+                                   revision,
+                                   ra_session,
+                                   eb,
+                                   cancel_func,
+                                   cancel_baton,
+                                   iterpool));
+        }
     }
 
   svn_pool_destroy(iterpool);
@@ -977,7 +987,7 @@ close_file(void *file_baton,
 
   scratch_pool = b->pool;
 
-  if (expected_md5_digest)
+  if (expected_md5_digest && eb->text_deltas)
     {
       svn_checksum_t *expected_md5_checksum;
 
@@ -1333,6 +1343,7 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
                             svn_ra_session_t *ra_session,
                             svn_revnum_t revision,
                             svn_boolean_t walk_deleted_dirs,
+                            svn_boolean_t text_deltas,
                             const svn_wc_diff_callbacks4_t *diff_callbacks,
                             void *diff_cmd_baton,
                             svn_cancel_func_t cancel_func,
@@ -1363,6 +1374,7 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
   eb->notify_func = notify_func;
   eb->notify_baton = notify_baton;
   eb->walk_deleted_repos_dirs = walk_deleted_dirs;
+  eb->text_deltas = text_deltas;
   eb->cancel_func = cancel_func;
   eb->cancel_baton = cancel_baton;
 

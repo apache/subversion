@@ -606,6 +606,11 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
    the 'dir_deleted' callback once, otherwise call the 'file_deleted' or
    'dir_deleted' callback for each individual node in that subtree.
 
+   If TEXT_DELTAS is FALSE, then do not expect text deltas from the edit
+   drive, nor send text deltas to the diff callbacks.
+   ### TODO: The implementation currently does send text deltas to the diff
+       callbacks in many cases even if they are not wanted.
+
    If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
    file and directory operated on during the edit.
 
@@ -619,6 +624,7 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
                             svn_ra_session_t *ra_session,
                             svn_revnum_t revision,
                             svn_boolean_t walk_deleted_dirs,
+                            svn_boolean_t text_deltas,
                             const svn_wc_diff_callbacks4_t *diff_callbacks,
                             void *diff_cmd_baton,
                             svn_cancel_func_t cancel_func,
@@ -632,29 +638,23 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
 
 /*** Editor for diff summary ***/
 
-/* Create an editor for a repository diff summary, i.e. comparing one
-   repository version against the other and only providing information
-   about the changed items without the text deltas.
+/* Set *CALLBACKS and *CALLBACK_BATON to a set of diff callbacks that will
+   report a diff summary, i.e. only providing information about the changed
+   items without the text deltas.
 
-   TARGET is the target of the diff, relative to the root of the edit.
+   TARGET is the target path, relative to the anchor, of the diff.
 
    SUMMARIZE_FUNC is called with SUMMARIZE_BATON as parameter by the
-   created svn_delta_editor_t for each changed item.
-
-   See svn_client__get_diff_editor() for a description of the other
-   parameters.  */
+   created callbacks for each changed item.
+*/
 svn_error_t *
-svn_client__get_diff_summarize_editor(const char *target,
-                                      svn_client_diff_summarize_func_t
-                                      summarize_func,
-                                      void *summarize_baton,
-                                      svn_ra_session_t *ra_session,
-                                      svn_revnum_t revision,
-                                      svn_cancel_func_t cancel_func,
-                                      void *cancel_baton,
-                                      const svn_delta_editor_t **editor,
-                                      void **edit_baton,
-                                      apr_pool_t *pool);
+svn_client__get_diff_summarize_callbacks(
+                        svn_wc_diff_callbacks4_t **callbacks,
+                        void **callback_baton,
+                        const char *target,
+                        svn_client_diff_summarize_func_t summarize_func,
+                        void *summarize_baton,
+                        apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 
