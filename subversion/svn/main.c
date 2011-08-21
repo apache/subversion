@@ -1011,6 +1011,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  for deletion. If the patch creates a new file, that file is scheduled\n"
      "  for addition. Use 'svn revert' to undo deletions and additions you\n"
      "  do not agree with.\n"
+     "\n"
+     "  Hint: If the patch file was created with Subversion, it will contain\n"
+     "        the number of a revision N the patch will cleanly apply to\n"
+     "        (look for lines like \"--- foo/bar.txt        (revision N)\").\n"
+     "        To avoid rejects, first update to the revision N using \n"
+     "        'svn update -r N', apply the patch, and then update back to the\n"
+     "        HEAD revision. This way, conflicts can be resolved interactively.\n"
      ),
     {'q', opt_dry_run, opt_strip, opt_reverse_diff,
      opt_ignore_whitespace} },
@@ -1941,12 +1948,6 @@ main(int argc, const char *argv[])
         break;
       case opt_changelist:
         opt_state.changelist = apr_pstrdup(pool, opt_arg);
-        if (opt_state.changelist[0] == '\0')
-          {
-            err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                   _("Changelist names must not be empty"));
-            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-          }
         apr_hash_set(changelists, opt_state.changelist,
                      APR_HASH_KEY_STRING, (void *)1);
         break;

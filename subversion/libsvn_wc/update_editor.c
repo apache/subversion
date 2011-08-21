@@ -1272,7 +1272,8 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
   /* Get the source-left information, i.e. the local state of the node
    * before any changes were made to the working copy, i.e. the state the
    * node would have if it was reverted. */
-  if (reason == svn_wc_conflict_reason_added)
+  if (reason == svn_wc_conflict_reason_added ||
+      reason == svn_wc_conflict_reason_moved_here)
     {
       svn_wc__db_status_t added_status;
 
@@ -1327,6 +1328,7 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
        * and that other case should also be handled. */
       SVN_ERR_ASSERT(reason == svn_wc_conflict_reason_edited
                      || reason == svn_wc_conflict_reason_deleted
+                     || reason == svn_wc_conflict_reason_moved_away
                      || reason == svn_wc_conflict_reason_replaced
                      || reason == svn_wc_conflict_reason_obstructed);
 
@@ -1364,7 +1366,8 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
       /* This is an 'update', so REPOS_RELPATH would be the same as for
        * source-left. However, we don't have a source-left for locally
        * added files. */
-      right_repos_relpath = (reason == svn_wc_conflict_reason_added ?
+      right_repos_relpath = ((reason == svn_wc_conflict_reason_added ||
+                              reason == svn_wc_conflict_reason_moved_here) ?
                              added_repos_relpath : left_repos_relpath);
       if (! right_repos_relpath)
         right_repos_relpath = their_relpath;
@@ -1496,7 +1499,18 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
              * would not have been called in the first place. */
             SVN_ERR_ASSERT(action == svn_wc_conflict_action_add);
 
-            reason = svn_wc_conflict_reason_added;
+            /* Scan the addition in case our caller didn't. */
+            if (working_status == svn_wc__db_status_added)
+              SVN_ERR(svn_wc__db_scan_addition(&working_status, NULL, NULL,
+                                               NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL, NULL,
+                                               eb->db, local_abspath,
+                                               scratch_pool, scratch_pool));
+
+            if (working_status == svn_wc__db_status_moved_here)
+              reason = svn_wc_conflict_reason_moved_here;
+            else
+              reason = svn_wc_conflict_reason_added;
           }
         else
           {
@@ -1507,8 +1521,20 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
 
 
       case svn_wc__db_status_deleted:
-        /* The node is locally deleted. */
-        reason = svn_wc_conflict_reason_deleted;
+        {
+          const char *moved_to_abspath;
+
+          /* The node is locally deleted. Check if it was moved away.
+           * ### should scan_deletion return status_moved_away, like
+           * ### scan_addition returns status_moved_here? */
+          SVN_ERR(svn_wc__db_scan_deletion(NULL, &moved_to_abspath, NULL,
+                                           NULL, eb->db, local_abspath,
+                                           scratch_pool, scratch_pool));
+          if (moved_to_abspath)
+            reason = svn_wc_conflict_reason_moved_away;
+          else
+            reason = svn_wc_conflict_reason_deleted;
+        }
         break;
 
       case svn_wc__db_status_incomplete:
@@ -1573,6 +1599,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
    * would not have been called in the first place.*/
   if (reason == svn_wc_conflict_reason_edited
       || reason == svn_wc_conflict_reason_deleted
+      || reason == svn_wc_conflict_reason_moved_away
       || reason == svn_wc_conflict_reason_replaced)
     /* When the node existed before (it was locally deleted, replaced or
      * edited), then 'update' cannot add it "again". So it can only send
@@ -1580,7 +1607,8 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
     SVN_ERR_ASSERT(action == svn_wc_conflict_action_edit
                    || action == svn_wc_conflict_action_delete
                    || action == svn_wc_conflict_action_replace);
-  else if (reason == svn_wc_conflict_reason_added)
+  else if (reason == svn_wc_conflict_reason_added ||
+           reason == svn_wc_conflict_reason_moved_here)
     /* When the node did not exist before (it was locally added), then 'update'
      * cannot want to modify it in any way. It can only send _action_add. */
     SVN_ERR_ASSERT(action == svn_wc_conflict_action_add);
@@ -1835,6 +1863,7 @@ delete_entry(const char *path,
              keeping a not-present marker */
         }
       else if (tree_conflict->reason == svn_wc_conflict_reason_deleted
+               || tree_conflict->reason == svn_wc_conflict_reason_moved_away
                || tree_conflict->reason == svn_wc_conflict_reason_replaced)
         {
           /* The item does not exist locally because it was already shadowed.
@@ -2355,6 +2384,7 @@ open_directory(const char *path,
       /* Other modifications wouldn't be a tree conflict */
       SVN_ERR_ASSERT(
                 tree_conflict->reason == svn_wc_conflict_reason_deleted ||
+                tree_conflict->reason == svn_wc_conflict_reason_moved_away ||
                 tree_conflict->reason == svn_wc_conflict_reason_replaced);
 
       /* Continue updating BASE */
@@ -3349,6 +3379,7 @@ open_file(const char *path,
       /* Other modifications wouldn't be a tree conflict */
       SVN_ERR_ASSERT(
                 tree_conflict->reason == svn_wc_conflict_reason_deleted ||
+                tree_conflict->reason == svn_wc_conflict_reason_moved_away||
                 tree_conflict->reason == svn_wc_conflict_reason_replaced);
 
       /* Continue updating BASE */
