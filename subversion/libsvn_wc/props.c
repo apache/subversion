@@ -2071,6 +2071,7 @@ validate_prop_against_node_kind(const char *name,
                                  SVN_PROP_EOL_STYLE,
                                  SVN_PROP_MIME_TYPE,
                                  SVN_PROP_NEEDS_LOCK,
+                                 SVN_PROP_HOLD,
                                  NULL };
   const char **node_kind_prohibit;
   const char *path_display
