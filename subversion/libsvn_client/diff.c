@@ -2022,7 +2022,6 @@ diff_summarize_wc_wc(svn_client_diff_summarize_func_t summarize_func,
                      const svn_opt_revision_t *revision2,
                      svn_depth_t depth,
                      svn_boolean_t ignore_ancestry,
-                     svn_boolean_t use_git_diff_format,
                      const apr_array_header_t *changelists,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
@@ -2068,7 +2067,7 @@ diff_summarize_wc_wc(svn_client_diff_summarize_func_t summarize_func,
                        callbacks, callback_baton,
                        depth,
                        ignore_ancestry, FALSE /* show_copies_as_adds */,
-                       /* FALSE */ use_git_diff_format, changelists,
+                       FALSE /* use_git_diff_format */, changelists,
                        ctx->cancel_func, ctx->cancel_baton,
                        pool));
   return SVN_NO_ERROR;
@@ -2180,7 +2179,6 @@ do_diff_summarize(svn_client_diff_summarize_func_t summarize_func,
     return diff_summarize_wc_wc(summarize_func, summarize_baton,
                                 path1, revision1, path2, revision2,
                                 depth, ignore_ancestry,
-                                FALSE /* use_git_diff_format */,
                                 changelists, ctx, pool);
   else
    return unsupported_diff_error(
