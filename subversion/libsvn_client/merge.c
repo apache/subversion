@@ -7854,7 +7854,7 @@ record_mergeinfo_for_added_subtrees(
                        APR_HASH_KEY_STRING, rangelist);
 
           /* Don't add new mergeinfo to describe the merge if that mergeinfo
-             contains non-existent merge sources. 
+             contains non-existent merge sources.
 
              We know that MERGEINFO_PATH/rel_added_path's history does not
              span MERGED_RANGE->START:MERGED_RANGE->END but rather that it
