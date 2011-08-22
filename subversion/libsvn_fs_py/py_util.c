@@ -64,8 +64,9 @@ create_py_stack(PyObject *p_exception,
       p_traceback_mod = PyImport_Import(p_module_name);
       Py_DECREF(p_module_name);
 
-      p_stack = PyObject_CallMethod(p_traceback_mod, "extract_tb",
-                                    "(O)", p_traceback);
+      /* ### Cast away const for the Python API. */
+      p_stack = PyObject_CallMethod(p_traceback_mod, (char *) "extract_tb",
+                                    (char *) "(O)", p_traceback);
       Py_DECREF(p_traceback_mod);
 
       i = PySequence_Length(p_stack);
@@ -108,7 +109,7 @@ create_py_stack(PyObject *p_exception,
       PyObject *p_code = PyObject_GetAttrString(p_exception, "code");
 
       if (PyInt_Check(p_code))
-        err->apr_err = PyInt_AS_LONG(p_code);
+        err->apr_err = (int) PyInt_AS_LONG(p_code);
 
       Py_DECREF(p_code);
     }
@@ -486,7 +487,8 @@ convert_svn_string_t(void *value)
 PyObject *
 svn_fs_py__convert_cstring_hash(void *object)
 {
-  return convert_hash(object, PyString_FromString);
+  /* Cast PyString_FromString to silence a compiler warning. */
+  return convert_hash(object, (PyObject *(*)(void *value)) PyString_FromString);
 }
 
 PyObject *
