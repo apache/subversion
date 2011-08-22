@@ -486,9 +486,6 @@ open_root(void *edit_baton,
   struct edit_baton *eb = edit_baton;
   struct dir_baton *b = make_dir_baton("", NULL, eb, FALSE, pool);
 
-  /* Override the wcpath in our baton. */
-  b->wcpath = apr_pstrdup(pool, eb->target);
-
   SVN_ERR(get_dirprops_from_ra(b, base_revision));
 
   *root_baton = b;
