@@ -85,12 +85,22 @@ tweak_status(void *baton,
   /* If the status item has an entry, but doesn't belong to one of the
      changelists our caller is interested in, we filter out this status
      transmission.  */
-  if (sb->changelist_hash
-      && (! status->changelist
-          || ! apr_hash_get(sb->changelist_hash, status->changelist,
-                            APR_HASH_KEY_STRING)))
+  if (sb->changelist_hash)
     {
-      return SVN_NO_ERROR;
+      if (status->changelist)
+        {
+          /* Skip unless the caller requested this changelist. */
+          if (! apr_hash_get(sb->changelist_hash, status->changelist,
+                             APR_HASH_KEY_STRING))
+            return SVN_NO_ERROR;
+        }
+      else
+        {
+          /* Skip unless the caller requested changelist-lacking items. */
+          if (! apr_hash_get(sb->changelist_hash, "",
+                             APR_HASH_KEY_STRING))
+            return SVN_NO_ERROR;
+        }
     }
 
   /* If we know that the target was deleted in HEAD of the repository,
@@ -570,10 +580,6 @@ svn_client_status_dup(const svn_client_status_t *status,
   if (status->moved_to_abspath)
     st->moved_to_abspath = apr_pstrdup(result_pool, status->moved_to_abspath);
 
-  if (status->moved_to_op_root_abspath)
-    st->moved_to_op_root_abspath =
-      apr_pstrdup(result_pool, status->moved_to_op_root_abspath);
-
   return st;
 }
 
@@ -680,7 +686,6 @@ svn_client__create_status(svn_client_status_t **cst,
 
   (*cst)->moved_from_abspath = status->moved_from_abspath;
   (*cst)->moved_to_abspath = status->moved_to_abspath;
-  (*cst)->moved_to_op_root_abspath = status->moved_to_op_root_abspath;
 
   return SVN_NO_ERROR;
 }

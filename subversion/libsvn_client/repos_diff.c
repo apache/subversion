@@ -98,6 +98,9 @@ struct edit_baton {
      FALSE otherwise. */
   svn_boolean_t walk_deleted_repos_dirs;
 
+  /* Whether to report text deltas */
+  svn_boolean_t text_deltas;
+
   /* A callback used to see if the client wishes to cancel the running
      operation. */
   svn_cancel_func_t cancel_func;
@@ -315,11 +318,19 @@ get_file_mime_types(const char **mimetype1,
 }
 
 
-/* Get revision REVISION of the file described by B from the repository.
- * Set B->path_start_revision to the path of a new temporary file containing
- * the file's text.  Set B->pristine_props to a new hash containing the
- * file's properties.  Install a pool cleanup handler on B->pool to delete
- * the file.
+/* Get revision B->base_revision of the file described by B from the
+ * repository, through B->edit_baton->ra_session.
+ *
+ * Unless PROPS_ONLY is true:
+ *   Set B->path_start_revision to the path of a new temporary file containing
+ *   the file's text.
+ *   Set B->start_md5_checksum to that file's MD-5 checksum.
+ *   Install a pool cleanup handler on B->pool to delete the file.
+ *
+ * Always:
+ *   Set B->pristine_props to a new hash containing the file's properties.
+ *
+ * Allocate all results in B->pool.
  */
 static svn_error_t *
 get_file_from_ra(struct file_baton *b,
@@ -332,7 +343,7 @@ get_file_from_ra(struct file_baton *b,
 
       SVN_ERR(svn_stream_open_unique(&fstream, &(b->path_start_revision), NULL,
                                      svn_io_file_del_on_pool_cleanup,
-                                     scratch_pool, scratch_pool));
+                                     b->pool, scratch_pool));
 
       fstream = svn_stream_checksummed2(fstream, NULL, &b->start_md5_checksum,
                                         svn_checksum_md5, TRUE, scratch_pool);
@@ -485,7 +496,7 @@ open_root(void *edit_baton,
 }
 
 /* Recursively walk tree rooted at DIR (at REVISION) in the repository,
- * reporting all files as deleted.  Part of a workaround for issue 2333.
+ * reporting all children as deleted.  Part of a workaround for issue 2333.
  *
  * DIR is a repository path relative to the URL in RA_SESSION.  REVISION
  * must be a valid revision number, not SVN_INVALID_REVNUM.  EB is the
@@ -554,13 +565,20 @@ diff_deleted_dir(const char *dir,
         }
 
       if (dirent->kind == svn_node_dir)
-        SVN_ERR(diff_deleted_dir(path,
-                                 revision,
-                                 ra_session,
-                                 eb,
-                                 cancel_func,
-                                 cancel_baton,
-                                 iterpool));
+        {
+          const char *wcpath = svn_dirent_join(eb->target, path, iterpool);
+
+          SVN_ERR(eb->diff_callbacks->dir_deleted(
+                                NULL, NULL, wcpath,
+                                eb->diff_cmd_baton, iterpool));
+          SVN_ERR(diff_deleted_dir(path,
+                                   revision,
+                                   ra_session,
+                                   eb,
+                                   cancel_func,
+                                   cancel_baton,
+                                   iterpool));
+        }
     }
 
   svn_pool_destroy(iterpool);
@@ -969,7 +987,7 @@ close_file(void *file_baton,
 
   scratch_pool = b->pool;
 
-  if (expected_md5_digest)
+  if (expected_md5_digest && eb->text_deltas)
     {
       svn_checksum_t *expected_md5_checksum;
 
@@ -1086,7 +1104,13 @@ close_file(void *file_baton,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_editor_t function.  */
+/* Report any accumulated prop changes via the 'dir_props_changed' callback,
+ * and then call the 'dir_closed' callback.  Notify about any deleted paths
+ * within this directory that have not already been notified, and then about
+ * this directory itself (unless it was added, in which case the notification
+ * was done at that time).
+ *
+ * An svn_delta_editor_t function.  */
 static svn_error_t *
 close_directory(void *dir_baton,
                 apr_pool_t *pool)
@@ -1110,6 +1134,7 @@ close_directory(void *dir_baton,
   if (!b->added && b->propchanges->nelts > 0)
     remove_non_prop_changes(b->pristine_props, b->propchanges);
 
+  /* Report any prop changes. */
   if (b->propchanges->nelts > 0)
     {
       svn_boolean_t tree_conflicted = FALSE;
@@ -1134,8 +1159,8 @@ close_directory(void *dir_baton,
                                          b->edit_baton->diff_cmd_baton,
                                          scratch_pool));
 
-  /* Don't notify added directories as they triggered notification
-     in add_directory. */
+  /* Notify about any deleted paths within this directory that have not
+   * already been notified. */
   if (!skipped && !b->added && eb->notify_func)
     {
       apr_hash_index_t *hi;
@@ -1157,6 +1182,8 @@ close_directory(void *dir_baton,
         }
     }
 
+  /* Notify about this directory itself (unless it was added, in which
+   * case the notification was done at that time). */
   if (!b->added && eb->notify_func)
     {
       svn_wc_notify_t *notify;
@@ -1188,7 +1215,9 @@ close_directory(void *dir_baton,
 }
 
 
-/* An svn_delta_editor_t function.  */
+/* Record a prop change, which we will report later in close_file().
+ *
+ * An svn_delta_editor_t function.  */
 static svn_error_t *
 change_file_prop(void *file_baton,
                  const char *name,
@@ -1209,7 +1238,9 @@ change_file_prop(void *file_baton,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_editor_t function.  */
+/* Make a note of this prop change, to be reported when the dir is closed.
+ *
+ * An svn_delta_editor_t function.  */
 static svn_error_t *
 change_dir_prop(void *dir_baton,
                 const char *name,
@@ -1243,7 +1274,8 @@ close_edit(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_editor_t function.  */
+/* Notify that the node at PATH is 'missing'.
+ * An svn_delta_editor_t function.  */
 static svn_error_t *
 absent_directory(const char *path,
                  void *parent_baton,
@@ -1272,7 +1304,8 @@ absent_directory(const char *path,
 }
 
 
-/* An svn_delta_editor_t function.  */
+/* Notify that the node at PATH is 'missing'.
+ * An svn_delta_editor_t function.  */
 static svn_error_t *
 absent_file(const char *path,
             void *parent_baton,
@@ -1310,6 +1343,7 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
                             svn_ra_session_t *ra_session,
                             svn_revnum_t revision,
                             svn_boolean_t walk_deleted_dirs,
+                            svn_boolean_t text_deltas,
                             const svn_wc_diff_callbacks4_t *diff_callbacks,
                             void *diff_cmd_baton,
                             svn_cancel_func_t cancel_func,
@@ -1340,6 +1374,7 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
   eb->notify_func = notify_func;
   eb->notify_baton = notify_baton;
   eb->walk_deleted_repos_dirs = walk_deleted_dirs;
+  eb->text_deltas = text_deltas;
   eb->cancel_func = cancel_func;
   eb->cancel_baton = cancel_baton;
 

@@ -1854,7 +1854,7 @@ files_same_p(svn_boolean_t *same,
       /* Compare the file content, translating 'mine' to 'normal' form. */
       SVN_ERR(svn_client__get_normalized_stream(&mine_stream, wc_ctx,
                                                 mine_abspath, &working_rev,
-                                                FALSE, NULL, NULL,
+                                                FALSE, TRUE, NULL, NULL,
                                                 scratch_pool, scratch_pool));
 
       SVN_ERR(svn_stream_open_readonly(&older_stream, older_abspath,
@@ -5022,7 +5022,8 @@ drive_merge_report_editor(const char *target_abspath,
                                       merge_b->ctx->wc_ctx, target_abspath,
                                       depth,
                                       merge_b->ra_session2, revision1,
-                                      FALSE,
+                                      FALSE /* walk_deleted_dirs */,
+                                      TRUE /* text_deltas */,
                                       &merge_callbacks, merge_b,
                                       merge_b->ctx->cancel_func,
                                       merge_b->ctx->cancel_baton,

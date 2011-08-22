@@ -50,6 +50,7 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
                                   const char *local_abspath,
                                   const svn_opt_revision_t *revision,
                                   svn_boolean_t expand_keywords,
+                                  svn_boolean_t normalize_eols,
                                   svn_cancel_func_t cancel_func,
                                   void *cancel_baton,
                                   apr_pool_t *result_pool,
@@ -163,8 +164,10 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
 
   /* Wrap the output stream if translation is needed. */
   if (eol != NULL || kw != NULL)
-    input = svn_subst_stream_translated(input, eol, FALSE, kw, expand_keywords,
-                                        result_pool);
+    input = svn_subst_stream_translated(
+      input,
+      (eol_style && normalize_eols) ? SVN_SUBST_NATIVE_EOL_STR : eol,
+      FALSE, kw, expand_keywords, result_pool);
 
   *normal_stream = input;
 
@@ -211,7 +214,7 @@ svn_client_cat2(svn_stream_t *out,
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
       SVN_ERR(svn_client__get_normalized_stream(&normal_stream, ctx->wc_ctx,
-                                            local_abspath, revision, TRUE,
+                                            local_abspath, revision, TRUE, FALSE,
                                             ctx->cancel_func, ctx->cancel_baton,
                                             pool, pool));
 

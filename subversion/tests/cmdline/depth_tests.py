@@ -2229,10 +2229,6 @@ def excluded_path_misc_operation(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'revert', '--depth=infinity', L_path)
 
-  # Get rid of A/L.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'rm', '--force', L_path)
-
   # copy A/B to A/L and then cp A/L to A/M, excluded entry should be
   # copied both times
   expected_output = ['A         '+L_path+'\n']

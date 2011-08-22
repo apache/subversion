@@ -7482,7 +7482,6 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
   #
   # First revert all local changes and remove A_COPY/C/nu from disk.
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
-  os.remove(os.path.join(wc_dir, "A_COPY", "nu"))
 
   # Make a text change to A_COPY_2/mu in r11 and then merge that
   # change to A/mu in r12.  This will create mergeinfo of '/A_COPY_2/mu:11'
@@ -16972,6 +16971,78 @@ def reverse_merge_adds_subtree(sbox):
                                        None, None, None, None,
                                        None, 1, False)
 
+#----------------------------------------------------------------------
+# A test for issue #3989 'merge which deletes file with native eol-style
+# raises spurious tree conflict'.
+@Issue(3989)
+@SkipUnless(server_has_mergeinfo)
+def merged_deletion_causes_tree_conflict(sbox):
+  "merged deletion causes spurious tree conflict"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path        = os.path.join(wc_dir, 'A')
+  psi_path      = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
+  H_branch_path = os.path.join(wc_dir, 'branch', 'D', 'H')
+
+  # r2 - Set svn:eol-style native on A/D/H/psi
+  svntest.actions.run_and_verify_svn(None, None, [], 'ps', 'svn:eol-style',
+                                     'native', psi_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Set eol-style native on a path',
+                                     wc_dir)
+
+  # r3 - Branch ^/A to ^/branch
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
+                                     sbox.repo_url + '/A',
+                                     sbox.repo_url + '/branch',
+                                     '-m', 'Copy ^/A to ^/branch')
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # r4 - Delete A/D/H/psi 
+  svntest.actions.run_and_verify_svn(None, None, [], 'delete', psi_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Delete a a path with native eol-style',
+                                     wc_dir)
+
+  # Sync merge ^/A/D/H to branch/D/H.
+  #
+  # branch/D/H/psi is, ignoring differences caused by svn:eol-style, identical
+  # to ^/A/D/H/psi when the latter was deleted, so the deletion should merge
+  # cleanly.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = wc.State(H_branch_path, {
+    'psi' : Item(status='D '),
+    })
+  expected_mergeinfo_output = wc.State(H_branch_path, {
+    ''    : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(H_branch_path, {})
+  expected_status = wc.State(H_branch_path, {
+    ''      : Item(status=' M'),
+    'chi'   : Item(status='  '),
+    'psi'   : Item(status='D '),
+    'omega' : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=4)
+  expected_disk = wc.State('', {
+    ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:3-4'}),
+    'chi'   : Item("This is the file 'chi'.\n"),
+    'omega' : Item("This is the file 'omega'.\n"),
+    })
+  expected_skip = wc.State('.', { })
+  svntest.actions.run_and_verify_merge(H_branch_path, None, None,
+                                       sbox.repo_url + '/A/D/H', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, False)
+
 ########################################################################
 # Run the tests
 
@@ -17098,6 +17169,7 @@ test_list = [ None,
               foreign_repos_prop_conflict,
               merge_adds_subtree_with_mergeinfo,
               reverse_merge_adds_subtree,
+              merged_deletion_causes_tree_conflict,
              ]
 
 if __name__ == '__main__':

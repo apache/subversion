@@ -1551,7 +1551,11 @@ typedef enum svn_wc_conflict_reason_t
   /** Object is already added or schedule-add. @since New in 1.6. */
   svn_wc_conflict_reason_added,
   /** Object is already replaced. @since New in 1.7. */
-  svn_wc_conflict_reason_replaced
+  svn_wc_conflict_reason_replaced,
+  /** Object is moved away. @since New in 1.8. */
+  svn_wc_conflict_reason_moved_away,
+  /** Object is moved here. @since New in 1.8. */
+  svn_wc_conflict_reason_moved_here
 
 } svn_wc_conflict_reason_t;
 
@@ -3618,17 +3622,37 @@ typedef struct svn_wc_status3_t
   /** @} */
 
   /** Set to the local absolute path that this node was moved from, if this
-   * file or directory has been moved here locally. */
+   * file or directory has been moved here locally and is the root of that
+   * move. Otherwise set to NULL.
+   *
+   * This will be NULL for moved-here nodes that are just part of a subtree
+   * that was moved along (and are not themselves a root of a different move
+   * operation).
+   * 
+   * @since New in 1.8. */
   const char *moved_from_abspath;
 
   /** Set to the local absolute path that this node was moved to, if this file
-   * or directory has been moved away locally. */
+   * or directory has been moved away locally and corresponds to the root
+   * of the destination side of the move. Otherwise set to NULL.
+   *
+   * Note: Saying just "root" here could be misleading. For example:
+   *   svn mv A AA;
+   *   svn mv AA/B BB;
+   * creates a situation where A/B is moved-to BB, but one could argue that
+   * the move source's root actually was AA/B. Note that, as far as the
+   * working copy is concerned, above case is exactly identical to:
+   *   svn mv A/B BB;
+   *   svn mv A AA;
+   * In both situations, @a moved_to_abspath would be set for nodes A (moved
+   * to AA) and A/B (moved to BB), only.
+   *
+   * This will be NULL for moved-away nodes that were just part of a subtree
+   * that was moved along (and are not themselves a root of a different move
+   * operation).
+   *
+   * @since New in 1.8. */
   const char *moved_to_abspath;
-
-  /* If this file or directory has been moved away locally, set this to the
-   * local absolute path that was the root of the move-away, i.e. to the
-   * op-root of the delete-half of the move operation. */
-  const char *moved_to_op_root_abspath;
 
   /* NOTE! Please update svn_wc_dup_status3() when adding new fields here. */
 } svn_wc_status3_t;

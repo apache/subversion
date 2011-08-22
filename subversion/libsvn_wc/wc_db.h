@@ -1506,6 +1506,10 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
  * path was reverted.  Set *CONFLICT_OLD, *CONFLICT_NEW,
  * *CONFLICT_WORKING and *PROP_REJECT to the names of the conflict
  * files, or NULL if the names are not stored.
+ * 
+ * Set *COPIED_HERE if the reverted node was copied here and is the
+ * operation root of the copy.
+ * Set *KIND to the node kind of the reverted node.
  *
  * Removes the row for LOCAL_ABSPATH from the revert list.
  */
@@ -1515,10 +1519,31 @@ svn_wc__db_revert_list_read(svn_boolean_t *reverted,
                             const char **conflict_new,
                             const char **conflict_working,
                             const char **prop_reject,
+                            svn_boolean_t *copied_here,
+                            svn_wc__db_kind_t *kind,
                             svn_wc__db_t *db,
                             const char *local_abspath,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
+
+/* The type of elements in the array returned by
+ * svn_wc__db_revert_list_read_copied_children(). */
+typedef struct svn_wc__db_revert_list_copied_child_info_t {
+  const char *abspath;
+  svn_wc__db_kind_t kind;
+} svn_wc__db_revert_list_copied_child_info_t ;
+
+/* Return in *CHILDREN a list of reverted copied nodes at or within
+ * LOCAL_ABSPATH (which is a reverted file or a reverted directory).
+ * Allocate *COPIED_CHILDREN and its elements in RESULT_POOL.
+ * The elements are of type svn_wc__db_revert_list_copied_child_info_t. */
+svn_error_t *
+svn_wc__db_revert_list_read_copied_children(const apr_array_header_t **children,
+                                            svn_wc__db_t *db,
+                                            const char *local_abspath,
+                                            apr_pool_t *result_pool,
+                                            apr_pool_t *scratch_pool);
+
 
 /* Make revert notifications for all paths in the revert list that are
  * equal to LOCAL_ABSPATH or below LOCAL_ABSPATH.
@@ -1842,6 +1867,9 @@ struct svn_wc__db_info_t {
 
   svn_boolean_t locked;     /* WC directory lock */
   svn_wc__db_lock_t *lock;  /* Repository file lock */
+
+  const char *moved_to_abspath; /* Only on op-roots. See svn_wc_status3_t. */
+  svn_boolean_t moved_here;     /* On both op-roots and children. */
 };
 
 /* Return in *NODES a hash mapping name->struct svn_wc__db_info_t for
