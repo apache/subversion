@@ -344,9 +344,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "Please run 'svn update' instead.")},
   {"do-not-hold", opt_do_not_hold, 0,
-                    N_("do not hold any files. This allows\n"
-                       "                             "
-                       "committing the svn:hold property.")},
+                    N_("do not hold any files (see svn:hold property)\n"
+                       )},
 
   /* Long-opt Aliases
    *
@@ -532,7 +531,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd,
      opt_internal_diff, 'x', opt_no_diff_deleted, opt_show_copies_as_adds,
      opt_notice_ancestry, opt_summarize, opt_changelist, opt_force, opt_xml,
-     opt_use_git_diff_format} },
+     opt_use_git_diff_format, opt_do_not_hold} },
+
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
      "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"

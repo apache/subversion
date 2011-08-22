@@ -1618,6 +1618,7 @@ diff_wc_wc(const char *path1,
            svn_boolean_t ignore_ancestry,
            svn_boolean_t show_copies_as_adds,
            svn_boolean_t use_git_diff_format,
+           svn_boolean_t do_not_hold,
            const apr_array_header_t *changelists,
            const svn_wc_diff_callbacks4_t *callbacks,
            struct diff_cmd_baton *callback_baton,
@@ -1670,12 +1671,12 @@ diff_wc_wc(const char *path1,
   else
     callback_baton->anchor = path1;
 
-  SVN_ERR(svn_wc_diff6(ctx->wc_ctx,
+  SVN_ERR(svn_wc_diff7(ctx->wc_ctx,
                        abspath1,
                        callbacks, callback_baton,
                        depth,
                        ignore_ancestry, show_copies_as_adds,
-                       use_git_diff_format, changelists,
+                       use_git_diff_format, do_not_hold, changelists,
                        ctx->cancel_func, ctx->cancel_baton,
                        pool));
   return SVN_NO_ERROR;
@@ -1796,6 +1797,7 @@ diff_repos_wc(const char *path1,
               svn_boolean_t ignore_ancestry,
               svn_boolean_t show_copies_as_adds,
               svn_boolean_t use_git_diff_format,
+              svn_boolean_t do_not_hold,
               const apr_array_header_t *changelists,
               const svn_wc_diff_callbacks4_t *callbacks,
               struct diff_cmd_baton *callback_baton,
@@ -1887,7 +1889,7 @@ diff_repos_wc(const char *path1,
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
                                 SVN_RA_CAPABILITY_DEPTH, pool));
 
-  SVN_ERR(svn_wc_get_diff_editor6(&diff_editor, &diff_edit_baton,
+  SVN_ERR(svn_wc_get_diff_editor7(&diff_editor, &diff_edit_baton,
                                   ctx->wc_ctx,
                                   anchor_abspath,
                                   target,
@@ -1895,6 +1897,7 @@ diff_repos_wc(const char *path1,
                                   ignore_ancestry,
                                   show_copies_as_adds,
                                   use_git_diff_format,
+                                  do_not_hold,
                                   rev2_is_base,
                                   reverse,
                                   server_supports_depth,
@@ -1957,6 +1960,7 @@ do_diff(const svn_wc_diff_callbacks4_t *callbacks,
         svn_boolean_t ignore_ancestry,
         svn_boolean_t show_copies_as_adds,
         svn_boolean_t use_git_diff_format,
+        svn_boolean_t do_not_hold,
         const apr_array_header_t *changelists,
         apr_pool_t *pool)
 {
@@ -1981,7 +1985,7 @@ do_diff(const svn_wc_diff_callbacks4_t *callbacks,
           SVN_ERR(diff_repos_wc(path1, revision1, peg_revision,
                                 path2, revision2, FALSE, depth,
                                 ignore_ancestry, show_copies_as_adds,
-                                use_git_diff_format, changelists,
+                                use_git_diff_format, do_not_hold, changelists,
                                 callbacks, callback_baton, ctx, pool));
         }
     }
@@ -1992,14 +1996,14 @@ do_diff(const svn_wc_diff_callbacks4_t *callbacks,
           SVN_ERR(diff_repos_wc(path2, revision2, peg_revision,
                                 path1, revision1, TRUE, depth,
                                 ignore_ancestry, show_copies_as_adds,
-                                use_git_diff_format, changelists,
+                                use_git_diff_format, do_not_hold, changelists,
                                 callbacks, callback_baton, ctx, pool));
         }
       else /* path2 is a working copy path */
         {
           SVN_ERR(diff_wc_wc(path1, revision1, path2, revision2,
                              depth, ignore_ancestry, show_copies_as_adds,
-                             use_git_diff_format, changelists,
+                             use_git_diff_format, do_not_hold, changelists,
                              callbacks, callback_baton, ctx, pool));
         }
     }
@@ -2217,7 +2221,7 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
       * These cases require server communication.
 */
 svn_error_t *
-svn_client_diff5(const apr_array_header_t *options,
+svn_client_diff6(const apr_array_header_t *options,
                  const char *path1,
                  const svn_opt_revision_t *revision1,
                  const char *path2,
@@ -2229,6 +2233,7 @@ svn_client_diff5(const apr_array_header_t *options,
                  svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
                  svn_boolean_t use_git_diff_format,
+                 svn_boolean_t do_not_hold,
                  const char *header_encoding,
                  apr_file_t *outfile,
                  apr_file_t *errfile,
@@ -2269,11 +2274,39 @@ svn_client_diff5(const apr_array_header_t *options,
   return do_diff(&diff_callbacks, &diff_cmd_baton, ctx,
                  path1, path2, revision1, revision2, &peg_revision,
                  depth, ignore_ancestry, show_copies_as_adds,
-                 use_git_diff_format, changelists, pool);
+                 use_git_diff_format, do_not_hold, changelists, pool);
 }
 
 svn_error_t *
-svn_client_diff_peg5(const apr_array_header_t *options,
+svn_client_diff5(const apr_array_header_t *options,
+                 const char *path1,
+                 const svn_opt_revision_t *revision1,
+                 const char *path2,
+                 const svn_opt_revision_t *revision2,
+                 const char *relative_to_dir,
+                 svn_depth_t depth,
+                 svn_boolean_t ignore_ancestry,
+                 svn_boolean_t no_diff_deleted,
+                 svn_boolean_t show_copies_as_adds,
+                 svn_boolean_t ignore_content_type,
+                 svn_boolean_t use_git_diff_format,
+                 const char *header_encoding,
+                 apr_file_t *outfile,
+                 apr_file_t *errfile,
+                 const apr_array_header_t *changelists,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  return svn_client_diff6(options, path1, revision1, path2, revision2,
+                          relative_to_dir, depth, ignore_ancestry,
+                          no_diff_deleted, show_copies_as_adds,
+                          ignore_content_type, use_git_diff_format, TRUE,
+                          header_encoding, outfile, errfile, changelists, ctx,
+                          pool);
+}
+
+svn_error_t *
+svn_client_diff_peg6(const apr_array_header_t *options,
                      const char *path,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *start_revision,
@@ -2285,6 +2318,7 @@ svn_client_diff_peg5(const apr_array_header_t *options,
                      svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_content_type,
                      svn_boolean_t use_git_diff_format,
+                     svn_boolean_t do_not_hold,
                      const char *header_encoding,
                      apr_file_t *outfile,
                      apr_file_t *errfile,
@@ -2321,7 +2355,37 @@ svn_client_diff_peg5(const apr_array_header_t *options,
   return do_diff(&diff_callbacks, &diff_cmd_baton, ctx,
                  path, path, start_revision, end_revision, peg_revision,
                  depth, ignore_ancestry, show_copies_as_adds,
-                 use_git_diff_format, changelists, pool);
+                 use_git_diff_format, do_not_hold, changelists, pool);
+}
+
+svn_error_t *
+svn_client_diff_peg5(const apr_array_header_t *options,
+                     const char *path,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *start_revision,
+                     const svn_opt_revision_t *end_revision,
+                     const char *relative_to_dir,
+                     svn_depth_t depth,
+                     svn_boolean_t ignore_ancestry,
+                     svn_boolean_t no_diff_deleted,
+                     svn_boolean_t show_copies_as_adds,
+                     svn_boolean_t ignore_content_type,
+                     svn_boolean_t use_git_diff_format,
+                     const char *header_encoding,
+                     apr_file_t *outfile,
+                     apr_file_t *errfile,
+                     const apr_array_header_t *changelists,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  return svn_client_diff_peg6(options, path, peg_revision, start_revision,
+                              end_revision, relative_to_dir, depth,
+                              ignore_content_type, no_diff_deleted,
+                              show_copies_as_adds, ignore_content_type,
+                              use_git_diff_format,
+                              TRUE,
+                              header_encoding, outfile, errfile, changelists,
+                              ctx, pool);
 }
 
 svn_error_t *

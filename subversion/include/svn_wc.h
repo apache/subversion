@@ -6141,6 +6141,10 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * if they weren't modified after being copied. This allows the callbacks
  * to generate appropriate --git diff headers for such files.
  *
+ * If @a do_not_hold is FALSE, local modifications of files that have the
+ * @c svn:hold property set will be omitted from the diff (the "default
+ * behavior"). If @a do_not_hold is TRUE, all local modifications are shown.
+ *
  * Normally, the difference from repository->working_copy is shown.
  * If @a reverse_order is TRUE, then show working_copy->repository diffs.
  *
@@ -6156,6 +6160,33 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
   * If @a server_performs_filtering is TRUE, assume that the server handles
  * the ambient depth filtering, so this doesn't have to be handled in the
  * editor.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_wc_get_diff_editor7(const svn_delta_editor_t **editor,
+                        void **edit_baton,
+                        svn_wc_context_t *wc_ctx,
+                        const char *anchor_abspath,
+                        const char *target,
+                        svn_depth_t depth,
+                        svn_boolean_t ignore_ancestry,
+                        svn_boolean_t show_copies_as_adds,
+                        svn_boolean_t use_git_diff_format,
+                        svn_boolean_t do_not_hold,
+                        svn_boolean_t use_text_base,
+                        svn_boolean_t reverse_order,
+                        svn_boolean_t server_performs_filtering,
+                        const apr_array_header_t *changelist_filter,
+                        const svn_wc_diff_callbacks4_t *callbacks,
+                        void *callback_baton,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_get_diff_editor7(), but with @a do_not_hold set to TRUE.
  *
  * @since New in 1.7.
  */
@@ -6331,6 +6362,10 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  * if they weren't modified after being copied. This allows the callbacks
  * to generate appropriate --git diff headers for such files.
  *
+ * If @a do_not_hold is FALSE, local modifications of files that have the
+ * @c svn:hold property set will be omitted from the diff (the "default
+ * behavior"). If @a do_not_hold is TRUE, all local modifications are shown.
+ *
  * @a changelist_filter is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose differences are
  * reported; that is, don't generate diffs about any item unless
@@ -6340,6 +6375,26 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at various
  * points during the operation.  If it returns an error (typically
  * #SVN_ERR_CANCELLED), return that error immediately.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_wc_diff7(svn_wc_context_t *wc_ctx,
+             const char *target_abspath,
+             const svn_wc_diff_callbacks4_t *callbacks,
+             void *callback_baton,
+             svn_depth_t depth,
+             svn_boolean_t ignore_ancestry,
+             svn_boolean_t show_copies_as_adds,
+             svn_boolean_t use_git_diff_format,
+             svn_boolean_t do_not_hold,
+             const apr_array_header_t *changelist_filter,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_diff7(), but with @a do_not_hold set to @c TRUE.
  *
  * @since New in 1.7.
  */

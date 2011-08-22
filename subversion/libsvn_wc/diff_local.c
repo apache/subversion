@@ -71,6 +71,9 @@ struct diff_baton
   /* Are we producing a git-style diff? */
   svn_boolean_t use_git_diff_format;
 
+  /* Whether local mods of files with an svn:hold property are shown. */
+  svn_boolean_t do_not_hold;
+
   /* Empty file used to diff adds / deletes */
   const char *empty_file;
 
@@ -150,6 +153,16 @@ file_diff(struct diff_baton *eb,
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
   const svn_checksum_t *base_checksum;
   const char *pristine_abspath;
+
+  /* Skip files that are on hold via an svn:hold prop. */
+  if (! eb->do_not_hold) {
+    const svn_string_t *propval;
+    SVN_ERR(svn_wc__internal_propget(&propval, db, local_abspath,
+                                     SVN_PROP_HOLD,
+                                     scratch_pool, scratch_pool));
+    if (propval != NULL)
+      return SVN_NO_ERROR;
+  }
 
   SVN_ERR(svn_wc__db_read_info(&status, &kind, &revision, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, &checksum, NULL,
@@ -505,7 +518,7 @@ diff_status_callback(void *baton,
 
 /* Public Interface */
 svn_error_t *
-svn_wc_diff6(svn_wc_context_t *wc_ctx,
+svn_wc_diff7(svn_wc_context_t *wc_ctx,
              const char *local_abspath,
              const svn_wc_diff_callbacks4_t *callbacks,
              void *callback_baton,
@@ -513,6 +526,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
              svn_boolean_t ignore_ancestry,
              svn_boolean_t show_copies_as_adds,
              svn_boolean_t use_git_diff_format,
+             svn_boolean_t do_not_hold,
              const apr_array_header_t *changelist_filter,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
@@ -537,6 +551,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
   eb.ignore_ancestry = ignore_ancestry;
   eb.show_copies_as_adds = show_copies_as_adds;
   eb.use_git_diff_format = use_git_diff_format;
+  eb.do_not_hold = do_not_hold;
   eb.empty_file = NULL;
   eb.pool = scratch_pool;
 
@@ -560,4 +575,26 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
                                        scratch_pool));
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_diff6(svn_wc_context_t *wc_ctx,
+             const char *local_abspath,
+             const svn_wc_diff_callbacks4_t *callbacks,
+             void *callback_baton,
+             svn_depth_t depth,
+             svn_boolean_t ignore_ancestry,
+             svn_boolean_t show_copies_as_adds,
+             svn_boolean_t use_git_diff_format,
+             const apr_array_header_t *changelist_filter,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             apr_pool_t *scratch_pool)
+{
+  return svn_wc_diff7(wc_ctx, local_abspath, callbacks, callback_baton,
+                      depth, ignore_ancestry, show_copies_as_adds,
+                      use_git_diff_format,
+                      TRUE,
+                      changelist_filter, cancel_func, callback_baton,
+                      scratch_pool);
 }

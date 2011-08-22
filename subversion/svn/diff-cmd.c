@@ -353,7 +353,7 @@ svn_cl__diff(apr_getopt_t *os,
                      summarize_func, &target1,
                      ctx, iterpool));
           else
-            SVN_ERR(svn_client_diff5
+            SVN_ERR(svn_client_diff6
                     (options,
                      target1,
                      &(opt_state->start_revision),
@@ -366,6 +366,7 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->show_copies_as_adds,
                      opt_state->force,
                      opt_state->use_git_diff_format,
+                     opt_state->do_not_hold,
                      svn_cmdline_output_encoding(pool),
                      outfile,
                      errfile,
@@ -398,7 +399,7 @@ svn_cl__diff(apr_getopt_t *os,
                      summarize_func, &truepath,
                      ctx, iterpool));
           else
-            SVN_ERR(svn_client_diff_peg5
+            SVN_ERR(svn_client_diff_peg6
                     (options,
                      truepath,
                      &peg_revision,
@@ -411,6 +412,7 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->show_copies_as_adds,
                      opt_state->force,
                      opt_state->use_git_diff_format,
+                     opt_state->do_not_hold,
                      svn_cmdline_output_encoding(pool),
                      outfile,
                      errfile,

@@ -233,6 +233,9 @@ struct edit_baton {
   /* Are we producing a git-style diff? */
   svn_boolean_t use_git_diff_format;
 
+  /* Whether local mods of files with an svn:hold property are shown. */
+  svn_boolean_t do_not_hold;
+
   /* Possibly diff repos against text-bases instead of working files. */
   svn_boolean_t use_text_base;
 
@@ -350,6 +353,7 @@ make_edit_baton(struct edit_baton **edit_baton,
                 svn_boolean_t ignore_ancestry,
                 svn_boolean_t show_copies_as_adds,
                 svn_boolean_t use_git_diff_format,
+                svn_boolean_t do_not_hold,
                 svn_boolean_t use_text_base,
                 svn_boolean_t reverse_order,
                 const apr_array_header_t *changelist_filter,
@@ -376,6 +380,7 @@ make_edit_baton(struct edit_baton **edit_baton,
   eb->ignore_ancestry = ignore_ancestry;
   eb->show_copies_as_adds = show_copies_as_adds;
   eb->use_git_diff_format = use_git_diff_format;
+  eb->do_not_hold = do_not_hold;
   eb->use_text_base = use_text_base;
   eb->reverse_order = reverse_order;
   eb->changelist_hash = changelist_hash;
@@ -546,6 +551,17 @@ file_diff(struct edit_baton *eb,
   if (! svn_wc__internal_changelist_match(db, local_abspath,
                                           eb->changelist_hash, scratch_pool))
     return SVN_NO_ERROR;
+
+  /* Skip files that are on hold via an svn:hold prop. */
+  if (! eb->do_not_hold)
+    {
+      const svn_string_t *propval;
+      SVN_ERR(svn_wc__internal_propget(&propval, eb->db, local_abspath,
+                                       SVN_PROP_HOLD,
+                                       scratch_pool, scratch_pool));
+      if (propval != NULL)
+        return SVN_NO_ERROR;
+    }
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -1579,6 +1595,7 @@ close_file(void *file_baton,
   /* The working copy properties at the base of the wc->repos
      comparison: either BASE or WORKING. */
   apr_hash_t *originalprops;
+  svn_boolean_t held;
 
   if (expected_md5_digest != NULL)
     {
@@ -1625,6 +1642,18 @@ close_file(void *file_baton,
     }
   else
     SVN_ERR(err);
+
+  /* Determine if an svn:hold prop has any bearing on this file. */
+  if (! eb->do_not_hold)
+    {
+      const svn_string_t *propval;
+      SVN_ERR(svn_wc__internal_propget(&propval, eb->db, fb->local_abspath,
+                                       SVN_PROP_HOLD,
+                                       scratch_pool, scratch_pool));
+      held = (propval != NULL);
+    }
+  else
+    held = FALSE;
 
   SVN_ERR(get_empty_file(eb, &empty_file));
 
@@ -1720,14 +1749,14 @@ close_file(void *file_baton,
      against WORKING, we also need to check whether there are any local
      (BASE:WORKING) modifications. */
   modified = (fb->temp_file_path != NULL);
-  if (!modified && !eb->use_text_base)
+  if (!modified && !eb->use_text_base && !held)
     SVN_ERR(svn_wc__internal_file_modified_p(&modified, eb->db,
                                              fb->local_abspath,
                                              FALSE, scratch_pool));
 
   if (modified)
     {
-      if (eb->use_text_base)
+      if (eb->use_text_base || held)
         SVN_ERR(get_pristine_file(&localfile, eb->db, fb->local_abspath,
                                   FALSE, scratch_pool, scratch_pool));
       else
@@ -1741,7 +1770,7 @@ close_file(void *file_baton,
   else
     localfile = repos_file = NULL;
 
-  if (eb->use_text_base)
+  if (eb->use_text_base || held)
     {
       originalprops = pristine_props;
     }
@@ -1856,7 +1885,7 @@ close_edit(void *edit_baton,
 
 /* Create a diff editor and baton. */
 svn_error_t *
-svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
+svn_wc_get_diff_editor7(const svn_delta_editor_t **editor,
                         void **edit_baton,
                         svn_wc_context_t *wc_ctx,
                         const char *anchor_abspath,
@@ -1865,6 +1894,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                         svn_boolean_t ignore_ancestry,
                         svn_boolean_t show_copies_as_adds,
                         svn_boolean_t use_git_diff_format,
+                        svn_boolean_t do_not_hold,
                         svn_boolean_t use_text_base,
                         svn_boolean_t reverse_order,
                         svn_boolean_t server_performs_filtering,
@@ -1888,7 +1918,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                           anchor_abspath, target,
                           callbacks, callback_baton,
                           depth, ignore_ancestry, show_copies_as_adds,
-                          use_git_diff_format,
+                          use_git_diff_format, do_not_hold,
                           use_text_base, reverse_order, changelist_filter,
                           cancel_func, cancel_baton,
                           result_pool));
@@ -1930,4 +1960,35 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                                            editor,
                                            edit_baton,
                                            result_pool);
+}
+
+svn_error_t *
+svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
+                        void **edit_baton,
+                        svn_wc_context_t *wc_ctx,
+                        const char *anchor_abspath,
+                        const char *target,
+                        svn_depth_t depth,
+                        svn_boolean_t ignore_ancestry,
+                        svn_boolean_t show_copies_as_adds,
+                        svn_boolean_t use_git_diff_format,
+                        svn_boolean_t use_text_base,
+                        svn_boolean_t reverse_order,
+                        svn_boolean_t server_performs_filtering,
+                        const apr_array_header_t *changelist_filter,
+                        const svn_wc_diff_callbacks4_t *callbacks,
+                        void *callback_baton,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  return svn_wc_get_diff_editor7(editor, edit_baton, wc_ctx, anchor_abspath,
+                                 target, depth, ignore_ancestry,
+                                 show_copies_as_adds, use_git_diff_format,
+                                 TRUE,
+                                 use_text_base, reverse_order,
+                                 server_performs_filtering, changelist_filter,
+                                 callbacks, callback_baton, cancel_func,
+                                 cancel_baton, result_pool, scratch_pool);
 }
