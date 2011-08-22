@@ -29,7 +29,6 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
 
   - Minor new features and improvements:
     * Better handling of HTTP redirects (issue #2779)
-    * make Serf the default DAV access method, if available (r875974)
     * Improved and much more consistent path handling (issue #2028, and others)
     * 'svnadmin load' rewrites changed revnums in mergeinfo (issue #3020)
     * Error message and help text improvements
