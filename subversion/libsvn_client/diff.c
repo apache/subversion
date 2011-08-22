@@ -820,10 +820,9 @@ diff_props_changed(svn_wc_notify_state_t *state,
                    svn_boolean_t dir_was_added,
                    const apr_array_header_t *propchanges,
                    apr_hash_t *original_props,
-                   void *diff_baton,
+                   struct diff_cmd_baton *diff_cmd_baton,
                    apr_pool_t *scratch_pool)
 {
-  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
   apr_array_header_t *props;
   svn_boolean_t show_diff_header;
 
@@ -891,7 +890,7 @@ diff_dir_props_changed(svn_wc_notify_state_t *state,
                                             dir_was_added,
                                             propchanges,
                                             original_props,
-                                            diff_baton,
+                                            diff_cmd_baton,
                                             scratch_pool));
 }
 
@@ -911,9 +910,8 @@ diff_content_changed(const char *path,
                      svn_diff_operation_kind_t operation,
                      const char *copyfrom_path,
                      svn_revnum_t copyfrom_rev,
-                     void *diff_baton)
+                     struct diff_cmd_baton *diff_cmd_baton)
 {
-  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
   int exitcode;
   apr_pool_t *subpool = svn_pool_create(diff_cmd_baton->pool);
   svn_stream_t *os;
@@ -1105,6 +1103,7 @@ diff_file_changed(svn_wc_notify_state_t *content_state,
                   apr_pool_t *scratch_pool)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+
   if (diff_cmd_baton->anchor)
     path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
   if (tmpfile1)
@@ -1112,11 +1111,11 @@ diff_file_changed(svn_wc_notify_state_t *content_state,
                                  tmpfile1, tmpfile2, rev1, rev2,
                                  mimetype1, mimetype2,
                                  svn_diff_op_modified, NULL,
-                                 SVN_INVALID_REVNUM, diff_baton));
+                                 SVN_INVALID_REVNUM, diff_cmd_baton));
   if (prop_changes->nelts > 0)
     SVN_ERR(diff_props_changed(prop_state, tree_conflicted,
                                path, FALSE, prop_changes,
-                               original_props, diff_baton, scratch_pool));
+                               original_props, diff_cmd_baton, scratch_pool));
   if (content_state)
     *content_state = svn_wc_notify_state_unknown;
   if (prop_state)
@@ -1166,17 +1165,17 @@ diff_file_added(svn_wc_notify_state_t *content_state,
                                  tmpfile1, tmpfile2, rev1, rev2,
                                  mimetype1, mimetype2,
                                  svn_diff_op_copied, copyfrom_path,
-                                 copyfrom_revision, diff_baton));
+                                 copyfrom_revision, diff_cmd_baton));
   else if (tmpfile1)
     SVN_ERR(diff_content_changed(path,
                                  tmpfile1, tmpfile2, rev1, rev2,
                                  mimetype1, mimetype2,
                                  svn_diff_op_added, NULL, SVN_INVALID_REVNUM,
-                                 diff_baton));
+                                 diff_cmd_baton));
   if (prop_changes->nelts > 0)
     SVN_ERR(diff_props_changed(prop_state, tree_conflicted,
                                path, FALSE, prop_changes,
-                               original_props, diff_baton, scratch_pool));
+                               original_props, diff_cmd_baton, scratch_pool));
   if (content_state)
     *content_state = svn_wc_notify_state_unknown;
   if (prop_state)
@@ -1224,7 +1223,7 @@ diff_file_deleted(svn_wc_notify_state_t *state,
                                      diff_cmd_baton->revnum2,
                                      mimetype1, mimetype2,
                                      svn_diff_op_deleted, NULL,
-                                     SVN_INVALID_REVNUM, diff_baton));
+                                     SVN_INVALID_REVNUM, diff_cmd_baton));
     }
 
   /* We don't list all the deleted properties. */
