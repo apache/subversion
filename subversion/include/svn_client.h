@@ -2776,6 +2776,10 @@ svn_client_blame(const char *path_or_url,
  * If @a show_copies_as_adds is TRUE, then copied files will not be diffed
  * against their copyfrom source, and will appear in the diff output
  * in their entirety, as if they were newly added.
+ * ### BUGS: For a repos-repos diff, this is ignored. Instead, a file is
+ *     diffed against its copyfrom source iff the file is the diff target
+ *     and not if some parent directory is the diff target. For a repos-WC
+ *     diff, this is ignored if the file is the diff target.
  *
  * If @a use_git_diff_format is TRUE, then the git's extended diff format
  * will be used.

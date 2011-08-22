@@ -1971,6 +1971,7 @@ do_diff(const svn_wc_diff_callbacks4_t *callbacks,
     {
       if (is_repos2)
         {
+          /* ### Ignores 'show_copies_as_adds'. */
           SVN_ERR(diff_repos_repos(callbacks, callback_baton, ctx,
                                    path1, path2, revision1, revision2,
                                    peg_revision, depth, ignore_ancestry,
