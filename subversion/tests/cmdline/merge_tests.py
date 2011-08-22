@@ -16711,7 +16711,6 @@ def foreign_repos_prop_conflict(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3975 'adds with explicit mergeinfo don't get mergeinfo
 # describing merge which added them'
-@XFail()
 @Issue(3975)
 @SkipUnless(server_has_mergeinfo)
 def merge_adds_subtree_with_mergeinfo(sbox):
@@ -16806,10 +16805,6 @@ def merge_adds_subtree_with_mergeinfo(sbox):
     'B/lambda'  : Item("This is the file 'lambda'.\n"),
     'B/F'       : Item(),
     'C'         : Item(),
-    # Currently this test fails because A_COPY_2/C/nu gets no
-    # mergeinfo set on it to describe the merge, it only has
-    # the explicit mergeinfo from its copy source (i.e. /A_COPY/C/nu:10
-    # from ^/A/C/nu@11.
     'C/nu'      : Item("This is the file 'nu'.\n" \
                        "More work on the A_COPY branch.\n" \
                        "A faux conflict resolution.\n",
