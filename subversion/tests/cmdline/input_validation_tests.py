@@ -120,9 +120,6 @@ def invalid_diff_targets(sbox):
   for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
     run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot mix repository and working "
                              "copy targets", 'diff', target1, target2)
-  run_and_verify_svn_in_wc(sbox, "svn: E200007: Summarizing diff can only compare "
-                           "repository to repository",
-                           'diff', '--summarize', "iota", "A")
 
 def invalid_export_targets(sbox):
   "invalid targets for 'export'"

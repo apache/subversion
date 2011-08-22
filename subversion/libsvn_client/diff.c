@@ -2007,6 +2007,73 @@ do_diff(const svn_wc_diff_callbacks4_t *callbacks,
   return SVN_NO_ERROR;
 }
 
+/* Perform a summary diff between two working-copy paths.
+
+   PATH1 and PATH2 are both working copy paths.  REVISION1 and
+   REVISION2 are their respective revisions.
+
+   All other options are the same as those passed to svn_client_diff5(). */
+static svn_error_t *
+diff_summarize_wc_wc(svn_client_diff_summarize_func_t summarize_func,
+                     void *summarize_baton,
+                     const char *path1,
+                     const svn_opt_revision_t *revision1,
+                     const char *path2,
+                     const svn_opt_revision_t *revision2,
+                     svn_depth_t depth,
+                     svn_boolean_t ignore_ancestry,
+                     svn_boolean_t use_git_diff_format,
+                     const apr_array_header_t *changelists,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  svn_wc_diff_callbacks4_t *callbacks;
+  void *callback_baton;
+  const char *abspath1, *anchor1, *target1;
+  svn_node_kind_t kind;
+
+  SVN_ERR_ASSERT(! svn_path_is_url(path1));
+  SVN_ERR_ASSERT(! svn_path_is_url(path2));
+
+  /* Currently we support only the case where path1 and path2 are the
+     same path. */
+  if ((strcmp(path1, path2) != 0)
+      || (! ((revision1->kind == svn_opt_revision_base)
+             && (revision2->kind == svn_opt_revision_working))))
+    return unsupported_diff_error
+      (svn_error_create
+       (SVN_ERR_INCORRECT_PARAMS, NULL,
+        _("Only diffs between a path's text-base "
+          "and its working files are supported at this time")));
+
+  /* Find the node kind of PATH1 so that we know whether the diff drive will
+     be anchored at PATH1 or its parent dir. */
+  SVN_ERR(svn_dirent_get_absolute(&abspath1, path1, pool));
+  SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, abspath1, FALSE, pool));
+  if (kind == svn_node_dir)
+    {
+      anchor1 = path1;
+      target1 = "";
+    }
+  else
+    {
+      svn_dirent_split(&anchor1, &target1, path1, pool);
+    }
+  SVN_ERR(svn_client__get_diff_summarize_callbacks(
+            &callbacks, &callback_baton, target1,
+            summarize_func, summarize_baton, pool));
+
+  SVN_ERR(svn_wc_diff6(ctx->wc_ctx,
+                       abspath1,
+                       callbacks, callback_baton,
+                       depth,
+                       ignore_ancestry, FALSE /* show_copies_as_adds */,
+                       /* FALSE */ use_git_diff_format, changelists,
+                       ctx->cancel_func, ctx->cancel_baton,
+                       pool));
+  return SVN_NO_ERROR;
+}
+
 /* Perform a diff summary between two repository paths. */
 static svn_error_t *
 diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
@@ -2094,6 +2161,7 @@ do_diff_summarize(svn_client_diff_summarize_func_t summarize_func,
                   const svn_opt_revision_t *peg_revision,
                   svn_depth_t depth,
                   svn_boolean_t ignore_ancestry,
+                  const apr_array_header_t *changelists,
                   apr_pool_t *pool)
 {
   svn_boolean_t is_repos1;
@@ -2108,10 +2176,17 @@ do_diff_summarize(svn_client_diff_summarize_func_t summarize_func,
                                       path1, path2, revision1, revision2,
                                       peg_revision, depth, ignore_ancestry,
                                       pool);
+  else if (! is_repos1 && ! is_repos2)
+    return diff_summarize_wc_wc(summarize_func, summarize_baton,
+                                path1, revision1, path2, revision2,
+                                depth, ignore_ancestry,
+                                FALSE /* use_git_diff_format */,
+                                changelists, ctx, pool);
   else
-    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                            _("Summarizing diff can only compare repository "
-                              "to repository"));
+   return unsupported_diff_error(
+            svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("Summarizing diff cannot compare repository "
+                               "to WC")));
 }
 
 
@@ -2341,10 +2416,9 @@ svn_client_diff_summarize2(const char *path1,
   svn_opt_revision_t peg_revision;
   peg_revision.kind = svn_opt_revision_unspecified;
 
-  /* ### CHANGELISTS parameter isn't used */
   return do_diff_summarize(summarize_func, summarize_baton, ctx,
                            path1, path2, revision1, revision2, &peg_revision,
-                           depth, ignore_ancestry, pool);
+                           depth, ignore_ancestry, changelists, pool);
 }
 
 svn_error_t *
@@ -2360,10 +2434,10 @@ svn_client_diff_summarize_peg2(const char *path,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool)
 {
-  /* ### CHANGELISTS parameter isn't used */
   return do_diff_summarize(summarize_func, summarize_baton, ctx,
                            path, path, start_revision, end_revision,
-                           peg_revision, depth, ignore_ancestry, pool);
+                           peg_revision,
+                           depth, ignore_ancestry, changelists, pool);
 }
 
 svn_client_diff_summarize_t *
