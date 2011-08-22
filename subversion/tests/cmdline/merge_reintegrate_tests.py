@@ -486,22 +486,9 @@ def reintegrate_with_rename(sbox):
     ""             : Item(status=' M', wc_rev=9),
   })
   k_expected_disk.tweak('', props={SVN_PROP_MERGEINFO : '/A_COPY:2-9'})
-
-  # Why do we expect mergeinfo of '/A_COPY/D/G/tauprime:2-9' on
-  # A/D/G/tauprime?  Because this --reintegrate merge is effectively a
-  # two URL merge of %URL%/A@9 %URL%/A_COPY@9 to 'A'.  Since %URL%/A@9 and
-  # %URL%/A_COPY@9 have a common ancestor in %URL%/A@1 we expect this 2-URL
-  # merge to record mergeinfo and a component of that mergeinfo describes
-  # the merge of %URL%/A_COPY@2 to %URL%/A_COPY@9.  We see that above on
-  # A.  But we also get it on A's subtrees with explicit mergeinfo, namely
-  # A/D/G/tauprime.  Now I know what you are thinking, "'A_COPY/D/G/tauprime'
-  # doesn't even exist until r9!", and you are quite right.  But this
-  # inheritance of bogus mergeinfo is a known problem, see
-  # http://subversion.tigris.org/issues/show_bug.cgi?id=3157#desc8,
-  # and is not what this test is about, so we won't fail because of it.
   k_expected_disk.add({
     'D/G/tauprime' : Item(props={SVN_PROP_MERGEINFO :
-                                 '/A/D/G/tau:2-7\n/A_COPY/D/G/tauprime:2-9'},
+                                 '/A/D/G/tau:2-7\n/A_COPY/D/G/tauprime:9'},
                           contents="This is the file 'tau'.\n")
     })
   expected_skip = wc.State(A_path, {})
@@ -1340,7 +1327,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
     ''              : Item(status=' U'),
     'mu'            : Item(status=' G'),
     'D'             : Item(status=' U'),
-    'D/gamma_moved' : Item(status=' G'),
+    'D/gamma_moved' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_path, {
     })
@@ -1384,22 +1371,9 @@ def reintegrate_with_subtree_mergeinfo(sbox):
     'D/G/pi'        : Item("This is the file 'pi'.\n"),
     'D/G/rho'       : Item("New content"),
     'D/G/tau'       : Item("This is the file 'tau'.\n"),
-    # Why do we expect mergeinfo of '/A_COPY/D/G/tauprime:2-9' on
-    # A/D/G/tauprime?  Because this --reintegrate merge is effectively a
-    # two URL merge of %URL%/A@9 %URL%/A_COPY@9 to 'A'.  Since %URL%/A@9 and
-    # %URL%/A_COPY@9 have a common ancestor in %URL%/A@1 we expect this 2-URL
-    # merge to record mergeinfo and a component of that mergeinfo describes
-    # the merge of %URL%/A_COPY@2 to %URL%/A_COPY@9.  We see that above on
-    # A.  But we also get it on A's subtrees with explicit mergeinfo, namely
-    # A/D/G/tauprime.  Now I know what you are thinking, "'A_COPY/D/G/tauprime'
-    # doesn't even exist until r9!", and you are quite right.  But this
-    # inheritance of bogus mergeinfo is a known problem, see
-    # http://subversion.tigris.org/issues/show_bug.cgi?id=3157#desc8,
-    # and is not what this test is about, so we won't fail because of it.
     'D/gamma_moved' : Item(
       "Even newer content", props={SVN_PROP_MERGEINFO :
-                                   '/A/D/gamma_moved:2-15\n'
-                                   '/A_COPY/D/gamma_moved:2-19\n'
+                                   '/A_COPY/D/gamma_moved:17-19\n'
                                    '/A_COPY_3/D/gamma:9'}),
     'D/H'           : Item(),
     'D/H/chi'       : Item("This is the file 'chi'.\n"),
@@ -2037,7 +2011,7 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
     'C'         : Item(),
     'C/nu'      : Item("Trunk work on nu.\n",
                        props={SVN_PROP_MERGEINFO :
-                              '/A_COPY/C/nu:16-18\n'
+                              '/A_COPY/C/nu:13,16-18\n'
                               '/A_COPY_2/C/nu:10'}), # <-- From cyclic
                                                      # merge in r11
     'D'         : Item(),
