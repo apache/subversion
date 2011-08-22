@@ -2028,7 +2028,7 @@ diff_summarize_wc_wc(svn_client_diff_summarize_func_t summarize_func,
 {
   svn_wc_diff_callbacks4_t *callbacks;
   void *callback_baton;
-  const char *abspath1, *anchor1, *target1;
+  const char *abspath1, *target1;
   svn_node_kind_t kind;
 
   SVN_ERR_ASSERT(! svn_path_is_url(path1));
@@ -2049,15 +2049,7 @@ diff_summarize_wc_wc(svn_client_diff_summarize_func_t summarize_func,
      be anchored at PATH1 or its parent dir. */
   SVN_ERR(svn_dirent_get_absolute(&abspath1, path1, pool));
   SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, abspath1, FALSE, pool));
-  if (kind == svn_node_dir)
-    {
-      anchor1 = path1;
-      target1 = "";
-    }
-  else
-    {
-      svn_dirent_split(&anchor1, &target1, path1, pool);
-    }
+  target1 = (kind == svn_node_dir) ? "" : svn_dirent_basename(path1, pool);
   SVN_ERR(svn_client__get_diff_summarize_callbacks(
             &callbacks, &callback_baton, target1,
             summarize_func, summarize_baton, pool));
