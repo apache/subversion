@@ -6198,6 +6198,27 @@ info_below_working(svn_boolean_t *have_base,
   return SVN_NO_ERROR;
 }
 
+/* Helper function for op_delete_txn */
+static svn_error_t *
+delete_update_movedto(svn_wc__db_wcroot_t *wcroot,
+                      const char *child_moved_from_relpath,
+                      const char *new_moved_to_relpath,
+                      apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_UPDATE_MOVED_TO_RELPATH));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss",
+                            wcroot->wc_id,
+                            child_moved_from_relpath,
+                            new_moved_to_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
 
 struct op_delete_baton_t {
   apr_int64_t delete_depth;  /* op-depth for root of delete */
@@ -6339,7 +6360,6 @@ op_delete_txn(void *baton,
                 {
                   const char *child_subtree_relpath;
                   const char *new_moved_to_relpath;
-                  svn_sqlite__stmt_t *moved_to_stmt;
 
                   /* Compute the new moved-to path for this child... */
                   child_subtree_relpath =
@@ -6351,16 +6371,14 @@ op_delete_txn(void *baton,
                     svn_relpath_join(b->moved_to_relpath,
                                      child_subtree_relpath, iterpool);
                   /* ... and update the BASE moved-to record. */
-                  /* ### On errors the next 4 statements don't reset STMT */
-                  SVN_ERR(svn_sqlite__get_statement(
-                            &moved_to_stmt, wcroot->sdb,
-                            STMT_UPDATE_MOVED_TO_RELPATH));
-                  SVN_ERR(svn_sqlite__bindf(moved_to_stmt, "iss",
-                                            wcroot->wc_id,
-                                            child_moved_from_relpath,
-                                            new_moved_to_relpath));
-                  SVN_ERR(svn_sqlite__step(&have_row, moved_to_stmt));
-                  SVN_ERR(svn_sqlite__reset(moved_to_stmt));
+                  err = delete_update_movedto(wcroot, child_moved_from_relpath,
+                                              new_moved_to_relpath,
+                                              scratch_pool);
+
+                  if (err)
+                    return svn_error_trace(svn_error_compose_create(
+                                                    err,
+                                                    svn_sqlite__reset(stmt)));
                 }
 
               SVN_ERR(svn_sqlite__step(&have_row, stmt));
