@@ -1510,9 +1510,6 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
  * Set *COPIED_HERE if the reverted node was copied here and is the
  * operation root of the copy.
  * Set *KIND to the node kind of the reverted node.
- * If the node was a file, set *PRISTINE_CHECKSUM to the checksum
- * of the pristine associated with the node. If the file had no
- * pristine set *PRISTINE_CHECKSUM to NULL.
  *
  * Removes the row for LOCAL_ABSPATH from the revert list.
  */
@@ -1524,7 +1521,6 @@ svn_wc__db_revert_list_read(svn_boolean_t *reverted,
                             const char **prop_reject,
                             svn_boolean_t *copied_here,
                             svn_wc__db_kind_t *kind,
-                            const svn_checksum_t **pristine_checksum,
                             svn_wc__db_t *db,
                             const char *local_abspath,
                             apr_pool_t *result_pool,
@@ -1535,11 +1531,10 @@ svn_wc__db_revert_list_read(svn_boolean_t *reverted,
 typedef struct svn_wc__db_revert_list_copied_child_info_t {
   const char *abspath;
   svn_wc__db_kind_t kind;
-  const svn_checksum_t *pristine_checksum;
 } svn_wc__db_revert_list_copied_child_info_t ;
 
-/* Return in *CHILDREN a list of reverted copied children within the
- * reverted tree rooted at LOCAL_ABSPATH.
+/* Return in *CHILDREN a list of reverted copied nodes at or within
+ * LOCAL_ABSPATH (which is a reverted file or a reverted directory).
  * Allocate *COPIED_CHILDREN and its elements in RESULT_POOL.
  * The elements are of type svn_wc__db_revert_list_copied_child_info_t. */
 svn_error_t *
@@ -2610,14 +2605,20 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
    @{
 */
 
+/* Create a new wc.db file for LOCAL_DIR_ABSPATH, which is going to be a
+   working copy for the repository REPOS_ROOT_URL with uuid REPOS_UUID.
+   Return the raw sqlite handle, repository id and working copy id
+   and store the database in WC_DB.
+
+   Perform temporary allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                          apr_int64_t *repos_id,
                          apr_int64_t *wc_id,
+                         svn_wc__db_t *wc_db,
                          const char *local_dir_abspath,
                          const char *repos_root_url,
                          const char *repos_uuid,
-                         apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
 

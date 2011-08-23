@@ -3184,6 +3184,16 @@ def diff_summarize_xml(sbox):
                         wc_rev=2)
   expected_status.remove("A/B/lambda")
 
+  # 3) Test working copy summarize
+  paths = ['A/mu', 'iota', 'A/D/G/tau', 'newfile', 'A/B/lambda',
+           'newdir',]
+  items = ['modified', 'none', 'modified', 'added', 'deleted', 'added',]
+  kinds = ['file','file','file','file','file', 'dir',]
+  props = ['none', 'modified', 'modified', 'none', 'none', 'none',]
+
+  svntest.actions.run_and_verify_diff_summarize_xml(
+    [], wc_dir, paths, items, props, kinds, wc_dir)
+
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
@@ -3197,38 +3207,21 @@ def diff_summarize_xml(sbox):
     ".*No such revision 5555555",
     None, wc_dir, None, None, None, '-r0:5555555', wc_dir)
 
-  # 3) Test working copy summarize
-  svntest.actions.run_and_verify_diff_summarize_xml(
-    ".*Summarizing diff can only compare repository to repository",
-    None, wc_dir, None, None, wc_dir)
-
   # 4) Test --summarize --xml on -c2
-  paths = ['iota',]
-  items = ['none',]
-  kinds = ['file',]
-  props = ['modified',]
+  paths_iota = ['iota',]
+  items_iota = ['none',]
+  kinds_iota = ['file',]
+  props_iota = ['modified',]
 
   svntest.actions.run_and_verify_diff_summarize_xml(
-    [], wc_dir, paths, items, props, kinds, '-c2',
+    [], wc_dir, paths_iota, items_iota, props_iota, kinds_iota, '-c2',
     os.path.join(wc_dir, 'iota'))
 
   # 5) Test --summarize --xml on -r1:2
-  paths = ['A/mu', 'iota', 'A/D/G/tau', 'newfile', 'A/B/lambda',
-           'newdir',]
-  items = ['modified', 'none', 'modified', 'added', 'deleted', 'added',]
-  kinds = ['file','file','file','file','file', 'dir',]
-  props = ['none', 'modified', 'modified', 'none', 'none', 'none',]
-
   svntest.actions.run_and_verify_diff_summarize_xml(
     [], wc_dir, paths, items, props, kinds, '-r1:2', wc_dir)
 
   # 6) Same as test #5 but ran against a URL instead of a WC path
-  paths = ['A/mu', 'iota', 'A/D/G/tau', 'newfile', 'A/B/lambda',
-           'newdir',]
-  items = ['modified', 'none', 'modified', 'added', 'deleted', 'added',]
-  kinds = ['file','file','file','file','file', 'dir',]
-  props = ['none', 'modified', 'modified', 'none', 'none', 'none',]
-
   svntest.actions.run_and_verify_diff_summarize_xml(
     [], sbox.repo_url, paths, items, props, kinds, '-r1:2', sbox.repo_url)
 

@@ -246,6 +246,15 @@ static const char *bad_git_diff_header =
   "diff --git a/ b/path 1 b/ b/path 1"                                  NL
   "new file mode 100644"                                                NL;
 
+static const char *unidiff_lacking_trailing_eol =
+  "Index: A/C/gamma"                                                    NL
+  "===================================================================" NL
+  "--- A/C/gamma\t(revision 2)"                                         NL
+  "+++ A/C/gamma\t(working copy)"                                       NL
+  "@@ -1 +1,2 @@"                                                       NL
+  " This is the file 'gamma'."                                          NL
+  "+some more bytes to 'gamma'"; /* Don't add NL after this line */
+
 
 /* Create a PATCH_FILE containing the contents of DIFF. */
 static svn_error_t *
@@ -900,6 +909,57 @@ test_git_diffs_with_spaces_diff(apr_pool_t *pool)
   SVN_ERR(svn_diff_close_patch_file(patch_file, pool));
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+test_parse_unidiff_lacking_trailing_eol(apr_pool_t *pool)
+{
+  svn_patch_file_t *patch_file;
+  svn_boolean_t reverse;
+  svn_boolean_t ignore_whitespace;
+  int i;
+  apr_pool_t *iterpool;
+
+  reverse = FALSE;
+  ignore_whitespace = FALSE;
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < 2; i++)
+    {
+      svn_patch_t *patch;
+      svn_diff_hunk_t *hunk;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(create_patch_file(&patch_file, unidiff_lacking_trailing_eol,
+                                pool));
+
+      /* We have one patch with one hunk. Parse it. */
+      SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, reverse,
+                                        ignore_whitespace, iterpool,
+                                        iterpool));
+      SVN_TEST_ASSERT(patch);
+      SVN_TEST_STRING_ASSERT(patch->old_filename, "A/C/gamma");
+      SVN_TEST_STRING_ASSERT(patch->new_filename, "A/C/gamma");
+      SVN_TEST_ASSERT(patch->hunks->nelts == 1);
+
+      hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_diff_hunk_t *);
+      SVN_ERR(check_content(hunk, ! reverse,
+                            "This is the file 'gamma'." NL,
+                            pool));
+
+      /* Verify that the contents are as expected, with a NL appended.
+         TODO: test for notification about the NL silently appended */
+      SVN_ERR(check_content(hunk, reverse,
+                            "This is the file 'gamma'." NL
+                            "some more bytes to 'gamma'" NL,
+                            pool));
+
+      reverse = !reverse;
+      SVN_ERR(svn_diff_close_patch_file(patch_file, pool));
+    }
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -921,5 +981,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test property diffs with odd symbols"),
     SVN_TEST_PASS2(test_git_diffs_with_spaces_diff,
                    "test git diffs with spaces in paths"),
+    SVN_TEST_XFAIL2(test_parse_unidiff_lacking_trailing_eol,
+                   "test parsing unidiffs lacking trailing eol"),
     SVN_TEST_NULL
   };

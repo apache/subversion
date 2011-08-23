@@ -1292,48 +1292,6 @@ remove_conflict_file(svn_boolean_t *notify_required,
 }
 
 
-/* Remove the reverted copied file at LOCAL_ABSPATH from disk if it was
- * not modified after being copied. Use FILESIZE and PRISTINE_CHECKSUM to
- * detect modification.
- * If NEW_KIND is not NULL, return the resulting on-disk kind of the node
- * at LOCAL_ABSPATH in *NEW_KIND. */
-static svn_error_t *
-revert_restore_handle_copied_file(svn_node_kind_t *new_kind,
-                                  svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  svn_filesize_t filesize,
-                                  const svn_checksum_t *pristine_checksum,
-                                  apr_pool_t *scratch_pool)
-{
-  svn_stream_t *pristine_stream;
-  svn_filesize_t pristine_size;
-  svn_boolean_t has_text_mods;
-
-  if (new_kind)
-    *new_kind = svn_node_file;
-
-  SVN_ERR(svn_wc__db_pristine_read(&pristine_stream, &pristine_size,
-                                   db, local_abspath, pristine_checksum,
-                                   scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__compare_file_with_pristine(&has_text_mods, db,
-                                             local_abspath,
-                                             filesize,
-                                             pristine_stream,
-                                             pristine_size,
-                                             FALSE, FALSE, FALSE,
-                                             scratch_pool));
-
-  if (!has_text_mods)
-    {
-      SVN_ERR(svn_io_remove_file2(local_abspath, FALSE, scratch_pool));
-      if (new_kind)
-        *new_kind = svn_node_none;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Sort copied children obtained from the revert list based on
  * their paths in descending order (longest paths first). */
 static int
@@ -1351,19 +1309,18 @@ compare_revert_list_copied_children(const void *a, const void *b)
 }
 
 
-/* Remove as many reverted copied children as possible from the directory at
- * LOCAL_ABSPATH. If REMOVE_SELF is TRUE, also remove LOCAL_ABSPATH itself
- * if possible (REMOVE_SELF should be set if LOCAL_ABSPATH is itself a
- * reverted copy).
+/* Remove all reverted copied children from the directory at LOCAL_ABSPATH.
+ * If REMOVE_SELF is TRUE, try to remove LOCAL_ABSPATH itself (REMOVE_SELF
+ * should be set if LOCAL_ABSPATH is itself a reverted copy).
  *
- * All reverted copied file children not modified after being copied are
- * removed from disk. Reverted copied directories left empty as a result
- * are also removed from disk.
+ * If REMOVED_SELF is not NULL, indicate in *REMOVED_SELF whether
+ * LOCAL_ABSPATH itself was removed.
  *
- * If NEW_KIND is not NULL, return the resulting on-disk kind of the node
- * at LOCAL_ABSPATH in *NEW_KIND. */
+ * All reverted copied file children are removed from disk. Reverted copied
+ * directories left empty as a result are also removed from disk.
+ */
 static svn_error_t *
-revert_restore_handle_copied_dirs(svn_node_kind_t *new_kind,
+revert_restore_handle_copied_dirs(svn_boolean_t *removed_self,
                                   svn_wc__db_t *db,
                                   const char *local_abspath,
                                   svn_boolean_t remove_self,
@@ -1374,12 +1331,12 @@ revert_restore_handle_copied_dirs(svn_node_kind_t *new_kind,
   const apr_array_header_t *copied_children;
   svn_wc__db_revert_list_copied_child_info_t *child_info;
   int i;
-  apr_finfo_t finfo;
+  svn_node_kind_t on_disk;
   apr_pool_t *iterpool;
   svn_error_t *err;
 
-  if (new_kind)
-    *new_kind = svn_node_dir;
+  if (removed_self)
+    *removed_self = FALSE;
 
   SVN_ERR(svn_wc__db_revert_list_read_copied_children(&copied_children,
                                                       db, local_abspath,
@@ -1387,7 +1344,7 @@ revert_restore_handle_copied_dirs(svn_node_kind_t *new_kind,
                                                       scratch_pool));
   iterpool = svn_pool_create(scratch_pool);
 
-  /* Remove all file children, if possible. */
+  /* Remove all copied file children. */
   for (i = 0; i < copied_children->nelts; i++)
     {
       child_info = APR_ARRAY_IDX(
@@ -1402,33 +1359,19 @@ revert_restore_handle_copied_dirs(svn_node_kind_t *new_kind,
 
       svn_pool_clear(iterpool);
 
-      err = svn_io_stat(&finfo, child_info->abspath,
-                        APR_FINFO_TYPE | APR_FINFO_SIZE,
-                        iterpool);
-      if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
-                  || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
-        {
-          svn_error_clear(err);
-          continue;
-        }
-      else
-        SVN_ERR(err);
-
-      if (finfo.filetype != APR_REG)
+      /* Make sure what we delete from disk is really a file. */
+      SVN_ERR(svn_io_check_path(child_info->abspath, &on_disk, iterpool));
+      if (on_disk != svn_node_file)
         continue;
 
-      SVN_ERR(revert_restore_handle_copied_file(NULL, db, child_info->abspath,
-                                                finfo.size,
-                                                child_info->pristine_checksum,
-                                                iterpool));
+      SVN_ERR(svn_io_remove_file2(child_info->abspath, TRUE, iterpool));
     }
 
-  /* Try to delete every child directory, ignoring errors.
-   * This is a bit crude but good enough for our purposes.
-   *
+  /* Delete every empty child directory.
    * We cannot delete children recursively since we want to keep any files
-   * that still exist on disk. So sort the children list such that longest
-   * paths come first and try to remove each child directory in order. */
+   * that still exist on disk (e.g. unversioned files within the copied tree).
+   * So sort the children list such that longest paths come first and try to
+   * remove each child directory in order. */
   qsort(copied_children->elts, copied_children->nelts,
         sizeof(svn_wc__db_revert_list_copied_child_info_t *),
         compare_revert_list_copied_children);
@@ -1446,24 +1389,31 @@ revert_restore_handle_copied_dirs(svn_node_kind_t *new_kind,
 
       svn_pool_clear(iterpool);
 
-      svn_error_clear(svn_io_dir_remove_nonrecursive(child_info->abspath,
-                                                     iterpool));
+      err = svn_io_dir_remove_nonrecursive(child_info->abspath, iterpool);
+      if (err)
+        {
+          if (APR_STATUS_IS_ENOENT(err->apr_err) ||
+              SVN__APR_STATUS_IS_ENOTDIR(err->apr_err) ||
+              APR_STATUS_IS_ENOTEMPTY(err->apr_err))
+            svn_error_clear(err);
+          else
+            return svn_error_trace(err);
+        }
     }
 
   if (remove_self)
     {
-      apr_hash_t *remaining_children;
-
       /* Delete LOCAL_ABSPATH itself if no children are left. */
-      SVN_ERR(svn_io_get_dirents3(&remaining_children, local_abspath, TRUE,
-                                  iterpool, iterpool));
-      if (apr_hash_count(remaining_children) == 0)
-        {
-          SVN_ERR(svn_io_remove_dir2(local_abspath, FALSE, NULL, NULL,
-                                     iterpool));
-          if (new_kind)
-            *new_kind = svn_node_none;
+      err = svn_io_dir_remove_nonrecursive(local_abspath, iterpool);
+      if (err)
+       {
+          if (APR_STATUS_IS_ENOTEMPTY(err->apr_err))
+            svn_error_clear(err);
+          else
+            return svn_error_trace(err);
         }
+      else if (removed_self)
+        *removed_self = TRUE;
     }
 
   svn_pool_destroy(iterpool);
@@ -1504,7 +1454,6 @@ revert_restore(svn_wc__db_t *db,
 #endif
   svn_boolean_t copied_here;
   svn_wc__db_kind_t reverted_kind;
-  const svn_checksum_t *pristine_checksum;
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
@@ -1513,7 +1462,6 @@ revert_restore(svn_wc__db_t *db,
                                       &conflict_old, &conflict_new,
                                       &conflict_working, &prop_reject,
                                       &copied_here, &reverted_kind,
-                                      &pristine_checksum,
                                       db, local_abspath,
                                       scratch_pool, scratch_pool));
 
@@ -1542,6 +1490,16 @@ revert_restore(svn_wc__db_t *db,
                                                   db, local_abspath,
                                                   scratch_pool));
           return SVN_NO_ERROR;
+        }
+      else
+        {
+          /* ### Initialise to values which prevent the code below from
+           * ### trying to restore anything to disk.
+           * ### 'status' should be status_unknown but that doesn't exist. */
+          status = svn_wc__db_status_normal;
+          kind = svn_wc__db_kind_unknown;
+          recorded_size = SVN_INVALID_FILESIZE;
+          recorded_mod_time = 0;
         }
     }
   else if (err)
@@ -1581,15 +1539,21 @@ revert_restore(svn_wc__db_t *db,
     {
       /* The revert target itself is the op-root of a copy. */
       if (reverted_kind == svn_wc__db_kind_file && on_disk == svn_node_file)
-        SVN_ERR(revert_restore_handle_copied_file(&on_disk, db, local_abspath,
-                                                  finfo.size,
-                                                  pristine_checksum,
-                                                  scratch_pool));
+        {
+          SVN_ERR(svn_io_remove_file2(local_abspath, TRUE, scratch_pool));
+          on_disk = svn_node_none;
+        }
       else if (reverted_kind == svn_wc__db_kind_dir && on_disk == svn_node_dir)
-        SVN_ERR(revert_restore_handle_copied_dirs(&on_disk, db, local_abspath,
-                                                  TRUE, 
-                                                  cancel_func, cancel_baton,
-                                                  scratch_pool));
+        {
+          svn_boolean_t removed;
+
+          SVN_ERR(revert_restore_handle_copied_dirs(&removed, db,
+                                                    local_abspath, TRUE, 
+                                                    cancel_func, cancel_baton,
+                                                    scratch_pool));
+          if (removed)
+            on_disk = svn_node_none;
+        }
     }
 
   /* If we expect a versioned item to be present then check that any
@@ -2536,9 +2500,11 @@ svn_wc__internal_changelist_match(svn_wc__db_t *db,
       return FALSE;
     }
 
+  /* The empty changelist name is special-cased. */
   return (changelist
-            && apr_hash_get((apr_hash_t *)clhash, changelist,
-                            APR_HASH_KEY_STRING) != NULL);
+          ? apr_hash_get((apr_hash_t *)clhash, changelist, APR_HASH_KEY_STRING)
+          : apr_hash_get((apr_hash_t *)clhash, "", APR_HASH_KEY_STRING)
+         ) != NULL;
 }
 
 

@@ -90,8 +90,8 @@ static apr_hash_t *xlate_handle_hash = NULL;
  * using atomic xchange ops, i.e. without further thread synchronization.
  * If the respective item is NULL, fallback to hash lookup.
  */
-static volatile void *xlat_ntou_static_handle = NULL;
-static volatile void *xlat_uton_static_handle = NULL;
+static void * volatile xlat_ntou_static_handle = NULL;
+static void * volatile xlat_uton_static_handle = NULL;
 
 /* Clean up the xlate handle cache. */
 static apr_status_t
@@ -182,11 +182,13 @@ get_xlate_key(const char *topage,
  * the caller.
  */
 static APR_INLINE void*
-atomic_swap(volatile void **mem, void *new_value)
+atomic_swap(void * volatile * mem, void *new_value)
 {
 #if APR_HAS_THREADS
 #if APR_VERSION_AT_LEAST(1,3,0)
-   return apr_atomic_xchgptr(mem, new_value);
+  /* Cast is necessary because of APR bug:
+     https://issues.apache.org/bugzilla/show_bug.cgi?id=50731 */
+   return apr_atomic_xchgptr((volatile void **)mem, new_value);
 #else
    /* old APRs don't support atomic swaps. Simply return the
     * input to the caller for further proccessing. */

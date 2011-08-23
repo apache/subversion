@@ -666,9 +666,7 @@ assemble_status(svn_wc_status3_t **status,
             }
 
           /* Get moved-from info (only for potential op-roots of a move). */
-          if (node_status == svn_wc_status_added
-              && info->moved_here
-              && info->op_root)
+          if (info->moved_here && info->op_root)
             SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL,
                                              NULL, NULL, NULL, NULL,
                                              &moved_from_abspath,

@@ -75,7 +75,9 @@ def generate_asc_files(target_dir='.'):
 
   db = sqlite3.connect(os.path.join(target_dir, 'sigs.db'))
   curs = db.cursor()
-  curs.execute('SELECT filename, signature FROM signatures;')
+  like_filename = 'subversion-%s%%' % config.version
+  curs.execute('''SELECT filename, signature FROM signatures
+                  WHERE filename LIKE ?''', (like_filename, ) )
   for filename, signature in curs:
     fd = _open(filename)
     fd.write(signature)

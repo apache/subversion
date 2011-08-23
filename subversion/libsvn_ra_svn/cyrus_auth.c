@@ -28,7 +28,6 @@
 #include <apr_want.h>
 #include <apr_general.h>
 #include <apr_strings.h>
-#include <apr_atomic.h>
 #include <apr_thread_mutex.h>
 #include <apr_version.h>
 
