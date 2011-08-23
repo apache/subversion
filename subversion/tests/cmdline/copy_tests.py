@@ -955,7 +955,6 @@ def repos_to_wc(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
 
   svntest.main.safe_rmtree(os.path.join(wc_dir, 'E'))
-  os.unlink(os.path.join(wc_dir, 'pi'))
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   svntest.actions.run_and_verify_status(wc_dir, expected_output)

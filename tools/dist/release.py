@@ -423,7 +423,7 @@ def roll_tarballs(args):
     logging.info('Moving artifacts and calculating checksums')
     for e in extns:
         if args.version.pre == 'nightly':
-            filename = 'subversion-trunk.%s' % e
+            filename = 'subversion-nightly.%s' % e
         else:
             filename = 'subversion-%s.%s' % (args.version, e)
 

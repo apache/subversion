@@ -368,37 +368,52 @@ def revert_replaced_file_without_props(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
-# Regression test for issue #876:
-# svn revert of an svn move'd file does not revert the file
-@XFail()
+# Note that issue #876 has been rejected. This now basically tests that
+# reverting the delete side of a move does *not* also revert the copy side.
 @Issue(876)
 def revert_moved_file(sbox):
-    "revert a moved file"
+  "revert a moved file"
 
-    sbox.build(read_only = True)
-    wc_dir = sbox.wc_dir
-    iota_path = os.path.join(wc_dir, 'iota')
-    iota_path_moved = os.path.join(wc_dir, 'iota_moved')
+  # svntest.factory.make(sbox, """svn mv iota iota_moved
+  #                               svn st
+  #                               svn revert iota
+  #                               svn st
+  #                               """)
 
-    svntest.actions.run_and_verify_svn(None, None, [], 'mv', iota_path,
-                                        iota_path_moved)
-    expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
-    expected_output.tweak('iota', status='D ')
-    expected_output.add({
-      'iota_moved' : Item(status='A ', copied='+', wc_rev='-'),
-    })
-    svntest.actions.run_and_verify_status(wc_dir, expected_output)
+  sbox.build()
+  wc_dir = sbox.wc_dir
 
-    # now revert the file iota
-    svntest.actions.run_and_verify_svn(None,
-      ["Reverted '" + iota_path + "'\n"], [], 'revert', iota_path)
+  iota = os.path.join(wc_dir, 'iota')
+  iota_moved = os.path.join(wc_dir, 'iota_moved')
 
-    # at this point, svn status on iota_path_moved should return nothing
-    # since it should disappear on reverting the move, and since svn status
-    # on a non-existent file returns nothing.
+  # svn mv iota iota_moved
+  expected_stdout = svntest.verify.UnorderedOutput([
+    'A         ' + iota_moved + '\n',
+    'D         ' + iota + '\n',
+  ])
 
-    svntest.actions.run_and_verify_svn(None, [], [],
-                                      'status', '-v', iota_path_moved)
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'mv', iota,
+    iota_moved)
+
+  # svn st
+  expected_status = actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'iota_moved'        : Item(status='A ', copied='+', wc_rev='-'),
+  })
+  expected_status.tweak('iota', status='D ')
+
+  actions.run_and_verify_unquiet_status(wc_dir, expected_status)
+
+  # svn revert iota
+  expected_stdout = ["Reverted '" + iota + "'\n"]
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'revert',
+    iota)
+
+  # svn st
+  expected_status.tweak('iota', status='  ')
+
+  actions.run_and_verify_unquiet_status(wc_dir, expected_status)
 
 
 #----------------------------------------------------------------------
@@ -971,8 +986,7 @@ def revert_tree_conflicts_in_updated_files(sbox):
   expected_status.remove('A/D/G/tau')
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/D/G/rho',
-                      contents="This is the file 'rho'.\nLocal edit.\n")
+  expected_disk.remove('A/D/G/rho')
   expected_disk.tweak('A/D/G/pi',
                       contents="This is the file 'pi'.\nIncoming edit.\n")
   expected_disk.remove('A/D/G/tau')
