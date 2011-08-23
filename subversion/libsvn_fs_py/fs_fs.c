@@ -7327,12 +7327,23 @@ svn_fs_py__pack(svn_fs_t *fs,
                 void *cancel_baton,
                 apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   struct pack_baton pb = { 0 };
+  PyObject *p_cancel_func;
+  PyObject *p_notify_func;
+
   pb.fs = fs;
   pb.notify_func = notify_func;
   pb.notify_baton = notify_baton;
   pb.cancel_func = cancel_func;
   pb.cancel_baton = cancel_baton;
+
+  p_notify_func = svn_fs_py__wrap_pack_notify_func(notify_func, notify_baton);
+  p_cancel_func = svn_fs_py__wrap_cancel_func(cancel_func, cancel_baton);
+
+  SVN_ERR(svn_fs_py__call_method(NULL, ffd->p_fs, "pack", "(NN)",
+                                 p_notify_func, p_cancel_func));
+
   return svn_fs_py__with_write_lock(fs, pack_body, &pb, pool);
 }
 

@@ -209,6 +209,123 @@ load_error:
   }
 }
 
+static void
+raise_and_clear_err(svn_error_t *error_chain)
+{
+  PyObject *args_list = NULL;
+  PyObject *args = NULL;
+  PyObject *apr_err_ob = NULL;
+  PyObject *message_ob = NULL;
+  PyObject *file_ob = NULL;
+  PyObject *line_ob = NULL;
+  PyObject *svn_module = NULL;
+  PyObject *exc_class = NULL;
+  PyObject *exc_ob = NULL;
+  svn_error_t *err;
+
+  if (error_chain == NULL)
+    return;
+
+  args_list = PyList_New(0);
+  if (PyErr_Occurred())
+    goto finished;
+
+  for (err = error_chain; err; err = err->child)
+    {
+      int i;
+
+      args = PyTuple_New(4);
+      if (PyErr_Occurred())
+        goto finished;
+
+      /* Convert the fields of the svn_error_t to Python objects. */
+      apr_err_ob = PyInt_FromLong(err->apr_err);
+      if (PyErr_Occurred())
+        goto finished;
+
+      if (err->message)
+        {
+          message_ob = PyString_FromString(err->message);
+          if (PyErr_Occurred())
+            goto finished;
+        }
+      else
+        {
+          Py_INCREF(Py_None);
+          message_ob = Py_None;
+        }
+
+      if (err->file)
+        {
+          file_ob = PyString_FromString(err->file);
+          if (PyErr_Occurred())
+            goto finished;
+        }
+      else
+        {
+          Py_INCREF(Py_None);
+          file_ob = Py_None;
+        }
+
+      line_ob = PyInt_FromLong(err->line);
+      if (PyErr_Occurred())
+        goto finished;
+
+      /* Store the objects in the tuple. */
+      i = 0;
+#define append(item)                                            \
+      if (PyTuple_SetItem(args, i++, item) == 0)                \
+        /* tuple stole our reference, so don't DECREF */        \
+        item = NULL;                                            \
+      else                                                      \
+        goto finished;
+      append(apr_err_ob);
+      append(message_ob);
+      append(file_ob);
+      append(line_ob);
+#undef append
+
+      /* Append the tuple to the args list. */
+      PyList_Append(args_list, args);
+      if (PyErr_Occurred())
+        goto finished;
+
+      /* The list takes its own reference, so release ours. */
+      Py_DECREF(args);
+    }
+  args = NULL;
+  svn_error_clear(error_chain);
+
+  /* Create the exception object chain. */
+  svn_module = PyImport_ImportModule((char *)"svn");
+  if (PyErr_Occurred())
+    goto finished;
+
+  exc_class = PyObject_GetAttrString(svn_module, (char *)"SubversionException");
+  if (PyErr_Occurred())
+    goto finished;
+
+  exc_ob = PyObject_CallMethod(exc_class, (char *)"_new_from_err_list",
+                               (char *)"(O)", args_list);
+  if (PyErr_Occurred())
+    goto finished;
+
+  /* Raise the exception. */
+  PyErr_SetObject(exc_class, exc_ob);
+
+ finished:
+  /* Release any references. */
+  Py_XDECREF(args_list);
+  Py_XDECREF(args);
+  Py_XDECREF(apr_err_ob);
+  Py_XDECREF(message_ob);
+  Py_XDECREF(file_ob);
+  Py_XDECREF(line_ob);
+  Py_XDECREF(svn_module);
+  Py_XDECREF(exc_class);
+  Py_XDECREF(exc_ob);
+}
+
 svn_error_t *
 svn_fs_py__init_python(apr_pool_t *pool)
 {
@@ -501,4 +618,74 @@ svn_error_t *
 svn_fs_py__load_module(fs_fs_data_t *ffd)
 {
   return svn_error_trace(load_module(&ffd->p_module, FS_MODULE_NAME));
+}
+
+PyObject *
+svn_fs_py__wrap_pack_notify_func(svn_fs_pack_notify_t notify_func,
+                                 void *notify_baton)
+{
+  if (!notify_func)
+    Py_RETURN_NONE;
+
+  Py_RETURN_NONE;
+}
+
+static PyObject *
+cancel_func_wrapper(PyObject *p_tuple, PyObject *args)
+{
+  PyObject *c_func;
+  PyObject *baton;
+  void *cancel_baton;
+  svn_cancel_func_t cancel_func;
+  svn_error_t *err;
+
+  c_func = PySequence_GetItem(p_tuple, 0);
+  cancel_func = PyCObject_AsVoidPtr(c_func);
+  Py_DECREF(c_func);
+
+  baton = PySequence_GetItem(p_tuple, 1);
+  if (baton == Py_None)
+    cancel_baton = NULL;
+  else
+    cancel_baton = PyCObject_AsVoidPtr(baton);
+  Py_DECREF(baton);
+
+  err = cancel_func(cancel_baton);
+  if (err)
+    raise_and_clear_err(err);
+
+  Py_RETURN_NONE;
+}
+
+PyObject *
+svn_fs_py__wrap_cancel_func(svn_cancel_func_t cancel_func,
+                            void *cancel_baton)
+{
+  static PyMethodDef method_def = { "cancel", cancel_func_wrapper,
+                                    METH_NOARGS, NULL };
+  PyObject *func;
+  PyObject *c_func;
+  PyObject *baton;
+  PyObject *p_tuple;
+
+  if (!cancel_func)
+    Py_RETURN_NONE;
+
+  c_func = PyCObject_FromVoidPtr(cancel_func, NULL);
+
+  if (cancel_baton)
+    {
+      baton = PyCObject_FromVoidPtr(cancel_baton, NULL);
+    }
+  else
+    {
+      baton = Py_None;
+      Py_INCREF(baton);
+    }
+
+  p_tuple = Py_BuildValue("(NN)", c_func, baton);
+  func = PyCFunction_New(&method_def, p_tuple);
+  Py_DECREF(p_tuple);
+
+  return func;
 }

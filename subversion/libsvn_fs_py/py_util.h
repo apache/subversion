@@ -67,3 +67,11 @@ svn_error_t *
 svn_fs_py__get_int_attr(int *result,
                         PyObject *p_obj,
                         const char *name);
+
+PyObject *
+svn_fs_py__wrap_pack_notify_func(svn_fs_pack_notify_t notify_func,
+                                 void *notify_baton);
+
+PyObject *
+svn_fs_py__wrap_cancel_func(svn_cancel_func_t cancel_func,
+                            void *cancel_baton);

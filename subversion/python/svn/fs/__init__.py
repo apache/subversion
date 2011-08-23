@@ -25,6 +25,7 @@ import svn
 import svn.hash
 import svn.prop
 import svn._cache
+import svn._lock
 import svn.err
 
 # Some constants
@@ -438,6 +439,18 @@ class FS(object):
             self._create_fs(config)
         else:
             self._open_fs()
+
+        self._write_lock = svn._lock.Lock(self.__path_lock)
+
+
+    def pack(self, notify=None, cancel=None):
+        'Pack the filesystem, calling NOTIFY and CANCEL as appropriate.'
+
+        with self._write_lock:
+            if notify:
+                notify()
+            if cancel:
+                cancel()
 
 
 

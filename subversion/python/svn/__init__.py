@@ -27,6 +27,16 @@ class SubversionException(Exception):
     def __str__(self):
         return self.message
 
+    @classmethod
+    def _new_from_err_list(cls, errors):
+        '''This is provided for any C callers to manually construct an
+        exception.'''
+        child = None
+        errors.reverse()
+        for (apr_err, message, file, line) in errors:
+            child = cls(apr_err, message)
+        return child
+
 
 def is_valid_revnum(rev):
     return rev >= 0
