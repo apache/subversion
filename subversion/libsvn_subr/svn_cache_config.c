@@ -147,6 +147,9 @@ svn_cache__get_global_membuffer_cache(void)
       /* Handle race condition: if we are the first to create a
        * cache object, make it our global singleton. Otherwise,
        * discard the new cache and keep the existing one.
+       *
+       * Cast is necessary because of APR bug:
+       * https://issues.apache.org/bugzilla/show_bug.cgi?id=50731
        */
       old_cache = apr_atomic_casptr((volatile void **)&cache, new_cache, NULL);
       if (old_cache != NULL)
