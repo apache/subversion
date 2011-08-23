@@ -26,7 +26,7 @@ Candidate changes:
      separately.
    Votes:
      +1: rhuijben (only for 1.7.0)
-     +0: danielsh
+     +½: danielsh (not +1 since I nominated the change the same day I wrote it)
      +0: gstein (progress would be nice)
 
  * fs-progress branch
@@ -42,7 +42,7 @@ Candidate changes:
      in a new commit.
    Votes:
      +1: rhuijben (only for 1.7.0)
-     +0: danielsh
+     +½: danielsh
 
  * r1147540, r1147541
    Remove unused variables in build system.
