@@ -50,13 +50,21 @@ public class CommitInfo implements java.io.Serializable
     /** the author of the revision */
     String author;
 
+    /** post commit error (or NULL) */
+    String postCommitError;
+
+    /** repos root (or NULL) */
+    String reposRoot;
+
     /** This constructor will be only called from the jni code.  */
-    public CommitInfo(long rev, String d, String a)
+    public CommitInfo(long rev, String d, String a, String pce, String rr)
             throws java.text.ParseException
     {
         revision = rev;
         date = (new LogDate(d)).getDate();
         author = a;
+        postCommitError = pce;
+        reposRoot = rr;
     }
 
     /**
@@ -81,5 +89,21 @@ public class CommitInfo implements java.io.Serializable
     public String getAuthor()
     {
         return author;
+    }
+
+    /**
+     * return any post commit error for the commit
+     */
+    public String getPostCommitError()
+    {
+        return postCommitError;
+    }
+
+    /**
+     * return the repos root
+     */
+    public String getReposRoot()
+    {
+        return reposRoot;
     }
 }
