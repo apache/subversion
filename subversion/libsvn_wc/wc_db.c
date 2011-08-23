@@ -5414,13 +5414,20 @@ op_revert_recursive_txn(void *baton,
   while (have_row)
     {
       const char *moved_here_child_relpath;
+      svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
       moved_here_child_relpath = svn_sqlite__column_text(stmt, 0, iterpool);
-      SVN_ERR(clear_moved_to(moved_here_child_relpath, wcroot, iterpool));
+      err = clear_moved_to(moved_here_child_relpath, wcroot, iterpool);
+      if (err)
+        return svn_error_trace(svn_error_compose_create(
+                                        err,
+                                        svn_sqlite__reset(stmt)));
+
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
+  SVN_ERR(svn_sqlite__reset(stmt));
   svn_pool_destroy(iterpool);
 
   /* Clear potential moved-to pointing at the target node itself. */
@@ -6344,6 +6351,7 @@ op_delete_txn(void *baton,
                     svn_relpath_join(b->moved_to_relpath,
                                      child_subtree_relpath, iterpool);
                   /* ... and update the BASE moved-to record. */
+                  /* ### On errors the next 4 statements don't reset STMT */
                   SVN_ERR(svn_sqlite__get_statement(
                             &moved_to_stmt, wcroot->sdb,
                             STMT_UPDATE_MOVED_TO_RELPATH));
