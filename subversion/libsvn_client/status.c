@@ -85,6 +85,7 @@ tweak_status(void *baton,
   /* If the status item has an entry, but doesn't belong to one of the
      changelists our caller is interested in, we filter out this status
      transmission.  */
+  /* ### duplicated in ../libsvn_wc/diff_local.c */
   if (sb->changelist_hash)
     {
       if (status->changelist)
