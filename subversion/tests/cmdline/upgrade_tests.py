@@ -1093,6 +1093,24 @@ def upgrade_with_missing_subdir(sbox):
                                         expected_disk,
                                         expected_status)
 
+@Issue(3994)
+def upgrade_locked(sbox):
+  "upgrade working copy with locked files"
+
+  replace_sbox_with_tarfile(sbox, 'upgrade_locked.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''                  : Item(status='  ', wc_rev=1),
+      'A'                 : Item(status='D ', wc_rev=2),
+      'A/third'           : Item(status='D ', writelocked='K', wc_rev=2),
+      'other'             : Item(status='D ', writelocked='K', wc_rev=4),
+      'iota'              : Item(status='  ', writelocked='K', wc_rev=3),
+    })
+
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
 ########################################################################
 # Run the tests
@@ -1141,6 +1159,7 @@ test_list = [ None,
               add_add_del_del_tc,
               add_add_x2,
               upgrade_with_missing_subdir,
+              upgrade_locked,
              ]
 
 
