@@ -151,11 +151,3 @@ Approved changes:
    Votes:
      +1: rhuijben, cmpilato
      +1 (once tests pass): danielsh
-
- * r1160671, r1160682, r1160704
-   Resolve issue #3994, Subversion working copies that contain 'svn lock'-style
-   locks cannot be upgraded.
-   Justification:
-     svn upgrade should not fail on perfectly valid working copies.
-   Votes:
-     +1: rhuijben, philip, cmpilato

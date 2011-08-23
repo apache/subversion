@@ -9540,16 +9540,30 @@ svn_error_t *
 svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                          apr_int64_t *repos_id,
                          apr_int64_t *wc_id,
+                         svn_wc__db_t *wc_db,
                          const char *dir_abspath,
                          const char *repos_root_url,
                          const char *repos_uuid,
-                         apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(create_db(sdb, repos_id, wc_id, dir_abspath,
-                                   repos_root_url, repos_uuid,
-                                   SDB_FILE,
-                                   result_pool, scratch_pool));
+  svn_wc__db_wcroot_t *wcroot;
+  SVN_ERR(create_db(sdb, repos_id, wc_id, dir_abspath,
+                    repos_root_url, repos_uuid,
+                    SDB_FILE,
+                    wc_db->state_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__db_pdh_create_wcroot(&wcroot,
+                                       apr_pstrdup(wc_db->state_pool,
+                                                   dir_abspath),
+                                       *sdb, *wc_id, FORMAT_FROM_SDB,
+                                       FALSE /* auto-upgrade */,
+                                       FALSE /* enforce_empty_wq */,
+                                       wc_db->state_pool, scratch_pool));
+
+  /* The WCROOT is complete. Stash it into DB.  */
+  apr_hash_set(wc_db->dir_data, wcroot->abspath, APR_HASH_KEY_STRING, wcroot);
+
+  return SVN_NO_ERROR;
 }
 
 
