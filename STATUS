@@ -118,21 +118,14 @@ Candidate changes:
    Justification:
      Might save a poor soul from lots of manual copy-paste/editing some day.
    Votes:
-     +1: stsp
-
- * r1160705
-   Expose post-commit-error through JavaHL
-   Justification:
-     Low-impact, user-requested.
-   Votes:
-     +1: hwright
+     +1: stsp, rhuijben
 
  * r1160605
    Use "volatile pointers" not "pointers to volatile".
    Justification:
      If volatile is necessary it should be in the right place.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
 Veto-blocked changes:
 =====================
@@ -151,3 +144,10 @@ Approved changes:
    Votes:
      +1: rhuijben, cmpilato
      +1 (once tests pass): danielsh
+
+ * r1160705
+   Expose post-commit-error through JavaHL
+   Justification:
+     Low-impact, user-requested.
+   Votes:
+     +1: hwright, rhuijben
