@@ -67,7 +67,7 @@ Candidate changes:
               back from svn_ra_serf__get_dir.
               (Most likely the problem is detected earlier than this function)
    Votes:
-     +1: rhuijben
+     +1: rhuijben, cmpilato
 
  * r1158187, r1158196, r1158201, r1158207
    Fix issues #2557 and #3987: 'svn info symlink/to/wc'.
@@ -111,7 +111,7 @@ Candidate changes:
      r1159136 is the real fix.
      r1159148 is a further cleanup (Not required, but makes patching easier)
    Votes:
-     +1: rhuijben
+     +1: rhuijben, cmpilato
 
  * r1159400
    Document a neat trick to better handle patch rejects in 'svn help patch'.
