@@ -128,6 +128,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1160705
+   Expose post-commit-error through JavaHL
+   Justification:
+     Low-impact, user-requested.
+   Votes:
+     +1: hwright
+
 Veto-blocked changes:
 =====================
 
