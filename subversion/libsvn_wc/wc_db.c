@@ -5303,7 +5303,6 @@ op_revert_txn(void *baton,
                                         STMT_CLEAR_MOVED_TO_RELPATH));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
-      SVN_ERR(svn_sqlite__reset(stmt));
     }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -5440,7 +5439,6 @@ op_revert_recursive_txn(void *baton,
                                     STMT_CLEAR_MOVED_TO_RELPATH_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
-  SVN_ERR(svn_sqlite__reset(stmt));
 
   return SVN_NO_ERROR;
 }
@@ -6295,7 +6293,6 @@ op_delete_txn(void *baton,
           SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
                                     moved_from_relpath, b->moved_to_relpath));
           SVN_ERR(svn_sqlite__step_done(stmt));
-          SVN_ERR(svn_sqlite__reset(stmt));
         }
 
       /* If a subtree is being moved-away, we need to update moved-to
