@@ -102,17 +102,6 @@ Candidate changes:
     Votes:
       +1: stsp, rhuijben (but only if this gets into 1.7.0)
 
- * r1159132, r1159136, r1159148
-   Make serf provide a sensible path for out of date items with HTTPv1 servers.
-   Justifications:
-     Bad errors are bad.
-   Notes:
-     r1159132 is a nonfunctional rename to make the code clearer.
-     r1159136 is the real fix.
-     r1159148 is a further cleanup (Not required, but makes patching easier)
-   Votes:
-     +1: rhuijben, cmpilato
-
  * r1159400
    Document a neat trick to better handle patch rejects in 'svn help patch'.
    Justification:
@@ -144,3 +133,14 @@ Approved changes:
    Votes:
      +1: rhuijben, cmpilato
      +1 (once tests pass): danielsh
+
+ * r1159132, r1159136, r1159148
+   Make serf provide a sensible path for out of date items with HTTPv1 servers.
+   Justifications:
+     Bad errors are bad.
+   Notes:
+     r1159132 is a nonfunctional rename to make the code clearer.
+     r1159136 is the real fix.
+     r1159148 is a further cleanup (Not required, but makes patching easier)
+   Votes:
+     +1: rhuijben, cmpilato, stsp
