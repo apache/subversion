@@ -144,10 +144,3 @@ Approved changes:
    Votes:
      +1: rhuijben, cmpilato
      +1 (once tests pass): danielsh
-
- * r1160705
-   Expose post-commit-error through JavaHL
-   Justification:
-     Low-impact, user-requested.
-   Votes:
-     +1: hwright, rhuijben
