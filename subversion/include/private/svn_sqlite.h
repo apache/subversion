@@ -377,8 +377,8 @@ svn_sqlite__with_immediate_transaction(svn_sqlite__db_t *db,
 
    Using this function as a wrapper around a group of operations can give a
    *huge* performance boost as the shared-read lock will be shared over
-   multiple statements, instead of being reobtaine everytime, which may
-   require disk and/or network io, depending on SQLites locking strategy.
+   multiple statements, instead of being reobtained every time, which may
+   require disk and/or network io, depending on SQLite's locking strategy.
 
    SCRATCH_POOL will be passed to the callback (NULL is valid).
 
