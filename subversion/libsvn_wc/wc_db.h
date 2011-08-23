@@ -2605,14 +2605,20 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
    @{
 */
 
+/* Create a new wc.db file for LOCAL_DIR_ABSPATH, which is going to be a
+   working copy for the repository REPOS_ROOT_URL with uuid REPOS_UUID.
+   Return the raw sqlite handle, repository id and working copy id
+   and store the database in WC_DB.
+
+   Perform temporary allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                          apr_int64_t *repos_id,
                          apr_int64_t *wc_id,
+                         svn_wc__db_t *wc_db,
                          const char *local_dir_abspath,
                          const char *repos_root_url,
                          const char *repos_uuid,
-                         apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
 
