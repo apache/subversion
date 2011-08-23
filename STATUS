@@ -120,13 +120,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1160671, r1160682
+ * r1160671, r1160682, r1160704
    Resolve issue #3994, Subversion working copies that contain 'svn lock'-style
    locks cannot be upgraded.
    Justification:
      svn upgrade should not fail on perfectly valid working copies.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1160705
    Expose post-commit-error through JavaHL
@@ -134,6 +134,13 @@ Candidate changes:
      Low-impact, user-requested.
    Votes:
      +1: hwright
+
+ * r1160605
+   Use "volatile pointers" not "pointers to volatile".
+   Justification:
+     If volatile is necessary it should be in the right place.
+   Votes:
+     +1: philip
 
 Veto-blocked changes:
 =====================
