@@ -109,13 +109,6 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
- * r1160605
-   Use "volatile pointers" not "pointers to volatile".
-   Justification:
-     If volatile is necessary it should be in the right place.
-   Votes:
-     +1: philip, rhuijben
-
 Veto-blocked changes:
 =====================
 
@@ -144,3 +137,10 @@ Approved changes:
      r1159148 is a further cleanup (Not required, but makes patching easier)
    Votes:
      +1: rhuijben, cmpilato, stsp
+
+ * r1160605
+   Use "volatile pointers" not "pointers to volatile".
+   Justification:
+     If volatile is necessary it should be in the right place.
+   Votes:
+     +1: philip, rhuijben, stsp
