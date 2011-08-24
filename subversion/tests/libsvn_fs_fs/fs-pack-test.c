@@ -99,6 +99,8 @@ struct pack_notify_baton
 {
   apr_int64_t expected_shard;
   svn_fs_pack_notify_action_t expected_action;
+  int num_revs;
+  int shard_size;
 };
 
 static svn_error_t *
@@ -107,15 +109,13 @@ pack_notify(void *baton,
             svn_fs_pack_notify_action_t action,
             apr_pool_t *pool)
 {
-  struct pack_notify_baton *pnb = baton;
+#ifdef PACK_AFTER_EVERY_COMMIT
+  /* Note: this function might not be called when building with
+     -DPACK_AFTER_EVERY_COMMIT, since that causes svn_fs_commit_txn()
+     to run 'pack' without notification. */
+#endif
 
-  if (shard == 0 && action == svn_fs_pack_notify_start_revprop)
-    {
-      /* In this case, we've started packing revprops, so reset our
-         expectations. */
-      pnb->expected_shard = 0;
-      pnb->expected_action = svn_fs_pack_notify_start_revprop;
-    }
+  struct pack_notify_baton *pnb = baton;
 
   SVN_TEST_ASSERT(shard == pnb->expected_shard);
   SVN_TEST_ASSERT(action == pnb->expected_action);
@@ -130,6 +130,12 @@ pack_notify(void *baton,
       case svn_fs_pack_notify_end:
         pnb->expected_action = svn_fs_pack_notify_start;
         pnb->expected_shard++;
+
+        if (pnb->expected_shard == (pnb->num_revs+1) / pnb->shard_size)
+          {
+            pnb->expected_action = svn_fs_pack_notify_start_revprop;
+            pnb->expected_shard = 0;
+          }
         break;
 
       case svn_fs_pack_notify_start_revprop:
@@ -213,6 +219,8 @@ create_packed_filesystem(const char *dir,
   /* Now pack the FS */
   pnb.expected_shard = 0;
   pnb.expected_action = svn_fs_pack_notify_start;
+  pnb.num_revs = num_revs;
+  pnb.shard_size = shard_size;
   return svn_fs_pack(dir, pack_notify, &pnb, NULL, NULL, pool);
 }
 
