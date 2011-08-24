@@ -109,6 +109,14 @@ pack_notify(void *baton,
 {
   struct pack_notify_baton *pnb = baton;
 
+  if (shard == 0 && action == svn_fs_pack_notify_start_revprop)
+    {
+      /* In this case, we've started packing revprops, so reset our
+         expectations. */
+      pnb->expected_shard = 0;
+      pnb->expected_action = svn_fs_pack_notify_start_revprop;
+    }
+
   SVN_TEST_ASSERT(shard == pnb->expected_shard);
   SVN_TEST_ASSERT(action == pnb->expected_action);
 
@@ -121,6 +129,15 @@ pack_notify(void *baton,
 
       case svn_fs_pack_notify_end:
         pnb->expected_action = svn_fs_pack_notify_start;
+        pnb->expected_shard++;
+        break;
+
+      case svn_fs_pack_notify_start_revprop:
+        pnb->expected_action = svn_fs_pack_notify_end_revprop;
+        break;
+
+      case svn_fs_pack_notify_end_revprop:
+        pnb->expected_action = svn_fs_pack_notify_start_revprop;
         pnb->expected_shard++;
         break;
 
