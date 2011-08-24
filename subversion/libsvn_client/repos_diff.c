@@ -1052,6 +1052,7 @@ close_file(void *file_baton,
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action;
       svn_node_kind_t kind = svn_node_file;
+      const char *moved_to_abspath = NULL;
 
       /* Find out if a pending delete notification for this path is
        * still around. */
@@ -1087,9 +1088,30 @@ close_file(void *file_baton,
       else if (b->added)
         action = svn_wc_notify_update_add;
       else
-        action = svn_wc_notify_update_update;
+        {
+          svn_error_t *err;
 
-      notify = svn_wc_create_notify(b->wcpath, action, scratch_pool);
+          action = svn_wc_notify_update_update;
+
+          /* If the file was moved-away, use its new path in the
+           * notification.
+           * ### This is redundant. The file_changed() callback should
+           * ### pass the moved-to path back up here. */
+          err = svn_wc__node_was_moved_away(&moved_to_abspath, NULL,
+                                            eb->wc_ctx, b->wcpath,
+                                            scratch_pool, scratch_pool);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+                svn_error_clear(err);
+              else
+                return svn_error_trace(err);
+            }
+        }
+
+      notify = svn_wc_create_notify(moved_to_abspath ? moved_to_abspath
+                                                     : b->wcpath,
+                                    action, scratch_pool);
       notify->kind = kind;
       notify->content_state = content_state;
       notify->prop_state = prop_state;
