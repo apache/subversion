@@ -32,21 +32,6 @@ Candidate changes:
          too anemic. I'd prefer this be a private function in 1.7.x, leaving
          room for a future public API that really does full verification.)
 
- * fs-progress branch
-   Notes:
-     Depends on the r1146131 group (1.7.x-fs-verify).
-   Branch:
-     fs-progress
-   Justification:
-     Provide feedback during 'svnadmin verify'.
-     Avoid an API change in 1.8.
-   Notes:
-     If this proposal passes, the docstrings @since would have to be fixed
-     in a new commit.
-   Votes:
-     +1: rhuijben (only for 1.7.0)
-     +½: danielsh
-
  * r1147540, r1147541
    Remove unused variables in build system.
    Justification:
