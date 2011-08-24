@@ -22,8 +22,9 @@ Candidate changes:
    Justification:
      Would be nice to extend verify already in 1.7.x.
    Notes:
-     This does not include progress reporting, since that is nominated
-     separately.
+     This does not include progress reporting; that has been postponed to 1.8.
+   Conflicts:
+     On fs_fs.c.  Resolve with 'theirs-conflict'.
    Votes:
      +1: rhuijben (only for 1.7.0) (without r1161164, r1161180)
      +1: danielsh
