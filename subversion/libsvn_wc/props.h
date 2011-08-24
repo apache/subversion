@@ -45,7 +45,7 @@ extern "C" {
    For 1.7, we're removing this support. Some old code is being left around
    in case we decide to change this.
 
-   For more information, see ^/notes/api-errata/wc006.txt
+   For more information, see ^/notes/api-errata/1.7/wc006.txt
 */
 #undef SVN__SUPPORT_BASE_MERGE
 
