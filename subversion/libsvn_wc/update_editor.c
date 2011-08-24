@@ -780,8 +780,6 @@ make_file_baton(struct file_baton **f_p,
   struct edit_baton *eb = pb->edit_baton;
   apr_pool_t *file_pool = svn_pool_create(pb->pool);
   struct file_baton *f = apr_pcalloc(file_pool, sizeof(*f));
-  svn_wc__db_status_t status;
-  svn_error_t *err;
 
   SVN_ERR_ASSERT(path);
 
@@ -790,25 +788,6 @@ make_file_baton(struct file_baton **f_p,
   f->old_revision = SVN_INVALID_REVNUM;
   SVN_ERR(path_join_under_root(&f->local_abspath,
                                pb->local_abspath, f->name, file_pool));
-
-  /* If the file has moved locally remember the new location. */
-  err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             pb->edit_baton->db,
-                             f->local_abspath, scratch_pool, scratch_pool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        svn_error_clear(err);
-      else
-        return svn_error_trace(err);
-    }
-  else if (status == svn_wc__db_status_deleted)
-    SVN_ERR(svn_wc__db_scan_deletion(NULL, &f->moved_to_abspath, NULL, NULL,
-                                     pb->edit_baton->db, f->local_abspath,
-                                     file_pool, scratch_pool));
 
   /* Figure out the new URL for this file. */
   if (eb->switch_relpath)
@@ -3352,6 +3331,12 @@ open_file(const char *path,
                                      &fb->changed_date, &fb->changed_author,
                                      NULL, &fb->original_checksum, NULL, NULL,
                                      NULL, NULL,
+                                     eb->db, fb->local_abspath,
+                                     fb->pool, scratch_pool));
+
+  /* If the file has moved locally look up its new location. */
+  if (status == svn_wc__db_status_deleted)
+    SVN_ERR(svn_wc__db_scan_deletion(NULL, &fb->moved_to_abspath, NULL, NULL,
                                      eb->db, fb->local_abspath,
                                      fb->pool, scratch_pool));
 
