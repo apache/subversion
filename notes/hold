@@ -16,24 +16,42 @@ USE CASES
 Do not commit modifications on selected files, which do have to be versioned,
 because...
 
-(1) CONVENIENCE
-File 'foo' is modified with every click made in my IDE. I want 'foo' to be
-skipped on commits unless I explicitly ask svn to commit it. (Instead of
-having to take explicit care on every commit to omit the file.)
+(UC1) IDE CONFIG FILE, LOCAL
+  File 'foo' is modified with every click made in my IDE: it updates a time
+  stamp. I want 'foo' to be skipped on commits unless I explicitly ask svn
+  to commit it. (Instead of having to take explicit care on every commit to
+  omit the file.)
 
-(2) LOCAL/GLOBAL
-Since all other developers use the same IDE, I want to have the option to tell
-all other working copies to hold back 'foo' as well -- but only if all agreed
-to that. Else I want to just hold locally.
+(UC2) IDE CONFIG FILE, GLOBAL
+  Building on [1].  Since all other developers use the same IDE, I want to
+  tell all other working copies to hold back 'foo' as well, if they all
+  agree to that.
 
-(3) SECRET
-Every user must locally add their passwords and PIN numbers to file 'foo'.
-By default, every working copy should exclude 'foo' from commits. We don't
-want any user's mods of 'foo' to even go over the wire (ruling out hooks).
+(UC3) IDE CONFIG FILE, GLOBAL AND SECRET
+  Building on [2].  Every user must locally add their passwords and PIN
+  numbers to file 'foo'.  By default, every working copy should exclude
+  'foo' from commits.  We don't want any user's mods of 'foo' to even go
+  over the wire.  (This last point rules out hooks.)
+
+(UC4) - Eclipse directory, from issue #3028.
+  "We have a complete Eclipse instance in our svn repository and we want
+  to ignore every change in its directory and below. Because Eclipse
+  more or less at random creates and deletes file from its own directory
+  we have no way of knowing which individual files may be change or
+  deleted by starting Eclipse."  An update should not re-create files
+  that were deleted from disk by Eclipse.  Let's say a 'global' hold is
+  required as in [UC2].
 
 
-LEGEND:
+LEGEND
+======
+
   'held-back file': A file that's excluded from a commit by svn:hold.
+
+  'overridden': The effect of the 'hold' may be overridden by telling
+      Subversion not to ignore the modifications on a held-back file that it
+      otherwise would have ignored. The syntax and scope (per file, per
+      command or per user) of the override is described in [8].
 
 
 DETAILS
@@ -46,6 +64,7 @@ DETAILS
 (5a) BOOLEAN
      A file is held-back iff it has an svn:hold property, with whichever
      value, even empty. A fixed set of subcommands heeds svn:hold.
+     ### JAF: As specified under SUBCOMMANDS, below.
  OR
 (5b) LIST OF STRINGS
      The value of 'svn:hold' determines which subcommands hold the file:
@@ -65,11 +84,24 @@ should not be allowed to be set on directories. If an entire subtree should be
 put on hold, users can do 'svn propset -R'. Such a recursive propset should
 not error out on the first dir encountered, but instead print a warning that
 svn:hold was only added to the files, ignoring the dirs.
+  ### JAF: So this rules out use case [UC4].
+  ### JAF: A recursive propset should warn or not warn in exactly the same
+      way as a recursive propset of any other file-only property, whatever
+      that way is, if those are already self-consistent, unless there is a
+      good reason to do otherwise.
 
 (7) LOCAL HOLD
 The svn:hold property already acts when it is added locally. This provides a
 way to hold back files in only the local working copy, no other users nor the
 repository is affected. See [2].
+
+    ### JAF: Specifically, a file is held back iff the 'svn:hold' property
+      as described in [5] is set on the working version in the WC,
+      regardless whether it's set on the WC base version. One consequence is
+      that a file scheduled for delete is no longer held back from commit.
+
+    ### JAF: It seems the principle is that the hold applies only to text
+        and property modifications, not to tree changes.
 
 (8) GLOBAL HOLD
 There must be a --do-not-hold option to 'svn commit'. This allows committing
@@ -81,6 +113,14 @@ could mean "ignore the held-back files" or "ignore that files are held-back"
 or even "commit everything except the svn:hold propadd". --do-not-hold and
 --disable-hold are the only ones I found that aren't ambiguous like that.
 
+### JAF: Alternatively we could say that files are not held back if they are
+    explicitly named targets to the 'commit' (or other) command.  That has
+    the advantages of consistency with the way svn:ignore and depth behave,
+    and of avoiding another command-line option.  It does not provide an
+    easy way to specify all the files in a subtree, but the feature is not
+    suited to ignoring a whole subtree [UC4] so this is not really a
+    disadvantage.
+
 
 SUBCOMMANDS
 So far, no real point has been made to justify ignoring file mods on any other
@@ -90,12 +130,31 @@ command except 'commit'. I am adding some as I type:
   to read about them in a diff of local mods. (Held-back files should *not*
   omit already-committed modifications.)
 
+  ### JAF: What do you mean by 'omit already-committed modifications'? Do
+      you mean a repos-repos or repos-WC diff should always show all
+      differences, or do you mean a repos-WC diff should always diff to
+      the WC base rather than the working version, or something else?
+
+  ### JAF: So, what's the exact behavioural spec? A repos-repos diff shall
+      show all changes as usual. Unless overridden, a WC-WC diff shall omit
+      local mods on a held-back file. Unless overridden, a repos-WC diff
+      shall omit local mods on a held-back file, by diffing against the base
+      version even if the working version is requested. Diff shall display
+      an added/deleted/replaced file in the usual way, including any
+      modifications against the copy-from source, regardless of the
+      held-back status.
+
   (11) COPY:
     (12) WC-TO-URL: Copying locally added secrets [3] to a URL is fatal. Any
     WC-to-URL copy of held-back files should
       (12a) exclude local mods, or
+            ### JAF: No, don't silently ignore local mods: they might be
+                intentional and important. The behaviour of copies is well
+                established: if you request -rBASE as the source, you copy
+                the base, else you copy the working version. Instead: [12b].
       (12b) just bail if there are local mods, unless they get a --do-not-hold
             option. (probably easier to do, until [12a] gets implemented)
+
     (13) WC-TO-WC: A WC copy or move will also copy the svn:hold property, and
     thus isn't that dangerous for [3]. But when a WC-to-WC copy of a subtree
     that has a held-back file inside is finally committed, the BASE node of
@@ -103,23 +162,41 @@ command except 'commit'. I am adding some as I type:
     completely would imply a delete within the added tree. So a commit
     should take care to add files that are held-back, but skip all local
     modifications.
+    ### JAF: No, don't silently ignore local mods: they might be intentional
+        and important. Instead:
+        (13b) Error out if the commit includes a held-back copied file with
+              local mods and does not specify the do-not-hold option.
+
     (14a) Committing BASE nodes for added held-back files should be limited to
           copied/moved files, i.e. where the BASE is nonempty. Simply-added
           held-back files should not be added to the repos at all.
      OR
     (14b) If a held-back file is simply-added (not copied/moved), just add an
           empty file with no props except svn:hold to the repository.
+    ### JAF: No, don't silently omit the file or commit an empty file.
+        That's stepping outside the territory that this feature should be
+        involved in. Instead:
+        (14c) Error out if the commit includes a held-back added file and does
+              not specify the do-not-hold option.
 
   (15) STATUS:
   (15a) 'svn status' should show mods on held-back files iff they are
         modified, with an added status indicator like 'H'.
+        ### JAF: (And show added/deleted/replaced held-back files as usual.)
    OR
   (15b) 'svn status' should omit held-back files even if modified,
         unless --show-hold is supplied.
+        ### JAF: (And show added/deleted/replaced held-back files as usual.)
 
   (16) UPDATE: Holding off updates from a file could be desirable, but I can't
   think of any real situation that needs this. If holding back updates is ever
   implemented, it should definitely be optional, as in [5b]. See also [19]!
+
+  ### JAF: No known use case => no special behaviour except [19]; enough said.
+      So: Update shall issue a warning if it removes the held-back status
+      from a file. In all other respects, update shall act as usual: for
+      example, if update deletes a held-back file with local mods, it shall
+      raise a tree conflict in the usual way.
 
   (17) MERGE: Holding off merges from single files is pure madness. Alas, the
   whole topic of svn:hold is a nightmare in merge land. Users have to take
@@ -130,13 +207,23 @@ command except 'commit'. I am adding some as I type:
   the 'svn:hold' property in the local working copy, and that, for basic
   sanity, --do-not-hold should be supplied at commit time. See also [19]!
 
+  ### JAF: So: Merge shall issue a warning if it modifies, adds, deletes or
+      replaces a held-back file (one that is/was held back before and/or
+      after the merge). Merge shall issue a warning if it changes the
+      held-back status of a file that has local mods.
+
   (18) SWITCH: Switch should go ahead as always. All it does is pull other
   BASE nodes in under the local mods, so there is no danger of anything
   leaking around. But see [19]!
 
+  ### JAF: Switch is very similar to update, so see [16].
+
   (19) UPSTREAM REMOVES 'svn:hold': Users must be warned when update, switch
   or merge remove the 'svn:hold' property from a file that had local mods.
   They should maybe even flag some (new??) kind of conflict. See also [31].
+
+  ### JAF: This is a principle of the design. Maybe you could move all the
+  principles to a section before this SUBCOMMANDS section.
 
 
 PERFORMANCE DURING COMMIT
