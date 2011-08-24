@@ -62,3 +62,36 @@ present.  That would need to be added for the code is released.
 Lacking also are C unit tests for this functionality.
 
 And, of course, the FSFS support for this enhancement is non-existent.
+
+
+FSFS WHITEBOARD
+===============
+
+Need an append-only key-value store.  (Values may be modified by appending
+to them.  Keys may be appended.)
+
+1. In revisions, all successors are copies, except at most one.
+   => that 'at most one' modification successor can be stored separately
+      from the copies.
+
+2. Storing copies:
+   - a directory per noderev that had been copied
+   - in the directory, a file per copy event
+   - each file contains the txn-id of the (txn creating the) revision
+     the copy/successor lives in
+   - directories are sharded, scheme TBD
+     - possibly: one directory serves several copied-from noderevs?
+   - non-copies (ie, 'modification' successors) are stored separately
+
+   Rationale:
+
+   - store the txn-id (and check it when reading the directory)
+     to handle issues with aborted commits (eg, mkdir db/revs/${youngest+1})
+
+   - shard/reuse directories to avoid burning through inodes
+     - may need to 'pack' directories occasionally?  The one-file-per-successor
+       isn't needed in the long term...
+
+   - store 'modification' successors separately as there is O(1) of them
+
+3. (append your FSFS design scheme to here): 
