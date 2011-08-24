@@ -94,6 +94,9 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * 'svn delete --force' removes tree conflicts (issue #3805)
     * don't throw an error when skipping tree conflicts in update (issue #3329)
     * don't break commits of wc->wc copies with file externals (issue #3589)
+    * allow 'svn info' to work on symlinks to working copies (issue #2305)
+    * allow 'svn st --show-updates' to work across symlinks (issue #3117)
+    * 'svn revert' shouldn't loop on symlinks (issue #3972)
     * fixed: wc-to-wc copy of a switch source (issue #1802)
     * fixed: 'svn st' reports symlinks as obstructed items (issue #2284)
     * fixed: 'cd e:\; svn up e:\' fails (issue #2556)
@@ -135,6 +138,9 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed: spurious prop conflict with 'merge --reintegrate' (issue #3919)
     * fixed: 'svn --version' fails with non-existant $HOME (issue #3947)
     * fixed: unforced export silently overwites existing file (issue #3799)
+    * fixed: reverse merge which adds subtree mergeinfo fails (issue #3978)
+    * fixed: 'svn up -r{R>HEAD}' hangs client over ra_svn (issue #3963)
+    * fixed: 'svn up' updates file externals in target siblings (issue #3819)
     * many other minor bugfixes, optimizations, plugs of memory leaks, etc
   
   - Server-side bugfixes:
@@ -155,6 +161,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * svnserve can now force usernames to upper/lower case (issue #3726)
     * reduce duplicate log messages in 'log -g' (issue #3650)
     * don't crash on shutdown with SASL in inetd mode (issue #3664)
+    * disallow arbitrary HTTP headers from committers (issue #2872)
     * many other minor bugfixes too numerous to list here
 
   - Other tool improvements and bugfixes:
@@ -184,7 +191,9 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * notifications sent when mergeinfo changes (r877588)
     * add information on text and property mods in log APIs (r877688)
     * fixed: svn_ra_local__get_file() leaks file descriptors (issue #3290)
+    * svn_ra_neon__get_dir() returns correct dir set for URLs (issue #3093)
     * swig-py: always set ChangedPath.path (issue #2630)
+    * improve conflict resolver API for a specific direction (issue #3049)
 
   - Bindings:
     * New JavaHL package: org.apache.subversion
