@@ -95,6 +95,43 @@ get_rev_contents(svn_revnum_t rev, apr_pool_t *pool)
   return apr_psprintf(pool, "%" APR_INT64_T_FMT "\n", num);
 }
 
+struct pack_notify_baton
+{
+  apr_int64_t expected_shard;
+  svn_fs_pack_notify_action_t expected_action;
+};
+
+static svn_error_t *
+pack_notify(void *baton,
+            apr_int64_t shard,
+            svn_fs_pack_notify_action_t action,
+            apr_pool_t *pool)
+{
+  struct pack_notify_baton *pnb = baton;
+
+  SVN_TEST_ASSERT(shard == pnb->expected_shard);
+  SVN_TEST_ASSERT(action == pnb->expected_action);
+
+  /* Update expectations. */
+  switch (action)
+    {
+      case svn_fs_pack_notify_start:
+        pnb->expected_action = svn_fs_pack_notify_end;
+        break;
+
+      case svn_fs_pack_notify_end:
+        pnb->expected_action = svn_fs_pack_notify_start;
+        pnb->expected_shard++;
+        break;
+
+      default:
+        return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                                "Unknown notification action when packing");
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Create a packed filesystem in DIR.  Set the shard size to
    SHARD_SIZE and create NUM_REVS number of revisions (in addition to
    r0).  Use POOL for allocations.  After this function successfully
@@ -113,6 +150,7 @@ create_packed_filesystem(const char *dir,
   const char *conflict;
   svn_revnum_t after_rev;
   apr_pool_t *subpool = svn_pool_create(pool);
+  struct pack_notify_baton pnb;
   apr_pool_t *iterpool;
   int version;
 
@@ -156,7 +194,9 @@ create_packed_filesystem(const char *dir,
   svn_pool_destroy(subpool);
 
   /* Now pack the FS */
-  return svn_fs_pack(dir, NULL, NULL, NULL, NULL, pool);
+  pnb.expected_shard = 0;
+  pnb.expected_action = svn_fs_pack_notify_start;
+  return svn_fs_pack(dir, pack_notify, &pnb, NULL, NULL, pool);
 }
 
 
