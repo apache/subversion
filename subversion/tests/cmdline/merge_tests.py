@@ -7681,7 +7681,7 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
   expected_output = svntest.verify.UnorderedOutput(
       [A_COPY_path  + ' - /A:2-13*\n',
        mu_COPY_path + ' - /A/mu:2-13\n',
-       nu_COPY_path + ' - /A/nu:2-13\n',])
+       nu_COPY_path + ' - /A/nu:10-13\n',])
   svntest.actions.run_and_verify_svn(None,
                                      expected_output,
                                      [], 'pg', SVN_PROP_MERGEINFO,
@@ -11582,24 +11582,7 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   wc_status.tweak(wc_rev=10)
 
-  # Now do a cherry harvest merge to 'A_copy'.  We should pick up the
-  # change to 'A_copy/D/H/nu' from r10, the mergeinfo on 'A_copy' should
-  # reflect the entire eligible revision range from 'A', r2-10.
-  # 'A_copy/D/H/nu' should have get the equivalent mergeinfo to 'A_copy'
-  # which should elide to the latter, leaving no explicit mergeinfo...
-  #
-  # ...or should it?  For the mergeinfo on ' A_copy/D/H/nu' to elide, it
-  # needs mergeinfo '/A/D/H/nu:2-10', but 'A/D/H/nu' doesn't exist prior to
-  # r6...Anyhow, regardless of what the mergeinfo on ' A_copy/D/H/nu' should
-  # be prior to elision, if we have the following conditions:
-  #
-  #   1) A uniform working revision merge target.
-  #
-  #   2) Explicit mergeinfo on the target/subtrees from the same
-  #      source ('A' in this case).
-  #
-  # Then a cherry harvest from the same source should leave explicit
-  # mergeinfo *only* on the merge target no?
+  # Now do a cherry harvest merge to 'A_copy'.
   expected_output = wc.State(A_copy_path, {
     'D/H/nu' : Item(status='U '),
     })
@@ -11608,7 +11591,6 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
     'D/H/nu' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_copy_path, {
-    'D/H/nu' : Item(status=' U'),
     })
   expected_A_copy_status = wc.State(A_copy_path, {
     ''          : Item(status=' M', wc_rev=10),
@@ -11652,7 +11634,8 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
     'D/H/chi'   : Item("This is the file 'chi'.\n"),
     'D/H/psi'   : Item("This is the file 'psi'.\n"),
     'D/H/omega' : Item("This is the file 'omega'.\n"),
-    'D/H/nu'    : Item("Even nuer content"),
+    'D/H/nu'    : Item("Even nuer content",
+                       props={SVN_PROP_MERGEINFO : '/A/D/H/nu:6-10'}),
     })
   expected_A_copy_skip = wc.State(A_copy_path, {})
   svntest.actions.run_and_verify_merge(A_copy_path, None, None,
@@ -13957,7 +13940,7 @@ def no_self_referential_filtering_on_added_path(sbox):
     'B/E/beta'  : Item("New content"),
     'B/lambda'  : Item("This is the file 'lambda'.\n"),
     'B/F'       : Item(),
-    'C_MOVED'   : Item(props={SVN_PROP_MERGEINFO : '/A/C_MOVED:3-10\n' +
+    'C_MOVED'   : Item(props={SVN_PROP_MERGEINFO : '/A/C_MOVED:10\n' +
                               '/A_COPY/C:8\n' +
                               '/A_COPY/C_MOVED:8',
                               'propname' : 'propval'}),
@@ -16711,7 +16694,6 @@ def foreign_repos_prop_conflict(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3975 'adds with explicit mergeinfo don't get mergeinfo
 # describing merge which added them'
-@XFail()
 @Issue(3975)
 @SkipUnless(server_has_mergeinfo)
 def merge_adds_subtree_with_mergeinfo(sbox):
@@ -16767,7 +16749,8 @@ def merge_adds_subtree_with_mergeinfo(sbox):
     ''          : Item(status=' U'),
     })
   expected_mergeinfo_output = wc.State(A_COPY2_path, {
-    ''   : Item(status=' G'),
+    ''     : Item(status=' G'),
+    'C/nu' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_COPY2_path, {
     })
@@ -16805,15 +16788,11 @@ def merge_adds_subtree_with_mergeinfo(sbox):
     'B/lambda'  : Item("This is the file 'lambda'.\n"),
     'B/F'       : Item(),
     'C'         : Item(),
-    # Currently this test fails because A_COPY_2/C/nu gets no
-    # mergeinfo set on it to describe the merge, it only has
-    # the explicit mergeinfo from its copy source (i.e. /A_COPY/C/nu:10
-    # from ^/A/C/nu@11.
     'C/nu'      : Item("This is the file 'nu'.\n" \
                        "More work on the A_COPY branch.\n" \
                        "A faux conflict resolution.\n",
                        props={SVN_PROP_MERGEINFO :
-                              '\/A/C/nu:9-11n/A_COPY/C/nu:10'}),
+                              '/A/C/nu:9-11\n/A_COPY/C/nu:10'}),
     'D'         : Item(),
     'D/G'       : Item(),
     'D/G/pi'    : Item("This is the file 'pi'.\n"),

@@ -2060,7 +2060,7 @@ svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
  *
  * The values #svn_wc_conflict_choose_mine_conflict and
  * #svn_wc_conflict_choose_theirs_conflict are not legal for conflicts
- * in binary files or properties.
+ * in binary files or binary properties.
  *
  * Implementations of this callback are free to present the conflict
  * using any user interface.  This may include simple contextual

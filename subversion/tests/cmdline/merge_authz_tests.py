@@ -420,7 +420,7 @@ def mergeinfo_and_skipped_paths(sbox):
                    props={SVN_PROP_MERGEINFO : '/A/D/H/omega:8-9'}),
     'chi'   : Item("This is the file 'chi'.\n"),
     'zeta'  : Item("This is the file 'zeta'.\n",
-                   props={SVN_PROP_MERGEINFO : '/A/D/H/zeta:8-9'}),
+                   props={SVN_PROP_MERGEINFO : '/A/D/H/zeta:9'}),
     })
   expected_skip = wc.State(A_COPY_2_H_path, {})
   svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '7', '9',
