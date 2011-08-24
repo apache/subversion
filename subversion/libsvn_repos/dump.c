@@ -1284,8 +1284,8 @@ svn_repos_verify_fs2(svn_repos_t *repos,
 
   /* Verify global/auxiliary data before verifying revisions. */
   if (start_rev == 0)
-    SVN_ERR(svn_fs_verify(svn_fs_path(fs, pool), cancel_func, cancel_baton,
-                          pool));
+    SVN_ERR(svn_fs__verify(svn_fs_path(fs, pool), cancel_func, cancel_baton,
+                           pool));
 
   /* Create a notify object that we can reuse within the loop. */
   if (notify_func)

@@ -460,10 +460,10 @@ svn_fs_upgrade(const char *path, apr_pool_t *pool)
 }
 
 svn_error_t *
-svn_fs_verify(const char *path,
-              svn_cancel_func_t cancel_func,
-              void *cancel_baton,
-              apr_pool_t *pool) 
+svn_fs__verify(const char *path,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               apr_pool_t *pool) 
 {
   svn_error_t *err;
   svn_error_t *err2;

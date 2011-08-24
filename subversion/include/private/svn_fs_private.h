@@ -67,6 +67,23 @@ svn_fs__access_get_lock_tokens(svn_fs_access_t *access_ctx);
 svn_error_t *
 svn_fs__path_valid(const char *path, apr_pool_t *pool);
 
+/**
+ * Perform backend-specific data consistency and correctness validations
+ * to the Subversion filesystem located in the directory @a path.
+ * Use @a pool for necessary allocations.
+ *
+ * @note You probably don't want to use this directly.  Take a look at
+ * svn_repos_verify_fs2() instead, which does non-backend-specific
+ * verifications as well.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_fs__verify(const char *path,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
