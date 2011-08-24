@@ -800,6 +800,45 @@ def merge_foreign_symlink(sbox):
   #     'A/zeta' : Item(status='A ', wc_rev='-', props={'svn:special': '*'}),
   #     })
 
+#----------------------------------------------------------------------
+@Issue(2557,3987)
+@SkipUnless(svntest.main.is_posix_os)
+def symlink_to_wc(sbox):
+  "operate on symlink to wc"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  # Create a symlink
+  symlink_path = sbox.add_wc_path('2')
+  assert not os.path.islink(symlink_path)
+  os.symlink(os.path.basename(wc_dir), symlink_path) ### implementation detail
+  symlink_basename = os.path.basename(symlink_path)
+
+  # Some basic tests
+  wc_uuid = svntest.actions.get_wc_uuid(wc_dir)
+  expected_info = [{
+      'Path' : re.escape(os.path.join(symlink_path)),
+      'Working Copy Root Path' : re.escape(os.path.abspath(symlink_path)),
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : wc_uuid,
+      'Revision' : '1',
+      'Node Kind' : 'directory',
+      'Schedule' : 'normal',
+  }, {
+      'Name' : 'iota',
+      'Path' : re.escape(os.path.join(symlink_path, 'iota')),
+      'Working Copy Root Path' : re.escape(os.path.abspath(symlink_path)),
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : wc_uuid,
+      'Revision' : '1',
+      'Node Kind' : 'file',
+      'Schedule' : 'normal',
+  }]
+  svntest.actions.run_and_verify_info(expected_info,
+                                      symlink_path, symlink_path + '/iota')
+
+
 ########################################################################
 # Run the tests
 
@@ -824,6 +863,7 @@ test_list = [ None,
               unrelated_changed_special_status,
               symlink_destination_change,
               merge_foreign_symlink,
+              symlink_to_wc,
              ]
 
 if __name__ == '__main__':
