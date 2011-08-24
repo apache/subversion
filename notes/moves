@@ -125,7 +125,7 @@ Interfaces which have changed behaviour:
 Interfaces which have not changed behaviour yet but might change in 1.8.0:
 
  - svn_client_update/svn_client_merge: Update and Merge might use move
-    information to auto-resolve some additional tree conflict scenario.
+    information to auto-resolve some additional tree conflict scenarios.
 
  - diff: Diff might use move information to generate 'rename from' headers
     when the --git option is used. (A related problem is making diff use
