@@ -448,7 +448,7 @@ class FS(object):
 
         with self._write_lock:
             if notify:
-                notify()
+                notify(0, 0)
             if cancel:
                 cancel()
 

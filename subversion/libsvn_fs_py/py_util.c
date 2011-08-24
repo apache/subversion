@@ -620,14 +620,73 @@ svn_fs_py__load_module(fs_fs_data_t *ffd)
   return svn_error_trace(load_module(&ffd->p_module, FS_MODULE_NAME));
 }
 
+static PyObject *
+notify_func_wrapper(PyObject *p_tuple, PyObject *args)
+{
+  PyObject *c_func;
+  PyObject *baton;
+  apr_int64_t shard;
+  svn_fs_pack_notify_action_t action;
+  svn_fs_pack_notify_t notify_func;
+  void *notify_baton;
+  svn_error_t *err;
+  apr_pool_t *pool;
+
+  PyArg_ParseTuple(args, (char *)"(li)", &shard, &action);
+  if (PyErr_Occurred())
+    Py_RETURN_NONE;
+
+  c_func = PySequence_GetItem(p_tuple, 0);
+  notify_func = PyCObject_AsVoidPtr(c_func);
+  Py_DECREF(c_func);
+
+  baton = PySequence_GetItem(p_tuple, 1);
+  if (baton == Py_None)
+    notify_baton = NULL;
+  else
+    notify_baton = PyCObject_AsVoidPtr(baton);
+  Py_DECREF(baton);
+
+  pool = svn_pool_create(NULL);
+  err = notify_func(notify_baton, shard, action, pool);
+  svn_pool_destroy(pool);
+  if (err)
+    raise_and_clear_err(err);
+
+  Py_RETURN_NONE;
+}
+
 PyObject *
 svn_fs_py__wrap_pack_notify_func(svn_fs_pack_notify_t notify_func,
                                  void *notify_baton)
 {
+  static PyMethodDef method_def = { "notify", notify_func_wrapper,
+                                    METH_VARARGS, NULL };
+  PyObject *func;
+  PyObject *c_func;
+  PyObject *baton;
+  PyObject *p_tuple;
+
   if (!notify_func)
     Py_RETURN_NONE;
 
-  Py_RETURN_NONE;
+  c_func = PyCObject_FromVoidPtr(notify_func, NULL);
+
+  if (notify_baton)
+    {
+      baton = PyCObject_FromVoidPtr(notify_baton, NULL);
+    }
+  else
+    {
+      baton = Py_None;
+      Py_INCREF(baton);
+    }
+
+  p_tuple = Py_BuildValue("(NN)", c_func, baton);
+  func = PyCFunction_New(&method_def, p_tuple);
+  Py_DECREF(p_tuple);
+
+  return func;
 }
 
 static PyObject *
