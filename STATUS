@@ -72,7 +72,10 @@ Candidate changes:
  * r1158187, r1158196, r1158201, r1158207
    Fix issues #2557 and #3987: 'svn info symlink/to/wc'.
    Justification:
-     That syntax should work.
+     The svn_wc__db api should allow passing a working copy root when that root
+     is a symlink. Without r1158187 it allows any node in such a working copy
+     but not the root itself. But once a child is used it would work as the
+     working copy is cached in the svn_wc__db_t.
    Votes:
      +1: danielsh (without r1158187, so just the tests and not the fix)
      +1: rhuijben, cmpilato
