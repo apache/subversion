@@ -5403,6 +5403,8 @@ struct revert_list_read_baton {
   const char **conflict_new;
   const char **conflict_working;
   const char **prop_reject;
+  svn_boolean_t *copied_here;
+  svn_wc__db_kind_t *kind;
   apr_pool_t *result_pool;
 };
 
@@ -5419,6 +5421,8 @@ revert_list_read(void *baton,
   *(b->reverted) = FALSE;
   *(b->conflict_new) = *(b->conflict_old) = *(b->conflict_working) = NULL;
   *(b->prop_reject) = NULL;
+  *(b->copied_here) = FALSE;
+  *(b->kind) = svn_wc__db_kind_unknown;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_REVERT_LIST));
@@ -5426,9 +5430,10 @@ revert_list_read(void *baton,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     {
-      svn_boolean_t another_row;
+      svn_boolean_t is_actual = (svn_sqlite__column_int64(stmt, 5) != 0);
+      svn_boolean_t another_row = FALSE;
 
-      if (svn_sqlite__column_int64(stmt, 5))
+      if (is_actual)
         {
           if (!svn_sqlite__column_is_null(stmt, 4))
             *(b->reverted) = TRUE;
@@ -5458,11 +5463,19 @@ revert_list_read(void *baton,
                                 b->result_pool);
 
           SVN_ERR(svn_sqlite__step(&another_row, stmt));
-          if (another_row)
-            *(b->reverted) = TRUE;
         }
-      else
-        *(b->reverted) = TRUE;
+
+      if (!is_actual || another_row)
+        {
+          *(b->reverted) = TRUE;
+          if (!svn_sqlite__column_is_null(stmt, 7))
+            {
+              apr_int64_t op_depth = svn_sqlite__column_int64(stmt, 6);
+              *(b->copied_here) = (op_depth == relpath_depth(local_relpath));
+            }
+          *(b->kind) = svn_sqlite__column_token(stmt, 8, kind_map);
+        }
+
     }
   SVN_ERR(svn_sqlite__reset(stmt));
 
@@ -5483,6 +5496,8 @@ svn_wc__db_revert_list_read(svn_boolean_t *reverted,
                             const char **conflict_new,
                             const char **conflict_working,
                             const char **prop_reject,
+                            svn_boolean_t *copied_here,
+                            svn_wc__db_kind_t *kind,
                             svn_wc__db_t *db,
                             const char *local_abspath,
                             apr_pool_t *result_pool,
@@ -5492,7 +5507,7 @@ svn_wc__db_revert_list_read(svn_boolean_t *reverted,
   const char *local_relpath;
   struct revert_list_read_baton b = {reverted, conflict_old, conflict_new,
                                      conflict_working, prop_reject,
-                                     result_pool};
+                                     copied_here, kind, result_pool};
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                               db, local_abspath, scratch_pool, scratch_pool));
@@ -5502,6 +5517,80 @@ svn_wc__db_revert_list_read(svn_boolean_t *reverted,
                               scratch_pool));
   return SVN_NO_ERROR;
 }
+
+
+struct revert_list_read_copied_children_baton {
+  const apr_array_header_t **children;
+  apr_pool_t *result_pool;
+};
+
+static svn_error_t *
+revert_list_read_copied_children(void *baton,
+                                 svn_wc__db_wcroot_t *wcroot,
+                                 const char *local_relpath,
+                                 apr_pool_t *scratch_pool)
+{
+  struct revert_list_read_copied_children_baton *b = baton;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  apr_array_header_t *children;
+
+  children =
+    apr_array_make(b->result_pool, 0,
+                  sizeof(svn_wc__db_revert_list_copied_child_info_t *));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_REVERT_LIST_COPIED_CHILDREN));
+  SVN_ERR(svn_sqlite__bindf(stmt, "si",
+                            construct_like_arg(local_relpath, scratch_pool),
+                            relpath_depth(local_relpath)));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      svn_wc__db_revert_list_copied_child_info_t *child_info;
+      const char *child_relpath;
+
+      child_info = apr_palloc(b->result_pool, sizeof(*child_info));
+
+      child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      child_info->abspath = svn_dirent_join(wcroot->abspath, child_relpath,
+                                            b->result_pool);
+      child_info->kind = svn_sqlite__column_token(stmt, 1, kind_map);
+      APR_ARRAY_PUSH(
+        children,
+        svn_wc__db_revert_list_copied_child_info_t *) = child_info;
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+   SVN_ERR(svn_sqlite__reset(stmt));
+
+  *b->children = children;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_revert_list_read_copied_children(const apr_array_header_t **children,
+                                            svn_wc__db_t *db,
+                                            const char *local_abspath,
+                                            apr_pool_t *result_pool,
+                                            apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  struct revert_list_read_copied_children_baton b = {children, result_pool};
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                              db, local_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath,
+                              revert_list_read_copied_children, &b,
+                              scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_wc__db_revert_list_notify(svn_wc_notify_func2_t notify_func,
