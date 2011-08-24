@@ -101,10 +101,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1161080
-   Make svnmucc respect --config-dir.
-   Justification:
-     The option already exists; let's make it operative.
-   Votes:
-     +1: philip, rhuijben, danielsh
