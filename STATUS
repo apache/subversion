@@ -73,8 +73,6 @@ Candidate changes:
    Fix issues #2557 and #3987: 'svn info symlink/to/wc'.
    Justification:
      That syntax should work.
-   Notes:
-     Depends on the r1158193 group.
    Votes:
      +1: danielsh (without r1158187, so just the tests and not the fix)
      +1: rhuijben, cmpilato
