@@ -1281,6 +1281,7 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
                         const char *original_uuid,
                         svn_revnum_t original_revision,
                         const svn_checksum_t *checksum,
+                        svn_boolean_t is_move,
                         const svn_skel_t *conflict,
                         const svn_skel_t *work_items,
                         apr_pool_t *scratch_pool);

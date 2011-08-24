@@ -1018,7 +1018,7 @@ insert_working_node(void *baton,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isisnnntstrisn"
                 "nnnn" /* properties translated_size last_mod_time dav_cache */
-                "s",
+                "snni", /* symlink_target, file_external, moved_to, moved_here */
                 wcroot->wc_id, local_relpath,
                 piwb->op_depth,
                 parent_relpath,
@@ -1031,7 +1031,8 @@ insert_working_node(void *baton,
                 piwb->changed_author,
                 /* Note: incomplete nodes may have a NULL target.  */
                 (piwb->kind == svn_wc__db_kind_symlink)
-                            ? piwb->target : NULL));
+                            ? piwb->target : NULL,
+                (apr_int64_t)piwb->moved_here));
 
   if (piwb->kind == svn_wc__db_kind_file)
     {
@@ -4250,6 +4251,7 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
                         const char *original_uuid,
                         svn_revnum_t original_revision,
                         const svn_checksum_t *checksum,
+                        svn_boolean_t is_move,
                         const svn_skel_t *conflict,
                         const svn_skel_t *work_items,
                         apr_pool_t *scratch_pool)
@@ -4282,7 +4284,7 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
   iwb.changed_rev = changed_rev;
   iwb.changed_date = changed_date;
   iwb.changed_author = changed_author;
-  iwb.moved_here = FALSE;
+  iwb.moved_here = is_move;
 
   if (original_root_url != NULL)
     {
