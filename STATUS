@@ -25,12 +25,13 @@ Candidate changes:
      This does not include progress reporting, since that is nominated
      separately.
    Votes:
-     +1: rhuijben (only for 1.7.0)
+     +1: rhuijben (only for 1.7.0) (without r1161164)
      +½: danielsh (not +1 since I nominated the change the same day I wrote it)
-     +0: gstein (progress would be nice)
+     +0: gstein (progress would be nice) (without r1161164)
      -0: cmpilato (For a function with this name, the implementation is far
          too anemic. I'd prefer this be a private function in 1.7.x, leaving
          room for a future public API that really does full verification.)
+         (without r1161164)
 
  * r1147540, r1147541
    Remove unused variables in build system.
