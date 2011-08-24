@@ -264,6 +264,11 @@ dav_svn__build_uri(const dav_svn_repos *repos,
                           href1, root_path, special_uri,
                           revision, path_uri, href2);
 
+    case DAV_SVN__BUILD_URI_REVROOT:
+      return apr_psprintf(pool, "%s%s/%s/rvr/%ld%s%s",
+                          href1, root_path, special_uri,
+                          revision, path_uri, href2);
+
     case DAV_SVN__BUILD_URI_VCC:
       return apr_psprintf(pool, "%s%s/%s/vcc/" DAV_SVN__DEFAULT_VCC_NAME "%s",
                           href1, root_path, special_uri, href2);
