@@ -118,13 +118,16 @@ Interfaces which have changed behaviour:
  - svn_client_patch: Patch uses move information to apply changes to files
      which have been moved locally.
 
-Interfaces which have not changed behaviour yet but will change in 1.8.0:
-
- - svn_client_update/svn_client_merge: Update and Merge will use move
+ - svn_client_update/svn_client_merge: Update and Merge use move
     information to auto-resolve the "local move vs. incoming edit"
     tree conflict scenario.
 
- - diff: Diff will use move information to generate 'rename from' headers
+Interfaces which have not changed behaviour yet but might change in 1.8.0:
+
+ - svn_client_update/svn_client_merge: Update and Merge might use move
+    information to auto-resolve some additional tree conflict scenario.
+
+ - diff: Diff might use move information to generate 'rename from' headers
     when the --git option is used. (A related problem is making diff use
     correct copyfrom in repos-repos diffs, which is not trivial.)
 
