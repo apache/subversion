@@ -2436,33 +2436,40 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
    that represents the location of representation REP.  If
    MUTABLE_REP_TRUNCATED is given, the rep is for props or dir contents,
    and only a "-1" revision number will be given for a mutable rep.
+   If MAY_BE_CORRUPT is true, guard for NULL when constructing the string.
    Perform the allocation from POOL.  */
 static const char *
 representation_string(representation_t *rep,
                       int format,
                       svn_boolean_t mutable_rep_truncated,
+                      svn_boolean_t may_be_corrupt,
                       apr_pool_t *pool)
 {
   if (rep->txn_id && mutable_rep_truncated)
     return "-1";
+
+#define DISPLAY_MAYBE_NULL_CHECKSUM(checksum)          \
+  ((may_be_corrupt == FALSE || (checksum) != NULL)     \
+   ? svn_checksum_to_cstring_display((checksum), pool) \
+   : "(null)")
 
   if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT || rep->sha1_checksum == NULL)
     return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
                         " %" SVN_FILESIZE_T_FMT " %s",
                         rep->revision, rep->offset, rep->size,
                         rep->expanded_size,
-                        svn_checksum_to_cstring_display(rep->md5_checksum,
-                                                        pool));
+                        DISPLAY_MAYBE_NULL_CHECKSUM(rep->md5_checksum));
 
   return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
                       " %" SVN_FILESIZE_T_FMT " %s %s %s",
                       rep->revision, rep->offset, rep->size,
                       rep->expanded_size,
-                      svn_checksum_to_cstring_display(rep->md5_checksum,
-                                                      pool),
-                      svn_checksum_to_cstring_display(rep->sha1_checksum,
-                                                      pool),
+                      DISPLAY_MAYBE_NULL_CHECKSUM(rep->md5_checksum),
+                      DISPLAY_MAYBE_NULL_CHECKSUM(rep->sha1_checksum),
                       rep->uniquifier);
+
+#undef DISPLAY_MAYBE_NULL_CHECKSUM
+
 }
 
 
@@ -2495,12 +2502,13 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
                                                     format,
                                                     (noderev->kind
                                                      == svn_node_dir),
+                                                    FALSE,
                                                     pool)));
 
   if (noderev->prop_rep)
     SVN_ERR(svn_stream_printf(outfile, pool, HEADER_PROPS ": %s\n",
                               representation_string(noderev->prop_rep, format,
-                                                    TRUE, pool)));
+                                                    TRUE, FALSE, pool)));
 
   SVN_ERR(svn_stream_printf(outfile, pool, HEADER_CPATH ": %s\n",
                             noderev->created_path));
@@ -3136,7 +3144,7 @@ create_rep_state(struct rep_state **rep_state,
                                "Corrupt representation '%s'",
                                rep 
                                ? representation_string(rep, ffd->format, TRUE,
-                                                       pool)
+                                                       TRUE, pool)
                                : "(null)");
     }
   /* ### Call representation_string() ? */
