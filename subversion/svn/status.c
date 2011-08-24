@@ -124,6 +124,65 @@ generate_status_desc(enum svn_wc_status_kind status)
     }
 }
 
+/* Make a relative path containing '..' elements as needed.
+   RELATIVE_TO_PATH must be the path to a directory (not a file!) and
+   TARGET_PATH must be the path to any file or directory. Both
+   RELATIVE_TO_PATH and TARGET_PATH must be based on the same parent path,
+   i.e. they can either both be absolute or they can both be relative to the
+   same parent directory. Both paths are expected to be canonical.
+   
+   If above conditions are met, a relative path that leads to TARGET_ABSPATH
+   from RELATIVE_TO_PATH is returned, but there is no error checking involved.
+   
+   The returned path is allocated from RESULT_POOL, all other allocations are
+   made in SCRATCH_POOL. */
+static const char *
+make_relpath(const char *relative_to_path,
+             const char *target_path,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
+{
+  const char *la;
+  const char *parent_dir_els = "";
+
+  /* An example:
+   *  relative_to_path = /a/b/c
+   *  target_path      = /a/x/y/z
+   *  result           = ../../x/y/z 
+   *
+   * Another example (Windows specific):
+   *  relative_to_path = F:/wc
+   *  target_path      = C:/wc
+   *  result           = C:/wc
+   */
+
+  /* Skip the common ancestor of both paths, here '/a'. */
+  la = svn_dirent_get_longest_ancestor(relative_to_path, target_path,
+                                       scratch_pool);
+  if (*la == '\0')
+    {
+      /* Nothing in common: E.g. C:/ vs F:/ on Windows */
+      return apr_pstrdup(result_pool, target_path);
+    }
+  relative_to_path = svn_dirent_skip_ancestor(la, relative_to_path);
+  target_path = svn_dirent_skip_ancestor(la, target_path);
+
+  /* In above example, we'd now have:
+   *  relative_to_path = b/c
+   *  target_path      = x/y/z */
+
+  /* Count the elements of relative_to_path and prepend as many '..' elements
+   * to target_path. */
+  while (*relative_to_path)
+    {
+      svn_dirent_split(&relative_to_path, NULL, relative_to_path,
+                       scratch_pool);
+      parent_dir_els = svn_dirent_join(parent_dir_els, "..", scratch_pool);
+    }
+
+  return svn_dirent_join(parent_dir_els, target_path, result_pool);
+}
+
 
 /* Print STATUS and PATH in a format determined by DETAILED and
    SHOW_LAST_COMMITTED. */
@@ -143,6 +202,8 @@ print_status(const char *path,
   enum svn_wc_status_kind prop_status = status->prop_status;
   char tree_status_code = ' ';
   const char *tree_desc_line = "";
+  const char *moved_from_line = "";
+  const char *moved_to_line = "";
 
   /* For historic reasons svn ignores the property status for added nodes, even
      if these nodes were copied and have local property changes.
@@ -211,6 +272,36 @@ print_status(const char *path,
         (*prop_conflicts)++;
     }
 
+  /* Note that moved-from and moved-to information is only available in STATUS
+   * for (op-)roots of a move. Those are exactly the nodes we want to show
+   * move info for in 'svn status'. See also comments in svn_wc_status3_t. */
+
+  if (status->moved_from_abspath)
+    {
+      const char *cwd;
+      const char *relpath;
+      SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
+      relpath = make_relpath(cwd, status->moved_from_abspath, pool, pool);
+      relpath = svn_dirent_local_style(relpath, pool);
+      moved_from_line = apr_pstrcat(pool, "\n        > ",
+                                    apr_psprintf(pool, _("moved from %s"),
+                                                 relpath),
+                                    (char *)NULL);
+    }
+
+  if (status->moved_to_abspath)
+    {
+      const char *cwd;
+      const char *relpath;
+      SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
+      relpath = make_relpath(cwd, status->moved_to_abspath, pool, pool);
+      relpath = svn_dirent_local_style(relpath, pool);
+      moved_to_line = apr_pstrcat(pool, "\n        > ",
+                                  apr_psprintf(pool, _("moved to %s"),
+                                               relpath),
+                                  (char *)NULL);
+    }
+
   if (detailed)
     {
       char ood_status, lock_status;
@@ -273,7 +364,7 @@ print_status(const char *path,
 
           SVN_ERR
             (svn_cmdline_printf(pool,
-                                "%c%c%c%c%c%c%c %c   %6s   %6s %-12s %s%s\n",
+                                "%c%c%c%c%c%c%c %c   %6s   %6s %-12s %s%s%s%s\n",
                                 generate_status_code(combined_status(status)),
                                 generate_status_code(prop_status),
                                 status->wc_is_locked ? 'L' : ' ',
@@ -286,11 +377,13 @@ print_status(const char *path,
                                 commit_rev,
                                 commit_author,
                                 path,
+                                moved_to_line,
+                                moved_from_line,
                                 tree_desc_line));
         }
       else
         SVN_ERR(
-           svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %c   %6s   %s%s\n",
+           svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %c   %6s   %s%s%s%s\n",
                               generate_status_code(combined_status(status)),
                               generate_status_code(prop_status),
                               status->wc_is_locked ? 'L' : ' ',
@@ -301,11 +394,13 @@ print_status(const char *path,
                               ood_status,
                               working_rev,
                               path,
+                              moved_to_line,
+                              moved_from_line,
                               tree_desc_line));
     }
   else
     SVN_ERR(
-       svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %s%s\n",
+       svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %s%s%s%s\n",
                           generate_status_code(combined_status(status)),
                           generate_status_code(prop_status),
                           status->wc_is_locked ? 'L' : ' ',
@@ -315,6 +410,8 @@ print_status(const char *path,
                            ? 'K' : ' '),
                           tree_status_code,
                           path,
+                          moved_to_line,
+                          moved_from_line,
                           tree_desc_line));
 
   return svn_cmdline_fflush(stdout);

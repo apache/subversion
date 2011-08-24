@@ -373,13 +373,12 @@ svn_sqlite__with_immediate_transaction(svn_sqlite__db_t *db,
 
 /* Helper function to handle several SQLite operations inside a shared lock.
    This callback is similar to svn_sqlite__with_transaction(), but can be
-   nested (even with a transaction) and changes in the callback are always
-   committed when this function returns.
+   nested (even with a transaction).
 
-   For SQLite 3.6.8 and later using this function as a wrapper around a group
-   of operations can give a *huge* performance boost as the shared-read lock
-   will be shared over multiple statements, instead of being reobtained
-   everytime, which requires disk and/or network io.
+   Using this function as a wrapper around a group of operations can give a
+   *huge* performance boost as the shared-read lock will be shared over
+   multiple statements, instead of being reobtained every time, which may
+   require disk and/or network io, depending on SQLite's locking strategy.
 
    SCRATCH_POOL will be passed to the callback (NULL is valid).
 

@@ -338,7 +338,7 @@ svn_wc__db_init(svn_wc__db_t *db,
    be returned.
 
    The LOCAL_RELPATH should ONLY be used for persisting paths to disk.
-   Those patsh should not be an abspath, otherwise the working copy cannot
+   Those paths should not be abspaths, otherwise the working copy cannot
    be moved. The working copy library should not make these paths visible
    in its API (which should all be abspaths), and it should not be using
    relpaths for other processing.
@@ -1281,6 +1281,7 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
                         const char *original_uuid,
                         svn_revnum_t original_revision,
                         const svn_checksum_t *checksum,
+                        svn_boolean_t is_move,
                         const svn_skel_t *conflict,
                         const svn_skel_t *work_items,
                         apr_pool_t *scratch_pool);
@@ -1506,6 +1507,10 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
  * path was reverted.  Set *CONFLICT_OLD, *CONFLICT_NEW,
  * *CONFLICT_WORKING and *PROP_REJECT to the names of the conflict
  * files, or NULL if the names are not stored.
+ * 
+ * Set *COPIED_HERE if the reverted node was copied here and is the
+ * operation root of the copy.
+ * Set *KIND to the node kind of the reverted node.
  *
  * Removes the row for LOCAL_ABSPATH from the revert list.
  */
@@ -1515,10 +1520,31 @@ svn_wc__db_revert_list_read(svn_boolean_t *reverted,
                             const char **conflict_new,
                             const char **conflict_working,
                             const char **prop_reject,
+                            svn_boolean_t *copied_here,
+                            svn_wc__db_kind_t *kind,
                             svn_wc__db_t *db,
                             const char *local_abspath,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
+
+/* The type of elements in the array returned by
+ * svn_wc__db_revert_list_read_copied_children(). */
+typedef struct svn_wc__db_revert_list_copied_child_info_t {
+  const char *abspath;
+  svn_wc__db_kind_t kind;
+} svn_wc__db_revert_list_copied_child_info_t ;
+
+/* Return in *CHILDREN a list of reverted copied nodes at or within
+ * LOCAL_ABSPATH (which is a reverted file or a reverted directory).
+ * Allocate *COPIED_CHILDREN and its elements in RESULT_POOL.
+ * The elements are of type svn_wc__db_revert_list_copied_child_info_t. */
+svn_error_t *
+svn_wc__db_revert_list_read_copied_children(const apr_array_header_t **children,
+                                            svn_wc__db_t *db,
+                                            const char *local_abspath,
+                                            apr_pool_t *result_pool,
+                                            apr_pool_t *scratch_pool);
+
 
 /* Make revert notifications for all paths in the revert list that are
  * equal to LOCAL_ABSPATH or below LOCAL_ABSPATH.
@@ -1842,6 +1868,9 @@ struct svn_wc__db_info_t {
 
   svn_boolean_t locked;     /* WC directory lock */
   svn_wc__db_lock_t *lock;  /* Repository file lock */
+
+  const char *moved_to_abspath; /* Only on op-roots. See svn_wc_status3_t. */
+  svn_boolean_t moved_here;     /* On both op-roots and children. */
 };
 
 /* Return in *NODES a hash mapping name->struct svn_wc__db_info_t for
@@ -2419,8 +2448,9 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
        Additionally, information about the local move source is provided.
        If MOVED_FROM_ABSPATH is not NULL, set *MOVED_FROM_ABSPATH to the
        absolute path of the move source node in the working copy.
-       If DELETE_OP_ROOT_ABSPATH is not NULL, set *DELETE_OP_ROOT_ABSPATH
-       to the absolute path of the op-root of the delete-half of the move.
+       If MOVED_FROM_OP_ROOT_ABSPATH is not NULL, set
+       *MOVED_FROM_OP_ROOT_ABSPATH to the absolute path of the op-root of the
+       delete-half of the move.
 
    All OUT parameters may be NULL to indicate a lack of interest in
    that piece of information.
@@ -2452,7 +2482,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                          const char **original_uuid,
                          svn_revnum_t *original_revision,
                          const char **moved_from_abspath,
-                         const char **delete_op_root_abspath,
+                         const char **moved_from_oproot_abspath,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
@@ -2536,12 +2566,17 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
    BASE_DEL_ABSPATH will specify the nearest ancestor of the explicit or
    implicit deletion (if any) that applies to the BASE tree.
 
-   MOVED_TO_ABSPATH will specify the nearest ancestor that has moved-away,
-   if any. If no ancestors have been moved-away, then this is set to NULL.
-
    WORK_DEL_ABSPATH will specify the root of a deleted subtree within
    the WORKING tree (note there is no concept of layered delete operations
    in WORKING, so there is only one deletion root in the ancestry).
+
+   MOVED_TO_ABSPATH will specify the path where this node was moved to
+   if the node has moved-away.
+
+   If the node was moved-away, MOVED_TO_OP_ROOT_ABSPATH will specify the root
+   of the copy operation that created the move destination.
+   If LOCAL_ABSPATH itself is the root of the copy, MOVED_TO_OP_ROOT_ABSPATH
+   equals MOVED_TO_ABSPATH.
 
    All OUT parameters may be set to NULL to indicate a lack of interest in
    that piece of information.
@@ -2557,6 +2592,7 @@ svn_error_t *
 svn_wc__db_scan_deletion(const char **base_del_abspath,
                          const char **moved_to_abspath,
                          const char **work_del_abspath,
+                         const char **moved_to_op_root_abspath,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
@@ -2570,14 +2606,20 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
    @{
 */
 
+/* Create a new wc.db file for LOCAL_DIR_ABSPATH, which is going to be a
+   working copy for the repository REPOS_ROOT_URL with uuid REPOS_UUID.
+   Return the raw sqlite handle, repository id and working copy id
+   and store the database in WC_DB.
+
+   Perform temporary allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                          apr_int64_t *repos_id,
                          apr_int64_t *wc_id,
+                         svn_wc__db_t *wc_db,
                          const char *local_dir_abspath,
                          const char *repos_root_url,
                          const char *repos_uuid,
-                         apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
 

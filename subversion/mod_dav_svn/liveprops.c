@@ -483,6 +483,8 @@ insert_prop_internal(const dav_resource *resource,
                    there's no point even checking.  No matter what the
                    error is, we can't claim to have a mime type for
                    this resource. */
+                ap_log_rerror(APLOG_MARK, APLOG_WARNING, serr->apr_err, 
+                              resource->info->r, "%s", serr->message);
                 svn_error_clear(serr);
                 return DAV_PROP_INSERT_NOTDEF;
               }

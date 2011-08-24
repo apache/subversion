@@ -733,10 +733,7 @@ run_file_install(svn_wc__db_t *db,
                            cancel_func, cancel_baton,
                            scratch_pool));
 
-  /* ### post-commit feature: avoid overwrite if same as working file.  */
-
   /* All done. Move the file into place.  */
-  /* ### fix this. we should delay the rename.  */
 
   {
     svn_error_t *err;
@@ -750,7 +747,7 @@ run_file_install(svn_wc__db_t *db,
       {
         svn_error_t *err2;
 
-        err2 = svn_io_make_dir_recursively(svn_dirent_dirname(dst_abspath,
+        err2 = svn_io_make_dir_recursively(svn_dirent_dirname(local_abspath,
                                                               scratch_pool),
                                            scratch_pool);
 

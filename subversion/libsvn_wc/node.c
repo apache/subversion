@@ -182,7 +182,7 @@ svn_wc__internal_get_repos_info(const char **repos_root_url,
       const char *base_del_abspath, *wrk_del_abspath;
 
       SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath, NULL,
-                                       &wrk_del_abspath,
+                                       &wrk_del_abspath, NULL,
                                        db, local_abspath,
                                        scratch_pool, scratch_pool));
 
@@ -748,6 +748,33 @@ svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
 }
 
 svn_error_t *
+svn_wc__node_get_deleted_ancestor(const char **deleted_ancestor_abspath,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+
+  *deleted_ancestor_abspath = NULL;
+
+  SVN_ERR(svn_wc__db_read_info(&status,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+
+  if (status == svn_wc__db_status_deleted)
+    SVN_ERR(svn_wc__db_scan_deletion(deleted_ancestor_abspath, NULL, NULL,
+                                     NULL, wc_ctx->db, local_abspath,
+                                     result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_wc__node_is_status_server_excluded(svn_boolean_t *is_server_excluded,
                                        svn_wc_context_t *wc_ctx,
                                        const char *local_abspath,
@@ -990,7 +1017,7 @@ svn_wc__internal_get_commit_base_rev(svn_revnum_t *commit_base_revision,
       const char *work_del_abspath;
 
       SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
-                                       &work_del_abspath,
+                                       &work_del_abspath, NULL,
                                        db, local_abspath,
                                        scratch_pool, scratch_pool));
       if (work_del_abspath != NULL)
@@ -1133,7 +1160,7 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
 
               /* Find out details of our deletion.  */
               SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
-                                               &work_del_abspath,
+                                               &work_del_abspath, NULL,
                                                db, local_abspath,
                                                scratch_pool, scratch_pool));
 
@@ -1620,7 +1647,6 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
                                svn_node_kind_t *kind,
                                svn_boolean_t *added,
                                svn_boolean_t *deleted,
-                               svn_boolean_t *conflicted,
                                svn_wc_context_t *wc_ctx,
                                const char *local_abspath,
                                svn_boolean_t no_wcroot_check,
@@ -1629,7 +1655,6 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t db_kind;
   svn_node_kind_t disk_kind;
-  svn_boolean_t conflicted_p;
   svn_error_t *err;
 
   *obstruction_state = svn_wc_notify_state_inapplicable;
@@ -1639,14 +1664,12 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
     *added = FALSE;
   if (deleted)
     *deleted = FALSE;
-  if (conflicted)
-    *conflicted = FALSE;
 
   SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
 
   err = svn_wc__db_read_info(&status, &db_kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, &conflicted_p, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL,
                              wc_ctx->db, local_abspath,
                              scratch_pool, scratch_pool);
@@ -1752,16 +1775,32 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
         SVN_ERR_MALFUNCTION();
     }
 
-  if (conflicted_p && (conflicted != NULL))
-    {
-      svn_boolean_t text_c, prop_c, tree_c;
+  return SVN_NO_ERROR;
+}
 
-      SVN_ERR(svn_wc__internal_conflicted_p(&text_c, &prop_c, &tree_c,
-                                            wc_ctx->db, local_abspath,
-                                            scratch_pool));
 
-      *conflicted = (text_c || prop_c || tree_c);
-    }
+svn_error_t *
+svn_wc__node_was_moved_away(const char **moved_to_abspath,
+                            const char **op_root_abspath,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  svn_boolean_t is_deleted;
+
+  if (moved_to_abspath)
+    *moved_to_abspath = NULL;
+  if (op_root_abspath)
+    *op_root_abspath = NULL;
+
+  SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, wc_ctx, local_abspath,
+                                         scratch_pool));
+  if (is_deleted)
+    SVN_ERR(svn_wc__db_scan_deletion(NULL, moved_to_abspath, NULL,
+                                     op_root_abspath, wc_ctx->db,
+                                     local_abspath,
+                                     result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }

@@ -61,10 +61,6 @@ class JNIThreadData
    */
   char m_formatBuffer[JNIUtil::formatBufferSize];
 
-  /**
-   * The pool for the current request (call).
-   */
-  SVN::Pool *m_requestPool;
  private:
   /**
    * Pointer to previous thread information to enable reentrent

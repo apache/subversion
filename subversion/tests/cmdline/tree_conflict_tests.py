@@ -254,8 +254,10 @@ d_adds = [
 # Scenarios that start with an existing versioned item
 #
 # GO-AWAY: node is no longer at the path where it was.
-# file-del(F) = del(F) or move(F,F2)
+# file-del(F) = del(F)
+# file-move(F) = move(F,F2)
 # dir-del(D)  = del(D) or move(D,D2)
+# Note: file-move(F) does not conflict with incoming edit
 #
 # REPLACE: node is no longer at the path where it was, but another node is.
 # file-rpl(F) = file-del(F) + file-add(F)
@@ -268,8 +270,12 @@ d_adds = [
 
 f_dels = [
   ( create_f, ['fD'] ),
+]
+
+f_moves = [
   ( create_f, ['fM'] ),
 ]
+
 d_dels = [
   ( create_d, ['dD'] ),
   ( create_d, ['dM'] ),
@@ -562,7 +568,7 @@ def test_tc_merge(sbox, incoming_scen, br_scen=None, wc_scen=None):
 # WC state: as scheduled (no obstruction)
 
 def up_sw_file_mod_onto_del(sbox):
-  "up/sw file: modify onto del/rpl/mv"
+  "up/sw file: modify onto del/rpl"
   test_tc_up_sw(sbox, f_mods, f_dels + f_rpls)
   # Note: See UC1 in notes/tree-conflicts/use-cases.txt.
 
@@ -573,12 +579,12 @@ def up_sw_file_del_onto_mod(sbox):
   #          ### OR (see Nico's email <>):
   #          schedule-delete but leave F on disk (can only apply with
   #            text-mod; prop-mod can't be preserved in this way)
-  test_tc_up_sw(sbox, f_dels + f_rpls, f_mods)
+  test_tc_up_sw(sbox, f_dels + f_moves + f_rpls, f_mods)
   # Note: See UC2 in notes/tree-conflicts/use-cases.txt.
 
 def up_sw_file_del_onto_del(sbox):
   "up/sw file: del/rpl/mv onto del/rpl/mv"
-  test_tc_up_sw(sbox, f_dels + f_rpls, f_dels + f_rpls)
+  test_tc_up_sw(sbox, f_dels + f_moves + f_rpls, f_dels + f_rpls)
   # Note: See UC3 in notes/tree-conflicts/use-cases.txt.
 
 def up_sw_file_add_onto_add(sbox):
@@ -650,22 +656,24 @@ def up_sw_dir_add_onto_add(sbox):
 def merge_file_mod_onto_not_file(sbox):
   "merge file: modify onto not-file"
   sbox2 = sbox.clone_dependent()
-  test_tc_merge(sbox, f_mods, br_scen = f_dels + f_rpl_d)
-  test_tc_merge(sbox2, f_mods, wc_scen = f_dels)
+  test_tc_merge(sbox, f_mods, br_scen = f_dels + f_moves + f_rpl_d)
+  test_tc_merge(sbox2, f_mods, wc_scen = f_dels + f_moves)
   # Note: See UC4 in notes/tree-conflicts/use-cases.txt.
 
 def merge_file_del_onto_not_same(sbox):
   "merge file: del/rpl/mv onto not-same"
   sbox2 = sbox.clone_dependent()
-  test_tc_merge(sbox, f_dels + f_rpls, br_scen = f_mods)
-  test_tc_merge(sbox2, f_dels + f_rpls, wc_scen = f_mods)
+  test_tc_merge(sbox, f_dels + f_moves + f_rpls, br_scen = f_mods)
+  test_tc_merge(sbox2, f_dels + f_moves + f_rpls, wc_scen = f_mods)
   # Note: See UC5 in notes/tree-conflicts/use-cases.txt.
 
 def merge_file_del_onto_not_file(sbox):
   "merge file: del/rpl/mv onto not-file"
   sbox2 = sbox.clone_dependent()
-  test_tc_merge(sbox, f_dels + f_rpls, br_scen = f_dels + f_rpl_d)
-  test_tc_merge(sbox2, f_dels + f_rpls, wc_scen = f_dels)
+  test_tc_merge(sbox, f_dels + f_moves + f_rpls,
+                br_scen = f_dels + f_moves + f_rpl_d)
+  test_tc_merge(sbox2, f_dels + f_moves + f_rpls,
+                wc_scen = f_dels + f_moves)
   # Note: See UC6 in notes/tree-conflicts/use-cases.txt.
 
 def merge_file_add_onto_not_none(sbox):

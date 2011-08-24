@@ -356,8 +356,9 @@ Java_org_apache_subversion_javahl_SVNClient_remove
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
+  SVN::Pool tmpPool;
   StringArray targetsArr(jtargets);
-  Targets targets(targetsArr);
+  Targets targets(targetsArr, tmpPool);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -434,8 +435,9 @@ Java_org_apache_subversion_javahl_SVNClient_update
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
+  SVN::Pool tmpPool;
   StringArray targetsArr(jtargets);
-  Targets targets(targetsArr);
+  Targets targets(targetsArr, tmpPool);
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
@@ -459,8 +461,9 @@ Java_org_apache_subversion_javahl_SVNClient_commit
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
+  SVN::Pool tmpPool;
   StringArray targetsArr(jtargets);
-  Targets targets(targetsArr);
+  Targets targets(targetsArr, tmpPool);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -538,8 +541,9 @@ Java_org_apache_subversion_javahl_SVNClient_move
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
+  SVN::Pool tmpPool;
   StringArray srcPathArr(jsrcPaths);
-  Targets srcPaths(srcPathArr);
+  Targets srcPaths(srcPathArr, tmpPool);
   if (JNIUtil::isExceptionThrown())
     return;
   JNIStringHolder destPath(jdestPath);
@@ -572,8 +576,9 @@ Java_org_apache_subversion_javahl_SVNClient_mkdir
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
+  SVN::Pool tmpPool;
   StringArray targetsArr(jtargets);
-  Targets targets(targetsArr);
+  Targets targets(targetsArr, tmpPool);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -917,8 +922,9 @@ Java_org_apache_subversion_javahl_SVNClient_properties
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_propertySetRemote
-(JNIEnv *env, jobject jthis, jstring jpath, jstring jname,
- jbyteArray jvalue, jboolean jforce, jobject jrevpropTable, jobject jcallback)
+(JNIEnv *env, jobject jthis, jstring jpath, jlong jbaseRev, jstring jname,
+ jbyteArray jvalue, jobject jmessage, jboolean jforce, jobject jrevpropTable,
+ jobject jcallback)
 {
   JNIEntry(SVNClient, propertySet);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -935,6 +941,10 @@ Java_org_apache_subversion_javahl_SVNClient_propertySetRemote
   if (JNIUtil::isExceptionThrown())
     return;
 
+  CommitMessage message(jmessage);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   JNIByteArray value(jvalue);
   if (JNIUtil::isExceptionThrown())
     return;
@@ -944,8 +954,9 @@ Java_org_apache_subversion_javahl_SVNClient_propertySetRemote
     return;
 
   CommitCallback callback(jcallback);
-  cl->propertySetRemote(path, name, value, jforce ? true:false, revprops,
-                        jcallback ? &callback : NULL);
+  cl->propertySetRemote(path, jbaseRev, name, &message, value,
+                        jforce ? true:false,
+                        revprops, jcallback ? &callback : NULL);
 }
 
 JNIEXPORT void JNICALL
@@ -960,8 +971,9 @@ Java_org_apache_subversion_javahl_SVNClient_propertySetLocal
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
+  SVN::Pool tmpPool;
   StringArray targetsArr(jtargets);
-  Targets targets(targetsArr);
+  Targets targets(targetsArr, tmpPool);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1575,8 +1587,9 @@ Java_org_apache_subversion_javahl_SVNClient_addToChangelist
       JNIUtil::throwError("bad C++ this");
       return;
     }
+  SVN::Pool tmpPool;
   StringArray targetsArr(jtargets);
-  Targets targets(targetsArr);
+  Targets targets(targetsArr, tmpPool);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1604,8 +1617,9 @@ Java_org_apache_subversion_javahl_SVNClient_removeFromChangelists
       JNIUtil::throwError("bad C++ this");
       return;
     }
+  SVN::Pool tmpPool;
   StringArray targetsArr(jtargets);
-  Targets targets(targetsArr);
+  Targets targets(targetsArr, tmpPool);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1654,8 +1668,9 @@ Java_org_apache_subversion_javahl_SVNClient_lock
       JNIUtil::throwError("bad C++ this");
       return;
     }
+  SVN::Pool tmpPool;
   StringArray targetsArr(jtargets);
-  Targets targets(targetsArr);
+  Targets targets(targetsArr, tmpPool);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1678,8 +1693,9 @@ Java_org_apache_subversion_javahl_SVNClient_unlock
       return;
     }
 
+  SVN::Pool tmpPool;
   StringArray targetsArr(jtargets);
-  Targets targets(targetsArr);
+  Targets targets(targetsArr, tmpPool);
   if (JNIUtil::isExceptionThrown())
     return;
 

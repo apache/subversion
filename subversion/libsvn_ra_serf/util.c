@@ -821,7 +821,7 @@ start_error(svn_ra_serf__xml_parser_t *parser,
         }
       else
         {
-          ctx->error->apr_err = APR_EGENERAL;
+          ctx->error->apr_err = SVN_ERR_RA_DAV_REQUEST_FAILED;
         }
 
       /* Start collecting cdata. */
@@ -1497,6 +1497,21 @@ inject_to_parser(svn_ra_serf__xml_parser_t *ctx,
   return SVN_NO_ERROR;
 }
 
+/* Apr pool cleanup handler to release an XML_Parser in success and error
+   conditions */
+static apr_status_t
+xml_parser_cleanup(void *baton)
+{
+  XML_Parser *xmlp = baton;
+
+  if (*xmlp)
+    {
+      XML_ParserFree(*xmlp);
+      *xmlp = NULL;
+    }
+
+  return APR_SUCCESS;
+}
 
 svn_error_t *
 svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
@@ -1633,7 +1648,7 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
          return status. We just don't care.  */
       (void) XML_Parse(parser->xmlp, NULL, 0, 1);
 
-      XML_ParserFree(parser->xmlp);
+      apr_pool_cleanup_run(parser->pool, &parser->xmlp, xml_parser_cleanup);
       parser->xmlp = NULL;
       add_done_item(parser);
     }
@@ -1690,9 +1705,27 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       return SVN_NO_ERROR;
     }
 
+  if (ctx->headers_baton == NULL)
+    ctx->headers_baton = serf_bucket_response_get_headers(response);
+  else if (ctx->headers_baton != serf_bucket_response_get_headers(response))
+    {
+      /* We got a new response to an existing parser...
+         This tells us the connection has restarted and we should continue
+         where we stopped last time.
+       */
+
+      /* Is this a second attempt?? */
+      if (!ctx->skip_size)
+        ctx->skip_size = ctx->read_size;
+
+      ctx->read_size = 0; /* New request, nothing read */
+    }
+
   if (!ctx->xmlp)
     {
       ctx->xmlp = XML_ParserCreate(NULL);
+      apr_pool_cleanup_register(ctx->pool, &ctx->xmlp, xml_parser_cleanup,
+                                apr_pool_cleanup_null);
       XML_SetUserData(ctx->xmlp, ctx);
       XML_SetElementHandler(ctx->xmlp, start_xml, end_xml);
       if (ctx->cdata)
@@ -1730,6 +1763,35 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       if (SERF_BUCKET_READ_ERROR(status))
         {
           return svn_error_wrap_apr(status, NULL);
+        }
+
+      ctx->read_size += len;
+
+      if (ctx->skip_size)
+        {
+          /* Handle restarted requests correctly: Skip what we already read */
+          apr_size_t skip;
+
+          if (ctx->skip_size >= ctx->read_size)
+            {
+            /* Eek.  What did the file shrink or something? */
+              if (APR_STATUS_IS_EOF(status))
+                {
+                  SVN_ERR_MALFUNCTION();
+                }
+
+              /* Skip on to the next iteration of this loop. */
+              if (APR_STATUS_IS_EAGAIN(status))
+                {
+                  return svn_error_wrap_apr(status, NULL);
+                }
+              continue;
+            }
+
+          skip = (apr_size_t)(len - (ctx->read_size - ctx->skip_size));
+          data += skip;
+          len -= skip;
+          ctx->skip_size = 0;
         }
 
       /* Ensure that the parser's PAUSED state is correct before we test
@@ -1783,8 +1845,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
         {
           SVN_ERR_ASSERT(ctx->xmlp != NULL);
 
-          XML_ParserFree(ctx->xmlp);
-          ctx->xmlp = NULL;
+          apr_pool_cleanup_run(ctx->pool, &ctx->xmlp, xml_parser_cleanup);
           add_done_item(ctx);
           return svn_error_trace(err);
         }
@@ -1818,8 +1879,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
               /* Ignore the return status. We just don't care.  */
               (void) XML_Parse(ctx->xmlp, NULL, 0, 1);
 
-              XML_ParserFree(ctx->xmlp);
-              ctx->xmlp = NULL;
+              apr_pool_cleanup_run(ctx->pool, &ctx->xmlp, xml_parser_cleanup);
               add_done_item(ctx);
             }
 
@@ -2013,17 +2073,27 @@ handle_response(serf_request_t *request,
 
   ctx->conn->last_status_code = sl.code;
 
-  if (sl.code == 409 || sl.code >= 500)
+  if (sl.code == 405 || sl.code == 409 || sl.code >= 500)
     {
-      /* 409 Conflict: can indicate a hook error.
+      /* 405 Method Not allowed.
+         409 Conflict: can indicate a hook error.
          5xx (Internal) Server error. */
       SVN_ERR(svn_ra_serf__handle_server_error(request, response, pool));
 
       if (!ctx->session->pending_error)
         {
+          apr_status_t apr_err = SVN_ERR_RA_DAV_REQUEST_FAILED;
+
+          /* 405 == Method Not Allowed (Occurs when trying to lock a working
+             copy path which no longer exists at HEAD in the repository. */
+
+          if (sl.code == 405 && !strcmp(ctx->method, "LOCK"))
+            apr_err = SVN_ERR_FS_OUT_OF_DATE;
+
           return
-              svn_error_createf(APR_EGENERAL, NULL,
-              _("Unspecified error message: %d %s"), sl.code, sl.reason);
+              svn_error_createf(apr_err, NULL,
+                                _("%s request on '%s' failed: %d %s"),
+                                ctx->method, ctx->path, sl.code, sl.reason);
         }
 
       return SVN_NO_ERROR; /* Error is set in caller */
@@ -2249,7 +2319,7 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
           if ((err->apr_err != SVN_ERR_FS_NOT_FOUND) &&
               (err->apr_err != SVN_ERR_RA_DAV_FORBIDDEN))
             {
-              return err;  /* found a _real_ error */
+              return svn_error_trace(err);  /* found a _real_ error */
             }
           else
             {

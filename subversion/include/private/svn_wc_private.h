@@ -466,6 +466,22 @@ svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
                                apr_pool_t *scratch_pool);
 
 /**
+ * Set @a *deleted_ancestor_abspath to the root of the delete operation
+ * that deleted @a local_abspath. If @a local_abspath itself was deleted
+ * and has no deleted ancestor, @a *deleted_ancestor_abspath will equal
+ * @a local_abspath. If @a local_abspath was not deleted,
+ * set @a *deleted_ancestor_abspath to @c NULL.
+ * @a *deleted_ancestor_abspath is allocated in @a result_pool.
+ * Use @a scratch_pool for all temporary allocations.
+ */ 
+svn_error_t *
+svn_wc__node_get_deleted_ancestor(const char **deleted_ancestor_abspath,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
+/**
  * Set @a *is_server_excluded to whether @a local_abspath has been
  * excluded by the server, using @a wc_ctx.  If @a local_abspath is not
  * in the working copy, return @c SVN_ERR_WC_PATH_NOT_FOUND.
@@ -994,9 +1010,6 @@ svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
  * If DELETED is not NULL, set *DELETED to TRUE if the node is marked as
  * deleted in the working copy.
  *
- * If CONFLICTED is not NULL, set *CONFLICTED to TRUE if the node is somehow
- * conflicted.
- *
  * All output arguments except OBSTRUCTION_STATE can be NULL to ommit the
  * result.
  *
@@ -1007,7 +1020,6 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
                                svn_node_kind_t *kind,
                                svn_boolean_t *added,
                                svn_boolean_t *deleted,
-                               svn_boolean_t *conflicted,
                                svn_wc_context_t *wc_ctx,
                                const char *local_abspath,
                                svn_boolean_t no_wcroot_check,
@@ -1110,6 +1122,24 @@ svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
                         svn_wc_notify_func2_t notify_func,
                         void *notify_baton,
                         apr_pool_t *scratch_pool);
+
+/* If the node at LOCAL_ABSPATH was moved away set *MOVED_TO_ABSPATH to
+ * the absolute path of the copied move-target node, and *COPY_OP_ROOT_ABSPATH
+ * to the absolute path of the root node of the copy operation.
+ *
+ * If the node was not moved, set *MOVED_TO_ABSPATH and *COPY_OP_ROOT_ABSPATH
+ * to NULL.
+ *
+ * Either MOVED_TO_ABSPATH or OP_ROOT_ABSPATH may be NULL to indicate
+ * that the caller is not interested in the result.
+ */
+svn_error_t *
+svn_wc__node_was_moved_away(const char **moved_to_abspath,
+                            const char **copy_op_root_abspath,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* If the node at LOCAL_ABSPATH was moved here set *MOVED_FROM_ABSPATH to
  * the absolute path of the deleted move-source node, and set

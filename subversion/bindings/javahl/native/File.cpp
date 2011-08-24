@@ -90,7 +90,7 @@ const char *File::getInternalStyle(const SVN::Pool &requestPool)
 {
   const char *path = getAbsPath();
   if (path)
-    return svn_dirent_internal_style(path, requestPool.pool());
+    return svn_dirent_internal_style(path, requestPool.getPool());
   else
     return NULL;
 }

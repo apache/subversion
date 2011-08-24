@@ -2105,11 +2105,11 @@ typedef struct svn_client_status_t
    * svn_wc_status_modified and svn_wc_status_conflicted. */
   enum svn_wc_status_kind prop_status;
 
-  /** a node can be 'locked' if a working copy update is in progress or
+  /** A node can be 'locked' if a working copy update is in progress or
    * was interrupted. */
   svn_boolean_t wc_is_locked;
 
-  /** a file or directory can be 'copied' if it's scheduled for
+  /** A file or directory can be 'copied' if it's scheduled for
    * addition-with-history (or part of a subtree that is scheduled as such.).
    */
   svn_boolean_t copied;
@@ -2135,7 +2135,7 @@ typedef struct svn_client_status_t
   /** Last commit author of this item */
   const char *changed_author;
 
-    /** a file or directory can be 'switched' if the switch command has been
+  /** A file or directory can be 'switched' if the switch command has been
    * used.  If this is TRUE, then file_external will be FALSE.
    */
   svn_boolean_t switched;
@@ -2201,10 +2201,43 @@ typedef struct svn_client_status_t
 
   /** @} */
 
-  /** Reserved for libsvn_client's internal use; this value is only to be used for
-   * libsvn_client backwards compatibility wrappers. This value may be NULL or
-   * to other data in future versions. */
+  /** Reserved for libsvn_client's internal use; this value is only to be used
+   * for libsvn_client backwards compatibility wrappers. This value may be NULL
+   * or to other data in future versions. */
   const void *backwards_compatibility_baton;
+
+  /** Set to the local absolute path that this node was moved from, if this
+   * file or directory has been moved here locally and is the root of that
+   * move. Otherwise set to NULL.
+   *
+   * This will be NULL for moved-here nodes that are just part of a subtree
+   * that was moved along (and are not themselves a root of a different move
+   * operation).
+   * 
+   * @since New in 1.8. */
+  const char *moved_from_abspath;
+
+  /** Set to the local absolute path that this node was moved to, if this file
+   * or directory has been moved away locally and corresponds to the root
+   * of the destination side of the move. Otherwise set to NULL.
+   *
+   * Note: Saying just "root" here could be misleading. For example:
+   *   svn mv A AA;
+   *   svn mv AA/B BB;
+   * creates a situation where A/B is moved-to BB, but one could argue that
+   * the move source's root actually was AA/B. Note that, as far as the
+   * working copy is concerned, above case is exactly identical to:
+   *   svn mv A/B BB;
+   *   svn mv A AA;
+   * In both situations, @a moved_to_abspath would be set for nodes A (moved
+   * to AA) and A/B (moved to BB), only.
+   *
+   * This will be NULL for moved-away nodes that were just part of a subtree
+   * that was moved along (and are not themselves a root of a different move
+   * operation).
+   *
+   * @since New in 1.8. */
+  const char *moved_to_abspath;
 
   /* NOTE! Please update svn_client_status_dup() when adding new fields here. */
 } svn_client_status_t;
@@ -2743,6 +2776,10 @@ svn_client_blame(const char *path_or_url,
  * If @a show_copies_as_adds is TRUE, then copied files will not be diffed
  * against their copyfrom source, and will appear in the diff output
  * in their entirety, as if they were newly added.
+ * ### BUGS: For a repos-repos diff, this is ignored. Instead, a file is
+ *     diffed against its copyfrom source iff the file is the diff target
+ *     and not if some parent directory is the diff target. For a repos-WC
+ *     diff, this is ignored if the file is the diff target.
  *
  * If @a use_git_diff_format is TRUE, then the git's extended diff format
  * will be used.

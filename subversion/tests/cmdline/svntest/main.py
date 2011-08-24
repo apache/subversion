@@ -705,10 +705,15 @@ def chmod_tree(path, mode, mask):
 
 # For clearing away working copies
 def safe_rmtree(dirname, retry=0):
-  "Remove the tree at DIRNAME, making it writable first"
+  """Remove the tree at DIRNAME, making it writable first.
+     If DIRNAME is a symlink, only remove the symlink, not its target."""
   def rmtree(dirname):
     chmod_tree(dirname, 0666, 0666)
     shutil.rmtree(dirname)
+
+  if os.path.islink(dirname):
+    os.unlink(dirname)
+    return
 
   if not os.path.exists(dirname):
     return

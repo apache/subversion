@@ -932,7 +932,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Display information related to merges (or potential merges) between\n"
      "  SOURCE and TARGET (default: '.').  Display the type of information\n"
      "  specified by the --show-revs option.  If --show-revs isn't passed,\n"
-     "  it defaults to --show-revs='merged'.\n"),
+     "  it defaults to --show-revs='merged'.\n"
+     "\n"
+     "  The depth can be 'empty' or 'infinity'; the default is 'empty'.\n"),
     {'r', 'R', opt_depth, opt_show_revs} },
 
   { "mkdir", svn_cl__mkdir, {0}, N_
@@ -1004,6 +1006,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  for deletion. If the patch creates a new file, that file is scheduled\n"
      "  for addition. Use 'svn revert' to undo deletions and additions you\n"
      "  do not agree with.\n"
+     "\n"
+     "  Hint: If the patch file was created with Subversion, it will contain\n"
+     "        the number of a revision N the patch will cleanly apply to\n"
+     "        (look for lines like \"--- foo/bar.txt        (revision N)\").\n"
+     "        To avoid rejects, first update to the revision N using \n"
+     "        'svn update -r N', apply the patch, and then update back to the\n"
+     "        HEAD revision. This way, conflicts can be resolved interactively.\n"
      ),
     {'q', opt_dry_run, opt_strip, opt_reverse_diff,
      opt_ignore_whitespace} },
@@ -1182,7 +1191,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "usage: revert PATH...\n"
      "\n"
      "  Note:  this subcommand does not require network access, and resolves\n"
-     "  any conflicted states.  However, it does not restore removed directories.\n"),
+     "  any conflicted states.\n"),
     {opt_targets, 'R', opt_depth, 'q', opt_changelist} },
 
   { "status", svn_cl__status, {"stat", "st"}, N_
@@ -1934,12 +1943,6 @@ main(int argc, const char *argv[])
         break;
       case opt_changelist:
         opt_state.changelist = apr_pstrdup(pool, opt_arg);
-        if (opt_state.changelist[0] == '\0')
-          {
-            err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                   _("Changelist names must not be empty"));
-            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-          }
         apr_hash_set(changelists, opt_state.changelist,
                      APR_HASH_KEY_STRING, (void *)1);
         break;

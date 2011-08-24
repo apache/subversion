@@ -1106,6 +1106,18 @@ migrate_text_bases(apr_hash_t **text_bases_info,
             is_revert_base = FALSE;
           }
 
+        if (! versioned_file_name)
+          {
+             /* Some file that doesn't end with .svn-base or .svn-revert.
+                No idea why that would be in our administrative area, but
+                we shouldn't segfault on this case.
+
+                Note that we already copied this file in the pristine store,
+                but the next cleanup will take care of that.
+              */
+            continue;
+          }
+
         /* Create a new info struct for this versioned file, or fill in the
          * existing one if this is the second text-base we've found for it. */
         info = apr_hash_get(*text_bases_info, versioned_file_name,
@@ -1902,12 +1914,12 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                              scratch_pool));
   SVN_ERR(svn_wc__ensure_directory(root_adm_abspath, scratch_pool));
 
-  /* Create an empty sqlite database for this directory. */
+  /* Create an empty sqlite database for this directory and store it in DB. */
   SVN_ERR(svn_wc__db_upgrade_begin(&data.sdb,
                                    &data.repos_id, &data.wc_id,
-                                   data.root_abspath,
+                                   db, data.root_abspath,
                                    this_dir->repos, this_dir->uuid,
-                                   scratch_pool, scratch_pool));
+                                   scratch_pool));
 
   /* Migrate the entries over to the new database.
    ### We need to think about atomicity here.
@@ -1952,7 +1964,6 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__db_wq_add(db, data.root_abspath, work_items, scratch_pool));
 
   SVN_ERR(svn_wc__db_wclock_release(db, data.root_abspath, scratch_pool));
-  SVN_ERR(svn_sqlite__close(data.sdb));
   SVN_ERR(svn_wc__db_close(db));
 
   /* Renaming the db file is what makes the pre-wcng into a wcng */

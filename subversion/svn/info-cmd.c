@@ -172,6 +172,35 @@ print_info_xml(void *baton,
         svn_cl__xml_tagged_cdata(&sb, pool, "changelist",
                                  info->wc_info->changelist);
 
+      if (info->wc_info->moved_from_abspath)
+        {
+          const char *relpath;
+
+          relpath = svn_dirent_skip_ancestor(info->wc_info->wcroot_abspath,
+                                             info->wc_info->moved_from_abspath);
+
+          /* <moved-from> xx </moved-from> */
+          if (relpath && relpath[0] != '\0')
+            svn_cl__xml_tagged_cdata(&sb, pool, "moved-from", relpath);
+          else
+            svn_cl__xml_tagged_cdata(&sb, pool, "moved-from",
+                                     info->wc_info->moved_from_abspath);
+        }
+
+      if (info->wc_info->moved_to_abspath)
+        {
+          const char *relpath;
+
+          relpath = svn_dirent_skip_ancestor(info->wc_info->wcroot_abspath,
+                                             info->wc_info->moved_to_abspath);
+          /* <moved-to> xx </moved-to> */
+          if (relpath && relpath[0] != '\0')
+            svn_cl__xml_tagged_cdata(&sb, pool, "moved-to", relpath);
+          else
+            svn_cl__xml_tagged_cdata(&sb, pool, "moved-to",
+                                     info->wc_info->moved_to_abspath);
+        }
+
       /* "</wc-info>" */
       svn_xml_make_close_tag(&sb, pool, "wc-info");
     }
@@ -376,6 +405,31 @@ print_info(void *baton,
       if (SVN_IS_VALID_REVNUM(info->wc_info->copyfrom_rev))
         SVN_ERR(svn_cmdline_printf(pool, _("Copied From Rev: %ld\n"),
                                    info->wc_info->copyfrom_rev));
+      if (info->wc_info->moved_from_abspath)
+        {
+          const char *relpath;
+
+          relpath = svn_dirent_skip_ancestor(info->wc_info->wcroot_abspath,
+                                             info->wc_info->moved_from_abspath);
+          if (relpath && relpath[0] != '\0')
+            SVN_ERR(svn_cmdline_printf(pool, _("Moved From: %s\n"), relpath));
+          else
+            SVN_ERR(svn_cmdline_printf(pool, _("Moved From: %s\n"),
+                                       info->wc_info->moved_from_abspath));
+        }
+
+      if (info->wc_info->moved_to_abspath)
+        {
+          const char *relpath;
+
+          relpath = svn_dirent_skip_ancestor(info->wc_info->wcroot_abspath,
+                                             info->wc_info->moved_to_abspath);
+          if (relpath && relpath[0] != '\0')
+            SVN_ERR(svn_cmdline_printf(pool, _("Moved To: %s\n"), relpath));
+          else
+            SVN_ERR(svn_cmdline_printf(pool, _("Moved To: %s\n"),
+                                       info->wc_info->moved_to_abspath));
+        }
     }
 
   if (info->last_changed_author)

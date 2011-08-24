@@ -179,6 +179,9 @@ struct svn_ra_serf__session_t {
   /* Connection timeout value */
   long timeout;
 
+  /* HTTPv1 flags */
+  svn_tristate_t supports_deadprop_count;
+
   /*** HTTP v2 protocol stuff. ***
    *
    * We assume that if mod_dav_svn sends one of the special v2 OPTIONs
@@ -626,6 +629,11 @@ struct svn_ra_serf__xml_parser_t {
 
      See libsvn_ra_serf/util.c  */
   struct svn_ra_serf__pending_t *pending;
+
+  /* Response restart support */
+  const void *headers_baton; /* Last pointer to headers */
+  apr_off_t skip_size; /* Number of bytes to skip */
+  apr_off_t read_size; /* Number of bytes read from response */
 };
 
 /*

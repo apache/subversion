@@ -445,11 +445,25 @@ diff_status_callback(void *baton,
         break; /* Go check other conditions */
     }
 
-  if (eb->changelist_hash != NULL
-      && (!status->changelist
-          || ! apr_hash_get(eb->changelist_hash, status->changelist,
-                            APR_HASH_KEY_STRING)))
-    return SVN_NO_ERROR; /* Filtered via changelist */
+  /* Filter items by changelist. */
+  /* ### duplicated in ../libsvn_client/status.c */
+  if (eb->changelist_hash)
+    {
+      if (status->changelist)
+        {
+          /* Skip unless the caller requested this changelist. */
+          if (! apr_hash_get(eb->changelist_hash, status->changelist,
+                             APR_HASH_KEY_STRING))
+            return SVN_NO_ERROR;
+        }
+      else
+        {
+          /* Skip unless the caller requested changelist-lacking items. */
+          if (! apr_hash_get(eb->changelist_hash, "",
+                             APR_HASH_KEY_STRING))
+            return SVN_NO_ERROR;
+        }
+    }
 
   /* ### The following checks should probably be reversed as it should decide
          when *not* to show a diff, because generally all changed nodes should
@@ -474,8 +488,29 @@ diff_status_callback(void *baton,
           SVN_ERR(file_diff(eb, local_abspath, path, scratch_pool));
         }
     }
-  else
+  else  /* it's a directory */
     {
+      const char *path = svn_dirent_skip_ancestor(eb->anchor_abspath,
+                                                  local_abspath);
+
+      /* Report the directory as deleted and/or opened or added. */
+      if (status->node_status == svn_wc_status_deleted
+          || status->node_status == svn_wc_status_replaced)
+        SVN_ERR(eb->callbacks->dir_deleted(NULL, NULL, path,
+                                           eb->callback_baton, scratch_pool));
+
+      if (status->node_status == svn_wc_status_added
+          || status->node_status == svn_wc_status_replaced)
+        SVN_ERR(eb->callbacks->dir_added(NULL, NULL, NULL, NULL,
+                                         path, status->revision,
+                                         path, status->revision /* ### ? */,
+                                         eb->callback_baton, scratch_pool));
+      else
+        SVN_ERR(eb->callbacks->dir_opened(NULL, NULL, NULL,
+                                          path, status->revision,
+                                          eb->callback_baton, scratch_pool));
+
+      /* Report the prop change. */
       /* ### This case should probably be extended for git-diff, but this
              is what the old diff code provided */
       if (status->node_status == svn_wc_status_deleted
@@ -484,9 +519,6 @@ diff_status_callback(void *baton,
         {
           apr_array_header_t *propchanges;
           apr_hash_t *baseprops;
-          const char *path = svn_dirent_skip_ancestor(eb->anchor_abspath,
-                                                      local_abspath);
-
 
           SVN_ERR(svn_wc__internal_propdiff(&propchanges, &baseprops,
                                             eb->db, local_abspath,
@@ -498,6 +530,15 @@ diff_status_callback(void *baton,
                                                    eb->callback_baton,
                                                    scratch_pool));
         }
+
+      /* Close the dir.
+       * ### This should be done after all children have been processed, not
+       *     yet.  The current Subversion-internal callers don't care. */
+      SVN_ERR(eb->callbacks->dir_closed(
+                        NULL, NULL, NULL, path,
+                        (status->node_status == svn_wc_status_added
+                         || status->node_status == svn_wc_status_replaced),
+                        eb->callback_baton, scratch_pool));
     }
   return SVN_NO_ERROR;
 }
