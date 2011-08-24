@@ -20,7 +20,7 @@ answer these questions for a given node-revision:
    Q: To what locations has this /some/fixed/file.c@r45 been copied?
 
 By also storing for each node-revision a list of its successors (the
-exact opposite of the predessor mapping), we provide a basis for
+exact opposite of the predecessor mapping), we provide a basis for
 answering those questions:
 
    Q: In what revision was /path/to/foo.c@r15 next changed?
