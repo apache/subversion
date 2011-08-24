@@ -69,29 +69,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, cmpilato
 
-  * r1158617, r1158875, r1158886, r1158896, r1158919, r1158924, r1158963
-    Make 'svn revert' remove unversioned nodes resulting from reverting a copy.
-    Fixes issue #3101.
-    Justification:
-      Bert suggested to backport this to 1.7.
-      I myself am not really sure if we should consider this a bug fix
-      or a behaviour change. I think we should merge this before 1.7.0
-      if we decide to merge it.
-      It does fix some fairly annoying usability issues.
-      For instance: If a merge adds files, the merge result is reverted, and
-      the merge is repeated, the second merge does not produce the same result
-      as the first merge. It will skip the, now unversioned, files added by
-      the first merge. There are various other cases where the unversioned
-      files get in the way.
-    Notes:
-      All revisions depend on one another, but some amend or even undo changes
-      made in earlier revisions. Instead of reviewing the individual commits
-      I would suggest to run the following merge and review the resulting diff:
-        svn merge -c1158617,1158875,1158886,1158896,1158919,1158924,1158963 \
-          ^/subversion/trunk
-    Votes:
-      +1: stsp, rhuijben (but only if this gets into 1.7.0)
-
  * r1159400
    Document a neat trick to better handle patch rejects in 'svn help patch'.
    Justification:
@@ -147,3 +124,26 @@ Approved changes:
    Votes:
      +1: danielsh (without r1158187, so just the tests and not the fix)
      +1: rhuijben, cmpilato, philip
+
+  * r1158617, r1158875, r1158886, r1158896, r1158919, r1158924, r1158963
+    Make 'svn revert' remove unversioned nodes resulting from reverting a copy.
+    Fixes issue #3101.
+    Justification:
+      Bert suggested to backport this to 1.7.
+      I myself am not really sure if we should consider this a bug fix
+      or a behaviour change. I think we should merge this before 1.7.0
+      if we decide to merge it.
+      It does fix some fairly annoying usability issues.
+      For instance: If a merge adds files, the merge result is reverted, and
+      the merge is repeated, the second merge does not produce the same result
+      as the first merge. It will skip the, now unversioned, files added by
+      the first merge. There are various other cases where the unversioned
+      files get in the way.
+    Notes:
+      All revisions depend on one another, but some amend or even undo changes
+      made in earlier revisions. Instead of reviewing the individual commits
+      I would suggest to run the following merge and review the resulting diff:
+        svn merge -c1158617,1158875,1158886,1158896,1158919,1158924,1158963 \
+          ^/subversion/trunk
+    Votes:
+      +1: stsp, rhuijben (but only if this gets into 1.7.0), philip
