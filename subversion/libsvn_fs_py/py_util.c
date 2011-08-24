@@ -632,15 +632,18 @@ notify_func_wrapper(PyObject *p_tuple, PyObject *args)
   svn_error_t *err;
   apr_pool_t *pool;
 
-  PyArg_ParseTuple(args, (char *)"(li)", &shard, &action);
+  PyArg_ParseTuple(args, (char *)"li", &shard, &action);
   if (PyErr_Occurred())
-    Py_RETURN_NONE;
+    return NULL;
 
   c_func = PySequence_GetItem(p_tuple, 0);
   notify_func = PyCObject_AsVoidPtr(c_func);
   Py_DECREF(c_func);
 
   baton = PySequence_GetItem(p_tuple, 1);
+  if (PyErr_Occurred())
+    return NULL;
+
   if (baton == Py_None)
     notify_baton = NULL;
   else
@@ -651,7 +654,10 @@ notify_func_wrapper(PyObject *p_tuple, PyObject *args)
   err = notify_func(notify_baton, shard, action, pool);
   svn_pool_destroy(pool);
   if (err)
-    raise_and_clear_err(err);
+    {
+      raise_and_clear_err(err);
+      return NULL;
+    }
 
   Py_RETURN_NONE;
 }
@@ -703,6 +709,9 @@ cancel_func_wrapper(PyObject *p_tuple, PyObject *args)
   Py_DECREF(c_func);
 
   baton = PySequence_GetItem(p_tuple, 1);
+  if (PyErr_Occurred())
+    return NULL;
+
   if (baton == Py_None)
     cancel_baton = NULL;
   else
@@ -711,7 +720,10 @@ cancel_func_wrapper(PyObject *p_tuple, PyObject *args)
 
   err = cancel_func(cancel_baton);
   if (err)
-    raise_and_clear_err(err);
+    {
+      raise_and_clear_err(err);
+      return NULL;
+    }
 
   Py_RETURN_NONE;
 }
