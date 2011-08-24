@@ -443,14 +443,49 @@ class FS(object):
         self._write_lock = svn._lock.Lock(self.__path_lock)
 
 
+    def _pack_shard(self, shard, notify, cancel):
+        assert self._write_lock.is_locked()
+
+        if notify:
+            notify(shard, 0)
+            notify(shard, 1)
+
+
     def pack(self, notify=None, cancel=None):
         'Pack the filesystem, calling NOTIFY and CANCEL as appropriate.'
 
         with self._write_lock:
-            if notify:
-                notify(0, 0)
-            if cancel:
-                cancel()
+            (format, max_files_per_dir) = _read_format(self.__path_format)
+            _check_format(format)
+
+            # If the repository isn't a new enough format, we don't support
+            # packing.  Return a friendly error to that effect.
+            if format < MIN_PACKED_FORMAT:
+                raise svn.SubversionException(svn.err.UNSUPPORTED_FEATURE,
+                                              "FSFS format (%d) too old to " +
+                                              "pack; please upgrade the " +
+                                              "filesystem." % format)
+           
+            # If we aren't using sharding, we can't do any packing, so quit.
+            if not max_files_per_dir:
+                return
+
+            self.__update_min_unpacked_rev()
+            youngest = self._get_youngest()
+            completed_shards = (youngest + 1) / max_files_per_dir
+
+            # See if we've already completed all possible shards thus far.
+            if self.__min_unpacked_rev == \
+                                (completed_shards * max_files_per_dir):
+                return
+
+            data_path = os.path.join(self.path, PATH_REVS_DIR)
+            for shard in range(self.__min_unpacked_rev / max_files_per_dir,
+                               completed_shards):
+                if cancel:
+                    cancel()
+
+                self._pack_shard(shard, notify, cancel)
 
 
 

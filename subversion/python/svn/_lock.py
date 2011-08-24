@@ -70,6 +70,9 @@ class Lock(object):
             del self._fd
             self._is_locked = False
 
+    def is_locked(self):
+        return self._is_locked
+
     def __enter__(self):
         if not self._is_locked:
             self.acquire()

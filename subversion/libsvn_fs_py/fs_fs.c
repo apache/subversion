@@ -7311,7 +7311,8 @@ pack_body(void *baton,
         SVN_ERR(pb->cancel_func(pb->cancel_baton));
 
       SVN_ERR(pack_shard(data_path, pb->fs->path, i, max_files_per_dir,
-                         pb->notify_func, pb->notify_baton,
+                         /*pb->notify_func, pb->notify_baton,*/
+                         NULL, NULL,
                          pb->cancel_func, pb->cancel_baton, iterpool));
     }
 
