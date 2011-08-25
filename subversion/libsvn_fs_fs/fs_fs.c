@@ -6509,10 +6509,11 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
 
   SVN_ERR(svn_fs_fs__with_write_lock(fs, commit_body, &cb, pool));
 
+  /* At this point, *NEW_REV_P has been set, so errors below won't affect
+     the success of the commit.  (See svn_fs_commit_txn().)  */
+
   if (ffd->rep_sharing_allowed)
     {
-      /* At this point, *NEW_REV_P has been set, so errors here won't affect
-         the success of the commit.  (See svn_fs_commit_txn().)  */
       SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
       SVN_ERR(svn_sqlite__with_transaction(ffd->rep_cache_db,
                                            commit_sqlite_txn_callback,
