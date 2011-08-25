@@ -26,8 +26,7 @@ Candidate changes:
    Conflicts:
      On fs_fs.c.  Resolve with 'theirs-conflict'.
    Votes:
-     +1: rhuijben (only for 1.7.0) (without r1161164, r1161180)
-     +1: danielsh
+     +1: danielsh, rhuijben
      +0: gstein (progress would be nice) (without r1161164, r1161180)
      -0: cmpilato (For a function with this name, the implementation is far
          too anemic. I'd prefer this be a private function in 1.7.x, leaving
