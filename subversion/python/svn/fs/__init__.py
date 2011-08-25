@@ -57,6 +57,10 @@ MIN_PACKED_FORMAT                   = 4
 MIN_REP_SHARING_FORMAT              = 4
 PACKED_REVPROP_SQLITE_DEV_FORMAT    = 5
 
+# Pack notification constants
+PACK_NOTIFY_START                   = 0
+PACK_NOTIFY_END                     = 1
+
 _DEFAULT_MAX_FILES_PER_DIR = 1000
 _TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
@@ -181,6 +185,17 @@ def _check_format(format):
     raise svn.SubversionException(svn.err.FS_UNSUPPORTED_FORMAT,
                 "Expected FS format between '1' and '%d'; found format '%d'" %
                 (FORMAT_NUMBER, format))
+
+
+def _write_revnum_file(path, rev):
+    '''Write a file FILENAME in directory FS_PATH, containing a single line
+       with the number REVNUM in ASCII decimal.  Move the file into place
+       atomically, overwriting any existing file.'''
+    tempf = tempfile.NamedTemporaryFile(dir=os.path.dirname(path),
+                                        delete=False)
+    tempf.write('%d\n' % rev)
+    tempf.close()
+    os.rename(tempf.name, path)
 
 
 class FS(object):
@@ -443,12 +458,63 @@ class FS(object):
         self._write_lock = svn._lock.Lock(self.__path_lock)
 
 
-    def _pack_shard(self, shard, notify, cancel):
+    def _pack_shard(self, shard, notify):
+        '''Pack a single shard SHARD, using NOTIFY as needed.
+
+           If for some reason we detect a partial packing already performed, we
+           remove the pack file and start again.'''
         assert self._write_lock.is_locked()
 
+        # Some useful paths
+        revs_path = os.path.join(self.path, PATH_REVS_DIR)
+        pack_file_dir = os.path.join(revs_path, '%d.pack' % shard)
+        pack_file_path = os.path.join(pack_file_dir, 'pack')
+        manifest_file_path = os.path.join(pack_file_dir, 'manifest')
+        shard_path = os.path.join(revs_path, str(shard))
+
         if notify:
-            notify(shard, 0)
-            notify(shard, 1)
+            notify(shard, PACK_NOTIFY_START)
+
+        # Remove any existing pack file for this shard, since it is incomplete.
+        shutil.rmtree(pack_file_dir, True)
+
+        # Create the new directory and pack and manifest files.
+        os.mkdir(pack_file_dir)
+
+        with open(pack_file_path, 'wb') as pack_file, \
+                            open(manifest_file_path, 'wb') as manifest_file:
+
+            # Iterate over the revisions in this shard, squashing them together.
+            next_offset = 0
+            for rev in range(shard * self.max_files_per_dir,
+                             (shard + 1) * (self.max_files_per_dir)):
+                path = os.path.join(shard_path, str(rev))
+
+                # Get the size of the file and update the manifest
+                size = os.stat(path)[6]
+                manifest_file.write('%d\n' % next_offset)
+                next_offset += size
+
+                # Copy all the bits from the rev file to the end of the pack
+                # file
+                with open(path, 'rb') as rev_file:
+                    shutil.copyfileobj(rev_file, pack_file)
+
+        shutil.copymode(shard_path, pack_file_dir)
+        os.chmod(pack_file_path, stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
+        os.chmod(manifest_file_path, stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
+
+        # Update the min-unpacked-rev file to reflect our newly packed shard.
+        # (This doesn't update ffd->min_unpacked_rev.  That will be updated by
+        # update_min_unpacked_rev() when necessary.)
+        _write_revnum_file(self.__path_min_unpacked_rev,
+                           (shard + 1) * self.max_files_per_dir)
+
+        # Finally, remove the existing shard directory.
+        shutil.rmtree(shard_path)
+
+        if notify:
+            notify(shard, PACK_NOTIFY_END)
 
 
     def pack(self, notify=None, cancel=None):
@@ -479,13 +545,12 @@ class FS(object):
                                 (completed_shards * max_files_per_dir):
                 return
 
-            data_path = os.path.join(self.path, PATH_REVS_DIR)
             for shard in range(self.__min_unpacked_rev / max_files_per_dir,
                                completed_shards):
                 if cancel:
                     cancel()
 
-                self._pack_shard(shard, notify, cancel)
+                self._pack_shard(shard, notify)
 
 
 
