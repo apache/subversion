@@ -658,6 +658,7 @@ revision_props(const svn_test_opts_t *opts,
 
   /* Copy a property's value into a new property. */
   SVN_ERR(svn_fs_revision_prop(&value, fs, 0, "color", pool));
+  SVN_TEST_ASSERT(value);
 
   s1.data = value->data;
   s1.len = value->len;
@@ -694,6 +695,7 @@ revision_props(const svn_test_opts_t *opts,
   /* Obtain a list of all current properties, and make sure it matches
      the expected values. */
   SVN_ERR(svn_fs_revision_proplist(&proplist, fs, 0, pool));
+  SVN_TEST_ASSERT(proplist);
   {
     svn_string_t *prop_value;
 
