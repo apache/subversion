@@ -880,7 +880,6 @@ base_verify(svn_fs_t *fs, const char *path,
             apr_pool_t *pool,
             apr_pool_t *common_pool)
 {
-  /* ### Any boilerplate needed here? */
   /* Verifying is currently a no op for BDB. */
   return SVN_NO_ERROR;
 }

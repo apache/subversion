@@ -82,6 +82,11 @@ typedef struct update_ctx_t {
 
   /* SVNDIFF version to send to client.  */
   int svndiff_version;
+
+  /* Did the client submit this REPORT request via the HTTPv2 "me
+     resource" and are we advertising support for as much? */
+  svn_boolean_t enable_v2_response;
+
 } update_ctx_t;
 
 typedef struct item_baton_t {
@@ -219,9 +224,18 @@ send_vsn_url(item_baton_t *baton, apr_pool_t *pool)
   path = get_real_fs_path(baton, pool);
   revision = dav_svn__get_safe_cr(baton->uc->rev_root, path, pool);
 
-  href = dav_svn__build_uri(baton->uc->resource->info->repos,
-                            DAV_SVN__BUILD_URI_VERSION,
-                            revision, path, 0 /* add_href */, pool);
+  if (baton->uc->enable_v2_response)
+    {
+      href = dav_svn__build_uri(baton->uc->resource->info->repos,
+                                DAV_SVN__BUILD_URI_REVROOT,
+                                revision, path, 0 /* add_href */, pool);
+    }
+  else
+    {
+      href = dav_svn__build_uri(baton->uc->resource->info->repos,
+                                DAV_SVN__BUILD_URI_VERSION,
+                                revision, path, 0 /* add_href */, pool);
+    }
 
   return dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
                                  "<D:checked-in><D:href>%s</D:href>"
@@ -1073,6 +1087,9 @@ dav_svn__update_report(const dav_resource *resource,
   uc.target = target;
   uc.bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
   uc.pathmap = NULL;
+  uc.enable_v2_response = ((resource->info->restype == DAV_SVN_RESTYPE_ME)
+                           && (resource->info->repos->v2_protocol));
+
   if (dst_path) /* we're doing a 'switch' */
     {
       if (*target)

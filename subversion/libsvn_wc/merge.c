@@ -1320,7 +1320,6 @@ svn_wc__internal_merge(svn_skel_t **work_items,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  apr_pool_t *pool = scratch_pool;  /* ### temporary rename  */
   const char *detranslated_target_abspath;
   svn_boolean_t is_binary = FALSE;
   const svn_prop_t *mimeprop;
@@ -1357,13 +1356,15 @@ svn_wc__internal_merge(svn_skel_t **work_items,
   SVN_ERR(detranslate_wc_file(&detranslated_target_abspath, &mt,
                               (! is_binary) && diff3_cmd != NULL,
                               target_abspath,
-                              cancel_func, cancel_baton, pool, pool));
+                              cancel_func, cancel_baton,
+                              scratch_pool, scratch_pool));
 
   /* We cannot depend on the left file to contain the same eols as the
      right file. If the merge target has mods, this will mark the entire
      file as conflicted, so we need to compensate. */
   SVN_ERR(maybe_update_target_eols(&left_abspath, &mt, left_abspath,
-                                   cancel_func, cancel_baton, pool, pool));
+                                   cancel_func, cancel_baton,
+                                   scratch_pool, scratch_pool));
 
   if (is_binary)
     {

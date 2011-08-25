@@ -2474,7 +2474,7 @@ svn_repos_verify_fs(svn_repos_t *repos,
  * revision up through @a end_rev.  Use @a pool for all allocation.  If
  * non-@c NULL, send feedback to @a feedback_stream.  If @a dumpstream is
  * @c NULL, this is effectively a primitive verify.  It is not complete,
- * however; see svn_fs_verify instead.
+ * however; svn_repos_verify_fs2() and svn_fs_verify().
  *
  * If @a start_rev is #SVN_INVALID_REVNUM, then start dumping at revision
  * 0.  If @a end_rev is #SVN_INVALID_REVNUM, then dump through the @c HEAD
