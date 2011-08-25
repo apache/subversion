@@ -66,6 +66,12 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
   * r1152809, r1152267, r1152286, r1160756
     Fixes issue #3975 'adds with explicit mergeinfo don't get mergeinfo
     describing merge which added them'.
@@ -84,10 +90,4 @@ Candidate changes:
       of the branch ^/subversion/branches/issue-3975, where the actual fixes
       were made.
     Votes:
-      +1: pburba, rhuijben
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+      +1: pburba, rhuijben, philip
