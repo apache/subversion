@@ -65,6 +65,22 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
+ * r1161683, r1161721
+   Fix issue #3976 "record-only merges which add new subtree mergeinfo don't
+   record mergeinfo describing merge".
+   Justification:
+      Avoid repeat merges and possible spurious conflicts in merges subsequent
+      to a --record-only merge which adds mergeinfo to a subtree which had no
+      explicit mergeinfo prior to the merge.  Ok, that's a mouthful, to put it
+      more succinctly: A --record-only merge of revision X should block future
+      merges of revision X, but that wasn't happening here.
+   Notes:
+     r1161683 is a new test for this issue and r1161721 is the fix.
+   Branch:
+     ^/subversion/branches/1.7.x-issue3976
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
