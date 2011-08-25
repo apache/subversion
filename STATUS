@@ -71,23 +71,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
-  * r1152809, r1152267, r1152286, r1160756
-    Fixes issue #3975 'adds with explicit mergeinfo don't get mergeinfo
-    describing merge which added them'.
-    Justification:
-      Avoid repeat merges and possible spurious conflicts in merges subsequent
-      to one which adds a subtree with its own explicit mergeinfo.  Since
-      merge tracking's raison d'être is keeping track of what's been merged and
-      thus avoiding repeat merges and the possible conflicts that go with
-      them, this is a *bit* of a problem.
-    Branch:
-      branches/1.7.x-issue3975
-    Notes:
-      r1152809 is a comment only change made to avoid a conflict with
-      r1160756.  r1152267 and r1152286 is a new test for issue #3975
-      and a tweak to that test respectively.  r1160756 is the reintegration
-      of the branch ^/subversion/branches/issue-3975, where the actual fixes
-      were made.
-    Votes:
-      +1: pburba, rhuijben, philip
