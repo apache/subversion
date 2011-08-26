@@ -545,7 +545,10 @@ diff_deleted_dir(const char *dir,
 
           /* Compare a file being deleted against an empty file */
           b = make_file_baton(path, FALSE, eb, iterpool);
-          SVN_ERR(get_file_from_ra(b, FALSE, iterpool));
+          if (eb->text_deltas)
+            SVN_ERR(get_file_from_ra(b, FALSE, iterpool));
+          else
+            SVN_ERR(get_empty_file(eb, &b->path_start_revision));
 
           SVN_ERR(get_empty_file(b->edit_baton, &(b->path_end_revision)));
 
@@ -617,7 +620,11 @@ delete_entry(const char *path,
 
         /* Compare a file being deleted against an empty file */
         b = make_file_baton(path, FALSE, eb, scratch_pool);
-        SVN_ERR(get_file_from_ra(b, FALSE, scratch_pool));
+        if (eb->text_deltas)
+          SVN_ERR(get_file_from_ra(b, FALSE, scratch_pool));
+        else
+          SVN_ERR(get_empty_file(eb, &b->path_start_revision));
+
         SVN_ERR(get_empty_file(b->edit_baton, &(b->path_end_revision)));
 
         get_file_mime_types(&mimetype1, &mimetype2, b);
@@ -905,6 +912,19 @@ apply_textdelta(void *file_baton,
     {
       *handler = svn_delta_noop_window_handler;
       *handler_baton = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  /* If we're not sending file text, then ignore any that we receive. */
+  if (! b->edit_baton->text_deltas)
+    {
+      /* Supply valid paths to indicate there is a text change. */
+      SVN_ERR(get_empty_file(b->edit_baton, &b->path_start_revision));
+      SVN_ERR(get_empty_file(b->edit_baton, &b->path_end_revision));
+
+      *handler = svn_delta_noop_window_handler;
+      *handler_baton = NULL;
+
       return SVN_NO_ERROR;
     }
 
