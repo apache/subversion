@@ -480,6 +480,48 @@ def info_show_exclude(sbox):
   # Expect error on iota (unversioned)
   svntest.actions.run_and_verify_svn(None, [], expected_error, 'info', iota)
 
+@XFail()
+def binary_tree_conflict(sbox):
+  "svn info shouldn't crash on conflict"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('svn:mime-type', 'binary/octet-stream', 'iota')
+  sbox.simple_commit()
+
+
+  iota = sbox.ospath('iota')
+
+  svntest.main.file_write(iota, 'something-else')
+  sbox.simple_commit()
+
+  svntest.main.file_write(iota, 'third')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='C '),
+    })
+
+  expected_status = svntest.wc.State(iota, {
+    '' : Item(status='C ', wc_rev='2')
+  })
+
+  svntest.actions.run_and_verify_update(iota,
+                                        expected_output, None, expected_status,
+                                        None, None, None, None, None, True,
+                                        iota, '-r', '2')
+
+  expected_info = [{
+      'Path' : '%s' % re.escape(iota),
+      # Another issue: we didn't show abspaths here in <= 1.6
+      'Conflict Previous Base File' : re.escape(os.path.abspath(iota + '.r3')),
+      'Conflict Current Base File' : re.escape(os.path.abspath(iota + '.r2')),
+  }]
+
+  svntest.actions.run_and_verify_info(expected_info, iota)
+
+
+
+
 ########################################################################
 # Run the tests
 
@@ -493,6 +535,7 @@ test_list = [ None,
               info_multiple_targets,
               info_repos_root_url,
               info_show_exclude,
+              binary_tree_conflict,
              ]
 
 if __name__ == '__main__':
