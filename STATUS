@@ -58,13 +58,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, cmpilato
 
- * r1159400
-   Document a neat trick to better handle patch rejects in 'svn help patch'.
-   Justification:
-     Might save a poor soul from lots of manual copy-paste/editing some day.
-   Votes:
-     +1: stsp, rhuijben
-
  * r1161683, r1161721
    Fix issue #3976 "record-only merges which add new subtree mergeinfo don't
    record mergeinfo describing merge".
@@ -86,3 +79,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1159400
+   Document a neat trick to better handle patch rejects in 'svn help patch'.
+   Justification:
+     Might save a poor soul from lots of manual copy-paste/editing some day.
+   Votes:
+     +1: stsp, rhuijben, danielsh
+
