@@ -482,6 +482,42 @@ def info_show_exclude(sbox):
        'svn: E200009: Could not display info for all targets.*',
         'info', iota)
 
+@Issue(3998)
+def binary_tree_conflict(sbox):
+  "svn info shouldn't crash on conflict"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('svn:mime-type', 'binary/octet-stream', 'iota')
+  sbox.simple_commit()
+
+  iota = sbox.ospath('iota')
+
+  svntest.main.file_write(iota, 'something-else')
+  sbox.simple_commit()
+
+  svntest.main.file_write(iota, 'third')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='C '),
+    })
+  expected_status = svntest.wc.State(iota, {
+    '' : Item(status='C ', wc_rev='2')
+  })
+  svntest.actions.run_and_verify_update(iota,
+                                        expected_output, None, expected_status,
+                                        None, None, None, None, None, False,
+                                        iota, '-r', '2')
+
+  expected_info = [{
+      'Path' : '%s' % re.escape(iota),
+      'Conflict Previous Base File' : re.escape(iota + '.r3'),
+      'Conflict Current Base File' : re.escape(iota + '.r2'),
+  }]
+  svntest.actions.run_and_verify_info(expected_info, iota)
+
+
+
 
 ########################################################################
 # Run the tests
@@ -496,6 +532,7 @@ test_list = [ None,
               info_multiple_targets,
               info_repos_root_url,
               info_show_exclude,
+              binary_tree_conflict,
              ]
 
 if __name__ == '__main__':

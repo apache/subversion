@@ -892,12 +892,15 @@ read_one_entry(const svn_wc_entry_t **new_entry,
           switch (cd->kind)
             {
             case svn_wc_conflict_kind_text:
-              entry->conflict_old = svn_dirent_basename(cd->base_abspath,
-                                                        result_pool);
-              entry->conflict_new = svn_dirent_basename(cd->their_abspath,
-                                                        result_pool);
-              entry->conflict_wrk = svn_dirent_basename(cd->my_abspath,
-                                                        result_pool);
+              if (cd->base_abspath)
+                entry->conflict_old = svn_dirent_basename(cd->base_abspath,
+                                                          result_pool);
+              if (cd->their_abspath)
+                entry->conflict_new = svn_dirent_basename(cd->their_abspath,
+                                                          result_pool);
+              if (cd->my_abspath)
+                entry->conflict_wrk = svn_dirent_basename(cd->my_abspath,
+                                                          result_pool);
               break;
             case svn_wc_conflict_kind_property:
               entry->prejfile = svn_dirent_basename(cd->their_abspath,
