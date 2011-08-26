@@ -2243,7 +2243,7 @@ def reintegrate_creates_bogus_mergeinfo(sbox):
   svntest.main.run_svn(None, "up", wc_dir)
 
   # Reintegrate A_COPY to A.  The resulting merginfo on A should be
-  # /A_COPY:4-10
+  # /A_COPY:4-6
   #
   # Currently this test fails because the resulting mergeinfo is /A_COPY:2-6.
   # But A_COPY didn't exist unitl r4, so /A_COPY:2-3 describes merge source
