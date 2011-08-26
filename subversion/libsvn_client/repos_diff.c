@@ -370,7 +370,11 @@ get_file_from_ra(struct file_baton *b,
   return SVN_NO_ERROR;
 }
 
-/* Issue #3657 'dav update report handler in skelta mode can cause
+/* Remove every no-op property change from CHANGES: that is, remove every
+   entry in which the target value is the same as the value of the
+   corresponding property in PRISTINE_PROPS.
+
+     Issue #3657 'dav update report handler in skelta mode can cause
      spurious conflicts'.  When communicating with the repository via ra_serf
      and ra_neon, the change_dir_prop and change_file_prop svn_delta_editor_t
      callbacks are called (obviously) when a directory or file property has
@@ -397,8 +401,6 @@ get_file_from_ra(struct file_baton *b,
 
      See http://subversion.tigris.org/issues/show_bug.cgi?id=3657#desc9 and
      http://svn.haxx.se/dev/archive-2010-08/0351.shtml for more details.
-
-     This function filters these property changes from the change hash
  */
 static void
 remove_non_prop_changes(apr_hash_t *pristine_props,
