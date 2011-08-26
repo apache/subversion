@@ -74,6 +74,17 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r1162024, r1162033
+   Resolve segfault on retrieving svn_wc_entry_t or calling 'svn info' on a
+   binary conflict.
+   Justification:
+     svn info shouldn't crash on a simple (binary) conflict.
+   Notes:
+     r1162024 is a test reproducing the segfault. r1162033 fixes both issues
+     and possibly a few harder to reproduce variants.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
