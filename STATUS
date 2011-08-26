@@ -74,6 +74,11 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r1162201
+   Resolve a tempfile leak.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
