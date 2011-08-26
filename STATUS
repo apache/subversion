@@ -80,13 +80,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1159400
-   Document a neat trick to better handle patch rejects in 'svn help patch'.
-   Justification:
-     Might save a poor soul from lots of manual copy-paste/editing some day.
-   Votes:
-     +1: stsp, rhuijben, danielsh
-
  * r1162024, r1162033
    Resolve segfault on retrieving svn_wc_entry_t or calling 'svn info' on a
    binary conflict.
