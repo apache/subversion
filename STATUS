@@ -83,7 +83,7 @@ Candidate changes:
      r1162024 is a test reproducing the segfault. r1162033 fixes both issues
      and possibly a few harder to reproduce variants.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, danielsh
 
 Veto-blocked changes:
 =====================
