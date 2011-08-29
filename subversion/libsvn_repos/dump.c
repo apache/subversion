@@ -385,7 +385,7 @@ dump_node(struct edit_baton *eb,
                      pool,
                      _("Referencing data in revision %ld,"
                        " which is older than the oldest"
-                       " dumped revision (%ld).  Loading this dump"
+                       " dumped revision (r%ld).  Loading this dump"
                        " into an empty repository"
                        " will fail."),
                      cmp_rev, eb->oldest_dumped_rev);
@@ -489,7 +489,7 @@ dump_node(struct edit_baton *eb,
                   notify->warning_str = apr_psprintf(
                     pool,
                     _("Mergeinfo referencing revision(s) prior "
-                      "to the oldest dumped revision (%ld). "
+                      "to the oldest dumped revision (r%ld). "
                       "Loading this dump may result in invalid "
                       "mergeinfo."),
                     eb->oldest_dumped_rev);
