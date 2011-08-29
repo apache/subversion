@@ -2201,7 +2201,6 @@ def two_URL_merge_removes_valid_mergeinfo_from_target(sbox):
 # Test for issue #3867 'reintegrate merges create mergeinfo for
 # non-existent paths'.
 @Issue(3867)
-@XFail()
 def reintegrate_creates_bogus_mergeinfo(sbox):
   "reintegrate creates bogus mergeinfo"
 
@@ -2230,11 +2229,11 @@ def reintegrate_creates_bogus_mergeinfo(sbox):
   svntest.main.run_svn(None, "cp", A_path_1, A_COPY_path)
   svntest.main.run_svn(None, "ci", "-m", "create a branch", wc_dir)
 
-  # Make a text edit on the branch pushing the repo to rev6
+  # Make a text edit on the branch pushing the repo to r5
   svntest.main.file_write(A_COPY_psi_path, "Branch edit.\n")
   svntest.main.run_svn(None, "ci", "-m", "branch edit", wc_dir)
 
-  # Sync the A_COPY with A in preparation for reintegrate
+  # Sync the A_COPY with A in preparation for reintegrate and commit as r6.
   svntest.main.run_svn(None, "up", wc_dir)
   svntest.main.run_svn(None, "merge", sbox.repo_url + "/A", A_COPY_path)
   svntest.main.run_svn(None, "ci", "-m", "sync A_COPY with A", wc_dir)
@@ -2244,10 +2243,6 @@ def reintegrate_creates_bogus_mergeinfo(sbox):
 
   # Reintegrate A_COPY to A.  The resulting merginfo on A should be
   # /A_COPY:4-6
-  #
-  # Currently this test fails because the resulting mergeinfo is /A_COPY:2-6.
-  # But A_COPY didn't exist unitl r4, so /A_COPY:2-3 describes merge source
-  # path-revs which don't exist.
   expected_output = wc.State(A_path, {
     'D/H/psi' : Item(status='U '),
     })
@@ -2393,7 +2388,7 @@ def no_source_subtree_mergeinfo(sbox):
   expected_elision = wc.State(os.path.join(wc_dir, 'A', 'B'), {
       })
   expected_disk = wc.State('', {
-      ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B2:3-12'}),
+      ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B2:4-12'}),
       'E'       : Item(),
       'E/alpha' : Item("AAA\n" +
                        "BBB\n" +

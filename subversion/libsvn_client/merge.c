@@ -7850,19 +7850,38 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
 
           child_merges = apr_hash_make(iterpool);
 
-          /* If CHILD is the merge target we then know that the mergeinfo
-             described by MERGE_SOURCE_PATH:MERGED_RANGE->START-
-             MERGED_RANGE->END describes existent path-revs in the repository,
-             see normalize_merge_sources() and the global comment
+          /* The short story:
+
+             If we are describing a forward merge, then the naive mergeinfo
+             defined by MERGE_SOURCE_PATH:MERGED_RANGE->START:
+             MERGE_SOURCE_PATH:MERGED_RANGE->END may contain non-existent
+             path-revs or may describe other lines of history.  We must
+             remove these invalid portion(s) before recording mergeinfo
+             describing the merge.
+
+             The long story:
+
+             If CHILD is the merge target we know that
+             MERGE_SOURCE_PATH:MERGED_RANGE->END exists.  Further, if there
+             were no copies in MERGE_SOURCE_PATH's history going back to
+             RANGE->START then we know that
+             MERGE_SOURCE_PATH:MERGED_RANGE->START exists too and the two
+             describe and unbroken line of history and thus
+             MERGE_SOURCE_PATH:MERGED_RANGE->START:
+             MERGE_SOURCE_PATH:MERGED_RANGE->END is a valid description of
+             the merge -- see normalize_merge_sources() and the global comment
              'MERGEINFO MERGE SOURCE NORMALIZATION'.
 
-             If CHILD is a subtree of the merge target however, then no such
-             guarantee holds.  The mergeinfo described by
-             (MERGE_SOURCE_PATH + CHILD_REPOS_PATH):MERGED_RANGE->START-
-             MERGED_RANGE->END might contain merge sources which don't
-             exist or refer to unrelated lines of history. */
-          if (i > 0
-              && (!merge_b->record_only || merge_b->reintegrate_merge)
+             However, if there *was* a copy, then
+             MERGE_SOURCE_PATH:MERGED_RANGE->START doesn't exist or is
+             unrelated to MERGE_SOURCE_PATH:MERGED_RANGE->END.  Also, we
+             don't know if (MERGE_SOURCE_PATH:MERGED_RANGE->START)+1 through
+             (MERGE_SOURCE_PATH:MERGED_RANGE->END)-1 actually exist.
+
+             If CHILD is a subtree of the merge target, then nothing is
+             guaranteed beyond the fact that MERGE_SOURCE_PATH exists at
+             MERGED_RANGE->END. */
+          if ((!merge_b->record_only || merge_b->reintegrate_merge)
               && (!is_rollback))
             {
               svn_opt_revision_t peg_revision;
