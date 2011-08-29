@@ -2419,7 +2419,6 @@ def no_source_subtree_mergeinfo(sbox):
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
 @Issue(3961)
-@XFail()
 def reintegrate_replaced_source(sbox):
   "reintegrate a replaced source branch"
 
@@ -2511,9 +2510,6 @@ def reintegrate_replaced_source(sbox):
     })
   expected_status.tweak(wc_rev=12)
   expected_disk = wc.State('', {
-    # This test currently fails because the resulting mergeinfo is
-    # /A_COPY:2-12, even though the changes in A_COPY:9 are *not*
-    # present on A.
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A_COPY:2-8,10-12'}),
     'B'         : Item(),
     'mu'        : Item("Branch edit.\n"),
