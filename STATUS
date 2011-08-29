@@ -79,6 +79,19 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1162974
+   Fix issue #3867 'reintegrate merges create mergeinfo for non-existent
+   paths'.
+   Justification:
+      Avoid potential confusion which can occur when a reintegrate merge
+      sets mergeinfo (to describe the merge) which contains non-existent
+      path-revs.
+   Notes:
+     A test already existed for this issue prior to branching 1.7.x.
+     r1162974 is simply the fix.
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
