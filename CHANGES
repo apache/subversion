@@ -161,7 +161,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * match paths against authz rules in case sensitive way (issue #3781)
     * svnserve can now force usernames to upper/lower case (issue #3726)
     * reduce duplicate log messages in 'log -g' (issue #3650)
-    * don't crash on shutdown with SASL in inetd mode (issue #3664)
+    * svnserve: don't crash on shutdown with SASL in inetd mode (issue #3664)
     * disallow arbitrary HTTP headers from committers (issue #2872)
     * limit FSFS memory consumption (issue #3478, #3593)
     * many other minor bugfixes too numerous to list here
