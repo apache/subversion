@@ -93,7 +93,7 @@ Candidate changes:
      issue #3961.  A test already existed for issue #3867 prior to branching
      1.7.x. r1162974 is the fix for both issues.
    Votes:
-     +1: pburba
+     +1: pburba, stsp
 
 Veto-blocked changes:
 =====================
