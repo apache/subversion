@@ -7419,7 +7419,6 @@ struct change_rev_prop_baton {
 /* The work-horse for svn_fs_fs__change_rev_prop, called with the FS
    write lock.  This implements the svn_fs_fs__with_write_lock()
    'body' callback type.  BATON is a 'struct change_rev_prop_baton *'. */
-
 static svn_error_t *
 change_rev_prop_body(void *baton, apr_pool_t *pool)
 {
