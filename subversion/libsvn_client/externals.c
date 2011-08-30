@@ -126,8 +126,8 @@ relegate_dir_external(svn_wc_context_t *wc_ctx,
 static svn_error_t *
 switch_dir_external(const char *local_abspath,
                     const char *url,
-                    const svn_opt_revision_t *revision,
                     const svn_opt_revision_t *peg_revision,
+                    const svn_opt_revision_t *revision,
                     const char *defining_abspath,
                     svn_boolean_t *timestamp_sleep,
                     svn_client_ctx_t *ctx,
@@ -945,8 +945,8 @@ handle_external_item_change(const struct external_change_baton_t *eb,
         {
         case svn_node_dir:
           SVN_ERR(switch_dir_external(local_abspath, new_url,
-                                      &(new_item->revision),
                                       &(new_item->peg_revision),
+                                      &(new_item->revision),
                                       parent_dir_abspath,
                                       eb->timestamp_sleep, eb->ctx,
                                       scratch_pool));
