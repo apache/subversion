@@ -24,7 +24,8 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * Less verbose HTTP-based repository access protocol (issue #1161, #3371)
     * Rewritten working copy metadata storage (issue #3357)
     * New 'svn patch' subcommand (issue #511)
-    * Limit FSFS memory consumption (issue #3478, #3593)
+    * Rewritten FSFS in-memory caching for better performance
+    * New remote repository dump/load client 'svnrdump'
 
   - Minor new features and improvements:
     * Better handling of HTTP redirects (issue #2779)
@@ -162,6 +163,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * reduce duplicate log messages in 'log -g' (issue #3650)
     * don't crash on shutdown with SASL in inetd mode (issue #3664)
     * disallow arbitrary HTTP headers from committers (issue #2872)
+    * limit FSFS memory consumption (issue #3478, #3593)
     * many other minor bugfixes too numerous to list here
 
   - Other tool improvements and bugfixes:
