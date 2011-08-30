@@ -77,7 +77,7 @@ Candidate changes:
  * r1162201
    Resolve a tempfile leak.
    Votes:
-     +1: danielsh
+     +1: danielsh, stsp
 
  * r1147299, r1162974, r1162995
    Fix issue #3867 'reintegrate merges create mergeinfo for non-existent
