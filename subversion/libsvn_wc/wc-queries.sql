@@ -949,13 +949,9 @@ VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
 
 -- STMT_SELECT_EXTERNAL_INFO
 SELECT presence, kind, def_local_relpath, repos_id,
-    def_repos_relpath, def_operational_revision, def_revision, presence
+    def_repos_relpath, def_operational_revision, def_revision
 FROM externals WHERE wc_id = ?1 AND local_relpath = ?2
 LIMIT 1
-
--- STMT_SELECT_EXTERNAL_CHILDREN
-SELECT local_relpath
-FROM externals WHERE wc_id = ?1 AND parent_relpath = ?2
 
 -- STMT_SELECT_EXTERNALS_DEFINED
 SELECT local_relpath, def_local_relpath
