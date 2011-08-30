@@ -135,9 +135,17 @@ switch_dir_external(const char *local_abspath,
 {
   svn_node_kind_t kind;
   svn_error_t *err;
+  svn_revnum_t external_peg_rev = SVN_INVALID_REVNUM;
+  svn_revnum_t external_rev = SVN_INVALID_REVNUM;
   apr_pool_t *subpool = svn_pool_create(pool);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  if (peg_revision->kind == svn_opt_revision_number)
+    external_peg_rev = peg_revision->value.number;
+
+  if (revision->kind == svn_opt_revision_number)
+    external_rev = revision->value.number;
 
   /* If path is a directory, try to update/switch to the correct URL
      and revision. */
@@ -230,8 +238,8 @@ switch_dir_external(const char *local_abspath,
                                                 svn_uri_skip_ancestor(
                                                             repos_root_url,
                                                             url, subpool),
-                                                SVN_INVALID_REVNUM,
-                                                SVN_INVALID_REVNUM,
+                                                external_peg_rev,
+                                                external_rev,
                                                 subpool));
 
               svn_pool_destroy(subpool);
@@ -288,8 +296,8 @@ switch_dir_external(const char *local_abspath,
                                       repos_root_url, repos_uuid,
                                       svn_uri_skip_ancestor(repos_root_url,
                                                             url, pool),
-                                      SVN_INVALID_REVNUM,
-                                      SVN_INVALID_REVNUM,
+                                      external_peg_rev,
+                                      external_rev,
                                       pool));
   }
 
