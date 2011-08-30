@@ -628,7 +628,6 @@ def wc_target_inherits_mergeinfo_from_repos(sbox):
 # A test for issue 3791 'svn mergeinfo shows natural history of added
 # subtrees as eligible'.
 @Issue(3791)
-@XFail()
 @SkipUnless(server_has_mergeinfo)
 def natural_history_is_not_eligible_nor_merged(sbox):
   "natural history is not eligible nor merged"
@@ -669,29 +668,12 @@ def natural_history_is_not_eligible_nor_merged(sbox):
   # that svn mergeinfo -R agrees.
   #
   # First check if there are eligible revisions, there should be none.
-  #
-  # This fails because r7 is reported as only partially merged:
-  #
-  #   >svn mergeinfo --show-revs eligible ^/A A_COPY -R
-  #   r7*
-  #
-  # ...But r7 is the addition of A/C/nu, which we clearly merged in r8.
   svntest.actions.run_and_verify_mergeinfo(
     adjust_error_for_server_version(''),
     [], sbox.repo_url + '/A',
     A_COPY_path, '--show-revs', 'eligible', '-R')
 
   # Now check that all operative revisions show as merged.
-  #
-  # This fails because r7 is reported as only partially merged:
-  #
-  #   >svn mergeinfo --show-revs merged ^/A A_COPY -R
-  #   r3
-  #   r4
-  #   r5
-  #   r6
-  #   r7*
-  #   r9
   svntest.actions.run_and_verify_mergeinfo(
     adjust_error_for_server_version(''),
     ['3','4','5','6','7','9'], sbox.repo_url + '/A',
