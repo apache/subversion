@@ -1113,6 +1113,22 @@ check_format(int format)
      SVN_FS_FS__FORMAT_NUMBER, format);
 }
 
+static svn_error_t *
+check_revprop_format(svn_fs_t *fs, int format)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  if (ffd->format != SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT
+      || format != SVN_FS_FS__REVPROP_FORMAT_NUMBER)
+    return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+                             _("Found unsupported combination: "
+                               "revprop format '%d' and FSFS format %d"),
+                             /* ### TODO: add a FAQ URL to the error message? */
+                             format, ffd->format);
+
+  return SVN_NO_ERROR;
+}
+
 svn_boolean_t
 svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs)
 {
@@ -3070,8 +3086,32 @@ read_revprop_manifest_record(apr_off_t *offset,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+copy_first_line(svn_stream_t *from, svn_stream_t *to, apr_pool_t *pool)
+{
+  svn_stringbuf_t *format;
+  svn_boolean_t eof;
+
+  /* ### Use a 'goto' to keep the non-error codepath readable. */
+  SVN_ERR(svn_stream_readline(from, &format, "\n", &eof, pool));
+  if (eof) goto end;
+  svn_stringbuf_appendbyte(format, '\n');
+  SVN_ERR(svn_stream_write(to, format->data, &format->len));
+
+  return SVN_NO_ERROR;
+
+end:
+  return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                           _("Format line vanished from packed revprop "
+                             "file (while write-lock is held)"));
+}
+
 /* Set the revision property list of revision REV in filesystem FS to
-   PROPLIST.  Use POOL for temporary allocations. */
+   PROPLIST.  Use POOL for temporary allocations.
+ 
+   NOTE: The implementation for packed revprops assumes that the caller has
+   a write lock and has checked the format number of the pre-existing revprops
+   pack file. */
 static svn_error_t *
 set_revision_proplist(svn_fs_t *fs,
                       svn_revnum_t rev,
@@ -3159,6 +3199,11 @@ set_revision_proplist(svn_fs_t *fs,
                                      pool, pool));
       SVN_ERR(svn_stream_open_readonly(&source_stream, pack_file_path,
                                        pool, pool));
+
+      /* Copy the format number. */
+      /* Note: not checking the revprop pack file format number because our
+         (one and only) caller did that. */
+      SVN_ERR(copy_first_line(source_stream, target_stream, pool));
 
       /* Copy manifest info up to the new prop's offset value. */
       SVN_ERR(svn_stream_bounded_copy(svn_stream_disown(source_stream, pool),
@@ -3306,6 +3351,7 @@ revision_proplist(apr_hash_t **proplist_p,
       const char *pack_file_path;
       apr_off_t offset;
       apr_off_t manifest_record;
+      apr_size_t start; /* offset to first byte of the manifest */
 
       proplist = apr_hash_make(pool);
 
@@ -3315,10 +3361,24 @@ revision_proplist(apr_hash_t **proplist_p,
       /* Compute paths. */
       pack_file_path = path_revprops_pack(fs, rev, pool);
 
-      /* Open the pack file and seek to the manifest offset. */
+      /* Open the pack file and check the format number. */
       SVN_ERR(svn_io_file_open(&pack_file, pack_file_path,
                                APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
-      offset = shard_pos * (REVPROP_MANIFEST_FIELD_WIDTH + 1);
+      {
+        char buf[80];
+        int format;
+        apr_size_t len = sizeof(buf);
+
+        SVN_ERR(svn_io_read_length_line(pack_file, buf, &len, pool));
+        SVN_ERR(check_format_file_buffer_numeric(buf, 0, pack_file_path, pool));
+        SVN_ERR(svn_cstring_atoi(&format, buf));
+        SVN_ERR(check_revprop_format(fs, format));
+
+        start = len + 1; /* count the trailing newline */
+      }
+
+      /* Seek to the manifest record offset. */
+      offset = start + shard_pos * (REVPROP_MANIFEST_FIELD_WIDTH + 1);
       SVN_ERR(svn_io_file_seek(pack_file, APR_SET, &offset, pool));
 
       /* Read the revprop offset. */
@@ -3328,7 +3388,8 @@ revision_proplist(apr_hash_t **proplist_p,
                                                                     pool)));
 
       /* Seek to the revprop offset, and read the props. */
-      offset = ffd->max_files_per_dir * (REVPROP_MANIFEST_FIELD_WIDTH + 1)
+      offset = start
+               + ffd->max_files_per_dir * (REVPROP_MANIFEST_FIELD_WIDTH + 1)
                + manifest_record;
       SVN_ERR(svn_io_file_seek(pack_file, APR_SET, &offset, pool));
       SVN_ERR(svn_hash_read2(proplist,
@@ -8058,6 +8119,10 @@ pack_revprop_shard(svn_fs_t *fs,
                                     pool));
   SVN_ERR(svn_stream_open_writable(&manifest_stream, manifest_file_path,
                                    pool, pool));
+
+  /* Staple the pack file with a format number. */
+  SVN_ERR(svn_stream_printf(manifest_stream, pool, "%d\n",
+                            SVN_FS_FS__REVPROP_FORMAT_NUMBER));
 
   start_rev = (svn_revnum_t) (shard * max_files_per_dir);
   end_rev = (svn_revnum_t) ((shard + 1) * (max_files_per_dir) - 1);

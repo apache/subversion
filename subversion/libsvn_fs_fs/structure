@@ -249,9 +249,13 @@ consumers that propedit r0.
 
 The pack+manifest file consists of:
 
+* A format number.
 * A 32-bit sequence number
 * A list of offsets, one for each revision's hunk in the pack file.
 * The concatenated hunks for all revisions in the shard.
+
+The format number is stored in ASCII decimal, followed by newline.  The only
+defined value is '6', understood by FSFS format 6+.
 
 The sequence number and the offsets are stored as ASCII decimal, followed by
 newline.  They are space-padded from the right such that the least-significant
@@ -267,6 +271,7 @@ the shard.
 
 Readers operate as follows:
 
+* They read and check the format number.
 * They ignore the sequence number.
 * For r0, they always read revprops/0/0 read the non-packed file
   (e.g., revprops/0/0 if sharding is in use).
@@ -286,6 +291,8 @@ Editing a packed revision's properties proceeds as follows:
 
 * Lock the revprop shard.  (via ./revprops/42.revpack/lock)
 * Prepare a revprop pack file, with an incremented sequence number.
+  (This is also an opportunity to update to a newer pack file format number,
+  once a non-'6' pack file format is defined.)
 * Lock the filesystem.  (via ./write-lock)
 * Check the sequence number of the revprop pack file.
 * Atomically move-into-place the new pack file.
@@ -293,6 +300,8 @@ Editing a packed revision's properties proceeds as follows:
 * Release the revprop shard lock.
 
 This has the following properties:
+
+* Has a format number.
 
 * Having a per-shard lock minimizes writers' I/O.  (They have to rewrite
   a full shard file.)
