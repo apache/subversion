@@ -2694,6 +2694,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 {
   notification_receiver_baton_t *notify_b = baton;
   svn_boolean_t is_operative_notification = FALSE;
+  const char *notify_path;
 
   /* Skip notifications if this is a --record-only merge that is adding
      or deleting NOTIFY->PATH, allow only mergeinfo changes and headers.
@@ -2711,6 +2712,35 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
       is_operative_notification = TRUE;
     }
 
+  /* If the node was moved-away, use its new path in the notification. */
+  /* ### Currently only for files, as following a local move of a dir is
+   * not yet implemented.
+   * ### We should stash the info about which moves have been followed and
+   * retrieve that info here, instead of querying the WC again here. */
+  notify_path = notify->path;
+  if (notify->action == svn_wc_notify_update_update
+      && notify->kind == svn_node_file)
+    {
+      svn_error_t *err;
+      const char *moved_to_abspath;
+
+      err = svn_wc__node_was_moved_away(&moved_to_abspath, NULL,
+                                        notify_b->merge_b->ctx->wc_ctx,
+                                        notify->path, pool, pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+            {
+              svn_error_clear(err);
+              moved_to_abspath = NULL;
+            }
+          else
+            return;  /* ### return svn_error_trace(err); */
+        }
+      if (moved_to_abspath)
+        notify_path = moved_to_abspath;
+    }
+
   if (notify_b->merge_b->sources_ancestral
       || notify_b->merge_b->reintegrate_merge)
     {
@@ -2720,7 +2750,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
           || notify->prop_state == svn_wc_notify_state_changed
           || notify->action == svn_wc_notify_update_add)
         {
-          const char *merged_path = apr_pstrdup(notify_b->pool, notify->path);
+          const char *merged_path = apr_pstrdup(notify_b->pool, notify_path);
 
           if (notify_b->merged_abspaths == NULL)
             notify_b->merged_abspaths = apr_hash_make(notify_b->pool);
@@ -2731,7 +2761,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 
       if (notify->action == svn_wc_notify_skip)
         {
-          const char *skipped_path = apr_pstrdup(notify_b->pool, notify->path);
+          const char *skipped_path = apr_pstrdup(notify_b->pool, notify_path);
 
           if (notify_b->skipped_abspaths == NULL)
             notify_b->skipped_abspaths = apr_hash_make(notify_b->pool);
@@ -2743,7 +2773,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
       if (notify->action == svn_wc_notify_tree_conflict)
         {
           const char *tree_conflicted_path = apr_pstrdup(notify_b->pool,
-                                                         notify->path);
+                                                         notify_path);
 
           if (notify_b->tree_conflicted_abspaths == NULL)
             notify_b->tree_conflicted_abspaths =
@@ -2757,7 +2787,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
       if (notify->action == svn_wc_notify_update_add)
         {
           svn_boolean_t is_root_of_added_subtree = FALSE;
-          const char *added_path = apr_pstrdup(notify_b->pool, notify->path);
+          const char *added_path = apr_pstrdup(notify_b->pool, notify_path);
           const char *added_path_parent = NULL;
 
           /* Stash the root path of any added subtrees. */
@@ -2806,7 +2836,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
             find_nearest_ancestor(
               notify_b->children_with_mergeinfo,
               notify->action != svn_wc_notify_update_delete,
-              notify->path);
+              notify_path);
 
           if (new_nearest_ancestor_index != notify_b->cur_ancestor_index)
             {
