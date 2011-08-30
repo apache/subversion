@@ -1396,9 +1396,6 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
   apr_pool_t *editor_pool = svn_pool_create(result_pool);
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(editor_pool);
   struct edit_baton *eb = apr_pcalloc(editor_pool, sizeof(*eb));
-  const char *target_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, editor_pool));
 
   eb->pool = editor_pool;
   eb->target = target;
