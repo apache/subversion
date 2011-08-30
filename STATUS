@@ -74,11 +74,6 @@ Candidate changes:
    Votes:
      +1: pburba, stsp
 
- * r1162201
-   Resolve a tempfile leak.
-   Votes:
-     +1: danielsh, stsp
-
  * r1147299, r1162974, r1162995
    Fix issue #3867 'reintegrate merges create mergeinfo for non-existent
    paths' and issue #3961 'reintegrate merge of replaced source produces
@@ -100,3 +95,8 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1162201
+   Resolve a tempfile leak.
+   Votes:
+     +1: danielsh, stsp, hwright
