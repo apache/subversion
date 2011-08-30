@@ -1178,13 +1178,21 @@ merge_props_changed(svn_wc_notify_state_t *state,
 
               if (strcmp(prop->name, SVN_PROP_MERGEINFO) == 0)
                 {
-                  /* Does PATH have any working mergeinfo? */
-                  svn_string_t *mergeinfo_prop =
-                    apr_hash_get(original_props,
-                                 SVN_PROP_MERGEINFO,
-                                 APR_HASH_KEY_STRING);
+                  /* Does LOCAL_ABSPATH have any pristine mergeinfo? */
+                  svn_boolean_t has_pristine_mergeinfo = FALSE;
+                  apr_hash_t *pristine_props;
 
-                  if (!mergeinfo_prop && prop->value)
+                  SVN_ERR(svn_wc_get_pristine_props(&pristine_props,
+                                                    ctx->wc_ctx,
+                                                    local_abspath,
+                                                    scratch_pool,
+                                                    scratch_pool));
+
+                  if (apr_hash_get(pristine_props, SVN_PROP_MERGEINFO,
+                                   APR_HASH_KEY_STRING))
+                    has_pristine_mergeinfo = TRUE;
+
+                  if (!has_pristine_mergeinfo && prop->value)
                     {
                       /* If BATON->PATHS_WITH_NEW_MERGEINFO needs to be
                          allocated do so in BATON->POOL so it has a
@@ -1197,7 +1205,7 @@ merge_props_changed(svn_wc_notify_state_t *state,
                                    apr_pstrdup(merge_b->pool, local_abspath),
                                    APR_HASH_KEY_STRING, local_abspath);
                     }
-                  else if (mergeinfo_prop && !prop->value)
+                  else if (has_pristine_mergeinfo && !prop->value)
                     {
                       /* If BATON->PATHS_WITH_DELETED_MERGEINFO needs to be
                          allocated do so in BATON->POOL so it has a
@@ -1460,8 +1468,9 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
      way svn_wc_merge4() can do the merge. */
   if (wc_kind != svn_node_file || is_deleted)
     {
-      svn_boolean_t moved_away;
+      const char *moved_to_abspath;
       svn_wc_conflict_reason_t reason;
+      svn_error_t *err;
 
       /* Maybe the node is excluded via depth filtering? */
 
@@ -1491,23 +1500,39 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
       /* This is use case 4 described in the paper attached to issue
        * #2282.  See also notes/tree-conflicts/detection.txt
        */
-      SVN_ERR(check_moved_away(&moved_away, merge_b->ctx->wc_ctx,
-                               mine_abspath, scratch_pool));
-      if (moved_away)
-        reason = svn_wc_conflict_reason_moved_away;
-      else if (is_deleted)
-        reason = svn_wc_conflict_reason_deleted;
+      err = svn_wc__node_was_moved_away(&moved_to_abspath, NULL,
+                                        merge_b->ctx->wc_ctx, mine_abspath,
+                                        scratch_pool, scratch_pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+            svn_error_clear(err);
+          else
+            return svn_error_trace(err);
+        }
+
+      if (moved_to_abspath)
+        {
+          /* File has been moved away locally -- apply incoming
+           * changes at the new location. */
+          mine_abspath = moved_to_abspath;
+        }
       else
-        reason = svn_wc_conflict_reason_missing;
-      SVN_ERR(tree_conflict(merge_b, mine_abspath, svn_node_file,
-                            svn_wc_conflict_action_edit, reason));
-      if (tree_conflicted)
-        *tree_conflicted = TRUE;
-      if (content_state)
-        *content_state = svn_wc_notify_state_missing;
-      if (prop_state)
-        *prop_state = svn_wc_notify_state_missing;
-      return SVN_NO_ERROR;
+        {
+          if (is_deleted)
+            reason = svn_wc_conflict_reason_deleted;
+          else
+            reason = svn_wc_conflict_reason_missing;
+          SVN_ERR(tree_conflict(merge_b, mine_abspath, svn_node_file,
+                                svn_wc_conflict_action_edit, reason));
+          if (tree_conflicted)
+            *tree_conflicted = TRUE;
+          if (content_state)
+            *content_state = svn_wc_notify_state_missing;
+          if (prop_state)
+            *prop_state = svn_wc_notify_state_missing;
+          return SVN_NO_ERROR;
+        }
     }
 
   /* ### TODO: Thwart attempts to merge into a path that has
@@ -7825,19 +7850,38 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
 
           child_merges = apr_hash_make(iterpool);
 
-          /* If CHILD is the merge target we then know that the mergeinfo
-             described by MERGE_SOURCE_PATH:MERGED_RANGE->START-
-             MERGED_RANGE->END describes existent path-revs in the repository,
-             see normalize_merge_sources() and the global comment
+          /* The short story:
+
+             If we are describing a forward merge, then the naive mergeinfo
+             defined by MERGE_SOURCE_PATH:MERGED_RANGE->START:
+             MERGE_SOURCE_PATH:MERGED_RANGE->END may contain non-existent
+             path-revs or may describe other lines of history.  We must
+             remove these invalid portion(s) before recording mergeinfo
+             describing the merge.
+
+             The long story:
+
+             If CHILD is the merge target we know that
+             MERGE_SOURCE_PATH:MERGED_RANGE->END exists.  Further, if there
+             were no copies in MERGE_SOURCE_PATH's history going back to
+             RANGE->START then we know that
+             MERGE_SOURCE_PATH:MERGED_RANGE->START exists too and the two
+             describe and unbroken line of history and thus
+             MERGE_SOURCE_PATH:MERGED_RANGE->START:
+             MERGE_SOURCE_PATH:MERGED_RANGE->END is a valid description of
+             the merge -- see normalize_merge_sources() and the global comment
              'MERGEINFO MERGE SOURCE NORMALIZATION'.
 
-             If CHILD is a subtree of the merge target however, then no such
-             guarantee holds.  The mergeinfo described by
-             (MERGE_SOURCE_PATH + CHILD_REPOS_PATH):MERGED_RANGE->START-
-             MERGED_RANGE->END might contain merge sources which don't
-             exist or refer to unrelated lines of history. */
-          if (i > 0
-              && (!merge_b->record_only || merge_b->reintegrate_merge)
+             However, if there *was* a copy, then
+             MERGE_SOURCE_PATH:MERGED_RANGE->START doesn't exist or is
+             unrelated to MERGE_SOURCE_PATH:MERGED_RANGE->END.  Also, we
+             don't know if (MERGE_SOURCE_PATH:MERGED_RANGE->START)+1 through
+             (MERGE_SOURCE_PATH:MERGED_RANGE->END)-1 actually exist.
+
+             If CHILD is a subtree of the merge target, then nothing is
+             guaranteed beyond the fact that MERGE_SOURCE_PATH exists at
+             MERGED_RANGE->END. */
+          if ((!merge_b->record_only || merge_b->reintegrate_merge)
               && (!is_rollback))
             {
               svn_opt_revision_t peg_revision;

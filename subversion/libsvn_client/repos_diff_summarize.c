@@ -61,6 +61,9 @@ send_summary(struct summarize_baton_t *b,
 {
   svn_client_diff_summarize_t *sum = apr_pcalloc(scratch_pool, sizeof(*sum));
 
+  SVN_ERR_ASSERT(summarize_kind != svn_client_diff_summarize_kind_normal
+                 || prop_changed);
+
   /* PATH is relative to the anchor of the diff, but SUM->path needs to be
      relative to the target of the diff. */
   sum->path = svn_relpath_skip_ancestor(b->target, path);
@@ -263,12 +266,13 @@ cb_file_changed(svn_wc_notify_state_t *contentstate,
 {
   struct summarize_baton_t *b = diff_baton;
   svn_boolean_t text_change = (tmpfile2 != NULL);
+  svn_boolean_t prop_change = props_changed(propchanges, scratch_pool);
 
-  SVN_ERR(send_summary(b, path,
-                       text_change ? svn_client_diff_summarize_kind_modified
-                                   : svn_client_diff_summarize_kind_normal,
-                       props_changed(propchanges, scratch_pool),
-                       svn_node_file, scratch_pool));
+  if (text_change || prop_change)
+    SVN_ERR(send_summary(b, path,
+                         text_change ? svn_client_diff_summarize_kind_modified
+                                     : svn_client_diff_summarize_kind_normal,
+                         prop_change, svn_node_file, scratch_pool));
 
   if (contentstate)
     *contentstate = svn_wc_notify_state_inapplicable;

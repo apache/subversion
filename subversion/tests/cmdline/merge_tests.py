@@ -17022,6 +17022,91 @@ def merged_deletion_causes_tree_conflict(sbox):
                                        None, None, None, None,
                                        None, 1, False)
 
+#----------------------------------------------------------------------
+# A test for issue #3976 'record-only merges which add new subtree mergeinfo
+# don't record mergeinfo describing merge'.
+@Issue(3976)
+@SkipUnless(server_has_mergeinfo)
+def record_only_merge_adds_new_subtree_mergeinfo(sbox):
+  "record only merge adds new subtree mergeinfo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  psi_path      = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
+  psi_COPY_path = os.path.join(wc_dir, 'A_COPY', 'D', 'H', 'psi')
+  H_COPY2_path  = os.path.join(wc_dir, 'A_COPY_2', 'D', 'H')
+
+  # r7 - Copy ^/A_COPY to ^/A_COPY_2
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', '-m', 'copy A_COPY to A_COPY_2',
+                                     sbox.repo_url + '/A_COPY',
+                                     sbox.repo_url + '/A_COPY_2')
+
+  # r8 - Set a property on A/D/H/psi.  It doesn't matter what property
+  # we use, just as long as we have a change that can be merged independently
+  # of the text change to A/D/H/psi in r3.
+  svntest.main.run_svn(None, 'propset', 'svn:eol-style', 'native', psi_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'set svn:eol-style', wc_dir)
+
+  # r9 - Merge r3 from ^/A/D/H/psi to A_COPY/D/H/psi.
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A/D/H/psi',
+                                     psi_COPY_path, '-c3')
+  svntest.main.run_svn(None, 'commit', '-m', 'Subtree merge', wc_dir)
+
+  # r10 - Merge r8 from ^/A/D/H/psi to A_COPY/D/H/psi.
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A/D/H/psi',
+                                     psi_COPY_path, '-c8')
+  svntest.main.run_svn(None, 'commit', '-m', 'Subtree merge', wc_dir)
+
+  # Merge r10 from ^/A_COPY/D/H to A_COPY_2/D/H.  This should leave
+  # A_COPY_2/D/H/psi with three new property additions:
+  #
+  #   1) The 'svn:eol-style=native' from r10 via r8.
+  #
+  #   2) The mergeinfo '/A/D/H/psi:8' from r10.
+  #
+  #   3) The mergeinfo '/A_COPY/D/H/psi:10' describing the merge itself.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = wc.State(H_COPY2_path, {
+    'psi' : Item(status=' U'),
+    })
+  expected_mergeinfo_output = wc.State(H_COPY2_path, {
+    ''    : Item(status=' U'),
+    'psi' : Item(status=' G'),
+    })
+  expected_elision_output = wc.State(H_COPY2_path, {})
+  expected_status = wc.State(H_COPY2_path, {
+    ''      : Item(status=' M'),
+    'chi'   : Item(status='  '),
+    'psi'   : Item(status=' M'),
+    'omega' : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=10)
+  expected_disk = wc.State('', {
+    ''      : Item(props={SVN_PROP_MERGEINFO : '/A_COPY/D/H:10'}),
+    'psi'   : Item("This is the file 'psi'.\n",
+                   props={SVN_PROP_MERGEINFO :
+                          '/A/D/H/psi:8\n/A_COPY/D/H/psi:10',
+                          'svn:eol-style' : 'native'}),
+    'chi'   : Item("This is the file 'chi'.\n"),
+    'omega' : Item("This is the file 'omega'.\n"),
+    })
+  expected_skip = wc.State('.', { })
+  svntest.actions.run_and_verify_merge(H_COPY2_path, 9, 10,
+                                       sbox.repo_url + '/A_COPY/D/H', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, False)
+
 ########################################################################
 # Run the tests
 
@@ -17149,6 +17234,7 @@ test_list = [ None,
               merge_adds_subtree_with_mergeinfo,
               reverse_merge_adds_subtree,
               merged_deletion_causes_tree_conflict,
+              record_only_merge_adds_new_subtree_mergeinfo,
              ]
 
 if __name__ == '__main__':

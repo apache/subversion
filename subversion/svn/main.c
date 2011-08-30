@@ -1147,7 +1147,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "       2. relocate TO-URL [PATH]\n"
      "\n"
      "  Rewrite working copy URL metadata to reflect a syntactic change only.\n"
-     "  This is used when repository's root URL changes (such as a scheme\n"
+     "  This is used when a repository's root URL changes (such as a scheme\n"
      "  or hostname change) but your working copy still reflects the same\n"
      "  directory within the same repository.\n"
      "\n"
@@ -1391,7 +1391,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "upgrade", svn_cl__upgrade, {0}, N_
     ("Upgrade the metadata storage format for a working copy.\n"
-     "usage: upgrade WCPATH...\n"
+     "usage: upgrade [WCPATH...]\n"
      "\n"
      "  Local modifications are preserved.\n"),
     { 'q' } },

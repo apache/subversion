@@ -105,9 +105,18 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
    If IGNORE_ENOENT, then set *external_kind to svn_node_none, when
    LOCAL_ABSPATH is not an external instead of returning an error.
 
-   ### While we are not at the SVN_WC__HAS_EXTERNALS_STORE format, roots
-   ### of working copies will be identified as directory externals. The
-   ### recorded information will be NULL for directory externals.
+   Here is an overview of how DEFINING_REVISION and
+   DEFINING_OPERATIONAL_REVISION would be set for which kinds of externals
+   definitions:
+
+     svn:externals line   DEFINING_REV.       DEFINING_OP._REV.
+
+         ^/foo@2 bar       2                   2
+     -r1 ^/foo@2 bar       1                   2
+     -r1 ^/foo   bar       1                  SVN_INVALID_REVNUM
+         ^/foo   bar      SVN_INVALID_REVNUM  SVN_INVALID_REVNUM
+         ^/foo@HEAD bar   SVN_INVALID_REVNUM  SVN_INVALID_REVNUM
+     -rHEAD ^/foo bar     -- not a valid externals definition --
 */
 svn_error_t *
 svn_wc__read_external_info(svn_node_kind_t *external_kind,

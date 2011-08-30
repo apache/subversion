@@ -6534,7 +6534,8 @@ typedef enum svn_wc_merge_outcome_t
  * control, then set @a *merge_outcome to #svn_wc_merge_no_merge and
  * return success without merging anything.  (The reasoning is that if
  * the file is not versioned, then it is probably unrelated to the
- * changes being considered, so they should not be merged into it.)
+ * changes being considered, so they should not be merged into it.
+ * Furtheremore, merging into an unversioned file is a lossy operation.)
  *
  * @a dry_run determines whether the working copy is modified.  When it
  * is @c FALSE the merge will cause @a target_abspath to be modified, when

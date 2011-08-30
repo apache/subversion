@@ -53,6 +53,23 @@ extern "C" {
                                #expr, __FILE__, __LINE__);        \
   } while (0)
 
+/** Handy macro for testing an expected svn_error_t return value.
+ * EXPECTED must be a real error (neither SVN_NO_ERROR nor APR_SUCCESS). */
+#define SVN_TEST_ASSERT_ERROR(expr, expected)                             \
+  do {                                                                    \
+    svn_error_t *err__ = (expr);                                          \
+    SVN_ERR_ASSERT((expected));                                           \
+    if (err__ == SVN_NO_ERROR || err__->apr_err != (expected))            \
+      return err__ ? svn_error_createf(SVN_ERR_TEST_FAILED, err__,        \
+                                       "Expected error %d but got %d",    \
+                                       (expected),                        \
+                                       err__->apr_err)                    \
+                   : svn_error_createf(SVN_ERR_TEST_FAILED, err__,        \
+                                        "Expected error %d but got %s",   \
+                                        (expected),                       \
+                                        "SVN_NO_ERROR");                  \
+  } while (0)
+
 /** Handy macro for testing string equality.
  */
 #define SVN_TEST_STRING_ASSERT(expr, expected_expr)                 \
