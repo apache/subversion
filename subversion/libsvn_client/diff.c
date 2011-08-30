@@ -1751,7 +1751,7 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
      Otherwise, we just use "". */
   SVN_ERR(svn_client__get_diff_editor(
                 &diff_editor, &diff_edit_baton,
-                NULL, "", depth,
+                depth,
                 extra_ra_session, rev1, TRUE /* walk_deleted_dirs */,
                 TRUE /* text_deltas */,
                 callbacks, callback_baton,
@@ -2119,7 +2119,7 @@ diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
 
   /* Set up the repos_diff editor. */
   SVN_ERR(svn_client__get_diff_editor(&diff_editor, &diff_edit_baton,
-            NULL /* wc_ctx */, "", depth,
+            depth,
             extra_ra_session, rev1, TRUE /* walk_deleted_dirs */,
             FALSE /* text_deltas */,
             callbacks, callback_baton,
