@@ -624,6 +624,79 @@ def wc_target_inherits_mergeinfo_from_repos(sbox):
   test_svn_mergeinfo_4_way(D_COPY_path)
   test_svn_mergeinfo_4_way(subtree_wc)
 
+#----------------------------------------------------------------------
+# A test for issue 3791 'svn mergeinfo shows natural history of added
+# subtrees as eligible'.
+@Issue(3791)
+@XFail()
+@SkipUnless(server_has_mergeinfo)
+def natural_history_is_not_eligible_nor_merged(sbox):
+  "natural history is not eligible nor merged"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  nu_path      = os.path.join(wc_dir, 'A', 'C', 'nu')
+  A_COPY_path  = os.path.join(wc_dir, 'A_COPY')
+  nu_COPY_path = os.path.join(wc_dir, 'A_COPY', 'C', 'nu')
+
+  # r7 - Add a new file A/C/nu
+  svntest.main.file_write(nu_path, "This is the file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', nu_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Add a file', wc_dir)
+
+  # r8 - Sync merge ^/A to A_COPY
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Add a file', wc_dir)
+
+  # r9 - Modify the file added in r7
+  svntest.main.file_write(nu_path, "Modification to file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Modify added file', wc_dir)
+
+  # r10 - Merge ^/A/C/nu to A_COPY/C/nu, creating subtree mergeinfo.
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A/C/nu', nu_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Add a file', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # We've effectively merged everything from ^/A to A_COPY, check
+  # that svn mergeinfo -R agrees.
+  #
+  # First check if there are eligible revisions, there should be none.
+  #
+  # This fails because r7 is reported as only partially merged:
+  #
+  #   >svn mergeinfo --show-revs eligible ^/A A_COPY -R
+  #   r7*
+  #
+  # ...But r7 is the addition of A/C/nu, which we clearly merged in r8.
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    [], sbox.repo_url + '/A',
+    A_COPY_path, '--show-revs', 'eligible', '-R')
+
+  # Now check that all operative revisions show as merged.
+  #
+  # This fails because r7 is reported as only partially merged:
+  #
+  #   >svn mergeinfo --show-revs merged ^/A A_COPY -R
+  #   r3
+  #   r4
+  #   r5
+  #   r6
+  #   r7*
+  #   r9
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['3','4','5','6','7','9'], sbox.repo_url + '/A',
+    A_COPY_path, '--show-revs', 'merged', '-R')
+
 ########################################################################
 # Run the tests
 
@@ -639,6 +712,7 @@ test_list = [ None,
               recursive_mergeinfo,
               mergeinfo_on_pegged_wc_path,
               wc_target_inherits_mergeinfo_from_repos,
+              natural_history_is_not_eligible_nor_merged,
              ]
 
 if __name__ == '__main__':
