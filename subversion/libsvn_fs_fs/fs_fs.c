@@ -70,8 +70,10 @@
 #define FSFS_MAX_PATH_LEN 4096
 
 /* Revprop packing uses a fixed-width manifest field size.  This is that
- * width, not including the terminating newline. */
-#define REVPROP_MANIFEST_FIELD_WIDTH 16
+ * width, not including the terminating newline.
+ * 20 == len('%s' % ((1<<64)-1)).
+ */
+#define REVPROP_MANIFEST_FIELD_WIDTH 20
 
 /* The default maximum number of files per directory to store in the
    rev and revprops directory.  The number below is somewhat arbitrary,
