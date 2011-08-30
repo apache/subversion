@@ -72,7 +72,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-issue3976
    Votes:
-     +1: pburba
+     +1: pburba, stsp
 
  * r1162201
    Resolve a tempfile leak.
