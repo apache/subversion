@@ -1391,7 +1391,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "upgrade", svn_cl__upgrade, {0}, N_
     ("Upgrade the metadata storage format for a working copy.\n"
-     "usage: upgrade WCPATH...\n"
+     "usage: upgrade [WCPATH...]\n"
      "\n"
      "  Local modifications are preserved.\n"),
     { 'q' } },

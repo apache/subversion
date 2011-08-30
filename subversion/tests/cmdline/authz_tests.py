@@ -1087,7 +1087,7 @@ def authz_recursive_ls(sbox):
 @Issue(3781)
 @Skip(svntest.main.is_ra_type_file)
 def case_sensitive_authz(sbox):
-  "authz issue #3781, check case sensitiveness"
+  "authz issue #3781, check case sensitivity"
 
   sbox.build()
 

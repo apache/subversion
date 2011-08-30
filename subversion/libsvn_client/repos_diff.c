@@ -370,7 +370,11 @@ get_file_from_ra(struct file_baton *b,
   return SVN_NO_ERROR;
 }
 
-/* Issue #3657 'dav update report handler in skelta mode can cause
+/* Remove every no-op property change from CHANGES: that is, remove every
+   entry in which the target value is the same as the value of the
+   corresponding property in PRISTINE_PROPS.
+
+     Issue #3657 'dav update report handler in skelta mode can cause
      spurious conflicts'.  When communicating with the repository via ra_serf
      and ra_neon, the change_dir_prop and change_file_prop svn_delta_editor_t
      callbacks are called (obviously) when a directory or file property has
@@ -397,8 +401,6 @@ get_file_from_ra(struct file_baton *b,
 
      See http://subversion.tigris.org/issues/show_bug.cgi?id=3657#desc9 and
      http://svn.haxx.se/dev/archive-2010-08/0351.shtml for more details.
-
-     This function filters these property changes from the change hash
  */
 static void
 remove_non_prop_changes(apr_hash_t *pristine_props,
@@ -545,7 +547,10 @@ diff_deleted_dir(const char *dir,
 
           /* Compare a file being deleted against an empty file */
           b = make_file_baton(path, FALSE, eb, iterpool);
-          SVN_ERR(get_file_from_ra(b, FALSE, iterpool));
+          if (eb->text_deltas)
+            SVN_ERR(get_file_from_ra(b, FALSE, iterpool));
+          else
+            SVN_ERR(get_empty_file(eb, &b->path_start_revision));
 
           SVN_ERR(get_empty_file(b->edit_baton, &(b->path_end_revision)));
 
@@ -617,7 +622,11 @@ delete_entry(const char *path,
 
         /* Compare a file being deleted against an empty file */
         b = make_file_baton(path, FALSE, eb, scratch_pool);
-        SVN_ERR(get_file_from_ra(b, FALSE, scratch_pool));
+        if (eb->text_deltas)
+          SVN_ERR(get_file_from_ra(b, FALSE, scratch_pool));
+        else
+          SVN_ERR(get_empty_file(eb, &b->path_start_revision));
+
         SVN_ERR(get_empty_file(b->edit_baton, &(b->path_end_revision)));
 
         get_file_mime_types(&mimetype1, &mimetype2, b);
@@ -908,6 +917,19 @@ apply_textdelta(void *file_baton,
       return SVN_NO_ERROR;
     }
 
+  /* If we're not sending file text, then ignore any that we receive. */
+  if (! b->edit_baton->text_deltas)
+    {
+      /* Supply valid paths to indicate there is a text change. */
+      SVN_ERR(get_empty_file(b->edit_baton, &b->path_start_revision));
+      SVN_ERR(get_empty_file(b->edit_baton, &b->path_end_revision));
+
+      *handler = svn_delta_noop_window_handler;
+      *handler_baton = NULL;
+
+      return SVN_NO_ERROR;
+    }
+
   /* We need the expected pristine file, so go get it */
   if (!b->added)
     SVN_ERR(get_file_from_ra(b, FALSE, scratch_pool));
@@ -1052,7 +1074,6 @@ close_file(void *file_baton,
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action;
       svn_node_kind_t kind = svn_node_file;
-      const char *moved_to_abspath = NULL;
 
       /* Find out if a pending delete notification for this path is
        * still around. */
@@ -1088,30 +1109,9 @@ close_file(void *file_baton,
       else if (b->added)
         action = svn_wc_notify_update_add;
       else
-        {
-          svn_error_t *err;
+        action = svn_wc_notify_update_update;
 
-          action = svn_wc_notify_update_update;
-
-          /* If the file was moved-away, use its new path in the
-           * notification.
-           * ### This is redundant. The file_changed() callback should
-           * ### pass the moved-to path back up here. */
-          err = svn_wc__node_was_moved_away(&moved_to_abspath, NULL,
-                                            eb->wc_ctx, b->wcpath,
-                                            scratch_pool, scratch_pool);
-          if (err)
-            {
-              if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-                svn_error_clear(err);
-              else
-                return svn_error_trace(err);
-            }
-        }
-
-      notify = svn_wc_create_notify(moved_to_abspath ? moved_to_abspath
-                                                     : b->wcpath,
-                                    action, scratch_pool);
+      notify = svn_wc_create_notify(b->wcpath, action, scratch_pool);
       notify->kind = kind;
       notify->content_state = content_state;
       notify->prop_state = prop_state;
@@ -1374,9 +1374,6 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
   apr_pool_t *editor_pool = svn_pool_create(result_pool);
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(editor_pool);
   struct edit_baton *eb = apr_pcalloc(editor_pool, sizeof(*eb));
-  const char *target_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, editor_pool));
 
   eb->pool = editor_pool;
   eb->target = target;

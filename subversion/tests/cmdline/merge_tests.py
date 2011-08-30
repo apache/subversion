@@ -17026,7 +17026,6 @@ def merged_deletion_causes_tree_conflict(sbox):
 # A test for issue #3976 'record-only merges which add new subtree mergeinfo
 # don't record mergeinfo describing merge'.
 @Issue(3976)
-@XFail()
 @SkipUnless(server_has_mergeinfo)
 def record_only_merge_adds_new_subtree_mergeinfo(sbox):
   "record only merge adds new subtree mergeinfo"
@@ -17064,15 +17063,13 @@ def record_only_merge_adds_new_subtree_mergeinfo(sbox):
   svntest.main.run_svn(None, 'commit', '-m', 'Subtree merge', wc_dir)
 
   # Merge r10 from ^/A_COPY/D/H to A_COPY_2/D/H.  This should leave
-  # A_COPY_2/D/H/psi with three new property changes:
+  # A_COPY_2/D/H/psi with three new property additions:
   #
   #   1) The 'svn:eol-style=native' from r10 via r8.
   #
   #   2) The mergeinfo '/A/D/H/psi:8' from r10.
   #
   #   3) The mergeinfo '/A_COPY/D/H/psi:10' describing the merge itself.
-  #
-  # Currently this test fails because #3 doesn't happen.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_output = wc.State(H_COPY2_path, {
     'psi' : Item(status=' U'),

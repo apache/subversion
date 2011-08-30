@@ -402,7 +402,7 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
    If COMMIT_RELPATH is not NULL, treat not-added nodes as if it is destined to
    be added as COMMIT_RELPATH, and add 'deleted' entries to COMMITTABLES as
    items to delete in the copy destination.  COPY_MODE_ROOT should be set TRUE
-   for the first call for which COPY_MODE is TRUE, i.e. not for for the
+   for the first call for which COPY_MODE is TRUE, i.e. not for the
    recursive calls, and FALSE otherwise.
 
    If CHANGELISTS is non-NULL, it is a hash whose keys are const char *
@@ -543,12 +543,12 @@ harvest_committables(svn_wc_context_t *wc_ctx,
          svn_dirent_local_style(local_abspath, scratch_pool));
     }
 
+  /* ### in need of comment */
   if (copy_mode
       && is_update_root
       && db_kind == svn_node_file)
     {
-      if (copy_mode)
-        return SVN_NO_ERROR;
+      return SVN_NO_ERROR;
     }
 
   /* If NODE is in our changelist, then examine it for conflicts. We

@@ -1037,7 +1037,7 @@ merge_text_file(svn_skel_t **work_items,
         }
 
       if (*merge_outcome == svn_wc_merge_merged)
-        return SVN_NO_ERROR;
+        goto done;
     }
   else if (contains_conflicts && dry_run)
       *merge_outcome = svn_wc_merge_conflict;
@@ -1074,6 +1074,7 @@ merge_text_file(svn_skel_t **work_items,
       *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
     }
 
+done:
   /* Remove the tempfile after use */
   SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
                                        mt->db, result_target,
