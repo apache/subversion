@@ -46,6 +46,9 @@ svn_fs_py__convert_cstring_hash(void *object);
 PyObject *
 svn_fs_py__convert_proplist(void *object);
 
+apr_hash_t *
+svn_fs_py__prophash_from_dict(PyObject *dict, apr_pool_t *pool);
+
 /* Load a reference to the FS Python module into the shared data. */
 svn_error_t *
 svn_fs_py__load_module(fs_fs_data_t *ffd);

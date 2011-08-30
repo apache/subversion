@@ -620,6 +620,80 @@ svn_fs_py__load_module(fs_fs_data_t *ffd)
   return svn_error_trace(load_module(&ffd->p_module, FS_MODULE_NAME));
 }
 
+/* Conversion from Python single objects (not hashes/lists/etc.) to
+   Subversion types. */
+static const char *
+make_string_from_ob(PyObject *ob, apr_pool_t *pool)
+{
+  if (ob == Py_None)
+    return NULL;
+  if (! PyString_Check(ob))
+    {
+      PyErr_SetString(PyExc_TypeError, "not a string");
+      return NULL;
+    }
+  return apr_pstrdup(pool, PyString_AS_STRING(ob));
+}
+
+static svn_string_t *
+make_svn_string_from_ob(PyObject *ob, apr_pool_t *pool)
+{
+  if (ob == Py_None)
+    return NULL;
+  if (! PyString_Check(ob))
+    {
+      PyErr_SetString(PyExc_TypeError, "not a string");
+      return NULL;
+    }
+  return svn_string_create(PyString_AS_STRING(ob), pool);
+}
+
+/* ### We may need to wrap this in something to catch any Python errors which
+ * ### are generated. */
+apr_hash_t *
+svn_fs_py__prophash_from_dict(PyObject *dict, apr_pool_t *pool)
+{
+  apr_hash_t *hash;
+  PyObject *keys;
+  long num_keys;
+  long i;
+
+  if (dict == Py_None)
+    return NULL;
+
+  if (!PyDict_Check(dict))
+    {
+      PyErr_SetString(PyExc_TypeError, "not a dictionary");
+      return NULL;
+    }
+
+  hash = apr_hash_make(pool);
+  keys = PyDict_Keys(dict);
+  num_keys = PyList_Size(keys);
+  for (i = 0; i < num_keys; i++)
+    {
+      PyObject *key = PyList_GetItem(keys, i);
+      PyObject *value = PyDict_GetItem(dict, key);
+      const char *propname = make_string_from_ob(key, pool);
+      svn_string_t *propval = make_svn_string_from_ob(value, pool);
+
+      if (! (propname && propval))
+        {
+          PyErr_SetString(PyExc_TypeError,
+                          "dictionary keys/values aren't strings");
+          Py_DECREF(keys);
+          return NULL;
+        }
+      apr_hash_set(hash, propname, APR_HASH_KEY_STRING, propval);
+    }
+  Py_DECREF(keys);
+  return hash;
+}
+
+
+/**********************
+ * Wrapping C callback functions
+ */
 static PyObject *
 notify_func_wrapper(PyObject *p_tuple, PyObject *args)
 {

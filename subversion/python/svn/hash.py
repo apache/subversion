@@ -20,6 +20,8 @@
 
 TERMINATOR = "END"
 
+import svn
+
 def encode(h, terminator):
     output = []
     for k in sorted(h.keys()):
@@ -29,3 +31,49 @@ def encode(h, terminator):
         output.append('%s\n' % terminator)
 
     return ''.join(output)
+
+
+def read(f, terminator):
+    'Return a hash as read from the file-like object F.'
+
+    h = {}
+    while True:
+        line = f.readline().rstrip()
+
+        if line == terminator:
+            break
+
+        if line[0:2] == 'K ':
+            # Read length and data into a buffer.
+            keylen = int(line[2:])
+            keybuf = f.read(keylen)
+
+            # Suck up extra newline after key data
+            c = f.read(1)
+            if c != '\n':
+                raise svn.SubversionException(svn.err.MALFORMED_FILE,
+                                              "Serialized hash malformed")
+
+            # Read a val length line
+            line = f.readline().rstrip()
+            if line[0:2] == 'V ':
+                vallen = int(line[2:])
+                valbuf = f.read(vallen)
+
+                # Suck up extra newline after val data
+                c = f.read(1)
+                if c != '\n':
+                    raise svn.SubversionException(svn.err.MALFORMED_FILE,
+                                                  "Serialized hash malformed")
+
+                h[keybuf] = valbuf
+            else:
+                raise svn.SubversionException(svn.err.MALFORMED_FILE,
+                                              "Serialized hash malformed")
+
+        else:
+            print line
+            raise svn.SubversionException(svn.err.MALFORMED_FILE,
+                                          "Serialized hash malformed")
+
+    return h

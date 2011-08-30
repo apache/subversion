@@ -2875,65 +2875,15 @@ revision_proplist(apr_hash_t **proplist_p,
                   svn_revnum_t rev,
                   apr_pool_t *pool)
 {
-  apr_hash_t *proplist;
+  fs_fs_data_t *ffd = fs->fsap_data;
+  PyObject *p_proplist;
 
-  SVN_ERR(ensure_revision_exists(fs, rev, pool));
+  SVN_ERR(svn_fs_py__call_method(&p_proplist, ffd->p_fs, "revision_proplist",
+                                 "(l)", rev));
 
-  if (1)
-    {
-      apr_file_t *revprop_file = NULL;
-      svn_error_t *err = SVN_NO_ERROR;
-      int i;
-      apr_pool_t *iterpool;
+  *proplist_p = svn_fs_py__prophash_from_dict(p_proplist, pool);
 
-      proplist = apr_hash_make(pool);
-      iterpool = svn_pool_create(pool);
-      for (i = 0; i < RECOVERABLE_RETRY_COUNT; i++)
-        {
-          svn_pool_clear(iterpool);
-
-          /* Clear err here rather than after finding a recoverable error so
-           * we can return that error on the last iteration of the loop. */
-          svn_error_clear(err);
-          err = svn_io_file_open(&revprop_file, path_revprops(fs, rev,
-                                                              iterpool),
-                                 APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
-                                 iterpool);
-          if (err)
-            {
-              if (APR_STATUS_IS_ENOENT(err->apr_err))
-                {
-                  svn_error_clear(err);
-                  return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                           _("No such revision %ld"), rev);
-                }
-#ifdef ESTALE
-              else if (APR_TO_OS_ERROR(err->apr_err) == ESTALE
-                       || APR_TO_OS_ERROR(err->apr_err) == EIO
-                       || APR_TO_OS_ERROR(err->apr_err) == ENOENT)
-                continue;
-#endif
-              return svn_error_trace(err);
-            }
-
-          SVN_ERR(svn_hash__clear(proplist, iterpool));
-          RETRY_RECOVERABLE(err, revprop_file,
-                            svn_hash_read2(proplist,
-                                           svn_stream_from_aprfile2(
-                                                revprop_file, TRUE, iterpool),
-                                           SVN_HASH_TERMINATOR, pool));
-
-          IGNORE_RECOVERABLE(err, svn_io_file_close(revprop_file, iterpool));
-
-          break;
-        }
-
-      if (err)
-        return svn_error_trace(err);
-      svn_pool_destroy(iterpool);
-    }
-
-  *proplist_p = proplist;
+  Py_DECREF(p_proplist);
 
   return SVN_NO_ERROR;
 }

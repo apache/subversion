@@ -553,6 +553,14 @@ class FS(object):
                 self._pack_shard(shard, notify)
 
 
+    def revision_proplist(self, rev):
+        'Return a dictionary of revprops'
+
+        self._ensure_revision_exists(rev)
+        with open(self.__path_revprops(rev), 'rb') as f:
+            return svn.hash.read(f, svn.hash.TERMINATOR)
+
+
 
 # A few helper functions for C callers
 def _create_fs(path, config=None):
