@@ -61,7 +61,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * allow subdirs of moved dirs to be moved and committed (issue #1259)
     * improved performance of 'svn mv' with whole directories (issue #1284)
     * 'svn rm B; svn cp A B' now works (issue #1516)
-    * 'svn diff URL1 URL2' now reverse of 'svn diff URL2 URL1) (issue #2333)
+    * 'svn diff URL1 URL2' now reverse of 'svn diff URL2 URL1' (issue #2333)
     * error if relocating to an unused URL (issue #2531)
     * 'svn blame -rWORKING' is now supported (issue #2544)
     * improve correctness of commit on a relocated wc over ra_dav (issue #2578)
