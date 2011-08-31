@@ -48,6 +48,7 @@
 #include "client.h"
 
 #include "private/svn_wc_private.h"
+#include "../libsvn_delta/debug_editor.h"
 
 /* Overall crawler editor baton.  */
 struct edit_baton {
@@ -1285,12 +1286,19 @@ absent_directory(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
 
+  SVN_DBG(("pb->path='%s'; path='%s'\n", pb->path, path));
   /* ### TODO: Raise a tree-conflict?? I sure hope not.*/
 
   if (eb->notify_func)
     {
+      /* ### This 'join ... basename' works around an inconsistency whereby
+       * RA-serf gives PATH as just the basename instead of the full path. */
       svn_wc_notify_t *notify
-        = svn_wc_create_notify(path, svn_wc_notify_skip, pool);
+        = svn_wc_create_notify(svn_dirent_join(pb->path,
+                                               svn_relpath_basename(path,
+                                                                    NULL),
+                                               pool),
+                               svn_wc_notify_skip, pool);
 
       notify->kind = svn_node_dir;
       notify->content_state = notify->prop_state
@@ -1312,12 +1320,19 @@ absent_file(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
 
+  SVN_DBG(("pb->path='%s'; path='%s'\n", pb->path, path));
   /* ### TODO: Raise a tree-conflict?? I sure hope not.*/
 
   if (eb->notify_func)
     {
+      /* ### This 'join ... basename' works around an inconsistency whereby
+       * RA-serf gives PATH as just the basename instead of the full path. */
       svn_wc_notify_t *notify
-        = svn_wc_create_notify(path, svn_wc_notify_skip, pool);
+        = svn_wc_create_notify(svn_dirent_join(pb->path,
+                                               svn_relpath_basename(path,
+                                                                    NULL),
+                                               pool),
+                               svn_wc_notify_skip, pool);
 
       notify->kind = svn_node_file;
       notify->content_state = notify->prop_state
@@ -1382,11 +1397,7 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
   tree_editor->absent_directory = absent_directory;
   tree_editor->absent_file = absent_file;
 
-  return svn_delta_get_cancellation_editor(cancel_func,
-                                           cancel_baton,
-                                           tree_editor,
-                                           eb,
-                                           editor,
-                                           edit_baton,
-                                           eb->pool);
+  return svn_delta__get_debug_editor(editor, edit_baton,
+                                     tree_editor, eb,
+                                     eb->pool);
 }
