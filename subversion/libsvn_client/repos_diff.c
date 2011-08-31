@@ -1286,7 +1286,6 @@ absent_directory(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
 
-  SVN_DBG(("pb->path='%s'; path='%s'\n", pb->path, path));
   /* ### TODO: Raise a tree-conflict?? I sure hope not.*/
 
   if (eb->notify_func)
@@ -1320,7 +1319,6 @@ absent_file(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
 
-  SVN_DBG(("pb->path='%s'; path='%s'\n", pb->path, path));
   /* ### TODO: Raise a tree-conflict?? I sure hope not.*/
 
   if (eb->notify_func)
