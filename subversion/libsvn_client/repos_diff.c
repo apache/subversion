@@ -48,7 +48,6 @@
 #include "client.h"
 
 #include "private/svn_wc_private.h"
-#include "../libsvn_delta/debug_editor.h"
 
 /* Overall crawler editor baton.  */
 struct edit_baton {
@@ -1395,7 +1394,8 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
   tree_editor->absent_directory = absent_directory;
   tree_editor->absent_file = absent_file;
 
-  return svn_delta__get_debug_editor(editor, edit_baton,
-                                     tree_editor, eb,
-                                     eb->pool);
+  return svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
+                                           tree_editor, eb,
+                                           editor, edit_baton,
+                                           eb->pool);
 }
