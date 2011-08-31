@@ -601,6 +601,19 @@ def write_announcement(args):
     template.generate(sys.stdout, data)
 
 
+def write_downloads(args):
+    'Output the download section of the website.'
+    sha1info = get_sha1info(args)
+
+    data = { 'version'              : str(args.version),
+             'fileinfo'             : sha1info,
+           }
+
+    template = ezt.Template(compress_whitespace = False)
+    template.parse(get_tmplfile('download.ezt').read())
+    template.generate(sys.stdout, data)
+
+
 #----------------------------------------------------------------------
 # Validate the signatures for a release
 
@@ -755,6 +768,13 @@ def main():
                     help='''Output to stdout template text for the emailed
                             release announcement.''')
     subparser.set_defaults(func=write_announcement)
+    subparser.add_argument('version', type=Version,
+                    help='''The release label, such as '1.7.0-alpha1'.''')
+
+    subparser = subparsers.add_parser('write-downloads',
+                    help='''Output to stdout template text for the download
+                            table for subversion.apache.org''')
+    subparser.set_defaults(func=write_downloads)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
 
