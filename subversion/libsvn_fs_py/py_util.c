@@ -555,6 +555,42 @@ svn_fs_py__call_method(PyObject **p_result,
 }
 
 
+struct convert_and_consume_baton
+{
+  void **out_p;
+  PyObject *p_obj;
+  void *(*convert_func)(PyObject *, apr_pool_t *);
+  apr_pool_t *pool;
+};
+
+
+static void
+convert_and_consume(void *baton, va_list argp)
+{
+  struct convert_and_consume_baton *cacb = baton;
+
+  *cacb->out_p = cacb->convert_func(cacb->p_obj, cacb->pool);
+  Py_DECREF(cacb->p_obj);
+
+  /* We trust catch_py_exception to do any error checking. */
+}
+
+
+svn_error_t *
+svn_fs_py__convert_and_consume(void **out_p,
+                               PyObject *p_obj,
+                               void *(*convert_func)(PyObject *, apr_pool_t *),
+                               apr_pool_t *pool)
+{
+  svn_error_t *err;
+  struct convert_and_consume_baton cacb = { out_p, p_obj, convert_func, pool };
+
+  err = catch_py_exception(convert_and_consume, &cacb, NULL);
+
+  return SVN_NO_ERROR;
+}
+
+
 static PyObject *
 convert_hash(apr_hash_t *hash,
              PyObject *(*converter_func)(void *value))
@@ -650,9 +686,7 @@ make_svn_string_from_ob(PyObject *ob, apr_pool_t *pool)
   return svn_string_create(PyString_AS_STRING(ob), pool);
 }
 
-/* ### We may need to wrap this in something to catch any Python errors which
- * ### are generated. */
-apr_hash_t *
+void *
 svn_fs_py__prophash_from_dict(PyObject *dict, apr_pool_t *pool)
 {
   apr_hash_t *hash;
@@ -671,13 +705,23 @@ svn_fs_py__prophash_from_dict(PyObject *dict, apr_pool_t *pool)
 
   hash = apr_hash_make(pool);
   keys = PyDict_Keys(dict);
+  if (PyErr_Occurred())
+    return NULL;
+
   num_keys = PyList_Size(keys);
+  if (PyErr_Occurred())
+    {
+      Py_DECREF(keys);
+      return NULL;
+    }
+
   for (i = 0; i < num_keys; i++)
     {
       PyObject *key = PyList_GetItem(keys, i);
       PyObject *value = PyDict_GetItem(dict, key);
       const char *propname = make_string_from_ob(key, pool);
       svn_string_t *propval = make_svn_string_from_ob(value, pool);
+
 
       if (! (propname && propval))
         {
@@ -688,6 +732,7 @@ svn_fs_py__prophash_from_dict(PyObject *dict, apr_pool_t *pool)
         }
       apr_hash_set(hash, propname, APR_HASH_KEY_STRING, propval);
     }
+
   Py_DECREF(keys);
   return hash;
 }

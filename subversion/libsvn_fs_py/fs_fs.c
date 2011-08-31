@@ -2880,10 +2880,9 @@ revision_proplist(apr_hash_t **proplist_p,
 
   SVN_ERR(svn_fs_py__call_method(&p_proplist, ffd->p_fs, "revision_proplist",
                                  "(l)", rev));
-
-  *proplist_p = svn_fs_py__prophash_from_dict(p_proplist, pool);
-
-  Py_DECREF(p_proplist);
+  SVN_ERR(svn_fs_py__convert_and_consume((void **)proplist_p, p_proplist,
+                                         svn_fs_py__prophash_from_dict,
+                                         pool));
 
   return SVN_NO_ERROR;
 }
