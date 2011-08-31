@@ -7966,8 +7966,8 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
               SVN_ERR(svn_client__get_history_as_mergeinfo(
                 &subtree_history_as_mergeinfo, NULL,
                 subtree_mergeinfo_url, &peg_revision,
-                MAX(merged_range->start, merged_range->end),
-                MIN(merged_range->start, merged_range->end),
+                merged_range->end,
+                merged_range->start,
                 merge_b->ra_session2, merge_b->ctx, iterpool));
 
               if (old_session_url)
