@@ -90,6 +90,13 @@ Candidate changes:
    Votes:
      +1: pburba, stsp
 
+ * r1163557
+   Relax wcng consistency checks for file externals.
+   Justification:
+      Debug build claims wcng DB is inconsistent when it is OK.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
