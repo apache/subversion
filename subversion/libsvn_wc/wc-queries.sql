@@ -1372,7 +1372,7 @@ WHERE wc_id = ?1 AND op_depth = 0
 /* Queries for verification. */
 
 -- STMT_SELECT_ALL_NODES
-SELECT op_depth, local_relpath, parent_relpath FROM nodes
+SELECT op_depth, local_relpath, parent_relpath, file_external FROM nodes
 WHERE wc_id == ?1
 
 /* ------------------------------------------------------------------------- */
