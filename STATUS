@@ -90,6 +90,17 @@ Candidate changes:
    Votes:
      +1: pburba, stsp
 
+ * r1163243, r1163383
+   Fix issue #3791 'svn mergeinfo shows natural history of added subtrees
+   as eligible'.
+   Justification:
+     The 'svn mergeinfo [ -R | --depth [ files | immediates | infinity ] ]'
+     subcommand gives incorrect answers in some use cases.
+   Notes:
+     r1163243 is a test for the issue, r1163383 is the fix.
+   Votes:
+     +1: pburba
+
  * r1163557
    Relax wcng consistency checks for file externals.
    Justification:
