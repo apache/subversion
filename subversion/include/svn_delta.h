@@ -649,10 +649,12 @@ svn_txdelta_skip_svndiff_window(apr_file_t *file,
  *
  * Each of these takes a directory baton, indicating the directory
  * in which the change takes place, and a @a path argument, giving the
- * path (relative to the root of the edit) of the file,
- * subdirectory, or directory entry to change. Editors will usually
- * want to join this relative path with some base stored in the edit
- * baton (e.g. a URL, a location in the OS filesystem).
+ * path of the file, subdirectory, or directory entry to change.
+ * 
+ * The @a path argument to each of the callbacks is relative to the
+ * root of the edit.  Editors will usually want to join this relative
+ * path with some base stored in the edit baton (e.g. a URL, or a
+ * location in the OS filesystem).
  *
  * Since every call requires a parent directory baton, including
  * @c add_directory and @c open_directory, where do we ever get our
@@ -826,7 +828,7 @@ typedef struct svn_delta_editor_t
                             void **root_baton);
 
 
-  /** Remove the directory entry named @a path, a child of the directory
+  /** Remove the directory entry at @a path, a child of the directory
    * represented by @a parent_baton.  If @a revision is a valid
    * revision number, it is used as a sanity check to ensure that you
    * are really removing the revision of @a path that you think you are.
@@ -847,9 +849,10 @@ typedef struct svn_delta_editor_t
                                apr_pool_t *scratch_pool);
 
 
-  /** We are going to add a new subdirectory named @a path.  We will use
+  /** We are going to add a new subdirectory at @a path, a child of
+   * the directory represented by @a parent_baton.  We will use
    * the value this callback stores in @a *child_baton as the
-   * @a parent_baton for further changes in the new subdirectory.
+   * parent baton for further changes in the new subdirectory.
    *
    * If @a copyfrom_path is non-@c NULL, this add has history (i.e., is a
    * copy), and the origin of the copy may be recorded as
@@ -866,10 +869,10 @@ typedef struct svn_delta_editor_t
                                 apr_pool_t *result_pool,
                                 void **child_baton);
 
-  /** We are going to make changes in a subdirectory (of the directory
-   * identified by @a parent_baton). The subdirectory is specified by
-   * @a path. The callback must store a value in @a *child_baton that
-   * should be used as the @a parent_baton for subsequent changes in this
+  /** We are going to make changes in the subdirectory at @a path, a
+   * child of the directory represented by @a parent_baton.
+   * The callback must store a value in @a *child_baton that
+   * should be used as the parent baton for subsequent changes in this
    * subdirectory.  If a valid revnum, @a base_revision is the current
    * revision of the subdirectory.
    *
@@ -921,7 +924,8 @@ typedef struct svn_delta_editor_t
                                    void *parent_baton,
                                    apr_pool_t *scratch_pool);
 
-  /** We are going to add a new file named @a path.  The callback can
+  /** We are going to add a new file at @a path, a child of the
+   * directory represented by @a parent_baton.  The callback can
    * store a baton for this new file in @a **file_baton; whatever value
    * it stores there should be passed through to @c apply_textdelta.
    *
@@ -950,8 +954,8 @@ typedef struct svn_delta_editor_t
                            apr_pool_t *result_pool,
                            void **file_baton);
 
-  /** We are going to make change to a file named @a path, which resides
-   * in the directory identified by @a parent_baton.
+  /** We are going to make changes to a file at @a path, a child of the
+   * directory represented by @a parent_baton.
    *
    * The callback can store a baton for this new file in @a **file_baton;
    * whatever value it stores there should be passed through to
