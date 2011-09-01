@@ -1940,7 +1940,6 @@ def file_external_in_unversioned(sbox):
 
 from svntest import verify, actions, main
 
-@XFail()
 def commit_file_external(sbox):
   "file external modified, committed, updated"
 
