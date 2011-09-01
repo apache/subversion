@@ -1289,14 +1289,8 @@ absent_directory(const char *path,
 
   if (eb->notify_func)
     {
-      /* ### This 'join ... basename' works around an inconsistency whereby
-       * RA-serf gives PATH as just the basename instead of the full path. */
       svn_wc_notify_t *notify
-        = svn_wc_create_notify(svn_dirent_join(pb->path,
-                                               svn_relpath_basename(path,
-                                                                    NULL),
-                                               pool),
-                               svn_wc_notify_skip, pool);
+        = svn_wc_create_notify(path, svn_wc_notify_skip, pool);
 
       notify->kind = svn_node_dir;
       notify->content_state = notify->prop_state
@@ -1322,14 +1316,8 @@ absent_file(const char *path,
 
   if (eb->notify_func)
     {
-      /* ### This 'join ... basename' works around an inconsistency whereby
-       * RA-serf gives PATH as just the basename instead of the full path. */
       svn_wc_notify_t *notify
-        = svn_wc_create_notify(svn_dirent_join(pb->path,
-                                               svn_relpath_basename(path,
-                                                                    NULL),
-                                               pool),
-                               svn_wc_notify_skip, pool);
+        = svn_wc_create_notify(path, svn_wc_notify_skip, pool);
 
       notify->kind = svn_node_file;
       notify->content_state = notify->prop_state
