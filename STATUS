@@ -124,7 +124,7 @@ Candidate changes:
      destabilizing change, so IMO does not require a restart of the soak
      for RC2.
    Votes:
-     +1: pburba
+     +1: pburba, stsp
      
  * r1163953
    Make the ra_serf delta editor report absent paths correctly.
