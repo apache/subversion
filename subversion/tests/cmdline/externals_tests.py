@@ -1938,6 +1938,89 @@ def file_external_in_unversioned(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'cleanup', wc_dir)
 
 
+from svntest import verify, actions, main
+
+@XFail()
+def commit_file_external(sbox):
+  "file external modified, committed, updated"
+
+  # svntest.factory.make(sbox,"""
+  # svn ps svn:externals "^/iota xiota" wc_dir
+  # svn ci
+  # svn up
+  # echo mod >> iota
+  # svn ci iota
+  # svn up""")
+  # exit(0)
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  xiota = os.path.join(wc_dir, 'xiota')
+
+  # svn ps svn:externals "^/iota xiota" wc_dir
+  expected_stdout = ["property 'svn:externals' set on '" + wc_dir + "'\n"]
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps',
+    'svn:externals', '^/iota xiota', wc_dir)
+
+  # svn ci
+  expected_output = svntest.wc.State(wc_dir, {
+    ''                  : Item(verb='Sending'),
+  })
+
+  expected_status = actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev='1')
+  expected_status.tweak('', wc_rev='2')
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, wc_dir)
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {
+    'xiota'             : Item(status='A '),
+  })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'xiota'             : Item(contents="This is the file 'iota'.\n"),
+  })
+
+  expected_status.add({
+    'xiota'             : Item(status='  ', wc_rev='2', switched='X'),
+  })
+  expected_status.tweak(wc_rev='2')
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
+  # echo mod >> xiota
+  main.file_append(xiota, 'mod\n')
+
+  # svn ci xiota
+  expected_output = svntest.wc.State(wc_dir, {
+    'xiota'             : Item(verb='Sending'),
+  })
+
+  expected_status.tweak('xiota', wc_rev='3')
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, xiota)
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota'              : Item(status='U '),
+  })
+
+  expected_disk.tweak('xiota', 'iota',
+    contents="This is the file 'iota'.\nmod\n")
+
+  expected_status.tweak(wc_rev='3')
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -1978,6 +2061,7 @@ test_list = [ None,
               exclude_externals,
               file_externals_different_repos,
               file_external_in_unversioned,
+              commit_file_external,
              ]
 
 if __name__ == '__main__':
