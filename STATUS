@@ -139,6 +139,8 @@ Candidate changes:
      Merge this with --accept=mine-conflict, and then manually remove
      the @XFail() line from the patch_tests.py:patch_deletes_prop()
      function.
+   Votes:
+     +1: cmpilato
 
  * r1164535, r1164554
    Fix issue #4004 ("'svn patch --reverse-diff' chokes on patches
