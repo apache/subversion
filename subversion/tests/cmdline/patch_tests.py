@@ -3671,6 +3671,90 @@ def patch_lacking_trailing_eol(sbox):
                                        1, # check-props
                                        1) # dry-run
 
+@XFail()
+@Issue(4003)
+def patch_deletes_prop(sbox):
+  "patch deletes prop, directly and via reversed add"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  svntest.main.run_svn(None, 'propset', 'propname', 'propvalue',
+                       iota_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Apply patch
+  unidiff_patch = [
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Deleted: propname\n",
+    "## -1 +0,0 ##\n",
+    "-propvalue\n",
+    ]
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  # Expect the original state of the working copy in r1, exception
+  # that iota is at r2 now.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status=' M')
+  expected_status.tweak('iota', wc_rev=2)
+  expected_skip = wc.State('', { })
+  expected_output = [
+    ' U        %s\n' % os.path.join(wc_dir, 'iota'),
+  ]
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       0) # dry-run
+
+  # Revert any local mods, then try to reverse-apply a patch which
+  # *adds* the property.
+  svntest.main.run_svn(None, 'revert', iota_path)
+
+  # Apply patch 
+  unidiff_patch = [
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Added: propname\n",
+    "## -0,0 +1 ##\n",
+    "+propvalue\n",
+    ]
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       0, # dry-run
+                                       '--reverse-diff') 
+
 ########################################################################
 #Run the tests
 
@@ -3708,6 +3792,7 @@ test_list = [ None,
               patch_add_symlink,
               patch_moved_away,
               patch_lacking_trailing_eol,
+              patch_deletes_prop,
             ]
 
 if __name__ == '__main__':
