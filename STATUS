@@ -40,6 +40,7 @@ Candidate changes:
    Votes:
      +1: arfrever
      -0: stsp (we can backport these when we need to)
+     -0: gstein
 
  * r1154278, r1154379, r1154382
    Make 'svn ls' capable of listing Subversion 1.0-1.3 repositories using
@@ -118,7 +119,7 @@ Candidate changes:
      this problem in the update and diff editor in 1.7.x.
      (The other editors just ignore absent paths)
    Votes:
-     +1: rhuijben
+     +1: rhuijben, gstein
      
  * r1164386
    Avoid an expensive database operation in 'svn info'.
@@ -127,6 +128,7 @@ Candidate changes:
      moving an in most cases unneeded database call in the error handling.
    Votes:
      +1: rhuijben
+     +1: gstein (for 1.7.1)
 
  * r1164517, r1164580
    Fix issue #4003 ("'svn patch' seems unable to delete properties"). 
@@ -166,6 +168,7 @@ Candidate changes:
      +1: philip
      +0: peters (looks correct, but I didn't test, and while performance
                  should be better, I wonder if that's been tested at all)
+     +0: gstein (changes remain in wc_b.c; I think there should be no change)
 
  * r1164645
    Fix issue #3999 'svn merge with bad option or target segfaults'.
