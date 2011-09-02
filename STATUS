@@ -155,6 +155,14 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r1164426,r1164614
+   Fix STMT_SELECT_NODE_CHILDREN_WALKER_INFO for correctness and speed.
+   Justification:
+     Recursive info and propset don't scale well with large working copies
+     and may possibly act on the wrong nodes.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
