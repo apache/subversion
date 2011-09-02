@@ -119,6 +119,14 @@ Candidate changes:
      (The other editors just ignore absent paths)
    Votes:
      +1: rhuijben
+     
+ * r1164386
+   Avoid an expensive database operation in 'svn info'.
+   Justification:
+     Improves performance of 'svn info' on a single unmodified node by 20-30%, by
+     moving an in most cases unneeded database call in the error handling.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
