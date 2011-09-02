@@ -142,7 +142,7 @@ check_root_url_of_target(const char **root_url,
         return svn_error_trace(err);
      }
 
-   if (*root_url != NULL)
+   if (*root_url && tmp_root_url)
      {
        if (strcmp(*root_url, tmp_root_url) != 0)
          return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
