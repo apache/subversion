@@ -3671,7 +3671,6 @@ def patch_lacking_trailing_eol(sbox):
                                        1, # check-props
                                        1) # dry-run
 
-@XFail()
 @Issue(4003)
 def patch_deletes_prop(sbox):
   "patch deletes prop, directly and via reversed add"
