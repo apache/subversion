@@ -136,6 +136,9 @@ Candidate changes:
    Notes:
      r1164517 adds the XFail regression test.
      r1164580 fixes the bug and expects test passage.
+     Merge this with --accept=mine-conflict, and then manually remove
+     the @XFail() line from the patch_tests.py:patch_deletes_prop()
+     function.
 
  * r1164535, r1164554
    Fix issue #4004 ("'svn patch --reverse-diff' chokes on patches
@@ -146,6 +149,9 @@ Candidate changes:
    Notes:
      r1164535 adds the XFail regression tests.
      r1164554 fixes the bug and expects test passage.
+     Merge this with --accept=mine-conflict, and then manually remove
+     the @XFail() line from the patch_tests.py:patch_reversed_add_with_props()
+     function.
    Votes:
      +1: cmpilato
 
