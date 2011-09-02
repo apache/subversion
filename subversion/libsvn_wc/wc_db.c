@@ -7005,7 +7005,8 @@ struct read_children_info_baton_t
   apr_pool_t *result_pool;
 };
 
-/* What we really want to store about a node */
+/* What we really want to store about a node.  This relies on the
+   offset of svn_wc__db_info_t being zero. */
 struct read_children_info_item_t
 {
   struct svn_wc__db_info_t info;
@@ -7431,6 +7432,12 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
                                      svn_sqlite__reset(stmt)));
 }
 
+/* This relies on the offset of svn_wc__db_walker_info_t being zero. */
+struct read_children_walker_info_item_t {
+  struct svn_wc__db_walker_info_t child;
+  apr_int64_t op_depth;
+};
+
 svn_error_t *
 svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
                                      svn_wc__db_t *db,
@@ -7442,7 +7449,6 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
   const char *dir_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  apr_int64_t op_depth;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
 
@@ -7459,26 +7465,38 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
   *nodes = apr_hash_make(result_pool);
   while (have_row)
     {
-      struct svn_wc__db_walker_info_t *child;
+      struct read_children_walker_info_item_t *child_item;
       const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
       const char *name = svn_relpath_basename(child_relpath, NULL);
+      apr_int64_t op_depth;
+      svn_boolean_t new_item;
       svn_error_t *err;
 
-      child = apr_hash_get(*nodes, name, APR_HASH_KEY_STRING);
-      if (child == NULL)
-        child = apr_palloc(result_pool, sizeof(*child));
+      child_item = apr_hash_get(*nodes, name, APR_HASH_KEY_STRING);
+      if (child_item)
+        new_item = FALSE;
+      else
+        {
+          child_item = apr_palloc(result_pool, sizeof(*child_item));
+          apr_hash_set(*nodes, apr_pstrdup(result_pool, name),
+                       APR_HASH_KEY_STRING, child_item);
+          new_item = TRUE;
+        }
 
       op_depth = svn_sqlite__column_int(stmt, 1);
-      child->status = svn_sqlite__column_token(stmt, 2, presence_map);
-      if (op_depth > 0)
+      if (new_item || op_depth > child_item->op_depth)
         {
-          err = convert_to_working_status(&child->status, child->status);
-          if (err)
-            SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+          struct svn_wc__db_walker_info_t *child = &child_item->child;
+          child_item->op_depth = op_depth;
+          child->status = svn_sqlite__column_token(stmt, 2, presence_map);
+          if (op_depth > 0)
+            {
+              err = convert_to_working_status(&child->status, child->status);
+              if (err)
+                SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+            }
+          child->kind = svn_sqlite__column_token(stmt, 3, kind_map);
         }
-      child->kind = svn_sqlite__column_token(stmt, 3, kind_map);
-      apr_hash_set(*nodes, apr_pstrdup(result_pool, name),
-                   APR_HASH_KEY_STRING, child);
 
       err = svn_sqlite__step(&have_row, stmt);
       if (err)
