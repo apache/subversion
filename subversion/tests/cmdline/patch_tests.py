@@ -3755,7 +3755,6 @@ def patch_deletes_prop(sbox):
                                        0, # dry-run
                                        '--reverse-diff') 
 
-@XFail()
 @Issue(4004)
 def patch_reversed_add_with_props(sbox):
   "reverse patch new file+props atop uncommitted"
@@ -3805,7 +3804,6 @@ def patch_reversed_add_with_props(sbox):
                                        0, # dry-run
                                        '--reverse-diff') 
 
-@XFail()
 @Issue(4004)
 def patch_reversed_add_with_props2(sbox):
   "reverse patch new file+props"

@@ -2913,7 +2913,7 @@ apply_patches(void *baton,
                                                    btn->ctx, btn->dry_run,
                                                    iterpool));
 
-                  if (target->has_prop_changes)
+                  if (target->has_prop_changes && (!target->deleted))
                     SVN_ERR(install_patched_prop_targets(target, btn->ctx,
                                                          btn->dry_run,
                                                          iterpool));
