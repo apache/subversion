@@ -328,7 +328,7 @@ extern "C" {
  * applied to a different branch, which side will REVISION arguments reflect
  * and is there still a problem?
  *
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 typedef struct svn_editor_t svn_editor_t;
 
@@ -358,7 +358,7 @@ typedef struct svn_editor_t svn_editor_t;
  */
 
 /** @see svn_editor_add_directory(), svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 typedef svn_error_t *(*svn_editor_cb_add_directory_t)(
   void *baton,
@@ -369,7 +369,7 @@ typedef svn_error_t *(*svn_editor_cb_add_directory_t)(
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor_add_file(), svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 typedef svn_error_t *(*svn_editor_cb_add_file_t)(
   void *baton,
@@ -379,7 +379,7 @@ typedef svn_error_t *(*svn_editor_cb_add_file_t)(
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor_add_symlink(), svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 typedef svn_error_t *(*svn_editor_cb_add_symlink_t)(
   void *baton,
@@ -390,7 +390,7 @@ typedef svn_error_t *(*svn_editor_cb_add_symlink_t)(
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor_add_absent(), svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 typedef svn_error_t *(*svn_editor_cb_add_absent_t)(
   void *baton,
@@ -400,7 +400,7 @@ typedef svn_error_t *(*svn_editor_cb_add_absent_t)(
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor_set_props(), svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 typedef svn_error_t *(*svn_editor_cb_set_props_t)(
   void *baton,
@@ -411,7 +411,7 @@ typedef svn_error_t *(*svn_editor_cb_set_props_t)(
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor_set_text(), svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 typedef svn_error_t *(*svn_editor_cb_set_text_t)(
   void *baton,
@@ -422,7 +422,7 @@ typedef svn_error_t *(*svn_editor_cb_set_text_t)(
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor_set_target(), svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 typedef svn_error_t *(*svn_editor_cb_set_target_t)(
   void *baton,
@@ -432,7 +432,7 @@ typedef svn_error_t *(*svn_editor_cb_set_target_t)(
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor_delete(), svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 typedef svn_error_t *(*svn_editor_cb_delete_t)(
   void *baton,
@@ -441,7 +441,7 @@ typedef svn_error_t *(*svn_editor_cb_delete_t)(
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor_copy(), svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 typedef svn_error_t *(*svn_editor_cb_copy_t)(
   void *baton,
@@ -452,7 +452,7 @@ typedef svn_error_t *(*svn_editor_cb_copy_t)(
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor_move(), svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 typedef svn_error_t *(*svn_editor_cb_move_t)(
   void *baton,
@@ -463,14 +463,14 @@ typedef svn_error_t *(*svn_editor_cb_move_t)(
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor_complete(), svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 typedef svn_error_t *(*svn_editor_cb_complete_t)(
   void *baton,
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor_abort(), svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 typedef svn_error_t *(*svn_editor_cb_abort_t)(
   void *baton,
@@ -491,7 +491,7 @@ typedef svn_error_t *(*svn_editor_cb_abort_t)(
  * @a scratch_pool is used for temporary allocations (if any). Note that
  * this is NOT the same @a scratch_pool that is passed to callback functions.
  * @see svn_editor_t
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_create(svn_editor_t **editor,
@@ -506,7 +506,7 @@ svn_editor_create(svn_editor_t **editor,
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_setcb_add_directory(svn_editor_t *editor,
@@ -517,7 +517,7 @@ svn_editor_setcb_add_directory(svn_editor_t *editor,
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_setcb_add_file(svn_editor_t *editor,
@@ -528,7 +528,7 @@ svn_editor_setcb_add_file(svn_editor_t *editor,
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_setcb_add_symlink(svn_editor_t *editor,
@@ -539,7 +539,7 @@ svn_editor_setcb_add_symlink(svn_editor_t *editor,
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_setcb_add_absent(svn_editor_t *editor,
@@ -550,7 +550,7 @@ svn_editor_setcb_add_absent(svn_editor_t *editor,
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_setcb_set_props(svn_editor_t *editor,
@@ -561,7 +561,7 @@ svn_editor_setcb_set_props(svn_editor_t *editor,
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_setcb_set_text(svn_editor_t *editor,
@@ -572,7 +572,7 @@ svn_editor_setcb_set_text(svn_editor_t *editor,
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_setcb_set_target(svn_editor_t *editor,
@@ -583,7 +583,7 @@ svn_editor_setcb_set_target(svn_editor_t *editor,
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_setcb_delete(svn_editor_t *editor,
@@ -594,7 +594,7 @@ svn_editor_setcb_delete(svn_editor_t *editor,
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_setcb_copy(svn_editor_t *editor,
@@ -605,7 +605,7 @@ svn_editor_setcb_copy(svn_editor_t *editor,
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_setcb_move(svn_editor_t *editor,
@@ -616,7 +616,7 @@ svn_editor_setcb_move(svn_editor_t *editor,
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_setcb_complete(svn_editor_t *editor,
@@ -627,7 +627,7 @@ svn_editor_setcb_complete(svn_editor_t *editor,
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_setcb_abort(svn_editor_t *editor,
@@ -638,7 +638,7 @@ svn_editor_setcb_abort(svn_editor_t *editor,
 /** Lists a complete set of editor callbacks.
  * This is a convenience structure.
  * @see svn_editor_setcb_many(), svn_editor_create(), svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 typedef struct svn_editor_cb_many_t
 {
@@ -660,7 +660,7 @@ typedef struct svn_editor_cb_many_t
 /** Sets all the callback functions in @a editor at once, according to the
  * callback functions stored in @a many.
  * @a scratch_pool is used for temporary allocations (if any).
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_setcb_many(svn_editor_t *editor,
@@ -726,7 +726,7 @@ svn_editor_add_directory(svn_editor_t *editor,
  * accordingly MUST be used.
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_add_file(svn_editor_t *editor,
@@ -743,7 +743,7 @@ svn_editor_add_file(svn_editor_t *editor,
  * svn_editor_add_file().
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_add_symlink(svn_editor_t *editor,
@@ -761,7 +761,7 @@ svn_editor_add_symlink(svn_editor_t *editor,
  * For a description of @a replaces_rev, see svn_editor_add_file().
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_add_absent(svn_editor_t *editor,
@@ -784,7 +784,7 @@ svn_editor_add_absent(svn_editor_t *editor,
  *   follow on the same path.
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_set_props(svn_editor_t *editor,
@@ -801,7 +801,7 @@ svn_editor_set_props(svn_editor_t *editor,
  * ### TODO @todo What is REVISION for?
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_set_text(svn_editor_t *editor,
@@ -817,7 +817,7 @@ svn_editor_set_text(svn_editor_t *editor,
  * ### TODO @todo What is REVISION for?
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_set_target(svn_editor_t *editor,
@@ -831,7 +831,7 @@ svn_editor_set_target(svn_editor_t *editor,
  * revision @a revision of that path.
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_delete(svn_editor_t *editor,
@@ -846,7 +846,7 @@ svn_editor_delete(svn_editor_t *editor,
  * For a description of @a replaces_rev, see svn_editor_add_file().
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_copy(svn_editor_t *editor,
@@ -878,7 +878,7 @@ svn_editor_copy(svn_editor_t *editor,
  * ###   your example.
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_move(svn_editor_t *editor,
@@ -892,7 +892,7 @@ svn_editor_move(svn_editor_t *editor,
  * Send word that the tree delta has been completed successfully.
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_complete(svn_editor_t *editor);
@@ -903,7 +903,7 @@ svn_editor_complete(svn_editor_t *editor);
  * ### TODO @todo Shouldn't we add a reason-for-aborting argument?
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_editor_abort(svn_editor_t *editor);
