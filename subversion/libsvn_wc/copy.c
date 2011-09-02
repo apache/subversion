@@ -446,14 +446,14 @@ copy_versioned_dir(svn_wc__db_t *db,
               svn_boolean_t skip = FALSE;
 
               /* We should skip this node if this child is a file external
-                 (issue #3589) */
+                 (issues #3589, #4000) */
               if (child_status == svn_wc__db_status_normal)
                 {
                   SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL,
                                                    NULL, NULL, NULL, NULL,
                                                    NULL, NULL, NULL, NULL,
                                                    NULL, NULL, &skip,
-                                                   db, src_abspath,
+                                                   db, child_src_abspath,
                                                    scratch_pool,
                                                    scratch_pool));
                 }
