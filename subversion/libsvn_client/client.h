@@ -601,9 +601,10 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
    'dir_deleted' callback for each individual node in that subtree.
 
    If TEXT_DELTAS is FALSE, then do not expect text deltas from the edit
-   drive, nor send text deltas to the diff callbacks.
-   ### TODO: The implementation currently does send text deltas to the diff
-       callbacks in many cases even if they are not wanted.
+   drive, nor send the 'before' and 'after' texts to the diff callbacks;
+   instead, send empty files to the diff callbacks if there was a change.
+   This must be FALSE if the edit producer is not sending text deltas,
+   otherwise the file content checksum comparisons will fail.
 
    If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
    file and directory operated on during the edit.
