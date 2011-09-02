@@ -163,6 +163,14 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1164645
+   Fix issue #3999 'svn merge with bad option or target segfaults'.
+   Justification:
+      Command line merge with too many targets and/or a bad option
+      (no leading '-') results in a segfault without this fix.
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
