@@ -164,6 +164,8 @@ Candidate changes:
      and may possibly act on the wrong nodes.
    Votes:
      +1: philip
+     +0: peters (looks correct, but I didn't test, and while performance
+                 should be better, I wonder if that's been tested at all)
 
  * r1164645
    Fix issue #3999 'svn merge with bad option or target segfaults'.
