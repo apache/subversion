@@ -786,14 +786,19 @@ WHERE wc_id = ?1
 
 -- STMT_APPLY_CHANGES_TO_BASE_NODE
 /* translated_size and last_mod_time are not mentioned here because they will
-   be tweaked after the working-file is installed.
-   ### what to do about file_external?  */
+   be tweaked after the working-file is installed. When we replace an existing
+   BASE node (read: bump), preserve its file_external status. */
 INSERT OR REPLACE INTO nodes (
   wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
   revision, presence, depth, kind, changed_revision, changed_date,
-  changed_author, checksum, properties, dav_cache, symlink_target )
+  changed_author, checksum, properties, dav_cache, symlink_target,
+  file_external )
 VALUES (?1, ?2, 0,
-        ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
+        ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
+        (SELECT file_external FROM nodes
+          WHERE wc_id = ?1
+            AND local_relpath = ?2
+            AND op_depth = 0))
 
 -- STMT_INSTALL_WORKING_NODE_FOR_DELETE
 INSERT OR REPLACE INTO nodes (
