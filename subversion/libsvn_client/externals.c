@@ -879,16 +879,20 @@ handle_external_item_change(const struct external_change_baton_t *eb,
      the global case is hard, and it should be pretty obvious to a
      user when it happens.  Worst case: your disk fills up :-). */
 
+  /* First notify that we're about to handle an external. */
+  if (eb->ctx->notify_func2)
+    {
+      (*eb->ctx->notify_func2)(
+         eb->ctx->notify_baton2,
+         svn_wc_create_notify(local_abspath,
+                              svn_wc_notify_update_external,
+                              scratch_pool),
+         scratch_pool);
+    }
+
   if (! old_defining_abspath)
     {
       /* This branch is only used during a checkout or an export. */
-
-      /* First notify that we're about to handle an external. */
-      if (eb->ctx->notify_func2)
-        (*eb->ctx->notify_func2)(
-           eb->ctx->notify_baton2,
-           svn_wc_create_notify(local_abspath, svn_wc_notify_update_external,
-                                scratch_pool), scratch_pool);
 
       switch (ra_cache.kind)
         {
@@ -931,18 +935,6 @@ handle_external_item_change(const struct external_change_baton_t *eb,
   else
     {
       /* This branch handles a definition change or simple update. */
-
-      /* First notify that we're about to handle an external. */
-      if (eb->ctx->notify_func2)
-        {
-          svn_wc_notify_t *nt;
-
-          nt = svn_wc_create_notify(local_abspath,
-                                    svn_wc_notify_update_external,
-                                    scratch_pool);
-
-          eb->ctx->notify_func2(eb->ctx->notify_baton2, nt, scratch_pool);
-        }
 
       /* Either the URL changed, or the exact same item is present in
          both hashes, and caller wants to update such unchanged items.
