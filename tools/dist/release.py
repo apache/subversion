@@ -623,7 +623,10 @@ fp_pattern = re.compile(r'^pub\s+(\w+\/\w+)[^\n]*\n\s+Key\sfingerprint\s=((\s+[0
 def check_sigs(args):
     'Check the signatures for the release.'
 
-    import gnupg
+    try:
+        import gnupg
+    except ImportError:
+        import _gnupg as gnupg
     gpg = gnupg.GPG()
 
     if args.target:
