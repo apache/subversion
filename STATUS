@@ -178,6 +178,26 @@ Candidate changes:
    Votes:
      +1: pburba, philip
 
+ * branches/1.7.x-issue4000
+   Fix issue #4000 'WC-WC-copy of file external creates first-class file node'
+   and don't break file external state when committing a file external.
+   Justification:
+     Inconsistency. Can create collisions between externals definitions and
+     versioned nodes.
+     r1164027 is included since it inadvertently fixes the re-appearance of
+     issue #4000 on a file external that has been committed.
+   Notes:
+     Since r1164027 prevents the NODES table's FILE_EXTERNAL column from
+     being blanked out during commit bumping, it probably fixes a number of
+     other problems with committed file externals that I'm not aware of ATM.
+   Conflicts:
+     C  externals_tests.py
+     branches/1.7.x-issue4000@    1164785 1164786 1164792
+     are clean versions of trunk@ 1164027 1164760 1164765
+     and are the:    corner case fix^  main fix^    ^test
+   Votes:
+     +1: neels
+
 Veto-blocked changes:
 =====================
 
