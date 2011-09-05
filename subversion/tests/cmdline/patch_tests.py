@@ -3751,7 +3751,7 @@ def patch_deletes_prop(sbox):
                                        expected_skip,
                                        None, # expected err
                                        1, # check-props
-                                       0, # dry-run
+                                       1, # dry-run
                                        '--reverse-diff') 
 
 @Issue(4004)
@@ -3800,7 +3800,7 @@ def patch_reversed_add_with_props(sbox):
                                        expected_skip,
                                        None, # expected err
                                        1, # check-props
-                                       0, # dry-run
+                                       1, # dry-run
                                        '--reverse-diff') 
 
 @Issue(4004)
@@ -3855,7 +3855,7 @@ def patch_reversed_add_with_props2(sbox):
                                        expected_skip,
                                        None, # expected err
                                        1, # check-props
-                                       0, # dry-run
+                                       1, # dry-run
                                        '--reverse-diff') 
 
 ########################################################################
