@@ -177,19 +177,3 @@ Approved changes:
      (The other editors just ignore absent paths)
    Votes:
      +1: rhuijben, gstein, philip
-
- * r1163792
-   Follow-up to the issue #3975 fixes which were backported in r1161547.
-   Justification:
-      Some merge use cases fail due to the issue #3975 fixes.  However,
-      this failure is legitimate in the sense that it should be expected
-      and cleared, and the merge allowed to continue.  For details, see
-      http://subversion.tigris.org/issues/show_bug.cgi?id=3975#desc6
-   Notes:
-     r1163792 simply catches and clears an error.  While this change needs
-     to get into 1.7.0 (or the issue #3975 fixes need to come out), given
-     the simplicity of the change I don't believe this constitutes a
-     destabilizing change, so IMO does not require a restart of the soak
-     for RC2.
-   Votes:
-     +1: pburba, stsp, philip

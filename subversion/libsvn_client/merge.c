@@ -7697,6 +7697,7 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
               && (!merge_b->record_only || merge_b->reintegrate_merge)
               && (!is_rollback))
             {
+              svn_error_t *err;
               svn_opt_revision_t peg_revision;
               svn_mergeinfo_t subtree_history_as_mergeinfo;
               apr_array_header_t *child_merge_src_rangelist;
@@ -7719,26 +7720,40 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
                                                         merge_b->ra_session2,
                                                         subtree_mergeinfo_url,
                                                         iterpool));
-              SVN_ERR(svn_client__get_history_as_mergeinfo(
+              err = svn_client__get_history_as_mergeinfo(
                 &subtree_history_as_mergeinfo, NULL,
                 subtree_mergeinfo_url, &peg_revision,
                 MAX(merged_range->start, merged_range->end),
                 MIN(merged_range->start, merged_range->end),
-                merge_b->ra_session2, merge_b->ctx, iterpool));
+                merge_b->ra_session2, merge_b->ctx, iterpool);
+
+              /* If CHILD is a subtree it may have been deleted prior to
+                 MERGED_RANGE->END so the above call to get its history
+                 will fail. */
+              if (err)
+                {
+                  if (err->apr_err != SVN_ERR_FS_NOT_FOUND)
+                      return svn_error_trace(err);
+                  svn_error_clear(err);
+                }
+              else
+                {
+                  child_merge_src_rangelist = apr_hash_get(
+                    subtree_history_as_mergeinfo,
+                    child_merge_src_canon_path,
+                    APR_HASH_KEY_STRING);
+                  SVN_ERR(svn_rangelist_intersect(&child_merge_rangelist,
+                                                  child_merge_rangelist,
+                                                  child_merge_src_rangelist,
+                                                  FALSE, iterpool));
+                  if (!rangelist_inheritance)
+                    svn_rangelist__set_inheritance(child_merge_rangelist,
+                                                   FALSE);
+                }
 
               if (old_session_url)
                 SVN_ERR(svn_ra_reparent(merge_b->ra_session2,
                                         old_session_url, iterpool));
-              child_merge_src_rangelist = apr_hash_get(
-                subtree_history_as_mergeinfo,
-                child_merge_src_canon_path,
-                APR_HASH_KEY_STRING);
-              SVN_ERR(svn_rangelist_intersect(&child_merge_rangelist,
-                                              child_merge_rangelist,
-                                              child_merge_src_rangelist,
-                                              FALSE, iterpool));
-              if (!rangelist_inheritance)
-                svn_rangelist__set_inheritance(child_merge_rangelist, FALSE);
             }
 
           apr_hash_set(child_merges, child->abspath, APR_HASH_KEY_STRING,
