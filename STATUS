@@ -111,16 +111,6 @@ Candidate changes:
    Votes:
      +1: pburba, stsp
      
- * r1163953
-   Make the ra_serf delta editor report absent paths correctly.
-   Justification:
-     Some callers might assume that ra_serf follows the delta editor
-     documentation even though our own code avoids and/or works around
-     this problem in the update and diff editor in 1.7.x.
-     (The other editors just ignore absent paths)
-   Votes:
-     +1: rhuijben, gstein
-     
  * r1164386
    Avoid an expensive database operation in 'svn info'.
    Justification:
@@ -224,3 +214,13 @@ Approved changes:
      ^/subversion/branches/1.7.x-issue3976
    Votes:
      +1: pburba, stsp, philip
+     
+ * r1163953
+   Make the ra_serf delta editor report absent paths correctly.
+   Justification:
+     Some callers might assume that ra_serf follows the delta editor
+     documentation even though our own code avoids and/or works around
+     this problem in the update and diff editor in 1.7.x.
+     (The other editors just ignore absent paths)
+   Votes:
+     +1: rhuijben, gstein, philip
