@@ -193,19 +193,3 @@ Approved changes:
      for RC2.
    Votes:
      +1: pburba, stsp, philip
-
- * r1164535, r1164554
-   Fix issue #4004 ("'svn patch --reverse-diff' chokes on patches
-   which add files with props").
-   Justification:
-     Prevents failure from a use-case that folks will naturally expect
-     to work: "svn diff > PATCH && svn patch PATH --reverse-diff"
-   Notes:
-     r1164535 adds the XFail regression tests.
-     r1164554 fixes the bug and expects test passage.
-     Merge this with --accept=mine-conflict, and then manually remove
-     the @XFail() line from the patch_tests.py:patch_reversed_add_with_props()
-     function.
-     Only one of (r1164517, r1164580) and (r1164535, r1164554) will conflict.
-   Votes:
-     +1: cmpilato, philip, stsp

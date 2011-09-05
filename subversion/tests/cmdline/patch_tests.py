@@ -3568,6 +3568,110 @@ def patch_deletes_prop(sbox):
                                        0, # dry-run
                                        '--reverse-diff') 
 
+@Issue(4004)
+def patch_reversed_add_with_props(sbox):
+  "reverse patch new file+props atop uncommitted"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  patch_file_path = make_patch_path(sbox)
+
+  # Add a new file which also has props set on it.
+  newfile_path = os.path.join(wc_dir, 'newfile')
+  newfile_contents = ["This is the file 'newfile'.\n"]
+  svntest.main.file_write(newfile_path, ''.join(newfile_contents))
+  svntest.main.run_svn(None, 'add', newfile_path)
+  svntest.main.run_svn(None, 'propset', 'propname', 'propvalue',
+                       newfile_path)
+
+  # Generate a patch file from our current diff (rooted at the working
+  # copy root).
+  cwd = os.getcwd()
+  try:
+    os.chdir(wc_dir)
+    exit_code, diff_output, err_output = svntest.main.run_svn(None, 'diff')
+  finally:
+    os.chdir(cwd)
+  svntest.main.file_write(patch_file_path, ''.join(diff_output))
+
+  # Okay, now commit up.
+  expected_output = svntest.wc.State(wc_dir, {
+    'newfile' : Item(verb='Adding'),
+    })
+
+  # Now, we'll try to reverse-apply the very diff we just created.  We
+  # expect the original state of the working copy in r1.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_skip = wc.State('', { })
+  expected_output = [
+    'D         %s\n' % newfile_path,
+  ]
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       0, # dry-run
+                                       '--reverse-diff') 
+
+@Issue(4004)
+def patch_reversed_add_with_props2(sbox):
+  "reverse patch new file+props"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  patch_file_path = make_patch_path(sbox)
+
+  # Add a new file which also has props set on it.
+  newfile_path = os.path.join(wc_dir, 'newfile')
+  newfile_contents = ["This is the file 'newfile'.\n"]
+  svntest.main.file_write(newfile_path, ''.join(newfile_contents))
+  svntest.main.run_svn(None, 'add', newfile_path)
+  svntest.main.run_svn(None, 'propset', 'propname', 'propvalue',
+                       newfile_path)
+
+  # Generate a patch file from our current diff (rooted at the working
+  # copy root).
+  cwd = os.getcwd()
+  try:
+    os.chdir(wc_dir)
+    exit_code, diff_output, err_output = svntest.main.run_svn(None, 'diff')
+  finally:
+    os.chdir(cwd)
+  svntest.main.file_write(patch_file_path, ''.join(diff_output))
+
+  # Okay, now commit up.
+  expected_output = svntest.wc.State(wc_dir, {
+    'newfile' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({'newfile' : Item(wc_rev=2, status='  ')})
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Now, we'll try to reverse-apply the very diff we just created.  We
+  # expect the original state of the working copy in r1 plus 'newfile'
+  # scheduled for deletion.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({'newfile' : Item(status='D ', wc_rev=2)})
+  expected_skip = wc.State('', { })
+  expected_output = [
+    'D         %s\n' % newfile_path,
+  ]
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       0, # dry-run
+                                       '--reverse-diff') 
+
 ########################################################################
 #Run the tests
 
@@ -3604,6 +3708,8 @@ test_list = [ None,
               patch_set_prop_no_eol,
               patch_add_symlink,
               patch_deletes_prop,
+              patch_reversed_add_with_props,
+              patch_reversed_add_with_props2,
             ]
 
 if __name__ == '__main__':
