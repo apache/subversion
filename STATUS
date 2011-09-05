@@ -194,21 +194,6 @@ Approved changes:
    Votes:
      +1: pburba, stsp, philip
 
- * r1164517, r1164580
-   Fix issue #4003 ("'svn patch' seems unable to delete properties"). 
-   Justification:
-     This fixes a lack of consistency with how emptied file contents
-     are handled.
-   Notes:
-     r1164517 adds the XFail regression test.
-     r1164580 fixes the bug and expects test passage.
-     Merge this with --accept=mine-conflict, and then manually remove
-     the @XFail() line from the patch_tests.py:patch_deletes_prop()
-     function.
-     Only one of (r1164517, r1164580) and (r1164535, r1164554) will conflict.
-   Votes:
-     +1: cmpilato, philip, stsp
-
  * r1164535, r1164554
    Fix issue #4004 ("'svn patch --reverse-diff' chokes on patches
    which add files with props").

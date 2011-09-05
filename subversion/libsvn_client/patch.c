@@ -2471,8 +2471,15 @@ install_patched_prop_targets(patch_target_t *target,
           target->added = TRUE;
         }
 
-      /* Attempt to set the property, and reject all hunks if this fails. */
-      prop_val = svn_stringbuf__morph_into_string(prop_target->patched_value);
+      /* Attempt to set the property, and reject all hunks if this
+         fails.  If the property had a non-empty value, but now has
+         an empty one, we'll just delete the property altogether.  */
+      if (prop_target->value && prop_target->value->len
+          && prop_target->patched_value && !prop_target->patched_value->len)
+        prop_val = NULL;
+      else
+        prop_val = svn_stringbuf__morph_into_string(prop_target->patched_value);
+
       if (dry_run)
         {
           const svn_string_t *canon_propval;
