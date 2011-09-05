@@ -254,7 +254,7 @@ adjust_relative_to_repos_root(const char **adjusted_path,
   return SVN_NO_ERROR;
 }
 
-/* Adjust PATH, ORIG_PATH_1 and ORIG_PATH_2, representing the changed file
+/* Adjust *PATH, *ORIG_PATH_1 and *ORIG_PATH_2, representing the changed file
  * and the two original targets passed to the diff command, to handle the
  * case when we're dealing with different anchors. RELATIVE_TO_DIR is the
  * directory the diff target should be considered relative to. All
@@ -559,8 +559,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                    apr_pool_t *pool)
 {
   int i;
-  const char *path1 = apr_pstrdup(pool, orig_path1);
-  const char *path2 = apr_pstrdup(pool, orig_path2);
+  const char *path1 = orig_path1;
+  const char *path2 = orig_path2;
 
   if (use_git_diff_format)
     {
@@ -582,8 +582,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
     {
       const char *label1;
       const char *label2;
-      const char *adjusted_path1 = apr_pstrdup(pool, path1);
-      const char *adjusted_path2 = apr_pstrdup(pool, path2);
+      const char *adjusted_path1 = path1;
+      const char *adjusted_path2 = path2;
 
       SVN_ERR(adjust_paths_for_diff_labels(&path, &adjusted_path1,
                                            &adjusted_path2,
@@ -911,16 +911,13 @@ diff_content_changed(const char *path,
   apr_file_t *errfile = diff_cmd_baton->errfile;
   const char *label1, *label2;
   svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
-  const char *path1, *path2;
+  const char *path1 = diff_cmd_baton->orig_path_1;
+  const char *path2 = diff_cmd_baton->orig_path_2;
 
   /* Get a stream from our output file. */
   os = svn_stream_from_aprfile2(diff_cmd_baton->outfile, TRUE, subpool);
 
   /* Generate the diff headers. */
-
-  path1 = apr_pstrdup(subpool, diff_cmd_baton->orig_path_1);
-  path2 = apr_pstrdup(subpool, diff_cmd_baton->orig_path_2);
-
   SVN_ERR(adjust_paths_for_diff_labels(&path, &path1, &path2,
                                        rel_to_dir, subpool));
 
