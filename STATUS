@@ -167,7 +167,7 @@ Candidate changes:
      Recursive info and propset don't scale well with large working copies
      and may possibly act on the wrong nodes.
      On a Linux machine with a Subversion trunk working copy on a local disk
-     running 'svn info --depth infinite' shows it to be 2 or 3 times faster.
+     running 'svn info --depth infinity' shows it to be 2 or 3 times faster.
      On a larger working copy it's orders of magnitude faster.
    Votes:
      +1: philip
