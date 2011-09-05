@@ -94,7 +94,10 @@ Candidate changes:
      1.7.x-r1163557
    Votes:
      +1: philip
-     
+     +0: neels (Much other code still dismally fails at file externals in
+                unversioned dirs, e.g. 'status', 'commit'. This apparently
+                only fixes maintainer-mode 'svn cleanup', IMHO low prio.)
+    
  * r1164386
    Avoid an expensive database operation in 'svn info'.
    Justification:
@@ -117,14 +120,6 @@ Candidate changes:
      +0: peters, gstein (looks correct, but I didn't test, and while
                          performance should be better, I wonder if that's
                          been tested at all)
-
- * r1164645
-   Fix issue #3999 'svn merge with bad option or target segfaults'.
-   Justification:
-      Command line merge with too many targets and/or a bad option
-      (no leading '-') results in a segfault without this fix.
-   Votes:
-     +1: pburba, philip
 
  * branches/1.7.x-issue4000
    Fix issue #4000 'WC-WC-copy of file external creates first-class file node'
@@ -151,3 +146,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1164645
+   Fix issue #3999 'svn merge with bad option or target segfaults'.
+   Justification:
+      Command line merge with too many targets and/or a bad option
+      (no leading '-') results in a segfault without this fix.
+   Votes:
+     +1: pburba, philip, neels
