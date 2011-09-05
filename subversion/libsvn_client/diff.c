@@ -459,10 +459,6 @@ print_git_diff_header_modified(svn_stream_t *os, const char *header_encoding,
  * are the paths passed to the original diff command. REV1 and REV2 are
  * revisions being diffed. COPYFROM_PATH and COPYFROM_REV indicate where the
  * diffed item was copied from.
- * RA_SESSION and WC_CTX are used to adjust paths in the headers to be
- * relative to the repository root.
- * WC_ROOT_ABSPATH is the absolute path to the root directory of a working
- * copy involved in a repos-wc diff, and may be NULL.
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 print_git_diff_header(svn_stream_t *os,
@@ -475,9 +471,6 @@ print_git_diff_header(svn_stream_t *os,
                       const char *copyfrom_path,
                       svn_revnum_t copyfrom_rev,
                       const char *header_encoding,
-                      svn_ra_session_t *ra_session,
-                      svn_wc_context_t *wc_ctx,
-                      const char *wc_root_abspath,
                       apr_pool_t *scratch_pool)
 {
   if (operation == svn_diff_op_deleted)
@@ -616,8 +609,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                                         svn_diff_op_modified,
                                         path1, path2, rev1, rev2, NULL,
                                         SVN_INVALID_REVNUM,
-                                        encoding, ra_session, wc_ctx,
-                                        wc_root_abspath, pool));
+                                        encoding, pool));
           SVN_ERR(svn_stream_close(os));
         }
 
@@ -1040,9 +1032,6 @@ diff_content_changed(const char *path,
                                             copyfrom_path,
                                             copyfrom_rev,
                                             diff_cmd_baton->header_encoding,
-                                            diff_cmd_baton->ra_session,
-                                            diff_cmd_baton->wc_ctx,
-                                            diff_cmd_baton->wc_root_abspath,
                                             subpool));
             }
 
