@@ -141,8 +141,9 @@ Candidate changes:
      Merge this with --accept=mine-conflict, and then manually remove
      the @XFail() line from the patch_tests.py:patch_deletes_prop()
      function.
+     Only one of (r1164517, r1164580) and (r1164535, r1164554) will conflict.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, philip
 
  * r1164535, r1164554
    Fix issue #4004 ("'svn patch --reverse-diff' chokes on patches
@@ -156,8 +157,9 @@ Candidate changes:
      Merge this with --accept=mine-conflict, and then manually remove
      the @XFail() line from the patch_tests.py:patch_reversed_add_with_props()
      function.
+     Only one of (r1164517, r1164580) and (r1164535, r1164554) will conflict.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, philip
 
  * r1164426,r1164614
    Fix STMT_SELECT_NODE_CHILDREN_WALKER_INFO for correctness and speed.
