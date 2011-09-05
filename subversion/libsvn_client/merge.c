@@ -1179,13 +1179,21 @@ merge_props_changed(svn_wc_notify_state_t *state,
 
               if (strcmp(prop->name, SVN_PROP_MERGEINFO) == 0)
                 {
-                  /* Does PATH have any working mergeinfo? */
-                  svn_string_t *mergeinfo_prop =
-                    apr_hash_get(original_props,
-                                 SVN_PROP_MERGEINFO,
-                                 APR_HASH_KEY_STRING);
+                  /* Does LOCAL_ABSPATH have any pristine mergeinfo? */
+                  svn_boolean_t has_pristine_mergeinfo = FALSE;
+                  apr_hash_t *pristine_props;
 
-                  if (!mergeinfo_prop && prop->value)
+                  SVN_ERR(svn_wc_get_pristine_props(&pristine_props,
+                                                    ctx->wc_ctx,
+                                                    local_abspath,
+                                                    scratch_pool,
+                                                    scratch_pool));
+
+                  if (apr_hash_get(pristine_props, SVN_PROP_MERGEINFO,
+                                   APR_HASH_KEY_STRING))
+                    has_pristine_mergeinfo = TRUE;
+
+                  if (!has_pristine_mergeinfo && prop->value)
                     {
                       /* If BATON->PATHS_WITH_NEW_MERGEINFO needs to be
                          allocated do so in BATON->POOL so it has a
@@ -1198,7 +1206,7 @@ merge_props_changed(svn_wc_notify_state_t *state,
                                    apr_pstrdup(merge_b->pool, local_abspath),
                                    APR_HASH_KEY_STRING, local_abspath);
                     }
-                  else if (mergeinfo_prop && !prop->value)
+                  else if (has_pristine_mergeinfo && !prop->value)
                     {
                       /* If BATON->PATHS_WITH_DELETED_MERGEINFO needs to be
                          allocated do so in BATON->POOL so it has a
