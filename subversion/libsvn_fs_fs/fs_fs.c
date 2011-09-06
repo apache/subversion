@@ -5841,6 +5841,41 @@ copy_file_partially(apr_file_t *source_file,
   return SVN_NO_ERROR;
 }
 
+/* In filesystem FS, which is assumed to be of a format that contains
+ * successors, look up in the successors offsets file the entry for REVISION,
+ * and return it in *REVISION_OFFSET.  Use POOL for temporary allocations. */
+static svn_error_t *
+read_successor_revisions_file_entry(apr_uint64_t *revision_offset,
+                                    svn_fs_t *fs,
+                                    svn_revnum_t revision,
+                                    apr_pool_t *pool)
+{
+  apr_off_t offset_offset;
+  apr_size_t size;
+  apr_file_t *revs_file;
+  apr_uint32_t m;
+  apr_uint32_t n;
+  const char *revs_abspath = path_successor_revisions(fs, revision, pool);
+
+  SVN_ERR(svn_io_file_open(&revs_file, revs_abspath, APR_READ,
+                           APR_OS_DEFAULT, pool));
+  offset_offset = FSFS_SUCCESSORS_REV_OFFSET(revision - 1);
+  SVN_ERR(svn_io_file_seek(revs_file, APR_SET, &offset_offset, pool));
+  
+  /* Read a 64 bit big endian integer in two passes.
+   * The most significant 4 bytes come first. */
+  size = 4;
+  SVN_ERR(svn_io_file_read(revs_file, &n, &size, pool));
+  SVN_ERR_ASSERT(size == 4); /* ### TODO(sid): normal error */
+  SVN_ERR(svn_io_file_read(revs_file, &m, &size, pool));
+  SVN_ERR_ASSERT(size == 4);
+  *revision_offset = ((apr_uint64_t)(ntohl(n)) << 32) | ntohl(m);
+
+  SVN_ERR(svn_io_file_close(revs_file, pool));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 update_successor_ids_file(const char **successor_ids_temp_abspath,
                           apr_off_t *new_successor_ids_offset,
@@ -5851,12 +5886,7 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
 {
   apr_file_t *successor_ids_file;
   const char *successor_ids_abspath = path_successor_ids(fs, new_rev, pool);
-  const char *revs_abspath = path_successor_revisions(fs, new_rev, pool);
   apr_file_t *successor_ids_temp_file;
-  apr_file_t *revs_file;
-  apr_off_t offset;
-  apr_size_t size;
-  apr_uint32_t n; /* ### TODO(sid): move to loop scope */
   apr_pool_t *iterpool = NULL;
   apr_hash_index_t *hi;
 
@@ -5869,24 +5899,11 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
   /* ### TODO(sid): loop condition */
   if (new_rev > 1 && new_rev % FSFS_SUCCESSORS_MAX_FILES_PER_DIR != 0)
     {
-      /* Figure out the offset of successor data for the previous revision. */
       apr_uint64_t prev_successor_ids_offset;
-      apr_uint32_t m;
 
-      SVN_ERR(svn_io_file_open(&revs_file, revs_abspath, APR_READ,
-                               APR_OS_DEFAULT, pool));
-      SVN_ERR_ASSERT(new_rev >= 1); /* ### TODO(sid): redundant */
-      offset = FSFS_SUCCESSORS_REV_OFFSET(new_rev - 1);
-      SVN_ERR(svn_io_file_seek(revs_file, APR_SET, &offset, pool));
-      
-      /* Read a 64 bit big endian integer in two passes.
-       * The most significant 4 bytes come first. */
-      size = 4;
-      SVN_ERR(svn_io_file_read(revs_file, &n, &size, pool));
-      SVN_ERR_ASSERT(size == 4); /* ### TODO(sid): normal error */
-      SVN_ERR(svn_io_file_read(revs_file, &m, &size, pool));
-      SVN_ERR_ASSERT(size == 4);
-      prev_successor_ids_offset = ((apr_uint64_t)(ntohl(n)) << 32) | ntohl(m);
+      /* Figure out the offset of successor data for the previous revision. */
+      SVN_ERR(read_successor_revisions_file_entry(&prev_successor_ids_offset,
+                                                  fs, new_rev, pool));
 
       /* Check for offset overflow.
        * This gives a "will never be executed" warning on some platforms. */
@@ -5898,8 +5915,6 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
                                    "large files; this repository can only "
                                    "be used on platforms which support "
                                    "large files"), prev_successor_ids_offset);
-
-      SVN_ERR(svn_io_file_close(revs_file, pool));
 
       /* Copy successor data for revisions older than the previous revision
        * into the temporary successor data file. */
