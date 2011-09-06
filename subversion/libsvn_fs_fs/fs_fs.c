@@ -6371,8 +6371,7 @@ commit_body(void *baton, apr_pool_t *pool)
                           pool));
 
   /* Write successors. */
-  if (apr_hash_count(successor_ids) > 0)
-    SVN_ERR(update_successor_map(cb->fs, new_rev, successor_ids, pool));
+  SVN_ERR(update_successor_map(cb->fs, new_rev, successor_ids, pool));
 
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
