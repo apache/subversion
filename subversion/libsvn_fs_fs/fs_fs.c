@@ -80,6 +80,7 @@
 
 /* Sharding of files in successor-IDs directories. Changing this value will
  * cause compatibility issues with existing repositories. */
+/* See make_successor_ids_dirs() if you change this. */
 #define FSFS_SUCCESSORS_MAX_FILES_PER_DIR  1000
 
 /* Calculate the offset of a revision in a successors revisions file. */
@@ -1292,6 +1293,9 @@ make_successor_ids_dirs(svn_fs_t *fs, apr_pool_t *pool)
   SVN_ERR(svn_io_make_dir_recursively(node_revs_dir, pool));
   SVN_ERR(svn_io_make_dir_recursively(revs_dir, pool));
   SVN_ERR(svn_io_make_dir_recursively(data_dir, pool));
+
+  /* ### TODO(sid): check for sanity of FSFS_SUCCESSORS_MAX_FILES_PER_DIR here,
+         check that the successor data files won't get too large, etc. */
 
   return SVN_NO_ERROR;
 }
