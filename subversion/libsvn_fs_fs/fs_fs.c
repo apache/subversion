@@ -5884,7 +5884,6 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
                           apr_hash_t *new_successor_ids,
                           apr_pool_t *pool)
 {
-  apr_file_t *successor_ids_file;
   const char *successor_ids_abspath = path_successor_ids(fs, new_rev, pool);
   apr_file_t *successor_ids_temp_file;
   apr_pool_t *iterpool = NULL;
@@ -5900,6 +5899,7 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
   if (new_rev > 1 && new_rev % FSFS_SUCCESSORS_MAX_FILES_PER_DIR != 0)
     {
       apr_uint64_t prev_successor_ids_offset;
+      apr_file_t *successor_ids_file;
 
       /* Figure out the offset of successor data for the previous revision. */
       SVN_ERR(read_successor_revisions_file_entry(&prev_successor_ids_offset,
