@@ -78,14 +78,14 @@
 #define SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR 1000
 #endif
 
-/* Sharding of files in successor-IDs directories. Changing this value will
- * cause compatibility issues with existing repositories. */
-/* See make_successor_ids_dirs() if you change this. */
-#define FSFS_SUCCESSORS_MAX_FILES_PER_DIR  1000
+/* Maxiumum number of revisions represented per successor-IDs file.
+ * Changing this value will cause compatibility issues with existing
+ * repositories. See make_successor_ids_dirs() if you change this. */
+#define FSFS_SUCCESSORS_MAX_REVS_PER_FILE  1000
 
 /* Calculate the offset of a revision in a successors revisions file. */
 #define FSFS_SUCCESSORS_REV_OFFSET(rev) \
-  ((((rev) - 1) % FSFS_SUCCESSORS_MAX_FILES_PER_DIR) * 8)
+  ((((rev) - 1) % FSFS_SUCCESSORS_MAX_REVS_PER_FILE) * 8)
 
 /* Marker terminating per-revision successor-IDs. */
 #define FSFS_SUCCESSOR_IDS_END_MARKER "END\n"
@@ -255,7 +255,7 @@ path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 static const char *
 path_successor_ids(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
-  long shard = rev / FSFS_SUCCESSORS_MAX_FILES_PER_DIR;
+  long shard = rev / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
 
   return svn_dirent_join_many(pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
                               PATH_SUCCESSORS_IDS_DIR,
@@ -265,7 +265,7 @@ path_successor_ids(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 static const char *
 path_successor_revisions(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
-  long shard = rev / FSFS_SUCCESSORS_MAX_FILES_PER_DIR;
+  long shard = rev / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
 
   return svn_dirent_join_many(pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
                               PATH_SUCCESSORS_REVISIONS_DIR,
@@ -283,7 +283,7 @@ path_successor_node_revs(svn_fs_t *fs, const char *node_rev_id,
   /* ### TODO(sid): danielsh: is there a need to guard for ID == NULL here? */
   id = svn_fs_fs__id_parse(node_rev_id, strlen(node_rev_id), pool);
   rev = svn_fs_fs__id_rev(id);
-  shard = rev / FSFS_SUCCESSORS_MAX_FILES_PER_DIR;
+  shard = rev / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
 
   return svn_dirent_join_many(pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
                               PATH_SUCCESSORS_NODE_REVS_DIR,
@@ -1294,7 +1294,7 @@ make_successor_ids_dirs(svn_fs_t *fs, apr_pool_t *pool)
   SVN_ERR(svn_io_make_dir_recursively(revs_dir, pool));
   SVN_ERR(svn_io_make_dir_recursively(data_dir, pool));
 
-  /* ### TODO(sid): check for sanity of FSFS_SUCCESSORS_MAX_FILES_PER_DIR here,
+  /* ### TODO(sid): check for sanity of FSFS_SUCCESSORS_MAX_REVS_PER_FILE here,
          check that the successor data files won't get too large, etc. */
 
   return SVN_NO_ERROR;
@@ -5901,7 +5901,7 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
                                                       pool),
                                    svn_io_file_del_none, pool, pool));
   /* ### TODO(sid): loop condition */
-  if (new_rev > 1 && new_rev % FSFS_SUCCESSORS_MAX_FILES_PER_DIR != 0)
+  if (new_rev > 1 && new_rev % FSFS_SUCCESSORS_MAX_REVS_PER_FILE != 0)
     {
       apr_uint64_t prev_successor_ids_offset;
       apr_file_t *successor_ids_file;
@@ -6025,7 +6025,7 @@ update_successor_revisions_file(const char **revs_temp_abspath,
   /* Copy offsets of existing revisions into the temporary successor
    * revisions file. */
   /* ### TODO(sid): loop condition */
-  if (new_rev > 1 && new_rev % FSFS_SUCCESSORS_MAX_FILES_PER_DIR != 0)
+  if (new_rev > 1 && new_rev % FSFS_SUCCESSORS_MAX_REVS_PER_FILE != 0)
     {
       SVN_ERR(svn_io_file_open(&revs_file, revs_abspath, APR_READ,
                                APR_OS_DEFAULT, pool));
@@ -6034,7 +6034,7 @@ update_successor_revisions_file(const char **revs_temp_abspath,
       if (sizeof(apr_off_t) < sizeof(apr_uint64_t) &&
           new_rev_offset > APR_UINT32_MAX)
         /* ### TODO(sid): this can be detected in svn_fs_fs__create() by 
-               computing FSFS_SUCCESSORS_MAX_FILES_PER_DIR*8 */
+               computing FSFS_SUCCESSORS_MAX_REVS_PER_FILE*8 */
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                  _("Cannot seek to offset %llu in successor "
                                    "revision file; platform does not support "
@@ -6194,7 +6194,7 @@ update_successor_map(svn_fs_t *fs,
                                            new_rev, successor_ids, pool));
 
   /* Move temporary files into place. */
-  if (new_rev > 1 && new_rev % FSFS_SUCCESSORS_MAX_FILES_PER_DIR != 0)
+  if (new_rev > 1 && new_rev % FSFS_SUCCESSORS_MAX_REVS_PER_FILE != 0)
     perms_reference = successor_ids_abspath;
   else if (new_rev > 1)
     perms_reference = path_successor_ids(fs, new_rev - 1, pool);
