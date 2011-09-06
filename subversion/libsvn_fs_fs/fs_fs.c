@@ -5857,6 +5857,7 @@ read_successor_revisions_file_entry(apr_uint64_t *revision_offset,
   apr_uint32_t n;
   const char *revs_abspath = path_successor_revisions(fs, revision, pool);
 
+  /* ### TODO(sid): don't constantly re-open the file */
   SVN_ERR(svn_io_file_open(&revs_file, revs_abspath, APR_READ,
                            APR_OS_DEFAULT, pool));
   offset_offset = FSFS_SUCCESSORS_REV_OFFSET(revision - 1);
