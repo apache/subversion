@@ -101,8 +101,8 @@ svn_fs_base__create_successor(const svn_fs_id_t **new_id_p,
   /* Record the successor relationship. */
   if (bfd->format >= SVN_FS_BASE__MIN_SUCCESSOR_IDS_FORMAT)
     {
-      svn_string_t *old_id_str = svn_fs_unparse_id(old_id, pool);
-      svn_string_t *new_id_str = svn_fs_unparse_id(new_id, pool);
+      svn_string_t *old_id_str = svn_fs_base__id_unparse(old_id, pool);
+      svn_string_t *new_id_str = svn_fs_base__id_unparse(new_id, pool);
 
       SVN_ERR(svn_fs_bdb__successors_add(fs, old_id_str->data, new_id_str->data,
                                          trail, pool));
@@ -135,8 +135,8 @@ svn_fs_base__delete_node_revision(svn_fs_t *fs,
     {
       if (bfd->format >= SVN_FS_BASE__MIN_SUCCESSOR_IDS_FORMAT)
         {
-          svn_string_t *node_id_str = svn_fs_unparse_id(pred_id, pool);
-          svn_string_t *succ_id_str = svn_fs_unparse_id(id, pool);
+          svn_string_t *node_id_str = svn_fs_base__id_unparse(pred_id, pool);
+          svn_string_t *succ_id_str = svn_fs_base__id_unparse(id, pool);
 
           SVN_ERR(svn_fs_bdb__successors_delete(fs, node_id_str->data,
                                                 succ_id_str->data, trail,
@@ -168,7 +168,7 @@ svn_fs_base__get_node_successors(apr_array_header_t **successors_p,
 {
   apr_array_header_t *all_successors, *successors;
   apr_pool_t *subpool = svn_pool_create(pool);
-  svn_string_t *node_id_str = svn_fs_unparse_id(id, pool);
+  svn_string_t *node_id_str = svn_fs_base__id_unparse(id, pool);
   base_fs_data_t *bfd = fs->fsap_data;
   int i;
 
