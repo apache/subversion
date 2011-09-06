@@ -21,6 +21,7 @@
 #
 import sys
 import os
+import getpass
 from svn import client, ra, core
 
 def printer(segment, pool):
@@ -71,6 +72,39 @@ def parse_args(args):
   return url, peg_revision, start_revision, end_revision
 
 
+def prompt_func_ssl_unknown_cert(realm, failures, cert_info, may_save, pool):
+  print "The certficate details are as follows:"
+  print "--------------------------------------"
+  print "Issuer     : " + str(cert_info.issuer_dname)
+  print "Hostname   : " + str(cert_info.hostname)
+  print "ValidFrom  : " + str(cert_info.valid_from)
+  print "ValidUpto  : " + str(cert_info.valid_until)
+  print "Fingerprint: " + str(cert_info.fingerprint)
+  print ""
+  ssl_trust = core.svn_auth_cred_ssl_server_trust_t()
+  if may_save:
+    choice = raw_input( "accept (t)temporarily   (p)permanently: ")
+  else:
+    choice = raw_input( "(r)Reject or accept (t)temporarily: ")
+  if choice[0] == "t" or choice[0] == "T":
+    ssl_trust.may_save = False
+    ssl_trust.accepted_failures = failures
+  elif choice[0] == "p" or choice[0] == "P":
+    ssl_trust.may_save = True
+    ssl_trust.accepted_failures = failures
+  else:
+    ssl_trust = None
+  return ssl_trust
+
+def prompt_func_simple_prompt(realm, username, may_save, pool):
+  username = raw_input("username: ")
+  password = getpass.getpass(prompt="password: ")
+  simple_cred = core.svn_auth_cred_simple_t()
+  simple_cred.username = username
+  simple_cred.password = password
+  simple_cred.may_save = False
+  return simple_cred
+
 def main():
   try:
     url, peg_revision, start_revision, end_revision = parse_args(sys.argv[1:])
@@ -93,6 +127,9 @@ ERROR: %s
   ctx = client.ctx_t()
   providers = [
     client.get_simple_provider(),
+    core.svn_auth_get_ssl_server_trust_file_provider(),
+    core.svn_auth_get_simple_prompt_provider(prompt_func_simple_prompt, 2),
+    core.svn_auth_get_ssl_server_trust_prompt_provider(prompt_func_ssl_unknown_cert),
     client.get_username_provider(),
     client.get_ssl_server_trust_file_provider(),
     client.get_ssl_client_cert_file_provider(),
