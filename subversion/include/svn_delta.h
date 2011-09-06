@@ -42,6 +42,8 @@
 #include "svn_io.h"
 #include "svn_checksum.h"
 
+#include "private/svn_editor.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -1084,6 +1086,22 @@ typedef struct svn_delta_editor_t
  */
 svn_delta_editor_t *
 svn_delta_default_editor(apr_pool_t *pool);
+
+/* Return a delta editor and baton which will forward calls to @a editor,
+ * allocated in @a pool.
+ *
+ * @note: Since the semantics behind the two editors are different, calls
+ * the timing of calls forwarded to @a editor may be imprecise.  That is,
+ * the memory and computational overhead in using this forwarding
+ * mechanism may be large.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_delta_from_editor(svn_delta_editor_t **deditor,
+                      void **dedit_baton,
+                      svn_editor_t *editor,
+                      apr_pool_t *pool);
 
 /** A text-delta window handler which does nothing.
  *
