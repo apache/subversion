@@ -67,31 +67,221 @@ And, of course, the FSFS support for this enhancement is non-existent.
 FSFS WHITEBOARD
 ===============
 
-Need an append-only key-value store.  (Values may be modified by appending
-to them.  Keys may be appended.)
 
-1. In revisions, all successors are copies, except at most one.
-   => that 'at most one' modification successor can be stored separately
-      from the copies.
+Implementation proposal
+=======================
 
-2. Storing copies:
-   - a directory per noderev that had been copied
-   - in the directory, a file per copy event
-   - each file contains the txn-id of the (txn creating the) revision
-     the copy/successor lives in
-   - directories are sharded, scheme TBD
-     - possibly: one directory serves several copied-from noderevs?
-   - non-copies (ie, 'modification' successors) are stored separately
 
-   Rationale:
+- On-disk File Format -
 
-   - store the txn-id (and check it when reading the directory)
-     to handle issues with aborted commits (eg, mkdir db/revs/${youngest+1})
+All files related to the map are stored in the repos/db/successors
+directory ("successors directory").
 
-   - shard/reuse directories to avoid burning through inodes
-     - may need to 'pack' directories occasionally?  The one-file-per-successor
-       isn't needed in the long term...
+The successor map contains 3 kinds of files:
 
-   - store 'modification' successors separately as there is O(1) of them
+ 1) Node-revision map files.
+    These files map node-revision IDs to lists of revisions.
+    This map answers the question:
+    "In which revisions were successors of a node-revision created?"
 
-3. (append your FSFS design scheme to here): 
+ 2) Created-revision map file.
+    These files map revision numbers of file offsets in successor data files.
+    This map answers the question:
+    "Where in the successor data are those successors which were created
+     in revision N?"
+
+ 3) Successor data files.
+    These files store raw successor data.
+
+The different kinds of files refer to each other as shown below:
+
+                 node_rev_id map     revision map      successor data
+                   +-------+          +--------+       +-----------+
+                   |  ...  |          |  ...   |       | ...       |
+              +------>rN---------+    | offset |  +----->successor | 
+              |    |  ...  |     |    | offset |  |    | successor |
+              |    |  ...  |     +----->offset----+    | END       |
+node_rev_id --+    |  rQ   |          |  ...   |       | successor |
+              |    |  ...  |          | offset |       | ...       |
+              +------>rX---------+    |  ...   |       | ...       |
+                   |  ...  |     |    |  ...   |       | END       |
+                   |  ...  |     +----->offset---------->successor |
+                   |  rZ   |          |  ...   |       | END       |
+                   +-------+          +--------+       +-----------+
+
+Each type of file is described below in detail.
+
+
+-- Node-revision-ID map files --
+
+The purpose of node-revision-id map files is to facilitate lookup
+of successors of a given node-revision.
+
+The files are named after the number of the revision the node-revision
+was created in, modulo some fixed to-be-determined value (i.e. there
+won't be one file per node revision, but one file for every 10, 100,
+or so, node-revisions).
+
+The files are stored within the "node-revs" sub-directory:
+
+ db/successors/node-revs/1
+ db/successors/node-revs/2
+ db/successors/node-revs/3
+ ...
+ db/successors/node-revs/N
+ db/successors/node-revs/M
+ ...
+
+Each node-revision map file stores a mapping of the form
+  node_rev_id => [revnum, revnum, ...]
+The revision numbers identify those revisions in which one or more
+successors of a given node-revision were added.
+
+In the first iteration of this design, the mapping is stored as lines
+of ASCII text. Each line contains an unparsed node_revision_id, a space
+separator (ASCII 0x20), and a revision number in ASCII decimal representation.
+(The design may be refined later to use a more efficient storage model.)
+
+
+-- Revision map files --
+
+The purpose of the revision map file is to facilitate lookup
+of successor data created in a given revision.
+
+The files are named after the numbers of revisions they are responsible for,
+modulo some fixed to-be-determined value (i.e. there won't be one file
+per revision, but one file for every 10, 100, or so, revisions; each file
+is responsible for some range of revisions).
+
+The files are stored within the "revs" sub-directory:
+
+ db/successors/revs/1
+ db/successors/revs/2
+ db/successors/revs/3
+ ...
+ db/successors/revs/N
+ db/successors/revs/M
+ ...
+
+
+Each file consists of an array of 64bit big-endian integers.
+The N'th integer (starting from N=1) in the file specifies the offset
+of successor data (in the corresponding successor data file) which was
+added in the N'th revision within the revision range the map file is
+responsible for.
+
+
+-- Successor-data files --
+
+These files use the same naming scheme as the revision map files (i.e.
+each successor data file is responsible for successors created within
+a specific range of revisions).
+
+The files are stored within the "successor-ids" sub-directory:
+
+ db/successors/successor-ids/1
+ db/successors/successor-ids/2
+ db/successors/successor-ids/3
+ ...
+ db/successors/successor-ids/N
+ db/successors/successor-ids/M
+ ...
+
+
+Each file consists of lines each containing two unparsed node_rev_id
+ASCII strings, separated by ASCII 0x20. The first node-revision ID is a
+predecessor, and the second one is one of its successors.
+The special string "END" on a single line signifies that the following
+successor data belongs to the next revision.
+(The design may be refined later to use a more efficient storage model.)
+
+
+- Procedure for Readers -
+
+A reader first reads the 'current' file and remembers the revision number.
+
+It locates the node-revision map file corresponding to the given node_rev_id,
+based on the node_rev_id's revision modulo a known fixed value.
+
+It opens this file and reads it to obtain a list of revisions which created
+successors of the given node_rev_id. It ignores lines listing node_rev_ids
+not matching the given node_rev_id. It also ignores revisions greater than
+'current'.
+
+Next, the reader opens the corresponding revision map files,
+based on revision numbers in the list, each modulo a known fixed value.
+For each revision N in the revision list, it seeks to the revision's byte
+offset within a revision map file and reads 4 bytes to obtain the offset
+corresponding to revision N within a successor data file.
+
+The reader then opens the corresponding successor data files,
+based on revision numbers in the list, each modulo a known fixed value.
+For each revision offset, it seeks to this offset and reads lines until it
+finds the line "END". It loops through all lines and appends those
+successor IDs to the set of successors which list a predecessor matching
+the given node_rev_id.
+
+In exceptional cases (see below) it is possible that a given revision
+does not actually contain any successors of the given node_rev_id.
+
+
+- Procedure for Writers -
+
+Assume that the writer has access to a mapping from predecessor
+node-revision ID to one or more successor node-revision IDs.
+(The exact mechanism managing this mapping still needs to be determined.
+But it can be assumed to be available as all predecessors and successors
+are known within the context of a commit.)
+
+When committing a finished transaction (in fs_fs.c:commit_body()),
+the writer obtains a write-lock on all files within the successors
+directory it needs to modify.
+
+Let rN be the new revision the writer is committing.
+
+The writer creates an empty temporary file.
+
+If rN falls within the revision range of an existing successor data
+file, the writer looks up the offset of revision N-1 in the corresponding
+revision map file. It copies content from the corresponding successor data
+file to a temporary file up to this offset, and copies any data that follows
+until a line containing "END" has been copied. (Note that this step discards
+data left behind by any previous attempt at committing rN).  
+
+The writer appends any new successor data to the temporary file (note
+that there may be no successor data in case the revision is empty).
+It then adds a terminating "END".
+
+The writer creates another empty temporary file.
+
+If rN falls within the revision range of an existing revision map file,
+it copies ((N-2)*4) bytes of content from the revision map file into the
+temporary file. (Note that this step discards data left behind by any
+previous attempt at committing rN).
+
+The writer appends, to the temporary file, the offset of the new data
+it wrote into the successor data file.
+
+Likewise, the writer creates empty temporary files for each node-revision
+map files is needs to modify. It copies all content from any such
+node-revision map files which already exist, and appends a line to each
+file containing the node_revision ID and the new revision number.
+
+After moving the proto-revprop file into place, and before updating
+'current', the writer moves temporary files into place in the successors
+directory, in the following order:
+
+  1) the new successor data file
+  2) the new revision map file
+  3) each new node_rev_id map file
+
+If the writer fails to update all files in the successors directory,
+it will also fail to update 'current'. In this case, readers will ignore
+the new successor data until another commit succeeds in creating rN.
+Once a commit of rN has succeeded, readers following node-rev-id map
+entries updated by the failing commit might end up with an empty
+successors list for rN. Such erroneous entries will not be cleaned
+up automatically, but can be eliminated by re-creating the repository
+(e.g. via a dump/load cycle). However, the actual successor data stored
+for committed revisions is always correct, and the likelihood of incorrect
+node-revision ID map entries to occur is small.
