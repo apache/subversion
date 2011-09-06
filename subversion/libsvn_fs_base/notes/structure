@@ -129,7 +129,8 @@ where:
      which this node was created.
 
    * PRED-ID, if present, indicates the node revision which is the
-     immediate ancestor of this node.
+     immediate ancestor of this node.  (See the `successors' table for
+     the reverse mapping.)
 
    * PRED-COUNT, if present, indicates the number of predecessors the
      node revision has (recursively).
@@ -855,9 +856,9 @@ Berkeley DB tables
                 "nodes" : btree(ID -> NODE-REVISION, "next-key" -> NODE-ID)
             "revisions" : recno(REVISION)
          "transactions" : btree(TXN -> TRANSACTION, "next-key" -> TXN)
-              "changes" : btree(TXN -> CHANGE)
+              "changes" : btree(TXN -> CHANGE*)
                "copies" : btree(CPY -> COPY, "next-key" -> CPY)
-              "strings" : btree(STR -> STRING, "next-key" -> STR)
+              "strings" : btree(STR -> STRING*, "next-key" -> STR)
       "representations" : btree(REP -> REPRESENTATION, "next-key" -> REP)
                 "uuids" : recno(UUID)
                 "locks" : btree(TOKEN -> LOCK)
@@ -865,6 +866,11 @@ Berkeley DB tables
          "node-origins" : btree(NODE-ID -> ID)
         "checksum-reps" : btree(SHA1SUM -> REP, "next-key" -> number-36)
         "miscellaneous" : btree(STRING -> STRING)
+           "successors" : btree(ID -> ID*)
+
+   [*] These tables have duplicate keys enabled, allowing a 1-to-many
+       mapping for any particular key.  (In practice, the "next-key"
+       key is, if present at all, maintained as a 1-to-1 mapping.)
 
 Syntactic elements
 ------------------
