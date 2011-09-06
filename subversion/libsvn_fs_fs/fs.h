@@ -82,10 +82,16 @@ extern "C" {
 #define CONFIG_SECTION_REP_SHARING       "rep-sharing"
 #define CONFIG_OPTION_ENABLE_REP_SHARING "enable-rep-sharing"
 
+/* Names for successors directories. */
+#define PATH_SUCCESSORS_TOP_DIR       "successors"
+#define PATH_SUCCESSORS_NODE_REVS_DIR "node-revs"
+#define PATH_SUCCESSORS_REVISIONS_DIR "revs"
+#define PATH_SUCCESSORS_IDS_DIR       "ids"
+
 /* The format number of this filesystem.
    This is independent of the repository format number, and
    independent of any other FS back ends. */
-#define SVN_FS_FS__FORMAT_NUMBER   4
+#define SVN_FS_FS__FORMAT_NUMBER   6
 
 /* The minimum format number that supports svndiff version 1.  */
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
@@ -116,6 +122,9 @@ extern "C" {
 
 /* The minimum format number that stores node kinds in changed-paths lists. */
 #define SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT 4
+
+/* The minimum format number that supports successor-IDs.*/
+#define SVN_FS_FS__MIN_SUCCESSORS_FORMAT 6
 
 /* Private FSFS-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified

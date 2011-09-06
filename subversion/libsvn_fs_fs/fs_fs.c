@@ -1224,6 +1224,26 @@ create_file_ignore_eexist(const char *file,
 }
 
 static svn_error_t *
+make_successor_ids_dirs(svn_fs_t *fs, apr_pool_t *pool)
+{
+  const char *top_dir = svn_dirent_join(fs->path, PATH_SUCCESSORS_TOP_DIR,
+                                        pool);
+  const char *node_revs_dir = svn_dirent_join(top_dir,
+                                              PATH_SUCCESSORS_NODE_REVS_DIR,
+                                              pool);
+  const char *revs_dir = svn_dirent_join(top_dir,
+                                         PATH_SUCCESSORS_REVISIONS_DIR, pool);
+  const char *data_dir = svn_dirent_join(top_dir, PATH_SUCCESSORS_IDS_DIR,
+                                         pool);
+
+  SVN_ERR(svn_io_make_dir_recursively(node_revs_dir, pool));
+  SVN_ERR(svn_io_make_dir_recursively(revs_dir, pool));
+  SVN_ERR(svn_io_make_dir_recursively(data_dir, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 upgrade_body(void *baton, apr_pool_t *pool)
 {
   svn_fs_t *fs = baton;
@@ -1236,6 +1256,20 @@ upgrade_body(void *baton, apr_pool_t *pool)
   /* If we're already up-to-date, there's nothing to be done here. */
   if (format == SVN_FS_FS__FORMAT_NUMBER)
     return SVN_NO_ERROR;
+
+  /* ### We don't [yet] support upgrades to formats that support successor-IDs.
+   * ### We'd need to parse all node-revisions to create successor-ID data.
+   * ### This could be done, but for now, we punt. */
+  if (SVN_FS_FS__FORMAT_NUMBER >= SVN_FS_FS__MIN_SUCCESSORS_FORMAT &&
+      format < SVN_FS_FS__MIN_SUCCESSORS_FORMAT)
+    {
+      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                               _("Upgrading FSFS filesystems to format %d is "
+                                 "not supported; please dump this repository "
+                                 "and load the dump file into a new "
+                                 "repository"),
+                               SVN_FS_FS__MIN_SUCCESSORS_FORMAT);
+    }
 
   /* If our filesystem predates the existance of the 'txn-current
      file', make that file and its corresponding lock file. */
@@ -6265,6 +6299,10 @@ svn_fs_fs__create(svn_fs_t *fs,
       SVN_ERR(svn_io_file_create(path_txn_current_lock(fs, pool),
                                  "", pool));
     }
+
+  /* Create successor data dirs if the filesystem supports successors. */
+  if (format >= SVN_FS_FS__MIN_SUCCESSORS_FORMAT)
+    SVN_ERR(make_successor_ids_dirs(fs, pool));
 
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(write_format(path_format(fs, pool),
