@@ -145,7 +145,7 @@ svn_sort_compare_ranges(const void *a,
 /** Sort @a ht according to its keys, return an @c apr_array_header_t
  * containing @c svn_sort__item_t structures holding those keys and values
  * (i.e. for each @c svn_sort__item_t @a item in the returned array,
- * @a item->key and @a item->size are the hash key, and @a item->data points to
+ * @a item->key and @a item->size are the hash key, and @a item->value points to
  * the hash value).
  *
  * Storage is shared with the original hash, not copied.
