@@ -5347,7 +5347,7 @@ write_hash_rep(svn_filesize_t *size,
    If REPS_TO_CACHE is not NULL, append to it a copy (allocated in
    REPS_POOL) of each data rep that is new in this revision.
 
-   If SUCCESSOR_DATA is not NULL, it is a hash table mapping unparsed
+   If SUCCESSOR_IDS is not NULL, it is a hash table mapping unparsed
    node-rev ID (const char *) strings to an array of unparsed (const char *)
    node-rev IDs which are successors of the node-rev ID used as hash key.
    Add any successor data to this hash table, allocated in POOL.
@@ -5355,7 +5355,7 @@ write_hash_rep(svn_filesize_t *size,
    Temporary allocations are also from POOL. */
 static svn_error_t *
 write_final_rev(const svn_fs_id_t **new_id_p,
-                apr_hash_t *successor_data,
+                apr_hash_t *successor_ids,
                 apr_file_t *file,
                 svn_revnum_t rev,
                 svn_fs_t *fs,
@@ -5398,7 +5398,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           svn_fs_dirent_t *dirent = svn_apr_hash_index_val(hi);
 
           svn_pool_clear(subpool);
-          SVN_ERR(write_final_rev(&new_id, successor_data,
+          SVN_ERR(write_final_rev(&new_id, successor_ids,
                                   file, rev, fs, dirent->id,
                                   start_node_id, start_copy_id,
                                   reps_to_cache, reps_pool,
@@ -5490,12 +5490,12 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
   noderev->id = new_id;
 
-  if (successor_data && noderev->predecessor_id)
+  if (successor_ids && noderev->predecessor_id)
     {
       svn_string_t *unparsed_pred = svn_fs_unparse_id(noderev->predecessor_id,
                                                       pool);
       svn_string_t *unparsed_succ = svn_fs_unparse_id(noderev->id, pool);
-      apr_array_header_t *successors = apr_hash_get(successor_data,
+      apr_array_header_t *successors = apr_hash_get(successor_ids,
                                                     unparsed_pred->data,
                                                     APR_HASH_KEY_STRING);
       if (successors)
@@ -5504,7 +5504,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
         {
           successors = apr_array_make(pool, 1, sizeof(const char *));
           APR_ARRAY_PUSH(successors, const char *) = unparsed_succ->data;
-          apr_hash_set(successor_data, unparsed_pred->data,
+          apr_hash_set(successor_ids, unparsed_pred->data,
                        APR_HASH_KEY_STRING, successors);
         }
     }
@@ -5784,7 +5784,7 @@ commit_body(void *baton, apr_pool_t *pool)
   apr_array_header_t *txnprop_list;
   svn_prop_t prop;
   svn_string_t date;
-  apr_hash_t *successor_data;
+  apr_hash_t *successor_ids;
 
   /* Get the current youngest revision. */
   SVN_ERR(svn_fs_fs__youngest_rev(&old_rev, cb->fs, pool));
@@ -5817,8 +5817,8 @@ commit_body(void *baton, apr_pool_t *pool)
    * Also obtain successor information (### TODO: store successor
    * information in a separate file as part of creating the transaction?) */
   root_id = svn_fs_fs__id_txn_create("0", "0", cb->txn->id, pool);
-  successor_data = apr_hash_make(pool);
-  SVN_ERR(write_final_rev(&new_root_id, successor_data,
+  successor_ids = apr_hash_make(pool);
+  SVN_ERR(write_final_rev(&new_root_id, successor_ids,
                           proto_file, new_rev, cb->fs, root_id,
                           start_node_id, start_copy_id,
                           cb->reps_to_cache, cb->reps_pool,
@@ -5831,7 +5831,7 @@ commit_body(void *baton, apr_pool_t *pool)
     apr_hash_index_t *hi;
 
     SVN_DBG(("FSFS successors:\n"));
-    for (hi = apr_hash_first(pool, successor_data); hi; hi = apr_hash_next(hi))
+    for (hi = apr_hash_first(pool, successor_ids); hi; hi = apr_hash_next(hi))
       {
         const char *pred = svn_apr_hash_index_key(hi);
         apr_array_header_t *successors = svn_apr_hash_index_val(hi);
