@@ -56,17 +56,23 @@ from the filesystem are those which have no successors (which might
 not hold up if an obliteration feature is added, depending on the
 implementation).
 
-Currently the branch does not have any FS format version changes
-present.  That would need to be added for the code is released.
+The branch needs to implement the correct FS format bumping for both
+backends.
+
+The branch needs to be synced with 21 months of trunk changes.
+
+[ The branch does not currently add any public APIs. ]
 
 Lacking also are C unit tests for this functionality.
 
-And, of course, the FSFS support for this enhancement is non-existent.
+FSFS support for this enhancement is under development; see below.
 
 
 FSFS WHITEBOARD
 ===============
 
+TODO: 'svnadmin upgrade'
+(see <http://mid.gmane.org/20110906154244.GA3863@daniel3.local>)
 
 Implementation proposal
 =======================
