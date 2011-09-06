@@ -41,8 +41,7 @@
 #include "svn_string.h"
 #include "svn_io.h"
 #include "svn_checksum.h"
-
-#include "private/svn_editor.h"
+#include "svn_editor.h"
 
 #ifdef __cplusplus
 extern "C" {
