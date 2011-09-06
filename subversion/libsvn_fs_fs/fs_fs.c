@@ -279,6 +279,7 @@ path_successor_node_revs(svn_fs_t *fs, const char *node_rev_id,
   svn_revnum_t rev;
   long shard;
   
+  /* ### TODO(sid): danielsh: is there a need to guard for ID == NULL here? */
   id = svn_fs_fs__id_parse(node_rev_id, strlen(node_rev_id), pool);
   rev = svn_fs_fs__id_rev(id);
   shard = rev / FSFS_SUCCESSORS_MAX_FILES_PER_DIR;
@@ -5806,6 +5807,7 @@ verify_locks(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* ### TODO(sid): compare svn_stream_bounded_copy() from the revprop-packing branch */
 static svn_error_t *
 copy_file_partially(apr_file_t *source_file,
                     apr_file_t *dest_file,
@@ -5850,7 +5852,7 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
   apr_file_t *revs_file;
   apr_off_t offset;
   apr_size_t size;
-  apr_uint32_t n;
+  apr_uint32_t n; /* ### TODO(sid): move to loop scope */
   apr_pool_t *iterpool = NULL;
   apr_hash_index_t *hi;
 
@@ -5860,6 +5862,7 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
                                    svn_dirent_dirname(successor_ids_abspath,
                                                       pool),
                                    svn_io_file_del_none, pool, pool));
+  /* ### TODO(sid): loop condition */
   if (new_rev > 1 && new_rev % FSFS_SUCCESSORS_MAX_FILES_PER_DIR != 0)
     {
       /* Figure out the offset of successor data for the previous revision. */
@@ -5868,7 +5871,7 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
 
       SVN_ERR(svn_io_file_open(&revs_file, revs_abspath, APR_READ,
                                APR_OS_DEFAULT, pool));
-      SVN_ERR_ASSERT(new_rev >= 1);
+      SVN_ERR_ASSERT(new_rev >= 1); /* ### TODO(sid): redundant */
       offset = FSFS_SUCCESSORS_REV_OFFSET(new_rev - 1);
       SVN_ERR(svn_io_file_seek(revs_file, APR_SET, &offset, pool));
       
@@ -5876,7 +5879,7 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
        * The most significant 4 bytes come first. */
       size = 4;
       SVN_ERR(svn_io_file_read(revs_file, &n, &size, pool));
-      SVN_ERR_ASSERT(size == 4);
+      SVN_ERR_ASSERT(size == 4); /* ### TODO(sid): normal error */
       SVN_ERR(svn_io_file_read(revs_file, &m, &size, pool));
       SVN_ERR_ASSERT(size == 4);
       prev_successor_ids_offset = ((apr_uint64_t)(ntohl(n)) << 32) | ntohl(m);
@@ -5923,6 +5926,7 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
                                            iterpool));
             SVN_ERR(svn_io_file_write_full(successor_ids_temp_file,
                                            "\n", 1, NULL, iterpool));
+            /* ### TODO(sid): use macro  */
             if (strcmp(line->data, "END") == 0)
               break;
           }
@@ -5996,6 +6000,7 @@ update_successor_revisions_file(const char **revs_temp_abspath,
                                    svn_io_file_del_none, pool, pool));
   /* Copy offsets of existing revisions into the temporary successor
    * revisions file. */
+  /* ### TODO(sid): loop condition */
   if (new_rev > 1 && new_rev % FSFS_SUCCESSORS_MAX_FILES_PER_DIR != 0)
     {
       SVN_ERR(svn_io_file_open(&revs_file, revs_abspath, APR_READ,
@@ -6004,6 +6009,8 @@ update_successor_revisions_file(const char **revs_temp_abspath,
        * This gives a "will never be executed" warning on some platforms. */
       if (sizeof(apr_off_t) < sizeof(apr_uint64_t) &&
           new_rev_offset > APR_UINT32_MAX)
+        /* ### TODO(sid): this can be detected in svn_fs_fs__create() by 
+               computing FSFS_SUCCESSORS_MAX_FILES_PER_DIR*8 */
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                  _("Cannot seek to offset %llu in successor "
                                    "revision file; platform does not support "
@@ -6041,6 +6048,11 @@ update_successor_node_revs_files(apr_hash_t **node_revs_tempfiles,
   apr_hash_index_t *hi;
 
   /* Create temporary files we need to update all node revisions. */
+  /* ### TODO(sid): this creates one tempfile per noderev touched in the commit.
+                    how are they cleaned up in the event of segfault during commit,
+                    or even in the event of an SVN_ERR() below returning from
+                    this function prematurely? */
+  /* ### TODO(sid): stsp says: don't hold all noderevs in memory */
   for (hi = apr_hash_first(pool, successor_ids); hi; hi = apr_hash_next(hi))
     {
       const char *pred = svn_apr_hash_index_key(hi);
@@ -6083,6 +6095,7 @@ update_successor_node_revs_files(apr_hash_t **node_revs_tempfiles,
           temp_stream = svn_stream_from_aprfile2(tempfile, TRUE, iterpool);
           SVN_ERR(svn_stream_copy3(node_revs_stream, temp_stream,
                                    NULL, NULL, iterpool));
+          /* ### TODO(sid): runs into file descriptor limit? since TEMP_STREAM left open */
         }
     }
 
