@@ -5543,14 +5543,18 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
   noderev->id = new_id;
 
+  /* Maybe add a mapping to SUCCESSOR_IDS. */
   if (successor_ids && noderev->predecessor_id)
     {
-      svn_string_t *unparsed_pred = svn_fs_unparse_id(noderev->predecessor_id,
-                                                      pool);
-      svn_string_t *unparsed_succ = svn_fs_unparse_id(noderev->id, pool);
-      apr_array_header_t *successors = apr_hash_get(successor_ids,
-                                                    unparsed_pred->data,
-                                                    APR_HASH_KEY_STRING);
+      svn_string_t *unparsed_pred;
+      svn_string_t *unparsed_succ;
+      apr_array_header_t *successors;
+      
+      unparsed_pred = svn_fs_fs__id_unparse(noderev->predecessor_id, pool);
+      unparsed_succ = svn_fs_fs__id_unparse(noderev->id, pool);
+      successors = apr_hash_get(successor_ids, unparsed_pred->data,
+                                APR_HASH_KEY_STRING);
+
       if (successors)
         APR_ARRAY_PUSH(successors, const char *) = unparsed_succ->data;
       else
