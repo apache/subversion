@@ -27,7 +27,7 @@
 
 #include "svn_types.h"
 #include "svn_error.h"
-#include "private/svn_editor.h"
+#include "svn_editor.h"
 
 #include "../svn_test_fs.h"
 
