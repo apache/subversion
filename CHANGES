@@ -194,7 +194,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * add information on text and property mods in log APIs (r877688)
     * fixed: svn_ra_local__get_file() leaks file descriptors (issue #3290)
     * svn_ra_neon__get_dir() returns correct dir set for URLs (issue #3093)
-    * swig-py: always set ChangedPath.path (issue #2630)
+    * swig-py: always set ChangedPath.path (also for deletes) (issue #2630)
     * improve conflict resolver API for a specific direction (issue #3049)
 
   - Bindings:
