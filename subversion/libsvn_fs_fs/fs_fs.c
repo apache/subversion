@@ -6197,12 +6197,6 @@ update_successor_map(svn_fs_t *fs,
   if (ffd->format < SVN_FS_FS__MIN_SUCCESSORS_FORMAT)
     return SVN_NO_ERROR;
 
-  /* Create temporary files containing updated successor map data. */
-  SVN_ERR(update_successor_ids_file(&successor_ids_temp_abspath,
-                                    fs, new_rev, successor_ids, pool));
-  SVN_ERR(update_successor_node_revs_files(&node_revs_tempfiles, fs,
-                                           new_rev, successor_ids, pool));
-
   if (new_rev % FSFS_SUCCESSORS_MAX_REVS_PER_FILE == 0)
     {
       /* Create the shards for new successor files. We don't care if this
@@ -6231,6 +6225,12 @@ update_successor_map(svn_fs_t *fs,
                                      pool),
                                    pool));
     }
+
+  /* Create temporary files containing updated successor map data. */
+  SVN_ERR(update_successor_ids_file(&successor_ids_temp_abspath,
+                                    fs, new_rev, successor_ids, pool));
+  SVN_ERR(update_successor_node_revs_files(&node_revs_tempfiles, fs,
+                                           new_rev, successor_ids, pool));
 
   /* Move temporary files into place. */
   if (new_rev > 1 && new_rev % FSFS_SUCCESSORS_MAX_REVS_PER_FILE != 0)
