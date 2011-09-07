@@ -5421,7 +5421,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                 const char *start_copy_id,
                 apr_array_header_t *reps_to_cache,
                 apr_pool_t *reps_pool,
-                apr_pool_t *pool)
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
   node_revision_t *noderev;
   apr_off_t my_offset;
@@ -5437,7 +5438,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (! svn_fs_fs__id_txn_id(id))
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, id, pool));
+  SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, id, scratch_pool));
 
   if (noderev->kind == svn_node_dir)
     {
@@ -5446,11 +5447,12 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       apr_hash_index_t *hi;
 
       /* This is a directory.  Write out all the children first. */
-      subpool = svn_pool_create(pool);
+      subpool = svn_pool_create(scratch_pool);
 
-      SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, noderev, pool));
+      SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, noderev, scratch_pool));
 
-      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+      for (hi = apr_hash_first(scratch_pool, entries); hi;
+           hi = apr_hash_next(hi))
         {
           svn_fs_dirent_t *dirent = svn_apr_hash_index_val(hi);
 
@@ -5459,23 +5461,24 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                   file, rev, fs, dirent->id,
                                   start_node_id, start_copy_id,
                                   reps_to_cache, reps_pool,
-                                  subpool));
+                                  result_pool, subpool));
           if (new_id && (svn_fs_fs__id_rev(new_id) == rev))
-            dirent->id = svn_fs_fs__id_copy(new_id, pool);
+            dirent->id = svn_fs_fs__id_copy(new_id, scratch_pool);
         }
       svn_pool_destroy(subpool);
 
       if (noderev->data_rep && noderev->data_rep->txn_id)
         {
           /* Write out the contents of this directory as a text rep. */
-          SVN_ERR(unparse_dir_entries(&str_entries, entries, pool));
+          SVN_ERR(unparse_dir_entries(&str_entries, entries, scratch_pool));
 
           noderev->data_rep->txn_id = NULL;
           noderev->data_rep->revision = rev;
-          SVN_ERR(get_file_offset(&noderev->data_rep->offset, file, pool));
+          SVN_ERR(get_file_offset(&noderev->data_rep->offset, file,
+                                  scratch_pool));
           SVN_ERR(write_hash_rep(&noderev->data_rep->size,
                                  &noderev->data_rep->md5_checksum, file,
-                                 str_entries, pool));
+                                 str_entries, scratch_pool));
           noderev->data_rep->expanded_size = noderev->data_rep->size;
         }
     }
@@ -5497,11 +5500,11 @@ write_final_rev(const svn_fs_id_t **new_id_p,
     {
       apr_hash_t *proplist;
 
-      SVN_ERR(svn_fs_fs__get_proplist(&proplist, fs, noderev, pool));
-      SVN_ERR(get_file_offset(&noderev->prop_rep->offset, file, pool));
+      SVN_ERR(svn_fs_fs__get_proplist(&proplist, fs, noderev, scratch_pool));
+      SVN_ERR(get_file_offset(&noderev->prop_rep->offset, file, scratch_pool));
       SVN_ERR(write_hash_rep(&noderev->prop_rep->size,
                              &noderev->prop_rep->md5_checksum, file,
-                             proplist, pool));
+                             proplist, scratch_pool));
 
       noderev->prop_rep->txn_id = NULL;
       noderev->prop_rep->revision = rev;
@@ -5509,13 +5512,13 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
 
   /* Convert our temporary ID into a permanent revision one. */
-  SVN_ERR(get_file_offset(&my_offset, file, pool));
+  SVN_ERR(get_file_offset(&my_offset, file, scratch_pool));
 
   node_id = svn_fs_fs__id_node_id(noderev->id);
   if (*node_id == '_')
     {
       if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
-        my_node_id = apr_psprintf(pool, "%s-%ld", node_id + 1, rev);
+        my_node_id = apr_psprintf(scratch_pool, "%s-%ld", node_id + 1, rev);
       else
         {
           svn_fs_fs__add_keys(start_node_id, node_id + 1, my_node_id_buf);
@@ -5529,7 +5532,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (*copy_id == '_')
     {
       if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
-        my_copy_id = apr_psprintf(pool, "%s-%ld", copy_id + 1, rev);
+        my_copy_id = apr_psprintf(scratch_pool, "%s-%ld", copy_id + 1, rev);
       else
         {
           svn_fs_fs__add_keys(start_copy_id, copy_id + 1, my_copy_id_buf);
@@ -5543,7 +5546,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
     noderev->copyroot_rev = rev;
 
   new_id = svn_fs_fs__id_rev_create(my_node_id, my_copy_id, rev, my_offset,
-                                    pool);
+                                    result_pool);
 
   noderev->id = new_id;
 
@@ -5554,8 +5557,9 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       svn_string_t *unparsed_succ;
       apr_array_header_t *successors;
       
-      unparsed_pred = svn_fs_fs__id_unparse(noderev->predecessor_id, pool);
-      unparsed_succ = svn_fs_fs__id_unparse(noderev->id, pool);
+      unparsed_pred = svn_fs_fs__id_unparse(noderev->predecessor_id,
+                                            result_pool);
+      unparsed_succ = svn_fs_fs__id_unparse(noderev->id, result_pool);
       successors = apr_hash_get(successor_ids, unparsed_pred->data,
                                 APR_HASH_KEY_STRING);
 
@@ -5563,7 +5567,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
         APR_ARRAY_PUSH(successors, const char *) = unparsed_succ->data;
       else
         {
-          successors = apr_array_make(pool, 1, sizeof(const char *));
+          successors = apr_array_make(result_pool, 1, sizeof(const char *));
           APR_ARRAY_PUSH(successors, const char *) = unparsed_succ->data;
           apr_hash_set(successor_ids, unparsed_pred->data,
                        APR_HASH_KEY_STRING, successors);
@@ -5571,10 +5575,11 @@ write_final_rev(const svn_fs_id_t **new_id_p,
     }
 
   /* Write out our new node-revision. */
-  SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_aprfile2(file, TRUE, pool),
+  SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_aprfile2(file, TRUE,
+                                                            scratch_pool),
                                    noderev, ffd->format,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
-                                   pool));
+                                   scratch_pool));
 
   /* Save the data representation's hash in the rep cache. */
   if (ffd->rep_sharing_allowed
@@ -6288,7 +6293,7 @@ commit_body(void *baton, apr_pool_t *pool)
                           proto_file, new_rev, cb->fs, root_id,
                           start_node_id, start_copy_id,
                           cb->reps_to_cache, cb->reps_pool,
-                          pool));
+                          pool, pool));
 #ifdef SVN_DEBUG
   {
     /* Display successor data so it can be checked for correctness.
@@ -6461,7 +6466,7 @@ commit_obliteration_body(void *baton, apr_pool_t *pool)
   SVN_ERR(write_final_rev(&new_root_id, NULL, proto_file, new_rev,
                           cb->fs, root_id, start_node_id, start_copy_id,
                           cb->reps_to_cache, cb->reps_pool,
-                          pool));
+                          pool, pool));
 
   /* Write the changed-path information. */
   SVN_ERR(write_final_changed_path_info(&changed_path_offset, proto_file,
