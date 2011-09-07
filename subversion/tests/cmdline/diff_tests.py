@@ -83,64 +83,58 @@ def make_git_diff_header(target_path, repos_relpath,
   else:
     dst_label = ''
 
+  output = [
+    "Index: " + path_as_shown + "\n",
+    "===================================================================\n"
+  ]
   if add:
-    output = [
-      "Index: " + path_as_shown + "\n",
-      "===================================================================\n",
+    output.extend([
       "diff --git a/" + repos_relpath + " b/" + repos_relpath + "\n",
       "new file mode 10644\n",
-    ]
+    ])
     if text_changes:
       output.extend([
         "--- /dev/null\t(" + old_tag + ")\n",
         "+++ b/" + repos_relpath + dst_label + "\t(" + new_tag + ")\n"
       ])
   elif delete:
-    output = [
-      "Index: " + path_as_shown + "\n",
-      "===================================================================\n",
+    output.extend([
       "diff --git a/" + repos_relpath + " b/" + repos_relpath + "\n",
       "deleted file mode 10644\n",
-    ]
+    ])
     if text_changes:
       output.extend([
         "--- a/" + repos_relpath + src_label + "\t(" + old_tag + ")\n",
         "+++ /dev/null\t(" + new_tag + ")\n"
       ])
   elif cp:
-    output = [
-      "Index: " + path_as_shown + "\n",
-      "===================================================================\n",
+    output.extend([
       "diff --git a/" + copyfrom_path + " b/" + repos_relpath + "\n",
       "copy from " + copyfrom_path + "\n",
       "copy to " + repos_relpath + "\n",
-    ]
+    ])
     if text_changes:
       output.extend([
         "--- a/" + copyfrom_path + src_label + "\t(" + old_tag + ")\n",
         "+++ b/" + repos_relpath + "\t(" + new_tag + ")\n"
       ])
   elif mv:
-    return [
-      "Index: " + path_as_shown + "\n",
-      "===================================================================\n",
+    output.extend([
       "diff --git a/" + copyfrom_path + " b/" + path_as_shown + "\n",
       "rename from " + copyfrom_path + "\n",
       "rename to " + repos_relpath + "\n",
-    ]
+    ])
     if text_changes:
       output.extend([
         "--- a/" + copyfrom_path + src_label + "\t(" + old_tag + ")\n",
         "+++ b/" + repos_relpath + "\t(" + new_tag + ")\n"
       ])
   else:
-    output = [
-      "Index: " + path_as_shown + "\n",
-      "===================================================================\n",
+    output.extend([
       "diff --git a/" + repos_relpath + " b/" + repos_relpath + "\n",
       "--- a/" + repos_relpath + src_label + "\t(" + old_tag + ")\n",
       "+++ b/" + repos_relpath + dst_label + "\t(" + new_tag + ")\n",
-    ]
+    ])
   return output
 
 
