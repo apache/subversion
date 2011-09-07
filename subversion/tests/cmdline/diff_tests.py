@@ -3720,10 +3720,9 @@ def diff_git_with_props(sbox):
                                      '--git', wc_dir)
 
 @XFail()
+@Issue(4010)
 def diff_correct_wc_base_revnum(sbox):
   "diff WC-WC shows the correct base rev num"
-  # There was a bug in which diff on the parent path showed the
-  # parent's base revision for a child that had only a prop-change.
 
   sbox.build()
   wc_dir = sbox.wc_dir
