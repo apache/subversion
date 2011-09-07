@@ -5983,7 +5983,7 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
   if (new_rev % FSFS_SUCCESSORS_MAX_REVS_PER_FILE == 0)
     {
       /* This is a new file, so write a new index. */
-      write_new_successor_index(successor_ids_temp_file, pool);
+      SVN_ERR(write_new_successor_index(successor_ids_temp_file, pool));
       my_offset = FSFS_SUCCESSORS_INDEX_SIZE;
     }
   else
