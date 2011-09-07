@@ -253,13 +253,39 @@ path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 }
 
 static const char *
+path_successor_ids_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  assert(ffd->max_files_per_dir);
+  return svn_dirent_join_many(pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
+                              PATH_SUCCESSORS_IDS_DIR,
+                              apr_psprintf(pool, "%ld",
+                                                 rev / ffd->max_files_per_dir),
+                              NULL);
+}
+
+static const char *
 path_successor_ids(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   long filenum = rev / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
 
-  return svn_dirent_join_many(pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
-                              PATH_SUCCESSORS_IDS_DIR,
+  return svn_dirent_join_many(pool, path_successor_ids_shard(fs, rev, pool),
                               apr_psprintf(pool, "%ld", filenum), NULL);
+}
+
+static const char *
+path_successor_revisions_shard(svn_fs_t *fs, svn_revnum_t rev,
+                               apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  assert(ffd->max_files_per_dir);
+  return svn_dirent_join_many(pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
+                              PATH_SUCCESSORS_REVISIONS_DIR,
+                              apr_psprintf(pool, "%ld",
+                                                 rev / ffd->max_files_per_dir),
+                              NULL);
 }
 
 static const char *
@@ -267,9 +293,23 @@ path_successor_revisions(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   long filenum = rev / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
 
-  return svn_dirent_join_many(pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
-                              PATH_SUCCESSORS_REVISIONS_DIR,
+  return svn_dirent_join_many(pool,
+                              path_successor_revisions_shard(fs, rev, pool),
                               apr_psprintf(pool, "%ld", filenum), NULL);
+}
+
+static const char *
+path_successor_node_revs_shard(svn_fs_t *fs, svn_revnum_t rev,
+                               apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  assert(ffd->max_files_per_dir);
+  return svn_dirent_join_many(pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
+                              PATH_SUCCESSORS_NODE_REVS_DIR,
+                              apr_psprintf(pool, "%ld",
+                                                 rev / ffd->max_files_per_dir),
+                              NULL);
 }
 
 static const char *
@@ -285,8 +325,8 @@ path_successor_node_revs(svn_fs_t *fs, const char *node_rev_id,
   rev = svn_fs_fs__id_rev(id);
   filenum = rev / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
 
-  return svn_dirent_join_many(pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
-                              PATH_SUCCESSORS_NODE_REVS_DIR,
+  return svn_dirent_join_many(pool,
+                              path_successor_node_revs_shard(fs, rev, pool),
                               apr_psprintf(pool, "%ld", filenum), NULL);
 }
 
@@ -1282,19 +1322,21 @@ make_successor_ids_dirs(svn_fs_t *fs, apr_pool_t *pool)
 {
   const char *top_dir = svn_dirent_join(fs->path, PATH_SUCCESSORS_TOP_DIR,
                                         pool);
-  const char *node_revs_dir = svn_dirent_join(top_dir,
-                                              PATH_SUCCESSORS_NODE_REVS_DIR,
-                                              pool);
-  const char *revs_dir = svn_dirent_join(top_dir,
-                                         PATH_SUCCESSORS_REVISIONS_DIR, pool);
-  const char *data_dir = svn_dirent_join(top_dir, PATH_SUCCESSORS_IDS_DIR,
-                                         pool);
+  const char *node_revs_dir = svn_dirent_join_many(
+                                pool, top_dir, PATH_SUCCESSORS_NODE_REVS_DIR,
+                                "0", NULL, pool);
+  const char *revisions_dir = svn_dirent_join_many(
+                                pool, top_dir, PATH_SUCCESSORS_REVISIONS_DIR,
+                                "0", NULL, pool);
+  const char *ids_dir = svn_dirent_join_many(pool, top_dir,
+                                             PATH_SUCCESSORS_IDS_DIR,
+                                             "0", NULL, pool);
   apr_file_t *file;
   apr_uint64_t n;
 
   SVN_ERR(svn_io_make_dir_recursively(node_revs_dir, pool));
-  SVN_ERR(svn_io_make_dir_recursively(revs_dir, pool));
-  SVN_ERR(svn_io_make_dir_recursively(data_dir, pool));
+  SVN_ERR(svn_io_make_dir_recursively(revisions_dir, pool));
+  SVN_ERR(svn_io_make_dir_recursively(ids_dir, pool));
 
   /* Create empty successor-ID data for revision zero.
    * No successors were created in this revision. */
@@ -6226,6 +6268,47 @@ update_successor_map(svn_fs_t *fs,
                                           new_successor_ids_offset, pool));
   SVN_ERR(update_successor_node_revs_files(&node_revs_tempfiles, fs,
                                            new_rev, successor_ids, pool));
+
+  if (new_rev % FSFS_SUCCESSORS_MAX_REVS_PER_FILE == 0)
+    {
+      /* Create the shards for new successor files. We don't care if this
+       * fails because the shards already existed for some reason. */
+      svn_error_t *err;
+      const char *new_dir = path_successor_ids_shard(fs, new_rev, pool);
+      err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
+      if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
+        SVN_ERR(err);
+      svn_error_clear(err);
+      SVN_ERR(svn_fs_fs__dup_perms(new_dir,
+                                   svn_dirent_join(fs->path,
+                                                   PATH_SUCCESSORS_IDS_DIR,
+                                                   pool),
+                                   pool));
+
+      new_dir = path_successor_revisions_shard(fs, new_rev, pool);
+      err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
+      if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
+        SVN_ERR(err);
+      svn_error_clear(err);
+      SVN_ERR(svn_fs_fs__dup_perms(new_dir,
+                                   svn_dirent_join(
+                                     fs->path,
+                                     PATH_SUCCESSORS_REVISIONS_DIR,
+                                     pool),
+                                   pool));
+
+      new_dir = path_successor_node_revs_shard(fs, new_rev, pool);
+      err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
+      if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
+        SVN_ERR(err);
+      svn_error_clear(err);
+      SVN_ERR(svn_fs_fs__dup_perms(new_dir,
+                                   svn_dirent_join(
+                                     fs->path,
+                                     PATH_SUCCESSORS_NODE_REVS_DIR,
+                                     pool),
+                                   pool));
+    }
 
   /* Move temporary files into place. */
   if (new_rev > 1 && new_rev % FSFS_SUCCESSORS_MAX_REVS_PER_FILE != 0)
