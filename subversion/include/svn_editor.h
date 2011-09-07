@@ -96,7 +96,7 @@ extern "C" {
  * and consumer of these tree deltas were (and are) tightly coupled. As noted
  * above, the tree delta producer needed to be *totally* aware of the tree
  * that it needed to edit. So rather than telling the delta consumer how to
- * edit its tree, the classic "@c svn_delta_editor_t" interface focused
+ * edit its tree, the classic #svn_delta_editor_t interface focused
  * entirely on the tree delta, an intermediate (logical) data structure
  * which was unusable outside of the particular, coupled pairing of producer
  * and consumer. This generation of the API forgoes the logical tree delta
@@ -105,7 +105,7 @@ extern "C" {
  * a set of operations describing the change, and a "receiver" accepts and
  * applies them to its tree.
  *
- * The classic interface was named "@c svn_delta_editor_t" and was described
+ * The classic interface was named #svn_delta_editor_t and was described
  * idiomatically as the "editor interface". This generation of the interface
  * retains the "editor" name for that reason. All notions of a "tree delta"
  * structure are no longer part of this interface.
@@ -178,7 +178,7 @@ extern "C" {
  *    Just before each callback invocation is carried out, the @a cancel_func
  *    that was passed to svn_editor_create() is invoked to poll any
  *    external reasons to cancel the sequence of operations.  Unless it
- *    overrides the cancellation (denoted by SVN_ERR_CANCELLED), the driver
+ *    overrides the cancellation (denoted by #SVN_ERR_CANCELLED), the driver
  *    aborts the transmission by invoking the svn_editor_abort() callback.
  *    Exceptions to this are calls to svn_editor_complete() and
  *    svn_editor_abort(), which cannot be canceled externally.
@@ -322,7 +322,7 @@ extern "C" {
  * context.
  *
  *
- * ### TODO @todo anything missing? -- allow text and prop change to follow
+ * @todo ### TODO anything missing? -- allow text and prop change to follow
  * a move or copy. -- set_text() vs. apply_text_delta()? -- If a
  * set_props/set_text/set_target/copy/move/delete in a merge source is
  * applied to a different branch, which side will REVISION arguments reflect
