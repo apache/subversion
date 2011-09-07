@@ -92,7 +92,7 @@
 
 /* Calculate the offset of an entry in a successor-IDs file index. */
 #define FSFS_SUCCESSORS_INDEX_REV_OFFSET(rev) \
-  ((rev) % FSFS_SUCCESSORS_INDEX_SIZE)
+  (((rev) % FSFS_SUCCESSORS_MAX_REVS_PER_FILE) * 8)
 
 /* Marker terminating per-revision successor-IDs. */
 #define FSFS_SUCCESSOR_IDS_END_MARKER "END\n"
@@ -1301,14 +1301,31 @@ create_file_ignore_eexist(const char *file,
 }
 
 static svn_error_t *
+write_new_successor_index(apr_file_t *file,
+                          apr_pool_t *pool)
+{
+  apr_uint64_t zeroes[FSFS_SUCCESSORS_MAX_REVS_PER_FILE - 1];
+  apr_uint32_t n;
+
+  /* Write the first entry. */
+  n = 0;
+  SVN_ERR(svn_io_file_write_full(file, &n, sizeof(n), NULL, pool));
+  n = htonl(FSFS_SUCCESSORS_INDEX_SIZE);
+  SVN_ERR(svn_io_file_write_full(file, &n, sizeof(n), NULL, pool));
+
+  /* Write the rest of the new index (all zeroes). */
+  memset(zeroes, 0, sizeof(zeroes));
+  SVN_ERR(svn_io_file_write_full(file, (char*)zeroes, sizeof(zeroes),
+                                 NULL, pool));
+}
+
+static svn_error_t *
 make_successor_ids_dirs(svn_fs_t *fs, apr_pool_t *pool)
 {
   const char *top_dir_abspath;
   const char *ids_dir_abspath;
   const char *node_revs_dir_abspath;
   apr_file_t *file;
-  char new_index[FSFS_SUCCESSORS_INDEX_SIZE];
-  apr_uint32_t *n;
 
   top_dir_abspath = svn_dirent_join(fs->path, PATH_SUCCESSORS_TOP_DIR, pool);
   /* The new dirs must already contain the first shard. */
@@ -1325,12 +1342,7 @@ make_successor_ids_dirs(svn_fs_t *fs, apr_pool_t *pool)
   SVN_ERR(svn_io_file_open(&file, path_successor_ids(fs, 0, pool),
                            APR_WRITE | APR_BUFFERED | APR_CREATE,
                            APR_OS_DEFAULT, pool));
-  /* Write the new index. */
-  memset(new_index, 0, sizeof(new_index));
-  n = (apr_int32_t*)&new_index[3];
-  *n = htonl(FSFS_SUCCESSORS_INDEX_SIZE);
-  SVN_ERR(svn_io_file_write_full(file, new_index, sizeof(new_index), NULL,
-                                 pool));
+  SVN_ERR(write_new_successor_index(file, pool));
   /* No successors were created in revision zero. */
   SVN_ERR(svn_io_file_write_full(file, FSFS_SUCCESSOR_IDS_END_MARKER,
                                  sizeof(FSFS_SUCCESSOR_IDS_END_MARKER) - 1,
@@ -5960,7 +5972,6 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
   apr_pool_t *iterpool = NULL;
   apr_hash_index_t *hi;
   apr_off_t my_offset;
-  apr_off_t rev_offset;
   apr_uint32_t n;
 
   /* Create a temporary file to write new successor data to. */
@@ -5969,7 +5980,13 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
                                    svn_dirent_dirname(successor_ids_abspath,
                                                       pool),
                                    svn_io_file_del_none, pool, pool));
-  if (new_rev % FSFS_SUCCESSORS_MAX_REVS_PER_FILE != 0)
+  if (new_rev % FSFS_SUCCESSORS_MAX_REVS_PER_FILE == 0)
+    {
+      /* This is a new file, so write a new index. */
+      write_new_successor_index(successor_ids_temp_file, pool);
+      my_offset = FSFS_SUCCESSORS_INDEX_SIZE;
+    }
+  else
     {
       apr_uint64_t prev_successor_ids_offset;
       apr_file_t *successor_ids_file;
@@ -6031,10 +6048,10 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
                                      "not terminated"), (new_rev - 1));
         SVN_ERR(svn_stream_close(stream));
       }
-    }
 
-  /* Remember the current offset -- we'll write it to the index later. */
-  SVN_ERR(get_file_offset(&my_offset, successor_ids_temp_file, pool));
+      /* Remember the current offset -- we'll write it to the index later. */
+      SVN_ERR(get_file_offset(&my_offset, successor_ids_temp_file, pool));
+    }
 
   /* Write new successor data to the temporary successor data file. */
   if (iterpool == NULL)
@@ -6067,17 +6084,21 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
                                  sizeof(FSFS_SUCCESSOR_IDS_END_MARKER) - 1,
                                  NULL, pool));
 
-  /* Write offset of newly created successor data into the index. */
-  rev_offset = FSFS_SUCCESSORS_INDEX_REV_OFFSET(new_rev);
-  SVN_ERR(svn_io_file_seek(successor_ids_temp_file, APR_SET, &rev_offset,
-                           pool));
-  n = htonl(my_offset >> 32);
-  SVN_ERR(svn_io_file_write_full(successor_ids_temp_file, &n, sizeof(n),
-                                 NULL, pool));
-  n = htonl(my_offset & 0xffffffff);
-  SVN_ERR(svn_io_file_write_full(successor_ids_temp_file, &n, sizeof(n),
-                                 NULL, pool));
+  /* Write offset of new successor data into the index unless we created
+   * a fresh index (in which case the offset has already been written). */
+  if (my_offset != FSFS_SUCCESSORS_INDEX_SIZE)
+    {
+      apr_off_t rev_offset = FSFS_SUCCESSORS_INDEX_REV_OFFSET(new_rev);
 
+      SVN_ERR(svn_io_file_seek(successor_ids_temp_file, APR_SET, &rev_offset,
+                               pool));
+      n = htonl(my_offset >> 32);
+      SVN_ERR(svn_io_file_write_full(successor_ids_temp_file, &n, sizeof(n),
+                                     NULL, pool));
+      n = htonl(my_offset & 0xffffffff);
+      SVN_ERR(svn_io_file_write_full(successor_ids_temp_file, &n, sizeof(n),
+                                     NULL, pool));
+    }
   SVN_ERR(svn_io_file_flush_to_disk(successor_ids_temp_file, pool));
   SVN_ERR(svn_io_file_close(successor_ids_temp_file, pool));
 
