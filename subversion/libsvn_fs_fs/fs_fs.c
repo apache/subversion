@@ -5926,9 +5926,21 @@ read_successor_index_entry(apr_uint64_t *revision_offset,
    * The most significant 4 bytes come first. */
   size = 4;
   SVN_ERR(svn_io_file_read(file, &n, &size, pool));
-  SVN_ERR_ASSERT(size == 4); /* ### TODO(sid): normal error */
+  if (size != 4)
+    {
+      SVN_ERR(svn_io_file_close(file, pool));
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               _("Missing data at offset %llu in file '%s'"),
+                               offset, local_abspath);
+    }
   SVN_ERR(svn_io_file_read(file, &m, &size, pool));
-  SVN_ERR_ASSERT(size == 4);
+  if (size != 4)
+    {
+      SVN_ERR(svn_io_file_close(file, pool));
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               _("Missing data at offset %llu in file '%s'"),
+                               offset + 4, local_abspath);
+    }
   *revision_offset = ((apr_uint64_t)(ntohl(n)) << 32) | ntohl(m);
 
   SVN_ERR(svn_io_file_close(file, pool));
