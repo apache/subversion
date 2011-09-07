@@ -3719,6 +3719,51 @@ def diff_git_with_props(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      '--git', wc_dir)
 
+@XFail()
+def diff_correct_wc_base_revnum(sbox):
+  "diff WC-WC shows the correct base rev num"
+  # There was a bug in which diff on the parent path showed the
+  # parent's base revision for a child that had only a prop-change.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+  svntest.main.file_write(iota_path, "")
+
+  # Commit a local mod, creating rev 2.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'iota' : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Child's base is now 2; parent's is still 1.
+  # Make a local mod.
+  svntest.main.run_svn(None, 'propset', 'svn:keywords', 'Id', iota_path)
+
+  expected_output = make_git_diff_header(iota_path, "iota",
+                                         "revision 2", "working copy") + [
+      "\n",
+      "Property changes on: iota\n",
+      "___________________________________________________________________\n",
+      "Added: svn:keywords\n",
+      "## -0,0 +1 ##\n",
+      "+Id\n",
+  ]
+
+  # Diff the parent.
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
+                                     '--git', wc_dir)
+
+  # The same again, but specifying the target explicity. This should
+  # give the same output.
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
+                                     '--git', iota_path)
+
 def diff_git_with_props_on_dir(sbox):
   "diff in git format showing prop changes on dir"
   sbox.build()
@@ -3873,6 +3918,7 @@ test_list = [ None,
               diff_git_with_props_on_dir,
               diff_abs_localpath_from_wc_folder,
               no_spurious_conflict,
+              diff_correct_wc_base_revnum,
               ]
 
 if __name__ == '__main__':
