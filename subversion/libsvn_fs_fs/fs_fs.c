@@ -1315,7 +1315,7 @@ write_new_successor_index(apr_file_t *file,
 
   /* Write the rest of the new index (all zeroes). */
   memset(zeroes, 0, sizeof(zeroes));
-  SVN_ERR(svn_io_file_write_full(file, (char*)zeroes, sizeof(zeroes),
+  SVN_ERR(svn_io_file_write_full(file, zeroes, sizeof(zeroes),
                                  NULL, pool));
 }
 
