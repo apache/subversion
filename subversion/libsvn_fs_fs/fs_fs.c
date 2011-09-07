@@ -255,21 +255,21 @@ path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 static const char *
 path_successor_ids(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
-  long shard = rev / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
+  long filenum = rev / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
 
   return svn_dirent_join_many(pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
                               PATH_SUCCESSORS_IDS_DIR,
-                              apr_psprintf(pool, "%ld", shard), NULL);
+                              apr_psprintf(pool, "%ld", filenum), NULL);
 }
 
 static const char *
 path_successor_revisions(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
-  long shard = rev / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
+  long filenum = rev / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
 
   return svn_dirent_join_many(pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
                               PATH_SUCCESSORS_REVISIONS_DIR,
-                              apr_psprintf(pool, "%ld", shard), NULL);
+                              apr_psprintf(pool, "%ld", filenum), NULL);
 }
 
 static const char *
@@ -278,16 +278,16 @@ path_successor_node_revs(svn_fs_t *fs, const char *node_rev_id,
 {
   svn_fs_id_t *id;
   svn_revnum_t rev;
-  long shard;
+  long filenum;
   
   /* ### TODO(sid): danielsh: is there a need to guard for ID == NULL here? */
   id = svn_fs_fs__id_parse(node_rev_id, strlen(node_rev_id), pool);
   rev = svn_fs_fs__id_rev(id);
-  shard = rev / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
+  filenum = rev / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
 
   return svn_dirent_join_many(pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
                               PATH_SUCCESSORS_NODE_REVS_DIR,
-                              apr_psprintf(pool, "%ld", shard), NULL);
+                              apr_psprintf(pool, "%ld", filenum), NULL);
 }
 
 /* Returns the path of REV in FS, whether in a pack file or not.
