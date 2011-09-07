@@ -1271,7 +1271,7 @@ typedef enum svn_wc_notify_lock_state_t
  * @c kind, @c content_state, @c prop_state and @c lock_state are from
  * after @c action, not before.
  *
- * @note If @c action is #svn_wc_notify_update (### what?), then @c path has
+ * @note If @c action is #svn_wc_notify_update_completed, then @c path has
  * already been installed, so it is legitimate for an implementation of
  * #svn_wc_notify_func2_t to examine @c path in the working copy.
  *
@@ -3043,12 +3043,25 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
  */
 typedef struct svn_wc_info_t
 {
-  /* ### Do we still need schedule? */
+  /** The schedule of this item 
+   * ### Do we still need schedule? */
   svn_wc_schedule_t schedule;
+
+  /** If copied, the URL from which the copy was made, else @c NULL. */
   const char *copyfrom_url;
+
+  /** If copied, the revision from which the copy was made,
+   * else #SVN_INVALID_REVNUM. */
   svn_revnum_t copyfrom_rev;
+
+  /** The checksum of the node, if it is a file. */
   const svn_checksum_t *checksum;
+
+  /** A changelist the item is in, @c NULL if this node is not in a
+   * changelist. */
   const char *changelist;
+
+  /** The depth of the item, see #svn_depth_t */
   svn_depth_t depth;
 
   /**
