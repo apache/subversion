@@ -5866,6 +5866,13 @@ read_successor_revisions_file_entry(apr_uint64_t *revision_offset,
   apr_uint32_t n;
   const char *revs_abspath = path_successor_revisions(fs, revision, pool);
 
+  /* The trivial case: The caller asked for the first revision in a file. */
+  if (revision % FSFS_SUCCESSORS_MAX_REVS_PER_FILE == 0)
+    {
+      *revision_offset = 0;
+      return SVN_NO_ERROR;
+    }
+
   /* ### TODO(sid): don't constantly re-open the file */
   SVN_ERR(svn_io_file_open(&revs_file, revs_abspath, APR_READ,
                            APR_OS_DEFAULT, pool));
