@@ -1317,6 +1317,8 @@ write_new_successor_index(apr_file_t *file,
   memset(zeroes, 0, sizeof(zeroes));
   SVN_ERR(svn_io_file_write_full(file, zeroes, sizeof(zeroes),
                                  NULL, pool));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
