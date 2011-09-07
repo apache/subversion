@@ -315,6 +315,10 @@ typedef struct svn_repos_notify_t
   /** For #svn_repos_notify_load_node_start, the path of the node. */
   const char *path;
 
+  /** Whether future instances of this warning will be suppressed.
+   * @since New in 1.8. */
+  svn_boolean_t last_warning;
+
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update
      svn_repos_notify_create(). */
