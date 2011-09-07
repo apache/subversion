@@ -21,11 +21,11 @@
  * ====================================================================
  */
 
-#include <apr_pools.h>
-
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_delta.h"
+#include "svn_sorts.h"
+#include "svn_pools.h"
 
 
 struct file_rev_handler_wrapper_baton {
@@ -92,6 +92,8 @@ svn_compat_wrap_file_rev_handler(svn_file_rev_handler_t *handler2,
 struct ev2_edit_baton
 {
   svn_editor_t *editor;
+  apr_hash_t *paths;
+  apr_pool_t *edit_pool;
 };
 
 struct ev2_dir_baton
@@ -102,7 +104,54 @@ struct ev2_dir_baton
 struct ev2_file_baton
 {
   struct ev2_edit_baton *eb;
+  const char *path;
 };
+
+enum action
+{
+  add,
+  delete,
+  set_prop
+};
+
+struct path_action
+{
+  enum action action;
+  void *args;
+};
+
+struct prop_args
+{
+  const char *name;
+  const svn_string_t *value;
+};
+
+static svn_error_t *
+add_action(struct ev2_edit_baton *eb,
+           const char *path,
+           enum action action,
+           void *args)
+{
+  struct path_action *p_action;
+  apr_array_header_t *action_list = apr_hash_get(eb->paths, path,
+                                                 APR_HASH_KEY_STRING);
+
+  p_action = apr_palloc(eb->edit_pool, sizeof(*p_action));
+  p_action->action = action;
+  p_action->args = args;
+
+  if (action_list == NULL)
+    {
+      action_list = apr_array_make(eb->edit_pool, 1,
+                                   sizeof(struct path_action *));
+      apr_hash_set(eb->paths, apr_pstrdup(eb->edit_pool, path),
+                   APR_HASH_KEY_STRING, action_list);
+    }
+
+  APR_ARRAY_PUSH(action_list, struct path_action *) = p_action;
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 ev2_set_target_revision(void *edit_baton,
@@ -148,6 +197,11 @@ ev2_add_directory(const char *path,
                   void **child_baton)
 {
   struct ev2_dir_baton *pb = parent_baton;
+  svn_node_kind_t *kind;
+
+  kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
+  *kind = svn_node_dir;
+  SVN_ERR(add_action(pb->eb, path, add, kind));
 
   return SVN_NO_ERROR;
 }
@@ -183,6 +237,7 @@ ev2_close_directory(void *dir_baton,
                     apr_pool_t *scratch_pool)
 {
   struct ev2_dir_baton *db = dir_baton;
+
   return SVN_NO_ERROR;
 }
 
@@ -205,10 +260,16 @@ ev2_add_file(const char *path,
 {
   struct ev2_file_baton *fb = apr_palloc(result_pool, sizeof(*fb));
   struct ev2_dir_baton *pb = parent_baton;
+  svn_node_kind_t *kind;
 
   fb->eb = pb->eb;
-
+  fb->path = apr_pstrdup(result_pool, path);
   *file_baton = fb;
+
+  kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
+  *kind = svn_node_file;
+  SVN_ERR(add_action(pb->eb, path, add, kind));
+
   return SVN_NO_ERROR;
 }
 
@@ -223,6 +284,7 @@ ev2_open_file(const char *path,
   struct ev2_dir_baton *pb = parent_baton;
 
   fb->eb = pb->eb;
+  fb->path = apr_pstrdup(result_pool, path);
 
   *file_baton = fb;
   return SVN_NO_ERROR;
@@ -250,6 +312,13 @@ ev2_change_file_prop(void *file_baton,
                      apr_pool_t *scratch_pool)
 {
   struct ev2_file_baton *fb = file_baton;
+  struct prop_args *p_args = apr_palloc(fb->eb->edit_pool, sizeof(*p_args));
+
+  p_args->name = apr_pstrdup(fb->eb->edit_pool, name);
+  p_args->value = svn_string_dup(value, fb->eb->edit_pool);
+
+  SVN_ERR(add_action(fb->eb, fb->path, set_prop, p_args));
+
   return SVN_NO_ERROR;
 }
 
@@ -276,6 +345,60 @@ ev2_close_edit(void *edit_baton,
                apr_pool_t *scratch_pool)
 {
   struct ev2_edit_baton *eb = edit_baton;
+  apr_array_header_t *sorted_hash;
+  apr_pool_t *iterpool;
+  int i;
+
+  /* Sort the paths touched by this edit.
+   * Ev2 doesn't really have any particular need for depth-first-ness, but
+   * we want to ensure all parent directories are handled before children in
+   * the case of adds (which does introduce an element of depth-first-ness). */
+  sorted_hash = svn_sort__hash(eb->paths, svn_sort_compare_items_as_paths,
+                               scratch_pool);
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < sorted_hash->nelts; i++)
+    {
+      svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_hash, i, svn_sort__item_t);
+      apr_array_header_t *actions = item->value;
+      const char *path = item->key;
+      apr_hash_t *props;
+      int j;
+
+      svn_pool_clear(iterpool);
+
+      props = apr_hash_make(iterpool);
+
+      /* Go through all of our actions, populating various datastructures
+       * dependent on them. */
+      for (j = 0; j < actions->nelts; j++)
+        {
+          struct path_action *action = APR_ARRAY_IDX(actions, j,
+                                                     struct path_action *);
+
+          switch (action->action)
+            {
+              case set_prop:
+                {
+                  struct prop_args *p_args = action->args;
+
+                  apr_hash_set(props, p_args->name, APR_HASH_KEY_STRING,
+                               p_args->value);
+                  break;
+                }
+
+              default:
+                break;
+            }
+        }
+
+      /* We've now got a wholistic view of what has happened to this node,
+       * so we can call our own editor APIs on it. */
+      if (apr_hash_count(props) > 0)
+        SVN_ERR(svn_editor_set_props(eb->editor, path, SVN_INVALID_REVNUM,
+                                     props, TRUE));
+    }
+  svn_pool_destroy(iterpool);
 
   return svn_error_trace(svn_editor_complete(eb->editor));
 }
@@ -317,6 +440,8 @@ svn_delta_from_editor(svn_delta_editor_t **deditor,
   struct ev2_edit_baton *eb = apr_palloc(pool, sizeof(*eb));
 
   eb->editor = editor;
+  eb->paths = apr_hash_make(pool);
+  eb->edit_pool = pool;
 
   *dedit_baton = eb;
   *deditor = &delta_editor;
