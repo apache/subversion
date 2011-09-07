@@ -85,7 +85,6 @@ extern "C" {
 /* Names for successors directories. */
 #define PATH_SUCCESSORS_TOP_DIR       "successors"
 #define PATH_SUCCESSORS_NODE_REVS_DIR "node-revs"
-#define PATH_SUCCESSORS_REVISIONS_DIR "revs"
 #define PATH_SUCCESSORS_IDS_DIR       "ids"
 
 /* The format number of this filesystem.

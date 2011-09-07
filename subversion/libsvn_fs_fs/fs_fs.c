@@ -78,14 +78,21 @@
 #define SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR 1000
 #endif
 
-/* Maxiumum number of revisions represented per successor-IDs file.
+/* Number of revisions represented per successor-IDs file.
  * Changing this value will cause compatibility issues with existing
- * repositories. See make_successor_ids_dirs() if you change this. */
+ * repositories. */
 #define FSFS_SUCCESSORS_MAX_REVS_PER_FILE  1000
 
-/* Calculate the offset of a revision in a successors revisions file. */
-#define FSFS_SUCCESSORS_REV_OFFSET(rev) \
-  (((rev) % FSFS_SUCCESSORS_MAX_REVS_PER_FILE) * 8)
+/* Size of the index at the start of each successor-IDs file.
+ * The index contains 8 bytes per revision.
+ * The N'th 8-byte index entry contains the 64-bit offset (big endian)
+ * of the successor data of revision N. The offset is relative to the
+ * start of the successor IDs file. */
+#define FSFS_SUCCESSORS_INDEX_SIZE (FSFS_SUCCESSORS_MAX_REVS_PER_FILE * 8)
+
+/* Calculate the offset of an entry in a successor-IDs file index. */
+#define FSFS_SUCCESSORS_INDEX_REV_OFFSET(rev) \
+  ((rev) % FSFS_SUCCESSORS_INDEX_SIZE)
 
 /* Marker terminating per-revision successor-IDs. */
 #define FSFS_SUCCESSOR_IDS_END_MARKER "END\n"
@@ -271,30 +278,6 @@ path_successor_ids(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
   long filenum = rev / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
 
   return svn_dirent_join_many(pool, path_successor_ids_shard(fs, rev, pool),
-                              apr_psprintf(pool, "%ld", filenum), NULL);
-}
-
-static const char *
-path_successor_revisions_shard(svn_fs_t *fs, svn_revnum_t rev,
-                               apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  assert(ffd->max_files_per_dir);
-  return svn_dirent_join_many(pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
-                              PATH_SUCCESSORS_REVISIONS_DIR,
-                              apr_psprintf(pool, "%ld",
-                                                 rev / ffd->max_files_per_dir),
-                              NULL);
-}
-
-static const char *
-path_successor_revisions(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
-{
-  long filenum = rev / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
-
-  return svn_dirent_join_many(pool,
-                              path_successor_revisions_shard(fs, rev, pool),
                               apr_psprintf(pool, "%ld", filenum), NULL);
 }
 
@@ -1320,40 +1303,38 @@ create_file_ignore_eexist(const char *file,
 static svn_error_t *
 make_successor_ids_dirs(svn_fs_t *fs, apr_pool_t *pool)
 {
-  const char *top_dir = svn_dirent_join(fs->path, PATH_SUCCESSORS_TOP_DIR,
-                                        pool);
-  const char *node_revs_dir = svn_dirent_join_many(
-                                pool, top_dir, PATH_SUCCESSORS_NODE_REVS_DIR,
-                                "0", NULL, pool);
-  const char *revisions_dir = svn_dirent_join_many(
-                                pool, top_dir, PATH_SUCCESSORS_REVISIONS_DIR,
-                                "0", NULL, pool);
-  const char *ids_dir = svn_dirent_join_many(pool, top_dir,
-                                             PATH_SUCCESSORS_IDS_DIR,
-                                             "0", NULL, pool);
+  const char *top_dir_abspath;
+  const char *ids_dir_abspath;
+  const char *node_revs_dir_abspath;
   apr_file_t *file;
-  apr_uint64_t n;
+  char new_index[FSFS_SUCCESSORS_INDEX_SIZE];
+  apr_uint32_t *n;
 
-  SVN_ERR(svn_io_make_dir_recursively(node_revs_dir, pool));
-  SVN_ERR(svn_io_make_dir_recursively(revisions_dir, pool));
-  SVN_ERR(svn_io_make_dir_recursively(ids_dir, pool));
+  top_dir_abspath = svn_dirent_join(fs->path, PATH_SUCCESSORS_TOP_DIR, pool);
+  /* The new dirs must already contain the first shard. */
+  ids_dir_abspath = svn_dirent_join_many(pool, top_dir_abspath,
+                                         PATH_SUCCESSORS_IDS_DIR, "0",
+                                         NULL, pool);
+  node_revs_dir_abspath = svn_dirent_join_many(pool, top_dir_abspath,
+                                               PATH_SUCCESSORS_NODE_REVS_DIR,
+                                               "0", NULL, pool);
+  SVN_ERR(svn_io_make_dir_recursively(ids_dir_abspath, pool));
+  SVN_ERR(svn_io_make_dir_recursively(node_revs_dir_abspath, pool));
 
-  /* Create empty successor-ID data for revision zero.
-   * No successors were created in this revision. */
+  /* Create successor-ID data for revision zero. */
   SVN_ERR(svn_io_file_open(&file, path_successor_ids(fs, 0, pool),
                            APR_WRITE | APR_BUFFERED | APR_CREATE,
                            APR_OS_DEFAULT, pool));
+  /* Write the new index. */
+  memset(new_index, 0, sizeof(new_index));
+  n = (apr_int32_t*)&new_index[3];
+  *n = htonl(FSFS_SUCCESSORS_INDEX_SIZE);
+  SVN_ERR(svn_io_file_write_full(file, new_index, sizeof(new_index), NULL,
+                                 pool));
+  /* No successors were created in revision zero. */
   SVN_ERR(svn_io_file_write_full(file, FSFS_SUCCESSOR_IDS_END_MARKER,
                                  sizeof(FSFS_SUCCESSOR_IDS_END_MARKER) - 1,
                                  NULL, pool));
-  SVN_ERR(svn_io_file_close(file, pool));
-
-  /* Write successor revision offset for revision zero. */
-  SVN_ERR(svn_io_file_open(&file, path_successor_revisions(fs, 0, pool),
-                           APR_WRITE | APR_BUFFERED | APR_CREATE,
-                           APR_OS_DEFAULT, pool));
-  n = 0; /* no byte-swap needed */
-  SVN_ERR(svn_io_file_write_full(file, &n, sizeof(n), NULL, pool));
   SVN_ERR(svn_io_file_close(file, pool));
 
   /* ### TODO(sid): check for sanity of FSFS_SUCCESSORS_MAX_REVS_PER_FILE here,
@@ -5913,51 +5894,50 @@ copy_file_partially(apr_file_t *source_file,
 }
 
 /* In filesystem FS, which is assumed to be of a format that contains
- * successors, look up in the successors offsets file the entry for REVISION,
+ * successors, look up in the successors-IDs file index the entry for REVISION,
  * and return it in *REVISION_OFFSET.  Use POOL for temporary allocations. */
 static svn_error_t *
-read_successor_revisions_file_entry(apr_uint64_t *revision_offset,
-                                    svn_fs_t *fs,
-                                    svn_revnum_t revision,
-                                    apr_pool_t *pool)
+read_successor_index_entry(apr_uint64_t *revision_offset,
+                           svn_fs_t *fs,
+                           svn_revnum_t revision,
+                           apr_pool_t *pool)
 {
-  apr_off_t offset_offset;
+  apr_off_t offset;
   apr_size_t size;
-  apr_file_t *revs_file;
+  apr_file_t *file;
   apr_uint32_t m;
   apr_uint32_t n;
-  const char *revs_abspath = path_successor_revisions(fs, revision, pool);
+  const char *local_abspath = path_successor_ids(fs, revision, pool);
 
   /* The trivial case: The caller asked for the first revision in a file. */
   if (revision % FSFS_SUCCESSORS_MAX_REVS_PER_FILE == 0)
     {
-      *revision_offset = 0;
+      *revision_offset = FSFS_SUCCESSORS_INDEX_SIZE;
       return SVN_NO_ERROR;
     }
 
   /* ### TODO(sid): don't constantly re-open the file */
-  SVN_ERR(svn_io_file_open(&revs_file, revs_abspath, APR_READ,
+  SVN_ERR(svn_io_file_open(&file, local_abspath, APR_READ,
                            APR_OS_DEFAULT, pool));
-  offset_offset = FSFS_SUCCESSORS_REV_OFFSET(revision);
-  SVN_ERR(svn_io_file_seek(revs_file, APR_SET, &offset_offset, pool));
+  offset = FSFS_SUCCESSORS_INDEX_REV_OFFSET(revision);
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
   
   /* Read a 64 bit big endian integer in two passes.
    * The most significant 4 bytes come first. */
   size = 4;
-  SVN_ERR(svn_io_file_read(revs_file, &n, &size, pool));
+  SVN_ERR(svn_io_file_read(file, &n, &size, pool));
   SVN_ERR_ASSERT(size == 4); /* ### TODO(sid): normal error */
-  SVN_ERR(svn_io_file_read(revs_file, &m, &size, pool));
+  SVN_ERR(svn_io_file_read(file, &m, &size, pool));
   SVN_ERR_ASSERT(size == 4);
   *revision_offset = ((apr_uint64_t)(ntohl(n)) << 32) | ntohl(m);
 
-  SVN_ERR(svn_io_file_close(revs_file, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 update_successor_ids_file(const char **successor_ids_temp_abspath,
-                          apr_off_t *new_successor_ids_offset,
                           svn_fs_t *fs,
                           svn_revnum_t new_rev,
                           apr_hash_t *new_successor_ids,
@@ -5967,6 +5947,9 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
   apr_file_t *successor_ids_temp_file;
   apr_pool_t *iterpool = NULL;
   apr_hash_index_t *hi;
+  apr_off_t my_offset;
+  apr_off_t rev_offset;
+  apr_uint32_t n;
 
   /* Create a temporary file to write new successor data to. */
   SVN_ERR(svn_io_open_unique_file3(&successor_ids_temp_file,
@@ -5980,8 +5963,8 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
       apr_file_t *successor_ids_file;
 
       /* Figure out the offset of successor data for the previous revision. */
-      SVN_ERR(read_successor_revisions_file_entry(&prev_successor_ids_offset,
-                                                  fs, new_rev - 1, pool));
+      SVN_ERR(read_successor_index_entry(&prev_successor_ids_offset,
+                                         fs, new_rev - 1, pool));
 
       /* Check for offset overflow.
        * This gives a "will never be executed" warning on some platforms. */
@@ -5994,8 +5977,8 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
                                    "be used on platforms which support "
                                    "large files"), prev_successor_ids_offset);
 
-      /* Copy successor data for revisions older than the previous revision
-       * into the temporary successor data file. */
+      /* Copy successor IDs index and the data for revisions older than
+       * the previous revision into the temporary successor data file. */
       SVN_ERR(svn_io_file_open(&successor_ids_file, successor_ids_abspath,
                                APR_READ, APR_OS_DEFAULT, pool));
       SVN_ERR(copy_file_partially(successor_ids_file,
@@ -6038,9 +6021,10 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
       }
     }
 
+  /* Remember the current offset -- we'll write it to the index later. */
+  SVN_ERR(get_file_offset(&my_offset, successor_ids_temp_file, pool));
+
   /* Write new successor data to the temporary successor data file. */
-  SVN_ERR(get_file_offset(new_successor_ids_offset,
-                          successor_ids_temp_file, pool));
   if (iterpool == NULL)
     iterpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, new_successor_ids); hi;
@@ -6071,63 +6055,19 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
                                  sizeof(FSFS_SUCCESSOR_IDS_END_MARKER) - 1,
                                  NULL, pool));
 
+  /* Write offset of newly created successor data into the index. */
+  rev_offset = FSFS_SUCCESSORS_INDEX_REV_OFFSET(new_rev);
+  SVN_ERR(svn_io_file_seek(successor_ids_temp_file, APR_SET, &rev_offset,
+                           pool));
+  n = htonl(my_offset >> 32);
+  SVN_ERR(svn_io_file_write_full(successor_ids_temp_file, &n, sizeof(n),
+                                 NULL, pool));
+  n = htonl(my_offset & 0xffffffff);
+  SVN_ERR(svn_io_file_write_full(successor_ids_temp_file, &n, sizeof(n),
+                                 NULL, pool));
+
   SVN_ERR(svn_io_file_flush_to_disk(successor_ids_temp_file, pool));
   SVN_ERR(svn_io_file_close(successor_ids_temp_file, pool));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-update_successor_revisions_file(const char **revs_temp_abspath,
-                                svn_fs_t *fs,
-                                svn_revnum_t new_rev,
-                                apr_off_t new_successor_ids_offset,
-                                apr_pool_t *pool)
-{
-  const apr_off_t new_rev_offset = FSFS_SUCCESSORS_REV_OFFSET(new_rev);
-  apr_file_t *revs_file;
-  apr_file_t *revs_temp_file;
-  const char *revs_abspath = path_successor_revisions(fs, new_rev, pool);
-  apr_uint32_t n;
-
-  /* Create a temporary successor revisions file. */
-  SVN_ERR(svn_io_open_unique_file3(&revs_temp_file,
-                                   revs_temp_abspath,
-                                   svn_dirent_dirname(revs_abspath, pool),
-                                   svn_io_file_del_none, pool, pool));
-  /* Copy offsets of existing revisions into the temporary successor
-   * revisions file. */
-  if (new_rev % FSFS_SUCCESSORS_MAX_REVS_PER_FILE != 0)
-    {
-      SVN_ERR(svn_io_file_open(&revs_file, revs_abspath, APR_READ,
-                               APR_OS_DEFAULT, pool));
-      /* Check for offset overflow.
-       * This gives a "will never be executed" warning on some platforms. */
-      if (sizeof(apr_off_t) < sizeof(apr_uint64_t) &&
-          new_rev_offset > APR_UINT32_MAX)
-        /* ### TODO(sid): this can be detected in svn_fs_fs__create() by 
-               computing FSFS_SUCCESSORS_MAX_REVS_PER_FILE*8 */
-        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                 _("Cannot seek to offset %llu in successor "
-                                   "revision file; platform does not support "
-                                   "large files; this repository can only "
-                                   "be used on platforms which support "
-                                   "large files"), new_rev_offset);
-
-      /* Copy offsets for all previous revisions. */
-      SVN_ERR(copy_file_partially(revs_file, revs_temp_file, new_rev_offset,
-                                  pool));
-    }
-
-  /* Write offset of successor data created in this revision into
-   * the successor revision file. */
-  n = htonl(new_successor_ids_offset >> 32);
-  SVN_ERR(svn_io_file_write_full(revs_temp_file, &n, sizeof(n), NULL, pool));
-  n = htonl(new_successor_ids_offset & 0xffffffff);
-  SVN_ERR(svn_io_file_write_full(revs_temp_file, &n, sizeof(n), NULL, pool));
-
-  SVN_ERR(svn_io_file_flush_to_disk(revs_temp_file, pool));
-  SVN_ERR(svn_io_file_close(revs_temp_file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -6248,13 +6188,10 @@ update_successor_map(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   const char *successor_ids_abspath = path_successor_ids(fs, new_rev, pool);
-  const char *revs_abspath = path_successor_revisions(fs, new_rev, pool);
   const char *successor_ids_temp_abspath;
-  const char *revs_temp_abspath;
   apr_hash_t *node_revs_tempfiles;
   apr_hash_index_t *hi;
   const char *perms_reference;
-  apr_off_t new_successor_ids_offset;
 
   /* If the filesystem does not support successors, do nothing. */
   if (ffd->format < SVN_FS_FS__MIN_SUCCESSORS_FORMAT)
@@ -6262,10 +6199,7 @@ update_successor_map(svn_fs_t *fs,
 
   /* Create temporary files containing updated successor map data. */
   SVN_ERR(update_successor_ids_file(&successor_ids_temp_abspath,
-                                    &new_successor_ids_offset,
                                     fs, new_rev, successor_ids, pool));
-  SVN_ERR(update_successor_revisions_file(&revs_temp_abspath, fs, new_rev,
-                                          new_successor_ids_offset, pool));
   SVN_ERR(update_successor_node_revs_files(&node_revs_tempfiles, fs,
                                            new_rev, successor_ids, pool));
 
@@ -6283,18 +6217,6 @@ update_successor_map(svn_fs_t *fs,
                                    svn_dirent_join(fs->path,
                                                    PATH_SUCCESSORS_IDS_DIR,
                                                    pool),
-                                   pool));
-
-      new_dir = path_successor_revisions_shard(fs, new_rev, pool);
-      err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
-      if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
-        SVN_ERR(err);
-      svn_error_clear(err);
-      SVN_ERR(svn_fs_fs__dup_perms(new_dir,
-                                   svn_dirent_join(
-                                     fs->path,
-                                     PATH_SUCCESSORS_REVISIONS_DIR,
-                                     pool),
                                    pool));
 
       new_dir = path_successor_node_revs_shard(fs, new_rev, pool);
@@ -6322,8 +6244,6 @@ update_successor_map(svn_fs_t *fs,
     }
   SVN_ERR(move_into_place(successor_ids_temp_abspath,
                           successor_ids_abspath, perms_reference,
-                          pool));
-  SVN_ERR(move_into_place(revs_temp_abspath, revs_abspath, perms_reference,
                           pool));
   for (hi = apr_hash_first(pool, node_revs_tempfiles); hi;
        hi = apr_hash_next(hi))
