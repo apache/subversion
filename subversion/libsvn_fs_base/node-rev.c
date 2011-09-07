@@ -187,7 +187,7 @@ svn_fs_base__get_node_successors(apr_array_header_t **successors_p,
     {
       svn_revnum_t revision;
       const char *succ_id_str = APR_ARRAY_IDX(all_successors, i, const char *);
-      const svn_fs_id_t *succ_id = svn_fs_parse_id(succ_id_str,
+      const svn_fs_id_t *succ_id = svn_fs_base__id_parse(succ_id_str,
                                                    strlen(succ_id_str), pool);
 
       svn_pool_clear(subpool);
