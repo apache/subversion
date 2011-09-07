@@ -116,11 +116,11 @@ struct edit_baton
 
   /* Set to true if any references to revisions older than
      OLDEST_DUMPED_REV were found in the dumpstream. */
-  svn_boolean_t *found_old_reference;
+  svn_boolean_t found_old_reference;
 
   /* Set to true if any mergeinfo was dumped which contains revisions
      older than OLDEST_DUMPED_REV. */
-  svn_boolean_t *found_old_mergeinfo;
+  svn_boolean_t found_old_mergeinfo;
 
   /* reusable buffer for writing file contents */
   char buffer[SVN__STREAM_CHUNK_SIZE];
@@ -389,8 +389,7 @@ dump_node(struct edit_baton *eb,
                        " into an empty repository"
                        " will fail."),
                      cmp_rev, eb->oldest_dumped_rev);
-              if (eb->found_old_reference)
-                *eb->found_old_reference = TRUE;
+              eb->found_old_reference = TRUE;
               eb->notify_func(eb->notify_baton, notify, pool);
             }
 
@@ -481,8 +480,7 @@ dump_node(struct edit_baton *eb,
                 &old_mergeinfo, mergeinfo,
                 eb->oldest_dumped_rev - 1, 0,
                 TRUE, pool, pool));
-              if ((eb->found_old_mergeinfo && ! *eb->found_old_mergeinfo)
-                  && apr_hash_count(old_mergeinfo))
+              if (apr_hash_count(old_mergeinfo))
                 {
                   svn_repos_notify_t *notify =
                     svn_repos_notify_create(svn_repos_notify_warning, pool);
@@ -495,10 +493,8 @@ dump_node(struct edit_baton *eb,
                       "Loading this dump may result in invalid "
                       "mergeinfo."),
                     eb->oldest_dumped_rev);
-                  notify->last_warning = TRUE;
 
-                  if (eb->found_old_mergeinfo)
-                    *eb->found_old_mergeinfo = TRUE;
+                  eb->found_old_mergeinfo = TRUE;
                   eb->notify_func(eb->notify_baton, notify, pool);
                 }
             }
@@ -867,8 +863,6 @@ get_dump_editor(const svn_delta_editor_t **editor,
                 svn_revnum_t oldest_dumped_rev,
                 svn_boolean_t use_deltas,
                 svn_boolean_t verify,
-                svn_boolean_t *found_old_reference,
-                svn_boolean_t *found_old_mergeinfo,
                 apr_pool_t *pool)
 {
   /* Allocate an edit baton to be stored in every directory baton.
@@ -888,8 +882,6 @@ get_dump_editor(const svn_delta_editor_t **editor,
   eb->current_rev = to_rev;
   eb->use_deltas = use_deltas;
   eb->verify = verify;
-  eb->found_old_reference = found_old_reference;
-  eb->found_old_mergeinfo = found_old_mergeinfo;
 
   /* Set up the editor. */
   dump_editor->open_root = open_root;
@@ -1102,9 +1094,7 @@ svn_repos_dump_fs3(svn_repos_t *repos,
       use_deltas_for_rev = use_deltas && (incremental || i != start_rev);
       SVN_ERR(get_dump_editor(&dump_editor, &dump_edit_baton, fs, to_rev,
                               "", stream, notify_func, notify_baton,
-                              start_rev, use_deltas_for_rev, FALSE, 
-                              &found_old_reference, &found_old_mergeinfo,
-                              subpool));
+                              start_rev, use_deltas_for_rev, FALSE, subpool));
 
       /* Drive the editor in one way or another. */
       SVN_ERR(svn_fs_revision_root(&to_root, fs, to_rev, subpool));
@@ -1143,9 +1133,9 @@ svn_repos_dump_fs3(svn_repos_t *repos,
 
       if (dump_edit_baton) /* We never get an edit baton for r0. */
         {
-          if (*((struct edit_baton *)dump_edit_baton)->found_old_reference)
+          if (((struct edit_baton *)dump_edit_baton)->found_old_reference)
             found_old_reference = TRUE;
-          if (*((struct edit_baton *)dump_edit_baton)->found_old_mergeinfo)
+          if (((struct edit_baton *)dump_edit_baton)->found_old_mergeinfo)
             found_old_mergeinfo = TRUE;
         }
     }
@@ -1320,7 +1310,6 @@ svn_repos_verify_fs2(svn_repos_t *repos,
                               notify_func, notify_baton,
                               start_rev,
                               FALSE, TRUE, /* use_deltas, verify */
-                              NULL, NULL,
                               iterpool));
       dump_editor->close_directory = verify_close_directory;
       SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
