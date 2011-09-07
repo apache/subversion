@@ -5869,7 +5869,7 @@ read_successor_revisions_file_entry(apr_uint64_t *revision_offset,
   /* ### TODO(sid): don't constantly re-open the file */
   SVN_ERR(svn_io_file_open(&revs_file, revs_abspath, APR_READ,
                            APR_OS_DEFAULT, pool));
-  offset_offset = FSFS_SUCCESSORS_REV_OFFSET(revision - 1);
+  offset_offset = FSFS_SUCCESSORS_REV_OFFSET(revision);
   SVN_ERR(svn_io_file_seek(revs_file, APR_SET, &offset_offset, pool));
   
   /* Read a 64 bit big endian integer in two passes.
@@ -5913,7 +5913,7 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
 
       /* Figure out the offset of successor data for the previous revision. */
       SVN_ERR(read_successor_revisions_file_entry(&prev_successor_ids_offset,
-                                                  fs, new_rev, pool));
+                                                  fs, new_rev - 1, pool));
 
       /* Check for offset overflow.
        * This gives a "will never be executed" warning on some platforms. */
