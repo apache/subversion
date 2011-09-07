@@ -6192,6 +6192,9 @@ update_successor_node_revs_files(apr_hash_t **node_revs_tempfiles,
   return SVN_NO_ERROR;
 }
 
+/* In commit finalization, flush the new successors/ entries (in SUCCESSOR_IDS)
+ * to disk and move them into their final places.  NEW_REV is the revision 
+ * being committed.  Use POOL for temporary allocations. */
 static svn_error_t *
 update_successor_map(svn_fs_t *fs,
                      svn_revnum_t new_rev,
