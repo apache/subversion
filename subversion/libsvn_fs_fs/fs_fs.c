@@ -6245,9 +6245,9 @@ update_successor_map(svn_fs_t *fs,
         SVN_ERR(err);
       svn_error_clear(err);
       SVN_ERR(svn_fs_fs__dup_perms(new_dir,
-                                   svn_dirent_join(fs->path,
-                                                   PATH_SUCCESSORS_IDS_DIR,
-                                                   pool),
+                                   svn_dirent_join_many(
+                                     pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
+                                     PATH_SUCCESSORS_IDS_DIR, NULL),
                                    pool));
 
       new_dir = path_successor_node_revs_shard(fs, new_rev, pool);
@@ -6256,10 +6256,9 @@ update_successor_map(svn_fs_t *fs,
         SVN_ERR(err);
       svn_error_clear(err);
       SVN_ERR(svn_fs_fs__dup_perms(new_dir,
-                                   svn_dirent_join(
-                                     fs->path,
-                                     PATH_SUCCESSORS_NODE_REVS_DIR,
-                                     pool),
+                                   svn_dirent_join_many(
+                                     pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
+                                     PATH_SUCCESSORS_NODE_REVS_DIR, NULL),
                                    pool));
     }
 
