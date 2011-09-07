@@ -678,12 +678,6 @@ repos_notify_handler(void *baton,
       svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
                                         "WARNING 0x%04x: %s\n", notify->warning,
                                         notify->warning_str));
-      if (notify->last_warning)
-        svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                                          "WARNING 0x%04x: %s\n",
-                                          notify->warning,
-                                          _("Future instances of this warning "
-                                            "will be suppressed\n")));
       return;
 
     case svn_repos_notify_dump_rev_end:
