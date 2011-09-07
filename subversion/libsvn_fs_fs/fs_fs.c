@@ -6089,7 +6089,9 @@ update_successor_node_revs_files(apr_hash_t **node_revs_tempfiles,
 
       svn_pool_clear(iterpool);
       
-      node_revs_file_abspath = path_successor_node_revs(fs, pred, iterpool);
+      /* This string will be obtained by the caller when iterating over
+       * the NODE_REV_TEMPILES hash so we allocate it in the result pool. */
+      node_revs_file_abspath = path_successor_node_revs(fs, pred, pool);
       if (apr_hash_get(tempfiles, node_revs_file_abspath,
                        APR_HASH_KEY_STRING) == NULL)
         {
@@ -6100,6 +6102,8 @@ update_successor_node_revs_files(apr_hash_t **node_revs_tempfiles,
           svn_error_t *err;
           const char *dirname = svn_dirent_dirname(node_revs_file_abspath,
                                                    iterpool);
+          /* This tempfile is also used by the loops below so we
+           * must not allocate it in the iterpool. */
           SVN_ERR(svn_io_open_unique_file3(&tempfile, NULL, dirname,
                                            svn_io_file_del_none, pool,
                                            iterpool));
