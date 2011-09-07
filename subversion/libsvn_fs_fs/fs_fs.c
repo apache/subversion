@@ -1304,7 +1304,7 @@ static svn_error_t *
 write_new_successor_index(apr_file_t *file,
                           apr_pool_t *pool)
 {
-  apr_uint64_t zeroes[FSFS_SUCCESSORS_MAX_REVS_PER_FILE - 1];
+  apr_uint64_t zeroes[FSFS_SUCCESSORS_MAX_REVS_PER_FILE - 1] = { 0 };
   apr_uint32_t n;
 
   /* Write the first entry. */
@@ -1314,7 +1314,6 @@ write_new_successor_index(apr_file_t *file,
   SVN_ERR(svn_io_file_write_full(file, &n, sizeof(n), NULL, pool));
 
   /* Write the rest of the new index (all zeroes). */
-  memset(zeroes, 0, sizeof(zeroes));
   SVN_ERR(svn_io_file_write_full(file, zeroes, sizeof(zeroes),
                                  NULL, pool));
 
