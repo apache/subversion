@@ -121,10 +121,8 @@ Each type of file is described below in detail.
 -- Common aspects --
 
 Sharding.  All three kinds of files are sharded in a manner similar to
-revision files.  However, since revision 0 never creates successors of
-anything, it is not in any shard.  The Nth shard contains data for
-noderevs in revisions { r | (r-1) % shard_size == N }: so, 1..1000,
-1001..2000, etc.
+revision files. The Nth shard contains data for noderevs in revisions
+{ r | r % shard_size == N }: so, 0..999, 1000..1999, etc.
 
 -- Node-revision-ID map files --
 
