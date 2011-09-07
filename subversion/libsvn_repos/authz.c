@@ -723,8 +723,25 @@ static svn_boolean_t authz_validate_section(const char *name,
     svn_config_enumerate2(b->config, name, authz_validate_alias,
                           baton, pool);
   else
-    svn_config_enumerate2(b->config, name, authz_validate_rule,
-                          baton, pool);
+    {
+      /* Validate the section's name. Skip the optional REPOS_NAME. */
+      const char *fspath = strchr(name, ':');
+      if (fspath)
+        fspath++;
+      else
+        fspath = name;
+      if (! svn_fspath__is_canonical(fspath))
+        {
+          b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                                     "Section name '%s' contains non-canonical "
+                                     "fspath '%s'",
+                                     name, fspath);
+          return FALSE;
+        }
+
+      svn_config_enumerate2(b->config, name, authz_validate_rule,
+                            baton, pool);
+    }
 
   if (b->err)
     return FALSE;
