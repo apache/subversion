@@ -27,6 +27,16 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_editor.h"
+#include "svn_dirent_uri.h"
+
+#ifdef SVN_DEBUG
+/* This enables runtime checks of the editor API constraints.  This may
+   introduce additional memory and runtime overhead, and should not be used
+   in production builds.
+   
+   ### Remove before release? */
+#define ENABLE_ORDERING_CHECK
+#endif
 
 
 struct svn_editor_t
@@ -43,6 +53,11 @@ struct svn_editor_t
 
   /* This pool is used as the scratch_pool for all callbacks.  */
   apr_pool_t *scratch_pool;
+
+#ifdef ENABLE_ORDERING_CHECK
+  apr_hash_t *pending_incomplete_children;
+  apr_pool_t *result_pool;
+#endif
 };
 
 
@@ -60,6 +75,10 @@ svn_editor_create(svn_editor_t **editor,
   (*editor)->cancel_func = cancel_func;
   (*editor)->cancel_baton = cancel_baton;
   (*editor)->scratch_pool = svn_pool_create(result_pool);
+#ifdef ENABLE_ORDERING_CHECK
+  (*editor)->pending_incomplete_children = apr_hash_make(result_pool);
+  (*editor)->result_pool = result_pool;
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -228,6 +247,22 @@ svn_editor_add_directory(svn_editor_t *editor,
   err = editor->funcs.cb_add_directory(editor->baton, relpath, children,
                                        props, replaces_rev,
                                        editor->scratch_pool);
+#ifdef ENABLE_ORDERING_CHECK
+  apr_hash_set(editor->pending_incomplete_children, relpath,
+               APR_HASH_KEY_STRING, NULL);
+  {
+    int i;
+    for (i = 0; i < children->nelts; i++)
+      {
+        const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
+        const char *child = svn_relpath_join(relpath, child_basename,
+                                             editor->result_pool);
+
+        apr_hash_set(editor->pending_incomplete_children, child,
+                     APR_HASH_KEY_STRING, (void *)0xdeadbeef);
+      }
+  }
+#endif
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -248,6 +283,10 @@ svn_editor_add_file(svn_editor_t *editor,
 
   err = editor->funcs.cb_add_file(editor->baton, relpath, props,
                                   replaces_rev, editor->scratch_pool);
+#ifdef ENABLE_ORDERING_CHECK
+  apr_hash_set(editor->pending_incomplete_children, relpath,
+               APR_HASH_KEY_STRING, NULL);
+#endif
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -269,6 +308,10 @@ svn_editor_add_symlink(svn_editor_t *editor,
 
   err = editor->funcs.cb_add_symlink(editor->baton, relpath, target, props,
                                      replaces_rev, editor->scratch_pool);
+#ifdef ENABLE_ORDERING_CHECK
+  apr_hash_set(editor->pending_incomplete_children, relpath,
+               APR_HASH_KEY_STRING, NULL);
+#endif
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -289,6 +332,10 @@ svn_editor_add_absent(svn_editor_t *editor,
 
   err = editor->funcs.cb_add_absent(editor->baton, relpath, kind,
                                     replaces_rev, editor->scratch_pool);
+#ifdef ENABLE_ORDERING_CHECK
+  apr_hash_set(editor->pending_incomplete_children, relpath,
+               APR_HASH_KEY_STRING, NULL);
+#endif
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -425,6 +472,9 @@ svn_editor_complete(svn_editor_t *editor)
   svn_error_t *err;
 
   SVN_ERR_ASSERT(editor->funcs.cb_complete != NULL);
+#ifdef ENABLE_ORDERING_CHECK
+  SVN_ERR_ASSERT(apr_hash_count(editor->pending_incomplete_children) == 0);
+#endif
 
   err = editor->funcs.cb_complete(editor->baton, editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
