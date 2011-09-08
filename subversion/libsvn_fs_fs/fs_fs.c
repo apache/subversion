@@ -6296,16 +6296,7 @@ update_successor_map(svn_fs_t *fs,
                                            new_rev, successor_ids, pool));
 
   /* Move temporary files into place. */
-  if (new_rev > 1 && new_rev % FSFS_SUCCESSORS_MAX_REVS_PER_FILE != 0)
-    perms_reference = successor_ids_abspath;
-  else if (new_rev > 1)
-    perms_reference = path_successor_ids(fs, new_rev - 1, pool);
-  else
-    {
-      /* Use 'current' as perms reference. */
-      perms_reference = svn_fs_fs__path_current(fs, pool);
-    }
-
+  perms_reference = path_successor_ids(fs, new_rev - 1, pool);
   SVN_ERR(move_into_place(successor_ids_temp_abspath,
                           successor_ids_abspath, perms_reference,
                           pool));
