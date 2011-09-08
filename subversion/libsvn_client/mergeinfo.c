@@ -1281,6 +1281,7 @@ svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
                                                       sizeof(const char *));
   svn_delta_editor_t *editor = svn_delta_default_editor(pool);
   struct elide_mergeinfo_catalog_cb_baton cb = { 0 };
+  void *eb;
   int i;
 
   cb.elidable_paths = elidable_paths;
@@ -1290,10 +1291,13 @@ svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
   editor->open_root = elide_mergeinfo_catalog_open_root;
   editor->open_directory = elide_mergeinfo_catalog_open_directory;
 
+  eb = mergeinfo_catalog;
+  SVN_ERR(svn_editor__insert_shims(&editor, &eb, editor, eb, pool, pool));
+
   /* Walk over the paths, and build up a list of elidable ones. */
   SVN_ERR(svn_hash_keys(&paths, mergeinfo_catalog, pool));
   SVN_ERR(svn_delta_path_driver(editor,
-                                mergeinfo_catalog, /* as edit_baton */
+                                eb,
                                 SVN_INVALID_REVNUM,
                                 paths,
                                 elide_mergeinfo_catalog_cb,

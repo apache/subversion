@@ -667,10 +667,15 @@ get_ra_editor(svn_ra_session_t **ra_session,
                                            log_msg, ctx, pool));
 
   /* Fetch RA commit editor. */
-  return svn_ra_get_commit_editor3(*ra_session, editor, edit_baton,
-                                   commit_revprops, commit_callback,
-                                   commit_baton, lock_tokens, keep_locks,
-                                   pool);
+  SVN_ERR(svn_ra_get_commit_editor3(*ra_session, editor, edit_baton,
+                                    commit_revprops, commit_callback,
+                                    commit_baton, lock_tokens, keep_locks,
+                                    pool));
+
+  SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                   pool, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
