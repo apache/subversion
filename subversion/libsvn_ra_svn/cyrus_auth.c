@@ -775,7 +775,10 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
   cred_baton.pool = pool;
 
   /* Reserve space for 3 callbacks (for the username, password and the
-     array terminator). */
+     array terminator).  These structures must persist until the
+     disposal of the SASL context at pool cleanup, however the
+     callback functions will not be invoked outside this function so
+     other structures can have a shorter lifetime. */
   callbacks = apr_palloc(sess->conn->pool, sizeof(*callbacks) * 3);
 
   /* Initialize the callbacks array. */
