@@ -448,3 +448,23 @@ svn_delta_from_editor(const svn_delta_editor_t **deditor,
 
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_editor_from_delta(svn_editor_t **editor_p,
+                      const svn_delta_editor_t *deditor,
+                      void *dedit_baton,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  svn_editor_t *editor;
+
+  SVN_ERR(svn_editor_create(&editor, NULL, cancel_func, cancel_baton,
+                            result_pool, scratch_pool));
+
+  *editor_p = editor;
+
+  return SVN_NO_ERROR;
+}

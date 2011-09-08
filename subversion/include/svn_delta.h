@@ -1102,6 +1102,24 @@ svn_delta_from_editor(const svn_delta_editor_t **deditor,
                       svn_editor_t *editor,
                       apr_pool_t *pool);
 
+/* Return an editor allocated in @a result_pool which will forward calls
+ * to @a deditor using @a dedit_baton.
+ *
+ * @note Since the sematics behind the two editors are different, the
+ * timing of calls forwarded to the @a editor may be imprecise, and the
+ * overhead large.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_editor_from_delta(svn_editor_t **editor,
+                      const svn_delta_editor_t *deditor,
+                      void *dedit_baton,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
 /** A text-delta window handler which does nothing.
  *
  * Editors can return this handler from @c apply_textdelta if they don't
