@@ -494,23 +494,14 @@ path_node_origin(svn_fs_t *fs, const char *node_id, apr_pool_t *pool)
                               node_id_minus_last_char, NULL);
 }
 
-/* Pass all arguments to PATH_SOME_SHARD(), interpret the returned value
-   as a directory name, and create it (with the permissions of its parent)
-   if it doesn't already exist. */
+/* Create NEW_DIR (with the permissions of its parent).
+ * Ignore errors if this fails because the directory already exists
+ * for some reason. */
 static svn_error_t *
-make_shard_dir(const char *(*path_some_shard)(svn_fs_t *,
-                                              svn_revnum_t,
-                                              apr_pool_t *),
-               svn_fs_t *fs,
-               svn_revnum_t revision,
-               apr_pool_t *pool)
+make_shard_dir(const char *new_dir, apr_pool_t *pool)
 {
-  /* We don't care if this fails because the shard already existed
-   * for some reason. */
   svn_error_t *err;
-  const char *new_dir;
   
-  new_dir = path_some_shard(fs, revision, pool);
   err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
   if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
     SVN_ERR(err);
@@ -6285,8 +6276,10 @@ update_successor_map(svn_fs_t *fs,
   if (new_rev % FSFS_SUCCESSORS_REVISIONS_PER_SHARD(ffd) == 0)
     {
       /* Create new shards. */
-      SVN_ERR(make_shard_dir(path_successor_ids_shard, fs, new_rev, pool));
-      SVN_ERR(make_shard_dir(path_successor_node_revs_shard, fs, new_rev, pool));
+      SVN_ERR(make_shard_dir(path_successor_ids_shard(fs, new_rev, pool),
+                             pool));
+      SVN_ERR(make_shard_dir(path_successor_node_revs_shard(fs, new_rev, pool),
+                             pool));
     }
   else if ((new_rev % FSFS_SUCCESSORS_REVISIONS_PER_SHARD(ffd))
            % FSFS_SUCCESSORS_MAX_REVS_PER_FILE == 0)
@@ -6453,10 +6446,8 @@ commit_body(void *baton, apr_pool_t *pool)
      this is the first revision of a new shard. */
   if (ffd->max_files_per_dir && new_rev % ffd->max_files_per_dir == 0)
     {
-      SVN_ERR(make_shard_dir(path_rev_shard,
-                             cb->fs, new_rev, pool));
-      SVN_ERR(make_shard_dir(path_revprops_shard,
-                             cb->fs, new_rev, pool));
+      SVN_ERR(make_shard_dir(path_rev_shard(cb->fs, new_rev, pool), pool));
+      SVN_ERR(make_shard_dir(path_revprops_shard(cb->fs, new_rev, pool), pool));
     }
 
   /* Move the finished rev file into place. */
