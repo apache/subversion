@@ -101,7 +101,7 @@
   ((ffd)->max_files_per_dir * FSFS_SUCCESSORS_MAX_REVS_PER_FILE)
 
 /* Marker terminating per-revision successor-IDs. */
-#define FSFS_SUCCESSOR_IDS_END_MARKER "END\n"
+#define FSFS_SUCCESSOR_IDS_END_MARKER "END"
 
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */
@@ -1380,8 +1380,8 @@ make_successor_ids_dirs(svn_fs_t *fs, apr_pool_t *pool)
                            APR_OS_DEFAULT, pool));
   SVN_ERR(write_new_successor_index(file, pool));
   /* No successors were created in revision zero. */
-  SVN_ERR(svn_io_file_write_full(file, FSFS_SUCCESSOR_IDS_END_MARKER,
-                                 sizeof(FSFS_SUCCESSOR_IDS_END_MARKER) - 1,
+  SVN_ERR(svn_io_file_write_full(file, FSFS_SUCCESSOR_IDS_END_MARKER"\n",
+                                 sizeof(FSFS_SUCCESSOR_IDS_END_MARKER"\n") - 1,
                                  NULL, pool));
   SVN_ERR(svn_io_file_close(file, pool));
 
@@ -6075,8 +6075,7 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
                                            iterpool));
             SVN_ERR(svn_io_file_write_full(successor_ids_temp_file,
                                            "\n", 1, NULL, iterpool));
-            /* ### TODO(sid): use macro  */
-            if (strcmp(line->data, "END") == 0)
+            if (strcmp(line->data, FSFS_SUCCESSOR_IDS_END_MARKER) == 0)
               break;
           }
         while (!eof);
@@ -6120,8 +6119,8 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
 
   /* Terminate successor data for this revision. */
   SVN_ERR(svn_io_file_write_full(successor_ids_temp_file,
-                                 FSFS_SUCCESSOR_IDS_END_MARKER,
-                                 sizeof(FSFS_SUCCESSOR_IDS_END_MARKER) - 1,
+                                 FSFS_SUCCESSOR_IDS_END_MARKER"\n",
+                                 sizeof(FSFS_SUCCESSOR_IDS_END_MARKER"\n") - 1,
                                  NULL, pool));
 
   /* Write offset of new successor data into the index unless we created
