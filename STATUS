@@ -118,6 +118,11 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1166555
+   Fix a crash in ra_svn SASL authentication.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
