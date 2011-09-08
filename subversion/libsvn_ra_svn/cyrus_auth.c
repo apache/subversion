@@ -738,9 +738,7 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
   const char *mechstring = "", *last_err = "", *realmstring;
   const char *local_addrport = NULL, *remote_addrport = NULL;
   svn_boolean_t success;
-  /* Reserve space for 3 callbacks (for the username, password and the
-     array terminator). */
-  sasl_callback_t callbacks[3];
+  sasl_callback_t *callbacks;
   cred_baton_t cred_baton;
   int i;
 
@@ -775,6 +773,10 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
   cred_baton.auth_baton = sess->callbacks->auth_baton;
   cred_baton.realmstring = realmstring;
   cred_baton.pool = pool;
+
+  /* Reserve space for 3 callbacks (for the username, password and the
+     array terminator). */
+  callbacks = apr_palloc(sess->conn->pool, sizeof(*callbacks) * 3);
 
   /* Initialize the callbacks array. */
 
