@@ -81,7 +81,9 @@
 /* Number of revisions represented per successor-IDs file.
  * Changing this value will cause compatibility issues with existing
  * repositories. */
+#ifndef FSFS_SUCCESSORS_MAX_REVS_PER_FILE
 #define FSFS_SUCCESSORS_MAX_REVS_PER_FILE  1000
+#endif
 
 /* Size of the index at the start of each successor-IDs file.
  * The index contains 8 bytes per revision.
