@@ -1097,7 +1097,7 @@ svn_delta_default_editor(apr_pool_t *pool);
  * @since New in 1.8.
  */
 svn_error_t *
-svn_delta_from_editor(svn_delta_editor_t **deditor,
+svn_delta_from_editor(const svn_delta_editor_t **deditor,
                       void **dedit_baton,
                       svn_editor_t *editor,
                       apr_pool_t *pool);

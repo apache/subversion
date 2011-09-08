@@ -175,7 +175,7 @@ get_noop_editor(svn_editor_t **editor,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
-  svn_editor_cb_many_t editor_cbs = {
+  static const svn_editor_cb_many_t editor_cbs = {
       add_directory_noop_cb,
       add_file_noop_cb,
       add_symlink_noop_cb,
