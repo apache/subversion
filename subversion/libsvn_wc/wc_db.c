@@ -9913,7 +9913,7 @@ scan_deletion_txn(void *baton,
                          || base_presence == svn_wc__db_status_incomplete
                          );
 
-#if 1
+#if 0
           /* ### see above comment  */
           if (base_presence == svn_wc__db_status_incomplete)
             base_presence = svn_wc__db_status_normal;
