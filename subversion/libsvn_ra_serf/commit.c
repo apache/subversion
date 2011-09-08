@@ -2366,6 +2366,9 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   *ret_editor = editor;
   *edit_baton = ctx;
 
+  SVN_ERR(svn_editor__insert_shims(ret_editor, edit_baton, *ret_editor,
+                                   *edit_baton, pool, pool));
+
   return SVN_NO_ERROR;
 }
 

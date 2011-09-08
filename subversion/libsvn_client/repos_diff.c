@@ -1382,8 +1382,13 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
   tree_editor->absent_directory = absent_directory;
   tree_editor->absent_file = absent_file;
 
-  return svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
-                                           tree_editor, eb,
-                                           editor, edit_baton,
-                                           eb->pool);
+  SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
+                                            tree_editor, eb,
+                                            editor, edit_baton,
+                                            eb->pool));
+
+  SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                   result_pool, result_pool));
+
+  return SVN_NO_ERROR;
 }
