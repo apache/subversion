@@ -823,7 +823,7 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
           return cred_baton.err;
         }
       if (cred_baton.no_more_creds
-          || (! success && ! err && ! cred_baton.was_used))
+          || (! err && ! success && ! cred_baton.was_used))
         {
           svn_error_clear(err);
           /* If we ran out of authentication providers, or if we got a server
