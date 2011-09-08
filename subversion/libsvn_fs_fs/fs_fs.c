@@ -94,6 +94,10 @@
 #define FSFS_SUCCESSORS_INDEX_REV_OFFSET(rev) \
   (((rev) % FSFS_SUCCESSORS_MAX_REVS_PER_FILE) * 8)
 
+/* Calculate the number of revisions in a successors shard. */
+#define FSFS_SUCCESSORS_REVISIONS_PER_SHARD(ffd) \
+  ((ffd)->max_files_per_dir * FSFS_SUCCESSORS_MAX_REVS_PER_FILE)
+
 /* Marker terminating per-revision successor-IDs. */
 #define FSFS_SUCCESSOR_IDS_END_MARKER "END\n"
 
@@ -263,19 +267,25 @@ static const char *
 path_successor_ids_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-
+  long shard;
+  
   assert(ffd->max_files_per_dir);
+  shard = rev / FSFS_SUCCESSORS_REVISIONS_PER_SHARD(ffd);
+
   return svn_dirent_join_many(pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
                               PATH_SUCCESSORS_IDS_DIR,
-                              apr_psprintf(pool, "%ld",
-                                                 rev / ffd->max_files_per_dir),
+                              apr_psprintf(pool, "%ld", shard),
                               NULL);
 }
 
 static const char *
 path_successor_ids(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
-  long filenum = rev / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
+  fs_fs_data_t *ffd = fs->fsap_data;
+  long filenum;
+  
+  assert(ffd->max_files_per_dir);
+  filenum = (rev % FSFS_SUCCESSORS_REVISIONS_PER_SHARD(ffd)) / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
 
   return svn_dirent_join_many(pool, path_successor_ids_shard(fs, rev, pool),
                               apr_psprintf(pool, "%ld", filenum), NULL);
@@ -286,12 +296,13 @@ path_successor_node_revs_shard(svn_fs_t *fs, svn_revnum_t rev,
                                apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  long shard;
 
   assert(ffd->max_files_per_dir);
+  shard = rev / FSFS_SUCCESSORS_REVISIONS_PER_SHARD(ffd);
   return svn_dirent_join_many(pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
                               PATH_SUCCESSORS_NODE_REVS_DIR,
-                              apr_psprintf(pool, "%ld",
-                                                 rev / ffd->max_files_per_dir),
+                              apr_psprintf(pool, "%ld", shard),
                               NULL);
 }
 
@@ -299,6 +310,7 @@ static const char *
 path_successor_node_revs(svn_fs_t *fs, const char *node_rev_id,
                          apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   svn_fs_id_t *id;
   svn_revnum_t rev;
   long filenum;
@@ -306,7 +318,8 @@ path_successor_node_revs(svn_fs_t *fs, const char *node_rev_id,
   /* ### TODO(sid): danielsh: is there a need to guard for ID == NULL here? */
   id = svn_fs_fs__id_parse(node_rev_id, strlen(node_rev_id), pool);
   rev = svn_fs_fs__id_rev(id);
-  filenum = rev / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
+  assert(ffd->max_files_per_dir);
+  filenum = (rev % FSFS_SUCCESSORS_REVISIONS_PER_SHARD(ffd)) / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
 
   return svn_dirent_join_many(pool,
                               path_successor_node_revs_shard(fs, rev, pool),
@@ -5968,6 +5981,7 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
                           apr_hash_t *new_successor_ids,
                           apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   const char *successor_ids_abspath = path_successor_ids(fs, new_rev, pool);
   apr_file_t *successor_ids_temp_file;
   apr_pool_t *iterpool = NULL;
@@ -5975,13 +5989,16 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
   apr_off_t my_offset;
   apr_uint32_t n;
 
+  assert(ffd->max_files_per_dir); /* ### TODO(sid): account for 'layout linear' */
+
   /* Create a temporary file to write new successor data to. */
   SVN_ERR(svn_io_open_unique_file3(&successor_ids_temp_file,
                                    successor_ids_temp_abspath,
                                    svn_dirent_dirname(successor_ids_abspath,
                                                       pool),
                                    svn_io_file_del_none, pool, pool));
-  if (new_rev % FSFS_SUCCESSORS_MAX_REVS_PER_FILE == 0)
+  if ((new_rev % FSFS_SUCCESSORS_REVISIONS_PER_SHARD(ffd))
+      % FSFS_SUCCESSORS_MAX_REVS_PER_FILE == 0)
     {
       /* This is a new file, so write a new index. */
       SVN_ERR(write_new_successor_index(successor_ids_temp_file, pool));
@@ -6234,12 +6251,14 @@ update_successor_map(svn_fs_t *fs,
   if (ffd->format < SVN_FS_FS__MIN_SUCCESSORS_FORMAT)
     return SVN_NO_ERROR;
 
-  if (new_rev % FSFS_SUCCESSORS_MAX_REVS_PER_FILE == 0)
+  if (new_rev % FSFS_SUCCESSORS_REVISIONS_PER_SHARD(ffd) == 0)
     {
-      /* Create the shards for new successor files. We don't care if this
-       * fails because the shards already existed for some reason. */
       svn_error_t *err;
-      const char *new_dir = path_successor_ids_shard(fs, new_rev, pool);
+      const char *new_dir;
+      
+      /* Create a new ids/ shard. We don't care if this fails because the shard
+       * already existed for some reason. */
+      new_dir = path_successor_ids_shard(fs, new_rev, pool);
       err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
       if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
         SVN_ERR(err);
@@ -6250,6 +6269,8 @@ update_successor_map(svn_fs_t *fs,
                                      PATH_SUCCESSORS_IDS_DIR, NULL),
                                    pool));
 
+      /* Create a new node-revs/ shard. We don't care if this fails because the
+       * shard already existed for some reason. */
       new_dir = path_successor_node_revs_shard(fs, new_rev, pool);
       err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
       if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
@@ -6260,6 +6281,12 @@ update_successor_map(svn_fs_t *fs,
                                      pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
                                      PATH_SUCCESSORS_NODE_REVS_DIR, NULL),
                                    pool));
+    }
+  else if ((new_rev % FSFS_SUCCESSORS_REVISIONS_PER_SHARD(ffd))
+           % FSFS_SUCCESSORS_MAX_REVS_PER_FILE == 0)
+    {
+      /* Nothing; update_successor_ids_file() will DTRT with respect to
+       * the index within the ids/ file. */
     }
 
   /* Create temporary files containing updated successor map data. */
@@ -6278,6 +6305,7 @@ update_successor_map(svn_fs_t *fs,
       /* Use 'current' as perms reference. */
       perms_reference = svn_fs_fs__path_current(fs, pool);
     }
+
   SVN_ERR(move_into_place(successor_ids_temp_abspath,
                           successor_ids_abspath, perms_reference,
                           pool));
