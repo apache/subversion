@@ -1120,6 +1120,26 @@ svn_editor_from_delta(svn_editor_t **editor,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 
+/** A temporary API which conditionally inserts a double editor shim
+ * into the chain of delta editors.  Used for testing Editor v2.
+ *
+ * Whether or not the shims are inserted is controlled by a compile-time
+ * option in libsvn_delta/compat.c.
+ *
+ * @note The use of these shims and this API will likely cause all kinds
+ * of performance degredation.  (Which is actually a moot point since they
+ * don't even work properly yet anyway.)
+ *
+ * ### This should not ship in the final release.
+ */
+svn_error_t *
+svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
+                         void **dedit_baton_out,
+                         const svn_delta_editor_t *deditor_in,
+                         void *dedit_baton_in,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
 /** A text-delta window handler which does nothing.
  *
  * Editors can return this handler from @c apply_textdelta if they don't
