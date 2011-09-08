@@ -121,23 +121,19 @@ Candidate changes:
                          performance should be better, I wonder if that's
                          been tested at all)
 
- * branches/1.7.x-issue4000
-   Fix issue #4000 'WC-WC-copy of file external creates first-class file node'
-   and don't break file external state when committing a file external.
+ * r1164027
+   Fix issue #4002: 'Commit of external file breaks subsequent update'
+   read: prevent wc.db inconsistency.
    Justification:
-     Inconsistency. Can create collisions between externals definitions and
-     versioned nodes.
-     r1164027 is included since it inadvertently fixes the re-appearance of
-     issue #4000 on a file external that has been committed.
+     The missing FILE_EXTERNAL flag in the NODES table is an inconsistency
+     that affects these wc-queries: STMT_SELECT_BASE_*,
+     STMT_SELECT_MIN_MAX_REVISIONS, STMT_HAS_SPARSE_NODES, STMT_HAS_SWITCHED*. 
    Notes:
-     Since r1164027 prevents the NODES table's FILE_EXTERNAL column from
-     being blanked out during commit bumping, it probably fixes a number of
-     other problems with committed file externals that I'm not aware of ATM.
+     Issue #4002 doesn't actually break 'update', just shows an extraneous
+     error message. I haven't actually tested for failing use cases beyond
+     that, except I know that this fix will also be needed for #4000's fix.
    Conflicts:
-     C  externals_tests.py
-     branches/1.7.x-issue4000@    1164785 1164786 1164792
-     are clean versions of trunk@ 1164027 1164760 1164765
-     and are the:    corner case fix^  main fix^    ^test
+     --accept=mf
    Votes:
      +1: neels
 
