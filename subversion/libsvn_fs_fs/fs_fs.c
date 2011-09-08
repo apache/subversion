@@ -494,6 +494,9 @@ path_node_origin(svn_fs_t *fs, const char *node_id, apr_pool_t *pool)
                               node_id_minus_last_char, NULL);
 }
 
+/* Pass all arguments to PATH_SOME_SHARD(), interpret the returned value
+   as a directory name, and create it (with the permissions of its parent)
+   if it doesn't already exist. */
 static svn_error_t *
 make_shard_dir(const char *(*path_some_shard)(svn_fs_t *,
                                               svn_revnum_t,
