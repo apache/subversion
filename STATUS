@@ -137,6 +137,25 @@ Candidate changes:
    Votes:
      +1: neels
 
+ * r1164760, r1166500
+   Fix issue #4000 'WC-WC-copy of file external creates first-class file node'.
+   Justification:
+     Inconsistency and regression. Copies file externals as "real" files
+     when recursively copying, and can create collisions between externals
+     definitions and versioned nodes, causing error on each checkout/update.
+   Notes:
+     - This fix depends on r1164027 (separately nominated) to cover file
+       externals that have seen a commit from the current WC -- otherwise
+       issue #4000 remains for committed file externals.
+     - r1164765 adds a test; it depends on r1164027 to pass.
+   Conflicts:
+     None with the nominated revisions, but
+     - The test revision lacks one import line. Branch 1.7.x-issue4k adds the
+       test to the revisions nominated here.
+     - r1164027 can be merged to branch 1.7.x-issue4k with --accept=mf.
+   Votes:
+     +1: neels
+
 Veto-blocked changes:
 =====================
 
