@@ -468,3 +468,35 @@ svn_editor_from_delta(svn_editor_t **editor_p,
 
   return SVN_NO_ERROR;
 }
+
+
+/* Uncomment below to add editor shims throughout Subversion.  In it's
+ * current state, that will likely break The World. */
+/* #define ENABLE_EDITOR_SHIMS*/
+
+svn_error_t *
+svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
+                         void **dedit_baton_out,
+                         const svn_delta_editor_t *deditor_in,
+                         void *dedit_baton_in,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+#ifndef ENABLE_EDITOR_SHIMS
+  /* Shims disabled, just copy the editor and baton directly. */
+  *deditor_out = deditor_in;
+  *dedit_baton_out = dedit_baton_in;
+#else
+  /* Use our shim APIs to create an intermediate svn_editor_t, and then
+     wrap that again back into a svn_delta_editor_t.  This introduces
+     a lot of overhead. */
+  svn_editor_t *editor;
+
+  SVN_ERR(svn_editor_from_delta(&editor, deditor_in, dedit_baton_in,
+                                NULL, NULL, result_pool, scratch_pool));
+  SVN_ERR(svn_delta_from_editor(deditor_out, dedit_baton_out, editor,
+                                result_pool));
+
+#endif
+  return SVN_NO_ERROR;
+}
