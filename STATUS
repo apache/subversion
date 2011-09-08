@@ -93,7 +93,7 @@ Candidate changes:
    Branch:
      1.7.x-r1163557
    Votes:
-     +1: philip
+     +1: philip, rhuijben
      +0: neels (Much other code still dismally fails at file externals in
                 unversioned dirs, e.g. 'status', 'commit'. This apparently
                 only fixes maintainer-mode 'svn cleanup', IMHO low prio.)
@@ -156,12 +156,13 @@ Candidate changes:
    Votes:
      +1: neels
 
- * r1166555
+ * r1166555, r1166678
    Fix a crash in ra_svn SASL authentication.
    Justification:
      See http://svn.haxx.se/dev/archive-2011-09/0182.shtml
    Votes:
-     +1: stsp, philip
+     +1: stsp, philip (without)
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
