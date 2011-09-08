@@ -158,6 +158,8 @@ Candidate changes:
 
  * r1166555
    Fix a crash in ra_svn SASL authentication.
+   Justification:
+     See http://svn.haxx.se/dev/archive-2011-09/0182.shtml
    Votes:
      +1: stsp
 
