@@ -161,11 +161,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1166555, r1166678
-   Fix a crash in ra_svn SASL authentication.
-   Justification:
-     See http://svn.haxx.se/dev/archive-2011-09/0182.shtml
-   Votes:
-     +1: stsp, philip, rhuijben
-
