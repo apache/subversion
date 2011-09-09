@@ -10375,8 +10375,7 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
           int i;
           apr_array_header_t *ext;
 
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                            STMT_INSERT_EXTERNAL_UPGRADE));
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_EXTERNAL));
 
           SVN_ERR(svn_wc_parse_externals_description3(
                             &ext, svn_dirent_join(dir_abspath, local_relpath,
@@ -10391,12 +10390,13 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
               item_relpath = svn_relpath_join(local_relpath, item->target_dir,
                                               scratch_pool);
 
-              SVN_ERR(svn_sqlite__bindf(stmt, "issssis",
+              SVN_ERR(svn_sqlite__bindf(stmt, "isssssis",
                                         wc_id,
                                         item_relpath,
                                         svn_relpath_dirname(item_relpath,
                                                             scratch_pool),
                                         "normal",
+                                        "unknown",
                                         local_relpath,
                                         (apr_int64_t)1, /* repos_id */
                                         "" /* repos_relpath */));
