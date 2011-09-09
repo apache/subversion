@@ -121,13 +121,14 @@ Candidate changes:
                          performance should be better, I wonder if that's
                          been tested at all)
 
- * r1167209
-   Unbreak the tests after r1167208.
-   Votes:
-     +1: danielsh
-     
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1167209
+   Unbreak the tests after r1167208.
+   Votes:
+     +1: danielsh, stsp, hwright
+     
