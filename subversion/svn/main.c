@@ -2190,6 +2190,19 @@ main(int argc, const char *argv[])
       return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
 
+  /* Disallow simultaneous use of both -m and -F, when they are
+     both used to pass a commit message or lock comment.  ('propset'
+     takes the property value, not a commit message, from -F.) 
+   */
+  if (opt_state.filedata && opt_state.message
+      && subcommand->cmd_func != svn_cl__propset)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--message (-m) and --file (-F) "
+                               "are mutually exclusive"));
+      return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+    }
+
   /* --trust-server-cert can only be used with --non-interactive */
   if (opt_state.trust_server_cert && !opt_state.non_interactive)
     {
