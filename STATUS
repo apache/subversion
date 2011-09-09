@@ -121,7 +121,13 @@ Candidate changes:
                          performance should be better, I wonder if that's
                          been tested at all)
 
- * r1164027,r1167062
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
+ * r1164027, r1167062
    Fix issue #4002: 'Commit of external file breaks subsequent update'
    read: prevent wc.db inconsistency.
    Justification:
@@ -136,10 +142,12 @@ Candidate changes:
    Conflicts:
      r1164027: --accept=mf
    Votes:
-     +1: neels, philip
+     +1: neels, philip, rhuijben
 
- * r1164760, r1166500
+ * r1164760, r1166500, r1164765
    Fix issue #4000 'WC-WC-copy of file external creates first-class file node'.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4k
    Justification:
      Inconsistency and regression. Copies file externals as "real" files
      when recursively copying, and can create collisions between externals
@@ -150,15 +158,6 @@ Candidate changes:
        issue #4000 remains for committed file externals.
      - r1164765 adds a test; it depends on r1164027 to pass.
    Conflicts:
-     None with the nominated revisions.
-     Dependency r1164027: --accept=mf
-     Test r1164765: use branches/1.7.x-issue4k (has test, but not r1164027)
-                    (missing 'import' line after merge)
+     This group depends on the r1164027 group.
    Votes:
-     +1: neels, philip (the two revs or the 1.7.x-issue4k branch)
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: neels, philip, rhuijben
