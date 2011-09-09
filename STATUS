@@ -134,10 +134,9 @@ Candidate changes:
      that, except I know that this fix will also be needed for #4000's fix.
      r1167062 is a regression test.
    Conflicts:
-     --accept=mf
+     r1164027: --accept=mf
    Votes:
-     +1: neels (r1164027 only)
-     +1: philip
+     +1: neels, philip
 
  * r1164760, r1166500
    Fix issue #4000 'WC-WC-copy of file external creates first-class file node'.
@@ -151,10 +150,10 @@ Candidate changes:
        issue #4000 remains for committed file externals.
      - r1164765 adds a test; it depends on r1164027 to pass.
    Conflicts:
-     None with the nominated revisions, but
-     - The test revision lacks one import line. Branch 1.7.x-issue4k adds the
-       test to the revisions nominated here.
-     - r1164027 can be merged to branch 1.7.x-issue4k with --accept=mf.
+     None with the nominated revisions.
+     Dependency r1164027: --accept=mf
+     Test r1164765: use branches/1.7.x-issue4k (has test, but not r1164027)
+                    (missing 'import' line after merge)
    Votes:
      +1: neels
 
