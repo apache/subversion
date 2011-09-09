@@ -741,8 +741,7 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
 svn_error_t *
 svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
                                      svn_boolean_t *has_rev_zero_history,
-                                     const char *path_or_url,
-                                     const svn_opt_revision_t *peg_revision,
+                                     svn_revnum_t peg_revnum,
                                      svn_revnum_t range_youngest,
                                      svn_revnum_t range_oldest,
                                      svn_ra_session_t *ra_session,
@@ -750,65 +749,13 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
                                      apr_pool_t *pool)
 {
   apr_array_header_t *segments;
-  svn_revnum_t peg_revnum = SVN_INVALID_REVNUM;
-  apr_pool_t *sesspool = NULL;  /* only used for an RA session we open */
-  svn_ra_session_t *session = ra_session;
-
-  /* If SESSION is NULL, resolve the url */
-  if (session == NULL)
-    {
-      svn_opt_revision_t opt_rev;
-      const char *url;
-      opt_rev.kind = svn_opt_revision_unspecified;
-
-      sesspool = svn_pool_create(pool);
-
-      SVN_ERR(svn_client__ra_session_from_path(&session, &peg_revnum, &url,
-                                               path_or_url, NULL,
-                                               peg_revision, &opt_rev,
-                                               ctx, sesspool));
-    }
-  else
-    {
-      const char *local_abspath;
-      /* The session is rooted correctly, so we don't need the url,
-         but we do need a revision */
-      switch (peg_revision->kind)
-        {
-          case svn_opt_revision_head:
-          case svn_opt_revision_unspecified:
-            SVN_ERR(svn_ra_get_latest_revnum(session, &peg_revnum, pool));
-            break;
-          case svn_opt_revision_number:
-            peg_revnum = peg_revision->value.number;
-            break;
-          case svn_opt_revision_date:
-            SVN_ERR(svn_ra_get_dated_revision(session, &peg_revnum,
-                                              peg_revision->value.date, pool));
-            break;
-          default:
-            if (svn_path_is_url(path_or_url))
-              return svn_error_create(SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED,
-                                      NULL, NULL);
-
-            SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url,
-                                            pool));
-
-            SVN_ERR(svn_client__get_revision_number(&peg_revnum, NULL,
-                                                    ctx->wc_ctx,
-                                                    local_abspath,
-                                                    session, peg_revision,
-                                                    pool));
-            break;
-        }
-    }
 
   /* Fetch the location segments for our URL@PEG_REVNUM. */
   if (! SVN_IS_VALID_REVNUM(range_youngest))
     range_youngest = peg_revnum;
   if (! SVN_IS_VALID_REVNUM(range_oldest))
     range_oldest = 0;
-  SVN_ERR(svn_client__repos_location_segments(&segments, session, "",
+  SVN_ERR(svn_client__repos_location_segments(&segments, ra_session, "",
                                               peg_revnum, range_youngest,
                                               range_oldest, ctx, pool));
 
@@ -825,10 +772,6 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
     }
 
   SVN_ERR(svn_mergeinfo__mergeinfo_from_segments(mergeinfo_p, segments, pool));
-
-  /* If we opened an RA session, ensure its closure. */
-  if (sesspool)
-    svn_pool_destroy(sesspool);
 
   return SVN_NO_ERROR;
 }
@@ -1785,6 +1728,8 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *scratch_pool)
 {
+  apr_pool_t *sesspool = svn_pool_create(scratch_pool);
+  svn_ra_session_t *source_session, *target_session;
   const char *log_target = NULL;
   const char *repos_root;
   const char *target_repos_rel;
@@ -1855,20 +1800,50 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
         }
     }
 
+  /* Open RA sessions to the repository for the source and target.
+   * ### TODO: As the source and target must be in the same repository, we
+   * should share a single session, tracking the two URLs separately. */
+  
   if (!finding_merged)
-    SVN_ERR(svn_client__get_history_as_mergeinfo(&target_history, NULL,
-                                                 target_path_or_url,
-                                                 target_peg_revision,
-                                                 SVN_INVALID_REVNUM,
-                                                 SVN_INVALID_REVNUM,
-                                                 NULL, ctx, scratch_pool));
+    {
+      svn_revnum_t target_peg_revnum;
+      const char *url;
 
-  SVN_ERR(svn_client__get_history_as_mergeinfo(&source_history, NULL,
-                                               source_path_or_url,
-                                               source_peg_revision,
-                                               SVN_INVALID_REVNUM,
-                                               SVN_INVALID_REVNUM,
-                                               NULL, ctx, scratch_pool));
+      SVN_ERR(svn_client__ra_session_from_path(&target_session,
+                                               &target_peg_revnum, &url,
+                                               target_path_or_url, NULL,
+                                               target_peg_revision,
+                                               target_peg_revision,
+                                               ctx, scratch_pool));
+      
+      SVN_ERR(svn_client__get_history_as_mergeinfo(&target_history, NULL,
+                                                   target_peg_revnum,
+                                                   SVN_INVALID_REVNUM,
+                                                   SVN_INVALID_REVNUM,
+                                                   target_session, ctx,
+                                                   scratch_pool));
+    }
+
+  {
+    svn_revnum_t source_peg_revnum;
+    const char *url;
+
+    SVN_ERR(svn_client__ra_session_from_path(&source_session,
+                                             &source_peg_revnum, &url,
+                                             source_path_or_url, NULL,
+                                             source_peg_revision,
+                                             source_peg_revision,
+                                             ctx, scratch_pool));
+
+    SVN_ERR(svn_client__get_history_as_mergeinfo(&source_history, NULL,
+                                                 source_peg_revnum,
+                                                 SVN_INVALID_REVNUM,
+                                                 SVN_INVALID_REVNUM,
+                                                 source_session, ctx,
+                                                 scratch_pool));
+  }
+
+  svn_pool_destroy(sesspool);
 
   /* Separate the explicit or inherited mergeinfo on TARGET_PATH_OR_URL, and possibly
      its explicit subtree mergeinfo, into their inheritable and non-inheritable

@@ -769,6 +769,8 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
                                          svn_client_ctx_t *ctx,
                                          apr_pool_t *pool)
 {
+  apr_pool_t *sesspool = svn_pool_create(pool);
+  svn_ra_session_t *session1, *session2;
   apr_hash_t *history1, *history2;
   apr_hash_index_t *hi;
   svn_revnum_t yc_revision = SVN_INVALID_REVNUM;
@@ -781,22 +783,39 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
   revision1.value.number = rev1;
   revision2.value.number = rev2;
 
+  /* Open RA sessions for the two locations.
+   * ### TODO: As they are assumed to be in the same repository, we
+   * should share a single session, tracking the two URLs separately. */
+  {
+    svn_revnum_t peg;
+    const char *url;
+
+    SVN_ERR(svn_client__ra_session_from_path(&session1, &peg, &url,
+                                             path_or_url1, NULL,
+                                             &revision1, &revision1,
+                                             ctx, pool));
+    SVN_ERR(svn_client__ra_session_from_path(&session2, &peg, &url,
+                                             path_or_url2, NULL,
+                                             &revision2, &revision2,
+                                             ctx, pool));
+  }
+
   /* We're going to cheat and use history-as-mergeinfo because it
      saves us a bunch of annoying custom data comparisons and such. */
   SVN_ERR(svn_client__get_history_as_mergeinfo(&history1,
                                                &has_rev_zero_history1,
-                                               path_or_url1,
-                                               &revision1,
+                                               rev1,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
-                                               NULL, ctx, pool));
+                                               session1, ctx, pool));
   SVN_ERR(svn_client__get_history_as_mergeinfo(&history2,
                                                &has_rev_zero_history2,
-                                               path_or_url2,
-                                               &revision2,
+                                               rev2,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
-                                               NULL, ctx, pool));
+                                               session2, ctx, pool));
+
+  svn_pool_destroy(sesspool);
 
   /* Loop through the first location's history, check for overlapping
      paths and ranges in the second location's history, and

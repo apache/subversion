@@ -1043,15 +1043,10 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
       if (mergeinfo)
         {
           svn_mergeinfo_t implicit_mergeinfo;
-          svn_opt_revision_t peg_rev;
 
-          peg_rev.kind = svn_opt_revision_number;
-          peg_rev.value.number = base_revision;
           SVN_ERR(svn_client__get_history_as_mergeinfo(
             &implicit_mergeinfo, NULL,
-            local_abspath, &peg_rev,
-            base_revision,
-            SVN_INVALID_REVNUM,
+            base_revision, base_revision, SVN_INVALID_REVNUM,
             ra_session,
             ctx,
             iterpool));
@@ -3623,7 +3618,6 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
         }
       else
         {
-          svn_opt_revision_t peg_revision;
           const char *url;
 
           url = svn_path_url_add_component2(repos_root, repos_relpath,
@@ -3644,11 +3638,9 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
             start = target_rev;
 
           /* Fetch the implicit mergeinfo. */
-          peg_revision.kind = svn_opt_revision_number;
-          peg_revision.value.number = target_rev;
           SVN_ERR(svn_client__get_history_as_mergeinfo(implicit_mergeinfo,
                                                        NULL,
-                                                       url, &peg_revision,
+                                                       target_rev,
                                                        start, end,
                                                        ra_session, ctx,
                                                        result_pool));
@@ -4286,20 +4278,16 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
                                   apr_pool_t *scratch_pool)
 {
   svn_mergeinfo_t implicit_src_mergeinfo;
-  svn_opt_revision_t peg_rev;
   svn_revnum_t young_rev = MAX(revision1, revision2);
   svn_revnum_t old_rev = MIN(revision1, revision2);
   apr_array_header_t *rangelist;
-  const char *url = (revision2 < revision1) ? url1 : url2;
 
   /* Start by assuming there is no gap. */
   *gap_start = *gap_end = SVN_INVALID_REVNUM;
 
   /* Get URL1@REVISION1:URL2@REVISION2 as mergeinfo. */
-  peg_rev.kind = svn_opt_revision_number;
-  peg_rev.value.number = young_rev;
   SVN_ERR(svn_client__get_history_as_mergeinfo(&implicit_src_mergeinfo, NULL,
-                                               url, &peg_rev, young_rev,
+                                               young_rev, young_rev,
                                                old_rev, ra_session,
                                                merge_b->ctx, scratch_pool));
 
@@ -7942,7 +7930,6 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
               && (!is_rollback))
             {
               svn_error_t *err;
-              svn_opt_revision_t peg_revision;
               svn_mergeinfo_t subtree_history_as_mergeinfo;
               apr_array_header_t *child_merge_src_rangelist;
               const char *old_session_url;
@@ -7955,18 +7942,15 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
                  CHILD->ABSPATH both exists and is part of
                  (MERGE_SOURCE_PATH+CHILD_REPOS_PATH)@MERGED_RANGE->END's
                  history. */
-              peg_revision.kind = svn_opt_revision_number;
-
               /* We know MERGED_RANGE->END is younger than MERGE_RANGE->START
                  because we only do this for forward merges. */
-              peg_revision.value.number = merged_range->end;
               SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
                                                         merge_b->ra_session2,
                                                         subtree_mergeinfo_url,
                                                         iterpool));
               err = svn_client__get_history_as_mergeinfo(
                 &subtree_history_as_mergeinfo, NULL,
-                subtree_mergeinfo_url, &peg_revision,
+                merged_range->end,
                 merged_range->end,
                 merged_range->start,
                 merge_b->ra_session2, merge_b->ctx, iterpool);
@@ -8127,7 +8111,6 @@ record_mergeinfo_for_added_subtrees(
           const char *added_path_mergeinfo_path;
           const char *old_session_url;
           const char *added_path_mergeinfo_url;
-          svn_opt_revision_t peg_revision;
 
           SVN_ERR(svn_wc_read_kind(&added_path_kind, merge_b->ctx->wc_ctx,
                                    added_abspath, FALSE, iterpool));
@@ -8175,15 +8158,12 @@ record_mergeinfo_for_added_subtrees(
             svn_path_url_add_component2(merge_b->repos_root_url,
                                         added_path_mergeinfo_path + 1,
                                         iterpool);
-          peg_revision.kind = svn_opt_revision_number;
-          peg_revision.value.number = MAX(merged_range->start,
-                                          merged_range->end);
           SVN_ERR(svn_client__ensure_ra_session_url(
             &old_session_url, merge_b->ra_session2,
             added_path_mergeinfo_url, iterpool));
           SVN_ERR(svn_client__get_history_as_mergeinfo(
             &adds_history_as_mergeinfo, NULL,
-            added_path_mergeinfo_url, &peg_revision,
+            MAX(merged_range->start, merged_range->end),
             MAX(merged_range->start, merged_range->end),
             MIN(merged_range->start, merged_range->end),
             merge_b->ra_session2, merge_b->ctx, iterpool));
