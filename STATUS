@@ -126,7 +126,7 @@ Candidate changes:
    Justification:
      Ambiguous syntax leading to data loss (of a commit message).
    Votes:
-     +1: danielsh
+     +1: danielsh, neels
 
 Veto-blocked changes:
 =====================
