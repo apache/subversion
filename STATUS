@@ -121,7 +121,7 @@ Candidate changes:
                          performance should be better, I wonder if that's
                          been tested at all)
 
- * r1164027
+ * r1164027,r1167062
    Fix issue #4002: 'Commit of external file breaks subsequent update'
    read: prevent wc.db inconsistency.
    Justification:
@@ -132,10 +132,12 @@ Candidate changes:
      Issue #4002 doesn't actually break 'update', just shows an extraneous
      error message. I haven't actually tested for failing use cases beyond
      that, except I know that this fix will also be needed for #4000's fix.
+     r1167062 is a regression test.
    Conflicts:
      --accept=mf
    Votes:
-     +1: neels
+     +1: neels (r1164027 only)
+     +1: philip
 
  * r1164760, r1166500
    Fix issue #4000 'WC-WC-copy of file external creates first-class file node'.
