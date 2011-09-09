@@ -126,10 +126,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1167173
-   Disallow 'svn commit -m foo -F bar'.
-   Justification:
-     Ambiguous syntax leading to data loss (of a commit message).
-   Votes:
-     +1: danielsh, neels, hwright
