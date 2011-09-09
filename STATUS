@@ -121,6 +121,16 @@ Candidate changes:
                          performance should be better, I wonder if that's
                          been tested at all)
 
+  * r1167269
+    Also upgrade dir externals nested inside dir externals.
+    Justification:
+      We currently upgrade only the first level of dir externals. We should
+      look for further nested externals WCs.
+    Notes:
+      http://svn.haxx.se/dev/archive-2011-09/0227.shtml
+    Votes:
+      +1: neels
+
 Veto-blocked changes:
 =====================
 
