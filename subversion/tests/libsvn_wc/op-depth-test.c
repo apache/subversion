@@ -3475,7 +3475,7 @@ revert_file_externals(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
 
-  SVN_ERR(svn_test__sandbox_create(&b, "revert_file_external", opts, pool));
+  SVN_ERR(svn_test__sandbox_create(&b, "revert_file_externals", opts, pool));
   file_write(&b, "f", "this is f\n");
   SVN_ERR(wc_add(&b, "f"));
   SVN_ERR(wc_propset(&b, "svn:externals", "^/f g", ""));
@@ -3526,6 +3526,100 @@ revert_file_externals(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0, "",    "normal", 1, "" },
       { 0, "f",   "normal", 1, "f" },
       { 0, "g",   "normal", 1, "f", TRUE },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "", rows));
+  }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+copy_file_externals(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "copy_file_externals", opts, pool));
+  file_write(&b, "f", "this is f\n");
+  SVN_ERR(wc_add(&b, "f"));
+  SVN_ERR(wc_mkdir(&b, "A"));
+  SVN_ERR(wc_propset(&b, "svn:externals", "^/f g", "A"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_mkdir(&b, "A/B"));
+  SVN_ERR(wc_propset(&b, "svn:externals", "^/f g", "A/B"));
+  SVN_ERR(wc_update(&b, "", 1));
+  {
+    nodes_row_t rows[] = {
+      { 0, "",      "normal", 1, "" },
+      { 0, "f",     "normal", 1, "f" },
+      { 0, "A",     "normal", 1, "A" },
+      { 2, "A/B",   "normal", NO_COPY_FROM },
+      { 0, "A/g",   "normal", 1, "f", TRUE },
+      { 0, "A/B/g", "normal", 1, "f", TRUE },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "", rows));
+  }
+
+  SVN_ERR(wc_copy(&b, "A", "X"));
+  {
+    nodes_row_t rows[] = {
+      { 0, "",      "normal", 1, "" },
+      { 0, "f",     "normal", 1, "f" },
+      { 0, "A",     "normal", 1, "A" },
+      { 2, "A/B",   "normal", NO_COPY_FROM },
+      { 0, "A/g",   "normal", 1, "f", TRUE },
+      { 0, "A/B/g", "normal", 1, "f", TRUE },
+      { 1, "X",     "normal", 1, "A" },
+      { 2, "X/B",   "normal", NO_COPY_FROM },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "", rows));
+  }
+
+  SVN_ERR(wc_update(&b, "", 1));
+  {
+    nodes_row_t rows[] = {
+      { 0, "",      "normal", 1, "" },
+      { 0, "f",     "normal", 1, "f" },
+      { 0, "A",     "normal", 1, "A" },
+      { 2, "A/B",   "normal", NO_COPY_FROM },
+      { 0, "A/g",   "normal", 1, "f", TRUE },
+      { 0, "A/B/g", "normal", 1, "f", TRUE },
+      { 1, "X",     "normal", 1, "A" },
+      { 2, "X/B",   "normal", NO_COPY_FROM },
+      { 0, "X/g",   "normal", 1, "f", TRUE },
+      { 0, "X/B/g", "normal", 1, "f", TRUE },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "", rows));
+  }
+
+  SVN_ERR(wc_delete(&b, "X"));
+  {
+    nodes_row_t rows[] = {
+      { 0, "",      "normal", 1, "" },
+      { 0, "f",     "normal", 1, "f" },
+      { 0, "A",     "normal", 1, "A" },
+      { 2, "A/B",   "normal", NO_COPY_FROM },
+      { 0, "A/g",   "normal", 1, "f", TRUE },
+      { 0, "A/B/g", "normal", 1, "f", TRUE },
+      { 0, "X/g",   "normal", 1, "f", TRUE },
+      { 0, "X/B/g", "normal", 1, "f", TRUE },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "", rows));
+  }
+
+  SVN_ERR(wc_update(&b, "", 1));
+  {
+    nodes_row_t rows[] = {
+      { 0, "",      "normal", 1, "" },
+      { 0, "f",     "normal", 1, "f" },
+      { 0, "A",     "normal", 1, "A" },
+      { 2, "A/B",   "normal", NO_COPY_FROM },
+      { 0, "A/g",   "normal", 1, "f", TRUE },
+      { 0, "A/B/g", "normal", 1, "f", TRUE },
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "", rows));
@@ -3596,5 +3690,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "commit_file_external (issue #4002)"),
     SVN_TEST_OPTS_PASS(revert_file_externals,
                        "revert_file_externals"),
+    SVN_TEST_OPTS_PASS(copy_file_externals,
+                       "copy_file_externals"),
     SVN_TEST_NULL
   };
