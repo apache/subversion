@@ -1398,8 +1398,9 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
     status_tree = status_tree.old_tree()
 
   # Commit.
+  if '-m' not in args and '-F' not in args:
+    args = list(args) + ['-m', 'log msg']
   exit_code, output, errput = main.run_svn(error_re_string, 'ci',
-                                           '-m', 'log msg',
                                            *args)
 
   if error_re_string:
