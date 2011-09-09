@@ -121,6 +121,12 @@ Candidate changes:
                          performance should be better, I wonder if that's
                          been tested at all)
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
   * r1167269
     Also upgrade dir externals nested inside dir externals.
     Justification:
@@ -129,11 +135,4 @@ Candidate changes:
     Notes:
       http://svn.haxx.se/dev/archive-2011-09/0227.shtml
     Votes:
-      +1: neels, stsp
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
-
+      +1: neels, stsp, philip
