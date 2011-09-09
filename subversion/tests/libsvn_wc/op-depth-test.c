@@ -422,10 +422,12 @@ check_db_rows(svn_test__sandbox_t *b,
   int i;
   svn_sqlite__stmt_t *stmt;
   static const char *const statements[] = {
-    "SELECT op_depth, presence, local_relpath, revision, repos_path, "
-      "     file_external "
-      "FROM nodes "
-      "WHERE local_relpath = ?1 OR local_relpath LIKE ?2",
+    "SELECT op_depth, nodes.presence, nodes.local_relpath, revision,"
+    "       repos_path, file_external, def_local_relpath"
+    " FROM nodes "
+    " LEFT OUTER JOIN externals"
+    "             ON nodes.local_relpath = externals.local_relpath"
+    " WHERE nodes.local_relpath = ?1 OR nodes.local_relpath LIKE ?2",
     NULL };
 #define STMT_SELECT_NODES_INFO 0
 
@@ -454,6 +456,10 @@ check_db_rows(svn_test__sandbox_t *b,
       row->repo_revnum = svn_sqlite__column_revnum(stmt, 3);
       row->repo_relpath = svn_sqlite__column_text(stmt, 4, b->pool);
       row->file_external = !svn_sqlite__column_is_null(stmt, 5);
+      if (row->file_external && svn_sqlite__column_is_null(stmt, 6))
+        comparison_baton.errors
+          = svn_error_createf(SVN_ERR_TEST_FAILED, comparison_baton.errors,
+                              "incomplete {%s}", print_row(row, b->pool));
 
       key = apr_psprintf(b->pool, "%d %s", row->op_depth, row->local_relpath);
       apr_hash_set(found_hash, key, APR_HASH_KEY_STRING, row);
