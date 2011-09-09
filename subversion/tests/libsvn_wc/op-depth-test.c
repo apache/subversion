@@ -264,6 +264,23 @@ wc_move(svn_test__sandbox_t *b, const char *src, const char *dst)
                           FALSE, FALSE, NULL, NULL, NULL, ctx, b->pool);
 }
 
+static svn_error_t *
+wc_propset(svn_test__sandbox_t *b,
+           const char *name,
+           const char *value,
+           const char *path)
+{
+  svn_client_ctx_t *ctx;
+  apr_array_header_t *paths = apr_array_make(b->pool, 1,
+                                             sizeof(const char *));
+
+  SVN_ERR(svn_client_create_context(&ctx, b->pool));
+  APR_ARRAY_PUSH(paths, const char *) = wc_path(b, path);
+  return svn_client_propset_local(name, svn_string_create(value, b->pool),
+                                  paths, svn_depth_empty, TRUE, NULL, ctx,
+                                  b->pool);
+}
+
 /* Create the Greek tree on disk in the WC, and commit it. */
 static svn_error_t *
 add_and_commit_greek_tree(svn_test__sandbox_t *b)
@@ -321,6 +338,7 @@ typedef struct nodes_row_t {
     const char *presence;
     svn_revnum_t repo_revnum;
     const char *repo_relpath;
+    svn_boolean_t file_external;
 } nodes_row_t;
 
 /* Macro for filling in the REPO_* fields of a non-base NODES_ROW_T
@@ -332,15 +350,25 @@ static const char *
 print_row(const nodes_row_t *row,
           apr_pool_t *result_pool)
 {
+  const char *file_external_str;
+
   if (row == NULL)
     return "(null)";
-  if (row->repo_revnum == SVN_INVALID_REVNUM)
-    return apr_psprintf(result_pool, "%d, %s, %s",
-                        row->op_depth, row->local_relpath, row->presence);
+
+  if (row->file_external)
+    file_external_str = ", file-external";
   else
-    return apr_psprintf(result_pool, "%d, %s, %s, from ^/%s@%d",
+    file_external_str = "";
+      
+  if (row->repo_revnum == SVN_INVALID_REVNUM)
+    return apr_psprintf(result_pool, "%d, %s, %s%s",
                         row->op_depth, row->local_relpath, row->presence,
-                        row->repo_relpath, (int)row->repo_revnum);
+                        file_external_str);
+  else
+    return apr_psprintf(result_pool, "%d, %s, %s, from ^/%s@%d%s",
+                        row->op_depth, row->local_relpath, row->presence,
+                        row->repo_relpath, (int)row->repo_revnum,
+                        file_external_str);
 }
 
 /* A baton to pass through svn_hash_diff() to compare_nodes_rows(). */
@@ -381,7 +409,8 @@ compare_nodes_rows(const void *key, apr_ssize_t klen,
     }
   else if (expected->repo_revnum != found->repo_revnum
            || (strcmp_null(expected->repo_relpath, found->repo_relpath) != 0)
-           || (strcmp_null(expected->presence, found->presence) != 0))
+           || (strcmp_null(expected->presence, found->presence) != 0)
+           || (expected->file_external != found->file_external))
     {
       b->errors = svn_error_createf(
                     SVN_ERR_TEST_FAILED, b->errors,
@@ -410,7 +439,8 @@ check_db_rows(svn_test__sandbox_t *b,
   int i;
   svn_sqlite__stmt_t *stmt;
   static const char *const statements[] = {
-    "SELECT op_depth, presence, local_relpath, revision, repos_path "
+    "SELECT op_depth, presence, local_relpath, revision, repos_path, "
+      "     file_external "
       "FROM nodes "
       "WHERE local_relpath = ?1 OR local_relpath LIKE ?2",
     NULL };
@@ -440,6 +470,7 @@ check_db_rows(svn_test__sandbox_t *b,
       row->local_relpath = svn_sqlite__column_text(stmt, 2, b->pool);
       row->repo_revnum = svn_sqlite__column_revnum(stmt, 3);
       row->repo_relpath = svn_sqlite__column_text(stmt, 4, b->pool);
+      row->file_external = !svn_sqlite__column_is_null(stmt, 5);
 
       key = apr_psprintf(b->pool, "%d %s", row->op_depth, row->local_relpath);
       apr_hash_set(found_hash, key, APR_HASH_KEY_STRING, row);
@@ -3427,6 +3458,35 @@ test_case_rename(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+commit_file_external(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "commit_file_external", opts, pool));
+  file_write(&b, "f", "this is f\n");
+  SVN_ERR(wc_add(&b, "f"));
+  SVN_ERR(wc_propset(&b, "svn:externals", "^/f g", ""));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_update(&b, "", 1));
+  file_write(&b, "g", "this is f\nmodified via g\n");
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_update(&b, "", 2));
+
+  {
+    nodes_row_t rows[] = {
+      { 0, "",  "normal",       2, "" },
+      { 0, "f", "normal",       2, "f" },
+      { 0, "g", "normal",       2, "f", TRUE },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "", rows));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -3485,5 +3545,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_XFAIL(test_case_rename,
                         "test_case_rename on case (in)sensitive system"),
 #endif
+    SVN_TEST_OPTS_PASS(commit_file_external,
+                       "commit_file_external (issue #4002)"),
     SVN_TEST_NULL
   };

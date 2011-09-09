@@ -1,4 +1,4 @@
-      * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      *ts * * * * * * * * * * * * * * * * * * * * * * * * * * *
       *                                                     *
       *  THIS RELEASE STREAM IS OPEN TO BUG FIXES.          *
       *                                                     *
@@ -133,23 +133,6 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1164027, r1167062
-   Fix issue #4002: 'Commit of external file breaks subsequent update'
-   read: prevent wc.db inconsistency.
-   Justification:
-     The missing FILE_EXTERNAL flag in the NODES table is an inconsistency
-     that affects these wc-queries: STMT_SELECT_BASE_*,
-     STMT_SELECT_MIN_MAX_REVISIONS, STMT_HAS_SPARSE_NODES, STMT_HAS_SWITCHED*. 
-   Notes:
-     Issue #4002 doesn't actually break 'update', just shows an extraneous
-     error message. I haven't actually tested for failing use cases beyond
-     that, except I know that this fix will also be needed for #4000's fix.
-     r1167062 is a regression test.
-   Conflicts:
-     r1164027: --accept=mf
-   Votes:
-     +1: neels, philip, rhuijben
 
  * r1164760, r1166500, r1164765
    Fix issue #4000 'WC-WC-copy of file external creates first-class file node'.
