@@ -1,4 +1,4 @@
-      *ts * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      * * * * * * * * * * * * * * * * * * * * * * * * * * * *
       *                                                     *
       *  THIS RELEASE STREAM IS OPEN TO BUG FIXES.          *
       *                                                     *
@@ -133,21 +133,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1164760, r1166500, r1164765
-   Fix issue #4000 'WC-WC-copy of file external creates first-class file node'.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4k
-   Justification:
-     Inconsistency and regression. Copies file externals as "real" files
-     when recursively copying, and can create collisions between externals
-     definitions and versioned nodes, causing error on each checkout/update.
-   Notes:
-     - This fix depends on r1164027 (separately nominated) to cover file
-       externals that have seen a commit from the current WC -- otherwise
-       issue #4000 remains for committed file externals.
-     - r1164765 adds a test; it depends on r1164027 to pass.
-   Conflicts:
-     This group depends on the r1164027 group.
-   Votes:
-     +1: neels, philip, rhuijben
