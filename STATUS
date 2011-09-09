@@ -155,7 +155,7 @@ Candidate changes:
      Test r1164765: use branches/1.7.x-issue4k (has test, but not r1164027)
                     (missing 'import' line after merge)
    Votes:
-     +1: neels
+     +1: neels, philip (the two revs or the 1.7.x-issue4k branch)
 
 Veto-blocked changes:
 =====================
