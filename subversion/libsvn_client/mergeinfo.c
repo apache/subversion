@@ -1235,7 +1235,8 @@ svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
   editor->open_directory = elide_mergeinfo_catalog_open_directory;
 
   eb = mergeinfo_catalog;
-  SVN_ERR(svn_editor__insert_shims(&editor, &eb, editor, eb, pool, pool));
+  SVN_ERR(svn_editor__insert_shims((const svn_delta_editor_t **)&editor, &eb,
+                                   editor, eb, pool, pool));
 
   /* Walk over the paths, and build up a list of elidable ones. */
   SVN_ERR(svn_hash_keys(&paths, mergeinfo_catalog, pool));
