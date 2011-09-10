@@ -1112,6 +1112,74 @@ def upgrade_locked(sbox):
 
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
+@Issue(4015)
+@XFail()
+def upgrade_file_externals(sbox):
+  "upgrade with file externals"
+
+  sbox.build()
+  replace_sbox_with_tarfile(sbox, 'upgrade_file_externals.tar.bz2')
+  svntest.main.run_svnadmin('setuuid', sbox.repo_dir,
+                            '07146bbd-0b64-4aaf-ab70-cd76a0df2d41')
+
+  expected_output = svntest.verify.RegexOutput('r2 committed.*')
+  svntest.actions.run_and_verify_svnmucc(None, expected_output, [],
+                                         'propset', 'svn:externals',
+                                         '^/A/B/E EX\n^/A/mu muX',
+                                         sbox.repo_url + '/A/B/F')
+
+  expected_output = svntest.verify.RegexOutput('r3 committed.*')
+  svntest.actions.run_and_verify_svnmucc(None, expected_output, [],
+                                         'propset', 'svn:externals',
+                                         '^/A/B/F FX\n^/A/B/lambda lambdaX',
+                                         sbox.repo_url + '/A/C')
+
+  expected_output = svntest.verify.RegexOutput('r4 committed.*')
+  svntest.actions.run_and_verify_svnmucc(None, expected_output, [],
+                                         'propset', 'pname1', 'pvalue1',
+                                         sbox.repo_url + '/A/mu',
+                                         'propset', 'pname2', 'pvalue2',
+                                         sbox.repo_url + '/A/B/lambda',
+                                         'propset', 'pname3', 'pvalue3',
+                                         sbox.repo_url + '/A/B/E/alpha')
+
+  #try: svntest.main.safe_rmtree(sbox.wc_dir)
+  #except OSError, e: pass
+  #svntest.main.run_svn(None, 'checkout', '-r', '3', sbox.repo_url, sbox.wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
+                                     'file:///tmp/repo', sbox.repo_url,
+                                     sbox.wc_dir)
+  
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+      'A/mu'        : Item(status=' U'),
+      'A/B/lambda'  : Item(status=' U'),
+      'A/B/E/alpha' : Item(status=' U'),
+      })
+  svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output,
+                                        None, None)
+
+  ### simple_property_verify only sees last line of multi-line
+  ### property values such as svn:externals
+  simple_property_verify(sbox.wc_dir, {
+      'A/mu'          : {'pname1' : 'pvalue1' },
+      'A/B/lambda'    : {'pname2' : 'pvalue2' },
+      'A/B/E/alpha'   : {'pname3' : 'pvalue3' },
+      'A/B/F'         : {'svn:externals' : '^/A/mu muX'},
+      'A/C'           : {'svn:externals' : '^/A/B/lambda lambdaX'},
+      'A/B/F/muX'     : {'pname1' : 'pvalue1' },
+      'A/C/lambdaX'   : {'pname2' : 'pvalue2' },
+      })
+
+  simple_property_verify(sbox.ospath('A/C/FX'), {
+      ''    : {'svn:externals' : '^/A/mu muX'},
+      'muX' : {'pname1' : 'pvalue1' },
+      })
+
+  simple_property_verify(sbox.ospath('A/C/FX/EX'), {
+      'alpha' : {'pname3' : 'pvalue3' },
+      })
+
 ########################################################################
 # Run the tests
 
@@ -1160,6 +1228,7 @@ test_list = [ None,
               add_add_x2,
               upgrade_with_missing_subdir,
               upgrade_locked,
+              upgrade_file_externals,
              ]
 
 
