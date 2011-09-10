@@ -4782,43 +4782,6 @@ check_history_location(const char *expected_path,
   return SVN_NO_ERROR;
 }
 
-/* Baton for history_next_receiver(). */
-struct history_next_baton
-{
-  apr_array_header_t *paths;
-  apr_array_header_t *revisions;
-  apr_pool_t *pool;
-};
-
-/* Implements svn_fs_history_next_receiver_t. */
-static svn_error_t *
-history_next_receiver(svn_fs_history_t *next,
-                      void *baton,
-                      svn_fs_history_t *origin,
-                      apr_pool_t *scratch_pool)
-{
-  struct history_next_baton *hnb = baton;
-
-  SVN_ERR(svn_fs_history_location(&APR_ARRAY_PUSH(hnb->paths, const char*),
-                                  &APR_ARRAY_PUSH(hnb->revisions, svn_revnum_t),
-                                  next, hnb->pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* Allocate a struct in POOL, initialize it, and return it. */
-static struct history_next_baton *
-make_history_next_baton(apr_pool_t *pool)
-{
-  struct history_next_baton *hnb;
-
-  hnb = apr_pcalloc(pool, sizeof(*hnb));
-  hnb->paths = apr_array_make(pool, 5, sizeof(const char *));
-  hnb->revisions = apr_array_make(pool, 5, sizeof(svn_revnum_t));
-  hnb->pool = pool;
-  return hnb;
-}
-
 /* Test svn_fs_history_*(). */
 static svn_error_t *
 node_history(const svn_test_opts_t *opts,
@@ -4876,24 +4839,6 @@ node_history(const svn_test_opts_t *opts,
 
     SVN_ERR(svn_fs_history_prev(&history, history, TRUE, pool));
     SVN_TEST_ASSERT(history == NULL);
-
-  }
-
-  /* Go forward in history: pi@r1 -> pi2@r2 */
-  {
-    svn_fs_history_t *history;
-    svn_fs_root_t *rev_root;
-    struct history_next_baton *hnb = make_history_next_baton(pool);
-
-    SVN_ERR(svn_fs_revision_root(&rev_root, fs, 1, pool));
-
-    /* Fetch another history object, and walk forward. */
-
-    SVN_ERR(svn_fs_node_history(&history, rev_root, "A/D/G/pi", pool));
-    SVN_ERR(check_history_location("/A/D/G/pi", 1, history, pool));
-    SVN_ERR(svn_fs_history_next(history_next_receiver, &hnb, history, pool));
-
-    /* ### TODO(sid): check HISTORY's location */
   }
 
   return SVN_NO_ERROR;
