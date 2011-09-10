@@ -1281,8 +1281,8 @@ svn_fs_history_next(svn_fs_history_next_receiver_t *receiver,
                     svn_fs_history_t *history,
                     apr_pool_t *pool)
 {
-  /* ### TODO(sid): svn_error_trace() */
-  return history->vtable->next(receiver, receiver_baton, history, pool);
+  return svn_error_return(history->vtable->next(receiver, receiver_baton,
+                                               history, pool));
 }
 
 svn_error_t *
