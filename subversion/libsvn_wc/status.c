@@ -266,13 +266,23 @@ read_info(const struct svn_wc__db_info_t **info,
      happy... (It might be completely unrelated, but...) */
   if (mtb->have_base
       && (mtb->status == svn_wc__db_status_added
-         || mtb->status == svn_wc__db_status_deleted))
+          || mtb->status == svn_wc__db_status_deleted
+          || mtb->kind == svn_wc__db_kind_file))
     {
+      svn_boolean_t update_root;
+      svn_wc__db_lock_t **lock_arg = NULL;
+
+      if (mtb->status == svn_wc__db_status_added
+          || mtb->status == svn_wc__db_status_deleted)
+        lock_arg = &mtb->lock;
+
       SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                       &mtb->lock, NULL, NULL,
+                                       lock_arg, NULL, &update_root,
                                        db, local_abspath,
                                        result_pool, scratch_pool));
+
+      mtb->file_external = (update_root && mtb->kind == svn_wc__db_kind_file);
 
       if (mtb->status == svn_wc__db_status_deleted)
         {
@@ -771,6 +781,8 @@ assemble_status(svn_wc_status3_t **status,
 
   stat->moved_from_abspath = moved_from_abspath;
   stat->moved_to_abspath = info->moved_to_abspath;
+
+  stat->file_external = info->file_external;
 
   *status = stat;
 

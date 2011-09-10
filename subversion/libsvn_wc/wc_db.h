@@ -1871,6 +1871,8 @@ struct svn_wc__db_info_t {
 
   const char *moved_to_abspath; /* Only on op-roots. See svn_wc_status3_t. */
   svn_boolean_t moved_here;     /* On both op-roots and children. */
+
+  svn_boolean_t file_external;
 };
 
 /* Return in *NODES a hash mapping name->struct svn_wc__db_info_t for

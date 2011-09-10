@@ -3667,6 +3667,10 @@ typedef struct svn_wc_status3_t
    * @since New in 1.8. */
   const char *moved_to_abspath;
 
+  /* TRUE iff the item is a file brought in by an svn:externals definition.
+   * @since New in 1.8. */
+  svn_boolean_t file_external;
+
   /* NOTE! Please update svn_wc_dup_status3() when adding new fields here. */
 } svn_wc_status3_t;
 
