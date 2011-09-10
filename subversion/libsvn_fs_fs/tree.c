@@ -3338,7 +3338,7 @@ fs_history_next(svn_fs_history_next_receiver_t receiver,
                 apr_pool_t *pool)
 {
   /* ### "Not implemented" */
-  return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
+  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
 }
 
 
