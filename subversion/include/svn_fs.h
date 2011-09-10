@@ -1204,7 +1204,7 @@ svn_fs_node_history(svn_fs_history_t **history_p,
  * the same as the original.  This will happen if the original
  * location was an interesting one (where the node was modified, or
  * took place in a copy event).  This behavior allows looping callers
- * to avoid the calling svn_fs_history_location() on the object
+ * to avoid calling svn_fs_history_location() on the object
  * returned by svn_fs_node_history(), and instead go ahead and begin
  * calling svn_fs_history_prev().
  *
@@ -1249,7 +1249,7 @@ typedef svn_error_t *
  * the same as the original.  This will happen if the original
  * location was an interesting one (where the node was modified, or
  * took place in a copy event).  This behavior allows looping callers
- * to avoid the calling svn_fs_history_location() on the object
+ * to avoid calling svn_fs_history_location() on the object
  * returned by svn_fs_node_history(), and instead go ahead and begin
  * calling svn_fs_history_next().
  *
