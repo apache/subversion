@@ -1224,6 +1224,58 @@ svn_fs_history_prev(svn_fs_history_t **prev_history_p,
                     svn_boolean_t cross_copies,
                     apr_pool_t *pool);
 
+/** The callback type invoked by svn_fs_history_next().  Each invocation
+ * reports a history location @a next as an interesting location in the
+ * (future) history of @a origin.
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *
+(*svn_fs_history_next_receiver_t)(svn_fs_history_t *next,
+                                  void *baton,
+                                  svn_fs_history_t *origin,
+                                  apr_pool_t *scratch_pool);
+
+/** Invoke @a receiver (with @a receiver_baton) with an opaque node history
+ * object which represents each next (younger) interesting history
+ * location for the filesystem node represented by @a history, or @c
+ * NULL if no such next location exists.
+ *
+ * @todo ### TODO(sid) add booleans controlling the definitions of
+ * 'interesting': does it include copies, merges, deletes, etc.
+ *
+ * @note If this is the first call to svn_fs_history_next() for the @a
+ * history object, it could return a history object whose location is
+ * the same as the original.  This will happen if the original
+ * location was an interesting one (where the node was modified, or
+ * took place in a copy event).  This behavior allows looping callers
+ * to avoid the calling svn_fs_history_location() on the object
+ * returned by svn_fs_node_history(), and instead go ahead and begin
+ * calling svn_fs_history_next().
+ *
+ * @note This function uses node-id ancestry alone to determine
+ * modifiedness, and therefore does NOT claim that in any of the
+ * returned revisions file contents changed, properties changed,
+ * directory entries lists changed, etc.
+ *
+ * @note The revisions returned for @a path will be younger than or
+ * the same age as the revision of that path in @a root.  That is, if
+ * @a root is a revision root based on revision X, and @a path was
+ * modified in some revision(s) older than X, those revisions
+ * older than X will not be included for @a path.
+ *
+ * @note This may return #SVN_ERR_UNSUPPORTED_FEATURE if the filesystem
+ * backend is of does not support successor lookups (e.g., because it
+ * is a pre-1.8 format).
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_history_next(svn_fs_history_next_receiver_t *receiver,
+                    void *receiver_baton,
+                    svn_fs_history_t *history,
+                    apr_pool_t *pool);
+
 
 /** Set @a *path and @a *revision to the path and revision,
  * respectively, of the @a history object.  Use @a pool for all

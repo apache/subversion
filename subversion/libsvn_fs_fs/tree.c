@@ -3330,6 +3330,18 @@ fs_history_prev(svn_fs_history_t **prev_history_p,
 }
 
 
+/* Implement svn_fs_history_next(). */
+static svn_error_t *
+fs_history_next(svn_fs_history_next_receiver_t *receiver,
+                void *receiver_baton,
+                svn_fs_history_t *history,
+                apr_pool_t *pool)
+{
+  /* ### "Not implemented" */
+  return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
+}
+
+
 /* Set *PATH and *REVISION to the path and revision for the HISTORY
    object.  Use POOL for all allocations. */
 static svn_error_t *
@@ -3347,6 +3359,7 @@ fs_history_location(const char **path,
 
 static history_vtable_t history_vtable = {
   fs_history_prev,
+  fs_history_next,
   fs_history_location
 };
 

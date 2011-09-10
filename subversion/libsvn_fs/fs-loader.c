@@ -1276,6 +1276,16 @@ svn_fs_history_prev(svn_fs_history_t **prev_history_p,
 }
 
 svn_error_t *
+svn_fs_history_next(svn_fs_history_next_receiver_t *receiver,
+                    void *receiver_baton,
+                    svn_fs_history_t *history,
+                    apr_pool_t *pool)
+{
+  /* ### TODO(sid): svn_error_trace() */
+  return history->vtable->next(receiver, receiver_baton, history, pool);
+}
+
+svn_error_t *
 svn_fs_history_location(const char **path, svn_revnum_t *revision,
                         svn_fs_history_t *history, apr_pool_t *pool)
 {
