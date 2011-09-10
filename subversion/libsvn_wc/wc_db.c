@@ -7174,6 +7174,10 @@ read_children_info(void *baton,
           if (moved_to_relpath)
             child_item->info.moved_to_abspath =
               svn_dirent_join(wcroot->abspath, moved_to_relpath, result_pool);
+
+          /* FILE_EXTERNAL flag only on op_depth 0. */
+          child_item->info.file_external = svn_sqlite__column_boolean(stmt,
+                                                                      22);
         }
       else
         {
