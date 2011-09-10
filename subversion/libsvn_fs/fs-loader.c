@@ -1276,7 +1276,7 @@ svn_fs_history_prev(svn_fs_history_t **prev_history_p,
 }
 
 svn_error_t *
-svn_fs_history_next(svn_fs_history_next_receiver_t *receiver,
+svn_fs_history_next(svn_fs_history_next_receiver_t receiver,
                     void *receiver_baton,
                     svn_fs_history_t *history,
                     apr_pool_t *pool)

@@ -3332,7 +3332,7 @@ fs_history_prev(svn_fs_history_t **prev_history_p,
 
 /* Implement svn_fs_history_next(). */
 static svn_error_t *
-fs_history_next(svn_fs_history_next_receiver_t *receiver,
+fs_history_next(svn_fs_history_next_receiver_t receiver,
                 void *receiver_baton,
                 svn_fs_history_t *history,
                 apr_pool_t *pool)

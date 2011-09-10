@@ -339,7 +339,7 @@ typedef struct history_vtable_t
   svn_error_t *(*prev)(svn_fs_history_t **prev_history_p,
                        svn_fs_history_t *history, svn_boolean_t cross_copies,
                        apr_pool_t *pool);
-  svn_error_t *(*next)(svn_fs_history_next_receiver_t *receiver,
+  svn_error_t *(*next)(svn_fs_history_next_receiver_t receiver,
                        void *receiver_baton,
                        svn_fs_history_t *history,
                        apr_pool_t *pool);

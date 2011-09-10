@@ -1271,7 +1271,7 @@ typedef svn_error_t *
  * @since New in 1.8.
  */
 svn_error_t *
-svn_fs_history_next(svn_fs_history_next_receiver_t *receiver,
+svn_fs_history_next(svn_fs_history_next_receiver_t receiver,
                     void *receiver_baton,
                     svn_fs_history_t *history,
                     apr_pool_t *pool);
