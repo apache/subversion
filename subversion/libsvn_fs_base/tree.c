@@ -4470,6 +4470,87 @@ base_history_prev(svn_fs_history_t **prev_history_p,
 }
 
 
+struct history_next_args
+{
+  svn_fs_history_next_receiver_t receiver;
+  void *receiver_baton;
+  svn_fs_history_t *history;
+  apr_pool_t *pool;
+};
+
+/* Call ARGS->RECEIVER with a history object corresponding to ID
+   in ARGS's FS. Do the work in TRAIL. */
+static svn_error_t *
+report_successor(struct history_next_args *args,
+                 svn_fs_id_t *id,
+                 trail_t *trail,
+                 apr_pool_t *pool)
+{
+  base_history_data_t *bhd = args->history->fsap_data;
+  dag_node_t *node;
+  svn_fs_history_t *next;
+  const char *path;
+  svn_revnum_t revision;
+
+  SVN_ERR(svn_fs_base__dag_get_node(&node, bhd->fs, id, trail, pool));
+  path = svn_fs_base__dag_get_created_path(node);
+  SVN_ERR(svn_fs_base__dag_get_revision(&revision, node,
+                                        trail, trail->pool));
+  next = assemble_history(bhd->fs,
+                          bhd->path, bhd->revision,
+                          TRUE /* is_interesting */,
+                          NULL, SVN_INVALID_REVNUM /* path_hint, rev_hint */,
+                          pool);
+  SVN_ERR(args->receiver(next, args->receiver_baton, args->history, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Transactional part of base_history_next(). */
+static svn_error_t *
+txn_body_history_next(void *baton, trail_t *trail)
+{
+  struct history_next_args *args = baton;
+  base_history_data_t *bhd = args->history->fsap_data;
+  svn_fs_root_t *root;
+  const svn_fs_id_t *node_id;
+  apr_pool_t *pool = args->pool;
+
+  /* Compute NODE_ID from bhd->PATH and bhd->REVISION. */
+  {
+    struct revision_root_args rr_args;
+    dag_node_t *node;
+
+    rr_args.root_p = &root;
+    rr_args.rev = bhd->revision;
+    SVN_ERR(txn_body_revision_root(&rr_args, trail));
+
+    SVN_ERR(get_dag(&node, root, bhd->path, trail, pool));
+    node_id = svn_fs_base__dag_get_id(node);
+  }
+
+  /* Let the node-revs.h API do the legwork, ... */
+  {
+    apr_array_header_t *successors;
+    int i;
+
+    /* ### TODO(sid): switch to callback */
+    SVN_ERR(svn_fs_base__get_node_successors(&successors,
+                                             bhd->fs, node_id,
+                                             TRUE /* committed_only */,
+                                             trail, pool));
+    for (i = 0; i < successors->nelts; i++)
+      {
+        /* ... then massage its results into something understandable by
+           our caller, and pass them along. */
+        svn_fs_id_t *successor_id = APR_ARRAY_IDX(successors, i, svn_fs_id_t *);
+        SVN_ERR(report_successor(args, successor_id, trail, pool));
+      }
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* Implement svn_fs_history_next(). */
 static svn_error_t *
 base_history_next(svn_fs_history_next_receiver_t receiver,
@@ -4477,8 +4558,16 @@ base_history_next(svn_fs_history_next_receiver_t receiver,
                   svn_fs_history_t *history,
                   apr_pool_t *pool)
 {
-  /* ### "Not implemented" */
-  return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
+  struct history_next_args args = {
+    receiver, receiver_baton, history, pool
+  };
+  base_history_data_t *bhd = history->fsap_data;
+  svn_fs_t *fs = bhd->fs;
+
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_history_next, &args,
+                                 FALSE, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
