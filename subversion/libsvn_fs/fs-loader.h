@@ -36,13 +36,14 @@ extern "C" {
 /* The FS loader library implements the a front end to "filesystem
    abstract providers" (FSAPs), which implement the svn_fs API.
 
-   The loader library divides up the FS API into five categories:
+   The loader library divides up the FS API into several categories:
 
      - Top-level functions, which operate on paths to an FS
      - Functions which operate on an FS object
      - Functions which operate on a transaction object
      - Functions which operate on a root object
      - Functions which operate on a history object
+     - Functions which operate on a noderev-ID object
 
    Some generic fields of the FS, transaction, root, and history
    objects are defined by the loader library; the rest are stored in
