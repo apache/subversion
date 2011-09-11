@@ -167,7 +167,7 @@ svn_fs_base__get_node_successors(apr_array_header_t **successors_p,
                                  apr_pool_t *pool)
 {
   apr_array_header_t *all_successors, *successors;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   svn_string_t *node_id_str = svn_fs_base__id_unparse(id, pool);
   base_fs_data_t *bfd = fs->fsap_data;
   int i;
@@ -190,7 +190,7 @@ svn_fs_base__get_node_successors(apr_array_header_t **successors_p,
       const svn_fs_id_t *succ_id = svn_fs_base__id_parse(succ_id_str,
                                                    strlen(succ_id_str), pool);
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
       /* If we only want stable, committed successor IDs, then we need
          to check each ID's txn-id component to verify that's been
@@ -199,14 +199,14 @@ svn_fs_base__get_node_successors(apr_array_header_t **successors_p,
         {
           SVN_ERR(svn_fs_base__txn_get_revision
                   (&revision, fs, svn_fs_base__id_txn_id(succ_id),
-                   trail, subpool));
+                   trail, iterpool));
           if (! SVN_IS_VALID_REVNUM(revision))
             continue;
         }
 
       APR_ARRAY_PUSH(successors, const svn_fs_id_t *) = succ_id;
     }
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   *successors_p = successors;
   return SVN_NO_ERROR;
