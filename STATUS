@@ -122,7 +122,7 @@ Candidate changes:
                          been tested at all)
 
   * r1167659
-    Don't sort an already sorted array in svn_hash__sort().
+    Don't sort an already sorted array in svn_sort__hash().
     Justification:
       Possible performance improvement for merges, and doesn't cost anything.
       This function is used to sort mergeinfo catalogs, among other things.
