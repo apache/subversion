@@ -1113,7 +1113,6 @@ def upgrade_locked(sbox):
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
 @Issue(4015)
-@XFail()
 def upgrade_file_externals(sbox):
   "upgrade with file externals"
 
@@ -1147,25 +1146,20 @@ def upgrade_file_externals(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
                                      'file:///tmp/repo', sbox.repo_url,
                                      sbox.wc_dir)
+  # Relocate not fully recursive?
   svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
                                      'file:///tmp/repo', sbox.repo_url,
                                      sbox.ospath('A/C/FX/EX'))
-  #try: svntest.main.safe_rmtree(sbox.wc_dir)
-  #except OSError, e: pass
-  #svntest.main.run_svn(None, 'checkout', '-r', '3', sbox.repo_url, sbox.wc_dir)
   
   expected_output = svntest.wc.State(sbox.wc_dir, {
       'A/mu'            : Item(status=' U'),
       'A/B/lambda'      : Item(status=' U'),
       'A/B/E/alpha'     : Item(status=' U'),
-
-      # The upgraded working copy produces the following lines that are not
-      # present in the update of a 1.7 checkout.
-      #'A/C/FX/EX/alpha' : Item(status=' U'),
-      #'A/C/FX/muX'      : Item(status=' U'),
-      #'A/C/lambdaX'     : Item(status=' U'),
-      #'A/B/F/EX/alpha'  : Item(status=' U'),
-      #'A/B/F/muX'       : Item(status=' U'),
+      'A/C/FX/EX/alpha' : Item(status=' U'),
+      'A/C/FX/muX'      : Item(status=' U'),
+      'A/C/lambdaX'     : Item(status=' U'),
+      'A/B/F/EX/alpha'  : Item(status=' U'),
+      'A/B/F/muX'       : Item(status=' U'),
       })
   svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output,
                                         None, None)
