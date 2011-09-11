@@ -4480,13 +4480,13 @@ struct history_next_args
 
 /* Call ARGS->RECEIVER with a history object corresponding to either
    ID or NODE in ARGS's FS. Exactly one of NODE and ID must be provided.
-   Do the work in TRAIL. */
+   Do the work in TRAIL. Use ARGS->POOL and TRAIL->POOL for allocations.
+ */
 static svn_error_t *
 report_successor(struct history_next_args *args,
                  svn_fs_id_t *id,
                  dag_node_t *node,
-                 trail_t *trail,
-                 apr_pool_t *pool)
+                 trail_t *trail)
 {
   base_history_data_t *bhd = args->history->fsap_data;
   svn_fs_history_t *next;
@@ -4496,17 +4496,20 @@ report_successor(struct history_next_args *args,
   SVN_ERR_ASSERT((id != NULL) != (node != NULL));
 
   if (id)
-    SVN_ERR(svn_fs_base__dag_get_node(&node, bhd->fs, id, trail, pool));
+    SVN_ERR(svn_fs_base__dag_get_node(&node, bhd->fs, id, trail, trail->pool));
 
   path = svn_fs_base__dag_get_created_path(node);
   SVN_ERR(svn_fs_base__dag_get_revision(&revision, node,
                                         trail, trail->pool));
+  /* ### TODO(sid): NEXT should be allocated in TRAIL->POOL, but there is no
+         svn_fs_history_dup() function for callers that want to hang on to it.
+   */
   next = assemble_history(bhd->fs,
                           path, revision,
                           TRUE /* is_interesting */,
                           NULL, SVN_INVALID_REVNUM /* path_hint, rev_hint */,
-                          pool);
-  SVN_ERR(args->receiver(next, args->receiver_baton, args->history, pool));
+                          args->pool);
+  SVN_ERR(args->receiver(next, args->receiver_baton, args->history, trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -4518,7 +4521,6 @@ txn_body_history_next(void *baton, trail_t *trail)
   struct history_next_args *args = baton;
   base_history_data_t *bhd = args->history->fsap_data;
   const svn_fs_id_t *node_id;
-  apr_pool_t *pool = args->pool;
   dag_node_t *node;
 
   /* Compute NODE and NODE_ID from bhd->PATH and bhd->REVISION. */
@@ -4530,7 +4532,7 @@ txn_body_history_next(void *baton, trail_t *trail)
     rr_args.rev = bhd->revision;
     SVN_ERR(txn_body_revision_root(&rr_args, trail));
 
-    SVN_ERR(get_dag(&node, root, bhd->path, trail, pool));
+    SVN_ERR(get_dag(&node, root, bhd->path, trail, trail->pool));
     node_id = svn_fs_base__dag_get_id(node);
   }
 
@@ -4542,7 +4544,7 @@ txn_body_history_next(void *baton, trail_t *trail)
                                           trail, trail->pool));
 
     if (commit_rev == bhd->revision)
-      SVN_ERR(report_successor(args, NULL, node, trail, pool));
+      SVN_ERR(report_successor(args, NULL, node, trail));
   }
 
   /* Let the node-revs.h API do the legwork, ... */
@@ -4561,7 +4563,7 @@ txn_body_history_next(void *baton, trail_t *trail)
         /* ... then massage its results into something understandable by
            our caller, and pass them along. */
         svn_fs_id_t *successor_id = APR_ARRAY_IDX(successors, i, svn_fs_id_t *);
-        SVN_ERR(report_successor(args, successor_id, NULL, trail, pool));
+        SVN_ERR(report_successor(args, successor_id, NULL, trail));
       }
   }
 
