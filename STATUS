@@ -129,6 +129,13 @@ Candidate changes:
     Votes:
       +1: stsp (for 1.7.1)
 
+  * r1167503,r1169524,r1169531
+    Fix issue 4015, file externals upgrade to bogus non-external files.
+    Justification:
+      Upgrade with file externals breaks working copies.
+    Votes:
+      +1: philip
+
 Veto-blocked changes:
 =====================
 
