@@ -86,6 +86,10 @@ svn_fs_bdb__successors_add(svn_fs_t *fs,
   base_fs_data_t *bfd = fs->fsap_data;
   DBT query, value;
 
+  SVN_DBG(("BDB successors:\n"));
+  SVN_DBG(("pred: %s\n", node_id));
+  SVN_DBG(("      %s\n", succ_id));
+
   /* Store a new record into the database. */
   svn_fs_base__str_to_dbt(&query, node_id);
   svn_fs_base__str_to_dbt(&value, succ_id);
