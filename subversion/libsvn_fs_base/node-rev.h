@@ -106,7 +106,8 @@ svn_error_t *svn_fs_base__get_node_successors(apr_array_header_t **successors,
                                               const svn_fs_id_t *id,
                                               svn_boolean_t committed_only,
                                               trail_t *trail,
-                                              apr_pool_t *pool);
+                                              apr_pool_t *result_pool,
+                                              apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

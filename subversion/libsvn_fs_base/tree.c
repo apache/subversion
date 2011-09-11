@@ -4554,7 +4554,8 @@ txn_body_history_next(void *baton, trail_t *trail)
     SVN_ERR(svn_fs_base__get_node_successors(&successors,
                                              bhd->fs, node_id,
                                              TRUE /* committed_only */,
-                                             trail, pool));
+                                             trail,
+                                             args->pool, trail->pool));
     for (i = 0; i < successors->nelts; i++)
       {
         /* ... then massage its results into something understandable by

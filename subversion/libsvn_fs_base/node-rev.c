@@ -164,11 +164,12 @@ svn_fs_base__get_node_successors(apr_array_header_t **successors_p,
                                  const svn_fs_id_t *id,
                                  svn_boolean_t committed_only,
                                  trail_t *trail,
-                                 apr_pool_t *pool)
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
 {
   apr_array_header_t *all_successors, *successors;
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  svn_string_t *node_id_str = svn_fs_base__id_unparse(id, pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  svn_string_t *node_id_str = svn_fs_base__id_unparse(id, scratch_pool);
   base_fs_data_t *bfd = fs->fsap_data;
   int i;
 
@@ -180,15 +181,16 @@ svn_fs_base__get_node_successors(apr_array_header_t **successors_p,
     }
 
   SVN_ERR(svn_fs_bdb__successors_fetch(&all_successors, fs, node_id_str->data,
-                                       trail, pool));
-  successors = apr_array_make(pool, all_successors->nelts,
+                                       trail, scratch_pool));
+  successors = apr_array_make(result_pool, all_successors->nelts,
                               sizeof(const svn_fs_id_t *));
   for (i = 0; i < all_successors->nelts; i++)
     {
       svn_revnum_t revision;
       const char *succ_id_str = APR_ARRAY_IDX(all_successors, i, const char *);
       const svn_fs_id_t *succ_id = svn_fs_base__id_parse(succ_id_str,
-                                                   strlen(succ_id_str), pool);
+                                                   strlen(succ_id_str),
+                                                   result_pool);
 
       svn_pool_clear(iterpool);
 
