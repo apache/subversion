@@ -4807,7 +4807,7 @@ history_next_receiver(svn_fs_history_t *next,
 {
   struct history_next_baton *hnb = baton;
 
-  SVN_TEST_ASSERT(hnb->i <= hnb->length);
+  SVN_TEST_ASSERT(hnb->i+1 <= hnb->length);
 
   SVN_ERR(check_history_location(hnb->expected[hnb->i].path,
                                  hnb->expected[hnb->i].rev,
