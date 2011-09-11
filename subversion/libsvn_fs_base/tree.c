@@ -4497,7 +4497,7 @@ report_successor(struct history_next_args *args,
   SVN_ERR(svn_fs_base__dag_get_revision(&revision, node,
                                         trail, trail->pool));
   next = assemble_history(bhd->fs,
-                          bhd->path, bhd->revision,
+                          path, revision,
                           TRUE /* is_interesting */,
                           NULL, SVN_INVALID_REVNUM /* path_hint, rev_hint */,
                           pool);
