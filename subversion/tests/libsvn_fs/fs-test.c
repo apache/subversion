@@ -4895,24 +4895,6 @@ node_history(const svn_test_opts_t *opts,
                                                      );
       struct location_t expected[] = {
         { "/A/D/G/pi",  1 },
-      };
-      struct history_next_baton hnb = {
-        expected, sizeof(expected)/sizeof(expected[0]),
-        locations, 0, pool
-      };
-      SVN_ERR(check_history_location("/A/D/G/pi", 1, history, pool));
-      SVN_ERR(svn_fs_history_next(history_next_receiver, &hnb, history, pool));
-      SVN_TEST_ASSERT(hnb.locations->nelts == hnb.length);
-
-      history = APR_ARRAY_IDX(hnb.locations, 0, svn_fs_history_t *);
-    }
-
-    /* Validate the just-fetched history object. */
-    {
-      apr_array_header_t *locations = apr_array_make(pool, 5,
-                                                     sizeof(svn_fs_history_t *)
-                                                     );
-      struct location_t expected[] = {
         { "/A/D/H/pi2",  2 },
       };
       struct history_next_baton hnb = {
@@ -4923,7 +4905,7 @@ node_history(const svn_test_opts_t *opts,
       SVN_ERR(svn_fs_history_next(history_next_receiver, &hnb, history, pool));
       SVN_TEST_ASSERT(hnb.locations->nelts == hnb.length);
 
-      history = NULL;
+      history = APR_ARRAY_IDX(hnb.locations, 0, svn_fs_history_t *);
     }
   }
 
@@ -5013,7 +4995,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "create and modify small file"),
     SVN_TEST_OPTS_SKIP(obliterate_1, TRUE,  /* Skipped as not impl. yet */
                        "obliterate 1"),
-    SVN_TEST_OPTS_XFAIL(node_history,
+    SVN_TEST_OPTS_PASS(node_history,
                        "test svn_fs_node_history"),
     SVN_TEST_NULL
   };
