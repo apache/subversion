@@ -301,6 +301,7 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
              intersect but have differing inheritability.  Check for the
              first case as that is easy to handle. */
           intersection_type_t intersection_type;
+          svn_boolean_t sorted = FALSE;
 
           SVN_ERR(get_type_of_intersection(new_range, lastrange,
                                            &intersection_type));
@@ -312,12 +313,15 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
                        just push NEW_RANGE only RANGELIST. */
                     APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) =
                       svn_merge_range_dup(new_range, result_pool);
+                    sorted = (svn_sort_compare_ranges(&lastrange,
+                                                      &new_range) < 0);
                     break;
 
                   case svn__equal_intersection:
                     /* They range are equal so all we do is force the
                        inheritability of lastrange to true. */
                     lastrange->inheritable = TRUE;
+                    sorted = TRUE;
                     break;
 
                   case svn__adjoining_intersection:
@@ -325,6 +329,8 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
                        onto RANGELIST. */
                     APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) =
                       svn_merge_range_dup(new_range, result_pool);
+                    sorted = (svn_sort_compare_ranges(&lastrange,
+                                                      &new_range) < 0);
                     break;
 
                   case svn__overlapping_intersection:
@@ -359,8 +365,11 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
 
                       /* Push everything back onto RANGELIST. */
                       APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r1;
+                      sorted = (svn_sort_compare_ranges(&lastrange,
+                                                        &r1) < 0);
                       APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r2;
-
+                      if (sorted)
+                        sorted = (svn_sort_compare_ranges(&r1, &r2) < 0);
                       break;
                     }
 
@@ -425,19 +434,35 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
 
                       /* Push everything back onto RANGELIST. */
                       APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r1;
+                      sorted = (svn_sort_compare_ranges(&lastrange, &r1) < 0);
                       if (r2)
-                        APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r2;
+                        {
+                          APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r2;
+                          if (sorted)
+                            sorted = (svn_sort_compare_ranges(&r1, &r2) < 0);
+                        }
                       if (r3)
-                        APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r3;
-
+                        {
+                          APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r3;
+                          if (sorted)
+                            {
+                              if (r2)
+                                sorted = (svn_sort_compare_ranges(&r2,
+                                                                  &r3) < 0);
+                              else
+                                sorted = (svn_sort_compare_ranges(&r1,
+                                                                  &r3) < 0);
+                            }
+                        }
                       break;
                     }
                 }
 
               /* Some of the above cases might have put *RANGELIST out of
                  order, so re-sort.*/
-              qsort(rangelist->elts, rangelist->nelts, rangelist->elt_size,
-                    svn_sort_compare_ranges);
+              if (!sorted)
+                qsort(rangelist->elts, rangelist->nelts, rangelist->elt_size,
+                      svn_sort_compare_ranges);
         }
     }
 
