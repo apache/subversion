@@ -4512,13 +4512,13 @@ txn_body_history_next(void *baton, trail_t *trail)
 {
   struct history_next_args *args = baton;
   base_history_data_t *bhd = args->history->fsap_data;
-  svn_fs_root_t *root;
   const svn_fs_id_t *node_id;
   apr_pool_t *pool = args->pool;
 
   /* Compute NODE_ID from bhd->PATH and bhd->REVISION. */
   {
     struct revision_root_args rr_args;
+    svn_fs_root_t *root;
     dag_node_t *node;
 
     rr_args.root_p = &root;
