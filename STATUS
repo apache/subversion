@@ -121,6 +121,14 @@ Candidate changes:
                          performance should be better, I wonder if that's
                          been tested at all)
 
+  * r1167659
+    Don't sort an already sorted array in svn_hash__sort().
+    Justification:
+      Possible performance improvement for merges, and doesn't cost anything.
+      This function is used to sort mergeinfo catalogs, among other things.
+    Votes:
+      +1: stsp (for 1.7.1)
+
 Veto-blocked changes:
 =====================
 
