@@ -306,163 +306,163 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
           SVN_ERR(get_type_of_intersection(new_range, lastrange,
                                            &intersection_type));
 
-              switch (intersection_type)
+          switch (intersection_type)
+            {
+              case svn__no_intersection:
+                /* NEW_RANGE and *LASTRANGE *really* don't intersect so
+                   just push NEW_RANGE only RANGELIST. */
+                APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) =
+                  svn_merge_range_dup(new_range, result_pool);
+                sorted = (svn_sort_compare_ranges(&lastrange,
+                                                  &new_range) < 0);
+                break;
+
+              case svn__equal_intersection:
+                /* They range are equal so all we do is force the
+                   inheritability of lastrange to true. */
+                lastrange->inheritable = TRUE;
+                sorted = TRUE;
+                break;
+
+              case svn__adjoining_intersection:
+                /* They adjoin but don't overlap so just push NEW_RANGE
+                   onto RANGELIST. */
+                APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) =
+                  svn_merge_range_dup(new_range, result_pool);
+                sorted = (svn_sort_compare_ranges(&lastrange,
+                                                  &new_range) < 0);
+                break;
+
+              case svn__overlapping_intersection:
+                /* They ranges overlap but neither is a proper subset of
+                   the other.  We'll end up pusing two new ranges onto
+                   RANGELIST, the intersecting part and the part unique to
+                   NEW_RANGE.*/
                 {
-                  case svn__no_intersection:
-                    /* NEW_RANGE and *LASTRANGE *really* don't intersect so
-                       just push NEW_RANGE only RANGELIST. */
-                    APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) =
-                      svn_merge_range_dup(new_range, result_pool);
-                    sorted = (svn_sort_compare_ranges(&lastrange,
-                                                      &new_range) < 0);
-                    break;
+                  svn_merge_range_t *r1 = svn_merge_range_dup(lastrange,
+                                                              result_pool);
+                  svn_merge_range_t *r2 = svn_merge_range_dup(new_range,
+                                                              result_pool);
 
-                  case svn__equal_intersection:
-                    /* They range are equal so all we do is force the
-                       inheritability of lastrange to true. */
-                    lastrange->inheritable = TRUE;
-                    sorted = TRUE;
-                    break;
+                  /* Pop off *LASTRANGE to make our manipulations
+                     easier. */
+                  apr_array_pop(rangelist);
 
-                  case svn__adjoining_intersection:
-                    /* They adjoin but don't overlap so just push NEW_RANGE
-                       onto RANGELIST. */
-                    APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) =
-                      svn_merge_range_dup(new_range, result_pool);
-                    sorted = (svn_sort_compare_ranges(&lastrange,
-                                                      &new_range) < 0);
-                    break;
-
-                  case svn__overlapping_intersection:
-                    /* They ranges overlap but neither is a proper subset of
-                       the other.  We'll end up pusing two new ranges onto
-                       RANGELIST, the intersecting part and the part unique to
-                       NEW_RANGE.*/
+                  /* Ensure R1 is the older range. */
+                  if (r2->start < r1->start)
                     {
-                      svn_merge_range_t *r1 = svn_merge_range_dup(lastrange,
-                                                                  result_pool);
-                      svn_merge_range_t *r2 = svn_merge_range_dup(new_range,
-                                                                  result_pool);
+                      /* Swap R1 and R2. */
+                      *r2 = *r1;
+                      *r1 = *new_range;
+                    }
 
-                      /* Pop off *LASTRANGE to make our manipulations
-                         easier. */
-                      apr_array_pop(rangelist);
+                  /* Absorb the intersecting ranges into the
+                     inheritable range. */
+                  if (r1->inheritable)
+                    r2->start = r1->end;
+                  else
+                    r1->end = r2->start;
 
-                      /* Ensure R1 is the older range. */
-                      if (r2->start < r1->start)
-                        {
-                          /* Swap R1 and R2. */
-                          *r2 = *r1;
-                          *r1 = *new_range;
-                        }
+                  /* Push everything back onto RANGELIST. */
+                  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r1;
+                  sorted = (svn_sort_compare_ranges(&lastrange,
+                                                    &r1) < 0);
+                  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r2;
+                  if (sorted)
+                    sorted = (svn_sort_compare_ranges(&r1, &r2) < 0);
+                  break;
+                }
 
-                      /* Absorb the intersecting ranges into the
-                         inheritable range. */
-                      if (r1->inheritable)
-                        r2->start = r1->end;
-                      else
-                        r1->end = r2->start;
+              default: /* svn__proper_subset_intersection */
+                {
+                  /* One range is a proper subset of the other. */
+                  svn_merge_range_t *r1 = svn_merge_range_dup(lastrange,
+                                                              result_pool);
+                  svn_merge_range_t *r2 = svn_merge_range_dup(new_range,
+                                                              result_pool);
+                  svn_merge_range_t *r3 = NULL;
 
-                      /* Push everything back onto RANGELIST. */
-                      APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r1;
-                      sorted = (svn_sort_compare_ranges(&lastrange,
-                                                        &r1) < 0);
+                  /* Pop off *LASTRANGE to make our manipulations
+                     easier. */
+                  apr_array_pop(rangelist);
+
+                  /* Ensure R1 is the superset. */
+                  if (r2->start < r1->start || r2->end > r1->end)
+                    {
+                      /* Swap R1 and R2. */
+                      *r2 = *r1;
+                      *r1 = *new_range;
+                    }
+
+                  if (r1->inheritable)
+                    {
+                      /* The simple case: The superset is inheritable, so
+                         just combine r1 and r2. */
+                      r1->start = MIN(r1->start, r2->start);
+                      r1->end = MAX(r1->end, r2->end);
+                      r2 = NULL;
+                    }
+                  else if (r1->start == r2->start)
+                    {
+                      svn_revnum_t tmp_revnum;
+
+                      /* *LASTRANGE and NEW_RANGE share an end point. */
+                      tmp_revnum = r1->end;
+                      r1->end = r2->end;
+                      r2->inheritable = r1->inheritable;
+                      r1->inheritable = TRUE;
+                      r2->start = r1->end;
+                      r2->end = tmp_revnum;
+                    }
+                  else if (r1->end == r2->end)
+                    {
+                      /* *LASTRANGE and NEW_RANGE share an end point. */
+                      r1->end = r2->start;
+                      r2->inheritable = TRUE;
+                    }
+                  else
+                    {
+                      /* NEW_RANGE and *LASTRANGE share neither start
+                         nor end points. */
+                      r3 = apr_pcalloc(result_pool, sizeof(*r3));
+                      r3->start = r2->end;
+                      r3->end = r1->end;
+                      r3->inheritable = r1->inheritable;
+                      r2->inheritable = TRUE;
+                      r1->end = r2->start;
+                    }
+
+                  /* Push everything back onto RANGELIST. */
+                  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r1;
+                  sorted = (svn_sort_compare_ranges(&lastrange, &r1) < 0);
+                  if (r2)
+                    {
                       APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r2;
                       if (sorted)
                         sorted = (svn_sort_compare_ranges(&r1, &r2) < 0);
-                      break;
                     }
-
-                  default: /* svn__proper_subset_intersection */
+                  if (r3)
                     {
-                      /* One range is a proper subset of the other. */
-                      svn_merge_range_t *r1 = svn_merge_range_dup(lastrange,
-                                                                  result_pool);
-                      svn_merge_range_t *r2 = svn_merge_range_dup(new_range,
-                                                                  result_pool);
-                      svn_merge_range_t *r3 = NULL;
-
-                      /* Pop off *LASTRANGE to make our manipulations
-                         easier. */
-                      apr_array_pop(rangelist);
-
-                      /* Ensure R1 is the superset. */
-                      if (r2->start < r1->start || r2->end > r1->end)
+                      APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r3;
+                      if (sorted)
                         {
-                          /* Swap R1 and R2. */
-                          *r2 = *r1;
-                          *r1 = *new_range;
+                          if (r2)
+                            sorted = (svn_sort_compare_ranges(&r2,
+                                                              &r3) < 0);
+                          else
+                            sorted = (svn_sort_compare_ranges(&r1,
+                                                              &r3) < 0);
                         }
-
-                      if (r1->inheritable)
-                        {
-                          /* The simple case: The superset is inheritable, so
-                             just combine r1 and r2. */
-                          r1->start = MIN(r1->start, r2->start);
-                          r1->end = MAX(r1->end, r2->end);
-                          r2 = NULL;
-                        }
-                      else if (r1->start == r2->start)
-                        {
-                          svn_revnum_t tmp_revnum;
-
-                          /* *LASTRANGE and NEW_RANGE share an end point. */
-                          tmp_revnum = r1->end;
-                          r1->end = r2->end;
-                          r2->inheritable = r1->inheritable;
-                          r1->inheritable = TRUE;
-                          r2->start = r1->end;
-                          r2->end = tmp_revnum;
-                        }
-                      else if (r1->end == r2->end)
-                        {
-                          /* *LASTRANGE and NEW_RANGE share an end point. */
-                          r1->end = r2->start;
-                          r2->inheritable = TRUE;
-                        }
-                      else
-                        {
-                          /* NEW_RANGE and *LASTRANGE share neither start
-                             nor end points. */
-                          r3 = apr_pcalloc(result_pool, sizeof(*r3));
-                          r3->start = r2->end;
-                          r3->end = r1->end;
-                          r3->inheritable = r1->inheritable;
-                          r2->inheritable = TRUE;
-                          r1->end = r2->start;
-                        }
-
-                      /* Push everything back onto RANGELIST. */
-                      APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r1;
-                      sorted = (svn_sort_compare_ranges(&lastrange, &r1) < 0);
-                      if (r2)
-                        {
-                          APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r2;
-                          if (sorted)
-                            sorted = (svn_sort_compare_ranges(&r1, &r2) < 0);
-                        }
-                      if (r3)
-                        {
-                          APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r3;
-                          if (sorted)
-                            {
-                              if (r2)
-                                sorted = (svn_sort_compare_ranges(&r2,
-                                                                  &r3) < 0);
-                              else
-                                sorted = (svn_sort_compare_ranges(&r1,
-                                                                  &r3) < 0);
-                            }
-                        }
-                      break;
                     }
+                  break;
                 }
+            }
 
-              /* Some of the above cases might have put *RANGELIST out of
-                 order, so re-sort.*/
-              if (!sorted)
-                qsort(rangelist->elts, rangelist->nelts, rangelist->elt_size,
-                      svn_sort_compare_ranges);
+          /* Some of the above cases might have put *RANGELIST out of
+             order, so re-sort.*/
+          if (!sorted)
+            qsort(rangelist->elts, rangelist->nelts, rangelist->elt_size,
+                  svn_sort_compare_ranges);
         }
     }
 
