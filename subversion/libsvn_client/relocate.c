@@ -139,6 +139,7 @@ relocate_externals(const char *local_abspath,
                    apr_array_header_t *ext_desc,
                    const char *old_parent_repos_root_url,
                    const char *new_parent_repos_root_url,
+                   svn_boolean_t ignore_externals,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *scratch_pool)
 {
@@ -202,7 +203,7 @@ relocate_externals(const char *local_abspath,
         SVN_ERR(svn_client_relocate2(target_abspath,
                                      old_parent_repos_root_url,
                                      new_parent_repos_root_url,
-                                     TRUE, ctx, iterpool));
+                                     ignore_externals, ctx, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -284,7 +285,8 @@ svn_client_relocate2(const char *wcroot_dir,
                                                   iterpool));
       if (ext_desc->nelts)
         SVN_ERR(relocate_externals(this_abspath, ext_desc, old_repos_root_url,
-                                   new_repos_root_url, ctx, iterpool));
+                                   new_repos_root_url, ignore_externals, ctx,
+                                   iterpool));
     }
 
   svn_pool_destroy(iterpool);

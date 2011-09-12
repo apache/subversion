@@ -1146,10 +1146,6 @@ def upgrade_file_externals(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
                                      'file:///tmp/repo', sbox.repo_url,
                                      sbox.wc_dir)
-  # Relocate not fully recursive?
-  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
-                                     'file:///tmp/repo', sbox.repo_url,
-                                     sbox.ospath('A/C/FX/EX'))
   
   expected_output = svntest.wc.State(sbox.wc_dir, {
       'A/mu'            : Item(status=' U'),
