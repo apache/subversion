@@ -832,10 +832,10 @@ handle_external_item_change(const struct external_change_baton_t *eb,
      iterpool, since the hash table values outlive the iterpool and
      any pointers they have should also outlive the iterpool.  */
 
-   SVN_ERR(resolve_relative_external_url(&new_url,
-                                         new_item, eb->repos_root_url,
-                                         parent_dir_url,
-                                         scratch_pool, scratch_pool));
+  SVN_ERR(resolve_relative_external_url(&new_url,
+                                        new_item, eb->repos_root_url,
+                                        parent_dir_url,
+                                        scratch_pool, scratch_pool));
 
   /* If the external is being checked out, exported or updated,
      determine if the external is a file or directory. */

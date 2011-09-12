@@ -169,7 +169,7 @@ is_empty_wc(svn_boolean_t *clean_checkout,
    This is typically either the same as LOCAL_ABSPATH, or the
    immediate parent of LOCAL_ABSPATH.
 
-   If NOTIFY_SUMMARY is set (and there's a notification hander in
+   If NOTIFY_SUMMARY is set (and there's a notification handler in
    CTX), transmit the final update summary upon successful
    completion of the update.
 */

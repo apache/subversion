@@ -114,8 +114,8 @@ check_root_url_of_target(const char **root_url,
   if (!svn_path_is_url(truepath))
     SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, pool));
 
-  err =  svn_client__get_repos_root(&tmp_root_url, truepath,
-                                    ctx, pool, pool);
+  err = svn_client__get_repos_root(&tmp_root_url, truepath,
+                                   ctx, pool, pool);
 
   if (err)
     {
@@ -125,7 +125,7 @@ check_root_url_of_target(const char **root_url,
        *
        * If the target itself is a URL to a repository that does not exist,
        * that's fine, too. The callers will deal with this argument in an
-       * appropriate manter if it does not make any sense.
+       * appropriate manner if it does not make any sense.
        *
        * Also tolerate locally added targets ("bad revision" error).
        */
