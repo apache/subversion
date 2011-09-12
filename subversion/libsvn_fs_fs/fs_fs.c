@@ -147,6 +147,9 @@ read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
 static svn_error_t *
 update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool);
 
+static svn_error_t *
+get_youngest(svn_revnum_t *youngest_p, const char *fs_path, apr_pool_t *pool);
+
 /* Pathname helper functions */
 
 /* Return TRUE is REV is packed in FS, FALSE otherwise. */
@@ -590,10 +593,8 @@ with_some_lock(svn_fs_t *fs,
       fs_fs_data_t *ffd = fs->fsap_data;
       if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
         SVN_ERR(update_min_unpacked_rev(fs, pool));
-#if 0 /* Might be a good idea? */
       SVN_ERR(get_youngest(&ffd->youngest_rev_cache, fs->path,
                            pool));
-#endif
       err = body(baton, subpool);
     }
 
@@ -1196,9 +1197,6 @@ update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
                                path_min_unpacked_rev(fs, pool),
                                pool);
 }
-
-static svn_error_t *
-get_youngest(svn_revnum_t *youngest_p, const char *fs_path, apr_pool_t *pool);
 
 svn_error_t *
 svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
