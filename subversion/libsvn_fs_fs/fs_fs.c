@@ -5947,21 +5947,22 @@ copy_file_partially(apr_file_t *source_file,
  * if *FILE_P is not NULL then that handle is used, and if it is NULL
  * then *FILE_P is set to an open file handle for the sucessors index 
  * (and data) file.  The caller is responsible for closing that returned
- * handle, which is allocated in POOL.
+ * handle, which is allocated in RESULT_POOL.
  */
 static svn_error_t *
 read_successor_index_entry(apr_uint64_t *revision_offset,
                            apr_file_t **file_p,
                            svn_fs_t *fs,
                            svn_revnum_t revision,
-                           apr_pool_t *pool)
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   apr_off_t offset;
   apr_size_t size;
   apr_file_t *file;
   apr_uint32_t m;
   apr_uint32_t n;
-  const char *local_abspath = path_successor_ids(fs, revision, pool);
+  const char *local_abspath = path_successor_ids(fs, revision, scratch_pool);
 
   /* The trivial case: The caller asked for the first revision in a file. */
   if (revision % FSFS_SUCCESSORS_MAX_REVS_PER_FILE == 0)
@@ -5974,27 +5975,29 @@ read_successor_index_entry(apr_uint64_t *revision_offset,
   if (file_p && *file_p)
     file = *file_p;
   else
+    /* Allocated from RESULT_POOL.  If FILE_P is NULL then we'll close
+       the file shortly, thus we're not leaking from RESULT_POOL. */
     SVN_ERR(svn_io_file_open(&file, local_abspath, APR_READ,
-                             APR_OS_DEFAULT, pool));
+                             APR_OS_DEFAULT, result_pool));
 
   offset = FSFS_SUCCESSORS_INDEX_REV_OFFSET(revision);
-  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, scratch_pool));
   
   /* Read a 64 bit big endian integer in two passes.
    * The most significant 4 bytes come first. */
   size = 4;
-  SVN_ERR(svn_io_file_read(file, &n, &size, pool));
+  SVN_ERR(svn_io_file_read(file, &n, &size, scratch_pool));
   if (size != 4)
     {
-      SVN_ERR(svn_io_file_close(file, pool));
+      SVN_ERR(svn_io_file_close(file, scratch_pool));
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                _("Missing data at offset %llu in file '%s'"),
                                offset, local_abspath);
     }
-  SVN_ERR(svn_io_file_read(file, &m, &size, pool));
+  SVN_ERR(svn_io_file_read(file, &m, &size, scratch_pool));
   if (size != 4)
     {
-      SVN_ERR(svn_io_file_close(file, pool));
+      SVN_ERR(svn_io_file_close(file, scratch_pool));
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                _("Missing data at offset %llu in file '%s'"),
                                offset + 4, local_abspath);
@@ -6004,7 +6007,7 @@ read_successor_index_entry(apr_uint64_t *revision_offset,
   if (file_p && ! *file_p)
     *file_p = file;
   else if (! file_p)
-    SVN_ERR(svn_io_file_close(file, pool));
+    SVN_ERR(svn_io_file_close(file, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -6046,7 +6049,7 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
 
       /* Figure out the offset of successor data for the previous revision. */
       SVN_ERR(read_successor_index_entry(&prev_successor_ids_offset,
-                                         NULL, fs, new_rev - 1, pool));
+                                         NULL, fs, new_rev - 1, pool, pool));
 
       /* Check for offset overflow.
        * This gives a "will never be executed" warning on some platforms. */
