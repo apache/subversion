@@ -2161,9 +2161,9 @@ try_copy(const apr_array_header_t *sources,
     {
       if (!srcs_are_urls)
         {
-          /* If we are doing a wc->* move, but with an operational revision
+          /* If we are doing a wc->* copy, but with an operational revision
              other than the working copy revision, we are really doing a
-             repo->* move, because we're going to need to get the rev from the
+             repo->* copy, because we're going to need to get the rev from the
              repo. */
 
           svn_boolean_t need_repos_op_rev = FALSE;

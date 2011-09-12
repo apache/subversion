@@ -7911,7 +7911,7 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
              were no copies in MERGE_SOURCE_PATH's history going back to
              RANGE->START then we know that
              MERGE_SOURCE_PATH:MERGED_RANGE->START exists too and the two
-             describe and unbroken line of history and thus
+             describe an unbroken line of history, and thus
              MERGE_SOURCE_PATH:MERGED_RANGE->START:
              MERGE_SOURCE_PATH:MERGED_RANGE->END is a valid description of
              the merge -- see normalize_merge_sources() and the global comment
