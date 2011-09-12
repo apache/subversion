@@ -206,22 +206,6 @@ crash_handler(int signum)
   longjmp(jump_buffer, 1);
 }
 
-static svn_error_t *
-abort_handler(svn_boolean_t can_return,
-              const char *file,
-              int line,
-              const char *expr)
-{
-  if (!can_return)
-    {
-      printf("unrecoverable abort() in %s:%d: '%s'\n", file, line, expr);
-      exit(1);
-    }
-
-  return svn_error_createf(SVN_ERR_ASSERTION_FAIL, NULL,
-                           _("In file '%s' line %d: assertion failed (%s)"),
-                           file, line, expr);
-}
 
 /* Execute a test number TEST_NUM.  Pretty-print test name and dots
    according to our test-suite spec, and return the result code.
@@ -242,7 +226,6 @@ do_test_num(const char *progname,
   const struct svn_test_descriptor_t *desc;
   const int array_size = get_array_size();
   svn_boolean_t run_this_test; /* This test's mode matches DESC->MODE. */
-  svn_error_malfunction_handler_t old_handler;
 
   /* Check our array bounds! */
   if (test_num < 0)
@@ -275,8 +258,6 @@ do_test_num(const char *progname,
       apr_signal(SIGSEGV, crash_handler);
     }
 
-  old_handler = svn_error_set_malfunction_handler(abort_handler);
-
   /* We use setjmp/longjmp to recover from the crash.  setjmp() essentially
      establishes a rollback point, and longjmp() goes back to that point.
      When we invoke longjmp(), it instructs setjmp() to return non-zero,
@@ -304,8 +285,6 @@ do_test_num(const char *progname,
     err = svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                            "Test crashed "
                            "(run in debugger with '--allow-segfaults')");
-
-  svn_error_set_malfunction_handler(old_handler);
 
   if (!allow_segfaults)
     {
