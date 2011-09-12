@@ -26,6 +26,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include <errno.h>
+#include <limits.h>
 
 /* htonl() and ntohl() */
 #define APR_WANT_BYTEFUNC
@@ -7970,6 +7971,7 @@ read_successor_candidate_revisions(apr_array_header_t **revisions_p,
           svn_fs_id_t *pred_id;
           const char *revstr;
           svn_revnum_t rev;
+          apr_uint64_t rev64;
 
           split = svn_cstring_split(line->data, " ", TRUE, iterpool);
           if (split->nelts != 2)
@@ -7983,8 +7985,16 @@ read_successor_candidate_revisions(apr_array_header_t **revisions_p,
                                       _("Corrupt line '%s' in file '%s'"),
                                       line->data, node_revs_file_abspath);
 
+#if SVN_VER_MINOR >=8
           revstr = APR_ARRAY_IDX(split, 1, const char *);
-          rev = apr_atoi64(revstr); /* TODO: use svn_cstring_strtoui64() */
+          SVN_ERR(svn_cstring_strtoui64(&rev64, revstr,
+                                        0, LONG_MAX,
+                                        10 /* base */));
+          rev = (long) rev64;
+#else
+          revstr = APR_ARRAY_IDX(split, 1, const char *);
+          rev = apr_atoi64(revstr);
+#endif
 
           /* Ignore non-existent revisions. Those can occur naturally
            * if a previous commit attempt failed. */
