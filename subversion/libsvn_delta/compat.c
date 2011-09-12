@@ -454,6 +454,147 @@ svn_delta_from_editor(const svn_delta_editor_t **deditor,
 }
 
 
+struct editor_baton
+{
+  const svn_delta_editor_t *deditor;
+  void *dedit_baton;
+};
+
+/* This implements svn_editor_cb_add_directory_t */
+static svn_error_t *
+add_directory_cb(void *baton,
+                 const char *relpath,
+                 const apr_array_header_t *children,
+                 apr_hash_t *props,
+                 svn_revnum_t replaces_rev,
+                 apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+/* This implements svn_editor_cb_add_file_t */
+static svn_error_t *
+add_file_cb(void *baton,
+            const char *relpath,
+            apr_hash_t *props,
+            svn_revnum_t replaces_rev,
+            apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+/* This implements svn_editor_cb_add_symlink_t */
+static svn_error_t *
+add_symlink_cb(void *baton,
+               const char *relpath,
+               const char *target,
+               apr_hash_t *props,
+               svn_revnum_t replaces_rev,
+               apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+/* This implements svn_editor_cb_add_absent_t */
+static svn_error_t *
+add_absent_cb(void *baton,
+              const char *relpath,
+              svn_node_kind_t kind,
+              svn_revnum_t replaces_rev,
+              apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+/* This implements svn_editor_cb_set_props_t */
+static svn_error_t *
+set_props_cb(void *baton,
+             const char *relpath,
+             svn_revnum_t revision,
+             apr_hash_t *props,
+             svn_boolean_t complete,
+             apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+/* This implements svn_editor_cb_set_text_t */
+static svn_error_t *
+set_text_cb(void *baton,
+            const char *relpath,
+            svn_revnum_t revision,
+            const svn_checksum_t *checksum,
+            svn_stream_t *contents,
+            apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+/* This implements svn_editor_cb_set_target_t */
+static svn_error_t *
+set_target_cb(void *baton,
+              const char *relpath,
+              svn_revnum_t revision,
+              const char *target,
+              apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+/* This implements svn_editor_cb_delete_t */
+static svn_error_t *
+delete_cb(void *baton,
+          const char *relpath,
+          svn_revnum_t revision,
+          apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+/* This implements svn_editor_cb_copy_t */
+static svn_error_t *
+copy_cb(void *baton,
+        const char *src_relpath,
+        svn_revnum_t src_revision,
+        const char *dst_relpath,
+        svn_revnum_t replaces_rev,
+        apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+/* This implements svn_editor_cb_move_t */
+static svn_error_t *
+move_cb(void *baton,
+        const char *src_relpath,
+        svn_revnum_t src_revision,
+        const char *dst_relpath,
+        svn_revnum_t replaces_rev,
+        apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+/* This implements svn_editor_cb_complete_t */
+static svn_error_t *
+complete_cb(void *baton,
+            apr_pool_t *scratch_pool)
+{
+  struct editor_baton *eb = baton;
+
+  SVN_ERR(eb->deditor->close_edit(eb->dedit_baton, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* This implements svn_editor_cb_abort_t */
+static svn_error_t *
+abort_cb(void *baton,
+         apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_editor_from_delta(svn_editor_t **editor_p,
                       const svn_delta_editor_t *deditor,
@@ -464,9 +605,28 @@ svn_editor_from_delta(svn_editor_t **editor_p,
                       apr_pool_t *scratch_pool)
 {
   svn_editor_t *editor;
+  static const svn_editor_cb_many_t editor_cbs = {
+      add_directory_cb,
+      add_file_cb,
+      add_symlink_cb,
+      add_absent_cb,
+      set_props_cb,
+      set_text_cb,
+      set_target_cb,
+      delete_cb,
+      copy_cb,
+      move_cb,
+      complete_cb,
+      abort_cb
+    };
+  struct editor_baton *eb = apr_palloc(result_pool, sizeof(*eb));
 
-  SVN_ERR(svn_editor_create(&editor, NULL, cancel_func, cancel_baton,
+  eb->deditor = deditor;
+  eb->dedit_baton = dedit_baton;
+
+  SVN_ERR(svn_editor_create(&editor, eb, cancel_func, cancel_baton,
                             result_pool, scratch_pool));
+  SVN_ERR(svn_editor_setcb_many(editor, &editor_cbs, scratch_pool));
 
   *editor_p = editor;
 
