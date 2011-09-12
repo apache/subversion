@@ -7974,7 +7974,9 @@ read_successor_candidate_revisions(apr_array_header_t **revisions_p,
           svn_fs_id_t *pred_id;
           const char *revstr;
           svn_revnum_t rev;
+#if SVN_VER_MINOR >=8
           apr_uint64_t rev64;
+#endif
 
           split = svn_cstring_split(line->data, " ", TRUE, iterpool);
           if (split->nelts != 2)
