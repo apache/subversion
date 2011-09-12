@@ -5940,9 +5940,17 @@ copy_file_partially(apr_file_t *source_file,
 
 /* In filesystem FS, which is assumed to be of a format that contains
  * successors, look up in the successors-IDs file index the entry for REVISION,
- * and return it in *REVISION_OFFSET.  Use POOL for temporary allocations. */
+ * and return it in *REVISION_OFFSET.  Use POOL for temporary allocations.
+ *
+ * FILE_P is an optional in-out parameter: if FILE_P is not NULL, then
+ * if *FILE_P is not NULL then that handle is used, and if it is NULL
+ * then *FILE_P is set to an open file handle for the sucessors index 
+ * (and data) file.  The caller is responsible for closing that returned
+ * handle, which is allocated in POOL.
+ */
 static svn_error_t *
 read_successor_index_entry(apr_uint64_t *revision_offset,
+                           apr_file_t **file_p,
                            svn_fs_t *fs,
                            svn_revnum_t revision,
                            apr_pool_t *pool)
@@ -5962,8 +5970,12 @@ read_successor_index_entry(apr_uint64_t *revision_offset,
     }
 
   /* ### TODO(sid): don't constantly re-open the file */
-  SVN_ERR(svn_io_file_open(&file, local_abspath, APR_READ,
-                           APR_OS_DEFAULT, pool));
+  if (file_p && *file_p)
+    file = *file_p;
+  else
+    SVN_ERR(svn_io_file_open(&file, local_abspath, APR_READ,
+                             APR_OS_DEFAULT, pool));
+
   offset = FSFS_SUCCESSORS_INDEX_REV_OFFSET(revision);
   SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
   
@@ -5988,7 +6000,10 @@ read_successor_index_entry(apr_uint64_t *revision_offset,
     }
   *revision_offset = ((apr_uint64_t)(ntohl(n)) << 32) | ntohl(m);
 
-  SVN_ERR(svn_io_file_close(file, pool));
+  if (file_p && ! *file_p)
+    *file_p = file;
+  else if (! file_p)
+    SVN_ERR(svn_io_file_close(file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -6030,7 +6045,7 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
 
       /* Figure out the offset of successor data for the previous revision. */
       SVN_ERR(read_successor_index_entry(&prev_successor_ids_offset,
-                                         fs, new_rev - 1, pool));
+                                         NULL, fs, new_rev - 1, pool));
 
       /* Check for offset overflow.
        * This gives a "will never be executed" warning on some platforms. */
