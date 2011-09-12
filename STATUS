@@ -136,6 +136,15 @@ Candidate changes:
     Votes:
       +1: philip
 
+  * r1169650
+    Make relocate act recursively on all externals, not just immediate ones.
+    Justification:
+      Relocating externals is new 1.7, no reason not to do them all.
+    Notes:
+      Depends on issue 4015 merge.
+    Votes:
+      +1: philip
+
 Veto-blocked changes:
 =====================
 
