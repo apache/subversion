@@ -7931,3 +7931,79 @@ svn_fs_fs__pack(svn_fs_t *fs,
   pb.cancel_baton = cancel_baton;
   return svn_fs_fs__with_write_lock(fs, pack_body, &pb, pool);
 }
+
+
+/* Getting successor-IDs. */
+
+static svn_error_t *
+read_successor_candidate_revisions(apr_array_header_t **revisions_p,
+                                   svn_fs_t *fs,
+                                   svn_fs_id_t *id,
+                                   svn_revnum_t youngest,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *revisions;
+  apr_file_t *node_revs_file;
+  const char *node_revs_file_abspath;
+  svn_stream_t *stream;
+  svn_boolean_t eof;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  node_revs_file_abspath = path_successor_node_revs(fs, id, scratch_pool);
+  SVN_ERR(svn_io_file_open(&node_revs_file, node_revs_file_abspath,
+                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                           scratch_pool));
+  stream = svn_stream_from_aprfile2(node_revs_file, FALSE, scratch_pool);
+  revisions = apr_array_make(result_pool, 0, sizeof(svn_revnum_t));
+  do
+    {
+      svn_stringbuf_t *line;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, iterpool));
+      if (line->len)
+        {
+          apr_array_header_t *split;
+          const char *pred;
+          svn_fs_id_t *pred_id;
+          const char *revstr;
+          svn_revnum_t rev;
+
+          split = svn_cstring_split(line->data, " ", TRUE, iterpool);
+          if (split->nelts != 2)
+            return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                     _("Corrupt line '%s' in file '%s'"),
+                                     line->data, node_revs_file_abspath);
+          pred = APR_ARRAY_IDX(split, 0, const char *);
+          pred_id = svn_fs_fs__id_parse(pred, strlen(pred), iterpool);
+          if (pred_id == NULL)
+            return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                      _("Corrupt line '%s' in file '%s'"),
+                                      line->data, node_revs_file_abspath);
+
+          revstr = APR_ARRAY_IDX(split, 1, const char *);
+          rev = apr_atoi64(revstr); /* TODO: use svn_cstring_strtoui64() */
+
+          /* Ignore non-existent revisions. Those can occur naturally
+           * if a previous commit attempt failed. */
+          if (rev > youngest)
+            continue;
+
+          if (svn_fs_fs__id_compare(id, pred_id) == 0)
+            {
+              /* This entry matches our predeccessor. */
+              APR_ARRAY_PUSH(revisions, svn_revnum_t) = rev;
+            }
+        }
+    }
+  while (!eof);
+
+  SVN_ERR(svn_stream_close(stream));
+
+  svn_pool_destroy(iterpool);
+
+  *revisions_p = revisions;
+  return SVN_NO_ERROR;
+}
