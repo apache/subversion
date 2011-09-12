@@ -309,16 +309,13 @@ path_successor_node_revs_shard(svn_fs_t *fs, svn_revnum_t rev,
 }
 
 static const char *
-path_successor_node_revs(svn_fs_t *fs, const char *node_rev_id,
-                         apr_pool_t *pool)
+path_successor_node_revs(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  svn_fs_id_t *id;
   svn_revnum_t rev;
   long filenum;
   
   /* ### TODO(sid): danielsh: is there a need to guard for ID == NULL here? */
-  id = svn_fs_fs__id_parse(node_rev_id, strlen(node_rev_id), pool);
   rev = svn_fs_fs__id_rev(id);
   assert(ffd->max_files_per_dir);
   filenum = (rev % FSFS_SUCCESSORS_REVISIONS_PER_SHARD(ffd)) / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
@@ -6164,13 +6161,15 @@ update_successor_node_revs_files(apr_hash_t **node_revs_tempfiles,
   for (hi = apr_hash_first(pool, successor_ids); hi; hi = apr_hash_next(hi))
     {
       const char *pred = svn_apr_hash_index_key(hi);
+      svn_fs_id_t *pred_id = svn_fs_fs__id_parse(pred, strlen(pred), pool);
       const char *node_revs_file_abspath;
 
       svn_pool_clear(iterpool);
       
       /* This string will be obtained by the caller when iterating over
        * the NODE_REV_TEMPILES hash so we allocate it in the result pool. */
-      node_revs_file_abspath = path_successor_node_revs(fs, pred, pool);
+
+      node_revs_file_abspath = path_successor_node_revs(fs, pred_id, pool);
       if (apr_hash_get(tempfiles, node_revs_file_abspath,
                        APR_HASH_KEY_STRING) == NULL)
         {
@@ -6215,13 +6214,15 @@ update_successor_node_revs_files(apr_hash_t **node_revs_tempfiles,
   for (hi = apr_hash_first(pool, successor_ids); hi; hi = apr_hash_next(hi))
     {
       const char *pred = svn_apr_hash_index_key(hi);
+      svn_fs_id_t *pred_id;
       const char *node_revs_file_abspath;
       apr_file_t *tempfile;
       const char *new_line;
 
       svn_pool_clear(iterpool);
       
-      node_revs_file_abspath = path_successor_node_revs(fs, pred, iterpool);
+      pred_id = svn_fs_fs__id_parse(pred, strlen(pred), iterpool);
+      node_revs_file_abspath = path_successor_node_revs(fs, pred_id, iterpool);
       tempfile = apr_hash_get(tempfiles, node_revs_file_abspath,
                               APR_HASH_KEY_STRING);
       SVN_ERR_ASSERT(tempfile);
