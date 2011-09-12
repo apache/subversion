@@ -197,11 +197,15 @@ ev2_add_directory(const char *path,
                   void **child_baton)
 {
   struct ev2_dir_baton *pb = parent_baton;
+  struct ev2_dir_baton *cb = apr_palloc(result_pool, sizeof(*cb));
   svn_node_kind_t *kind;
 
   kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
   *kind = svn_node_dir;
   SVN_ERR(add_action(pb->eb, path, add, kind));
+
+  cb->eb = pb->eb;
+  *child_baton = cb;
 
   return SVN_NO_ERROR;
 }
