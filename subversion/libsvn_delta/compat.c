@@ -581,10 +581,8 @@ complete_cb(void *baton,
             apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
-
-  SVN_ERR(eb->deditor->close_edit(eb->dedit_baton, scratch_pool));
-
-  return SVN_NO_ERROR;
+  return svn_error_trace(eb->deditor->close_edit(eb->dedit_baton,
+                                                 scratch_pool));
 }
 
 /* This implements svn_editor_cb_abort_t */
@@ -592,7 +590,9 @@ static svn_error_t *
 abort_cb(void *baton,
          apr_pool_t *scratch_pool)
 {
-  return SVN_NO_ERROR;
+  struct editor_baton *eb = baton;
+  return svn_error_trace(eb->deditor->abort_edit(eb->dedit_baton,
+                                                 scratch_pool));
 }
 
 svn_error_t *
