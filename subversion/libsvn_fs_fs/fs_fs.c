@@ -8102,7 +8102,7 @@ read_successors_from_candidates(apr_array_header_t **successors_p,
                                        rev);
 
           pred_id = svn_fs_fs__id_parse(buf, strlen(buf), iterpool);
-          succ_id = svn_fs_fs__id_parse(p, strlen(p), iterpool);
+          succ_id = svn_fs_fs__id_parse(p+1, strlen(p+1), iterpool);
 
           if (pred_id == NULL || succ_id == NULL)
             return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
