@@ -1830,17 +1830,13 @@ diff_repos_wc(const char *path1,
      actual URLs will be. */
   if (peg_revision->kind != svn_opt_revision_unspecified)
     {
-      svn_opt_revision_t *start_ignore, *end_ignore, end;
-      const char *url_ignore;
+      svn_opt_revision_t *start_ignore;
 
-      end.kind = svn_opt_revision_unspecified;
-
-      SVN_ERR(svn_client__repos_locations(&url1, &start_ignore,
-                                          &url_ignore, &end_ignore,
+      SVN_ERR(svn_client__repos_locations(&url1, &start_ignore, NULL, NULL,
                                           NULL,
                                           path1,
                                           peg_revision,
-                                          revision1, &end,
+                                          revision1, NULL,
                                           ctx, pool));
       if (!reverse)
         {

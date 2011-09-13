@@ -450,10 +450,8 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
   const char *initial_url, *url;
   svn_opt_revision_t *good_rev;
   svn_opt_revision_t peg_revision, start_rev;
-  svn_opt_revision_t dead_end_rev;
-  svn_opt_revision_t *ignored_rev;
   svn_revnum_t rev;
-  const char *ignored_url, *corrected_url;
+  const char *corrected_url;
 
   SVN_ERR(svn_client_url_from_path2(&initial_url, path_or_url, ctx, pool,
                                     pool));
@@ -479,16 +477,13 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
   if (corrected_url && svn_path_is_url(path_or_url))
     path_or_url = corrected_url;
 
-  dead_end_rev.kind = svn_opt_revision_unspecified;
-
   /* Run the history function to get the object's (possibly
      different) url in REVISION. */
-  SVN_ERR(svn_client__repos_locations(&url, &good_rev,
-                                      &ignored_url, &ignored_rev,
+  SVN_ERR(svn_client__repos_locations(&url, &good_rev, NULL, NULL,
                                       ra_session,
                                       path_or_url, &peg_revision,
                                       /* search range: */
-                                      &start_rev, &dead_end_rev,
+                                      &start_rev, NULL,
                                       ctx, pool));
 
   /* Make the session point to the real URL. */
@@ -618,6 +613,14 @@ svn_client__repos_locations(const char **start_url,
   if (revision->kind == svn_opt_revision_unspecified
       || start->kind == svn_opt_revision_unspecified)
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
+
+  if (end == NULL)
+    {
+      static const svn_opt_revision_t unspecified_rev
+        = { svn_opt_revision_unspecified, { 0 } };
+
+      end = &unspecified_rev;
+    }
 
   /* Check to see if this is schedule add with history working copy
      path.  If it is, then we need to use the URL and peg revision of
