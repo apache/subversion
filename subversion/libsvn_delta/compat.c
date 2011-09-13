@@ -99,6 +99,7 @@ struct ev2_edit_baton
 struct ev2_dir_baton
 {
   struct ev2_edit_baton *eb;
+  const char *path;
 };
 
 struct ev2_file_baton
@@ -205,6 +206,7 @@ ev2_add_directory(const char *path,
   SVN_ERR(add_action(pb->eb, path, add, kind));
 
   cb->eb = pb->eb;
+  cb->path = apr_pstrdup(result_pool, path);
   *child_baton = cb;
 
   return SVN_NO_ERROR;
@@ -221,6 +223,7 @@ ev2_open_directory(const char *path,
   struct ev2_dir_baton *db = apr_palloc(result_pool, sizeof(*db));
 
   db->eb = pb->eb;
+  db->path = apr_pstrdup(result_pool, path);
 
   *child_baton = db;
   return SVN_NO_ERROR;
@@ -233,6 +236,13 @@ ev2_change_dir_prop(void *dir_baton,
                     apr_pool_t *scratch_pool)
 {
   struct ev2_dir_baton *db = dir_baton;
+  struct prop_args *p_args = apr_palloc(db->eb->edit_pool, sizeof(*p_args));
+
+  p_args->name = apr_pstrdup(db->eb->edit_pool, name);
+  p_args->value = value ? svn_string_dup(value, db->eb->edit_pool) : NULL;
+
+  SVN_ERR(add_action(db->eb, db->path, set_prop, p_args));
+
   return SVN_NO_ERROR;
 }
 
@@ -319,7 +329,7 @@ ev2_change_file_prop(void *file_baton,
   struct prop_args *p_args = apr_palloc(fb->eb->edit_pool, sizeof(*p_args));
 
   p_args->name = apr_pstrdup(fb->eb->edit_pool, name);
-  p_args->value = svn_string_dup(value, fb->eb->edit_pool);
+  p_args->value = value ? svn_string_dup(value, fb->eb->edit_pool) : NULL;
 
   SVN_ERR(add_action(fb->eb, fb->path, set_prop, p_args));
 
@@ -366,12 +376,10 @@ ev2_close_edit(void *edit_baton,
       svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_hash, i, svn_sort__item_t);
       apr_array_header_t *actions = item->value;
       const char *path = item->key;
-      apr_hash_t *props;
+      apr_hash_t *props = NULL;
       int j;
 
       svn_pool_clear(iterpool);
-
-      props = apr_hash_make(iterpool);
 
       /* Go through all of our actions, populating various datastructures
        * dependent on them. */
@@ -386,6 +394,9 @@ ev2_close_edit(void *edit_baton,
                 {
                   struct prop_args *p_args = action->args;
 
+                  if (!props)
+                    props = apr_hash_make(iterpool);
+
                   apr_hash_set(props, p_args->name, APR_HASH_KEY_STRING,
                                p_args->value);
                   break;
@@ -398,7 +409,14 @@ ev2_close_edit(void *edit_baton,
 
       /* We've now got a wholistic view of what has happened to this node,
        * so we can call our own editor APIs on it. */
-      if (apr_hash_count(props) > 0)
+
+      /* We don't want to just unconditionally call set_props on our PROPS
+         hash, since if we didn't get an set props actions, that hash would
+         be invalid (or if it was valid, it would be empty and we'd delete
+         all the properties).  So instead, we only allocate the hash when
+         we know we've seen a SET_PROP action, and ensure that hash is valid
+         when calling the Ev2 function below. */
+      if (props)
         SVN_ERR(svn_editor_set_props(eb->editor, path, SVN_INVALID_REVNUM,
                                      props, TRUE));
     }
