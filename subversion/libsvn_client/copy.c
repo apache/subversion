@@ -795,8 +795,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       apr_hash_t *mergeinfo;
-      svn_opt_revision_t *src_rev, *ignored_rev, dead_end_rev;
-      dead_end_rev.kind = svn_opt_revision_unspecified;
+      svn_opt_revision_t *src_rev;
 
       /* Are the source and destination URLs at or under REPOS_ROOT? */
       if (! (svn_uri__is_ancestor(repos_root, pair->src_abspath_or_url)
@@ -820,12 +819,12 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                                 pair->src_abspath_or_url,
                                                 pool));
       SVN_ERR(svn_client__repos_locations(&pair->src_abspath_or_url, &src_rev,
-                                          &ignored_url, &ignored_rev,
+                                          NULL, NULL,
                                           ra_session,
                                           pair->src_abspath_or_url,
                                           &pair->src_peg_revision,
-                                          &pair->src_op_revision,
-                                          &dead_end_rev, ctx, pool));
+                                          &pair->src_op_revision, NULL,
+                                          ctx, pool));
 
       /* Go ahead and grab mergeinfo from the source, too. */
       SVN_ERR(svn_client__ensure_ra_session_url(&ignored_url, ra_session,
@@ -1829,19 +1828,16 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
-      const char *src, *ignored_url;
-      svn_opt_revision_t *new_rev, *ignored_rev, dead_end_rev;
+      const char *src;
+      svn_opt_revision_t *new_rev;
 
       svn_pool_clear(iterpool);
-      dead_end_rev.kind = svn_opt_revision_unspecified;
 
-      SVN_ERR(svn_client__repos_locations(&src, &new_rev,
-                                          &ignored_url, &ignored_rev,
+      SVN_ERR(svn_client__repos_locations(&src, &new_rev, NULL, NULL,
                                           NULL,
                                           pair->src_abspath_or_url,
                                           &pair->src_peg_revision,
-                                          &pair->src_op_revision,
-                                          &dead_end_rev,
+                                          &pair->src_op_revision, NULL,
                                           ctx, iterpool));
 
       pair->src_original = pair->src_abspath_or_url;

@@ -105,7 +105,7 @@ svn_error_t *svn_client__get_copy_source(const char *path_or_url,
    specify the point(s) of interest (typically the revisions referred
    to as the "operative range" for a given operation) along that history.
 
-   END may be of kind svn_opt_revision_unspecified (in which case
+   END may be NULL or of kind svn_opt_revision_unspecified (in either case
    END_URL and END_REVISION are not touched by the function);
    START and REVISION may not.
 
