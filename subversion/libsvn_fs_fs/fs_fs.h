@@ -538,5 +538,17 @@ svn_fs_fs__pack(svn_fs_t *fs,
                 void *cancel_baton,
                 apr_pool_t *pool);
 
+/* Set *SUCCESSORS to an array of svn_fs_id_t * node revision IDs of
+   nodes in FS which are successors of ID (that is, ID is their
+   immediate predecessor).  If COMMITTED_ONLY is set, only include
+   successors which were created in transactions that have since been
+   committed.
 
+   Do this as part of TRAIL, and use POOL for any allocations.  */
+svn_error_t *svn_fs_fs__get_node_successors(apr_array_header_t **successors,
+                                            svn_fs_t *fs,
+                                            const svn_fs_id_t *id,
+                                            svn_boolean_t committed_only,
+                                            apr_pool_t *result_pool,
+                                            apr_pool_t *scratch_pool);
 #endif

@@ -8130,3 +8130,34 @@ read_successors_from_candidates(apr_array_header_t **successors_p,
   *successors_p = successors;
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_fs_fs__get_node_successors(apr_array_header_t **successors,
+                               svn_fs_t *fs,
+                               const svn_fs_id_t *id,
+                               svn_boolean_t committed_only,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  svn_revnum_t youngest;
+  apr_array_header_t *revisions;
+
+  /* For now, we only support COMMITTED_ONLY. */
+  if (!committed_only)
+    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
+
+  /* Snapshot YOUNGEST at this time. */
+  SVN_ERR(ensure_revision_exists(fs, svn_fs_fs__id_rev(id), scratch_pool));
+  SVN_ERR(get_youngest(&youngest, fs->path, scratch_pool));
+
+  /* Find out in which revisions created successors of the node. */
+  SVN_ERR(read_successor_candidate_revisions(&revisions, fs, id, youngest,
+                                             scratch_pool, scratch_pool));
+
+  SVN_ERR(read_successors_from_candidates(successors, fs, id, 
+                                          revisions,
+                                          result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
