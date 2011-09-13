@@ -399,9 +399,12 @@ def roll_tarballs(args):
         # Make sure CHANGES is sync'd.    
         compare_changes(repos, branch, args.revnum)
     
-    # Create the output directory
-    if not os.path.exists(get_deploydir(args.base_dir)):
-        os.mkdir(get_deploydir(args.base_dir))
+    # Ensure the output directory doesn't already exist
+    if os.path.exists(get_deploydir(args.base_dir)):
+        raise RuntimeError('output directory \'%s\' already exists'
+                                            % get_deploydir(args.base_dir))
+
+    os.mkdir(get_deploydir(args.base_dir))
 
     # For now, just delegate to dist.sh to create the actual artifacts
     extra_args = ''
