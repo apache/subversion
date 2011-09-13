@@ -452,17 +452,13 @@ def post_candidates(args):
         target = os.path.join(os.getenv('HOME'), 'public_html', 'svn',
                               str(args.version))
 
-    if args.code_name:
-        dirname = args.code_name
-    else:
-        dirname = 'deploy'
-
-    if not os.path.exists(target):
-        os.makedirs(target)
+    logging.info('Moving tarballs to %s' % target)
+    if os.path.exists(target):
+        shutil.rmtree(target)
+    shutil.copytree(get_deploydir(args.base_dir), target)
 
     data = { 'version'      : str(args.version),
              'revnum'       : args.revnum,
-             'dirname'      : dirname,
            }
 
     # Choose the right template text
@@ -476,12 +472,11 @@ def post_candidates(args):
 
     template = ezt.Template()
     template.parse(get_tmplfile(template_filename).read())
-    template.generate(open(os.path.join(target, 'index.html'), 'w'), data)
+    template.generate(open(os.path.join(target, 'HEADER.html'), 'w'), data)
 
-    logging.info('Moving tarballs to %s' % os.path.join(target, dirname))
-    if os.path.exists(os.path.join(target, dirname)):
-        shutil.rmtree(os.path.join(target, dirname))
-    shutil.copytree(get_deploydir(args.base_dir), os.path.join(target, dirname))
+    template = ezt.Template()
+    template.parse(get_tmplfile('htaccess.ezt').read())
+    template.generate(open(os.path.join(target, '.htaccess'), 'w'), data)
 
 
 #----------------------------------------------------------------------
@@ -529,12 +524,7 @@ def move_to_dist(args):
         target = args.target
     else:
         target = os.path.join(os.getenv('HOME'), 'public_html', 'svn',
-                              str(args.version), 'deploy')
-
-    if args.code_name:
-        dirname = args.code_name
-    else:
-        dirname = 'deploy'
+                              str(args.version))
 
     logging.info('Moving %s to dist dir \'%s\'' % (str(args.version),
                                                    args.dist_dir) )
@@ -730,9 +720,6 @@ def main():
                     help='''The revision number to base the release on.''')
     subparser.add_argument('--target',
                     help='''The full path to the destination.''')
-    subparser.add_argument('--code-name',
-                    help='''A whimsical name for the release, used only for
-                            naming the download directory.''')
 
     # The clean-dist subcommand
     subparser = subparsers.add_parser('clean-dist',
@@ -755,9 +742,6 @@ def main():
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('--dist-dir',
                     help='''The directory to clean.''')
-    subparser.add_argument('--code-name',
-                    help='''A whimsical name for the release, used only for
-                            naming the download directory.''')
     subparser.add_argument('--target',
                     help='''The full path to the destination used in
                             'post-candiates'..''')
