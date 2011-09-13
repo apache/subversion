@@ -1000,15 +1000,9 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       svn_node_kind_t dst_kind;
       const char *src_rel, *dst_rel;
 
-      src_rel = svn_uri__is_child(top_url, pair->src_abspath_or_url, pool);
+      src_rel = svn_uri_skip_ancestor(top_url, pair->src_abspath_or_url, pool);
       if (src_rel)
         {
-          SVN_ERR(svn_ra_check_path(ra_session, src_rel, pair->src_revnum,
-                                    &info->src_kind, pool));
-        }
-      else if (strcmp(pair->src_abspath_or_url, top_url) == 0)
-        {
-          src_rel = "";
           SVN_ERR(svn_ra_check_path(ra_session, src_rel, pair->src_revnum,
                                     &info->src_kind, pool));
         }

@@ -1145,19 +1145,13 @@ svn_ra_neon__get_path_relative_to_root(svn_ra_session_t *session,
   const char *root_url;
 
   SVN_ERR(svn_ra_neon__get_repos_root(session, &root_url, pool));
-  if (strcmp(root_url, url) == 0)
-    {
-      *rel_path = "";
-    }
-  else
-    {
-      *rel_path = svn_uri__is_child(root_url, url, pool);
-      if (! *rel_path)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("'%s' isn't a child of repository root "
-                                   "URL '%s'"),
-                                 url, root_url);
-    }
+  *rel_path = svn_uri_skip_ancestor(root_url, url, pool);
+  if (! *rel_path)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("'%s' isn't a child of repository root "
+                               "URL '%s'"),
+                             url, root_url);
+
   return SVN_NO_ERROR;
 }
 
