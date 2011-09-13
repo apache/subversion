@@ -3330,6 +3330,104 @@ fs_history_prev(svn_fs_history_t **prev_history_p,
 }
 
 
+struct history_next_args
+{
+  svn_fs_history_next_receiver_t receiver;
+  void *receiver_baton;
+  svn_fs_history_t *history;
+  apr_pool_t *pool;
+};
+
+/* Call ARGS->RECEIVER with a history object corresponding to either
+   ID or NODE in ARGS's FS. Exactly one of NODE and ID must be provided.
+   Use SCRATCH_POOL for allocations.
+ */
+static svn_error_t *
+report_successor(struct history_next_args *args,
+                 svn_fs_id_t *id,
+                 dag_node_t *node,
+                 apr_pool_t *scratch_pool)
+{
+  fs_history_data_t *fhd = args->history->fsap_data;
+  svn_fs_history_t *next;
+  const char *path;
+  svn_revnum_t revision;
+
+  SVN_ERR_ASSERT((id != NULL) != (node != NULL));
+
+  if (id)
+    SVN_ERR(svn_fs_fs__dag_get_node(&node, fhd->fs, id, scratch_pool));
+
+  path = svn_fs_fs__dag_get_created_path(node);
+  SVN_ERR(svn_fs_fs__dag_get_revision(&revision, node,
+                                      scratch_pool));
+  /* ### TODO(sid): NEXT should be allocated in SCRATCH_POOL, but there is no
+         svn_fs_history_dup() function for callers that want to hang on to it.
+   */
+  next = assemble_history(fhd->fs,
+                          path, revision,
+                          TRUE /* is_interesting */,
+                          NULL, SVN_INVALID_REVNUM /* path_hint, rev_hint */,
+                          args->pool);
+  SVN_ERR(args->receiver(next, args->receiver_baton, args->history,
+                         scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Corresponds to the same function in libsvn_fs_base, except that here it
+   doesn't need to take any lock or txn as it doesn't write anything. */
+static svn_error_t *
+txn_body_history_next(struct history_next_args *args,
+                      apr_pool_t *scratch_pool)
+{
+  fs_history_data_t *fhd = args->history->fsap_data;
+  const svn_fs_id_t *node_id;
+  dag_node_t *node;
+
+  /* Compute NODE and NODE_ID from fhd->PATH and fhd->REVISION. */
+  {
+    svn_fs_root_t *root;
+    svn_fs_t *fs = fhd->fs;
+
+    SVN_ERR(svn_fs_fs__revision_root(&root, fs, fhd->revision, scratch_pool));
+    SVN_ERR(get_dag(&node, root, fhd->path, scratch_pool));
+    node_id = svn_fs_fs__dag_get_id(node);
+  }
+
+  /* Check whether NODE_ID itself is an interesting history location. */
+  {
+    svn_revnum_t commit_rev;
+
+    SVN_ERR(svn_fs_fs__dag_get_revision(&commit_rev, node,
+                                        scratch_pool));
+
+    if (commit_rev == fhd->revision)
+      SVN_ERR(report_successor(args, NULL, node, scratch_pool));
+  }
+
+  /* Let the fs_fs.h API do the legwork, ... */
+  {
+    apr_array_header_t *successors;
+    int i;
+
+    /* ### TODO(sid): switch to callback */
+    SVN_ERR(svn_fs_fs__get_node_successors(&successors,
+                                           fhd->fs, node_id,
+                                           TRUE /* committed_only */,
+                                           scratch_pool, scratch_pool));
+    for (i = 0; i < successors->nelts; i++)
+      {
+        /* ... then massage its results into something understandable by
+           our caller, and pass them along. */
+        svn_fs_id_t *successor_id = APR_ARRAY_IDX(successors, i, svn_fs_id_t *);
+        SVN_ERR(report_successor(args, successor_id, NULL, scratch_pool));
+      }
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* Implement svn_fs_history_next(). */
 static svn_error_t *
 fs_history_next(svn_fs_history_next_receiver_t receiver,
@@ -3337,8 +3435,13 @@ fs_history_next(svn_fs_history_next_receiver_t receiver,
                 svn_fs_history_t *history,
                 apr_pool_t *pool)
 {
-  /* ### "Not implemented" */
-  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
+  struct history_next_args args = {
+    receiver, receiver_baton, history, pool
+  };
+
+  SVN_ERR(txn_body_history_next(&args, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
