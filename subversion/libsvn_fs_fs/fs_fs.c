@@ -8022,3 +8022,111 @@ read_successor_candidate_revisions(apr_array_header_t **revisions_p,
   *revisions_p = revisions;
   return SVN_NO_ERROR;
 }
+
+/* Set *SUCCESSORS_P to an array of 'svn_fs_id_t *' of successors of ID,
+   allocated in RESULT_POOL. Only successors contained in successors
+   cache entries of revisions in REVISIONS will be returned. */
+static svn_error_t *
+read_successors_from_candidates(apr_array_header_t **successors_p,
+                                svn_fs_t *fs,
+                                svn_fs_id_t *id,
+                                apr_array_header_t *revisions,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *successors;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  svn_revnum_t lastrev = SVN_INVALID_REVNUM;
+  apr_file_t *ids_file = NULL;
+  int i;
+
+  successors = apr_array_make(result_pool, 0, sizeof(svn_fs_id_t *));
+  for (i = 0; i < revisions->nelts; i++)
+    {
+      apr_off_t offset;
+      svn_revnum_t rev;
+
+      svn_pool_clear(iterpool);
+
+      rev = APR_ARRAY_IDX(revisions, i, svn_revnum_t);
+
+      /* Maybe close the old file. */
+      if (ids_file
+          && lastrev != SVN_INVALID_REVNUM /* -1/1000 == 1/1000 */
+          && rev / FSFS_SUCCESSORS_MAX_REVS_PER_FILE
+             != lastrev / FSFS_SUCCESSORS_MAX_REVS_PER_FILE)
+        {
+          SVN_ERR(svn_io_file_close(ids_file, iterpool));
+          ids_file = NULL;
+        }
+
+      /* This will either reuse IDS_FILE or open() it for us. */
+      SVN_ERR(read_successor_index_entry(&offset, &ids_file, fs, rev,
+                                         scratch_pool, iterpool));
+
+      /* Seek and read. */
+      SVN_ERR(svn_io_file_seek(ids_file, APR_SET, &offset, iterpool));
+      while (1)
+        {
+          apr_status_t status;
+          char buf[512]; /* big enough for two noderev ids */
+          svn_fs_id_t *pred_id;
+          svn_fs_id_t *succ_id;
+          char *p = NULL;
+
+          status = apr_file_gets(buf, sizeof(buf), ids_file);
+          if (status)
+            return svn_error_wrap_apr(status,
+                                      _("Can't read successors line for r%ld"),
+                                      rev);
+
+          /* Parse BUF. */
+
+          /* Easy out. */
+          if (!strcmp(buf, FSFS_SUCCESSOR_IDS_END_MARKER "\n"))
+            break;
+
+          /* Split into two noderev id's. */
+          if ((p = strchr(buf, ' ')))
+            *p = '\0';
+          if (!p || strchr(p+1, ' '))
+            return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                     _("Bad spaces in successor line "
+                                       "'%s%s%s' for r%ld"),
+                                       buf,
+                                       p ? " " : "",
+                                       p ? p+1 : "",
+                                       rev);
+
+          pred_id = svn_fs_fs__id_parse(buf, strlen(buf), iterpool);
+          succ_id = svn_fs_fs__id_parse(p, strlen(p), iterpool);
+
+          if (pred_id == NULL || succ_id == NULL)
+            return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                     _("Invalid noderev id's (%d,%d) in "
+                                       "successors index line '%s %s' "
+                                       "for r%ld"),
+                                       !!pred_id, !!succ_id,
+                                       buf, p, rev);
+
+          if (svn_fs_fs__id_compare(id, pred_id) == 0)
+            {
+              /* This entry matches our predeccessor. */
+              APR_ARRAY_PUSH(successors, svn_fs_id_t *)
+                = svn_fs_fs__id_copy(succ_id, result_pool);
+            }
+        }
+      /* We just read END\n. */
+
+      /* Remember REV so that we know whether we may re-use IDS_FILE. */
+      lastrev = rev;
+    }
+
+  if (ids_file)
+    SVN_ERR(svn_io_file_close(ids_file, iterpool));
+
+  svn_pool_destroy(iterpool);
+
+  *successors_p = successors;
+  return SVN_NO_ERROR;
+}
