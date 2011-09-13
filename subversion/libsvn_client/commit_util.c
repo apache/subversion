@@ -1341,14 +1341,9 @@ svn_client__condense_commit_items(const char **base_url,
     {
       svn_client_commit_item3_t *this_item
         = APR_ARRAY_IDX(ci, i, svn_client_commit_item3_t *);
-      size_t url_len = strlen(this_item->url);
-      size_t base_url_len = strlen(*base_url);
 
-      if (url_len > base_url_len)
-        this_item->session_relpath = svn_uri__is_child(*base_url,
-                                                       this_item->url, pool);
-      else
-        this_item->session_relpath = "";
+      this_item->session_relpath = svn_uri_skip_ancestor(*base_url,
+                                                         this_item->url, pool);
     }
 #ifdef SVN_CLIENT_COMMIT_DEBUG
   /* ### TEMPORARY CODE ### */
