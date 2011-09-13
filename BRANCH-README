@@ -67,6 +67,9 @@ Lacking also are C unit tests for this functionality.
 
 FSFS support for this enhancement is under development; see below.
 
+'svnadmin verify' could validate the successors cache against the
+revisions and predecessors data.
+
 
 FSFS WHITEBOARD
 ===============
