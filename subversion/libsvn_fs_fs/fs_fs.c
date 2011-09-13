@@ -7939,6 +7939,9 @@ svn_fs_fs__pack(svn_fs_t *fs,
 
 /* Getting successor-IDs. */
 
+/* Read into *REVISIONS_P the successors/node-revs/ entries of ID in FS.
+   YOUNGEST is the caller's notion of the current youngest revision; ignore
+   any entries purporting to belong to revisions younger than that. */
 static svn_error_t *
 read_successor_candidate_revisions(apr_array_header_t **revisions_p,
                                    svn_fs_t *fs,
