@@ -7942,7 +7942,7 @@ svn_fs_fs__pack(svn_fs_t *fs,
 static svn_error_t *
 read_successor_candidate_revisions(apr_array_header_t **revisions_p,
                                    svn_fs_t *fs,
-                                   svn_fs_id_t *id,
+                                   const svn_fs_id_t *id,
                                    svn_revnum_t youngest,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool)
@@ -8029,8 +8029,8 @@ read_successor_candidate_revisions(apr_array_header_t **revisions_p,
 static svn_error_t *
 read_successors_from_candidates(apr_array_header_t **successors_p,
                                 svn_fs_t *fs,
-                                svn_fs_id_t *id,
-                                apr_array_header_t *revisions,
+                                const svn_fs_id_t *id,
+                                const apr_array_header_t *revisions,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
 {
