@@ -761,7 +761,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
   apr_hash_t *action_hash = apr_hash_make(pool);
   apr_array_header_t *path_infos;
   const char *top_url, *top_url_all, *top_url_dst;
-  const char *message, *repos_root, *ignored_url;
+  const char *message, *repos_root;
   svn_revnum_t youngest = SVN_INVALID_REVNUM;
   svn_ra_session_t *ra_session = NULL;
   const svn_delta_editor_t *editor;
@@ -815,9 +815,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
 
       /* Run the history function to get the source's URL in the
          operational revision. */
-      SVN_ERR(svn_client__ensure_ra_session_url(&ignored_url, ra_session,
-                                                pair->src_abspath_or_url,
-                                                pool));
+      SVN_ERR(svn_ra_reparent(ra_session, pair->src_abspath_or_url, pool));
       SVN_ERR(svn_client__repos_locations(&pair->src_abspath_or_url, &src_rev,
                                           NULL, NULL,
                                           ra_session,
@@ -827,9 +825,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                           ctx, pool));
 
       /* Go ahead and grab mergeinfo from the source, too. */
-      SVN_ERR(svn_client__ensure_ra_session_url(&ignored_url, ra_session,
-                                                pair->src_abspath_or_url,
-                                                pool));
+      SVN_ERR(svn_ra_reparent(ra_session, pair->src_abspath_or_url, pool));
       SVN_ERR(calculate_target_mergeinfo(ra_session, &mergeinfo, NULL,
                                          pair->src_abspath_or_url,
                                          pair->src_revnum, ctx, pool));
@@ -894,8 +890,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
     }
 
   /* Point the RA session to our current TOP_URL. */
-  SVN_ERR(svn_client__ensure_ra_session_url(&ignored_url, ra_session,
-                                            top_url, pool));
+  SVN_ERR(svn_ra_reparent(ra_session, top_url, pool));
 
   /* If we're allowed to create nonexistent parent directories of our
      destinations, then make a list in NEW_DIRS of the parent
