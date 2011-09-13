@@ -83,8 +83,7 @@ svn_client__dirent_fetcher(void *baton,
     *dirents = NULL;
 
   if (old_url)
-    SVN_ERR(svn_client__ensure_ra_session_url(&old_url, dfb->ra_session,
-                                              old_url, scratch_pool));
+    SVN_ERR(svn_ra_reparent(dfb->ra_session, old_url, scratch_pool));
 
   return SVN_NO_ERROR;
 }

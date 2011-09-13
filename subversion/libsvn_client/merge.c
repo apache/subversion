@@ -8969,11 +8969,7 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
 
   if (*ra_session)
     {
-      const char *old_session_url;
-      err = svn_client__ensure_ra_session_url(&old_session_url,
-                                              *ra_session,
-                                              url,
-                                              pool);
+      err = svn_ra_reparent(*ra_session, url, pool);
     }
 
   /* SVN_ERR_RA_ILLEGAL_URL is raised when url doesn't point to the same
