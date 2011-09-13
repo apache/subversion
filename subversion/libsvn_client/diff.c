@@ -561,6 +561,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
   int i;
   const char *path1 = orig_path1;
   const char *path2 = orig_path2;
+  apr_pool_t *iterpool;
 
   if (use_git_diff_format)
     {
@@ -629,6 +630,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
   SVN_ERR(file_printf_from_utf8(file, encoding, "%s" APR_EOL_STR,
                                 under_string));
 
+  iterpool = svn_pool_create(pool);
   for (i = 0; i < propchanges->nelts; i++)
     {
       const char *action;
@@ -649,6 +651,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
               && svn_string_compare(original_value, propchange->value)))
         continue;
 
+      svn_pool_clear(iterpool);
+
       if (! original_value)
         action = "Added";
       else if (! propchange->value)
@@ -663,7 +667,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
           const char *orig = original_value ? original_value->data : NULL;
           const char *val = propchange->value ? propchange->value->data : NULL;
           svn_error_t *err = display_mergeinfo_diff(orig, val, encoding,
-                                                    file, pool);
+                                                    file, iterpool);
 
           /* Issue #3896: If we can't pretty-print mergeinfo differences
              because invalid mergeinfo is present, then don't let the diff
@@ -680,7 +684,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
         }
 
       {
-        svn_stream_t *os = svn_stream_from_aprfile2(file, TRUE, pool);
+        svn_stream_t *os = svn_stream_from_aprfile2(file, TRUE, iterpool);
         svn_diff_t *diff;
         svn_diff_file_options_t options = { 0 };
         const svn_string_t *tmp;
@@ -691,14 +695,16 @@ display_prop_diffs(const apr_array_header_t *propchanges,
            Since the diff is not useful anyway for patching properties an
            eol character is appended when needed to remove those pescious
            ' \ No newline at end of file' lines. */
-        tmp = original_value ? original_value : svn_string_create("", pool);
-        orig = maybe_append_eol(tmp, pool);
+        tmp = original_value ? original_value : svn_string_create("",
+                                                                  iterpool);
+        orig = maybe_append_eol(tmp, iterpool);
 
         tmp = propchange->value ? propchange->value :
-                                  svn_string_create("", pool);
-        val = maybe_append_eol(tmp, pool);
+                                  svn_string_create("", iterpool);
+        val = maybe_append_eol(tmp, iterpool);
 
-        SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options, pool));
+        SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options,
+                                         iterpool));
 
         /* UNIX patch will try to apply a diff even if the diff header
          * is missing. It tries to be helpful by asking the user for a
@@ -708,13 +714,16 @@ display_prop_diffs(const apr_array_header_t *propchanges,
          * instead of "@@" as the default hunk delimiter for property diffs.
          * We also supress the diff header. */
         SVN_ERR(svn_diff_mem_string_output_unified2(os, diff, FALSE, "##",
-                                           svn_dirent_local_style(path, pool),
-                                           svn_dirent_local_style(path, pool),
-                                           encoding, orig, val, pool));
+                                           svn_dirent_local_style(path,
+                                                                  iterpool),
+                                           svn_dirent_local_style(path,
+                                                                  iterpool),
+                                           encoding, orig, val, iterpool));
         SVN_ERR(svn_stream_close(os));
 
       }
     }
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
