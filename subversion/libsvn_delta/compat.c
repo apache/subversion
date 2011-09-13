@@ -185,6 +185,10 @@ ev2_delete_entry(const char *path,
                  apr_pool_t *scratch_pool)
 {
   struct ev2_dir_baton *pb = parent_baton;
+  svn_revnum_t *revnum = apr_palloc(pb->eb->edit_pool, sizeof(*revnum));
+
+  *revnum = revision;
+  SVN_ERR(add_action(pb->eb, path, delete, revnum));
 
   return SVN_NO_ERROR;
 }
@@ -399,6 +403,17 @@ ev2_close_edit(void *edit_baton,
 
                   apr_hash_set(props, p_args->name, APR_HASH_KEY_STRING,
                                p_args->value);
+                  break;
+                }
+
+              case delete:
+                {
+                  svn_revnum_t *revnum = action->args;
+
+                  /* If we get a delete, we'd better not have gotten any
+                     other actions for this path later, so we can go ahead
+                     and call our handler. */
+                  SVN_ERR(svn_editor_delete(eb->editor, path, *revnum));
                   break;
                 }
 
