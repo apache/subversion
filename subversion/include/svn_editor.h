@@ -773,7 +773,14 @@ svn_editor_add_absent(svn_editor_t *editor,
  *
  * Set or change properties on the existing node at @a relpath.
  * ### TODO @todo Does this send *all* properties, always?
+ * ### HKW: The purist in me says "yes", but the pragmatist says "no".
+ * ### Writing a backward compat shim is going to be next to impossible,
+ * ### since we've no way to know about existing props while receiving
+ * ### props from the delta editor.
+ * ###
  * ### TODO @todo What is REVISION for?
+ * ### HKW: This is puzzling to me as well...
+ * ###
  * ### what about "entry props"? will these still be handled via
  * ### the general prop function?
  *
