@@ -255,7 +255,7 @@ editor_from_delta_editor_test(const svn_test_opts_t *opts,
     {
       svn_fs_root_t *revision_root;
       void *dedit_baton;
-      svn_delta_editor_t *deditor;
+      const svn_delta_editor_t *deditor;
       svn_editor_t *editor;
 
       svn_pool_clear(iterpool);
