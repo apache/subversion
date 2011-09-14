@@ -76,6 +76,9 @@ TODO
     http://mid.gmane.org/20110906154244.GA3863@daniel3.local
     http://mid.gmane.org/20110913172801.GB18110@jack.stsp.name
 
+- review '### TODO(sid)' comments
+  (note: at least one of these is a blocker --- the 'layout linear' one)
+
 - danielsh: review FSFS readers code
 
 - (optional) sync merge from trunk
