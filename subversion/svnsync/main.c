@@ -1119,7 +1119,7 @@ replay_rev_started(svn_revnum_t revision,
   *edit_baton = cancel_baton;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   pool, pool));
+                                   NULL, NULL, pool, pool));
 
   return SVN_NO_ERROR;
 }

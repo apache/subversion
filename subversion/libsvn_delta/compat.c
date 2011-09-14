@@ -94,6 +94,8 @@ struct ev2_edit_baton
   svn_editor_t *editor;
   apr_hash_t *paths;
   apr_pool_t *edit_pool;
+  svn_delta_fetch_props_cb_func_t fetch_props_func;
+  void *fetch_props_baton;
 };
 
 struct ev2_dir_baton
@@ -112,7 +114,8 @@ enum action
 {
   add,
   delete,
-  set_prop
+  set_prop,
+  remove_prop
 };
 
 struct path_action
@@ -240,12 +243,19 @@ ev2_change_dir_prop(void *dir_baton,
                     apr_pool_t *scratch_pool)
 {
   struct ev2_dir_baton *db = dir_baton;
-  struct prop_args *p_args = apr_palloc(db->eb->edit_pool, sizeof(*p_args));
 
-  p_args->name = apr_pstrdup(db->eb->edit_pool, name);
-  p_args->value = value ? svn_string_dup(value, db->eb->edit_pool) : NULL;
+  if (value)
+    {
+      struct prop_args *p_args = apr_palloc(db->eb->edit_pool, sizeof(*p_args));
 
-  SVN_ERR(add_action(db->eb, db->path, set_prop, p_args));
+      p_args->name = apr_pstrdup(db->eb->edit_pool, name);
+      p_args->value = value ? svn_string_dup(value, db->eb->edit_pool) : NULL;
+
+      SVN_ERR(add_action(db->eb, db->path, set_prop, p_args));
+    }
+  else
+    SVN_ERR(add_action(db->eb, db->path, remove_prop,
+                       apr_pstrdup(db->eb->edit_pool, name)));
 
   return SVN_NO_ERROR;
 }
@@ -330,12 +340,18 @@ ev2_change_file_prop(void *file_baton,
                      apr_pool_t *scratch_pool)
 {
   struct ev2_file_baton *fb = file_baton;
-  struct prop_args *p_args = apr_palloc(fb->eb->edit_pool, sizeof(*p_args));
 
-  p_args->name = apr_pstrdup(fb->eb->edit_pool, name);
-  p_args->value = value ? svn_string_dup(value, fb->eb->edit_pool) : NULL;
+  if (value)
+    {
+      struct prop_args *p_args = apr_palloc(fb->eb->edit_pool, sizeof(*p_args));
+      p_args->name = apr_pstrdup(fb->eb->edit_pool, name);
+      p_args->value = value ? svn_string_dup(value, fb->eb->edit_pool) : NULL;
 
-  SVN_ERR(add_action(fb->eb, fb->path, set_prop, p_args));
+      SVN_ERR(add_action(fb->eb, fb->path, set_prop, p_args));
+    }
+  else
+    SVN_ERR(add_action(fb->eb, fb->path, remove_prop,
+                       apr_pstrdup(fb->eb->edit_pool, name)));
 
   return SVN_NO_ERROR;
 }
@@ -380,6 +396,7 @@ ev2_close_edit(void *edit_baton,
       svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_hash, i, svn_sort__item_t);
       apr_array_header_t *actions = item->value;
       const char *path = item->key;
+      apr_array_header_t *removed_props = NULL;
       apr_hash_t *props = NULL;
       int j;
 
@@ -406,6 +423,18 @@ ev2_close_edit(void *edit_baton,
                   break;
                 }
 
+              case remove_prop:
+                {
+                  const char *name = action->args;
+
+                  if (!removed_props)
+                    removed_props = apr_array_make(iterpool, 1,
+                                                   sizeof(const char *));
+
+                  APR_ARRAY_PUSH(removed_props, const char *) = name;
+                  break;
+                }
+
               case delete:
                 {
                   svn_revnum_t *revnum = action->args;
@@ -425,15 +454,37 @@ ev2_close_edit(void *edit_baton,
       /* We've now got a wholistic view of what has happened to this node,
        * so we can call our own editor APIs on it. */
 
-      /* We don't want to just unconditionally call set_props on our PROPS
-         hash, since if we didn't get an set props actions, that hash would
-         be invalid (or if it was valid, it would be empty and we'd delete
-         all the properties).  So instead, we only allocate the hash when
-         we know we've seen a SET_PROP action, and ensure that hash is valid
-         when calling the Ev2 function below. */
-      if (props)
-        SVN_ERR(svn_editor_set_props(eb->editor, path, SVN_INVALID_REVNUM,
-                                     props, TRUE));
+      if (props || removed_props)
+        {
+          /* If we've seen any prop mods, we're going to need to fetch the
+             existing props so that we can properly drive the editor method
+             below. */
+          apr_hash_t *existing_props;
+
+          SVN_ERR(eb->fetch_props_func(&existing_props, eb->fetch_props_baton,
+                                       path, iterpool));
+          if (props)
+            props = apr_hash_overlay(iterpool, props, existing_props);
+          else
+            props = existing_props;
+
+          /* Now delete any props which were deleted in our drive. */
+          if (removed_props)
+            {
+              int k;
+
+              for (k = 0; k < removed_props->nelts; k++)
+                {
+                  const char *name = APR_ARRAY_IDX(removed_props, k,
+                                                   const char *);
+                  apr_hash_set(props, name, APR_HASH_KEY_STRING, NULL);
+                }
+            }
+
+          /* This point, PROPS will contain all the props for this node. */
+          SVN_ERR(svn_editor_set_props(eb->editor, path, SVN_INVALID_REVNUM,
+                                       props, TRUE));
+        }
     }
   svn_pool_destroy(iterpool);
 
@@ -453,6 +504,8 @@ svn_error_t *
 svn_delta_from_editor(const svn_delta_editor_t **deditor,
                       void **dedit_baton,
                       svn_editor_t *editor,
+                      svn_delta_fetch_props_cb_func_t fetch_props_func,
+                      void *fetch_props_baton,
                       apr_pool_t *pool)
 {
   /* Static 'cause we don't want it to be on the stack. */
@@ -479,6 +532,8 @@ svn_delta_from_editor(const svn_delta_editor_t **deditor,
   eb->editor = editor;
   eb->paths = apr_hash_make(pool);
   eb->edit_pool = pool;
+  eb->fetch_props_func = fetch_props_func;
+  eb->fetch_props_baton = fetch_props_baton;
 
   *dedit_baton = eb;
   *deditor = &delta_editor;
@@ -676,6 +731,8 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
                          void **dedit_baton_out,
                          const svn_delta_editor_t *deditor_in,
                          void *dedit_baton_in,
+                         svn_delta_fetch_props_cb_func_t fetch_props_func,
+                         void *fetch_props_baton,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
@@ -692,6 +749,7 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
   SVN_ERR(svn_editor_from_delta(&editor, deditor_in, dedit_baton_in,
                                 NULL, NULL, result_pool, scratch_pool));
   SVN_ERR(svn_delta_from_editor(deditor_out, dedit_baton_out, editor,
+                                fetch_props_func, fetch_props_baton,
                                 result_pool));
 
 #endif

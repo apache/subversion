@@ -2365,7 +2365,7 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
     *set_locks_baton = eb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   result_pool, scratch_pool));
+                                   NULL, NULL, result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }

@@ -264,7 +264,8 @@ editor_from_delta_editor_test(const svn_test_opts_t *opts,
 
       /* Construct our editor, and from it a delta editor. */
       SVN_ERR(get_noop_editor(&editor, NULL, NULL, NULL, iterpool, iterpool));
-      SVN_ERR(svn_delta_from_editor(&deditor, &dedit_baton, editor, iterpool));
+      SVN_ERR(svn_delta_from_editor(&deditor, &dedit_baton, editor,
+                                    NULL, NULL, iterpool));
 
       SVN_ERR(svn_repos_replay2(revision_root, "", SVN_INVALID_REVNUM, TRUE,
                                 deditor, dedit_baton, NULL, NULL, iterpool));
