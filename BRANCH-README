@@ -48,7 +48,7 @@ one or another flavor of successor (copy or not).
 STATUS
 ======
 
-Only the BDB backend has been tweaked so far.  The code is believed to
+The BDB backend has been tweaked.  The code is believed to
 cover the basic maintenance of the successor ID mapping, adding map
 items when new nodes are created, removing them when nodes are
 deleted.  The code assumes that the only node revisions every removed
@@ -56,26 +56,33 @@ from the filesystem are those which have no successors (which might
 not hold up if an obliteration feature is added, depending on the
 implementation).
 
-The branch needs to implement the correct FS format bumping for both
-backends.
+FSFS has been tweaked too.
 
-The branch needs to be synced with 21 months of trunk changes.
+This branch adds svn_fs_history_next() to the public API.
 
-[ The branch does not currently add any public APIs. ]
+TODO
+====
 
-Lacking also are C unit tests for this functionality.
+- implement FS format bumping for both backends
 
-FSFS support for this enhancement is under development; see below.
+- expand the unit test
 
-'svnadmin verify' could validate the successors cache against the
-revisions and predecessors data.
+- convert all internal APIs to return results via s/array/callback/
 
+- update design docs (both backends) and move out them out of this file (FSFS)
 
-FSFS WHITEBOARD
-===============
+- implement successors data construction logic on top of existing filesystem
+  for 'svnadmin upgrade'
+    http://mid.gmane.org/20110906154244.GA3863@daniel3.local
+    http://mid.gmane.org/20110913172801.GB18110@jack.stsp.name
 
-TODO: 'svnadmin upgrade'
-(see <http://mid.gmane.org/20110906154244.GA3863@daniel3.local>)
+- danielsh: review FSFS readers code
+
+- (optional) sync merge from trunk
+
+- 'svnadmin verify' could validate the successors cache against the
+  revisions and predecessors data.
+
 
 Implementation proposal
 =======================
