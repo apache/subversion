@@ -176,6 +176,7 @@ ev2_open_root(void *edit_baton,
   struct ev2_edit_baton *eb = edit_baton;
 
   db->eb = eb;
+  db->path = "";
 
   *root_baton = db;
   return SVN_NO_ERROR;
