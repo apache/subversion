@@ -673,7 +673,7 @@ get_ra_editor(svn_ra_session_t **ra_session,
                                     pool));
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   pool, pool));
+                                   NULL, NULL, pool, pool));
 
   return SVN_NO_ERROR;
 }

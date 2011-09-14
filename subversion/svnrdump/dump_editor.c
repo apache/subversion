@@ -892,7 +892,7 @@ svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
                                             de, eb, editor, edit_baton, pool));
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   pool, pool));
+                                   NULL, NULL, pool, pool));
 
   return SVN_NO_ERROR;
 }
