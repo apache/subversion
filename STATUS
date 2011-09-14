@@ -138,12 +138,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1163557
-   Relax wcng consistency checks for file externals.
-   Justification:
-      Debug build claims wcng DB is inconsistent when it is OK.
-   Branch:
-     1.7.x-r1163557
-   Votes:
-     +1: philip, rhuijben, neels

@@ -1884,6 +1884,23 @@ def exclude_externals(sbox):
                                         None, None, None, None, False,
                                         '--set-depth', 'infinity', wc_dir)
 
+def file_external_in_unversioned(sbox):
+  "file external in unversioned dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('svn:externals', '^/A/mu X/mu', 'A')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/X/mu' : Item(status='A '),
+  })
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None, None)
+
+  # At one point this failed with SVN_DEBUG wcng consistency checks enabled
+  svntest.actions.run_and_verify_svn(None, None, [], 'cleanup', wc_dir)
+
+
 from svntest import verify, actions, main
 
 @Issue(3589, 4000)
@@ -2082,6 +2099,7 @@ test_list = [ None,
               incoming_file_on_file_external,
               incoming_file_external_on_file,
               exclude_externals,
+              file_external_in_unversioned,
               copy_file_externals,
              ]
 

@@ -12248,7 +12248,7 @@ verify_wcroot(svn_wc__db_wcroot_t *wcroot,
       /* Verify parent_relpath refers to a row that exists */
       /* TODO: Verify there is a suitable parent row - e.g. has op_depth <=
        * the child's and a suitable presence */
-      if (parent_relpath)
+      if (parent_relpath && svn_sqlite__column_is_null(stmt, 3))
         {
           svn_sqlite__stmt_t *stmt2;
           svn_boolean_t have_a_parent_row;
