@@ -375,6 +375,102 @@ ev2_absent_file(const char *path,
 }
 
 static svn_error_t *
+process_actions(void *edit_baton,
+                const char *path,
+                apr_array_header_t *actions,
+                apr_pool_t *scratch_pool)
+{
+  struct ev2_edit_baton *eb = edit_baton;
+  apr_array_header_t *removed_props = NULL;
+  apr_hash_t *props = NULL;
+  int i;
+
+  /* Go through all of our actions, populating various datastructures
+   * dependent on them. */
+  for (i = 0; i < actions->nelts; i++)
+    {
+      struct path_action *action = APR_ARRAY_IDX(actions, i,
+                                                 struct path_action *);
+
+      switch (action->action)
+        {
+          case set_prop:
+            {
+              struct prop_args *p_args = action->args;
+
+              if (!props)
+                props = apr_hash_make(scratch_pool);
+
+              apr_hash_set(props, p_args->name, APR_HASH_KEY_STRING,
+                           p_args->value);
+              break;
+            }
+
+          case remove_prop:
+            {
+              const char *name = action->args;
+
+              if (!removed_props)
+                removed_props = apr_array_make(scratch_pool, 1,
+                                               sizeof(const char *));
+
+              APR_ARRAY_PUSH(removed_props, const char *) = name;
+              break;
+            }
+
+          case delete:
+            {
+              svn_revnum_t *revnum = action->args;
+
+              /* If we get a delete, we'd better not have gotten any
+                 other actions for this path later, so we can go ahead
+                 and call our handler. */
+              SVN_ERR(svn_editor_delete(eb->editor, path, *revnum));
+              break;
+            }
+
+          default:
+            break;
+        }
+    }
+
+  /* We've now got a wholistic view of what has happened to this node,
+   * so we can call our own editor APIs on it. */
+
+  if (props || removed_props)
+    {
+      /* If we've seen any prop mods, we're going to need to fetch the
+         existing props so that we can properly drive the editor method
+         below. */
+      apr_hash_t *existing_props;
+
+      SVN_ERR(eb->fetch_props_func(&existing_props, eb->fetch_props_baton,
+                                   path, scratch_pool));
+      if (props)
+        props = apr_hash_overlay(scratch_pool, props, existing_props);
+      else
+        props = existing_props;
+
+      /* Now delete any props which were deleted in our drive. */
+      if (removed_props)
+        {
+          for (i = 0; i < removed_props->nelts; i++)
+            {
+              const char *name = APR_ARRAY_IDX(removed_props, i,
+                                               const char *);
+              apr_hash_set(props, name, APR_HASH_KEY_STRING, NULL);
+            }
+        }
+
+      /* This point, PROPS will contain all the props for this node. */
+      SVN_ERR(svn_editor_set_props(eb->editor, path, SVN_INVALID_REVNUM,
+                                   props, TRUE));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 ev2_close_edit(void *edit_baton,
                apr_pool_t *scratch_pool)
 {
@@ -396,95 +492,9 @@ ev2_close_edit(void *edit_baton,
       svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_hash, i, svn_sort__item_t);
       apr_array_header_t *actions = item->value;
       const char *path = item->key;
-      apr_array_header_t *removed_props = NULL;
-      apr_hash_t *props = NULL;
-      int j;
 
       svn_pool_clear(iterpool);
-
-      /* Go through all of our actions, populating various datastructures
-       * dependent on them. */
-      for (j = 0; j < actions->nelts; j++)
-        {
-          struct path_action *action = APR_ARRAY_IDX(actions, j,
-                                                     struct path_action *);
-
-          switch (action->action)
-            {
-              case set_prop:
-                {
-                  struct prop_args *p_args = action->args;
-
-                  if (!props)
-                    props = apr_hash_make(iterpool);
-
-                  apr_hash_set(props, p_args->name, APR_HASH_KEY_STRING,
-                               p_args->value);
-                  break;
-                }
-
-              case remove_prop:
-                {
-                  const char *name = action->args;
-
-                  if (!removed_props)
-                    removed_props = apr_array_make(iterpool, 1,
-                                                   sizeof(const char *));
-
-                  APR_ARRAY_PUSH(removed_props, const char *) = name;
-                  break;
-                }
-
-              case delete:
-                {
-                  svn_revnum_t *revnum = action->args;
-
-                  /* If we get a delete, we'd better not have gotten any
-                     other actions for this path later, so we can go ahead
-                     and call our handler. */
-                  SVN_ERR(svn_editor_delete(eb->editor, path, *revnum));
-                  break;
-                }
-
-              default:
-                break;
-            }
-        }
-
-      /* We've now got a wholistic view of what has happened to this node,
-       * so we can call our own editor APIs on it. */
-
-      if (props || removed_props)
-        {
-          /* If we've seen any prop mods, we're going to need to fetch the
-             existing props so that we can properly drive the editor method
-             below. */
-          apr_hash_t *existing_props;
-
-          SVN_ERR(eb->fetch_props_func(&existing_props, eb->fetch_props_baton,
-                                       path, iterpool));
-          if (props)
-            props = apr_hash_overlay(iterpool, props, existing_props);
-          else
-            props = existing_props;
-
-          /* Now delete any props which were deleted in our drive. */
-          if (removed_props)
-            {
-              int k;
-
-              for (k = 0; k < removed_props->nelts; k++)
-                {
-                  const char *name = APR_ARRAY_IDX(removed_props, k,
-                                                   const char *);
-                  apr_hash_set(props, name, APR_HASH_KEY_STRING, NULL);
-                }
-            }
-
-          /* This point, PROPS will contain all the props for this node. */
-          SVN_ERR(svn_editor_set_props(eb->editor, path, SVN_INVALID_REVNUM,
-                                       props, TRUE));
-        }
+      SVN_ERR(process_actions(edit_baton, path, actions, iterpool));
     }
   svn_pool_destroy(iterpool);
 
