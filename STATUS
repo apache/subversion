@@ -121,29 +121,29 @@ Candidate changes:
                          performance should be better, I wonder if that's
                          been tested at all)
 
-  * r1167659
-    Don't sort an already sorted array in svn_sort__hash().
-    Justification:
-      Possible performance improvement for merges, and doesn't cost anything.
-      This function is used to sort mergeinfo catalogs, among other things.
-    Votes:
-      +1: stsp (for 1.7.1)
+ * r1167659
+   Don't sort an already sorted array in svn_sort__hash().
+   Justification:
+     Possible performance improvement for merges, and doesn't cost anything.
+     This function is used to sort mergeinfo catalogs, among other things.
+   Votes:
+     +1: stsp (for 1.7.1)
 
-  * r1167503,r1169524,r1169531
-    Fix issue 4015, file externals upgrade to bogus non-external files.
-    Justification:
-      Upgrade with file externals breaks working copies.
-    Votes:
-      +1: philip
+ * r1167503,r1169524,r1169531
+   Fix issue 4015, file externals upgrade to bogus non-external files.
+   Justification:
+     Upgrade with file externals breaks working copies.
+   Votes:
+     +1: philip
 
-  * r1169650
-    Make relocate act recursively on all externals, not just immediate ones.
-    Justification:
-      Relocating externals is new 1.7, no reason not to do them all.
-    Notes:
-      Depends on issue 4015 merge.
-    Votes:
-      +1: philip
+ * r1169650
+   Make relocate act recursively on all externals, not just immediate ones.
+   Justification:
+     Relocating externals is new 1.7, no reason not to do them all.
+   Notes:
+     Depends on issue 4015 merge.
+   Votes:
+     +1: philip
 
 Veto-blocked changes:
 =====================
