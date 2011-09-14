@@ -148,6 +148,9 @@ read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
 static svn_error_t *
 update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool);
 
+static svn_error_t *
+get_youngest(svn_revnum_t *youngest_p, const char *fs_path, apr_pool_t *pool);
+
 /* Pathname helper functions */
 
 /* Return TRUE is REV is packed in FS, FALSE otherwise. */
@@ -617,15 +620,13 @@ with_some_lock(svn_fs_t *fs,
   if (!err)
     {
       fs_fs_data_t *ffd = fs->fsap_data;
+      svn_revnum_t youngest;
       int format;
 
       SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
       if (format >= SVN_FS_FS__MIN_PACKED_FORMAT)
         SVN_ERR(update_min_unpacked_rev(fs, pool));
-#if 0 /* Might be a good idea? */
-      SVN_ERR(get_youngest(&ffd->youngest_rev_cache, fs->path,
-                           pool));
-#endif
+      SVN_ERR(svn_fs_py__youngest_rev(&youngest, fs, pool));
       err = body(baton, subpool);
     }
 
@@ -1212,9 +1213,6 @@ update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
                                path_min_unpacked_rev(fs, pool),
                                pool);
 }
-
-static svn_error_t *
-get_youngest(svn_revnum_t *youngest_p, const char *fs_path, apr_pool_t *pool);
 
 svn_error_t *
 svn_fs_py__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
@@ -6926,7 +6924,6 @@ struct change_rev_prop_baton {
 /* The work-horse for svn_fs_py__change_rev_prop, called with the FS
    write lock.  This implements the svn_fs_py__with_write_lock()
    'body' callback type.  BATON is a 'struct change_rev_prop_baton *'. */
-
 static svn_error_t *
 change_rev_prop_body(void *baton, apr_pool_t *pool)
 {
