@@ -86,18 +86,6 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r1163557
-   Relax wcng consistency checks for file externals.
-   Justification:
-      Debug build claims wcng DB is inconsistent when it is OK.
-   Branch:
-     1.7.x-r1163557
-   Votes:
-     +1: philip, rhuijben
-     +0: neels (Much other code still dismally fails at file externals in
-                unversioned dirs, e.g. 'status', 'commit'. This apparently
-                only fixes maintainer-mode 'svn cleanup', IMHO low prio.)
-    
  * r1164386
    Avoid an expensive database operation in 'svn info'.
    Justification:
@@ -134,7 +122,7 @@ Candidate changes:
    Justification:
      Upgrade with file externals breaks working copies.
    Votes:
-     +1: philip
+     +1: philip, neels
 
  * r1169650
    Make relocate act recursively on all externals, not just immediate ones.
@@ -143,10 +131,19 @@ Candidate changes:
    Notes:
      Depends on issue 4015 merge.
    Votes:
-     +1: philip
+     +1: philip, neels
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1163557
+   Relax wcng consistency checks for file externals.
+   Justification:
+      Debug build claims wcng DB is inconsistent when it is OK.
+   Branch:
+     1.7.x-r1163557
+   Votes:
+     +1: philip, rhuijben, neels
