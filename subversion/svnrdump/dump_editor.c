@@ -888,6 +888,11 @@ svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
   *editor = de;
 
   /* Wrap this editor in a cancellation editor. */
-  return svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
-                                           de, eb, editor, edit_baton, pool);
+  SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
+                                            de, eb, editor, edit_baton, pool));
+
+  SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                   pool, pool));
+
+  return SVN_NO_ERROR;
 }

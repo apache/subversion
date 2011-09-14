@@ -254,7 +254,7 @@ adjust_relative_to_repos_root(const char **adjusted_path,
   return SVN_NO_ERROR;
 }
 
-/* Adjust PATH, ORIG_PATH_1 and ORIG_PATH_2, representing the changed file
+/* Adjust *PATH, *ORIG_PATH_1 and *ORIG_PATH_2, representing the changed file
  * and the two original targets passed to the diff command, to handle the
  * case when we're dealing with different anchors. RELATIVE_TO_DIR is the
  * directory the diff target should be considered relative to. All
@@ -459,10 +459,6 @@ print_git_diff_header_modified(svn_stream_t *os, const char *header_encoding,
  * are the paths passed to the original diff command. REV1 and REV2 are
  * revisions being diffed. COPYFROM_PATH and COPYFROM_REV indicate where the
  * diffed item was copied from.
- * RA_SESSION and WC_CTX are used to adjust paths in the headers to be
- * relative to the repository root.
- * WC_ROOT_ABSPATH is the absolute path to the root directory of a working
- * copy involved in a repos-wc diff, and may be NULL.
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 print_git_diff_header(svn_stream_t *os,
@@ -475,9 +471,6 @@ print_git_diff_header(svn_stream_t *os,
                       const char *copyfrom_path,
                       svn_revnum_t copyfrom_rev,
                       const char *header_encoding,
-                      svn_ra_session_t *ra_session,
-                      svn_wc_context_t *wc_ctx,
-                      const char *wc_root_abspath,
                       apr_pool_t *scratch_pool)
 {
   if (operation == svn_diff_op_deleted)
@@ -566,8 +559,9 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                    apr_pool_t *pool)
 {
   int i;
-  const char *path1 = apr_pstrdup(pool, orig_path1);
-  const char *path2 = apr_pstrdup(pool, orig_path2);
+  const char *path1 = orig_path1;
+  const char *path2 = orig_path2;
+  apr_pool_t *iterpool;
 
   if (use_git_diff_format)
     {
@@ -589,8 +583,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
     {
       const char *label1;
       const char *label2;
-      const char *adjusted_path1 = apr_pstrdup(pool, path1);
-      const char *adjusted_path2 = apr_pstrdup(pool, path2);
+      const char *adjusted_path1 = path1;
+      const char *adjusted_path2 = path2;
 
       SVN_ERR(adjust_paths_for_diff_labels(&path, &adjusted_path1,
                                            &adjusted_path2,
@@ -616,8 +610,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                                         svn_diff_op_modified,
                                         path1, path2, rev1, rev2, NULL,
                                         SVN_INVALID_REVNUM,
-                                        encoding, ra_session, wc_ctx,
-                                        wc_root_abspath, pool));
+                                        encoding, pool));
           SVN_ERR(svn_stream_close(os));
         }
 
@@ -637,6 +630,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
   SVN_ERR(file_printf_from_utf8(file, encoding, "%s" APR_EOL_STR,
                                 under_string));
 
+  iterpool = svn_pool_create(pool);
   for (i = 0; i < propchanges->nelts; i++)
     {
       const char *action;
@@ -657,6 +651,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
               && svn_string_compare(original_value, propchange->value)))
         continue;
 
+      svn_pool_clear(iterpool);
+
       if (! original_value)
         action = "Added";
       else if (! propchange->value)
@@ -671,7 +667,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
           const char *orig = original_value ? original_value->data : NULL;
           const char *val = propchange->value ? propchange->value->data : NULL;
           svn_error_t *err = display_mergeinfo_diff(orig, val, encoding,
-                                                    file, pool);
+                                                    file, iterpool);
 
           /* Issue #3896: If we can't pretty-print mergeinfo differences
              because invalid mergeinfo is present, then don't let the diff
@@ -688,7 +684,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
         }
 
       {
-        svn_stream_t *os = svn_stream_from_aprfile2(file, TRUE, pool);
+        svn_stream_t *os = svn_stream_from_aprfile2(file, TRUE, iterpool);
         svn_diff_t *diff;
         svn_diff_file_options_t options = { 0 };
         const svn_string_t *tmp;
@@ -699,14 +695,16 @@ display_prop_diffs(const apr_array_header_t *propchanges,
            Since the diff is not useful anyway for patching properties an
            eol character is appended when needed to remove those pescious
            ' \ No newline at end of file' lines. */
-        tmp = original_value ? original_value : svn_string_create("", pool);
-        orig = maybe_append_eol(tmp, pool);
+        tmp = original_value ? original_value : svn_string_create("",
+                                                                  iterpool);
+        orig = maybe_append_eol(tmp, iterpool);
 
         tmp = propchange->value ? propchange->value :
-                                  svn_string_create("", pool);
-        val = maybe_append_eol(tmp, pool);
+                                  svn_string_create("", iterpool);
+        val = maybe_append_eol(tmp, iterpool);
 
-        SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options, pool));
+        SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options,
+                                         iterpool));
 
         /* UNIX patch will try to apply a diff even if the diff header
          * is missing. It tries to be helpful by asking the user for a
@@ -716,13 +714,16 @@ display_prop_diffs(const apr_array_header_t *propchanges,
          * instead of "@@" as the default hunk delimiter for property diffs.
          * We also supress the diff header. */
         SVN_ERR(svn_diff_mem_string_output_unified2(os, diff, FALSE, "##",
-                                           svn_dirent_local_style(path, pool),
-                                           svn_dirent_local_style(path, pool),
-                                           encoding, orig, val, pool));
+                                           svn_dirent_local_style(path,
+                                                                  iterpool),
+                                           svn_dirent_local_style(path,
+                                                                  iterpool),
+                                           encoding, orig, val, iterpool));
         SVN_ERR(svn_stream_close(os));
 
       }
     }
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -919,16 +920,13 @@ diff_content_changed(const char *path,
   apr_file_t *errfile = diff_cmd_baton->errfile;
   const char *label1, *label2;
   svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
-  const char *path1, *path2;
+  const char *path1 = diff_cmd_baton->orig_path_1;
+  const char *path2 = diff_cmd_baton->orig_path_2;
 
   /* Get a stream from our output file. */
   os = svn_stream_from_aprfile2(diff_cmd_baton->outfile, TRUE, subpool);
 
   /* Generate the diff headers. */
-
-  path1 = apr_pstrdup(subpool, diff_cmd_baton->orig_path_1);
-  path2 = apr_pstrdup(subpool, diff_cmd_baton->orig_path_2);
-
   SVN_ERR(adjust_paths_for_diff_labels(&path, &path1, &path2,
                                        rel_to_dir, subpool));
 
@@ -1040,9 +1038,6 @@ diff_content_changed(const char *path,
                                             copyfrom_path,
                                             copyfrom_rev,
                                             diff_cmd_baton->header_encoding,
-                                            diff_cmd_baton->ra_session,
-                                            diff_cmd_baton->wc_ctx,
-                                            diff_cmd_baton->wc_root_abspath,
                                             subpool));
             }
 
@@ -1751,7 +1746,7 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
      Otherwise, we just use "". */
   SVN_ERR(svn_client__get_diff_editor(
                 &diff_editor, &diff_edit_baton,
-                NULL, "", depth,
+                depth,
                 extra_ra_session, rev1, TRUE /* walk_deleted_dirs */,
                 TRUE /* text_deltas */,
                 callbacks, callback_baton,
@@ -1844,17 +1839,13 @@ diff_repos_wc(const char *path1,
      actual URLs will be. */
   if (peg_revision->kind != svn_opt_revision_unspecified)
     {
-      svn_opt_revision_t *start_ignore, *end_ignore, end;
-      const char *url_ignore;
+      svn_opt_revision_t *start_ignore;
 
-      end.kind = svn_opt_revision_unspecified;
-
-      SVN_ERR(svn_client__repos_locations(&url1, &start_ignore,
-                                          &url_ignore, &end_ignore,
+      SVN_ERR(svn_client__repos_locations(&url1, &start_ignore, NULL, NULL,
                                           NULL,
                                           path1,
                                           peg_revision,
-                                          revision1, &end,
+                                          revision1, NULL,
                                           ctx, pool));
       if (!reverse)
         {
@@ -2119,7 +2110,7 @@ diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
 
   /* Set up the repos_diff editor. */
   SVN_ERR(svn_client__get_diff_editor(&diff_editor, &diff_edit_baton,
-            NULL /* wc_ctx */, "", depth,
+            depth,
             extra_ra_session, rev1, TRUE /* walk_deleted_dirs */,
             FALSE /* text_deltas */,
             callbacks, callback_baton,

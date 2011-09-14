@@ -863,6 +863,7 @@ def authz_svnserve_anon_access_read(sbox):
                                      B_url, B_path)
 
 @XFail()
+@Issue(3796)
 @Skip(svntest.main.is_ra_type_file)
 def authz_switch_to_directory(sbox):
   "switched to directory, no read access on parents"
@@ -879,7 +880,8 @@ def authz_switch_to_directory(sbox):
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
 
   # Switch /A/B/E to /A/B/F.
-  svntest.main.run_svn(None, 'switch', sbox.repo_url + "/A/B/E", G_path)
+  svntest.main.run_svn(None, 'switch', sbox.repo_url + "/A/B/E", G_path,
+                       '--ignore-ancestry')
 
 # Test to reproduce the problem identified by Issue 3242 in which
 # Subversion's authz, as of Subversion 1.5, requires access to the

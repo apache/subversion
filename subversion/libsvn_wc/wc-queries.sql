@@ -127,20 +127,17 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND changelist IS NOT NULL
 SELECT op_depth, nodes.repos_id, nodes.repos_path, presence, kind, revision,
   checksum, translated_size, changed_revision, changed_date, changed_author,
   depth, symlink_target, last_mod_time, properties, lock_token, lock_owner,
-  lock_comment, lock_date, local_relpath, moved_here, moved_to
+  lock_comment, lock_date, local_relpath, moved_here, moved_to, 
+  file_external IS NOT NULL
 FROM nodes
 LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
   AND nodes.repos_path = lock.repos_relpath
 WHERE wc_id = ?1 AND parent_relpath = ?2
 
 -- STMT_SELECT_NODE_CHILDREN_WALKER_INFO
-/* ### See comment at STMT_SELECT_NODE_CHILDREN_INFO.
-   ### Should C code handle GROUP BY local_relpath ORDER BY op_depths DESC? */
 SELECT local_relpath, op_depth, presence, kind
-FROM nodes
+FROM nodes_current
 WHERE wc_id = ?1 AND parent_relpath = ?2
-GROUP BY local_relpath
-ORDER BY op_depth DESC
 
 -- STMT_SELECT_ACTUAL_CHILDREN_INFO
 SELECT prop_reject, changelist, conflict_old, conflict_new,
@@ -173,6 +170,7 @@ VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
 -- STMT_SELECT_OP_DEPTH_CHILDREN
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = ?3
+  AND (?3 != 0 OR file_external is NULL)
 
 -- STMT_SELECT_GE_OP_DEPTH_CHILDREN
 SELECT 1 FROM nodes
@@ -794,14 +792,19 @@ WHERE wc_id = ?1
 
 -- STMT_APPLY_CHANGES_TO_BASE_NODE
 /* translated_size and last_mod_time are not mentioned here because they will
-   be tweaked after the working-file is installed.
-   ### what to do about file_external?  */
+   be tweaked after the working-file is installed. When we replace an existing
+   BASE node (read: bump), preserve its file_external status. */
 INSERT OR REPLACE INTO nodes (
   wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
   revision, presence, depth, kind, changed_revision, changed_date,
-  changed_author, checksum, properties, dav_cache, symlink_target )
+  changed_author, checksum, properties, dav_cache, symlink_target,
+  file_external )
 VALUES (?1, ?2, 0,
-        ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
+        ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
+        (SELECT file_external FROM nodes
+          WHERE wc_id = ?1
+            AND local_relpath = ?2
+            AND op_depth = 0))
 
 -- STMT_INSTALL_WORKING_NODE_FOR_DELETE
 INSERT OR REPLACE INTO nodes (
@@ -947,15 +950,21 @@ INSERT OR REPLACE INTO externals (
     repos_id, def_repos_relpath, def_operational_revision, def_revision)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
 
+-- STMT_INSERT_EXTERNAL_UPGRADE
+INSERT OR REPLACE INTO externals (
+    wc_id, local_relpath, parent_relpath, presence, kind, def_local_relpath,
+    repos_id, def_repos_relpath, def_operational_revision, def_revision)
+VALUES (?1, ?2, ?3, ?4,
+        CASE WHEN (SELECT file_external FROM nodes
+                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0)
+             IS NOT NULL THEN 'file' ELSE 'unknown' END,
+        ?5, ?6, ?7, ?8, ?9)
+
 -- STMT_SELECT_EXTERNAL_INFO
 SELECT presence, kind, def_local_relpath, repos_id,
-    def_repos_relpath, def_operational_revision, def_revision, presence
+    def_repos_relpath, def_operational_revision, def_revision
 FROM externals WHERE wc_id = ?1 AND local_relpath = ?2
 LIMIT 1
-
--- STMT_SELECT_EXTERNAL_CHILDREN
-SELECT local_relpath
-FROM externals WHERE wc_id = ?1 AND parent_relpath = ?2
 
 -- STMT_SELECT_EXTERNALS_DEFINED
 SELECT local_relpath, def_local_relpath
@@ -1376,7 +1385,7 @@ WHERE wc_id = ?1 AND op_depth = 0
 /* Queries for verification. */
 
 -- STMT_SELECT_ALL_NODES
-SELECT op_depth, local_relpath, parent_relpath FROM nodes
+SELECT op_depth, local_relpath, parent_relpath, file_external FROM nodes
 WHERE wc_id == ?1
 
 /* ------------------------------------------------------------------------- */

@@ -186,20 +186,18 @@ same_resource_in_head(svn_boolean_t *same_p,
                       apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_opt_revision_t start_rev, end_rev, peg_rev;
+  svn_opt_revision_t start_rev, peg_rev;
   svn_opt_revision_t *ignored_rev;
-  const char *head_url, *ignored_url;
+  const char *head_url;
 
   start_rev.kind = svn_opt_revision_head;
   peg_rev.kind = svn_opt_revision_number;
   peg_rev.value.number = rev;
-  end_rev.kind = svn_opt_revision_unspecified;
 
-  err = svn_client__repos_locations(&head_url, &ignored_rev,
-                                    &ignored_url, &ignored_rev,
+  err = svn_client__repos_locations(&head_url, &ignored_rev, NULL, NULL,
                                     ra_session,
                                     url, &peg_rev,
-                                    &start_rev, &end_rev,
+                                    &start_rev, NULL,
                                     ctx, pool);
   if (err &&
       ((err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES) ||

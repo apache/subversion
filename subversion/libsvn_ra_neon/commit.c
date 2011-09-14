@@ -1620,5 +1620,9 @@ svn_error_t * svn_ra_neon__get_commit_editor(svn_ra_session_t *session,
 
   *editor = commit_editor;
   *edit_baton = cc;
+
+  SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                   pool, pool));
+
   return SVN_NO_ERROR;
 }

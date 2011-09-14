@@ -24,7 +24,8 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * Less verbose HTTP-based repository access protocol (issue #1161, #3371)
     * Rewritten working copy metadata storage (issue #3357)
     * New 'svn patch' subcommand (issue #511)
-    * Limit FSFS memory consumption (issue #3478, #3593)
+    * Rewritten FSFS in-memory caching for better performance
+    * New remote repository dump/load client 'svnrdump'
 
   - Minor new features and improvements:
     * Better handling of HTTP redirects (issue #2779)
@@ -60,7 +61,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * allow subdirs of moved dirs to be moved and committed (issue #1259)
     * improved performance of 'svn mv' with whole directories (issue #1284)
     * 'svn rm B; svn cp A B' now works (issue #1516)
-    * 'svn diff URL1 URL2' now reverse of 'svn diff URL2 URL1) (issue #2333)
+    * 'svn diff URL1 URL2' now reverse of 'svn diff URL2 URL1' (issue #2333)
     * error if relocating to an unused URL (issue #2531)
     * 'svn blame -rWORKING' is now supported (issue #2544)
     * improve correctness of commit on a relocated wc over ra_dav (issue #2578)
@@ -160,8 +161,9 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * match paths against authz rules in case sensitive way (issue #3781)
     * svnserve can now force usernames to upper/lower case (issue #3726)
     * reduce duplicate log messages in 'log -g' (issue #3650)
-    * don't crash on shutdown with SASL in inetd mode (issue #3664)
+    * svnserve: don't crash on shutdown with SASL in inetd mode (issue #3664)
     * disallow arbitrary HTTP headers from committers (issue #2872)
+    * limit FSFS memory consumption (issue #3478, #3593)
     * many other minor bugfixes too numerous to list here
 
   - Other tool improvements and bugfixes:
@@ -192,7 +194,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * add information on text and property mods in log APIs (r877688)
     * fixed: svn_ra_local__get_file() leaks file descriptors (issue #3290)
     * svn_ra_neon__get_dir() returns correct dir set for URLs (issue #3093)
-    * swig-py: always set ChangedPath.path (issue #2630)
+    * swig-py: always set ChangedPath.path (also for deletes) (issue #2630)
     * improve conflict resolver API for a specific direction (issue #3049)
 
   - Bindings:

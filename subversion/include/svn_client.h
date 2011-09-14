@@ -3509,14 +3509,15 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 /**
  * If @a finding_merged is TRUE, then drive log entry callbacks
  * @a receiver / @a receiver_baton with the revisions merged from
- * @a merge_source_path_or_url (as of @a src_peg_revision) into
- * @a path_or_url (as of @a peg_revision).  If @a finding_merged is FALSE
- * then find the revisions eligible for merging.
+ * @a source_path_or_url (as of @a source_peg_revision) into
+ * @a target_path_or_url (as of @a target_peg_revision).  If @a
+ * finding_merged is FALSE then find the revisions eligible for merging.
  *
  * If @a depth is #svn_depth_empty consider only the explicit or
- * inherited mergeinfo on @a path_or_url when calculating merged revisions
- * from @a merge_source_path_or_url.  If @a depth is #svn_depth_infinity
- * then also consider the explicit subtree mergeinfo under @a path_or_url.
+ * inherited mergeinfo on @a target_path_or_url when calculating merged
+ * revisions from @a source_path_or_url.  If @a depth is #svn_depth_infinity
+ * then also consider the explicit subtree mergeinfo under @a
+ * target_path_or_url.
  * If a depth other than #svn_depth_empty or #svn_depth_infinity is
  * requested then return a #SVN_ERR_UNSUPPORTED_FEATURE error.
  *
@@ -3532,10 +3533,10 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  */
 svn_error_t *
 svn_client_mergeinfo_log(svn_boolean_t finding_merged,
-                         const char *path_or_url,
-                         const svn_opt_revision_t *peg_revision,
-                         const char *merge_source_path_or_url,
-                         const svn_opt_revision_t *src_peg_revision,
+                         const char *target_path_or_url,
+                         const svn_opt_revision_t *target_peg_revision,
+                         const char *source_path_or_url,
+                         const svn_opt_revision_t *source_peg_revision,
                          svn_log_entry_receiver_t receiver,
                          void *receiver_baton,
                          svn_boolean_t discover_changed_paths,

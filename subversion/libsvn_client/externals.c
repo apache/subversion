@@ -126,8 +126,8 @@ relegate_dir_external(svn_wc_context_t *wc_ctx,
 static svn_error_t *
 switch_dir_external(const char *local_abspath,
                     const char *url,
-                    const svn_opt_revision_t *revision,
                     const svn_opt_revision_t *peg_revision,
+                    const svn_opt_revision_t *revision,
                     const char *defining_abspath,
                     svn_boolean_t *timestamp_sleep,
                     svn_client_ctx_t *ctx,
@@ -135,9 +135,17 @@ switch_dir_external(const char *local_abspath,
 {
   svn_node_kind_t kind;
   svn_error_t *err;
+  svn_revnum_t external_peg_rev = SVN_INVALID_REVNUM;
+  svn_revnum_t external_rev = SVN_INVALID_REVNUM;
   apr_pool_t *subpool = svn_pool_create(pool);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  if (peg_revision->kind == svn_opt_revision_number)
+    external_peg_rev = peg_revision->value.number;
+
+  if (revision->kind == svn_opt_revision_number)
+    external_rev = revision->value.number;
 
   /* If path is a directory, try to update/switch to the correct URL
      and revision. */
@@ -230,8 +238,8 @@ switch_dir_external(const char *local_abspath,
                                                 svn_uri_skip_ancestor(
                                                             repos_root_url,
                                                             url, subpool),
-                                                SVN_INVALID_REVNUM,
-                                                SVN_INVALID_REVNUM,
+                                                external_peg_rev,
+                                                external_rev,
                                                 subpool));
 
               svn_pool_destroy(subpool);
@@ -288,8 +296,8 @@ switch_dir_external(const char *local_abspath,
                                       repos_root_url, repos_uuid,
                                       svn_uri_skip_ancestor(repos_root_url,
                                                             url, pool),
-                                      SVN_INVALID_REVNUM,
-                                      SVN_INVALID_REVNUM,
+                                      external_peg_rev,
+                                      external_rev,
                                       pool));
   }
 
@@ -824,10 +832,10 @@ handle_external_item_change(const struct external_change_baton_t *eb,
      iterpool, since the hash table values outlive the iterpool and
      any pointers they have should also outlive the iterpool.  */
 
-   SVN_ERR(resolve_relative_external_url(&new_url,
-                                         new_item, eb->repos_root_url,
-                                         parent_dir_url,
-                                         scratch_pool, scratch_pool));
+  SVN_ERR(resolve_relative_external_url(&new_url,
+                                        new_item, eb->repos_root_url,
+                                        parent_dir_url,
+                                        scratch_pool, scratch_pool));
 
   /* If the external is being checked out, exported or updated,
      determine if the external is a file or directory. */
@@ -871,16 +879,20 @@ handle_external_item_change(const struct external_change_baton_t *eb,
      the global case is hard, and it should be pretty obvious to a
      user when it happens.  Worst case: your disk fills up :-). */
 
+  /* First notify that we're about to handle an external. */
+  if (eb->ctx->notify_func2)
+    {
+      (*eb->ctx->notify_func2)(
+         eb->ctx->notify_baton2,
+         svn_wc_create_notify(local_abspath,
+                              svn_wc_notify_update_external,
+                              scratch_pool),
+         scratch_pool);
+    }
+
   if (! old_defining_abspath)
     {
       /* This branch is only used during a checkout or an export. */
-
-      /* First notify that we're about to handle an external. */
-      if (eb->ctx->notify_func2)
-        (*eb->ctx->notify_func2)(
-           eb->ctx->notify_baton2,
-           svn_wc_create_notify(local_abspath, svn_wc_notify_update_external,
-                                scratch_pool), scratch_pool);
 
       switch (ra_cache.kind)
         {
@@ -924,18 +936,6 @@ handle_external_item_change(const struct external_change_baton_t *eb,
     {
       /* This branch handles a definition change or simple update. */
 
-      /* First notify that we're about to handle an external. */
-      if (eb->ctx->notify_func2)
-        {
-          svn_wc_notify_t *nt;
-
-          nt = svn_wc_create_notify(local_abspath,
-                                    svn_wc_notify_update_external,
-                                    scratch_pool);
-
-          eb->ctx->notify_func2(eb->ctx->notify_baton2, nt, scratch_pool);
-        }
-
       /* Either the URL changed, or the exact same item is present in
          both hashes, and caller wants to update such unchanged items.
          In the latter case, the call below will try to make sure that
@@ -945,8 +945,8 @@ handle_external_item_change(const struct external_change_baton_t *eb,
         {
         case svn_node_dir:
           SVN_ERR(switch_dir_external(local_abspath, new_url,
-                                      &(new_item->revision),
                                       &(new_item->peg_revision),
+                                      &(new_item->revision),
                                       parent_dir_abspath,
                                       eb->timestamp_sleep, eb->ctx,
                                       scratch_pool));

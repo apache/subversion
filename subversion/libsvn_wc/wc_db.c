@@ -7005,7 +7005,8 @@ struct read_children_info_baton_t
   apr_pool_t *result_pool;
 };
 
-/* What we really want to store about a node */
+/* What we really want to store about a node.  This relies on the
+   offset of svn_wc__db_info_t being zero. */
 struct read_children_info_item_t
 {
   struct svn_wc__db_info_t info;
@@ -7173,6 +7174,10 @@ read_children_info(void *baton,
           if (moved_to_relpath)
             child_item->info.moved_to_abspath =
               svn_dirent_join(wcroot->abspath, moved_to_relpath, result_pool);
+
+          /* FILE_EXTERNAL flag only on op_depth 0. */
+          child_item->info.file_external = svn_sqlite__column_boolean(stmt,
+                                                                      22);
         }
       else
         {
@@ -7442,7 +7447,6 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
   const char *dir_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  apr_int64_t op_depth;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
 
@@ -7462,13 +7466,10 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
       struct svn_wc__db_walker_info_t *child;
       const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
       const char *name = svn_relpath_basename(child_relpath, NULL);
+      apr_int64_t op_depth = svn_sqlite__column_int(stmt, 1);
       svn_error_t *err;
 
-      child = apr_hash_get(*nodes, name, APR_HASH_KEY_STRING);
-      if (child == NULL)
-        child = apr_palloc(result_pool, sizeof(*child));
-
-      op_depth = svn_sqlite__column_int(stmt, 1);
+      child = apr_palloc(result_pool, sizeof(*child));
       child->status = svn_sqlite__column_token(stmt, 2, presence_map);
       if (op_depth > 0)
         {
@@ -9916,7 +9917,7 @@ scan_deletion_txn(void *baton,
                          || base_presence == svn_wc__db_status_incomplete
                          );
 
-#if 1
+#if 0
           /* ### see above comment  */
           if (base_presence == svn_wc__db_status_incomplete)
             base_presence = svn_wc__db_status_normal;
@@ -10378,7 +10379,8 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
           int i;
           apr_array_header_t *ext;
 
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_EXTERNAL));
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                            STMT_INSERT_EXTERNAL_UPGRADE));
 
           SVN_ERR(svn_wc_parse_externals_description3(
                             &ext, svn_dirent_join(dir_abspath, local_relpath,
@@ -10393,13 +10395,12 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
               item_relpath = svn_relpath_join(local_relpath, item->target_dir,
                                               scratch_pool);
 
-              SVN_ERR(svn_sqlite__bindf(stmt, "isssssis",
+              SVN_ERR(svn_sqlite__bindf(stmt, "issssis",
                                         wc_id,
                                         item_relpath,
                                         svn_relpath_dirname(item_relpath,
                                                             scratch_pool),
                                         "normal",
-                                        "unknown",
                                         local_relpath,
                                         (apr_int64_t)1, /* repos_id */
                                         "" /* repos_relpath */));
@@ -12772,7 +12773,7 @@ verify_wcroot(svn_wc__db_wcroot_t *wcroot,
       /* Verify parent_relpath refers to a row that exists */
       /* TODO: Verify there is a suitable parent row - e.g. has op_depth <=
        * the child's and a suitable presence */
-      if (parent_relpath)
+      if (parent_relpath && svn_sqlite__column_is_null(stmt, 3))
         {
           svn_sqlite__stmt_t *stmt2;
           svn_boolean_t have_a_parent_row;

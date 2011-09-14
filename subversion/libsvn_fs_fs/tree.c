@@ -1892,7 +1892,7 @@ fs_delete_node(svn_fs_root_t *root,
 {
   parent_path_t *parent_path;
   const char *txn_id = root->txn;
-  apr_int64_t mergeinfo_count;
+  apr_int64_t mergeinfo_count = 0;
   svn_node_kind_t kind;
 
   if (! root->is_txn_root)
@@ -1927,7 +1927,7 @@ fs_delete_node(svn_fs_root_t *root,
                                     pool));
 
   /* Update mergeinfo counts for parents */
-  if (svn_fs_fs__fs_supports_mergeinfo(root->fs) && mergeinfo_count > 0)
+  if (mergeinfo_count > 0)
     SVN_ERR(increment_mergeinfo_up_tree(parent_path->parent,
                                         -mergeinfo_count,
                                         pool));
@@ -3048,7 +3048,7 @@ fs_node_origin_rev(svn_revnum_t *revision,
 
     /* Walk the predecessor links back to origin. */
     SVN_ERR(fs_node_id(&pred_id, curroot, lastpath->data, predidpool));
-    while (pred_id)
+    do
       {
         svn_pool_clear(subpool);
         SVN_ERR(svn_fs_fs__dag_get_node(&node, fs, pred_id, subpool));
@@ -3062,6 +3062,7 @@ fs_node_origin_rev(svn_revnum_t *revision,
         SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, node, subpool));
         pred_id = pred_id ? svn_fs_fs__id_copy(pred_id, predidpool) : NULL;
       }
+    while (pred_id);
 
     /* When we get here, NODE should be the first node-revision in our
        chain. */

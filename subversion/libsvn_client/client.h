@@ -105,7 +105,7 @@ svn_error_t *svn_client__get_copy_source(const char *path_or_url,
    specify the point(s) of interest (typically the revisions referred
    to as the "operative range" for a given operation) along that history.
 
-   END may be of kind svn_opt_revision_unspecified (in which case
+   END may be NULL or of kind svn_opt_revision_unspecified (in either case
    END_URL and END_REVISION are not touched by the function);
    START and REVISION may not.
 
@@ -584,12 +584,6 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 /* Create an editor for a pure repository comparison, i.e. comparing one
    repository version against the other.
 
-   TARGET is a working-copy path, the base of the hierarchy to be
-   compared.  It corresponds to the URL opened in RA_SESSION below.
-
-   WC_CTX is a context for the working copy and should be NULL for
-   operations that do not involve a working copy.
-
    DIFF_CMD/DIFF_CMD_BATON represent the callback and callback argument that
    implement the file comparison function
 
@@ -607,9 +601,10 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
    'dir_deleted' callback for each individual node in that subtree.
 
    If TEXT_DELTAS is FALSE, then do not expect text deltas from the edit
-   drive, nor send text deltas to the diff callbacks.
-   ### TODO: The implementation currently does send text deltas to the diff
-       callbacks in many cases even if they are not wanted.
+   drive, nor send the 'before' and 'after' texts to the diff callbacks;
+   instead, send empty files to the diff callbacks if there was a change.
+   This must be FALSE if the edit producer is not sending text deltas,
+   otherwise the file content checksum comparisons will fail.
 
    If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
    file and directory operated on during the edit.
@@ -618,8 +613,6 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 svn_error_t *
 svn_client__get_diff_editor(const svn_delta_editor_t **editor,
                             void **edit_baton,
-                            svn_wc_context_t *wc_ctx,
-                            const char *target,
                             svn_depth_t depth,
                             svn_ra_session_t *ra_session,
                             svn_revnum_t revision,

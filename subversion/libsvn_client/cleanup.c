@@ -120,6 +120,7 @@ svn_client_upgrade(const char *path,
   apr_hash_t *externals;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
+  apr_pool_t *iterpool2;
   svn_opt_revision_t rev = {svn_opt_revision_unspecified, {0}};
   struct repos_info_baton info_baton;
 
@@ -148,6 +149,7 @@ svn_client_upgrade(const char *path,
                               scratch_pool, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
+  iterpool2 = svn_pool_create(scratch_pool);
 
   for (hi = apr_hash_first(scratch_pool, externals); hi;
        hi = apr_hash_next(hi))
@@ -174,11 +176,12 @@ svn_client_upgrade(const char *path,
 
           item = APR_ARRAY_IDX(externals_p, i, svn_wc_external_item2_t*);
 
+          svn_pool_clear(iterpool2);
           external_path = svn_dirent_join(externals_parent, item->target_dir,
-                                          iterpool);
+                                          iterpool2);
 
           SVN_ERR(svn_dirent_get_absolute(&external_abspath, external_path,
-                                          iterpool));
+                                          iterpool2));
 
           /* This is hack. We can only send dirs to svn_wc_upgrade(). This
              way we will get an exception saying that the wc must be
@@ -186,17 +189,13 @@ svn_client_upgrade(const char *path,
              in an adm_dir belonging to the real wc and since that was
              updated before the externals no error is returned. */
           err = svn_wc_read_kind(&kind, ctx->wc_ctx, external_abspath, FALSE,
-                                 iterpool);
+                                 iterpool2);
 
           if (err && err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
             {
               svn_error_clear(err);
 
-              SVN_ERR(svn_wc_upgrade(ctx->wc_ctx, external_abspath,
-                                     fetch_repos_info, &info_baton,
-                                     ctx->cancel_func, ctx->cancel_baton,
-                                     ctx->notify_func2, ctx->notify_baton2,
-                                     iterpool));
+              SVN_ERR(svn_client_upgrade(external_abspath, ctx, iterpool2));
             }
           else
             SVN_ERR(err);
@@ -204,6 +203,7 @@ svn_client_upgrade(const char *path,
     }
 
   svn_pool_destroy(iterpool);
+  svn_pool_destroy(iterpool2);
 
   return SVN_NO_ERROR;
 }
