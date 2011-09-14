@@ -368,7 +368,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
     }
 
   return SVN_NO_ERROR;
- }
+}
 #undef SVN_CLIENT__MAX_REDIRECT_ATTEMPTS
 
 
