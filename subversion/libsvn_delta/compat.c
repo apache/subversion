@@ -250,7 +250,7 @@ ev2_change_dir_prop(void *dir_baton,
       struct prop_args *p_args = apr_palloc(db->eb->edit_pool, sizeof(*p_args));
 
       p_args->name = apr_pstrdup(db->eb->edit_pool, name);
-      p_args->value = value ? svn_string_dup(value, db->eb->edit_pool) : NULL;
+      p_args->value = svn_string_dup(value, db->eb->edit_pool);
 
       SVN_ERR(add_action(db->eb, db->path, set_prop, p_args));
     }
@@ -346,7 +346,7 @@ ev2_change_file_prop(void *file_baton,
     {
       struct prop_args *p_args = apr_palloc(fb->eb->edit_pool, sizeof(*p_args));
       p_args->name = apr_pstrdup(fb->eb->edit_pool, name);
-      p_args->value = value ? svn_string_dup(value, fb->eb->edit_pool) : NULL;
+      p_args->value = svn_string_dup(value, fb->eb->edit_pool);
 
       SVN_ERR(add_action(fb->eb, fb->path, set_prop, p_args));
     }
