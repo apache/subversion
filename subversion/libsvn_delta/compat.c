@@ -93,6 +93,7 @@ struct ev2_edit_baton
 {
   svn_editor_t *editor;
   apr_hash_t *paths;
+  svn_revnum_t target_revision;
   apr_pool_t *edit_pool;
   svn_delta_fetch_props_cb_func_t fetch_props_func;
   void *fetch_props_baton;
@@ -163,6 +164,8 @@ ev2_set_target_revision(void *edit_baton,
                         apr_pool_t *scratch_pool)
 {
   struct ev2_edit_baton *eb = edit_baton;
+
+  eb->target_revision = target_revision;
   return SVN_NO_ERROR;
 }
 
@@ -464,7 +467,7 @@ process_actions(void *edit_baton,
         }
 
       /* This point, PROPS will contain all the props for this node. */
-      SVN_ERR(svn_editor_set_props(eb->editor, path, SVN_INVALID_REVNUM,
+      SVN_ERR(svn_editor_set_props(eb->editor, path, eb->target_revision,
                                    props, TRUE));
     }
 
@@ -542,6 +545,7 @@ svn_delta_from_editor(const svn_delta_editor_t **deditor,
 
   eb->editor = editor;
   eb->paths = apr_hash_make(pool);
+  eb->target_revision = SVN_INVALID_REVNUM;
   eb->edit_pool = pool;
   eb->fetch_props_func = fetch_props_func;
   eb->fetch_props_baton = fetch_props_baton;
