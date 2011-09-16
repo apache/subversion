@@ -1182,7 +1182,7 @@ def basic_delete(sbox):
                                      'rm', '--force', foo_path)
   verify_file_deleted("Failed to remove unversioned file foo", foo_path)
 
-  # At one stage deleting an URL dumped core
+  # At one stage deleting a URL dumped core
   iota_URL = sbox.repo_url + '/iota'
 
   svntest.actions.run_and_verify_svn(None,

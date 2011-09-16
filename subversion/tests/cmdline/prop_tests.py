@@ -1125,7 +1125,7 @@ def recursive_base_wc_ops(sbox):
 #----------------------------------------------------------------------
 
 def url_props_ops(sbox):
-  "property operations on an URL"
+  "property operations on a URL"
 
   # Bootstrap
   sbox.build()

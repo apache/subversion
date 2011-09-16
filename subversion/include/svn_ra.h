@@ -573,7 +573,7 @@ svn_ra_create_callbacks(svn_ra_callbacks2_t **callbacks,
 
 /**
  * A repository access session.  This object is used to perform requests
- * to a repository, identified by an URL.
+ * to a repository, identified by a URL.
  *
  * @since New in 1.2.
  */

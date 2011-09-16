@@ -330,7 +330,7 @@ svn_client_log5(const apr_array_header_t *targets,
       else if (range->start.kind == svn_opt_revision_unspecified)
         {
           /* Default to any specified peg revision.  Otherwise, if the
-           * first target is an URL, then we default to HEAD:0.  Lastly,
+           * first target is a URL, then we default to HEAD:0.  Lastly,
            * the default is BASE:0 since WC@HEAD may not exist. */
           if (peg_rev.kind == svn_opt_revision_unspecified)
             {

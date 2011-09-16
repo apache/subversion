@@ -68,7 +68,7 @@ help(const apr_getopt_option_t *options, apr_pool_t *pool)
         "\n"
         "  The version number will be a single number if the working\n"
         "  copy is single revision, unmodified, not switched and with\n"
-        "  an URL that matches the TRAIL_URL argument.  If the working\n"
+        "  a URL that matches the TRAIL_URL argument.  If the working\n"
         "  copy is unusual the version number will be more complex:\n"
         "\n"
         "   4123:4168     mixed revision working copy\n"
