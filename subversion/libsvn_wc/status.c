@@ -1129,43 +1129,41 @@ one_child_status(const struct walk_status_baton *wb,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  if (info)
+  if (info
+      && info->status != svn_wc__db_status_not_present
+      && info->status != svn_wc__db_status_excluded
+      && info->status != svn_wc__db_status_server_excluded)
     {
-      if (info->status != svn_wc__db_status_not_present
-          && info->status != svn_wc__db_status_excluded
-          && info->status != svn_wc__db_status_server_excluded)
+      if (depth == svn_depth_files
+          && info->kind == svn_wc__db_kind_dir)
         {
-          if (depth == svn_depth_files
-              && info->kind == svn_wc__db_kind_dir)
-            {
-              return SVN_NO_ERROR;
-            }
-
-          SVN_ERR(send_status_structure(wb, local_abspath,
-                                        dir_repos_root_url,
-                                        dir_repos_relpath,
-                                        dir_repos_uuid,
-                                        info, dirent, get_all,
-                                        status_func, status_baton,
-                                        scratch_pool));
-
-          /* Descend in subdirectories. */
-          if (depth == svn_depth_infinity
-              && info->kind == svn_wc__db_kind_dir)
-            {
-              SVN_ERR(get_dir_status(wb, local_abspath, TRUE,
-                                     dir_repos_root_url, dir_repos_relpath,
-                                     dir_repos_uuid, info,
-                                     dirent, ignore_patterns,
-                                     svn_depth_infinity, get_all,
-                                     no_ignore,
-                                     status_func, status_baton,
-                                     cancel_func, cancel_baton,
-                                     scratch_pool));
-            }
-
           return SVN_NO_ERROR;
         }
+
+      SVN_ERR(send_status_structure(wb, local_abspath,
+                                    dir_repos_root_url,
+                                    dir_repos_relpath,
+                                    dir_repos_uuid,
+                                    info, dirent, get_all,
+                                    status_func, status_baton,
+                                    scratch_pool));
+
+      /* Descend in subdirectories. */
+      if (depth == svn_depth_infinity
+          && info->kind == svn_wc__db_kind_dir)
+        {
+          SVN_ERR(get_dir_status(wb, local_abspath, TRUE,
+                                 dir_repos_root_url, dir_repos_relpath,
+                                 dir_repos_uuid, info,
+                                 dirent, ignore_patterns,
+                                 svn_depth_infinity, get_all,
+                                 no_ignore,
+                                 status_func, status_baton,
+                                 cancel_func, cancel_baton,
+                                 scratch_pool));
+        }
+
+      return SVN_NO_ERROR;
     }
 
   if (tree_conflicted)
