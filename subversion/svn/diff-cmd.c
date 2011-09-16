@@ -166,7 +166,8 @@ svn_cl__diff(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *options;
   apr_array_header_t *targets;
-  apr_file_t *outfile, *errfile;
+  svn_stream_t *outstream;
+  svn_stream_t *errstream;
   apr_status_t status;
   const char *old_target, *new_target;
   apr_pool_t *iterpool;
@@ -182,10 +183,8 @@ svn_cl__diff(apr_getopt_t *os,
 
   /* Get an apr_file_t representing stdout and stderr, which is where
      we'll have the external 'diff' program print to. */
-  if ((status = apr_file_open_stdout(&outfile, pool)))
-    return svn_error_wrap_apr(status, _("Can't open stdout"));
-  if ((status = apr_file_open_stderr(&errfile, pool)))
-    return svn_error_wrap_apr(status, _("Can't open stderr"));
+  SVN_ERR(svn_stream_for_stdout(&outstream, pool));
+  SVN_ERR(svn_stream_for_stderr(&errstream, pool));
 
   if (opt_state->xml)
     {
@@ -353,8 +352,8 @@ svn_cl__diff(apr_getopt_t *os,
                      summarize_func, &target1,
                      ctx, iterpool));
           else
-            SVN_ERR(svn_client_diff5
-                    (options,
+            SVN_ERR(svn_client_diff6(
+                     options,
                      target1,
                      &(opt_state->start_revision),
                      target2,
@@ -367,8 +366,8 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->force,
                      opt_state->use_git_diff_format,
                      svn_cmdline_output_encoding(pool),
-                     outfile,
-                     errfile,
+                     outstream,
+                     errstream,
                      opt_state->changelists,
                      ctx, iterpool));
         }
@@ -398,8 +397,8 @@ svn_cl__diff(apr_getopt_t *os,
                      summarize_func, &truepath,
                      ctx, iterpool));
           else
-            SVN_ERR(svn_client_diff_peg5
-                    (options,
+            SVN_ERR(svn_client_diff_peg6(
+                     options,
                      truepath,
                      &peg_revision,
                      &opt_state->start_revision,
@@ -412,8 +411,8 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->force,
                      opt_state->use_git_diff_format,
                      svn_cmdline_output_encoding(pool),
-                     outfile,
-                     errfile,
+                     outstream,
+                     errstream,
                      opt_state->changelists,
                      ctx, iterpool));
         }

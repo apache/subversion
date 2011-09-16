@@ -69,31 +69,6 @@ static const char under_string[] =
 
 /* Utilities */
 
-/* Wrapper for apr_file_printf(), which see.  FORMAT is a utf8-encoded
-   string after it is formatted, so this function can convert it to
-   ENCODING before printing. */
-static svn_error_t *
-file_printf_from_utf8(apr_file_t *fptr, const char *encoding,
-                      const char *format, ...)
-  __attribute__ ((format(printf, 3, 4)));
-static svn_error_t *
-file_printf_from_utf8(apr_file_t *fptr, const char *encoding,
-                      const char *format, ...)
-{
-  va_list ap;
-  const char *buf, *buf_apr;
-
-  va_start(ap, format);
-  buf = apr_pvsprintf(apr_file_pool_get(fptr), format, ap);
-  va_end(ap);
-
-  SVN_ERR(svn_utf_cstring_from_utf8_ex2(&buf_apr, buf, encoding,
-                                        apr_file_pool_get(fptr)));
-
-  return svn_io_file_write_full(fptr, buf_apr, strlen(buf_apr),
-                                NULL, apr_file_pool_get(fptr));
-}
-
 
 /* A helper function for display_prop_diffs.  Output the differences between
    the mergeinfo stored in ORIG_MERGEINFO_VAL and NEW_MERGEINFO_VAL in a
@@ -103,7 +78,7 @@ static svn_error_t *
 display_mergeinfo_diff(const char *old_mergeinfo_val,
                        const char *new_mergeinfo_val,
                        const char *encoding,
-                       apr_file_t *file,
+                       svn_stream_t *outstream,
                        apr_pool_t *pool)
 {
   apr_hash_t *old_mergeinfo_hash, *new_mergeinfo_hash, *added, *deleted;
@@ -132,10 +107,10 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
 
       SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
 
-      SVN_ERR(file_printf_from_utf8(file, encoding,
-                                    _("   Reverse-merged %s:r%s%s"),
-                                    from_path, merge_revstr->data,
-                                    APR_EOL_STR));
+      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
+                                          _("   Reverse-merged %s:r%s%s"),
+                                          from_path, merge_revstr->data,
+                                          APR_EOL_STR));
     }
 
   for (hi = apr_hash_first(pool, added);
@@ -147,10 +122,10 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
 
       SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
 
-      SVN_ERR(file_printf_from_utf8(file, encoding,
-                                    _("   Merged %s:r%s%s"),
-                                    from_path, merge_revstr->data,
-                                    APR_EOL_STR));
+      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
+                                          _("   Merged %s:r%s%s"),
+                                          from_path, merge_revstr->data,
+                                          APR_EOL_STR));
     }
 
   return SVN_NO_ERROR;
@@ -528,7 +503,7 @@ print_git_diff_header(svn_stream_t *os,
 }
 
 /* A helper func that writes out verbal descriptions of property diffs
-   to FILE.   Of course, the apr_file_t will probably be the 'outfile'
+   to FILE.   Of course, OUTSTREAM will probably be whatever was
    passed to svn_client_diff5, which is probably stdout.
 
    ### FIXME needs proper docstring
@@ -549,7 +524,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                    svn_revnum_t rev1,
                    svn_revnum_t rev2,
                    const char *encoding,
-                   apr_file_t *file,
+                   svn_stream_t *outstream,
                    const char *relative_to_dir,
                    svn_boolean_t show_diff_header,
                    svn_boolean_t use_git_diff_format,
@@ -596,39 +571,33 @@ display_prop_diffs(const apr_array_header_t *propchanges,
       /* ### Should we show the paths in platform specific format,
        * ### diff_content_changed() does not! */
 
-      SVN_ERR(file_printf_from_utf8(file, encoding,
-                                    "Index: %s" APR_EOL_STR
-                                    "%s" APR_EOL_STR,
-                                    path, equal_string));
+      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
+                                          "Index: %s" APR_EOL_STR
+                                          "%s" APR_EOL_STR,
+                                          path, equal_string));
 
       if (use_git_diff_format)
-        {
-          svn_stream_t *os;
+        SVN_ERR(print_git_diff_header(outstream, &label1, &label2,
+                                      svn_diff_op_modified,
+                                      path1, path2, rev1, rev2, NULL,
+                                      SVN_INVALID_REVNUM,
+                                      encoding, pool));
 
-          os = svn_stream_from_aprfile2(file, TRUE, pool);
-          SVN_ERR(print_git_diff_header(os, &label1, &label2,
-                                        svn_diff_op_modified,
-                                        path1, path2, rev1, rev2, NULL,
-                                        SVN_INVALID_REVNUM,
-                                        encoding, pool));
-          SVN_ERR(svn_stream_close(os));
-        }
-
-      SVN_ERR(file_printf_from_utf8(file, encoding,
+      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
                                           "--- %s" APR_EOL_STR
                                           "+++ %s" APR_EOL_STR,
                                           label1,
                                           label2));
     }
 
-  SVN_ERR(file_printf_from_utf8(file, encoding,
-                                _("%sProperty changes on: %s%s"),
-                                APR_EOL_STR,
-                                use_git_diff_format ? path1 : path,
-                                APR_EOL_STR));
+  SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
+                                      _("%sProperty changes on: %s%s"),
+                                      APR_EOL_STR,
+                                      use_git_diff_format ? path1 : path,
+                                      APR_EOL_STR));
 
-  SVN_ERR(file_printf_from_utf8(file, encoding, "%s" APR_EOL_STR,
-                                under_string));
+  SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
+                                      "%s" APR_EOL_STR, under_string));
 
   iterpool = svn_pool_create(pool);
   for (i = 0; i < propchanges->nelts; i++)
@@ -659,15 +628,16 @@ display_prop_diffs(const apr_array_header_t *propchanges,
         action = "Deleted";
       else
         action = "Modified";
-      SVN_ERR(file_printf_from_utf8(file, encoding, "%s: %s%s", action,
-                                    propchange->name, APR_EOL_STR));
+      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, iterpool,
+                                          "%s: %s%s", action,
+                                          propchange->name, APR_EOL_STR));
 
       if (strcmp(propchange->name, SVN_PROP_MERGEINFO) == 0)
         {
           const char *orig = original_value ? original_value->data : NULL;
           const char *val = propchange->value ? propchange->value->data : NULL;
           svn_error_t *err = display_mergeinfo_diff(orig, val, encoding,
-                                                    file, iterpool);
+                                                    outstream, iterpool);
 
           /* Issue #3896: If we can't pretty-print mergeinfo differences
              because invalid mergeinfo is present, then don't let the diff
@@ -684,7 +654,6 @@ display_prop_diffs(const apr_array_header_t *propchanges,
         }
 
       {
-        svn_stream_t *os = svn_stream_from_aprfile2(file, TRUE, iterpool);
         svn_diff_t *diff;
         svn_diff_file_options_t options = { 0 };
         const svn_string_t *tmp;
@@ -713,13 +682,13 @@ display_prop_diffs(const apr_array_header_t *propchanges,
          * UNIX patch could apply the property diff to, so we use "##"
          * instead of "@@" as the default hunk delimiter for property diffs.
          * We also supress the diff header. */
-        SVN_ERR(svn_diff_mem_string_output_unified2(os, diff, FALSE, "##",
+        SVN_ERR(svn_diff_mem_string_output_unified2(outstream, diff, FALSE,
+                                                    "##",
                                            svn_dirent_local_style(path,
                                                                   iterpool),
                                            svn_dirent_local_style(path,
                                                                   iterpool),
                                            encoding, orig, val, iterpool));
-        SVN_ERR(svn_stream_close(os));
 
       }
     }
@@ -753,8 +722,8 @@ struct diff_cmd_baton {
   } options;
 
   apr_pool_t *pool;
-  apr_file_t *outfile;
-  apr_file_t *errfile;
+  svn_stream_t *outstream;
+  svn_stream_t *errstream;
 
   const char *header_encoding;
 
@@ -846,7 +815,7 @@ diff_props_changed(svn_wc_notify_state_t *state,
                                  diff_cmd_baton->revnum1,
                                  diff_cmd_baton->revnum2,
                                  diff_cmd_baton->header_encoding,
-                                 diff_cmd_baton->outfile,
+                                 diff_cmd_baton->outstream,
                                  diff_cmd_baton->relative_to_dir,
                                  show_diff_header,
                                  diff_cmd_baton->use_git_diff_format,
@@ -915,16 +884,13 @@ diff_content_changed(const char *path,
 {
   int exitcode;
   apr_pool_t *subpool = svn_pool_create(diff_cmd_baton->pool);
-  svn_stream_t *os;
   const char *rel_to_dir = diff_cmd_baton->relative_to_dir;
-  apr_file_t *errfile = diff_cmd_baton->errfile;
+  svn_stream_t *errstream = diff_cmd_baton->errstream;
+  svn_stream_t *outstream = diff_cmd_baton->outstream;
   const char *label1, *label2;
   svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
   const char *path1 = diff_cmd_baton->orig_path_1;
   const char *path2 = diff_cmd_baton->orig_path_2;
-
-  /* Get a stream from our output file. */
-  os = svn_stream_from_aprfile2(diff_cmd_baton->outfile, TRUE, subpool);
 
   /* Generate the diff headers. */
   SVN_ERR(adjust_paths_for_diff_labels(&path, &path1, &path2,
@@ -944,35 +910,35 @@ diff_content_changed(const char *path,
   if (! diff_cmd_baton->force_binary && (mt1_binary || mt2_binary))
     {
       /* Print out the diff header. */
-      SVN_ERR(svn_stream_printf_from_utf8
-              (os, diff_cmd_baton->header_encoding, subpool,
+      SVN_ERR(svn_stream_printf_from_utf8(outstream,
+               diff_cmd_baton->header_encoding, subpool,
                "Index: %s" APR_EOL_STR "%s" APR_EOL_STR, path, equal_string));
 
       /* ### Print git diff headers. */
 
-      SVN_ERR(svn_stream_printf_from_utf8
-              (os, diff_cmd_baton->header_encoding, subpool,
+      SVN_ERR(svn_stream_printf_from_utf8(outstream,
+               diff_cmd_baton->header_encoding, subpool,
                _("Cannot display: file marked as a binary type.%s"),
                APR_EOL_STR));
 
       if (mt1_binary && !mt2_binary)
-        SVN_ERR(svn_stream_printf_from_utf8
-                (os, diff_cmd_baton->header_encoding, subpool,
+        SVN_ERR(svn_stream_printf_from_utf8(outstream,
+                 diff_cmd_baton->header_encoding, subpool,
                  "svn:mime-type = %s" APR_EOL_STR, mimetype1));
       else if (mt2_binary && !mt1_binary)
-        SVN_ERR(svn_stream_printf_from_utf8
-                (os, diff_cmd_baton->header_encoding, subpool,
+        SVN_ERR(svn_stream_printf_from_utf8(outstream,
+                 diff_cmd_baton->header_encoding, subpool,
                  "svn:mime-type = %s" APR_EOL_STR, mimetype2));
       else if (mt1_binary && mt2_binary)
         {
           if (strcmp(mimetype1, mimetype2) == 0)
-            SVN_ERR(svn_stream_printf_from_utf8
-                    (os, diff_cmd_baton->header_encoding, subpool,
+            SVN_ERR(svn_stream_printf_from_utf8(outstream,
+                     diff_cmd_baton->header_encoding, subpool,
                      "svn:mime-type = %s" APR_EOL_STR,
                      mimetype1));
           else
-            SVN_ERR(svn_stream_printf_from_utf8
-                    (os, diff_cmd_baton->header_encoding, subpool,
+            SVN_ERR(svn_stream_printf_from_utf8(outstream,
+                     diff_cmd_baton->header_encoding, subpool,
                      "svn:mime-type = (%s, %s)" APR_EOL_STR,
                      mimetype1, mimetype2));
         }
@@ -985,25 +951,52 @@ diff_content_changed(const char *path,
 
   if (diff_cmd_baton->diff_cmd)
     {
+      apr_file_t *outfile;
+      apr_file_t *errfile;
+      const char *outfilename;
+      const char *errfilename;
+      svn_stream_t *stream;
+
       /* Print out the diff header. */
-      SVN_ERR(svn_stream_printf_from_utf8
-              (os, diff_cmd_baton->header_encoding, subpool,
+      SVN_ERR(svn_stream_printf_from_utf8(outstream,
+               diff_cmd_baton->header_encoding, subpool,
                "Index: %s" APR_EOL_STR "%s" APR_EOL_STR, path, equal_string));
-      /* Close the stream (flush) */
-      SVN_ERR(svn_stream_close(os));
 
       /* ### Do we want to add git diff headers here too? I'd say no. The
        * ### 'Index' and '===' line is something subversion has added. The rest
        * ### is up to the external diff application. We may be dealing with
        * ### a non-git compatible diff application.*/
 
+      /* We deal in streams, but svn_io_run_diff2() deals in file handles,
+         unfortunately, so we need to make these temporary files, and then
+         copy the contents to our stream. */
+      SVN_ERR(svn_io_open_unique_file3(&outfile, &outfilename, NULL,
+                                       svn_io_file_del_on_pool_cleanup,
+                                       subpool, subpool));
+      SVN_ERR(svn_io_open_unique_file3(&errfile, &errfilename, NULL,
+                                       svn_io_file_del_on_pool_cleanup,
+                                       subpool, subpool));
+
       SVN_ERR(svn_io_run_diff2(".",
                                diff_cmd_baton->options.for_external.argv,
                                diff_cmd_baton->options.for_external.argc,
                                label1, label2,
                                tmpfile1, tmpfile2,
-                               &exitcode, diff_cmd_baton->outfile, errfile,
+                               &exitcode, outfile, errfile,
                                diff_cmd_baton->diff_cmd, subpool));
+
+      SVN_ERR(svn_io_file_close(outfile, subpool));
+      SVN_ERR(svn_io_file_close(errfile, subpool));
+
+      /* Now, open and copy our files to our output streams. */
+      SVN_ERR(svn_stream_open_readonly(&stream, outfilename,
+                                       subpool, subpool));
+      SVN_ERR(svn_stream_copy3(stream, svn_stream_disown(outstream, subpool),
+                               NULL, NULL, subpool));
+      SVN_ERR(svn_stream_open_readonly(&stream, errfilename,
+                                       subpool, subpool));
+      SVN_ERR(svn_stream_copy3(stream, svn_stream_disown(errstream, subpool),
+                               NULL, NULL, subpool));
     }
   else   /* use libsvn_diff to generate the diff  */
     {
@@ -1017,8 +1010,8 @@ diff_content_changed(const char *path,
           diff_cmd_baton->use_git_diff_format)
         {
           /* Print out the diff header. */
-          SVN_ERR(svn_stream_printf_from_utf8
-                  (os, diff_cmd_baton->header_encoding, subpool,
+          SVN_ERR(svn_stream_printf_from_utf8(outstream,
+                   diff_cmd_baton->header_encoding, subpool,
                    "Index: %s" APR_EOL_STR "%s" APR_EOL_STR,
                    path, equal_string));
 
@@ -1033,7 +1026,8 @@ diff_content_changed(const char *path,
                          &tmp_path2, path, diff_cmd_baton->orig_path_2,
                          diff_cmd_baton->ra_session, diff_cmd_baton->wc_ctx,
                          diff_cmd_baton->wc_root_abspath, subpool));
-              SVN_ERR(print_git_diff_header(os, &label1, &label2, operation,
+              SVN_ERR(print_git_diff_header(outstream, &label1, &label2,
+                                            operation,
                                             tmp_path1, tmp_path2, rev1, rev2,
                                             copyfrom_path,
                                             copyfrom_rev,
@@ -1043,8 +1037,8 @@ diff_content_changed(const char *path,
 
           /* Output the actual diff */
           if (svn_diff_contains_diffs(diff) || diff_cmd_baton->force_empty)
-            SVN_ERR(svn_diff_file_output_unified3
-                    (os, diff, tmpfile1, tmpfile2, label1, label2,
+            SVN_ERR(svn_diff_file_output_unified3(outstream, diff,
+                     tmpfile1, tmpfile2, label1, label2,
                      diff_cmd_baton->header_encoding, rel_to_dir,
                      diff_cmd_baton->options.for_internal->show_c_function,
                      subpool));
@@ -1054,9 +1048,6 @@ diff_content_changed(const char *path,
                        APR_HASH_KEY_STRING, path);
 
         }
-
-      /* Close the stream (flush) */
-      SVN_ERR(svn_stream_close(os));
     }
 
   /* ### todo: someday we'll need to worry about whether we're going
@@ -1203,9 +1194,8 @@ diff_file_deleted(svn_wc_notify_state_t *state,
 
   if (diff_cmd_baton->no_diff_deleted)
     {
-      SVN_ERR(file_printf_from_utf8(
-                diff_cmd_baton->outfile,
-                diff_cmd_baton->header_encoding,
+      SVN_ERR(svn_stream_printf_from_utf8(diff_cmd_baton->outstream,
+                diff_cmd_baton->header_encoding, scratch_pool,
                 "Index: %s (deleted)" APR_EOL_STR "%s" APR_EOL_STR,
                 path, equal_string));
     }
@@ -2273,7 +2263,7 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
       * These cases require server communication.
 */
 svn_error_t *
-svn_client_diff5(const apr_array_header_t *options,
+svn_client_diff6(const apr_array_header_t *options,
                  const char *path1,
                  const svn_opt_revision_t *revision1,
                  const char *path2,
@@ -2286,8 +2276,8 @@ svn_client_diff5(const apr_array_header_t *options,
                  svn_boolean_t ignore_content_type,
                  svn_boolean_t use_git_diff_format,
                  const char *header_encoding,
-                 apr_file_t *outfile,
-                 apr_file_t *errfile,
+                 svn_stream_t *outstream,
+                 svn_stream_t *errstream,
                  const apr_array_header_t *changelists,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
@@ -2305,8 +2295,8 @@ svn_client_diff5(const apr_array_header_t *options,
   SVN_ERR(set_up_diff_cmd_and_options(&diff_cmd_baton, options,
                                       ctx->config, pool));
   diff_cmd_baton.pool = pool;
-  diff_cmd_baton.outfile = outfile;
-  diff_cmd_baton.errfile = errfile;
+  diff_cmd_baton.outstream = outstream;
+  diff_cmd_baton.errstream = errstream;
   diff_cmd_baton.header_encoding = header_encoding;
   diff_cmd_baton.revnum1 = SVN_INVALID_REVNUM;
   diff_cmd_baton.revnum2 = SVN_INVALID_REVNUM;
@@ -2329,7 +2319,7 @@ svn_client_diff5(const apr_array_header_t *options,
 }
 
 svn_error_t *
-svn_client_diff_peg5(const apr_array_header_t *options,
+svn_client_diff_peg6(const apr_array_header_t *options,
                      const char *path,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *start_revision,
@@ -2342,8 +2332,8 @@ svn_client_diff_peg5(const apr_array_header_t *options,
                      svn_boolean_t ignore_content_type,
                      svn_boolean_t use_git_diff_format,
                      const char *header_encoding,
-                     apr_file_t *outfile,
-                     apr_file_t *errfile,
+                     svn_stream_t *outstream,
+                     svn_stream_t *errstream,
                      const apr_array_header_t *changelists,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
@@ -2357,8 +2347,8 @@ svn_client_diff_peg5(const apr_array_header_t *options,
   SVN_ERR(set_up_diff_cmd_and_options(&diff_cmd_baton, options,
                                       ctx->config, pool));
   diff_cmd_baton.pool = pool;
-  diff_cmd_baton.outfile = outfile;
-  diff_cmd_baton.errfile = errfile;
+  diff_cmd_baton.outstream = outstream;
+  diff_cmd_baton.errstream = errstream;
   diff_cmd_baton.header_encoding = header_encoding;
   diff_cmd_baton.revnum1 = SVN_INVALID_REVNUM;
   diff_cmd_baton.revnum2 = SVN_INVALID_REVNUM;
