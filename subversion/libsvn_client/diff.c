@@ -1321,14 +1321,14 @@ static const svn_wc_diff_callbacks4_t diff_callbacks =
    this knowledge has been grokked yet.
 
    There are five cases:
-      1. path is not an URL and start_revision != end_revision
-      2. path is not an URL and start_revision == end_revision
-      3. path is an URL and start_revision != end_revision
-      4. path is an URL and start_revision == end_revision
-      5. path is not an URL and no revisions given
+      1. path is not a URL and start_revision != end_revision
+      2. path is not a URL and start_revision == end_revision
+      3. path is a URL and start_revision != end_revision
+      4. path is a URL and start_revision == end_revision
+      5. path is not a URL and no revisions given
 
    With only one distinct revision the working copy provides the
-   other.  When path is an URL there is no working copy. Thus
+   other.  When path is a URL there is no working copy. Thus
 
      1: compare repository versions for URL coresponding to working copy
      2: compare working copy against repository version

@@ -6999,7 +6999,7 @@ typedef svn_error_t *(*svn_wc_relocation_validator3_t)(void *baton,
  * the @a root argument.
  *
  * If @a root is TRUE, then the implementation should make sure that @a url
- * is the repository root.  Else, it can be an URL inside the repository.
+ * is the repository root.  Else, it can be a URL inside the repository.
  *
  * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
