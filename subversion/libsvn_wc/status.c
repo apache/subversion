@@ -1084,12 +1084,13 @@ get_dir_status(const struct walk_status_baton *wb,
  * Send a status structure of LOCAL_ABSPATH. PARENT_ABSPATH must be the
  * dirname of LOCAL_ABSPATH.
  *
- * If LOCAL_ABSPATH is a versioned file, INFO should reflect the information
- * on LOCAL_ABSPATH; if LOCAL_ABSPATH is an unversioned file or dir, INFO
- * should be NULL. For versioned directories use get_dir_status() instead.
+ * INFO should reflect the information on LOCAL_ABSPATH; if LOCAL_ABSPATH must
+ * be an unversioned file or dir, or a versioned file.  For versioned
+ * directories use get_dir_status() instead.
  *
- * If LOCAL_ABSPATH is a tree conflicted path with no local versioned node,
- * INFO should be NULL and TREE_CONFLICTED should be TRUE.
+ * INFO may be NULL for an unversioned node. If such node has a tree conflict,
+ * UNVERSIONED_TREE_CONFLICTED may be set to TRUE. If INFO is non-NULL,
+ * UNVERSIONED_TREE_CONFLICTED is ignored.
  *
  * DIRENT should reflect LOCAL_ABSPATH's dirent information.
  *
@@ -1116,7 +1117,7 @@ one_child_status(const struct walk_status_baton *wb,
                  const char *dir_repos_root_url,
                  const char *dir_repos_relpath,
                  const char *dir_repos_uuid,
-                 svn_boolean_t tree_conflicted,
+                 svn_boolean_t unversioned_tree_conflicted,
                  apr_array_header_t **collected_ignore_patterns,
                  const apr_array_header_t *ignore_patterns,
                  svn_depth_t depth,
@@ -1129,10 +1130,14 @@ one_child_status(const struct walk_status_baton *wb,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
+  svn_boolean_t conflicted = info ? info->conflicted
+                                  : unversioned_tree_conflicted;
+
   if (info
       && info->status != svn_wc__db_status_not_present
       && info->status != svn_wc__db_status_excluded
-      && info->status != svn_wc__db_status_server_excluded)
+      && info->status != svn_wc__db_status_server_excluded
+      && info->kind != svn_node_unknown)
     {
       if (depth == svn_depth_files
           && info->kind == svn_wc__db_kind_dir)
@@ -1166,43 +1171,34 @@ one_child_status(const struct walk_status_baton *wb,
       return SVN_NO_ERROR;
     }
 
-  if (tree_conflicted)
+  /* If conflicted, fall right through to unversioned.
+   * With depth_files, show all conflicts, even if their report is only
+   * about directories. A tree conflict may actually report two different
+   * kinds, so it's not so easy to define what depth=files means. We could go
+   * look up the kinds in the conflict ... just show all. */
+  if (! conflicted)
     {
-      /* Why pass ignore patterns on a tree conflicted node, even if it should
-       * anyway always show up in clients' status reports? Because this yields
-       * a subtle difference in status for tree conflicted paths with a plain
-       * unversioned node and those that are also in svn:ignore. For example,
-       * in 'svn status', plain unversioned nodes show as '?  C', where
-       * ignored ones show as 'I  C'.  IOW, the calling client decides whether
-       * to ignore, and thus this flag needs to be determined. */
-      if (ignore_patterns && ! *collected_ignore_patterns)
-        SVN_ERR(collect_ignore_patterns(collected_ignore_patterns, wb->db,
-                                        parent_abspath, ignore_patterns,
-                                        result_pool, scratch_pool));
+      /* Selected node, but not found */
+      if (dirent == NULL)
+        return SVN_NO_ERROR;
 
-      SVN_ERR(send_unversioned_item(wb,
-                                    local_abspath,
-                                    dirent,
-                                    TRUE, /* tree_conflicted */
-                                    *collected_ignore_patterns,
-                                    no_ignore,
-                                    status_func,
-                                    status_baton,
-                                    scratch_pool));
+      if (depth == svn_depth_files && dirent->kind == svn_node_dir)
+        return SVN_NO_ERROR;
 
-      return SVN_NO_ERROR;
+      if (svn_wc_is_adm_dir(svn_dirent_basename(local_abspath, scratch_pool),
+                            scratch_pool))
+        return SVN_NO_ERROR;
     }
 
-  /* Unversioned node */
-  if (dirent == NULL)
-    return SVN_NO_ERROR; /* Selected node, but not found */
-
-  if (depth == svn_depth_files && dirent->kind == svn_node_dir)
-    return SVN_NO_ERROR;
-
-  if (svn_wc_is_adm_dir(svn_dirent_basename(local_abspath, scratch_pool),
-                        scratch_pool))
-    return SVN_NO_ERROR;
+  /* The node exists on disk but there is no versioned information about it,
+   * or it doesn't exist but is a tree conflicted path or should be
+   * reported not-present. */
+   
+  /* Why pass ignore patterns on a tree conflicted node, even if it should
+   * always show up in clients' status reports anyway? Because the calling
+   * client decides whether to ignore, and thus this flag needs to be
+   * determined.  For example, in 'svn status', plain unversioned nodes show
+   * as '?  C', where ignored ones show as 'I  C'. */
 
   if (ignore_patterns && ! *collected_ignore_patterns)
     SVN_ERR(collect_ignore_patterns(collected_ignore_patterns, wb->db,
@@ -1211,7 +1207,8 @@ one_child_status(const struct walk_status_baton *wb,
 
   SVN_ERR(send_unversioned_item(wb,
                                 local_abspath,
-                                dirent, FALSE,
+                                dirent,
+                                conflicted,
                                 *collected_ignore_patterns,
                                 no_ignore,
                                 status_func, status_baton,
@@ -1401,7 +1398,6 @@ get_child_status(const struct walk_status_baton *wb,
   const struct svn_wc__db_info_t *dir_info;
   apr_array_header_t *collected_ignore_patterns = NULL;
   const svn_io_dirent2_t *dirent_p;
-  svn_boolean_t tree_conflicted = info ? info->conflicted : FALSE;
   const char *parent_abspath = svn_dirent_dirname(local_abspath,
                                                   scratch_pool);
 
@@ -1423,17 +1419,11 @@ get_child_status(const struct walk_status_baton *wb,
                                      wb->db, parent_abspath,
                                      scratch_pool, scratch_pool));
 
-  if (info
-      && info->conflicted
-      && info->status == svn_wc__db_status_normal
-      && info->kind == svn_wc__db_kind_unknown)
-    {
-      /* We only have an info because of the CONFLICTED flag. It is in fact an
-       * unversioned node and should be treated as such. The CONFLICTED flag
-       * has been read to TREE_CONFLICTED above and is passed separately. */
-      info = NULL;
-    }
-
+  /* An unversioned node with a tree conflict will see an INFO != NULL here,
+   * in which case the FALSE passed for UNVERSIONED_TREE_CONFLICTED has no
+   * effect and INFO->CONFLICTED counts.
+   * ### Maybe svn_wc__db_read_children_info() and read_info() should be more
+   * ### alike? */
   SVN_ERR(one_child_status(wb,
                            local_abspath,
                            parent_abspath,
@@ -1442,7 +1432,7 @@ get_child_status(const struct walk_status_baton *wb,
                            dir_repos_root_url,
                            dir_repos_relpath,
                            dir_repos_uuid,
-                           tree_conflicted,
+                           FALSE, /* unversioned_tree_conflicted */
                            &collected_ignore_patterns,
                            ignore_patterns,
                            svn_depth_empty,
