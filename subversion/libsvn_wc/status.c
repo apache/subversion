@@ -1084,7 +1084,7 @@ get_dir_status(const struct walk_status_baton *wb,
  * Send a status structure of LOCAL_ABSPATH. PARENT_ABSPATH must be the
  * dirname of LOCAL_ABSPATH.
  *
- * INFO should reflect the information on LOCAL_ABSPATH; if LOCAL_ABSPATH must
+ * INFO should reflect the information on LOCAL_ABSPATH; LOCAL_ABSPATH must
  * be an unversioned file or dir, or a versioned file.  For versioned
  * directories use get_dir_status() instead.
  *
