@@ -449,7 +449,7 @@ process_actions(void *edit_baton,
       apr_hash_t *existing_props;
 
       SVN_ERR(eb->fetch_props_func(&existing_props, eb->fetch_props_baton,
-                                   path, scratch_pool));
+                                   path, scratch_pool, scratch_pool));
       if (props)
         props = apr_hash_overlay(scratch_pool, props, existing_props);
       else

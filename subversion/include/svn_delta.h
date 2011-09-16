@@ -1095,6 +1095,7 @@ typedef svn_error_t *(*svn_delta_fetch_props_cb_func_t)(
   apr_hash_t **props,
   void *baton,
   const char *path,
+  apr_pool_t *result_pool,
   apr_pool_t *scratch_pool
   );
 
