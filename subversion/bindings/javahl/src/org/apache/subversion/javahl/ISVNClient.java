@@ -84,7 +84,7 @@ public interface ISVNClient
             throws ClientException;
 
     /**
-     * Lists the directory entries of an url on the server.
+     * Lists the directory entries of a url on the server.
      * @param url             the url to list
      * @param revision        the revision to list
      * @param pegRevision     the revision to interpret url

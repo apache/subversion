@@ -1295,7 +1295,7 @@ typedef struct svn_wc_notify_t {
 
   /** Path, either absolute or relative to the current working directory
    * (i.e., not relative to an anchor).  @c path is "." or another valid path
-   * value for compatibility reasons when the real target is an url that
+   * value for compatibility reasons when the real target is a url that
    * is available in @c url. */
   const char *path;
 
