@@ -363,7 +363,7 @@ const apr_getopt_option_t svn_cl__options[] =
  *
  * In most of the help text "PATH" is used where a working copy path is
  * required, "URL" where a repository URL is required and "TARGET" when
- * either a path or an url can be used.  Hmm, should this be part of the
+ * either a path or a url can be used.  Hmm, should this be part of the
  * help text?
  */
 
