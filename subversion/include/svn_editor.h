@@ -209,9 +209,6 @@ extern "C" {
  *   follow for each child mentioned in the @a children argument of any
  *   svn_editor_add_directory() call.
  *
- * - svn_editor_add_file() -- An svn_editor_set_text() call must follow
- *   for the same path (at some point).
- *
  * - svn_editor_set_props()
  *   - The @a complete argument must be TRUE if no more calls will follow on
  *     the same path. @a complete must always be TRUE for directories.
@@ -222,16 +219,16 @@ extern "C" {
  *       an svn_editor_set_target() call on the same path.
  *
  * - svn_editor_set_text() and svn_editor_set_target() must always occur
- *   @b after an svn_editor_set_props() or svn_editor_add_file() call on
- *   the same path, if any.\n
+ *   @b after an svn_editor_set_props() call on the same path, if any.
+ *
  *   In other words, if there are two calls coming in on the same path, the
- *   first of them has to be either svn_editor_set_props() or
- *   svn_editor_add_file().
+ *   first of them has to be svn_editor_set_props().
  *
  * - svn_editor_delete() must not be used to replace a path -- i.e.
  *   svn_editor_delete() must not be followed by an svn_editor_add_*() on
  *   the same path, nor by an svn_editor_copy() or svn_editor_move() with
  *   the same path as the copy/move target.
+ *
  *   Instead of a prior delete call, the add/copy/move callbacks should be
  *   called with the @a replaces_rev argument set to the revision number of
  *   the node at this path that is being replaced.  Note that the path and
@@ -258,7 +255,6 @@ extern "C" {
  * All callbacks must complete their handling of a path before they
  * return, except for the following pairs, where a change must be completed
  * when receiving the second callback in each pair:
- *  - svn_editor_add_file() and svn_editor_set_text()
  *  - svn_editor_set_props() (if @a complete is FALSE) and
  *    svn_editor_set_text() (if the node is a file)
  *  - svn_editor_set_props() (if @a complete is FALSE) and
@@ -374,6 +370,8 @@ typedef svn_error_t *(*svn_editor_cb_add_directory_t)(
 typedef svn_error_t *(*svn_editor_cb_add_file_t)(
   void *baton,
   const char *relpath,
+  const svn_checksum_t *checksum,
+  svn_stream_t *contents,
   apr_hash_t *props,
   svn_revnum_t replaces_rev,
   apr_pool_t *scratch_pool);
@@ -713,6 +711,9 @@ svn_editor_add_directory(svn_editor_t *editor,
  * Create a new file at @a relpath. The immediate parent of @a relpath
  * is expected to exist.
  *
+ * The file's contents are specified in @a contents which has a checksum
+ * matching @a checksum.
+ *
  * Set the properties of the new file to @a props, which is an
  * apr_hash_t holding key-value pairs. Each key is a const char* of a
  * property name, each value is a const svn_string_t*. If no properties are
@@ -731,6 +732,8 @@ svn_editor_add_directory(svn_editor_t *editor,
 svn_error_t *
 svn_editor_add_file(svn_editor_t *editor,
                     const char *relpath,
+                    const svn_checksum_t *checksum,
+                    svn_stream_t *contents,
                     apr_hash_t *props,
                     svn_revnum_t replaces_rev);
 
