@@ -462,6 +462,24 @@ svn_cl__print_status_xml(const char *path,
   if (tree_conflicted)
     apr_hash_set(att_hash, "tree-conflicted", APR_HASH_KEY_STRING,
                  "true");
+  if (status->moved_from_abspath || status->moved_to_abspath)
+    {
+      const char *cwd;
+      const char *relpath;
+      SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
+      if (status->moved_from_abspath)
+        {
+          relpath = make_relpath(cwd, status->moved_from_abspath, pool, pool);
+          relpath = svn_dirent_local_style(relpath, pool);
+          apr_hash_set(att_hash, "moved-from", APR_HASH_KEY_STRING, relpath);
+        }
+      if (status->moved_to_abspath)
+        {
+          relpath = make_relpath(cwd, status->moved_to_abspath, pool, pool);
+          relpath = svn_dirent_local_style(relpath, pool);
+          apr_hash_set(att_hash, "moved-to", APR_HASH_KEY_STRING, relpath);
+        }
+    }
   svn_xml_make_open_tag_hash(&sb, pool, svn_xml_normal, "wc-status",
                              att_hash);
 
