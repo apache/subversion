@@ -52,6 +52,8 @@ add_directory_noop_cb(void *baton,
 static svn_error_t *
 add_file_noop_cb(void *baton,
                  const char *relpath,
+                 const svn_checksum_t *checksum,
+                 svn_stream_t *contents,
                  apr_hash_t *props,
                  svn_revnum_t replaces_rev,
                  apr_pool_t *scratch_pool)
