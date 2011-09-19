@@ -207,6 +207,12 @@ process_actions(void *edit_baton,
               break;
             }
 
+          case add:
+            {
+              /* ### do something  */
+              break;
+            }
+
           default:
             SVN_ERR_MALFUNCTION();
         }
