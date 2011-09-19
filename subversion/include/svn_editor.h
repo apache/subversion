@@ -224,6 +224,17 @@ extern "C" {
  *   In other words, if there are two calls coming in on the same path, the
  *   first of them has to be svn_editor_set_props().
  *
+ * - Other than the above two pairs of linked operations, a path should
+ *   never be referenced more than once by the add_* and set_* and the
+ *   delete operations. The source of a copy (and its children) may be
+ *   copied many times. The source of a move may be mentioned only once
+ *   (in the move). The destination of a copy or move (and its children,
+ *   if a directory) may have set_* operations applied. Children of the
+ *   source of a move may never be mentioned.
+ *
+ * - The ancestor of an added or modified node may not be deleted. The
+ *   ancestor may not be moved (instead: perform the move, *then* the edits).
+ *
  * - svn_editor_delete() must not be used to replace a path -- i.e.
  *   svn_editor_delete() must not be followed by an svn_editor_add_*() on
  *   the same path, nor by an svn_editor_copy() or svn_editor_move() with
@@ -873,14 +884,12 @@ svn_editor_copy(svn_editor_t *editor,
  * ###   svn_editor_add_file(ed, "foo.c", props, rN);
  * ###   svn_editor_move(ed, "foo.c", rM, "bar.c", rN);
  * ###
- * ### gstein: no, it would be:
- * ###   svn_editor_delete(e, "foo.c", rN);
- * ###   svn_editor_add_file(e, "foo.c", props, SVN_INVALID_REVNUM);
- * ###   svn_editor_move(e, "foo.c", rM, "bar.c", SVN_INVALID_REVNUM);
- * ###
- * ###   replaces_rev is to indicate a deletion of the destination node
- * ###   that occurs as part of the move. there are no replacements in
- * ###   your example.
+ * ### gstein: An editor is used to make changes to a tree rather than
+ * ###   model *how* the tree changed. If the receiver's tree is at
+ * ###   revision N-1, then the operations would be:
+ * ###     svn_editor_delete(ed, "foo.c", N-1);
+ * ###     svn_editor_copy(ed, "foo.c", M, "bar.c", SVN_INVALID_REVNUM);
+ * ###   That edits the tree to the appropriate state.
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.8.
@@ -894,7 +903,7 @@ svn_editor_move(svn_editor_t *editor,
 
 /** Drive @a editor's #svn_editor_cb_complete_t callback.
  *
- * Send word that the tree delta has been completed successfully.
+ * Send word that the edit has been completed successfully.
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.8.
@@ -904,7 +913,7 @@ svn_editor_complete(svn_editor_t *editor);
 
 /** Drive @a editor's #svn_editor_cb_abort_t callback.
  *
- * Notify that the tree delta transmission was not successful.
+ * Notify that the edit transmission was not successful.
  * ### TODO @todo Shouldn't we add a reason-for-aborting argument?
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
