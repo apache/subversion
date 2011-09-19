@@ -115,8 +115,7 @@ enum action
 {
   add,
   delete,
-  set_prop,
-  remove_prop
+  set_prop
 };
 
 struct path_action
@@ -165,7 +164,6 @@ process_actions(void *edit_baton,
                 apr_pool_t *scratch_pool)
 {
   struct ev2_edit_baton *eb = edit_baton;
-  apr_array_header_t *removed_props = NULL;
   apr_hash_t *props = NULL;
   int i;
 
@@ -173,32 +171,28 @@ process_actions(void *edit_baton,
    * dependent on them. */
   for (i = 0; i < actions->nelts; i++)
     {
-      struct path_action *action = APR_ARRAY_IDX(actions, i,
-                                                 struct path_action *);
+      const struct path_action *action = APR_ARRAY_IDX(actions, i,
+                                                       struct path_action *);
 
       switch (action->action)
         {
           case set_prop:
             {
-              struct prop_args *p_args = action->args;
+              const struct prop_args *p_args = action->args;
 
               if (!props)
-                props = apr_hash_make(scratch_pool);
+                {
+                  /* Fetch the original props. We can then apply each of
+                     the modifications to it.  */
+                  SVN_ERR(eb->fetch_props_func(&props,
+                                               eb->fetch_props_baton,
+                                               path,
+                                               scratch_pool, scratch_pool));
+                }
 
+              /* Note that p_args->value may be NULL.  */
               apr_hash_set(props, p_args->name, APR_HASH_KEY_STRING,
                            p_args->value);
-              break;
-            }
-
-          case remove_prop:
-            {
-              const char *name = action->args;
-
-              if (!removed_props)
-                removed_props = apr_array_make(scratch_pool, 1,
-                                               sizeof(const char *));
-
-              APR_ARRAY_PUSH(removed_props, const char *) = name;
               break;
             }
 
@@ -214,39 +208,17 @@ process_actions(void *edit_baton,
             }
 
           default:
-            break;
+            SVN_ERR_MALFUNCTION();
         }
     }
 
   /* We've now got a wholistic view of what has happened to this node,
    * so we can call our own editor APIs on it. */
 
-  if (props || removed_props)
+  if (props)
     {
-      /* If we've seen any prop mods, we're going to need to fetch the
-         existing props so that we can properly drive the editor method
-         below. */
-      apr_hash_t *existing_props;
-
-      SVN_ERR(eb->fetch_props_func(&existing_props, eb->fetch_props_baton,
-                                   path, scratch_pool, scratch_pool));
-      if (props)
-        props = apr_hash_overlay(scratch_pool, props, existing_props);
-      else
-        props = existing_props;
-
-      /* Now delete any props which were deleted in our drive. */
-      if (removed_props)
-        {
-          for (i = 0; i < removed_props->nelts; i++)
-            {
-              const char *name = APR_ARRAY_IDX(removed_props, i,
-                                               const char *);
-              apr_hash_set(props, name, APR_HASH_KEY_STRING, NULL);
-            }
-        }
-
-      /* This point, PROPS will contain all the props for this node. */
+      /* We fetched and modified the props in some way. Apply 'em now that
+         we have the new set.  */
       SVN_ERR(svn_editor_set_props(eb->editor, path, eb->target_revision,
                                    props, TRUE));
     }
@@ -343,19 +315,12 @@ ev2_change_dir_prop(void *dir_baton,
                     apr_pool_t *scratch_pool)
 {
   struct ev2_dir_baton *db = dir_baton;
+  struct prop_args *p_args = apr_palloc(db->eb->edit_pool, sizeof(*p_args));
 
-  if (value)
-    {
-      struct prop_args *p_args = apr_palloc(db->eb->edit_pool, sizeof(*p_args));
+  p_args->name = apr_pstrdup(db->eb->edit_pool, name);
+  p_args->value = value ? svn_string_dup(value, db->eb->edit_pool) : NULL;
 
-      p_args->name = apr_pstrdup(db->eb->edit_pool, name);
-      p_args->value = svn_string_dup(value, db->eb->edit_pool);
-
-      SVN_ERR(add_action(db->eb, db->path, set_prop, p_args));
-    }
-  else
-    SVN_ERR(add_action(db->eb, db->path, remove_prop,
-                       apr_pstrdup(db->eb->edit_pool, name)));
+  SVN_ERR(add_action(db->eb, db->path, set_prop, p_args));
 
   return SVN_NO_ERROR;
 }
@@ -440,18 +405,12 @@ ev2_change_file_prop(void *file_baton,
                      apr_pool_t *scratch_pool)
 {
   struct ev2_file_baton *fb = file_baton;
+  struct prop_args *p_args = apr_palloc(fb->eb->edit_pool, sizeof(*p_args));
 
-  if (value)
-    {
-      struct prop_args *p_args = apr_palloc(fb->eb->edit_pool, sizeof(*p_args));
-      p_args->name = apr_pstrdup(fb->eb->edit_pool, name);
-      p_args->value = svn_string_dup(value, fb->eb->edit_pool);
+  p_args->name = apr_pstrdup(fb->eb->edit_pool, name);
+  p_args->value = value ? svn_string_dup(value, fb->eb->edit_pool) : NULL;
 
-      SVN_ERR(add_action(fb->eb, fb->path, set_prop, p_args));
-    }
-  else
-    SVN_ERR(add_action(fb->eb, fb->path, remove_prop,
-                       apr_pstrdup(fb->eb->edit_pool, name)));
+  SVN_ERR(add_action(fb->eb, fb->path, set_prop, p_args));
 
   return SVN_NO_ERROR;
 }
