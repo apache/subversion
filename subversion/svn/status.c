@@ -275,31 +275,31 @@ print_status(const char *path,
   /* Note that moved-from and moved-to information is only available in STATUS
    * for (op-)roots of a move. Those are exactly the nodes we want to show
    * move info for in 'svn status'. See also comments in svn_wc_status3_t. */
-
-  if (status->moved_from_abspath)
+  if (status->moved_from_abspath || status->moved_to_abspath)
     {
       const char *cwd;
       const char *relpath;
       SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
-      relpath = make_relpath(cwd, status->moved_from_abspath, pool, pool);
-      relpath = svn_dirent_local_style(relpath, pool);
-      moved_from_line = apr_pstrcat(pool, "\n        > ",
-                                    apr_psprintf(pool, _("moved from %s"),
-                                                 relpath),
-                                    (char *)NULL);
-    }
 
-  if (status->moved_to_abspath)
-    {
-      const char *cwd;
-      const char *relpath;
-      SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
-      relpath = make_relpath(cwd, status->moved_to_abspath, pool, pool);
-      relpath = svn_dirent_local_style(relpath, pool);
-      moved_to_line = apr_pstrcat(pool, "\n        > ",
-                                  apr_psprintf(pool, _("moved to %s"),
-                                               relpath),
-                                  (char *)NULL);
+      if (status->moved_from_abspath)
+        {
+          relpath = make_relpath(cwd, status->moved_from_abspath, pool, pool);
+          relpath = svn_dirent_local_style(relpath, pool);
+          moved_from_line = apr_pstrcat(pool, "\n        > ",
+                                        apr_psprintf(pool, _("moved from %s"),
+                                                     relpath),
+                                        (char *)NULL);
+        }
+
+      if (status->moved_to_abspath)
+        {
+          relpath = make_relpath(cwd, status->moved_to_abspath, pool, pool);
+          relpath = svn_dirent_local_style(relpath, pool);
+          moved_to_line = apr_pstrcat(pool, "\n        > ",
+                                      apr_psprintf(pool, _("moved to %s"),
+                                                   relpath),
+                                      (char *)NULL);
+        }
     }
 
   if (detailed)
