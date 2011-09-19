@@ -923,7 +923,7 @@ Java_org_apache_subversion_javahl_SVNClient_properties
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_propertySetRemote
 (JNIEnv *env, jobject jthis, jstring jpath, jlong jbaseRev, jstring jname,
- jbyteArray jvalue, jobject jmessage, jboolean jforce, jobject jrevpropTable,
+ jbyteArray jval, jobject jmessage, jboolean jforce, jobject jrevpropTable,
  jobject jcallback)
 {
   JNIEntry(SVNClient, propertySet);
@@ -945,7 +945,7 @@ Java_org_apache_subversion_javahl_SVNClient_propertySetRemote
   if (JNIUtil::isExceptionThrown())
     return;
 
-  JNIByteArray value(jvalue);
+  JNIByteArray value(jval);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -962,7 +962,7 @@ Java_org_apache_subversion_javahl_SVNClient_propertySetRemote
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_propertySetLocal
 (JNIEnv *env, jobject jthis, jobject jtargets, jstring jname,
- jbyteArray jvalue, jobject jdepth, jobject jchangelists, jboolean jforce)
+ jbyteArray jval, jobject jdepth, jobject jchangelists, jboolean jforce)
 {
   JNIEntry(SVNClient, propertySet);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -981,7 +981,7 @@ Java_org_apache_subversion_javahl_SVNClient_propertySetLocal
   if (JNIUtil::isExceptionThrown())
     return;
 
-  JNIByteArray value(jvalue);
+  JNIByteArray value(jval);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1044,7 +1044,7 @@ Java_org_apache_subversion_javahl_SVNClient_revProperties
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_setRevProperty
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jobject jrevision,
- jstring jvalue, jstring joriginalValue, jboolean jforce)
+ jstring jval, jstring joriginalValue, jboolean jforce)
 {
   JNIEntry(SVNClient, setRevProperty);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1065,7 +1065,7 @@ Java_org_apache_subversion_javahl_SVNClient_setRevProperty
   if (JNIUtil::isExceptionThrown())
     return;
 
-  JNIStringHolder value(jvalue);
+  JNIStringHolder value(jval);
   if (JNIUtil::isExceptionThrown())
     return;
 
