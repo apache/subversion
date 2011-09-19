@@ -1137,7 +1137,8 @@ one_child_status(const struct walk_status_baton *wb,
       && info->status != svn_wc__db_status_not_present
       && info->status != svn_wc__db_status_excluded
       && info->status != svn_wc__db_status_server_excluded
-      && info->kind != svn_node_unknown)
+      && !(info->kind == svn_node_unknown
+           && info->status == svn_wc__db_status_normal))
     {
       if (depth == svn_depth_files
           && info->kind == svn_wc__db_kind_dir)
