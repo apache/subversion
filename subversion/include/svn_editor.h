@@ -226,11 +226,15 @@ extern "C" {
  *
  * - Other than the above two pairs of linked operations, a path should
  *   never be referenced more than once by the add_* and set_* and the
- *   delete operations. The source of a copy (and its children) may be
- *   copied many times. The source of a move may be mentioned only once
- *   (in the move). The destination of a copy or move (and its children,
- *   if a directory) may have set_* operations applied. Children of the
- *   source of a move may never be mentioned.
+ *   delete operations (the "Once Rule"). The source path of a copy (and
+ *   its children, if a directory) may be copied many times, and are
+ *   otherwise subject to the Once Rule. The destination path of a copy
+ *   or move may have set_* operations applied, but not add_* or delete.
+ *   If the destination path of a copy or move is a directory, then its
+ *   children are subject to the Once Rule. The source path of a move
+ *   (and its child paths) may be referenced in add_*, or as the
+ *   destination of a copy (where these new, copied nodes are subject to
+ *   the Once Rule).
  *
  * - The ancestor of an added or modified node may not be deleted. The
  *   ancestor may not be moved (instead: perform the move, *then* the edits).
@@ -250,6 +254,9 @@ extern "C" {
  * - svn_editor_delete() must not be used to move a path -- i.e.
  *   svn_editor_delete() must not delete the source path of a previous
  *   svn_editor_copy() call. Instead, svn_editor_move() must be used.
+ *   Note: if the desired semantics is one (or more) copies, followed
+ *   by a delete... that is fine. It is simply that svn_editor_move()
+ *   should be used to describe a semantic move.
  *
  * - One of svn_editor_complete() or svn_editor_abort() must be called
  *   exactly once, which must be the final call the driver invokes.
