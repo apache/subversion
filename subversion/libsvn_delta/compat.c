@@ -113,9 +113,9 @@ struct ev2_file_baton
 
 enum action
 {
-  add,
-  delete,
-  set_prop
+  ACTION_ADD,
+  ACTION_DELETE,
+  ACTION_SET_PROP
 };
 
 struct path_action
@@ -176,7 +176,7 @@ process_actions(void *edit_baton,
 
       switch (action->action)
         {
-          case set_prop:
+          case ACTION_SET_PROP:
             {
               const struct prop_args *p_args = action->args;
 
@@ -196,7 +196,7 @@ process_actions(void *edit_baton,
               break;
             }
 
-          case delete:
+          case ACTION_DELETE:
             {
               svn_revnum_t *revnum = action->args;
 
@@ -207,7 +207,7 @@ process_actions(void *edit_baton,
               break;
             }
 
-          case add:
+          case ACTION_ADD:
             {
               /* ### do something  */
               break;
@@ -269,7 +269,7 @@ ev2_delete_entry(const char *path,
   svn_revnum_t *revnum = apr_palloc(pb->eb->edit_pool, sizeof(*revnum));
 
   *revnum = revision;
-  SVN_ERR(add_action(pb->eb, path, delete, revnum));
+  SVN_ERR(add_action(pb->eb, path, ACTION_DELETE, revnum));
 
   return SVN_NO_ERROR;
 }
@@ -288,7 +288,7 @@ ev2_add_directory(const char *path,
 
   kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
   *kind = svn_node_dir;
-  SVN_ERR(add_action(pb->eb, path, add, kind));
+  SVN_ERR(add_action(pb->eb, path, ACTION_ADD, kind));
 
   cb->eb = pb->eb;
   cb->path = apr_pstrdup(result_pool, path);
@@ -326,7 +326,7 @@ ev2_change_dir_prop(void *dir_baton,
   p_args->name = apr_pstrdup(db->eb->edit_pool, name);
   p_args->value = value ? svn_string_dup(value, db->eb->edit_pool) : NULL;
 
-  SVN_ERR(add_action(db->eb, db->path, set_prop, p_args));
+  SVN_ERR(add_action(db->eb, db->path, ACTION_SET_PROP, p_args));
 
   return SVN_NO_ERROR;
 }
@@ -367,7 +367,7 @@ ev2_add_file(const char *path,
 
   kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
   *kind = svn_node_file;
-  SVN_ERR(add_action(pb->eb, path, add, kind));
+  SVN_ERR(add_action(pb->eb, path, ACTION_ADD, kind));
 
   return SVN_NO_ERROR;
 }
@@ -416,7 +416,7 @@ ev2_change_file_prop(void *file_baton,
   p_args->name = apr_pstrdup(fb->eb->edit_pool, name);
   p_args->value = value ? svn_string_dup(value, fb->eb->edit_pool) : NULL;
 
-  SVN_ERR(add_action(fb->eb, fb->path, set_prop, p_args));
+  SVN_ERR(add_action(fb->eb, fb->path, ACTION_SET_PROP, p_args));
 
   return SVN_NO_ERROR;
 }
