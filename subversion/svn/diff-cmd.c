@@ -168,7 +168,6 @@ svn_cl__diff(apr_getopt_t *os,
   apr_array_header_t *targets;
   svn_stream_t *outstream;
   svn_stream_t *errstream;
-  apr_status_t status;
   const char *old_target, *new_target;
   apr_pool_t *iterpool;
   svn_boolean_t pegged_diff = FALSE;
@@ -181,7 +180,7 @@ svn_cl__diff(apr_getopt_t *os,
   else
     options = NULL;
 
-  /* Get an apr_file_t representing stdout and stderr, which is where
+  /* Get streams representing stdout and stderr, which is where
      we'll have the external 'diff' program print to. */
   SVN_ERR(svn_stream_for_stdout(&outstream, pool));
   SVN_ERR(svn_stream_for_stderr(&errstream, pool));
