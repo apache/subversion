@@ -1,5 +1,5 @@
 /*
- * svn_subr_privae.h : private definitions from libsvn_subr
+ * svn_subr_private.h : private definitions from libsvn_subr
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -44,8 +44,11 @@ svn_spillbuf_create(apr_size_t blocksize,
 
 /* Determine whether the spill buffer has any content.
 
-   Note: once content spills to a file, this will always return TRUE, even
-   if the spill file has been read/consumed.  */
+   Note: there is an edge case for a false positive. If the spill file was
+   read *just* to the end of the file, but not past... then the spill
+   buffer will not realize that no further content exists in the spill file.
+   In this situation, svn_spillbuf_is_empty() will return TRUE, but an
+   attempt to read content will detect that it has been exhausted.  */
 svn_boolean_t
 svn_spillbuf_is_empty(const svn_spillbuf_t *buf);
 
@@ -56,6 +59,18 @@ svn_spillbuf_write(svn_spillbuf_t *buf,
                    const char *data,
                    apr_size_t len,
                    apr_pool_t *scratch_pool);
+
+
+/* Read a block of memory from the spill buffer. @a data will be set to
+   NULL if no content remains. Otherwise, @data and @len will point to
+   data that must be fully-consumed by the caller. This data will remain
+   valid until another call to svn_spillbuf_write(), svn_spillbuf_read(),
+   or svn_spillbuf_process(), or if the spill buffer's pool is cleared.  */
+svn_error_t *
+svn_spillbuf_read(const char **data,
+                  apr_size_t *len,
+                  svn_spillbuf_t *buf,
+                  apr_pool_t *scratch_pool);
 
 
 /* Callback for reading content out of the spill buffer. Set @a stop if
