@@ -85,13 +85,6 @@ svn_sqlite__insert(apr_int64_t *row_id, svn_sqlite__stmt_t *stmt);
 svn_error_t *
 svn_sqlite__update(int *affected_rows, svn_sqlite__stmt_t *stmt);
 
-/* Return in *VERSION the version of the schema for the database as PATH.
-   Use SCRATCH_POOL for temporary allocations. */
-svn_error_t *
-svn_sqlite__get_schema_version(int *version,
-                               const char *path,
-                               apr_pool_t *scratch_pool);
-
 /* Return in *VERSION the version of the schema in DB. Use SCRATCH_POOL
    for temporary allocations.  */
 svn_error_t *
@@ -99,12 +92,6 @@ svn_sqlite__read_schema_version(int *version,
                                 svn_sqlite__db_t *db,
                                 apr_pool_t *scratch_pool);
 
-/* Set DB's schema version to VERSION. Use SCRATCH_POOL for all temporary
-   allocations.  */
-svn_error_t *
-svn_sqlite__set_schema_version(svn_sqlite__db_t *db,
-                               int version,
-                               apr_pool_t *scratch_pool);
 
 
 /* Open a connection in *DB to the database at PATH. Validate the schema,
