@@ -32,6 +32,54 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/** Spill-to-file Buffers
+ *
+ * @defgroup svn_spillbuf_t Spill-to-file Buffers
+ * @{
+ */
+
+/** A buffer that collects blocks of content, possibly using a file.
+ *
+ * The spill-buffer is created with two basic parameters: the size of the
+ * blocks that will be written into the spill-buffer ("blocksize"), and
+ * the (approximate) maximum size that will be allowed in memory ("maxsize").
+ * Once the maxsize is reached, newly written content will be "spilled"
+ * into a temporary file.
+ *
+ * When writing, the amount @b must be less than the blocksize. If more
+ * bytes need to be written, the caller must divide the content into
+ * multiple writes of blocksize (or less) bytes each. Also note that if
+ * the written content is being collected in memory, then it will go
+ * into a block of blocksize bytes. Thus, if the blocksize is defined
+ * as 8000 bytes, and 10 are written into the spill-buffer, then 7990
+ * bytes will be wasted. If the content has exceeded maxsize and is
+ * being written to disk, then the amount written does not matter since
+ * it is simply appended to the spill file.
+ *
+ * ### This writing behavior may be fixed in the future.
+ *
+ * As a result of this design, the ideal application for a spill-buffer
+ * is where known-size blocks of content are generated (or read from
+ * somewhere) and then stored into the spill-buffer.
+ *
+ * To read information back out of a spill buffer, there are two approaches
+ * available to the application:
+ *
+ *   *) reading blocks using svn_spillbuf_read() (a "pull" model)
+ *   *) having blocks passed to a callback via svn_spillbuf_process()
+ *      (a "push" model to your application)
+ *
+ * In both cases, the spill-buffer will provide you with a block of N bytes
+ * that you must fully consume before asking for more data. The callback
+ * style provides for a "stop" parameter to temporarily pause the reading
+ * until another read is desired. The two styles of reading may be mixed,
+ * as the caller desires.
+ *
+ * Writes may be interleaved with reading, and content will be returned
+ * in a FIFO manner. Thus, if content has been placed into the spill-buffer
+ * you will always read the earliest-written data, and any newly-written
+ * content will be appended to the buffer.
+ */
 typedef struct svn_spillbuf_t svn_spillbuf_t;
 
 
@@ -93,6 +141,8 @@ svn_spillbuf_process(svn_boolean_t *exhausted,
                      svn_spillbuf_read_t read_func,
                      void *read_baton,
                      apr_pool_t *scratch_pool);
+
+/** @} */
 
 
 #ifdef __cplusplus
