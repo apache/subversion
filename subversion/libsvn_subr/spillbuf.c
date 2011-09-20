@@ -58,6 +58,9 @@ struct svn_spillbuf_t {
      previously, then the data consumed and returned to this list.  */
   struct memblock_t *avail;
 
+  /* When a block is borrowed for reading, it is listed here.  */
+  struct memblock_t *out_for_reading;
+
   /* Once MEMORY_SIZE exceeds SPILL_SIZE, then arriving content will be
      appended to the (temporary) file indicated by SPILL.  */
   apr_file_t *spill;
@@ -90,12 +93,18 @@ svn_spillbuf_is_empty(const svn_spillbuf_t *buf)
 }
 
 
-/* Get a buffer from the spill-buffer. It will come from the free list,
-   or allocated as necessary.  */
+/* Get a memblock from the spill-buffer. It will be the block that we
+   passed out for reading, come from the free list, or allocated.  */
 static struct memblock_t *
 get_buffer(svn_spillbuf_t *buf)
 {
-  struct memblock_t *mem;
+  struct memblock_t *mem = buf->out_for_reading;
+
+  if (mem != NULL)
+    {
+      buf->out_for_reading = NULL;
+      return mem;
+    }
 
   if (buf->avail == NULL)
     {
@@ -161,7 +170,7 @@ svn_spillbuf_write(svn_spillbuf_t *buf,
      memory. Get a buffer, copy the data there, and link it into our
      pending data.  */
   mem = get_buffer(buf);
-  /* NOTE: *mem is uninitialized. All fields must be stored.  */
+  /* NOTE: mem's size/next are uninitialized.  */
 
   mem->size = len;
   memcpy(mem->data, data, len);
@@ -189,6 +198,145 @@ svn_spillbuf_write(svn_spillbuf_t *buf,
 }
 
 
+/* Return a memblock of content, if any is available. *mem will be NULL if
+   no further content is available. The memblock should eventually be
+   passed to return_buffer() (or stored into buf->out_for_reading which
+   will grab that block at the next get_buffer() call). */
+static svn_error_t *
+read_data(struct memblock_t **mem,
+          svn_spillbuf_t *buf,
+          apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+
+  /* If we have some in-memory blocks, then return one.  */
+  if (buf->head != NULL)
+    {
+      *mem = buf->head;
+      if (buf->tail == *mem)
+        buf->head = buf->tail = NULL;
+      else
+        buf->head = (*mem)->next;
+
+      /* We're using less memory now. If we haven't hit the spill file,
+         then we may be able to keep using memory.  */
+      buf->memory_size -= (*mem)->size;
+
+      return SVN_NO_ERROR;
+    }
+
+  /* No file? Done.  */
+  if (buf->spill == NULL)
+    {
+      *mem = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  /* Assume that the caller has seeked the spill file to the correct pos.  */
+
+  /* Get a buffer that we can read content into.  */
+  *mem = get_buffer(buf);
+  /* NOTE: mem's size/next are uninitialized.  */
+
+  (*mem)->size = buf->blocksize;  /* The size of (*mem)->data  */
+  (*mem)->next = NULL;
+
+  /* Read some data from the spill file into the memblock.  */
+  err = svn_io_file_read(buf->spill, (*mem)->data, &(*mem)->size,
+                         scratch_pool);
+  if (err != NULL && APR_STATUS_IS_EOF(err->apr_err))
+    {
+      /* We've exhausted the file. Close it, so any new content will go
+         into memory rather than the file.  */
+      svn_error_clear(err);
+      SVN_ERR(svn_io_file_close(buf->spill, scratch_pool));
+      buf->spill = NULL;
+    }
+  else if (err)
+    {
+      return_buffer(buf, *mem);
+      return svn_error_trace(err);
+    }
+
+  /* If we didn't read anything from the file, then avoid returning a
+     memblock (ie. just like running out of content).  */
+  if ((*mem)->size == 0)
+    {
+      return_buffer(buf, *mem);
+      *mem = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  /* Mark the data that we consumed from the spill file.  */
+  buf->spill_start += (*mem)->size;
+
+  /* *mem has been initialized. Done.  */
+  return SVN_NO_ERROR;
+}
+
+
+/* If the next read would consume data from the file, then seek to the
+   correct position.  */
+static svn_error_t *
+maybe_seek(svn_boolean_t *seeked,
+           const svn_spillbuf_t *buf,
+           apr_pool_t *scratch_pool)
+{
+  if (buf->head == NULL && buf->spill != NULL)
+    {
+      apr_off_t output_unused;
+
+      /* Seek to where we left off reading.  */
+      output_unused = buf->spill_start;  /* ### stupid API  */
+      SVN_ERR(svn_io_file_seek(buf->spill,
+                               APR_SET, &output_unused,
+                               scratch_pool));
+      if (seeked != NULL)
+        *seeked = TRUE;
+    }
+  else if (seeked != NULL)
+    {
+      *seeked = FALSE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_spillbuf_read(const char **data,
+                  apr_size_t *len,
+                  svn_spillbuf_t *buf,
+                  apr_pool_t *scratch_pool)
+{
+  struct memblock_t *mem;
+
+  /* Possibly seek... */
+  SVN_ERR(maybe_seek(NULL, buf, scratch_pool));
+
+  SVN_ERR(read_data(&mem, buf, scratch_pool));
+  if (mem == NULL)
+    {
+      *data = NULL;
+      *len = 0;
+    }
+  else
+    {
+      *data = mem->data;
+      *len = mem->size;
+
+      /* If a block was out for reading, then return it.  */
+      if (buf->out_for_reading != NULL)
+        return_buffer(buf, buf->out_for_reading);
+
+      /* Remember that we've passed this block out for reading.  */
+      buf->out_for_reading = mem;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_spillbuf_process(svn_boolean_t *exhausted,
                      svn_spillbuf_t *buf,
@@ -196,31 +344,33 @@ svn_spillbuf_process(svn_boolean_t *exhausted,
                      void *read_baton,
                      apr_pool_t *scratch_pool)
 {
-  struct memblock_t *mem;
-  svn_error_t *err;
-  apr_off_t output_unused;
-  svn_boolean_t stop;
+  svn_boolean_t has_seeked = FALSE;
 
   *exhausted = FALSE;
 
-  /* Empty out memory buffers until we run out, or we get paused again.  */
-  while (buf->head != NULL)
+  while (TRUE)
     {
-      /* Pull the HEAD buffer out of the list.  */
-      mem = buf->head;
-      if (buf->tail == mem)
-        buf->head = buf->tail = NULL;
-      else
-        buf->head = mem->next;
+      struct memblock_t *mem;
+      svn_error_t *err;
+      svn_boolean_t stop;
 
-      /* We're using less memory now. If we haven't hit the spill file,
-         then we may be able to keep using memory.  */
-      buf->memory_size -= mem->size;
+      /* If this call to read_data() will read from the spill file, and we
+         have not seek'd the file... then do it now.  */
+      if (!has_seeked)
+        SVN_ERR(maybe_seek(&has_seeked, buf, scratch_pool));
+
+      /* Get some content to pass to the read callback.  */
+      SVN_ERR(read_data(&mem, buf, scratch_pool));
+      if (mem == NULL)
+        {
+          *exhausted = TRUE;
+          return SVN_NO_ERROR;
+        }
 
       err = read_func(&stop, read_baton, mem->data, mem->size);
 
       return_buffer(buf, mem);
-
+      
       if (err)
         return svn_error_trace(err);
 
@@ -229,58 +379,5 @@ svn_spillbuf_process(svn_boolean_t *exhausted,
         return SVN_NO_ERROR;
     }
 
-  /* If we don't have a spill file, then we've exhausted all
-     pending content.  */
-  if (buf->spill == NULL)
-    {
-      *exhausted = TRUE;
-      return SVN_NO_ERROR;
-    }
-
-  /* Seek once to where we left off reading.  */
-  output_unused = buf->spill_start;  /* ### stupid API  */
-  SVN_ERR(svn_io_file_seek(buf->spill,
-                           APR_SET, &output_unused,
-                           scratch_pool));
-
-  /* We need a buffer for reading out of the file. One of these will always
-     exist by the time we start reading from the spill file.  */
-  mem = get_buffer(buf);
-
-  /* Keep reading until we hit EOF, or get paused again.  */
-  while (TRUE)
-    {
-      apr_size_t len = buf->blocksize;
-      apr_status_t status;
-
-      /* Read some data and remember where we left off.  */
-      status = apr_file_read(buf->spill, mem->data, &len);
-      if (status && !APR_STATUS_IS_EOF(status))
-        {
-          err = svn_error_wrap_apr(status, NULL);
-          break;
-        }
-      buf->spill_start += len;
-
-      err = read_func(&stop, read_baton, mem->data, len);
-      if (err)
-        break;
-
-      /* If we just consumed everything in the spill file, then we may
-         be done with the parsing.  */
-      /* ### future change: when we hit EOF, then remove the spill file.
-         ### we could go back to using memory for a while.  */
-      if (APR_STATUS_IS_EOF(status))
-        {
-          *exhausted = TRUE;
-          break;
-        }
-
-      /* If the callbacks paused the parsing, then we're done for now.  */
-      if (stop)
-        break;
-    }
-
-  return_buffer(buf, mem);
-  return svn_error_trace(err);  /* may be SVN_NO_ERROR  */
+  /* NOTREACHED */
 }
