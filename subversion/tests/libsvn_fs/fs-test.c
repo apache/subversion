@@ -2010,13 +2010,13 @@ copy_test(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-copy-test",
                               opts, pool));
 
-  /* In first txn, create and commit the greek tree. */
+  /* r1: In first txn, create and commit the greek tree. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
 
-  /* In second txn, copy the file A/D/G/pi into the subtree A/D/H as
+  /* r2: In second txn, copy the file A/D/G/pi into the subtree A/D/H as
      pi2.  Change that file's contents to state its new name.  Along
      the way, test that the copy history was preserved both during the
      transaction and after the commit. */
@@ -2067,7 +2067,7 @@ copy_test(const svn_test_opts_t *opts,
          "post-commit copy history wrong (path) for A/D/H/pi2");
   }
 
-  /* Let's copy the copy we just made, to make sure copy history gets
+  /* r3: Let's copy the copy we just made, to make sure copy history gets
      chained correctly. */
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool));
   SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, pool));
@@ -2108,7 +2108,7 @@ copy_test(const svn_test_opts_t *opts,
          "second copy history wrong (path) for A/D/H/pi3");
   }
 
-  /* Commit a regular change to a copy, make sure the copy history
+  /* r4: Commit a regular change to a copy, make sure the copy history
      isn't inherited. */
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool));
   SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, pool));
@@ -2150,7 +2150,7 @@ copy_test(const svn_test_opts_t *opts,
          "copy history wrong (path) for A/D/H/pi3");
   }
 
-  /* Then, as if that wasn't fun enough, copy the whole subtree A/D/H
+  /* r5: Then, as if that wasn't fun enough, copy the whole subtree A/D/H
      into the root directory as H2! */
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool));
   SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, pool));
@@ -2193,7 +2193,7 @@ copy_test(const svn_test_opts_t *opts,
        string for svn_fs_copied_from() for more on this. */
   }
 
-  /* Let's live dangerously.  What happens if we copy a path into one
+  /* r6: Let's live dangerously.  What happens if we copy a path into one
      of its own children.  Looping filesystem?  Cyclic ancestry?
      Another West Virginia family tree with no branches?  We certainly
      hope that's not the case. */
