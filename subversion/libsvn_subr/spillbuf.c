@@ -139,15 +139,11 @@ svn_spillbuf_write(svn_spillbuf_t *buf,
 {
   struct memblock_t *mem;
 
-  /* The caller should not have provided us more than we can store into
-     a single memory block.  */
-  SVN_ERR_ASSERT(len <= buf->blocksize);
-
   /* We do not (yet) have a spill file, but the amount stored in memory
-     has grown too large. Create the file and place the pending data into
+     will grow too large. Create the file and place the pending data into
      the temporary file.  */
   if (buf->spill == NULL
-      && buf->memory_size > buf->maxsize)
+      && (buf->memory_size + len) > buf->maxsize)
     {
       SVN_ERR(svn_io_open_unique_file3(&buf->spill,
                                        NULL /* temp_path */,
@@ -168,33 +164,52 @@ svn_spillbuf_write(svn_spillbuf_t *buf,
       return SVN_NO_ERROR;
     }
 
-  /* We're still within bounds of holding the pending information in
-     memory. Get a buffer, copy the data there, and link it into our
-     pending data.  */
-  mem = get_buffer(buf);
-  /* NOTE: mem's size/next are uninitialized.  */
-
-  mem->size = len;
-  memcpy(mem->data, data, len);
-  mem->next = NULL;
-
-  /* Start a list of buffers, or append to the end of the linked list
-     of buffers.  */
-  if (buf->tail == NULL)
+  while (len > 0)
     {
-      buf->head = mem;
-      buf->tail = mem;
-    }
-  else
-    {
-      buf->tail->next = mem;
-      buf->tail = mem;
-    }
+      apr_size_t amt;
 
-  /* We need to record how much is buffered in memory. Once we reach
-     buf->maxsize (or thereabouts, it doesn't have to be precise), then
-     we'll switch to putting the content into a file.  */
-  buf->memory_size += len;
+      if (buf->tail == NULL || buf->tail->size == buf->blocksize)
+        {
+          /* There is no existing memblock (that may have space), or the
+             tail memblock has no space, so we need a new memblock.  */
+          mem = get_buffer(buf);
+          mem->size = 0;
+          mem->next = NULL;
+        }
+      else
+        {
+          mem = buf->tail;
+        }
+
+      /* Compute how much to write into the memblock.  */
+      amt = buf->blocksize - mem->size;
+      if (amt > len)
+        amt = len;
+
+      /* Copy some data into this memblock.  */
+      memcpy(&mem->data[mem->size], data, amt);
+      mem->size += amt;
+      data += amt;
+      len -= amt;
+
+      /* We need to record how much is buffered in memory. Once we reach
+         buf->maxsize (or thereabouts, it doesn't have to be precise), then
+         we'll switch to putting the content into a file.  */
+      buf->memory_size += amt;
+
+      /* Start a list of buffers, or (if we're not writing into the tail)
+         append to the end of the linked list of buffers.  */
+      if (buf->tail == NULL)
+        {
+          buf->head = mem;
+          buf->tail = mem;
+        }
+      else if (mem != buf->tail)
+        {
+          buf->tail->next = mem;
+          buf->tail = mem;
+        }
+    }
 
   return SVN_NO_ERROR;
 }
