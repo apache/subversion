@@ -51,6 +51,4 @@ if __name__ == '__main__':
     width = 80
   else:
     width = int(sys.argv[1])
-  counts = count(sys.stdin)
-
-  histogram(counts, width)
+  histogram(count(sys.stdin), width)
