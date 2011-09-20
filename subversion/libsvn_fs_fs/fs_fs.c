@@ -1434,6 +1434,7 @@ upgrade_body(void *baton, apr_pool_t *pool)
    * ### We'd need to parse all node-revisions to create successor-ID data.
    * ### This could be done, but for now, we punt. */
   if (format < SVN_FS_FS__MIN_SUCCESSORS_FORMAT)
+    /* ### TODO(sid): implement upgrade */
     abort();
 
   /* Bump the format file. */
