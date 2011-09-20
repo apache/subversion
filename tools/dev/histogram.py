@@ -20,6 +20,7 @@
 #
 
 import sys
+import operator
 
 
 def count(infile):
@@ -38,8 +39,9 @@ def histogram(counts, width):
 
   adjustor = float(max_count) / (width - max_len - 3)
 
-  for (count, author) in sorted([(v, k) for (k, v) in counts.items()],
-                                reverse=True):
+  for author, count in sorted(counts.items(),
+                              key=operator.itemgetter(1),  # sort on count
+                              reverse=True):
     print "%-*s | %s" % (max_len, author, "X"*int(count/adjustor))
 
 
