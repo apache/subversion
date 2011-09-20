@@ -117,15 +117,15 @@ Candidate changes:
    Votes:
      +1: stsp (for 1.7.1)
 
- * r1171708
-   Enable FSFS cache in svn, introduce config:miscellaneous:memory-cache-size.
-   Justification:
-     Make FSFS intensive operations, like blame, faster over ra_local.
-   Votes:
-     +1: philip, hwright
-
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1171708, r1173111
+   Enable FSFS cache in svn, introduce config:miscellaneous:memory-cache-size.
+   Justification:
+     Make FSFS intensive operations, like blame, faster over ra_local.
+   Votes:
+     +1: philip, hwright, danielsh
