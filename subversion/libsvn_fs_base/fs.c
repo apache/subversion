@@ -883,6 +883,11 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
       svn_pool_destroy(subpool);
     }
 
+  /* Create the successors index. */
+  if (old_format_number < SVN_FS_BASE__MIN_SUCCESSOR_IDS_FORMAT)
+    /* ### TODO(sid): implement upgrade */
+    abort();
+
   return SVN_NO_ERROR;
 }
 

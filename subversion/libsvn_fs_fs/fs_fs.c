@@ -1406,20 +1406,6 @@ upgrade_body(void *baton, apr_pool_t *pool)
   if (format == SVN_FS_FS__FORMAT_NUMBER)
     return SVN_NO_ERROR;
 
-  /* ### We don't [yet] support upgrades to formats that support successor-IDs.
-   * ### We'd need to parse all node-revisions to create successor-ID data.
-   * ### This could be done, but for now, we punt. */
-  if (SVN_FS_FS__FORMAT_NUMBER >= SVN_FS_FS__MIN_SUCCESSORS_FORMAT &&
-      format < SVN_FS_FS__MIN_SUCCESSORS_FORMAT)
-    {
-      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                               _("Upgrading FSFS filesystems to format %d is "
-                                 "not supported; please dump this repository "
-                                 "and load the dump file into a new "
-                                 "repository"),
-                               SVN_FS_FS__MIN_SUCCESSORS_FORMAT);
-    }
-
   /* If our filesystem predates the existance of the 'txn-current
      file', make that file and its corresponding lock file. */
   if (format < SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
@@ -1443,6 +1429,12 @@ upgrade_body(void *baton, apr_pool_t *pool)
   /* If our filesystem is new enough, write the min unpacked rev file. */
   if (format < SVN_FS_FS__MIN_PACKED_FORMAT)
     SVN_ERR(svn_io_file_create(path_min_unpacked_rev(fs, pool), "0\n", pool));
+
+  /* ### We don't [yet] support upgrades to formats that support successor-IDs.
+   * ### We'd need to parse all node-revisions to create successor-ID data.
+   * ### This could be done, but for now, we punt. */
+  if (format < SVN_FS_FS__MIN_SUCCESSORS_FORMAT)
+    abort();
 
   /* Bump the format file. */
   return write_format(format_path, SVN_FS_FS__FORMAT_NUMBER, max_files_per_dir,
