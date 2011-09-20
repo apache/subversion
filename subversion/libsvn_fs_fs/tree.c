@@ -3576,9 +3576,7 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
 
 /* Calculates the mergeinfo for PATH under REV_ROOT using inheritance
    type INHERIT.  Returns it in *MERGEINFO, or NULL if there is none.
-   If *MERGEINFO is inherited and VALIDATE_INHERITED_MERGEINFO is true,
-   then *MERGEINFO will only contain path-revs that actually exist in
-   repository.  The result is allocated in RESULT_POOL; SCRATCH_POOL is
+   The result is allocated in RESULT_POOL; SCRATCH_POOL is
    used for temporary allocations.
  */
 static svn_error_t *
@@ -3586,7 +3584,6 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
                        svn_fs_root_t *rev_root,
                        const char *path,
                        svn_mergeinfo_inheritance_t inherit,
-                       svn_boolean_t validate_inherited_mergeinfo,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
@@ -3637,6 +3634,8 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
         }
     }
 
+  svn_pool_destroy(iterpool);
+
   SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, nearest_ancestor->node,
                                       scratch_pool));
   mergeinfo_string = apr_hash_get(proplist, SVN_PROP_MERGEINFO,
@@ -3663,7 +3662,6 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
             err = NULL;
             *mergeinfo = NULL;
           }
-        svn_pool_destroy(iterpool);
         return svn_error_trace(err);
       }
   }
@@ -3685,14 +3683,8 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
                                                parent_path, nearest_ancestor,
                                                scratch_pool),
                                              result_pool));
-
-      if (validate_inherited_mergeinfo)
-        SVN_ERR(svn_fs_fs__validate_mergeinfo(mergeinfo, rev_root->fs,
-                                              *mergeinfo, result_pool,
-                                              iterpool));
     }
 
-  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -3725,17 +3717,13 @@ add_descendant_mergeinfo(svn_mergeinfo_catalog_t result_catalog,
 
 
 /* Get the mergeinfo for a set of paths, returned in
-   *MERGEINFO_CATALOG.  If the mergeinfo for any path is inherited
-   and VALIDATE_INHERITED_MERGEINFO is true, then the mergeinfo for
-   that path in *MERGEINFO_CATALOG will only contain path-revs that
-   actually exist in repository.  Returned values are allocated in
+   *MERGEINFO_CATALOG.  Returned values are allocated in
    POOL, while temporary values are allocated in a sub-pool. */
 static svn_error_t *
 get_mergeinfos_for_paths(svn_fs_root_t *root,
                          svn_mergeinfo_catalog_t *mergeinfo_catalog,
                          const apr_array_header_t *paths,
                          svn_mergeinfo_inheritance_t inherit,
-                         svn_boolean_t validate_inherited_mergeinfo,
                          svn_boolean_t include_descendants,
                          apr_pool_t *pool)
 {
@@ -3752,8 +3740,7 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
       svn_pool_clear(iterpool);
 
       err = get_mergeinfo_for_path(&path_mergeinfo, root, path,
-                                   inherit, validate_inherited_mergeinfo,
-                                   pool, iterpool);
+                                   inherit, pool, iterpool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
@@ -3788,7 +3775,6 @@ fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                  svn_fs_root_t *root,
                  const apr_array_header_t *paths,
                  svn_mergeinfo_inheritance_t inherit,
-                 svn_boolean_t validate_inherited_mergeinfo,
                  svn_boolean_t include_descendants,
                  apr_pool_t *pool)
 {
@@ -3808,7 +3794,7 @@ fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
 
   /* Retrieve a path -> mergeinfo hash mapping. */
   return get_mergeinfos_for_paths(root, catalog, paths,
-                                  inherit, validate_inherited_mergeinfo,
+                                  inherit,
                                   include_descendants, pool);
 }
 
