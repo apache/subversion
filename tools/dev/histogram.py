@@ -23,27 +23,24 @@ import sys
 
 
 def count(infile):
+  # infile should be a simple file with author names on each line
   counts = {}
   for line in infile:
-    line = line.strip()
-    if line in counts:
-      counts[line] = counts[line] + 1
-    else:
-      counts[line] = 1
+    author = line.strip()
+    counts[author] = counts.get(author, 0) + 1
 
   return counts
 
 
 def histogram(counts, width):
-  (max_len, max_count) = reduce(lambda x, i: (max(len(i[0]), x[0]),
-                                              max(i[1], x[1])),
-                                counts.iteritems(), (0, 0))
+  max_len = max([len(author) for author in counts.keys()])
+  max_count = max(counts.values())
 
   adjustor = float(max_count) / (width - max_len - 3)
 
-  for (count, author) in sorted((v, k) for (k, v) in counts.items())[::-1]:
-    print "%s%s | %s" % (author, " "*(max_len-len(author)),
-                                 "X"*int(count/adjustor))
+  for (count, author) in sorted([(v, k) for (k, v) in counts.items()],
+                                reverse=True):
+    print "%-*s | %s" % (max_len, author, "X"*int(count/adjustor))
 
 
 if __name__ == '__main__':
