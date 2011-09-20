@@ -5964,6 +5964,12 @@ read_successor_index_entry(apr_off_t *revision_offset,
   /* The trivial case: The caller asked for the first revision in a file. */
   if (revision % FSFS_SUCCESSORS_MAX_REVS_PER_FILE == 0)
     {
+      /* We promise to open the filehandle, too. */
+      if (file_p && ! *file_p)
+        SVN_ERR(svn_io_file_open(file_p, local_abspath, APR_READ,
+                                 APR_OS_DEFAULT, result_pool));
+
+      /* Set the right answer (without consulting the file), and get out. */
       *revision_offset = FSFS_SUCCESSORS_INDEX_SIZE;
       return SVN_NO_ERROR;
     }
@@ -8066,6 +8072,7 @@ read_successors_from_candidates(apr_array_header_t **successors_p,
       /* This will either reuse IDS_FILE or open() it for us. */
       SVN_ERR(read_successor_index_entry(&offset, &ids_file, fs, rev,
                                          scratch_pool, iterpool));
+      SVN_ERR_ASSERT(ids_file);
 
       /* Seek and read. */
       SVN_ERR(svn_io_file_seek(ids_file, APR_SET, &offset, iterpool));
