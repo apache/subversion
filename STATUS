@@ -129,10 +129,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1169650
-   Make relocate act recursively on all externals, not just immediate ones.
-   Justification:
-     Relocating externals is new 1.7, no reason not to do them all.
-   Votes:
-     +1: philip, neels, hwright
