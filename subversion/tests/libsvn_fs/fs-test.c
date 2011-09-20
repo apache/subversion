@@ -4924,7 +4924,8 @@ node_history(const svn_test_opts_t *opts,
         expected, sizeof(expected)/sizeof(expected[0]),
         locations, 0, pool
       };
-      SVN_ERR(check_history_location("/A/D/G/pi", 1, history, pool));
+      SVN_ERR(check_history_location(expected[0].path, expected[0].rev,
+                                     history, pool));
       SVN_ERR(svn_fs_history_next(history_next_receiver, &hnb, history, pool));
       SVN_TEST_ASSERT(hnb.locations->nelts == hnb.length);
 
@@ -4956,7 +4957,8 @@ node_history(const svn_test_opts_t *opts,
         expected, sizeof(expected)/sizeof(expected[0]),
         locations, 0, pool
       };
-      SVN_ERR(check_history_location("/A/D/H/pi2", 2, history, pool));
+      SVN_ERR(check_history_location(expected[0].path, expected[0].rev,
+                                     history, pool));
       SVN_ERR(svn_fs_history_next(history_next_receiver, &hnb, history, pool));
       SVN_TEST_ASSERT(hnb.locations->nelts == hnb.length);
 
@@ -4988,7 +4990,8 @@ node_history(const svn_test_opts_t *opts,
         expected, sizeof(expected)/sizeof(expected[0]),
         locations, 0, pool
       };
-      SVN_ERR(check_history_location("/A/D/H/pi3", 3, history, pool));
+      SVN_ERR(check_history_location(expected[0].path, expected[0].rev,
+                                     history, pool));
       SVN_ERR(svn_fs_history_next(history_next_receiver, &hnb, history, pool));
       SVN_TEST_ASSERT(hnb.locations->nelts == hnb.length);
 
