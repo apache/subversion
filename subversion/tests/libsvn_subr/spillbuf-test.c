@@ -141,11 +141,67 @@ test_spillbuf_file(apr_pool_t *pool)
 }
 
 
+static svn_error_t *
+test_spillbuf_interleaving(apr_pool_t *pool)
+{
+  svn_spillbuf_t *buf = svn_spillbuf_create(8 /* blocksize */,
+                                            11 /* maxsize */,
+                                            pool);
+  const char *readptr;
+  apr_size_t readlen;
+
+  SVN_ERR(svn_spillbuf_write(buf, "abcdef", 6, pool));
+  SVN_ERR(svn_spillbuf_write(buf, "ghijkl", 6, pool));
+  /* now: two blocks of 6 bytes each  */
+
+  SVN_ERR(svn_spillbuf_read(&readptr, &readlen, buf, pool));
+  SVN_TEST_ASSERT(readptr != NULL
+                  && readlen == 6
+                  && memcmp(readptr, "abcdef", 6) == 0);
+  /* now: one block of 6 bytes  */
+
+  SVN_ERR(svn_spillbuf_write(buf, "mnopqr", 6, pool));
+  /* now: two blocks of 6 bytes each  */
+
+  SVN_ERR(svn_spillbuf_read(&readptr, &readlen, buf, pool));
+  SVN_TEST_ASSERT(readptr != NULL
+                  && readlen == 6
+                  && memcmp(readptr, "ghijkl", 6) == 0);
+  /* now: one block of 6 bytes  */
+
+  SVN_ERR(svn_spillbuf_write(buf, "stuvwx", 6, pool));
+  SVN_ERR(svn_spillbuf_write(buf, "ABCDEF", 6, pool));
+  SVN_ERR(svn_spillbuf_write(buf, "GHIJKL", 6, pool));
+  /* now: two blocks of 6 bytes each, and 12 bytes spilled to a file  */
+
+  SVN_ERR(svn_spillbuf_read(&readptr, &readlen, buf, pool));
+  SVN_TEST_ASSERT(readptr != NULL
+                  && readlen == 6
+                  && memcmp(readptr, "mnopqr", 6) == 0);
+  SVN_ERR(svn_spillbuf_read(&readptr, &readlen, buf, pool));
+  SVN_TEST_ASSERT(readptr != NULL
+                  && readlen == 6
+                  && memcmp(readptr, "stuvwx", 6) == 0);
+  SVN_ERR(svn_spillbuf_read(&readptr, &readlen, buf, pool));
+  SVN_TEST_ASSERT(readptr != NULL
+                  && readlen == 8
+                  && memcmp(readptr, "ABCDEFGH", 8) == 0);
+  SVN_ERR(svn_spillbuf_read(&readptr, &readlen, buf, pool));
+  SVN_TEST_ASSERT(readptr != NULL
+                  && readlen == 4
+                  && memcmp(readptr, "IJKL", 4) == 0);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* The test table.  */
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_spillbuf_basic, "basic spill buffer test"),
     SVN_TEST_PASS2(test_spillbuf_file, "spill buffer file test"),
+    SVN_TEST_PASS2(test_spillbuf_interleaving,
+                   "interleaving reads and writes"),
     SVN_TEST_NULL
   };
