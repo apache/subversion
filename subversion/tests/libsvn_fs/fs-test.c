@@ -4855,12 +4855,35 @@ node_history(const svn_test_opts_t *opts,
     SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
   }
 
+  /* r3: copy pi2 to pi3, no textmods. */
+  {
+    svn_fs_root_t *rev_root;
+
+    SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool));
+    SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, pool));
+    SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+    SVN_ERR(svn_fs_copy(rev_root, "A/D/H/pi2", txn_root, "A/D/H/pi3", pool));
+    SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+  }
+
+  /* r4: mod pi3, no copies. */
+  {
+    svn_fs_root_t *rev_root;
+
+    SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool));
+    SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, pool));
+    SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+    SVN_ERR(svn_test__set_file_contents
+            (txn_root, "A/D/H/pi3", "This is the file 'pi3'.\n", pool));
+    SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+  }
+
   /* Go back in history: pi2@r2 -> pi@r1 */
   {
     svn_fs_history_t *history;
     svn_fs_root_t *rev_root;
 
-    SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool));
+    SVN_ERR(svn_fs_revision_root(&rev_root, fs, 2, pool));
 
     /* Fetch a history object, and walk it until its start. */
 
@@ -4877,7 +4900,7 @@ node_history(const svn_test_opts_t *opts,
     SVN_TEST_ASSERT(history == NULL);
   }
 
-  /* Go forward in history: pi@r1 -> pi2@r2 */
+  /* Go forward in history: pi@r1 -> pi2@r2 (copy+mod) */
   {
     svn_fs_history_t *history;
     svn_fs_root_t *rev_root;
@@ -4902,6 +4925,70 @@ node_history(const svn_test_opts_t *opts,
         locations, 0, pool
       };
       SVN_ERR(check_history_location("/A/D/G/pi", 1, history, pool));
+      SVN_ERR(svn_fs_history_next(history_next_receiver, &hnb, history, pool));
+      SVN_TEST_ASSERT(hnb.locations->nelts == hnb.length);
+
+      history = APR_ARRAY_IDX(hnb.locations, 0, svn_fs_history_t *);
+    }
+  }
+
+  /* Go forward in history: pi2@r2 -> pi3@r3 (copy) */
+  {
+    svn_fs_history_t *history;
+    svn_fs_root_t *rev_root;
+    
+    SVN_ERR(svn_fs_revision_root(&rev_root, fs, 2, pool));
+
+    /* Fetch another history object, and walk forward. */
+
+    SVN_ERR(svn_fs_node_history(&history, rev_root, "A/D/H/pi2", pool));
+
+    /* Validate the just-fetched history object. */
+    {
+      apr_array_header_t *locations = apr_array_make(pool, 5,
+                                                     sizeof(svn_fs_history_t *)
+                                                     );
+      struct location_t expected[] = {
+        { "/A/D/H/pi2",  2 },
+        { "/A/D/H/pi3",  3 },
+      };
+      struct history_next_baton hnb = {
+        expected, sizeof(expected)/sizeof(expected[0]),
+        locations, 0, pool
+      };
+      SVN_ERR(check_history_location("/A/D/H/pi2", 2, history, pool));
+      SVN_ERR(svn_fs_history_next(history_next_receiver, &hnb, history, pool));
+      SVN_TEST_ASSERT(hnb.locations->nelts == hnb.length);
+
+      history = APR_ARRAY_IDX(hnb.locations, 0, svn_fs_history_t *);
+    }
+  }
+
+  /* Go forward in history: pi3@r3 -> pi3@r4 (mod) */
+  {
+    svn_fs_history_t *history;
+    svn_fs_root_t *rev_root;
+    
+    SVN_ERR(svn_fs_revision_root(&rev_root, fs, 3, pool));
+
+    /* Fetch another history object, and walk forward. */
+
+    SVN_ERR(svn_fs_node_history(&history, rev_root, "A/D/H/pi3", pool));
+
+    /* Validate the just-fetched history object. */
+    {
+      apr_array_header_t *locations = apr_array_make(pool, 5,
+                                                     sizeof(svn_fs_history_t *)
+                                                     );
+      struct location_t expected[] = {
+        { "/A/D/H/pi3",  3 },
+        { "/A/D/H/pi3",  4 },
+      };
+      struct history_next_baton hnb = {
+        expected, sizeof(expected)/sizeof(expected[0]),
+        locations, 0, pool
+      };
+      SVN_ERR(check_history_location("/A/D/H/pi3", 3, history, pool));
       SVN_ERR(svn_fs_history_next(history_next_receiver, &hnb, history, pool));
       SVN_TEST_ASSERT(hnb.locations->nelts == hnb.length);
 
