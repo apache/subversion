@@ -1975,6 +1975,9 @@ write_entry(struct write_baton **entry_node,
       base_node->changed_date = entry->cmt_date;
       base_node->changed_author = entry->cmt_author;
 
+      if (entry->file_external_path)
+        base_node->file_external = TRUE;
+
       SVN_ERR(insert_node(sdb, base_node, scratch_pool));
 
       /* We have to insert the lock after the base node, because the node
@@ -1991,12 +1994,6 @@ write_entry(struct write_baton **entry_node,
 
           SVN_ERR(svn_wc__db_lock_add(db, tmp_entry_abspath, &lock,
                                       scratch_pool));
-        }
-
-      /* Now, update the file external information. */
-      if (entry->file_external_path)
-        {
-          base_node->file_external = TRUE;
         }
     }
 
