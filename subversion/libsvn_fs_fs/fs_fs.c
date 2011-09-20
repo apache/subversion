@@ -5974,7 +5974,7 @@ read_successor_index_entry(apr_uint64_t *revision_offset,
       return SVN_NO_ERROR;
     }
 
-  /* ### TODO(sid): don't constantly re-open the file */
+  /* Open the file or re-use the opened file our caller provides. */
   if (file_p && *file_p)
     file = *file_p;
   else
@@ -6007,6 +6007,7 @@ read_successor_index_entry(apr_uint64_t *revision_offset,
     }
   *revision_offset = ((apr_uint64_t)(ntohl(n)) << 32) | ntohl(m);
 
+  /* Close the file or let our caller stash it. */
   if (file_p && ! *file_p)
     *file_p = file;
   else if (! file_p)
