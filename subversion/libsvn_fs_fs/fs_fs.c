@@ -97,9 +97,16 @@
 #define FSFS_SUCCESSORS_INDEX_REV_OFFSET(rev) \
   (((rev) % FSFS_SUCCESSORS_MAX_REVS_PER_FILE) * 8)
 
+/* ffd->max_files_per_dir will be zero for 'layout linear' filesystems.
+   This is an alternative for code that does sharding even for such
+   filesystems.  Changing the magic number, 1000, will cause
+   incompatibilities with existing 'layout linear' repositories. */
+#define FSFS_SUCCESSORS_MAX_FILES_PER_DIR(ffd) \
+  ((ffd)->max_files_per_dir ? (ffd)->max_files_per_dir : 1000)
+
 /* Calculate the number of revisions in a successors shard. */
 #define FSFS_SUCCESSORS_REVISIONS_PER_SHARD(ffd) \
-  ((ffd)->max_files_per_dir * FSFS_SUCCESSORS_MAX_REVS_PER_FILE)
+  (FSFS_SUCCESSORS_MAX_FILES_PER_DIR((ffd)) * FSFS_SUCCESSORS_MAX_REVS_PER_FILE)
 
 /* Marker terminating per-revision successor-IDs. */
 #define FSFS_SUCCESSOR_IDS_END_MARKER "END"
@@ -272,7 +279,6 @@ path_successor_ids_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
   fs_fs_data_t *ffd = fs->fsap_data;
   long shard;
   
-  assert(ffd->max_files_per_dir);
   shard = rev / FSFS_SUCCESSORS_REVISIONS_PER_SHARD(ffd);
 
   return svn_dirent_join_many(pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
@@ -287,7 +293,6 @@ path_successor_ids(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
   fs_fs_data_t *ffd = fs->fsap_data;
   long filenum;
   
-  assert(ffd->max_files_per_dir);
   filenum = (rev % FSFS_SUCCESSORS_REVISIONS_PER_SHARD(ffd)) / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
 
   return svn_dirent_join_many(pool, path_successor_ids_shard(fs, rev, pool),
@@ -301,7 +306,6 @@ path_successor_node_revs_shard(svn_fs_t *fs, svn_revnum_t rev,
   fs_fs_data_t *ffd = fs->fsap_data;
   long shard;
 
-  assert(ffd->max_files_per_dir);
   shard = rev / FSFS_SUCCESSORS_REVISIONS_PER_SHARD(ffd);
   return svn_dirent_join_many(pool, fs->path, PATH_SUCCESSORS_TOP_DIR,
                               PATH_SUCCESSORS_NODE_REVS_DIR,
@@ -318,7 +322,6 @@ path_successor_node_revs(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
   
   /* ### TODO(sid): danielsh: is there a need to guard for ID == NULL here? */
   rev = svn_fs_fs__id_rev(id);
-  assert(ffd->max_files_per_dir);
   filenum = (rev % FSFS_SUCCESSORS_REVISIONS_PER_SHARD(ffd)) / FSFS_SUCCESSORS_MAX_REVS_PER_FILE;
 
   return svn_dirent_join_many(pool,
@@ -6026,8 +6029,6 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
   apr_hash_index_t *hi;
   apr_off_t my_offset;
   apr_uint32_t n;
-
-  assert(ffd->max_files_per_dir); /* ### TODO(sid): account for 'layout linear' */
 
   /* Create a temporary file to write new successor data to. */
   SVN_ERR(svn_io_open_unique_file3(&successor_ids_temp_file,
