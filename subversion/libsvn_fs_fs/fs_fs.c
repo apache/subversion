@@ -5953,7 +5953,7 @@ copy_file_partially(apr_file_t *source_file,
  * handle, which is allocated in RESULT_POOL.
  */
 static svn_error_t *
-read_successor_index_entry(apr_uint64_t *revision_offset,
+read_successor_index_entry(apr_off_t *revision_offset,
                            apr_file_t **file_p,
                            svn_fs_t *fs,
                            svn_revnum_t revision,
@@ -5965,6 +5965,7 @@ read_successor_index_entry(apr_uint64_t *revision_offset,
   apr_file_t *file;
   apr_uint32_t m;
   apr_uint32_t n;
+  apr_uint64_t nm;
   const char *local_abspath = path_successor_ids(fs, revision, scratch_pool);
 
   /* The trivial case: The caller asked for the first revision in a file. */
@@ -6005,7 +6006,13 @@ read_successor_index_entry(apr_uint64_t *revision_offset,
                                _("Missing data at offset %llu in file '%s'"),
                                offset + 4, local_abspath);
     }
-  *revision_offset = ((apr_uint64_t)(ntohl(n)) << 32) | ntohl(m);
+  nm = (((apr_uint64_t)ntohl(n)) << 32) | ntohl(m);
+  if ((apr_off_t)nm != nm || (apr_off_t)nm < 0)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Successors data lives at offset larger than "
+                               "this platform can represent (%ld<<32 + %ld)"),
+                             (long)n, (long)m);
+  *revision_offset = nm;
 
   /* Close the file or let our caller stash it. */
   if (file_p && ! *file_p)
@@ -6046,23 +6053,12 @@ update_successor_ids_file(const char **successor_ids_temp_abspath,
     }
   else
     {
-      apr_uint64_t prev_successor_ids_offset;
+      apr_off_t prev_successor_ids_offset;
       apr_file_t *successor_ids_file;
 
       /* Figure out the offset of successor data for the previous revision. */
       SVN_ERR(read_successor_index_entry(&prev_successor_ids_offset,
                                          NULL, fs, new_rev - 1, pool, pool));
-
-      /* Check for offset overflow.
-       * This gives a "will never be executed" warning on some platforms. */
-      if (sizeof(apr_off_t) < sizeof(apr_uint64_t) &&
-          prev_successor_ids_offset > APR_UINT32_MAX)
-        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                 _("Cannot seek to offset %llu in successor "
-                                   "data file; platform does not support "
-                                   "large files; this repository can only "
-                                   "be used on platforms which support "
-                                   "large files"), prev_successor_ids_offset);
 
       /* Copy successor IDs index and the data for revisions older than
        * the previous revision into the temporary successor data file. */
