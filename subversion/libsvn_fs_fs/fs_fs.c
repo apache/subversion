@@ -7974,7 +7974,6 @@ read_successor_candidate_revisions(apr_array_header_t **revisions_p,
       SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, iterpool));
       if (line->len)
         {
-          apr_array_header_t *split;
           const char *pred;
           svn_fs_id_t *pred_id;
           const char *revstr;
@@ -7982,27 +7981,28 @@ read_successor_candidate_revisions(apr_array_header_t **revisions_p,
 #if SVN_VER_MINOR >=8
           apr_uint64_t rev64;
 #endif
+          const char *p;
 
-          split = svn_cstring_split(line->data, " ", TRUE, iterpool);
-          if (split->nelts != 2)
+          p = strchr(line->data, ' ');
+          if (p == NULL)
             return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                      _("Corrupt line '%s' in file '%s'"),
                                      line->data, node_revs_file_abspath);
-          pred = APR_ARRAY_IDX(split, 0, const char *);
-          pred_id = svn_fs_fs__id_parse(pred, strlen(pred), iterpool);
+          pred = line->data;
+          pred_id = svn_fs_fs__id_parse(pred, p - line->data, iterpool);
           if (pred_id == NULL)
             return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                       _("Corrupt line '%s' in file '%s'"),
                                       line->data, node_revs_file_abspath);
 
 #if SVN_VER_MINOR >=8
-          revstr = APR_ARRAY_IDX(split, 1, const char *);
+          revstr = p+1;
           SVN_ERR(svn_cstring_strtoui64(&rev64, revstr,
                                         0, LONG_MAX,
                                         10 /* base */));
           rev = (long) rev64;
 #else
-          revstr = APR_ARRAY_IDX(split, 1, const char *);
+          revstr = p+1;
           rev = apr_atoi64(revstr);
 #endif
 
