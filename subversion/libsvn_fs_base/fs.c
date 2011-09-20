@@ -669,7 +669,12 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   int format = SVN_FS_BASE__FORMAT_NUMBER;
   svn_error_t *svn_err;
 
-  /* See if we had an explicitly specified pre-1.5-compatible.  */
+  /* See if we had an explicitly specified pre-1.8-compatible.  */
+  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE,
+                                 APR_HASH_KEY_STRING))
+    format = 4;
+
+  /* See if we had an explicitly specified pre-1.6-compatible.  */
   if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
                                  APR_HASH_KEY_STRING))
     format = 3;

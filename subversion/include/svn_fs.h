@@ -101,6 +101,18 @@ typedef struct svn_fs_t svn_fs_t;
  * @since New in 1.6.
  */
 #define SVN_FS_CONFIG_PRE_1_6_COMPATIBLE        "pre-1.6-compatible"
+
+/** Create repository format compatible with Subversion versions
+ * earlier than 1.8.
+ *
+ * @note There is no @c SVN_FS_CONFIG_PRE_1_7_COMPATIBLE option, since
+ * Subversion 1.7 did not bump the repository or filesystem formats;
+ * it always uses the same formats as Subversion 1.6.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_FS_CONFIG_PRE_1_8_COMPATIBLE        "pre-1.8-compatible"
+
 /** @} */
 
 

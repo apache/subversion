@@ -6784,6 +6784,15 @@ svn_fs_fs__create(svn_fs_t *fs,
       else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
                                         APR_HASH_KEY_STRING))
         format = 3;
+      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE,
+                                        APR_HASH_KEY_STRING))
+        format = 4;
+#if 0
+      /* Remember, format 5 was never released. */
+      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_9_COMPATIBLE,
+                                        APR_HASH_KEY_STRING))
+        format = 6;
+#endif
     }
   ffd->format = format;
 
