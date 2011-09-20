@@ -1073,7 +1073,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# interactive-conflicts = no"                                       NL
         "### Set memory-cache-size to define the size of the memory cache"   NL
         "### used by the client when accessing a FSFS repository via"        NL
-        "### ra_local (the file scheme). The value represents the number"    NL
+        "### ra_local (the file:// scheme). The value represents the number" NL
         "### of MB used by the cache."                                       NL
         "# memory-cache-size = 16"                                           NL
         ""                                                                   NL
