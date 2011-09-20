@@ -92,7 +92,7 @@ Candidate changes:
      Improves performance of 'svn info' on a single unmodified node by 20-30%, by
      moving an in most cases unneeded database call in the error handling.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, hwright
      +1: gstein (for 1.7.1)
 
  * r1164426, r1164614
@@ -117,22 +117,22 @@ Candidate changes:
    Votes:
      +1: stsp (for 1.7.1)
 
- * r1169650
-   Make relocate act recursively on all externals, not just immediate ones.
-   Justification:
-     Relocating externals is new 1.7, no reason not to do them all.
-   Votes:
-     +1: philip, neels
-
  * r1171708
    Enable FSFS cache in svn, introduce config:miscellaneous:memory-cache-size.
    Justification:
      Make FSFS intensive operations, like blame, faster over ra_local.
    Votes:
-     +1: philip
+     +1: philip, hwright
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1169650
+   Make relocate act recursively on all externals, not just immediate ones.
+   Justification:
+     Relocating externals is new 1.7, no reason not to do them all.
+   Votes:
+     +1: philip, neels, hwright
