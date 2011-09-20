@@ -46,21 +46,10 @@ extern "C" {
  * Once the maxsize is reached, newly written content will be "spilled"
  * into a temporary file.
  *
- * When writing, the amount @b must be less than the blocksize. If more
- * bytes need to be written, the caller must divide the content into
- * multiple writes of blocksize (or less) bytes each. Also note that if
- * the written content is being collected in memory, then it will go
- * into a block of blocksize bytes. Thus, if the blocksize is defined
- * as 8000 bytes, and 10 are written into the spill-buffer, then 7990
- * bytes will be wasted. If the content has exceeded maxsize and is
- * being written to disk, then the amount written does not matter since
- * it is simply appended to the spill file.
- *
- * ### This writing behavior may be fixed in the future.
- *
- * As a result of this design, the ideal application for a spill-buffer
- * is where known-size blocks of content are generated (or read from
- * somewhere) and then stored into the spill-buffer.
+ * When writing, content will be buffered into memory unless a given write
+ * will cause the amount of in-memory content to exceed the specified
+ * maxsize. At that point, the file is created, and the content will be
+ * written to that file.
  *
  * To read information back out of a spill buffer, there are two approaches
  * available to the application:
@@ -79,6 +68,14 @@ extern "C" {
  * in a FIFO manner. Thus, if content has been placed into the spill-buffer
  * you will always read the earliest-written data, and any newly-written
  * content will be appended to the buffer.
+ *
+ * Note: the file is created in the same pool where the spill-buffer was
+ * created. If the content is completely read from that file, it will be
+ * closed and deleted. Should writing further content cause another spill
+ * file to be created, that will increase the size of the pool. There is
+ * no bound on the amount of file-related resources that may be consumed
+ * from the pool. It is entirely related to the read/write pattern and
+ * whether spill files are repeatedly created.
  */
 typedef struct svn_spillbuf_t svn_spillbuf_t;
 

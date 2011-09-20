@@ -124,8 +124,9 @@ test_spillbuf_callback(apr_pool_t *pool)
 static svn_error_t *
 test_spillbuf_file(apr_pool_t *pool)
 {
+  apr_size_t altsize = sizeof(basic_data) + 2;
   svn_spillbuf_t *buf = svn_spillbuf_create(
-                          sizeof(basic_data) + 2 /* blocksize */,
+                          altsize /* blocksize */,
                           2 * sizeof(basic_data) /* maxsize */,
                           pool);
   int i;
@@ -138,17 +139,20 @@ test_spillbuf_file(apr_pool_t *pool)
   for (i = 7; i--; )
     SVN_ERR(svn_spillbuf_write(buf, basic_data, sizeof(basic_data), pool));
 
-  /* The first three reads will be in-memory blocks, so they will match
-     what we wrote into the spill buffer.  */
+  /* The first two reads will be in-memory blocks (the third write causes
+     the spill to disk). The spillbuf will pack the content into BLOCKSIZE
+     blocks. The second/last memory block will (thus) be a bit smaller.  */
   SVN_ERR(svn_spillbuf_read(&readptr, &readlen, buf, pool));
   SVN_TEST_ASSERT(readptr != NULL);
-  SVN_TEST_ASSERT(readlen == sizeof(basic_data));
+  SVN_TEST_ASSERT(readlen == altsize);
   SVN_ERR(svn_spillbuf_read(&readptr, &readlen, buf, pool));
   SVN_TEST_ASSERT(readptr != NULL);
-  SVN_TEST_ASSERT(readlen == sizeof(basic_data));
-  SVN_ERR(svn_spillbuf_read(&readptr, &readlen, buf, pool));
-  SVN_TEST_ASSERT(readptr != NULL);
-  SVN_TEST_ASSERT(readlen == sizeof(basic_data));
+  /* The second write put sizeof(basic_data) into the buffer. A small
+     portion was stored at the end of the memblock holding the first write.
+     Thus, the size of this read will be the written data, minus that
+     slice written to the first block.  */
+  SVN_TEST_ASSERT(readlen
+                  == sizeof(basic_data) - (altsize - sizeof(basic_data)));
 
   /* Current index into basic_data[] that we compare against.  */
   cur_index = 0;
@@ -191,51 +195,47 @@ static svn_error_t *
 test_spillbuf_interleaving(apr_pool_t *pool)
 {
   svn_spillbuf_t *buf = svn_spillbuf_create(8 /* blocksize */,
-                                            11 /* maxsize */,
+                                            15 /* maxsize */,
                                             pool);
   const char *readptr;
   apr_size_t readlen;
 
   SVN_ERR(svn_spillbuf_write(buf, "abcdef", 6, pool));
   SVN_ERR(svn_spillbuf_write(buf, "ghijkl", 6, pool));
-  /* now: two blocks of 6 bytes each  */
+  /* now: two blocks of 8 and 4 bytes  */
 
   SVN_ERR(svn_spillbuf_read(&readptr, &readlen, buf, pool));
   SVN_TEST_ASSERT(readptr != NULL
-                  && readlen == 6
-                  && memcmp(readptr, "abcdef", 6) == 0);
-  /* now: one block of 6 bytes  */
+                  && readlen == 8
+                  && memcmp(readptr, "abcdefgh", 8) == 0);
+  /* now: one block of 4 bytes  */
 
   SVN_ERR(svn_spillbuf_write(buf, "mnopqr", 6, pool));
-  /* now: two blocks of 6 bytes each  */
+  /* now: two blocks of 8 and 2 bytes  */
 
   SVN_ERR(svn_spillbuf_read(&readptr, &readlen, buf, pool));
   SVN_TEST_ASSERT(readptr != NULL
-                  && readlen == 6
-                  && memcmp(readptr, "ghijkl", 6) == 0);
-  /* now: one block of 6 bytes  */
+                  && readlen == 8
+                  && memcmp(readptr, "ijklmnop", 8) == 0);
+  /* now: one block of 2 bytes  */
 
   SVN_ERR(svn_spillbuf_write(buf, "stuvwx", 6, pool));
   SVN_ERR(svn_spillbuf_write(buf, "ABCDEF", 6, pool));
   SVN_ERR(svn_spillbuf_write(buf, "GHIJKL", 6, pool));
-  /* now: two blocks of 6 bytes each, and 12 bytes spilled to a file  */
+  /* now: two blocks of 8 and 6 bytes, and 6 bytes spilled to a file  */
 
   SVN_ERR(svn_spillbuf_read(&readptr, &readlen, buf, pool));
   SVN_TEST_ASSERT(readptr != NULL
-                  && readlen == 6
-                  && memcmp(readptr, "mnopqr", 6) == 0);
-  SVN_ERR(svn_spillbuf_read(&readptr, &readlen, buf, pool));
-  SVN_TEST_ASSERT(readptr != NULL
-                  && readlen == 6
-                  && memcmp(readptr, "stuvwx", 6) == 0);
-  SVN_ERR(svn_spillbuf_read(&readptr, &readlen, buf, pool));
-  SVN_TEST_ASSERT(readptr != NULL
                   && readlen == 8
-                  && memcmp(readptr, "ABCDEFGH", 8) == 0);
+                  && memcmp(readptr, "qrstuvwx", 8) == 0);
   SVN_ERR(svn_spillbuf_read(&readptr, &readlen, buf, pool));
   SVN_TEST_ASSERT(readptr != NULL
-                  && readlen == 4
-                  && memcmp(readptr, "IJKL", 4) == 0);
+                  && readlen == 6
+                  && memcmp(readptr, "ABCDEF", 6) == 0);
+  SVN_ERR(svn_spillbuf_read(&readptr, &readlen, buf, pool));
+  SVN_TEST_ASSERT(readptr != NULL
+                  && readlen == 6
+                  && memcmp(readptr, "GHIJKL", 6) == 0);
 
   return SVN_NO_ERROR;
 }
