@@ -79,7 +79,8 @@ svn_spillbuf_read(const char **data,
 typedef svn_error_t * (*svn_spillbuf_read_t)(svn_boolean_t *stop,
                                              void *baton,
                                              const char *data,
-                                             apr_size_t len);
+                                             apr_size_t len,
+                                             apr_pool_t *scratch_pool);
 
 
 /* Process the content stored in the spill buffer. @a exhausted will be

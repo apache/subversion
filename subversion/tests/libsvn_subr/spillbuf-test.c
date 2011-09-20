@@ -76,6 +76,52 @@ test_spillbuf_basic(apr_pool_t *pool)
 
 
 static svn_error_t *
+read_callback(svn_boolean_t *stop,
+              void *baton,
+              const char *data,
+              apr_size_t len,
+              apr_pool_t *scratch_pool)
+{
+  int *counter = baton;
+
+  SVN_TEST_ASSERT(len == sizeof(basic_data));
+  SVN_TEST_ASSERT(memcmp(data, basic_data, len) == 0);
+
+  *stop = (++*counter == 10);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+test_spillbuf_callback(apr_pool_t *pool)
+{
+  svn_spillbuf_t *buf = svn_spillbuf_create(
+                          sizeof(basic_data) /* blocksize */,
+                          10 * sizeof(basic_data) /* maxsize */,
+                          pool);
+  int i;
+  int counter;
+  svn_boolean_t exhausted;
+
+  /* Place enough data into the buffer to cause a spill to disk.  */
+  for (i = 20; i--; )
+    SVN_ERR(svn_spillbuf_write(buf, basic_data, sizeof(basic_data), pool));
+
+  counter = 0;
+  SVN_ERR(svn_spillbuf_process(&exhausted, buf, read_callback, &counter,
+                               pool));
+  SVN_TEST_ASSERT(!exhausted);
+  
+  SVN_ERR(svn_spillbuf_process(&exhausted, buf, read_callback, &counter,
+                               pool));
+  SVN_TEST_ASSERT(exhausted);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 test_spillbuf_file(apr_pool_t *pool)
 {
   svn_spillbuf_t *buf = svn_spillbuf_create(
@@ -200,6 +246,7 @@ struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_spillbuf_basic, "basic spill buffer test"),
+    SVN_TEST_PASS2(test_spillbuf_callback, "spill buffer read callback"),
     SVN_TEST_PASS2(test_spillbuf_file, "spill buffer file test"),
     SVN_TEST_PASS2(test_spillbuf_interleaving,
                    "interleaving reads and writes"),

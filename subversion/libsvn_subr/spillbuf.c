@@ -24,6 +24,8 @@
 #include <apr_file_io.h>
 
 #include "svn_io.h"
+#include "svn_pools.h"
+
 #include "private/svn_subr_private.h"
 
 
@@ -150,7 +152,7 @@ svn_spillbuf_write(svn_spillbuf_t *buf,
       SVN_ERR(svn_io_open_unique_file3(&buf->spill,
                                        NULL /* temp_path */,
                                        NULL /* dirpath */,
-                                       svn_io_file_del_on_pool_cleanup,
+                                       svn_io_file_del_on_close,
                                        buf->pool, scratch_pool));
     }
 
@@ -345,6 +347,7 @@ svn_spillbuf_process(svn_boolean_t *exhausted,
                      apr_pool_t *scratch_pool)
 {
   svn_boolean_t has_seeked = FALSE;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   *exhausted = FALSE;
 
@@ -354,30 +357,33 @@ svn_spillbuf_process(svn_boolean_t *exhausted,
       svn_error_t *err;
       svn_boolean_t stop;
 
+      svn_pool_clear(iterpool);
+
       /* If this call to read_data() will read from the spill file, and we
          have not seek'd the file... then do it now.  */
       if (!has_seeked)
-        SVN_ERR(maybe_seek(&has_seeked, buf, scratch_pool));
+        SVN_ERR(maybe_seek(&has_seeked, buf, iterpool));
 
       /* Get some content to pass to the read callback.  */
-      SVN_ERR(read_data(&mem, buf, scratch_pool));
+      SVN_ERR(read_data(&mem, buf, iterpool));
       if (mem == NULL)
         {
           *exhausted = TRUE;
-          return SVN_NO_ERROR;
+          break;
         }
 
-      err = read_func(&stop, read_baton, mem->data, mem->size);
+      err = read_func(&stop, read_baton, mem->data, mem->size, iterpool);
 
       return_buffer(buf, mem);
-      
+
       if (err)
         return svn_error_trace(err);
 
       /* If the callbacks told us to stop, then we're done for now.  */
       if (stop)
-        return SVN_NO_ERROR;
+        break;
     }
 
-  /* NOTREACHED */
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
 }
