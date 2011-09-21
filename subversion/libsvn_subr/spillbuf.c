@@ -97,9 +97,9 @@ struct svn_spillbuf_reader_t {
 
 
 svn_spillbuf_t *
-svn_spillbuf_create(apr_size_t blocksize,
-                    apr_size_t maxsize,
-                    apr_pool_t *result_pool)
+svn_spillbuf__create(apr_size_t blocksize,
+                     apr_size_t maxsize,
+                     apr_pool_t *result_pool)
 {
   svn_spillbuf_t *buf = apr_pcalloc(result_pool, sizeof(*buf));
 
@@ -113,7 +113,7 @@ svn_spillbuf_create(apr_size_t blocksize,
 
 
 svn_boolean_t
-svn_spillbuf_is_empty(const svn_spillbuf_t *buf)
+svn_spillbuf__is_empty(const svn_spillbuf_t *buf)
 {
   return buf->head == NULL && buf->spill == NULL;
 }
@@ -156,10 +156,10 @@ return_buffer(svn_spillbuf_t *buf,
 
 
 svn_error_t *
-svn_spillbuf_write(svn_spillbuf_t *buf,
-                   const char *data,
-                   apr_size_t len,
-                   apr_pool_t *scratch_pool)
+svn_spillbuf__write(svn_spillbuf_t *buf,
+                    const char *data,
+                    apr_size_t len,
+                    apr_pool_t *scratch_pool)
 {
   struct memblock_t *mem;
 
@@ -345,10 +345,10 @@ maybe_seek(svn_boolean_t *seeked,
 
 
 svn_error_t *
-svn_spillbuf_read(const char **data,
-                  apr_size_t *len,
-                  svn_spillbuf_t *buf,
-                  apr_pool_t *scratch_pool)
+svn_spillbuf__read(const char **data,
+                   apr_size_t *len,
+                   svn_spillbuf_t *buf,
+                   apr_pool_t *scratch_pool)
 {
   struct memblock_t *mem;
 
@@ -379,11 +379,11 @@ svn_spillbuf_read(const char **data,
 
 
 svn_error_t *
-svn_spillbuf_process(svn_boolean_t *exhausted,
-                     svn_spillbuf_t *buf,
-                     svn_spillbuf_read_t read_func,
-                     void *read_baton,
-                     apr_pool_t *scratch_pool)
+svn_spillbuf__process(svn_boolean_t *exhausted,
+                      svn_spillbuf_t *buf,
+                      svn_spillbuf_read_t read_func,
+                      void *read_baton,
+                      apr_pool_t *scratch_pool)
 {
   svn_boolean_t has_seeked = FALSE;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -429,9 +429,9 @@ svn_spillbuf_process(svn_boolean_t *exhausted,
 
 
 svn_spillbuf_reader_t *
-svn_spillbuf_reader_create(apr_size_t blocksize,
-                           apr_size_t maxsize,
-                           apr_pool_t *result_pool)
+svn_spillbuf__reader_create(apr_size_t blocksize,
+                            apr_size_t maxsize,
+                            apr_pool_t *result_pool)
 {
   svn_spillbuf_reader_t *sbr = apr_pcalloc(result_pool, sizeof(*sbr));
 
@@ -445,11 +445,11 @@ svn_spillbuf_reader_create(apr_size_t blocksize,
 
 
 svn_error_t *
-svn_spillbuf_reader_read(apr_size_t *amt,
-                         svn_spillbuf_reader_t *reader,
-                         char *data,
-                         apr_size_t len,
-                         apr_pool_t *scratch_pool)
+svn_spillbuf__reader_read(apr_size_t *amt,
+                          svn_spillbuf_reader_t *reader,
+                          char *data,
+                          apr_size_t len,
+                          apr_pool_t *scratch_pool)
 {
   if (len == 0)
     return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL, NULL);
@@ -481,9 +481,9 @@ svn_spillbuf_reader_read(apr_size_t *amt,
           /* We may need more content from the spillbuf.  */
           if (reader->sb_len == 0)
             {
-              SVN_ERR(svn_spillbuf_read(&reader->sb_ptr, &reader->sb_len,
-                                        &reader->buf,
-                                        scratch_pool));
+              SVN_ERR(svn_spillbuf__read(&reader->sb_ptr, &reader->sb_len,
+                                         &reader->buf,
+                                         scratch_pool));
 
               /* We've run out of content, so return with whatever has
                  been copied into DATA and stored into AMT.  */
@@ -516,13 +516,13 @@ svn_spillbuf_reader_read(apr_size_t *amt,
 
 
 svn_error_t *
-svn_spillbuf_reader_getc(char *c,
-                         svn_spillbuf_reader_t *reader,
-                         apr_pool_t *scratch_pool)
+svn_spillbuf__reader_getc(char *c,
+                          svn_spillbuf_reader_t *reader,
+                          apr_pool_t *scratch_pool)
 {
   apr_size_t amt;
 
-  SVN_ERR(svn_spillbuf_reader_read(&amt, reader, c, 1, scratch_pool));
+  SVN_ERR(svn_spillbuf__reader_read(&amt, reader, c, 1, scratch_pool));
   if (amt == 0)
     return svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL, NULL);
 
@@ -531,10 +531,10 @@ svn_spillbuf_reader_getc(char *c,
 
 
 svn_error_t *
-svn_spillbuf_reader_write(svn_spillbuf_reader_t *reader,
-                          const char *data,
-                          apr_size_t len,
-                          apr_pool_t *scratch_pool)
+svn_spillbuf__reader_write(svn_spillbuf_reader_t *reader,
+                           const char *data,
+                           apr_size_t len,
+                           apr_pool_t *scratch_pool)
 {
   /* If we have a buffer of content from the spillbuf, then we need to
      move that content to a safe place.  */
@@ -551,6 +551,6 @@ svn_spillbuf_reader_write(svn_spillbuf_reader_t *reader,
       reader->sb_len = 0;
     }
 
-  return svn_error_trace(svn_spillbuf_write(&reader->buf, data, len,
-                                            scratch_pool));
+  return svn_error_trace(svn_spillbuf__write(&reader->buf, data, len,
+                                             scratch_pool));
 }
