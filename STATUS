@@ -95,7 +95,7 @@ Candidate changes:
    Justification:
      Fixes a reintegrate merge use case.
    Votes:
-     +1: pburba, philip
+     +1: pburba, philip, kameshj
 
  * r1151911
    Fix description of svndumpfilter's --targets option.
