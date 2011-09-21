@@ -122,6 +122,7 @@ Candidate changes:
      +1: pburba
      +0: ivan (r1173425 only, restart soak period for at least two weeks due
                API and client/server protocol)
+     +0: danielsh (I didn't review merge_tests.py or merge.c changes)
 
 Veto-blocked changes:
 =====================
