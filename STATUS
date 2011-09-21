@@ -132,6 +132,8 @@ Candidate changes:
      http://subversion.tigris.org/issues/show_bug.cgi?id=3668#desc5
    Votes:
      +1: pburba
+     +0: ivan (restart soak period for at least two weeks due API and
+               client/server protocol)
 
 Veto-blocked changes:
 =====================
