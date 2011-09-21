@@ -241,6 +241,38 @@ test_spillbuf_interleaving(apr_pool_t *pool)
 }
 
 
+static svn_error_t *
+test_spillbuf_reader(apr_pool_t *pool)
+{
+  svn_spillbuf_reader_t *sbr;
+  apr_size_t amt;
+  char buf[10];
+
+  sbr = svn_spillbuf_reader_create(4 /* blocksize */,
+                                   100 /* maxsize */,
+                                   pool);
+
+  SVN_ERR(svn_spillbuf_reader_write(sbr, "abcdef", 6, pool));
+
+  /* Get a buffer from the underlying reader, and grab a couple bytes.  */
+  SVN_ERR(svn_spillbuf_reader_read(&amt, sbr, buf, 2, pool));
+  SVN_TEST_ASSERT(amt == 2 && memcmp(buf, "ab", 2) == 0);
+
+  /* Trigger the internal "save" feature of the SBR.  */
+  SVN_ERR(svn_spillbuf_reader_write(sbr, "ghijkl", 6, pool));
+
+  /* Read from the save buffer, and from the internal blocks.  */
+  SVN_ERR(svn_spillbuf_reader_read(&amt, sbr, buf, 10, pool));
+  SVN_TEST_ASSERT(amt == 10 && memcmp(buf, "cdefghijkl", 10) == 0);
+
+  /* Should be done.  */
+  SVN_ERR(svn_spillbuf_reader_read(&amt, sbr, buf, 10, pool));
+  SVN_TEST_ASSERT(amt == 0);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* The test table.  */
 struct svn_test_descriptor_t test_funcs[] =
   {
@@ -250,5 +282,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_spillbuf_file, "spill buffer file test"),
     SVN_TEST_PASS2(test_spillbuf_interleaving,
                    "interleaving reads and writes"),
+    SVN_TEST_PASS2(test_spillbuf_reader, "spill buffer reader test"),
     SVN_TEST_NULL
   };
