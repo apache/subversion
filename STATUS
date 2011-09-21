@@ -88,15 +88,6 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
- * r1146121, r1146870
-   Fix issue #3957 'reintegrate fails with no subtree mergeinfo on source'.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3957
-   Justification:
-     Fixes a reintegrate merge use case.
-   Votes:
-     +1: pburba, philip, kameshj
-
  * r1151911
    Fix description of svndumpfilter's --targets option.
    Votes:
@@ -269,3 +260,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1146121, r1146870
+   Fix issue #3957 'reintegrate fails with no subtree mergeinfo on source'.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3957
+   Justification:
+     Fixes a reintegrate merge use case.
+   Votes:
+     +1: pburba, philip, kameshj
