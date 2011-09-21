@@ -53,7 +53,6 @@
 #include "svn_hash.h"
 #include "svn_version.h"
 #include "cl.h"
-#include "svn_cache_config.h"
 
 #include "private/svn_wc_private.h"
 #include "private/svn_cmdline_private.h"
@@ -1450,7 +1449,6 @@ main(int argc, const char *argv[])
   svn_error_t *err;
   apr_allocator_t *allocator;
   apr_pool_t *pool;
-  svn_cache_config_t settings;
   int opt_id;
   apr_getopt_t *os;
   svn_cl__opt_state_t opt_state = { 0, { 0 } };
@@ -1497,17 +1495,6 @@ main(int argc, const char *argv[])
         return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
 #endif
-
-  /* Per default, disable large expensive FS caching on the client side.
-   * We can still chose a different size for that cache later in the
-   * startup phase, e.g. after reading config files. If that does not
-   * happen until the first FSFS repository get opened, low initialization
-   * overhead caches will be used for the most time-critical structures.
-   *
-   * This is only relevant for FSFS over ra_local. */
-  settings = *svn_cache_config_get();
-  settings.cache_size = 0x0;
-  svn_cache_config_set(&settings);
 
   /* Initialize the RA library. */
   err = svn_ra_initialize(pool);

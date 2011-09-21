@@ -32,12 +32,14 @@
 #include "svn_mergeinfo.h"
 #include "svn_path.h"
 #include "svn_version.h"
+#include "svn_cache_config.h"
 
 #include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_repos_private.h"
 #include "private/svn_fspath.h"
+#include "private/svn_atomic.h"
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
@@ -124,6 +126,35 @@ get_username(svn_ra_session_t *session,
          destroyed. */
       apr_pool_cleanup_register(session->pool, sess->fs, cleanup_access,
                                 apr_pool_cleanup_null);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements an svn_atomic__init_once callback.  Sets the FSFS memory
+   cache size. */
+static svn_error_t *
+cache_init(void *baton, apr_pool_t *pool)
+{
+  apr_hash_t *config_hash = baton;
+  svn_config_t *config = NULL;
+  const char *memory_cache_size_str;
+
+  if (config_hash)
+    config = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_CONFIG,
+                          APR_HASH_KEY_STRING);
+  svn_config_get(config, &memory_cache_size_str, SVN_CONFIG_SECTION_MISCELLANY,
+                 SVN_CONFIG_OPTION_MEMORY_CACHE_SIZE, NULL);
+  if (memory_cache_size_str)
+    {
+      apr_uint64_t memory_cache_size;
+      svn_cache_config_t settings = *svn_cache_config_get();
+
+      SVN_ERR(svn_error_quick_wrap(svn_cstring_atoui64(&memory_cache_size,
+                                                       memory_cache_size_str),
+                                   _("memory-cache-size invalid")));
+      settings.cache_size = 1024 * 1024 * memory_cache_size; 
+      svn_cache_config_set(&settings);
     }
 
   return SVN_NO_ERROR;
@@ -451,6 +482,12 @@ svn_ra_local__open(svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sess;
   const char *fs_path;
+  static volatile svn_atomic_t cache_init_state = 0;
+
+  /* Initialise the FSFS memory cache size.  We can only do this once
+     so one CONFIG will win the race and all others will be ignored
+     silently.  */
+  SVN_ERR(svn_atomic__init_once(&cache_init_state, cache_init, config, pool));
 
   /* We don't support redirections in ra-local. */
   if (corrected_url)
