@@ -166,13 +166,7 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
 
    If there is no mergeinfo available for REL_PATH, or if the server
    doesn't support a mergeinfo capability and SQUELCH_INCAPABLE is
-   TRUE, set *TARGET_MERGEINFO to NULL.
-
-   If the mergeinfo for REL_PATH path is inherited,
-   VALIDATE_INHERITED_MERGEINFO is TRUE, and the server supports
-   the #SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO capability,
-   then *TARGET_MERGEINFO will only contain merge source path-revisions
-   that actually exist in the repository. */
+   TRUE, set *TARGET_MERGEINFO to NULL. */
 svn_error_t *
 svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
                                 svn_mergeinfo_t *target_mergeinfo,
@@ -180,7 +174,6 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
                                 svn_revnum_t rev,
                                 svn_mergeinfo_inheritance_t inherit,
                                 svn_boolean_t squelch_incapable,
-                                svn_boolean_t validate_inherited_mergeinfo,
                                 apr_pool_t *pool);
 
 /* If INCLUDE_DESCENDANTS is FALSE, behave exactly like
@@ -194,15 +187,13 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
    paths of the subtrees.  If no mergeinfo is found, then
    *TARGET_MERGEINFO_CAT is set to NULL. */
 svn_error_t *
-svn_client__get_repos_mergeinfo_catalog(
-  svn_mergeinfo_catalog_t *mergeinfo_cat,
+svn_client__get_repos_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
   svn_ra_session_t *ra_session,
   const char *rel_path,
   svn_revnum_t rev,
   svn_mergeinfo_inheritance_t inherit,
   svn_boolean_t squelch_incapable,
   svn_boolean_t include_descendants,
-  svn_boolean_t validate_inherited_mergeinfo,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
 
@@ -233,14 +224,7 @@ svn_client__get_repos_mergeinfo_catalog(
 
    If TARGET_WCPATH inherited its mergeinfo from a working copy ancestor
    or if it was obtained from the repository, set *INHERITED to TRUE, set it
-   to FALSE otherwise.
-
-   Note: If the repository is contacted to find inherited mergeinfo, then
-   inherited mergeinfo validation is requested by default (see the
-   VALIDATE_INHERITED_MERGEINFO parameter to svn_client__get_repos_mergeinfo).
-   If the caller needs to know if validation actually occurred then it should
-   check if the server supports the
-   SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO capability. */
+   to FALSE otherwise. */
 svn_error_t *
 svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                       svn_boolean_t *inherited,

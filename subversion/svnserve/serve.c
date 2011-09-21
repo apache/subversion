@@ -1845,17 +1845,12 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_hash_index_t *hi;
   const char *inherit_word;
   svn_mergeinfo_inheritance_t inherit;
-  apr_uint64_t validate_inherited_mergeinfo;
   svn_boolean_t include_descendants;
   apr_pool_t *iterpool;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)wb?B", &paths, &rev,
-                                 &inherit_word,
-                                 &include_descendants,
-                                 &validate_inherited_mergeinfo));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)wb", &paths, &rev,
+                                 &inherit_word, &include_descendants));
   inherit = svn_inheritance_from_word(inherit_word);
-  if (validate_inherited_mergeinfo == SVN_RA_SVN_UNSPECIFIED_NUMBER)
-    validate_inherited_mergeinfo = FALSE;
 
   /* Canonicalize the paths which mergeinfo has been requested for. */
   canonical_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
@@ -1878,11 +1873,9 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                              pool)));
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_CMD_ERR(svn_repos_fs_get_mergeinfo2(&mergeinfo, b->repos,
+  SVN_CMD_ERR(svn_repos_fs_get_mergeinfo(&mergeinfo, b->repos,
                                           canonical_paths, rev,
                                           inherit,
-                                          (svn_boolean_t)
-                                          validate_inherited_mergeinfo,
                                           include_descendants,
                                           authz_check_access_cb_func(b), b,
                                           pool));
@@ -3229,12 +3222,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
     SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(cc(!",
                                    "success", uuid, b.repos_url));
     if (supports_mergeinfo)
-      {
         SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_CAP_MERGEINFO));
-        SVN_ERR(svn_ra_svn_write_word(
-          conn, pool, SVN_RA_SVN_CAP_VALIDATE_INHERITED_MERGEINFO));
-      }
-
     SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
   }
 
