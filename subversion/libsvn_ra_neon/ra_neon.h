@@ -1,4 +1,4 @@
-    /*
+/*
  * ra_neon.h : Private declarations for the Neon-based DAV RA module.
  *
  * ====================================================================
