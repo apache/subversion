@@ -27,6 +27,7 @@
 #include "svn_sorts.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
+#include "svn_props.h"
 #include "svn_pools.h"
 
 
@@ -524,14 +525,7 @@ svn_delta_from_editor(const svn_delta_editor_t **deditor,
 }
 
 
-struct editor_baton
-{
-  const svn_delta_editor_t *deditor;
-  void *dedit_baton;
 
-  apr_hash_t *paths;
-  apr_pool_t *edit_pool;
-};
 
 
 typedef enum action_code_t {
@@ -539,8 +533,6 @@ typedef enum action_code_t {
   ACTION_MKDIR,
   ACTION_CP,
   ACTION_PROPSET,
-  ACTION_PROPSETF,
-  ACTION_PROPDEL,
   ACTION_PUT,
   ACTION_RM
 } action_code_t;
@@ -560,12 +552,21 @@ struct operation {
   const char *url;       /* to copy, valid for add and replace */
   const char *src_file;  /* for put, the source file for contents */
   apr_hash_t *children;  /* const char *path -> struct operation * */
-  apr_hash_t *prop_mods; /* const char *prop_name ->
+  apr_hash_t *props;     /* const char *prop_name ->
                             const svn_string_t *prop_value */
-  apr_array_header_t *prop_dels; /* const char *prop_name deletions */
   void *baton;           /* as returned by the commit editor */
 };
 
+struct editor_baton
+{
+  const svn_delta_editor_t *deditor;
+  void *dedit_baton;
+
+  struct operation root;
+
+  apr_hash_t *paths;
+  apr_pool_t *edit_pool;
+};
 
 /* Find the operation associated with PATH, which is a single-path
    component representing a child of the path represented by
@@ -585,18 +586,10 @@ get_operation(const char *path,
       child->operation = OP_OPEN;
       child->rev = SVN_INVALID_REVNUM;
       child->kind = svn_node_dir;
-      child->prop_mods = apr_hash_make(pool);
-      child->prop_dels = apr_array_make(pool, 1, sizeof(const char *));
+      child->props = NULL;
       apr_hash_set(operation->children, path, APR_HASH_KEY_STRING, child);
     }
   return child;
-}
-
-/* Return the portion of URL that is relative to ANCHOR (URI-decoded). */
-static const char *
-subtract_anchor(const char *anchor, const char *url, apr_pool_t *pool)
-{
-  return svn_uri_skip_ancestor(anchor, url, pool);
 }
 
 /* Add PATH to the operations tree rooted at OPERATION, creating any
@@ -621,8 +614,7 @@ build(action_code_t action,
       const char *path,
       const char *url,
       svn_revnum_t rev,
-      const char *prop_name,
-      const svn_string_t *prop_value,
+      apr_hash_t *props,
       const char *src_file,
       svn_revnum_t head,
       const char *anchor,
@@ -656,7 +648,8 @@ build(action_code_t action,
           && (operation->operation == OP_REPLACE
               || operation->operation == OP_ADD))
         {
-          copy_src = subtract_anchor(anchor, operation->url, pool);
+          /* ### HKW:
+          copy_src = subtract_anchor(anchor, operation->url, pool);*/
           copy_rev = operation->rev;
         }
       else if (copy_src)
@@ -666,7 +659,7 @@ build(action_code_t action,
     }
 
   /* Handle property changes. */
-  if (prop_name)
+  if (props)
     {
       if (operation->operation == OP_DELETE)
         return svn_error_createf(SVN_ERR_BAD_URL, NULL,
@@ -688,11 +681,7 @@ build(action_code_t action,
                    && (operation->operation == OP_OPEN))
             operation->operation = OP_PROPSET;
         }
-      if (! prop_value)
-        APR_ARRAY_PUSH(operation->prop_dels, const char *) = prop_name;
-      else
-        apr_hash_set(operation->prop_mods, prop_name,
-                     APR_HASH_KEY_STRING, prop_value);
+      operation->props = svn_prop_hash_dup(props, pool);
       if (!operation->rev)
         operation->rev = rev;
       return SVN_NO_ERROR;
@@ -772,10 +761,6 @@ build(action_code_t action,
       /* ### HKW:
       SVN_ERR(svn_ra_check_path(session, subtract_anchor(anchor, url, pool),
                                 rev, &operation->kind, pool));*/
-      if (operation->kind == svn_node_none)
-        return svn_error_createf(SVN_ERR_BAD_URL, NULL,
-                                 "'%s' not found",
-                                  subtract_anchor(anchor, url, pool));
       operation->url = url;
       operation->rev = rev;
     }
@@ -878,8 +863,10 @@ set_props_cb(void *baton,
              apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
-  apr_hash_set(eb->paths, apr_pstrdup(eb->edit_pool, relpath),
-               APR_HASH_KEY_STRING, (void *)0xdeadbeef);
+
+  SVN_ERR(build(ACTION_PROPSET, relpath, NULL, SVN_INVALID_REVNUM,
+                props, NULL, SVN_INVALID_REVNUM, NULL, &eb->root,
+                scratch_pool));
 
   return SVN_NO_ERROR;
 }
