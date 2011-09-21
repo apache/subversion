@@ -89,9 +89,9 @@ typedef struct svn_spillbuf_t svn_spillbuf_t;
 
 /* Create a spill buffer.  */
 svn_spillbuf_t *
-svn_spillbuf_create(apr_size_t blocksize,
-                    apr_size_t maxsize,
-                    apr_pool_t *result_pool);
+svn_spillbuf__create(apr_size_t blocksize,
+                     apr_size_t maxsize,
+                     apr_pool_t *result_pool);
 
 
 /* Determine whether the spill buffer has any content.
@@ -102,15 +102,15 @@ svn_spillbuf_create(apr_size_t blocksize,
    In this situation, svn_spillbuf_is_empty() will return TRUE, but an
    attempt to read content will detect that it has been exhausted.  */
 svn_boolean_t
-svn_spillbuf_is_empty(const svn_spillbuf_t *buf);
+svn_spillbuf__is_empty(const svn_spillbuf_t *buf);
 
 
 /* Write some data into the spill buffer.  */
 svn_error_t *
-svn_spillbuf_write(svn_spillbuf_t *buf,
-                   const char *data,
-                   apr_size_t len,
-                   apr_pool_t *scratch_pool);
+svn_spillbuf__write(svn_spillbuf_t *buf,
+                    const char *data,
+                    apr_size_t len,
+                    apr_pool_t *scratch_pool);
 
 
 /* Read a block of memory from the spill buffer. @a data will be set to
@@ -119,10 +119,10 @@ svn_spillbuf_write(svn_spillbuf_t *buf,
    valid until another call to svn_spillbuf_write(), svn_spillbuf_read(),
    or svn_spillbuf_process(), or if the spill buffer's pool is cleared.  */
 svn_error_t *
-svn_spillbuf_read(const char **data,
-                  apr_size_t *len,
-                  svn_spillbuf_t *buf,
-                  apr_pool_t *scratch_pool);
+svn_spillbuf__read(const char **data,
+                   apr_size_t *len,
+                   svn_spillbuf_t *buf,
+                   apr_pool_t *scratch_pool);
 
 
 /* Callback for reading content out of the spill buffer. Set @a stop if
@@ -140,11 +140,11 @@ typedef svn_error_t * (*svn_spillbuf_read_t)(svn_boolean_t *stop,
    function may return early if the callback returns TRUE for its 'stop'
    parameter.  */
 svn_error_t *
-svn_spillbuf_process(svn_boolean_t *exhausted,
-                     svn_spillbuf_t *buf,
-                     svn_spillbuf_read_t read_func,
-                     void *read_baton,
-                     apr_pool_t *scratch_pool);
+svn_spillbuf__process(svn_boolean_t *exhausted,
+                      svn_spillbuf_t *buf,
+                      svn_spillbuf_read_t read_func,
+                      void *read_baton,
+                      apr_pool_t *scratch_pool);
 
 
 /** Classic stream reading layer on top of spill-buffers.
@@ -159,9 +159,9 @@ typedef struct svn_spillbuf_reader_t svn_spillbuf_reader_t;
 
 /* Create a spill-buffer and a reader for it.  */
 svn_spillbuf_reader_t *
-svn_spillbuf_reader_create(apr_size_t blocksize,
-                           apr_size_t maxsize,
-                           apr_pool_t *result_pool);
+svn_spillbuf__reader_create(apr_size_t blocksize,
+                            apr_size_t maxsize,
+                            apr_pool_t *result_pool);
 
 
 /* Read @a len bytes from @a reader into @a data. The number of bytes
@@ -171,28 +171,28 @@ svn_spillbuf_reader_create(apr_size_t blocksize,
 
    If @a len is zero, then SVN_ERR_INCORRECT_PARAMS is returned.  */
 svn_error_t *
-svn_spillbuf_reader_read(apr_size_t *amt,
-                         svn_spillbuf_reader_t *reader,
-                         char *data,
-                         apr_size_t len,
-                         apr_pool_t *scratch_pool);
+svn_spillbuf__reader_read(apr_size_t *amt,
+                          svn_spillbuf_reader_t *reader,
+                          char *data,
+                          apr_size_t len,
+                          apr_pool_t *scratch_pool);
 
 
 /* Read a single character from @a reader, and place it in @a c. If there
    is no content in the spill-buffer, then SVN_ERR_STREAM_UNEXPECTED_EOF
    is returned.  */
 svn_error_t *
-svn_spillbuf_reader_getc(char *c,
-                         svn_spillbuf_reader_t *reader,
-                         apr_pool_t *scratch_pool);
+svn_spillbuf__reader_getc(char *c,
+                          svn_spillbuf_reader_t *reader,
+                          apr_pool_t *scratch_pool);
 
 
 /* Write @a len bytes from @a data into the spill-buffer in @reader.  */
 svn_error_t *
-svn_spillbuf_reader_write(svn_spillbuf_reader_t *reader,
-                          const char *data,
-                          apr_size_t len,
-                          apr_pool_t *scratch_pool);
+svn_spillbuf__reader_write(svn_spillbuf_reader_t *reader,
+                           const char *data,
+                           apr_size_t len,
+                           apr_pool_t *scratch_pool);
 
 /** @} */
 

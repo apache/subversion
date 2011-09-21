@@ -167,7 +167,7 @@ read_number(apr_uint64_t *num, svn_spillbuf_reader_t *reader, apr_pool_t *pool)
   *num = 0;
   while (1)
     {
-      SVN_ERR(svn_spillbuf_reader_getc(&c, reader, pool));
+      SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
       if (c == ':')
         break;
       *num = *num * 10 + (c - '0');
@@ -206,7 +206,7 @@ read_string(const char **str, svn_spillbuf_reader_t *reader, apr_pool_t *pool)
   buf = apr_palloc(pool, size+1);
   if (size > 0)
     {
-      SVN_ERR(svn_spillbuf_reader_read(&amt, reader, buf, size, pool));
+      SVN_ERR(svn_spillbuf__reader_read(&amt, reader, buf, size, pool));
       SVN_ERR_ASSERT(amt == size);
     }
   buf[len] = 0;
@@ -220,7 +220,7 @@ read_rev(svn_revnum_t *rev, svn_spillbuf_reader_t *reader, apr_pool_t *pool)
   char c;
   apr_uint64_t num;
 
-  SVN_ERR(svn_spillbuf_reader_getc(&c, reader, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   if (c == '+')
     {
       SVN_ERR(read_number(&num, reader, pool));
@@ -240,7 +240,7 @@ read_depth(svn_depth_t *depth, svn_spillbuf_reader_t *reader, const char *path,
 {
   char c;
 
-  SVN_ERR(svn_spillbuf_reader_getc(&c, reader, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   switch (c)
     {
     case 'X':
@@ -276,7 +276,7 @@ read_path_info(path_info_t **pi,
 {
   char c;
 
-  SVN_ERR(svn_spillbuf_reader_getc(&c, reader, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   if (c == '-')
     {
       *pi = NULL;
@@ -285,20 +285,20 @@ read_path_info(path_info_t **pi,
 
   *pi = apr_palloc(pool, sizeof(**pi));
   SVN_ERR(read_string(&(*pi)->path, reader, pool));
-  SVN_ERR(svn_spillbuf_reader_getc(&c, reader, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   if (c == '+')
     SVN_ERR(read_string(&(*pi)->link_path, reader, pool));
   else
     (*pi)->link_path = NULL;
   SVN_ERR(read_rev(&(*pi)->rev, reader, pool));
-  SVN_ERR(svn_spillbuf_reader_getc(&c, reader, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   if (c == '+')
     SVN_ERR(read_depth(&((*pi)->depth), reader, (*pi)->path, pool));
   else
     (*pi)->depth = svn_depth_infinity;
-  SVN_ERR(svn_spillbuf_reader_getc(&c, reader, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   (*pi)->start_empty = (c == '+');
-  SVN_ERR(svn_spillbuf_reader_getc(&c, reader, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   if (c == '+')
     SVN_ERR(read_string(&(*pi)->lock_token, reader, pool));
   else
@@ -1297,7 +1297,7 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
   b->pool = pool;
 
   /* Add the end marker. */
-  SVN_ERR(svn_spillbuf_reader_write(b->reader, "-", 1, pool));
+  SVN_ERR(svn_spillbuf__reader_write(b->reader, "-", 1, pool));
 
   /* Read the first pathinfo from the report and verify that it is a top-level
      set_path entry. */
@@ -1389,7 +1389,7 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
   rep = apr_psprintf(pool, "+%" APR_SIZE_T_FMT ":%s%s%s%s%c%s",
                      strlen(path), path, lrep, rrep, drep,
                      start_empty ? '+' : '-', ltrep);
-  return svn_spillbuf_reader_write(b->reader, rep, strlen(rep), pool);
+  return svn_spillbuf__reader_write(b->reader, rep, strlen(rep), pool);
 }
 
 svn_error_t *
@@ -1484,9 +1484,9 @@ svn_repos_begin_report2(void **report_baton,
   b->authz_read_baton = authz_read_baton;
   b->revision_infos = apr_hash_make(pool);
   b->pool = pool;
-  b->reader = svn_spillbuf_reader_create(1000 /* blocksize */,
-                                         1000000 /* maxsize */,
-                                         pool);
+  b->reader = svn_spillbuf__reader_create(1000 /* blocksize */,
+                                          1000000 /* maxsize */,
+                                          pool);
 
   /* Hand reporter back to client. */
   *report_baton = b;
