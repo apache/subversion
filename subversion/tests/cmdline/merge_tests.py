@@ -16301,7 +16301,7 @@ def no_self_referential_or_nonexistent_inherited_mergeinfo(sbox):
 
   # This test is marked as XFail because the following two merges
   # create mergeinfo with both non-existent path-revs and self-referential
-  # mergeinfo.c
+  # mergeinfo.
   #
   # Merge all available revisions from A/C/nu to A_COPY/C/nu.
   # The target has no explicit mergeinfo of its own but inherits mergeinfo
