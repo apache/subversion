@@ -59,22 +59,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, cmpilato
 
- * r1147299, r1162974, r1162995
-   Fix issue #3867 'reintegrate merges create mergeinfo for non-existent
-   paths' and issue #3961 'reintegrate merge of replaced source produces
-   inaccurate mergeinfo'.
-   Justification:
-      Avoid potential confusion which can occur when a reintegrate merge
-      sets mergeinfo (to describe the merge) which contains non-existent
-      path-revs, other lines of history, and/or valid path-revs which were
-      never merged.
-   Notes:
-     r1147299 and r1162995 is the addition and tweak of a test for
-     issue #3961.  A test already existed for issue #3867 prior to branching
-     1.7.x. r1162974 is the fix for both issues.
-   Votes:
-     +1: pburba, stsp
-
  * r1163243, r1163383
    Fix issue #3791 'svn mergeinfo shows natural history of added subtrees
    as eligible'.
@@ -115,7 +99,7 @@ Candidate changes:
      Possible performance improvement for merges, and doesn't cost anything.
      This function is used to sort mergeinfo catalogs, among other things.
    Votes:
-     +1: stsp (for 1.7.1)
+     +1: stsp, rhuijben (for 1.7.1)
 
  * r1173425, r1173639
    Revert the fixes for issue #3669 'inheritance can result in mergeinfo
@@ -144,3 +128,19 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1147299, r1162974, r1162995
+   Fix issue #3867 'reintegrate merges create mergeinfo for non-existent
+   paths' and issue #3961 'reintegrate merge of replaced source produces
+   inaccurate mergeinfo'.
+   Justification:
+      Avoid potential confusion which can occur when a reintegrate merge
+      sets mergeinfo (to describe the merge) which contains non-existent
+      path-revs, other lines of history, and/or valid path-revs which were
+      never merged.
+   Notes:
+     r1147299 and r1162995 is the addition and tweak of a test for
+     issue #3961.  A test already existed for issue #3867 prior to branching
+     1.7.x. r1162974 is the fix for both issues.
+   Votes:
+     +1: pburba, stsp, rhuijben
