@@ -62,7 +62,14 @@ extern "C" {
  * that you must fully consume before asking for more data. The callback
  * style provides for a "stop" parameter to temporarily pause the reading
  * until another read is desired. The two styles of reading may be mixed,
- * as the caller desires.
+ * as the caller desires. Generally, N will be the blocksize, and will be
+ * less when the end of the content is reached.
+ *
+ * For a more stream-oriented style of reading, where the caller specifies
+ * the number of bytes to read into a caller-provided buffer, please see
+ * svn_spillbuf_reader_t. That overlaid type will cause more memory copies
+ * to be performed (whereas the bare spill-buffer type hands you a buffer
+ * to consume).
  *
  * Writes may be interleaved with reading, and content will be returned
  * in a FIFO manner. Thus, if content has been placed into the spill-buffer
@@ -138,6 +145,54 @@ svn_spillbuf_process(svn_boolean_t *exhausted,
                      svn_spillbuf_read_t read_func,
                      void *read_baton,
                      apr_pool_t *scratch_pool);
+
+
+/** Classic stream reading layer on top of spill-buffers.
+ *
+ * This type layers upon a spill-buffer to enable a caller to read a
+ * specified number of bytes into the caller's provided buffer. This
+ * implies more memory copies than the standard spill-buffer reading
+ * interface, but is sometimes required by spill-buffer users.
+ */
+typedef struct svn_spillbuf_reader_t svn_spillbuf_reader_t;
+
+
+/* Create a spill-buffer and a reader for it.  */
+svn_spillbuf_reader_t *
+svn_spillbuf_reader_create(apr_size_t blocksize,
+                           apr_size_t maxsize,
+                           apr_pool_t *result_pool);
+
+
+/* Read @a len bytes from @a reader into @a data. The number of bytes
+   actually read is stored in @a amt. If the content is exhausted, then
+   @a amt is set to zero. It will always be non-zero if the spill-buffer
+   contains content.
+
+   If @a len is zero, then SVN_ERR_INCORRECT_PARAMS is returned.  */
+svn_error_t *
+svn_spillbuf_reader_read(apr_size_t *amt,
+                         svn_spillbuf_reader_t *reader,
+                         char *data,
+                         apr_size_t len,
+                         apr_pool_t *scratch_pool);
+
+
+/* Read a single character from @a reader, and place it in @a c. If there
+   is no content in the spill-buffer, then SVN_ERR_STREAM_UNEXPECTED_EOF
+   is returned.  */
+svn_error_t *
+svn_spillbuf_reader_getc(char *c,
+                         svn_spillbuf_reader_t *reader,
+                         apr_pool_t *scratch_pool);
+
+
+/* Write @a len bytes from @a data into the spill-buffer in @reader.  */
+svn_error_t *
+svn_spillbuf_reader_write(svn_spillbuf_reader_t *reader,
+                          const char *data,
+                          apr_size_t len,
+                          apr_pool_t *scratch_pool);
 
 /** @} */
 

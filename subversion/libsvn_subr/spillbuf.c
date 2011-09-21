@@ -73,6 +73,29 @@ struct svn_spillbuf_t {
 };
 
 
+struct svn_spillbuf_reader_t {
+  /* Embed the spill-buffer within the reader.  */
+  struct svn_spillbuf_t buf;
+
+  /* When we read content from the underlying spillbuf, these fields store
+     the ptr/len pair. The ptr will be incremented as we "read" out of this
+     buffer since we don't have to retain the original pointer (it is
+     managed inside of the spillbuf).  */
+  const char *sb_ptr;
+  apr_size_t sb_len;
+
+  /* If a write comes in, then we may need to save content from our
+     borrowed buffer (since that buffer may be destroyed by our call into
+     the spillbuf code). Note that we retain the original pointer since
+     this buffer is allocated by the reader code and re-used. The SAVE_POS
+     field indicates the current position within this save buffer. The
+     SAVE_LEN field describes how much content is present.  */
+  char *save_ptr;
+  apr_size_t save_len;
+  apr_size_t save_pos;
+};
+
+
 svn_spillbuf_t *
 svn_spillbuf_create(apr_size_t blocksize,
                     apr_size_t maxsize,
@@ -83,6 +106,7 @@ svn_spillbuf_create(apr_size_t blocksize,
   buf->pool = result_pool;
   buf->blocksize = blocksize;
   buf->maxsize = maxsize;
+  /* Note: changes here should also go into svn_spillbuf_reader_create() */
 
   return buf;
 }
@@ -401,4 +425,132 @@ svn_spillbuf_process(svn_boolean_t *exhausted,
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
+}
+
+
+svn_spillbuf_reader_t *
+svn_spillbuf_reader_create(apr_size_t blocksize,
+                           apr_size_t maxsize,
+                           apr_pool_t *result_pool)
+{
+  svn_spillbuf_reader_t *sbr = apr_pcalloc(result_pool, sizeof(*sbr));
+
+  /* See svn_spillbuf_create()  */
+  sbr->buf.pool = result_pool;
+  sbr->buf.blocksize = blocksize;
+  sbr->buf.maxsize = maxsize;
+
+  return sbr;
+}
+
+
+svn_error_t *
+svn_spillbuf_reader_read(apr_size_t *amt,
+                         svn_spillbuf_reader_t *reader,
+                         char *data,
+                         apr_size_t len,
+                         apr_pool_t *scratch_pool)
+{
+  if (len == 0)
+    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL, NULL);
+
+  *amt = 0;
+
+  while (len > 0)
+    {
+      apr_size_t copy_amt;
+
+      if (reader->save_len > 0)
+        {
+          /* We have some saved content, so use this first.  */
+
+          if (len < reader->save_len)
+            copy_amt = len;
+          else
+            copy_amt = reader->save_len;
+
+          memcpy(data, reader->save_ptr + reader->save_pos, copy_amt);
+          reader->save_pos += copy_amt;
+          reader->save_len -= copy_amt;
+        }
+      else
+        {
+          /* No saved content. We should now copy from spillbuf-provided
+             buffers of content.  */
+
+          /* We may need more content from the spillbuf.  */
+          if (reader->sb_len == 0)
+            {
+              SVN_ERR(svn_spillbuf_read(&reader->sb_ptr, &reader->sb_len,
+                                        &reader->buf,
+                                        scratch_pool));
+
+              /* We've run out of content, so return with whatever has
+                 been copied into DATA and stored into AMT.  */
+              if (reader->sb_ptr == NULL)
+                {
+                  /* For safety, read() may not have set SB_LEN. We use it
+                     as an indicator, so it needs to be cleared.  */
+                  reader->sb_len = 0;
+                  return SVN_NO_ERROR;
+                }
+            }
+
+          if (len < reader->sb_len)
+            copy_amt = len;
+          else
+            copy_amt = reader->sb_len;
+
+          memcpy(data, reader->sb_ptr, copy_amt);
+          reader->sb_ptr += copy_amt;
+          reader->sb_len -= copy_amt;
+        }
+
+      data += copy_amt;
+      len -= copy_amt;
+      (*amt) += copy_amt;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_spillbuf_reader_getc(char *c,
+                         svn_spillbuf_reader_t *reader,
+                         apr_pool_t *scratch_pool)
+{
+  apr_size_t amt;
+
+  SVN_ERR(svn_spillbuf_reader_read(&amt, reader, c, 1, scratch_pool));
+  if (amt == 0)
+    return svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL, NULL);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_spillbuf_reader_write(svn_spillbuf_reader_t *reader,
+                          const char *data,
+                          apr_size_t len,
+                          apr_pool_t *scratch_pool)
+{
+  /* If we have a buffer of content from the spillbuf, then we need to
+     move that content to a safe place.  */
+  if (reader->sb_len > 0)
+    {
+      if (reader->save_ptr == NULL)
+        reader->save_ptr = apr_palloc(reader->buf.pool, reader->buf.blocksize);
+
+      memcpy(reader->save_ptr, reader->sb_ptr, reader->sb_len);
+      reader->save_len = reader->sb_len;
+      reader->save_pos = 0;
+
+      /* No more content in the spillbuf-borrowed buffer.  */
+      reader->sb_len = 0;
+    }
+
+  return svn_error_trace(svn_spillbuf_write(&reader->buf, data, len,
+                                            scratch_pool));
 }
