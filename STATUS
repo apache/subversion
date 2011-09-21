@@ -117,6 +117,22 @@ Candidate changes:
    Votes:
      +1: stsp (for 1.7.1)
 
+ * r1173425
+   Revert the fixes for issue #3669 'inheritance can result in mergeinfo
+   describing nonexistent sources'.
+   Justification:
+     The issue #3669 fixes reverted in r1173425 imposed an unacceptable
+     performance penalty on the server.  A new approach is needed, but can
+     wait till 1.8.
+   Branch:
+     ^/subversion/branches/1.7.x-r1173425
+   Notes:
+     Issue #3668 'inheritance can result in self-referential mergeinfo' is
+     also reverted as part of this change, see
+     http://subversion.tigris.org/issues/show_bug.cgi?id=3668#desc5
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
