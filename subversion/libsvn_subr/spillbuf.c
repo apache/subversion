@@ -106,7 +106,7 @@ svn_spillbuf__create(apr_size_t blocksize,
   buf->pool = result_pool;
   buf->blocksize = blocksize;
   buf->maxsize = maxsize;
-  /* Note: changes here should also go into svn_spillbuf_reader_create() */
+  /* Note: changes here should also go into svn_spillbuf__reader_create() */
 
   return buf;
 }
@@ -435,7 +435,7 @@ svn_spillbuf__reader_create(apr_size_t blocksize,
 {
   svn_spillbuf_reader_t *sbr = apr_pcalloc(result_pool, sizeof(*sbr));
 
-  /* See svn_spillbuf_create()  */
+  /* See svn_spillbuf__create()  */
   sbr->buf.pool = result_pool;
   sbr->buf.blocksize = blocksize;
   sbr->buf.maxsize = maxsize;
