@@ -4546,7 +4546,7 @@ close_edit(void *edit_baton,
 
 /*** Returning editors. ***/
 
-struct fetch_props_baton
+struct fetch_baton
 {
   svn_wc__db_t *db;
   const char *target_abspath;
@@ -4559,7 +4559,7 @@ fetch_props_func(apr_hash_t **props,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  struct fetch_props_baton *fpb = baton;
+  struct fetch_baton *fpb = baton;
   const char *local_abspath = svn_dirent_join(fpb->target_abspath, path,
                                               scratch_pool);
   svn_error_t *err;
@@ -4576,6 +4576,31 @@ fetch_props_func(apr_hash_t **props,
   else if (err)
     return svn_error_trace(err);
 
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_kind_func(svn_node_kind_t *kind,
+                void *baton,
+                const char *path,
+                apr_pool_t *scratch_pool)
+{
+  struct fetch_baton *fpb = baton;
+  const char *local_abspath = svn_dirent_join(fpb->target_abspath, path,
+                                              scratch_pool);
+  svn_error_t *err;
+  svn_wc__db_kind_t db_kind;
+
+  SVN_ERR(svn_wc__db_read_kind(&db_kind, fpb->db, local_abspath, FALSE,
+                               scratch_pool));
+
+  if (db_kind == svn_wc__db_kind_dir)
+    *kind = svn_node_dir;
+  else if (db_kind == svn_wc__db_kind_file)
+    *kind = svn_node_file;
+  else
+    *kind = svn_node_none;
+  
   return SVN_NO_ERROR;
 }
 
@@ -4616,7 +4641,7 @@ make_editor(svn_revnum_t *target_revision,
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(edit_pool);
   const svn_delta_editor_t *inner_editor;
   const char *repos_root, *repos_uuid;
-  struct fetch_props_baton *fpb;
+  struct fetch_baton *fpb;
 
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
@@ -4848,7 +4873,7 @@ make_editor(svn_revnum_t *target_revision,
   fpb->db = db;
   fpb->target_abspath = eb->target_abspath;
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   fetch_props_func, fpb, NULL, NULL,
+                                   fetch_props_func, fpb, fetch_kind_func, fpb,
                                    result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
