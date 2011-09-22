@@ -524,6 +524,13 @@ public interface ISVNClient
      * @throws ClientException
      */
     void diff(String target1, Revision revision1, String target2,
+              Revision revision2, String relativeToDir, OutputStream outStream,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds)
+            throws ClientException;
+
+    void diff(String target1, Revision revision1, String target2,
               Revision revision2, String relativeToDir, String outFileName,
               Depth depth, Collection<String> changelists,
               boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
@@ -547,6 +554,14 @@ public interface ISVNClient
      *                      entirety, not as diffs from their sources
      * @throws ClientException
      */
+    void diff(String target, Revision pegRevision, Revision startRevision,
+              Revision endRevision, String relativeToDir,
+              OutputStream outStream,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds)
+            throws ClientException;
+
     void diff(String target, Revision pegRevision, Revision startRevision,
               Revision endRevision, String relativeToDir, String outFileName,
               Depth depth, Collection<String> changelists,
