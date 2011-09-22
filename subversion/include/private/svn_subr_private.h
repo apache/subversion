@@ -113,8 +113,8 @@ svn_spillbuf__write(svn_spillbuf_t *buf,
                     apr_pool_t *scratch_pool);
 
 
-/* Read a block of memory from the spill buffer. @a data will be set to
-   NULL if no content remains. Otherwise, @data and @len will point to
+/* Read a block of memory from the spill buffer. @a *data will be set to
+   NULL if no content remains. Otherwise, @a data and @a len will point to
    data that must be fully-consumed by the caller. This data will remain
    valid until another call to svn_spillbuf_write(), svn_spillbuf_read(),
    or svn_spillbuf_process(), or if the spill buffer's pool is cleared.  */
@@ -187,7 +187,7 @@ svn_spillbuf__reader_getc(char *c,
                           apr_pool_t *scratch_pool);
 
 
-/* Write @a len bytes from @a data into the spill-buffer in @reader.  */
+/* Write @a len bytes from @a data into the spill-buffer in @a reader.  */
 svn_error_t *
 svn_spillbuf__reader_write(svn_spillbuf_reader_t *reader,
                            const char *data,
