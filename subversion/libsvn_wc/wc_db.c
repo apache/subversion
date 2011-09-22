@@ -10413,6 +10413,77 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__db_upgrade_insert_external(svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   svn_wc__db_kind_t kind,
+                                   const char *parent_abspath,
+                                   const char *def_local_abspath,
+                                   const char *repos_relpath,
+                                   const char *repos_root_url,
+                                   const char *repos_uuid,
+                                   svn_revnum_t def_peg_revision,
+                                   svn_revnum_t def_revision,
+                                   apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *parent_local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  apr_int64_t repos_id;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot,
+                                                &parent_local_relpath, db,
+                                                parent_abspath, scratch_pool,
+                                                scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_REPOSITORY));
+  SVN_ERR(svn_sqlite__bindf(stmt, "s", repos_root_url));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row)
+    repos_id = svn_sqlite__column_int64(stmt, 0);
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (!have_row)
+    {
+      /* Need to set up a new repository row. */
+      SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
+                              wcroot->sdb, scratch_pool));
+    }
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_INSERT_EXTERNAL));
+
+  /* wc_id, local_relpath, parent_relpath, presence, kind, def_local_relpath,
+   * repos_id, def_repos_relpath, def_operational_revision, def_revision */
+  SVN_ERR(svn_sqlite__bindf(stmt, "issstsis",
+                            wcroot->wc_id,
+                            svn_dirent_skip_ancestor(wcroot->abspath,
+                                                     local_abspath),
+                            parent_local_relpath,
+                            "normal",
+                            kind_map, kind,
+                            svn_dirent_skip_ancestor(wcroot->abspath,
+                                                     def_local_abspath),
+                            repos_id,
+                            repos_relpath));
+
+  if (SVN_IS_VALID_REVNUM(def_peg_revision))
+    SVN_ERR(svn_sqlite__bind_revnum(stmt, 9, def_peg_revision));
+
+  if (SVN_IS_VALID_REVNUM(def_revision))
+    SVN_ERR(svn_sqlite__bind_revnum(stmt, 10, def_revision));
+
+  SVN_ERR(svn_sqlite__insert(NULL, stmt));
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__db_upgrade_get_repos_id(apr_int64_t *repos_id,
