@@ -571,7 +571,7 @@ svn_error_t * svn_ra_neon__get_props_resource(svn_ra_neon__resource_t **rsrc,
 {
   apr_hash_t *props;
   char * url_path = apr_pstrdup(pool, url);
-  int len = strlen(url);
+  size_t len = strlen(url);
   /* Clean up any trailing slashes. */
   if (len > 1 && url[len - 1] == '/')
       url_path[len - 1] = '\0';
