@@ -4848,7 +4848,7 @@ make_editor(svn_revnum_t *target_revision,
   fpb->db = db;
   fpb->target_abspath = eb->target_abspath;
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   fetch_props_func, fpb,
+                                   fetch_props_func, fpb, NULL, NULL,
                                    result_pool, scratch_pool));
 
   return SVN_NO_ERROR;

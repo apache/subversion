@@ -438,7 +438,7 @@ void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
 
   svn_error_clear(svn_editor__insert_shims(editor, edit_baton, *editor,
                                            *edit_baton, NULL, NULL,
-                                           pool, pool));
+                                           NULL, NULL, pool, pool));
 }
 
 /* --- DRIVING AN EDITOR --- */
