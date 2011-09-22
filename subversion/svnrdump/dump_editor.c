@@ -718,7 +718,7 @@ apply_textdelta(void *file_baton, const char *base_checksum,
 
   LDR_DBG(("apply_textdelta %p\n", file_baton));
 
-  /* Use a temporary file to measure the text-content-length */
+  /* Use a temporary file to measure the Text-content-length */
   delta_filestream = svn_stream_from_aprfile2(eb->delta_file, TRUE, pool);
 
   /* Prepare to write the delta to the delta_filestream */
