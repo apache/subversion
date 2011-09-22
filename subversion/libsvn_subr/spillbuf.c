@@ -70,6 +70,9 @@ struct svn_spillbuf_t {
   /* As we consume content from SPILL, this value indicates where we
      will begin reading.  */
   apr_off_t spill_start;
+
+  /* How much content remains in SPILL.  */
+  svn_filesize_t spill_size;
 };
 
 
@@ -112,10 +115,10 @@ svn_spillbuf__create(apr_size_t blocksize,
 }
 
 
-svn_boolean_t
-svn_spillbuf__is_empty(const svn_spillbuf_t *buf)
+svn_filesize_t
+svn_spillbuf__get_size(const svn_spillbuf_t *buf)
 {
-  return buf->head == NULL && buf->spill == NULL;
+  return buf->memory_size + buf->spill_size;
 }
 
 
@@ -185,6 +188,8 @@ svn_spillbuf__write(svn_spillbuf_t *buf,
          ensure this, so that we will append.  */
       SVN_ERR(svn_io_file_write_full(buf->spill, data, len,
                                      NULL, scratch_pool));
+      buf->spill_size += len;
+
       return SVN_NO_ERROR;
     }
 
@@ -279,37 +284,30 @@ read_data(struct memblock_t **mem,
   *mem = get_buffer(buf);
   /* NOTE: mem's size/next are uninitialized.  */
 
-  (*mem)->size = buf->blocksize;  /* The size of (*mem)->data  */
+  if (buf->spill_size < buf->blocksize)
+    (*mem)->size = buf->spill_size;
+  else
+    (*mem)->size = buf->blocksize;  /* The size of (*mem)->data  */
   (*mem)->next = NULL;
 
   /* Read some data from the spill file into the memblock.  */
   err = svn_io_file_read(buf->spill, (*mem)->data, &(*mem)->size,
                          scratch_pool);
-  if (err != NULL && APR_STATUS_IS_EOF(err->apr_err))
-    {
-      /* We've exhausted the file. Close it, so any new content will go
-         into memory rather than the file.  */
-      svn_error_clear(err);
-      SVN_ERR(svn_io_file_close(buf->spill, scratch_pool));
-      buf->spill = NULL;
-    }
-  else if (err)
+  if (err)
     {
       return_buffer(buf, *mem);
       return svn_error_trace(err);
     }
 
-  /* If we didn't read anything from the file, then avoid returning a
-     memblock (ie. just like running out of content).  */
-  if ((*mem)->size == 0)
-    {
-      return_buffer(buf, *mem);
-      *mem = NULL;
-      return SVN_NO_ERROR;
-    }
-
   /* Mark the data that we consumed from the spill file.  */
   buf->spill_start += (*mem)->size;
+
+  /* Did we consume all the data from the spill file?  */
+  if ((buf->spill_size -= (*mem)->size) == 0)
+    {
+      SVN_ERR(svn_io_file_close(buf->spill, scratch_pool));
+      buf->spill = NULL;
+    }
 
   /* *mem has been initialized. Done.  */
   return SVN_NO_ERROR;

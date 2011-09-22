@@ -43,14 +43,14 @@ test_spillbuf_basic(apr_pool_t *pool)
   int i;
 
   /* It starts empty.  */
-  SVN_TEST_ASSERT(svn_spillbuf__is_empty(buf));
+  SVN_TEST_ASSERT(svn_spillbuf__get_size(buf) == 0);
 
   /* Place enough data into the buffer to cause a spill to disk.  */
   for (i = 20; i--; )
     SVN_ERR(svn_spillbuf__write(buf, basic_data, sizeof(basic_data), pool));
 
   /* And now has content.  */
-  SVN_TEST_ASSERT(!svn_spillbuf__is_empty(buf));
+  SVN_TEST_ASSERT(svn_spillbuf__get_size(buf) > 0);
 
   while (TRUE)
     {
@@ -69,7 +69,7 @@ test_spillbuf_basic(apr_pool_t *pool)
       SVN_TEST_ASSERT(memcmp(readptr, basic_data, readlen) == 0);
     }
 
-  SVN_TEST_ASSERT(svn_spillbuf__is_empty(buf));
+  SVN_TEST_ASSERT(svn_spillbuf__get_size(buf) == 0);
 
   return SVN_NO_ERROR;
 }
@@ -185,7 +185,7 @@ test_spillbuf_file(apr_pool_t *pool)
         }
     }
 
-  SVN_TEST_ASSERT(svn_spillbuf__is_empty(buf));
+  SVN_TEST_ASSERT(svn_spillbuf__get_size(buf) == 0);
 
   return SVN_NO_ERROR;
 }

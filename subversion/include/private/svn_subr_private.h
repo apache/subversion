@@ -94,15 +94,9 @@ svn_spillbuf__create(apr_size_t blocksize,
                      apr_pool_t *result_pool);
 
 
-/* Determine whether the spill buffer has any content.
-
-   Note: there is an edge case for a false positive. If the spill file was
-   read *just* to the end of the file, but not past... then the spill
-   buffer will not realize that no further content exists in the spill file.
-   In this situation, svn_spillbuf_is_empty() will return TRUE, but an
-   attempt to read content will detect that it has been exhausted.  */
-svn_boolean_t
-svn_spillbuf__is_empty(const svn_spillbuf_t *buf);
+/* Determine how much content is stored in the spill buffer.  */
+svn_filesize_t
+svn_spillbuf__get_size(const svn_spillbuf_t *buf);
 
 
 /* Write some data into the spill buffer.  */
