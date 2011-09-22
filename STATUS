@@ -119,7 +119,7 @@ Candidate changes:
      follow-up to the issue #3669 fixes that didn't get fully removed
      in r1173425.
    Votes:
-     +1: pburba
+     +1: pburba, philip
      +0: ivan (r1173425 only, restart soak period for at least two weeks due
                API and client/server protocol)
      +0: danielsh (I didn't review merge_tests.py or merge.c changes)
@@ -129,7 +129,7 @@ Candidate changes:
    Justification:
      I said it already :)
    Votes:
-     +1: neels
+     +1: neels, philip
 
 Veto-blocked changes:
 =====================
