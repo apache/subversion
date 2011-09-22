@@ -129,10 +129,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1174051, r1174060
-   Fix a segfault in upgrade code.
-   Justification:
-     I said it already :)
-   Votes:
-     +1: neels, philip, rhuijben
