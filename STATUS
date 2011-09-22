@@ -124,6 +124,13 @@ Candidate changes:
                API and client/server protocol)
      +0: danielsh (I didn't review merge_tests.py or merge.c changes)
 
+ * r1174051
+   Fix a segfault in upgrade code.
+   Justification:
+     I said it already :)
+   Votes:
+     +1: neels
+
 Veto-blocked changes:
 =====================
 
