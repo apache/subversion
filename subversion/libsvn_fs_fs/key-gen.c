@@ -79,7 +79,7 @@ svn_fs_fs__add_keys(const char *key1, const char *key2, char *result)
 void
 svn_fs_fs__next_key(const char *this, apr_size_t *len, char *next)
 {
-  apr_size_t i;
+  apr_ssize_t i;
   apr_size_t olen = *len;     /* remember the first length */
   char c;                     /* current char */
   svn_boolean_t carry = TRUE; /* boolean: do we have a carry or not?
