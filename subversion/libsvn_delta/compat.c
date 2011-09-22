@@ -590,7 +590,8 @@ get_operation(const char *path,
       child->rev = SVN_INVALID_REVNUM;
       child->kind = svn_node_dir;
       child->props = NULL;
-      apr_hash_set(operation->children, path, APR_HASH_KEY_STRING, child);
+      apr_hash_set(operation->children, apr_pstrdup(result_pool, path),
+                   APR_HASH_KEY_STRING, child);
     }
   return child;
 }
@@ -909,6 +910,12 @@ svn_editor_from_delta(svn_editor_t **editor_p,
 
   eb->fetch_kind_func = fetch_kind_func;
   eb->fetch_kind_baton = fetch_kind_baton;
+
+  eb->root.children = apr_hash_make(result_pool);
+  eb->root.kind = svn_node_dir;
+  eb->root.operation = OP_OPEN;
+  eb->root.props = NULL;
+  eb->root.rev = SVN_INVALID_REVNUM;
 
   SVN_ERR(svn_editor_create(&editor, eb, cancel_func, cancel_baton,
                             result_pool, scratch_pool));
