@@ -244,14 +244,16 @@ svn_client__ensure_ra_session_url(const char **old_session_url,
                                   const char *session_url,
                                   apr_pool_t *pool);
 
-/* Set REPOS_ROOT, allocated in RESULT_POOL to the URL which represents
+/* Set *REPOS_ROOT and *REPOS_UUID, to the URL and UUID that represent
    the root of the repository in with ABSPATH_OR_URL is versioned.
    Use the authentication baton and working copy context cached in CTX as
-   necessary.
+   necessary.  REPOS_ROOT and/or REPOS_UUID may be NULL if not wanted.
 
+   Allocate *REPOS_ROOT and *REPOS_UUID in RESULT_POOL.
    Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_client__get_repos_root(const char **repos_root,
+                           const char **repos_uuid,
                            const char *abspath_or_url,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *result_pool,
