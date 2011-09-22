@@ -98,7 +98,7 @@ struct ev2_edit_baton
   apr_hash_t *paths;
   svn_revnum_t target_revision;
   apr_pool_t *edit_pool;
-  svn_delta_fetch_props_cb_func_t fetch_props_func;
+  svn_delta_fetch_props_func_t fetch_props_func;
   void *fetch_props_baton;
 };
 
@@ -486,7 +486,7 @@ svn_error_t *
 svn_delta_from_editor(const svn_delta_editor_t **deditor,
                       void **dedit_baton,
                       svn_editor_t *editor,
-                      svn_delta_fetch_props_cb_func_t fetch_props_func,
+                      svn_delta_fetch_props_func_t fetch_props_func,
                       void *fetch_props_baton,
                       apr_pool_t *pool)
 {
@@ -562,7 +562,7 @@ struct editor_baton
   const svn_delta_editor_t *deditor;
   void *dedit_baton;
 
-  svn_delta_fetch_kind_cb_func_t fetch_kind_func;
+  svn_delta_fetch_kind_func_t fetch_kind_func;
   void *fetch_kind_baton;
 
   struct operation root;
@@ -975,7 +975,7 @@ svn_editor_from_delta(svn_editor_t **editor_p,
                       void *dedit_baton,
                       svn_cancel_func_t cancel_func,
                       void *cancel_baton,
-                      svn_delta_fetch_kind_cb_func_t fetch_kind_func,
+                      svn_delta_fetch_kind_func_t fetch_kind_func,
                       void *fetch_kind_baton,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
@@ -1024,9 +1024,9 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
                          void **dedit_baton_out,
                          const svn_delta_editor_t *deditor_in,
                          void *dedit_baton_in,
-                         svn_delta_fetch_props_cb_func_t fetch_props_func,
+                         svn_delta_fetch_props_func_t fetch_props_func,
                          void *fetch_props_baton,
-                         svn_delta_fetch_kind_cb_func_t fetch_kind_func,
+                         svn_delta_fetch_kind_func_t fetch_kind_func,
                          void *fetch_kind_baton,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
