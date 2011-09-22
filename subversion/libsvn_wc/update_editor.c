@@ -4588,7 +4588,6 @@ fetch_kind_func(svn_node_kind_t *kind,
   struct fetch_baton *fpb = baton;
   const char *local_abspath = svn_dirent_join(fpb->target_abspath, path,
                                               scratch_pool);
-  svn_error_t *err;
   svn_wc__db_kind_t db_kind;
 
   SVN_ERR(svn_wc__db_read_kind(&db_kind, fpb->db, local_abspath, FALSE,
