@@ -1171,10 +1171,10 @@ JNIEXPORT void JNICALL Java_org_apache_subversion_javahl_SVNClient_getMergeinfoL
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2ZZZZ
+Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Ljava_io_OutputStream_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2ZZZZ
 (JNIEnv *env, jobject jthis, jstring jtarget1, jobject jrevision1,
  jstring jtarget2, jobject jrevision2, jstring jrelativeToDir,
- jstring joutfileName, jobject jdepth, jobject jchangelists,
+ jobject jstream, jobject jdepth, jobject jchangelists,
  jboolean jignoreAncestry, jboolean jnoDiffDeleted, jboolean jforce,
  jboolean jcopiesAsAdds)
 {
@@ -1205,7 +1205,7 @@ Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache
   if (JNIUtil::isExceptionThrown())
     return;
 
-  JNIStringHolder outfileName(joutfileName);
+  OutputStream dataOut(jstream);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1213,7 +1213,7 @@ Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->diff(target1, revision1, target2, revision2, relativeToDir, outfileName,
+  cl->diff(target1, revision1, target2, revision2, relativeToDir, dataOut,
            EnumMapper::toDepth(jdepth), changelists,
            jignoreAncestry ? true:false,
            jnoDiffDeleted ? true:false, jforce ? true:false,
@@ -1221,10 +1221,10 @@ Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2ZZZZ
+Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Ljava_io_OutputStream_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2ZZZZ
 (JNIEnv *env, jobject jthis, jstring jtarget, jobject jpegRevision,
  jobject jstartRevision, jobject jendRevision, jstring jrelativeToDir,
- jstring joutfileName, jobject jdepth, jobject jchangelists,
+ jobject jstream, jobject jdepth, jobject jchangelists,
  jboolean jignoreAncestry, jboolean jnoDiffDeleted, jboolean jforce,
  jboolean jcopiesAsAdds)
 {
@@ -1251,7 +1251,7 @@ Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache
   if (JNIUtil::isExceptionThrown())
     return;
 
-  JNIStringHolder outfileName(joutfileName);
+  OutputStream dataOut(jstream);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1264,7 +1264,7 @@ Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache
     return;
 
   cl->diff(target, pegRevision, startRevision, endRevision, relativeToDir,
-           outfileName, EnumMapper::toDepth(jdepth), changelists,
+           dataOut, EnumMapper::toDepth(jdepth), changelists,
            jignoreAncestry ? true:false,
            jnoDiffDeleted ? true:false, jforce ? true:false,
            jcopiesAsAdds ? true:false);
