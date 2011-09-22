@@ -562,6 +562,9 @@ struct editor_baton
   const svn_delta_editor_t *deditor;
   void *dedit_baton;
 
+  svn_delta_fetch_kind_cb_func_t fetch_kind_func;
+  void *fetch_kind_baton;
+
   struct operation root;
 
   apr_hash_t *paths;
@@ -972,6 +975,8 @@ svn_editor_from_delta(svn_editor_t **editor_p,
                       void *dedit_baton,
                       svn_cancel_func_t cancel_func,
                       void *cancel_baton,
+                      svn_delta_fetch_kind_cb_func_t fetch_kind_func,
+                      void *fetch_kind_baton,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
@@ -997,6 +1002,9 @@ svn_editor_from_delta(svn_editor_t **editor_p,
   eb->edit_pool = result_pool;
   eb->paths = apr_hash_make(result_pool);
 
+  eb->fetch_kind_func = fetch_kind_func;
+  eb->fetch_kind_baton = fetch_kind_baton;
+
   SVN_ERR(svn_editor_create(&editor, eb, cancel_func, cancel_baton,
                             result_pool, scratch_pool));
   SVN_ERR(svn_editor_setcb_many(editor, &editor_cbs, scratch_pool));
@@ -1018,6 +1026,8 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
                          void *dedit_baton_in,
                          svn_delta_fetch_props_cb_func_t fetch_props_func,
                          void *fetch_props_baton,
+                         svn_delta_fetch_kind_cb_func_t fetch_kind_func,
+                         void *fetch_kind_baton,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
@@ -1035,6 +1045,7 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
                                 NULL, NULL, result_pool, scratch_pool));
   SVN_ERR(svn_delta_from_editor(deditor_out, dedit_baton_out, editor,
                                 fetch_props_func, fetch_props_baton,
+                                fetch_kind_func, fetch_kind_baton,
                                 result_pool));
 
 #endif

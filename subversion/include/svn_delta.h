@@ -1099,6 +1099,18 @@ typedef svn_error_t *(*svn_delta_fetch_props_cb_func_t)(
   apr_pool_t *scratch_pool
   );
 
+/** Callback to retrieve a node's kind.  This is needed by the various editor
+ * shims in order to effect backward compat.
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *(*svn_delta_fetch_kind_cb_func_t)(
+  svn_node_kind_t *kind,
+  void *baton,
+  const char *path,
+  apr_pool_t *scratch_pool
+  );
+
 /* Return a delta editor and baton which will forward calls to @a editor,
  * allocated in @a pool.
  *
@@ -1132,6 +1144,8 @@ svn_editor_from_delta(svn_editor_t **editor,
                       void *dedit_baton,
                       svn_cancel_func_t cancel_func,
                       void *cancel_baton,
+                      svn_delta_fetch_kind_cb_func_t fetch_kind_func,
+                      void *fetch_kind_baton,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 
@@ -1154,6 +1168,8 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
                          void *dedit_baton_in,
                          svn_delta_fetch_props_cb_func_t fetch_props_func,
                          void *fetch_props_baton,
+                         svn_delta_fetch_kind_cb_func_t fetch_kind_func,
+                         void *fetch_kind_baton,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
