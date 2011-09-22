@@ -1886,7 +1886,7 @@ def file_externals_different_repos(sbox):
   r1_url = sbox.repo_url
 
   r2_dir, r2_url = sbox.add_repo_path('2')
-  shutil.copytree(sbox.repo_dir, r2_dir)
+  svntest.main.copy_repos(sbox.repo_dir, r2_dir, 1, 0)
 
 
   sbox.simple_propset('svn:externals',
