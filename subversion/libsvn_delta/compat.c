@@ -578,14 +578,14 @@ struct editor_baton
 static struct operation *
 get_operation(const char *path,
               struct operation *operation,
-              apr_pool_t *pool)
+              apr_pool_t *result_pool)
 {
   struct operation *child = apr_hash_get(operation->children, path,
                                          APR_HASH_KEY_STRING);
   if (! child)
     {
-      child = apr_pcalloc(pool, sizeof(*child));
-      child->children = apr_hash_make(pool);
+      child = apr_pcalloc(result_pool, sizeof(*child));
+      child->children = apr_hash_make(result_pool);
       child->operation = OP_OPEN;
       child->rev = SVN_INVALID_REVNUM;
       child->kind = svn_node_dir;
@@ -606,29 +606,30 @@ get_operation(const char *path,
       ACTION_PUT      NULL   invalid  valid     NULL
       ACTION_RM       NULL   invalid  NULL      NULL
       ACTION_PROPSET  valid  invalid  NULL      valid
-      ACTION_PROPDEL  valid  invalid  NULL      valid
 
    Node type information is obtained for any copy source (to determine
    whether to create a file or directory) and for any deleted path (to
    ensure it exists since svn_delta_editor_t->delete_entry doesn't
    return an error on non-existent nodes). */
 static svn_error_t *
-build(action_code_t action,
-      const char *path,
+build(struct editor_baton *eb,
+      action_code_t action,
+      const char *relpath,
       const char *url,
       svn_revnum_t rev,
       apr_hash_t *props,
       const char *src_file,
       svn_revnum_t head,
-      const char *anchor,
-      struct operation *operation,
-      apr_pool_t *pool)
+      apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *path_bits = svn_path_decompose(path, pool);
+  apr_array_header_t *path_bits = svn_path_decompose(relpath, scratch_pool);
   const char *path_so_far = "";
-  const char *copy_src = NULL;
-  svn_revnum_t copy_rev = SVN_INVALID_REVNUM;
+  struct operation *operation = &eb->root;
   int i;
+
+  /* We should only see PROPS when action is ACTION_PROPSET. */
+  SVN_ERR_ASSERT((props && action == ACTION_PROPSET)
+                || (!props && action != ACTION_PROPSET) );
 
   /* Look for any previous operations we've recognized for PATH.  If
      any of PATH's ancestors have not yet been traversed, we'll be
@@ -637,133 +638,41 @@ build(action_code_t action,
   for (i = 0; i < path_bits->nelts; ++i)
     {
       const char *path_bit = APR_ARRAY_IDX(path_bits, i, const char *);
-      path_so_far = svn_relpath_join(path_so_far, path_bit, pool);
-      operation = get_operation(path_so_far, operation, pool);
-
-      /* If we cross a replace- or add-with-history, remember the
-      source of those things in case we need to lookup the node kind
-      of one of their children.  And if this isn't such a copy,
-      but we've already seen one in of our parent paths, we just need
-      to extend that copy source path by our current path
-      component. */
-      if (operation->url
-          && SVN_IS_VALID_REVNUM(operation->rev)
-          && (operation->operation == OP_REPLACE
-              || operation->operation == OP_ADD))
-        {
-          /* ### HKW:
-          copy_src = subtract_anchor(anchor, operation->url, pool);*/
-          copy_rev = operation->rev;
-        }
-      else if (copy_src)
-        {
-          copy_src = svn_relpath_join(copy_src, path_bit, pool);
-        }
+      path_so_far = svn_relpath_join(path_so_far, path_bit, scratch_pool);
+      operation = get_operation(path_so_far, operation, eb->edit_pool);
     }
 
   /* Handle property changes. */
   if (props)
     {
-      if (operation->operation == OP_DELETE)
-        return svn_error_createf(SVN_ERR_BAD_URL, NULL,
-                                 "cannot set properties on a location being"
-                                 " deleted ('%s')", path);
+      SVN_ERR(eb->fetch_kind_func(&operation->kind, eb->fetch_kind_baton,
+                                  relpath, scratch_pool));
+
       /* If we're not adding this thing ourselves, check for existence.  */
       if (! ((operation->operation == OP_ADD) ||
              (operation->operation == OP_REPLACE)))
         {
-          /* ### HKW:
-          SVN_ERR(svn_ra_check_path(session,
-                                    copy_src ? copy_src : path,
-                                    copy_src ? copy_rev : head,
-                                    &operation->kind, pool));*/
-          if (operation->kind == svn_node_none)
-            return svn_error_createf(SVN_ERR_BAD_URL, NULL,
-                                     "propset: '%s' not found", path);
-          else if ((operation->kind == svn_node_file)
+          if ((operation->kind == svn_node_file)
                    && (operation->operation == OP_OPEN))
             operation->operation = OP_PROPSET;
         }
-      operation->props = svn_prop_hash_dup(props, pool);
+      operation->props = svn_prop_hash_dup(props, eb->edit_pool);
       if (!operation->rev)
         operation->rev = rev;
       return SVN_NO_ERROR;
     }
 
-  /* We won't fuss about multiple operations on the same path in the
-     following cases:
-
-       - the prior operation was, in fact, a no-op (open)
-       - the prior operation was a propset placeholder
-       - the prior operation was a deletion
-
-     Note: while the operation structure certainly supports the
-     ability to do a copy of a file followed by a put of new contents
-     for the file, we don't let that happen (yet).
-  */
-  if (operation->operation != OP_OPEN
-      && operation->operation != OP_PROPSET
-      && operation->operation != OP_DELETE)
-    return svn_error_createf(SVN_ERR_BAD_URL, NULL,
-                             "unsupported multiple operations on '%s'", path);
-
-  /* For deletions, we validate that there's actually something to
-     delete.  If this is a deletion of the child of a copied
-     directory, we need to remember to look in the copy source tree to
-     verify that this thing actually exists. */
   if (action == ACTION_RM)
-    {
-      operation->operation = OP_DELETE;
-      /* ### HKW
-      SVN_ERR(svn_ra_check_path(session,
-                                copy_src ? copy_src : path,
-                                copy_src ? copy_rev : head,
-                                &operation->kind, pool));*/
-      if (operation->kind == svn_node_none)
-        {
-          if (copy_src && strcmp(path, copy_src))
-            return svn_error_createf(SVN_ERR_BAD_URL, NULL,
-                                     "'%s' (from '%s:%ld') not found",
-                                     path, copy_src, copy_rev);
-          else
-            return svn_error_createf(SVN_ERR_BAD_URL, NULL, "'%s' not found",
-                                     path);
-        }
-    }
+    operation->operation = OP_DELETE;
+
   /* Handle copy operations (which can be adds or replacements). */
   else if (action == ACTION_CP)
     {
-      if (rev > head)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                "Copy source revision cannot be younger "
-                                "than base revision");
       operation->operation =
         operation->operation == OP_DELETE ? OP_REPLACE : OP_ADD;
-      if (operation->operation == OP_ADD)
-        {
-          /* There is a bug in the current version of mod_dav_svn
-             which incorrectly replaces existing directories.
-             Therefore we need to check if the target exists
-             and raise an error here. */
-          /* ### HKW:
-          SVN_ERR(svn_ra_check_path(session,
-                                    copy_src ? copy_src : path,
-                                    copy_src ? copy_rev : head,
-                                    &operation->kind, pool));*/
-          if (operation->kind != svn_node_none)
-            {
-              if (copy_src && strcmp(path, copy_src))
-                return svn_error_createf(SVN_ERR_BAD_URL, NULL,
-                                         "'%s' (from '%s:%ld') already exists",
-                                         path, copy_src, copy_rev);
-              else
-                return svn_error_createf(SVN_ERR_BAD_URL, NULL,
-                                         "'%s' already exists", path);
-            }
-        }
-      /* ### HKW:
-      SVN_ERR(svn_ra_check_path(session, subtract_anchor(anchor, url, pool),
-                                rev, &operation->kind, pool));*/
+
+      SVN_ERR(eb->fetch_kind_func(&operation->kind, eb->fetch_kind_baton,
+                                  relpath, scratch_pool));
       operation->url = url;
       operation->rev = rev;
     }
@@ -783,18 +692,15 @@ build(action_code_t action,
         }
       else
         {
-          /* ### HKW:
-          SVN_ERR(svn_ra_check_path(session,
-                                    copy_src ? copy_src : path,
-                                    copy_src ? copy_rev : head,
-                                    &operation->kind, pool));*/
+          SVN_ERR(eb->fetch_kind_func(&operation->kind, eb->fetch_kind_baton,
+                                      relpath, scratch_pool));
           if (operation->kind == svn_node_file)
             operation->operation = OP_OPEN;
           else if (operation->kind == svn_node_none)
             operation->operation = OP_ADD;
           else
             return svn_error_createf(SVN_ERR_BAD_URL, NULL,
-                                     "'%s' is not a file", path);
+                                     "'%s' is not a file", relpath);
         }
       operation->kind = svn_node_file;
       operation->src_file = src_file;
@@ -867,9 +773,8 @@ set_props_cb(void *baton,
 {
   struct editor_baton *eb = baton;
 
-  SVN_ERR(build(ACTION_PROPSET, relpath, NULL, SVN_INVALID_REVNUM,
-                props, NULL, SVN_INVALID_REVNUM, NULL, &eb->root,
-                scratch_pool));
+  SVN_ERR(build(eb, ACTION_PROPSET, relpath, NULL, SVN_INVALID_REVNUM,
+                props, NULL, SVN_INVALID_REVNUM, scratch_pool));
 
   return SVN_NO_ERROR;
 }
