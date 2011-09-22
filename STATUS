@@ -99,11 +99,12 @@ Candidate changes:
      Possible performance improvement for merges, and doesn't cost anything.
      This function is used to sort mergeinfo catalogs, among other things.
    Votes:
-     +1: stsp, rhuijben (for 1.7.1)
+     +1: stsp, rhuijben (for 1.7.1), pburba
 
  * r1173425, r1173639
-   Revert the fixes for issue #3669 'inheritance can result in mergeinfo
-   describing nonexistent sources'.
+   Fix issue #4013 'merge performance regression in 1.7 when target has no
+   explicit mergeinfo' by reverting the fixes for issue #3669 'inheritance 
+   an result in mergeinfo describing nonexistent sources'.
    Justification:
      The issue #3669 fixes reverted in r1173425 imposed an unacceptable
      performance penalty on the server.  A new approach is needed, but can
@@ -132,6 +133,10 @@ Candidate changes:
      Merge conflict on externals_tests.py resolved with --accept mf.
    Votes:
      +1: philip, danielsh
+     +0: pburba (Ideally this would be done as a subtree merge targeting
+                 basic_tests.py, as danielsh points out in
+                 http://svn.haxx.se/dev/archive-2011-09/0482.shtml.  I'm +1
+                 if the backport is done that way).
 
 Veto-blocked changes:
 =====================
