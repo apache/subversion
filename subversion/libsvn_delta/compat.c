@@ -1042,10 +1042,10 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
   svn_editor_t *editor;
 
   SVN_ERR(svn_editor_from_delta(&editor, deditor_in, dedit_baton_in,
-                                NULL, NULL, result_pool, scratch_pool));
+                                NULL, NULL, fetch_kind_func, fetch_kind_baton,
+                                result_pool, scratch_pool));
   SVN_ERR(svn_delta_from_editor(deditor_out, dedit_baton_out, editor,
                                 fetch_props_func, fetch_props_baton,
-                                fetch_kind_func, fetch_kind_baton,
                                 result_pool));
 
 #endif
