@@ -767,6 +767,9 @@ PRAGMA user_version = 29;
 /* TODO: Rename the "absent" presence value to "server-excluded" before
    the 1.7 release. wc_db.c and this file have references to "absent" which
    still need to be changed to "server-excluded". */
+/* TODO: Un-confuse *_revision column names in the EXTERNALS table to
+   "-r<operative> foo@<peg>", as suggested by the patch attached to
+   http://svn.haxx.se/dev/archive-2011-09/0478.shtml */
 
 /* Now "drop" the tree_conflict_data column from actual_node. */
 CREATE TABLE ACTUAL_NODE_BACKUP (
