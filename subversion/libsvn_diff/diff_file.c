@@ -1636,7 +1636,7 @@ output_unified_diff_modified(void *baton,
 
       if (output_baton->show_c_function)
         {
-          int p;
+          apr_size_t p;
           const char *invalid_character;
 
           /* Save the extra context for later use.
@@ -1920,7 +1920,7 @@ flush_context_saver(context_saver_t *cs,
   int i;
   for (i = 0; i < SVN_DIFF__UNIFIED_CONTEXT_SIZE; i++)
     {
-      int slot = (i + cs->next_slot) % SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+      apr_size_t slot = (i + cs->next_slot) % SVN_DIFF__UNIFIED_CONTEXT_SIZE;
       if (cs->data[slot])
         {
           apr_size_t len = cs->len[slot];
