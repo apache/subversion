@@ -945,16 +945,6 @@ INSERT OR REPLACE INTO externals (
     repos_id, def_repos_relpath, def_operational_revision, def_revision)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
 
--- STMT_INSERT_EXTERNAL_UPGRADE
-INSERT OR REPLACE INTO externals (
-    wc_id, local_relpath, parent_relpath, presence, kind, def_local_relpath,
-    repos_id, def_repos_relpath, def_operational_revision, def_revision)
-VALUES (?1, ?2, ?3, ?4,
-        CASE WHEN (SELECT file_external FROM nodes
-                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0)
-             IS NOT NULL THEN 'file' ELSE 'unknown' END,
-        ?5, ?6, ?7, ?8, ?9)
-
 -- STMT_SELECT_EXTERNAL_INFO
 SELECT presence, kind, def_local_relpath, repos_id,
     def_repos_relpath, def_operational_revision, def_revision, presence

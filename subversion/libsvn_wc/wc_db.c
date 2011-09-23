@@ -9839,52 +9839,6 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
                                sdb, scratch_pool));
     }
 
-  if (kind == svn_wc__db_kind_dir)
-    {
-      const char *externals;
-      apr_hash_t *props = working_props;
-
-      if (props == NULL)
-        props = base_props;
-
-      externals = svn_prop_get_value(props, SVN_PROP_EXTERNALS);
-
-      if (externals != NULL)
-        {
-          int i;
-          apr_array_header_t *ext;
-
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                            STMT_INSERT_EXTERNAL_UPGRADE));
-
-          SVN_ERR(svn_wc_parse_externals_description3(
-                            &ext, svn_dirent_join(dir_abspath, local_relpath,
-                                                  scratch_pool),
-                            externals, FALSE, scratch_pool));
-          for (i = 0; i < ext->nelts; i++)
-            {
-              const svn_wc_external_item2_t *item;
-              const char *item_relpath;
-
-              item = APR_ARRAY_IDX(ext, i, const svn_wc_external_item2_t *);
-              item_relpath = svn_relpath_join(local_relpath, item->target_dir,
-                                              scratch_pool);
-
-              SVN_ERR(svn_sqlite__bindf(stmt, "issssis",
-                                        wc_id,
-                                        item_relpath,
-                                        svn_relpath_dirname(item_relpath,
-                                                            scratch_pool),
-                                        "normal",
-                                        local_relpath,
-                                        (apr_int64_t)1, /* repos_id */
-                                        "" /* repos_relpath */));
-
-              SVN_ERR(svn_sqlite__insert(NULL, stmt));
-            }
-        }
-    }
-
   return SVN_NO_ERROR;
 }
 
