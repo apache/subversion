@@ -32,6 +32,8 @@ AC_DEFUN(SVN_LIB_Z,
   [
     if test "$withval" = "yes" ; then
       AC_MSG_ERROR([--with-zlib requires an argument.])
+    elif test "$withval" = "no" ; then
+      AC_MSG_ERROR([cannot compile without zlib.])
     else
       AC_MSG_NOTICE([zlib library configuration])
       zlib_prefix=$withval
