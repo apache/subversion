@@ -119,6 +119,9 @@ Candidate changes:
      API changes.  r1173639 is the reversion of r1036078, which was a
      follow-up to the issue #3669 fixes that didn't get fully removed
      in r1173425.
+   Notes:
+     This may be missing a hunk?  See "Subject: Does this need to be added to
+     the #3668/#3669 revert?" on dev@.  --danielsh
    Votes:
      +1: pburba, philip
      +0: ivan (r1173425 only, restart soak period for at least two weeks due
@@ -132,11 +135,12 @@ Candidate changes:
    Notes:
      Merge conflict on externals_tests.py resolved with --accept mf.
    Votes:
-     +1: philip, danielsh
+     +1: philip
      +0: pburba (Ideally this would be done as a subtree merge targeting
                  basic_tests.py, as danielsh points out in
                  http://svn.haxx.se/dev/archive-2011-09/0482.shtml.  I'm +1
                  if the backport is done that way).
+     +1: danielsh (conditioned upon the backport done as per Paul's comment)
 
  * r1174342
    Fix issue #4016: 'externals after upgrade from 1.6 have wrong URL
