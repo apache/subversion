@@ -224,18 +224,22 @@ test_spillbuf_interleaving(apr_pool_t *pool)
   SVN_ERR(svn_spillbuf__write(buf, "GHIJKL", 6, pool));
   /* now: two blocks of 8 and 6 bytes, and 6 bytes spilled to a file  */
 
+  SVN_TEST_ASSERT(svn_spillbuf__get_size(buf) > 0);
   SVN_ERR(svn_spillbuf__read(&readptr, &readlen, buf, pool));
   SVN_TEST_ASSERT(readptr != NULL
                   && readlen == 8
                   && memcmp(readptr, "qrstuvwx", 8) == 0);
+  SVN_TEST_ASSERT(svn_spillbuf__get_size(buf) > 0);
   SVN_ERR(svn_spillbuf__read(&readptr, &readlen, buf, pool));
   SVN_TEST_ASSERT(readptr != NULL
                   && readlen == 6
                   && memcmp(readptr, "ABCDEF", 6) == 0);
+  SVN_TEST_ASSERT(svn_spillbuf__get_size(buf) > 0);
   SVN_ERR(svn_spillbuf__read(&readptr, &readlen, buf, pool));
   SVN_TEST_ASSERT(readptr != NULL
                   && readlen == 6
                   && memcmp(readptr, "GHIJKL", 6) == 0);
+  SVN_TEST_ASSERT(svn_spillbuf__get_size(buf) == 0);
 
   return SVN_NO_ERROR;
 }
