@@ -86,6 +86,8 @@ TODO
 - 'svnadmin verify' could validate the successors cache against the
   revisions and predecessors data.
 
+- extend 'hotcopy' as required
+
 
 Implementation proposal
 =======================
