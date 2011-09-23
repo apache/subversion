@@ -6822,7 +6822,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
                                &inherited, svn_mergeinfo_inherited,
                                merge_b->ra_session1, target_abspath,
                                MAX(revision1, revision2),
-                               0, /* Get all implicit mergeinfo */
+                               MIN(revision1, revision2),
                                ctx, scratch_pool, iterpool);
 
       if (err)
