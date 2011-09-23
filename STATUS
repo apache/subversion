@@ -101,7 +101,7 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben (for 1.7.1), pburba
 
- * r1173425, r1173639
+ * r1173425, r1173639, r1174797
    Fix issue #4013 'merge performance regression in 1.7 when target has no
    explicit mergeinfo' by reverting the fixes for issue #3669 'inheritance 
    an result in mergeinfo describing nonexistent sources'.
@@ -118,12 +118,16 @@ Candidate changes:
      r1173425 is the reversion of the issue #3669 fixes including all the
      API changes.  r1173639 is the reversion of r1036078, which was a
      follow-up to the issue #3669 fixes that didn't get fully removed
-     in r1173425.
+     in r1173425.  r1174797 is a one-line hunk that mistakenly was not
+     reverted in r1173425.
    Notes:
      This may be missing a hunk?  See "Subject: Does this need to be added to
      the #3668/#3669 revert?" on dev@.  --danielsh
+     Daniel is correct, see the latest on the aforementioned thread:
+     http://svn.haxx.se/dev/archive-2011-09/0495.shtml -- pburba
    Votes:
-     +1: pburba, philip
+     +1: pburba
+     +1: philip (all but r1174797)
      +0: ivan (r1173425 only, restart soak period for at least two weeks due
                API and client/server protocol)
      +0: danielsh (I didn't review merge_tests.py.
