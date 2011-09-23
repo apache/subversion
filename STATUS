@@ -126,7 +126,10 @@ Candidate changes:
      +1: pburba, philip
      +0: ivan (r1173425 only, restart soak period for at least two weeks due
                API and client/server protocol)
-     +0: danielsh (I didn't review merge_tests.py or merge.c changes)
+     +0: danielsh (I didn't review merge_tests.py.
+                   All changes in merge.c look good, but I can't tell if
+                   additional changes that should have been included are 
+                   missing, so not upgrading the vote to +1.)
 
  * r1174111
    Use the correct function to copy repositories in the testsuite.
