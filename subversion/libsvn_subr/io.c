@@ -2158,8 +2158,11 @@ svn_io_remove_file2(const char *path,
     }
 #endif
 
-  return svn_error_wrap_apr(apr_err, _("Can't remove file '%s'"),
-                            svn_dirent_local_style(path, scratch_pool));
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't remove file '%s'"),
+                              svn_dirent_local_style(path, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 
