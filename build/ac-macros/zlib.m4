@@ -31,7 +31,9 @@ AC_DEFUN(SVN_LIB_Z,
                                   [zlib compression library]),
   [
     if test "$withval" = "yes" ; then
-      AC_MSG_ERROR([--with-zlib requires an argument.])
+      AC_CHECK_HEADER(zlib.h, [
+        AC_CHECK_LIB(z, inflate, [zlib_found="builtin"])
+      ])
     elif test "$withval" = "no" ; then
       AC_MSG_ERROR([cannot compile without zlib.])
     else
