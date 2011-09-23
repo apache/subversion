@@ -145,6 +145,12 @@ Candidate changes:
                  if the backport is done that way).
      +1: danielsh (conditioned upon the backport done as per Paul's comment)
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1174652
    Fix Windows retry loop error handling when removing file. On some cases
    svn_io_remove_file2() returns error "Can't remove file '': No error", while
@@ -153,10 +159,4 @@ Candidate changes:
      Returning error when file actually was deleted is potentally dangerous
      thing.
    Votes:
-     +1: ivan, philip
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: ivan, philip, danielsh
