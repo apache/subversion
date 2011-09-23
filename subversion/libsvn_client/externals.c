@@ -530,10 +530,10 @@ error:
 
 /* If the URL for @a item is relative, then using the repository root
    URL @a repos_root_url and the parent directory URL @parent_dir_url,
-   resolve it into an absolute URL and save it in @a item.
+   resolve it into an absolute URL and save it in @a *resolved_url.
 
    Regardless if the URL is absolute or not, if there are no errors,
-   the URL in @a item will be canonicalized.
+   the URL returned in @a *resolved_url will be canonicalized.
 
    The following relative URL formats are supported:
 
@@ -679,16 +679,16 @@ resolve_relative_external_url(const char **resolved_url,
       return SVN_NO_ERROR;
     }
 
-  /* The remaining URLs are relative to the either the scheme or
-     server root and can only refer to locations inside that scope, so
-     backpaths are not allowed. */
+  /* The remaining URLs are relative to either the scheme or server root
+     and can only refer to locations inside that scope, so backpaths are
+     not allowed. */
   if (svn_path_is_backpath_present(url + 2))
     return svn_error_createf(SVN_ERR_BAD_URL, 0,
                              _("The external relative URL '%s' cannot have "
                                "backpaths, i.e. '..'"),
                              item->url);
 
-  /* Relative to the scheme: Build a new URL from the parts we know.  */
+  /* Relative to the scheme: Build a new URL from the parts we know. */
   if (0 == strncmp("//", url, 2))
     {
       const char *scheme;
@@ -701,7 +701,7 @@ resolve_relative_external_url(const char **resolved_url,
     }
 
   /* Relative to the server root: Just replace the path portion of the
-     parent's URL.  */
+     parent's URL. */
   if (url[0] == '/')
     {
       parent_dir_uri.path = (char *)url;
