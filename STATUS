@@ -145,6 +145,11 @@ Candidate changes:
                  if the backport is done that way).
      +1: danielsh (conditioned upon the backport done as per Paul's comment)
 
+ * r1174761
+   Better error message when configuring --without-zlib.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
