@@ -43,7 +43,7 @@ AC_DEFUN(SVN_LIB_Z,
       CPPFLAGS="$CPPFLAGS -I$zlib_prefix/include"
       AC_CHECK_HEADERS(zlib.h,[
         save_ldflags="$LDFLAGS"
-        LDFLAGS="-L$zlib_prefix/lib"
+        LDFLAGS="$LDFLAGS -L$zlib_prefix/lib"
         AC_CHECK_LIB(z, inflate, [zlib_found="yes"])
         LDFLAGS="$save_ldflags"
       ])
