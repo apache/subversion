@@ -27,6 +27,8 @@ TODO:
 * add some explicit tests for svnadmin upgrade/pack
   (both revs and revrops)
 
+* review 'hotcopy'
+
 * cf fs-successor-ids plans:
     Date: Fri, 26 Aug 2011 13:14:32 +0200
     From: Stefan Sperling <stsp@elego.de>
