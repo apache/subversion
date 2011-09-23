@@ -126,8 +126,7 @@ Candidate changes:
      Daniel is correct, see the latest on the aforementioned thread:
      http://svn.haxx.se/dev/archive-2011-09/0495.shtml -- pburba
    Votes:
-     +1: pburba
-     +1: philip (all but r1174797)
+     +1: pburba, philip
      +0: ivan (r1173425 only, restart soak period for at least two weeks due
                API and client/server protocol)
      +0: danielsh (I didn't review merge_tests.py.
