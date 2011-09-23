@@ -1111,6 +1111,35 @@ svn_wc__upgrade_add_external_info(svn_wc_context_t *wc_ctx,
                                   svn_revnum_t def_revision,
                                   apr_pool_t *scratch_pool);
 
+/* If the URL for @a item is relative, then using the repository root
+   URL @a repos_root_url and the parent directory URL @parent_dir_url,
+   resolve it into an absolute URL and save it in @a *resolved_url.
+
+   Regardless if the URL is absolute or not, if there are no errors,
+   the URL returned in @a *resolved_url will be canonicalized.
+
+   The following relative URL formats are supported:
+
+     ../    relative to the parent directory of the external
+     ^/     relative to the repository root
+     //     relative to the scheme
+     /      relative to the server's hostname
+
+   The ../ and ^/ relative URLs may use .. to remove path elements up
+   to the server root.
+
+   The external URL should not be canonicalized before calling this function,
+   as otherwise the scheme relative URL '//host/some/path' would have been
+   canonicalized to '/host/some/path' and we would not be able to match on
+   the leading '//'. */
+svn_error_t *
+svn_wc__resolve_relative_external_url(const char **resolved_url,
+                                      const svn_wc_external_item2_t *item,
+                                      const char *repos_root_url,
+                                      const char *parent_dir_url,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
