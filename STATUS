@@ -150,6 +150,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1174798
+   DTRT when --with-zlib is passed without an argument.
+   Justification:
+     This DTRTing is normal for other --with-* options.
+   Votes:
+     +1: danielsh
+
  * r1173574, r1174342, r1174693, r1174699
    Fix issue #4016: 'externals after upgrade from 1.6 have wrong URL
    information in EXTERNALS rows'
