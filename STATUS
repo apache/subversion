@@ -153,7 +153,7 @@ Candidate changes:
      Returning error when file actually was deleted is potentally dangerous
      thing.
    Votes:
-     +1: ivan
+     +1: ivan, philip
 
 Veto-blocked changes:
 =====================
