@@ -1320,8 +1320,10 @@ svn_mergeinfo__equals(svn_boolean_t *is_equal,
 }
 
 svn_error_t *
-svn_mergeinfo_merge(svn_mergeinfo_t mergeinfo, svn_mergeinfo_t changes,
-                    apr_pool_t *pool)
+svn_mergeinfo_merge2(svn_mergeinfo_t mergeinfo,
+                     svn_mergeinfo_t changes,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
   apr_array_header_t *sorted1, *sorted2;
   int i, j;
@@ -1330,12 +1332,14 @@ svn_mergeinfo_merge(svn_mergeinfo_t mergeinfo, svn_mergeinfo_t changes,
   if (!apr_hash_count(changes))
     return SVN_NO_ERROR;
 
-  sorted1 = svn_sort__hash(mergeinfo, svn_sort_compare_items_as_paths, pool);
-  sorted2 = svn_sort__hash(changes, svn_sort_compare_items_as_paths, pool);
+  sorted1 = svn_sort__hash(mergeinfo, svn_sort_compare_items_as_paths,
+                           scratch_pool);
+  sorted2 = svn_sort__hash(changes, svn_sort_compare_items_as_paths,
+                           scratch_pool);
 
   i = 0;
   j = 0;
-  iterpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(scratch_pool);
   while (i < sorted1->nelts && j < sorted2->nelts)
     {
       svn_sort__item_t elt1, elt2;
@@ -1354,7 +1358,7 @@ svn_mergeinfo_merge(svn_mergeinfo_t mergeinfo, svn_mergeinfo_t changes,
           rl1 = elt1.value;
           rl2 = elt2.value;
 
-          SVN_ERR(svn_rangelist_merge2(rl1, rl2, pool, iterpool));
+          SVN_ERR(svn_rangelist_merge2(rl1, rl2, result_pool, iterpool));
           apr_hash_set(mergeinfo, elt1.key, elt1.klen, rl1);
           i++;
           j++;
@@ -1410,8 +1414,8 @@ svn_mergeinfo_catalog_merge(svn_mergeinfo_catalog_t mergeinfo_cat,
           svn_mergeinfo_t mergeinfo = cat_elt.value;
           svn_mergeinfo_t changes_mergeinfo = change_elt.value;
 
-          SVN_ERR(svn_mergeinfo_merge(mergeinfo, changes_mergeinfo,
-                                      result_pool));
+          SVN_ERR(svn_mergeinfo_merge2(mergeinfo, changes_mergeinfo,
+                                       result_pool, scratch_pool));
           apr_hash_set(mergeinfo_cat, cat_elt.key, cat_elt.klen, mergeinfo);
           i++;
           j++;

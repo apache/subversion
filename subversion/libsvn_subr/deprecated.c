@@ -1135,3 +1135,12 @@ svn_rangelist_merge(apr_array_header_t **rangelist,
   return svn_error_trace(svn_rangelist_merge2(*rangelist, changes,
                                               pool, pool));
 }
+
+svn_error_t *
+svn_mergeinfo_merge(svn_mergeinfo_t mergeinfo,
+                    svn_mergeinfo_t changes,
+                    apr_pool_t *pool)
+{
+  return svn_error_trace(svn_mergeinfo_merge2(mergeinfo, changes, pool,
+                         pool));
+}
