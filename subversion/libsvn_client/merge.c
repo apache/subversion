@@ -4638,8 +4638,8 @@ update_wc_mergeinfo(svn_mergeinfo_catalog_t result_catalog,
           apr_pool_t *result_catalog_pool = apr_hash_pool_get(result_catalog);
 
           if (existing_mergeinfo)
-            SVN_ERR(svn_mergeinfo_merge(mergeinfo, existing_mergeinfo,
-                                        result_catalog_pool));
+            SVN_ERR(svn_mergeinfo_merge2(mergeinfo, existing_mergeinfo,
+                                         result_catalog_pool, scratch_pool));
           apr_hash_set(result_catalog,
                        apr_pstrdup(result_catalog_pool, local_abspath),
                        APR_HASH_KEY_STRING,
@@ -9919,9 +9919,10 @@ log_find_operative_revs(void *baton,
 
           if (unmerged_for_key)
             {
-              SVN_ERR(svn_mergeinfo_merge(unmerged_for_key,
-                                          log_entry_as_mergeinfo,
-                                          log_baton->result_pool));
+              SVN_ERR(svn_mergeinfo_merge2(unmerged_for_key,
+                                           log_entry_as_mergeinfo,
+                                           log_baton->result_pool,
+                                           pool));
             }
           else
             {

@@ -195,6 +195,9 @@ svn_mergeinfo_diff(svn_mergeinfo_t *deleted, svn_mergeinfo_t *added,
 /** Merge a shallow copy of one mergeinfo, @a changes, into another mergeinfo
  * @a mergeinfo.
  *
+ * Additions to @a mergeinfo are allocated in @a result_pool.  Temporary
+ * allocations are made in @a scratch_pool.
+ *
  * When intersecting rangelists for a path are merged, the inheritability of
  * the resulting svn_merge_range_t depends on the inheritability of the
  * operands.  If two non-inheritable ranges are merged the result is always
@@ -203,10 +206,22 @@ svn_mergeinfo_diff(svn_mergeinfo_t *deleted, svn_mergeinfo_t *added,
  *  e.g. '/A: 1,3-4'  merged with '/A: 1,3,4*,5' --> '/A: 1,3-5'
  *       '/A: 1,3-4*' merged with '/A: 1,3,4*,5' --> '/A: 1,3,4*,5'
  *
- * @since New in 1.5.
+ * @since New in 1.8.
  */
 svn_error_t *
-svn_mergeinfo_merge(svn_mergeinfo_t mergeinfo, svn_mergeinfo_t changes,
+svn_mergeinfo_merge2(svn_mergeinfo_t mergeinfo,
+                     svn_mergeinfo_t changes,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
+/** Like svn_mergeinfo_merge2, but uses only one pool.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
+SVN_DEPRECATED
+svn_error_t *
+svn_mergeinfo_merge(svn_mergeinfo_t mergeinfo,
+                    svn_mergeinfo_t changes,
                     apr_pool_t *pool);
 
 /** Combine one mergeinfo catalog, @a changes_catalog, into another mergeinfo
