@@ -83,7 +83,8 @@ Candidate changes:
    Fix STMT_SELECT_NODE_CHILDREN_WALKER_INFO for correctness and speed.
    Justification:
      Recursive info and propset don't scale well with large working copies
-     and may possibly act on the wrong nodes.
+     and may possibly act on the wrong nodes.  Correctness discussion:
+     http://colabti.org/irclogger/irclogger_log/svn-dev?date=2011-09-02#l214
      On a Linux machine with a Subversion trunk working copy on a local disk
      running 'svn info --depth infinity' shows it to be 2 or 3 times faster.
      On a larger working copy it's orders of magnitude faster.
