@@ -10238,7 +10238,6 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
   apr_int64_t below_op_depth = -1;
   svn_wc__db_status_t top_presence;
   svn_wc__db_status_t below_presence;
-  svn_wc__db_kind_t kind = svn_wc__db_kind_unknown;
   int affected_rows;
 
   /* ### working_props: use set_props_txn.
@@ -10275,7 +10274,6 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
     {
       top_op_depth = svn_sqlite__column_int64(stmt, 0);
       top_presence = svn_sqlite__column_token(stmt, 3, presence_map);
-      kind = svn_sqlite__column_token(stmt, 4, kind_map);
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
       if (have_row)
         {
