@@ -1449,16 +1449,6 @@ svn_mergeinfo_catalog_merge(svn_mergeinfo_catalog_t mergeinfo_cat,
 }
 
 svn_error_t *
-svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
-                        svn_mergeinfo_t mergeinfo1,
-                        svn_mergeinfo_t mergeinfo2,
-                        apr_pool_t *pool)
-{
-  return svn_mergeinfo_intersect2(mergeinfo, mergeinfo1, mergeinfo2,
-                                  TRUE, pool, pool);
-}
-
-svn_error_t *
 svn_mergeinfo_intersect2(svn_mergeinfo_t *mergeinfo,
                          svn_mergeinfo_t mergeinfo1,
                          svn_mergeinfo_t mergeinfo2,
@@ -1495,14 +1485,6 @@ svn_mergeinfo_intersect2(svn_mergeinfo_t *mergeinfo,
         }
     }
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_mergeinfo_remove(svn_mergeinfo_t *mergeinfo, svn_mergeinfo_t eraser,
-                     svn_mergeinfo_t whiteboard, apr_pool_t *pool)
-{
-  return svn_mergeinfo_remove2(mergeinfo, eraser, whiteboard, TRUE, pool,
-                               pool);
 }
 
 svn_error_t *
