@@ -100,7 +100,7 @@ Candidate changes:
      Possible performance improvement for merges, and doesn't cost anything.
      This function is used to sort mergeinfo catalogs, among other things.
    Votes:
-     +1: stsp, rhuijben (for 1.7.1), pburba
+     +1: stsp (for 1.7.1), rhuijben (for 1.7.1), pburba
 
  * r1173425, r1173639, r1174797
    Fix issue #4013 'merge performance regression in 1.7 when target has no
