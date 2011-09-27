@@ -474,9 +474,9 @@ void JNIUtil::handleSVNError(svn_error_t *err)
       if (isJavaExceptionThrown())
         POP_AND_RETURN_NOTHING();
     }
-  Array stackTraceArray((jobjectArray) env->CallObjectMethod(nativeException,
-                                                             mid_gst));
-  std::vector<jobject> oldStackTrace = stackTraceArray.vector();
+  Array *stackTraceArray =
+    new Array((jobjectArray) env->CallObjectMethod(nativeException, mid_gst));
+  std::vector<jobject> oldStackTrace = stackTraceArray->vector();
 
   // Build the new stack trace elements from the chained errors.
   std::vector<jobject> newStackTrace;
@@ -505,6 +505,8 @@ void JNIUtil::handleSVNError(svn_error_t *err)
       env->SetObjectArrayElement(jStackTrace, i, *it);
       ++i;
     }
+
+  delete stackTraceArray;
 
   // And put the entire trace back into the exception
   static jmethodID mid_sst = 0;
