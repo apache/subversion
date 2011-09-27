@@ -1874,11 +1874,11 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
   SVN_CMD_ERR(svn_repos_fs_get_mergeinfo(&mergeinfo, b->repos,
-                                          canonical_paths, rev,
-                                          inherit,
-                                          include_descendants,
-                                          authz_check_access_cb_func(b), b,
-                                          pool));
+                                         canonical_paths, rev,
+                                         inherit,
+                                         include_descendants,
+                                         authz_check_access_cb_func(b), b,
+                                         pool));
   SVN_ERR(svn_mergeinfo__remove_prefix_from_catalog(&mergeinfo, mergeinfo,
                                                     b->fs_path->data, pool));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));

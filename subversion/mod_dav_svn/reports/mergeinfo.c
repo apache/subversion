@@ -127,8 +127,8 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
 
   serr = svn_repos_fs_get_mergeinfo(&catalog, repos->repos, paths, rev,
                                     inherit, include_descendants,
-                                     dav_svn__authz_read_func(&arb),
-                                     &arb, resource->pool);
+                                    dav_svn__authz_read_func(&arb),
+                                    &arb, resource->pool);
   if (serr)
     {
       derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,

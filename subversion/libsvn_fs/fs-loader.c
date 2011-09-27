@@ -974,11 +974,11 @@ svn_fs_closest_copy(svn_fs_root_t **root_p, const char **path_p,
 
 svn_error_t *
 svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
-                      svn_fs_root_t *root,
-                      const apr_array_header_t *paths,
-                      svn_mergeinfo_inheritance_t inherit,
-                      svn_boolean_t include_descendants,
-                      apr_pool_t *pool)
+                     svn_fs_root_t *root,
+                     const apr_array_header_t *paths,
+                     svn_mergeinfo_inheritance_t inherit,
+                     svn_boolean_t include_descendants,
+                     apr_pool_t *pool)
 {
   return svn_error_trace(root->vtable->get_mergeinfo(catalog, root, paths,
                                                      inherit,

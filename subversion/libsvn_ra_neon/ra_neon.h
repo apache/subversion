@@ -1,4 +1,4 @@
-    /*
+/*
  * ra_neon.h : Private declarations for the Neon-based DAV RA module.
  *
  * ====================================================================
@@ -302,7 +302,8 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
                                   apr_uint32_t dirent_fields,
                                   apr_pool_t *pool);
 
-svn_error_t * svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
+svn_error_t * svn_ra_neon__get_mergeinfo(
+  svn_ra_session_t *session,
   apr_hash_t **mergeinfo,
   const apr_array_header_t *paths,
   svn_revnum_t revision,

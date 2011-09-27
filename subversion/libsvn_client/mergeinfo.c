@@ -464,7 +464,8 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
 }
 
 svn_error_t *
-svn_client__get_repos_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
+svn_client__get_repos_mergeinfo_catalog(
+  svn_mergeinfo_catalog_t *mergeinfo_cat,
   svn_ra_session_t *ra_session,
   const char *rel_path,
   svn_revnum_t rev,

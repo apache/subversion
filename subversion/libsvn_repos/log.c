@@ -664,7 +664,7 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
 
           APR_ARRAY_PUSH(query_paths, const char *) = changed_path;
           SVN_ERR(svn_fs_get_mergeinfo(&tmp_catalog, root,
-                                        query_paths, svn_mergeinfo_inherited,
+                                       query_paths, svn_mergeinfo_inherited,
                                        FALSE, iterpool));
           tmp_mergeinfo = apr_hash_get(tmp_catalog, changed_path,
                                         APR_HASH_KEY_STRING);
@@ -683,7 +683,7 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
 
           APR_ARRAY_PUSH(query_paths, const char *) = base_path;
           SVN_ERR(svn_fs_get_mergeinfo(&tmp_catalog, base_root,
-                                        query_paths, svn_mergeinfo_inherited,
+                                       query_paths, svn_mergeinfo_inherited,
                                        FALSE, iterpool));
           tmp_mergeinfo = apr_hash_get(tmp_catalog, base_path,
                                         APR_HASH_KEY_STRING);

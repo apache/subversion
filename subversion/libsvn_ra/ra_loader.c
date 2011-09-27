@@ -767,12 +767,12 @@ svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
 }
 
 svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
-                                   svn_mergeinfo_catalog_t *catalog,
-                                   const apr_array_header_t *paths,
-                                   svn_revnum_t revision,
-                                   svn_mergeinfo_inheritance_t inherit,
-                                   svn_boolean_t include_descendants,
-                                   apr_pool_t *pool)
+                                  svn_mergeinfo_catalog_t *catalog,
+                                  const apr_array_header_t *paths,
+                                  svn_revnum_t revision,
+                                  svn_mergeinfo_inheritance_t inherit,
+                                  svn_boolean_t include_descendants,
+                                  apr_pool_t *pool)
 {
   svn_error_t *err;
   int i;

@@ -1179,7 +1179,8 @@ optbool_to_tristate(apr_uint64_t v)
 
 /* If REVISION is SVN_INVALID_REVNUM, no value is sent to the
    server, which defaults to youngest. */
-static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
+static svn_error_t *ra_svn_get_mergeinfo(
+  svn_ra_session_t *session,
   svn_mergeinfo_catalog_t *catalog,
   const apr_array_header_t *paths,
   svn_revnum_t revision,
