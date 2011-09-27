@@ -162,8 +162,8 @@ Candidate changes:
    Votes:         caused by cosmetic fix from r1169770)
      +1: neels
 
- * r1175888
-   Fix an object lifetime issue in the JavaHL bindings
+ * r1175888, r1176416
+   Fix some object lifetime issues in the JavaHL bindings.
    Justification:
      Using garbage-collected objects is bad.
    Votes:
