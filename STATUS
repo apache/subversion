@@ -174,32 +174,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1173425, r1173639, r1174797
-   Fix issue #4013 'merge performance regression in 1.7 when target has no
-   explicit mergeinfo' by reverting the fixes for issue #3669 'inheritance 
-   an result in mergeinfo describing nonexistent sources'.
-   Justification:
-     The issue #3669 fixes reverted in r1173425 imposed an unacceptable
-     performance penalty on the server.  A new approach is needed, but can
-     wait till 1.8.
-   Branch:
-     ^/subversion/branches/1.7.x-r1173425
-   Notes:
-     Issue #3668 'inheritance can result in self-referential mergeinfo' is
-     also reverted as part of this change, see
-     http://subversion.tigris.org/issues/show_bug.cgi?id=3668#desc5
-     r1173425 is the reversion of the issue #3669 fixes including all the
-     API changes.  r1173639 is the reversion of r1036078, which was a
-     follow-up to the issue #3669 fixes that didn't get fully removed
-     in r1173425.  r1174797 is a one-line hunk that mistakenly was not
-     reverted in r1173425.
-   Votes:
-     +1: pburba, philip, cmpilato
-     +0: ivan (r1173425 only, restart soak period for at least two weeks due
-               API and client/server protocol)
-     +0: danielsh (I didn't review merge_tests.py.
-                   All changes in merge.c look good, but I can't tell if
-                   additional changes that should have been included are 
-                   missing, so not upgrading the vote to +1.)
-

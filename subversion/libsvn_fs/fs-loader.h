@@ -194,11 +194,6 @@ typedef struct fs_vtable_t
   svn_error_t *(*bdb_set_errcall)(svn_fs_t *fs,
                                   void (*handler)(const char *errpfx,
                                                   char *msg));
-  svn_error_t *(*validate_mergeinfo)(svn_mergeinfo_t *validated_mergeinfo,
-                                     svn_fs_t *fs,
-                                     svn_mergeinfo_t mergeinfo,
-                                     apr_pool_t *result_pool,
-                                     apr_pool_t *scratch_pool);
 } fs_vtable_t;
 
 
@@ -331,7 +326,6 @@ typedef struct root_vtable_t
                                 svn_fs_root_t *root,
                                 const apr_array_header_t *paths,
                                 svn_mergeinfo_inheritance_t inherit,
-                                svn_boolean_t validate_inherited_mergeinfo,
                                 svn_boolean_t include_descendants,
                                 apr_pool_t *pool);
 } root_vtable_t;

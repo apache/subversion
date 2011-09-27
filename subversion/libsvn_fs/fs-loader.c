@@ -973,22 +973,6 @@ svn_fs_closest_copy(svn_fs_root_t **root_p, const char **path_p,
 }
 
 svn_error_t *
-svn_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
-                      svn_fs_root_t *root,
-                      const apr_array_header_t *paths,
-                      svn_mergeinfo_inheritance_t inherit,
-                      svn_boolean_t validate_inherited_mergeinfo,
-                      svn_boolean_t include_descendants,
-                      apr_pool_t *pool)
-{
-  return svn_error_trace(root->vtable->get_mergeinfo(catalog, root, paths,
-                                                     inherit,
-                                                     validate_inherited_mergeinfo,
-                                                     include_descendants,
-                                                     pool));
-}
-
-svn_error_t *
 svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                      svn_fs_root_t *root,
                      const apr_array_header_t *paths,
@@ -996,24 +980,10 @@ svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                      svn_boolean_t include_descendants,
                      apr_pool_t *pool)
 {
-  return svn_error_trace(svn_fs_get_mergeinfo2(catalog, root, paths,
-                                               inherit,
-                                               FALSE,
-                                               include_descendants,
-                                               pool));
-}
-
-svn_error_t *
-svn_fs_validate_mergeinfo(svn_mergeinfo_t *validated_mergeinfo,
-                          svn_fs_t *fs,
-                          svn_mergeinfo_t mergeinfo,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(fs->vtable->validate_mergeinfo(validated_mergeinfo,
-                                                        fs, mergeinfo,
-                                                        result_pool,
-                                                        scratch_pool));
+  return svn_error_trace(root->vtable->get_mergeinfo(catalog, root, paths,
+                                                     inherit,
+                                                     include_descendants,
+                                                     pool));
 }
 
 svn_error_t *
