@@ -1519,3 +1519,9 @@ ifeq ($(ENABLE_JAVA_BINDINGS),yes)
 endif
 	@echo ""
 	@echo "Signatures:"
+	@echo
+	@echo "subversion-$(TAG).tar.gz"
+	@echo "`cat subversion-$(TAG).tar.gz.asc`" 
+	@echo
+	@echo "subversion-$(TAG).tar.bz2"
+	@echo "`cat subversion-$(TAG).tar.bz2.asc`" 
