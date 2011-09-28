@@ -612,14 +612,14 @@ parse_rangelist(const char **input, const char *end,
 /* revisionline -> PATHNAME COLON revisionlist */
 static svn_error_t *
 parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
-                    apr_pool_t *pool)
+                    apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *pathname;
   apr_array_header_t *existing_rangelist;
-  apr_array_header_t *rangelist = apr_array_make(pool, 1,
+  apr_array_header_t *rangelist = apr_array_make(scratch_pool, 1,
                                                  sizeof(svn_merge_range_t *));
 
-  SVN_ERR(parse_pathname(input, end, &pathname, pool));
+  SVN_ERR(parse_pathname(input, end, &pathname, scratch_pool));
 
   if (*(*input) != ':')
     return svn_error_create(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
@@ -627,7 +627,7 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
 
   *input = *input + 1;
 
-  SVN_ERR(parse_rangelist(input, end, rangelist, pathname->data, pool));
+  SVN_ERR(parse_rangelist(input, end, rangelist, pathname->data, scratch_pool));
 
   if (*input != end && *(*input) != '\n')
     return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
@@ -666,8 +666,10 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
                                              "revision ranges '%s' and '%s' "
                                              "with different inheritance "
                                              "types"),
-                                           range_to_string(lastrange, pool),
-                                           range_to_string(range, pool));
+                                           range_to_string(lastrange,
+                                                           scratch_pool),
+                                           range_to_string(range,
+                                                           scratch_pool));
                 }
 
               /* Combine overlapping or adjacent ranges with the
@@ -695,9 +697,12 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
      absolute path key. */
   existing_rangelist = apr_hash_get(hash, pathname->data, APR_HASH_KEY_STRING);
   if (existing_rangelist)
-    SVN_ERR(svn_rangelist_merge2(rangelist, existing_rangelist, pool, pool));
+    SVN_ERR(svn_rangelist_merge2(rangelist, existing_rangelist,
+                                 scratch_pool, scratch_pool));
 
-  apr_hash_set(hash, pathname->data, APR_HASH_KEY_STRING, rangelist);
+  apr_hash_set(hash, apr_pstrdup(apr_hash_pool_get(hash), pathname->data),
+               APR_HASH_KEY_STRING,
+               svn_rangelist_dup(rangelist, apr_hash_pool_get(hash)));
 
   return SVN_NO_ERROR;
 }
@@ -707,8 +712,14 @@ static svn_error_t *
 parse_top(const char **input, const char *end, svn_mergeinfo_t hash,
           apr_pool_t *pool)
 {
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
   while (*input < end)
-    SVN_ERR(parse_revision_line(input, end, hash, pool));
+    {
+      svn_pool_clear(iterpool);
+      SVN_ERR(parse_revision_line(input, end, hash, iterpool));
+    }
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
