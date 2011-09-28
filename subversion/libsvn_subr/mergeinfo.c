@@ -245,15 +245,13 @@ get_type_of_intersection(const svn_merge_range_t *r1,
 
    When replacing the last range in RANGELIST, either allocate a new range in
    RESULT_POOL or modify the existing range in place.  Any new ranges added
-   to RANGELIST are allocated in RESULT_POOL.  SCRATCH_POOL is used for any
-   temporary allocations.
+   to RANGELIST are allocated in RESULT_POOL.
 */
 static svn_error_t *
 combine_with_lastrange(const svn_merge_range_t *new_range,
                        apr_array_header_t *rangelist,
                        svn_boolean_t consider_inheritance,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool)
+                       apr_pool_t *result_pool)
 {
   svn_merge_range_t *lastrange;
   svn_merge_range_t combined_range;
@@ -763,21 +761,18 @@ svn_rangelist_merge2(apr_array_header_t *rangelist,
              result. */
           if (elt1->inheritable || elt2->inheritable)
             elt1->inheritable = TRUE;
-          SVN_ERR(combine_with_lastrange(elt1, rangelist, TRUE, result_pool,
-                                         scratch_pool));
+          SVN_ERR(combine_with_lastrange(elt1, rangelist, TRUE, result_pool));
           i++;
           j++;
         }
       else if (res < 0)
         {
-          SVN_ERR(combine_with_lastrange(elt1, rangelist, TRUE, result_pool,
-                                         scratch_pool));
+          SVN_ERR(combine_with_lastrange(elt1, rangelist, TRUE, result_pool));
           i++;
         }
       else
         {
-          SVN_ERR(combine_with_lastrange(elt2, rangelist, TRUE, result_pool,
-                                         scratch_pool));
+          SVN_ERR(combine_with_lastrange(elt2, rangelist, TRUE, result_pool));
           j++;
         }
     }
@@ -790,16 +785,14 @@ svn_rangelist_merge2(apr_array_header_t *rangelist,
     {
       svn_merge_range_t *elt = APR_ARRAY_IDX(original_rangelist, i,
                                              svn_merge_range_t *);
-      SVN_ERR(combine_with_lastrange(elt, rangelist, TRUE, result_pool,
-                                     scratch_pool));
+      SVN_ERR(combine_with_lastrange(elt, rangelist, TRUE, result_pool));
     }
 
 
   for (; j < changes->nelts; j++)
     {
       svn_merge_range_t *elt = APR_ARRAY_IDX(changes, j, svn_merge_range_t *);
-      SVN_ERR(combine_with_lastrange(elt, rangelist,
-                                     TRUE, result_pool, scratch_pool));
+      SVN_ERR(combine_with_lastrange(elt, rangelist, TRUE, result_pool));
     }
 
   return SVN_NO_ERROR;
@@ -997,7 +990,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
               tmp_range.inheritable =
                 (elt2->inheritable || elt1->inheritable);
               SVN_ERR(combine_with_lastrange(&tmp_range, *output,
-                                             consider_inheritance, pool,
+                                             consider_inheritance,
                                              pool));
             }
 
@@ -1034,7 +1027,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
 
               SVN_ERR(combine_with_lastrange(&tmp_range,
                                              *output, consider_inheritance,
-                                             pool, pool));
+                                             pool));
             }
 
           /* Set up the rest of the rangelist2 range for further
@@ -1055,7 +1048,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                   SVN_ERR(combine_with_lastrange(&tmp_range,
                                                  *output,
                                                  consider_inheritance,
-                                                 pool, pool));
+                                                 pool));
                 }
 
               working_elt2.start = elt1->end;
@@ -1107,7 +1100,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
       if (i2 == lasti2 && i2 < rangelist2->nelts)
         {
           SVN_ERR(combine_with_lastrange(&working_elt2, *output,
-                                         consider_inheritance, pool, pool));
+                                         consider_inheritance, pool));
           i2++;
         }
 
@@ -1118,7 +1111,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                                                  svn_merge_range_t *);
 
           SVN_ERR(combine_with_lastrange(elt, *output,
-                                         consider_inheritance, pool, pool));
+                                         consider_inheritance, pool));
         }
     }
 
