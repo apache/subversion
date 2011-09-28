@@ -298,6 +298,10 @@ else
 THREADS_FLAG=--disable-threads
 endif
 
+ifdef POOL_DEBUG
+POOL_DEBUG_FLAG=--enable-pool-debug=all
+endif
+
 # configure apr
 $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved
 	cp $(APR_SRCDIR)/build/apr_hints.m4 \
@@ -311,7 +315,8 @@ $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved
 		$(APR_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--enable-maintainer-mode \
-		$(THREADS_FLAG)
+		$(THREADS_FLAG) \
+		$(POOL_DEBUG_FLAG)
 	touch $@
 
 # compile apr
