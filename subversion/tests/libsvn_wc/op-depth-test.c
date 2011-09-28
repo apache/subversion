@@ -3634,6 +3634,41 @@ copy_file_externals(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+copy_wc_wc_absent(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  nodes_row_t before[] = {
+    {0, "",      "normal",  1, ""},
+    {0, "A",     "normal",  1, "A"},
+    {0, "A/B",   "normal",  1, "A/B"},
+    {0, "A/B/E", "absent",  1, "A/B/E"},
+    {0}
+  };
+  nodes_row_t after[] = {
+    {0, "",      "normal",  1, ""},
+    {0, "A",     "normal",      1, "A"},
+    {0, "A/B",   "normal",      1, "A/B"},
+    {0, "A/B/E", "absent",      1, "A/B/E"},
+    {1, "X",     "normal",      1, "A"},
+    {1, "X/B",   "normal",      1, "A/B"},
+    {1, "X/B/E", "incomplete",  1, "A/B/E"},
+    {0}
+  };
+  svn_error_t *err;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "copy_wc_wc_absent", opts, pool));
+  SVN_ERR(insert_dirs(&b, before));
+  SVN_ERR(check_db_rows(&b, "", before));
+  SVN_ERR(disk_mkdir(&b, "A"));
+  err = wc_copy(&b, "A", "X");
+  SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS);
+  svn_error_clear(err);
+  SVN_ERR(check_db_rows(&b, "", after));
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -3698,5 +3733,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "revert_file_externals"),
     SVN_TEST_OPTS_PASS(copy_file_externals,
                        "copy_file_externals"),
+    SVN_TEST_OPTS_PASS(copy_wc_wc_absent,
+                       "test_wc_wc_copy_absent"),
     SVN_TEST_NULL
   };
