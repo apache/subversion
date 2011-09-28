@@ -169,16 +169,17 @@ Candidate changes:
    Votes:
      +1: hwright
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1177001
    Update bash_completion to match 1.7 commands and options.
    Justification:
      Frustrating to be offered the wrong options.
    Votes:
      +1: philip
+     +0: danielsh
 
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
