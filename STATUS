@@ -149,6 +149,21 @@ Candidate changes:
    Votes:
      +1: danielsh, stsp
 
+ * r1167681
+   Don't invoke quicksort unnecessarily when combining mergeinfo rangelists.
+   Justification:
+     This speeds up --reintegrate merges, especially the pathological case
+     described here: http://svn.haxx.se/dev/archive-2011-09/0247.shtml
+   Votes:
+     +1: stsp
+
+ * r1176915
+   Improve handling of temporary allocations in svn_mergeinfo_intersect2().
+   Justification:
+     Should reduce memory footprint.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
