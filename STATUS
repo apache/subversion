@@ -135,7 +135,7 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1175888, r1176416
+ * r1175888
    Fix some object lifetime issues in the JavaHL bindings.
    Justification:
      Using garbage-collected objects is bad.
