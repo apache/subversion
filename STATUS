@@ -118,13 +118,6 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1175888
-   Fix some object lifetime issues in the JavaHL bindings.
-   Justification:
-     Using garbage-collected objects is bad.
-   Votes:
-     +1: hwright
-
  * r1177492
    Constness fix.
    Justification:
@@ -178,3 +171,10 @@ Approved changes:
    Votes:
      +1: philip
      +0: danielsh
+
+ * r1175888
+   Fix some object lifetime issues in the JavaHL bindings.
+   Justification:
+     Using garbage-collected objects is bad.
+   Votes:
+     +1: hwright, philip
