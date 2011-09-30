@@ -135,33 +135,6 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1173574, r1174342, r1174693, r1174699
-   Fix issue #4016: 'externals after upgrade from 1.6 have wrong URL
-   information in EXTERNALS rows'
-   Also: previously, the first failing external upgrade aborted all other
-   external upgrades, now just prints the error and carries on.
-   Justification:
-     Users will start upgrading their WCs right after the 1.7.0 release, and
-     it would be nice to have proper information in wc.db. I know of no real
-     problems when EXTERNALS rows are wrong and/or missing info, but we might
-     see them soon enough, or hit problems if same users upgrade same WCs
-     to 1.8, much later.
-     Argument against: "If EXTERNALS is just some sort of cache perhaps
-       upgrade should just leave the columns null?"
-     Argument for: "Currently 1.7 populates those columns. So upgrade should,
-       too. We don't know which way we'll go -- drop EXTERNALS columns or
-       heavily rely on them. So rather make an upgraded 1.6 WC look exactly
-       the same as a fresh 1.7 WC would, saving us complex special cases in
-       subsequent upgrade code. Meaning: power users with age-old WCs won't
-       get dropped during upgrade to 1.8, whichever way we choose."
-   Notes:
-     r1173574 is just a cosmetic change that avoids conflicts in r1174693.
-     r1174699 removes obsoleted stuff, but doesn't change the outcome.
-   Conflicts:
-     --accept=tc (r1174693, indent mismatch in handle_external_item_change()
-   Votes:         caused by cosmetic fix from r1169770)
-     +1: neels
-
  * r1175888, r1176416
    Fix some object lifetime issues in the JavaHL bindings.
    Justification:
