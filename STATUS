@@ -70,15 +70,6 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r1164386
-   Avoid an expensive database operation in 'svn info'.
-   Justification:
-     Improves performance of 'svn info' on a single unmodified node by 20-30%, by
-     moving an in most cases unneeded database call in the error handling.
-   Votes:
-     +1: rhuijben, hwright
-     +1: gstein (for 1.7.1)
-
  * r1164426, r1164614
    Fix STMT_SELECT_NODE_CHILDREN_WALKER_INFO for correctness and speed.
    Justification:
@@ -93,14 +84,6 @@ Candidate changes:
      +0: peters, gstein (looks correct, but I didn't test, and while
                          performance should be better, I wonder if that's
                          been tested at all)
-
- * r1167659
-   Don't sort an already sorted array in svn_sort__hash().
-   Justification:
-     Possible performance improvement for merges, and doesn't cost anything.
-     This function is used to sort mergeinfo catalogs, among other things.
-   Votes:
-     +1: stsp (for 1.7.1), rhuijben (for 1.7.1), pburba
 
  * r1174111
    Use the correct function to copy repositories in the testsuite.
@@ -170,6 +153,24 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+[ Note: Please don't merge these until after 1.7.0 is released, just in case. ]
+
+ * r1164386
+   Avoid an expensive database operation in 'svn info'.
+   Justification:
+     Improves performance of 'svn info' on a single unmodified node by 20-30%, by
+     moving an in most cases unneeded database call in the error handling.
+   Votes:
+     +1: rhuijben, hwright, gstein
+
+ * r1167659
+   Don't sort an already sorted array in svn_sort__hash().
+   Justification:
+     Possible performance improvement for merges, and doesn't cost anything.
+     This function is used to sort mergeinfo catalogs, among other things.
+   Votes:
+     +1: stsp, rhuijben, pburba
+
  * r1177001
    Update bash_completion to match 1.7 commands and options.
    Justification:
@@ -177,4 +178,3 @@ Approved changes:
    Votes:
      +1: philip
      +0: danielsh
-
