@@ -161,8 +161,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_py__unlock,
   svn_fs_py__get_lock,
   svn_fs_py__get_locks,
-  fs_set_errcall,
-  svn_fs_py__validate_mergeinfo,
+  fs_set_errcall
 };
 
 

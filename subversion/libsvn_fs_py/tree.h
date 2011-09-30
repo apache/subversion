@@ -71,14 +71,6 @@ svn_fs_py__node_created_rev(svn_revnum_t *revision,
                             const char *path,
                             apr_pool_t *pool);
 
-/* Implements svn_fs_validate_mergeinfo. */
-svn_error_t *
-svn_fs_py__validate_mergeinfo(svn_mergeinfo_t *validated_mergeinfo,
-                              svn_fs_t *fs,
-                              svn_mergeinfo_t mergeinfo,
-                              apr_pool_t *result_pool,
-                              apr_pool_t *scratch_pool);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
