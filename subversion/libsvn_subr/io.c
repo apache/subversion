@@ -2938,7 +2938,8 @@ svn_io_detect_mimetype2(const char **mimetype,
   if (mimetype_map)
     {
       const char *type_from_map;
-      char *path_ext;
+      char *path_ext; /* Can point to physical const memory but only when
+                         svn_path_splitext sets it to "". */
       svn_path_splitext(NULL, (const char **)&path_ext, file, pool);
       fileext_tolower(path_ext);
       if ((type_from_map = apr_hash_get(mimetype_map, path_ext,
