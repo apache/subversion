@@ -158,7 +158,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__unlock,
   svn_fs_fs__get_lock,
   svn_fs_fs__get_locks,
-  fs_set_errcall,
+  fs_set_errcall
 };
 
 
