@@ -169,6 +169,13 @@ Candidate changes:
    Votes:
      +1: hwright
 
+ * r1177492
+   Constness fix.
+   Justification:
+     Without this we are writing to const memory.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
