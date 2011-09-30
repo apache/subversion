@@ -6108,11 +6108,7 @@ convert_to_working_status(svn_wc__db_status_t *working_status,
                  || work_status == svn_wc__db_status_incomplete
                  || work_status == svn_wc__db_status_excluded);
 
-  if (work_status == svn_wc__db_status_incomplete)
-    {
-      *working_status = svn_wc__db_status_incomplete;
-    }
-  else if (work_status == svn_wc__db_status_excluded)
+  if (work_status == svn_wc__db_status_excluded)
     {
       *working_status = svn_wc__db_status_excluded;
     }
@@ -6127,7 +6123,7 @@ convert_to_working_status(svn_wc__db_status_t *working_status,
 
       *working_status = svn_wc__db_status_deleted;
     }
-  else /* normal */
+  else /* normal or incomplete */
     {
       /* The caller should scan upwards to detect whether this
          addition has occurred because of a simple addition,
@@ -7068,6 +7064,8 @@ read_children_info(void *baton,
           child->status = svn_sqlite__column_token(stmt, 3, presence_map);
           if (op_depth != 0)
             {
+              if (child->status == svn_wc__db_status_incomplete)
+                child->incomplete = TRUE;
               err = convert_to_working_status(&child->status, child->status);
               if (err)
                 SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
@@ -9463,7 +9461,9 @@ scan_addition_txn(void *baton,
     presence = svn_sqlite__column_token(stmt, 1, presence_map);
 
     /* The starting node should exist normally.  */
-    if (presence != svn_wc__db_status_normal)
+    op_depth = svn_sqlite__column_int64(stmt, 0);
+    if (op_depth == 0 || (presence != svn_wc__db_status_normal
+                          && presence != svn_wc__db_status_incomplete))
       /* reset the statement as part of the error generation process */
       return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
                                svn_sqlite__reset(stmt),
@@ -9477,11 +9477,15 @@ scan_addition_txn(void *baton,
 
     /* Provide the default status; we'll override as appropriate. */
     if (sab->status)
-      *sab->status = svn_wc__db_status_added;
+      {
+        if (presence == svn_wc__db_status_normal)
+          *sab->status = svn_wc__db_status_added;
+        else
+          *sab->status = svn_wc__db_status_incomplete;
+      }
 
 
     /* Calculate the op root local path components */
-    op_depth = svn_sqlite__column_int64(stmt, 0);
     op_root_relpath = local_relpath;
 
     for (i = (int)relpath_depth(local_relpath); i > op_depth; --i)

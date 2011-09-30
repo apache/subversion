@@ -338,13 +338,16 @@ read_info(const struct svn_wc__db_info_t **info,
   if (mtb->status == svn_wc__db_status_added)
     {
       const char *moved_from_abspath = NULL;
-      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL,
+      svn_wc__db_status_t status;
+
+      SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL,
                                        &moved_from_abspath,
                                        NULL,
                                        db, local_abspath,
                                        result_pool, scratch_pool));
       mtb->moved_here = (moved_from_abspath != NULL);
+      mtb->incomplete = (status == svn_wc__db_status_incomplete);
     }
 
   mtb->has_checksum = (checksum != NULL);
@@ -505,7 +508,7 @@ assemble_status(svn_wc_status3_t **status,
    * obstructions, we have to look at the on-disk status in DIRENT. */
   if (info->kind == svn_wc__db_kind_dir)
     {
-      if (info->status == svn_wc__db_status_incomplete)
+      if (info->status == svn_wc__db_status_incomplete || info->incomplete)
         {
           /* Highest precedence.  */
           node_status = svn_wc_status_incomplete;

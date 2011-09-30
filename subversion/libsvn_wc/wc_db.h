@@ -1710,8 +1710,8 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
        node's revision.
 
      svn_wc__db_status_incomplete
-       The BASE or WORKING node is incomplete due to an interrupted
-       operation.
+       The BASE is incomplete due to an interrupted operation.  An
+       incomplete WORKING node will be svn_wc__db_status_added.
 
    If REVISION is requested, it will be set to the revision of the
    unmodified (BASE) node, or to SVN_INVALID_REVNUM if any structural
@@ -1868,6 +1868,7 @@ struct svn_wc__db_info_t {
 
   svn_boolean_t locked;     /* WC directory lock */
   svn_wc__db_lock_t *lock;  /* Repository file lock */
+  svn_boolean_t incomplete; /* TRUE if a working node is incomplete */
 
   const char *moved_to_abspath; /* Only on op-roots. See svn_wc_status3_t. */
   svn_boolean_t moved_here;     /* On both op-roots and children. */
@@ -2440,6 +2441,8 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
        an add, copy, or move). The REPOS_* values will be implied by the
        ancestor unshadowed BASE node. ORIGINAL_* will indicate the source
        of the copy.
+
+     svn_wc__db_status_incomplete -- this NODE is copied but incomplete.
 
      svn_wc__db_status_moved_here -- this NODE arrived as a result of a move.
        The root of the moved nodes will be stored in OP_ROOT_ABSPATH.
