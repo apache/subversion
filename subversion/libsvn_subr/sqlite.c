@@ -133,6 +133,10 @@ struct svn_sqlite__value_t
 } while (0)
 
 
+/* Time (in milliseconds) to wait for sqlite locks before giving up. */
+#define BUSY_TIMEOUT 10000
+
+
 /* Convenience wrapper around exec_sql2(). */
 #define exec_sql(db, sql) exec_sql2((db), (sql), SQLITE_OK)
 
@@ -579,108 +583,6 @@ svn_sqlite__reset(svn_sqlite__stmt_t *stmt)
 
 
 svn_error_t *
-svn_sqlite__set_schema_version(svn_sqlite__db_t *db,
-                               int version,
-                               apr_pool_t *scratch_pool)
-{
-  const char *pragma_cmd = apr_psprintf(scratch_pool,
-                                        "PRAGMA user_version = %d;",
-                                        version);
-
-  return svn_error_trace(exec_sql(db, pragma_cmd));
-}
-
-
-/* Time (in milliseconds) to wait for sqlite locks before giving up. */
-#define BUSY_TIMEOUT 10000
-
-
-#if 0
-/*
- * EXAMPLE
- *
- * The following provide an example for a series of SQL statements to
- * create/upgrade a SQLite schema across multiple "formats". This array
- * and integer would be passed into svn_sqlite__open().
- */
-static const char *schema_create_sql[] = {
-  NULL, /* An empty database is format 0 */
-
-  /* USER_VERSION 1 */
-  "PRAGMA auto_vacuum = 1;"
-  APR_EOL_STR
-  "CREATE TABLE mergeinfo (revision INTEGER NOT NULL, mergedfrom TEXT NOT "
-  "NULL, mergedto TEXT NOT NULL, mergedrevstart INTEGER NOT NULL, "
-  "mergedrevend INTEGER NOT NULL, inheritable INTEGER NOT NULL);"
-  APR_EOL_STR
-  "CREATE INDEX mi_mergedfrom_idx ON mergeinfo (mergedfrom);"
-  APR_EOL_STR
-  "CREATE INDEX mi_mergedto_idx ON mergeinfo (mergedto);"
-  APR_EOL_STR
-  "CREATE INDEX mi_revision_idx ON mergeinfo (revision);"
-  APR_EOL_STR
-  "CREATE TABLE mergeinfo_changed (revision INTEGER NOT NULL, path TEXT "
-  "NOT NULL);"
-  APR_EOL_STR
-  "CREATE UNIQUE INDEX mi_c_revpath_idx ON mergeinfo_changed (revision, path);"
-  APR_EOL_STR
-  "CREATE INDEX mi_c_path_idx ON mergeinfo_changed (path);"
-  APR_EOL_STR
-  "CREATE INDEX mi_c_revision_idx ON mergeinfo_changed (revision);"
-  APR_EOL_STR,
-
-  /* USER_VERSION 2 */
-  "CREATE TABLE node_origins (node_id TEXT NOT NULL, node_rev_id TEXT NOT "
-  "NULL);"
-  APR_EOL_STR
-  "CREATE UNIQUE INDEX no_ni_idx ON node_origins (node_id);"
-  APR_EOL_STR
-};
-
-static const int latest_schema_format =
-  sizeof(schema_create_sql)/sizeof(schema_create_sql[0]) - 1;
-
-#endif
-
-struct upgrade_baton
-{
-  int current_schema;
-  int latest_schema;
-  const char * const *upgrade_sql;
-};
-
-
-/* This implements svn_sqlite__transaction_callback_t */
-static svn_error_t *
-upgrade_format(void *baton,
-               svn_sqlite__db_t *db,
-               apr_pool_t *scratch_pool)
-{
-  struct upgrade_baton *ub = baton;
-  int current_schema = ub->current_schema;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-
-  while (current_schema < ub->latest_schema)
-    {
-      svn_pool_clear(iterpool);
-
-      /* Go to the next schema */
-      current_schema++;
-
-      /* Run the upgrade SQL */
-      if (ub->upgrade_sql[current_schema])
-        SVN_ERR(exec_sql(db, ub->upgrade_sql[current_schema]));
-
-      /* Update the user version pragma */
-      SVN_ERR(svn_sqlite__set_schema_version(db, current_schema, iterpool));
-    }
-
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_sqlite__read_schema_version(int *version,
                                 svn_sqlite__db_t *db,
                                 apr_pool_t *scratch_pool)
@@ -695,41 +597,6 @@ svn_sqlite__read_schema_version(int *version,
   return svn_error_trace(svn_sqlite__finalize(stmt));
 }
 
-
-/* Check the schema format of the database, upgrading it if necessary.
-   Return SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA if the schema format is too new,
-   or SVN_ERR_SQLITE_ERROR if an sqlite error occurs during validation.
-   Return SVN_NO_ERROR if everything is okay. */
-static svn_error_t *
-check_format(svn_sqlite__db_t *db,
-             int latest_schema,
-             const char * const *upgrade_sql,
-             apr_pool_t *scratch_pool)
-{
-  int current_schema;
-
-  /* Validate that the schema exists as expected. */
-  SVN_ERR(svn_sqlite__read_schema_version(&current_schema, db, scratch_pool));
-
-  if (current_schema == latest_schema)
-    return SVN_NO_ERROR;
-
-  if (current_schema < latest_schema)
-    {
-      struct upgrade_baton ub;
-
-      ub.current_schema = current_schema;
-      ub.latest_schema = latest_schema;
-      ub.upgrade_sql = upgrade_sql;
-
-      return svn_error_trace(svn_sqlite__with_transaction(
-                               db, upgrade_format, &ub, scratch_pool));
-    }
-
-  return svn_error_createf(SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA, NULL,
-                           _("Schema format %d not recognized"),
-                           current_schema);
-}
 
 static volatile svn_atomic_t sqlite_init_state = 0;
 
@@ -836,22 +703,6 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_sqlite__get_schema_version(int *version,
-                               const char *path,
-                               apr_pool_t *scratch_pool)
-{
-  svn_sqlite__db_t db;
-
-  SVN_ERR(svn_atomic__init_once(&sqlite_init_state,
-                                init_sqlite, NULL, scratch_pool));
-  SVN_ERR(internal_open(&db.db3, path, svn_sqlite__mode_readonly,
-                        scratch_pool));
-  SVN_ERR(svn_sqlite__read_schema_version(version, &db, scratch_pool));
-  SQLITE_ERR(sqlite3_close(db.db3), &db);
-
-  return SVN_NO_ERROR;
-}
 
 /* APR cleanup function used to close the database when its pool is destroyed.
    DATA should be the svn_sqlite__db_t handle for the database. */
@@ -897,7 +748,7 @@ close_apr(void *data)
 svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  svn_sqlite__mode_t mode, const char * const statements[],
-                 int latest_schema, const char * const *upgrade_sql,
+                 int unused1, const char * const *unused2,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   SVN_ERR(svn_atomic__init_once(&sqlite_init_state,
@@ -965,10 +816,6 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
      fail on this if this option is disabled in the sqlite compilation by
      setting SQLITE_TEMP_STORE to 0 (always to disk) */
   svn_error_clear(exec_sql(*db, "PRAGMA temp_store = MEMORY;"));
-
-  /* Validate the schema, upgrading if necessary. */
-  if (upgrade_sql != NULL)
-    SVN_ERR(check_format(*db, latest_schema, upgrade_sql, scratch_pool));
 
   /* Store the provided statements. */
   if (statements)

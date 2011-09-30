@@ -573,7 +573,7 @@ svn_ra_create_callbacks(svn_ra_callbacks2_t **callbacks,
 
 /**
  * A repository access session.  This object is used to perform requests
- * to a repository, identified by an URL.
+ * to a repository, identified by a URL.
  *
  * @since New in 1.2.
  */
@@ -1017,12 +1017,6 @@ svn_ra_get_dir(svn_ra_session_t *session,
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is retrieved.
  *
- * If server supports the #SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO
- * capability, the mergeinfo for any path is inherited, and
- * @a validate_inherited_mergeinfo is TRUE, then request that the server
- * validate the mergeinfo in @a *catalog, so it contains only merge source
- * path-revisions that actually exist in repository.
- *
  * If @a include_descendants is TRUE, then additionally return the
  * mergeinfo for any descendant of any element of @a paths which has
  * the @c SVN_PROP_MERGEINFO property explicitly set on it.  (Note
@@ -1039,25 +1033,8 @@ svn_ra_get_dir(svn_ra_session_t *session,
  * upgraded), return @c SVN_ERR_UNSUPPORTED_FEATURE in preference to
  * any other error that might otherwise be returned.
  *
- * @since New in 1.7.
+ * @since New in 1.5.
  */
-svn_error_t *
-svn_ra_get_mergeinfo2(svn_ra_session_t *session,
-                      svn_mergeinfo_catalog_t *catalog,
-                      const apr_array_header_t *paths,
-                      svn_revnum_t revision,
-                      svn_mergeinfo_inheritance_t inherit,
-                      svn_boolean_t validate_inherited_mergeinfo,
-                      svn_boolean_t include_descendants,
-                      apr_pool_t *pool);
-
-/**
- * Similar to svn_ra_get_mergeinfo2(), but with
- * @a validate_inherited_mergeinfo always passed as FALSE.
- *
- * @deprecated Provided for backward compatibility with the 1.6 API.
- */
-SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_mergeinfo(svn_ra_session_t *session,
                      svn_mergeinfo_catalog_t *catalog,
@@ -1980,15 +1957,6 @@ svn_ra_has_capability(svn_ra_session_t *session,
  * @since New in 1.7.
  */
 #define SVN_RA_CAPABILITY_ATOMIC_REVPROPS "atomic-revprops"
-
-/**
- * The capability of validating inherited mergeinfo in
- * svn_ra_get_mergeinfo2().
- *
- * @since New in 1.7.
- */
-#define SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO \
-  "validate-inherited-mergeinfo"
 
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
  *

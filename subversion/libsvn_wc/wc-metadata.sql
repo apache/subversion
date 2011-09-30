@@ -540,7 +540,7 @@ CREATE TABLE EXTERNALS (
   local_relpath  TEXT NOT NULL,
 
   /* The working copy root can't be recorded as an external in itself
-     so this will never be NULL. */
+     so this will never be NULL. ### ATM only inserted, never queried */
   parent_relpath  TEXT NOT NULL,
 
   /* Repository location fields */
@@ -767,6 +767,12 @@ PRAGMA user_version = 29;
 /* TODO: Rename the "absent" presence value to "server-excluded" before
    the 1.7 release. wc_db.c and this file have references to "absent" which
    still need to be changed to "server-excluded". */
+/* TODO: Un-confuse *_revision column names in the EXTERNALS table to
+   "-r<operative> foo@<peg>", as suggested by the patch attached to
+   http://svn.haxx.se/dev/archive-2011-09/0478.shtml */
+/* TODO: Remove column parent_relpath from EXTERNALS. We're not using it and
+   never will. It's not interesting like in the NODES table: the external's
+   parent path may be *anything*: unversioned, "behind" a another WC... */
 
 /* Now "drop" the tree_conflict_data column from actual_node. */
 CREATE TABLE ACTUAL_NODE_BACKUP (

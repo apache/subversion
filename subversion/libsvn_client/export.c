@@ -1180,6 +1180,7 @@ svn_client_export5(svn_revnum_t *result_rev,
 
           SVN_ERR(svn_editor__insert_shims(&export_editor, &edit_baton,
                                            export_editor, edit_baton,
+                                           NULL, NULL, NULL, NULL,
                                            pool, pool));
 
           /* Manufacture a basic 'report' to the update reporter. */

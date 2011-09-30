@@ -275,31 +275,31 @@ print_status(const char *path,
   /* Note that moved-from and moved-to information is only available in STATUS
    * for (op-)roots of a move. Those are exactly the nodes we want to show
    * move info for in 'svn status'. See also comments in svn_wc_status3_t. */
-
-  if (status->moved_from_abspath)
+  if (status->moved_from_abspath || status->moved_to_abspath)
     {
       const char *cwd;
       const char *relpath;
       SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
-      relpath = make_relpath(cwd, status->moved_from_abspath, pool, pool);
-      relpath = svn_dirent_local_style(relpath, pool);
-      moved_from_line = apr_pstrcat(pool, "\n        > ",
-                                    apr_psprintf(pool, _("moved from %s"),
-                                                 relpath),
-                                    (char *)NULL);
-    }
 
-  if (status->moved_to_abspath)
-    {
-      const char *cwd;
-      const char *relpath;
-      SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
-      relpath = make_relpath(cwd, status->moved_to_abspath, pool, pool);
-      relpath = svn_dirent_local_style(relpath, pool);
-      moved_to_line = apr_pstrcat(pool, "\n        > ",
-                                  apr_psprintf(pool, _("moved to %s"),
-                                               relpath),
-                                  (char *)NULL);
+      if (status->moved_from_abspath)
+        {
+          relpath = make_relpath(cwd, status->moved_from_abspath, pool, pool);
+          relpath = svn_dirent_local_style(relpath, pool);
+          moved_from_line = apr_pstrcat(pool, "\n        > ",
+                                        apr_psprintf(pool, _("moved from %s"),
+                                                     relpath),
+                                        (char *)NULL);
+        }
+
+      if (status->moved_to_abspath)
+        {
+          relpath = make_relpath(cwd, status->moved_to_abspath, pool, pool);
+          relpath = svn_dirent_local_style(relpath, pool);
+          moved_to_line = apr_pstrcat(pool, "\n        > ",
+                                      apr_psprintf(pool, _("moved to %s"),
+                                                   relpath),
+                                      (char *)NULL);
+        }
     }
 
   if (detailed)
@@ -462,6 +462,24 @@ svn_cl__print_status_xml(const char *path,
   if (tree_conflicted)
     apr_hash_set(att_hash, "tree-conflicted", APR_HASH_KEY_STRING,
                  "true");
+  if (status->moved_from_abspath || status->moved_to_abspath)
+    {
+      const char *cwd;
+      const char *relpath;
+      SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
+      if (status->moved_from_abspath)
+        {
+          relpath = make_relpath(cwd, status->moved_from_abspath, pool, pool);
+          relpath = svn_dirent_local_style(relpath, pool);
+          apr_hash_set(att_hash, "moved-from", APR_HASH_KEY_STRING, relpath);
+        }
+      if (status->moved_to_abspath)
+        {
+          relpath = make_relpath(cwd, status->moved_to_abspath, pool, pool);
+          relpath = svn_dirent_local_style(relpath, pool);
+          apr_hash_set(att_hash, "moved-to", APR_HASH_KEY_STRING, relpath);
+        }
+    }
   svn_xml_make_open_tag_hash(&sb, pool, svn_xml_normal, "wc-status",
                              att_hash);
 

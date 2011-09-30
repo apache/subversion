@@ -718,7 +718,7 @@ apply_textdelta(void *file_baton, const char *base_checksum,
 
   LDR_DBG(("apply_textdelta %p\n", file_baton));
 
-  /* Use a temporary file to measure the text-content-length */
+  /* Use a temporary file to measure the Text-content-length */
   delta_filestream = svn_stream_from_aprfile2(eb->delta_file, TRUE, pool);
 
   /* Prepare to write the delta to the delta_filestream */
@@ -892,7 +892,7 @@ svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
                                             de, eb, editor, edit_baton, pool));
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   pool, pool));
+                                   NULL, NULL, NULL, NULL, pool, pool));
 
   return SVN_NO_ERROR;
 }

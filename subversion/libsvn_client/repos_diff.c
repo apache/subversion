@@ -1388,6 +1388,7 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
                                             eb->pool));
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                   NULL, NULL, NULL, NULL,
                                    result_pool, result_pool));
 
   return SVN_NO_ERROR;

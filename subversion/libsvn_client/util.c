@@ -145,6 +145,7 @@ svn_client__path_relative_to_root(const char **rel_path,
 
 svn_error_t *
 svn_client__get_repos_root(const char **repos_root,
+                           const char **repos_uuid,
                            const char *abspath_or_url,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *result_pool,
@@ -155,7 +156,7 @@ svn_client__get_repos_root(const char **repos_root,
   /* If PATH_OR_URL is a local path we can fetch the repos root locally. */
   if (!svn_path_is_url(abspath_or_url))
     {
-      SVN_ERR(svn_wc__node_get_repos_info(repos_root, NULL,
+      SVN_ERR(svn_wc__node_get_repos_info(repos_root, repos_uuid,
                                           ctx->wc_ctx, abspath_or_url,
                                           result_pool, scratch_pool));
 
@@ -168,7 +169,10 @@ svn_client__get_repos_root(const char **repos_root,
                                                NULL, NULL, FALSE, TRUE,
                                                ctx, scratch_pool));
 
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, result_pool));
+  if (repos_root)
+    SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, result_pool));
+  if (repos_uuid)
+    SVN_ERR(svn_ra_get_uuid2(ra_session, repos_uuid, result_pool));
 
   return SVN_NO_ERROR;
 }

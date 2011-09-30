@@ -301,7 +301,6 @@ class TestHarness:
                  '--srcdir=' + os.path.join(self.srcdir, progdir)]
       if self.config_file is not None:
         cmdline.append('--config-file=' + self.config_file)
-      cmdline.append('--trap-assertion-failures')
     else:
       print('Don\'t know what to do about ' + progbase)
       sys.exit(1)

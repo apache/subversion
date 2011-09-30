@@ -209,9 +209,6 @@ extern "C" {
  *   follow for each child mentioned in the @a children argument of any
  *   svn_editor_add_directory() call.
  *
- * - svn_editor_add_file() -- An svn_editor_set_text() call must follow
- *   for the same path (at some point).
- *
  * - svn_editor_set_props()
  *   - The @a complete argument must be TRUE if no more calls will follow on
  *     the same path. @a complete must always be TRUE for directories.
@@ -222,16 +219,31 @@ extern "C" {
  *       an svn_editor_set_target() call on the same path.
  *
  * - svn_editor_set_text() and svn_editor_set_target() must always occur
- *   @b after an svn_editor_set_props() or svn_editor_add_file() call on
- *   the same path, if any.\n
+ *   @b after an svn_editor_set_props() call on the same path, if any.
+ *
  *   In other words, if there are two calls coming in on the same path, the
- *   first of them has to be either svn_editor_set_props() or
- *   svn_editor_add_file().
+ *   first of them has to be svn_editor_set_props().
+ *
+ * - Other than the above two pairs of linked operations, a path should
+ *   never be referenced more than once by the add_* and set_* and the
+ *   delete operations (the "Once Rule"). The source path of a copy (and
+ *   its children, if a directory) may be copied many times, and are
+ *   otherwise subject to the Once Rule. The destination path of a copy
+ *   or move may have set_* operations applied, but not add_* or delete.
+ *   If the destination path of a copy or move is a directory, then its
+ *   children are subject to the Once Rule. The source path of a move
+ *   (and its child paths) may be referenced in add_*, or as the
+ *   destination of a copy (where these new, copied nodes are subject to
+ *   the Once Rule).
+ *
+ * - The ancestor of an added or modified node may not be deleted. The
+ *   ancestor may not be moved (instead: perform the move, *then* the edits).
  *
  * - svn_editor_delete() must not be used to replace a path -- i.e.
  *   svn_editor_delete() must not be followed by an svn_editor_add_*() on
  *   the same path, nor by an svn_editor_copy() or svn_editor_move() with
  *   the same path as the copy/move target.
+ *
  *   Instead of a prior delete call, the add/copy/move callbacks should be
  *   called with the @a replaces_rev argument set to the revision number of
  *   the node at this path that is being replaced.  Note that the path and
@@ -242,6 +254,9 @@ extern "C" {
  * - svn_editor_delete() must not be used to move a path -- i.e.
  *   svn_editor_delete() must not delete the source path of a previous
  *   svn_editor_copy() call. Instead, svn_editor_move() must be used.
+ *   Note: if the desired semantics is one (or more) copies, followed
+ *   by a delete... that is fine. It is simply that svn_editor_move()
+ *   should be used to describe a semantic move.
  *
  * - One of svn_editor_complete() or svn_editor_abort() must be called
  *   exactly once, which must be the final call the driver invokes.
@@ -258,7 +273,6 @@ extern "C" {
  * All callbacks must complete their handling of a path before they
  * return, except for the following pairs, where a change must be completed
  * when receiving the second callback in each pair:
- *  - svn_editor_add_file() and svn_editor_set_text()
  *  - svn_editor_set_props() (if @a complete is FALSE) and
  *    svn_editor_set_text() (if the node is a file)
  *  - svn_editor_set_props() (if @a complete is FALSE) and
@@ -374,6 +388,8 @@ typedef svn_error_t *(*svn_editor_cb_add_directory_t)(
 typedef svn_error_t *(*svn_editor_cb_add_file_t)(
   void *baton,
   const char *relpath,
+  const svn_checksum_t *checksum,
+  svn_stream_t *contents,
   apr_hash_t *props,
   svn_revnum_t replaces_rev,
   apr_pool_t *scratch_pool);
@@ -713,6 +729,9 @@ svn_editor_add_directory(svn_editor_t *editor,
  * Create a new file at @a relpath. The immediate parent of @a relpath
  * is expected to exist.
  *
+ * The file's contents are specified in @a contents which has a checksum
+ * matching @a checksum.
+ *
  * Set the properties of the new file to @a props, which is an
  * apr_hash_t holding key-value pairs. Each key is a const char* of a
  * property name, each value is a const svn_string_t*. If no properties are
@@ -731,6 +750,8 @@ svn_editor_add_directory(svn_editor_t *editor,
 svn_error_t *
 svn_editor_add_file(svn_editor_t *editor,
                     const char *relpath,
+                    const svn_checksum_t *checksum,
+                    svn_stream_t *contents,
                     apr_hash_t *props,
                     svn_revnum_t replaces_rev);
 
@@ -771,13 +792,8 @@ svn_editor_add_absent(svn_editor_t *editor,
 
 /** Drive @a editor's #svn_editor_cb_set_props_t callback.
  *
- * Set or change properties on the existing node at @a relpath.
- * ### TODO @todo Does this send *all* properties, always?
- * ### HKW: The purist in me says "yes", but the pragmatist says "no".
- * ### Writing a backward compat shim is going to be next to impossible,
- * ### since we've no way to know about existing props while receiving
- * ### props from the delta editor.
- * ###
+ * Set or change properties on the existing node at @a relpath.  This
+ * function sends *all* properties, both existing and changes.
  * ### TODO @todo What is REVISION for?
  * ### HKW: This is puzzling to me as well...
  * ###
@@ -875,14 +891,12 @@ svn_editor_copy(svn_editor_t *editor,
  * ###   svn_editor_add_file(ed, "foo.c", props, rN);
  * ###   svn_editor_move(ed, "foo.c", rM, "bar.c", rN);
  * ###
- * ### gstein: no, it would be:
- * ###   svn_editor_delete(e, "foo.c", rN);
- * ###   svn_editor_add_file(e, "foo.c", props, SVN_INVALID_REVNUM);
- * ###   svn_editor_move(e, "foo.c", rM, "bar.c", SVN_INVALID_REVNUM);
- * ###
- * ###   replaces_rev is to indicate a deletion of the destination node
- * ###   that occurs as part of the move. there are no replacements in
- * ###   your example.
+ * ### gstein: An editor is used to make changes to a tree rather than
+ * ###   model *how* the tree changed. If the receiver's tree is at
+ * ###   revision N-1, then the operations would be:
+ * ###     svn_editor_delete(ed, "foo.c", N-1);
+ * ###     svn_editor_copy(ed, "foo.c", M, "bar.c", SVN_INVALID_REVNUM);
+ * ###   That edits the tree to the appropriate state.
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.8.
@@ -896,7 +910,7 @@ svn_editor_move(svn_editor_t *editor,
 
 /** Drive @a editor's #svn_editor_cb_complete_t callback.
  *
- * Send word that the tree delta has been completed successfully.
+ * Send word that the edit has been completed successfully.
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.8.
@@ -906,7 +920,7 @@ svn_editor_complete(svn_editor_t *editor);
 
 /** Drive @a editor's #svn_editor_cb_abort_t callback.
  *
- * Notify that the tree delta transmission was not successful.
+ * Notify that the edit transmission was not successful.
  * ### TODO @todo Shouldn't we add a reason-for-aborting argument?
  *
  * For all restrictions on driving the editor, see #svn_editor_t.

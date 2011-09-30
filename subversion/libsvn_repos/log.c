@@ -663,9 +663,9 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
           svn_mergeinfo_catalog_t tmp_catalog;
 
           APR_ARRAY_PUSH(query_paths, const char *) = changed_path;
-          SVN_ERR(svn_fs_get_mergeinfo2(&tmp_catalog, root,
-                                        query_paths, svn_mergeinfo_inherited,
-                                        FALSE, FALSE, iterpool));
+          SVN_ERR(svn_fs_get_mergeinfo(&tmp_catalog, root,
+                                       query_paths, svn_mergeinfo_inherited,
+                                       FALSE, iterpool));
           tmp_mergeinfo = apr_hash_get(tmp_catalog, changed_path,
                                         APR_HASH_KEY_STRING);
           if (tmp_mergeinfo)
@@ -682,9 +682,9 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
           svn_mergeinfo_catalog_t tmp_catalog;
 
           APR_ARRAY_PUSH(query_paths, const char *) = base_path;
-          SVN_ERR(svn_fs_get_mergeinfo2(&tmp_catalog, base_root,
-                                        query_paths, svn_mergeinfo_inherited,
-                                        FALSE, FALSE, iterpool));
+          SVN_ERR(svn_fs_get_mergeinfo(&tmp_catalog, base_root,
+                                       query_paths, svn_mergeinfo_inherited,
+                                       FALSE, iterpool));
           tmp_mergeinfo = apr_hash_get(tmp_catalog, base_path,
                                         APR_HASH_KEY_STRING);
           if (tmp_mergeinfo)
@@ -835,9 +835,8 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
       SVN_ERR(svn_fs_revision_root(&prev_root, fs, prev_rev, iterpool));
       query_paths = apr_array_make(iterpool, 1, sizeof(const char *));
       APR_ARRAY_PUSH(query_paths, const char *) = prev_path;
-      err = svn_fs_get_mergeinfo2(&catalog, prev_root, query_paths,
-                                  svn_mergeinfo_inherited, FALSE, FALSE,
-                                  iterpool);
+      err = svn_fs_get_mergeinfo(&catalog, prev_root, query_paths,
+                                 svn_mergeinfo_inherited, FALSE, iterpool);
       if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
                   err->apr_err == SVN_ERR_FS_NOT_DIRECTORY ||
                   err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR))
@@ -852,9 +851,8 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
       /* Fetch the current mergeinfo (as of REV, and including
          inherited stuff) for this path. */
       APR_ARRAY_IDX(query_paths, 0, const char *) = path;
-      SVN_ERR(svn_fs_get_mergeinfo2(&catalog, root, query_paths,
-                                    svn_mergeinfo_inherited, FALSE, FALSE,
-                                    iterpool));
+      SVN_ERR(svn_fs_get_mergeinfo(&catalog, root, query_paths,
+                                   svn_mergeinfo_inherited, FALSE, iterpool));
       mergeinfo = apr_hash_get(catalog, path, APR_HASH_KEY_STRING);
 
       if (!prev_mergeinfo && !mergeinfo)
@@ -863,14 +861,13 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
       /* Compare, constrast, and combine the results. */
       SVN_ERR(svn_mergeinfo_diff(&deleted, &added, prev_mergeinfo,
                                  mergeinfo, FALSE, iterpool));
-      SVN_ERR(svn_mergeinfo_merge(*deleted_mergeinfo,
-                                  svn_mergeinfo_dup(deleted, result_pool),
-                                  result_pool));
-      SVN_ERR(svn_mergeinfo_merge(*added_mergeinfo,
-                                  svn_mergeinfo_dup(added, result_pool),
-                                  result_pool));
+      SVN_ERR(svn_mergeinfo_merge2(*deleted_mergeinfo,
+                                   svn_mergeinfo_dup(deleted, result_pool),
+                                   result_pool, iterpool));
+      SVN_ERR(svn_mergeinfo_merge2(*added_mergeinfo,
+                                   svn_mergeinfo_dup(added, result_pool),
+                                   result_pool, iterpool));
      }
-  svn_pool_destroy(iterpool);
 
   /* Merge all the mergeinfos which are, or are children of, one of
      our paths of interest into one giant delta mergeinfo.  */
@@ -893,18 +890,20 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
           const char *path = APR_ARRAY_IDX(paths, i, const char *);
           if (! svn_dirent_is_ancestor(path, changed_path))
             continue;
+          svn_pool_clear(iterpool);
           deleted = apr_hash_get(deleted_mergeinfo_catalog, key, klen);
-          SVN_ERR(svn_mergeinfo_merge(*deleted_mergeinfo,
-                                      svn_mergeinfo_dup(deleted, result_pool),
-                                      result_pool));
-          SVN_ERR(svn_mergeinfo_merge(*added_mergeinfo,
-                                      svn_mergeinfo_dup(added, result_pool),
-                                      result_pool));
+          SVN_ERR(svn_mergeinfo_merge2(*deleted_mergeinfo,
+                                       svn_mergeinfo_dup(deleted, result_pool),
+                                       result_pool, iterpool));
+          SVN_ERR(svn_mergeinfo_merge2(*added_mergeinfo,
+                                       svn_mergeinfo_dup(added, result_pool),
+                                       result_pool, iterpool));
 
           break;
         }
     }
 
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -1741,8 +1740,8 @@ store_search(svn_mergeinfo_t processed,
       apr_hash_set(mergeinfo, apr_pstrdup(processed_pool, path),
                    APR_HASH_KEY_STRING, ranges);
     }
-  SVN_ERR(svn_mergeinfo_merge(processed, mergeinfo,
-                              apr_hash_pool_get(processed)));
+  SVN_ERR(svn_mergeinfo_merge2(processed, mergeinfo,
+                               apr_hash_pool_get(processed), scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2113,10 +2112,10 @@ get_paths_history_as_mergeinfo(svn_mergeinfo_t *paths_history_mergeinfo,
 
       SVN_ERR(svn_mergeinfo__mergeinfo_from_segments(
         &path_history_mergeinfo, loc_seg_baton.history_segments, iterpool));
-      SVN_ERR(svn_mergeinfo_merge(*paths_history_mergeinfo,
-                                  svn_mergeinfo_dup(path_history_mergeinfo,
-                                                    result_pool),
-                                  result_pool));
+      SVN_ERR(svn_mergeinfo_merge2(*paths_history_mergeinfo,
+                                   svn_mergeinfo_dup(path_history_mergeinfo,
+                                                     result_pool),
+                                   result_pool, iterpool));
     }
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;

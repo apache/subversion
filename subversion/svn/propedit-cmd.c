@@ -326,7 +326,7 @@ svn_cl__propedit(apr_getopt_t *os,
                 return svn_error_trace(err);
 
               /* Print a message if we successfully committed or if it
-                 was just a wc propset (but not if the user aborted an URL
+                 was just a wc propset (but not if the user aborted a URL
                  propedit). */
               if (!svn_path_is_url(target))
                 SVN_ERR(svn_cmdline_printf(

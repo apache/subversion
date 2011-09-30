@@ -1073,6 +1073,42 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
                                                     pool, pool));
 }
 
+svn_error_t *
+svn_rangelist_merge(apr_array_header_t **rangelist,
+                    const apr_array_header_t *changes,
+                    apr_pool_t *pool)
+{
+  return svn_error_trace(svn_rangelist_merge2(*rangelist, changes,
+                                              pool, pool));
+}
+
+svn_error_t *
+svn_mergeinfo_merge(svn_mergeinfo_t mergeinfo,
+                    svn_mergeinfo_t changes,
+                    apr_pool_t *pool)
+{
+  return svn_error_trace(svn_mergeinfo_merge2(mergeinfo, changes, pool,
+                         pool));
+}
+
+svn_error_t *
+svn_mergeinfo_remove(svn_mergeinfo_t *mergeinfo, svn_mergeinfo_t eraser,
+                     svn_mergeinfo_t whiteboard, apr_pool_t *pool)
+{
+  return svn_mergeinfo_remove2(mergeinfo, eraser, whiteboard, TRUE, pool,
+                               pool);
+}
+
+svn_error_t *
+svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
+                        svn_mergeinfo_t mergeinfo1,
+                        svn_mergeinfo_t mergeinfo2,
+                        apr_pool_t *pool)
+{
+  return svn_mergeinfo_intersect2(mergeinfo, mergeinfo1, mergeinfo2,
+                                  TRUE, pool, pool);
+}
+
 /*** From config.c ***/
 
 svn_error_t *
@@ -1125,13 +1161,4 @@ void
 svn_xml_make_header(svn_stringbuf_t **str, apr_pool_t *pool)
 {
   svn_xml_make_header2(str, NULL, pool);
-}
-
-svn_error_t *
-svn_rangelist_merge(apr_array_header_t **rangelist,
-                    const apr_array_header_t *changes,
-                    apr_pool_t *pool)
-{
-  return svn_error_trace(svn_rangelist_merge2(*rangelist, changes,
-                                              pool, pool));
 }

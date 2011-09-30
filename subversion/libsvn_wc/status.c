@@ -1058,29 +1058,189 @@ send_unversioned_item(const struct walk_status_baton *wb,
   return SVN_NO_ERROR;
 }
 
-/* Send svn_wc_status3_t * structures for the directory LOCAL_ABSPATH and
-   for all its entries through STATUS_FUNC/STATUS_BATON, or, if SELECTED
-   is non-NULL, only for that directory entry.
+static svn_error_t *
+get_dir_status(const struct walk_status_baton *wb,
+               const char *local_abspath,
+               svn_boolean_t skip_this_dir,
+               const char *parent_repos_root_url,
+               const char *parent_repos_relpath,
+               const char *parent_repos_uuid,
+               const struct svn_wc__db_info_t *dir_info,
+               const svn_io_dirent2_t *dirent,
+               const apr_array_header_t *ignore_patterns,
+               svn_depth_t depth,
+               svn_boolean_t get_all,
+               svn_boolean_t no_ignore,
+               svn_wc_status_func4_t status_func,
+               void *status_baton,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               apr_pool_t *scratch_pool);
 
-   PARENT_ENTRY is the entry for the parent of the directory or NULL
-   if LOCAL_ABSPATH is a working copy root.
+/* Send out a status structure according to the information gathered on one
+ * child node. (Basically this function is the guts of the loop in
+ * get_dir_status() and of get_child_status().)
+ *
+ * Send a status structure of LOCAL_ABSPATH. PARENT_ABSPATH must be the
+ * dirname of LOCAL_ABSPATH.
+ *
+ * INFO should reflect the information on LOCAL_ABSPATH; LOCAL_ABSPATH must
+ * be an unversioned file or dir, or a versioned file.  For versioned
+ * directories use get_dir_status() instead.
+ *
+ * INFO may be NULL for an unversioned node. If such node has a tree conflict,
+ * UNVERSIONED_TREE_CONFLICTED may be set to TRUE. If INFO is non-NULL,
+ * UNVERSIONED_TREE_CONFLICTED is ignored.
+ *
+ * DIRENT should reflect LOCAL_ABSPATH's dirent information.
+ *
+ * DIR_REPOS_* should reflect LOCAL_ABSPATH's parent URL, i.e. LOCAL_ABSPATH's
+ * URL treated with svn_uri_dirname(). ### TODO verify this (externals)
+ *
+ * If *COLLECTED_IGNORE_PATTERNS is NULL and ignore patterns are needed in
+ * this call, *COLLECTED_IGNORE_PATTERNS will be set to an apr_array_header_t*
+ * containing all ignore patterns, as returned by collect_ignore_patterns() on
+ * PARENT_ABSPATH and IGNORE_PATTERNS. If *COLLECTED_IGNORE_PATTERNS is passed
+ * non-NULL, it is assumed to already hold that result. This speeds up
+ * repeated calls with the same PARENT_ABSPATH.
+ *
+ * *COLLECTED_IGNORE_PATTERNS will be allocated in RESULT_POOL. All other
+ * allocations are made in SCRATCH_POOL.
+ *
+ * The remaining parameters correspond to get_dir_status(). */
+static svn_error_t*
+one_child_status(const struct walk_status_baton *wb,
+                 const char *local_abspath,
+                 const char *parent_abspath,
+                 const struct svn_wc__db_info_t *info,
+                 const svn_io_dirent2_t *dirent,
+                 const char *dir_repos_root_url,
+                 const char *dir_repos_relpath,
+                 const char *dir_repos_uuid,
+                 svn_boolean_t unversioned_tree_conflicted,
+                 apr_array_header_t **collected_ignore_patterns,
+                 const apr_array_header_t *ignore_patterns,
+                 svn_depth_t depth,
+                 svn_boolean_t get_all,
+                 svn_boolean_t no_ignore,
+                 svn_wc_status_func4_t status_func,
+                 void *status_baton,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  svn_boolean_t conflicted = info ? info->conflicted
+                                  : unversioned_tree_conflicted;
+
+  if (info
+      && info->status != svn_wc__db_status_not_present
+      && info->status != svn_wc__db_status_excluded
+      && info->status != svn_wc__db_status_server_excluded
+      && !(info->kind == svn_wc__db_kind_unknown
+           && info->status == svn_wc__db_status_normal))
+    {
+      if (depth == svn_depth_files
+          && info->kind == svn_wc__db_kind_dir)
+        {
+          return SVN_NO_ERROR;
+        }
+
+      SVN_ERR(send_status_structure(wb, local_abspath,
+                                    dir_repos_root_url,
+                                    dir_repos_relpath,
+                                    dir_repos_uuid,
+                                    info, dirent, get_all,
+                                    status_func, status_baton,
+                                    scratch_pool));
+
+      /* Descend in subdirectories. */
+      if (depth == svn_depth_infinity
+          && info->kind == svn_wc__db_kind_dir)
+        {
+          SVN_ERR(get_dir_status(wb, local_abspath, TRUE,
+                                 dir_repos_root_url, dir_repos_relpath,
+                                 dir_repos_uuid, info,
+                                 dirent, ignore_patterns,
+                                 svn_depth_infinity, get_all,
+                                 no_ignore,
+                                 status_func, status_baton,
+                                 cancel_func, cancel_baton,
+                                 scratch_pool));
+        }
+
+      return SVN_NO_ERROR;
+    }
+
+  /* If conflicted, fall right through to unversioned.
+   * With depth_files, show all conflicts, even if their report is only
+   * about directories. A tree conflict may actually report two different
+   * kinds, so it's not so easy to define what depth=files means. We could go
+   * look up the kinds in the conflict ... just show all. */
+  if (! conflicted)
+    {
+      /* Selected node, but not found */
+      if (dirent == NULL)
+        return SVN_NO_ERROR;
+
+      if (depth == svn_depth_files && dirent->kind == svn_node_dir)
+        return SVN_NO_ERROR;
+
+      if (svn_wc_is_adm_dir(svn_dirent_basename(local_abspath, scratch_pool),
+                            scratch_pool))
+        return SVN_NO_ERROR;
+    }
+
+  /* The node exists on disk but there is no versioned information about it,
+   * or it doesn't exist but is a tree conflicted path or should be
+   * reported not-present. */
+   
+  /* Why pass ignore patterns on a tree conflicted node, even if it should
+   * always show up in clients' status reports anyway? Because the calling
+   * client decides whether to ignore, and thus this flag needs to be
+   * determined.  For example, in 'svn status', plain unversioned nodes show
+   * as '?  C', where ignored ones show as 'I  C'. */
+
+  if (ignore_patterns && ! *collected_ignore_patterns)
+    SVN_ERR(collect_ignore_patterns(collected_ignore_patterns, wb->db,
+                                    parent_abspath, ignore_patterns,
+                                    result_pool, scratch_pool));
+
+  SVN_ERR(send_unversioned_item(wb,
+                                local_abspath,
+                                dirent,
+                                conflicted,
+                                *collected_ignore_patterns,
+                                no_ignore,
+                                status_func, status_baton,
+                                scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Send svn_wc_status3_t * structures for the directory LOCAL_ABSPATH and
+   for all its child nodes (according to DEPTH) through STATUS_FUNC /
+   STATUS_BATON.
 
    If SKIP_THIS_DIR is TRUE, the directory's own status will not be reported.
-   However, upon recursing, all subdirs *will* be reported, regardless of this
+   All subdirs reached by recursion will be reported regardless of this
    parameter's value.
 
-   DIRENT is LOCAL_ABSPATH's own dirent and is only needed if it is reported,
-   so if SKIP_THIS_DIR or SELECTED is not-NULL DIRENT can be left NULL.
+   PARENT_REPOS_* parameters can be set to refer to LOCAL_ABSPATH's parent's
+   URL, i.e. the URL the WC reflects at the dirname of LOCAL_ABSPATH, to avoid
+   retrieving them again. Otherwise they must be NULL.
 
    DIR_INFO can be set to the information of LOCAL_ABSPATH, to avoid retrieving
-   it again.
+   it again. Otherwise it must be NULL.
+
+   DIRENT is LOCAL_ABSPATH's own dirent and is only needed if it is reported,
+   so if SKIP_THIS_DIR is TRUE, DIRENT can be left NULL.
 
    Other arguments are the same as those passed to
    svn_wc_get_status_editor5().  */
 static svn_error_t *
 get_dir_status(const struct walk_status_baton *wb,
                const char *local_abspath,
-               const char *selected,
                svn_boolean_t skip_this_dir,
                const char *parent_repos_root_url,
                const char *parent_repos_relpath,
@@ -1102,7 +1262,7 @@ get_dir_status(const struct walk_status_baton *wb,
   const char *dir_repos_relpath;
   const char *dir_repos_uuid;
   apr_hash_t *dirents, *nodes, *conflicts, *all_children;
-  apr_array_header_t *patterns = NULL;
+  apr_array_header_t *collected_ignore_patterns = NULL;
   apr_pool_t *iterpool, *subpool = svn_pool_create(scratch_pool);
   svn_error_t *err;
 
@@ -1135,178 +1295,156 @@ get_dir_status(const struct walk_status_baton *wb,
                                      parent_repos_root_url, parent_repos_uuid,
                                      wb->db, local_abspath,
                                      subpool, iterpool));
-  if (selected == NULL)
-    {
-      /* Create a hash containing all children.  The source hashes
-         don't all map the same types, but only the keys of the result
-         hash are subsequently used. */
-      SVN_ERR(svn_wc__db_read_children_info(&nodes, &conflicts,
-                                            wb->db, local_abspath,
-                                            subpool, iterpool));
 
-      all_children = apr_hash_overlay(subpool, nodes, dirents);
-      if (apr_hash_count(conflicts) > 0)
-        all_children = apr_hash_overlay(subpool, conflicts, all_children);
-    }
-  else
-    {
-      const struct svn_wc__db_info_t *info;
-      const char *selected_abspath = svn_dirent_join(local_abspath, selected,
-                                                     iterpool);
-      /* Create a hash containing just selected */
-      all_children = apr_hash_make(subpool);
-      nodes = apr_hash_make(subpool);
-      conflicts = apr_hash_make(subpool);
+  /* Create a hash containing all children.  The source hashes
+     don't all map the same types, but only the keys of the result
+     hash are subsequently used. */
+  SVN_ERR(svn_wc__db_read_children_info(&nodes, &conflicts,
+                                        wb->db, local_abspath,
+                                        subpool, iterpool));
 
-      err = read_info(&info, selected_abspath, wb->db, subpool, iterpool);
+  all_children = apr_hash_overlay(subpool, nodes, dirents);
+  if (apr_hash_count(conflicts) > 0)
+    all_children = apr_hash_overlay(subpool, conflicts, all_children);
 
-      if (err)
-        {
-          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-            return svn_error_trace(err);
-          svn_error_clear(err);
-          /* The node is neither a tree conflict nor a versioned node */
-        }
-      else
-        {
-          if (!info->conflicted
-              || info->status != svn_wc__db_status_normal
-              || info->kind != svn_wc__db_kind_unknown)
-             {
-               /* The node is a normal versioned node */
-               apr_hash_set(nodes, selected, APR_HASH_KEY_STRING, info);
-             }
+  /* Handle "this-dir" first. */
+  if (! skip_this_dir)
+    SVN_ERR(send_status_structure(wb, local_abspath,
+                                  parent_repos_root_url,
+                                  parent_repos_relpath,
+                                  parent_repos_uuid,
+                                  dir_info, dirent, get_all,
+                                  status_func, status_baton,
+                                  iterpool));
 
-          /* Drop it in the list of possible conflicts */
-          if (info->conflicted)
-            apr_hash_set(conflicts, selected, APR_HASH_KEY_STRING, info);
-        }
-
-      apr_hash_set(all_children, selected, APR_HASH_KEY_STRING, selected);
-    }
-
-  if (!selected)
-    {
-      /* Handle "this-dir" first. */
-      if (! skip_this_dir)
-        SVN_ERR(send_status_structure(wb, local_abspath,
-                                      parent_repos_root_url,
-                                      parent_repos_relpath,
-                                      parent_repos_uuid,
-                                      dir_info, dirent, get_all,
-                                      status_func, status_baton,
-                                      iterpool));
-
-      /* If the requested depth is empty, we only need status on this-dir. */
-      if (depth == svn_depth_empty)
-        return SVN_NO_ERROR;
-    }
+  /* If the requested depth is empty, we only need status on this-dir. */
+  if (depth == svn_depth_empty)
+    return SVN_NO_ERROR;
 
   /* Walk all the children of this directory. */
   for (hi = apr_hash_first(subpool, all_children); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       apr_ssize_t klen;
-      const char *node_abspath;
-      svn_io_dirent2_t *dirent_p;
-      const struct svn_wc__db_info_t *info;
+      const char *child_abspath;
+      svn_io_dirent2_t *child_dirent;
+      const struct svn_wc__db_info_t *child_info;
 
       svn_pool_clear(iterpool);
 
       apr_hash_this(hi, &key, &klen, NULL);
 
-      node_abspath = svn_dirent_join(local_abspath, key, iterpool);
+      child_abspath = svn_dirent_join(local_abspath, key, iterpool);
 
-      dirent_p = apr_hash_get(dirents, key, klen);
+      child_dirent = apr_hash_get(dirents, key, klen);
+      child_info = apr_hash_get(nodes, key, klen);
 
-      info = apr_hash_get(nodes, key, klen);
-      if (info)
-        {
-          if (info->status != svn_wc__db_status_not_present
-              && info->status != svn_wc__db_status_excluded
-              && info->status != svn_wc__db_status_server_excluded)
-            {
-              if (depth == svn_depth_files
-                  && info->kind == svn_wc__db_kind_dir)
-                {
-                  continue;
-                }
-
-              SVN_ERR(send_status_structure(wb, node_abspath,
-                                            dir_repos_root_url,
-                                            dir_repos_relpath,
-                                            dir_repos_uuid,
-                                            info, dirent_p, get_all,
-                                            status_func, status_baton,
-                                            iterpool));
-
-              /* Descend in subdirectories. */
-              if (depth == svn_depth_infinity
-                  && info->kind == svn_wc__db_kind_dir)
-                {
-                  SVN_ERR(get_dir_status(wb, node_abspath, NULL, TRUE,
-                                         dir_repos_root_url, dir_repos_relpath,
-                                         dir_repos_uuid, info,
-                                         dirent_p, ignore_patterns,
-                                         svn_depth_infinity, get_all,
-                                         no_ignore,
-                                         status_func, status_baton,
-                                         cancel_func, cancel_baton,
-                                         iterpool));
-                }
-
-              continue;
-            }
-        }
-
-      if (apr_hash_get(conflicts, key, klen))
-        {
-          /* Tree conflict */
-
-          if (ignore_patterns && ! patterns)
-            SVN_ERR(collect_ignore_patterns(&patterns, wb->db, local_abspath,
-                                            ignore_patterns, subpool,
-                                            iterpool));
-
-          SVN_ERR(send_unversioned_item(wb,
-                                        node_abspath,
-                                        dirent_p, TRUE,
-                                        patterns,
-                                        no_ignore,
-                                        status_func,
-                                        status_baton,
-                                        iterpool));
-
-          continue;
-        }
-
-      /* Unversioned node */
-      if (dirent_p == NULL)
-        continue; /* Selected node, but not found */
-
-      if (depth == svn_depth_files && dirent_p->kind == svn_node_dir)
-        continue;
-
-      if (svn_wc_is_adm_dir(key, iterpool))
-        continue;
-
-      if (ignore_patterns && ! patterns)
-        SVN_ERR(collect_ignore_patterns(&patterns, wb->db, local_abspath,
-                                        ignore_patterns, subpool,
-                                        iterpool));
-
-      SVN_ERR(send_unversioned_item(wb,
-                                    node_abspath,
-                                    dirent_p, FALSE,
-                                    patterns,
-                                    no_ignore || selected,
-                                    status_func, status_baton,
-                                    iterpool));
+      SVN_ERR(one_child_status(wb,
+                               child_abspath,
+                               local_abspath,
+                               child_info,
+                               child_dirent,
+                               dir_repos_root_url,
+                               dir_repos_relpath,
+                               dir_repos_uuid,
+                               apr_hash_get(conflicts, key, klen) != NULL,
+                               &collected_ignore_patterns,
+                               ignore_patterns,
+                               depth,
+                               get_all,
+                               no_ignore,
+                               status_func,
+                               status_baton,
+                               cancel_func,
+                               cancel_baton,
+                               subpool,
+                               iterpool));
     }
 
   /* Destroy our subpools. */
   svn_pool_destroy(subpool);
 
+  return SVN_NO_ERROR;
+}
+
+/* Send an svn_wc_status3_t * structure for the versioned file, or for the
+ * unversioned file or directory, LOCAL_ABSPATH, which is not ignored (an
+ * explicit target). Does not recurse.
+ *
+ * INFO should reflect LOCAL_ABSPATH's information, but should be NULL for
+ * unversioned nodes. An unversioned and tree-conflicted node however should
+ * pass a non-NULL INFO as returned by read_info() (INFO->CONFLICTED = TRUE).
+ *
+ * DIRENT should reflect LOCAL_ABSPATH.
+ *
+ * All allocations made in SCRATCH_POOL.
+ *
+ * The remaining parameters correspond to get_dir_status(). */
+static svn_error_t *
+get_child_status(const struct walk_status_baton *wb,
+                 const char *local_abspath,
+                 const struct svn_wc__db_info_t *info,
+                 const svn_io_dirent2_t *dirent,
+                 const apr_array_header_t *ignore_patterns,
+                 svn_boolean_t get_all,
+                 svn_wc_status_func4_t status_func,
+                 void *status_baton,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *scratch_pool)
+{
+  const char *dir_repos_root_url;
+  const char *dir_repos_relpath;
+  const char *dir_repos_uuid;
+  const struct svn_wc__db_info_t *dir_info;
+  apr_array_header_t *collected_ignore_patterns = NULL;
+  const svn_io_dirent2_t *dirent_p;
+  const char *parent_abspath = svn_dirent_dirname(local_abspath,
+                                                  scratch_pool);
+
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
+
+  SVN_ERR(svn_io_stat_dirent(&dirent_p, local_abspath, TRUE,
+                             scratch_pool, scratch_pool));
+
+  if (dirent_p->kind == svn_node_none)
+    dirent_p = NULL;
+
+  SVN_ERR(read_info(&dir_info, parent_abspath, wb->db,
+                    scratch_pool, scratch_pool));
+
+  SVN_ERR(get_repos_root_url_relpath(&dir_repos_relpath, &dir_repos_root_url,
+                                     &dir_repos_uuid, dir_info,
+                                     NULL, NULL, NULL,
+                                     wb->db, parent_abspath,
+                                     scratch_pool, scratch_pool));
+
+  /* An unversioned node with a tree conflict will see an INFO != NULL here,
+   * in which case the FALSE passed for UNVERSIONED_TREE_CONFLICTED has no
+   * effect and INFO->CONFLICTED counts.
+   * ### Maybe svn_wc__db_read_children_info() and read_info() should be more
+   * ### alike? */
+  SVN_ERR(one_child_status(wb,
+                           local_abspath,
+                           parent_abspath,
+                           info,
+                           dirent_p,
+                           dir_repos_root_url,
+                           dir_repos_relpath,
+                           dir_repos_uuid,
+                           FALSE, /* unversioned_tree_conflicted */
+                           &collected_ignore_patterns,
+                           ignore_patterns,
+                           svn_depth_empty,
+                           get_all,
+                           TRUE, /* no_ignore. This is an explicit target. */
+                           status_func,
+                           status_baton,
+                           cancel_func,
+                           cancel_baton,
+                           scratch_pool,
+                           scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1578,7 +1716,7 @@ make_dir_baton(void **dir_baton,
       const svn_wc_status3_t *this_dir_status;
       const apr_array_header_t *ignores = eb->ignores;
 
-      SVN_ERR(get_dir_status(&eb->wb, local_abspath, NULL, TRUE,
+      SVN_ERR(get_dir_status(&eb->wb, local_abspath, TRUE,
                              status_in_parent->repos_root_url,
                              NULL /*parent_repos_relpath*/,
                              status_in_parent->repos_uuid,
@@ -1761,7 +1899,7 @@ handle_statii(struct edit_baton *eb,
               || depth == svn_depth_infinity))
         {
           SVN_ERR(get_dir_status(&eb->wb,
-                                 local_abspath, NULL, TRUE,
+                                 local_abspath, TRUE,
                                  dir_repos_root_url, dir_repos_relpath,
                                  dir_repos_uuid,
                                  NULL,
@@ -2033,7 +2171,7 @@ close_directory(void *dir_baton,
                   && tgt_status->kind == svn_node_dir)
                 {
                   SVN_ERR(get_dir_status(&eb->wb,
-                                         eb->target_abspath, NULL, TRUE,
+                                         eb->target_abspath, TRUE,
                                          NULL, NULL, NULL, NULL,
                                          NULL /* dirent */,
                                          eb->ignores,
@@ -2365,6 +2503,7 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
     *set_locks_baton = eb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                   NULL, NULL, NULL, NULL,
                                    result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -2386,9 +2525,7 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
 {
   struct walk_status_baton wb;
   const svn_io_dirent2_t *dirent;
-  const char *anchor_abspath, *target_name;
-  svn_boolean_t skip_root;
-  const struct svn_wc__db_info_t *dir_info;
+  const struct svn_wc__db_info_t *info;
   svn_error_t *err;
 
   wb.db = db;
@@ -2410,45 +2547,53 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
       ignore_patterns = ignores;
     }
 
-  err = read_info(&dir_info, local_abspath, db, scratch_pool, scratch_pool);
+  err = read_info(&info, local_abspath, db, scratch_pool, scratch_pool);
 
-  if (!err && dir_info->kind == svn_wc__db_kind_dir)
+  if (err)
     {
-      anchor_abspath = local_abspath;
-      target_name = NULL;
-      skip_root = FALSE;
-    }
-  else if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-    return svn_error_trace(err);
-  else
-    {
-      svn_error_clear(err);
-      dir_info = NULL; /* Don't pass information of the child */
-
-      /* Walk the status of the parent of LOCAL_ABSPATH, but only report
-         status on its child LOCAL_ABSPATH. */
-      anchor_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-      target_name = svn_dirent_basename(local_abspath, NULL);
-      skip_root = TRUE;
+      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          info = NULL;
+        }
+      else
+        return svn_error_trace(err);
     }
 
   SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
                              scratch_pool, scratch_pool));
 
-  SVN_ERR(get_dir_status(&wb,
-                         anchor_abspath,
-                         target_name,
-                         skip_root,
-                         NULL, NULL, NULL,
-                         dir_info,
-                         dirent,
-                         ignore_patterns,
-                         depth,
-                         get_all,
-                         no_ignore,
-                         status_func, status_baton,
-                         cancel_func, cancel_baton,
-                         scratch_pool));
+  if (info && info->kind == svn_wc__db_kind_dir)
+    {
+      SVN_ERR(get_dir_status(&wb,
+                             local_abspath,
+                             FALSE /* skip_root */,
+                             NULL, NULL, NULL,
+                             info,
+                             dirent,
+                             ignore_patterns,
+                             depth,
+                             get_all,
+                             no_ignore,
+                             status_func, status_baton,
+                             cancel_func, cancel_baton,
+                             scratch_pool));
+    }
+  else
+    {
+      /* It may be a file or an unversioned item. And this is an explicit
+       * target, so no ignoring. An unversioned item (file or dir) shows a
+       * status like '?', and can yield a tree conflicted path. */
+      SVN_ERR(get_child_status(&wb,
+                               local_abspath,
+                               info,
+                               dirent,
+                               ignore_patterns,
+                               get_all,
+                               status_func, status_baton,
+                               cancel_func, cancel_baton,
+                               scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }

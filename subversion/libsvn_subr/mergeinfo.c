@@ -245,15 +245,13 @@ get_type_of_intersection(const svn_merge_range_t *r1,
 
    When replacing the last range in RANGELIST, either allocate a new range in
    RESULT_POOL or modify the existing range in place.  Any new ranges added
-   to RANGELIST are allocated in RESULT_POOL.  SCRATCH_POOL is used for any
-   temporary allocations.
+   to RANGELIST are allocated in RESULT_POOL.
 */
 static svn_error_t *
 combine_with_lastrange(const svn_merge_range_t *new_range,
                        apr_array_header_t *rangelist,
                        svn_boolean_t consider_inheritance,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool)
+                       apr_pool_t *result_pool)
 {
   svn_merge_range_t *lastrange;
   svn_merge_range_t combined_range;
@@ -614,14 +612,14 @@ parse_rangelist(const char **input, const char *end,
 /* revisionline -> PATHNAME COLON revisionlist */
 static svn_error_t *
 parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
-                    apr_pool_t *pool)
+                    apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *pathname;
   apr_array_header_t *existing_rangelist;
-  apr_array_header_t *rangelist = apr_array_make(pool, 1,
+  apr_array_header_t *rangelist = apr_array_make(scratch_pool, 1,
                                                  sizeof(svn_merge_range_t *));
 
-  SVN_ERR(parse_pathname(input, end, &pathname, pool));
+  SVN_ERR(parse_pathname(input, end, &pathname, scratch_pool));
 
   if (*(*input) != ':')
     return svn_error_create(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
@@ -629,7 +627,7 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
 
   *input = *input + 1;
 
-  SVN_ERR(parse_rangelist(input, end, rangelist, pathname->data, pool));
+  SVN_ERR(parse_rangelist(input, end, rangelist, pathname->data, scratch_pool));
 
   if (*input != end && *(*input) != '\n')
     return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
@@ -668,8 +666,10 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
                                              "revision ranges '%s' and '%s' "
                                              "with different inheritance "
                                              "types"),
-                                           range_to_string(lastrange, pool),
-                                           range_to_string(range, pool));
+                                           range_to_string(lastrange,
+                                                           scratch_pool),
+                                           range_to_string(range,
+                                                           scratch_pool));
                 }
 
               /* Combine overlapping or adjacent ranges with the
@@ -697,9 +697,12 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
      absolute path key. */
   existing_rangelist = apr_hash_get(hash, pathname->data, APR_HASH_KEY_STRING);
   if (existing_rangelist)
-    SVN_ERR(svn_rangelist_merge2(rangelist, existing_rangelist, pool, pool));
+    SVN_ERR(svn_rangelist_merge2(rangelist, existing_rangelist,
+                                 scratch_pool, scratch_pool));
 
-  apr_hash_set(hash, pathname->data, APR_HASH_KEY_STRING, rangelist);
+  apr_hash_set(hash, apr_pstrdup(apr_hash_pool_get(hash), pathname->data),
+               APR_HASH_KEY_STRING,
+               svn_rangelist_dup(rangelist, apr_hash_pool_get(hash)));
 
   return SVN_NO_ERROR;
 }
@@ -709,8 +712,14 @@ static svn_error_t *
 parse_top(const char **input, const char *end, svn_mergeinfo_t hash,
           apr_pool_t *pool)
 {
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
   while (*input < end)
-    SVN_ERR(parse_revision_line(input, end, hash, pool));
+    {
+      svn_pool_clear(iterpool);
+      SVN_ERR(parse_revision_line(input, end, hash, iterpool));
+    }
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -763,21 +772,18 @@ svn_rangelist_merge2(apr_array_header_t *rangelist,
              result. */
           if (elt1->inheritable || elt2->inheritable)
             elt1->inheritable = TRUE;
-          SVN_ERR(combine_with_lastrange(elt1, rangelist, TRUE, result_pool,
-                                         scratch_pool));
+          SVN_ERR(combine_with_lastrange(elt1, rangelist, TRUE, result_pool));
           i++;
           j++;
         }
       else if (res < 0)
         {
-          SVN_ERR(combine_with_lastrange(elt1, rangelist, TRUE, result_pool,
-                                         scratch_pool));
+          SVN_ERR(combine_with_lastrange(elt1, rangelist, TRUE, result_pool));
           i++;
         }
       else
         {
-          SVN_ERR(combine_with_lastrange(elt2, rangelist, TRUE, result_pool,
-                                         scratch_pool));
+          SVN_ERR(combine_with_lastrange(elt2, rangelist, TRUE, result_pool));
           j++;
         }
     }
@@ -790,16 +796,14 @@ svn_rangelist_merge2(apr_array_header_t *rangelist,
     {
       svn_merge_range_t *elt = APR_ARRAY_IDX(original_rangelist, i,
                                              svn_merge_range_t *);
-      SVN_ERR(combine_with_lastrange(elt, rangelist, TRUE, result_pool,
-                                     scratch_pool));
+      SVN_ERR(combine_with_lastrange(elt, rangelist, TRUE, result_pool));
     }
 
 
   for (; j < changes->nelts; j++)
     {
       svn_merge_range_t *elt = APR_ARRAY_IDX(changes, j, svn_merge_range_t *);
-      SVN_ERR(combine_with_lastrange(elt, rangelist,
-                                     TRUE, result_pool, scratch_pool));
+      SVN_ERR(combine_with_lastrange(elt, rangelist, TRUE, result_pool));
     }
 
   return SVN_NO_ERROR;
@@ -997,7 +1001,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
               tmp_range.inheritable =
                 (elt2->inheritable || elt1->inheritable);
               SVN_ERR(combine_with_lastrange(&tmp_range, *output,
-                                             consider_inheritance, pool,
+                                             consider_inheritance,
                                              pool));
             }
 
@@ -1034,7 +1038,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
 
               SVN_ERR(combine_with_lastrange(&tmp_range,
                                              *output, consider_inheritance,
-                                             pool, pool));
+                                             pool));
             }
 
           /* Set up the rest of the rangelist2 range for further
@@ -1055,7 +1059,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                   SVN_ERR(combine_with_lastrange(&tmp_range,
                                                  *output,
                                                  consider_inheritance,
-                                                 pool, pool));
+                                                 pool));
                 }
 
               working_elt2.start = elt1->end;
@@ -1107,7 +1111,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
       if (i2 == lasti2 && i2 < rangelist2->nelts)
         {
           SVN_ERR(combine_with_lastrange(&working_elt2, *output,
-                                         consider_inheritance, pool, pool));
+                                         consider_inheritance, pool));
           i2++;
         }
 
@@ -1118,7 +1122,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                                                  svn_merge_range_t *);
 
           SVN_ERR(combine_with_lastrange(elt, *output,
-                                         consider_inheritance, pool, pool));
+                                         consider_inheritance, pool));
         }
     }
 
@@ -1320,8 +1324,10 @@ svn_mergeinfo__equals(svn_boolean_t *is_equal,
 }
 
 svn_error_t *
-svn_mergeinfo_merge(svn_mergeinfo_t mergeinfo, svn_mergeinfo_t changes,
-                    apr_pool_t *pool)
+svn_mergeinfo_merge2(svn_mergeinfo_t mergeinfo,
+                     svn_mergeinfo_t changes,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
   apr_array_header_t *sorted1, *sorted2;
   int i, j;
@@ -1330,12 +1336,14 @@ svn_mergeinfo_merge(svn_mergeinfo_t mergeinfo, svn_mergeinfo_t changes,
   if (!apr_hash_count(changes))
     return SVN_NO_ERROR;
 
-  sorted1 = svn_sort__hash(mergeinfo, svn_sort_compare_items_as_paths, pool);
-  sorted2 = svn_sort__hash(changes, svn_sort_compare_items_as_paths, pool);
+  sorted1 = svn_sort__hash(mergeinfo, svn_sort_compare_items_as_paths,
+                           scratch_pool);
+  sorted2 = svn_sort__hash(changes, svn_sort_compare_items_as_paths,
+                           scratch_pool);
 
   i = 0;
   j = 0;
-  iterpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(scratch_pool);
   while (i < sorted1->nelts && j < sorted2->nelts)
     {
       svn_sort__item_t elt1, elt2;
@@ -1354,7 +1362,7 @@ svn_mergeinfo_merge(svn_mergeinfo_t mergeinfo, svn_mergeinfo_t changes,
           rl1 = elt1.value;
           rl2 = elt2.value;
 
-          SVN_ERR(svn_rangelist_merge2(rl1, rl2, pool, iterpool));
+          SVN_ERR(svn_rangelist_merge2(rl1, rl2, result_pool, iterpool));
           apr_hash_set(mergeinfo, elt1.key, elt1.klen, rl1);
           i++;
           j++;
@@ -1410,8 +1418,8 @@ svn_mergeinfo_catalog_merge(svn_mergeinfo_catalog_t mergeinfo_cat,
           svn_mergeinfo_t mergeinfo = cat_elt.value;
           svn_mergeinfo_t changes_mergeinfo = change_elt.value;
 
-          SVN_ERR(svn_mergeinfo_merge(mergeinfo, changes_mergeinfo,
-                                      result_pool));
+          SVN_ERR(svn_mergeinfo_merge2(mergeinfo, changes_mergeinfo,
+                                       result_pool, scratch_pool));
           apr_hash_set(mergeinfo_cat, cat_elt.key, cat_elt.klen, mergeinfo);
           i++;
           j++;
@@ -1445,16 +1453,6 @@ svn_mergeinfo_catalog_merge(svn_mergeinfo_catalog_t mergeinfo_cat,
 }
 
 svn_error_t *
-svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
-                        svn_mergeinfo_t mergeinfo1,
-                        svn_mergeinfo_t mergeinfo2,
-                        apr_pool_t *pool)
-{
-  return svn_mergeinfo_intersect2(mergeinfo, mergeinfo1, mergeinfo2,
-                                  TRUE, pool, pool);
-}
-
-svn_error_t *
 svn_mergeinfo_intersect2(svn_mergeinfo_t *mergeinfo,
                          svn_mergeinfo_t mergeinfo1,
                          svn_mergeinfo_t mergeinfo2,
@@ -1463,26 +1461,29 @@ svn_mergeinfo_intersect2(svn_mergeinfo_t *mergeinfo,
                          apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
 
   *mergeinfo = apr_hash_make(result_pool);
+  iterpool = svn_pool_create(scratch_pool);
 
   /* ### TODO(reint): Do we care about the case when a path in one
      ### mergeinfo hash has inheritable mergeinfo, and in the other
      ### has non-inhertiable mergeinfo?  It seems like that path
      ### itself should really be an intersection, while child paths
      ### should not be... */
-  for (hi = apr_hash_first(apr_hash_pool_get(mergeinfo1), mergeinfo1);
+  for (hi = apr_hash_first(scratch_pool, mergeinfo1);
        hi; hi = apr_hash_next(hi))
     {
       const char *path = svn__apr_hash_index_key(hi);
       apr_array_header_t *rangelist1 = svn__apr_hash_index_val(hi);
       apr_array_header_t *rangelist2;
 
+      svn_pool_clear(iterpool);
       rangelist2 = apr_hash_get(mergeinfo2, path, APR_HASH_KEY_STRING);
       if (rangelist2)
         {
           SVN_ERR(svn_rangelist_intersect(&rangelist2, rangelist1, rangelist2,
-                                          consider_inheritance, scratch_pool));
+                                          consider_inheritance, iterpool));
           if (rangelist2->nelts > 0)
             apr_hash_set(*mergeinfo,
                          apr_pstrdup(result_pool, path),
@@ -1490,15 +1491,8 @@ svn_mergeinfo_intersect2(svn_mergeinfo_t *mergeinfo,
                          svn_rangelist_dup(rangelist2, result_pool));
         }
     }
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_mergeinfo_remove(svn_mergeinfo_t *mergeinfo, svn_mergeinfo_t eraser,
-                     svn_mergeinfo_t whiteboard, apr_pool_t *pool)
-{
-  return svn_mergeinfo_remove2(mergeinfo, eraser, whiteboard, TRUE, pool,
-                               pool);
 }
 
 svn_error_t *
