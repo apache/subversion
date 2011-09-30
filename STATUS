@@ -174,7 +174,7 @@ Candidate changes:
    Justification:
      Without this we are writing to const memory.
    Votes:
-     +1: danielsh
+     +1: danielsh, stsp
 
 Veto-blocked changes:
 =====================
