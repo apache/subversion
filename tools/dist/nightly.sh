@@ -76,7 +76,7 @@ echo '-------------------moving results---------------------'
     --target $target
 if [ ! -d "$target/dist" ]; then mkdir "$target/dist"; fi
 if [ -d "$target/dist/r$head" ]; then rm -r "$target/dist/r$head"; fi
-mv $target/deploy $target/dist/r$head
+mv roll/deploy $target/dist/r$head
 
 # Some static links for the most recent artifacts.
 ln -sf "r$head" "$target/dist/current"
