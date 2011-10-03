@@ -123,7 +123,7 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1178280
+ * r1178280, r1178282
    Add a sanity check to FSFS.
    Justification:
      Detects a user-visible corruption seen on svn-master.apache.org.
