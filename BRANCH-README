@@ -87,6 +87,7 @@ TODO
   revisions and predecessors data.
 
 - extend 'hotcopy' as required
+  fsfs: need to filter out { rev | rev > youngest } from the copy's candidates files
 
 
 Implementation proposal
