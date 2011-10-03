@@ -5885,14 +5885,8 @@ write_hash_rep(svn_filesize_t *size,
  */
 static APR_INLINE svn_error_t *
 validate_root_noderev(node_revision_t *root_noderev,
-                      svn_revnum_t rev,
-                      apr_pool_t *pool)
+                      svn_revnum_t rev)
 {
-  SVN_DBG(("root_noderev->predecessor_id=%s\n",
-           svn_fs_fs__id_unparse(root_noderev->predecessor_id, pool)->data));
-  SVN_DBG(("root_noderev->predecessor_count=%d\n",
-           root_noderev->predecessor_count));
-
   /* Bogosity seen on svn.apache.org; see
        http://mid.gmane.org/20111002202833.GA12373@daniel3.local
    */
@@ -6078,7 +6072,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
   /* Write out our new node-revision. */
   if (at_root)
-    SVN_ERR(validate_root_noderev(noderev, rev, pool));
+    SVN_ERR(validate_root_noderev(noderev, rev));
   SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_aprfile2(file, TRUE, pool),
                                    noderev, ffd->format,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
