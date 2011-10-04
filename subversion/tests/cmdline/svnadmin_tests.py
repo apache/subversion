@@ -1425,7 +1425,7 @@ def test_lslocks_and_rmlocks(sbox):
   if errput:
     raise SVNUnexpectedStderr(errput)
     
-  svntest.verify.compare_and_display_lines('message', 'label',
+  svntest.verify.compare_and_display_lines('lslocks output mismatch', 'output',
                                            expected_output, output)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
