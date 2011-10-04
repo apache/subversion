@@ -924,6 +924,68 @@ maybe_resolve_conflicts(svn_skel_t **work_items,
   return SVN_NO_ERROR;
 }
 
+
+/* Attempt a trivial merge of LEFT_ABSPATH and RIGHT_ABSPATH to TARGET_ABSPATH.
+ * The merge is trivial if the file at LEFT_ABSPATH equals TARGET_ABSPATH,
+ * because in this case the content of RIGHT_ABSPATH can be copied to the
+ * target. On success, set *MERGE_OUTCOME to SVN_WC_MERGE_MERGED,
+ * and install work queue items allocated in RESULT_POOL in *WORK_ITEMS.
+ * On failure, set *MERGE_OUTCOME to SVN_WC_MERGE_NO_MERGE. */
+static svn_error_t *
+merge_file_trivial(svn_skel_t **work_items,
+                   enum svn_wc_merge_outcome_t *merge_outcome,
+                   const char *left_abspath,
+                   const char *right_abspath,
+                   const char *target_abspath,
+                   svn_boolean_t dry_run,
+                   svn_wc__db_t *db,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  svn_skel_t *work_item;
+  svn_boolean_t same_contents = FALSE;
+  svn_error_t *err;
+
+  /* If the LEFT side of the merge is equal to WORKING, then we can
+   * copy RIGHT directly. */
+  err = svn_io_files_contents_same_p(&same_contents, left_abspath,
+                                     target_abspath, scratch_pool);
+  if (err)
+    {
+      if (APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          /* This can happen if TARGET_ABSPATH is a broken symlink.
+           * Let the smart merge code handle this. */
+          svn_error_clear(err);
+          *merge_outcome = svn_wc_merge_no_merge;
+          return SVN_NO_ERROR;
+        }
+      else
+        return svn_error_trace(err);
+    }
+
+  if (same_contents)
+    {
+      if (!dry_run)
+        {
+          SVN_ERR(svn_wc__wq_build_file_install(&work_item,
+                                                db, target_abspath,
+                                                right_abspath,
+                                                FALSE /* use_commit_times */,
+                                                FALSE /* record_fileinfo */,
+                                                result_pool, scratch_pool));
+          *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+        }
+
+      *merge_outcome = svn_wc_merge_merged;
+      return SVN_NO_ERROR;
+    }
+
+  *merge_outcome = svn_wc_merge_no_merge;
+  return SVN_NO_ERROR;
+}
+
+
 /* XXX Insane amount of parameters... */
 static svn_error_t*
 merge_text_file(svn_skel_t **work_items,
@@ -1112,37 +1174,22 @@ merge_binary_file(svn_skel_t **work_items,
   const char *merge_dirpath, *merge_filename;
   const char *conflict_wrk;
   svn_skel_t *work_item;
-  svn_boolean_t same_contents = FALSE;
 
   *work_items = NULL;
 
   svn_dirent_split(&merge_dirpath, &merge_filename, mt->local_abspath, pool);
 
-  /* Attempt to merge the binary file. At the moment, we can only
-     handle the special case: if the LEFT side of the merge is equal
-     to WORKING, then we can copy RIGHT directly. */
-  SVN_ERR(svn_io_files_contents_same_p(&same_contents,
-                                      left_abspath,
-                                      mt->local_abspath,
-                                      scratch_pool));
+  SVN_ERR(merge_file_trivial(work_items, merge_outcome,
+                             left_abspath, right_abspath,
+                             mt->local_abspath, dry_run, mt->db,
+                             result_pool, scratch_pool));
+  if (*merge_outcome == svn_wc_merge_merged)
+    return SVN_NO_ERROR;
 
-  if (same_contents)
-    {
-      if (!dry_run)
-        {
-          SVN_ERR(svn_wc__wq_build_file_install(&work_item,
-                                                mt->db, mt->local_abspath,
-                                                right_abspath,
-                                                FALSE /* use_commit_times */,
-                                                FALSE /* record_fileinfo */,
-                                                result_pool, scratch_pool));
-          *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
-        }
+  /* If we get here the binary files differ. Because we don't know how
+   * to merge binary files in a non-trivial way we always flag a conflict. */
 
-      *merge_outcome = svn_wc_merge_merged;
-      return SVN_NO_ERROR;
-    }
-  else if (dry_run)
+  if (dry_run)
     {
       *merge_outcome = svn_wc_merge_conflict;
       return SVN_NO_ERROR;
