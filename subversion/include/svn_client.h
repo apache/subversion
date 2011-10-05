@@ -2465,7 +2465,7 @@ svn_client_status(svn_revnum_t *result_rev,
  *
  * If @a discover_changed_paths is set, then the @c changed_paths and @c
  * changed_paths2 fields in the @c log_entry argument to @a receiver will be
- * populated on each invocation.  @note The @c text_modfied and @c
+ * populated on each invocation.  @note The @c text_modified and @c
  * props_modified fields of the changed paths structure may have the value
  * #svn_tristate_unknown if the repository does not report that information.
  *
