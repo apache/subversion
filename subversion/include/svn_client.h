@@ -2463,8 +2463,11 @@ svn_client_status(svn_revnum_t *result_rev,
  * If @a limit is non-zero only invoke @a receiver on the first @a limit
  * logs.
  *
- * If @a discover_changed_paths is set, then the `@a changed_paths' argument
- * to @a receiver will be passed on each invocation.
+ * If @a discover_changed_paths is set, then the @c changed_paths and @c
+ * changed_paths2 fields in the @c log_entry argument to @a receiver will be
+ * populated on each invocation.  @note The @c text_modfied and @c
+ * props_modified fields of the changed paths structure may have the value
+ * #svn_tristate_unknown if the repository does not report that information.
  *
  * If @a strict_node_history is set, copy history (if any exists) will
  * not be traversed while harvesting revision logs for each target.
@@ -2476,13 +2479,6 @@ svn_client_status(svn_revnum_t *result_rev,
  * revprops named in the array (i.e. retrieve none if the array is empty).
  *
  * Use @a pool for any temporary allocation.
- *
- * @par Important:
- * A special case for the revision range HEAD:1, which was present
- * in svn_client_log(), has been removed from svn_client_log2().  Instead, it
- * is expected that callers will specify the range HEAD:0, to avoid a
- * #SVN_ERR_FS_NO_SUCH_REVISION error when invoked against an empty repository
- * (i.e. one not containing a revision 1).
  *
  * If @a ctx->notify_func2 is non-NULL, then call @a ctx->notify_func2/baton2
  * with a 'skip' signal on any unversioned targets.
@@ -2553,6 +2549,13 @@ svn_client_log3(const apr_array_header_t *targets,
 /**
  * Similar to svn_client_log3(), but with the @c kind field of
  * @a peg_revision set to #svn_opt_revision_unspecified.
+ *
+ * @par Important:
+ * A special case for the revision range HEAD:1, which was present
+ * in svn_client_log(), has been removed from svn_client_log2().  Instead, it
+ * is expected that callers will specify the range HEAD:0, to avoid a
+ * #SVN_ERR_FS_NO_SUCH_REVISION error when invoked against an empty repository
+ * (i.e. one not containing a revision 1).
  *
  * @deprecated Provided for compatibility with the 1.3 API.
  * @since New in 1.2.
