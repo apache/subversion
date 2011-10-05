@@ -926,10 +926,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Display merge-related information.\n"
-     "usage: mergeinfo SOURCE[@REV] [TARGET[@REV]]\n"
+     "usage: mergeinfo [SOURCE[@REV]] [TARGET[@REV]]\n"
      "\n"
      "  Display information related to merges (or potential merges) between\n"
-     "  SOURCE and TARGET (default: '.').  Display the type of information\n"
+     "  SOURCE and TARGET.  The default SOURCE is the parent branch, and\n"
+     "  the default TARGET is '.'.  Display the type of information\n"
      "  specified by the --show-revs option.  If --show-revs isn't passed,\n"
      "  it defaults to --show-revs='merged'.\n"
      "\n"

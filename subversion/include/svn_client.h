@@ -1009,6 +1009,50 @@ svn_client_create_context(svn_client_ctx_t **ctx,
  * @{
  */
 
+/* */
+typedef struct svn_client_target_t
+  {
+    const char *path_or_url;
+    const char *abspath_or_url;
+    svn_opt_revision_t peg_revision;
+    svn_opt_revision_t revision;
+
+    /* The following fields are the resolved location after contacting
+     * the repository, else NULL or SVN_INVALID_REVNUM. */
+    const char *repos_root_url;
+    const char *repos_uuid;
+    const char *repos_relpath;
+    svn_revnum_t repos_revnum;
+
+    /* The pool in which to allocate new fields */
+    apr_pool_t *pool;
+  } svn_client_target_t;
+
+/* Allocate a svn_client_target_t structure. Initialize pool and
+ * abspath_or_url fields. */
+svn_error_t *
+svn_client__target(svn_client_target_t **target,
+                   const char *path_or_url,
+                   apr_pool_t *pool);
+
+/* */
+svn_error_t *
+svn_client__resolve_location(const char **repo_root_url_p,
+                             const char **repo_uuid_p,
+                             svn_revnum_t *repo_revnum_p,
+                             const char **repo_relpath_p,
+                             const char *path_or_url,
+                             const svn_opt_revision_t *peg_revision,
+                             const svn_opt_revision_t *revision,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *pool);
+
+/* */
+svn_error_t *
+svn_client__resolve_target_location(svn_client_target_t *target,
+                                    svn_client_ctx_t *ctx,
+                                    apr_pool_t *pool);
+
 /**
  * Pull remaining target arguments from @a os into @a *targets_p,
  * converting them to UTF-8, followed by targets from @a known_targets
@@ -4495,7 +4539,9 @@ svn_client_revprop_set(const char *propname,
  * Don't store any path, not even @a target, if it does not have a
  * property named @a propname.
  *
- * If @a revision->kind is #svn_opt_revision_unspecified, then: get
+ * @a target ...
+ *
+ * ###? If @a revision->kind is #svn_opt_revision_unspecified, then: get
  * properties from the working copy if @a target is a working copy
  * path, or from the repository head if @a target is a URL.  Else get
  * the properties as of @a revision.  The actual node revision
@@ -4525,7 +4571,23 @@ svn_client_revprop_set(const char *propname,
  * This function returns SVN_ERR_UNVERSIONED_RESOURCE when it is called on
  * unversioned nodes.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_propget5(apr_hash_t **props,
+                    const char *propname,
+                    svn_client_target_t *target,
+                    svn_depth_t depth,
+                    const apr_array_header_t *changelists,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+/* Like svn_client_propget5() but using separate path and revision arguments
+ * instead of svn_client_target_t.
+ *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 svn_error_t *
 svn_client_propget4(apr_hash_t **props,
@@ -4653,7 +4715,22 @@ svn_client_revprop_get(const char *propname,
  *
  * If @a target is not found, return the error #SVN_ERR_ENTRY_NOT_FOUND.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_proplist4(svn_client_target_t *target,
+                     svn_depth_t depth,
+                     const apr_array_header_t *changelists,
+                     svn_proplist_receiver_t receiver,
+                     void *receiver_baton,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
+
+/* Like svn_client_proplist4() but using separate path and revision arguments
+ * instead of svn_client_target_t.
+ *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 svn_error_t *
 svn_client_proplist3(const char *target,
@@ -4790,7 +4867,24 @@ svn_client_revprop_list(apr_hash_t **props,
  *
  * All allocations are done in @a pool.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_export6(svn_client_target_t *target,
+                   const char *to_path,
+                   svn_boolean_t overwrite,
+                   svn_boolean_t ignore_externals,
+                   svn_boolean_t ignore_keywords,
+                   svn_depth_t depth,
+                   const char *native_eol,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/* Like svn_client_export6() but using separate path and revision arguments
+ * instead of svn_client_target_t.
+ *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 svn_error_t *
 svn_client_export5(svn_revnum_t *result_rev,
@@ -4952,7 +5046,23 @@ typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
  * otherwise simply bitwise OR together the combination of @c SVN_DIRENT_
  * fields you care about.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_list3(svn_client_target_t *target,
+                 svn_depth_t depth,
+                 apr_uint32_t dirent_fields,
+                 svn_boolean_t fetch_locks,
+                 svn_client_list_func_t list_func,
+                 void *baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/* Like svn_client_list3() but using separate path and revision arguments
+ * instead of svn_client_target_t.
+ *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 svn_error_t *
 svn_client_list2(const char *path_or_url,
@@ -5080,10 +5190,22 @@ svn_client_ls(apr_hash_t **dirents,
  *         determined. <br>
  *         If no error occurred, return #SVN_NO_ERROR.
  *
- * @since New in 1.2.
+ * @since New in 1.8.
  *
  * @see #svn_client_ctx_t <br> @ref clnt_revisions for
  *      a discussion of operative and peg revisions.
+ */
+svn_error_t *
+svn_client_cat3(svn_stream_t *out,
+                svn_client_target_t *target,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
+
+/* Like svn_client_cat3() but using separate path and revision arguments
+ * instead of svn_client_target_t.
+ *
+ * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 svn_error_t *
 svn_client_cat2(svn_stream_t *out,
@@ -5092,7 +5214,6 @@ svn_client_cat2(svn_stream_t *out,
                 const svn_opt_revision_t *revision,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
-
 
 /**
  * Similar to svn_client_cat2() except that the peg revision is always
@@ -5521,6 +5642,9 @@ typedef svn_error_t *(*svn_client_info_receiver2_t)(
  * or @c NULL, then information will be pulled solely from the working copy;
  * no network connections will be made.
  *
+ * ### Should not process svn_opt_revision_working as a repo request. Should
+ * error, or process it as a WC request?
+ *
  * Otherwise, information will be pulled from a repository.  The
  * actual node revision selected is determined by the @a abspath_or_url
  * as it exists in @a peg_revision.  If @a peg_revision->kind is
@@ -5556,7 +5680,24 @@ typedef svn_error_t *(*svn_client_info_receiver2_t)(
  * it's a member of one of those changelists.  If @a changelists is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_info4(svn_client_target_t *target,
+                 svn_depth_t depth,
+                 svn_boolean_t fetch_excluded,
+                 svn_boolean_t fetch_actual_only,
+                 const apr_array_header_t *changelists,
+                 svn_client_info_receiver2_t receiver,
+                 void *receiver_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *scratch_pool);
+
+/* Like svn_client_info4() but using separate path and revision arguments
+ * instead of svn_client_target_t.
+ *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 svn_error_t *
 svn_client_info3(const char *abspath_or_url,
@@ -5783,6 +5924,12 @@ svn_client_url_from_path(const char **url,
                          const char *path_or_url,
                          apr_pool_t *pool);
 
+
+/* */
+svn_error_t *
+svn_client_resolve_repo_location(svn_client_target_t *target,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool);
 
 /** Set @a *url to the repository root URL of the repository in which
  * @a path_or_url is versioned (or scheduled to be versioned),

@@ -799,6 +799,25 @@ get_prop_from_wc(apr_hash_t *props,
 
 /* Note: this implementation is very similar to svn_client_proplist. */
 svn_error_t *
+svn_client_propget5(apr_hash_t **props,
+                    const char *propname,
+                    svn_client_target_t *target,
+                    svn_depth_t depth,
+                    const apr_array_header_t *changelists,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_client_propget4(props, propname,
+                              target->abspath_or_url,
+                              &target->peg_revision, &target->revision,
+                              &target->repos_revnum,
+                              depth, changelists,
+                              ctx, result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_client_propget4(apr_hash_t **props,
                     const char *propname,
                     const char *target,
