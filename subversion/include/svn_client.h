@@ -1561,6 +1561,9 @@ svn_client_add(const char *path,
 
 /** Create a directory, either in a repository or a working copy.
  *
+ * @a paths is an array of (const char *) paths, either all local WC paths
+ * or all URLs.
+ *
  * If @a paths contains URLs, use the authentication baton in @a ctx
  * and @a message to immediately attempt to commit the creation of the
  * directories in @a paths in the repository.
@@ -1655,6 +1658,9 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
  */
 
 /** Delete items from a repository or working copy.
+ *
+ * @a paths is an array of (const char *) paths, either all local WC paths
+ * or all URLs.
  *
  * If the paths in @a paths are URLs, use the authentication baton in
  * @a ctx and @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to
@@ -3745,10 +3751,12 @@ svn_client_relocate(const char *dir,
  */
 
 /**
- * Restore the pristine version of a working copy @a paths,
+ * Restore the pristine version of working copy @a paths,
  * effectively undoing any local mods.  For each path in @a paths,
  * revert it if it is a file.  Else if it is a directory, revert
  * according to @a depth:
+ *
+ * @a paths is an array of (const char *) local WC paths.
  *
  * If @a depth is #svn_depth_empty, revert just the properties on
  * the directory; else if #svn_depth_files, revert the properties
@@ -3885,18 +3893,14 @@ typedef struct svn_client_copy_source_t
     const svn_opt_revision_t *peg_revision;
 } svn_client_copy_source_t;
 
-/** Copy each @a src in @a sources to @a dst_path.
+/** Copy each source in @a sources to @a dst_path.
  *
  * If multiple @a sources are given, @a dst_path must be a directory,
  * and @a sources will be copied as children of @a dst_path.
  *
- * @a sources must be an array of elements of type
- * <tt>svn_client_copy_source_t *</tt>.
- *
- * Each @a src in @a sources must be files or directories under version control,
- * or URLs of a versioned item in the repository.  If @a sources has multiple
- * items, the @a src members must be all repository URLs or all working copy
- * paths.
+ * @a sources is an array of <tt>svn_client_copy_source_t *</tt> elements,
+ * either all referring to local WC items or all referring to versioned
+ * items in the repository.
  *
  * If @a sources has only one item, attempt to copy it to @a dst_path.  If
  * @a copy_as_child is TRUE and @a dst_path already exists, attempt to copy the
@@ -4064,10 +4068,10 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
 /**
  * Move @a src_paths to @a dst_path.
  *
- * @a src_paths must be files or directories under version control, or
- * URLs of versioned items in the repository.  All @a src_paths must be of
- * the same type.  If multiple @a src_paths are given, @a dst_path must be
- * a directory and @a src_paths will be moved as children of @a dst_path.
+ * @a src_paths is an array of (const char *) paths -- either all WC paths
+ * or all URLs -- of versioned items.  If multiple @a src_paths are given,
+ * @a dst_path must be a directory and @a src_paths will be moved as
+ * children of @a dst_path.
  *
  * If @a src_paths are repository URLs:
  *
@@ -4488,6 +4492,8 @@ svn_client_revprop_set(const char *propname,
  * Allocate @a *props, its keys, and its values in @a pool, use
  * @a scratch_pool for temporary allocations.
  *
+ * @a target is a WC absolute path or a URL.
+ *
  * Don't store any path, not even @a target, if it does not have a
  * property named @a propname.
  *
@@ -4526,7 +4532,7 @@ svn_client_revprop_set(const char *propname,
 svn_error_t *
 svn_client_propget4(apr_hash_t **props,
                     const char *propname,
-                    const char *target,
+                    const char *target,  /* abspath or URL */
                     const svn_opt_revision_t *peg_revision,
                     const svn_opt_revision_t *revision,
                     svn_revnum_t *actual_revnum,
@@ -4619,6 +4625,8 @@ svn_client_revprop_get(const char *propname,
  * Invoke @a receiver with @a receiver_baton to return the regular properties
  * of @a target, a URL or working copy path.  @a receiver will be called
  * for each path encountered.
+ *
+ * @a target is a WC path or a URL.
  *
  * If @a revision->kind is #svn_opt_revision_unspecified, then get
  * properties from the working copy, if @a target is a working copy
@@ -5130,6 +5138,8 @@ svn_client_cat(svn_stream_t *out,
  * @a changelist.  (For now, a path cannot belong to two changelists
  * at once.)
  *
+ * @a paths is an array of (const char *) local WC paths.
+ *
  * @a changelists is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose changelist
  * assignments are adjusted; that is, don't tweak the changeset of any
@@ -5153,6 +5163,8 @@ svn_client_add_to_changelist(const apr_array_header_t *paths,
 /**
  * Remove each path in @a paths (recursing to @a depth as necessary)
  * from changelists to which they are currently assigned.
+ *
+ * @a paths is an array of (const char *) local WC paths.
  *
  * @a changelists is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose changelist
@@ -5183,6 +5195,8 @@ svn_client_remove_from_changelists(const apr_array_header_t *paths,
  * Call @a callback_func (with @a callback_baton) each time a
  * changelist-having path is discovered.
  *
+ * @a path is a local WC path.
+ *
  * If @a ctx->cancel_func is not @c NULL, invoke it passing @a
  * ctx->cancel_baton during the recursive walk.
  *
@@ -5209,8 +5223,8 @@ svn_client_get_changelists(const char *path,
 
 /**
  * Lock @a targets in the repository.  @a targets is an array of
- * <tt>const char *</tt> paths - either all working copy paths or URLs.  All
- * @a targets must be in the same repository.
+ * <tt>const char *</tt> paths - either all working copy paths or all URLs.
+ * All targets must be in the same repository.
  *
  * If a target is already locked in the repository, no lock will be
  * acquired unless @a steal_lock is TRUE, in which case the locks are
@@ -5240,10 +5254,10 @@ svn_client_lock(const apr_array_header_t *targets,
 /**
  * Unlock @a targets in the repository.  @a targets is an array of
  * <tt>const char *</tt> paths - either all working copy paths or all URLs.
- * All @a targets must be in the same repository.
+ * All targets must be in the same repository.
  *
  * If the targets are WC paths, and @a break_lock is FALSE, the working
- * copy must contain a locks for each target.
+ * copy must contain a lock for each target.
  * If this is not the case, or the working copy lock doesn't match the
  * lock token in the repository, an error will be signaled.
  *
