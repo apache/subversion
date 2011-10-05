@@ -3898,8 +3898,6 @@ typedef struct svn_client_copy_source_t
  * items, the @a src members must be all repository URLs or all working copy
  * paths.
  *
- * The parent of @a dst_path must already exist.
- *
  * If @a sources has only one item, attempt to copy it to @a dst_path.  If
  * @a copy_as_child is TRUE and @a dst_path already exists, attempt to copy the
  * item as a child of @a dst_path.  If @a copy_as_child is FALSE and
@@ -3926,7 +3924,7 @@ typedef struct svn_client_copy_source_t
  * This scheduling can be removed with svn_client_revert2().
  *
  * If @a make_parents is TRUE, create any non-existent parent directories
- * also.
+ * also.  Otherwise the parent of @a dst_path must already exist.
  *
  * If @a ignore_externals is set, don't process externals definitions
  * as part of this operation.
@@ -4093,8 +4091,6 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  *     is a directory it will remain in the working copy but all the files,
  *     and unversioned items, it contains will be removed.
  *
- * The parent of @a dst_path must already exist.
- *
  * If @a src_paths has only one item, attempt to move it to @a dst_path.  If
  * @a move_as_child is TRUE and @a dst_path already exists, attempt to move the
  * item as a child of @a dst_path.  If @a move_as_child is FALSE and
@@ -4112,7 +4108,7 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  * with #SVN_ERR_CLIENT_MULTIPLE_SOURCES_DISALLOWED.
  *
  * If @a make_parents is TRUE, create any non-existent parent directories
- * also.
+ * also.  Otherwise, the parent of @a dst_path must already exist.
  *
  * If non-NULL, @a revprop_table is a hash table holding additional,
  * custom revision properties (<tt>const char *</tt> names mapped to
