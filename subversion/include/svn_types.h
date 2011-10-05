@@ -757,7 +757,7 @@ svn_log_changed_path2_dup(const svn_log_changed_path2_t *changed_path,
 
 /**
  * A structure to represent a path that changed for a log entry.  Same as
- * #svn_log_changed_path2_t, but without the node kind.
+ * the first three fields of #svn_log_changed_path2_t.
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
@@ -810,7 +810,8 @@ typedef struct svn_log_entry_t
   svn_revnum_t revision;
 
   /** The hash of requested revision properties, which may be NULL if it
-   * would contain no revprops. */
+   * would contain no revprops.  Maps (const char *) property name to
+   * (svn_string_t *) property value. */
   apr_hash_t *revprops;
 
   /**
