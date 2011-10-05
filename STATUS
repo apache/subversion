@@ -130,6 +130,11 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1153540, r1153566
+   Silence a build warning.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
