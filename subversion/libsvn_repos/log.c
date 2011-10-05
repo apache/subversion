@@ -1025,8 +1025,9 @@ fill_log_entry(svn_log_entry_t *log_entry,
 
    If DESCENDING_ORDER is true, send child messages in descending order.
 
-   If REVPROPS is NULL, retrieve all revprops; else, retrieve only the
-   revprops named in the array (i.e. retrieve none if the array is empty).
+   If REVPROPS is NULL, retrieve all revision properties; else, retrieve
+   only the revision properties named by the (const char *) array elements
+   (i.e. retrieve none if the array is empty).
 
    LOG_TARGET_HISTORY_AS_MERGEINFO, HANDLING_MERGED_REVISION, and
    NESTED_MERGES are as per the arguments of the same name to DO_LOGS.  If
