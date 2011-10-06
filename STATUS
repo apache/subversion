@@ -114,7 +114,7 @@ Candidate changes:
      This speeds up --reintegrate merges, especially the pathological case
      described here: http://svn.haxx.se/dev/archive-2011-09/0247.shtml
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r1176915
    Improve handling of temporary allocations in svn_mergeinfo_intersect2().
@@ -134,23 +134,6 @@ Candidate changes:
    Silence a build warning.
    Votes:
      +1: danielsh
-
- * r1179767
-   Prefix SASL error messages with a prefix that identifies them as such.
-   Justification:
-     Avoids silly error messages like "svn: generic failure".
-     Reported on users@.
-   Notes:
-     <danielsh> would also be +1 on a follow-up that adds APR_INLINE.
-   Votes:
-     +1: stsp, danielsh
-
- * r1179680
-   Fix javahl org.tigris.subversion to avoid double finalize.
-   Justification:
-     A double C++ delete can cause the JVM to SEGV.
-   Votes:
-     +1: philip
 
 Veto-blocked changes:
 =====================
@@ -208,3 +191,19 @@ Approved changes:
    Votes:
      +1: rhuijben, cmpilato, jerenkrantz
 
+ * r1179767
+   Prefix SASL error messages with a prefix that identifies them as such.
+   Justification:
+     Avoids silly error messages like "svn: generic failure".
+     Reported on users@.
+   Notes:
+     <danielsh> would also be +1 on a follow-up that adds APR_INLINE.
+   Votes:
+     +1: stsp, danielsh, rhuijben
+
+ * r1179680
+   Fix javahl org.tigris.subversion to avoid double finalize.
+   Justification:
+     A double C++ delete can cause the JVM to SEGV.
+   Votes:
+     +1: philip, rhuijben
