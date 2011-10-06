@@ -320,7 +320,7 @@ get_password_cb(sasl_conn_t *conn, void *b, int id, sasl_secret_t **psecret)
   return SASL_FAIL;
 }
 
-/* Wrap an error message from SASL with a prefix that allow users
+/* Wrap an error message from SASL with a prefix that allows users
  * to tell that the error message came from SASL. */
 static const char *
 get_sasl_error(sasl_conn_t *sasl_ctx, apr_pool_t *result_pool)
