@@ -140,8 +140,10 @@ Candidate changes:
    Justification:
      Avoids silly error messages like "svn: generic failure".
      Reported on users@.
+   Notes:
+     <danielsh> would also be +1 on a follow-up that adds APR_INLINE.
    Votes:
-     +1: stsp
+     +1: stsp, danielsh
 
 Veto-blocked changes:
 =====================
