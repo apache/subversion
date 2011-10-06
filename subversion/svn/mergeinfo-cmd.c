@@ -43,55 +43,36 @@
 
 /*** Code. ***/
 
-/* Set *CONTENT_MODIFIED if so, else set *MERGEINFO_CHANGED if so, else set
- * both to FALSE. */
-static svn_error_t *
-has_merge_prop_change(svn_boolean_t *content_modified,
-                      svn_boolean_t *mergeinfo_changed,
-                      apr_hash_t *changed_paths,
-                      apr_pool_t *pool)
+struct print_log_rev_baton_t
 {
-  apr_hash_index_t *hi;
+  int count;
+};
 
-  *content_modified = FALSE;
-  *mergeinfo_changed = FALSE;
-
-  for (hi = apr_hash_first(pool, changed_paths); hi; hi = apr_hash_next(hi))
-    {
-      const char *path = svn__apr_hash_index_key(hi);
-      svn_log_changed_path2_t *cp = svn__apr_hash_index_val(hi);
-
-      SVN_DBG(("%c %s%s %c %s\n", cp->action, svn_tristate__to_word(cp->text_modified), svn_tristate__to_word(cp->props_modified), cp->node_kind == svn_node_dir ? 'D' : 'f', path));
-      if (cp->action == 'A' || cp->action == 'D'
-          || cp->text_modified == svn_tristate_true)
-        {
-          *content_modified = TRUE;
-          return SVN_NO_ERROR;
-        }
-    }
-  return SVN_NO_ERROR;
-}
-
-/* Implements the svn_log_entry_receiver_t interface. */
+/* Implements the svn_mergeinfo_receiver_t interface. */
 static svn_error_t *
-print_log_rev(void *baton,
-              svn_log_entry_t *log_entry,
+print_log_rev(const svn_client_merged_rev_t *info,
+              void *baton,
               apr_pool_t *pool)
 {
-  svn_boolean_t content_modified;
-  svn_boolean_t mergeinfo_changed;
+  struct print_log_rev_baton_t *b = baton;
   const char *kind;
 
-  /* Identify this source-rev as "original change" or "no-op" or "a merge" */
-  SVN_ERR(has_merge_prop_change(&content_modified, &mergeinfo_changed,
-                                log_entry->changed_paths2, pool));
-  if (content_modified)
+  /* Don't print too much unless the user wants a verbose listing */
+  if (++b->count >= 5)
     {
-      kind = "operative (at least on some paths)";
+      if (b->count == 5)
+        SVN_ERR(svn_cmdline_printf(pool, "  ...\n"));
+      return SVN_NO_ERROR;
     }
-  else if (mergeinfo_changed)
+
+  /* Identify this source-rev as "original change" or "no-op" or "a merge" */
+  if (info->is_merge)
     {
       kind = "merge";
+    }
+  else if (info->content_modified)
+    {
+      kind = "operative (at least on some paths)";
     }
   else
     {
@@ -99,11 +80,8 @@ print_log_rev(void *baton,
        * all, but later we may use this function on such revs. */
       kind = "no-op";
     }
-  SVN_ERR(svn_cmdline_printf(pool, "r%ld%s%s%s -- %s\n", log_entry->revision,
-                             log_entry->non_inheritable ? "*" : " ",
-                             log_entry->subtractive_merge ? " (reverse)" : "",
-                             log_entry->has_children ? " (has children)" : "",
-                             kind));
+  SVN_ERR(svn_cmdline_printf(pool, "  r%ld -- %s %s\n", info->revnum,
+                             kind, info->misc));
   return SVN_NO_ERROR;
 }
 
@@ -129,8 +107,8 @@ target_for_display(const svn_client_target_t *target,
   if (target->revision.kind == svn_opt_revision_base)
     {
       SVN_ERR_ASSERT_NO_RETURN(target->peg_revision.kind == svn_opt_revision_base);
-      return apr_psprintf(pool, "^/%s (wc base = r%ld)",
-                          target->repos_relpath, target->repos_revnum);
+      return apr_psprintf(pool, "^/%s (wc base)",
+                          target->repos_relpath);
     }
   return apr_psprintf(pool, "^/%s (r%ld)",
                       target->repos_relpath, target->repos_revnum);
@@ -155,6 +133,7 @@ find_source_branch(svn_client_target_t **source_p,
 {
   apr_array_header_t *suggestions;
   const char *copyfrom_url;
+  svn_opt_revision_t peg_revision = { svn_opt_revision_number, { 1170000 } };
 
   /* This isn't properly doc'd, but the first result it gives is the
    * copyfrom source URL. */
@@ -164,9 +143,7 @@ find_source_branch(svn_client_target_t **source_p,
                                            ctx, pool));
   copyfrom_url = APR_ARRAY_IDX(suggestions, 0, const char *);
 
-  SVN_ERR(svn_client__target(source_p, copyfrom_url, pool));
-  (*source_p)->peg_revision.kind = svn_opt_revision_number;
-  (*source_p)->peg_revision.value.number = 1170000;
+  SVN_ERR(svn_client__target(source_p, copyfrom_url, &peg_revision, pool));
   (*source_p)->revision.kind = svn_opt_revision_unspecified;
 
   return SVN_NO_ERROR;
@@ -187,6 +164,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   /* Default to depth empty. */
   svn_depth_t depth = opt_state->depth == svn_depth_unknown
     ? svn_depth_infinity : opt_state->depth;
+  struct print_log_rev_baton_t log_rev_baton;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -199,16 +177,16 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   /* Locate the target branch: the second argument or this dir. */
   if (targets->nelts == 2)
     {
-      SVN_ERR(svn_client__target(&target, "", pool));
-      SVN_ERR(svn_opt_parse_path(&target->peg_revision, &target->path_or_url,
-                                 APR_ARRAY_IDX(targets, 1, const char *),
-                                 pool));
+      SVN_ERR(svn_client__parse_target(&target,
+                                       APR_ARRAY_IDX(targets, 1, const char *),
+                                       pool));
       target->revision.kind = svn_opt_revision_unspecified;
     }
   else
     {
-      SVN_ERR(svn_client__target(&target, "", pool));
-      target->peg_revision.kind = svn_opt_revision_working;
+      svn_opt_revision_t peg_revision = { svn_opt_revision_working, { 0 } };
+
+      SVN_ERR(svn_client__target(&target, "", &peg_revision, pool));
       target->revision.kind = svn_opt_revision_working;
     }
 
@@ -217,13 +195,9 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   /* Locate the source branch: the first argument or automatic. */
   if (targets->nelts >= 1)
     {
-      const char *path_or_url;
-      svn_opt_revision_t peg_revision;
-
-      SVN_ERR(svn_opt_parse_path(&peg_revision, &path_or_url,
-                                 APR_ARRAY_IDX(targets, 0, const char *), pool));
-      SVN_ERR(svn_client__target(&source, path_or_url, pool));
-      source->peg_revision = peg_revision;
+      SVN_ERR(svn_client__parse_target(&source,
+                                       APR_ARRAY_IDX(targets, 0, const char *),
+                                       pool));
       source->revision.kind = svn_opt_revision_unspecified;
 
       /* If no peg-rev was attached to the source URL, assume HEAD. */
@@ -268,24 +242,18 @@ svn_cl__mergeinfo(apr_getopt_t *os,
     }
 
   printf(_("Merged revisions:\n"));
-  SVN_ERR(svn_client_mergeinfo_log(TRUE /* finding_merged */,
-                                   target->path_or_url,
-                                   &target->peg_revision,
-                                   source->path_or_url,
-                                   &source->peg_revision,
-                                   print_log_rev, NULL,
-                                   TRUE, depth, NULL, ctx,
-                                   pool));
+  log_rev_baton.count = 0;
+  SVN_ERR(svn_client_mergeinfo_log2(TRUE /* finding_merged */,
+                                    target, source,
+                                    print_log_rev, &log_rev_baton,
+                                    NULL, ctx, pool));
 
   printf(_("Eligible revisions:\n"));
-  SVN_ERR(svn_client_mergeinfo_log(FALSE /* finding_merged */,
-                                   target->path_or_url,
-                                   &target->peg_revision,
-                                   source->path_or_url,
-                                   &source->peg_revision,
-                                   print_log_rev, NULL,
-                                   TRUE, depth, NULL, ctx,
-                                   pool));
+  log_rev_baton.count = 0;
+  SVN_ERR(svn_client_mergeinfo_log2(FALSE /* finding_merged */,
+                                    target, source,
+                                    print_log_rev, &log_rev_baton,
+                                    NULL, ctx, pool));
 
   return SVN_NO_ERROR;
 }

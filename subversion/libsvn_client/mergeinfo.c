@@ -2155,6 +2155,74 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
   return SVN_NO_ERROR;
 }
 
+struct baton
+{
+  svn_mergeinfo_receiver_t *receiver_func;
+  void *receiver_baton;
+};
+
+static svn_error_t *
+mergeinfo_log_receiver(void *baton,
+                       svn_log_entry_t *log_entry,
+                       apr_pool_t *pool)
+{
+  struct baton *b = baton;
+  svn_client_merged_rev_t info = { log_entry->revision, FALSE, FALSE, NULL };
+
+  /* Identify this source-rev as "original change" or "no-op" or "a merge" */
+  /* ### Fake: say it's a merge if log msg contains "erge". */
+  {
+    const svn_string_t *log = apr_hash_get(log_entry->revprops, "svn:log",
+                                           APR_HASH_KEY_STRING);
+
+    info.is_merge = strstr(log->data, "erge") != NULL;
+  }
+  /* ### Fake: say it's operative if (rev % 10 != 0). */
+  info.content_modified = (log_entry->revision % 10 != 0);
+
+  info.misc = apr_psprintf(pool, "%s%s%s",
+                           log_entry->non_inheritable ? "*" : " ",
+                           log_entry->subtractive_merge ? " (reverse)" : "",
+                           log_entry->has_children ? " (has children)" : "");
+
+  b->receiver_func(&info, b->receiver_baton, pool);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
+                          svn_client_target_t *target,
+                          svn_client_target_t *source,
+                          svn_mergeinfo_receiver_t receiver,
+                          void *receiver_baton,
+                          const apr_array_header_t *revprops,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *scratch_pool)
+{
+  struct baton b;
+
+  b.receiver_func = receiver;
+  b.receiver_baton = receiver_baton;
+
+  /* ### Request 'svn:log' revprop in order to discover whether it's a
+     merge by scanning the text for "erge". */
+  if (revprops)
+    {
+      apr_array_header_t *revprops2 = apr_array_copy(scratch_pool, revprops);
+      APR_ARRAY_PUSH(revprops2, const char *) = "svn:log";
+      revprops = revprops2;
+    }
+
+  SVN_ERR(svn_client_mergeinfo_log(finding_merged,
+                                   target->path_or_url, &target->peg_revision,
+                                   source->path_or_url, &source->peg_revision,
+                                   mergeinfo_log_receiver, &b,
+                                   FALSE /* discover_changed_paths */,
+                                   svn_depth_infinity, revprops,
+                                   ctx, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
                                  const char *path_or_url,

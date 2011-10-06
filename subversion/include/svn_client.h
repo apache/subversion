@@ -1033,7 +1033,14 @@ typedef struct svn_client_target_t
 svn_error_t *
 svn_client__target(svn_client_target_t **target,
                    const char *path_or_url,
+                   const svn_opt_revision_t *peg_revision,
                    apr_pool_t *pool);
+
+/* Like svn_opt_parse_path(). */
+svn_error_t *
+svn_client__parse_target(svn_client_target_t **target,
+                         const char *target_string,
+                         apr_pool_t *pool);
 
 /* */
 svn_error_t *
@@ -3604,6 +3611,21 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
                                 apr_pool_t *pool);
 
 
+/* */
+typedef struct svn_client_merged_rev_t
+{
+  svn_revnum_t revnum;
+  svn_boolean_t is_merge;
+  svn_boolean_t content_modified;
+  const char *misc;
+} svn_client_merged_rev_t;
+
+/* */
+typedef svn_error_t *
+  svn_mergeinfo_receiver_t(const svn_client_merged_rev_t *merged,
+                           void *baton,
+                           apr_pool_t *pool);
+
 /**
  * If @a finding_merged is TRUE, then drive log entry callbacks
  * @a receiver / @a receiver_baton with the revisions merged from
@@ -3619,15 +3641,30 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * If a depth other than #svn_depth_empty or #svn_depth_infinity is
  * requested then return a #SVN_ERR_UNSUPPORTED_FEATURE error.
  *
- * @a discover_changed_paths and @a revprops are the same as for
- * svn_client_log5().  Use @a scratch_pool for all temporary allocations.
+ * @a revprops is the same as for svn_client_log5().
  *
+ * Use @a scratch_pool for all temporary allocations.
+ * 
  * @a ctx is a context used for authentication.
  *
  * If the server doesn't support retrieval of mergeinfo, return an
  * #SVN_ERR_UNSUPPORTED_FEATURE error.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
+                          svn_client_target_t *target,
+                          svn_client_target_t *source,
+                          svn_mergeinfo_receiver_t receiver,
+                          void *receiver_baton,
+                          const apr_array_header_t *revprops,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *scratch_pool);
+
+/*
  * @since New in 1.7.
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
 svn_error_t *
 svn_client_mergeinfo_log(svn_boolean_t finding_merged,

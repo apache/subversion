@@ -81,6 +81,7 @@ svn_client_root_url_from_path(const char **url,
 svn_error_t *
 svn_client__target(svn_client_target_t **target_p,
                    const char *path_or_url,
+                   const svn_opt_revision_t *peg_revision,
                    apr_pool_t *pool)
 {
   *target_p = apr_pcalloc(pool, sizeof(**target_p));
@@ -92,6 +93,21 @@ svn_client__target(svn_client_target_t **target_p,
   else
     svn_error_clear(svn_dirent_get_absolute(&(*target_p)->abspath_or_url,
                                     path_or_url, pool));
+  (*target_p)->peg_revision = *peg_revision;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__parse_target(svn_client_target_t **target,
+                         const char *target_string,
+                         apr_pool_t *pool)
+{
+  svn_opt_revision_t peg_revision;
+  const char *path_or_url;
+
+  SVN_ERR(svn_opt_parse_path(&peg_revision, &path_or_url, target_string,
+                             pool));
+  SVN_ERR(svn_client__target(target, path_or_url, &peg_revision, pool));
   return SVN_NO_ERROR;
 }
 
