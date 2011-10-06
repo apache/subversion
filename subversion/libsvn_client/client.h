@@ -109,6 +109,9 @@ svn_error_t *svn_client__get_copy_source(const char *path_or_url,
    END_URL and END_REVISION are not touched by the function);
    START and REVISION may not.
 
+   If PATH is a WC path and REVISION is of kind svn_opt_revision_working,
+   then look at the PATH's copy-from URL instead of its base URL.
+
    RA_SESSION should be an open RA session pointing at the URL of PATH,
    or NULL, in which case this function will open its own temporary session.
 
@@ -191,7 +194,8 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
    is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
 
    BASE_DIR_ABSPATH is the working copy path the ra_session corresponds to,
-   should only be used if PATH_OR_URL is a url.
+   and should only be used if PATH_OR_URL is a url
+     ### else NULL? what's it for?
 
    If PEG_REVISION's kind is svn_opt_revision_unspecified, it is
    interpreted as "head" for a URL or "working" for a working-copy path.
