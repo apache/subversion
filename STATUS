@@ -135,6 +135,14 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1179767
+   Prefix SASL error messages with a prefix that identifies them as such.
+   Justification:
+     Avoids silly error messages like "svn: generic failure".
+     Reported on users@.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
