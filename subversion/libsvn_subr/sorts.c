@@ -245,3 +245,25 @@ svn_sort__array_insert(const void *new_element,
   /* Copy in the new element */
   memcpy(new_position, new_element, array->elt_size);
 }
+
+void
+svn_sort__array_delete(apr_array_header_t *arr,
+                       int delete_index)
+{
+  /* Do we have a valid index? */
+  if (delete_index >= 0 && delete_index < arr->nelts)
+    {
+      if (delete_index == (arr->nelts - 1))
+        {
+          /* Deleting the last or only element in an array is easy. */
+          apr_array_pop(arr);
+        }
+      else
+        {
+          memmove(arr->elts + arr->elt_size * delete_index,
+                  arr->elts + arr->elt_size * (delete_index + 1),
+                  arr->elt_size * (arr->nelts - 1 - delete_index));
+          --(arr->nelts);
+        }
+    }
+}

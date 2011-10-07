@@ -4770,30 +4770,6 @@ make_merge_conflict_error(const char *target_wcpath,
      r->start, r->end, svn_dirent_local_style(target_wcpath, scratch_pool));
 }
 
-/* Remove the element at IDX from the array ARR.
-   If IDX is not a valid element of ARR do nothing. */
-static void
-remove_element_from_array(apr_array_header_t *arr,
-                          int idx)
-{
-  /* Do we have a valid index? */
-  if (idx >= 0 && idx < arr->nelts)
-    {
-      if (idx == (arr->nelts - 1))
-        {
-          /* Deleting the last or only element in an array is easy. */
-          apr_array_pop(arr);
-        }
-      else
-        {
-          memmove(arr->elts + arr->elt_size * idx,
-                  arr->elts + arr->elt_size * (idx + 1),
-                  arr->elt_size * (arr->nelts - 1 - idx));
-          --(arr->nelts);
-        }
-    }
-}
-
 /* Helper for do_directory_merge().
 
    TARGET_WCPATH is a directory and CHILDREN_WITH_MERGEINFO is filled
@@ -4819,7 +4795,7 @@ remove_absent_children(const char *target_wcpath,
       if ((child->absent || child->scheduled_for_deletion)
           && svn_dirent_is_ancestor(target_wcpath, child->abspath))
         {
-          remove_element_from_array(children_with_mergeinfo, i--);
+          svn_sort__array_delete(children_with_mergeinfo, i--);
         }
     }
 }
@@ -4855,8 +4831,7 @@ remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
                        child->abspath,
                        APR_HASH_KEY_STRING))
         {
-          remove_element_from_array(notify_b->children_with_mergeinfo,
-                                    i--);
+          svn_sort__array_delete(notify_b->children_with_mergeinfo, i--);
         }
     }
 }
