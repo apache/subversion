@@ -38,13 +38,11 @@
 #include "svn_pools.h"
 #include "svn_wc.h"
 
-#include "../../include/private/svn_sqlite.h"
-
 #include "../../libsvn_wc/wc.h"
-#include "../../libsvn_wc/wc-queries.h"
 #include "../../libsvn_wc/wc_db.h"
 
 #include "../svn_test.h"
+#include "utils.h"
 
 
 /* NOTE: these must be canonical!  */
@@ -71,11 +69,12 @@
 #define AUTHOR_1 "johndoe"
 #define AUTHOR_2 "janedoe"
 
-/* Stick to MD5 values. We don't want to trigger SHA1->MD5 lookups.  */
+/* Some arbitrary checksum values */
 #define MD5_1 "2d18c5e57e84c5b8a5e9a6e13fa394dc"
-#define MD5_2 "5d41402abc4b2a76b9719d911017c592"
+#define SHA1_1 "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"
 
-#define I_TC_DATA "((conflict F file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file)) (conflict G file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file)) )"
+#define F_TC_DATA "(conflict F file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file))"
+#define G_TC_DATA "(conflict G file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file))"
 
 static const char * const TESTING_DATA = (
    /* Load our test data.
@@ -86,6 +85,8 @@ static const char * const TESTING_DATA = (
    "insert into repository values (1, '" ROOT_ONE "', '" UUID_ONE "'); "
    "insert into repository values (2, '" ROOT_TWO "', '" UUID_TWO "'); "
    "insert into wcroot values (1, null); "
+
+   "insert into pristine values ('$sha1$" SHA1_1 "', NULL, 15, 1, '$md5 $" MD5_1 "'); "
 
    /* ### The file_externals column in NODES is temporary, and will be
       ### removed.  However, to keep the tests passing, we need to add it
@@ -98,7 +99,7 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null);"
   "insert into nodes values ("
   "  1, 'A', 0, '', 1, 'A', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$md5 $" MD5_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
+  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  10, null, null, null);"
   "insert into nodes values ("
   "  1, 'B', 0, '', 1, 'B', null, 'excluded',"
@@ -118,11 +119,11 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null);"
   "insert into nodes values ("
   "  1, 'F', 0, '', 1, 'F', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$md5 $" MD5_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
+  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  15, null, null, null);"
   "insert into nodes values ("
   "  1, 'G', 0, '', 2, 'G-alt', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$md5 $" MD5_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
+  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  15, null, null, null);"
   "insert into nodes values ("
   "  1, 'H', 0, '', 1, 'H', 1, 'normal',"
@@ -142,7 +143,7 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e/J-e-a', 0, 'J/J-e', 1, 'J/J-e/J-e-a', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$md5 $" MD5_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
+  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  15, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e/J-e-b', 0, 'J/J-e', 1, 'J/J-e/J-e-b', 1, 'normal',"
@@ -150,7 +151,7 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e/J-e-b/Jeba', 0, 'J/J-e/J-e-b', 1, 'J/J-e/J-e-b/Jeba', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$md5 $" MD5_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
+  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  15, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-f', 0, 'J', 1, 'J/J-f', 1, 'normal',"
@@ -166,11 +167,11 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null);"
   "insert into nodes values ("
   "  1, 'K/K-a', 0, 'K', 1, 'K/K-a', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$md5 $" MD5_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
+  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  15, null, null, null);"
   "insert into nodes values ("
   "  1, 'K/K-b', 0, 'K', 1, 'K/K-b', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$md5 $" MD5_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
+  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  15, null, null, null);"
   ""
    /* Load data into NODES table;
@@ -210,7 +211,7 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-d', 1, 'J', 2, 'moved/file', 2, 'normal',"
-  "  1, null, 'file', '()', null, '$md5 $" MD5_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
+  "  1, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  10, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e', 1, 'J', null, null, null, 'not-present',"
@@ -257,12 +258,18 @@ static const char * const TESTING_DATA = (
   "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'L/L-a/L-a-a', 1, 'L', null, null, null, 'not-present',"
+  "  1, 'L/L-a/L-a-a', 1, 'L/L-a', null, null, null, 'not-present',"
   "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null);"
    "insert into actual_node values ("
    "  1, 'I', '', null, null, null, null, null, 'changelist', null, "
-   "'" I_TC_DATA "', null, null, null, null);"
+   "  null, null, null, null, null);"
+   "insert into actual_node values ("
+   "  1, 'F', '', null, null, null, null, null, null, null, "
+   "  '" F_TC_DATA "', null, null, null, null);"
+   "insert into actual_node values ("
+   "  1, 'G', '', null, null, null, null, null, null, null, "
+   "  '" G_TC_DATA "', null, null, null, null);"
    "  "
    "insert into nodes values ("
    "  1, 'M', 0, '', 1, 'M', 1, 'normal', "
@@ -291,61 +298,22 @@ static const char * const M_TESTING_DATA = (
    "  null, null, null, null);"
    );
 
-WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
-
 
 static svn_error_t *
-make_one_db(const char *dirpath,
-            const char * const my_statements[],
-            apr_pool_t *scratch_pool)
-{
-  const char *dbpath = svn_dirent_join(dirpath, "wc.db", scratch_pool);
-  svn_sqlite__db_t *sdb;
-  int i;
-
-  /* Create fake-wc/SUBDIR/.svn/ for placing the metadata. */
-  SVN_ERR(svn_io_make_dir_recursively(dirpath, scratch_pool));
-
-  svn_error_clear(svn_io_remove_file(dbpath, scratch_pool));
-  SVN_ERR(svn_sqlite__open(&sdb, dbpath, svn_sqlite__mode_rwcreate,
-                           my_statements,
-                           0, NULL,
-                           scratch_pool, scratch_pool));
-
-  for (i = 0; my_statements[i] != NULL; i++)
-    SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ i));
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
+create_fake_wc(const char *subdir, apr_pool_t *pool)
 {
   const char *root;
-  const char *dirpath;
-  const char * const my_statements[] = {
-    statements[STMT_CREATE_SCHEMA],
-    statements[STMT_CREATE_NODES],
-    TESTING_DATA,
-    NULL
-  };
-  const char * const M_statements[] = {
-    statements[STMT_CREATE_SCHEMA],
-    statements[STMT_CREATE_NODES],
-    M_TESTING_DATA,
-    NULL
-  };
+  const char *wc_abspath;
 
-  root = svn_dirent_join("fake-wc", subdir, scratch_pool);
+  root = svn_dirent_join("fake-wc", subdir, pool);
 
-  SVN_ERR(svn_io_remove_dir2(root, TRUE, NULL, NULL, scratch_pool));
+  SVN_ERR(svn_io_remove_dir2(root, TRUE, NULL, NULL, pool));
 
-  dirpath = svn_dirent_join(root, ".svn", scratch_pool);
-  SVN_ERR(make_one_db(dirpath, my_statements, scratch_pool));
+  SVN_ERR(svn_dirent_get_absolute(&wc_abspath, root, pool));
+  SVN_ERR(svn_test__create_fake_wc(wc_abspath, TESTING_DATA, pool, pool));
 
-  dirpath = svn_dirent_join_many(scratch_pool, root, "M", ".svn", NULL);
-  SVN_ERR(make_one_db(dirpath, M_statements, scratch_pool));
+  wc_abspath = svn_dirent_join(wc_abspath, "M", pool);
+  SVN_ERR(svn_test__create_fake_wc(wc_abspath, M_TESTING_DATA, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -357,17 +325,17 @@ create_open(svn_wc__db_t **db,
             const char *subdir,
             apr_pool_t *pool)
 {
-  SVN_ERR(create_fake_wc(subdir, SVN_WC__VERSION, pool));
+  SVN_ERR(create_fake_wc(subdir, pool));
 
   SVN_ERR(svn_dirent_get_absolute(local_abspath,
                                   svn_dirent_join("fake-wc", subdir, pool),
                                   pool));
-  SVN_ERR(svn_wc__db_open(db, svn_wc__db_openmode_readwrite,
+  SVN_ERR(svn_wc__db_open(db,
                           NULL /* config */,
                           TRUE /* auto_upgrade */,
                           TRUE /* enforce_empty_wq */,
                           pool, pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -529,18 +497,29 @@ test_access_baton_like_locking(apr_pool_t *pool)
   SVN_ERR(svn_wc_adm_retrieve(&subdir_access, adm_access, D2, pool));
   SVN_ERR(svn_wc_add3(D3, subdir_access, svn_depth_infinity, NULL,
                       SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(svn_wc_add3(D4, subdir_access, svn_depth_infinity, NULL,
+                      SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL, pool));
   SVN_ERR(svn_wc_locked(&locked, D3, pool));
   SVN_TEST_ASSERT(locked);
+  SVN_ERR(svn_wc_locked(&locked, D4, pool));
+  SVN_TEST_ASSERT(locked);
+  SVN_ERR(svn_wc_delete3(D4, subdir_access, NULL, NULL, NULL, NULL, FALSE,
+                         pool));
+  SVN_ERR(svn_wc_locked(&locked, D4, pool));
+  SVN_TEST_ASSERT(!locked);
   SVN_ERR(svn_wc_revert3(D, adm_access, svn_depth_infinity, FALSE,
                          NULL, NULL, NULL, NULL, NULL, pool));
   SVN_ERR(svn_wc_locked(&locked, D3, pool));
   SVN_TEST_ASSERT(!locked);
+  SVN_ERR(svn_wc_locked(&locked, local_abspath, pool));
+  SVN_TEST_ASSERT(locked);
   SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
   SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
 
   /* Obtain a lock for the root, which is extended on each level */
   SVN_ERR(svn_wc__db_wclock_obtain(wc_ctx->db, local_abspath, 0, FALSE, pool));
+  SVN_ERR(svn_io_make_dir_recursively(D4, pool));
   SVN_ERR(svn_wc_add4(wc_ctx, D, svn_depth_infinity, NULL, SVN_INVALID_REVNUM,
                       NULL, NULL, NULL, NULL, pool));
   SVN_ERR(svn_wc_add4(wc_ctx, D1, svn_depth_infinity, NULL, SVN_INVALID_REVNUM,
@@ -590,14 +569,14 @@ test_access_baton_like_locking(apr_pool_t *pool)
   err = svn_wc__db_wclock_obtain(wc_ctx2->db, D3, 0, FALSE, pool);
 
   if (err && err->apr_err != SVN_ERR_WC_LOCKED)
-    return svn_error_return(err);
+    return svn_error_trace(err);
   svn_error_clear(err);
 
   SVN_TEST_ASSERT(err != NULL); /* Can't lock, as it is still locked */
 
   err = svn_wc__db_wclock_release(wc_ctx2->db, D4, pool);
   if (err && err->apr_err != SVN_ERR_WC_NOT_LOCKED)
-    return svn_error_return(err);
+    return svn_error_trace(err);
   svn_error_clear(err);
 
   SVN_TEST_ASSERT(err != NULL); /* Can't unlock, as it is not ours */
@@ -611,7 +590,7 @@ test_access_baton_like_locking(apr_pool_t *pool)
 
   err = svn_wc__db_wclock_release(wc_ctx2->db, D4, pool);
   if (err && err->apr_err != SVN_ERR_WC_NOT_LOCKED)
-    return svn_error_return(err);
+    return svn_error_trace(err);
   svn_error_clear(err);
 
   SVN_TEST_ASSERT(err != NULL); /* Can't unlock a not locked path */
@@ -626,12 +605,12 @@ test_access_baton_like_locking(apr_pool_t *pool)
     svn_boolean_t is_root;
     SVN_ERR(svn_wc__node_get_url(&url, wc_ctx, local_abspath, pool, pool));
     SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, &repos_uuid,
-                                        wc_ctx, local_abspath, FALSE, FALSE,
+                                        wc_ctx, local_abspath,
                                         pool, pool));
 
     SVN_ERR(svn_io_make_dir_recursively(subdir, pool));
     SVN_ERR(svn_wc_ensure_adm3(subdir, repos_uuid,
-                               svn_uri_join(url, "sub-wc", pool),
+                               svn_path_url_add_component2(url, "sub-wc", pool),
                                repos_root_url, 0, svn_depth_infinity,
                                pool));
 

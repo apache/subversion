@@ -81,6 +81,7 @@
 					Name="VCCustomBuildTool"
 					Description="Generating [sql.header]"
 					CommandLine="&quot;[sql.svn_python]&quot; &quot;$(SolutionDir)\build\transform_sql.py&quot; &quot;$(InputPath)&quot; &quot;$(SolutionDir)\[sql.header]&quot;"
+					AdditionalDependencies="[for sql.dependencies]$(SolutionDir)\[sql.dependencies];[end]"
 					Outputs="$(SolutionDir)\[sql.header]"
 				/>
 			</FileConfiguration>

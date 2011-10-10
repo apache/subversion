@@ -29,14 +29,12 @@
 
 #include <serf.h>
 
+#include "svn_dav.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
-#include "svn_dav.h"
-#include "svn_xml.h"
+
 #include "../libsvn_ra/ra_loader.h"
 #include "svn_config.h"
-#include "svn_delta.h"
-#include "svn_version.h"
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_private_config.h"
@@ -47,7 +45,7 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-typedef enum {
+typedef enum lock_state_e {
   NONE = 0,
   PROP,
   LOCK_DISCOVERY,
@@ -60,12 +58,12 @@ typedef enum {
   COMMENT,
 } lock_state_e;
 
-typedef struct {
+typedef struct lock_prop_info_t {
   const char *data;
   apr_size_t len;
 } lock_prop_info_t;
 
-typedef struct {
+typedef struct lock_info_t {
   apr_pool_t *pool;
 
   const char *path;
@@ -360,9 +358,13 @@ handle_lock(serf_request_t *request,
       const char *val;
 
       serf_status_line sl;
-      apr_status_t rv;
+      apr_status_t status;
 
-      rv = serf_bucket_response_status(response, &sl);
+      status = serf_bucket_response_status(response, &sl);
+      if (SERF_BUCKET_READ_ERROR(status))
+        {
+          return svn_error_wrap_apr(status, NULL);
+        }
 
       ctx->status_code = sl.code;
       ctx->reason = sl.reason;
@@ -382,14 +384,6 @@ handle_lock(serf_request_t *request,
             }
           return err;
         }
-
-      /* 405 == Method Not Allowed (Occurs when trying to lock a working
-         copy path which no longer exists at HEAD in the repository. */
-      if (sl.code == 405)
-        return svn_error_createf(SVN_ERR_FS_OUT_OF_DATE,
-                                 NULL,
-                                 _("Lock request failed: %d %s"),
-                                   ctx->status_code, ctx->reason);
 
       headers = serf_bucket_response_get_headers(response);
 
@@ -515,7 +509,7 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   svn_error_t *err;
   int status_code;
 
-  req_url = svn_path_url_add_component2(session->repos_url.path, path, pool);
+  req_url = svn_path_url_add_component2(session->session_url.path, path, pool);
 
   lock_ctx = apr_pcalloc(pool, sizeof(*lock_ctx));
 
@@ -586,6 +580,8 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
 
   subpool = svn_pool_create(pool);
 
+  /* ### TODO for issue 2263: Send all the locks over the wire at once.  This
+     loop is just a temporary shim. */
   for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
     {
       svn_ra_serf__handler_t *handler;
@@ -594,7 +590,8 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       lock_info_t *lock_ctx;
       const void *key;
       void *val;
-      svn_error_t *err, *new_err;
+      svn_error_t *err;
+      svn_error_t *new_err = NULL;
 
       svn_pool_clear(subpool);
 
@@ -609,7 +606,7 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       lock_ctx->lock->comment = comment;
 
       lock_ctx->force = force;
-      req_url = svn_path_url_add_component2(session->repos_url.path,
+      req_url = svn_path_url_add_component2(session->session_url.path,
                                             lock_ctx->path, subpool);
 
       handler = apr_pcalloc(subpool, sizeof(*handler));
@@ -688,6 +685,8 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
 
   subpool = svn_pool_create(pool);
 
+  /* ### TODO for issue 2263: Send all the locks over the wire at once.  This
+     loop is just a temporary shim. */
   for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
     {
       svn_ra_serf__handler_t *handler;
@@ -695,11 +694,14 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       const char *req_url, *path, *token;
       const void *key;
       void *val;
+      svn_lock_t *existing_lock = NULL;
       struct unlock_context_t unlock_ctx;
+      svn_error_t *lock_err = NULL;
 
       svn_pool_clear(subpool);
 
       ctx = apr_pcalloc(subpool, sizeof(*ctx));
+      ctx->pool = subpool;
 
       apr_hash_this(hi, &key, NULL, &val);
       path = key;
@@ -707,10 +709,9 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
 
       if (force && (!token || token[0] == '\0'))
         {
-          svn_lock_t *lock;
-
-          SVN_ERR(svn_ra_serf__get_lock(ra_session, &lock, path, subpool));
-          token = lock->token;
+          SVN_ERR(svn_ra_serf__get_lock(ra_session, &existing_lock, path,
+                                        subpool));
+          token = existing_lock->token;
           if (!token)
             {
               svn_error_t *err;
@@ -734,7 +735,7 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       unlock_ctx.force = force;
       unlock_ctx.token = apr_pstrcat(subpool, "<", token, ">", (char *)NULL);
 
-      req_url = svn_path_url_add_component2(session->repos_url.path, path,
+      req_url = svn_path_url_add_component2(session->session_url.path, path,
                                             subpool);
 
       handler = apr_pcalloc(subpool, sizeof(*handler));
@@ -753,15 +754,28 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       svn_ra_serf__request_create(handler);
       SVN_ERR(svn_ra_serf__context_run_wait(&ctx->done, session, subpool));
 
-      if (ctx->status != 204)
+      switch (ctx->status)
         {
-           return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                                    _("Unlock request failed: %d %s"),
-                                    ctx->status, ctx->reason);
+          case 204:
+            break; /* OK */
+          case 403:
+            /* Api users expect this specific error code to detect failures */
+            lock_err = svn_error_createf(SVN_ERR_FS_LOCK_OWNER_MISMATCH, NULL,
+                                         _("Unlock request failed: %d %s"),
+                                         ctx->status, ctx->reason);
+            break;
+          default:
+            lock_err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                   _("Unlock request failed: %d %s"),
+                                   ctx->status, ctx->reason);
         }
 
       if (lock_func)
-        SVN_ERR(lock_func(lock_baton, path, FALSE, NULL, NULL, subpool));
+        {
+          SVN_ERR(lock_func(lock_baton, path, FALSE, existing_lock,
+                            lock_err, subpool));
+          svn_error_clear(lock_err);
+        }
     }
 
   return SVN_NO_ERROR;

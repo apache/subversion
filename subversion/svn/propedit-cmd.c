@@ -95,7 +95,7 @@ svn_cl__propedit(apr_getopt_t *os,
   /* Suck up all the remaining arguments into a targets array */
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   /* We do our own notifications */
   ctx->notify_func2 = NULL;
@@ -212,7 +212,7 @@ svn_cl__propedit(apr_getopt_t *os,
           svn_string_t *propval, *edited_propval;
           const char *base_dir = target;
           const char *target_local;
-          const char *local_abspath;
+          const char *abspath_or_url;
           svn_node_kind_t kind;
           svn_opt_revision_t peg_revision;
           svn_revnum_t base_rev = SVN_INVALID_REVNUM;
@@ -220,19 +220,24 @@ svn_cl__propedit(apr_getopt_t *os,
           svn_pool_clear(subpool);
           SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
+          if (!svn_path_is_url(target))
+            SVN_ERR(svn_dirent_get_absolute(&abspath_or_url, target, subpool));
+          else
+            abspath_or_url = target;
+
           /* Propedits can only happen on HEAD or the working copy, so
              the peg revision can be as unspecified. */
           peg_revision.kind = svn_opt_revision_unspecified;
 
           /* Fetch the current property. */
-          SVN_ERR(svn_client_propget3(&props, pname_utf8, target,
+          SVN_ERR(svn_client_propget4(&props, pname_utf8, abspath_or_url,
                                       &peg_revision,
                                       &(opt_state->start_revision),
                                       &base_rev, svn_depth_empty,
-                                      NULL, ctx, subpool));
+                                      NULL, ctx, subpool, subpool));
 
           /* Get the property value. */
-          propval = apr_hash_get(props, target, APR_HASH_KEY_STRING);
+          propval = apr_hash_get(props, abspath_or_url, APR_HASH_KEY_STRING);
           if (! propval)
             propval = svn_string_create("", subpool);
 
@@ -253,10 +258,8 @@ svn_cl__propedit(apr_getopt_t *os,
                 }
 
               /* Split the path if it is a file path. */
-              SVN_ERR(svn_dirent_get_absolute(&local_abspath, target, subpool));
-
-              SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
-                                       subpool));
+              SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, abspath_or_url,
+                                       FALSE, subpool));
 
               if (kind == svn_node_none)
                 return svn_error_createf(
@@ -295,20 +298,35 @@ svn_cl__propedit(apr_getopt_t *os,
                 SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3),
                                                    opt_state, NULL, ctx->config,
                                                    subpool));
+              if (svn_path_is_url(target))
+                {
+                  err = svn_client_propset_remote(pname_utf8, edited_propval,
+                                                  target, opt_state->force,
+                                                  base_rev,
+                                                  opt_state->revprop_table,
+                                                  commit_info_handler, &cib,
+                                                  ctx, subpool);
+                }
+              else
+                {
+                  apr_array_header_t *targs = apr_array_make(subpool, 1,
+                                                    sizeof(const char *));
 
-              err = svn_client_propset4(pname_utf8, edited_propval, target,
-                                        svn_depth_empty, opt_state->force,
-                                        base_rev, NULL, opt_state->revprop_table,
-                                        commit_info_handler, &cib,
-                                        ctx, subpool);
+                  APR_ARRAY_PUSH(targs, const char *) = target;
+                  err = svn_client_propset_local(pname_utf8, edited_propval,
+                                                 targs, svn_depth_empty,
+                                                 opt_state->force, NULL,
+                                                 ctx, subpool);
+                }
+
               if (ctx->log_msg_func3)
                 SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3,
                                                 err, pool));
               else if (err)
-                return svn_error_return(err);
+                return svn_error_trace(err);
 
               /* Print a message if we successfully committed or if it
-                 was just a wc propset (but not if the user aborted an URL
+                 was just a wc propset (but not if the user aborted a URL
                  propedit). */
               if (!svn_path_is_url(target))
                 SVN_ERR(svn_cmdline_printf(

@@ -26,6 +26,8 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 
+#define SVN_DEPRECATED
+
 #include "svn_pools.h"
 #include "svn_types.h"
 #include "svn_mergeinfo.h"
@@ -1179,7 +1181,7 @@ test_rangelist_merge(apr_pool_t *pool)
     svn_merge_range_t expected_merge[6];
   };
 
-  #define SIZE_OF_RANGE_MERGE_TEST_ARRAY 59
+  #define SIZE_OF_RANGE_MERGE_TEST_ARRAY 67
   /* The actual test data. */
   struct rangelist_merge_test_data test_data[SIZE_OF_RANGE_MERGE_TEST_ARRAY] =
     {
@@ -1263,6 +1265,26 @@ test_rangelist_merge(apr_pool_t *pool)
 
       {"/A: 2-17", "/A: 1-5*,7*,12-13*", 2,
        {{0, 1, FALSE}, {1, 17, TRUE}}},
+
+      {"/A: 3-4*,10-15,20", "/A: 5-60*", 5,
+       {{2, 9, FALSE}, {9, 15, TRUE}, {15, 19, FALSE},{19, 20, TRUE},
+        {20, 60, FALSE}}},
+
+      {"/A: 5-60*", "/A: 3-4*,10-15,20", 5,
+       {{2, 9, FALSE}, {9, 15, TRUE}, {15, 19, FALSE},{19, 20, TRUE},
+        {20, 60, FALSE}}},
+
+      {"/A: 3-4*,50-100*", "/A: 5-60*", 1, {{2, 100, FALSE}}},
+
+      {"/A: 5-60*", "/A: 3-4*,50-100*", 1, {{2, 100, FALSE}}},
+
+      {"/A: 3-4*,50-100", "/A: 5-60*", 2, {{2, 49, FALSE}, {49, 100, TRUE}}},
+
+      {"/A: 5-60*", "/A: 3-4*,50-100", 2, {{2, 49, FALSE}, {49, 100, TRUE}}},
+
+      {"/A: 3-4,50-100*", "/A: 5-60", 2, {{2, 60, TRUE}, {60, 100, FALSE}}},
+
+      {"/A: 5-60", "/A: 3-4,50-100*", 2, {{2, 60, TRUE}, {60, 100, FALSE}}},
 
       /* A rangelist merged with an empty rangelist should equal the
          non-empty rangelist but in compacted form. */
@@ -1579,7 +1601,7 @@ remove_prefix_helper(struct catalog_bits *test_data,
   svn_mergeinfo_catalog_t in_catalog, out_catalog, exp_out_catalog;
   apr_hash_index_t *hi;
   int i = 0;
-  
+
   in_catalog = apr_hash_make(pool);
   exp_out_catalog = apr_hash_make(pool);
   while (test_data[i].orig_path)

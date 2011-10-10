@@ -29,8 +29,14 @@
 #include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
 
+#include "private/svn_fspath.h"
+
 #include "ra_neon.h"
 
+
+/* In a debug build, setting this environment variable to "yes" will force
+   the client to speak v1, even if the server is capable of speaking v2. */
+#define SVN_IGNORE_V2_ENV_VAR "SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2"
 
 static const svn_ra_neon__xml_elm_t options_elements[] =
 {
@@ -41,7 +47,7 @@ static const svn_ra_neon__xml_elm_t options_elements[] =
   { NULL }
 };
 
-typedef struct {
+typedef struct options_ctx_t {
   /*WARNING: WANT_CDATA should stay the first element in the baton:
     svn_ra_neon__xml_collect_cdata() assumes the baton starts with a stringbuf.
   */
@@ -108,9 +114,9 @@ end_element(void *baton, int state,
   options_ctx_t *oc = baton;
 
   if (state == ELEM_href)
-    oc->activity_coll = svn_string_create(svn_uri_canonicalize(oc->cdata->data,
-                                                               oc->pool),
-                                          oc->pool);
+    oc->activity_coll =
+      svn_string_create(svn_urlpath__canonicalize(oc->cdata->data, oc->pool),
+                        oc->pool);
 
   return SVN_NO_ERROR;
 }
@@ -130,9 +136,9 @@ static const char *capability_server_yes = "server-yes";
    information discovered from REQ's headers.  Use POOL for temporary
    allocation only.
 
-   Also, set *YOUNGEST_REV to the current youngest revision if we can
-   detect that from the OPTIONS exchange; set it to SVN_INVALID_REVNUM
-   otherwise.  */
+   Also, if YOUNGEST_REV is not NULL, set *YOUNGEST_REV to the current
+   youngest revision if we can detect that from the OPTIONS exchange, or
+   to SVN_INVALID_REVNUM otherwise.  */
 static void
 parse_capabilities(ne_request *req,
                    svn_ra_neon__session_t *ras,
@@ -141,7 +147,8 @@ parse_capabilities(ne_request *req,
 {
   const char *val;
 
-  *youngest_rev = SVN_INVALID_REVNUM;
+  if (youngest_rev)
+    *youngest_rev = SVN_INVALID_REVNUM;
 
   /* Start out assuming all capabilities are unsupported. */
   apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
@@ -187,26 +194,25 @@ parse_capabilities(ne_request *req,
          slightly more efficiently, but that wouldn't be worth it
          until we have many more capabilities. */
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
                      APR_HASH_KEY_STRING, capability_yes);
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
         /* The server doesn't know what repository we're referring
            to, so it can't just say capability_yes. */
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                      APR_HASH_KEY_STRING, capability_server_yes);
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
                      APR_HASH_KEY_STRING, capability_yes);
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS, vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS, vals))
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                      APR_HASH_KEY_STRING, capability_yes);
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY,
-                                      vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY, vals))
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
                      APR_HASH_KEY_STRING, capability_yes);
     }
@@ -214,7 +220,8 @@ parse_capabilities(ne_request *req,
   /* Not strictly capabilities, but while we're here, we might as well... */
   if ((val = ne_get_response_header(req, SVN_DAV_YOUNGEST_REV_HEADER)))
     {
-      *youngest_rev = SVN_STR_TO_REV(val);
+      if (youngest_rev)
+        *youngest_rev = SVN_STR_TO_REV(val);
     }
   if ((val = ne_get_response_header(req, SVN_DAV_REPOS_UUID_HEADER)))
     {
@@ -222,19 +229,24 @@ parse_capabilities(ne_request *req,
     }
   if ((val = ne_get_response_header(req, SVN_DAV_ROOT_URI_HEADER)))
     {
-      ne_uri root = ras->root;
-      char *root_uri;
+      ne_uri root_uri = ras->root;
 
-      root.path = (char *)val;
-      root_uri = ne_uri_unparse(&root);
-      ras->repos_root = apr_pstrdup(ras->pool, root_uri);
-      free(root_uri);
+      root_uri.path = (char *)val;
+      ras->repos_root = svn_ra_neon__uri_unparse(&root_uri, ras->pool);
     }
 
   /* HTTP v2 stuff */
   if ((val = ne_get_response_header(req, SVN_DAV_ME_RESOURCE_HEADER)))
     {
+#ifdef SVN_DEBUG
+      char *ignore_v2_env_var = getenv(SVN_IGNORE_V2_ENV_VAR);
+
+      if (! (ignore_v2_env_var
+             && apr_strnatcasecmp(ignore_v2_env_var, "yes") == 0))
+        ras->me_resource = apr_pstrdup(ras->pool, val);
+#else
       ras->me_resource = apr_pstrdup(ras->pool, val);
+#endif
     }
   if ((val = ne_get_response_header(req, SVN_DAV_REV_ROOT_STUB_HEADER)))
     {
@@ -251,6 +263,14 @@ parse_capabilities(ne_request *req,
   if ((val = ne_get_response_header(req, SVN_DAV_TXN_STUB_HEADER)))
     {
       ras->txn_stub = apr_pstrdup(ras->pool, val);
+    }
+  if ((val = ne_get_response_header(req, SVN_DAV_VTXN_ROOT_STUB_HEADER)))
+    {
+      ras->vtxn_root_stub = apr_pstrdup(ras->pool, val);
+    }
+  if ((val = ne_get_response_header(req, SVN_DAV_VTXN_STUB_HEADER)))
+    {
+      ras->vtxn_stub = apr_pstrdup(ras->pool, val);
     }
 }
 
@@ -270,7 +290,8 @@ svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
   oc.pool = pool;
   oc.cdata = svn_stringbuf_create("", pool);
 
-  *youngest_rev = SVN_INVALID_REVNUM;
+  if (youngest_rev)
+    *youngest_rev = SVN_INVALID_REVNUM;
   if (relocation_location)
     *relocation_location = NULL;
 
@@ -334,10 +355,8 @@ svn_ra_neon__get_activity_collection(const svn_string_t **activity_coll,
                                      svn_ra_neon__session_t *ras,
                                      apr_pool_t *pool)
 {
-  svn_revnum_t ignored_revnum;
   if (! ras->act_coll)
-    SVN_ERR(svn_ra_neon__exchange_capabilities(ras, NULL, 
-                                               &ignored_revnum, pool));
+    SVN_ERR(svn_ra_neon__exchange_capabilities(ras, NULL, NULL, pool));
   *activity_coll = svn_string_create(ras->act_coll, pool);
   return SVN_NO_ERROR;
 }
@@ -366,9 +385,7 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
   /* If any capability is unknown, they're all unknown, so ask. */
   if (cap_result == NULL)
     {
-      svn_revnum_t ignored_revnum;
-      SVN_ERR(svn_ra_neon__exchange_capabilities(ras, NULL,
-                                                 &ignored_revnum, pool));
+      SVN_ERR(svn_ra_neon__exchange_capabilities(ras, NULL, NULL, pool));
     }
 
 
@@ -377,9 +394,8 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
                             capability, APR_HASH_KEY_STRING);
 
   /* Some capabilities depend on the repository as well as the server.
-     NOTE: ../libsvn_ra_serf/serf.c:svn_ra_serf__has_capability()
-     has a very similar code block.  If you change something here,
-     check there as well. */
+     NOTE: svn_ra_serf__has_capability() has a very similar code block.  If
+     you change something here, check there as well. */
   if (cap_result == capability_server_yes)
     {
       if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
@@ -390,20 +406,17 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
              above didn't even know which repository we were interested in
              -- it just told us whether the server supports mergeinfo.
              If the answer was 'no', there's no point checking the
-             particular repository; but if it was 'yes, we still must
+             particular repository; but if it was 'yes', we still must
              change it to 'no' iff the repository itself doesn't
              support mergeinfo. */
           svn_mergeinfo_catalog_t ignored;
           svn_error_t *err;
-          svn_boolean_t validate_inherited_mergeinfo = FALSE;
           apr_array_header_t *paths = apr_array_make(pool, 1,
                                                      sizeof(char *));
           APR_ARRAY_PUSH(paths, const char *) = "";
 
           err = svn_ra_neon__get_mergeinfo(session, &ignored, paths, 0,
-                                           FALSE,
-                                           &validate_inherited_mergeinfo,
-                                           FALSE, pool);
+                                           FALSE, FALSE, pool);
 
           if (err)
             {

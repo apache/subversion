@@ -39,7 +39,7 @@ StringArray::~StringArray()
 const apr_array_header_t *StringArray::array(const SVN::Pool &pool)
 {
   apr_array_header_t *strings
-    = apr_array_make(pool.pool(), m_strings.size(), sizeof(char *));
+    = apr_array_make(pool.getPool(), m_strings.size(), sizeof(char *));
 
   std::vector<std::string>::const_iterator it;
   for (it = m_strings.begin(); it < m_strings.end(); ++it)
@@ -61,7 +61,7 @@ void
 StringArray::init(void)
 {
   const std::vector<jobject> &jobjects = Array::vector();
-  
+
   for (std::vector<jobject>::const_iterator it = jobjects.begin();
         it < jobjects.end(); ++it)
     {

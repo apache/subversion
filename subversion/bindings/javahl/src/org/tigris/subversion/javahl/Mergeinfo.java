@@ -71,18 +71,18 @@ public class Mergeinfo implements java.io.Serializable
     /**
      * A constructor for backward compat.
      */
-    public Mergeinfo(org.apache.subversion.javahl.Mergeinfo aMergeinfo)
+    public Mergeinfo(org.apache.subversion.javahl.types.Mergeinfo aMergeinfo)
     {
         this();
         Set<String> srcPaths = aMergeinfo.getPaths();
 
         for (String srcPath : srcPaths)
         {
-            List<org.apache.subversion.javahl.RevisionRange> aRanges =
+            List<org.apache.subversion.javahl.types.RevisionRange> aRanges =
                                     aMergeinfo.getRevisionRange(srcPath);
             List<RevisionRange> list = new ArrayList<RevisionRange>();
 
-            for (org.apache.subversion.javahl.RevisionRange range : aRanges)
+            for (org.apache.subversion.javahl.types.RevisionRange range : aRanges)
             {
                 list.add(new RevisionRange(range));
             }

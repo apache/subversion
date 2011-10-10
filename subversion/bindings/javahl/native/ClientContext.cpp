@@ -25,6 +25,7 @@
  */
 
 #include "svn_client.h"
+#include "private/svn_wc_private.h"
 #include "svn_private_config.h"
 
 #include "ClientContext.h"
@@ -37,12 +38,11 @@
 #include "CommitMessage.h"
 
 
-ClientContext::ClientContext(jobject jsvnclient)
+ClientContext::ClientContext(jobject jsvnclient, SVN::Pool &pool)
     : m_prompter(NULL),
       m_cancelOperation(false)
 {
     JNIEnv *env = JNIUtil::getEnv();
-    JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
 
     /* Grab a global reference to the Java object embedded in the parent Java
        object. */
@@ -71,23 +71,32 @@ ClientContext::ClientContext(jobject jsvnclient)
 
     env->DeleteLocalRef(jctx);
 
-    /* Create a long-lived client context object in the global pool. */
-    SVN_JNI_ERR(svn_client_create_context(&persistentCtx, JNIUtil::getPool()),
+    SVN_JNI_ERR(svn_client_create_context(&m_context, pool.getPool()),
                 );
+
+    /* Clear the wc_ctx as we don't want to maintain this unconditionally
+       for compatibility reasons */
+    SVN_JNI_ERR(svn_wc_context_destroy(m_context->wc_ctx),
+                );
+    m_context->wc_ctx = NULL;
 
     /* None of the following members change during the lifetime of
        this object. */
-    persistentCtx->notify_func = NULL;
-    persistentCtx->notify_baton = NULL;
-    persistentCtx->log_msg_func3 = CommitMessage::callback;
-    persistentCtx->cancel_func = checkCancel;
-    persistentCtx->cancel_baton = this;
-    persistentCtx->notify_func2= notify;
-    persistentCtx->notify_baton2 = m_jctx;
-    persistentCtx->progress_func = progress;
-    persistentCtx->progress_baton = m_jctx;
-    persistentCtx->conflict_func = resolve;
-    persistentCtx->conflict_baton = m_jctx;
+    m_context->notify_func = NULL;
+    m_context->notify_baton = NULL;
+    m_context->log_msg_func3 = CommitMessage::callback;
+    m_context->log_msg_baton3 = NULL;
+    m_context->cancel_func = checkCancel;
+    m_context->cancel_baton = this;
+    m_context->notify_func2= notify;
+    m_context->notify_baton2 = m_jctx;
+    m_context->progress_func = progress;
+    m_context->progress_baton = m_jctx;
+    m_context->conflict_func2 = resolve;
+    m_context->conflict_baton2 = m_jctx;
+
+    m_context->client_name = "javahl";
+    m_pool = &pool;
 }
 
 ClientContext::~ClientContext()
@@ -98,22 +107,69 @@ ClientContext::~ClientContext()
     env->DeleteGlobalRef(m_jctx);
 }
 
-svn_client_ctx_t *
-ClientContext::getContext(CommitMessage *message)
-{
-    SVN::Pool *requestPool = JNIUtil::getRequestPool();
-    apr_pool_t *pool = requestPool->pool();
-    svn_auth_baton_t *ab;
-    svn_client_ctx_t *ctx = persistentCtx;
-    //SVN_JNI_ERR(svn_client_create_context(&ctx, pool), NULL);
 
-    const char *configDir = m_configDir.c_str();
-    if (m_configDir.length() == 0)
-        configDir = NULL;
-    SVN_JNI_ERR(svn_config_get_config(&(ctx->config), configDir, pool), NULL);
+/* Helper function to make sure that we don't keep dangling pointers in ctx.
+   Note that this function might be called multiple times if getContext()
+   is called on the same pool.
+   
+   The use of this function assumes a proper subpool behavior by its user,
+   (read: SVNClient) usually per request.
+ */
+extern "C" {
+
+struct clearctx_baton_t
+{
+  svn_client_ctx_t *ctx;
+  svn_client_ctx_t *backup;
+};
+
+static apr_status_t clear_ctx_ptrs(void *ptr)
+{
+    clearctx_baton_t *bt = (clearctx_baton_t*)ptr;
+
+    /* Reset all values to those before overwriting by getContext. */
+    *bt->ctx = *bt->backup;
+
+    return APR_SUCCESS;
+}
+
+};
+
+svn_client_ctx_t *
+ClientContext::getContext(CommitMessage *message, SVN::Pool &in_pool)
+{
+    apr_pool_t *pool = in_pool.getPool();
+    svn_auth_baton_t *ab;
+    svn_client_ctx_t *ctx = m_context;
+
+    /* Make a temporary copy of ctx to restore at pool cleanup to avoid
+       leaving references to dangling pointers.
+
+       Note that this allows creating a stack of context changes if
+       the function is invoked multiple times with different pools.
+     */
+    clearctx_baton_t *bt = (clearctx_baton_t *)apr_pcalloc(pool, sizeof(*bt));
+    bt->ctx = ctx;
+    bt->backup = (svn_client_ctx_t*)apr_pmemdup(pool, ctx, sizeof(*ctx));
+    apr_pool_cleanup_register(in_pool.getPool(), bt, clear_ctx_ptrs,
+                              clear_ctx_ptrs);
+
+
+    if (!ctx->config)
+      {
+        const char *configDir = m_configDir.c_str();
+        if (m_configDir.empty())
+            configDir = NULL;
+        SVN_JNI_ERR(svn_config_get_config(&(ctx->config), configDir,
+                                          m_pool->getPool()),
+                    NULL);
+
+        bt->backup->config = ctx->config;
+      }
     svn_config_t *config = (svn_config_t *) apr_hash_get(ctx->config,
                                                          SVN_CONFIG_CATEGORY_CONFIG,
                                                          APR_HASH_KEY_STRING);
+
 
     /* The whole list of registered providers */
     apr_array_header_t *providers;
@@ -172,22 +228,22 @@ ClientContext::getContext(CommitMessage *message)
     if (m_prompter != NULL)
     {
         /* Two basic prompt providers: username/password, and just username.*/
-        provider = m_prompter->getProviderSimple();
+        provider = m_prompter->getProviderSimple(in_pool);
 
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
-        provider = m_prompter->getProviderUsername();
+        provider = m_prompter->getProviderUsername(in_pool);
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
         /* Three ssl prompt providers, for server-certs, client-certs,
          * and client-cert-passphrases.  */
-        provider = m_prompter->getProviderServerSSLTrust();
+        provider = m_prompter->getProviderServerSSLTrust(in_pool);
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
-        provider = m_prompter->getProviderClientSSL();
+        provider = m_prompter->getProviderClientSSL(in_pool);
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
-        provider = m_prompter->getProviderClientSSLPassword();
+        provider = m_prompter->getProviderClientSSLPassword(in_pool);
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
     }
 
@@ -198,14 +254,25 @@ ClientContext::getContext(CommitMessage *message)
      * auth_baton's run-time parameter hash.  ### Same with --no-auth-cache? */
     if (!m_userName.empty())
         svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_USERNAME,
-                               m_userName.c_str());
+                               apr_pstrdup(in_pool.getPool(),
+                                           m_userName.c_str()));
     if (!m_passWord.empty())
         svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
-                               m_passWord.c_str());
+                               apr_pstrdup(in_pool.getPool(),
+                                           m_passWord.c_str()));
+    /* Store where to retrieve authentication data? */
+    if (!m_configDir.empty())
+        svn_auth_set_parameter(ab, SVN_AUTH_PARAM_CONFIG_DIR,
+                               apr_pstrdup(in_pool.getPool(),
+                                           m_configDir.c_str()));
 
     ctx->auth_baton = ab;
     ctx->log_msg_baton3 = message;
     m_cancelOperation = false;
+
+    SVN_JNI_ERR(svn_wc_context_create(&ctx->wc_ctx, NULL,
+                                      in_pool.getPool(), in_pool.getPool()),
+                NULL);
 
     return ctx;
 }
@@ -235,9 +302,10 @@ ClientContext::setConfigDirectory(const char *configDir)
     // A change to the config directory may necessitate creation of
     // the config templates.
     SVN::Pool requestPool;
-    SVN_JNI_ERR(svn_config_ensure(configDir, requestPool.pool()), );
+    SVN_JNI_ERR(svn_config_ensure(configDir, requestPool.getPool()), );
 
     m_configDir = (configDir == NULL ? "" : configDir);
+    m_context->config = NULL;
 }
 
 const char *
@@ -258,7 +326,7 @@ ClientContext::checkCancel(void *cancelBaton)
     ClientContext *that = (ClientContext *)cancelBaton;
     if (that->m_cancelOperation)
         return svn_error_create(SVN_ERR_CANCELLED, NULL,
-                                _("Operation canceled"));
+                                _("Operation cancelled"));
     else
         return SVN_NO_ERROR;
 }
@@ -341,15 +409,16 @@ ClientContext::progress(apr_off_t progressVal, apr_off_t total,
     POP_AND_RETURN_NOTHING();
 
   env->CallVoidMethod(jctx, mid, jevent);
-  
+
   POP_AND_RETURN_NOTHING();
 }
 
 svn_error_t *
 ClientContext::resolve(svn_wc_conflict_result_t **result,
-                       const svn_wc_conflict_description_t *desc,
+                       const svn_wc_conflict_description2_t *desc,
                        void *baton,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   jobject jctx = (jobject) baton;
   JNIEnv *env = JNIUtil::getEnv();
@@ -384,14 +453,15 @@ ClientContext::resolve(svn_wc_conflict_result_t **result,
     {
       // If an exception is thrown by our conflict resolver, remove it
       // from the JNI env, and convert it into a Subversion error.
-      const char *msg = JNIUtil::thrownExceptionToCString();
+      SVN::Pool tmpPool(scratch_pool);
+      const char *msg = JNIUtil::thrownExceptionToCString(tmpPool);
       svn_error_t *err = svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                                           NULL, msg);
       env->PopLocalFrame(NULL);
       return err;
     }
 
-  *result = javaResultToC(jresult, pool);
+  *result = javaResultToC(jresult, result_pool);
   if (*result == NULL)
     {
       // Unable to convert the result into a C representation.

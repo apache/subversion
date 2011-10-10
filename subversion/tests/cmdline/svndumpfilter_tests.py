@@ -37,9 +37,12 @@ from svntest.verify import SVNExpectedStdout, SVNExpectedStderr
 from svnadmin_tests import load_and_verify_dumpstream, test_create
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 
@@ -72,15 +75,15 @@ def filter_and_return_output(dump, bufsize=0, *varargs):
   # Since we call svntest.main.run_command_stdin() in binary mode,
   # normalize the stderr line endings on Windows ourselves.
   if sys.platform == 'win32':
-      errput = map(lambda x : x.replace('\r\n', '\n'), errput)
-      
+    errput = map(lambda x : x.replace('\r\n', '\n'), errput)
+
   return output, errput
 
 
 ######################################################################
 # Tests
 
-
+@Issue(2982)
 def reflect_dropped_renumbered_revs(sbox):
   "reflect dropped renumbered revs in svn:mergeinfo"
 
@@ -111,7 +114,7 @@ def reflect_dropped_renumbered_revs(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
-  
+
 
   # Test svndumpfilter with exclude option
   test_create(sbox)
@@ -132,6 +135,7 @@ def reflect_dropped_renumbered_revs(sbox):
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
+@Issue(3181)
 def svndumpfilter_loses_mergeinfo(sbox):
   "svndumpfilter loses mergeinfo"
   #svndumpfilter loses mergeinfo if invoked without --renumber-revs
@@ -214,6 +218,7 @@ def _simple_dumpfilter_test(sbox, dumpfile, *dumpargs):
                                         expected_status)
 
 
+@Issue(2697)
 def dumpfilter_with_targets(sbox):
   "svndumpfilter --targets blah"
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2697. ##
@@ -257,6 +262,7 @@ def dumpfilter_with_patterns(sbox):
 # Specifically, test that svndumpfilter, when used with the
 # --skip-missing-merge-sources option, removes mergeinfo that refers to
 # revisions that are older than the oldest revision in the dump stream.
+@Issue(3020)
 def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   "filter mergeinfo revs outside of dump stream"
 
@@ -295,7 +301,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   #                  r4                                            |     |
   #                   |                                            V     V
   #                  branches/B1/B/E------------------------------r14---r15->
-  #                  
+  #
   #
   # The mergeinfo on the complete repos would look like this:
   #
@@ -403,7 +409,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   #
   # ...But /branches/B2 has been filtered out, so all references to
   # that branch should be gone, leaving:
-  # 
+  #
   #   Properties on 'branches/B1':
   #     svn:mergeinfo
   #       /trunk:10
@@ -427,13 +433,13 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   #
   # This test currently fails with this mergeinfo:
   #
-  # 
+  #
   #
   #
   # Check that all the blather above really happens.  First does
   # svndumpfilter report what we expect to stderr?
   expected_err = [
-      "Excluding (and dropping empty revisions for) prefix patterns:\n",
+      "Excluding (and dropping empty revisions for) prefixes:\n",
       "   '/branches/B2'\n",
       "\n",
       "Revision 6 committed as 6.\n",
@@ -491,13 +497,14 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
 # --renumber-revs option, can create a dump with non-contiguous revisions.
 # Such dumps should not interfere with the correct remapping of mergeinfo
 # source revisions.
+@Issue(3020)
 def dropped_but_not_renumbered_empty_revs(sbox):
   "mergeinfo maps correctly when dropping revs"
 
   test_create(sbox)
 
   # The dump file mergeinfo_included_full.dump represents this repository:
-  # 
+  #
   #
   #                       __________________________________________
   #                      |                                         |
@@ -525,7 +532,7 @@ def dropped_but_not_renumbered_empty_revs(sbox):
   #                  r4                                            |     |
   #                   |                                            V     V
   #                  branches/B1/B/E------------------------------r14---r15->
-  #                  
+  #
   #
   # The mergeinfo on mergeinfo_included_full.dump is:
   #
@@ -579,7 +586,7 @@ def dropped_but_not_renumbered_empty_revs(sbox):
   #                    ^
   #       With r7 dropped, r8 and r9 in the incoming
   #       dump becomes r7 and r8 in the loaded repos.
- 
+
   # Check the resulting mergeinfo.
   url = sbox.repo_url + "/branches"
   expected_output = svntest.verify.UnorderedOutput([

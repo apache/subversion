@@ -38,8 +38,6 @@
 /**
  * Constructor
  * @param jprompter     a global reference to the Java callback object
- * @param v2            the callback objects implements PromptUserPassword2
- * @param v3            the callback objects implements PromptUserPassword3
  */
 Prompter::Prompter(jobject jprompter)
 {
@@ -76,7 +74,7 @@ Prompter *Prompter::makeCPrompter(jobject jprompter)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  // Sanity check that the Java object implements PromptUserPassword.
+  // Sanity check that the Java object implements UserPasswordCallback.
   jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
@@ -115,7 +113,7 @@ jstring Prompter::username()
 
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
@@ -150,7 +148,7 @@ jstring Prompter::password()
 
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
@@ -188,7 +186,7 @@ bool Prompter::askYesNo(const char *realm, const char *question,
 
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(false);
 
@@ -225,13 +223,13 @@ const char *Prompter::askQuestion(const char *realm, const char *question,
   // Create a local frame for our references
   env->PushLocalFrame(LOCAL_FRAME_SIZE);
   if (JNIUtil::isJavaExceptionThrown())
-    return false;
+    return NULL;
 
   static jmethodID mid = 0;
   static jmethodID mid2 = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword3");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
@@ -292,7 +290,7 @@ int Prompter::askTrust(const char *question, bool maySave)
 
    if (mid == 0)
      {
-       jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword2");
+       jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
        if (JNIUtil::isJavaExceptionThrown())
          POP_AND_RETURN(-1);
 
@@ -328,7 +326,7 @@ bool Prompter::prompt(const char *realm, const char *pi_username, bool maySave)
   static jmethodID mid2 = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword3");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(false);
 
@@ -363,9 +361,9 @@ bool Prompter::prompt(const char *realm, const char *pi_username, bool maySave)
   return ret ? true:false;
 }
 
-svn_auth_provider_object_t *Prompter::getProviderSimple()
+svn_auth_provider_object_t *Prompter::getProviderSimple(SVN::Pool &in_pool)
 {
-  apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
+  apr_pool_t *pool = in_pool.getPool();
   svn_auth_provider_object_t *provider;
   svn_auth_get_simple_prompt_provider(&provider,
                                       simple_prompt,
@@ -376,9 +374,9 @@ svn_auth_provider_object_t *Prompter::getProviderSimple()
   return provider;
 }
 
-svn_auth_provider_object_t *Prompter::getProviderUsername()
+svn_auth_provider_object_t *Prompter::getProviderUsername(SVN::Pool &in_pool)
 {
-  apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
+  apr_pool_t *pool = in_pool.getPool();
   svn_auth_provider_object_t *provider;
   svn_auth_get_username_prompt_provider(&provider,
                                         username_prompt,
@@ -389,9 +387,9 @@ svn_auth_provider_object_t *Prompter::getProviderUsername()
   return provider;
 }
 
-svn_auth_provider_object_t *Prompter::getProviderServerSSLTrust()
+svn_auth_provider_object_t *Prompter::getProviderServerSSLTrust(SVN::Pool &in_pool)
 {
-  apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
+  apr_pool_t *pool = in_pool.getPool();
   svn_auth_provider_object_t *provider;
   svn_auth_get_ssl_server_trust_prompt_provider
     (&provider, ssl_server_trust_prompt, this, pool);
@@ -399,9 +397,9 @@ svn_auth_provider_object_t *Prompter::getProviderServerSSLTrust()
   return provider;
 }
 
-svn_auth_provider_object_t *Prompter::getProviderClientSSL()
+svn_auth_provider_object_t *Prompter::getProviderClientSSL(SVN::Pool &in_pool)
 {
-  apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
+  apr_pool_t *pool = in_pool.getPool();
   svn_auth_provider_object_t *provider;
   svn_auth_get_ssl_client_cert_prompt_provider(&provider,
                                                ssl_client_cert_prompt,
@@ -412,9 +410,9 @@ svn_auth_provider_object_t *Prompter::getProviderClientSSL()
   return provider;
 }
 
-svn_auth_provider_object_t *Prompter::getProviderClientSSLPassword()
+svn_auth_provider_object_t *Prompter::getProviderClientSSLPassword(SVN::Pool &in_pool)
 {
-  apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
+  apr_pool_t *pool = in_pool.getPool();
   svn_auth_provider_object_t *provider;
   svn_auth_get_ssl_client_cert_pw_prompt_provider
     (&provider, ssl_client_cert_pw_prompt, this, 2 /* retry limit */,

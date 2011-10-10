@@ -24,9 +24,11 @@
 package org.apache.subversion.javahl;
 
 import org.apache.subversion.javahl.callback.*;
-import org.apache.subversion.javahl.type.*;
+import org.apache.subversion.javahl.types.*;
 
 import java.io.OutputStream;
+import java.io.FileOutputStream;
+import java.io.FileNotFoundException;
 import java.io.ByteArrayOutputStream;
 
 import java.util.Collection;
@@ -96,33 +98,20 @@ public class SVNClient implements ISVNClient
 
     private ClientContext clientContext = new ClientContext();
 
-    /**
-     * @since 1.0
-     */
     public Version getVersion()
     {
         return NativeResources.getVersion();
     }
 
-    /**
-     * @since 1.3
-     */
     public native String getAdminDirectoryName();
 
-    /**
-     * @since 1.3
-     */
     public native boolean isAdminDirectory(String name);
 
     /**
       * @deprecated
-      * @since 1.0
       */
     public native String getLastPath();
 
-    /**
-     * @since 1.5
-     */
     public native void status(String path, Depth depth, boolean onServer,
                               boolean getAll, boolean noIgnore,
                               boolean ignoreExternals,
@@ -130,32 +119,17 @@ public class SVNClient implements ISVNClient
                               StatusCallback callback)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native void list(String url, Revision revision,
                             Revision pegRevision, Depth depth, int direntFields,
                             boolean fetchLocks, ListCallback callback)
             throws ClientException;
 
-    /**
-     * @since 1.0
-     */
     public native void username(String username);
 
-    /**
-     * @since 1.0
-     */
     public native void password(String password);
 
-    /**
-     * @since 1.0
-     */
     public native void setPrompt(UserPasswordCallback prompt);
 
-    /**
-     * @since 1.6
-     */
     public native void logMessages(String path, Revision pegRevision,
                                    List<RevisionRange> revisionRanges,
                                    boolean stopOnCopy, boolean discoverPath,
@@ -164,74 +138,48 @@ public class SVNClient implements ISVNClient
                                    LogMessageCallback callback)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native long checkout(String moduleName, String destPath,
                                 Revision revision, Revision pegRevision,
                                 Depth depth, boolean ignoreExternals,
                                 boolean allowUnverObstructions)
             throws ClientException;
 
-    /**
-     * @since 1.2
-     */
     public void notification2(ClientNotifyCallback notify)
     {
         clientContext.notify = notify;
     }
 
-    /**
-     * @since 1.5
-     */
     public void setConflictResolver(ConflictResolverCallback listener)
     {
         clientContext.resolver = listener;
     }
 
-    /**
-     * @since 1.5
-     */
     public void setProgressCallback(ProgressCallback listener)
     {
         clientContext.listener = listener;
     }
 
-    /**
-     * @since 1.5
-     */
     public native void remove(Set<String> paths, boolean force,
                               boolean keepLocal,
                               Map<String, String> revpropTable,
                               CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native void revert(String path, Depth depth,
                               Collection<String> changelists)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native void add(String path, Depth depth, boolean force,
                            boolean noIgnores, boolean addParents)
         throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native long[] update(Set<String> paths, Revision revision,
                                 Depth depth, boolean depthIsSticky,
+                                boolean makeParents,
                                 boolean ignoreExternals,
                                 boolean allowUnverObstructions)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native void commit(Set<String> paths, Depth depth, boolean noUnlock,
                               boolean keepChangelist,
                               Collection<String> changelists,
@@ -239,9 +187,6 @@ public class SVNClient implements ISVNClient
                               CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
-    /**
-     * @since 1.7
-     */
     public native void copy(List<CopySource> sources, String destPath,
                             boolean copyAsChild, boolean makeParents,
                             boolean ignoreExternals,
@@ -249,9 +194,6 @@ public class SVNClient implements ISVNClient
                             CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native void move(Set<String> srcPaths, String destPath,
                             boolean force, boolean moveAsChild,
                             boolean makeParents,
@@ -259,48 +201,31 @@ public class SVNClient implements ISVNClient
                             CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native void mkdir(Set<String> paths, boolean makeParents,
                              Map<String, String> revpropTable,
                              CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
-    /**
-     * @since 1.0
-     */
     public native void cleanup(String path)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native void resolve(String path, Depth depth,
                                ConflictResult.Choice conflictResult)
         throws SubversionException;
 
-    /**
-     * @since 1.5
-     */
     public native long doExport(String srcPath, String destPath,
                                 Revision revision, Revision pegRevision,
                                 boolean force, boolean ignoreExternals,
                                 Depth depth, String nativeEOL)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native long doSwitch(String path, String url, Revision revision,
                                 Revision pegRevision, Depth depth,
                                 boolean depthIsSticky, boolean ignoreExternals,
-                                boolean allowUnverObstructions)
+                                boolean allowUnverObstructions,
+                                boolean ignoreAncestry)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native void doImport(String path, String url, Depth depth,
                                 boolean noIgnore,
                                 boolean ignoreUnknownNodeTypes,
@@ -308,16 +233,10 @@ public class SVNClient implements ISVNClient
                                 CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native Set<String> suggestMergeSources(String path,
                                                   Revision pegRevision)
             throws SubversionException;
 
-    /**
-     * @since 1.5
-     */
     public native void merge(String path1, Revision revision1, String path2,
                              Revision revision2, String localPath,
                              boolean force, Depth depth,
@@ -325,32 +244,20 @@ public class SVNClient implements ISVNClient
                              boolean recordOnly)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native void merge(String path, Revision pegRevision,
                              List<RevisionRange> revisions, String localPath,
                              boolean force, Depth depth, boolean ignoreAncestry,
                              boolean dryRun, boolean recordOnly)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native void mergeReintegrate(String path, Revision pegRevision,
                                         String localPath, boolean dryRun)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native Mergeinfo getMergeinfo(String path, Revision pegRevision)
             throws SubversionException;
 
-    /**
-     * @since 1.7
-     */
-    public native void getMergeinfoLog(MergeinfoLogKind kind, String pathOrUrl,
+    public native void getMergeinfoLog(Mergeinfo.LogKind kind, String pathOrUrl,
                                        Revision pegRevision,
                                        String mergeSourceUrl,
                                        Revision srcPegRevision,
@@ -359,31 +266,58 @@ public class SVNClient implements ISVNClient
                                        LogMessageCallback callback)
         throws ClientException;
 
-    /**
-     * @since 1.7
-     */
+    public void diff(String target1, Revision revision1, String target2,
+                     Revision revision2, String relativeToDir,
+                     String outFileName, Depth depth,
+                     Collection<String> changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds)
+            throws ClientException
+    {
+        try {
+            OutputStream stream = new FileOutputStream(outFileName);
+            diff(target1, revision1, target2, revision2, relativeToDir,
+                 stream, depth, changelists, ignoreAncestry, noDiffDeleted,
+                 force, copiesAsAdds);
+        } catch (FileNotFoundException ex) {
+            throw ClientException.fromException(ex);
+        }
+    }
+
     public native void diff(String target1, Revision revision1, String target2,
                             Revision revision2, String relativeToDir,
-                            String outFileName, Depth depth,
+                            OutputStream stream, Depth depth,
                             Collection<String> changelists,
                             boolean ignoreAncestry, boolean noDiffDeleted,
                             boolean force, boolean copiesAsAdds)
             throws ClientException;
 
-    /**
-     * @since 1.7
-     */
+    public void diff(String target, Revision pegRevision,
+                     Revision startRevision, Revision endRevision,
+                     String relativeToDir, String outFileName,
+                     Depth depth, Collection<String> changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds)
+            throws ClientException
+    {
+        try {
+            OutputStream stream = new FileOutputStream(outFileName);
+            diff(target, pegRevision, startRevision, endRevision,
+                 relativeToDir, stream, depth, changelists, ignoreAncestry,
+                 noDiffDeleted, force, copiesAsAdds);
+        } catch (FileNotFoundException ex) {
+            throw ClientException.fromException(ex);
+        }
+    }
+
     public native void diff(String target, Revision pegRevision,
                             Revision startRevision, Revision endRevision,
-                            String relativeToDir, String outFileName,
+                            String relativeToDir, OutputStream stream,
                             Depth depth, Collection<String> changelists,
                             boolean ignoreAncestry, boolean noDiffDeleted,
                             boolean force, boolean copiesAsAdds)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native void diffSummarize(String target1, Revision revision1,
                                      String target2, Revision revision2,
                                      Depth depth, Collection<String> changelists,
@@ -391,9 +325,6 @@ public class SVNClient implements ISVNClient
                                      DiffSummaryCallback receiver)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native void diffSummarize(String target, Revision pegRevision,
                                      Revision startRevision,
                                      Revision endRevision, Depth depth,
@@ -402,79 +333,41 @@ public class SVNClient implements ISVNClient
                                      DiffSummaryCallback receiver)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native void properties(String path, Revision revision,
                                   Revision pegRevision, Depth depth,
                                   Collection<String> changelists,
                                   ProplistCallback callback)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
-    public native void propertySet(String path, String name, String value,
-                                   Depth depth, Collection<String> changelists,
-                                   boolean force,
-                                   Map<String, String> revpropTable,
-                                   CommitCallback callback)
+    public native void propertySetLocal(Set<String> paths, String name,
+                                        byte[] value, Depth depth,
+                                        Collection<String> changelists,
+                                        boolean force)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
-    public void propertyRemove(String path, String name, Depth depth,
-                               Collection<String> changelists,
-                               CommitCallback callback)
-            throws ClientException
-    {
-        propertySet(path, name, null, depth, changelists, false, null,
-                    callback);
-    }
+    public native void propertySetRemote(String path, long baseRev,
+                                         String name, byte[] value,
+                                         CommitMessageCallback handler,
+                                         boolean force,
+                                         Map<String, String> revpropTable,
+                                         CommitCallback callback)
+            throws ClientException;
 
-    /**
-     * @since 1.5
-     */
-    public void propertyCreate(String path, String name, String value,
-                               Depth depth, Collection<String> changelists,
-                               boolean force, CommitCallback callback)
-            throws ClientException
-    {
-        propertySet(path, name, value, depth, changelists, force, null,
-                    callback);
-    }
-
-    /**
-     * @since 1.0
-     */
     public native byte[] revProperty(String path, String name, Revision rev)
             throws ClientException;
 
-    /**
-     * @since 1.2
-     */
     public native Map<String, byte[]> revProperties(String path, Revision rev)
             throws ClientException;
 
-    /**
-     * @since 1.6
-     */
     public native void setRevProperty(String path, String name, Revision rev,
                                       String value, String originalValue,
                                       boolean force)
             throws ClientException;
 
-    /**
-     * @since 1.2
-     */
     public native byte[] propertyGet(String path, String name,
                                      Revision revision, Revision pegRevision)
             throws ClientException;
 
-    /**
-     * @since 1.2
-     */
     public byte[] fileContent(String path, Revision revision,
                               Revision pegRevision)
             throws ClientException
@@ -485,24 +378,15 @@ public class SVNClient implements ISVNClient
         return stream.toByteArray();
     }
 
-    /**
-     * @since 1.0
-     */
     public native void streamFileContent(String path, Revision revision,
                                          Revision pegRevision,
                                          OutputStream stream)
             throws ClientException;
 
-    /**
-     * @since 1.0
-     */
     public native void relocate(String from, String to, String path,
                                 boolean ignoreExternals)
             throws ClientException;
 
-    /**
-     * @since 1.7
-     */
     public native void blame(String path, Revision pegRevision,
                              Revision revisionStart,
                              Revision revisionEnd, boolean ignoreMimeType,
@@ -510,57 +394,33 @@ public class SVNClient implements ISVNClient
                              BlameCallback callback)
             throws ClientException;
 
-    /**
-     * @since 1.0
-     */
     public native void setConfigDirectory(String configDir)
             throws ClientException;
 
-    /**
-     * @since 1.0
-     */
     public native String getConfigDirectory()
             throws ClientException;
 
-    /**
-     * @since 1.0
-     */
     public native void cancelOperation()
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native void addToChangelist(Set<String> paths, String changelist,
                                        Depth depth,
                                        Collection<String> changelists)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native void removeFromChangelists(Set<String> paths, Depth depth,
                                              Collection<String> changelists)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native void getChangelists(String rootPath,
                                       Collection<String> changelists,
                                       Depth depth, ChangelistCallback callback)
             throws ClientException;
 
-    /**
-     * @since 1.2
-     */
     public native String getVersionInfo(String path, String trailUrl,
                                         boolean lastChanged)
             throws ClientException;
 
-    /**
-     * @since 1.7
-     */
     public native void upgrade(String path)
             throws ClientException;
 
@@ -618,30 +478,18 @@ public class SVNClient implements ISVNClient
      */
     public static native int versionMicro();
 
-    /**
-     * @since 1.2
-     */
     public native void lock(Set<String> paths, String comment, boolean force)
             throws ClientException;
 
-    /**
-     * @since 1.2
-     */
     public native void unlock(Set<String> paths, boolean force)
             throws ClientException;
 
-    /**
-     * @since 1.5
-     */
     public native void info2(String pathOrUrl, Revision revision,
                              Revision pegRevision, Depth depth,
                              Collection<String> changelists,
                              InfoCallback callback)
             throws ClientException;
-    
-    /**
-     * @since 1.7
-     */
+
     public native void patch(String patchPath, String targetPath,
                              boolean dryRun, int stripCount, boolean reverse,
                              boolean ignoreWhitespace, boolean removeTempfiles,

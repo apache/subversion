@@ -28,7 +28,6 @@
 #include <apr_want.h>
 #include <apr_general.h>
 #include <apr_strings.h>
-#include <apr_atomic.h>
 #include <apr_thread_mutex.h>
 #include <apr_version.h>
 
@@ -54,8 +53,9 @@
  *       in atexit processing, at which point we are already running in
  *       single threaded mode.
  */
-volatile svn_atomic_t svn_ra_svn__sasl_status;
+volatile svn_atomic_t svn_ra_svn__sasl_status = 0;
 
+/* Initialized by svn_ra_svn__sasl_common_init(). */
 static volatile svn_atomic_t sasl_ctx_count;
 
 static apr_pool_t *sasl_pool = NULL;
@@ -320,6 +320,16 @@ get_password_cb(sasl_conn_t *conn, void *b, int id, sasl_secret_t **psecret)
   return SASL_FAIL;
 }
 
+/* Wrap an error message from SASL with a prefix that allows users
+ * to tell that the error message came from SASL. */
+static const char *
+get_sasl_error(sasl_conn_t *sasl_ctx, apr_pool_t *result_pool)
+{
+  return apr_psprintf(result_pool,
+                      _("SASL authentication error: %s"),
+                      sasl_errdetail(sasl_ctx));
+}
+
 /* Create a new SASL context. */
 static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
                                  svn_boolean_t is_tunneled,
@@ -354,7 +364,7 @@ static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
                             SASL_AUTH_EXTERNAL, " ");
       if (result != SASL_OK)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                sasl_errdetail(*sasl_ctx));
+                                get_sasl_error(*sasl_ctx, pool));
     }
 
   /* Set security properties. */
@@ -400,7 +410,7 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
           case SASL_NOMEM:
             /* Fatal error.  Fail the authentication. */
             return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                    sasl_errdetail(sasl_ctx));
+                                    get_sasl_error(sasl_ctx, pool));
           default:
             /* For anything else, delete the mech from the list
                and try again. */
@@ -461,7 +471,7 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
 
       if (result != SASL_OK && result != SASL_CONTINUE)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                sasl_errdetail(sasl_ctx));
+                                get_sasl_error(sasl_ctx, pool));
 
       /* If the server thinks we're done, then don't send any response. */
       if (strcmp(status, "success") == 0)
@@ -517,6 +527,7 @@ typedef struct sasl_baton {
   unsigned int read_len;        /* Its current length. */
   const char *write_buf;        /* The buffer returned by sasl_encode. */
   unsigned int write_len;       /* Its length. */
+  apr_pool_t *scratch_pool;
 } sasl_baton_t;
 
 /* Functions to implement a SASL encrypted svn_ra_svn__stream_t. */
@@ -544,7 +555,8 @@ static svn_error_t *sasl_read_cb(void *baton, char *buffer, apr_size_t *len)
                            &sasl_baton->read_len);
       if (result != SASL_OK)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                sasl_errdetail(sasl_baton->ctx));
+                                get_sasl_error(sasl_baton->ctx,
+                                               sasl_baton->scratch_pool));
     }
 
   /* The buffer returned by sasl_decode might be larger than what the
@@ -585,7 +597,8 @@ sasl_write_cb(void *baton, const char *buffer, apr_size_t *len)
 
       if (result != SASL_OK)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                sasl_errdetail(sasl_baton->ctx));
+                                get_sasl_error(sasl_baton->ctx,
+                                               sasl_baton->scratch_pool));
     }
 
   do
@@ -641,7 +654,7 @@ svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
       result = sasl_getprop(sasl_ctx, SASL_SSF, (void*) &ssfp);
       if (result != SASL_OK)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                sasl_errdetail(sasl_ctx));
+                                get_sasl_error(sasl_ctx, pool));
 
       if (*ssfp > 0)
         {
@@ -654,12 +667,13 @@ svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
           /* Create and initialize the stream baton. */
           sasl_baton = apr_pcalloc(conn->pool, sizeof(*sasl_baton));
           sasl_baton->ctx = sasl_ctx;
+          sasl_baton->scratch_pool = conn->pool;
 
           /* Find out the maximum input size for sasl_encode. */
           result = sasl_getprop(sasl_ctx, SASL_MAXOUTBUF, &maxsize);
           if (result != SASL_OK)
             return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                    sasl_errdetail(sasl_ctx));
+                                    get_sasl_error(sasl_ctx, pool));
           sasl_baton->maxsize = *((const unsigned int *) maxsize);
 
           /* If there is any data left in the read buffer at this point,
@@ -672,7 +686,7 @@ svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
                                    &sasl_baton->read_len);
               if (result != SASL_OK)
                 return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                        sasl_errdetail(sasl_ctx));
+                                        get_sasl_error(sasl_ctx, pool));
               conn->read_end = conn->read_ptr;
             }
 
@@ -738,9 +752,7 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
   const char *mechstring = "", *last_err = "", *realmstring;
   const char *local_addrport = NULL, *remote_addrport = NULL;
   svn_boolean_t success;
-  /* Reserve space for 3 callbacks (for the username, password and the
-     array terminator). */
-  sasl_callback_t callbacks[3];
+  sasl_callback_t *callbacks;
   cred_baton_t cred_baton;
   int i;
 
@@ -775,6 +787,13 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
   cred_baton.auth_baton = sess->callbacks->auth_baton;
   cred_baton.realmstring = realmstring;
   cred_baton.pool = pool;
+
+  /* Reserve space for 3 callbacks (for the username, password and the
+     array terminator).  These structures must persist until the
+     disposal of the SASL context at pool cleanup, however the
+     callback functions will not be invoked outside this function so
+     other structures can have a shorter lifetime. */
+  callbacks = apr_palloc(sess->conn->pool, sizeof(*callbacks) * 3);
 
   /* Initialize the callbacks array. */
 
@@ -818,7 +837,7 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
           return cred_baton.err;
         }
       if (cred_baton.no_more_creds
-          || (! success && ! err && ! cred_baton.was_used))
+          || (! err && ! success && ! cred_baton.was_used))
         {
           svn_error_clear(err);
           /* If we ran out of authentication providers, or if we got a server

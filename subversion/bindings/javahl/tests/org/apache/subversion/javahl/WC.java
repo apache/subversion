@@ -32,7 +32,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Date;
 
-import org.apache.subversion.javahl.type.NodeKind;
+import org.apache.subversion.javahl.types.*;
 
 import junit.framework.Assert;
 /**
@@ -519,6 +519,9 @@ public class WC
                                         + item.myPath + "' don't match:",
                                         item.reposLastCmtAuthor,
                                         status.getReposLastCmtAuthor());
+                    Assert.assertNotNull("URL for path " + item.myPath
+                                         + " should not be null", 
+                                         status.getUrl());
                 }
             }
             item.touched = true;
@@ -528,7 +531,7 @@ public class WC
         // result array
         for (Item item : items.values())
         {
-            Assert.assertTrue("item '" + item.myPath + 
+            Assert.assertTrue("item '" + item.myPath +
                               "' in working copy not found in status",
                     item.touched);
         }

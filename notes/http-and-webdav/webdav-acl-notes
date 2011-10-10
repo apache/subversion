@@ -33,7 +33,7 @@ Wilfredo: Note also that if you have a resource that inherits from another, and
           This can be avoided if you only allow inheritance from a parent.
 
 * Should ACLs themselves be versioned?
-Justin: See above, yes, I think they should.  (Those that aren't derived.)
+Justin: See above, yes, I think they should.  (Those that aren't derived.)
 
 * What sub/superset of WebDAV privileges should Subversion have, and how
   should they map to WebDAV's privilege model?
@@ -67,7 +67,7 @@ Justin: Bill has mentioned that we might want to control who can change
         the log.  Indeed, there seems to be a separate class of repository
         specific attributes.  Could we key them off of the Subversion root?
         These would seem to be an extension of the WebDAV ACL model, but
-        necessary ones for uses.
+        necessary ones for uses.
 Wilfredo: You can support specific ACEs on the root resource and not allow them
           on the rest, so you could, for example, have SVN:rewrite-log under
           DAV:write-properties on the root resource to globally control log

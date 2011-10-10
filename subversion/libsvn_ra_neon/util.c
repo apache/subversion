@@ -39,6 +39,7 @@
 #include "svn_xml.h"
 #include "svn_props.h"
 
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 #include "ra_neon.h"
@@ -154,7 +155,7 @@ validate_element(int parent, int child)
   return multistatus_nesting_table[i][j];
 }
 
-typedef struct
+typedef struct multistatus_baton_t
 {
   svn_stringbuf_t *want_cdata;
   svn_stringbuf_t *cdata;
@@ -232,7 +233,7 @@ end_207_element(void *baton, int state,
             return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                     _("The request response contained at least "
                                       "one error"));
-          else if (b->contains_precondition_error) 
+          else if (b->contains_precondition_error)
             return svn_error_create(SVN_ERR_FS_PROP_BASEVALUE_MISMATCH, NULL,
                                     b->description->data);
           else
@@ -460,7 +461,7 @@ attach_ne_body_reader(svn_ra_neon__request_t *req,
 }
 
 
-typedef struct
+typedef struct body_reader_wrapper_baton_t
 {
   svn_ra_neon__request_t *req;
   svn_ra_neon__block_reader real_reader;
@@ -557,8 +558,12 @@ svn_ra_neon__copy_href(svn_stringbuf_t *dst, const char *src,
 
   apr_uri_t uri;
   apr_status_t apr_status;
+
   /* SRC can have trailing '/' */
-  src = svn_path_canonicalize(src, pool);
+  if (svn_path_is_url(src))
+    src = svn_uri_canonicalize(src, pool);
+  else
+    src = svn_urlpath__canonicalize(src, pool);
   apr_status = apr_uri_parse(pool, src, &uri);
 
   if (apr_status != APR_SUCCESS)
@@ -593,7 +598,7 @@ generate_error(svn_ra_neon__request_t *req, apr_pool_t *pool)
                                                req->url));
         case 403:
           return svn_error_create(SVN_ERR_RA_DAV_FORBIDDEN, NULL,
-                                  apr_psprintf(pool, _("access to '%s' forbidden"),
+                                  apr_psprintf(pool, _("Access to '%s' forbidden"),
                                                req->url));
 
         case 301:
@@ -618,6 +623,7 @@ generate_error(svn_ra_neon__request_t *req, apr_pool_t *pool)
                           req->code_desc, req->method, req->url));
         }
     case NE_AUTH:
+    case NE_PROXYAUTH:
       errcode = SVN_ERR_RA_NOT_AUTHORIZED;
 #ifdef SVN_NEON_0_27
       /* neon >= 0.27 gives a descriptive error message after auth
@@ -651,7 +657,7 @@ generate_error(svn_ra_neon__request_t *req, apr_pool_t *pool)
 
   /*### This is a translation nightmare. Make sure to compose full strings
     and mark those for translation. */
-  return svn_error_createf(errcode, NULL, "%s: %s (%s://%s)",
+  return svn_error_createf(errcode, NULL, _("%s: %s (%s://%s)"),
                            context, msg, ne_get_scheme(req->ne_sess),
                            hostport);
 }
@@ -771,7 +777,7 @@ start_err_element(void *baton, int parent,
            overwritten by the <human-readable> tag, or even someday by
            a <D:failed-precondition/> tag. */
         *err = svn_error_create(APR_EGENERAL, NULL,
-                                "General svn error from server");
+                                _("General svn error from server"));
         break;
       }
     case ELEM_human_readable:
@@ -916,7 +922,7 @@ error_parser_create(svn_ra_neon__request_t *req)
  * interface.
  */
 
-typedef struct
+typedef struct body_provider_baton_t
 {
   svn_ra_neon__request_t *req;
   apr_file_t *body_file;
@@ -1065,7 +1071,7 @@ parse_spool_file(svn_ra_neon__session_t *ras,
  * are returned they are stored in this baton and a Neon level
  * error code is returned to the parser.
  */
-typedef struct {
+typedef struct parser_wrapper_baton_t {
   svn_ra_neon__request_t *req;
   ne_xml_parser *parser;
 
@@ -1570,8 +1576,76 @@ svn_ra_neon__request_get_location(svn_ra_neon__request_t *request,
                                   apr_pool_t *pool)
 {
   const char *val = ne_get_response_header(request->ne_req, "Location");
-  return val ? svn_uri_join(request->url,
-                            svn_uri_canonicalize(val, pool),
-                            pool)
-             : NULL;
+  return val ? svn_urlpath__canonicalize(val, pool) : NULL;
+}
+
+const char *
+svn_ra_neon__uri_unparse(const ne_uri *uri,
+                         apr_pool_t *pool)
+{
+  char *unparsed_uri;
+  const char *result;
+
+  /* Unparse uri. */
+  unparsed_uri = ne_uri_unparse(uri);
+
+  /* Copy string to result pool, and make sure it conforms to
+     Subversion rules */
+  result = svn_uri_canonicalize(unparsed_uri, pool);
+
+  /* Free neon's allocated copy. */
+  ne_free(unparsed_uri);
+
+  /* Return string allocated in result pool. */
+  return result;
+}
+
+/* Sets *SUPPORTS_DEADPROP_COUNT to non-zero if server supports
+ * deadprop-count property. */
+svn_error_t *
+svn_ra_neon__get_deadprop_count_support(svn_boolean_t *supported,
+                                        svn_ra_neon__session_t *ras,
+                                        const char *final_url,
+                                        apr_pool_t *pool)
+{
+  /* The property we need to fetch to see whether the server we are
+     connected to supports the deadprop-count property. */
+  static const ne_propname deadprop_count_support_props[] =
+  {
+    { SVN_DAV_PROP_NS_DAV, "deadprop-count" },
+    { NULL }
+  };
+
+  if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras))
+    {
+      /* HTTPv2 enabled servers always supports deadprop-count property. */
+      *supported = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  /* Check if we already checked deadprop_count support. */
+  if (ras->supports_deadprop_count == svn_tristate_unknown)
+    {
+      svn_ra_neon__resource_t *rsrc;
+      const svn_string_t *deadprop_count;
+
+      SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, ras, final_url, NULL,
+                                              deadprop_count_support_props,
+                                              pool));
+      deadprop_count = apr_hash_get(rsrc->propset,
+                                    SVN_RA_NEON__PROP_DEADPROP_COUNT,
+                                    APR_HASH_KEY_STRING);
+      if (deadprop_count != NULL)
+        {
+          ras->supports_deadprop_count = svn_tristate_true;
+        }
+      else
+        {
+          ras->supports_deadprop_count = svn_tristate_false;
+        }
+    }
+
+  *supported = (ras->supports_deadprop_count == svn_tristate_true);
+
+  return SVN_NO_ERROR;
 }

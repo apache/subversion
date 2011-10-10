@@ -164,7 +164,7 @@ svn_opt_get_canonical_subcommand(const svn_opt_subcommand_desc_t *table,
 /**
  * Return pointer to an @c apr_getopt_option_t for the option whose
  * option code is @a code, or @c NULL if no match.  @a option_table must end
- * with an element whose every field is zero.  If @c command is non-NULL,
+ * with an element whose every field is zero.  If @a command is non-NULL,
  * then return the subcommand-specific option description instead of the
  * generic one, if a specific description is defined.
  *
@@ -616,31 +616,31 @@ svn_opt_parse_all_args(apr_array_header_t **args_p,
                        apr_pool_t *pool);
 
 /**
- * Parse a working-copy or URL in @a path, extracting any trailing
+ * Parse a working-copy path or URL in @a path, extracting any trailing
  * revision specifier of the form "@rev" from the last component of
  * the path.
  *
  * Some examples would be:
  *
- *    "foo/bar"                      -> "foo/bar",       (unspecified)
- *    "foo/bar@13"                   -> "foo/bar",       (number, 13)
- *    "foo/bar@HEAD"                 -> "foo/bar",       (head)
- *    "foo/bar@{1999-12-31}"         -> "foo/bar",       (date, 1999-12-31)
- *    "http://a/b@27"                -> "http://a/b",    (number, 27)
- *    "http://a/b@COMMITTED"         -> "http://a/b",    (committed) [*]
- *    "http://a/b@{1999-12-31}       -> "http://a/b",    (date, 1999-12-31)
- *    "http://a/b@%7B1999-12-31%7D   -> "http://a/b",    (date, 1999-12-31)
- *    "foo/bar@1:2"                  -> error
- *    "foo/bar@baz"                  -> error
- *    "foo/bar@"                     -> "foo/bar",       (base)
- *    "foo/@bar@"                    -> "foo/@bar",      (base)
- *    "foo/bar/@13"                  -> "foo/bar/",      (number, 13)
- *    "foo/bar@@13"                  -> "foo/bar@",      (number, 13)
- *    "foo/@bar@HEAD"                -> "foo/@bar",      (head)
- *    "foo@/bar"                     -> "foo@/bar",      (unspecified)
- *    "foo@HEAD/bar"                 -> "foo@HEAD/bar",  (unspecified)
- *    "@foo/bar"                     -> error
- *    "@foo/bar@"                    -> "@foo/bar",      (unspecified)
+ *   - "foo/bar"                      -> "foo/bar",       (unspecified)
+ *   - "foo/bar@13"                   -> "foo/bar",       (number, 13)
+ *   - "foo/bar@HEAD"                 -> "foo/bar",       (head)
+ *   - "foo/bar@{1999-12-31}"         -> "foo/bar",       (date, 1999-12-31)
+ *   - "http://a/b@27"                -> "http://a/b",    (number, 27)
+ *   - "http://a/b@COMMITTED"         -> "http://a/b",    (committed) [*]
+ *   - "http://a/b@{1999-12-31}"      -> "http://a/b",    (date, 1999-12-31)
+ *   - "http://a/b@%7B1999-12-31%7D"  -> "http://a/b",    (date, 1999-12-31)
+ *   - "foo/bar@1:2"                  -> error
+ *   - "foo/bar@baz"                  -> error
+ *   - "foo/bar@"                     -> "foo/bar",       (unspecified)
+ *   - "foo/@bar@"                    -> "foo/@bar",      (unspecified)
+ *   - "foo/bar/@13"                  -> "foo/bar/",      (number, 13)
+ *   - "foo/bar@@13"                  -> "foo/bar@",      (number, 13)
+ *   - "foo/@bar@HEAD"                -> "foo/@bar",      (head)
+ *   - "foo@/bar"                     -> "foo@/bar",      (unspecified)
+ *   - "foo@HEAD/bar"                 -> "foo@HEAD/bar",  (unspecified)
+ *   - "@foo/bar"                     -> "@foo/bar",      (unspecified)
+ *   - "@foo/bar@"                    -> "@foo/bar",      (unspecified)
  *
  *   [*] Syntactically valid but probably not semantically useful.
  *

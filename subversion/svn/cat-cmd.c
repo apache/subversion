@@ -30,7 +30,10 @@
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_error.h"
+#include "svn_opt.h"
 #include "cl.h"
+
+#include "svn_private_config.h"
 
 
 /*** Code. ***/
@@ -47,10 +50,11 @@ svn_cl__cat(apr_getopt_t *os,
   int i;
   svn_stream_t *out;
   apr_pool_t *subpool = svn_pool_create(pool);
+  svn_boolean_t seen_nonexistent_target = FALSE;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   /* Cat cannot operate on an implicit '.' so a filename is required */
   if (! targets->nelts)
@@ -63,24 +67,33 @@ svn_cl__cat(apr_getopt_t *os,
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       const char *truepath;
       svn_opt_revision_t peg_revision;
+      svn_boolean_t success;
 
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
       /* Get peg revisions. */
-      SVN_ERR(svn_cl__opt_parse_path(&peg_revision, &truepath, target,
-                                     subpool));
+      SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
+                                 subpool));
 
       SVN_ERR(svn_cl__try(svn_client_cat2(out, truepath, &peg_revision,
                                           &(opt_state->start_revision),
                                           ctx, subpool),
-                           NULL, opt_state->quiet,
+                           &success, opt_state->quiet,
                            SVN_ERR_UNVERSIONED_RESOURCE,
                            SVN_ERR_ENTRY_NOT_FOUND,
                            SVN_ERR_CLIENT_IS_DIRECTORY,
+                           SVN_ERR_FS_NOT_FOUND,
                            SVN_NO_ERROR));
+      if (! success)
+        seen_nonexistent_target = TRUE;
     }
   svn_pool_destroy(subpool);
 
-  return SVN_NO_ERROR;
+  if (seen_nonexistent_target)
+    return svn_error_create(
+      SVN_ERR_ILLEGAL_TARGET, NULL,
+      _("Could not cat all targets because some targets don't exist"));
+  else
+    return SVN_NO_ERROR;
 }

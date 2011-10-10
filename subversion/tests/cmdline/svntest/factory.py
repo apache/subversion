@@ -288,7 +288,9 @@ class TestFactory:
     # Any expected_disk still there from a previous verification
     self.prev_disk = None
     if prev_disk:
-      self.prev_disk = [None, prev_disk]      # svntest.wc.State
+      reparented_prev_disk = svntest.wc.State(prev_disk.wc_dir, {});
+      reparented_prev_disk.add_state(sbox.wc_dir, prev_disk);
+      self.prev_disk = [None, reparented_prev_disk]
 
     # Those command line options that expect an argument following
     # which is not a path. (don't expand args following these)

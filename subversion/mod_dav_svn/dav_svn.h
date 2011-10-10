@@ -73,7 +73,7 @@ extern "C" {
  * ### only a single FS open; otherwise, it will have to work a bit harder
  * ### to keep the things in sync.
  */
-typedef struct {
+typedef struct dav_svn_repos {
   apr_pool_t *pool;     /* request_rec -> pool */
 
   /* Remember the root URL path of this repository (just a path; no
@@ -175,7 +175,7 @@ enum dav_svn_private_restype {
 
 
 /* store info about a root in a repository */
-typedef struct {
+typedef struct dav_svn_root {
   /* If a root within the FS has been opened, the value is stored here.
      Otherwise, this field is NULL. */
   svn_fs_root_t *root;
@@ -201,6 +201,15 @@ typedef struct {
      resources that directly represent either a txn or txn-root.
   */
   const char *txn_name;
+
+  /* The optional vtxn name supplied by an HTTPv2 client and
+     used in subsequent requests.  This may be NULL if the client
+     is not using a vtxn name.
+
+     PRIVATE resources that directly represent either a txn or
+     txn-root use this field.
+  */
+  const char *vtxn_name;
 
   /* If the root is part of a transaction, this contains the FS's transaction
      handle. It may be NULL if this root corresponds to a specific revision.
@@ -274,9 +283,6 @@ struct dav_resource_private {
 
   /* Cache any revprop change error */
   svn_error_t *revprop_error;
-
-  /* Pool to allocate temporary data from */
-  apr_pool_t *pool;
 };
 
 
@@ -298,11 +304,17 @@ svn_boolean_t dav_svn__get_autoversioning_flag(request_rec *r);
 /* for the repository referred to by this request, are bulk updates allowed? */
 svn_boolean_t dav_svn__get_bulk_updates_flag(request_rec *r);
 
-/* for the repository referred to by this request, are bulk updates allowed? */
+/* for the repository referred to by this request, should httpv2 be advertised? */
 svn_boolean_t dav_svn__get_v2_protocol_flag(request_rec *r);
 
 /* for the repository referred to by this request, are subrequests active? */
 svn_boolean_t dav_svn__get_pathauthz_flag(request_rec *r);
+
+/* for the repository referred to by this request, is txdelta caching active? */
+svn_boolean_t dav_svn__get_txdelta_cache_flag(request_rec *r);
+
+/* for the repository referred to by this request, is fulltext caching active? */
+svn_boolean_t dav_svn__get_fulltext_cache_flag(request_rec *r);
 
 /* for the repository referred to by this request, are subrequests bypassed?
  * A function pointer if yes, NULL if not.
@@ -370,6 +382,8 @@ const char *dav_svn__get_activities_db(request_rec *r);
 /* ### Is this assumed to be URI-encoded? */
 const char *dav_svn__get_root_dir(request_rec *r);
 
+/* Return the data compression level to be used over the wire. */
+int dav_svn__get_compression_level(void);
 
 /** For HTTP protocol v2, these are the new URIs and URI stubs
     returned to the client in our OPTIONS response.  They all depend
@@ -389,6 +403,12 @@ const char *dav_svn__get_txn_stub(request_rec *r);
 
 /* For accessing transaction properties (typically "!svn/txr") */
 const char *dav_svn__get_txn_root_stub(request_rec *r);
+
+/* For accessing transaction resources (typically "!svn/vtxn") */
+const char *dav_svn__get_vtxn_stub(request_rec *r);
+
+/* For accessing transaction properties (typically "!svn/vtxr") */
+const char *dav_svn__get_vtxn_root_stub(request_rec *r);
 
 
 /*** activity.c ***/
@@ -572,7 +592,7 @@ dav_error *
 dav_svn__merge_response(ap_filter_t *output,
                         const dav_svn_repos *repos,
                         svn_revnum_t new_rev,
-                        char *post_commit_err,
+                        const char *post_commit_err,
                         apr_xml_elem *prop_elem,
                         svn_boolean_t disable_merge_response,
                         apr_pool_t *pool);
@@ -662,7 +682,7 @@ dav_svn__post_create_txn(const dav_resource *resource,
 /*** authz.c ***/
 
 /* A baton needed by dav_svn__authz_read_func(). */
-typedef struct
+typedef struct dav_svn__authz_read_baton
 {
   /* The original request, needed to generate a subrequest. */
   request_rec *r;
@@ -748,9 +768,9 @@ dav_svn__new_error(apr_pool_t *pool,
    string constant. */
 dav_error *
 dav_svn__convert_err(svn_error_t *serr,
-                    int status,
-                    const char *message,
-                    apr_pool_t *pool);
+                     int status,
+                     const char *message,
+                     apr_pool_t *pool);
 
 
 /* Compare (PATH in ROOT) to (PATH in ROOT/PATH's created_rev).
@@ -788,7 +808,8 @@ enum dav_svn__build_what {
   DAV_SVN__BUILD_URI_BC,         /* a Baseline Collection */
   DAV_SVN__BUILD_URI_PUBLIC,     /* the "public" VCR */
   DAV_SVN__BUILD_URI_VERSION,    /* a Version Resource */
-  DAV_SVN__BUILD_URI_VCC         /* a Version Controlled Configuration */
+  DAV_SVN__BUILD_URI_VCC,        /* a Version Controlled Configuration */
+  DAV_SVN__BUILD_URI_REVROOT     /* HTTPv2: Revision Root resource */
 };
 
 const char *
@@ -809,7 +830,7 @@ dav_svn__build_uri(const dav_svn_repos *repos,
    ### URIs which we may need to parse. it also ignores any scheme, host,
    ### and port in the URI and simply assumes it refers to the same server.
 */
-typedef struct {
+typedef struct dav_svn__uri_info {
   svn_revnum_t rev;
   const char *repos_path;
   const char *activity_id;

@@ -62,6 +62,11 @@ extern "C" {
 #define apr_array_clear(arr)         (arr)->nelts = 0
 #endif
 
+#if !APR_VERSION_AT_LEAST(1,0,0)
+#define APR_UINT64_C(val) UINT64_C(val)
+#define APR_FPROT_OS_DEFAULT APR_OS_DEFAULT
+#endif
+
 #if !APR_VERSION_AT_LEAST(1,3,0)
 #define APR_UINT16_MAX  0xFFFFU
 #define APR_INT16_MAX   0x7FFF
@@ -73,7 +78,13 @@ extern "C" {
 #define APR_INT64_MAX   APR_INT64_C(0x7FFFFFFFFFFFFFFF)
 #define APR_INT64_MIN (-APR_INT64_MAX-1)
 #define APR_SIZE_MAX (~(apr_size_t)0)
+
+#if APR_SIZEOF_VOIDP == 8
+typedef apr_uint64_t apr_uintptr_t;
+#else
+typedef apr_uint32_t apr_uintptr_t;
 #endif
+#endif /* !APR_VERSION_AT_LEAST(1,3,0) */
 
 /**
  * Check at compile time if the Serf version is at least a certain

@@ -59,7 +59,8 @@ svn_cl__relocate(apr_getopt_t *os,
   */
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, scratch_pool));
+                                                      ctx, FALSE,
+                                                      scratch_pool));
   if (targets->nelts < 1)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
@@ -96,6 +97,13 @@ svn_cl__relocate(apr_getopt_t *os,
         {
           apr_pool_t *subpool = svn_pool_create(scratch_pool);
           int i;
+
+          /* Target working copy root dir must be local. */
+          for (i = 2; i < targets->nelts; i++)
+            {
+              path = APR_ARRAY_IDX(targets, i, const char *);
+              SVN_ERR(svn_cl__check_target_is_local_path(path));
+            }
 
           for (i = 2; i < targets->nelts; i++)
             {

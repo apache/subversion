@@ -30,8 +30,10 @@
 #include <http_request.h>
 #include <http_protocol.h>
 #include <http_log.h>
+#include <http_config.h>
 #include <ap_config.h>
 #include <ap_provider.h>
+#include <ap_mmn.h>
 #include <apr_uri.h>
 #include <apr_lib.h>
 #include <mod_dav.h>
@@ -42,11 +44,17 @@
 #include "svn_config.h"
 #include "svn_string.h"
 #include "svn_repos.h"
+#include "svn_dirent_uri.h"
+#include "private/svn_fspath.h"
 
 
 extern module AP_MODULE_DECLARE_DATA authz_svn_module;
 
-typedef struct {
+#ifdef APLOG_USE_MODULE
+APLOG_USE_MODULE(authz_svn);
+#endif
+
+typedef struct authz_svn_config_rec {
   int authoritative;
   int anonymous;
   int no_auth_when_anon_ok;
@@ -68,7 +76,7 @@ create_authz_svn_dir_config(apr_pool_t *p, char *d)
   conf->base_path = d;
 
   if (d)
-    conf->base_path = svn_uri_canonicalize(d, p);
+    conf->base_path = svn_urlpath__canonicalize(d, p);
 
   /* By default keep the fortress secure */
   conf->authoritative = 1;
@@ -83,8 +91,8 @@ AuthzSVNAccessFile_cmd(cmd_parms *cmd, void *config, const char *arg1)
   authz_svn_config_rec *conf = config;
 
   if (conf->repo_relative_access_file != NULL)
-    return "AuthzSVNAccessFile cannot be defined at "
-           "same time as AuthzSVNReposRelativeAccessFile.";
+    return "AuthzSVNAccessFile and AuthzSVNReposRelativeAccessFile "
+           "directives are mutually exclusive.";
 
   conf->access_file = ap_server_root_relative(cmd->pool, arg1);
 
@@ -100,8 +108,8 @@ AuthzSVNReposRelativeAccessFile_cmd(cmd_parms *cmd,
   authz_svn_config_rec *conf = config;
 
   if (conf->access_file != NULL)
-    return "AuthzSVNReposRelativeAccessFile cannot be defined at "
-           "same time as AuthzSVNAccessFile.";
+    return "AuthzSVNAccessFile and AuthzSVNReposRelativeAccessFile "
+           "directives are mutually exclusive.";
 
   conf->repo_relative_access_file = arg1;
 
@@ -166,22 +174,22 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf)
   dav_error *dav_err;
   char errbuf[256];
 
-  if (conf->repo_relative_access_file) 
+  if (conf->repo_relative_access_file)
     {
       dav_err = dav_svn_get_repos_path(r, conf->base_path, &repos_path);
       if (dav_err) {
-        ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, dav_err->desc);
+        ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "%s", dav_err->desc);
         return NULL;
       }
       access_file = svn_dirent_join_many(r->pool, repos_path, "conf",
                                          conf->repo_relative_access_file,
                                          NULL);
-    } 
+    }
   else
     {
       access_file = conf->access_file;
     }
-  
+
   ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r,
                 "Path to authz file is %s", access_file);
 
@@ -237,7 +245,7 @@ static char *
 get_username_to_authorize(request_rec *r, authz_svn_config_rec *conf)
 {
   char *username_to_authorize = r->user;
-  if (conf->force_username_case)
+  if (username_to_authorize && conf->force_username_case)
     {
       username_to_authorize = apr_pstrdup(r->pool, r->user);
       convert_case(username_to_authorize,
@@ -274,7 +282,6 @@ req_check_access(request_rec *r,
   svn_authz_t *access_conf = NULL;
   svn_error_t *svn_err;
   char errbuf[256];
-  const char *canonicalized_uri;
   const char *username_to_authorize = get_username_to_authorize(r, conf);
 
   switch (r->method_number)
@@ -314,8 +321,7 @@ req_check_access(request_rec *r,
         break;
     }
 
-  canonicalized_uri = svn_uri_canonicalize(r->uri, r->pool);
-  if (strcmp(canonicalized_uri, conf->base_path) == 0)
+  if (strcmp(svn_urlpath__canonicalize(r->uri, r->pool), conf->base_path) == 0)
     {
       /* Do no access control when conf->base_path(as configured in <Location>)
        * and given uri are same. The reason for such relaxation of access
@@ -357,7 +363,7 @@ req_check_access(request_rec *r,
     repos_path = NULL;
 
   if (repos_path)
-    repos_path = svn_path_join("/", repos_path, r->pool);
+    repos_path = svn_fspath__canonicalize(repos_path, r->pool);
 
   *repos_path_ref = apr_pstrcat(r->pool, repos_name, ":", repos_path,
                                 (char *)NULL);
@@ -405,7 +411,7 @@ req_check_access(request_rec *r,
         }
 
       if (dest_repos_path)
-        dest_repos_path = svn_path_join("/", dest_repos_path, r->pool);
+        dest_repos_path = svn_fspath__canonicalize(dest_repos_path, r->pool);
 
       *dest_repos_path_ref = apr_pstrcat(r->pool, dest_repos_name, ":",
                                          dest_repos_path, (char *)NULL);
@@ -519,12 +525,26 @@ req_check_access(request_rec *r,
   return OK;
 }
 
+/* The macros LOG_ARGS_SIGNATURE and LOG_ARGS_CASCADE are expanded as formal
+ * and actual parameters to log_access_verdict with respect to HTTPD version.
+ */
+#if AP_MODULE_MAGIC_AT_LEAST(20100606,0)
+#define LOG_ARGS_SIGNATURE const char *file, int line, int module_index
+#define LOG_ARGS_CASCADE file, line, module_index
+#else
+#define LOG_ARGS_SIGNATURE const char *file, int line
+#define LOG_ARGS_CASCADE file, line
+#endif
+
 /* Log a message indicating the access control decision made about a
- * request.  FILE and LINE should be supplied via the APLOG_MARK macro.
- * ALLOWED is boolean.  REPOS_PATH and DEST_REPOS_PATH are information
+ * request.  The macro LOG_ARGS_SIGNATURE expands to FILE, LINE and
+ * MODULE_INDEX in HTTPD 2.3 as APLOG_MARK macro has been changed for
+ * per-module loglevel configuration.  It expands to FILE and LINE
+ * in older server versions.  ALLOWED is boolean.
+ * REPOS_PATH and DEST_REPOS_PATH are information
  * about the request.  DEST_REPOS_PATH may be NULL. */
 static void
-log_access_verdict(const char *file, int line,
+log_access_verdict(LOG_ARGS_SIGNATURE,
                    const request_rec *r, int allowed,
                    const char *repos_path, const char *dest_repos_path)
 {
@@ -534,22 +554,22 @@ log_access_verdict(const char *file, int line,
   if (r->user)
     {
       if (dest_repos_path)
-        ap_log_rerror(file, line, level, 0, r,
+        ap_log_rerror(LOG_ARGS_CASCADE, level, 0, r,
                       "Access %s: '%s' %s %s %s", verdict, r->user,
                       r->method, repos_path, dest_repos_path);
       else
-        ap_log_rerror(file, line, level, 0, r,
+        ap_log_rerror(LOG_ARGS_CASCADE, level, 0, r,
                       "Access %s: '%s' %s %s", verdict, r->user,
                       r->method, repos_path);
     }
   else
     {
       if (dest_repos_path)
-        ap_log_rerror(file, line, level, 0, r,
+        ap_log_rerror(LOG_ARGS_CASCADE, level, 0, r,
                       "Access %s: - %s %s %s", verdict,
                       r->method, repos_path, dest_repos_path);
       else
-        ap_log_rerror(file, line, level, 0, r,
+        ap_log_rerror(LOG_ARGS_CASCADE, level, 0, r,
                       "Access %s: - %s %s", verdict,
                       r->method, repos_path);
     }
@@ -577,15 +597,15 @@ subreq_bypass(request_rec *r,
   username_to_authorize = get_username_to_authorize(r, conf);
 
   /* If configured properly, this should never be true, but just in case. */
-  if (!conf->anonymous || !conf->access_file
-      || !conf->repo_relative_access_file)
+  if (!conf->anonymous
+      || (! (conf->access_file || conf->repo_relative_access_file)))
     {
       log_access_verdict(APLOG_MARK, r, 0, repos_path, NULL);
       return HTTP_FORBIDDEN;
     }
 
   /* Retrieve authorization file */
-  access_conf = get_access_conf(r,conf);
+  access_conf = get_access_conf(r, conf);
   if (access_conf == NULL)
     return HTTP_FORBIDDEN;
 
@@ -643,7 +663,7 @@ access_checker(request_rec *r)
 
   /* We are not configured to run */
   if (!conf->anonymous
-      || (!conf->access_file && !conf->repo_relative_access_file))
+      || (! (conf->access_file || conf->repo_relative_access_file)))
     return DECLINED;
 
   if (ap_some_auth_required(r))
@@ -701,8 +721,8 @@ check_user_id(request_rec *r)
 
   /* We are not configured to run, or, an earlier module has already
    * authenticated this request. */
-  if ((!conf->access_file && !conf->repo_relative_access_file)
-      || !conf->no_auth_when_anon_ok || r->user)
+  if (!conf->no_auth_when_anon_ok || r->user
+      || (! (conf->access_file || conf->repo_relative_access_file)))
     return DECLINED;
 
   /* If anon access is allowed, return OK, preventing later modules
@@ -729,7 +749,7 @@ auth_checker(request_rec *r)
   int status;
 
   /* We are not configured to run */
-  if (!conf->access_file && !conf->repo_relative_access_file)
+  if (! (conf->access_file || conf->repo_relative_access_file))
     return DECLINED;
 
   /* Previous hook (check_user_id) already did all the work,

@@ -26,6 +26,7 @@
 
 # General modules
 import os
+import re
 import shutil
 import sys
 
@@ -33,12 +34,16 @@ import sys
 import svntest
 from svntest.verify import SVNExpectedStdout, SVNExpectedStderr
 from svntest.verify import SVNUnexpectedStderr
+from svntest.verify import UnorderedOutput
 from svntest.main import SVN_PROP_MERGEINFO
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 
@@ -248,8 +253,9 @@ def inconsistent_headers(sbox):
 #----------------------------------------------------------------------
 # Test for issue #2729: Datestamp-less revisions in dump streams do
 # not remain so after load
+@Issue(2729)
 def empty_date(sbox):
-  "preserve date-less revisions in load (issue #2729)"
+  "preserve date-less revisions in load"
 
   test_create(sbox)
 
@@ -461,7 +467,7 @@ def fsfs_file(repo_dir, kind, rev):
     if svntest.main.options.fsfs_sharding is None:
       return os.path.join(repo_dir, 'db', kind, '0', rev)
     else:
-      shard = int(rev) // svntest.main.fsfs_sharding
+      shard = int(rev) // svntest.main.options.fsfs_sharding
       path = os.path.join(repo_dir, 'db', kind, str(shard), rev)
 
       if svntest.main.options.fsfs_packing is None or kind == 'revprops':
@@ -477,6 +483,7 @@ def fsfs_file(repo_dir, kind, rev):
     return os.path.join(repo_dir, 'db', kind, rev)
 
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
 def verify_incremental_fsfs(sbox):
   """svnadmin verify detects corruption dump can't"""
 
@@ -608,10 +615,11 @@ _0.0.t1-1 add false false /A/B/E/bravo
   svntest.verify.verify_outputs(
     message=None, actual_stdout=output, actual_stderr=errput,
     expected_stdout=None,
-    expected_stderr=".*Found malformed header in revision file")
+    expected_stderr=".*Found malformed header '[^']*' in revision file")
 
 #----------------------------------------------------------------------
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
 def recover_fsfs(sbox):
   "recover a repository (FSFS only)"
   sbox.build()
@@ -690,7 +698,7 @@ def recover_fsfs(sbox):
     'db/current', expected_current_contents, actual_current_contents)
 
 #----------------------------------------------------------------------
-
+@Issue(2983)
 def load_with_parent_dir(sbox):
   "'svnadmin load --parent-dir' reparents mergeinfo"
 
@@ -787,7 +795,7 @@ def set_uuid(sbox):
     raise svntest.Failure
 
 #----------------------------------------------------------------------
-
+@Issue(3020)
 def reflect_dropped_renumbered_revs(sbox):
   "reflect dropped renumbered revs in svn:mergeinfo"
 
@@ -824,6 +832,8 @@ def reflect_dropped_renumbered_revs(sbox):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+@Issue(2992)
 def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
   """fsfs recovery checks missing revs / revprops files"""
   # Set up a repository containing the greek tree.
@@ -906,16 +916,32 @@ def create_in_repo_subdir(sbox):
   # This should succeed
   svntest.main.create_repos(repo_dir)
 
+  success = False
   try:
     # This should fail
     subdir = os.path.join(repo_dir, 'Z')
     svntest.main.create_repos(subdir)
   except svntest.main.SVNRepositoryCreateFailure:
-    return
+    success = True
+  if not success:
+    raise svntest.Failure
 
-  # No SVNRepositoryCreateFailure raised?
-  raise svntest.Failure
+  cwd = os.getcwd()
+  success = False
+  try:
+    # This should fail, too
+    subdir = os.path.join(repo_dir, 'conf')
+    os.chdir(subdir)
+    svntest.main.create_repos('Z')
+    os.chdir(cwd)
+  except svntest.main.SVNRepositoryCreateFailure:
+    success = True
+    os.chdir(cwd)
+  if not success:
+    raise svntest.Failure
 
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
 def verify_with_invalid_revprops(sbox):
   "svnadmin verify detects invalid revprops file"
 
@@ -946,7 +972,7 @@ def verify_with_invalid_revprops(sbox):
 
   if svntest.verify.verify_outputs(
     "Output of 'svnadmin verify' is unexpected.", None, errput, None,
-    ".*Malformed file"):
+    ".*svnadmin: E200002:.*"):
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -968,6 +994,7 @@ def verify_with_invalid_revprops(sbox):
 #      each of them to 'TARGET-REPOS'.
 #
 # See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc13
+@Issue(3020)
 def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   "don't filter mergeinfo revs from incremental dump"
 
@@ -1004,7 +1031,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   #                  r4                                            |     |
   #                   |                                            V     V
   #                  branches/B1/B/E------------------------------r14---r15->
-  #                  
+  #
   #
   # The mergeinfo on this repos@15 is:
   #
@@ -1034,7 +1061,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
     "/trunk/B/E:5-6,8-9\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
-                                     sbox.repo_url)  
+                                     sbox.repo_url)
 
   # PART 2: Load a a series of incremental dumps to an empty repository.
   #
@@ -1085,7 +1112,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   # repository.  First, try the full dump-load in one shot.
   #
   # PART 3: Load a full dump to an non-empty repository.
-  #  
+  #
   # Reset our sandbox.
   test_create(sbox)
 
@@ -1145,7 +1172,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   # Load this skeleton repos into the empty target:
   load_and_verify_dumpstream(sbox, [], [], None, dumpfile_skeleton,
                              '--ignore-uuid')
-  
+
   # Load the three incremental dump files in sequence.
   load_and_verify_dumpstream(sbox, [], [], None,
                              open(dump_file_r1_10).read(),
@@ -1168,6 +1195,8 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
                                      sbox.repo_url)
 
 
+@SkipUnless(svntest.main.is_posix_os)
+@Issue(2591)
 def hotcopy_symlink(sbox):
   "'svnadmin hotcopy' replicates symlink"
 
@@ -1228,6 +1257,227 @@ def hotcopy_symlink(sbox):
     if os.readlink(symlink_path + '_abs') != target_abspath:
       raise svntest.Failure
 
+def load_bad_props(sbox):
+  "svnadmin load with invalid svn: props"
+
+  dump_str = """SVN-fs-dump-format-version: 2
+
+UUID: dc40867b-38f6-0310-9f5f-f81aa277e06f
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2005-05-03T19:09:41.129900Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 99
+Content-length: 99
+
+K 7
+svn:log
+V 3
+\n\r\n
+K 10
+svn:author
+V 2
+pl
+K 8
+svn:date
+V 27
+2005-05-03T19:10:19.975578Z
+PROPS-END
+
+Node-path: file
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 5
+Text-content-md5: e1cbb0c3879af8347246f12c559a86b5
+Content-length: 15
+
+PROPS-END
+text
+
+
+"""
+  test_create(sbox)
+
+  # Try to load the dumpstream, expecting a failure (because of mixed EOLs).
+  load_and_verify_dumpstream(sbox, [], svntest.verify.AnyOutput,
+                             dumpfile_revisions, dump_str,
+                             '--ignore-uuid')
+
+  # Now try it again bypassing prop validation.  (This interface takes
+  # care of the removal and recreation of the original repository.)
+  svntest.actions.load_repo(sbox, dump_str=dump_str,
+                            bypass_prop_validation=True)
+
+# This test intentionally corrupts a revision and assumes an FSFS
+# repository. If you can make it work with BDB please do so.
+# However, the verification triggered by this test is in the repos layer
+# so it will trigger with either backend anyway.
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+@SkipUnless(svntest.main.server_enforces_UTF8_fspaths_in_verify)
+def verify_non_utf8_paths(sbox):
+  "svnadmin verify with non-UTF-8 paths"
+
+  dumpfile = clean_dumpfile()
+  test_create(sbox)
+
+  # Load the dumpstream
+  load_and_verify_dumpstream(sbox, [], [], dumpfile_revisions, dumpfile,
+                             '--ignore-uuid')
+
+  # Replace the path 'A' in revision 1 with a non-UTF-8 sequence.
+  # This has been observed in repositories in the wild, though Subversion
+  # 1.6 and greater should prevent such filenames from entering the repository.
+  path1 = os.path.join(sbox.repo_dir, "db", "revs", "0", "1")
+  path_new = os.path.join(sbox.repo_dir, "db", "revs", "0", "1.new")
+  fp1 = open(path1, 'rb')
+  fp_new = open(path_new, 'wb')
+  for line in fp1.readlines():
+    if line == "A\n":
+      # replace 'A' with a latin1 character -- the new path is not valid UTF-8
+      fp_new.write("\xE6\n")
+    elif line == "text: 1 279 32 32 d63ecce65d8c428b86f4f8b0920921fe\n":
+      # fix up the representation checksum
+      fp_new.write("text: 1 279 32 32 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
+    elif line == "cpath: /A\n":
+      # also fix up the 'created path' field
+      fp_new.write("cpath: /\xE6\n")
+    elif line == "_0.0.t0-0 add-file true true /A\n":
+      # and another occurrance
+      fp_new.write("_0.0.t0-0 add-file true true /\xE6\n")
+    else:
+      fp_new.write(line)
+  fp1.close()
+  fp_new.close()
+  os.remove(path1)
+  os.rename(path_new, path1)
+
+  # Verify the repository, expecting failure
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        sbox.repo_dir)
+  svntest.verify.verify_outputs(
+    "Unexpected error while running 'svnadmin verify'.",
+    [], errput, None, ".*Path '.*' is not in UTF-8.*")
+
+  # Make sure the repository can still be dumped so that the
+  # encoding problem can be fixed in a dump/edit/load cycle.
+  expected_stderr = [
+    "* Dumped revision 0.\n",
+    "WARNING 0x0002: E160005: "
+      "While validating fspath '?\\230': "
+      "Path '?\\230' is not in UTF-8"
+      "\n",
+    "* Dumped revision 1.\n",
+    ]
+  exit_code, output, errput = svntest.main.run_svnadmin("dump", sbox.repo_dir)
+  if svntest.verify.compare_and_display_lines(
+    "Output of 'svnadmin dump' is unexpected.",
+    'STDERR', expected_stderr, errput):
+    raise svntest.Failure
+
+def test_lslocks_and_rmlocks(sbox):
+  "test 'svnadmin lslocks' and 'svnadmin rmlocks'"
+  
+  sbox.build(create_wc=False)
+  iota_url = sbox.repo_url + '/iota'
+  lambda_url = sbox.repo_url + '/A/B/lambda'
+
+  exit_code, output, errput = svntest.main.run_svnadmin("lslocks",
+                                                        sbox.repo_dir)
+
+  if exit_code or errput or output:
+    raise svntest.Failure("Error: 'lslocks' failed")
+
+  expected_output = UnorderedOutput(
+    ["'A/B/lambda' locked by user 'jrandom'.\n",
+     "'iota' locked by user 'jrandom'.\n"])
+  
+  # Lock iota and A/B/lambda using svn client
+  svntest.actions.run_and_verify_svn(None, expected_output,
+                                     [], "lock", "-m", "Locking files",
+                                     iota_url, lambda_url)
+
+  expected_output_list = [
+      "Path: /A/B/lambda",
+      "UUID Token: opaquelocktoken",
+      "Owner: jrandom",
+      "Created:",
+      "Expires:",
+      "Comment \(1 line\):",
+      "Locking files",
+      "Path: /iota",
+      "UUID Token: opaquelocktoken.*",      
+      "\n", # empty line    
+      ]
+
+  # List all locks
+  exit_code, output, errput = svntest.main.run_svnadmin("lslocks",
+                                                        sbox.repo_dir)
+  
+  if errput:
+    raise SVNUnexpectedStderr(errput)
+  svntest.verify.verify_exit_code(None, exit_code, 0)
+    
+  try:
+    expected_output = svntest.verify.UnorderedRegexOutput(expected_output_list)
+    svntest.verify.compare_and_display_lines('lslocks output mismatch',
+                                             'output',
+                                             expected_output, output)
+  except:
+    # Usually both locks have the same timestamp but if the clock
+    # ticks between creating the two locks then the timestamps will
+    # differ.  When the output has two identical "Created" lines
+    # UnorderedRegexOutput must have one matching regex, when the
+    # output has two different "Created" lines UnorderedRegexOutput
+    # must have two regex.
+    expected_output_list.append("Created:.*")
+    expected_output = svntest.verify.UnorderedRegexOutput(expected_output_list)
+    svntest.verify.compare_and_display_lines('lslocks output mismatch',
+                                             'output',
+                                             expected_output, output)
+
+  # List lock in path /A
+  exit_code, output, errput = svntest.main.run_svnadmin("lslocks",
+                                                        sbox.repo_dir,
+                                                        "A")
+  if errput:
+    raise SVNUnexpectedStderr(errput)
+
+  expected_output = svntest.verify.UnorderedRegexOutput([
+    "Path: /A/B/lambda",
+    "UUID Token: opaquelocktoken",
+    "Owner: jrandom",
+    "Created:",
+    "Expires:",
+    "Comment \(1 line\):",
+    "Locking files",
+    "\n", # empty line    
+    ])
+
+  svntest.verify.compare_and_display_lines('message', 'label',
+                                           expected_output, output)
+  svntest.verify.verify_exit_code(None, exit_code, 0)
+
+  # Remove locks
+  exit_code, output, errput = svntest.main.run_svnadmin("rmlocks",
+                                                        sbox.repo_dir,
+                                                        "iota",
+                                                        "A/B/lambda")
+  expected_output = UnorderedOutput(["Removed lock on '/iota'.\n",
+                                     "Removed lock on '/A/B/lambda'.\n"])
+  
+  svntest.verify.verify_outputs(
+    "Unexpected output while running 'svnadmin rmlocks'.",
+    output, [], expected_output, None)
+
 ########################################################################
 # Run the tests
 
@@ -1245,18 +1495,19 @@ test_list = [ None,
               hotcopy_format,
               setrevprop,
               verify_windows_paths_in_repos,
-              SkipUnless(verify_incremental_fsfs, svntest.main.is_fs_type_fsfs),
-              SkipUnless(recover_fsfs, svntest.main.is_fs_type_fsfs),
+              verify_incremental_fsfs,
+              recover_fsfs,
               load_with_parent_dir,
               set_uuid,
               reflect_dropped_renumbered_revs,
-              SkipUnless(fsfs_recover_handle_missing_revs_or_revprops_file,
-                         svntest.main.is_fs_type_fsfs),
+              fsfs_recover_handle_missing_revs_or_revprops_file,
               create_in_repo_subdir,
-              SkipUnless(verify_with_invalid_revprops,
-                         svntest.main.is_fs_type_fsfs),
+              verify_with_invalid_revprops,
               dont_drop_valid_mergeinfo_during_incremental_loads,
-              SkipUnless(hotcopy_symlink, svntest.main.is_posix_os),
+              hotcopy_symlink,
+              load_bad_props,
+              verify_non_utf8_paths,
+              test_lslocks_and_rmlocks,
              ]
 
 if __name__ == '__main__':

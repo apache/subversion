@@ -48,7 +48,7 @@ const svn_opt_revision_range_t *RevisionRange::toRange(SVN::Pool &pool) const
 {
   JNIEnv *env = JNIUtil::getEnv();
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/RevisionRange");
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/RevisionRange");
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
@@ -56,7 +56,7 @@ const svn_opt_revision_range_t *RevisionRange::toRange(SVN::Pool &pool) const
   if (fmid == 0)
     {
       fmid = env->GetMethodID(clazz, "getFromRevision",
-                              "()L"JAVA_PACKAGE"/Revision;");
+                              "()L"JAVA_PACKAGE"/types/Revision;");
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
     }
@@ -65,7 +65,7 @@ const svn_opt_revision_range_t *RevisionRange::toRange(SVN::Pool &pool) const
   if (tmid == 0)
     {
       tmid = env->GetMethodID(clazz, "getToRevision",
-                              "()L"JAVA_PACKAGE"/Revision;");
+                              "()L"JAVA_PACKAGE"/types/Revision;");
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
     }
@@ -87,7 +87,7 @@ const svn_opt_revision_range_t *RevisionRange::toRange(SVN::Pool &pool) const
     return NULL;
 
   svn_opt_revision_range_t *range =
-    (svn_opt_revision_range_t *) apr_palloc(pool.pool(), sizeof(*range));
+    (svn_opt_revision_range_t *) apr_palloc(pool.getPool(), sizeof(*range));
 
   range->start = *startRevision.revision();
   if (JNIUtil::isExceptionThrown())
@@ -105,7 +105,7 @@ RevisionRange::makeJRevisionRange(svn_merge_range_t *range)
 {
     JNIEnv *env = JNIUtil::getEnv();
 
-    jclass rangeClazz = env->FindClass(JAVA_PACKAGE "/RevisionRange");
+    jclass rangeClazz = env->FindClass(JAVA_PACKAGE "/types/RevisionRange");
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
     static jmethodID rangeCtor = 0;

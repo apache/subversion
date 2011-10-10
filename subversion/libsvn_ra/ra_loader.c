@@ -201,14 +201,13 @@ load_ra_module(svn_ra__init_func_t *func,
   return SVN_NO_ERROR;
 }
 
-/* If DEFN may support URL, return the scheme.  Else, return NULL. */
+/* If SCHEMES contains URL, return the scheme.  Else, return NULL. */
 static const char *
-has_scheme_of(const struct ra_lib_defn *defn, const char *url)
+has_scheme_of(const char * const *schemes, const char *url)
 {
-  const char * const *schemes;
   apr_size_t len;
 
-  for (schemes = defn->schemes; *schemes != NULL; ++schemes)
+  for ( ; *schemes != NULL; ++schemes)
     {
       const char *scheme = *schemes;
       len = strlen(scheme);
@@ -286,7 +285,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   apr_uri_t repos_URI;
   apr_status_t apr_err;
 #ifdef CHOOSABLE_DAV_MODULE
-  const char *http_library = "serf";
+  const char *http_library = DEFAULT_HTTP_LIBRARY;
 #endif
   /* Auth caching parameters. */
   svn_boolean_t store_passwords = SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS;
@@ -300,6 +299,16 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
 
   /* Initialize the return variable. */
   *session_p = NULL;
+
+  apr_err = apr_uri_parse(sesspool, repos_URL, &repos_URI);
+  /* ### Should apr_uri_parse leave hostname NULL?  It doesn't
+   * for "file:///" URLs, only for bogus URLs like "bogus".
+   * If this is the right behavior for apr_uri_parse, maybe we
+   * should have a svn_uri_parse wrapper. */
+  if (apr_err != APR_SUCCESS || repos_URI.hostname == NULL)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("Illegal repository URL '%s'"),
+                             repos_URL);
 
   if (callbacks->auth_baton)
     {
@@ -363,15 +372,6 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
 
           /* Find out where we're about to connect to, and
            * try to pick a server group based on the destination. */
-          apr_err = apr_uri_parse(sesspool, repos_URL, &repos_URI);
-          /* ### Should apr_uri_parse leave hostname NULL?  It doesn't
-           * for "file:///" URLs, only for bogus URLs like "bogus".
-           * If this is the right behavior for apr_uri_parse, maybe we
-           * should have a svn_uri_parse wrapper. */
-          if (apr_err != APR_SUCCESS || repos_URI.hostname == NULL)
-            return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                     _("Illegal repository URL '%s'"),
-                                     repos_URL);
           server_group = svn_config_find_group(servers, repos_URI.hostname,
                                                SVN_CONFIG_SECTION_GROUPS,
                                                sesspool);
@@ -411,7 +411,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
             = svn_config_get_server_setting(servers,
                                             server_group, /* NULL is OK */
                                             SVN_CONFIG_OPTION_HTTP_LIBRARY,
-                                            "serf");
+                                            DEFAULT_HTTP_LIBRARY);
 
           if (strcmp(http_library, "neon") != 0 &&
               strcmp(http_library, "serf") != 0)
@@ -453,7 +453,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
     {
       const char *scheme;
 
-      if ((scheme = has_scheme_of(defn, repos_URL)))
+      if ((scheme = has_scheme_of(defn->schemes, repos_URL)))
         {
           svn_ra__init_func_t initfunc = defn->initfunc;
 
@@ -474,6 +474,11 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
 
           SVN_ERR(check_ra_version(vtable->get_version(), scheme));
 
+          if (! has_scheme_of(vtable->get_schemes(sesspool), repos_URL))
+            /* Library doesn't support the scheme at runtime. */
+            continue;
+
+
           break;
         }
     }
@@ -493,18 +498,30 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
                                  callbacks, callback_baton, config, sesspool),
             apr_psprintf(pool, "Unable to connect to a repository at URL '%s'",
                          repos_URL));
-  
+
   /* If the session open stuff detected a server-provided URL
      correction (a 301 or 302 redirect response during the initial
      OPTIONS request), then kill the session so the caller can decide
      what to do. */
   if (corrected_url_p && corrected_url)
     {
-      *corrected_url_p = apr_pstrdup(pool, corrected_url);
+      if (! svn_path_is_url(corrected_url))
+        {
+          /* RFC1945 and RFC2616 state that the Location header's
+             value (from whence this CORRECTED_URL ultimately comes),
+             if present, must be an absolute URI.  But some Apache
+             versions (those older than 2.2.11, it seems) transmit
+             only the path portion of the URI.  See issue #3775 for
+             details. */
+          apr_uri_t corrected_URI = repos_URI;
+          corrected_URI.path = (char *)corrected_url;
+          corrected_url = apr_uri_unparse(pool, &corrected_URI, 0);
+        }
+      *corrected_url_p = svn_uri_canonicalize(corrected_url, pool);
       svn_pool_destroy(sesspool);
       return SVN_NO_ERROR;
     }
-  
+
   /* Check the UUID. */
   if (uuid)
     {
@@ -513,6 +530,8 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
       SVN_ERR(vtable->get_uuid(session, &repository_uuid, pool));
       if (strcmp(uuid, repository_uuid) != 0)
         {
+          /* Duplicate the uuid as it is allocated in sesspool */
+          repository_uuid = apr_pstrdup(pool, repository_uuid);
           svn_pool_destroy(sesspool);
           return svn_error_createf(SVN_ERR_RA_UUID_MISMATCH, NULL,
                                    _("Repository UUID '%s' doesn't match "
@@ -534,7 +553,7 @@ svn_error_t *svn_ra_reparent(svn_ra_session_t *session,
   /* Make sure the new URL is in the same repository, so that the
      implementations don't have to do it. */
   SVN_ERR(svn_ra_get_repos_root2(session, &repos_root, pool));
-  if (! svn_uri_is_ancestor(repos_root, url))
+  if (! svn_uri__is_ancestor(repos_root, url))
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              _("'%s' isn't in the same repository as '%s'"),
                              url, repos_root);
@@ -555,20 +574,13 @@ svn_error_t *svn_ra_get_path_relative_to_session(svn_ra_session_t *session,
                                                  apr_pool_t *pool)
 {
   const char *sess_url;
+
   SVN_ERR(session->vtable->get_session_url(session, &sess_url, pool));
-  if (strcmp(sess_url, url) == 0)
-    {
-      *rel_path = "";
-    }
-  else
-    {
-      *rel_path = svn_uri_is_child(sess_url, url, pool);
-      if (! *rel_path)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("'%s' isn't a child of session URL '%s'"),
-                                 url, sess_url);
-      *rel_path = svn_path_uri_decode(*rel_path, pool);
-    }
+  *rel_path = svn_uri_skip_ancestor(sess_url, url, pool);
+  if (! *rel_path)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("'%s' isn't a child of session URL '%s'"),
+                             url, sess_url);
   return SVN_NO_ERROR;
 }
 
@@ -578,22 +590,14 @@ svn_error_t *svn_ra_get_path_relative_to_root(svn_ra_session_t *session,
                                               apr_pool_t *pool)
 {
   const char *root_url;
-  SVN_ERR(session->vtable->get_repos_root(session, &root_url, pool));
-  if (strcmp(root_url, url) == 0)
-    {
-      *rel_path = "";
-    }
-  else
-    {
-      *rel_path = svn_uri_is_child(root_url, url, pool);
-      if (! *rel_path)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("'%s' isn't a child of repository root "
-                                   "URL '%s'"),
-                                 url, root_url);
-      *rel_path = svn_path_uri_decode(*rel_path, pool);
-    }
 
+  SVN_ERR(session->vtable->get_repos_root(session, &root_url, pool));
+  *rel_path = svn_uri_skip_ancestor(root_url, url, pool);
+  if (! *rel_path)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("'%s' isn't a child of repository root "
+                               "URL '%s'"),
+                             url, root_url);
   return SVN_NO_ERROR;
 }
 
@@ -680,7 +684,7 @@ commit_callback_wrapper(const svn_commit_info_t *commit_info,
 {
   struct ccw_baton *ccwb = baton;
   svn_commit_info_t *ci = svn_commit_info_dup(commit_info, pool);
-  
+
   SVN_ERR(svn_ra_get_repos_root2(ccwb->session, &ci->repos_root, pool));
 
   return ccwb->original_callback(ci, ccwb->original_baton, pool);
@@ -753,14 +757,13 @@ svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
                                   path, revision, dirent_fields, pool);
 }
 
-svn_error_t *svn_ra_get_mergeinfo2(svn_ra_session_t *session,
-                                   svn_mergeinfo_catalog_t *catalog,
-                                   const apr_array_header_t *paths,
-                                   svn_revnum_t revision,
-                                   svn_mergeinfo_inheritance_t inherit,
-                                   svn_boolean_t *validate_inherited_mergeinfo,
-                                   svn_boolean_t include_descendants,
-                                   apr_pool_t *pool)
+svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
+                                  svn_mergeinfo_catalog_t *catalog,
+                                  const apr_array_header_t *paths,
+                                  svn_revnum_t revision,
+                                  svn_mergeinfo_inheritance_t inherit,
+                                  svn_boolean_t include_descendants,
+                                  apr_pool_t *pool)
 {
   svn_error_t *err;
   int i;
@@ -782,7 +785,6 @@ svn_error_t *svn_ra_get_mergeinfo2(svn_ra_session_t *session,
 
   return session->vtable->get_mergeinfo(session, catalog, paths,
                                         revision, inherit,
-                                        validate_inherited_mergeinfo,
                                         include_descendants, pool);
 }
 
@@ -1225,24 +1227,6 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
   return err;
 }
 
-svn_error_t *
-svn_ra__obliterate_path_rev(svn_ra_session_t *session,
-                            svn_revnum_t rev,
-                            const char *path,
-                            apr_pool_t *pool)
-{
-  const char *session_url;
-
-  SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
-
-  if (session->vtable->obliterate_path_rev == NULL)
-    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
-                            _("Obliterate is not supported by this "
-                              "Repository Access method"));
-
-  return session->vtable->obliterate_path_rev(session, rev, path, pool);
-}
-
 
 
 svn_error_t *
@@ -1337,7 +1321,7 @@ svn_ra_get_ra_library(svn_ra_plugin_t **library,
   for (defn = ra_libraries; defn->ra_name != NULL; ++defn)
     {
       const char *scheme;
-      if ((scheme = has_scheme_of(defn, url)))
+      if ((scheme = has_scheme_of(defn->schemes, url)))
         {
           svn_ra_init_func_t compat_initfunc = defn->compat_initfunc;
 

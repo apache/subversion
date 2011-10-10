@@ -50,14 +50,16 @@ svn_client_resolve(const char *path,
   const char *local_abspath;
 
   if (svn_path_is_url(path))
-    return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                              _("'%s' is not a local path"),
-                                              path));
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("'%s' is not a local path"), path);
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   SVN_ERR(svn_wc_resolved_conflict5(ctx->wc_ctx, local_abspath,
-                                    depth, TRUE, "", TRUE,
+                                    depth,
+                                    TRUE /* resolve_text */,
+                                    "" /* resolve_prop (ALL props) */,
+                                    TRUE /* resolve_tree */,
                                     conflict_choice,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->notify_func2, ctx->notify_baton2,

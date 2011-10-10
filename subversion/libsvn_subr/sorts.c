@@ -140,21 +140,38 @@ svn_sort__hash(apr_hash_t *ht,
 {
   apr_hash_index_t *hi;
   apr_array_header_t *ary;
+  svn_boolean_t sorted;
+  svn_sort__item_t *prev_item;
 
   /* allocate an array with enough elements to hold all the keys. */
   ary = apr_array_make(pool, apr_hash_count(ht), sizeof(svn_sort__item_t));
 
   /* loop over hash table and push all keys into the array */
+  sorted = TRUE;
+  prev_item = NULL;
   for (hi = apr_hash_first(pool, ht); hi; hi = apr_hash_next(hi))
     {
       svn_sort__item_t *item = apr_array_push(ary);
 
       apr_hash_this(hi, &item->key, &item->klen, &item->value);
+
+      if (prev_item == NULL)
+        {
+          prev_item = item;
+          continue;
+        }
+
+      if (sorted)
+        {
+          sorted = (comparison_func(prev_item, item) < 0);
+          prev_item = item;
+        }
     }
 
-  /* now quicksort the array.  */
-  qsort(ary->elts, ary->nelts, ary->elt_size,
-        (int (*)(const void *, const void *))comparison_func);
+  /* quicksort the array if it isn't already sorted.  */
+  if (!sorted)
+    qsort(ary->elts, ary->nelts, ary->elt_size,
+          (int (*)(const void *, const void *))comparison_func);
 
   return ary;
 }
@@ -227,4 +244,36 @@ svn_sort__array_insert(const void *new_element,
 
   /* Copy in the new element */
   memcpy(new_position, new_element, array->elt_size);
+}
+
+void
+svn_sort__array_delete(apr_array_header_t *arr,
+                       int delete_index,
+                       int elements_to_delete)
+{
+  /* Do we have a valid index and are there enough elements? */
+  if (delete_index >= 0
+      && delete_index < arr->nelts
+      && elements_to_delete > 0
+      && (elements_to_delete + delete_index) <= arr->nelts)
+    {
+      if (delete_index == (arr->nelts - 1))
+        {
+          /* Deleting the last or only element in an array is easy. */
+          apr_array_pop(arr);
+        }
+      else if ((delete_index + elements_to_delete) == arr->nelts)
+        {
+          /* Delete the last ELEMENTS_TO_DELETE elements. */
+          arr->nelts -= elements_to_delete;
+        }
+      else
+        {
+          memmove(arr->elts + arr->elt_size * delete_index,
+                  arr->elts + arr->elt_size * (delete_index + 1),
+                  arr->elt_size * (arr->nelts - 1 - delete_index)
+                  * elements_to_delete);
+          --(arr->nelts);
+        }
+    }
 }

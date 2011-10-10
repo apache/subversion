@@ -31,7 +31,6 @@
 #include <vector>
 #include "Pool.h"
 struct apr_pool_t;
-struct svn_error;
 class JNIMutex;
 class SVNBase;
 #include <jni.h>
@@ -64,8 +63,6 @@ class JNIUtil
 
   static void throwNullPointerException(const char *message);
   static jbyteArray makeJByteArray(const signed char *data, int length);
-  static void setRequestPool(SVN::Pool *pool);
-  static SVN::Pool *getRequestPool();
   static jobject createDate(apr_time_t time);
   static void logMessage(const char *message);
   static int getLogLevel();
@@ -104,7 +101,7 @@ class JNIUtil
    * occurred. Useful for converting Java @c Exceptions into @c
    * svn_error_t's.
    */
-  static const char *thrownExceptionToCString();
+  static const char *thrownExceptionToCString(SVN::Pool &in_pool);
 
   /**
    * Throw a Java exception corresponding to err, and run
@@ -136,7 +133,7 @@ class JNIUtil
   static apr_pool_t *getPool();
   static bool JNIGlobalInit(JNIEnv *env);
   static bool JNIInit(JNIEnv *env);
-  static JNIMutex *getGlobalPoolMutex();
+  static bool initializeJNIRuntime();
   enum { formatBufferSize = 2048 };
   enum { noLog, errorLog, exceptionLog, entryLog } LogLevel;
 
@@ -179,7 +176,7 @@ class JNIUtil
   static JNIMutex *g_logMutex;
 
   /**
-   * Flag, that an exception occured during our initialization.
+   * Flag, that an exception occurred during our initialization.
    */
   static bool g_initException;
 
@@ -203,11 +200,6 @@ class JNIUtil
    * The stream to write log messages to.
    */
   static std::ofstream g_logStream;
-
-  /**
-   * Flag to secure our global pool.
-   */
-  static JNIMutex *g_globalPoolMutext;
 };
 
 /**

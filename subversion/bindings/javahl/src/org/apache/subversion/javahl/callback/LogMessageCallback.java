@@ -23,8 +23,8 @@
 
 package org.apache.subversion.javahl.callback;
 
-import org.apache.subversion.javahl.ChangePath;
 import org.apache.subversion.javahl.ISVNClient;
+import org.apache.subversion.javahl.types.ChangePath;
 
 import java.util.Map;
 import java.util.Set;

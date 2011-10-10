@@ -23,7 +23,7 @@
 
 package org.apache.subversion.javahl;
 
-import org.apache.subversion.javahl.type.Version;
+import org.apache.subversion.javahl.types.Version;
 
 /**
  * Handles activities related to management of native resouces
@@ -63,7 +63,6 @@ public class NativeResources
      * @throws LinkageError If the version of the loaded native
      * library is not compatible with this version of JavaHL's Java
      * APIs.
-     * @since 1.3.0
      */
     public static synchronized void loadNativeLibrary()
     {
@@ -132,16 +131,15 @@ public class NativeResources
     {
         initNativeLibrary();
         version = new Version();
-        if (!version.isAtLeast(1, 5, 0))
+        if (!version.isAtLeast(1, 7, 0))
         {
             throw new LinkageError("Native library version must be at least " +
-                                   "1.5.0, but is only " + version);
+                                   "1.7.0, but is only " + version);
         }
     }
 
     /**
      * Initialize the native library layer.
-     * @since 1.5.0
      */
     private static native void initNativeLibrary();
 }

@@ -25,8 +25,6 @@
 
 #include <apr_uri.h>
 
-#include <expat.h>
-
 #include <serf.h>
 
 #include "svn_pools.h"
@@ -34,12 +32,11 @@
 #include "svn_dav.h"
 #include "svn_xml.h"
 #include "svn_config.h"
-#include "svn_delta.h"
-#include "svn_version.h"
 #include "svn_dirent_uri.h"
 #include "svn_props.h"
 
 #include "private/svn_dav_protocol.h"
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -49,7 +46,7 @@
 /*
  * This enum represents the current state of our XML parsing for a MERGE.
  */
-typedef enum {
+typedef enum merge_state_e {
   NONE = 0,
   MERGE_RESPONSE,
   UPDATED_SET,
@@ -66,14 +63,14 @@ typedef enum {
   PROP_VAL,
 } merge_state_e;
 
-typedef enum {
+typedef enum resource_type_e {
   UNSET,
   BASELINE,
   COLLECTION,
   CHECKED_IN,
 } resource_type_e;
 
-typedef struct {
+typedef struct merge_info_t {
   /* Temporary allocations here please */
   apr_pool_t *pool;
 
@@ -97,10 +94,8 @@ struct svn_ra_serf__merge_context_t
   apr_hash_t *lock_tokens;
   svn_boolean_t keep_locks;
 
-  const char *activity_url;
-  apr_size_t activity_url_len;
-
-  const char *merge_url;
+  const char *merge_resource_url; /* URL of resource to be merged. */
+  const char *merge_url; /* URL at which the MERGE request is aimed. */
 
   int status;
 
@@ -297,10 +292,9 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
           const char *href;
 
           href = apr_hash_get(info->props, "href", APR_HASH_KEY_STRING);
-          if (! svn_uri_is_ancestor(ctx->merge_url, href))
+          if (! svn_urlpath__is_ancestor(ctx->merge_url, href))
             {
-              /* ### need something better than APR_EGENERAL */
-              return svn_error_createf(APR_EGENERAL, NULL,
+              return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                        _("A MERGE response for '%s' is not "
                                          "a child of the destination ('%s')"),
                                        href, ctx->merge_url);
@@ -319,7 +313,7 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
                  an ancestor of HREF.  All that remains is to
                  determine of HREF is the same as CTX->MERGE_URL, or --
                  if not -- is relative value as a child thereof. */
-              href = svn_uri_is_child(ctx->merge_url, href, NULL);
+              href = svn_urlpath__is_child(ctx->merge_url, href, NULL);
               if (! href)
                 href = "";
 
@@ -364,7 +358,8 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
       info->prop_val = apr_pstrmemdup(info->pool, info->prop_val,
                                       info->prop_val_len);
       if (strcmp(info->prop_name, "href") == 0)
-        info->prop_val = svn_uri_canonicalize(info->prop_val, info->pool);
+        info->prop_val = svn_urlpath__canonicalize(info->prop_val,
+                                                       info->pool);
 
       /* Set our property. */
       apr_hash_set(info->props, info->prop_name, APR_HASH_KEY_STRING,
@@ -452,7 +447,7 @@ svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
       path.data = key;
       path.len = klen;
 
-      if (parent && !svn_uri_is_ancestor(parent, key))
+      if (parent && !svn_relpath__is_ancestor(parent, key))
         continue;
 
       svn_ra_serf__add_open_tag_buckets(body, alloc, "S:lock", NULL);
@@ -488,7 +483,8 @@ create_merge_body(serf_bucket_t **bkt,
   svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:href", NULL);
 
   svn_ra_serf__add_cdata_len_buckets(body_bkt, alloc,
-                                     ctx->activity_url, ctx->activity_url_len);
+                                     ctx->merge_resource_url,
+                                     strlen(ctx->merge_resource_url));
 
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:href");
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:source");
@@ -514,13 +510,12 @@ create_merge_body(serf_bucket_t **bkt,
   return SVN_NO_ERROR;
 }
 
+
 svn_error_t *
 svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **ret_ctx,
                               svn_ra_serf__session_t *session,
                               svn_ra_serf__connection_t *conn,
-                              const char *path,
-                              const char *activity_url,
-                              apr_size_t activity_url_len,
+                              const char *merge_resource_url,
                               apr_hash_t *lock_tokens,
                               svn_boolean_t keep_locks,
                               apr_pool_t *pool)
@@ -534,15 +529,14 @@ svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **ret_ctx,
   merge_ctx->pool = pool;
   merge_ctx->session = session;
 
-  merge_ctx->activity_url = activity_url;
-  merge_ctx->activity_url_len = activity_url_len;
+  merge_ctx->merge_resource_url = merge_resource_url;
 
   merge_ctx->lock_tokens = lock_tokens;
   merge_ctx->keep_locks = keep_locks;
 
   merge_ctx->commit_info = svn_create_commit_info(pool);
 
-  merge_ctx->merge_url = session->repos_url.path;
+  merge_ctx->merge_url = session->session_url.path;
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 

@@ -92,11 +92,25 @@ dnl   now generating errors instead of silently ignoring
 dnl   them.  Only .7 and later can guarantee repository
 dnl   integrity with FSFS.
 
-APR_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
-APU_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
+APR_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\. 2\."]
 
 SVN_LIB_APR($APR_VER_REGEXES)
-SVN_LIB_APRUTIL($APU_VER_REGEXES)
+
+if test `expr $apr_version : 2` -ne 0; then
+  dnl Bump the library so-version to 2 if using APR-2
+  dnl (Debian uses so-version 1 for APR-1-with-largefile)
+  SVN_LT_SOVERSION="-version-info 2"
+  dnl APR-2 provides APRUTIL
+  apu_config=$apr_config
+  AC_SUBST(SVN_APRUTIL_INCLUDES)
+  AC_SUBST(SVN_APRUTIL_CONFIG, ["$apu_config"])
+  AC_SUBST(SVN_APRUTIL_LIBS)
+else
+  SVN_LT_SOVERSION="-version-info 0"
+  APU_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
+  SVN_LIB_APRUTIL($APU_VER_REGEXES)
+fi
+AC_SUBST(SVN_LT_SOVERSION)
 
 dnl Search for pkg-config
 AC_PATH_PROG(PKG_CONFIG, pkg-config)
@@ -104,7 +118,7 @@ AC_PATH_PROG(PKG_CONFIG, pkg-config)
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
 NEON_ALLOWED_LIST="0\.25 0\.26 0\.27\.2 0\.28 0\.29"
-NEON_RECOMMENDED_VER="0.29.0"
+NEON_RECOMMENDED_VER="0.29.6"
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
 dnl You can skip the neon version check only if you know what you are doing 
 AC_ARG_ENABLE(neon-version-check,
@@ -124,7 +138,7 @@ if test "$svn_lib_neon" = "yes"; then
 fi
 
 dnl Search for serf as an alternative to neon
-SVN_LIB_SERF
+SVN_LIB_SERF(0,7,1)
 
 if test "$svn_lib_serf" = "yes"; then
   AC_DEFINE([SVN_HAVE_SERF], 1,
@@ -152,8 +166,8 @@ dnl Find Apache with a recent-enough magic module number
 SVN_FIND_APACHE(20020903)
 
 dnl Search for SQLite
-SQLITE_MINIMUM_VER="3.4.0"
-SQLITE_RECOMMENDED_VER="3.7.2"
+SQLITE_MINIMUM_VER="3.6.18"
+SQLITE_RECOMMENDED_VER="3.7.6.3"
 SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER}.tar.gz"
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
@@ -200,15 +214,21 @@ AC_DEFINE_UNQUOTED(SVN_LOCALE_DIR, "${svn_localedir}",
                    [Defined to be the path to the installed locale dirs])
 
 dnl Check for libtool -- we'll definitely need it for all our shared libs!
-AC_ARG_WITH(custom-libtool,
-AS_HELP_STRING([--with-custom-libtool=PATH],
-               [Specify the command to run libtool]),
-               [ AC_MSG_NOTICE([using $withval as libtool])
-                 sh_libtool="$withval" ],
-               [ AC_MSG_NOTICE([using APR's libtool])
-                 sh_libtool="`$apr_config --apr-libtool`" ])
-LIBTOOL="$sh_libtool"
-SVN_LIBTOOL="$sh_libtool"
+AC_MSG_NOTICE([configuring libtool now])
+ifdef([LT_INIT], [LT_INIT], [AC_PROG_LIBTOOL])
+AC_ARG_ENABLE(experimental-libtool,
+  AS_HELP_STRING([--enable-experimental-libtool],[Use APR's libtool]),
+  [experimental_libtool=$enableval],[experimental_libtool=no])
+
+if test "$experimental_libtool" = "yes"; then
+  echo "using APR's libtool"
+  sh_libtool="`$apr_config --apr-libtool`"
+  LIBTOOL="$sh_libtool"
+  SVN_LIBTOOL="$sh_libtool"
+else
+  sh_libtool="$abs_builddir/libtool"
+  SVN_LIBTOOL="\$(SHELL) $sh_libtool"
+fi
 AC_SUBST(SVN_LIBTOOL)
 
 dnl Determine the libtool version
@@ -268,8 +288,11 @@ AC_SUBST(LT_CFLAGS)
 AC_SUBST(LT_LDFLAGS)
 
 AC_ARG_ENABLE(local-library-preloading,
-  AS_HELP_STRING([--disable-local-library-preloading], 
-                 [Disable preloading of locally built libraries in locally built executables]),
+  AS_HELP_STRING([--enable-local-library-preloading], 
+                 [Enable preloading of locally built libraries in locally
+                  built executables.  This may be necessary for testing
+                  prior to installation on some platforms.  It does not
+                  work on some platforms (Darwin, OpenBSD, ...).]),
   [
   if test "$enableval" != "no"; then
     if test "$svn_enable_shared" = "yes"; then
@@ -281,11 +304,7 @@ AC_ARG_ENABLE(local-library-preloading,
     TRANSFORM_LIBTOOL_SCRIPTS=""
   fi
   ], [
-  if test "`uname`" != "Darwin" && test "$svn_enable_shared" = "yes"; then
-    TRANSFORM_LIBTOOL_SCRIPTS="transform-libtool-scripts"
-  else
-    TRANSFORM_LIBTOOL_SCRIPTS=""
-  fi
+  TRANSFORM_LIBTOOL_SCRIPTS=""
 ])
 AC_SUBST(TRANSFORM_LIBTOOL_SCRIPTS)
 
@@ -548,6 +567,25 @@ int main()
   fi
 fi
 
+dnl GPG Agent -------------------
+
+AC_ARG_WITH(gpg_agent,
+AS_HELP_STRING([--without-gpg-agent], 
+               [Disable support for GPG-Agent]),
+               [with_gpg_agent=no], [with_gpg_agent=yes])
+AC_MSG_CHECKING([whether to support GPG-Agent])
+if test "$svn_enable_shared" != "yes"; then
+  AC_MSG_RESULT([no (shared library support is disabled)])
+elif test "$with_gpg_agent" = "yes"; then
+  AC_MSG_RESULT([yes])
+  AC_DEFINE([SVN_HAVE_GPG_AGENT], [1], 
+            [Is GPG Agent support enabled?])
+else
+  AC_MSG_RESULT([no])
+fi
+
+AC_SUBST(SVN_HAVE_GPG_AGENT)
+
 dnl GNOME Keyring -------------------
 
 AC_ARG_WITH(gnome_keyring,
@@ -687,6 +725,52 @@ if test $USE_NLS = "yes"; then
 fi
 AC_SUBST(MSGFMTFLAGS)
 
+dnl libmagic -------------------
+
+libmagic_found=no
+
+AC_ARG_WITH(libmagic,AS_HELP_STRING([--with-libmagic=PREFIX],
+                                [libmagic filetype detection library]),
+[
+  if test "$withval" = "yes" ; then
+    AC_CHECK_HEADER(magic.h, [
+      AC_CHECK_LIB(magic, magic_open, [libmagic_found="builtin"])
+    ])
+    libmagic_prefix="the default locations"
+  elif test "$withval" != "no"; then
+    libmagic_prefix=$withval
+    save_cppflags="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS -I$libmagic_prefix/include"
+    AC_CHECK_HEADERS(magic.h,[
+      save_ldflags="$LDFLAGS"
+      LDFLAGS="-L$libmagic_prefix/lib"
+      AC_CHECK_LIB(magic, magic_open, [libmagic_found="yes"])
+      LDFLAGS="$save_ldflags"
+    ])
+    CPPFLAGS="$save_cppflags"
+  fi
+  if test "$withval" != "no" && test "$libmagic_found" = "no"; then
+    AC_MSG_ERROR([[--with-libmagic requested, but libmagic not found at $libmagic_prefix]])
+  fi
+],
+[
+  AC_CHECK_HEADER(magic.h, [
+    AC_CHECK_LIB(magic, magic_open, [libmagic_found="builtin"])
+  ])
+])
+
+if test "$libmagic_found" != "no"; then
+  AC_DEFINE([SVN_HAVE_LIBMAGIC], [1], [Defined if libmagic support is enabled])
+  SVN_MAGIC_LIBS="-lmagic"
+fi
+
+if test "$libmagic_found" = "yes"; then
+  SVN_MAGIC_INCLUDES="-I$libmagic_prefix/include"
+  LDFLAGS="$LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS(-L$libmagic_prefix/lib)`"
+fi
+
+AC_SUBST(SVN_MAGIC_INCLUDES)
+AC_SUBST(SVN_MAGIC_LIBS)
 
 dnl KWallet -------------------
 SVN_LIB_KWALLET
@@ -783,23 +867,22 @@ AS_HELP_STRING([--with-ssl],
                 an already installed version of Neon, you probably want to pass
                 this option so that Neon (and so indirectly, Subversion) will
                 be capable of https:// access via that library. (Note that
-                Subversion also may also or alternatively be configured to use
+                Subversion may also or alternatively be configured to use
                 the Serf library for http:// and https:// access; see the
-                --with-serf and --with-openssl options.)])
+                --with-serf and --with-openssl options.)]),
 [])
 
 AC_ARG_WITH(openssl,
 AS_HELP_STRING([--with-openssl],
                [This option does NOT affect the Subversion build process in any
-                way. It enables OpenSSL support in the Serf HTTP client
-                library. If and only if you are building Serf as an integrated
-                part of the Subversion build process, rather than linking to
-                an already installed version of Serf, you probably want to pass
-                this option so that Serf (and so indirectly, Subversion) will
-                be capable of https:// access via that library. (Note that
-                Subversion also may also or alternatively be configured to use
-                the Neon library for http:// and https:// access; see the
-                --with-neon and --with-ssl options.)])
+                way. It tells an integrated Serf HTTP client library build
+                process where to locate the OpenSSL library when (and only when)
+                building Serf as an integrated part of the Subversion build
+                process. When linking to a previously installed version of Serf
+                instead, you do not need to use this option. (Note that
+                Subversion may also or alternatively be configured to use the
+                Neon library for http:// and https:// access; see the
+                --with-neon and --with-ssl options.)]),
 [])
 
 AC_ARG_ENABLE(debug,
@@ -845,11 +928,10 @@ if test "$enable_disallowing_of_undefined_references" != "no"; then
   LDFLAGS="$LDFLAGS -Wl,--no-undefined"
   AC_LINK_IFELSE([AC_LANG_SOURCE([[int main(){;}]])], [svn_wl_no_undefined="yes"], [svn_wl_no_undefined="no"])
   LDFLAGS="$old_LDFLAGS"
-  libraries="auth_gnome_keyring auth_kwallet client delta diff fs fs_base fs_fs fs_util ra ra_local ra_neon ra_serf ra_svn repos subr wc"
   if test "$svn_wl_no_undefined" = "yes"; then
     AC_MSG_RESULT([yes])
-    for library in $libraries; do
-      eval "libsvn_${library}_LDFLAGS=-Wl,--no-undefined"
+    for library_dir in "$abs_srcdir/subversion/libsvn_"*; do
+      eval "`basename $library_dir`_LDFLAGS=-Wl,--no-undefined"
     done
   else
     AC_MSG_RESULT([no])
@@ -904,7 +986,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         CFLAGS_KEEP="$CFLAGS"
         AC_LANG_PUSH([C])
 
-        CFLAGS="-Wdeclaration-after-statement $CFLAGS_KEEP"
+        CFLAGS="-Werror=declaration-after-statement $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
         CFLAGS="-Wextra-tokens $CFLAGS_KEEP"
@@ -1042,10 +1124,20 @@ SVN_CHECK_JDK($JAVA_OLDEST_WORKING_VER)
 
 AC_PATH_PROG(PERL, perl, none)
 
-AC_PATH_PROG(RUBY, ruby, none)
+if test -n "$RUBY"; then
+  AC_PATH_PROG(RUBY, "$RUBY", none)
+else
+  AC_PATH_PROGS(RUBY, ruby ruby1.8 ruby18, none)
+fi
 if test "$RUBY" != "none"; then
-  if "$RUBY" -r mkmf -e 'exit(have_func("rb_hash_foreach") ? 0 : 1)'; then
-    AC_PATH_PROG(RDOC, rdoc, none)
+  AC_MSG_CHECKING([rb_hash_foreach])
+  if "$RUBY" -r mkmf -e 'exit(have_func("rb_hash_foreach") ? 0 : 1)' >/dev/null; then
+    AC_MSG_RESULT([yes])
+    if test -n "$RDOC"; then
+      AC_PATH_PROG(RDOC, "$RDOC", none)
+    else
+      AC_PATH_PROGS(RDOC, rdoc rdoc1.8 rdoc18, none)
+    fi
     AC_CACHE_CHECK([for Ruby major version], [svn_cv_ruby_major],[
     svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(MAJOR))'`"
     ])
@@ -1058,7 +1150,15 @@ if test "$RUBY" != "none"; then
 
     AC_SUBST(RUBY_MAJOR)
     AC_SUBST(RUBY_MINOR)
+    if test ! \( "$RUBY_MAJOR" -eq "1" -a "$RUBY_MINOR" -eq "8" \); then
+      # Disallow Ruby 1.9 or later until the binding tests get fixed
+      # to run with those versions.
+      RUBY="none"
+      AC_MSG_WARN([The detected Ruby is too new for Subversion to use])
+      AC_MSG_WARN([Only 1.8.x releases are supported at this time])
+    fi
   else
+    AC_MSG_RESULT([no])
     RUBY="none"
     AC_MSG_WARN([The detected Ruby is too old for Subversion to use])
     AC_MSG_WARN([A Ruby which has rb_hash_foreach is required to use the])
@@ -1232,6 +1332,10 @@ DEFAULT_FS_TYPE="fsfs"
 AC_DEFINE_UNQUOTED(DEFAULT_FS_TYPE, "$DEFAULT_FS_TYPE",
                    [The fs type to use by default])
 
+DEFAULT_HTTP_LIBRARY="serf"
+AC_DEFINE_UNQUOTED(DEFAULT_HTTP_LIBRARY, "$DEFAULT_HTTP_LIBRARY",
+                   [The http library to use by default])
+
 # BSD/OS (BSDi) needs to use a different include syntax in Makefile
 INCLUDE_OUTPUTS="include \$(top_srcdir)/build-outputs.mk"
 case "$host" in
@@ -1247,10 +1351,12 @@ AC_SUBST(INCLUDE_OUTPUTS)
 
 # ==== Detection complete - output and run config.status =====================
 
-AC_CONFIG_HEADERS(subversion/svn_private_config.h)
-AC_CONFIG_COMMANDS([svn_private_config.h],
-                   [$SED -e "s/@SVN_DB_HEADER@/$SVN_DB_HEADER/" subversion/svn_private_config.h > subversion/svn_private_config.h.new
-                    mv -f subversion/svn_private_config.h.new subversion/svn_private_config.h],
+AC_CONFIG_HEADERS(subversion/svn_private_config.h.tmp:subversion/svn_private_config.h.in)
+AC_CONFIG_COMMANDS([svn_private_config.h.tmp],
+                   [svn_cf=subversion/svn_private_config.h;
+                    $SED -e "s/@SVN_DB_HEADER@/$SVN_DB_HEADER/" $svn_cf.tmp > $svn_cf.tmp.new
+                    cmp -s $svn_cf.tmp.new $svn_cf || mv -f $svn_cf.tmp.new $svn_cf
+                    rm -f $svn_cf.tmp.new $svn_cf.tmp],
                    [SED="$SED"
                     SVN_DB_HEADER="$SVN_DB_HEADER"])
 AC_CONFIG_FILES([Makefile])
@@ -1258,8 +1364,13 @@ AC_CONFIG_FILES([Makefile])
 SVN_CONFIG_SCRIPT(tools/backup/hot-backup.py)
 SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-access-control.pl)
 SVN_CONFIG_SCRIPT(subversion/bindings/swig/perl/native/Makefile.PL)
-SVN_CONFIG_SCRIPT(packages/solaris/pkginfo)
+if test -e packages/solaris/pkginfo.in; then
+  SVN_CONFIG_SCRIPT(packages/solaris/pkginfo)
+fi
 AC_SUBST(SVN_CONFIG_SCRIPT_FILES)
+
+# Ensure that SWIG is checked after reconfiguration.
+rm -f .swig_checked
 
 AC_OUTPUT
 

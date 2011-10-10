@@ -49,7 +49,7 @@
 #define AUTHN_PASSTYPE_KEY            "passtype"
 
 /* Baton type for the simple provider. */
-typedef struct
+typedef struct simple_provider_baton_t
 {
   svn_auth_plaintext_prompt_func_t plaintext_prompt_func;
   void *prompt_baton;
@@ -161,7 +161,6 @@ svn_auth__simple_first_creds_helper(void **credentials,
   apr_hash_t *creds_hash = NULL;
   svn_error_t *err;
   svn_string_t *str;
-  svn_boolean_t have_passtype = FALSE;
 
   /* Try to load credentials from a file on disk, based on the
      realmstring.  Don't throw an error, though: if something went
@@ -178,6 +177,8 @@ svn_auth__simple_first_creds_helper(void **credentials,
   else if (creds_hash)
     {
       /* We have something in the auth cache for this realm. */
+      svn_boolean_t have_passtype = FALSE;
+
       /* The password type in the auth data must match the
          mangler's type, otherwise the password must be
          interpreted by another provider. */
@@ -357,7 +358,8 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
            (strcmp(passtype, SVN_AUTH__WINCRYPT_PASSWORD_TYPE) == 0
             || strcmp(passtype, SVN_AUTH__KEYCHAIN_PASSWORD_TYPE) == 0
             || strcmp(passtype, SVN_AUTH__KWALLET_PASSWORD_TYPE) == 0
-            || strcmp(passtype, SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE) == 0) )
+            || strcmp(passtype, SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE) == 0
+            || strcmp(passtype, SVN_AUTH__GPG_AGENT_PASSWORD_TYPE) == 0))
         {
           may_save_password = TRUE;
         }
@@ -541,7 +543,7 @@ svn_auth_get_simple_provider2
 /*-----------------------------------------------------------------------*/
 
 /* Baton type for username/password prompting. */
-typedef struct
+typedef struct simple_prompt_provider_baton_t
 {
   svn_auth_simple_prompt_func_t prompt_func;
   void *prompt_baton;
@@ -552,7 +554,7 @@ typedef struct
 
 
 /* Iteration baton type for username/password prompting. */
-typedef struct
+typedef struct simple_prompt_iter_baton_t
 {
   /* how many times we've reprompted */
   int retries;

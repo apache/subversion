@@ -59,7 +59,6 @@ public class SVNAdmin
      */
     protected void finalize()
     {
-        aSVNAdmin.finalize();
     }
 
     /**
@@ -458,7 +457,7 @@ public class SVNAdmin
     {
         try
         {
-            Set<org.apache.subversion.javahl.Lock> aLocks =
+            Set<org.apache.subversion.javahl.types.Lock> aLocks =
                                                     aSVNAdmin.lslocks(
                                                         new File(path),
                                                         Depth.toADepth(
@@ -466,7 +465,7 @@ public class SVNAdmin
             Lock[] locks = new Lock[aLocks.size()];
 
             int i = 0;
-            for (org.apache.subversion.javahl.Lock lock : aLocks)
+            for (org.apache.subversion.javahl.types.Lock lock : aLocks)
             {
                 locks[i] = new Lock(lock);
                 i++;
@@ -645,7 +644,7 @@ public class SVNAdmin
             }
 
             if (val != null)
-                try 
+                try
                 {
                     outputer.write(val.getBytes());
                 }

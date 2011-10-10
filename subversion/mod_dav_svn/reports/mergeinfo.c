@@ -34,6 +34,8 @@
 #include "svn_xml.h"
 #include "svn_path.h"
 #include "svn_dav.h"
+
+#include "private/svn_fspath.h"
 #include "private/svn_dav_protocol.h"
 #include "private/svn_log.h"
 #include "private/svn_mergeinfo_private.h"
@@ -50,7 +52,6 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   dav_error *derr = NULL;
   apr_xml_elem *child;
   svn_mergeinfo_catalog_t catalog;
-  svn_boolean_t validate_inherited_mergeinfo = FALSE;
   svn_boolean_t include_descendants = FALSE;
   dav_svn__authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
@@ -96,15 +97,15 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
           if ((derr = dav_svn__test_canonical(rel_path, resource->pool)))
             return derr;
-          target = svn_path_join(resource->info->repos_path, rel_path,
-                                 resource->pool);
+
+          /* Force REL_PATH to be a relative path, not an fspath. */
+          rel_path = svn_relpath_canonicalize(rel_path, resource->pool);
+
+          /* Append the REL_PATH to the base FS path to get an
+             absolute repository path. */
+          target = svn_fspath__join(resource->info->repos_path, rel_path,
+                                    resource->pool);
           (*((const char **)(apr_array_push(paths)))) = target;
-        }
-      else if (strcmp(child->name, SVN_DAV__VALIDATE_INHERITED) == 0)
-        {
-          const char *word = dav_xml_get_cdata(child, resource->pool, 1);
-          if (strcmp(word, "yes") == 0)
-            validate_inherited_mergeinfo = TRUE;
         }
       else if (strcmp(child->name, SVN_DAV__INCLUDE_DESCENDANTS) == 0)
         {
@@ -124,11 +125,10 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   /* Build mergeinfo brigade */
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
 
-  serr = svn_repos_fs_get_mergeinfo2(&catalog, repos->repos, paths, rev,
-                                     inherit, validate_inherited_mergeinfo,
-                                     include_descendants,
-                                     dav_svn__authz_read_func(&arb),
-                                     &arb, resource->pool);
+  serr = svn_repos_fs_get_mergeinfo(&catalog, repos->repos, paths, rev,
+                                    inherit, include_descendants,
+                                    dav_svn__authz_read_func(&arb),
+                                    &arb, resource->pool);
   if (serr)
     {
       derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
@@ -196,22 +196,6 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
          "</S:" SVN_DAV__MERGEINFO_ITEM ">",
          apr_xml_quote_string(resource->pool, path, 0),
          apr_xml_quote_string(resource->pool, mergeinfo_string->data, 0));
-      if (serr)
-        {
-          derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                      "Error ending REPORT response.",
-                                      resource->pool);
-          goto cleanup;
-        }
-    }
-
-  if (validate_inherited_mergeinfo)
-    {
-      serr = dav_svn__brigade_puts(bb, output,
-                                   "<S:" SVN_DAV__VALIDATE_INHERITED ">"
-                                   "yes"
-                                   "</S:" SVN_DAV__VALIDATE_INHERITED ">"
-                                   DEBUG_CR);
       if (serr)
         {
           derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

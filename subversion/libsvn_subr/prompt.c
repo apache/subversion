@@ -418,12 +418,14 @@ plaintext_prompt_helper(svn_boolean_t *may_save_plaintext,
           else
             return err;
         }
-      if (apr_strnatcasecmp(answer, _("yes")) == 0)
+      if (apr_strnatcasecmp(answer, _("yes")) == 0 ||
+          apr_strnatcasecmp(answer, _("y")) == 0)
         {
           *may_save_plaintext = TRUE;
           answered = TRUE;
         }
-      else if (apr_strnatcasecmp(answer, _("no")) == 0)
+      else if (apr_strnatcasecmp(answer, _("no")) == 0 ||
+               apr_strnatcasecmp(answer, _("n")) == 0)
         {
           *may_save_plaintext = FALSE;
           answered = TRUE;

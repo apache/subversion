@@ -33,9 +33,12 @@ import svntest
 from svntest.main import SVN_PROP_MERGEINFO
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 def is_non_posix_and_non_windows_os():
@@ -135,6 +138,7 @@ def commit_props(sbox):
 
 #----------------------------------------------------------------------
 
+@Issue(3951)
 def update_props(sbox):
   "receive properties via update"
 
@@ -373,6 +377,7 @@ def update_conflict_props(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
+@Issue(2608)
 def commit_conflict_dirprops(sbox):
   "commit with conflicting dirprops"
 
@@ -406,7 +411,7 @@ def commit_conflict_dirprops(sbox):
 # svn_wc_props_modified_p and svn_wc_transmit_prop_deltas to *ignore*
 # leftover base-props when a file is scheduled for replacement.  (When
 # we svn_wc_add a file, it starts life with no working props.)
-
+@Issue(742)
 def commit_replacement_props(sbox):
   "props work when committing a replacement"
 
@@ -525,7 +530,7 @@ def revert_replacement_props(sbox):
                                         1)
 
 #----------------------------------------------------------------------
-
+@Issues(920,2065)
 def inappropriate_props(sbox):
   "try to set inappropriate props"
 
@@ -674,18 +679,18 @@ def inappropriate_props(sbox):
 
   # ...grammatically incorrect
   svntest.actions.run_and_verify_svn('illegal grammar', None,
-                                     "svn: Pathname not terminated by ':'\n",
+                                     "svn: E200020: Pathname not terminated by ':'\n",
                                      'propset', SVN_PROP_MERGEINFO, '/trunk',
                                      path)
   svntest.actions.run_and_verify_svn('illegal grammar', None,
-                                     "svn: Invalid revision number found "
+                                     "svn: E200022: Invalid revision number found "
                                       "parsing 'one'\n",
                                      'propset', SVN_PROP_MERGEINFO,
                                      '/trunk:one', path)
 
   # ...contain overlapping revision ranges of differing inheritability.
   svntest.actions.run_and_verify_svn('overlapping ranges', None,
-                                     "svn: Unable to parse overlapping "
+                                     "svn: E200020: Unable to parse overlapping "
                                      "revision ranges '9-20\\*' and "
                                      "'18-22' with different "
                                      "inheritance types\n",
@@ -693,7 +698,7 @@ def inappropriate_props(sbox):
                                      '/branch:5-7,9-20*,18-22', path)
 
   svntest.actions.run_and_verify_svn('overlapping ranges', None,
-                                     "svn: Unable to parse overlapping "
+                                     "svn: E200020: Unable to parse overlapping "
                                      "revision ranges "
                                      "(('3' and '3\\*')|('3\\*' and '3')) "
                                      "with different "
@@ -704,21 +709,21 @@ def inappropriate_props(sbox):
   # ...contain revision ranges with start revisions greater than or
   #    equal to end revisions.
   svntest.actions.run_and_verify_svn('range start >= range end', None,
-                                     "svn: Unable to parse reversed "
+                                     "svn: E200020: Unable to parse reversed "
                                       "revision range '20-5'\n",
                                      'propset', SVN_PROP_MERGEINFO,
                                      '/featureX:4,20-5', path)
 
   # ...contain paths mapped to empty revision ranges
   svntest.actions.run_and_verify_svn('empty ranges', None,
-                                     "svn: Mergeinfo for '/trunk' maps to "
+                                     "svn: E200020: Mergeinfo for '/trunk' maps to "
                                       "an empty revision range\n",
                                      'propset', SVN_PROP_MERGEINFO,
                                      '/trunk:', path)
 
   # ...contain non-inheritable ranges when the target is a file.
   svntest.actions.run_and_verify_svn('empty ranges', None,
-                                     "svn: Cannot set non-inheritable "
+                                     "svn: E200020: Cannot set non-inheritable "
                                      "mergeinfo on a non-directory*",
                                      'propset', SVN_PROP_MERGEINFO,
                                      '/A/D/H/psi:1*', iota_path)
@@ -728,7 +733,7 @@ def inappropriate_props(sbox):
 # Issue #976.  When copying a file, do not determine svn:executable
 # and svn:mime-type values as though the file is brand new, instead
 # use the copied file's property values.
-
+@Issue(976)
 def copy_inherits_special_props(sbox):
   "file copies inherit (not re-derive) special props"
 
@@ -790,7 +795,14 @@ def copy_inherits_special_props(sbox):
       raise svntest.verify.SVNUnexpectedOutput
 
 #----------------------------------------------------------------------
-
+# Test for issue #3086 'mod-dav-svn ignores pre-revprop-change failure
+# on revprop delete'
+#
+# If we learn how to write a pre-revprop-change hook for
+# non-Posix platforms, we won't have to skip here:
+@Skip(is_non_posix_and_non_windows_os)
+@Issue(3086)
+@XFail(svntest.main.is_ra_type_dav)
 def revprop_change(sbox):
   "set, get, and delete a revprop change"
 
@@ -1041,7 +1053,10 @@ def verify_output(expected_out, output, errput):
       print('       actual full output: %s' % output)
       raise svntest.Failure
     ln = ln + 1
+  if ln != len(expected_out):
+    raise svntest.Failure
 
+@Issue(1794)
 def recursive_base_wc_ops(sbox):
   "recursive property operations in BASE and WC"
 
@@ -1110,7 +1125,7 @@ def recursive_base_wc_ops(sbox):
 #----------------------------------------------------------------------
 
 def url_props_ops(sbox):
-  "property operations on an URL"
+  "property operations on a URL"
 
   # Bootstrap
   sbox.build()
@@ -1280,6 +1295,7 @@ def update_props_on_wc_root(sbox):
                                         None, None, None, None, None, 1)
 
 # test for issue 2743
+@Issue(2743)
 def props_on_replaced_file(sbox):
   """test properties on replaced files"""
 
@@ -1378,12 +1394,13 @@ def depthy_url_proplist(sbox):
   sbox.simple_propset('p', 'prop2', 'iota')
   sbox.simple_propset('p', 'prop3', 'A')
   sbox.simple_propset('p', 'prop4', 'A/mu')
+  sbox.simple_commit()
 
   # Test depth-empty proplist.
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist',
                                                    '--depth', 'empty',
                                                    '-v', repo_url)
-  verify_output([ 'prop1', 'Properties on ' ],
+  verify_output([ 'prop1', 'p', 'Properties on '],
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1391,7 +1408,8 @@ def depthy_url_proplist(sbox):
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist',
                                                    '--depth', 'files',
                                                    '-v', repo_url)
-  verify_output([ 'prop1', 'prop2', 'Properties on ', 'Properties on ' ],
+  verify_output([ 'prop1', 'prop2', 'p', 'p',
+                 'Properties on ', 'Properties on ' ],
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1400,7 +1418,8 @@ def depthy_url_proplist(sbox):
                                                    '--depth', 'immediates',
                                                    '-v', repo_url)
 
-  verify_output([ 'prop1', 'prop2', 'prop3' ] + ['Properties on '] * 3,
+  verify_output([ 'prop1', 'prop2', 'prop3' ] + ['p'] * 3 +
+                ['Properties on '] * 3,
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1408,7 +1427,8 @@ def depthy_url_proplist(sbox):
   exit_code, output, errput = svntest.main.run_svn(None,
                                                    'proplist', '--depth',
                                                    'infinity', '-v', repo_url)
-  verify_output([ 'prop1', 'prop2', 'prop3', 'prop4' ] + ['Properties on '] * 4,
+  verify_output([ 'prop1', 'prop2', 'prop3', 'prop4' ] + ['p'] * 4 +
+                ['Properties on '] * 4,
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1426,9 +1446,9 @@ def invalid_propnames(sbox):
   propname = chr(8)
   propval = 'foo'
 
-  expected_stderr = (".*Attempting to delete nonexistent property "
+  expected_stdout = (".*Attempting to delete nonexistent property "
                      "'%s'.*" % (propname,))
-  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+  svntest.actions.run_and_verify_svn(None, expected_stdout, [],
                                      'propdel', propname)
   expected_stderr = (".*'%s' is not a valid Subversion"
                      ' property name' % (propname,))
@@ -1450,8 +1470,10 @@ def invalid_propnames(sbox):
 
   os.chdir(cwd)
 
+@SkipUnless(svntest.main.is_posix_os)
+@Issue(2581)
 def perms_on_symlink(sbox):
-  "issue #2581: propset shouldn't touch symlink perms"
+  "propset shouldn't touch symlink perms"
   sbox.build()
   # We can't just run commands on absolute paths in the usual way
   # (e.g., os.path.join(sbox.wc_dir, 'newdir')), because for some
@@ -1469,9 +1491,9 @@ def perms_on_symlink(sbox):
     old_mode = os.stat('newdir')[stat.ST_MODE]
     # The only property on 'symlink' is svn:special, so attempting to remove
     # 'svn:executable' should result in an error
-    expected_stderr = (".*Attempting to delete nonexistent property "
+    expected_stdout = (".*Attempting to delete nonexistent property "
                        "'svn:executable'.*")
-    svntest.actions.run_and_verify_svn(None, None, expected_stderr, 'propdel',
+    svntest.actions.run_and_verify_svn(None, expected_stdout, [], 'propdel',
                                      'svn:executable', 'symlink')
     new_mode = os.stat('newdir')[stat.ST_MODE]
     if not old_mode == new_mode:
@@ -1608,6 +1630,11 @@ def props_over_time(sbox):
           svntest.actions.run_and_verify_svn(None, plist_expected, [],
                                              'proplist', '-v', peg_path)
 
+
+# XFail the same reason revprop_change() is.
+@SkipUnless(svntest.main.server_enforces_date_syntax)
+@XFail(svntest.main.is_ra_type_dav)
+@Issue(3086)
 def invalid_propvalues(sbox):
   "test handling invalid svn:* property values"
 
@@ -1623,6 +1650,7 @@ def invalid_propvalues(sbox):
                                      'svn:date', 'Sat May 10 12:12:31 2008',
                                      repo_url)
 
+@Issue(3282)
 def same_replacement_props(sbox):
   "commit replacement props when same as old props"
   # issue #3282
@@ -1681,6 +1709,7 @@ def added_moved_file(sbox):
 
 
 # Issue 2220, deleting a non-existent property should error
+@Issue(2220)
 def delete_nonexistent_property(sbox):
   "remove a property which doesn't exist"
 
@@ -1689,12 +1718,13 @@ def delete_nonexistent_property(sbox):
   wc_dir = sbox.wc_dir
 
   # Remove one property
-  expected_stderr = ".*Attempting to delete nonexistent property 'yellow'.*"
-  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+  expected_stdout = ".*Attempting to delete nonexistent property 'yellow'.*"
+  svntest.actions.run_and_verify_svn(None, expected_stdout, [],
                                      'propdel', 'yellow',
                                      os.path.join(wc_dir, 'A', 'D', 'G'))
 
 #----------------------------------------------------------------------
+@Issue(3553)
 def post_revprop_change_hook(sbox):
   "post-revprop-change hook"
 
@@ -1711,7 +1741,7 @@ def post_revprop_change_hook(sbox):
 
   # serf/neon/mod_dav_svn splits the "svn: hook failed" line
   expected_error = svntest.verify.RegexOutput([
-    '(svn: |)post-revprop-change hook failed',
+    '(svn: E165001: |)post-revprop-change hook failed',
     error_msg + "\n",
   ], match_all = False)
 
@@ -1854,68 +1884,117 @@ def prop_reject_grind(sbox):
                        mu_path)
 
   # Check that A/mu.prej reports the expected conflicts:
-  expected_prej = svntest.verify.UnorderedOutput([
-   "Trying to change property 'edit.none' from 'repos' to 'repos.changed',\n"
-   "but the property does not exist.\n",
+  expected_prej = [
+    "Trying to change property 'edit.none'\n"
+    "but the property does not exist locally.\n"
+    "<<<<<<< (local property value)\n"
+    "=======\n"
+    "repos.changed>>>>>>> (incoming property value)\n",
 
-   "Trying to delete property 'del.del' with value 'repos',\n"
-   "but property with value 'local' is locally deleted.\n",
+    "Trying to delete property 'del.del'\n"
+    "but the property has been locally deleted and had a different value.\n",
 
-   "Trying to delete property 'del.edit' with value 'repos',\n"
-   "but the local value is 'local.changed'.\n",
+    "Trying to delete property 'del.edit'\n"
+    "but the local property value is different.\n"
+    "<<<<<<< (local property value)\n"
+    "local.changed=======\n"
+    ">>>>>>> (incoming property value)\n",
 
-   "Trying to change property 'edit.del' from 'repos' to 'repos.changed',\n"
-   "but it has been locally deleted.\n",
+    "Trying to change property 'edit.del'\n"
+    "but the property has been locally deleted.\n"
+    "<<<<<<< (local property value)\n"
+    "=======\n"
+    "repos.changed>>>>>>> (incoming property value)\n",
 
-   "Trying to change property 'edit.edit' from 'repos' to 'repos.changed',\n"
-   "but the property has been locally changed from 'local' to 'local.changed'.\n",
+    "Trying to change property 'edit.edit'\n"
+    "but the property has already been locally changed to a different value.\n"
+    "<<<<<<< (local property value)\n"
+    "local.changed=======\n"
+    "repos.changed>>>>>>> (incoming property value)\n",
 
-   "Trying to delete property 'del.edit2' with value 'repos',\n"
-   "but it has been modified from 'repos' to 'repos.changed'.\n",
+    "Trying to delete property 'del.edit2'\n"
+    "but the property has been locally modified.\n"
+    "<<<<<<< (local property value)\n"
+    "repos.changed=======\n"
+    ">>>>>>> (incoming property value)\n",
 
-   "Trying to delete property 'del.add' with value 'repos',\n"
-   "but property has been locally added with value 'local'.\n",
+    "Trying to delete property 'del.add'\n"
+    "but the property has been locally added.\n"
+    "<<<<<<< (local property value)\n"
+    "local=======\n"
+    ">>>>>>> (incoming property value)\n",
 
-   "Trying to delete property 'del.diff' with value 'repos',\n"
-   "but the local value is 'local'.\n",
+    "Trying to delete property 'del.diff'\n"
+    "but the local property value is different.\n"
+    "<<<<<<< (local property value)\n"
+    "local=======\n"
+    ">>>>>>> (incoming property value)\n",
 
-   "Trying to change property 'edit.add' from 'repos' to 'repos.changed',\n"
-   "but property has been locally added with value 'local'.\n",
+    "Trying to change property 'edit.add'\n"
+    "but the property has been locally added with a different value.\n"
+    "<<<<<<< (local property value)\n"
+    "local=======\n"
+    "repos.changed>>>>>>> (incoming property value)\n",
 
-   "Trying to change property 'edit.diff' from 'repos' to 'repos.changed',\n"
-   "but property already exists with value 'local'.\n",
+    "Trying to change property 'edit.diff'\n"
+    "but the local property value conflicts with the incoming change.\n"
+    "<<<<<<< (local property value)\n"
+    "local=======\n"
+    "repos.changed>>>>>>> (incoming property value)\n",
 
-   "Trying to add new property 'add.add' with value 'repos',\n"
-   "but property already exists with value 'local'.\n",
+    "Trying to add new property 'add.add'\n"
+    "but the property already exists.\n"
+    "<<<<<<< (local property value)\n"
+    "local=======\n"
+    "repos>>>>>>> (incoming property value)\n",
 
-   "Trying to add new property 'add.diff' with value 'repos',\n"
-   "but property already exists with value 'local'.\n",
+    "Trying to add new property 'add.diff'\n"
+    "but the property already exists.\n"
+    "Local property value:\n"
+    "local\n"
+    "Incoming property value:\n"
+    "repos\n",
 
-   "Trying to create property 'add.del' with value 'repos',\n"
-   "but it has been locally deleted.\n",
+    "Trying to add new property 'add.del'\n"
+    "but the property has been locally deleted.\n"
+    "<<<<<<< (local property value)\n"
+    "=======\n"
+    "repos>>>>>>> (incoming property value)\n",
 
-   "Trying to add new property 'add.edit' with value 'repos',\n"
-   "but property already exists with value 'local.changed'.\n",
+    "Trying to add new property 'add.edit'\n"
+    "but the property already exists.\n"
+    "<<<<<<< (local property value)\n"
+    "local.changed=======\n"
+    "repos>>>>>>> (incoming property value)\n",
+  ]
 
-   "\n"  
-   ])
-
-  # Get the contents of mu.prej.  The error messages in the prej file are
-  # two lines each, but there is no guarantee as to order, so remove the
-  # newline between each two line error message and then split the whole
-  # thing into a list of strings on the remaining newline...
-  raw_prej = open(mu_prej_path,
-                     'r').read().replace('\nbut', ' but').split('\n')
-  # ...then put the newlines back in each list item.  That leaves us with
-  # list of two lines strings we can compare to the unordered expected
-  # prej file.
-  actual_prej = []
-  for line in raw_prej:
-      repaired_line = line.replace(' but', '\nbut')
-      actual_prej.append(repaired_line + '\n')
-  
-  svntest.verify.verify_outputs("Expected mu.prej doesn't match actual mu.prej",
-                                actual_prej, None, expected_prej, None)
+  # Get the contents of mu.prej.  The error messages are in the prej file
+  # but there is no guarantee as to order. So try to locate each message
+  # in the file individually.
+  prej_file = open(mu_prej_path, 'r')
+  n = 0
+  for message in expected_prej:
+    prej_file.seek(0)
+    match = False
+    i = 0
+    j = 0
+    msg_lines = message.split('\n')
+    for file_line in prej_file:
+      line = msg_lines[i] + '\n'
+      match = (line == file_line)
+      if match:
+        # The last line in the list is always an empty string.
+        if msg_lines[i + 1] == "":
+          #print("found message %i in file at line %i" % (n, j))
+          break
+        i += 1
+      else:
+        i = 0
+      j += 1
+    n += 1
+    if not match:
+      raise svntest.main.SVNUnmatchedError(
+              "Expected mu.prej doesn't match actual mu.prej")
 
 def obstructed_subdirs(sbox):
   """test properties of obstructed subdirectories"""
@@ -1945,32 +2024,21 @@ def obstructed_subdirs(sbox):
                              expected_disk.old_tree())
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  if svntest.main.wc_is_singledb(wc_dir):
-    expected_status.tweak('A/C', status='! ', wc_rev='1')
-  else:
-    expected_status.tweak('A/C', status='! ', wc_rev='?')
+  expected_status.tweak('A/C', status='!M', wc_rev='1')
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Drop an empty file there to obstruct the now-deleted subdir
   open(C_path, 'w')
 
-  # Single-DB doesn't lose properties
-  if svntest.main.wc_is_singledb(wc_dir):
-    expected_disk.add({'A/C': Item(contents='', props={'red': 'blue'})})
-    expected_status.tweak('A/C', status='~ ', wc_rev='1')
-  else:
-    expected_disk.add({'A/C': Item(contents='')})
-
-    # NOTE: r943346 fixes a problem with reporter processing, which
-    #   is necessary for this status to complete properly.
-    expected_status.tweak('A/C', status='~ ', wc_rev='?')
+  expected_disk.add({'A/C': Item(contents='', props={'red': 'blue'})})
+  expected_status.tweak('A/C', status='~M', wc_rev='1')
 
   actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, load_props=True)
   svntest.tree.compare_trees("disk", actual_disk_tree,
                              expected_disk.old_tree())
 
-  
+
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
@@ -1995,7 +2063,7 @@ def atomic_over_ra(sbox):
                                      'flower', s1, repo_url)
 
   # Helpers.
-  
+
   def expect_old_server_fail(old_value, proposed_value):
     # We are setting a (possibly "not present") expectation for the old value,
     # so we should fail.
@@ -2052,6 +2120,7 @@ def atomic_over_ra(sbox):
 
 # Test for issue #3721 'redirection of svn propget output corrupted with
 # large property values'
+@Issue(3721)
 def propget_redirection(sbox):
   """pg of large text properties redirects properly"""
 
@@ -2182,7 +2251,7 @@ def propget_redirection(sbox):
   "874909,874912,874996,875051,875069,875129,875132,875134,875137,"    + \
   "875151-875153,875186-875188,875190,875235-875237,875242-875243,"    + \
   "875249,875388,875393,875406,875411\n"
-  
+
   # Set the 'big' mergeinfo prop on A/B, A/C, and A/D.
   svntest.main.file_write(prop_val_file, big_prop_val)
 
@@ -2211,7 +2280,7 @@ def propget_redirection(sbox):
   # is what we expect.
   expected_output = [
     "Properties on '" + B_path +  "':\n", # Should ocur only once!
-    "Properties on '" + C_path +  "':\n", # Should ocur only once! 
+    "Properties on '" + C_path +  "':\n", # Should ocur only once!
     "Properties on '" + D_path +  "':\n", # Should ocur only once!
     # Everything below should appear three times since this same
     # mergeinfo value is set on three paths in the WC.
@@ -2331,9 +2400,113 @@ def propget_redirection(sbox):
   # ...Since we've set the same mergeinfo prop on A/B, A/C, and A/D, this
   # means the number of lines in the redirected output of svn pg -vR should
   # be three times the number of lines in EXPECTED_OUTPUT, adjusted for the
-  # fact the "Properties on '[A/B | A/C | A/D]'" headers  appear only once. 
+  # fact the "Properties on '[A/B | A/C | A/D]'" headers  appear only once.
   if ((len(expected_output) * 3) - 6) != len(pg_stdout_redir):
     raise svntest.Failure("Redirected pg -vR has unexpected duplicates")
+
+@Issue(3852)
+def file_matching_dir_prop_reject(sbox):
+  "prop conflict for file matching dir prop reject"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add file with awkward name
+  svntest.main.file_append(sbox.ospath('A/dir_conflicts'), "some content\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'add', sbox.ospath('A/dir_conflicts'))
+  sbox.simple_propset('prop', 'val1', 'A/dir_conflicts')
+  sbox.simple_propset('prop', 'val1', 'A')
+  expected_output = svntest.wc.State(wc_dir, {
+      'A'               : Item(verb='Sending'),
+      'A/dir_conflicts' : Item(verb='Adding'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A', wc_rev=2)
+  expected_status.add({
+    'A/dir_conflicts' : Item(status='  ', wc_rev=2),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Modify/commit property change
+  sbox.simple_propset('prop', 'val2', 'A/dir_conflicts')
+  sbox.simple_propset('prop', 'val2', 'A')
+  expected_output = svntest.wc.State(wc_dir, {
+      'A'               : Item(verb='Sending'),
+      'A/dir_conflicts' : Item(verb='Sending'),
+      })
+  expected_status.tweak('A', 'A/dir_conflicts', wc_rev=3)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Local property mod
+  sbox.simple_propset('prop', 'val3', 'A/dir_conflicts')
+  sbox.simple_propset('prop', 'val3', 'A')
+
+  # Update to trigger property conflicts
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/dir_conflicts' : Item('some content\n', props = {'prop' : 'val3'}),
+    })
+  expected_disk.tweak('A', props={'prop' : 'val3'})
+  expected_output = svntest.wc.State(wc_dir, {
+    'A'               : Item(status=' C'),
+    'A/dir_conflicts' : Item(status=' C'),
+    })
+  expected_status.tweak(wc_rev=2)
+  expected_status.tweak('A', 'A/dir_conflicts', status=' C')
+
+  extra_files = ['dir_conflicts.prej', 'dir_conflicts.2.prej']
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None,
+                                        svntest.tree.detect_conflict_files,
+                                        extra_files,
+                                        None, None, True, '-r', '2', wc_dir)
+  if len(extra_files) != 0:
+    print("didn't get expected conflict files")
+    raise svntest.verify.SVNUnexpectedOutput
+
+  # Revert and update to check that conflict files are removed
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
+  expected_status.tweak('A', 'A/dir_conflicts', status='  ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A'               : Item(status=' U'),
+    'A/dir_conflicts' : Item(status=' U'),
+    })
+  expected_disk.tweak('A', 'A/dir_conflicts', props={'prop' : 'val2'})
+  expected_status.tweak(wc_rev=3)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, True)
+
+def pristine_props_listed(sbox):
+  "check if pristine properties are visible"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('prop', 'val', 'A')
+  sbox.simple_commit()
+
+  expected_output = ["Properties on '" + sbox.ospath('A') + "':\n", "  prop\n"]
+
+  # Now we see the pristine properties
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'proplist', '-R', wc_dir, '-r', 'BASE')
+
+  sbox.simple_propset('prop', 'needs-fix', 'A')
+
+  # And now we see no property at all
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'proplist', '-R', wc_dir, '-r', 'BASE')
 
 ########################################################################
 # Run the tests
@@ -2351,10 +2524,7 @@ test_list = [ None,
               revert_replacement_props,
               inappropriate_props,
               copy_inherits_special_props,
-              # If we learn how to write a pre-revprop-change hook for
-              # non-Posix platforms, we won't have to skip here:
-              Skip(XFail(revprop_change, svntest.main.is_ra_type_dav),
-                   is_non_posix_and_non_windows_os),
+              revprop_change,
               prop_value_conversions,
               binary_props,
               recursive_base_wc_ops,
@@ -2365,12 +2535,10 @@ test_list = [ None,
               depthy_wc_proplist,
               depthy_url_proplist,
               invalid_propnames,
-              SkipUnless(perms_on_symlink, svntest.main.is_posix_os),
+              perms_on_symlink,
               remove_custom_ns_props,
               props_over_time,
-              # XFail the same reason revprop_change() is.
-              SkipUnless(XFail(invalid_propvalues, svntest.main.is_ra_type_dav),
-                    svntest.main.server_enforces_date_syntax),
+              invalid_propvalues,
               same_replacement_props,
               added_moved_file,
               delete_nonexistent_property,
@@ -2380,6 +2548,8 @@ test_list = [ None,
               obstructed_subdirs,
               atomic_over_ra,
               propget_redirection,
+              file_matching_dir_prop_reject,
+              pristine_props_listed,
              ]
 
 if __name__ == '__main__':

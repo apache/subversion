@@ -58,10 +58,10 @@ svn_wc__conflict_skel_new(apr_pool_t *result_pool);
 
 /* Set 'update' as the conflicting operation in CONFLICT_SKEL.
    Allocate data stored in the skel in RESULT_POOL.
- 
+
    BASE_REVISION is the revision the node was at before the update.
    TARGET_REVISION is the revision being updated to.
- 
+
    Do temporary allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_wc__conflict_skel_set_op_update(svn_skel_t *conflict_skel,
@@ -92,7 +92,7 @@ svn_wc__conflict_skel_set_op_switch(svn_skel_t *conflict_skel,
    Allocate data stored in the skel in RESULT_POOL.
 
    REPOS_UUID is the UUID of the repository accessed via REPOS_ROOT_URL.
-  
+
    LEFT_REPOS_RELPATH and RIGHT_REPOS_RELPATH paths to the merge-left
    and merge-right merge sources, relative to REPOS_URL
 

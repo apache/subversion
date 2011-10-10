@@ -177,9 +177,11 @@ dnl at sqlite_file.  If not, fail.
 AC_DEFUN(SVN_SQLITE_FILE_CONFIG,
 [
   sqlite_amalg="$1"
+  AC_MSG_CHECKING([sqlite amalgamation])
   if test ! -e $sqlite_amalg; then
-    echo "amalgamation not found at $sqlite_amalg"
+    AC_MSG_RESULT([no])
   else
+    AC_MSG_RESULT([yes])
     AC_MSG_CHECKING([sqlite amalgamation file version])
     AC_EGREP_CPP(SQLITE_VERSION_OKAY,[
 #include "$sqlite_amalg"
@@ -242,7 +244,6 @@ AC_DEFUN(SVN_DOWNLOAD_SQLITE,
   echo "unpack the archive using tar/gunzip and copy sqlite3.c from the"
   echo "resulting directory to:"
   echo "$abs_srcdir/sqlite-amalgamation/sqlite3.c"
-  echo "This file also ships as part of the subversion-deps distribution."
   echo ""
   AC_MSG_ERROR([Subversion requires SQLite])
 ])

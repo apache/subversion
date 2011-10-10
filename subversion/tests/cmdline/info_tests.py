@@ -33,8 +33,12 @@ import shutil, stat, re, os
 import svntest
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 ######################################################################
@@ -167,7 +171,7 @@ def info_with_tree_conflicts(sbox):
     path = os.path.join(G, fname)
 
     # check plain info
-    expected_str1 = ".*local %s, incoming %s*" % (reason, action)
+    expected_str1 = ".*local %s, incoming %s.*" % (reason, action)
     expected_info = { 'Tree conflict' : expected_str1 }
     svntest.actions.run_and_verify_info([expected_info], path)
 
@@ -187,22 +191,15 @@ def info_with_tree_conflicts(sbox):
                                             },
                           )])
 
-  # Check recursive info.  Just ensure that all victims are listed.
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
-                                                                [], 'info',
-                                                                G, '-R')
+  # Check recursive info.
+  expected_infos = [{ 'Path' : re.escape(G) }]
   for fname, action, reason in scenarios:
-    found = False
-    expected = ".*incoming %s.*" % (action)
-    for item in output:
-      if re.search(expected, item):
-        found = True
-        break
-    if not found:
-      raise svntest.verify.SVNUnexpectedStdout(
-        "Tree conflict missing in svn info -R output:\n"
-        "  Expected: '%s'\n"
-        "  Found: '%s'" % (expected, output))
+    path = os.path.join(G, fname)
+    tree_conflict_re = ".*local %s, incoming %s.*" % (reason, action)
+    expected_infos.append({ 'Path' : re.escape(path),
+                            'Tree conflict' : tree_conflict_re })
+  expected_infos.sort(key=lambda info: info['Path'])
+  svntest.actions.run_and_verify_info(expected_infos, G, '-R')
 
 def info_on_added_file(sbox):
   """info on added file"""
@@ -223,7 +220,6 @@ def info_on_added_file(sbox):
               'Name' : 'new_file',
               'URL' : '.*/new_file',
               'Repository Root' : '.*',
-              'Revision' : '0',
               'Node Kind' : 'file',
               'Schedule' : 'add',
               'Repository UUID' : uuid_regex,
@@ -240,7 +236,7 @@ def info_on_added_file(sbox):
   verify_xml_elements(output,
                       [('entry',    {'kind'     : 'file',
                                      'path'     : new_file,
-                                     'revision' : '0'}),
+                                     'revision' : 'Resource is not under version control.'}),
                        ('url',      {}, '.*/new_file'),
                        ('root',     {}, '.*'),
                        ('uuid',     {}, uuid_regex),
@@ -262,7 +258,6 @@ def info_on_mkdir(sbox):
   expected = {'Path' : re.escape(new_dir),
               'URL' : '.*/new_dir',
               'Repository Root' : '.*',
-              'Revision' : '0',
               'Node Kind' : 'directory',
               'Schedule' : 'add',
               'Repository UUID' : uuid_regex,
@@ -278,7 +273,7 @@ def info_on_mkdir(sbox):
   verify_xml_elements(output,
                       [('entry',    {'kind'     : 'dir',
                                      'path'     : new_dir,
-                                     'revision' : '0'}),
+                                     'revision' : 'Resource is not under version control.'}),
                        ('url',      {}, '.*/new_dir'),
                        ('root',     {}, '.*'),
                        ('uuid',     {}, uuid_regex),
@@ -302,11 +297,11 @@ def info_wcroot_abspaths(sbox):
 
     if target is None:
       target = "(UNKNOWN)"
-      
+
     if path is None:
       print "No WC root path for '%s'" % (target)
       raise svntest.Failure
-    
+
     if path != wcroot_abspath:
       print("For target '%s'..." % (target))
       print("   Reported WC root path: %s" % (path))
@@ -326,14 +321,202 @@ def info_url_special_characters(sbox):
                   sbox.repo_url + '%2F' + 'A']
 
   expected = {'Path' : 'A',
-              'Repository Root' : '.*',
+              'Repository Root' : re.escape(sbox.repo_url),
               'Revision' : '1',
               'Node Kind' : 'dir',
              }
 
   for url in special_urls:
     svntest.actions.run_and_verify_info([expected], url)
+
+def info_multiple_targets(sbox):
+  "info multiple targets"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  def multiple_wc_targets():
+    "multiple wc targets"
+
+    alpha = sbox.ospath('A/B/E/alpha')
+    beta = sbox.ospath('A/B/E/beta')
+    non_existent_path = os.path.join(wc_dir, 'non-existent')
+
+    # All targets are existing
+    svntest.actions.run_and_verify_svn2(None, None, [],
+                                        0, 'info', alpha, beta)
+
+    # One non-existing target
+    expected_err = ".*W155010.*\n\n.*E200009.*"
+    expected_err_re = re.compile(expected_err, re.DOTALL)
+
+    exit_code, output, error = svntest.main.run_svn(1, 'info', alpha,
+                                                    non_existent_path, beta)
+
+    # Verify error
+    if not expected_err_re.match("".join(error)):
+      raise svntest.Failure('info failed: expected error "%s", but received '
+                            '"%s"' % (expected_err, "".join(error)))
+
+  def multiple_url_targets():
+    "multiple url targets"
+
+    alpha = sbox.repo_url +  '/A/B/E/alpha'
+    beta = sbox.repo_url +  '/A/B/E/beta'
+    non_existent_url = sbox.repo_url +  '/non-existent'
+
+    # All targets are existing
+    svntest.actions.run_and_verify_svn2(None, None, [],
+                                        0, 'info', alpha, beta)
+
+    # One non-existing target
+    expected_err = ".*W170000.*\n\n.*E200009.*"
+    expected_err_re = re.compile(expected_err, re.DOTALL)
+
+    exit_code, output, error = svntest.main.run_svn(1, 'info', alpha,
+                                                    non_existent_url, beta)
+
+    # Verify error
+    if not expected_err_re.match("".join(error)):
+      raise svntest.Failure('info failed: expected error "%s", but received '
+                            '"%s"' % (expected_err, "".join(error)))
+  # Test one by one
+  multiple_wc_targets()
+  multiple_url_targets()
+
+def info_repos_root_url(sbox):
+  """verify values for repository root"""
+  sbox.build(create_wc = False)
+  wc_dir = sbox.wc_dir
+
+  expected_info = [
+    {
+        'Path'              : re.escape(os.path.basename(sbox.repo_dir)),
+        'Repository Root'   : re.escape(sbox.repo_url),
+        'URL'               : re.escape(sbox.repo_url),
+        'Revision'          : '1',
+        'Node Kind'         : 'directory',
+        'Last Changed Rev'  : '1',
+    },
+    {
+        'Path'              : 'iota',
+        'Name'              : 'iota',
+        'Repository Root'   : re.escape(sbox.repo_url),
+        'URL'               : re.escape(sbox.repo_url + '/iota'),
+        'Revision'          : '1',
+        'Node Kind'         : 'file',
+        'Last Changed Rev'  : '1',
+    }
+  ]
+
+  svntest.actions.run_and_verify_info(expected_info, sbox.repo_url,
+                                      '--depth', 'files')
+
+@Issue(3787)
+def info_show_exclude(sbox):
+  "tests 'info --depth' variants on excluded node"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(wc_dir, 'A')
+  iota = os.path.join(wc_dir, 'iota')
+  svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', A_path)
+  wc_uuid = svntest.actions.get_wc_uuid(wc_dir)
+
+  expected_info = [{
+      'Path' : re.escape(wc_dir),
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : wc_uuid,
+  }]
+
+  svntest.actions.run_and_verify_info(expected_info, '--depth', 'empty',
+                                      wc_dir)
+
+  expected_info = [{
+      'Path' : '.*%sA' % re.escape(os.sep),
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : wc_uuid,
+      'Depth' : 'exclude',
+  }]
+
+  svntest.actions.run_and_verify_info(expected_info, '--depth',
+                                      'empty', A_path)
+  svntest.actions.run_and_verify_info(expected_info, '--depth',
+                                      'infinity', A_path)
+  svntest.actions.run_and_verify_info(expected_info, '--depth',
+                                      'immediates', A_path)
+
+  expected_info = [{
+      'Path' : '.*%siota' % re.escape(os.sep),
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : wc_uuid,
+  }]
+  svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', iota)
+  svntest.actions.run_and_verify_info(expected_info, iota)
+
+  # And now get iota back, to allow testing other states
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='A '),
+    })
+
+  expected_status = svntest.wc.State(iota, {
+    '' : Item(status='  ', wc_rev='1')
+  })
+
+  svntest.actions.run_and_verify_update(iota,
+                                        expected_output, None, expected_status)
+
+  sbox.simple_rm('iota')
+  sbox.simple_commit()
   
+  expected_error = 'svn: E200009: Could not display info for all targets.*'
+
+  # Expect error on iota (status = not-present)
+  svntest.actions.run_and_verify_svn(None, [], expected_error, 'info', iota)
+
+  sbox.simple_update()
+
+  # Expect error on iota (unversioned)
+  svntest.actions.run_and_verify_svn(None, [], expected_error, 'info', iota)
+
+@Issue(3998)
+def binary_tree_conflict(sbox):
+  "svn info shouldn't crash on conflict"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('svn:mime-type', 'binary/octet-stream', 'iota')
+  sbox.simple_commit()
+
+  iota = sbox.ospath('iota')
+
+  svntest.main.file_write(iota, 'something-else')
+  sbox.simple_commit()
+
+  svntest.main.file_write(iota, 'third')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='C '),
+    })
+  expected_status = svntest.wc.State(iota, {
+    '' : Item(status='C ', wc_rev='2')
+  })
+  svntest.actions.run_and_verify_update(iota,
+                                        expected_output, None, expected_status,
+                                        None, None, None, None, None, False,
+                                        iota, '-r', '2')
+
+  expected_info = [{
+      'Path' : '%s' % re.escape(iota),
+      'Conflict Previous Base File' : re.escape(iota + '.r3'),
+      'Conflict Current Base File' : re.escape(iota + '.r2'),
+  }]
+  svntest.actions.run_and_verify_info(expected_info, iota)
+
+
+
+
 ########################################################################
 # Run the tests
 
@@ -344,6 +527,10 @@ test_list = [ None,
               info_on_mkdir,
               info_wcroot_abspaths,
               info_url_special_characters,
+              info_multiple_targets,
+              info_repos_root_url,
+              info_show_exclude,
+              binary_tree_conflict,
              ]
 
 if __name__ == '__main__':

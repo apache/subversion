@@ -55,14 +55,14 @@ public class ChangePath implements java.io.Serializable, Comparable
     /**
      * A backward-compat constructor.
      */
-    public ChangePath(org.apache.subversion.javahl.ChangePath aChangePath)
+    public ChangePath(org.apache.subversion.javahl.types.ChangePath aChangePath)
     {
         this(aChangePath.getPath(), aChangePath.getCopySrcRevision(),
              aChangePath.getCopySrcPath(),
-              ((aChangePath.getAction() == org.apache.subversion.javahl.ChangePath.Action.add) ? 'A' :
-              ((aChangePath.getAction() == org.apache.subversion.javahl.ChangePath.Action.delete) ? 'D' :
-              ((aChangePath.getAction() == org.apache.subversion.javahl.ChangePath.Action.replace) ? 'R' :
-              ((aChangePath.getAction() == org.apache.subversion.javahl.ChangePath.Action.modify) ? 'M' :
+              ((aChangePath.getAction() == org.apache.subversion.javahl.types.ChangePath.Action.add) ? 'A' :
+              ((aChangePath.getAction() == org.apache.subversion.javahl.types.ChangePath.Action.delete) ? 'D' :
+              ((aChangePath.getAction() == org.apache.subversion.javahl.types.ChangePath.Action.replace) ? 'R' :
+              ((aChangePath.getAction() == org.apache.subversion.javahl.types.ChangePath.Action.modify) ? 'M' :
                 ' ')))),
              NodeKind.fromApache(aChangePath.getNodeKind()));
     }
@@ -72,7 +72,7 @@ public class ChangePath implements java.io.Serializable, Comparable
         return path.compareTo(((ChangePath)other).path);
     }
 
-    /** Path of commited item */
+    /** Path of committed item */
     private String path;
 
     /** Source revision of copy (if any). */
@@ -88,8 +88,8 @@ public class ChangePath implements java.io.Serializable, Comparable
     private int nodeKind;
 
     /**
-     * Retrieve the path to the commited item
-     * @return  the path to the commited item
+     * Retrieve the path to the committed item
+     * @return  the path to the committed item
      */
     public String getPath()
     {

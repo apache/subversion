@@ -20,6 +20,8 @@
 # ====================================================================
 
 """\
+__SCRIPTNAME__: checkout utility for sparse Subversion working copies
+
 Usage: 1. __SCRIPTNAME__ checkout VIEWSPEC-FILE TARGET-DIR
        2. __SCRIPTNAME__ examine VIEWSPEC-FILE
        3. __SCRIPTNAME__ help
@@ -35,7 +37,7 @@ by this script as it checks out the specified layout.
 
 2. Parse VIEWSPEC-FILE and dump out a human-readable representation of
    the tree described in the specification.
-   
+
 3. Show this usage message.
 
 4. Show information about the file format this program expects.
@@ -307,7 +309,7 @@ def usage_and_exit(errmsg=None):
     if errmsg:
         stream.write("ERROR: %s\n" % (errmsg))
     sys.exit(errmsg and 1 or 0)
-    
+
 def main():
     argc = len(sys.argv)
     if argc < 2:
@@ -341,6 +343,6 @@ def main():
         checkout_spec(parse_viewspec(fp), sys.argv[3])
     else:
         usage_and_exit('Unknown subcommand "%s".' % (subcommand))
-    
+
 if __name__ == "__main__":
     main()

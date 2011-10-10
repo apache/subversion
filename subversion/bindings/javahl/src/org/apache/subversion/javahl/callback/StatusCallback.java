@@ -23,8 +23,8 @@
 
 package org.apache.subversion.javahl.callback;
 
-import org.apache.subversion.javahl.Status;
 import org.apache.subversion.javahl.ISVNClient;
+import org.apache.subversion.javahl.types.Status;
 
 /**
  * This interface is used to receive every status item for
@@ -34,7 +34,8 @@ public interface StatusCallback
 {
     /**
      * the method will be called for each status item
-     * @param status    the status object
+     * @param path      the path of the object
+     * @param status    the status object, may be null
      */
-    public void doStatus(Status status);
+    public void doStatus(String path, Status status);
 }

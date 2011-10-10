@@ -40,6 +40,7 @@
 #include "../libsvn_fs/fs-loader.h"
 
 #include "private/svn_fs_util.h"
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 /* Names of hash keys used to store a lock for writing to disk. */
@@ -60,16 +61,18 @@
 
 /*** Generic helper functions. ***/
 
-/* Return the MD5 hash of STR. */
-static const char *
-make_digest(const char *str,
+/* Set *DIGEST to the MD5 hash of STR. */
+static svn_error_t *
+make_digest(const char **digest,
+            const char *str,
             apr_pool_t *pool)
 {
   svn_checksum_t *checksum;
 
-  svn_checksum(&checksum, svn_checksum_md5, str, strlen(str), pool);
+  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, str, strlen(str), pool));
 
-  return svn_checksum_to_cstring_display(checksum, pool);
+  *digest = svn_checksum_to_cstring_display(checksum, pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -134,18 +137,22 @@ digest_path_from_digest(const char *fs_path,
 }
 
 
-/* Return the path to the lock/entries digest file associate with
-   PATH, where PATH is the path to the lock file or lock entries file
+/* Set *DIGEST_PATH to the path to the lock/entries digest file associate
+   with PATH, where PATH is the path to the lock file or lock entries file
    in FS. */
-static const char *
-digest_path_from_path(const char *fs_path,
+static svn_error_t *
+digest_path_from_path(const char **digest_path,
+                      const char *fs_path,
                       const char *path,
                       apr_pool_t *pool)
 {
-  const char *digest = make_digest(path, pool);
-  return svn_dirent_join_many(pool, fs_path, PATH_LOCKS_DIR,
-                              apr_pstrmemdup(pool, digest, DIGEST_SUBDIR_LEN),
-                              digest, NULL);
+  const char *digest;
+  SVN_ERR(make_digest(&digest, path, pool));
+  *digest_path = svn_dirent_join_many(pool, fs_path, PATH_LOCKS_DIR,
+                                      apr_pstrmemdup(pool, digest,
+                                                     DIGEST_SUBDIR_LEN),
+                                      digest, NULL);
+  return SVN_NO_ERROR;
 }
 
 
@@ -287,17 +294,17 @@ read_digest_file(apr_hash_t **children_p,
       lock->path = path;
 
       if (! ((lock->token = hash_fetch(hash, TOKEN_KEY, pool))))
-        return svn_error_return(err_corrupt_lockfile(fs_path, path));
+        return svn_error_trace(err_corrupt_lockfile(fs_path, path));
 
       if (! ((lock->owner = hash_fetch(hash, OWNER_KEY, pool))))
-        return svn_error_return(err_corrupt_lockfile(fs_path, path));
+        return svn_error_trace(err_corrupt_lockfile(fs_path, path));
 
       if (! ((val = hash_fetch(hash, IS_DAV_COMMENT_KEY, pool))))
-        return svn_error_return(err_corrupt_lockfile(fs_path, path));
+        return svn_error_trace(err_corrupt_lockfile(fs_path, path));
       lock->is_dav_comment = (val[0] == '1');
 
       if (! ((val = hash_fetch(hash, CREATION_DATE_KEY, pool))))
-        return svn_error_return(err_corrupt_lockfile(fs_path, path));
+        return svn_error_trace(err_corrupt_lockfile(fs_path, path));
       SVN_ERR(svn_time_from_cstring(&(lock->creation_date), val, pool));
 
       if ((val = hash_fetch(hash, EXPIRATION_DATE_KEY, pool)))
@@ -333,7 +340,7 @@ read_digest_file(apr_hash_t **children_p,
 /* Write LOCK in FS to the actual OS filesystem.
 
    Use PERMS_REFERENCE for the permissions of any digest files.
-   
+
    Note: this takes an FS_PATH because it's called from the hotcopy logic.
  */
 static svn_error_t *
@@ -362,7 +369,8 @@ set_lock(const char *fs_path,
 
       /* Calculate the DIGEST_PATH for the currently FS path, and then
          get its DIGEST_FILE basename. */
-      digest_path = digest_path_from_path(fs_path, this_path->data, subpool);
+      SVN_ERR(digest_path_from_path(&digest_path, fs_path, this_path->data,
+                                    subpool));
       digest_file = svn_dirent_basename(digest_path, subpool);
 
       SVN_ERR(read_digest_file(&this_children, &this_lock, fs_path,
@@ -389,10 +397,10 @@ set_lock(const char *fs_path,
                                 digest_path, perms_reference, subpool));
 
       /* Prep for next iteration, or bail if we're done. */
-      if (svn_dirent_is_root(this_path->data, this_path->len))
+      if (svn_fspath__is_root(this_path->data, this_path->len))
         break;
       svn_stringbuf_set(this_path,
-                        svn_dirent_dirname(this_path->data, subpool));
+                        svn_fspath__dirname(this_path->data, subpool));
     }
 
   svn_pool_destroy(subpool);
@@ -424,7 +432,8 @@ delete_lock(svn_fs_t *fs,
 
       /* Calculate the DIGEST_PATH for the currently FS path, and then
          get its DIGEST_FILE basename. */
-      digest_path = digest_path_from_path(fs->path, this_path->data, subpool);
+      SVN_ERR(digest_path_from_path(&digest_path, fs->path, this_path->data,
+                                    subpool));
       digest_file = svn_dirent_basename(digest_path, subpool);
 
       SVN_ERR(read_digest_file(&this_children, &this_lock, fs->path,
@@ -456,10 +465,10 @@ delete_lock(svn_fs_t *fs,
         }
 
       /* Prep for next iteration, or bail if we're done. */
-      if (svn_dirent_is_root(this_path->data, this_path->len))
+      if (svn_fspath__is_root(this_path->data, this_path->len))
         break;
       svn_stringbuf_set(this_path,
-                        svn_dirent_dirname(this_path->data, subpool));
+                        svn_fspath__dirname(this_path->data, subpool));
     }
 
   svn_pool_destroy(subpool);
@@ -478,7 +487,9 @@ get_lock(svn_lock_t **lock_p,
          apr_pool_t *pool)
 {
   svn_lock_t *lock;
-  const char *digest_path = digest_path_from_path(fs->path, path, pool);
+  const char *digest_path;
+
+  SVN_ERR(digest_path_from_path(&digest_path, fs->path, path, pool));
 
   SVN_ERR(read_digest_file(NULL, &lock, fs->path, digest_path, pool));
   if (! lock)
@@ -574,7 +585,7 @@ locks_walker(void *baton,
 }
 
 /* Callback type for walk_digest_files().
- * 
+ *
  * CHILDREN and LOCK come from a read_digest_file(digest_path) call.
  */
 typedef svn_error_t *(*walk_digests_callback_t)(void *baton,
@@ -595,7 +606,7 @@ walk_digest_files(const char *fs_path,
                   walk_digests_callback_t walk_digests_func,
                   void *walk_digests_baton,
                   svn_boolean_t have_write_lock,
-                  apr_pool_t *pool) 
+                  apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   apr_hash_t *children;
@@ -702,7 +713,8 @@ svn_fs_fs__allow_locked_operation(const char *path,
   if (recurse)
     {
       /* Discover all locks at or below the path. */
-      const char *digest_path = digest_path_from_path(fs->path, path, pool);
+      const char *digest_path;
+      SVN_ERR(digest_path_from_path(&digest_path, fs->path, path, pool));
       SVN_ERR(walk_locks(fs, digest_path, get_locks_callback,
                          fs, have_write_lock, pool));
     }
@@ -978,7 +990,7 @@ svn_fs_fs__get_lock(svn_lock_t **lock_p,
 
 
 /* Baton for get_locks_filter_func(). */
-typedef struct
+typedef struct get_locks_filter_baton_t
 {
   const char *path;
   svn_depth_t requested_depth;
@@ -1016,7 +1028,7 @@ get_locks_filter_func(void *baton,
      c) we've asked for depth=files or depth=immediates, and this
         lock is on an immediate child of our query path.
   */
-  if ((strcmp(b->path, lock->path) == 0) 
+  if ((strcmp(b->path, lock->path) == 0)
       || (b->requested_depth == svn_depth_infinity))
     {
       SVN_ERR(b->get_locks_func(b->get_locks_baton, lock, pool));
@@ -1024,12 +1036,12 @@ get_locks_filter_func(void *baton,
   else if ((b->requested_depth == svn_depth_files) ||
            (b->requested_depth == svn_depth_immediates))
     {
-      const char *rel_uri = svn_uri_is_child(b->path, lock->path, pool);
+      const char *rel_uri = svn_fspath__is_child(b->path, lock->path, pool);
       if (rel_uri && (svn_path_component_count(rel_uri) == 1))
         SVN_ERR(b->get_locks_func(b->get_locks_baton, lock, pool));
     }
 
-  return SVN_NO_ERROR; 
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -1047,12 +1059,12 @@ svn_fs_fs__get_locks(svn_fs_t *fs,
   path = svn_fs__canonicalize_abspath(path, pool);
 
   glfb.path = path;
-  glfb.requested_depth = depth; 
+  glfb.requested_depth = depth;
   glfb.get_locks_func = get_locks_func;
   glfb.get_locks_baton = get_locks_baton;
 
   /* Get the top digest path in our tree of interest, and then walk it. */
-  digest_path = digest_path_from_path(fs->path, path, pool);
+  SVN_ERR(digest_path_from_path(&digest_path, fs->path, path, pool));
   SVN_ERR(walk_locks(fs, digest_path, get_locks_filter_func, &glfb,
                      FALSE, pool));
   return SVN_NO_ERROR;

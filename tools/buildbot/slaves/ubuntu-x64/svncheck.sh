@@ -29,9 +29,9 @@ if test -z "$1" ; then
 fi
 
 echo "========= mount RAM disc"
-# ignore the result: if it fails, the test will just take longer...
-mkdir -p subversion/tests/cmdline/svn-test-work
-test -e ../mount-ramdrive && ../mount-ramdrive
+test ! -e /dev/shm/svn-test-work && mkdir /dev/shm/svn-test-work
+test -e subversion/tests/cmdline/svn-test-work && rm -rf subversion/tests/cmdline/svn-test-work
+ln -s /dev/shm/svn-test-work subversion/tests/cmdline/
 
 echo "========= make check"
 make check FS_TYPE=$1 CLEANUP=1 || exit $?

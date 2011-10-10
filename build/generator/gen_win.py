@@ -95,6 +95,7 @@ class GeneratorBase(gen_base.GeneratorBase):
 
     # Instrumentation options
     self.disable_shared = None
+    self.static_apr = None
     self.instrument_apr_pools = None
     self.instrument_purify_quantify = None
     self.configure_apr_util = None
@@ -157,6 +158,8 @@ class GeneratorBase(gen_base.GeneratorBase):
         self.enable_ml = 1
       elif opt == '--disable-shared':
         self.disable_shared = 1
+      elif opt == '--with-static-apr':
+        self.static_apr = 1
       elif opt == '--vsnet-version':
         if val == '2002' or re.match('7(\.\d+)?', val):
           self.vs_version = '2002'
@@ -285,7 +288,7 @@ class WinGeneratorBase(GeneratorBase):
     #Make the project files directory if it doesn't exist
     #TODO win32 might not be the best path as win64 stuff will go here too
     self.projfilesdir=os.path.join("build","win32",subdir)
-    self.rootpath = ".." + "\\.." * self.projfilesdir.count(os.sep)
+    self.rootpath = self.find_rootpath()
     if not os.path.exists(self.projfilesdir):
       os.makedirs(self.projfilesdir)
 
@@ -329,6 +332,10 @@ class WinGeneratorBase(GeneratorBase):
     else:
       print("%s not found; skipping SWIG file generation..." % self.swig_exe)
 
+  def find_rootpath(self):
+    "Gets the root path as understand by the project system"
+    return ".." + "\\.." * self.projfilesdir.count(os.sep) + "\\"
+
   def makeguid(self, data):
     "Generate a windows style GUID"
     ### blah. this function can generate invalid GUIDs. leave it for now,
@@ -345,7 +352,7 @@ class WinGeneratorBase(GeneratorBase):
 
   def path(self, *paths):
     """Convert build path to msvc path and prepend root"""
-    return msvc_path_join(self.rootpath, *list(map(msvc_path, paths)))
+    return self.rootpath + msvc_path_join(*list(map(msvc_path, paths)))
 
   def apath(self, path, *paths):
     """Convert build path to msvc path and prepend root if not absolute"""
@@ -354,8 +361,8 @@ class WinGeneratorBase(GeneratorBase):
     if os.path.isabs(path):
       return msvc_path_join(msvc_path(path), *list(map(msvc_path, paths)))
     else:
-      return msvc_path_join(self.rootpath, msvc_path(path),
-                            *list(map(msvc_path, paths)))
+      return self.rootpath + msvc_path_join(msvc_path(path),
+                                            *list(map(msvc_path, paths)))
 
   def get_install_targets(self):
     "Generate the list of targets"
@@ -584,16 +591,16 @@ class WinGeneratorBase(GeneratorBase):
       for header in target.msvc_export:
         deps.append(self.path('subversion/include', header))
 
-      cbuild = "python $(InputPath) %s > %s" \
-               % (" ".join(deps), def_file)
+      cbuild = "%s $(InputPath) %s > %s" \
+               % (self.quote(sys.executable), " ".join(deps), def_file)
 
       cdesc = 'Generating %s ' % def_file
 
-      sources.append(ProjectItem(path=gsrc, reldir=None, 
+      sources.append(ProjectItem(path=gsrc, reldir=None,
                                  custom_build=cbuild,
                                  custom_target=def_file,
                                  custom_desc=cdesc,
-                                 user_deps=deps, 
+                                 user_deps=deps,
                                  extension=''))
 
       sources.append(ProjectItem(path=def_file, reldir=None,
@@ -852,6 +859,9 @@ class WinGeneratorBase(GeneratorBase):
     elif cfg == 'Release':
       fakedefines.append("NDEBUG")
 
+    if self.static_apr:
+      fakedefines.extend(["APR_DECLARE_STATIC", "APU_DECLARE_STATIC"])
+
     # XXX: Check if db is present, and if so, let apr-util know
     # XXX: This is a hack until the apr build system is improved to
     # XXX: know these things for itself.
@@ -889,6 +899,9 @@ class WinGeneratorBase(GeneratorBase):
 
     if target.name.endswith('svn_subr'):
       fakedefines.append("SVN_USE_WIN32_CRASHHANDLER")
+
+    # use static linking to Expat
+    fakedefines.append("XML_STATIC")
 
     return fakedefines
 
@@ -932,6 +945,10 @@ class WinGeneratorBase(GeneratorBase):
             or isinstance(target, gen_base.TargetSWIGLib)):
       if self.swig_vernum >= 103028:
         fakeincludes.append(self.apath(self.swig_libdir, target.lang))
+        if target.lang == 'perl':
+          # At least swigwin 1.3.38+ uses perl5 as directory name. Just add it
+          # to the list to make sure we don't break old versions
+          fakeincludes.append(self.apath(self.swig_libdir, 'perl5'))
       else:
         fakeincludes.append(self.swig_libdir)
       if target.lang == "python":
@@ -1004,7 +1021,10 @@ class WinGeneratorBase(GeneratorBase):
       neonlib = self.neon_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
 
     if self.serf_lib:
-      serflib = 'serf.lib'
+      if self.serf_ver_maj != 0:
+        serflib = 'serf-%d.lib' % self.serf_ver_maj
+      else:
+        serflib = 'serf.lib'
 
     zlib = (cfg == 'Debug' and 'zlibstatD.lib' or 'zlibstat.lib')
     sasllib = None
@@ -1161,6 +1181,11 @@ class WinGeneratorBase(GeneratorBase):
       return
 
     serf_path = os.path.abspath(self.serf_path)
+    if self.serf_ver_maj != 0:
+      serflib = 'serf-%d.lib' % self.serf_ver_maj
+    else:
+      serflib = 'serf.lib'
+
     self.move_proj_file(self.serf_path, name,
                         (('serf_sources',
                           glob.glob(os.path.join(serf_path, '*.c'))
@@ -1180,6 +1205,8 @@ class WinGeneratorBase(GeneratorBase):
                          ('apr_path', os.path.abspath(self.apr_path)),
                          ('apr_util_path', os.path.abspath(self.apr_util_path)),
                          ('project_guid', self.makeguid('serf')),
+                         ('apr_static', self.static_apr),
+                         ('serf_lib', serflib),
                         ))
 
   def move_proj_file(self, path, name, params=()):
@@ -1315,7 +1342,7 @@ class WinGeneratorBase(GeneratorBase):
     libdir = ''
 
     if self.swig_path is not None:
-      self.swig_exe = os.path.join(self.swig_path, 'swig')
+      self.swig_exe = os.path.abspath(os.path.join(self.swig_path, 'swig'))
     else:
       self.swig_exe = 'swig'
 
@@ -1415,13 +1442,13 @@ class WinGeneratorBase(GeneratorBase):
     # shouldn't be called unless serf is there
     assert self.serf_path and os.path.exists(self.serf_path)
 
+    self.serf_ver_maj = None
+    self.serf_ver_min = None
+    self.serf_ver_patch = None
+
     # serf.h should be present
     if not os.path.exists(os.path.join(self.serf_path, 'serf.h')):
       return None, None, None
-
-    ver_maj = None
-    ver_min = None
-    ver_patch = None
 
     txt = open(os.path.join(self.serf_path, 'serf.h')).read()
 
@@ -1429,13 +1456,13 @@ class WinGeneratorBase(GeneratorBase):
     min_match = re.search(r'SERF_MINOR_VERSION\s+(\d+)', txt)
     patch_match = re.search(r'SERF_PATCH_VERSION\s+(\d+)', txt)
     if maj_match:
-      ver_maj = int(maj_match.group(1))
+      self.serf_ver_maj = int(maj_match.group(1))
     if min_match:
-      ver_min = int(min_match.group(1))
+      self.serf_ver_min = int(min_match.group(1))
     if patch_match:
-      ver_patch = int(patch_match.group(1))
+      self.serf_ver_patch = int(patch_match.group(1))
 
-    return ver_maj, ver_min, ver_patch
+    return self.serf_ver_maj, self.serf_ver_min, self.serf_ver_patch
 
   def _find_serf(self):
     "Check if serf and its dependencies are available"
@@ -1480,10 +1507,15 @@ class WinGeneratorBase(GeneratorBase):
     vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
 
     major_ver = int(vermatch.group(1))
+
+    suffix = ''
     if major_ver > 0:
-      self.apr_lib = 'libapr-%d.lib' % major_ver
+        suffix = '-%d' % major_ver
+
+    if self.static_apr:
+      self.apr_lib = 'apr%s.lib' % suffix
     else:
-      self.apr_lib = 'libapr.lib'
+      self.apr_lib = 'libapr%s.lib' % suffix
 
   def _find_apr_util(self):
     "Find the APR-util library and version"
@@ -1502,10 +1534,15 @@ class WinGeneratorBase(GeneratorBase):
     vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
 
     major_ver = int(vermatch.group(1))
+
+    suffix = ''
     if major_ver > 0:
-      self.aprutil_lib = 'libaprutil-%d.lib' % major_ver
+        suffix = '-%d' % major_ver
+
+    if self.static_apr:
+      self.aprutil_lib = 'aprutil%s.lib' % suffix
     else:
-      self.aprutil_lib = 'libaprutil.lib'
+      self.aprutil_lib = 'libaprutil%s.lib' % suffix
 
   def _find_sqlite(self):
     "Find the Sqlite library and version"
@@ -1544,8 +1581,9 @@ class WinGeneratorBase(GeneratorBase):
     msg = 'Found SQLite version %s\n'
 
     major, minor, patch = version
-    if major < 3 or (major == 3 and minor < 4):
-      sys.stderr.write("ERROR: SQLite 3.4.0 or higher is required "
+    if major < 3 or (major == 3 and minor < 6) \
+                 or (major == 3 and minor == 6 and patch < 18):
+      sys.stderr.write("ERROR: SQLite 3.6.18 or higher is required "
                        "(%s found)\n" % self.sqlite_version);
       sys.exit(1)
     else:
@@ -1553,24 +1591,24 @@ class WinGeneratorBase(GeneratorBase):
 
   def _find_zlib(self):
     "Find the ZLib library and version"
-    
+
     if not self.zlib_path:
       self.zlib_version = '1'
       return
-    
+
     header_file = os.path.join(self.zlib_path, 'zlib.h')
-    
+
     if not os.path.exists(header_file):
       self.zlib_version = '1'
       return
-      
+
     fp = open(header_file)
     txt = fp.read()
     fp.close()
     vermatch = re.search(r'^\s*#define\s+ZLIB_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.\d)?"', txt, re.M)
 
     version = tuple(map(int, vermatch.groups()))
-    
+
     self.zlib_version = '%d.%d.%d' % version
 
     msg = 'Found ZLib version %s\n'

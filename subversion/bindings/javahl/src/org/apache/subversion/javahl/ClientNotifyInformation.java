@@ -26,13 +26,11 @@ package org.apache.subversion.javahl;
 import java.util.Map;
 import java.util.EventObject;
 import org.apache.subversion.javahl.callback.ClientNotifyCallback;
-import org.apache.subversion.javahl.type.NodeKind;
+import org.apache.subversion.javahl.types.*;
 
 /**
  * The event passed to the {@link ClientNotifyCallback#onNotify}
  * API to notify {@link ISVNClient} of relevant events.
- *
- * @since 1.2
  */
 public class ClientNotifyInformation extends EventObject
 {
@@ -92,19 +90,16 @@ public class ClientNotifyInformation extends EventObject
 
     /**
      * The name of the changelist.
-     * @since 1.5
      */
     private String changelistName;
 
     /**
      * The range of the merge just beginning to occur.
-     * @since 1.5
      */
     private RevisionRange mergeRange;
 
     /**
      * A common absolute path prefix that can be subtracted from .path.
-     * @since 1.6
      */
     private String pathPrefix;
 
@@ -115,7 +110,7 @@ public class ClientNotifyInformation extends EventObject
     long oldRevision;
 
     long hunkOriginalStart;
-    
+
     long hunkOriginalLength;
 
     long hunkModifiedStart;
@@ -262,7 +257,6 @@ public class ClientNotifyInformation extends EventObject
 
     /**
      * @return The name of the changelist.
-     * @since 1.5
      */
     public String getChangelistName()
     {
@@ -271,7 +265,6 @@ public class ClientNotifyInformation extends EventObject
 
     /**
      * @return The range of the merge just beginning to occur.
-     * @since 1.5
      */
     public RevisionRange getMergeRange()
     {
@@ -280,7 +273,6 @@ public class ClientNotifyInformation extends EventObject
 
     /**
      * @return The common absolute path prefix.
-     * @since 1.6
      */
     public String getPathPrefix()
     {
@@ -467,20 +459,29 @@ public class ClientNotifyInformation extends EventObject
           * which is unable to be operated on.  */
         failed_external ("failed external"),
 
-        /** An update tried to add a file or directory at path but an
-          * unversioned obstruction was found.  */
-        update_obstruction  ("update obstruction"),
+        /** Starting an update operation */
+        update_started ("update started"),
+
+        /** Skipping an obstruction working copy */
+        update_skip_obstruction ("update skip obstruction"),
+
+        /** Skipping a working only node */
+        update_skip_working_only ("update skip working only"),
+
+        /** Skipped a file or directory to which access couldn't be obtained */
+        update_skip_access_denied ("update skip access denied"),
 
         /** An update operation removed an external working copy.  */
         update_external_removed ("update external removed"),
 
-        /** A node below a deleted and tree conflicted directory was added
-          *  during update.  */
-        update_add_deleted  ("update add deleted"),
+        /** Applying a shadowed add */
+        update_shadowed_add ("update shadowed add"),
 
-        /** A node below a deleted and tree conflicted directory was updated.
-          */
-        update_update_deleted   ("update modified deleted"),
+        /** Applying a shadowed update */
+        update_shadowed_update ("update shadowed update"),
+
+        /** Applying a shadowed delete */
+        update_shadowed_delete ("update shadowed delete"),
 
         /** The mergeinfo on path was updated.  */
         merge_record_info   ("merge record info"),
@@ -501,7 +502,46 @@ public class ClientNotifyInformation extends EventObject
         patch_applied_hunk  ("patch applied hunk"),
 
         /** A hunk from a patch was rejected.  */
-        patch_rejected_hunk ("patch rejected hunk");
+        patch_rejected_hunk ("patch rejected hunk"),
+
+        /** A hunk from a patch was found to be already applied. */
+        patch_hunk_already_applied ("patch hunk already applied"),
+
+        /** Committing a non-overwriting copy (path is the target of the
+          * copy, not the source). */
+        commit_copied   ("commit copied"),
+
+        /** Committing an overwriting (replace) copy (path is the target of
+          * the copy, not the source).  */
+        commit_copied_replaced  ("commit copied replaced"),
+
+        /** The server has instructed the client to follow a URL
+          * redirection. */
+        url_redirect    ("url redirect"),
+
+        /** The operation was attempted on a path which doesn't exist. */
+        path_nonexistent ("path nonexistent"),
+
+        /** Removing a path by excluding it. */
+        exclude ("exclude"),
+
+        /** Operation failed because the node remains in conflict */
+        failed_conflict ("failed conflict"),
+
+        /** Operation failed because an added node is missing */
+        failed_missing ("failed missing"),
+
+        /** Operation failed because a node is out of date */
+        failed_out_of_date ("failed out of date"),
+
+        /** Operation failed because an added parent is not selected */
+        failed_no_parent ("failed no parent"),
+
+        /** Operation failed because a node is locked */
+        failed_locked ("failed by lock"),
+
+        /** Operation failed because the operation was forbidden */
+        failed_forbidden_by_server ("failed forbidden by server");
 
         /**
          * The description of the action.

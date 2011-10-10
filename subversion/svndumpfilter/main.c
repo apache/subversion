@@ -41,6 +41,7 @@
 #include "svn_sorts.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
+#include "svn_version.h"
 
 #include "private/svn_mergeinfo_private.h"
 
@@ -82,14 +83,15 @@ write_prop_to_stringbuf(svn_stringbuf_t **strbuf,
                         const char *name,
                         const svn_string_t *value)
 {
-  int bytes_used, namelen;
+  int bytes_used;
+  size_t namelen;
   char buf[SVN_KEYLINE_MAXLEN];
 
   /* Output name length, then name. */
   namelen = strlen(name);
   svn_stringbuf_appendbytes(*strbuf, "K ", 2);
 
-  bytes_used = apr_snprintf(buf, sizeof(buf), "%d", namelen);
+  bytes_used = apr_snprintf(buf, sizeof(buf), "%" APR_SIZE_T_FMT, namelen);
   svn_stringbuf_appendbytes(*strbuf, buf, bytes_used);
   svn_stringbuf_appendbyte(*strbuf, '\n');
 
@@ -112,13 +114,14 @@ write_prop_to_stringbuf(svn_stringbuf_t **strbuf,
 static svn_boolean_t
 ary_prefix_match(const apr_array_header_t *pfxlist, const char *path)
 {
-  int i, pfx_len, path_len = strlen(path);
-  const char *pfx;
+  int i;
+  size_t path_len = strlen(path);
 
   for (i = 0; i < pfxlist->nelts; i++)
     {
-      pfx = APR_ARRAY_IDX(pfxlist, i, const char *);
-      pfx_len = strlen(pfx);
+      const char *pfx = APR_ARRAY_IDX(pfxlist, i, const char *);
+      size_t pfx_len = strlen(pfx);
+
       if (path_len < pfx_len)
         continue;
       if (strncmp(path, pfx, pfx_len) == 0
@@ -485,9 +488,10 @@ new_node_record(void **node_baton,
                                APR_HASH_KEY_STRING);
 
   /* Ensure that paths start with a leading '/'. */
-  node_path = svn_uri_join("/", node_path, pool);
-  if (copyfrom_path)
-    copyfrom_path = svn_uri_join("/", copyfrom_path, pool);
+  if (node_path[0] != '/')
+    node_path = apr_pstrcat(pool, "/", node_path, (char *)NULL);
+  if (copyfrom_path && copyfrom_path[0] != '/')
+    copyfrom_path = apr_pstrcat(pool, "/", copyfrom_path, (char *)NULL);
 
   nb->do_skip = skip_path(node_path, pb->prefixes,
                           pb->do_exclude, pb->glob);
@@ -934,7 +938,8 @@ static const apr_getopt_option_t options_table[] =
     {"preserve-revprops",  svndumpfilter__preserve_revprops, 0,
      N_("Don't filter revision properties.") },
     {"targets", svndumpfilter__targets, 1,
-     N_("Pass contents of file ARG as additional args")},
+     N_("Read additional prefixes, one per line, from\n"
+        "                             file ARG.")},
     {NULL}
   };
 
@@ -1053,7 +1058,7 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_opt_print_help3(os, "svndumpfilter",
                               opt_state ? opt_state->version : FALSE,
-                              FALSE, NULL,
+                              opt_state ? opt_state->quiet : FALSE, NULL,
                               header, cmd_table, options_table, NULL,
                               NULL, pool));
 
@@ -1100,26 +1105,26 @@ do_filter(apr_getopt_t *os,
           SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
                                       do_exclude
                                       ? opt_state->drop_empty_revs
-                                      ? _("Excluding (and dropping empty "
-                                          "revisions for) prefixes:\n")
-                                      : _("Excluding prefixes:\n")
+                                        ? _("Excluding (and dropping empty "
+                                            "revisions for) prefix patterns:\n")
+                                        : _("Excluding prefix patterns:\n")
                                       : opt_state->drop_empty_revs
-                                      ? _("Including (and dropping empty "
-                                          "revisions for) prefixes:\n")
-                                      : _("Including prefixes:\n")));
+                                        ? _("Including (and dropping empty "
+                                            "revisions for) prefix patterns:\n")
+                                        : _("Including prefix patterns:\n")));
         }
       else
         {
           SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
                                       do_exclude
                                       ? opt_state->drop_empty_revs
-                                      ? _("Excluding (and dropping empty "
-                                          "revisions for) prefix patterns:\n")
-                                      : _("Excluding prefix patterns:\n")
+                                        ? _("Excluding (and dropping empty "
+                                            "revisions for) prefixes:\n")
+                                        : _("Excluding prefixes:\n")
                                       : opt_state->drop_empty_revs
-                                      ? _("Including (and dropping empty "
-                                          "revisions for) prefix patterns:\n")
-                                      : _("Including prefix patterns:\n")));
+                                        ? _("Including (and dropping empty "
+                                            "revisions for) prefixes:\n")
+                                        : _("Including prefixes:\n")));
         }
 
       for (i = 0; i < opt_state->prefixes->nelts; i++)
@@ -1293,7 +1298,7 @@ main(int argc, const char *argv[])
 
   if (argc <= 1)
     {
-      subcommand_help(NULL, NULL, pool);
+      SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
       svn_pool_destroy(pool);
       return EXIT_FAILURE;
     }
@@ -1319,7 +1324,7 @@ main(int argc, const char *argv[])
         break;
       else if (apr_err)
         {
-          subcommand_help(NULL, NULL, pool);
+          SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
           svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }
@@ -1335,6 +1340,7 @@ main(int argc, const char *argv[])
           break;
         case svndumpfilter__version:
           opt_state.version = TRUE;
+          break;
         case svndumpfilter__quiet:
           opt_state.quiet = TRUE;
           break;
@@ -1358,7 +1364,7 @@ main(int argc, const char *argv[])
           break;
         default:
           {
-            subcommand_help(NULL, NULL, pool);
+            SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
             svn_pool_destroy(pool);
             return EXIT_FAILURE;
           }
@@ -1384,6 +1390,7 @@ main(int argc, const char *argv[])
               static const svn_opt_subcommand_desc2_t pseudo_cmd =
                 { "--version", subcommand_help, {0}, "",
                   {svndumpfilter__version,  /* must accept its own option */
+                   svndumpfilter__quiet,
                   } };
 
               subcommand = &pseudo_cmd;
@@ -1393,7 +1400,7 @@ main(int argc, const char *argv[])
               svn_error_clear(svn_cmdline_fprintf
                               (stderr, pool,
                                _("Subcommand argument required\n")));
-              subcommand_help(NULL, NULL, pool);
+              SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
               svn_pool_destroy(pool);
               return EXIT_FAILURE;
             }
@@ -1413,7 +1420,7 @@ main(int argc, const char *argv[])
               svn_error_clear(svn_cmdline_fprintf(stderr, pool,
                                                   _("Unknown command: '%s'\n"),
                                                   first_arg_utf8));
-              subcommand_help(NULL, NULL, pool);
+              SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
               svn_pool_destroy(pool);
               return EXIT_FAILURE;
             }
@@ -1436,8 +1443,9 @@ main(int argc, const char *argv[])
           /* Ensure that each prefix is UTF8-encoded, in internal
              style, and absolute. */
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&prefix, os->argv[i], pool));
-          prefix = svn_relpath_internal_style(prefix, pool);
-          prefix = svn_uri_join("/", prefix, pool);
+          prefix = svn_relpath__internal_style(prefix, pool);
+          if (prefix[0] != '/')
+            prefix = apr_pstrcat(pool, "/", prefix, (char *)NULL);
           APR_ARRAY_PUSH(opt_state.prefixes, const char *) = prefix;
         }
 
@@ -1494,7 +1502,7 @@ main(int argc, const char *argv[])
                                           pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')
-            subcommand_help(NULL, NULL, pool);
+            SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
           else
             svn_error_clear(svn_cmdline_fprintf
                             (stderr, pool,

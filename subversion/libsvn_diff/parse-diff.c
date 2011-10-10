@@ -22,6 +22,7 @@
  */
 
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 
 #include "svn_types.h"
@@ -35,19 +36,35 @@
 #include "svn_diff.h"
 
 #include "private/svn_eol_private.h"
+#include "private/svn_dep_compat.h"
 
 /* Helper macro for readability */
 #define starts_with(str, start)  \
   (strncmp((str), (start), strlen(start)) == 0)
 
-struct svn_diff_hunk_t {
-  /* Hunk texts (see include/svn_diff.h). */
-  svn_stream_t *diff_text;
-  svn_stream_t *original_text;
-  svn_stream_t *modified_text;
+/* Like strlen() but for string literals. */
+#define STRLEN_LITERAL(str) (sizeof(str) - 1)
 
+/* This struct describes a range within a file, as well as the
+ * current cursor position within the range. All numbers are in bytes. */
+struct svn_diff__hunk_range {
+  apr_off_t start;
+  apr_off_t end;
+  apr_off_t current;
+};
+
+struct svn_diff_hunk_t {
   /* The patch this hunk belongs to. */
   svn_patch_t *patch;
+
+  /* APR file handle to the patch file this hunk came from. */
+  apr_file_t *apr_file;
+
+  /* Ranges used to keep track of this hunk's texts positions within
+   * the patch file. */
+  struct svn_diff__hunk_range diff_text_range;
+  struct svn_diff__hunk_range original_text_range;
+  struct svn_diff__hunk_range modified_text_range;
 
   /* Hunk ranges as they appeared in the patch file.
    * All numbers are lines, not bytes. */
@@ -61,28 +78,28 @@ struct svn_diff_hunk_t {
   svn_linenum_t trailing_context;
 };
 
-svn_error_t *
-svn_diff_hunk_reset_diff_text(const svn_diff_hunk_t *hunk)
+void
+svn_diff_hunk_reset_diff_text(svn_diff_hunk_t *hunk)
 {
-  return svn_error_return(svn_stream_reset(hunk->diff_text));
+  hunk->diff_text_range.current = hunk->diff_text_range.start;
 }
 
-svn_error_t *
-svn_diff_hunk_reset_original_text(const svn_diff_hunk_t *hunk)
+void
+svn_diff_hunk_reset_original_text(svn_diff_hunk_t *hunk)
 {
   if (hunk->patch->reverse)
-    return svn_error_return(svn_stream_reset(hunk->modified_text));
+    hunk->modified_text_range.current = hunk->modified_text_range.start;
   else
-    return svn_error_return(svn_stream_reset(hunk->original_text));
+    hunk->original_text_range.current = hunk->original_text_range.start;
 }
 
-svn_error_t *
-svn_diff_hunk_reset_modified_text(const svn_diff_hunk_t *hunk)
+void
+svn_diff_hunk_reset_modified_text(svn_diff_hunk_t *hunk)
 {
   if (hunk->patch->reverse)
-    return svn_error_return(svn_stream_reset(hunk->original_text));
+    hunk->original_text_range.current = hunk->original_text_range.start;
   else
-    return svn_error_return(svn_stream_reset(hunk->modified_text));
+    hunk->modified_text_range.current = hunk->modified_text_range.start;
 }
 
 svn_linenum_t
@@ -253,128 +270,149 @@ parse_hunk_header(const char *header, svn_diff_hunk_t *hunk,
   return TRUE;
 }
 
-/* Set *EOL to the first end-of-line string found in the stream
- * accessed through READ_FN, MARK_FN and SEEK_FN, whose stream baton
- * is BATON.  Leave the stream read position unchanged.
- * Allocate *EOL statically; POOL is a scratch pool. */
-static svn_error_t *
-scan_eol(const char **eol, svn_stream_t *stream, apr_pool_t *pool)
-{
-  const char *eol_str;
-  svn_stream_mark_t *mark;
-
-  SVN_ERR(svn_stream_mark(stream, &mark, pool));
-
-  eol_str = NULL;
-  while (! eol_str)
-    {
-      char buf[512];
-      apr_size_t len;
-
-      len = sizeof(buf);
-      SVN_ERR(svn_stream_read(stream, buf, &len));
-      if (len == 0)
-        break; /* EOF */
-      eol_str = svn_eol__detect_eol(buf, buf + len);
-    }
-
-  SVN_ERR(svn_stream_seek(stream, mark));
-
-  *eol = eol_str;
-
-  return SVN_NO_ERROR;
-}
-
-/* A helper function similar to svn_stream_readline_detect_eol(),
- * suitable for reading original or modified hunk text from a STREAM
- * which has been mapped onto a hunk region within a unidiff patch file.
+/* A helper for reading a line of text from a range in the patch file.
  *
- * Allocate *STRINGBUF in RESULT_POOL, and read into it one line from STREAM.
- *
- * STREAM is expected to contain unidiff text.
- * Leading unidiff symbols ('+', '-', and ' ') are removed from the line,
- * Any lines commencing with the VERBOTEN character are discarded.
- * VERBOTEN should be '+' or '-', depending on which form of hunk text
- * is being read.
+ * Allocate *STRINGBUF in RESULT_POOL, and read into it one line from FILE.
+ * Reading stops either after a line-terminator was found or after MAX_LEN
+ * bytes have been read. The line-terminator is not stored in *STRINGBUF.
  *
  * The line-terminator is detected automatically and stored in *EOL
- * if EOL is not NULL. If EOF is reached and the stream does not end
+ * if EOL is not NULL. If EOF is reached and FILE does not end
  * with a newline character, and EOL is not NULL, *EOL is set to NULL.
  *
  * SCRATCH_POOL is used for temporary allocations.
  */
 static svn_error_t *
-hunk_readline(svn_stream_t *stream,
-              svn_stringbuf_t **stringbuf,
-              const char **eol,
-              svn_boolean_t *eof,
-              char verboten,
-              apr_pool_t *result_pool,
-              apr_pool_t *scratch_pool)
+readline(apr_file_t *file,
+         svn_stringbuf_t **stringbuf,
+         const char **eol,
+         svn_boolean_t *eof,
+         apr_size_t max_len,
+         apr_pool_t *result_pool,
+         apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *str;
-  apr_pool_t *iterpool;
-  svn_boolean_t filtered;
   const char *eol_str;
+  apr_size_t numbytes;
+  char c;
+  apr_size_t len;
+  svn_boolean_t found_eof;
 
-  *eof = FALSE;
+  str = svn_stringbuf_create_ensure(80, result_pool);
 
-  iterpool = svn_pool_create(scratch_pool);
+  /* Read bytes into STR up to and including, but not storing,
+   * the next EOL sequence. */
+  eol_str = NULL;
+  numbytes = 1;
+  len = 0;
+  found_eof = FALSE;
+  while (!found_eof)
+    {
+      if (len < max_len)
+        SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
+                                       &found_eof, scratch_pool));
+      len++;
+      if (numbytes != 1 || len > max_len)
+        {
+          found_eof = TRUE;
+          break;
+        }
+
+      if (c == '\n')
+        {
+          eol_str = "\n";
+        }
+      else if (c == '\r')
+        {
+          eol_str = "\r";
+
+          if (!found_eof && len < max_len)
+            {
+              apr_off_t pos;
+
+              /* Check for "\r\n" by peeking at the next byte. */
+              pos = 0;
+              SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos, scratch_pool));
+              SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
+                                             &found_eof, scratch_pool));
+              if (numbytes == 1 && c == '\n')
+                {
+                  eol_str = "\r\n";
+                  len++;
+                }
+              else
+                {
+                  /* Pretend we never peeked. */
+                  SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
+                  found_eof = FALSE;
+                  numbytes = 1;
+                }
+            }
+        }
+      else
+        svn_stringbuf_appendbyte(str, c);
+
+      if (eol_str)
+        break;
+    }
+
+  if (eol)
+    *eol = eol_str;
+  if (eof)
+    *eof = found_eof;
+  *stringbuf = str;
+
+  return SVN_NO_ERROR;
+}
+
+/* Read a line of original or modified hunk text from the specified
+ * RANGE within FILE. FILE is expected to contain unidiff text.
+ * Leading unidiff symbols ('+', '-', and ' ') are removed from the line,
+ * Any lines commencing with the VERBOTEN character are discarded.
+ * VERBOTEN should be '+' or '-', depending on which form of hunk text
+ * is being read.
+ *
+ * All other parameters are as in svn_diff_hunk_readline_original_text()
+ * and svn_diff_hunk_readline_modified_text().
+ */
+static svn_error_t *
+hunk_readline_original_or_modified(apr_file_t *file,
+                                   struct svn_diff__hunk_range *range,
+                                   svn_stringbuf_t **stringbuf,
+                                   const char **eol,
+                                   svn_boolean_t *eof,
+                                   char verboten,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
+{
+  apr_size_t max_len;
+  svn_boolean_t filtered;
+  apr_off_t pos;
+  svn_stringbuf_t *str;
+
+  if (range->current >= range->end)
+    {
+      /* We're past the range. Indicate that no bytes can be read. */
+      *eof = TRUE;
+      if (eol)
+        *eol = NULL;
+      *stringbuf = svn_stringbuf_create("", result_pool);
+      return SVN_NO_ERROR;
+    }
+
+  pos = 0;
+  SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos,  scratch_pool));
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &range->current, scratch_pool));
   do
     {
-      apr_size_t numbytes;
-      const char *match;
-      char c;
-
-      svn_pool_clear(iterpool);
-
-      /* Since we're reading one character at a time, let's at least
-         optimize for the 90% case.  90% of the time, we can avoid the
-         stringbuf ever having to realloc() itself if we start it out at
-         80 chars.  */
-      str = svn_stringbuf_create_ensure(80, iterpool);
-
-      SVN_ERR(scan_eol(&eol_str, stream, iterpool));
-      if (eol)
-        *eol = eol_str;
-      if (eol_str == NULL)
-        {
-          /* No newline until EOF, EOL_STR can be anything. */
-          eol_str = APR_EOL_STR;
-        }
-
-      /* Read into STR up to and including the next EOL sequence. */
-      match = eol_str;
-      numbytes = 1;
-      while (*match)
-        {
-          SVN_ERR(svn_stream_read(stream, &c, &numbytes));
-          if (numbytes != 1)
-            {
-              /* a 'short' read means the stream has run out. */
-              *eof = TRUE;
-              /* We know we don't have a whole EOL sequence, but ensure we
-               * don't chop off any partial EOL sequence that we may have. */
-              match = eol_str;
-              /* Process this short (or empty) line just like any other
-               * except with *EOF set. */
-              break;
-            }
-
-          if (c == *match)
-            match++;
-          else
-            match = eol_str;
-
-          svn_stringbuf_appendbyte(str, c);
-        }
-
-      svn_stringbuf_chop(str, match - eol_str);
+      max_len = range->end - range->current;
+      SVN_ERR(readline(file, &str, eol, eof, max_len,
+                       result_pool, scratch_pool));
+      range->current = 0;
+      SVN_ERR(svn_io_file_seek(file, APR_CUR, &range->current, scratch_pool));
       filtered = (str->data[0] == verboten || str->data[0] == '\\');
     }
   while (filtered && ! *eof);
-  /* Not destroying the iterpool just yet since we still need STR
-   * which is allocated in it. */
 
   if (filtered)
     {
@@ -392,46 +430,49 @@ hunk_readline(svn_stream_t *stream,
       *stringbuf = svn_stringbuf_dup(str, result_pool);
     }
 
-  /* Done. RIP iterpool. */
-  svn_pool_destroy(iterpool);
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_diff_hunk_readline_original_text(const svn_diff_hunk_t *hunk,
+svn_diff_hunk_readline_original_text(svn_diff_hunk_t *hunk,
                                      svn_stringbuf_t **stringbuf,
                                      const char **eol,
                                      svn_boolean_t *eof,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool)
 {
-  return svn_error_return(hunk_readline(hunk->patch->reverse ?
-                                          hunk->modified_text :
-                                          hunk->original_text,
-                                        stringbuf, eol, eof,
-                                        hunk->patch->reverse ? '-' : '+',
-                                        result_pool, scratch_pool));
+  return svn_error_trace(
+    hunk_readline_original_or_modified(hunk->apr_file,
+                                       hunk->patch->reverse ?
+                                         &hunk->modified_text_range :
+                                         &hunk->original_text_range,
+                                       stringbuf, eol, eof,
+                                       hunk->patch->reverse ? '-' : '+',
+                                       result_pool, scratch_pool));
 }
 
 svn_error_t *
-svn_diff_hunk_readline_modified_text(const svn_diff_hunk_t *hunk,
+svn_diff_hunk_readline_modified_text(svn_diff_hunk_t *hunk,
                                      svn_stringbuf_t **stringbuf,
                                      const char **eol,
                                      svn_boolean_t *eof,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool)
 {
-  return svn_error_return(hunk_readline(hunk->patch->reverse ?
-                                          hunk->original_text :
-                                          hunk->modified_text,
-                                        stringbuf, eol, eof,
-                                        hunk->patch->reverse ? '+' : '-',
-                                        result_pool, scratch_pool));
+  return svn_error_trace(
+    hunk_readline_original_or_modified(hunk->apr_file,
+                                       hunk->patch->reverse ?
+                                         &hunk->original_text_range :
+                                         &hunk->modified_text_range,
+                                       stringbuf, eol, eof,
+                                       hunk->patch->reverse ? '+' : '-',
+                                       result_pool, scratch_pool));
 }
 
 svn_error_t *
-svn_diff_hunk_readline_diff_text(const svn_diff_hunk_t *hunk,
+svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
                                  svn_stringbuf_t **stringbuf,
                                  const char **eol,
                                  svn_boolean_t *eof,
@@ -440,31 +481,52 @@ svn_diff_hunk_readline_diff_text(const svn_diff_hunk_t *hunk,
 {
   svn_diff_hunk_t dummy;
   svn_stringbuf_t *line;
+  apr_size_t max_len;
+  apr_off_t pos;
 
-  SVN_ERR(svn_stream_readline_detect_eol(hunk->diff_text, &line, eol, eof,
-                                         result_pool));
-  
+  if (hunk->diff_text_range.current >= hunk->diff_text_range.end)
+    {
+      /* We're past the range. Indicate that no bytes can be read. */
+      *eof = TRUE;
+      if (eol)
+        *eol = NULL;
+      *stringbuf = svn_stringbuf_create("", result_pool);
+      return SVN_NO_ERROR;
+    }
+
+  pos = 0;
+  SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_CUR, &pos, scratch_pool));
+  SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_SET,
+                           &hunk->diff_text_range.current, scratch_pool));
+  max_len = hunk->diff_text_range.end - hunk->diff_text_range.current;
+  SVN_ERR(readline(hunk->apr_file, &line, eol, eof, max_len, result_pool,
+                   scratch_pool));
+  hunk->diff_text_range.current = 0;
+  SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_CUR,
+                           &hunk->diff_text_range.current, scratch_pool));
+  SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_SET, &pos, scratch_pool));
+
   if (hunk->patch->reverse)
     {
       if (parse_hunk_header(line->data, &dummy, "@@", scratch_pool))
         {
           /* Line is a hunk header, reverse it. */
-          *stringbuf = svn_stringbuf_createf(result_pool,
-                                             "@@ -%lu,%lu +%lu,%lu @@",
-                                             hunk->modified_start,
-                                             hunk->modified_length,
-                                             hunk->original_start,
-                                             hunk->original_length);
+          line = svn_stringbuf_createf(result_pool,
+                                       "@@ -%lu,%lu +%lu,%lu @@",
+                                       hunk->modified_start,
+                                       hunk->modified_length,
+                                       hunk->original_start,
+                                       hunk->original_length);
         }
       else if (parse_hunk_header(line->data, &dummy, "##", scratch_pool))
         {
           /* Line is a hunk header, reverse it. */
-          *stringbuf = svn_stringbuf_createf(result_pool,
-                                             "## -%lu,%lu +%lu,%lu ##",
-                                             hunk->modified_start,
-                                             hunk->modified_length,
-                                             hunk->original_start,
-                                             hunk->original_length);
+          line = svn_stringbuf_createf(result_pool,
+                                       "## -%lu,%lu +%lu,%lu ##",
+                                       hunk->modified_start,
+                                       hunk->modified_length,
+                                       hunk->original_start,
+                                       hunk->original_length);
         }
       else
         {
@@ -472,12 +534,10 @@ svn_diff_hunk_readline_diff_text(const svn_diff_hunk_t *hunk,
             line->data[0] = '-';
           else if (line->data[0] == '-')
             line->data[0] = '+';
-
-          *stringbuf = line;
         }
     }
-  else
-    *stringbuf = line;
+
+  *stringbuf = line;
 
   return SVN_NO_ERROR;
 }
@@ -486,7 +546,7 @@ svn_diff_hunk_readline_diff_text(const svn_diff_hunk_t *hunk,
  * Allocate *PROP_NAME in RESULT_POOL.
  * Set *PROP_NAME to NULL if no valid property name was found. */
 static svn_error_t *
-parse_prop_name(const char **prop_name, const char *header, 
+parse_prop_name(const char **prop_name, const char *header,
                 const char *indicator, apr_pool_t *result_pool)
 {
   SVN_ERR(svn_utf_cstring_to_utf8(prop_name,
@@ -504,21 +564,21 @@ parse_prop_name(const char **prop_name, const char *header,
   return SVN_NO_ERROR;
 }
 
-/* Return the next *HUNK from a PATCH, using STREAM to read data
- * from the patch file. If no hunk can be found, set *HUNK to NULL. Set
- * IS_PROPERTY to TRUE if we have a property hunk. If the returned HUNK is
- * the first belonging to a certain property, then PROP_NAME and
+/* Return the next *HUNK from a PATCH in APR_FILE.
+ * If no hunk can be found, set *HUNK to NULL.
+ * Set IS_PROPERTY to TRUE if we have a property hunk. If the returned HUNK
+ * is the first belonging to a certain property, then PROP_NAME and
  * PROP_OPERATION will be set too. If we have a text hunk, PROP_NAME will be
- * NULL. If IGNORE_WHITESPACE is TRUE, let lines without leading spaces be
- * recognized as context lines.  Allocate results in
- * RESULT_POOL.  Use SCRATCH_POOL for all other allocations. */
+ * NULL.  If IGNORE_WHITESPACE is TRUE, lines without leading spaces will be
+ * treated as context lines.  Allocate results in RESULT_POOL.
+ * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
 parse_next_hunk(svn_diff_hunk_t **hunk,
                 svn_boolean_t *is_property,
                 const char **prop_name,
                 svn_diff_operation_kind_t *prop_operation,
                 svn_patch_t *patch,
-                svn_stream_t *stream,
+                apr_file_t *apr_file,
                 svn_boolean_t ignore_whitespace,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
@@ -530,9 +590,6 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
   svn_boolean_t eof, in_hunk, hunk_seen;
   apr_off_t pos, last_line;
   apr_off_t start, end;
-  svn_stream_t *diff_text;
-  svn_stream_t *original_text;
-  svn_stream_t *modified_text;
   svn_linenum_t original_lines;
   svn_linenum_t modified_lines;
   svn_linenum_t leading_context;
@@ -546,7 +603,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
   *prop_name = NULL;
   *is_property = FALSE;
 
-  if (apr_file_eof(patch->patch_file) == APR_EOF)
+  if (apr_file_eof(apr_file) == APR_EOF)
     {
       /* No more hunks here. */
       *hunk = NULL;
@@ -562,7 +619,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
 
   /* Get current seek position -- APR has no ftell() :( */
   pos = 0;
-  SVN_ERR(svn_io_file_seek(patch->patch_file, APR_CUR, &pos, scratch_pool));
+  SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
   do
@@ -572,15 +629,14 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
 
       /* Remember the current line's offset, and read the line. */
       last_line = pos;
-      SVN_ERR(svn_stream_readline_detect_eol(stream, &line, NULL, &eof,
-                                             iterpool));
+      SVN_ERR(readline(apr_file, &line, NULL, &eof, APR_SIZE_MAX,
+                       iterpool, iterpool));
 
       if (! eof)
         {
-          /* Update line offset for next iteration.
-           * APR has no ftell() :( */
+          /* Update line offset for next iteration. */
           pos = 0;
-          SVN_ERR(svn_io_file_seek(patch->patch_file, APR_CUR, &pos, iterpool));
+          SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, iterpool));
         }
 
       /* Lines starting with a backslash are comments, such as
@@ -602,12 +658,14 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
             }
 
           c = line->data[0];
-          /* Tolerate chopped leading spaces on empty lines. */
-          if (original_lines > 0 && modified_lines > 0 
-              && ((c == ' ')
-              || (! eof && line->len == 0)
-              || (ignore_whitespace && c != del && c != add)))
+          if (original_lines > 0 && modified_lines > 0 &&
+              ((c == ' ')
+               /* Tolerate chopped leading spaces on empty lines. */
+               || (! eof && line->len == 0)
+               /* Maybe tolerate chopped leading spaces on non-empty lines. */
+               || (ignore_whitespace && c != del && c != add)))
             {
+              /* It's a "context" line in the hunk. */
               hunk_seen = TRUE;
               original_lines--;
               modified_lines--;
@@ -618,6 +676,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
             }
           else if (original_lines > 0 && c == del)
             {
+              /* It's a "deleted" line in the hunk. */
               hunk_seen = TRUE;
               changed_line_seen = TRUE;
 
@@ -630,6 +689,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
             }
           else if (modified_lines > 0 && c == add)
             {
+              /* It's an "added" line in the hunk. */
               hunk_seen = TRUE;
               changed_line_seen = TRUE;
 
@@ -642,8 +702,6 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
             }
           else
             {
-              in_hunk = FALSE;
-
               /* The start of the current line marks the first byte
                * after the hunk text. */
               end = last_line;
@@ -653,9 +711,6 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
         }
       else
         {
-          /* ### Add an is_hunk_header() helper function that returns
-           * ### the proper atat string? Then we could collapse the
-           * ### following two if-clauses. */
           if (starts_with(line->data, text_atat))
             {
               /* Looks like we have a hunk header, try to rip it apart. */
@@ -684,7 +739,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
           else if (starts_with(line->data, "Added: "))
             {
               SVN_ERR(parse_prop_name(prop_name, line->data, "Added: ",
-                                      result_pool));  
+                                      result_pool));
               if (*prop_name)
                 *prop_operation = svn_diff_op_added;
             }
@@ -717,41 +772,23 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
     /* Rewind to the start of the line just read, so subsequent calls
      * to this function or svn_diff_parse_next_patch() don't end
      * up skipping the line -- it may contain a patch or hunk header. */
-    SVN_ERR(svn_io_file_seek(patch->patch_file, APR_SET, &last_line,
-                             scratch_pool));
+    SVN_ERR(svn_io_file_seek(apr_file, APR_SET, &last_line, scratch_pool));
 
   if (hunk_seen && start < end)
     {
-      apr_file_t *f;
-      apr_int32_t flags = APR_READ | APR_BUFFERED;
-
-      /* Create a stream which returns the hunk text itself. */
-      SVN_ERR(svn_io_file_open(&f, patch->path, flags, APR_OS_DEFAULT,
-                               result_pool));
-      diff_text = svn_stream_from_aprfile_range_readonly(f, FALSE,
-                                                         start, end,
-                                                         result_pool);
-
-      /* Create a stream which returns the original hunk text. */
-      SVN_ERR(svn_io_file_open(&f, patch->path, flags, APR_OS_DEFAULT,
-                               result_pool));
-      original_text = svn_stream_from_aprfile_range_readonly(f, FALSE,
-                                                             start, end,
-                                                             result_pool);
-
-      /* Create a stream which returns the modified hunk text. */
-      SVN_ERR(svn_io_file_open(&f, patch->path, flags, APR_OS_DEFAULT,
-                               result_pool));
-      modified_text = svn_stream_from_aprfile_range_readonly(f, FALSE,
-                                                             start, end,
-                                                             result_pool);
-
-      (*hunk)->diff_text = diff_text;
       (*hunk)->patch = patch;
-      (*hunk)->original_text = original_text;
-      (*hunk)->modified_text = modified_text;
+      (*hunk)->apr_file = apr_file;
       (*hunk)->leading_context = leading_context;
       (*hunk)->trailing_context = trailing_context;
+      (*hunk)->diff_text_range.start = start;
+      (*hunk)->diff_text_range.current = start;
+      (*hunk)->diff_text_range.end = end;
+      (*hunk)->original_text_range.start = start;
+      (*hunk)->original_text_range.current = start;
+      (*hunk)->original_text_range.end = end;
+      (*hunk)->modified_text_range.start = start;
+      (*hunk)->modified_text_range.current = start;
+      (*hunk)->modified_text_range.end = end;
     }
   else
     /* Something went wrong, just discard the result. */
@@ -775,18 +812,6 @@ compare_hunks(const void *a, const void *b)
   return 0;
 }
 
-/*
- * Ensure that all streams which were opened for HUNK are closed.
- */
-static svn_error_t *
-close_hunk(const svn_diff_hunk_t *hunk)
-{
-  SVN_ERR(svn_stream_close(hunk->original_text));
-  SVN_ERR(svn_stream_close(hunk->modified_text));
-  SVN_ERR(svn_stream_close(hunk->diff_text));
-  return SVN_NO_ERROR;
-}
-
 /* Possible states of the diff header parser. */
 enum parse_state
 {
@@ -799,8 +824,6 @@ enum parse_state
    state_copy_from_seen,  /* copy from foo.c */
    state_minus_seen,      /* --- foo.c */
    state_unidiff_found,   /* valid start of a regular unidiff header */
-   state_add_seen,        /* ### unused? */
-   state_del_seen,        /* ### unused? */
    state_git_header_found /* valid start of a --git diff header */
 };
 
@@ -811,7 +834,7 @@ struct transition
   enum parse_state required_state;
 
   /* A callback called upon each parser state transition. */
-  svn_error_t *(*fn)(enum parse_state *new_state, const char *input, 
+  svn_error_t *(*fn)(enum parse_state *new_state, char *input,
                      svn_patch_t *patch, apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 };
@@ -843,7 +866,7 @@ grab_filename(const char **file_name, const char *line, apr_pool_t *result_pool,
 
 /* Parse the '--- ' line of a regular unidiff. */
 static svn_error_t *
-diff_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+diff_minus(enum parse_state *new_state, char *line, svn_patch_t *patch,
            apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* If we can find a tab, it separates the filename from
@@ -852,7 +875,7 @@ diff_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
   if (tab)
     *tab = '\0';
 
-  SVN_ERR(grab_filename(&patch->old_filename, line + strlen("--- "),
+  SVN_ERR(grab_filename(&patch->old_filename, line + STRLEN_LITERAL("--- "),
                         result_pool, scratch_pool));
 
   *new_state = state_minus_seen;
@@ -862,7 +885,7 @@ diff_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the '+++ ' line of a regular unidiff. */
 static svn_error_t *
-diff_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+diff_plus(enum parse_state *new_state, char *line, svn_patch_t *patch,
            apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* If we can find a tab, it separates the filename from
@@ -871,7 +894,7 @@ diff_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
   if (tab)
     *tab = '\0';
 
-  SVN_ERR(grab_filename(&patch->new_filename, line + strlen("+++ "),
+  SVN_ERR(grab_filename(&patch->new_filename, line + STRLEN_LITERAL("+++ "),
                         result_pool, scratch_pool));
 
   *new_state = state_unidiff_found;
@@ -881,7 +904,7 @@ diff_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the first line of a git extended unidiff. */
 static svn_error_t *
-git_start(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_start(enum parse_state *new_state, char *line, svn_patch_t *patch,
           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   const char *old_path_start;
@@ -892,14 +915,14 @@ git_start(enum parse_state *new_state, const char *line, svn_patch_t *patch,
   const char *old_path_marker;
 
   /* ### Add handling of escaped paths
-   * http://www.kernel.org/pub/software/scm/git/docs/git-diff.html: 
+   * http://www.kernel.org/pub/software/scm/git/docs/git-diff.html:
    *
    * TAB, LF, double quote and backslash characters in pathnames are
    * represented as \t, \n, \" and \\, respectively. If there is need for
    * such substitution then the whole pathname is put in double quotes.
    */
 
-  /* Our line should look like this: 'diff --git a/path b/path'. 
+  /* Our line should look like this: 'diff --git a/path b/path'.
    *
    * If we find any deviations from that format, we return with state reset
    * to start.
@@ -936,15 +959,15 @@ git_start(enum parse_state *new_state, const char *line, svn_patch_t *patch,
    * We only need the filenames when we have deleted or added empty
    * files. In those cases the old_path and new_path is identical on the
    * 'diff --git' line.  For all other cases we fetch the filenames from
-   * other header lines. */ 
-  old_path_start = line + strlen("diff --git a/");
+   * other header lines. */
+  old_path_start = line + STRLEN_LITERAL("diff --git a/");
   new_path_end = line + strlen(line);
   new_path_start = old_path_start;
 
   while (TRUE)
     {
-      int len_old;
-      int len_new;
+      ptrdiff_t len_old;
+      ptrdiff_t len_new;
 
       new_path_marker = strstr(new_path_start, " b/");
 
@@ -953,7 +976,7 @@ git_start(enum parse_state *new_state, const char *line, svn_patch_t *patch,
         break;
 
       old_path_end = new_path_marker;
-      new_path_start = new_path_marker + strlen(" b/");
+      new_path_start = new_path_marker + STRLEN_LITERAL(" b/");
 
       /* No path after the marker. */
       if (! *new_path_start)
@@ -986,7 +1009,7 @@ git_start(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the '--- ' line of a git extended unidiff. */
 static svn_error_t *
-git_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_minus(enum parse_state *new_state, char *line, svn_patch_t *patch,
           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* If we can find a tab, it separates the filename from
@@ -999,7 +1022,7 @@ git_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
     SVN_ERR(grab_filename(&patch->old_filename, "/dev/null",
                           result_pool, scratch_pool));
   else
-    SVN_ERR(grab_filename(&patch->old_filename, line + strlen("--- a/"),
+    SVN_ERR(grab_filename(&patch->old_filename, line + STRLEN_LITERAL("--- a/"),
                           result_pool, scratch_pool));
 
   *new_state = state_git_minus_seen;
@@ -1008,20 +1031,20 @@ git_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the '+++ ' line of a git extended unidiff. */
 static svn_error_t *
-git_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_plus(enum parse_state *new_state, char *line, svn_patch_t *patch,
           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* If we can find a tab, it separates the filename from
    * the rest of the line which we can discard. */
   char *tab = strchr(line, '\t');
   if (tab)
-    *tab = '\0'; /* ### indirectly modifying LINE, which is const */
+    *tab = '\0';
 
   if (starts_with(line, "+++ /dev/null"))
     SVN_ERR(grab_filename(&patch->new_filename, "/dev/null",
                           result_pool, scratch_pool));
   else
-    SVN_ERR(grab_filename(&patch->new_filename, line + strlen("+++ b/"),
+    SVN_ERR(grab_filename(&patch->new_filename, line + STRLEN_LITERAL("+++ b/"),
                           result_pool, scratch_pool));
 
   *new_state = state_git_header_found;
@@ -1030,22 +1053,24 @@ git_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the 'rename from ' line of a git extended unidiff. */
 static svn_error_t *
-git_move_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_move_from(enum parse_state *new_state, char *line, svn_patch_t *patch,
               apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(grab_filename(&patch->old_filename, line + strlen("rename from "),
+  SVN_ERR(grab_filename(&patch->old_filename,
+                        line + STRLEN_LITERAL("rename from "),
                         result_pool, scratch_pool));
 
   *new_state = state_move_from_seen;
   return SVN_NO_ERROR;
 }
 
-/* Parse the 'rename to ' line fo a git extended unidiff. */
+/* Parse the 'rename to ' line of a git extended unidiff. */
 static svn_error_t *
-git_move_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_move_to(enum parse_state *new_state, char *line, svn_patch_t *patch,
             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(grab_filename(&patch->new_filename, line + strlen("rename to "),
+  SVN_ERR(grab_filename(&patch->new_filename,
+                        line + STRLEN_LITERAL("rename to "),
                         result_pool, scratch_pool));
 
   patch->operation = svn_diff_op_moved;
@@ -1056,22 +1081,23 @@ git_move_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the 'copy from ' line of a git extended unidiff. */
 static svn_error_t *
-git_copy_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_copy_from(enum parse_state *new_state, char *line, svn_patch_t *patch,
               apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(grab_filename(&patch->old_filename, line + strlen("copy from "),
+  SVN_ERR(grab_filename(&patch->old_filename,
+                        line + STRLEN_LITERAL("copy from "),
                         result_pool, scratch_pool));
 
-  *new_state = state_copy_from_seen; 
+  *new_state = state_copy_from_seen;
   return SVN_NO_ERROR;
 }
 
 /* Parse the 'copy to ' line of a git extended unidiff. */
 static svn_error_t *
-git_copy_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_copy_to(enum parse_state *new_state, char *line, svn_patch_t *patch,
             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(grab_filename(&patch->new_filename, line + strlen("copy to "),
+  SVN_ERR(grab_filename(&patch->new_filename, line + STRLEN_LITERAL("copy to "),
                         result_pool, scratch_pool));
 
   patch->operation = svn_diff_op_copied;
@@ -1082,7 +1108,7 @@ git_copy_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the 'new file ' line of a git extended unidiff. */
 static svn_error_t *
-git_new_file(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_new_file(enum parse_state *new_state, char *line, svn_patch_t *patch,
              apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch->operation = svn_diff_op_added;
@@ -1095,7 +1121,7 @@ git_new_file(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the 'deleted file ' line of a git extended unidiff. */
 static svn_error_t *
-git_deleted_file(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_deleted_file(enum parse_state *new_state, char *line, svn_patch_t *patch,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch->operation = svn_diff_op_deleted;
@@ -1108,7 +1134,7 @@ git_deleted_file(enum parse_state *new_state, const char *line, svn_patch_t *pat
 
 /* Add a HUNK associated with the property PROP_NAME to PATCH. */
 static svn_error_t *
-add_property_hunk(svn_patch_t *patch, const char *prop_name, 
+add_property_hunk(svn_patch_t *patch, const char *prop_name,
                   svn_diff_hunk_t *hunk, svn_diff_operation_kind_t operation,
                   apr_pool_t *result_pool)
 {
@@ -1134,124 +1160,198 @@ add_property_hunk(svn_patch_t *patch, const char *prop_name,
   return SVN_NO_ERROR;
 }
 
+struct svn_patch_file_t
+{
+  /* The APR file handle to the patch file. */
+  apr_file_t *apr_file;
+
+  /* The file offset at which the next patch is expected. */
+  apr_off_t next_patch_offset;
+};
+
+svn_error_t *
+svn_diff_open_patch_file(svn_patch_file_t **patch_file,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool)
+{
+  svn_patch_file_t *p;
+
+  p = apr_palloc(result_pool, sizeof(*p));
+  SVN_ERR(svn_io_file_open(&p->apr_file, local_abspath,
+                           APR_READ | APR_BINARY, 0, result_pool));
+  p->next_patch_offset = 0;
+  *patch_file = p;
+
+  return SVN_NO_ERROR;
+}
+
+/* Parse hunks from APR_FILE and store them in PATCH->HUNKS.
+ * Parsing stops if no valid next hunk can be found.
+ * If IGNORE_WHITESPACE is TRUE, lines without
+ * leading spaces will be treated as context lines.
+ * Allocate results in RESULT_POOL.
+ * Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+parse_hunks(svn_patch_t *patch, apr_file_t *apr_file,
+            svn_boolean_t ignore_whitespace,
+            apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  svn_diff_hunk_t *hunk;
+  svn_boolean_t is_property;
+  const char *last_prop_name;
+  const char *prop_name;
+  svn_diff_operation_kind_t prop_operation;
+  apr_pool_t *iterpool;
+
+  last_prop_name = NULL;
+
+  patch->hunks = apr_array_make(result_pool, 10, sizeof(svn_diff_hunk_t *));
+  patch->prop_patches = apr_hash_make(result_pool);
+  iterpool = svn_pool_create(scratch_pool);
+  do
+    {
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(parse_next_hunk(&hunk, &is_property, &prop_name, &prop_operation,
+                              patch, apr_file, ignore_whitespace, result_pool,
+                              iterpool));
+
+      if (hunk && is_property)
+        {
+          if (! prop_name)
+            prop_name = last_prop_name;
+          else
+            last_prop_name = prop_name;
+          SVN_ERR(add_property_hunk(patch, prop_name, hunk, prop_operation,
+                                    result_pool));
+        }
+      else if (hunk)
+        {
+          APR_ARRAY_PUSH(patch->hunks, svn_diff_hunk_t *) = hunk;
+          last_prop_name = NULL;
+        }
+
+    }
+  while (hunk);
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* State machine for the diff header parser.
+ * Expected Input   Required state          Function to call */
+static struct transition transitions[] =
+{
+  {"--- ",          state_start,            diff_minus},
+  {"+++ ",          state_minus_seen,       diff_plus},
+  {"diff --git",    state_start,            git_start},
+  {"--- a/",        state_git_diff_seen,    git_minus},
+  {"--- a/",        state_git_tree_seen,    git_minus},
+  {"--- /dev/null", state_git_tree_seen,    git_minus},
+  {"+++ b/",        state_git_minus_seen,   git_plus},
+  {"+++ /dev/null", state_git_minus_seen,   git_plus},
+  {"rename from ",  state_git_diff_seen,    git_move_from},
+  {"rename to ",    state_move_from_seen,   git_move_to},
+  {"copy from ",    state_git_diff_seen,    git_copy_from},
+  {"copy to ",      state_copy_from_seen,   git_copy_to},
+  {"new file ",     state_git_diff_seen,    git_new_file},
+  {"deleted file ", state_git_diff_seen,    git_deleted_file},
+};
+
 svn_error_t *
 svn_diff_parse_next_patch(svn_patch_t **patch,
-                          apr_file_t *patch_file,
+                          svn_patch_file_t *patch_file,
                           svn_boolean_t reverse,
                           svn_boolean_t ignore_whitespace,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  const char *fname;
-  svn_stream_t *stream;
   apr_off_t pos, last_line;
   svn_boolean_t eof;
   svn_boolean_t line_after_tree_header_read = FALSE;
-
   apr_pool_t *iterpool;
-
   enum parse_state state = state_start;
 
-  /* Our table consisting of:
-   * Expected Input     Required state          Function to call */
-  struct transition transitions[] = 
-    {
-      {"--- ",          state_start,            diff_minus},
-      {"+++ ",          state_minus_seen,       diff_plus},
-      {"diff --git",    state_start,            git_start},
-      {"--- a/",        state_git_diff_seen,    git_minus},
-      {"--- a/",        state_git_tree_seen,    git_minus},
-      {"--- /dev/null", state_git_tree_seen,    git_minus},
-      {"+++ b/",        state_git_minus_seen,   git_plus},
-      {"+++ /dev/null", state_git_minus_seen,   git_plus},
-      {"rename from ",  state_git_diff_seen,    git_move_from},
-      {"rename to ",    state_move_from_seen,   git_move_to},
-      {"copy from ",    state_git_diff_seen,    git_copy_from},
-      {"copy to ",      state_copy_from_seen,   git_copy_to},
-      {"new file ",     state_git_diff_seen,    git_new_file},
-      {"deleted file ", state_git_diff_seen,    git_deleted_file},
-    };
-
-  if (apr_file_eof(patch_file) == APR_EOF)
+  if (apr_file_eof(patch_file->apr_file) == APR_EOF)
     {
       /* No more patches here. */
       *patch = NULL;
       return SVN_NO_ERROR;
     }
 
-  /* Get the patch's filename. */
-  SVN_ERR(svn_io_file_name_get(&fname, patch_file, result_pool));
-
-  /* Record what we already know about the patch. */
   *patch = apr_pcalloc(result_pool, sizeof(**patch));
-  (*patch)->patch_file = patch_file;
-  (*patch)->path = fname;
 
-  /* Get a stream to read lines from the patch file.
-   * The file should not be closed when we close the stream so
-   * make sure it is disowned. */
-  stream = svn_stream_from_aprfile2(patch_file, TRUE, scratch_pool);
-
-  /* Get current seek position -- APR has no ftell() :( */
-  pos = 0;
-  SVN_ERR(svn_io_file_seek((*patch)->patch_file, APR_CUR, &pos, scratch_pool));
+  pos = patch_file->next_patch_offset;
+  SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_SET, &pos, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
-
   do
     {
       svn_stringbuf_t *line;
+      svn_boolean_t valid_header_line = FALSE;
       int i;
 
       svn_pool_clear(iterpool);
 
       /* Remember the current line's offset, and read the line. */
       last_line = pos;
-      SVN_ERR(svn_stream_readline_detect_eol(stream, &line, NULL, &eof,
-                                             iterpool));
+      SVN_ERR(readline(patch_file->apr_file, &line, NULL, &eof,
+                       APR_SIZE_MAX, iterpool, iterpool));
 
       if (! eof)
         {
-          /* Update line offset for next iteration.
-           * APR has no ftell() :( */
+          /* Update line offset for next iteration. */
           pos = 0;
-          SVN_ERR(svn_io_file_seek((*patch)->patch_file, APR_CUR, &pos, iterpool));
+          SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_CUR, &pos,
+                                   iterpool));
         }
 
       /* Run the state machine. */
       for (i = 0; i < (sizeof(transitions) / sizeof(transitions[0])); i++)
         {
-          if (line->len > strlen(transitions[i].expected_input) 
+          if (line->len > strlen(transitions[i].expected_input)
               && starts_with(line->data, transitions[i].expected_input)
               && state == transitions[i].required_state)
             {
               SVN_ERR(transitions[i].fn(&state, line->data, *patch,
                                         result_pool, iterpool));
+              valid_header_line = TRUE;
               break;
             }
         }
 
-      if (state == state_unidiff_found
-          || state == state_git_header_found)
+      if (state == state_unidiff_found || state == state_git_header_found)
         {
           /* We have a valid diff header, yay! */
-          break; 
+          break;
         }
-      else if (state == state_git_tree_seen 
-               && line_after_tree_header_read)
+      else if (state == state_git_tree_seen && line_after_tree_header_read)
         {
           /* We have a valid diff header for a patch with only tree changes.
            * Rewind to the start of the line just read, so subsequent calls
            * to this function don't end up skipping the line -- it may
            * contain a patch. */
-          SVN_ERR(svn_io_file_seek((*patch)->patch_file, APR_SET, &last_line,
+          SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_SET, &last_line,
                                    scratch_pool));
           break;
         }
       else if (state == state_git_tree_seen)
+        {
           line_after_tree_header_read = TRUE;
+        }
+      else if (! valid_header_line && state != state_start)
+        {
+          /* We've encountered an invalid diff header.
+           *
+           * Rewind to the start of the line just read - it may be a new
+           * header that begins there. */
+          SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_SET, &last_line,
+                                   scratch_pool));
+          state = state_start;
+        }
 
-    } while (! eof);
+    }
+  while (! eof);
 
   (*patch)->reverse = reverse;
   if (reverse)
@@ -1268,49 +1368,14 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
       *patch = NULL;
     }
   else
-    {
-      svn_diff_hunk_t *hunk;
-      svn_boolean_t is_property;
-      const char *last_prop_name;
-      const char *prop_name;
-      svn_diff_operation_kind_t prop_operation;
-
-      last_prop_name = NULL;
-
-      /* Parse hunks. */
-      (*patch)->hunks = apr_array_make(result_pool, 10,
-                                       sizeof(svn_diff_hunk_t *));
-      (*patch)->prop_patches = apr_hash_make(result_pool);
-      do
-        {
-          svn_pool_clear(iterpool);
-
-          SVN_ERR(parse_next_hunk(&hunk, &is_property, &prop_name,
-                                  &prop_operation, *patch, stream,
-                                  ignore_whitespace,
-                                  result_pool, iterpool));
-
-          if (hunk && is_property)
-            {
-              if (! prop_name)
-                prop_name = last_prop_name;
-              else
-                last_prop_name = prop_name;
-              SVN_ERR(add_property_hunk(*patch, prop_name, hunk, prop_operation,
-                                        result_pool));
-            }
-          else if (hunk)
-            {
-              APR_ARRAY_PUSH((*patch)->hunks, svn_diff_hunk_t *) = hunk;
-              last_prop_name = NULL;
-            }
-
-        }
-      while (hunk);
-    }
+    SVN_ERR(parse_hunks(*patch, patch_file->apr_file, ignore_whitespace,
+                        result_pool, iterpool));
 
   svn_pool_destroy(iterpool);
-  SVN_ERR(svn_stream_close(stream));
+
+  patch_file->next_patch_offset = 0;
+  SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_CUR,
+                           &patch_file->next_patch_offset, scratch_pool));
 
   if (*patch)
     {
@@ -1326,34 +1391,9 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
 }
 
 svn_error_t *
-svn_diff_close_patch(const svn_patch_t *patch, apr_pool_t *scratch_pool)
+svn_diff_close_patch_file(svn_patch_file_t *patch_file,
+                          apr_pool_t *scratch_pool)
 {
-  int i;
-  apr_hash_index_t *hi;
-
-  for (i = 0; i < patch->hunks->nelts; i++)
-    {
-      const svn_diff_hunk_t *hunk = APR_ARRAY_IDX(patch->hunks, i,
-                                                  svn_diff_hunk_t *);
-      SVN_ERR(close_hunk(hunk));
-    }
-
-  for (hi = apr_hash_first(scratch_pool, patch->prop_patches);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-          svn_prop_patch_t *prop_patch; 
-
-          prop_patch = svn__apr_hash_index_val(hi);
-
-          for (i = 0; i < prop_patch->hunks->nelts; i++)
-            {
-              const svn_diff_hunk_t *hunk;
-              
-              hunk = APR_ARRAY_IDX(prop_patch->hunks, i, svn_diff_hunk_t *);
-              SVN_ERR(close_hunk(hunk));
-            }
-    } 
-
-  return SVN_NO_ERROR;
+  return svn_error_trace(svn_io_file_close(patch_file->apr_file,
+                                           scratch_pool));
 }

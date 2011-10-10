@@ -36,10 +36,12 @@ from svntest.main import server_authz_has_aliases
 
 # (abbreviation)
 Item = svntest.wc.StateItem
-XFail = svntest.testcase.XFail
-Wimp = svntest.testcase.Wimp
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 
 ######################################################################
 # Tests
@@ -50,7 +52,8 @@ SkipUnless = svntest.testcase.SkipUnless
 #----------------------------------------------------------------------
 
 # regression test for issue #2486 - part 1: open_root
-
+@Issue(2486)
+@Skip(svntest.main.is_ra_type_file)
 def authz_open_root(sbox):
   "authz issue #2486 - open root"
 
@@ -82,7 +85,8 @@ def authz_open_root(sbox):
 #----------------------------------------------------------------------
 
 # regression test for issue #2486 - part 2: open_directory
-
+@Issue(2486)
+@Skip(svntest.main.is_ra_type_file)
 def authz_open_directory(sbox):
   "authz issue #2486 - open directory"
 
@@ -115,6 +119,7 @@ def authz_open_directory(sbox):
                                         None,
                                         wc_dir)
 
+@Skip(svntest.main.is_ra_type_file)
 def broken_authz_file(sbox):
   "broken authz files cause errors"
 
@@ -136,6 +141,7 @@ def broken_authz_file(sbox):
     raise svntest.verify.SVNUnexpectedStderr("Missing stderr")
 
 # test whether read access is correctly granted and denied
+@Skip(svntest.main.is_ra_type_file)
 def authz_read_access(sbox):
   "test authz for read operations"
 
@@ -156,18 +162,17 @@ def authz_read_access(sbox):
   pi_url = G_url + '/pi'
   H_url = D_url + '/H'
   chi_url = H_url + '/chi'
+  fws_url = B_url + '/folder with spaces'
+  fws_empty_folder_url = fws_url + '/empty folder'
 
   if sbox.repo_url.startswith("http"):
     expected_err = ".*[Ff]orbidden.*"
   else:
-    expected_err = ".*svn: Authorization failed.*"
+    expected_err = ".*svn: E170001: Authorization failed.*"
 
   # create some folders with spaces in their names
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'mkdir',
-                                     '-m', 'logmsg',
-                                     B_url+'/folder with spaces',
-                                     B_url+'/folder with spaces/empty folder')
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'logmsg',
+                                     fws_url, fws_empty_folder_url)
 
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
@@ -222,7 +227,7 @@ def authz_read_access(sbox):
   # open a remote folder(ls) with spaces, should succeed
   svntest.actions.run_and_verify_svn(None,
                                      None, [], 'ls',
-                                     B_url+'/folder with spaces/empty folder')
+                                     fws_empty_folder_url)
 
   # open a remote folder(ls), unreadable through recursion: should fail
   svntest.actions.run_and_verify_svn(None,
@@ -265,15 +270,16 @@ def authz_read_access(sbox):
                                      'mv', '-m', 'logmsg',
                                      alpha_url, F_alpha_url)
 
-  # copy a remote file, source/target ancestor is readonly
-  ### we fail here due to issue #3242.
-  svntest.actions.run_and_verify_svn(None,
-                                     None, [],
-                                     'cp', '-m', 'logmsg',
-                                     alpha_url, F_alpha_url)
+  ## copy a remote file, source/target ancestor is readonly
+  ## we fail here due to issue #3242.
+  #svntest.actions.run_and_verify_svn(None,
+  #                                   None, [],
+  #                                   'cp', '-m', 'logmsg',
+  #                                   alpha_url, F_alpha_url)
 
 
 # test whether write access is correctly granted and denied
+@Skip(svntest.main.is_ra_type_file)
 def authz_write_access(sbox):
   "test authz for write operations"
 
@@ -284,7 +290,7 @@ def authz_write_access(sbox):
   if sbox.repo_url.startswith('http'):
     expected_err = ".*[Ff]orbidden.*"
   else:
-    expected_err = ".*svn: Access denied.*"
+    expected_err = ".*svn: E220004: Access denied.*"
 
   write_authz_file(sbox, { "/": "* = r",
                            "/A/B": "* = rw",
@@ -365,6 +371,7 @@ def authz_write_access(sbox):
 
 #----------------------------------------------------------------------
 
+@Skip(svntest.main.is_ra_type_file)
 def authz_checkout_test(sbox):
   "test authz for checkout"
 
@@ -379,7 +386,7 @@ def authz_checkout_test(sbox):
   if sbox.repo_url.startswith('http'):
     expected_err = ".*[Ff]orbidden.*"
   else:
-    expected_err = ".*svn: Authorization failed.*"
+    expected_err = ".*svn: E170001: Authorization failed.*"
 
   write_authz_file(sbox, { "/": "* ="})
 
@@ -403,6 +410,7 @@ def authz_checkout_test(sbox):
                           expected_output,
                           expected_wc)
 
+@Skip(svntest.main.is_ra_type_file)
 def authz_checkout_and_update_test(sbox):
   "test authz for checkout and update"
 
@@ -466,6 +474,7 @@ def authz_checkout_and_update_test(sbox):
                                         None, None,
                                         None, None, 1)
 
+@Skip(svntest.main.is_ra_type_file)
 def authz_partial_export_test(sbox):
   "test authz for export with unreadable subfolder"
 
@@ -501,6 +510,7 @@ def authz_partial_export_test(sbox):
 
 #----------------------------------------------------------------------
 
+@Skip(svntest.main.is_ra_type_file)
 def authz_log_and_tracing_test(sbox):
   "test authz for log and tracing path changes"
 
@@ -513,7 +523,7 @@ def authz_log_and_tracing_test(sbox):
   if sbox.repo_url.startswith('http'):
     expected_err = ".*[Ff]orbidden.*"
   else:
-    expected_err = ".*svn: Authorization failed.*"
+    expected_err = ".*svn: E170001: Authorization failed.*"
 
   write_authz_file(sbox, { "/": "* = rw\n" })
 
@@ -544,7 +554,7 @@ def authz_log_and_tracing_test(sbox):
   if sbox.repo_url.startswith('http'):
     expected_err = ".*[Ff]orbidden.*"
   else:
-    expected_err = ".*svn: Authorization failed.*"
+    expected_err = ".*svn: E170001: Authorization failed.*"
 
   authz = { "/": "* = rw",
             "/A/D/G": "* ="}
@@ -563,7 +573,7 @@ def authz_log_and_tracing_test(sbox):
   if sbox.repo_url.startswith('http'):
     expected_err2 = expected_err
   else:
-    expected_err2 = ".*svn: Item is not readable.*"
+    expected_err2 = ".*svn: E220001: Item is not readable.*"
 
   # if we do the same thing directly on the unreadable file, we get:
   # svn: Item is not readable
@@ -602,7 +612,7 @@ def authz_log_and_tracing_test(sbox):
   if sbox.repo_url.startswith('http'):
     expected_err2 = expected_err
   else:
-    expected_err2 = ".*svn: Unreadable path encountered; access denied.*"
+    expected_err2 = ".*svn: E220001: Unreadable path encountered; access denied.*"
 
   svntest.actions.run_and_verify_svn(None, None, expected_err2,
                                      'cat', '-r', '2', G_url+'/rho')
@@ -620,6 +630,8 @@ def authz_log_and_tracing_test(sbox):
                                      'diff', '-r', '2:4', D_url+'/rho')
 
 # test whether read access is correctly granted and denied
+@SkipUnless(server_authz_has_aliases)
+@Skip(svntest.main.is_ra_type_file)
 def authz_aliases(sbox):
   "test authz for aliases"
 
@@ -630,7 +642,7 @@ def authz_aliases(sbox):
   if sbox.repo_url.startswith("http"):
     expected_err = ".*[Ff]orbidden.*"
   else:
-    expected_err = ".*svn: Authorization failed.*"
+    expected_err = ".*svn: E170001: Authorization failed.*"
 
   write_authz_file(sbox, { "/" : "* = r",
                            "/A/B" : "&jray = rw" },
@@ -656,6 +668,8 @@ def authz_aliases(sbox):
                                      '-m', 'logmsg',
                                      iota_url, B_url)
 
+@Skip(svntest.main.is_ra_type_file)
+@Issue(2486)
 def authz_validate(sbox):
   "test the authz validation rules"
 
@@ -722,6 +736,8 @@ users = @devs1, @devs2, user1, user2""" })
                                      A_url)
 
 # test locking/unlocking with authz
+@Skip(svntest.main.is_ra_type_file)
+@Issue(2700)
 def authz_locking(sbox):
   "test authz for locking"
 
@@ -733,7 +749,7 @@ def authz_locking(sbox):
   if sbox.repo_url.startswith('http'):
     expected_err = ".*[Ff]orbidden.*"
   else:
-    expected_err = ".*svn: Authorization failed.*"
+    expected_err = ".*svn: E170001: Authorization failed.*"
 
   root_url = sbox.repo_url
   wc_dir = sbox.wc_dir
@@ -781,6 +797,9 @@ def authz_locking(sbox):
 # test for issue #2712: if anon-access == read, svnserve should also check
 # authz to determine whether a checkout/update is actually allowed for
 # anonymous users, and, if not, attempt authentication.
+@XFail()
+@Issue(2712)
+@SkipUnless(svntest.main.is_ra_type_svn)
 def authz_svnserve_anon_access_read(sbox):
   "authz issue #2712"
 
@@ -843,6 +862,9 @@ def authz_svnserve_anon_access_read(sbox):
                                      'merge', '-c', '2',
                                      B_url, B_path)
 
+@XFail()
+@Issue(3796)
+@Skip(svntest.main.is_ra_type_file)
 def authz_switch_to_directory(sbox):
   "switched to directory, no read access on parents"
 
@@ -858,11 +880,14 @@ def authz_switch_to_directory(sbox):
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
 
   # Switch /A/B/E to /A/B/F.
-  svntest.main.run_svn(None, 'switch', sbox.repo_url + "/A/B/E", G_path)
+  svntest.main.run_svn(None, 'switch', sbox.repo_url + "/A/B/E", G_path,
+                       '--ignore-ancestry')
 
 # Test to reproduce the problem identified by Issue 3242 in which
 # Subversion's authz, as of Subversion 1.5, requires access to the
 # repository root for copy and move operations.
+@Skip(svntest.main.is_ra_type_file)
+@Issue(3242)
 def authz_access_required_at_repo_root(sbox):
   "authz issue #3242 - access required at repo root"
 
@@ -904,6 +929,8 @@ def authz_access_required_at_repo_root(sbox):
                        root_url + '/A-copy/B/E/beta',
                        root_url + '/A-copy/C')
 
+@Skip(svntest.main.is_ra_type_file)
+@Issue(3242)
 def authz_access_required_at_repo_root2(sbox):
   "more authz issue #3242 - update to renamed file"
 
@@ -920,8 +947,8 @@ def authz_access_required_at_repo_root2(sbox):
                        '-m', 'rename file in readable writable space',
                        root_url + '/A/B/E/alpha',
                        root_url + '/A/B/E/alpha-renamed')
-  
-  # Check out original greek sub tree below /A/B/E 
+
+  # Check out original greek sub tree below /A/B/E
   # and update it to the above rename.
   wc_dir = sbox.add_wc_path('ABE')
   os.mkdir(wc_dir)
@@ -933,7 +960,7 @@ def authz_access_required_at_repo_root2(sbox):
                        '-m', 'rename diretory in readable writable space',
                        root_url + '/A/D/H',
                        root_url + '/A/D/a g e')
-  
+
   # Check out original greek sub tree below /A/D
   # and update it to the above rename.
   wc_dir = sbox.add_wc_path('AD')
@@ -941,6 +968,7 @@ def authz_access_required_at_repo_root2(sbox):
   svntest.main.run_svn(None, 'co', '-r', '1', root_url + '/A/D', wc_dir)
   svntest.main.run_svn(None, 'up', wc_dir)
 
+@Skip(svntest.main.is_ra_type_file)
 def multiple_matches(sbox):
   "multiple lines matching a user"
 
@@ -950,7 +978,7 @@ def multiple_matches(sbox):
   if sbox.repo_url.startswith("http"):
     expected_err = ".*[Ff]orbidden.*"
   else:
-    expected_err = ".*svn: Authorization failed.*"
+    expected_err = ".*svn: E170001: Authorization failed.*"
 
   # Prohibit access and commit fails
   write_authz_file(sbox, {'/': 'jrandom ='})
@@ -974,8 +1002,10 @@ def multiple_matches(sbox):
                        '-m', 'second copy',
                        root_url, root_url + '/second')
 
-def wc_wc_copy(sbox):
-  "wc-to-wc copy with absent nodes"
+@Issues(4025,4026)
+@Skip(svntest.main.is_ra_type_file)
+def wc_wc_copy_revert(sbox):
+  "wc-to-wc-copy with absent nodes and then revert"
 
   sbox.build(create_wc = False)
   local_dir = sbox.wc_dir
@@ -1000,27 +1030,49 @@ def wc_wc_copy(sbox):
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
   svntest.actions.run_and_verify_svn(None, None,
-                                     'svn: Cannot copy.*excluded by server',
-                                     'cp', sbox.ospath('A'), sbox.ospath('A2'))
+                             'svn: E155035: Cannot copy.*excluded by server',
+                             'cp', sbox.ospath('A'), sbox.ospath('A2'))
 
-  # The copy failed, no change in status
-  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
-def wc_wc_copy_revert(sbox):
-  "wc-to-wc-copy with absent nodes and then revert"
+  # The copy failed and A2/B/E is incomplete.  That means A2 and A2/B
+  # are complete, but for the other parts of A2 the status is undefined.
+  expected_output = svntest.verify.ExpectedOutput(
+    ['A  +             -        1 jrandom      ' + sbox.ospath('A2') + '\n',
+     '   +             -        1 jrandom      ' + sbox.ospath('A2/B') + '\n',
+     '!                -       ?   ?           ' + sbox.ospath('A2/B/E') + '\n',
+     ])
+  expected_output.match_all = False
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'st', '--verbose', sbox.ospath('A2'))
 
-  wc_wc_copy(sbox)
 
-  # Fails with a "No write-lock" error, as does "rm --force", on a
-  # path under A2.  Multiple repeats fail on different paths until the
-  # command completes.  No longer applies with op_depth.
+  # Issue 4025, info SEGV on incomplete working node
+  svntest.actions.run_and_verify_svn(None, None,
+                                     'svn: E145000: .*unrecognized node kind',
+                                     'info', sbox.ospath('A2/B/E'))
+
+  # Issue 4026, copy assertion on incomplete working node
+  svntest.actions.run_and_verify_svn(None, None,
+                             'svn: E145001: cannot handle node kind',
+                             'cp', sbox.ospath('A2/B'), sbox.ospath('B3'))
+
+  expected_output = svntest.verify.ExpectedOutput(
+    ['A  +             -        1 jrandom      ' + sbox.ospath('B3') + '\n',
+     '!                -       ?   ?           ' + sbox.ospath('B3/E') + '\n',
+     ])
+  expected_output.match_all = False
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'st', '--verbose', sbox.ospath('B3'))
+
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'revert', '--recursive', sbox.ospath('A2'))
-  
+                                     'revert', '--recursive',
+                                     sbox.ospath('A2'), sbox.ospath('B3'))
+
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
+@Skip(svntest.main.is_ra_type_file)
 def authz_recursive_ls(sbox):
   "recursive ls with private subtrees"
 
@@ -1055,40 +1107,281 @@ def authz_recursive_ls(sbox):
                                      [], 'ls', '-R',
                                      sbox.repo_url)
 
+@Issue(3781)
+@Skip(svntest.main.is_ra_type_file)
+def case_sensitive_authz(sbox):
+  "authz issue #3781, check case sensitivity"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_url = sbox.repo_url + '/A/mu'
+  mu_repo_path = sbox.repo_dir + "/A/mu"
+  svntest.main.file_append(mu_path, "hi")
+
+  # Create expected output tree.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
+
+  # error messages
+  expected_error_for_commit = "Commit failed"
+
+  if sbox.repo_url.startswith("http"):
+    expected_error_for_cat = ".*[Ff]orbidden.*"
+  else:
+    expected_error_for_cat = ".*svn: E170001: Authorization failed.*"
+
+  # test the case-sensitivity of the path inside the repo
+  write_authz_file(sbox, {"/": "jrandom = r",
+                          "/A/mu": "jrandom =", "/a/Mu": "jrandom = rw"})
+  svntest.actions.run_and_verify_svn2(None, None,
+                                      expected_error_for_cat,
+                                      1, 'cat', mu_url)
+
+  write_authz_file(sbox, {"/": "jrandom = r",
+                          "/A": "jrandom = r",
+                          "/a/Mu": "jrandom = rw"})
+  # Commit the file.
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None,
+                                        None,
+                                        expected_error_for_commit,
+                                        mu_path)
+
+  def mixcases(repo_name):
+    mixed_repo_name = ''
+    for i in range(0, len(repo_name)):
+      if i % 2 == 0:
+        mixed_val = repo_name[i].upper()
+        mixed_repo_name = mixed_repo_name + mixed_val
+      else:
+        mixed_val = repo_name[i].lower()
+        mixed_repo_name = mixed_repo_name + mixed_val
+    return mixed_repo_name
+
+  mixed_case_repo_dir = mixcases(os.path.basename(sbox.repo_dir))
+
+  # test the case-sensitivity of the repo name
+  sec_mixed_case = {mixed_case_repo_dir + ":/": "jrandom = r",
+                    mixed_case_repo_dir + ":/A": "jrandom = r",
+                    os.path.basename(sbox.repo_dir) + ":/A/mu": "jrandom =",
+                    mixed_case_repo_dir + ":/A/mu": "jrandom = rw"}
+  write_authz_file(sbox, {}, sec_mixed_case)
+  svntest.actions.run_and_verify_svn2(None, None,
+                                      expected_error_for_cat,
+                                      1, 'cat', mu_url)
+
+  write_authz_file(sbox, {},
+                   sections = {mixed_case_repo_dir + ":/": "jrandom = r",
+                               mixed_case_repo_dir + ":/A": "jrandom = r",
+                               mixed_case_repo_dir + ":/A/mu": "jrandom = rw"})
+
+  # Commit the file again.
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None,
+                                        None,
+                                        expected_error_for_commit,
+                                        mu_path)
+
+  # test the case-sensitivity
+  write_authz_file(sbox, {"/": "jrandom = r",
+                          "/A": "jrandom = r", "/A/mu": "jrandom = rw"})
+
+  svntest.actions.run_and_verify_svn2('No error',
+                                      svntest.verify.AnyOutput, [],
+                                      0, 'cat', mu_url)
+  # Commit the file.
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        None,
+                                        None,
+                                        mu_path)
+
+@Skip(svntest.main.is_ra_type_file)
+def authz_tree_conflict(sbox):
+  "authz should notice a tree conflict"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  sbox.simple_rm('A/C')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  write_authz_file(sbox, {"/": "jrandom = rw", "/A/C": "*="})
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  # And now create an obstruction
+  sbox.simple_mkdir('A/C')
+
+  expected_output = svntest.wc.State(wc_dir, {})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/C', status='A ', wc_rev='0')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        "Failed to mark '.*C' absent:",
+                                        None, None, None, None, 0,
+                                        '-r', '1', wc_dir)
+
+@Issue(3900)
+@Skip(svntest.main.is_ra_type_file)
+def wc_delete(sbox):
+  "wc delete with absent nodes"
+
+  sbox.build(create_wc = False)
+  local_dir = sbox.wc_dir
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  write_authz_file(sbox, {'/'       : '* = r',
+                          '/A/B/E'  : '* =', })
+
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = local_dir
+  expected_output.tweak(status='A ', contents=None)
+  expected_output.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+  expected_wc = svntest.main.greek_state.copy()
+  expected_wc.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+
+  svntest.actions.run_and_verify_checkout(sbox.repo_url, local_dir,
+                                          expected_output,
+                                          expected_wc)
+
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+
+  expected_err = ".*svn: E155035: .*excluded by server*"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'rm', sbox.ospath('A/B/E'))
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'rm', sbox.ospath('A'))
+
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+
+
+@Skip(svntest.main.is_ra_type_file)
+def wc_commit_error_handling(sbox):
+  "verify commit error reporting"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  sbox.simple_mkdir('A/Z')
+
+  write_authz_file(sbox, {'/'   : '* = r', })
+
+  # Creating editor fail: unfriendly error
+  expected_err = "(svn: E175013: .*orbidden.*)|" + \
+                 "(svn: E170001: Authorization failed)"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'ci', wc_dir, '-m', '')
+
+  write_authz_file(sbox, {'/'   : '* = rw',
+                          '/A'  : '* = r', })
+
+  # Allow the informative error for dav and the ra_svn specific one that is
+  # returned on editor->edit_close().
+  expected_err = "(svn: E195023: Changing directory '.*Z' is forbidden)|" + \
+                 "(svn: E220004: Access denied)"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'ci', wc_dir, '-m', '')
+
+  sbox.simple_revert('A/Z')
+
+  svntest.main.file_write(sbox.ospath('A/zeta'), "Zeta")
+  sbox.simple_add('A/zeta')
+
+  # Allow the informative error for dav and the ra_svn specific one that is
+  # returned on editor->edit_close().
+  expected_err = "(svn: E195023: Changing file '.*zeta' is forbidden)|" + \
+                 "(svn: E220004: Access denied)"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'ci', wc_dir, '-m', '')
+  sbox.simple_revert('A/zeta')
+
+  sbox.simple_propset('a', 'b', 'A/D')
+
+  # Allow a generic dav error and the ra_svn specific one that is returned
+  # on editor->edit_close().
+  expected_err = "(svn: E175013: .*orbidden.*)|" + \
+                 "(svn: E220004: Access denied)"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'ci', wc_dir, '-m', '')
+
+  sbox.simple_revert('A/D')
+
+  sbox.simple_propset('a', 'b', 'A/B/lambda')
+
+  # Allow the informative error for dav and the ra_svn specific one that is
+  # returned on editor->edit_close().
+  expected_err = "(svn: E195023: Changing file '.*lambda' is forbidden.*)|" + \
+                 "(svn: E220004: Access denied)"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'ci', wc_dir, '-m', '')
+
+  sbox.simple_revert('A/B/lambda')
+
+  svntest.main.file_write(sbox.ospath('A/B/lambda'), "New lambda")
+  # Allow the informative error for dav and the ra_svn specific one that is
+  # returned on editor->edit_close().
+  expected_err = "(svn: E195023: Changing file '.*lambda' is forbidden.*)|" + \
+                 "(svn: E220004: Access denied)"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'ci', wc_dir, '-m', '')
+
+  sbox.simple_revert('A/B/lambda')
+
+  sbox.simple_rm('A/B/F')
+  # Allow the informative error for dav and the ra_svn specific one that is
+  # returned on editor->edit_close().
+  expected_err = "(svn: E195023: Changing directory '.*F' is forbidden.*)|" + \
+                 "(svn: E220004: Access denied)"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'ci', wc_dir, '-m', '')
+  sbox.simple_revert('A/B/F')
+
+  svntest.main.file_write(sbox.ospath('A/mu'), "Updated mu")
+  # Allow the informative error for dav and the ra_svn specific one that is
+  # returned on editor->edit_close().
+  expected_err = "(svn: E195023: Changing file '.*mu' is forbidden.*)|" + \
+                 "(svn: E220004: Access denied)"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'ci', wc_dir, '-m', '')
+
+
 ########################################################################
 # Run the tests
 
 # list all tests here, starting with None:
 test_list = [ None,
-              Skip(authz_open_root, svntest.main.is_ra_type_file),
-              Skip(authz_open_directory, svntest.main.is_ra_type_file),
-              Skip(broken_authz_file, svntest.main.is_ra_type_file),
-              XFail(Skip(authz_read_access, svntest.main.is_ra_type_file)),
-              Skip(authz_write_access, svntest.main.is_ra_type_file),
-              Skip(authz_checkout_test, svntest.main.is_ra_type_file),
-              Skip(authz_log_and_tracing_test, svntest.main.is_ra_type_file),
-              Skip(authz_checkout_and_update_test,
-                   svntest.main.is_ra_type_file),
-              Skip(authz_partial_export_test, svntest.main.is_ra_type_file),
-              SkipUnless(Skip(authz_aliases, svntest.main.is_ra_type_file),
-                         server_authz_has_aliases),
-              Skip(authz_validate, svntest.main.is_ra_type_file),
-              Skip(authz_locking, svntest.main.is_ra_type_file),
-              XFail(SkipUnless(authz_svnserve_anon_access_read,
-                               svntest.main.is_ra_type_svn)),
-              XFail(Skip(authz_switch_to_directory,
-                         svntest.main.is_ra_type_file)),
-              Skip(authz_access_required_at_repo_root,
-                   svntest.main.is_ra_type_file),
-              Skip(authz_access_required_at_repo_root2,
-                   svntest.main.is_ra_type_file),
-              Skip(multiple_matches, svntest.main.is_ra_type_file),
-              Wimp("Needs op_depth", Skip(wc_wc_copy,
-                   svntest.main.is_ra_type_file)),
-              Wimp("Redundant with op_depth", Skip(wc_wc_copy_revert,
-                   svntest.main.is_ra_type_file)),
-              Skip(authz_recursive_ls,
-                   svntest.main.is_ra_type_file),
+              authz_open_root,
+              authz_open_directory,
+              broken_authz_file,
+              authz_read_access,
+              authz_write_access,
+              authz_checkout_test,
+              authz_log_and_tracing_test,
+              authz_checkout_and_update_test,
+              authz_partial_export_test,
+              authz_aliases,
+              authz_validate,
+              authz_locking,
+              authz_svnserve_anon_access_read,
+              authz_switch_to_directory,
+              authz_access_required_at_repo_root,
+              authz_access_required_at_repo_root2,
+              multiple_matches,
+              wc_wc_copy_revert,
+              authz_recursive_ls,
+              case_sensitive_authz,
+              authz_tree_conflict,
+              wc_delete,
+              wc_commit_error_handling,
              ]
 serial_only = True
 

@@ -53,7 +53,7 @@ int hash_do_callback(void *baton,
                      const void *value)
 {
   struct hash_do_baton *hdb = baton;
-  
+
   svn_pool_clear(hdb->iterpool);
   hdb->err = (*hdb->func)(hdb->baton, key, klen, (void *)value, hdb->iterpool);
 
@@ -176,6 +176,8 @@ svn_iter_apr_array(svn_boolean_t *completed,
   return err;
 }
 
+/* Note: Although this is a "__" function, it is in the public ABI, so
+ * we can never remove it or change its signature. */
 svn_error_t *
 svn_iter__break(void)
 {

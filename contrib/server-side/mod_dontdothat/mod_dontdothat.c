@@ -34,7 +34,7 @@
 
 module AP_MODULE_DECLARE_DATA dontdothat_module;
 
-typedef struct {
+typedef struct dontdothat_config_rec {
   const char *config_file;
   const char *base_path;
   int no_replay;
@@ -62,7 +62,7 @@ static const command_rec dontdothat_cmds[] =
   { NULL }
 };
 
-typedef enum {
+typedef enum parse_state_t {
   STATE_BEGINNING,
   STATE_IN_UPDATE,
   STATE_IN_SRC_PATH,
@@ -70,7 +70,7 @@ typedef enum {
   STATE_IN_RECURSIVE
 } parse_state_t;
 
-typedef struct {
+typedef struct dontdothat_filter_ctx {
   /* Set to TRUE when we determine that the request is safe and should be
    * allowed to continue. */
   svn_boolean_t let_it_go;

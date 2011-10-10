@@ -77,7 +77,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               svn_depth_t depth,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
-                              svn_boolean_t innercheckout,
                               svn_boolean_t *timestamp_sleep,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool)
@@ -92,7 +91,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
 
   /* Sanity check.  Without these, the checkout is meaningless. */
   SVN_ERR_ASSERT(local_abspath != NULL);
-  SVN_ERR_ASSERT(url != NULL);
+  SVN_ERR_ASSERT(svn_uri_is_canonical(url, pool));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* Fulfill the docstring promise of svn_client_checkout: */
@@ -100,9 +99,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       && (revision->kind != svn_opt_revision_date)
       && (revision->kind != svn_opt_revision_head))
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
-
-  /* Canonicalize the URL. */
-  url = svn_uri_canonicalize(url, pool);
 
   {
     svn_boolean_t have_repos_root_url;
@@ -123,8 +119,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
     if ((have_revnum = (ra_cache && SVN_IS_VALID_REVNUM(ra_cache->ra_revnum))))
       revnum = ra_cache->ra_revnum;
 
-    if ((have_kind = (ra_cache && ra_cache->kind_p)))
-      kind = *(ra_cache->kind_p);
+    if ((have_kind = (ra_cache && ra_cache->kind != svn_node_unknown)))
+      kind = ra_cache->kind;
 
     if (! have_repos_root_url || ! have_repos_uuid || ! have_session_url ||
         ! have_revnum || ! have_kind)
@@ -201,8 +197,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
           if (strcmp(entry_url, session_url) != 0)
             return svn_error_createf(
                           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                          _("'%s' is already a working copy for a different URL;"
-                            " use 'svn update' to update it"),
+                          _("'%s' is already a working copy for a"
+                            " different URL"),
                           svn_dirent_local_style(local_abspath, pool));
         }
     }
@@ -214,19 +210,23 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
     }
 
   /* Have update fix the incompleteness. */
-  err = svn_client__update_internal(result_rev, local_abspath,
-                                    revision, depth, TRUE,
-                                    ignore_externals,
-                                    allow_unver_obstructions,
-                                    use_sleep, innercheckout, FALSE,
-                                    ctx, pool);
+  if (! err)
+    {
+      err = svn_client__update_internal(result_rev, local_abspath,
+                                        revision, depth, TRUE,
+                                        ignore_externals,
+                                        allow_unver_obstructions,
+                                        TRUE /* adds_as_modification */,
+                                        FALSE, FALSE,
+                                        use_sleep, ctx, pool);
+    }
 
   if (err)
     {
       /* Don't rely on the error handling to handle the sleep later, do
          it now */
       svn_io_sleep_for_timestamps(local_abspath, pool);
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
   *use_sleep = TRUE;
 
@@ -255,6 +255,6 @@ svn_client_checkout3(svn_revnum_t *result_rev,
   return svn_client__checkout_internal(result_rev, URL, local_abspath,
                                        peg_revision, revision, NULL, depth,
                                        ignore_externals,
-                                       allow_unver_obstructions, FALSE, NULL,
+                                       allow_unver_obstructions, NULL,
                                        ctx, pool);
 }

@@ -23,7 +23,7 @@
 package org.apache.subversion.javahl;
 
 import org.apache.subversion.javahl.callback.*;
-import org.apache.subversion.javahl.type.NodeKind;
+import org.apache.subversion.javahl.types.*;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -240,7 +240,7 @@ class SVNTests extends TestCase
                               NodeKind.none, CommitItemStateFlags.Add);
         client.doImport(greekFiles.getAbsolutePath(),
                        makeReposUrl(greekRepos).toString(),
-                        Depth.infinity, false, false, null, 
+                        Depth.infinity, false, false, null,
                         new MyCommitMessage(), null);
         admin.dump(greekRepos, new FileOutputStream(greekDump),
                    null, null, false, false, null);
@@ -287,7 +287,7 @@ class SVNTests extends TestCase
     private static class DefaultPromptUserPassword implements UserPasswordCallback
     {
 
-        public int askTrustSSLServer(String info, boolean allowPermanently) 
+        public int askTrustSSLServer(String info, boolean allowPermanently)
         {
             return UserPasswordCallback.AcceptTemporary;
         }
@@ -323,25 +323,25 @@ class SVNTests extends TestCase
         }
 
         public String askQuestion(String realm, String question,
-                boolean showAnswer, boolean maySave) 
+                boolean showAnswer, boolean maySave)
         {
             return "";
         }
 
-        public boolean userAllowedSave() 
+        public boolean userAllowedSave()
         {
             return false;
         }
     }
 
-    private static class DefaultProgressListener implements ProgressCallback 
+    private static class DefaultProgressListener implements ProgressCallback
     {
 
-        public void onProgress(ProgressEvent event) 
+        public void onProgress(ProgressEvent event)
         {
             // Do nothing, just receive the event
         }
-        
+
     }
     /**
      * build a sample directory with test files to be used as import for
@@ -421,7 +421,7 @@ class SVNTests extends TestCase
      * Create the url for the repository to be used for the tests.
      * @param file  the directory of the repository
      * @return the URL for the repository
-     * @throws SubversionException 
+     * @throws SubversionException
      */
     protected URI makeReposUrl(File file) throws SubversionException
     {
@@ -794,14 +794,14 @@ class SVNTests extends TestCase
     {
         /**
          * Retrieve a commit message from the user based on the items
-         * to be commited
-         * @param elementsToBeCommited  Array of elements to be commited
+         * to be committed
+         * @param elementsToBeCommitted  Array of elements to be committed
          * @return  the log message of the commit.
          */
-        public String getLogMessage(Set<CommitItem> elementsToBeCommited)
+        public String getLogMessage(Set<CommitItem> elementsToBeCommitted)
         {
             // check all received CommitItems are expected as received
-            for (CommitItem commitItem : elementsToBeCommited)
+            for (CommitItem commitItem : elementsToBeCommitted)
             {
                 // since imports do not provide a url, the key is either url or
                 // path
@@ -840,7 +840,7 @@ class SVNTests extends TestCase
          */
         NodeKind myNodeKind;
         /**
-         * the reason why this item is commited (see CommitItemStateFlag)
+         * the reason why this item is committed (see CommitItemStateFlag)
          */
         int myStateFlags;
         /**
@@ -898,9 +898,10 @@ class SVNTests extends TestCase
     {
         private List<Status> statuses = new ArrayList<Status>();
 
-        public void doStatus(Status status)
+        public void doStatus(String path, Status status)
         {
-            statuses.add(status);
+            if (status != null)
+                statuses.add(status);
         }
 
         public Status[] getStatusArray()

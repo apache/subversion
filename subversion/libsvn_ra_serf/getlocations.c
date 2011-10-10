@@ -25,20 +25,15 @@
 
 #include <apr_uri.h>
 
-#include <expat.h>
-
 #include <serf.h>
 
+#include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
-#include "svn_dav.h"
 #include "svn_xml.h"
-#include "../libsvn_ra/ra_loader.h"
-#include "svn_config.h"
-#include "svn_delta.h"
-#include "svn_version.h"
-#include "svn_path.h"
 #include "svn_private_config.h"
+
+#include "../libsvn_ra/ra_loader.h"
 
 #include "ra_serf.h"
 
@@ -46,7 +41,7 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-typedef enum {
+typedef enum loc_state_e {
   REPORT,
   LOCATION,
 } loc_state_e;
@@ -59,7 +54,7 @@ typedef struct loc_state_list_t {
   struct loc_state_list_t *prev;
 } loc_state_list_t;
 
-typedef struct {
+typedef struct loc_context_t {
   /* pool to allocate memory from */
   apr_pool_t *pool;
 

@@ -353,6 +353,11 @@ svn_subst_stream_translated_to_normal_form(svn_stream_t **stream,
  * in @a result_pool, and any temporary allocations will be made in
  * @a scratch_pool.
  *
+ * If the file at @a path is in fact a regular file, just read its content,
+ * which should be in the "normal form" for a special file.  This enables
+ * special files to be written and read on platforms that do not treat them
+ * as special.
+ *
  * @since New in 1.6.
  */
 svn_error_t *
@@ -362,11 +367,16 @@ svn_subst_read_specialfile(svn_stream_t **stream,
                            apr_pool_t *scratch_pool);
 
 
-/** Set @a *stream to a writeable stream that accepts content in
+/** Set @a *stream to a writable stream that accepts content in
  * the "normal form" for a special file, to be located at @a path, and
  * will create that file when the stream is closed. The stream will be
  * allocated in @a result_pool, and any temporary allocations will be
  * made in @a scratch_pool.
+ *
+ * If the platform does not support the semantics of the special file, write
+ * a regular file containing the "normal form" text.  This enables special
+ * files to be written and read on platforms that do not treat them as
+ * special.
  *
  * Note: the target file is created in a temporary location, then renamed
  *   into position, so the creation can be considered "atomic".
@@ -596,11 +606,41 @@ svn_subst_stream_detranslated(svn_stream_t **stream_p,
  * UTF8, and also from its current line-ending style to LF line-endings.  If
  * @a encoding is @c NULL, translate from the system-default encoding.
  *
- * Recognized line endings are LF, CR, CRLF.  If @a value has inconsistent
- * line endings, return @c SVN_ERR_IO_INCONSISTENT_EOL.
+ * If @a translated_to_utf8 is not @c NULL, then set @a *translated_to_utf8
+ * to @c TRUE if at least one character of @a value in the source character
+ * encoding was translated to UTF-8, or to @c FALSE otherwise.
  *
- * Set @a *new_value to the translated string, allocated in @a pool.
+ * If @a translated_line_endings is not @c NULL, then set @a
+ * *translated_line_endings to @c TRUE if at least one line ending was
+ * changed to LF, or to @c FALSE otherwise.
+ *
+ * If @a value has an inconsistent line ending style, then: if @a repair
+ * is @c FALSE, return @c SVN_ERR_IO_INCONSISTENT_EOL, else if @a repair is
+ * @c TRUE, convert any line ending in @a value to "\n" in
+ * @a *new_value.  Recognized line endings are: "\n", "\r", and "\r\n".
+ *
+ * Set @a *new_value to the translated string, allocated in @a result_pool.
+ *
+ * @a scratch_pool is used for temporary allocations.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_subst_translate_string2(svn_string_t **new_value,
+                            svn_boolean_t *translated_to_utf8,
+                            svn_boolean_t *translated_line_endings,
+                            const svn_string_t *value,
+                            const char *encoding,
+                            svn_boolean_t repair,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+/** Similar to svn_subst_translate_string2(), except that the information about
+ * whether re-encoding or line ending translation were performed is discarded.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *svn_subst_translate_string(svn_string_t **new_value,
                                         const svn_string_t *value,
                                         const char *encoding,

@@ -33,16 +33,13 @@
 
 Array::~Array()
 {
-  if (m_objectArray != NULL)
-    {
-      for (std::vector<jobject>::iterator it = m_objects.begin();
-            it < m_objects.end(); ++it)
-        {
-          JNIUtil::getEnv()->DeleteLocalRef(*it);
-        }
-      
-      JNIUtil::getEnv()->DeleteLocalRef(m_objectArray);
-    }
+  /* We don't clean up our Java object here, because this destructor may run
+     *after* a call to PopLocalFrame().  If so, we would be deleting references
+     twice, which leads to all kinds of problems.
+
+     Instead, we intentionally "leak" these references, knowing that a call
+     to PopLocalFrame() will clean them up, or, in the worse case, the JVM
+     will clean them up when it returns from the JNI code. */
 }
 
 const std::vector<jobject> &Array::vector(void) const

@@ -73,6 +73,18 @@ typedef struct svn_fs_t svn_fs_t;
 #define SVN_FS_CONFIG_BDB_TXN_NOSYNC            "bdb-txn-nosync"
 #define SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE        "bdb-log-autoremove"
 
+/** Enable / disable text delta caching for a FSFS repository.
+ *
+ * @since New in 1.7.
+ */
+#define SVN_FS_CONFIG_FSFS_CACHE_DELTAS         "fsfs-cache-deltas"
+
+/** Enable / disable full-text caching for a FSFS repository.
+ *
+ * @since New in 1.7.
+ */
+#define SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS      "fsfs-cache-fulltexts"
+
 /* See also svn_fs_type(). */
 /** @since New in 1.1. */
 #define SVN_FS_CONFIG_FS_TYPE                   "fs-type"
@@ -101,13 +113,6 @@ typedef struct svn_fs_t svn_fs_t;
  * @since New in 1.6.
  */
 #define SVN_FS_CONFIG_PRE_1_6_COMPATIBLE        "pre-1.6-compatible"
-
-/** Create repository format compatible with Subversion versions
- * earlier than 1.7.
- *
- * @since New in 1.7.
- */
-#define SVN_FS_CONFIG_PRE_1_7_COMPATIBLE        "pre-1.7-compatible"
 /** @} */
 
 
@@ -214,7 +219,7 @@ svn_fs_create(svn_fs_t **fs_p,
  * they open separate filesystem objects.
  *
  * @note You probably don't want to use this directly.  Take a look at
- * svn_repos_open() instead.
+ * svn_repos_open2() instead.
  *
  * @since New in 1.1.
  */
@@ -239,6 +244,23 @@ svn_fs_open(svn_fs_t **fs_p,
 svn_error_t *
 svn_fs_upgrade(const char *path,
                apr_pool_t *pool);
+
+/**
+ * Perform backend-specific data consistency and correctness validations
+ * to the Subversion filesystem located in the directory @a path.
+ * Use @a pool for necessary allocations.
+ *
+ * @note You probably don't want to use this directly.  Take a look at
+ * svn_repos_verify_fs2() instead, which does non-backend-specific
+ * verifications as well.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_verify(const char *path,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *pool);
 
 /**
  * Return, in @a *fs_type, a string identifying the back-end type of
@@ -811,15 +833,16 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  *
  * If the commit succeeds, @a txn is invalid.
  *
- * If the commit fails, @a txn is still valid; you can make more
- * operations to resolve the conflict, or call svn_fs_abort_txn() to
- * abort the transaction.
+ * If the commit fails for any reason, @a *new_rev is an invalid
+ * revision number, an error other than #SVN_NO_ERROR is returned and
+ * @a txn is still valid; you can make more operations to resolve the
+ * conflict, or call svn_fs_abort_txn() to abort the transaction.
  *
  * @note Success or failure of the commit of @a txn is determined by
  * examining the value of @a *new_rev upon this function's return.  If
  * the value is a valid revision number, the commit was successful,
  * even though a non-@c NULL function return value may indicate that
- * something else went wrong.
+ * something else went wrong in post commit FS processing.
  */
 svn_error_t *
 svn_fs_commit_txn(const char **conflict_p,
@@ -931,7 +954,7 @@ svn_fs_change_txn_prop(svn_fs_txn_t *txn,
 
 /** Change, add, and/or delete transaction property values in
  * transaction @a txn.  @a props is an array of <tt>svn_prop_t</tt>
- * elements.  This is equivalent to calling svn_fs_change_txp_prop()
+ * elements.  This is equivalent to calling svn_fs_change_txn_prop()
  * multiple times with the @c name and @c value fields of each
  * successive <tt>svn_prop_t</tt>, but may be more efficient.
  * (Properties not mentioned are left alone.)  Do any necessary
@@ -1060,7 +1083,7 @@ svn_fs_revision_root_revision(svn_fs_root_t *root);
 
 
 /** The kind of change that occurred on the path. */
-typedef enum
+typedef enum svn_fs_path_change_kind_t
 {
   /** path modified in txn */
   svn_fs_path_change_modify = 0,
@@ -1164,7 +1187,7 @@ svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
  * #svn_fs_path_change2_t * values will be #svn_node_unknown or
  * that and some of the @c copyfrom_known fields will be FALSE.
  *
- * Use @c pool for all allocations, including the hash and its values.
+ * Use @a pool for all allocations, including the hash and its values.
  *
  * @since New in 1.6.
  */
@@ -1396,8 +1419,9 @@ svn_fs_props_changed(svn_boolean_t *changed_p,
 /** Discover a node's copy ancestry, if any.
  *
  * If the node at @a path in @a root was copied from some other node, set
- * @a *rev_p and @a *path_p to the revision and path of the other node,
- * allocating @a *path_p in @a pool.
+ * @a *rev_p and @a *path_p to the revision and path (expressed as an
+ * absolute filesystem path) of the other node, allocating @a *path_p
+ * in @a pool.
  *
  * Else if there is no copy ancestry for the node, set @a *rev_p to
  * #SVN_INVALID_REVNUM and @a *path_p to NULL.
@@ -1477,11 +1501,6 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  * @a inherit indicates whether to retrieve explicit,
  * explicit-or-inherited, or only inherited mergeinfo.
  *
- * If the mergeinfo for any path is inherited and
- * @a validate_inherited_mergeinfo is TRUE, then the mergeinfo for
- * that path in @a *catalog will only contain merge source
- * path-revisions that actually exist in repository.
- *
  * If @a include_descendants is TRUE, then additionally return the
  * mergeinfo for any descendant of any element of @a paths which has
  * the #SVN_PROP_MERGEINFO property explicitly set on it.  (Note
@@ -1491,22 +1510,7 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  *
  * Do any necessary temporary allocation in @a pool.
  *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
-                      svn_fs_root_t *root,
-                      const apr_array_header_t *paths,
-                      svn_mergeinfo_inheritance_t inherit,
-                      svn_boolean_t validate_inherited_mergeinfo,
-                      svn_boolean_t include_descendants,
-                      apr_pool_t *pool);
-
-/**
- * Similar to svn_fs_get_mergeinfo2(), but with
- * @a validate_inherited_mergeinfo always passed as FALSE.
- *
- * @deprecated Provided for backward compatibility with the 1.7 API.
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
@@ -1515,25 +1519,6 @@ svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                      svn_mergeinfo_inheritance_t inherit,
                      svn_boolean_t include_descendants,
                      apr_pool_t *pool);
-
-/**
- * Set @a *validated_mergeinfo equal to deep copy of @a mergeinfo, less
- * any mergeinfo that describes path-revs that do not exist in @a FS.
- * If @a mergeinfo is empty then @a *validated_mergeinfo is set to an empty
- * mergeinfo hash.  If @a mergeinfo is NULL then @a *validated_mergeinfo is
- * set to NULL.
- *
- * @a *validated_mergeinfo is allocated in @a result_pool.  All tempporary
- * allocations are performed in @a scratch_pool.
- *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_fs_validate_mergeinfo(svn_mergeinfo_t *validated_mergeinfo,
-                          svn_mergeinfo_t mergeinfo,
-                          svn_fs_t *fs,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
 
 /** Merge changes between two nodes into a third node.
  *
@@ -1958,7 +1943,7 @@ svn_fs_change_rev_prop2(svn_fs_t *fs,
                         apr_pool_t *pool);
 
 
-/** 
+/**
  * Similar to svn_fs_change_rev_prop2(), but with @a old_value_p passed as
  * @c NULL.
  *
@@ -2008,7 +1993,7 @@ svn_fs_get_uuid(svn_fs_t *fs,
 
 /** If not @c NULL, associate @a *uuid with @a fs.  Otherwise (if @a
  * uuid is @c NULL), generate a new UUID for @a fs.  Use @a pool for
- * any scratchwork.
+ * any scratch work.
  */
 svn_error_t *
 svn_fs_set_uuid(svn_fs_t *fs,
@@ -2175,13 +2160,10 @@ typedef svn_error_t *(*svn_fs_get_locks_callback_t)(void *baton,
  * lock iteration will terminate and that error will be returned by
  * this function.
  *
- * @note On Berkeley-DB-backed filesystems, the @a get_locks_func
- * callback will be invoked from within a Berkeley-DB transaction trail.
- * Implementors of the callback are, as a result, forbidden from
- * calling any svn_fs API functions which might themselves attempt to
- * start a new Berkeley DB transaction (which is most of this svn_fs
- * API).  Yes, this is a nasty implementation detail to have to be
- * aware of.  We hope to fix this problem in the future.
+ * @note Over the course of this function's invocation, locks might be
+ * added, removed, or modified by concurrent processes.  Callers need
+ * to anticipate and gracefully handle the transience of this
+ * information.
  *
  * @since New in 1.7.
  */
@@ -2193,9 +2175,17 @@ svn_fs_get_locks2(svn_fs_t *fs,
                   void *get_locks_baton,
                   apr_pool_t *pool);
 
-/** 
- * Similar to svn_fs_get_locks2(), but with @a depth always passed as
- * svn_depth_infinity.
+/** Similar to svn_fs_get_locks2(), but with @a depth always passed as
+ * svn_depth_infinity, and with the following known problem (which is
+ * not present in svn_fs_get_locks2()):
+ *
+ * @note On Berkeley-DB-backed filesystems in Subversion 1.6 and
+ * prior, the @a get_locks_func callback will be invoked from within a
+ * Berkeley-DB transaction trail.  Implementors of the callback are,
+ * as a result, forbidden from calling any svn_fs API functions which
+ * might themselves attempt to start a new Berkeley DB transaction
+ * (which is most of this svn_fs API).  Yes, this is a nasty
+ * implementation detail to have to be aware of.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
@@ -2221,7 +2211,7 @@ svn_fs_print_modules(svn_stringbuf_t *output,
 
 
 /** The kind of action being taken by 'pack'. */
-typedef enum
+typedef enum svn_fs_pack_notify_action_t
 {
   /** packing of the shard has commenced */
   svn_fs_pack_notify_start = 0,
@@ -2265,6 +2255,7 @@ svn_fs_pack(const char *db_path,
 
 
 /** @} */
+
 
 #ifdef __cplusplus
 }

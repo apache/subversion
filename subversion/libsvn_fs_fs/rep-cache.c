@@ -20,8 +20,11 @@
  * ====================================================================
  */
 
+#include "svn_pools.h"
+
 #include "svn_private_config.h"
 
+#include "fs_fs.h"
 #include "fs.h"
 #include "rep-cache.h"
 #include "../libsvn_fs/fs-loader.h"
@@ -38,6 +41,50 @@
 REP_CACHE_DB_SQL_DECLARE_STATEMENTS(statements);
 
 
+
+/** Helper functions. **/
+static APR_INLINE const char *
+path_rep_cache_db(const char *fs_path,
+                  apr_pool_t *result_pool)
+{
+  return svn_dirent_join(fs_path, REP_CACHE_DB_NAME, result_pool);
+}
+
+/* Check that REP refers to a revision that exists in FS. */
+static svn_error_t *
+rep_has_been_born(representation_t *rep,
+                  svn_fs_t *fs,
+                  apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_revnum_t youngest;
+
+  SVN_ERR_ASSERT(rep);
+
+  youngest = ffd->youngest_rev_cache;
+  if (youngest < rep->revision)
+  {
+    /* Stale cache. */
+    SVN_ERR(svn_fs_fs__youngest_rev(&youngest, fs, pool));
+
+    /* Fresh cache. */
+    if (youngest < rep->revision)
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               _("Youngest revision is r%ld, but "
+                                 "rep-cache contains r%ld"),
+                               youngest, rep->revision);
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/** Library-private API's. **/
+
+/* Body of svn_fs_fs__open_rep_cache().
+   Implements svn_atomic__init_once().init_func.
+ */
 static svn_error_t *
 open_rep_cache(void *baton,
                apr_pool_t *pool)
@@ -49,7 +96,7 @@ open_rep_cache(void *baton,
 
   /* Open (or create) the sqlite database.  It will be automatically
      closed when fs->pool is destoyed. */
-  db_path = svn_dirent_join(fs->path, REP_CACHE_DB_NAME, pool);
+  db_path = path_rep_cache_db(fs->path, pool);
   SVN_ERR(svn_sqlite__open(&ffd->rep_cache_db, db_path,
                            svn_sqlite__mode_rwcreate, statements,
                            0, NULL,
@@ -72,10 +119,98 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
                           apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  return svn_error_return(svn_atomic__init_once(&ffd->rep_cache_db_opened,
-                                                open_rep_cache, fs, pool));
+  svn_error_t *err = svn_atomic__init_once(&ffd->rep_cache_db_opened,
+                                           open_rep_cache, fs, pool);
+  return svn_error_quick_wrap(err, _("Couldn't open rep-cache database"));
 }
 
+svn_error_t *
+svn_fs_fs__exists_rep_cache(svn_boolean_t *exists,
+                            svn_fs_t *fs, apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+
+  SVN_ERR(svn_io_check_path(path_rep_cache_db(fs->path, pool),
+                            &kind, pool));
+
+  *exists = (kind != svn_node_none);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
+                              svn_error_t *(*walker)(representation_t *,
+                                                     void *,
+                                                     svn_fs_t *, 
+                                                     apr_pool_t *),
+                              void *walker_baton,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  int iterations = 0;
+
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* Don't check ffd->rep_sharing_allowed. */
+  SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT);
+
+  if (! ffd->rep_cache_db)
+    SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
+
+  /* Get the statement. (There are no arguments to bind.) */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db,
+                                    STMT_GET_ALL_REPS));
+
+  /* Walk the cache entries. */
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      representation_t *rep;
+      const char *sha1_digest;
+      
+      /* Clear ITERPOOL occasionally. */
+      if (iterations++ % 16 == 0)
+        svn_pool_clear(iterpool);
+
+      /* Check for cancellation. */
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+
+      /* Construct a representation_t. */
+      rep = apr_pcalloc(iterpool, sizeof(*rep));
+      sha1_digest = svn_sqlite__column_text(stmt, 0, iterpool);
+      SVN_ERR(svn_checksum_parse_hex(&rep->sha1_checksum,
+                                     svn_checksum_sha1, sha1_digest,
+                                     iterpool));
+      rep->revision = svn_sqlite__column_revnum(stmt, 1);
+      rep->offset = svn_sqlite__column_int64(stmt, 2);
+      rep->size = svn_sqlite__column_int64(stmt, 3);
+      rep->expanded_size = svn_sqlite__column_int64(stmt, 4);
+
+      /* Sanity check. */
+      if (rep)
+        SVN_ERR(rep_has_been_born(rep, fs, iterpool));
+
+      /* Walk. */
+      SVN_ERR(walker(rep, walker_baton, fs, iterpool));
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* This function's caller ignores most errors it returns.
+   If you extend this function, check the callsite to see if you have
+   to make it not-ignore additional error codes.  */
 svn_error_t *
 svn_fs_fs__get_rep_reference(representation_t **rep,
                              svn_fs_t *fs,
@@ -113,6 +248,9 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
   else
     *rep = NULL;
 
+  if (*rep)
+    SVN_ERR(rep_has_been_born(*rep, fs, pool));
+
   return svn_sqlite__reset(stmt);
 }
 
@@ -123,8 +261,8 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                              apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  representation_t *old_rep;
   svn_sqlite__stmt_t *stmt;
+  svn_error_t *err;
 
   SVN_ERR_ASSERT(ffd->rep_sharing_allowed);
   if (! ffd->rep_cache_db)
@@ -136,20 +274,39 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                             _("Only SHA1 checksums can be used as keys in the "
                               "rep_cache table.\n"));
 
-  /* Check to see if we already have a mapping for REP->SHA1_CHECKSUM.  If so,
-     and the value is the same one we were about to write, that's
-     cool -- just do nothing.  If, however, the value is *different*,
-     that's a red flag!  */
-  SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, fs, rep->sha1_checksum, pool));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db, STMT_SET_REP));
+  SVN_ERR(svn_sqlite__bindf(stmt, "siiii",
+                            svn_checksum_to_cstring(rep->sha1_checksum, pool),
+                            (apr_int64_t) rep->revision,
+                            (apr_int64_t) rep->offset,
+                            (apr_int64_t) rep->size,
+                            (apr_int64_t) rep->expanded_size));
 
-  if (old_rep)
+  err = svn_sqlite__insert(NULL, stmt);
+  if (err)
     {
-      if ( reject_dup && ((old_rep->revision != rep->revision)
-            || (old_rep->offset != rep->offset)
-            || (old_rep->size != rep->size)
-            || (old_rep->expanded_size != rep->expanded_size)) )
-        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                 apr_psprintf(pool,
+      representation_t *old_rep;
+
+      if (err->apr_err != SVN_ERR_SQLITE_CONSTRAINT)
+        return svn_error_trace(err);
+
+      svn_error_clear(err);
+
+      /* Constraint failed so the mapping for SHA1_CHECKSUM->REP
+         should exist.  If so, and the value is the same one we were
+         about to write, that's cool -- just do nothing.  If, however,
+         the value is *different*, that's a red flag!  */
+      SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, fs, rep->sha1_checksum,
+                                           pool));
+
+      if (old_rep)
+        {
+          if (reject_dup && ((old_rep->revision != rep->revision)
+                             || (old_rep->offset != rep->offset)
+                             || (old_rep->size != rep->size)
+                             || (old_rep->expanded_size != rep->expanded_size)))
+            return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                     apr_psprintf(pool,
                               _("Representation key for checksum '%%s' exists "
                                 "in filesystem '%%s' with a different value "
                                 "(%%ld,%%%s,%%%s,%%%s) than what we were about "
@@ -161,17 +318,16 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                  fs->path, old_rep->revision, old_rep->offset, old_rep->size,
                  old_rep->expanded_size, rep->revision, rep->offset, rep->size,
                  rep->expanded_size);
+          else
+            return SVN_NO_ERROR;
+        }
       else
-        return SVN_NO_ERROR;
+        {
+          /* Something really odd at this point, we failed to insert the
+             checksum AND failed to read an existing checksum.  Do we need
+             to flag this? */
+        }
     }
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db, STMT_SET_REP));
-  SVN_ERR(svn_sqlite__bindf(stmt, "siiii",
-                            svn_checksum_to_cstring(rep->sha1_checksum, pool),
-                            (apr_int64_t) rep->revision,
-                            (apr_int64_t) rep->offset,
-                            (apr_int64_t) rep->size,
-                            (apr_int64_t) rep->expanded_size));
-
-  return svn_sqlite__insert(NULL, stmt);
+  return SVN_NO_ERROR;
 }

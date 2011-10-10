@@ -29,69 +29,9 @@
 #include "svn_diff.h"
 #include "svn_types.h"
 #include "svn_ctype.h"
+#include "svn_version.h"
 
 #include "diff.h"
-
-/**
- * An Adler-32 implementation per RFC1950.
- *
- * "The Adler-32 algorithm is much faster than the CRC32 algorithm yet
- * still provides an extremely low probability of undetected errors"
- */
-
-/*
- * 65521 is the largest prime less than 65536.
- * "That 65521 is prime is important to avoid a possible large class of
- *  two-byte errors that leave the check unchanged."
- */
-#define ADLER_MOD_BASE 65521
-
-/*
- * "The modulo on unsigned long accumulators can be delayed for 5552 bytes,
- *  so the modulo operation time is negligible."
- */
-#define ADLER_MOD_BLOCK_SIZE 5552
-
-
-/*
- * Start with CHECKSUM and update the checksum by processing a chunk
- * of DATA sized LEN.
- */
-apr_uint32_t
-svn_diff__adler32(apr_uint32_t checksum, const char *data, apr_off_t len)
-{
-  const unsigned char *input = (const unsigned char *)data;
-  apr_uint32_t s1 = checksum & 0xFFFF;
-  apr_uint32_t s2 = checksum >> 16;
-  apr_uint32_t b;
-  apr_size_t blocks = len / ADLER_MOD_BLOCK_SIZE;
-
-  len %= ADLER_MOD_BLOCK_SIZE;
-
-  while (blocks--)
-    {
-      int count = ADLER_MOD_BLOCK_SIZE;
-      while (count--)
-        {
-          b = *input++;
-          s1 += b;
-          s2 += s1;
-        }
-
-      s1 %= ADLER_MOD_BASE;
-      s2 %= ADLER_MOD_BASE;
-    }
-
-  while (len--)
-    {
-      b = *input++;
-      s1 += b;
-      s2 += s1;
-    }
-
-  return ((s2 % ADLER_MOD_BASE) << 16) | (s1 % ADLER_MOD_BASE);
-}
-
 
 svn_boolean_t
 svn_diff_contains_conflicts(svn_diff_t *diff)
