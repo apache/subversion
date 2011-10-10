@@ -50,6 +50,7 @@
 #include "svn_sorts.h"
 #include "svn_subst.h"
 #include "client.h"
+#include "tree.h"
 
 #include "private/svn_wc_private.h"
 
@@ -63,6 +64,239 @@ static const char equal_string[] =
   "===================================================================";
 static const char under_string[] =
   "___________________________________________________________________";
+
+
+/*-----------------------------------------------------------------*/
+
+
+/* */
+static svn_error_t *
+tree_get_tmp_file(svn_client_tree_t *tree,
+                  const char **tmpfile_abspath,
+                  apr_hash_t **props,
+                  const char *relpath,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  svn_stream_t *s_in;
+  svn_stream_t *s_out;
+
+  SVN_ERR(svn_tree_get_file(tree, &s_in, props, relpath,
+                            scratch_pool, scratch_pool));
+  if (s_in == NULL)
+    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                             _("no file at '%s'"), relpath);
+
+  SVN_ERR(svn_stream_open_unique(&s_out, tmpfile_abspath, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 result_pool, scratch_pool));
+  SVN_ERR(svn_stream_copy3(s_in, s_out, NULL, NULL, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Compare two (independent) trees */
+static svn_error_t *
+compare_two_trees(svn_client_tree_t *tree1,
+                  const char *relpath1,
+                  svn_client_tree_t *tree2,
+                  const char *relpath2,
+                  const svn_wc_diff_callbacks4_t *callbacks,
+                  void *callback_baton,
+                  apr_pool_t *scratch_pool)
+{
+  const char *empty_file = "/dev/null";
+  svn_kind_t kind1, kind2;
+
+  SVN_ERR(svn_tree_get_kind(tree1, &kind1, relpath1, scratch_pool));
+  SVN_ERR(svn_tree_get_kind(tree2, &kind2, relpath2, scratch_pool));
+
+  if (kind1 == kind2)
+    {
+      switch (kind1)
+        {
+        case svn_kind_none:
+          return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                   _("No node at relative paths '%s' and '%s'"),
+                                   relpath1, relpath2);
+        case svn_kind_file:
+        {
+          const char *tmpfile1, *tmpfile2;
+          apr_hash_t *props1, *props2;
+          apr_array_header_t *propchanges;
+          svn_revnum_t rev = SVN_INVALID_REVNUM;
+
+          SVN_ERR(tree_get_tmp_file(tree1, &tmpfile1, &props1, relpath1,
+                                    scratch_pool, scratch_pool));
+          SVN_ERR(tree_get_tmp_file(tree2, &tmpfile2, &props2, relpath2,
+                                    scratch_pool, scratch_pool));
+          SVN_ERR(svn_prop_diffs(&propchanges, props1, props2, scratch_pool));
+
+          SVN_ERR(callbacks->file_opened(NULL, NULL,
+                                         relpath1, rev,
+                                         callback_baton, scratch_pool));
+          SVN_ERR(callbacks->file_changed(NULL, NULL, NULL,
+                                          relpath1, tmpfile1, tmpfile2,
+                                          rev, rev, NULL, NULL,
+                                          propchanges, props1,
+                                          callback_baton, scratch_pool));
+          break;
+        }
+        case svn_kind_dir:
+        {
+          apr_hash_t *dirents1, *dirents2;
+          apr_hash_t *props1, *props2;
+          apr_array_header_t *propchanges;
+          svn_revnum_t rev = SVN_INVALID_REVNUM;
+          apr_hash_t *all_children;
+          apr_hash_index_t *hi;
+
+          /* Open dir and compare properties */
+          SVN_ERR(svn_tree_get_dir(tree1, &dirents1, &props1, relpath1,
+                                   scratch_pool, scratch_pool));
+          SVN_ERR(svn_tree_get_dir(tree2, &dirents2, &props2, relpath2,
+                                   scratch_pool, scratch_pool));
+          SVN_ERR(svn_prop_diffs(&propchanges, props1, props2, scratch_pool));
+          SVN_ERR(callbacks->dir_opened(NULL, NULL, NULL,
+                                        relpath1, rev,
+                                        callback_baton, scratch_pool));
+          SVN_ERR(callbacks->dir_props_changed(NULL, NULL,
+                                               relpath1, FALSE /* added */,
+                                               propchanges, props1,
+                                               callback_baton, scratch_pool));
+
+          /* Recurse */
+          all_children = apr_hash_overlay(scratch_pool, dirents1, dirents2);
+          for (hi = apr_hash_first(scratch_pool, all_children);
+               hi;
+               hi = apr_hash_next(hi))
+            {
+              const char *name = svn__apr_hash_index_key(hi);
+              const char *child_relpath1 = svn_relpath_join(relpath1, name,
+                                                            scratch_pool);
+              const char *child_relpath2 = svn_relpath_join(relpath2, name,
+                                                            scratch_pool);
+
+              SVN_ERR(compare_two_trees(tree1, child_relpath1,
+                                        tree2, child_relpath2,
+                                        callbacks, callback_baton,
+                                        scratch_pool));
+            }
+
+          /* Close dir */
+          SVN_ERR(callbacks->dir_closed(NULL, NULL, NULL,
+                                        relpath1, FALSE /* added */,
+                                        callback_baton, scratch_pool));
+          break;
+        }
+        case svn_kind_symlink:
+          SVN_DBG(("compare_two_trees: '%s': is a symlink\n",
+                   relpath1));
+          break;
+        default:
+          /* Unknown node kind. */
+          SVN_DBG(("compare_two_trees: '%s': unknown node kind %d\n",
+                   relpath1, kind1));
+          break;
+        }
+    }
+  else /* different kinds */
+    {
+      /* Show a delete ... */
+      switch (kind1)
+        {
+        case svn_kind_none:
+          break;
+        case svn_kind_file:
+        {
+          const char *tmpfile1;
+          apr_hash_t *props1;
+
+          SVN_ERR(tree_get_tmp_file(tree1, &tmpfile1, &props1, relpath1,
+                                    scratch_pool, scratch_pool));
+
+          SVN_ERR(callbacks->file_deleted(NULL, NULL,
+                                          relpath1, tmpfile1, empty_file,
+                                          NULL, NULL,
+                                          props1,
+                                          callback_baton, scratch_pool));
+          break;
+        }
+        case svn_kind_dir:
+        {
+          apr_hash_t *dirents1;
+          apr_hash_t *props1;
+
+          SVN_ERR(svn_tree_get_dir(tree1, &dirents1, &props1, relpath1,
+                                   scratch_pool, scratch_pool));
+          SVN_ERR(callbacks->dir_deleted(NULL, NULL,
+                                         relpath1,
+                                         callback_baton, scratch_pool));
+          break;
+        }
+        case svn_kind_symlink:
+          SVN_DBG(("compare_two_trees: deleted symlink '%s'\n", relpath1));
+          break;
+        default:
+          /* Unknown node kind. */
+          SVN_DBG(("compare_two_trees: deleted '%s': unknown node kind %d\n",
+                   relpath1, kind1));
+          break;
+        }
+
+      /* ... followed by an add. */
+      switch (kind2)
+        {
+        case svn_kind_none:
+          break;
+        case svn_kind_file:
+        {
+          const char *tmpfile2;
+          apr_hash_t *props1, *props2;
+          apr_array_header_t *propchanges;
+          svn_revnum_t rev = SVN_INVALID_REVNUM;
+
+          SVN_ERR(tree_get_tmp_file(tree2, &tmpfile2, &props2, relpath2,
+                                    scratch_pool, scratch_pool));
+          props1 = apr_hash_make(scratch_pool);
+          SVN_ERR(svn_prop_diffs(&propchanges, props1, props2, scratch_pool));
+
+          SVN_ERR(callbacks->file_added(NULL, NULL, NULL,
+                                        relpath1, empty_file, tmpfile2,
+                                        rev, rev, NULL, NULL,
+                                        NULL, SVN_INVALID_REVNUM, /* cp-from */
+                                        propchanges, props1,
+                                        callback_baton, scratch_pool));
+          break;
+        }
+        case svn_kind_dir:
+        {
+          apr_hash_t *dirents2;
+          apr_hash_t *props2;
+          svn_revnum_t rev = SVN_INVALID_REVNUM;
+
+          SVN_ERR(svn_tree_get_dir(tree2, &dirents2, &props2, relpath2,
+                                   scratch_pool, scratch_pool));
+          SVN_ERR(callbacks->dir_added(NULL, NULL, NULL, NULL,
+                                       relpath2, rev,
+                                       NULL, SVN_INVALID_REVNUM, /* cp-from */
+                                       callback_baton, scratch_pool));
+          break;
+        }
+        case svn_kind_symlink:
+          SVN_DBG(("compare_two_trees: added symlink '%s'\n", relpath1));
+          break;
+        default:
+          /* Unknown node kind. */
+          SVN_DBG(("compare_two_trees: added '%s': unknown node kind %d\n",
+                   relpath1, kind1));
+          break;
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+/* Compare one tree with a delta against it */
 
 
 /*-----------------------------------------------------------------*/
@@ -1923,6 +2157,44 @@ diff_repos_wc(const char *path1,
 }
 
 
+/* Open a tree, whether in the repository or a WC or unversioned on disk. */
+static svn_error_t *
+open_tree(svn_client_tree_t **tree,
+          const char *path,
+          const svn_opt_revision_t *revision,
+          const svn_opt_revision_t *peg_revision,
+          svn_client_ctx_t *ctx,
+          apr_pool_t *result_pool,
+          apr_pool_t *scratch_pool)
+{
+  if (svn_path_is_url(path)
+      || ! SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
+    {
+      SVN_ERR(svn_client__repository_tree(tree, path, peg_revision, revision,
+                                          ctx, result_pool));
+    }
+  else
+    {
+      const char *abspath;
+      int wc_format;
+
+      SVN_ERR(svn_path_get_absolute(&abspath, path, scratch_pool));
+      SVN_ERR(svn_wc_check_wc2(&wc_format, ctx->wc_ctx, abspath, scratch_pool));
+      if (wc_format > 0)
+        {
+          if (revision->kind == svn_opt_revision_working)
+            SVN_ERR(svn_client__wc_working_tree(tree, abspath, ctx,
+                                                result_pool));
+          else
+            SVN_ERR(svn_client__wc_base_tree(tree, abspath, ctx, result_pool));
+        }
+      else
+        SVN_ERR(svn_client__disk_tree(tree, abspath, result_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* This is basically just the guts of svn_client_diff[_peg]5(). */
 static svn_error_t *
 do_diff(const svn_wc_diff_callbacks4_t *callbacks,
@@ -1946,6 +2218,20 @@ do_diff(const svn_wc_diff_callbacks4_t *callbacks,
   /* Check if paths/revisions are urls/local. */
   SVN_ERR(check_paths(&is_repos1, &is_repos2, path1, path2,
                       revision1, revision2, peg_revision));
+
+  /* Compare two independent trees */
+  {
+    svn_client_tree_t *tree1, *tree2;
+
+    SVN_ERR(open_tree(&tree1, path1, revision1, peg_revision, ctx, pool, pool));
+    SVN_ERR(open_tree(&tree2, path2, revision2, peg_revision, ctx, pool, pool));
+
+    SVN_ERR(compare_two_trees(tree1, "" /* relpath1 */,
+                              tree2, "" /* relpath2 */,
+                              callbacks, callback_baton,
+                              pool));
+    return SVN_NO_ERROR;
+  }
 
   if (is_repos1)
     {
