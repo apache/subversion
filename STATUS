@@ -141,23 +141,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1154278, r1154379, r1154382
-   Make 'svn ls' capable of listing Subversion 1.0-1.3 repositories using
-   ra_serf.
-   Justification:
-     We promised not to break backwards compatibility and it is not nice
-     that serf doesn't want to list the neon repository.
-     (Check svn ls http://svn.webdav.org/repos/projects/neon/)
-   Notes:
-     r1154278 is a quick hack to detect old servers and to at least return
-              some information.
-     r1154379 is the real fix: fallback to a more compatible request.
-     r1154382 makes sure the right result is used directly after falling
-              back from svn_ra_serf__get_dir.
-              (Most likely the problem is detected earlier than this function)
-   Votes:
-     +1: rhuijben, cmpilato, jerenkrantz
-
  * r1179767
    Prefix SASL error messages with a prefix that identifies them as such.
    Justification:
