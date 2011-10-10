@@ -44,6 +44,7 @@
 #include "svn_path.h"
 #include "svn_dso.h"
 #include "svn_config.h"
+#include "svn_props.h"
 #include "ra_loader.h"
 
 #include "private/svn_ra_private.h"
@@ -757,6 +758,39 @@ svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
                                   path, revision, dirent_fields, pool);
 }
 
+#define SVN_SUBST__SPECIAL_LINK_STR "link"
+
+svn_error_t *svn_ra_get_symlink(svn_ra_session_t *session,
+                                const char *path,
+                                svn_revnum_t revision,
+                                const char **link_target,
+                                svn_revnum_t *fetched_rev,
+                                apr_hash_t **props_p,
+                                apr_pool_t *pool)
+{
+  svn_stringbuf_t *str = svn_stringbuf_create("", pool);
+  svn_stream_t *stream = svn_stream_from_stringbuf(str, pool);
+  apr_hash_t *props;
+  svn_string_t *special;
+
+  SVN_ERR_ASSERT(*path != '/');
+  SVN_ERR(svn_ra_get_file(session, path, revision,
+                          stream, fetched_rev, &props, pool));
+  special = apr_hash_get(props, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING);
+  if (special == NULL
+      || strncmp(special->data, SVN_SUBST__SPECIAL_LINK_STR " ",
+                 strlen(SVN_SUBST__SPECIAL_LINK_STR " ")) != 0)
+    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                             _("not a symlink: '%s' at r%ld"), path, revision);
+
+  if (link_target)
+    *link_target = apr_pstrdup(pool, special->data +
+                                     strlen(SVN_SUBST__SPECIAL_LINK_STR " "));
+  if (props_p)
+    *props_p = props;
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
                                   svn_mergeinfo_catalog_t *catalog,
                                   const apr_array_header_t *paths,
@@ -916,11 +950,23 @@ svn_ra_check_path2(svn_ra_session_t *session,
   switch (node_kind)
     {
     case svn_node_file:
-      if (FALSE /* ### special */)
-        *kind = svn_kind_symlink;
+    {
+      const char *target;
+      svn_error_t *err;
+
+      err = svn_ra_get_symlink(session, path, revision, &target, NULL, NULL,
+                               scratch_pool);
+      if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
+        {
+          svn_error_clear(err);
+          *kind = svn_kind_file;
+        }
+      else if (err)
+        return svn_error_trace(err);
       else
-        *kind = svn_kind_file;
+        *kind = svn_kind_symlink;
       break;
+    }
     case svn_node_dir:
       *kind = svn_kind_dir;
       break;
