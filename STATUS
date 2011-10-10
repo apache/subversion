@@ -82,32 +82,6 @@ Candidate changes:
                  if the backport is done that way).
      +1: danielsh (conditioned upon the backport done as per Paul's comment)
 
- * r1174761
-   Better error message when configuring --without-zlib.
-   Votes:
-     +1: danielsh, jerenkrantz
-
- * r1174798
-   DTRT when --with-zlib is passed without an argument.
-   Justification:
-     This DTRTing is normal for other --with-* options.
-   Votes:
-     +1: danielsh, jerenkrantz
-
- * r1174806
-   Fix LDFLAGS when --with-zlib is passed with an argument.
-   Justification:
-     Might save a poor soul from lots of debugging some day.
-   Votes:
-     +1: danielsh, jerenkrantz
-
- * r1177492
-   Constness fix.
-   Justification:
-     Without this we are writing to const memory.
-   Votes:
-     +1: danielsh, stsp
-
  * r1167681
    Don't invoke quicksort unnecessarily when combining mergeinfo rangelists.
    Justification:
@@ -121,7 +95,7 @@ Candidate changes:
    Justification:
      Should reduce memory footprint.
    Votes:
-     +1: stsp
+     +1: stsp, hwright
 
  * r1178280, r1178282
    Add a sanity check to FSFS.
@@ -133,10 +107,36 @@ Candidate changes:
  * r1153540, r1153566
    Silence a build warning.
    Votes:
-     +1: danielsh
+     +1: danielsh, hwright
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1177492
+   Constness fix.
+   Justification:
+     Without this we are writing to const memory.
+   Votes:
+     +1: danielsh, stsp, hwright
+
+ * r1174761
+   Better error message when configuring --without-zlib.
+   Votes:
+     +1: danielsh, jerenkrantz, hwright
+
+ * r1174798
+   DTRT when --with-zlib is passed without an argument.
+   Justification:
+     This DTRTing is normal for other --with-* options.
+   Votes:
+     +1: danielsh, jerenkrantz, hwright
+
+ * r1174806
+   Fix LDFLAGS when --with-zlib is passed with an argument.
+   Justification:
+     Might save a poor soul from lots of debugging some day.
+   Votes:
+     +1: danielsh, jerenkrantz, hwright
