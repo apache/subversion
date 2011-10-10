@@ -1,6 +1,6 @@
      * * * * * * * * * * * * * * * * * * * * * * * * * * * *
      *                                                     *
-     *  THIS RELEASE STREAM IS OPEN TO BUG FIXES.          *
+     *  THIS RELEASE STREAM IS CLOSED TO FURTHER CHANGES.  *
      *                                                     *
      * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -59,6 +59,7 @@ Candidate changes for 1.5.10:
      r877146 is a test for the issue, r877157 is the fix.
    Branch:
      ^/subversion/branches/1.5.x-issue3392
+     (This branch was removed from HEAD in r1181163.)
    Votes:
      +1: pburba, arfrever
 
@@ -69,9 +70,10 @@ Candidate changes for 1.5.10:
      from 2Gb+ of RAM to under 400Mb is a very good thing.
    Notes
      The merge conflicts in a few places due to some minor cleanups
-     performed post-1.5.x.  A backport branch resolving it can be
-     found here:
+     performed post-1.5.x.
+   Branch:
      http://svn.collab.net/repos/svn/branches/1.5.x-r37137
+     (This branch was removed from HEAD in r1181163.)
    Votes:
      +1: cmpilato, arfrever
 
@@ -80,10 +82,9 @@ Candidate changes for 1.5.10:
    Justification:
      Not common, but a segfault is a segfault.  See
      http://svn.haxx.se/dev/archive-2009-05/0363.shtml.
-   Notes:
-     There are text conflicts in both merge.c and merge_tests.py, a
-     backport branch resolving these can be found at:
+   Branch:
      http://svn.collab.net/repos/svn/branches/1.5.x-r37779.
+     (This branch was removed from HEAD in r1181163.)
    Votes:
      +1: pburba
 
@@ -120,6 +121,7 @@ Candidate changes for 1.5.10:
      to mergeinfo-test.c clearly demonstrate the bug.
    Branch:
      ^/branches/1.5.x-r39109
+     (This branch was removed from HEAD in r1181163.)
    Votes:
      +1: pburba, hwright
 
@@ -131,6 +133,7 @@ Candidate changes for 1.5.10:
      Fixes an uninitialized variable that can result in a segfault.
    Branch:
      ^/branches/1.5.x-r902467
+     (This branch was removed from HEAD in r1181163.)
    Votes:
      +1: pburba
 
