@@ -148,21 +148,20 @@ svn_tree_get_symlink(svn_client_tree_t *tree,
 svn_error_t *
 svn_client__disk_tree(svn_client_tree_t **tree_p,
                       const char *abspath,
-                      svn_delta_editor_t *editor,
                       apr_pool_t *result_pool);
 
 /* */
 svn_error_t *
 svn_client__wc_base_tree(svn_client_tree_t **tree_p,
-                         const char *path,
-                         svn_delta_editor_t *editor,
+                         const char *abspath,
+                         svn_client_ctx_t *ctx,
                          apr_pool_t *result_pool);
 
 /* */
 svn_error_t *
 svn_client__wc_working_tree(svn_client_tree_t **tree_p,
-                            const char *path,
-                            svn_delta_editor_t *editor,
+                            const char *abspath,
+                            svn_client_ctx_t *ctx,
                             apr_pool_t *result_pool);
 
 /* */

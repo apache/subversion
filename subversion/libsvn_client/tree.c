@@ -150,7 +150,7 @@ disk_tree_get_file(svn_client_tree_t *tree,
     SVN_ERR(svn_stream_open_readonly(stream, abspath,
                                      result_pool, scratch_pool));
   if (props)
-    *props = NULL;
+    *props = apr_hash_make(result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -174,7 +174,7 @@ disk_tree_get_dir(svn_client_tree_t *tree,
                                   result_pool, scratch_pool));
     }
   if (props)
-    *props = NULL;
+    *props = apr_hash_make(result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -199,7 +199,7 @@ disk_tree_get_symlink(svn_client_tree_t *tree,
       *link_target = dest->data;
     }
   if (props)
-    *props = NULL;
+    *props = apr_hash_make(result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -216,7 +216,6 @@ static const svn_client_tree__vtable_t disk_tree_vtable =
 svn_error_t *
 svn_client__disk_tree(svn_client_tree_t **tree_p,
                       const char *abspath,
-                      svn_delta_editor_t *editor,
                       apr_pool_t *result_pool)
 {
   svn_client_tree_t *tree = apr_palloc(result_pool, sizeof(*tree));
@@ -235,13 +234,158 @@ svn_client__disk_tree(svn_client_tree_t **tree_p,
 /*-----------------------------------------------------------------*/
 
 
+/* */
+typedef struct wc_tree_baton_t
+{
+  const char *tree_abspath;
+  svn_wc_context_t *wc_ctx;
+  svn_boolean_t is_base;  /* true -> base, false -> working */
+} wc_tree_baton_t;
+
+/* */
+static svn_error_t *
+wc_tree_get_kind(svn_client_tree_t *tree,
+                 svn_kind_t *kind,
+                 const char *relpath,
+                 apr_pool_t *scratch_pool)
+{
+  wc_tree_baton_t *baton = tree->priv;
+  const char *abspath = svn_dirent_join(baton->tree_abspath, relpath,
+                                        scratch_pool);
+
+  if (baton->is_base)
+    {
+      /* ###
+       * SVN_ERR(svn_wc_read_base_kind(kind, baton->wc_ctx, abspath,
+       *                               scratch_pool));
+       */
+    }
+  else
+    SVN_ERR(svn_wc_read_kind2(kind, baton->wc_ctx, abspath,
+                              FALSE /* show_hidden */, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* */
+static svn_error_t *
+wc_tree_get_file(svn_client_tree_t *tree,
+                 svn_stream_t **stream,
+                 apr_hash_t **props,
+                 const char *relpath,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  wc_tree_baton_t *baton = tree->priv;
+  const char *abspath = svn_dirent_join(baton->tree_abspath, relpath,
+                                        scratch_pool);
+
+  if (stream)
+    {
+      if (baton->is_base)
+        SVN_ERR(svn_wc_get_pristine_contents2(stream, baton->wc_ctx, abspath,
+                                              result_pool, scratch_pool));
+      else
+        SVN_ERR(svn_stream_open_readonly(stream, abspath,
+                                         result_pool, scratch_pool));
+    }
+  if (props)
+    {
+      if (baton->is_base)
+        SVN_ERR(svn_wc_get_pristine_props(props, baton->wc_ctx, abspath,
+                                          result_pool, scratch_pool));
+      else
+        SVN_ERR(svn_wc_prop_list2(props, baton->wc_ctx, abspath,
+                                  result_pool, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* */
+static svn_error_t *
+wc_tree_get_dir(svn_client_tree_t *tree,
+                apr_hash_t **dirents,
+                apr_hash_t **props,
+                const char *relpath,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  wc_tree_baton_t *baton = tree->priv;
+  const char *abspath = svn_dirent_join(baton->tree_abspath, relpath,
+                                        scratch_pool);
+
+  if (dirents)
+    {
+      *dirents = apr_hash_make(result_pool);  /* ### */
+    }
+  if (props)
+    {
+      if (baton->is_base)
+        SVN_ERR(svn_wc_get_pristine_props(props, baton->wc_ctx, abspath,
+                                          result_pool, scratch_pool));
+      else
+        SVN_ERR(svn_wc_prop_list2(props, baton->wc_ctx, abspath,
+                                  result_pool, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* */
+static svn_error_t *
+wc_tree_get_symlink(svn_client_tree_t *tree,
+                    const char **link_target,
+                    apr_hash_t **props,
+                    const char *relpath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  wc_tree_baton_t *baton = tree->priv;
+  const char *abspath = svn_dirent_join(baton->tree_abspath, relpath,
+                                        scratch_pool);
+
+  if (link_target)
+    {
+      *link_target = "";  /* ### */
+    }
+  if (props)
+    {
+      if (baton->is_base)
+        SVN_ERR(svn_wc_get_pristine_props(props, baton->wc_ctx, abspath,
+                                          result_pool, scratch_pool));
+      else
+        SVN_ERR(svn_wc_prop_list2(props, baton->wc_ctx, abspath,
+                                  result_pool, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* */
+static const svn_client_tree__vtable_t wc_tree_vtable =
+{
+  wc_tree_get_kind,
+  wc_tree_get_file,
+  wc_tree_get_dir,
+  wc_tree_get_symlink
+};
+
 svn_error_t *
 svn_client__wc_base_tree(svn_client_tree_t **tree_p,
-                         const char *path,
-                         svn_delta_editor_t *editor,
+                         const char *abspath,
+                         svn_client_ctx_t *ctx,
                          apr_pool_t *result_pool)
 {
   svn_client_tree_t *tree = apr_pcalloc(result_pool, sizeof(*tree));
+  wc_tree_baton_t *baton = apr_palloc(result_pool, sizeof(*baton));
+
+  baton->tree_abspath = abspath;
+  baton->wc_ctx = ctx->wc_ctx;
+  baton->is_base = TRUE;
+
+  tree->vtable = &wc_tree_vtable;
+  tree->pool = result_pool;
+  tree->priv = baton;
 
   *tree_p = tree;
   return SVN_NO_ERROR;
@@ -249,11 +393,20 @@ svn_client__wc_base_tree(svn_client_tree_t **tree_p,
 
 svn_error_t *
 svn_client__wc_working_tree(svn_client_tree_t **tree_p,
-                            const char *path,
-                            svn_delta_editor_t *editor,
+                            const char *abspath,
+                            svn_client_ctx_t *ctx,
                             apr_pool_t *result_pool)
 {
   svn_client_tree_t *tree = apr_pcalloc(result_pool, sizeof(*tree));
+  wc_tree_baton_t *baton = apr_palloc(result_pool, sizeof(*baton));
+
+  baton->tree_abspath = abspath;
+  baton->wc_ctx = ctx->wc_ctx;
+  baton->is_base = FALSE;
+
+  tree->vtable = &wc_tree_vtable;
+  tree->pool = result_pool;
+  tree->priv = baton;
 
   *tree_p = tree;
   return SVN_NO_ERROR;
@@ -375,7 +528,6 @@ static svn_error_t *
 read_ra_tree(svn_client_tree_t **tree_p,
              svn_ra_session_t *ra_session,
              svn_revnum_t revnum,
-             svn_client_ctx_t *ctx,
              apr_pool_t *result_pool)
 {
   svn_client_tree_t *tree = apr_pcalloc(result_pool, sizeof(*tree));
@@ -410,8 +562,7 @@ svn_client__repository_tree(svn_client_tree_t **tree_p,
                                            peg_revision, revision,
                                            ctx, result_pool));
 
-  SVN_ERR(read_ra_tree(tree_p, ra_session, revnum,
-                       ctx, result_pool));
+  SVN_ERR(read_ra_tree(tree_p, ra_session, revnum, result_pool));
 
   return SVN_NO_ERROR;
 }
