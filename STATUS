@@ -141,16 +141,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1179767
-   Prefix SASL error messages with a prefix that identifies them as such.
-   Justification:
-     Avoids silly error messages like "svn: generic failure".
-     Reported on users@.
-   Notes:
-     <danielsh> would also be +1 on a follow-up that adds APR_INLINE.
-   Votes:
-     +1: stsp, danielsh, rhuijben
-
  * r1179680
    Fix javahl org.tigris.subversion to avoid double finalize.
    Justification:
