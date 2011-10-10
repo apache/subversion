@@ -195,10 +195,7 @@ I.    INTRODUCTION
 
       Whenever you want to build any part of Subversion, you need the
       Apache Portable Runtime (APR) and the APR Utility (APR-util)
-      libraries. These are included in the Subversion dependency package -
-      if you are building from a source tarball and wish to use the versions
-      of APR and APR-util included there, just unpack the dependency package
-      and skip ahead to the next requirement.
+      libraries.
 
 
         ****************************************************************
@@ -233,7 +230,7 @@ I.    INTRODUCTION
         | Note that it's *perfectly* safe to use APR 1.X from the      |
         | beginning.  In fact, we recommend it.  If you're building    |
         | Subversion for the first time, there's no compatibility      |
-        | issue to worry about, so grab the latest version of APR.
+        | issue to worry about, so grab the latest version of APR.     |
         |                                                              |
         | If you already have a Subversion installation using APR      |
         | 0.9.x, it's still possible to move to APR 1.X safely.  Just  |
@@ -242,8 +239,8 @@ I.    INTRODUCTION
         |______________________________________________________________|
 
 
-      If you are not building from a tarball with the dependency
-      package, you will need to get these yourself:
+      If you do not have a pre-installed APR and APR-util, you will need
+      to get these yourself:
 
           http://apr.apache.org/download.cgi
 
@@ -737,7 +734,7 @@ II.   INSTALLATION
       of the libsvn_* libraries.
 
       Note that if you commonly build with the -jN option to make and
-      have unpacked a dependency tarball into your checkout, the make
+      have used the get-deps.sh script to fetch dependencies, the make
       step above may fail, because we don't ensure that third party
       libraries in our source tree will finish building before
       subversion itself.  If you want to use -jN, use the following
