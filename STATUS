@@ -141,13 +141,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1175888
-   Fix some object lifetime issues in the JavaHL bindings.
-   Justification:
-     Using garbage-collected objects is bad.
-   Votes:
-     +1: hwright, philip
-
  * r1154278, r1154379, r1154382
    Make 'svn ls' capable of listing Subversion 1.0-1.3 repositories using
    ra_serf.
