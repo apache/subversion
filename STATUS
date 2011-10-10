@@ -114,10 +114,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1174806
-   Fix LDFLAGS when --with-zlib is passed with an argument.
-   Justification:
-     Might save a poor soul from lots of debugging some day.
-   Votes:
-     +1: danielsh, jerenkrantz, hwright
