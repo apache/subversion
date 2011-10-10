@@ -140,10 +140,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1179680
-   Fix javahl org.tigris.subversion to avoid double finalize.
-   Justification:
-     A double C++ delete can cause the JVM to SEGV.
-   Votes:
-     +1: philip, rhuijben
