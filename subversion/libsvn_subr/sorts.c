@@ -269,11 +269,11 @@ svn_sort__array_delete(apr_array_header_t *arr,
         }
       else
         {
-          memmove(arr->elts + arr->elt_size * delete_index,
-                  arr->elts + arr->elt_size * (delete_index + 1),
-                  arr->elt_size * (arr->nelts - 1 - delete_index)
-                  * elements_to_delete);
-          --(arr->nelts);
+          memmove(
+            arr->elts + arr->elt_size * delete_index,
+            arr->elts + (arr->elt_size * (delete_index + elements_to_delete)),
+            arr->elt_size * (arr->nelts - elements_to_delete - delete_index));
+          arr->nelts -= elements_to_delete;
         }
     }
 }
