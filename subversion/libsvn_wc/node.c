@@ -279,6 +279,78 @@ convert_db_kind_to_node_kind(svn_node_kind_t *node_kind,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+convert_db_kind_to_node_kind2(svn_kind_t *kind,
+                              svn_wc__db_kind_t db_kind,
+                              svn_wc__db_status_t db_status,
+                              svn_boolean_t show_hidden)
+{
+  switch (db_kind)
+    {
+      case svn_wc__db_kind_file:
+        *kind = svn_kind_file;
+        break;
+      case svn_wc__db_kind_dir:
+        *kind = svn_kind_dir;
+        break;
+      case svn_wc__db_kind_symlink:
+        *kind = svn_kind_symlink;
+        break;
+      case svn_wc__db_kind_unknown:
+        *kind = svn_kind_unknown;
+        break;
+      default:
+        SVN_ERR_MALFUNCTION();
+    }
+
+  /* Make sure hidden nodes return svn_node_none. */
+  if (! show_hidden)
+    switch (db_status)
+      {
+        case svn_wc__db_status_not_present:
+        case svn_wc__db_status_server_excluded:
+        case svn_wc__db_status_excluded:
+          *kind = svn_kind_none;
+
+        default:
+          break;
+      }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_read_kind2(svn_kind_t *kind,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  svn_boolean_t show_hidden,
+                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t db_status;
+  svn_wc__db_kind_t db_kind;
+  svn_error_t *err;
+
+  err = svn_wc__db_read_info(&db_status, &db_kind, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
+                             wc_ctx->db, local_abspath,
+                             scratch_pool, scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      *kind = svn_node_none;
+      return SVN_NO_ERROR;
+    }
+  else
+    SVN_ERR(err);
+
+  SVN_ERR(convert_db_kind_to_node_kind2(kind, db_kind, db_status, show_hidden));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc_read_kind(svn_node_kind_t *kind,
                  svn_wc_context_t *wc_ctx,

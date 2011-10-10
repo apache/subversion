@@ -7857,7 +7857,7 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
 /** @} */
 
 /**
- * Set @a kind to the #svn_node_kind_t of @a abspath.  Use @a wc_ctx
+ * Set @a kind to the node kind of @a abspath.  Use @a wc_ctx
  * to access the working copy, and @a scratch_pool for all temporary
  * allocations.
  *
@@ -7869,9 +7869,19 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
  * ### What happens when show_hidden is TRUE?
  *
  * If the node's info is incomplete, it may or may not have a known node kind
- * set. If the kind is not known (yet), set @a kind to #svn_node_unknown.
+ * set. If the kind is not known (yet), set @a kind to #svn_kind_unknown.
  * Otherwise return the node kind even though the node is marked incomplete.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_wc_read_kind2(svn_kind_t *kind,
+                  svn_wc_context_t *wc_ctx,
+                  const char *abspath,
+                  svn_boolean_t show_hidden,
+                  apr_pool_t *scratch_pool);
+
+/* @deprecated
  * @since New in 1.7.
  */
 svn_error_t *
