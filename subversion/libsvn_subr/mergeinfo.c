@@ -745,17 +745,17 @@ svn_mergeinfo_parse(svn_mergeinfo_t *mergeinfo,
 /* Cleanup after svn_rangelist_merge2 when it modifies the ending range of
    a single rangelist element in-place.
 
-   If *INDEX is not a valid element in RANGELIST do nothing.  Otherwise ensure
-   that RANGELIST[*INDEX]->END does not adjoin or overlap any subsequent
-   ranges in RANGELIST.
+   If *RANGE_INDEX is not a valid element in RANGELIST do nothing.  Otherwise
+   ensure that RANGELIST[*RANGE_INDEX]->END does not adjoin or overlap any
+   subsequent ranges in RANGELIST.
 
    If overlap is found, then remove, modify, and/or add elements to RANGELIST
    as per the invariants for rangelists documented in svn_mergeinfo.h.  If
-   RANGELIST[*INDEX]->END adjoins a subsequent element then combine the
+   RANGELIST[*RANGE_INDEX]->END adjoins a subsequent element then combine the
    elements if their inheritability permits -- The inheritance of intersecting
    and adjoining ranges is handled as per svn_mergeinfo_merge2.  Upon return
-   set *INDEX to the index of the youngest element modified, added, or
-   adjoined to RANGELIST[*INDEX].
+   set *RANGE_INDEX to the index of the youngest element modified, added, or
+   adjoined to RANGELIST[*RANGE_INDEX].
 
    Note: Adjoining rangelist elements are those where the end rev of the older
    element is equal to the start rev of the younger element.
@@ -763,7 +763,7 @@ svn_mergeinfo_parse(svn_mergeinfo_t *mergeinfo,
    Any new elements inserted into RANGELIST are allocated in  RESULT_POOL.*/
 static void
 adjust_remaining_ranges(apr_array_header_t *rangelist,
-                        int *index,
+                        int *range_index,
                         apr_pool_t *result_pool)
 {
   int i;
@@ -771,13 +771,13 @@ adjust_remaining_ranges(apr_array_header_t *rangelist,
   int elements_to_delete = 0;
   svn_merge_range_t *modified_range;
 
-  if (*index >= rangelist->nelts)
+  if (*range_index >= rangelist->nelts)
     return;
 
-  starting_index = *index + 1;
-  modified_range = APR_ARRAY_IDX(rangelist, *index, svn_merge_range_t *);
+  starting_index = *range_index + 1;
+  modified_range = APR_ARRAY_IDX(rangelist, *range_index, svn_merge_range_t *);
 
-  for (i = *index + 1; i < rangelist->nelts; i++)
+  for (i = *range_index + 1; i < rangelist->nelts; i++)
     {
       svn_merge_range_t *next_range = APR_ARRAY_IDX(rangelist, i,
                                                     svn_merge_range_t *);
@@ -799,7 +799,7 @@ adjust_remaining_ranges(apr_array_header_t *rangelist,
           else
             {
               /* Cannot join because inheritance differs. */
-              (*index)++;
+              (*range_index)++;
             }
           break;
         }
@@ -845,10 +845,11 @@ adjust_remaining_ranges(apr_array_header_t *rangelist,
               new_modified_range->end = modified_range->end;
               new_modified_range->inheritable = FALSE;
               modified_range->end = next_range->start;
-              (*index)+=2;
-              svn_sort__array_insert(&new_modified_range, rangelist, *index);
+              (*range_index)+=2;
+              svn_sort__array_insert(&new_modified_range, rangelist,
+                                     *range_index);
               /* Recurse with the new range. */
-              adjust_remaining_ranges(rangelist, index, result_pool);
+              adjust_remaining_ranges(rangelist, range_index, result_pool);
               break;
             }
         }
@@ -867,7 +868,7 @@ adjust_remaining_ranges(apr_array_header_t *rangelist,
               /* The intersection between MODIFIED_RANGE and NEXT_RANGE is
                  absorbed by the latter. */
               modified_range->end = next_range->start;
-              (*index)++;
+              (*range_index)++;
             }
           break;
         }
@@ -887,14 +888,14 @@ adjust_remaining_ranges(apr_array_header_t *rangelist,
               /* MODIFIED_RANGE absorbs the portion of NEXT_RANGE it overlaps
                  and NEXT_RANGE is truncated. */
               next_range->start = modified_range->end;
-              (*index)++;
+              (*range_index)++;
             }
           else
             {
               /* NEXT_RANGE absorbs the portion of MODIFIED_RANGE it overlaps
                  and MODIFIED_RANGE is truncated. */
               modified_range->end = next_range->start;
-              (*index)++;
+              (*range_index)++;
             }
           break;
         }
