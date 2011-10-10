@@ -24,6 +24,7 @@
 #include "svn_dirent_uri.h"
 #include "client.h"
 #include "tree.h"
+#include "private/svn_wc_private.h"
 
 
 /*-----------------------------------------------------------------*/
@@ -255,10 +256,9 @@ wc_tree_get_kind(svn_client_tree_t *tree,
 
   if (baton->is_base)
     {
-      /* ###
-       * SVN_ERR(svn_wc_read_base_kind(kind, baton->wc_ctx, abspath,
-       *                               scratch_pool));
-       */
+      /* ### svn_wc_read_base_kind()? */
+      SVN_ERR(svn_wc_read_kind2(kind, baton->wc_ctx, abspath,
+                                FALSE /* show_hidden */, scratch_pool));
     }
   else
     SVN_ERR(svn_wc_read_kind2(kind, baton->wc_ctx, abspath,
@@ -316,7 +316,22 @@ wc_tree_get_dir(svn_client_tree_t *tree,
 
   if (dirents)
     {
-      *dirents = apr_hash_make(result_pool);  /* ### */
+      /* if (baton->is_base) { ### ... } else */
+
+      const apr_array_header_t *children;
+      int i;
+
+      *dirents = apr_hash_make(result_pool);
+      SVN_ERR(svn_wc__node_get_children_of_working_node(
+                &children, baton->wc_ctx, abspath, FALSE /* show_hidden */,
+                result_pool, scratch_pool));
+      for (i = 0; i < children->nelts; i++)
+        {
+          const char *child_abspath = APR_ARRAY_IDX(children, i, const char *);
+          const char *name = svn_dirent_basename(child_abspath, scratch_pool);
+
+          apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, (void *)1);
+        }
     }
   if (props)
     {
@@ -346,7 +361,14 @@ wc_tree_get_symlink(svn_client_tree_t *tree,
 
   if (link_target)
     {
-      *link_target = "";  /* ### */
+      if (baton->is_base)
+        *link_target = "";  /* ### */
+      else
+        {
+          svn_string_t *dest;
+          SVN_ERR(svn_io_read_link(&dest, abspath, result_pool));
+          *link_target = dest->data;
+        }
     }
   if (props)
     {
@@ -509,8 +531,8 @@ ra_tree_get_symlink(svn_client_tree_t *tree,
 {
   ra_tree_baton_t *baton = tree->priv;
 
-  /* ### ... */
-
+  SVN_ERR(svn_ra_get_symlink(baton->ra_session, relpath, baton->revnum,
+                             link_target, NULL, props, result_pool));
   return SVN_NO_ERROR;
 }
 
