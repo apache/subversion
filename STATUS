@@ -141,8 +141,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
-[ Note: Please don't merge these until after 1.7.0 is released, just in case. ]
-
  * r1164386
    Avoid an expensive database operation in 'svn info'.
    Justification:
