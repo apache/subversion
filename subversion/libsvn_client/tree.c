@@ -29,6 +29,89 @@
 /*-----------------------------------------------------------------*/
 
 
+/* V-table for #svn_client_tree_t. */
+struct svn_client_tree__vtable_t
+{
+  /* See svn_tree_get_kind(). */
+  svn_error_t *(*get_kind)(svn_client_tree_t *tree,
+                           svn_kind_t *kind,
+                           const char *relpath,
+                           apr_pool_t *scratch_pool);
+
+  /* See svn_tree_get_file(). */
+  svn_error_t *(*get_file)(svn_client_tree_t *tree,
+                           svn_stream_t **stream,
+                           apr_hash_t **props,
+                           const char *relpath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+  /* See svn_tree_get_dir(). */
+  svn_error_t *(*get_dir)(svn_client_tree_t *tree,
+                          apr_hash_t **dirents,
+                          apr_hash_t **props,
+                          const char *relpath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+  /* See svn_tree_get_symlink(). */
+  svn_error_t *(*get_symlink)(svn_client_tree_t *tree,
+                              const char **link_target,
+                              apr_hash_t **props,
+                              const char *relpath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+};
+
+svn_error_t *
+svn_tree_get_kind(svn_client_tree_t *tree,
+                  svn_kind_t *kind,
+                  const char *relpath,
+                  apr_pool_t *scratch_pool)
+{
+  return tree->vtable->get_kind(tree, kind, relpath, scratch_pool);
+}
+
+svn_error_t *
+svn_tree_get_file(svn_client_tree_t *tree,
+                  svn_stream_t **stream,
+                  apr_hash_t **props,
+                  const char *relpath,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  return tree->vtable->get_file(tree, stream, props, relpath,
+                                result_pool, scratch_pool);
+}
+
+svn_error_t *
+svn_tree_get_dir(svn_client_tree_t *tree,
+                 apr_hash_t **dirents,
+                 apr_hash_t **props,
+                 const char *relpath,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  return tree->vtable->get_dir(tree, dirents, props, relpath,
+                               result_pool, scratch_pool);
+}
+
+svn_error_t *
+svn_tree_get_symlink(svn_client_tree_t *tree,
+                     const char **link_target,
+                     apr_hash_t **props,
+                     const char *relpath,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  return tree->vtable->get_symlink(tree, link_target, props, relpath,
+                                   result_pool, scratch_pool);
+}
+
+
+/*-----------------------------------------------------------------*/
+
+
 /* */
 typedef struct disk_tree_baton_t
 {
@@ -38,7 +121,7 @@ typedef struct disk_tree_baton_t
 /* */
 static svn_error_t *
 disk_tree_get_kind(svn_client_tree_t *tree,
-                   svn_node_kind_t *kind,
+                   svn_kind_t *kind,
                    const char *relpath,
                    apr_pool_t *scratch_pool)
 {
@@ -46,7 +129,7 @@ disk_tree_get_kind(svn_client_tree_t *tree,
   const char *abspath = svn_dirent_join(baton->tree_abspath, relpath,
                                         scratch_pool);
 
-  SVN_ERR(svn_io_check_path(abspath, kind, scratch_pool));
+  SVN_ERR(svn_io_check_path2(abspath, kind, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -97,11 +180,37 @@ disk_tree_get_dir(svn_client_tree_t *tree,
 }
 
 /* */
+static svn_error_t *
+disk_tree_get_symlink(svn_client_tree_t *tree,
+                      const char **link_target,
+                      apr_hash_t **props,
+                      const char *relpath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  disk_tree_baton_t *baton = tree->priv;
+  const char *abspath = svn_dirent_join(baton->tree_abspath, relpath,
+                                        scratch_pool);
+
+  if (link_target)
+    {
+      svn_string_t *dest;
+      SVN_ERR(svn_io_read_link(&dest, abspath, result_pool));
+      *link_target = dest->data;
+    }
+  if (props)
+    *props = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+/* */
 static const svn_client_tree__vtable_t disk_tree_vtable =
 {
   disk_tree_get_kind,
   disk_tree_get_file,
-  disk_tree_get_dir
+  disk_tree_get_dir,
+  disk_tree_get_symlink
 };
 
 svn_error_t *
@@ -163,14 +272,14 @@ typedef struct ra_tree_baton_t
 /* */
 static svn_error_t *
 ra_tree_get_kind(svn_client_tree_t *tree,
-                 svn_node_kind_t *kind,
+                 svn_kind_t *kind,
                  const char *relpath,
                  apr_pool_t *scratch_pool)
 {
   ra_tree_baton_t *baton = tree->priv;
 
-  SVN_ERR(svn_ra_check_path(baton->ra_session, relpath, baton->revnum,
-                            kind, scratch_pool));
+  SVN_ERR(svn_ra_check_path2(baton->ra_session, relpath, baton->revnum,
+                             kind, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -237,11 +346,28 @@ ra_tree_get_dir(svn_client_tree_t *tree,
 }
 
 /* */
+static svn_error_t *
+ra_tree_get_symlink(svn_client_tree_t *tree,
+                    const char **link_target,
+                    apr_hash_t **props,
+                    const char *relpath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  ra_tree_baton_t *baton = tree->priv;
+
+  /* ### ... */
+
+  return SVN_NO_ERROR;
+}
+
+/* */
 static const svn_client_tree__vtable_t ra_tree_vtable =
 {
   ra_tree_get_kind,
   ra_tree_get_file,
-  ra_tree_get_dir
+  ra_tree_get_dir,
+  ra_tree_get_symlink
 };
 
 /* */

@@ -43,71 +43,14 @@ typedef struct svn_client_tree_t svn_client_tree_t;
 /* */
 typedef svn_io_dirent2_t svn_client_tree_dirent_t;
 
-/* V-table for #svn_client_tree_t.
- *
+/*
  * Paths are relpaths, relative to the tree root.
+ *
  * Revision numbers and repository ids are #SVN_INVALID_REVNUM and NULL
  * for an unversioned node (including a node that is a local add/copy/move
  * in a WC working tree).
  */
-typedef struct svn_client_tree__vtable_t
-{
-  /* Fetch the node kind of the node at @a relpath.
-   * (### and other metadata? revnum? props?)
-   *
-   * Set @a *kind to the node kind.
-   */
-  svn_error_t *(*get_kind)(svn_client_tree_t *tree,
-                           svn_node_kind_t *kind,
-                           const char *relpath,
-                           apr_pool_t *scratch_pool);
-
-  /* Fetch the contents and properties of the file at @a relpath.
-   *
-   * If @a stream is non-NULL, set @a *stream to a readable stream yielding
-   * the contents of the file at @a relpath.  (### ? The stream
-   * handlers for @a stream may not perform any operations on @a tree.)
-   *
-   * If @a props is non-NULL, set @a *props to contain the regular
-   * versioned properties of the file (not 'wcprops', 'entryprops', etc.).
-   * The hash maps (const char *) names to (#svn_string_t *) values.
-   */
-  svn_error_t *(*get_file)(svn_client_tree_t *tree,
-                           svn_stream_t **stream,
-                           apr_hash_t **props,
-                           const char *relpath,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
-
-  /* Fetch the entries and properties of the directory at @a relpath.
-   *
-   * If @a dirents is non-NULL, set @a *dirents to contain all the entries
-   * of directory @a relpath.  The keys will be (<tt>const char *</tt>)
-   * entry names, and the values (#svn_client_tree_dirent_t *) dirents.
-   * Only the @c kind and @c filesize fields are filled in.
-   * ### @c special would be useful too.
-   *
-   * If @a props is non-NULL, set @a *props to contain the regular
-   * versioned properties of the file (not 'wcprops', 'entryprops', etc.).
-   * The hash maps (const char *) names to (#svn_string_t *) values.
-   */
-  svn_error_t *(*get_dir)(svn_client_tree_t *tree,
-                          apr_hash_t **dirents,
-                          apr_hash_t **props,
-                          const char *relpath,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
-
-  /* Push a sub-tree into an editor, as a delta against an empty tree.
-   * This is useful for efficiency when streaming a (sub-)tree from a
-   * remote source. */
-  svn_error_t *(*push_as_delta_edit)(svn_client_tree_t *tree,
-                                     const char *relpath,
-                                     svn_delta_editor_t *editor,
-                                     void *edit_baton,
-                                     apr_pool_t *result_pool,
-                                     apr_pool_t *scratch_pool);
-} svn_client_tree__vtable_t;
+typedef struct svn_client_tree__vtable_t svn_client_tree__vtable_t;
 
 /* */
 struct svn_client_tree_t
@@ -121,6 +64,82 @@ struct svn_client_tree_t
   void *priv;
 };
 
+/* Fetch the node kind of the node at @a relpath.
+ * (### and other metadata? revnum? props?)
+ *
+ * The kind will be 'file', 'dir', 'symlink' or 'none'; not 'unknown'.
+ *
+ * Set @a *kind to the node kind.
+ */
+svn_error_t *
+svn_tree_get_kind(svn_client_tree_t *tree,
+                  svn_kind_t *kind,
+                  const char *relpath,
+                  apr_pool_t *scratch_pool);
+
+/* Fetch the contents and/or properties of the file at @a relpath.
+ *
+ * If @a stream is non-NULL, set @a *stream to a readable stream yielding
+ * the contents of the file at @a relpath.  (### ? The stream
+ * handlers for @a stream may not perform any operations on @a tree.)
+ *
+ * If @a props is non-NULL, set @a *props to contain the regular
+ * versioned properties of the file (not 'wcprops', 'entryprops', etc.).
+ * The hash maps (const char *) names to (#svn_string_t *) values.
+ *
+ * If the node at @a relpath is not a symlink, return a
+ * #SVN_ERR_WRONG_KIND error.
+ */
+svn_error_t *
+svn_tree_get_file(svn_client_tree_t *tree,
+                  svn_stream_t **stream,
+                  apr_hash_t **props,
+                  const char *relpath,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool);
+
+/* Fetch the entries and/or properties of the directory at @a relpath.
+ *
+ * If @a dirents is non-NULL, set @a *dirents to contain all the entries
+ * of directory @a relpath.  The keys will be (<tt>const char *</tt>)
+ * entry names, and the values (#svn_client_tree_dirent_t *) dirents.
+ * Only the @c kind and @c filesize fields are filled in.
+ * ### @c special would be useful too.
+ *
+ * If @a props is non-NULL, set @a *props to contain the regular
+ * versioned properties of the file (not 'wcprops', 'entryprops', etc.).
+ * The hash maps (const char *) names to (#svn_string_t *) values.
+ *
+ * If the node at @a relpath is not a symlink, return a
+ * #SVN_ERR_WRONG_KIND error.
+ */
+svn_error_t *
+svn_tree_get_dir(svn_client_tree_t *tree,
+                 apr_hash_t **dirents,
+                 apr_hash_t **props,
+                 const char *relpath,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool);
+
+/* Fetch the target and/or properties of the symlink at @a relpath.
+ *
+ * If @a link_target is non-NULL, set @a *link_target to the target of
+ * the symbolic link.
+ *
+ * If @a props is non-NULL, set @a *props to contain the regular
+ * versioned properties of the file (not 'wcprops', 'entryprops', etc.).
+ * The hash maps (const char *) names to (#svn_string_t *) values.
+ *
+ * If the node at @a relpath is not a symlink, return a
+ * #SVN_ERR_WRONG_KIND error.
+ */
+svn_error_t *
+svn_tree_get_symlink(svn_client_tree_t *tree,
+                     const char **link_target,
+                     apr_hash_t **props,
+                     const char *relpath,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
 
 /*-----------------------------------------------------------------*/
 
