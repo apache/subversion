@@ -1181,7 +1181,7 @@ test_rangelist_merge(apr_pool_t *pool)
     svn_merge_range_t expected_merge[6];
   };
 
-  #define SIZE_OF_RANGE_MERGE_TEST_ARRAY 67
+  #define SIZE_OF_RANGE_MERGE_TEST_ARRAY 68
   /* The actual test data. */
   struct rangelist_merge_test_data test_data[SIZE_OF_RANGE_MERGE_TEST_ARRAY] =
     {
@@ -1285,6 +1285,9 @@ test_rangelist_merge(apr_pool_t *pool)
       {"/A: 3-4,50-100*", "/A: 5-60", 2, {{2, 60, TRUE}, {60, 100, FALSE}}},
 
       {"/A: 5-60", "/A: 3-4,50-100*", 2, {{2, 60, TRUE}, {60, 100, FALSE}}},
+
+      {"/A: 5,9,11-15,17,200-300,999", "/A: 7-50", 4,
+       {{4, 5, TRUE}, {6, 50, TRUE}, {199, 300, TRUE}, {998, 999, TRUE}}},
 
       /* A rangelist merged with an empty rangelist should equal the
          non-empty rangelist but in compacted form. */
