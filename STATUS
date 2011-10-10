@@ -115,13 +115,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1177492
-   Constness fix.
-   Justification:
-     Without this we are writing to const memory.
-   Votes:
-     +1: danielsh, stsp, hwright
-
  * r1174761
    Better error message when configuring --without-zlib.
    Votes:

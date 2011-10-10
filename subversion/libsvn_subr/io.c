@@ -2930,9 +2930,10 @@ svn_io_detect_mimetype2(const char **mimetype,
      heuristic. */
   if (mimetype_map)
     {
-      const char *type_from_map, *path_ext;
-      svn_path_splitext(NULL, &path_ext, file, pool);
-      fileext_tolower((char *)path_ext);
+      const char *type_from_map;
+      char *path_ext;
+      svn_path_splitext(NULL, (const char **)&path_ext, file, pool);
+      fileext_tolower(path_ext);
       if ((type_from_map = apr_hash_get(mimetype_map, path_ext,
                                         APR_HASH_KEY_STRING)))
         {
