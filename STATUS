@@ -141,14 +141,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1167659
-   Don't sort an already sorted array in svn_sort__hash().
-   Justification:
-     Possible performance improvement for merges, and doesn't cost anything.
-     This function is used to sort mergeinfo catalogs, among other things.
-   Votes:
-     +1: stsp, rhuijben, pburba
-
  * r1177001
    Update bash_completion to match 1.7 commands and options.
    Justification:
