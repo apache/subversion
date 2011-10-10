@@ -115,11 +115,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1174761
-   Better error message when configuring --without-zlib.
-   Votes:
-     +1: danielsh, jerenkrantz, hwright
-
  * r1174798
    DTRT when --with-zlib is passed without an argument.
    Justification:
