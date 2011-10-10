@@ -115,13 +115,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1174798
-   DTRT when --with-zlib is passed without an argument.
-   Justification:
-     This DTRTing is normal for other --with-* options.
-   Votes:
-     +1: danielsh, jerenkrantz, hwright
-
  * r1174806
    Fix LDFLAGS when --with-zlib is passed with an argument.
    Justification:
