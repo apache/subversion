@@ -4795,7 +4795,7 @@ remove_absent_children(const char *target_wcpath,
       if ((child->absent || child->scheduled_for_deletion)
           && svn_dirent_is_ancestor(target_wcpath, child->abspath))
         {
-          svn_sort__array_delete(children_with_mergeinfo, i--);
+          svn_sort__array_delete(children_with_mergeinfo, i--, 1);
         }
     }
 }
@@ -4831,7 +4831,7 @@ remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
                        child->abspath,
                        APR_HASH_KEY_STRING))
         {
-          svn_sort__array_delete(notify_b->children_with_mergeinfo, i--);
+          svn_sort__array_delete(notify_b->children_with_mergeinfo, i--, 1);
         }
     }
 }
