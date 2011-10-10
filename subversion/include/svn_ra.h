@@ -1481,6 +1481,15 @@ svn_ra_get_log(svn_ra_session_t *session,
                void *receiver_baton,
                apr_pool_t *pool);
 
+/* Like svn_ra_check_path() but returning svn_kind_t (includes symlink kind).
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_ra_check_path2(svn_ra_session_t *session,
+                   const char *path,
+                   svn_revnum_t revision,
+                   svn_kind_t *kind,
+                   apr_pool_t *scratch_pool);
 /**
  * Set @a *kind to the node kind associated with @a path at @a revision.
  * If @a path does not exist under @a revision, set @a *kind to

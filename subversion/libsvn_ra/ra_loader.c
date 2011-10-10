@@ -902,6 +902,38 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
                                   receiver, receiver_baton, pool);
 }
 
+svn_error_t *
+svn_ra_check_path2(svn_ra_session_t *session,
+                   const char *path,
+                   svn_revnum_t revision,
+                   svn_kind_t *kind,
+                   apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t node_kind;
+
+  SVN_ERR(svn_ra_check_path(session, path, revision,
+                            &node_kind, scratch_pool));
+  switch (node_kind)
+    {
+    case svn_node_file:
+      if (FALSE /* ### special */)
+        *kind = svn_kind_symlink;
+      else
+        *kind = svn_kind_file;
+      break;
+    case svn_node_dir:
+      *kind = svn_kind_dir;
+      break;
+    case svn_node_none:
+      *kind = svn_kind_none;
+      break;
+    case svn_node_unknown:
+      *kind = svn_kind_unknown;
+      break;
+    }
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_ra_check_path(svn_ra_session_t *session,
                                const char *path,
                                svn_revnum_t revision,

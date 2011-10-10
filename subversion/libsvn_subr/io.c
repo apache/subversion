@@ -226,6 +226,20 @@ map_apr_finfo_to_node_kind(svn_node_kind_t *kind,
     *kind = svn_node_unknown;
 }
 
+static void
+map_apr_finfo_to_kind(svn_kind_t *kind,
+                      apr_finfo_t *finfo)
+{
+  if (finfo->filetype == APR_REG)
+    *kind = svn_kind_file;
+  else if (finfo->filetype == APR_DIR)
+    *kind = svn_kind_dir;
+  else if (finfo->filetype == APR_LNK)
+    *kind = svn_kind_symlink;
+  else
+    *kind = svn_kind_unknown;
+}
+
 /* Helper for svn_io_check_path() and svn_io_check_resolved_path();
    essentially the same semantics as those two, with the obvious
    interpretation for RESOLVE_SYMLINKS. */
@@ -267,6 +281,43 @@ io_check_path(const char *path,
   return SVN_NO_ERROR;
 }
 
+/* Helper for svn_io_check_path() and svn_io_check_resolved_path();
+   essentially the same semantics as those two, with the obvious
+   interpretation for RESOLVE_SYMLINKS. */
+static svn_error_t *
+io_check_path2(const char *path,
+               svn_boolean_t resolve_symlinks,
+               svn_kind_t *kind,
+               apr_pool_t *pool)
+{
+  apr_int32_t flags;
+  apr_finfo_t finfo;
+  apr_status_t apr_err;
+  const char *path_apr;
+
+  if (path[0] == '\0')
+    path = ".";
+
+  /* Not using svn_io_stat() here because we want to check the
+     apr_err return explicitly. */
+  SVN_ERR(cstring_from_utf8(&path_apr, path, pool));
+
+  flags = resolve_symlinks ? APR_FINFO_MIN : (APR_FINFO_MIN | APR_FINFO_LINK);
+  apr_err = apr_stat(&finfo, path_apr, flags, pool);
+
+  if (APR_STATUS_IS_ENOENT(apr_err))
+    *kind = svn_node_none;
+  else if (SVN__APR_STATUS_IS_ENOTDIR(apr_err))
+    *kind = svn_node_none;
+  else if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't check path '%s'"),
+                              svn_dirent_local_style(path, pool));
+  else
+    map_apr_finfo_to_kind(kind, &finfo);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Wrapper for apr_file_open(), taking an APR-encoded filename. */
 static apr_status_t
@@ -303,6 +354,14 @@ svn_io_check_path(const char *path,
 {
   svn_boolean_t ignored;
   return io_check_path(path, FALSE, &ignored, kind, pool);
+}
+
+svn_error_t *
+svn_io_check_path2(const char *path,
+                   svn_kind_t *kind,
+                   apr_pool_t *pool)
+{
+  return io_check_path2(path, FALSE, kind, pool);
 }
 
 svn_error_t *

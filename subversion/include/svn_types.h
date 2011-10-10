@@ -204,6 +204,28 @@ typedef enum svn_node_kind_t
   svn_node_unknown
 } svn_node_kind_t;
 
+/* A node kind.
+ *
+ * @since New in 1.8. Replaces svn_node_kind_t.
+ */
+typedef enum svn_kind_t
+{
+  /** absent */
+  svn_kind_none,
+
+  /** regular file */
+  svn_kind_file,
+
+  /** directory */
+  svn_kind_dir,
+
+  /** symbolic link */
+  svn_kind_symlink,
+
+  /** something's here, but we don't know what */
+  svn_kind_unknown
+} svn_kind_t;
+
 /** Return a constant string expressing @a kind as an English word, e.g.,
  * "file", "dir", etc.  The string is not localized, as it may be used for
  * client<->server communications.  If the kind is not recognized, return

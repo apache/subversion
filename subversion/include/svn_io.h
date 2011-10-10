@@ -155,6 +155,12 @@ svn_io_check_path(const char *path,
                   svn_node_kind_t *kind,
                   apr_pool_t *pool);
 
+/* */
+svn_error_t *
+svn_io_check_path2(const char *path,
+                   svn_kind_t *kind,
+                   apr_pool_t *pool);
+
 /**
  * Like svn_io_check_path(), but also set *is_special to @c TRUE if
  * the path is not a normal file.
