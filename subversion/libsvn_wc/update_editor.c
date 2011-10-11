@@ -3093,7 +3093,6 @@ add_file(const char *path,
 
   /* Is this path a conflict victim? */
   if (conflicted)
-    if (conflicted)
     {
       if (pb->deletion_conflicts)
         tree_conflict = apr_hash_get(pb->deletion_conflicts, fb->name,
