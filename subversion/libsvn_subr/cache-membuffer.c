@@ -1133,7 +1133,6 @@ membuffer_cache_set(svn_membuffer_t *cache,
 {
   apr_uint32_t group_index;
   unsigned char to_find[KEY_SIZE];
-  entry_t *entry;
   char *buffer = NULL;
   apr_size_t size;
 
@@ -1494,8 +1493,6 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
 {
   apr_uint32_t group_index;
   unsigned char to_find[KEY_SIZE];
-  entry_t *entry;
-  svn_error_t *err = SVN_NO_ERROR;
 
   /* cache item lookup
    */
