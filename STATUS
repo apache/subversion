@@ -109,6 +109,13 @@ Candidate changes:
    Votes:
      +1: danielsh, hwright
 
+ * r1181666
+   Tweak SQLite runtime initialisation for OS X 10.7 compatibility.
+   Justification:
+     The client fails to run on OS X 10.7, maybe the server as well.
+   Votes:
+     +1: philip, danielsh
+
 Veto-blocked changes:
 =====================
 
