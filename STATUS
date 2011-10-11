@@ -68,20 +68,6 @@ Candidate changes:
                          performance should be better, I wonder if that's
                          been tested at all)
 
- * r1174111
-   Use the correct function to copy repositories in the testsuite.
-   Justification:
-     Prevent occassional test failure.
-   Notes:
-     Merge conflict on externals_tests.py resolved with --accept mf.
-   Votes:
-     +1: philip
-     +0: pburba (Ideally this would be done as a subtree merge targeting
-                 basic_tests.py, as danielsh points out in
-                 http://svn.haxx.se/dev/archive-2011-09/0482.shtml.  I'm +1
-                 if the backport is done that way).
-     +1: danielsh (conditioned upon the backport done as per Paul's comment)
-
  * r1167681
    Don't invoke quicksort unnecessarily when combining mergeinfo rangelists.
    Justification:
@@ -109,8 +95,31 @@ Candidate changes:
    Votes:
      +1: danielsh, hwright
 
+ * r1181609
+   Fill in the repos_* fields of svn_wc_status3_t for nodes that only exist
+   in the repository.
+   Justification:
+     Resolves a regression identified by markphip.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1174111
+   Use the correct function to copy repositories in the testsuite.
+   Justification:
+     Prevent occassional test failure.
+   Notes:
+     Merge conflict on externals_tests.py resolved with --accept mf.
+   Votes:
+     +1: philip
+     +0: pburba (Ideally this would be done as a subtree merge targeting
+                 basic_tests.py, as danielsh points out in
+                 http://svn.haxx.se/dev/archive-2011-09/0482.shtml.  I'm +1
+                 if the backport is done that way).
+     +1: danielsh, rhuijben (conditioned upon the backport done as per Paul's
+                             comment)
