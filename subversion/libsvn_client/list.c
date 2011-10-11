@@ -139,7 +139,7 @@ list_tree(svn_client_tree_t *tree,
   svn_dirent_t dirent = { 0 };
 
   SVN_ERR(svn_tree_get_kind(tree, &kind, relpath, pool));
-  /* dirent.kind = svn__node_kind_from_kind(kind); */
+  dirent.kind = svn__node_kind_from_kind(kind);
   /* if (dirent.kind == svn_kind_file)
     dirent.size = svn_tree_stat ... */
   SVN_ERR(list_func(list_baton, relpath, &dirent, NULL /* lock */,
