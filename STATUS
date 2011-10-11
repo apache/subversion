@@ -113,8 +113,6 @@ Approved changes:
    Use the correct function to copy repositories in the testsuite.
    Justification:
      Prevent occassional test failure.
-   Notes:
-     Merge conflict on externals_tests.py resolved with --accept mf.
    Votes:
      +1: philip
      +0: pburba (Ideally this would be done as a subtree merge targeting
