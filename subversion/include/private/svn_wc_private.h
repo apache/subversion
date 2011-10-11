@@ -339,10 +339,10 @@ svn_wc__node_get_children_of_working_node(const apr_array_header_t **children,
                                           apr_pool_t *scratch_pool);
 
 /**
- * Like svn_wc__node_get_children2(), except also include any path that was
- * a child of a deleted directory that existed at @a dir_abspath, even if
- * that directory is now scheduled to be replaced by the working node at
- * @a dir_abspath.
+ * Like svn_wc__node_get_children_of_working_node(), except also include any
+ * path that was a child of a deleted directory that existed at
+ * @a dir_abspath, even if that directory is now scheduled to be replaced by
+ * the working node at @a dir_abspath.
  */
 svn_error_t *
 svn_wc__node_get_children(const apr_array_header_t **children,

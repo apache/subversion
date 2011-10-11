@@ -26,7 +26,7 @@
 
 #include "svn_types.h"
 #include "svn_error.h"
-#include "svn_mergeinfo.h"
+#include "svn_string.h"
 #include "svn_private_config.h"
 
 svn_error_t *
@@ -120,29 +120,35 @@ svn_depth_from_word(const char *word)
   return svn_depth_unknown;
 }
 
-const char *
-svn_inheritance_to_word(svn_mergeinfo_inheritance_t inherit)
+svn_node_kind_t
+svn__node_kind_from_kind(svn_kind_t kind)
 {
-  switch (inherit)
+  switch (kind)
     {
-    case svn_mergeinfo_inherited:
-      return "inherited";
-    case svn_mergeinfo_nearest_ancestor:
-      return "nearest-ancestor";
-    default:
-      return "explicit";
+    case svn_kind_unknown:  return svn_node_unknown;
+    case svn_kind_none:     return svn_node_none;
+    case svn_kind_file:     return svn_node_file;
+    case svn_kind_dir:      return svn_node_dir;
+    case svn_kind_symlink:  return svn_node_file;
+    default: SVN_ERR_MALFUNCTION_NO_RETURN();
     }
 }
 
-
-svn_mergeinfo_inheritance_t
-svn_inheritance_from_word(const char *word)
+svn_kind_t
+svn__kind_from_node_kind(svn_node_kind_t kind,
+                         svn_boolean_t is_symlink)
 {
-  if (strcmp(word, "inherited") == 0)
-    return svn_mergeinfo_inherited;
-  if (strcmp(word, "nearest-ancestor") == 0)
-    return svn_mergeinfo_nearest_ancestor;
-  return svn_mergeinfo_explicit;
+  if (is_symlink)
+    return svn_kind_symlink;
+
+  switch (kind)
+    {
+    case svn_node_unknown:  return svn_kind_unknown;
+    case svn_node_none:     return svn_kind_none;
+    case svn_node_file:     return svn_kind_file;
+    case svn_node_dir:      return svn_kind_dir;
+    default: SVN_ERR_MALFUNCTION_NO_RETURN();
+    }
 }
 
 const char *
