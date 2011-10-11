@@ -83,10 +83,10 @@ echo epsilon > epsilon
 ### row is created).
 
 # a file with just .working
-### what comes after epsilon??
-echo lambda > lambda
-"${SVN}" add lambda
-"${SVN}" propset l-prop l-value lambda
+# zeta = epsilon+1
+echo zeta > zeta
+"${SVN}" add zeta
+"${SVN}" propset z-prop z-value zeta
 
 # a file with .base and .working
 "${SVN}" propset b-more b-value2 beta

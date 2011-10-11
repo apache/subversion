@@ -1039,7 +1039,6 @@ svn_client_export5(svn_revnum_t *result_rev,
                    apr_pool_t *pool)
 {
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
-  const char *url;
   svn_boolean_t from_is_url = svn_path_is_url(from_path_or_url);
 
   SVN_ERR_ASSERT(peg_revision != NULL);
@@ -1056,19 +1055,16 @@ svn_client_export5(svn_revnum_t *result_rev,
   if (from_is_url || ! SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
       svn_revnum_t revnum;
+      const char *url;
       svn_ra_session_t *ra_session;
       svn_node_kind_t kind;
       struct edit_baton *eb = apr_pcalloc(pool, sizeof(*eb));
-      const char *repos_root_url;
 
       /* Get the RA connection. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
                                                &url, from_path_or_url, NULL,
                                                peg_revision,
                                                revision, ctx, pool));
-
-      /* Get the repository root. */
-      SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
 
       eb->root_path = to_path;
       eb->root_url = url;
@@ -1182,6 +1178,10 @@ svn_client_export5(svn_revnum_t *result_rev,
                                                     &edit_baton,
                                                     pool));
 
+          SVN_ERR(svn_editor__insert_shims(&export_editor, &edit_baton,
+                                           export_editor, edit_baton,
+                                           NULL, NULL, NULL, NULL,
+                                           pool, pool));
 
           /* Manufacture a basic 'report' to the update reporter. */
           SVN_ERR(svn_ra_do_update2(ra_session,
@@ -1219,8 +1219,10 @@ svn_client_export5(svn_revnum_t *result_rev,
 
           if (! ignore_externals && depth == svn_depth_infinity)
             {
+              const char *repos_root_url;
               const char *to_abspath;
 
+              SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
               SVN_ERR(svn_dirent_get_absolute(&to_abspath, to_path, pool));
               SVN_ERR(svn_client__export_externals(eb->externals,
                                                    from_path_or_url,

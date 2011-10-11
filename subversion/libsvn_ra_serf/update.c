@@ -118,7 +118,7 @@ typedef struct report_dir_t
   /* the canonical url for this directory after updating. (received) */
   const char *url;
 
-  /* The original repos_relpath of this url (from the workingcopy)
+  /* The original repos_relpath of this url (from the working copy)
      or NULL if the repos_relpath can be calculated from the edit root. */
   const char *repos_relpath;
 
@@ -203,7 +203,7 @@ typedef struct report_info_t
   svn_revnum_t target_rev;
 
   /* our delta base, if present (NULL if we're adding the file) */
-  const svn_string_t *delta_base;
+  const char *delta_base;
 
   /* Path of original item if add with history */
   const char *copyfrom_path;
@@ -727,7 +727,7 @@ headers_fetch(serf_bucket_t *headers,
       fetch_ctx->info->delta_base)
     {
       serf_bucket_headers_setn(headers, SVN_DAV_DELTA_BASE_HEADER,
-                               fetch_ctx->info->delta_base->data);
+                               fetch_ctx->info->delta_base);
       serf_bucket_headers_setn(headers, "Accept-Encoding",
                                "svndiff1;q=0.9,svndiff;q=0.8");
     }
@@ -918,6 +918,7 @@ handle_fetch(serf_request_t *request,
 
       if (fetch_ctx->aborted_read)
         {
+          apr_off_t skip;
           /* We haven't caught up to where we were before. */
           if (fetch_ctx->read_size < fetch_ctx->aborted_read_size)
             {
@@ -938,9 +939,10 @@ handle_fetch(serf_request_t *request,
           /* Woo-hoo.  We're back. */
           fetch_ctx->aborted_read = FALSE;
 
-          /* Increment data and len by the difference. */
-          data += fetch_ctx->read_size - fetch_ctx->aborted_read_size;
-          len = fetch_ctx->read_size - fetch_ctx->aborted_read_size;
+          /* Update data and len to just provide the new data. */
+          skip = len - (fetch_ctx->read_size - fetch_ctx->aborted_read_size);
+          data += skip;
+          len -= skip;
         }
 
       if (fetch_ctx->delta_stream)
@@ -983,7 +985,12 @@ handle_fetch(serf_request_t *request,
              ### end of this block, so it will work for now.  */
           apr_pool_t *scratch_pool = info->editor_pool;
 
-          err = info->textdelta(NULL, info->textdelta_baton);
+          if (fetch_ctx->delta_stream)
+            err = svn_error_trace(svn_stream_close(fetch_ctx->delta_stream));
+          else
+            err = svn_error_trace(info->textdelta(NULL,
+                                                  info->textdelta_baton));
+
           if (err)
             {
               return error_fetch(request, fetch_ctx, err);
@@ -1021,7 +1028,7 @@ handle_fetch(serf_request_t *request,
 
           if (err)
             {
-              return error_fetch(request, fetch_ctx, err);
+              return svn_error_trace(error_fetch(request, fetch_ctx, err));
             }
 
           fetch_ctx->done = TRUE;
@@ -1375,6 +1382,12 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info->dir->repos_relpath = apr_hash_get(ctx->switched_paths, "",
                                               APR_HASH_KEY_STRING);
+
+      if (!info->dir->repos_relpath)
+        SVN_ERR(svn_ra_serf__get_relative_path(&info->dir->repos_relpath,
+                                               ctx->sess->session_url.path,
+                                               ctx->sess, ctx->conn,
+                                               info->dir->pool));
     }
   else if (state == NONE)
     {
@@ -1426,9 +1439,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       dir->repos_relpath = apr_hash_get(ctx->switched_paths, dir->name,
                                         APR_HASH_KEY_STRING);
 
-      if (!dir->repos_relpath
-          && dir->parent_dir
-          && dir->parent_dir->repos_relpath)
+      if (!dir->repos_relpath)
         dir->repos_relpath = svn_relpath_join(dir->parent_dir->repos_relpath,
                                                dir->base_name, dir->pool);
     }
@@ -1469,6 +1480,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       dir->base_rev = info->base_rev;
       dir->target_rev = ctx->target_rev;
       dir->fetch_props = TRUE;
+
+      dir->repos_relpath = svn_relpath_join(dir->parent_dir->repos_relpath,
+                                            dir->base_name, dir->pool);
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "open-file") == 0)
@@ -1590,9 +1604,11 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(open_dir(info->dir));
 
-      SVN_ERR(ctx->update_editor->absent_directory(file_name,
-                                                   info->dir->dir_baton,
-                                                   info->dir->pool));
+      SVN_ERR(ctx->update_editor->absent_directory(
+                                        svn_relpath_join(info->name, file_name,
+                                                         info->dir->pool),
+                                        info->dir->dir_baton,
+                                        info->dir->pool));
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "absent-file") == 0)
@@ -1613,9 +1629,11 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(open_dir(info->dir));
 
-      SVN_ERR(ctx->update_editor->absent_file(file_name,
-                                              info->dir->dir_baton,
-                                              info->dir->pool));
+      SVN_ERR(ctx->update_editor->absent_file(
+                                        svn_relpath_join(info->name, file_name,
+                                                         info->dir->pool),
+                                        info->dir->dir_baton,
+                                        info->dir->pool));
     }
   else if (state == OPEN_DIR || state == ADD_DIR)
     {
@@ -1868,162 +1886,54 @@ end_report(svn_ra_serf__xml_parser_t *parser,
        * rather than fetching a fulltext.
        *
        * In HTTP v2, we can simply construct the URL we need given the
-       * path and base revision number.
+       * repos_relpath and base revision number.
        */
       if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(ctx->sess))
         {
-          const char *fs_path;
-          const char *full_path =
-            svn_fspath__join(ctx->sess->session_url.path,
-                             svn_path_uri_encode(info->name, info->pool),
-                             info->pool);
+          const char *repos_relpath;
 
-#if 0
           /* If this file is switched vs the editor root we should provide
              its real url instead of the one calculated from the session root.
            */
-          fs_path = apr_hash_get(ctx->switched_paths, info->name,
-                                 APR_HASH_KEY_STRING);
+          repos_relpath = apr_hash_get(ctx->switched_paths, info->name,
+                                       APR_HASH_KEY_STRING);
 
-          if (!fs_path)
+          if (!repos_relpath)
             {
               if (ctx->root_is_switched)
                 {
-                  /* ### BH: Needs more review.
-
-                     We are updating a direct target (most likely a file)
+                  /* We are updating a direct target (most likely a file)
                      that is switched vs its parent url */
                   SVN_ERR_ASSERT(*svn_relpath_dirname(info->name, info->pool)
                                     == '\0');
 
-                  fs_path = apr_hash_get(ctx->switched_paths, "",
-                                         APR_HASH_KEY_STRING);
+                  repos_relpath = apr_hash_get(ctx->switched_paths, "",
+                                               APR_HASH_KEY_STRING);
                 }
-              else if (info->dir->repos_relpath)
-                fs_path = svn_relpath_join(info->dir->repos_relpath,
-                                           info->base_name, info->pool);
-              else if (!fs_path)
-                SVN_ERR(svn_ra_serf__get_relative_path(&fs_path, full_path,
-                                                       ctx->sess, NULL,
-                                                       info->pool));
+              else
+                repos_relpath = svn_relpath_join(info->dir->repos_relpath,
+                                                 info->base_name, info->pool);
             }
-#else
-          /* This code path is broken for files where fs_path is not
-             the same as the repository path. (E.g. when the file is switched)
-             */
-          SVN_ERR(svn_ra_serf__get_relative_path(&fs_path, full_path,
-                                                 ctx->sess, NULL, info->pool));
-#endif
 
-
-          info->delta_base = svn_string_createf(info->pool, "%s/%ld/%s",
-                                                ctx->sess->rev_root_stub,
-                                                info->base_rev, fs_path);
+          info->delta_base = apr_psprintf(info->pool, "%s/%ld/%s",
+                                          ctx->sess->rev_root_stub,
+                                          info->base_rev,
+                                          svn_path_uri_encode(repos_relpath,
+                                                              info->pool));
         }
-
-      /* Still no base URL?  If we have a WC, we might be able to dive all
-       * the way into the WC to get the previous URL so we can do a
-       * differential GET with the base URL.
-       */
-      if ((! info->delta_base) && (ctx->sess->wc_callbacks->get_wc_prop))
+      else if (ctx->sess->wc_callbacks->get_wc_prop)
         {
+          /* If we have a WC, we might be able to dive all the way into the WC
+           * to get the previous URL so we can do a differential GET with the
+           * base URL.
+           */
+          const svn_string_t *value = NULL;
           SVN_ERR(ctx->sess->wc_callbacks->get_wc_prop(
             ctx->sess->wc_callback_baton, info->name,
-            SVN_RA_SERF__WC_CHECKED_IN_URL, &info->delta_base, info->pool));
+            SVN_RA_SERF__WC_CHECKED_IN_URL, &value, info->pool));
+
+          info->delta_base = value ? value->data : NULL;
         }
-
-#if 0 /* ### FIXME: Something's not quite right with this algorithm.
-         ### Would be great to figure out the problem and correct it,
-         ### but that'll only bring a performance enhancement to the
-         ### technical correctness of not falling back to this URL
-         ### construction.  Motivation is low on this, though, because
-         ### HTTP v2 won't hit this block.  */
-
-      /* STILL no base URL?  Well, all else has failed, but we can
-       * manually reconstruct the base URL.  This avoids us having to
-       * grab two full-text for URL<->URL diffs.  Instead, we can just
-       * grab one full-text and a diff from the server against that
-       * other file.
-       */
-      if (! info->delta_base)
-        {
-          const char *c;
-          apr_size_t comp_count;
-          svn_stringbuf_t *path;
-
-          c = svn_ra_serf__get_ver_prop(info->props, info->base_name,
-                                        info->base_rev, "DAV:", "checked-in");
-
-          path = svn_stringbuf_create(c, info->pool);
-
-          comp_count = svn_path_component_count(info->name);
-
-          svn_path_remove_components(path, comp_count);
-
-          /* Find out the difference of the destination compared to
-           * the repos root url. Cut off this difference from path,
-           * which will give us our version resource root path.
-           *
-           * Example:
-           * path:
-           *  /repositories/log_tests-17/!svn/ver/4/branches/a
-           * repos_root:
-           *  http://localhost/repositories/log_tests-17
-           * destination:
-           *  http://localhost/repositories/log_tests-17/branches/a
-           *
-           * So, find 'branches/a' as the difference. Cutting it off
-           * path, gives us:
-           *  /repositories/log_tests-17/!svn/ver/4
-           */
-          if (ctx->destination &&
-              strcmp(ctx->destination, ctx->sess->repos_root_str) != 0)
-            {
-              apr_size_t root_count, src_count;
-
-              src_count = svn_path_component_count(ctx->destination);
-              root_count = svn_path_component_count(ctx->sess->repos_root_str);
-
-              svn_path_remove_components(path, src_count - root_count);
-            }
-
-          /* At this point, we should just have the version number
-           * remaining.  We know our target revision, so we'll replace it
-           * and recreate what we just chopped off.
-           */
-          svn_path_remove_component(path);
-
-          svn_path_add_component(path, apr_ltoa(info->pool, info->base_rev));
-
-          /* Similar as above, we now have to add the relative path between
-           * source and root path.
-           *
-           * Example:
-           * path:
-           *  /repositories/log_tests-17/!svn/ver/2
-           * repos_root path:
-           *  /repositories/log_tests-17
-           * source:
-           *  /repositories/log_tests-17/trunk
-           *
-           * So, find 'trunk' as the difference. Addding it to path, gives us:
-           *  /repositories/log_tests-17/!svn/ver/2/trunk
-           */
-          if (strcmp(ctx->source, ctx->sess->repos_root.path) != 0)
-            {
-              apr_size_t root_len;
-
-              root_len = strlen(ctx->sess->repos_root.path) + 1;
-
-              svn_path_add_component(path, &ctx->source[root_len]);
-            }
-
-          /* Re-add the filename. */
-          svn_path_add_component(path, info->name);
-
-          info->delta_base = svn_string_create_from_buf(path, info->pool);
-        }
-#endif
 
       SVN_ERR(fetch_file(ctx, info));
       svn_ra_serf__xml_pop_state(parser);
@@ -2315,7 +2225,7 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
       sess->conns[cur] = apr_palloc(sess->pool, sizeof(*sess->conns[cur]));
       sess->conns[cur]->bkt_alloc = serf_bucket_allocator_create(sess->pool,
                                                                  NULL, NULL);
-      sess->conns[cur]->hostinfo = sess->conns[0]->hostinfo;
+      sess->conns[cur]->hostname  = sess->conns[0]->hostname;
       sess->conns[cur]->using_ssl = sess->conns[0]->using_ssl;
       sess->conns[cur]->using_compression = sess->conns[0]->using_compression;
       sess->conns[cur]->useragent = sess->conns[0]->useragent;
@@ -2425,6 +2335,7 @@ finish_report(void *report_baton,
   parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
 
   parser_ctx->pool = pool;
+  parser_ctx->response_type = "update-report";
   parser_ctx->user_data = report;
   parser_ctx->start = start_report;
   parser_ctx->end = end_report;
@@ -2461,6 +2372,9 @@ finish_report(void *report_baton,
 
       /* Note: this throws out the old ITERPOOL_INNER.  */
       svn_pool_clear(iterpool);
+
+      if (sess->cancel_func)
+        SVN_ERR(sess->cancel_func(sess->cancel_baton));
 
       /* We need to be careful between the outer and inner ITERPOOLs,
          and what items are allocated within.  */

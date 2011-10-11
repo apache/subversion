@@ -105,9 +105,18 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
    If IGNORE_ENOENT, then set *external_kind to svn_node_none, when
    LOCAL_ABSPATH is not an external instead of returning an error.
 
-   ### While we are not at the SVN_WC__HAS_EXTERNALS_STORE format, roots
-   ### of working copies will be identified as directory externals. The
-   ### recorded information will be NULL for directory externals.
+   Here is an overview of how DEFINING_REVISION and
+   DEFINING_OPERATIONAL_REVISION would be set for which kinds of externals
+   definitions:
+
+     svn:externals line   DEFINING_REV.       DEFINING_OP._REV.
+
+         ^/foo@2 bar       2                   2
+     -r1 ^/foo@2 bar       1                   2
+     -r1 ^/foo   bar       1                  SVN_INVALID_REVNUM
+         ^/foo   bar      SVN_INVALID_REVNUM  SVN_INVALID_REVNUM
+         ^/foo@HEAD bar   SVN_INVALID_REVNUM  SVN_INVALID_REVNUM
+     -rHEAD ^/foo bar     -- not a valid externals definition --
 */
 svn_error_t *
 svn_wc__read_external_info(svn_node_kind_t *external_kind,
@@ -310,7 +319,7 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
  * absolute paths.
  *
  * Include children that are scheduled for deletion.  Iff @a show_hidden
- * is true, also include children that are 'excluded' or 'absent' or
+ * is true, also include children that are 'excluded' or 'server-excluded' or
  * 'not-present'.
  *
  * Return every path that refers to a child of the working node at
@@ -330,10 +339,10 @@ svn_wc__node_get_children_of_working_node(const apr_array_header_t **children,
                                           apr_pool_t *scratch_pool);
 
 /**
- * Like svn_wc__node_get_children2(), except also include any path that was
- * a child of a deleted directory that existed at @a dir_abspath, even if
- * that directory is now scheduled to be replaced by the working node at
- * @a dir_abspath.
+ * Like svn_wc__node_get_children_of_working_node(), except also include any
+ * path that was a child of a deleted directory that existed at
+ * @a dir_abspath, even if that directory is now scheduled to be replaced by
+ * the working node at @a dir_abspath.
  */
 svn_error_t *
 svn_wc__node_get_children(const apr_array_header_t **children,
@@ -464,6 +473,22 @@ svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
                                svn_wc_context_t *wc_ctx,
                                const char *local_abspath,
                                apr_pool_t *scratch_pool);
+
+/**
+ * Set @a *deleted_ancestor_abspath to the root of the delete operation
+ * that deleted @a local_abspath. If @a local_abspath itself was deleted
+ * and has no deleted ancestor, @a *deleted_ancestor_abspath will equal
+ * @a local_abspath. If @a local_abspath was not deleted,
+ * set @a *deleted_ancestor_abspath to @c NULL.
+ * @a *deleted_ancestor_abspath is allocated in @a result_pool.
+ * Use @a scratch_pool for all temporary allocations.
+ */ 
+svn_error_t *
+svn_wc__node_get_deleted_ancestor(const char **deleted_ancestor_abspath,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /**
  * Set @a *is_server_excluded to whether @a local_abspath has been
@@ -875,18 +900,20 @@ svn_wc__has_switched_subtrees(svn_boolean_t *is_switched,
                               const char *trail_url,
                               apr_pool_t *scratch_pool);
 
-/* Set @a *absent_subtrees to a hash mapping <tt>const char *</tt> local
- * absolute paths to <tt>const char *</tt> local absolute paths for every
- * path at or under @a local_abspath in @a wc_ctx which are absent (excluded
- * by authz).  If no absent paths are found then @a *absent_subtrees is set
- * to @c NULL.  Allocate the hash and all items therein from @a result_pool.
+/* Set @a *server_excluded_subtrees to a hash mapping <tt>const char *</tt>
+ * local * absolute paths to <tt>const char *</tt> local absolute paths for
+ * every path at or under @a local_abspath in @a wc_ctx which are excluded
+ * by the server (e.g. because of authz).
+ * If no server-excluded paths are found then @a *server_excluded_subtrees
+ * is set to @c NULL.
+ * Allocate the hash and all items therein from @a result_pool.
  */
 svn_error_t *
-svn_wc__get_absent_subtrees(apr_hash_t **absent_subtrees,
-                            svn_wc_context_t *wc_ctx,
-                            const char *local_abspath,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
+svn_wc__get_server_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
+                                     svn_wc_context_t *wc_ctx,
+                                     const char *local_abspath,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
 
 /* Indicate in @a *is_modified whether the working copy has local
  * modifications, using context @a wc_ctx.
@@ -978,7 +1005,7 @@ svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
  * direct parent does not exist or is deleted return _state_obstructed. When
  * a node doesn't exist but should exist return svn_wc_notify_state_missing.
  *
- * A node is also obstructed if it is marked excluded or absent or when
+ * A node is also obstructed if it is marked excluded or server-excluded or when
  * an unversioned file or directory exists. And if NO_WCROOT_CHECK is FALSE,
  * the root of a working copy is also obstructed; this to allow detecting
  * obstructing working copies.
@@ -992,9 +1019,6 @@ svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
  * If DELETED is not NULL, set *DELETED to TRUE if the node is marked as
  * deleted in the working copy.
  *
- * If CONFLICTED is not NULL, set *CONFLICTED to TRUE if the node is somehow
- * conflicted.
- *
  * All output arguments except OBSTRUCTION_STATE can be NULL to ommit the
  * result.
  *
@@ -1005,7 +1029,6 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
                                svn_node_kind_t *kind,
                                svn_boolean_t *added,
                                svn_boolean_t *deleted,
-                               svn_boolean_t *conflicted,
                                svn_wc_context_t *wc_ctx,
                                const char *local_abspath,
                                svn_boolean_t no_wcroot_check,
@@ -1077,17 +1100,118 @@ typedef svn_error_t *(*svn_wc__info_receiver2_t)(void *baton,
 
 /* Walk the children of LOCAL_ABSPATH and push svn_wc__info2_t's through
    RECEIVER/RECEIVER_BATON.  Honor DEPTH while crawling children, and
-   filter the pushed items against CHANGELISTS.  */
+   filter the pushed items against CHANGELISTS.
+
+   If FETCH_EXCLUDED is TRUE, also fetch excluded nodes.
+   If FETCH_ACTUAL_ONLY is TRUE, also fetch actual-only nodes. */
 svn_error_t *
 svn_wc__get_info(svn_wc_context_t *wc_ctx,
                  const char *local_abspath,
                  svn_depth_t depth,
+                 svn_boolean_t fetch_excluded,
+                 svn_boolean_t fetch_actual_only,
+                 const apr_array_header_t *changelists,
                  svn_wc__info_receiver2_t receiver,
                  void *receiver_baton,
-                 const apr_array_header_t *changelists,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool);
+
+/* Internal version of svn_wc_delete4(). It has one additional parameter,
+ * MOVED_TO_ABSPATH. If not NULL, this parameter indicates that the
+ * delete operation is the delete-half of a move. */
+svn_error_t *
+svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
+                        svn_boolean_t keep_local,
+                        svn_boolean_t delete_unversioned_target,
+                        const char *moved_to_abspath,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        apr_pool_t *scratch_pool);
+
+/* If the node at LOCAL_ABSPATH was moved away set *MOVED_TO_ABSPATH to
+ * the absolute path of the copied move-target node, and *COPY_OP_ROOT_ABSPATH
+ * to the absolute path of the root node of the copy operation.
+ *
+ * If the node was not moved, set *MOVED_TO_ABSPATH and *COPY_OP_ROOT_ABSPATH
+ * to NULL.
+ *
+ * Either MOVED_TO_ABSPATH or OP_ROOT_ABSPATH may be NULL to indicate
+ * that the caller is not interested in the result.
+ */
+svn_error_t *
+svn_wc__node_was_moved_away(const char **moved_to_abspath,
+                            const char **copy_op_root_abspath,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+/* If the node at LOCAL_ABSPATH was moved here set *MOVED_FROM_ABSPATH to
+ * the absolute path of the deleted move-source node, and set
+ * *DELETE_OP_ROOT_ABSPATH to the absolute path of the root node of the
+ * delete operation.
+ *
+ * If the node was not moved, set *MOVED_FROM_ABSPATH and
+ * *DELETE_OP_ROOT_ABSPATH to NULL.
+ *
+ * Either MOVED_FROM_ABSPATH or OP_ROOT_ABSPATH may be NULL to indicate
+ * that the caller is not interested in the result.
+ */
+svn_error_t *
+svn_wc__node_was_moved_here(const char **moved_from_abspath,
+                            const char **delete_op_root_abspath,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+/* During an upgrade to wc-ng, supply known details about an existing
+ * external.  The working copy will suck in and store the information supplied
+ * about the existing external at @a local_abspath. */
+svn_error_t *
+svn_wc__upgrade_add_external_info(svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  svn_node_kind_t kind,
+                                  const char *def_local_abspath,
+                                  const char *repos_relpath,
+                                  const char *repos_root_url,
+                                  const char *repos_uuid,
+                                  svn_revnum_t def_peg_revision,
+                                  svn_revnum_t def_revision,
+                                  apr_pool_t *scratch_pool);
+
+/* If the URL for @a item is relative, then using the repository root
+   URL @a repos_root_url and the parent directory URL @parent_dir_url,
+   resolve it into an absolute URL and save it in @a *resolved_url.
+
+   Regardless if the URL is absolute or not, if there are no errors,
+   the URL returned in @a *resolved_url will be canonicalized.
+
+   The following relative URL formats are supported:
+
+     ../    relative to the parent directory of the external
+     ^/     relative to the repository root
+     //     relative to the scheme
+     /      relative to the server's hostname
+
+   The ../ and ^/ relative URLs may use .. to remove path elements up
+   to the server root.
+
+   The external URL should not be canonicalized before calling this function,
+   as otherwise the scheme relative URL '//host/some/path' would have been
+   canonicalized to '/host/some/path' and we would not be able to match on
+   the leading '//'. */
+svn_error_t *
+svn_wc__resolve_relative_external_url(const char **resolved_url,
+                                      const svn_wc_external_item2_t *item,
+                                      const char *repos_root_url,
+                                      const char *parent_dir_url,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

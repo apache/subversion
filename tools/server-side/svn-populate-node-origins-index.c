@@ -122,7 +122,7 @@ build_index(const char *repos_path, apr_pool_t *pool)
   apr_pool_t *subpool;
 
   /* Open the repository. */
-  SVN_ERR(svn_repos_open(&repos, repos_path, pool));
+  SVN_ERR(svn_repos_open2(&repos, repos_path, NULL, pool));
 
   /* Get a filesystem object. */
   fs = svn_repos_fs(repos);

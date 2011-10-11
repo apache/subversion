@@ -39,6 +39,9 @@
 
 #include "ra_serf.h"
 
+
+/* In a debug build, setting this environment variable to "yes" will force
+   the client to speak v1, even if the server is capable of speaking v2. */
 #define SVN_IGNORE_V2_ENV_VAR "SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2"
 
 
@@ -296,22 +299,13 @@ capabilities_headers_iterator_callback(void *baton,
           apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_DEPTH,
                        APR_HASH_KEY_STRING, capability_yes);
         }
-
-       /* For mergeinfo capabilities, the server doesn't know what repository
-          we're referring to, so it can't just say capability_yes. */
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
         {
+          /* The server doesn't know what repository we're referring
+             to, so it can't just say capability_yes. */
           apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                        APR_HASH_KEY_STRING, capability_server_yes);
         }
-      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_MERGEINFO_VALIDATION,
-                                 vals))
-        {
-          apr_hash_set(orc->session->capabilities,
-                       SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO,
-                       APR_HASH_KEY_STRING, capability_server_yes);
-        }
-
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
         {
           apr_hash_set(orc->session->capabilities,
@@ -349,10 +343,6 @@ capabilities_headers_iterator_callback(void *baton,
       else if (svn_cstring_casecmp(key, SVN_DAV_ME_RESOURCE_HEADER) == 0)
         {
 #ifdef SVN_DEBUG
-          /* ### This section is throw in here for development use.  It
-             ### allows devs the chance to force the client to speak v1,
-             ### even if the server is capable of speaking v2.  We should
-             ### probably remove it before 1.7 goes final. */
           char *ignore_v2_env_var = getenv(SVN_IGNORE_V2_ENV_VAR);
 
           if (!(ignore_v2_env_var
@@ -562,14 +552,11 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
                             capability, APR_HASH_KEY_STRING);
 
   /* Some capabilities depend on the repository as well as the server.
-     NOTE: ../libsvn_ra_neon/session.c:svn_ra_neon__has_capability()
-     has a very similar code block.  If you change something here,
-     check there as well. */
+     NOTE: svn_ra_neon__has_capability() has a very similar code block.  If
+     you change something here, check there as well. */
   if (cap_result == capability_server_yes)
     {
-      if ((strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
-          || (strcmp(capability,
-                     SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO) == 0))
+      if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
         {
           /* Handle mergeinfo specially.  Mergeinfo depends on the
              repository as well as the server, but the server routine
@@ -577,20 +564,17 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
              didn't even know which repository we were interested in
              -- it just told us whether the server supports mergeinfo.
              If the answer was 'no', there's no point checking the
-             particular repository; but if it was 'yes, we still must
+             particular repository; but if it was 'yes', we still must
              change it to 'no' iff the repository itself doesn't
              support mergeinfo. */
           svn_mergeinfo_catalog_t ignored;
           svn_error_t *err;
-          svn_boolean_t validate_inherited_mergeinfo = FALSE;
           apr_array_header_t *paths = apr_array_make(pool, 1,
                                                      sizeof(char *));
           APR_ARRAY_PUSH(paths, const char *) = "";
 
           err = svn_ra_serf__get_mergeinfo(ra_session, &ignored, paths, 0,
-                                           FALSE,
-                                           validate_inherited_mergeinfo,
-                                           FALSE, pool);
+                                           FALSE, FALSE, pool);
 
           if (err)
             {
@@ -613,14 +597,9 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
           else
             cap_result = capability_yes;
 
-          if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
-            apr_hash_set(serf_sess->capabilities,
-                         SVN_RA_CAPABILITY_MERGEINFO, APR_HASH_KEY_STRING,
-                         cap_result);
-          else
-            apr_hash_set(serf_sess->capabilities,
-                         SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO,
-                         APR_HASH_KEY_STRING, cap_result);
+          apr_hash_set(serf_sess->capabilities,
+                       SVN_RA_CAPABILITY_MERGEINFO, APR_HASH_KEY_STRING,
+                       cap_result);
         }
       else
         {

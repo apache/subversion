@@ -244,7 +244,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
   svn_stream_t *pristine_stream;
   svn_filesize_t pristine_size;
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   const svn_checksum_t *checksum;
   svn_filesize_t recorded_size;
   apr_time_t recorded_mod_time;
@@ -265,7 +265,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
   /* If we don't have a pristine or the node has a status that allows a
      pristine, just say that the node is modified */
   if (!checksum
-      || (kind != svn_wc__db_kind_file)
+      || (kind != svn_kind_file)
       || ((status != svn_wc__db_status_normal)
           && (status != svn_wc__db_status_added)))
     {
@@ -335,12 +335,22 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
                                    scratch_pool, scratch_pool));
 
   /* Check all bytes, and verify checksum if requested. */
-  SVN_ERR(compare_and_verify(modified_p, db,
+  {
+    svn_error_t *err;
+    err = compare_and_verify(modified_p, db,
                              local_abspath, dirent->filesize,
                              pristine_stream, pristine_size,
                              has_props, props_mod,
                              exact_comparison,
-                             scratch_pool));
+                             scratch_pool);
+
+    /* At this point we already opened the pristine file, so we know that
+       the access denied applies to the working copy path */
+    if (err && APR_STATUS_IS_EACCES(err->apr_err))
+      return svn_error_create(SVN_ERR_WC_PATH_ACCESS_DENIED, err, NULL);
+    else
+      SVN_ERR(err);
+  }
 
   if (!*modified_p)
     {
@@ -384,7 +394,7 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
                               apr_pool_t *scratch_pool)
 {
   svn_node_kind_t kind;
-  svn_wc__db_kind_t node_kind;
+  svn_kind_t node_kind;
   const apr_array_header_t *conflicts;
   int i;
   svn_boolean_t conflicted;

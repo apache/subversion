@@ -169,42 +169,21 @@ copy_pristine_text_if_necessary(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-/* Copy the versioned node SRC_ABSPATH in DB to the path DST_ABSPATH in DB.
-
-   This is a specific variant of copy_versioned_file and copy_versioned_dir
-   specifically handling deleted nodes.
- */
-static svn_error_t *
-copy_deleted_node(svn_wc__db_t *db,
-                  const char *src_abspath,
-                  const char *dst_abspath,
-                  const char *dst_op_root_abspath,
-                  svn_cancel_func_t cancel_func,
-                  void *cancel_baton,
-                  svn_wc_notify_func2_t notify_func,
-                  void *notify_baton,
-                  apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath, dst_op_root_abspath,
-                             NULL, scratch_pool));
-
-  /* Don't recurse on children while all we do is creating not-present
-     children */
-
-  return SVN_NO_ERROR;
-}
 
 /* Copy the versioned file SRC_ABSPATH in DB to the path DST_ABSPATH in DB.
    If METADATA_ONLY is true, copy only the versioned metadata,
    otherwise copy both the versioned metadata and the filesystem node (even
    if it is the wrong kind, and recursively if it is a dir).
 
+   If IS_MOVE is true, record move information in working copy meta
+   data in addition to copying the file.
+
    If the versioned file has a text conflict, and the .mine file exists in
    the filesystem, copy the .mine file to DST_ABSPATH.  Otherwise, copy the
    versioned file itself.
 
    This also works for versioned symlinks that are stored in the db as
-   svn_wc__db_kind_file with svn:special set. */
+   svn_kind_file with svn:special set. */
 static svn_error_t *
 copy_versioned_file(svn_wc__db_t *db,
                     const char *src_abspath,
@@ -214,6 +193,7 @@ copy_versioned_file(svn_wc__db_t *db,
                     const svn_checksum_t *checksum,
                     svn_boolean_t metadata_only,
                     svn_boolean_t conflicted,
+                    svn_boolean_t is_move,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
                     svn_wc_notify_func2_t notify_func,
@@ -332,8 +312,9 @@ copy_versioned_file(svn_wc__db_t *db,
 
   /* Copy the (single) node's metadata, and move the new filesystem node
      into place. */
-  SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath, dst_op_root_abspath,
-                             work_items, scratch_pool));
+  SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath,
+                             dst_op_root_abspath, is_move, work_items,
+                             scratch_pool));
   SVN_ERR(svn_wc__wq_run(db, dir_abspath,
                          cancel_func, cancel_baton, scratch_pool));
 
@@ -351,7 +332,9 @@ copy_versioned_file(svn_wc__db_t *db,
 /* Copy the versioned dir SRC_ABSPATH in DB to the path DST_ABSPATH in DB,
    recursively.  If METADATA_ONLY is true, copy only the versioned metadata,
    otherwise copy both the versioned metadata and the filesystem nodes (even
-   if they are the wrong kind, and including unversioned children). */
+   if they are the wrong kind, and including unversioned children).
+   If IS_MOVE is true, record move information in working copy meta
+   data in addition to copying the directory. */
 static svn_error_t *
 copy_versioned_dir(svn_wc__db_t *db,
                    const char *src_abspath,
@@ -359,6 +342,7 @@ copy_versioned_dir(svn_wc__db_t *db,
                    const char *dst_op_root_abspath,
                    const char *tmpdir_abspath,
                    svn_boolean_t metadata_only,
+                   svn_boolean_t is_move,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
                    svn_wc_notify_func2_t notify_func,
@@ -394,8 +378,9 @@ copy_versioned_dir(svn_wc__db_t *db,
 
   /* Copy the (single) node's metadata, and move the new filesystem node
      into place. */
-  SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath, dst_op_root_abspath,
-                             work_items, scratch_pool));
+  SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath,
+                             dst_op_root_abspath, is_move, work_items,
+                             scratch_pool));
   SVN_ERR(svn_wc__wq_run(db, dir_abspath,
                          cancel_func, cancel_baton, scratch_pool));
 
@@ -425,7 +410,7 @@ copy_versioned_dir(svn_wc__db_t *db,
     {
       const char *child_name, *child_src_abspath, *child_dst_abspath;
       svn_wc__db_status_t child_status;
-      svn_wc__db_kind_t child_kind;
+      svn_kind_t child_kind;
       svn_boolean_t op_root;
       svn_boolean_t conflicted;
       const svn_checksum_t *checksum;
@@ -456,19 +441,19 @@ copy_versioned_dir(svn_wc__db_t *db,
           || child_status == svn_wc__db_status_added)
         {
           /* We have more work to do than just changing the DB */
-          if (child_kind == svn_wc__db_kind_file)
+          if (child_kind == svn_kind_file)
             {
               svn_boolean_t skip = FALSE;
 
               /* We should skip this node if this child is a file external
-                 (issue #3589) */
+                 (issues #3589, #4000) */
               if (child_status == svn_wc__db_status_normal)
                 {
                   SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL,
                                                    NULL, NULL, NULL, NULL,
                                                    NULL, NULL, NULL, NULL,
                                                    NULL, NULL, &skip,
-                                                   db, src_abspath,
+                                                   db, child_src_abspath,
                                                    scratch_pool,
                                                    scratch_pool));
                 }
@@ -480,15 +465,16 @@ copy_versioned_dir(svn_wc__db_t *db,
                                             dst_op_root_abspath,
                                             tmpdir_abspath, checksum,
                                             metadata_only, conflicted,
+                                            is_move,
                                             cancel_func, cancel_baton,
                                             NULL, NULL,
                                             iterpool));
             }
-          else if (child_kind == svn_wc__db_kind_dir)
+          else if (child_kind == svn_kind_dir)
             SVN_ERR(copy_versioned_dir(db,
                                        child_src_abspath, child_dst_abspath,
                                        dst_op_root_abspath, tmpdir_abspath,
-                                       metadata_only,
+                                       metadata_only, is_move,
                                        cancel_func, cancel_baton, NULL, NULL,
                                        iterpool));
           else
@@ -503,11 +489,12 @@ copy_versioned_dir(svn_wc__db_t *db,
         {
           /* This will be copied as some kind of deletion. Don't touch
              any actual files */
-          SVN_ERR(copy_deleted_node(db,
-                                    child_src_abspath, child_dst_abspath,
-                                    dst_op_root_abspath,
-                                    cancel_func, cancel_baton, NULL, NULL,
-                                    iterpool));
+          SVN_ERR(svn_wc__db_op_copy(db, child_src_abspath,
+                                     child_dst_abspath, dst_op_root_abspath,
+                                     is_move, NULL, iterpool));
+
+          /* Don't recurse on children while all we do is creating not-present
+             children */
         }
       else
         {
@@ -586,13 +573,15 @@ copy_versioned_dir(svn_wc__db_t *db,
 }
 
 
-/* Public Interface */
-
-svn_error_t *
-svn_wc_copy3(svn_wc_context_t *wc_ctx,
+/* The guts of svn_wc_copy3() and svn_wc_move().
+ * The additional parameter IS_MOVE indicates whether this is a copy or
+ * a move operation. */
+static svn_error_t *
+copy_or_move(svn_wc_context_t *wc_ctx,
              const char *src_abspath,
              const char *dst_abspath,
              svn_boolean_t metadata_only,
+             svn_boolean_t is_move,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
              svn_wc_notify_func2_t notify_func,
@@ -600,7 +589,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
              apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
-  svn_wc__db_kind_t src_db_kind;
+  svn_kind_t src_db_kind;
   const char *dstdir_abspath;
   svn_boolean_t conflicted;
   const svn_checksum_t *checksum;
@@ -638,6 +627,25 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
     else
       SVN_ERR(err);
 
+    switch (src_status)
+      {
+        case svn_wc__db_status_deleted:
+          return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                                   _("Deleted node '%s' can't be copied."),
+                                   svn_dirent_local_style(src_abspath,
+                                                          scratch_pool));
+
+        case svn_wc__db_status_excluded:
+        case svn_wc__db_status_server_excluded:
+        case svn_wc__db_status_not_present:
+          return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                   _("The node '%s' was not found."),
+                                   svn_dirent_local_style(src_abspath,
+                                                          scratch_pool));
+        default:
+          break;
+      }
+
     SVN_ERR(svn_wc__db_read_info(&dstdir_status, NULL, NULL, NULL,
                                  &dst_repos_root_url, &dst_repos_uuid, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -653,7 +661,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
                                            &src_repos_root_url,
                                            &src_repos_uuid, NULL, NULL, NULL,
-                                           NULL,
+                                           NULL, NULL, NULL,
                                            db, src_abspath,
                                            scratch_pool, scratch_pool));
         else
@@ -670,7 +678,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
                                            &dst_repos_root_url,
                                            &dst_repos_uuid, NULL, NULL, NULL,
-                                           NULL,
+                                           NULL, NULL, NULL,
                                            db, dstdir_abspath,
                                            scratch_pool, scratch_pool));
         else
@@ -762,12 +770,12 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
                                          dst_abspath,
                                          scratch_pool, scratch_pool));
 
-  if (src_db_kind == svn_wc__db_kind_file
-      || src_db_kind == svn_wc__db_kind_symlink)
+  if (src_db_kind == svn_kind_file
+      || src_db_kind == svn_kind_symlink)
     {
       SVN_ERR(copy_versioned_file(db, src_abspath, dst_abspath, dst_abspath,
                                   tmpdir_abspath, checksum,
-                                  metadata_only, conflicted,
+                                  metadata_only, conflicted, is_move,
                                   cancel_func, cancel_baton,
                                   notify_func, notify_baton,
                                   scratch_pool));
@@ -776,7 +784,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
     {
       SVN_ERR(copy_versioned_dir(db, src_abspath, dst_abspath, dst_abspath,
                                  tmpdir_abspath,
-                                 metadata_only,
+                                 metadata_only, is_move,
                                  cancel_func, cancel_baton,
                                  notify_func, notify_baton,
                                  scratch_pool));
@@ -784,6 +792,28 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
 
   return SVN_NO_ERROR;
 }
+
+
+/* Public Interface */
+
+svn_error_t *
+svn_wc_copy3(svn_wc_context_t *wc_ctx,
+             const char *src_abspath,
+             const char *dst_abspath,
+             svn_boolean_t metadata_only,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             svn_wc_notify_func2_t notify_func,
+             void *notify_baton,
+             apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(copy_or_move(wc_ctx, src_abspath, dst_abspath,
+                                      metadata_only, FALSE /* is_move */,
+                                      cancel_func, cancel_baton,
+                                      notify_func, notify_baton,
+                                      scratch_pool));
+}
+
 
 /* Remove the conflict markers of NODE_ABSPATH, that were left over after
    copying NODE_ABSPATH from SRC_ABSPATH.
@@ -918,7 +948,7 @@ remove_all_conflict_markers(svn_wc__db_t *db,
                             svn_dirent_join(wc_dir_abspath, name, iterpool),
                             iterpool));
         }
-      if (info->kind == svn_wc__db_kind_dir)
+      if (info->kind == svn_kind_dir)
         {
           svn_pool_clear(iterpool);
           SVN_ERR(remove_all_conflict_markers(
@@ -945,8 +975,9 @@ svn_wc_move(svn_wc_context_t *wc_ctx,
             apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
-  SVN_ERR(svn_wc_copy3(wc_ctx, src_abspath, dst_abspath,
+  SVN_ERR(copy_or_move(wc_ctx, src_abspath, dst_abspath,
                        TRUE /* metadata_only */,
+                       TRUE /* is_move */,
                        cancel_func, cancel_baton,
                        notify_func, notify_baton,
                        scratch_pool));
@@ -959,7 +990,7 @@ svn_wc_move(svn_wc_context_t *wc_ctx,
     SVN_ERR(svn_io_file_rename(src_abspath, dst_abspath, scratch_pool));
 
   {
-    svn_wc__db_kind_t kind;
+    svn_kind_t kind;
     svn_boolean_t conflicted;
 
     SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
@@ -970,7 +1001,7 @@ svn_wc_move(svn_wc_context_t *wc_ctx,
                                  db, src_abspath,
                                  scratch_pool, scratch_pool));
 
-    if (kind == svn_wc__db_kind_dir)
+    if (kind == svn_kind_dir)
       SVN_ERR(remove_all_conflict_markers(db, src_abspath, dst_abspath,
                                           scratch_pool));
 
@@ -979,10 +1010,11 @@ svn_wc_move(svn_wc_context_t *wc_ctx,
                                            scratch_pool));
   }
 
-  SVN_ERR(svn_wc_delete4(wc_ctx, src_abspath, TRUE, FALSE,
-                         cancel_func, cancel_baton,
-                         notify_func, notify_baton,
-                         scratch_pool));
+  SVN_ERR(svn_wc__delete_internal(wc_ctx, src_abspath, TRUE, FALSE,
+                                  dst_abspath,
+                                  cancel_func, cancel_baton,
+                                  notify_func, notify_baton,
+                                  scratch_pool));
 
   return SVN_NO_ERROR;
 }

@@ -871,7 +871,8 @@ CreateJ::CommitInfo(const svn_commit_info_t *commit_info)
   if (midCT == 0)
     {
       midCT = env->GetMethodID(clazz, "<init>",
-                               "(JLjava/lang/String;Ljava/lang/String;)V");
+                               "(JLjava/lang/String;Ljava/lang/String;"
+                               "Ljava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
         POP_AND_RETURN_NULL;
     }
@@ -886,8 +887,18 @@ CreateJ::CommitInfo(const svn_commit_info_t *commit_info)
 
   jlong jRevision = commit_info->revision;
 
+  jstring jPostCommitError = JNIUtil::makeJString(
+                                            commit_info->post_commit_err);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jstring jReposRoot = JNIUtil::makeJString(commit_info->repos_root);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
   // call the Java method
-  jobject jInfo = env->NewObject(clazz, midCT, jRevision, jDate, jAuthor);
+  jobject jInfo = env->NewObject(clazz, midCT, jRevision, jDate, jAuthor,
+                                 jPostCommitError, jReposRoot);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 

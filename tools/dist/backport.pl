@@ -28,6 +28,7 @@ my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
 my $VIM = 'vim';
 my $STATUS = './STATUS';
 my $BRANCHES = '^/subversion/branches';
+my $WET_RUN = qw[false true][1]; # don't commit
 
 sub usage {
   my $basename = $0;
@@ -61,27 +62,33 @@ sub merge {
   my %entry = @_;
 
   my ($logmsg_fh, $logmsg_filename) = tempfile();
-  my $mergeargs;
+  my ($mergeargs, $pattern);
 
   my $backupfile = "backport_pl.$$.tmp";
 
   if ($entry{branch}) {
+    # NOTE: This doesn't escape the branch into the pattern.
+    $pattern = printf '^ [*] %s branch\|Branch:\n *%s', $entry{branch}, $entry{branch};
     $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
-    print $logmsg_fh "Reintergrate the $BRANCHES/$entry{branch} branch:";
+    print $logmsg_fh "Reintergrate the $entry{header}:";
     print $logmsg_fh "";
-  } else {
+  } elsif (@{$entry{revisions}}) {
+    $pattern = 'r' . $entry{revisions}->[0];
     $mergeargs = join " ", (map { "-c$_" } @{$entry{revisions}}), '^/subversion/trunk';
     if (@{$entry{revisions}} > 1) {
-      print $logmsg_fh "Merge the r$entry{revisions}->[0] group from trunk:";
+      print $logmsg_fh "Merge the $entry{header} from trunk:";
       print $logmsg_fh "";
     } else {
       print $logmsg_fh "Merge r$entry{revisions}->[0] from trunk:";
       print $logmsg_fh "";
     }
+  } else {
+    die "Don't know how to call $entry{header}";
   }
   print $logmsg_fh $_ for @{$entry{entry}};
   close $logmsg_fh or die "Can't close $logmsg_filename: $!";
 
+  $pattern = '\V'.$pattern;
   my $script = <<"EOF";
 #!/bin/sh
 set -e
@@ -89,14 +96,24 @@ $SVN diff > $backupfile
 $SVN revert -R .
 $SVN up
 $SVN merge $mergeargs
-$VIM -e -s -n -N -i NONE -u NONE -c '/^ [*] r$entry{revisions}->[0]/normal! dap' -c wq $STATUS
-$SVN commit -F $logmsg_filename
+$VIM -e -s -n -N -i NONE -u NONE -c '/^ [*] $pattern/normal! dap' -c wq $STATUS
+if $WET_RUN; then
+  $SVN commit -F $logmsg_filename
+else
+  echo "Committing:"
+  $SVN status -q
+  cat $logmsg_filename
+fi
 EOF
 
   $script .= <<"EOF" if $entry{branch};
 reinteg_rev=\`$SVN info $STATUS | sed -ne 's/Last Changed Rev: //p'\`
-$SVN rm $BRANCHES/$entry{branch}\
-        -m "Remove the '$entry{branch}' branch, reintegrated in r\$reinteg_rev."
+if $WET_RUN; then
+  $SVN rm $BRANCHES/$entry{branch}\
+          -m "Remove the '$entry{branch}' branch, reintegrated in r\$reinteg_rev."
+else
+  echo "Removing reintegrated '$entry{branch}' branch"
+fi
 EOF
 
   open SHELL, '|-', qw#/bin/sh -x# or die $!;
@@ -105,6 +122,14 @@ EOF
 
   unlink $backupfile if -z $backupfile;
   unlink $logmsg_filename unless $? or $!;
+}
+
+sub sanitize_branch {
+  local $_ = shift;
+  s#.*/##;
+  s/^\s*//;
+  s/\s*$//;
+  return $_;
 }
 
 # TODO: may need to parse other headers too?
@@ -118,6 +143,7 @@ sub parse_entry {
   s/^   // for @_;
 
   # revisions
+  $branch = sanitize_branch $1 if $_[0] =~ /^(\S*) branch$/;
   while ($_[0] =~ /^r/) {
     while ($_[0] =~ s/^r(\d+)(?:,\s*)?//) {
       push @revisions, $1;
@@ -126,25 +152,29 @@ sub parse_entry {
   }
 
   # summary
-  push @logsummary, shift until $_[0] =~ /^\w+:/;
+  push @logsummary, shift until $_[0] =~ /^\s*\w+:/ or not defined $_[0];
 
   # votes
-  unshift @votes, pop until $_[-1] =~ /^Votes:/;
+  unshift @votes, pop until $_[-1] =~ /^\s*Votes:/ or not defined $_[-1];
   pop;
 
   # branch
   while (@_) {
-    shift and next unless $_[0] =~ s/^Branch:\s*//;
-    $branch = (shift || shift || die "Branch header found without value");
-    $branch =~ s#.*/##;
-    $branch =~ s/^\s*//;
-    $branch =~ s/\s*$//;
+    shift and next unless $_[0] =~ s/^\s*Branch:\s*//;
+    $branch = sanitize_branch (shift || shift || die "Branch header found without value");
   }
+
+  # Compute a header.
+  my $header;
+  $header = "r$revisions[0] group" if @revisions;
+  $header = "$branch branch" if $branch;
+  warn "No header for [@lines]" unless $header;
 
   return (
     revisions => [@revisions],
     logsummary => [@logsummary],
     branch => $branch,
+    header => $header,
     votes => [@votes],
     entry => [@lines],
   );
@@ -154,7 +184,7 @@ sub handle_entry {
   my %entry = parse_entry @_;
 
   print "";
-  print "\n>>> The r$entry{revisions}->[0] group:";
+  print "\n>>> The $entry{header}:";
   print join ", ", map { "r$_" } @{$entry{revisions}};
   print "$BRANCHES/$entry{branch}" if $entry{branch};
   print "";

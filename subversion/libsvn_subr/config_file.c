@@ -954,6 +954,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### Valid password stores:"                                         NL
         "###   gnome-keyring        (Unix-like systems)"                     NL
         "###   kwallet              (Unix-like systems)"                     NL
+        "###   gpg-agent            (Unix-like systems)"                     NL
         "###   keychain             (Mac OS X)"                              NL
         "###   windows-cryptoapi    (Windows)"                               NL
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
@@ -961,7 +962,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 #elif defined(WIN32) && !defined(__MINGW32__)
         "# password-stores = windows-cryptoapi"                              NL
 #else
-        "# password-stores = gnome-keyring,kwallet"                          NL
+        "# password-stores = gpg-agent,gnome-keyring,kwallet"                NL
 #endif
         "### To disable all password stores, use an empty list:"             NL
         "# password-stores ="                                                NL
@@ -1070,6 +1071,11 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### Set interactive-conflicts to 'no' to disable interactive"       NL
         "### conflict resolution prompting.  It defaults to 'yes'."          NL
         "# interactive-conflicts = no"                                       NL
+        "### Set memory-cache-size to define the size of the memory cache"   NL
+        "### used by the client when accessing a FSFS repository via"        NL
+        "### ra_local (the file:// scheme). The value represents the number" NL
+        "### of MB used by the cache."                                       NL
+        "# memory-cache-size = 16"                                           NL
         ""                                                                   NL
         "### Section for configuring automatic properties."                  NL
         "[auto-props]"                                                       NL

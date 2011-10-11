@@ -300,10 +300,10 @@ typedef struct svn_repos_notify_t
       #svn_repos_notify_pack_shard_end_revprop, the shard processed. */
   apr_int64_t shard;
 
-  /** For #svn_repos_notify_load_commited_rev, the revision committed. */
+  /** For #svn_repos_notify_load_node_done, the revision committed. */
   svn_revnum_t new_revision;
 
-  /** For #svn_repos_notify_load_commited_rev, the source revision, if
+  /** For #svn_repos_notify_load_node_done, the source revision, if
       different from @a new_revision, otherwise #SVN_INVALID_REVNUM.
       For #svn_repos_notify_load_txn_start, the source revision. */
   svn_revnum_t old_revision;
@@ -1625,11 +1625,12 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a paths will also be returned, unless these
  * revisions are already part of @a start to @a end in @a repos's
- * filesystem, as limted by @a paths. In the latter case those revisions
+ * filesystem, as limited by @a paths. In the latter case those revisions
  * are skipped and @a receiver is not invoked.
  *
- * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
- * revprops named in the array (i.e. retrieve none if the array is empty).
+ * If @a revprops is NULL, retrieve all revision properties; else, retrieve
+ * only the revision properties named by the (const char *) array elements
+ * (i.e. retrieve none if the array is empty).
  *
  * If any invocation of @a receiver returns error, return that error
  * immediately and without wrapping it.
@@ -1746,11 +1747,6 @@ svn_repos_get_logs(svn_repos_t *repos,
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is fetched.
  *
- * If the mergeinfo for any path is inherited and
- * @a validate_inherited_mergeinfo is TRUE, then the mergeinfo for
- * that path in @a *catalog will only contain merge source
- * path-revisions that actually exist in repository.
- *
  * If @a revision is #SVN_INVALID_REVNUM, it defaults to youngest.
  *
  * If @a include_descendants is TRUE, then additionally return the
@@ -1767,27 +1763,8 @@ svn_repos_get_logs(svn_repos_t *repos,
  *
  * Use @a pool for all allocations.
  *
- * @since New in 1.7.
+ * @since New in 1.5.
  */
-svn_error_t *
-svn_repos_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
-                            svn_repos_t *repos,
-                            const apr_array_header_t *paths,
-                            svn_revnum_t revision,
-                            svn_mergeinfo_inheritance_t inherit,
-                            svn_boolean_t validate_inherited_mergeinfo,
-                            svn_boolean_t include_descendants,
-                            svn_repos_authz_func_t authz_read_func,
-                            void *authz_read_baton,
-                            apr_pool_t *pool);
-
-/**
- * Similar to svn_repos_fs_get_mergeinfo2(), but with
- * @a validate_inherited_mergeinfo always passed as FALSE.
- *
- * @deprecated Provided for backward compatibility with the 1.6 API.
- */
-SVN_DEPRECATED
 svn_error_t *
 svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                            svn_repos_t *repos,
@@ -2474,7 +2451,7 @@ svn_repos_verify_fs(svn_repos_t *repos,
  * revision up through @a end_rev.  Use @a pool for all allocation.  If
  * non-@c NULL, send feedback to @a feedback_stream.  If @a dumpstream is
  * @c NULL, this is effectively a primitive verify.  It is not complete,
- * however; see svn_fs_verify instead.
+ * however; svn_repos_verify_fs2() and svn_fs_verify().
  *
  * If @a start_rev is #SVN_INVALID_REVNUM, then start dumping at revision
  * 0.  If @a end_rev is #SVN_INVALID_REVNUM, then dump through the @c HEAD

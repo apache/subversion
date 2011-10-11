@@ -28,10 +28,10 @@ APR_UTIL=apr-util-1.3.12
 NEON=neon-0.29.6
 SERF=serf-0.7.2
 ZLIB=zlib-1.2.5
-SQLITE_VERSION=3.7.6.3
+SQLITE_VERSION=3.7.8
 SQLITE=sqlite-amalgamation-$(printf %u%02u%02u%02u $(echo $SQLITE_VERSION | sed -e "s/\./ /g"))
 
-HTTPD=httpd-2.2.19
+HTTPD=httpd-2.2.21
 APR_ICONV=apr-iconv-1.2.1
 
 BASEDIR=`pwd`

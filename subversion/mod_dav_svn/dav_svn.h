@@ -283,11 +283,6 @@ struct dav_resource_private {
 
   /* Cache any revprop change error */
   svn_error_t *revprop_error;
-
-  /* Scratch pool for temporary allocations. This pool created on demand or
-     cleared if already created in mod_dav callbacks. Currently used only by
-     insert_liveprop() callback. */
-  apr_pool_t *scratch_pool;
 };
 
 
@@ -813,7 +808,8 @@ enum dav_svn__build_what {
   DAV_SVN__BUILD_URI_BC,         /* a Baseline Collection */
   DAV_SVN__BUILD_URI_PUBLIC,     /* the "public" VCR */
   DAV_SVN__BUILD_URI_VERSION,    /* a Version Resource */
-  DAV_SVN__BUILD_URI_VCC         /* a Version Controlled Configuration */
+  DAV_SVN__BUILD_URI_VCC,        /* a Version Controlled Configuration */
+  DAV_SVN__BUILD_URI_REVROOT     /* HTTPv2: Revision Root resource */
 };
 
 const char *

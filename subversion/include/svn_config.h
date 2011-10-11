@@ -112,6 +112,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_MIMETYPES_FILE            "mime-types-file"
 #define SVN_CONFIG_OPTION_PRESERVED_CF_EXTS         "preserved-conflict-file-exts"
 #define SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS     "interactive-conflicts"
+#define SVN_CONFIG_OPTION_MEMORY_CACHE_SIZE         "memory-cache-size"
 #define SVN_CONFIG_SECTION_TUNNELS              "tunnels"
 #define SVN_CONFIG_SECTION_AUTO_PROPS           "auto-props"
 /** @} */
@@ -146,7 +147,7 @@ typedef struct svn_config_t svn_config_t;
  * but we don't want the # character to end up in the variable.
  */
 #define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1 \
-  "*.o *.lo *.la *.al .libs *.so *.so.[0-9]* *.a *.pyc *.pyo"
+  "*.o *.lo *.la *.al .libs *.so *.so.[0-9]* *.a *.pyc *.pyo __pycache__"
 #define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_2 \
   "*.rej *~ #*# .#* .*.swp .DS_Store"
 

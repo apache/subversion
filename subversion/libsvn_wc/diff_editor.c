@@ -481,12 +481,7 @@ get_empty_file(struct edit_baton *b,
 static const char *
 get_prop_mimetype(apr_hash_t *props)
 {
-  const svn_string_t *mimetype_val;
-
-  mimetype_val = apr_hash_get(props,
-                              SVN_PROP_MIME_TYPE,
-                              strlen(SVN_PROP_MIME_TYPE));
-  return (mimetype_val) ? mimetype_val->data : NULL;
+  return svn_prop_get_value(props, SVN_PROP_MIME_TYPE);
 }
 
 
@@ -574,7 +569,7 @@ file_diff(struct edit_baton *eb,
   if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL,
                                      &original_repos_relpath, NULL, NULL,
-                                     NULL, db, local_abspath,
+                                     NULL, NULL, NULL, db, local_abspath,
                                      scratch_pool, scratch_pool));
 
   /* A wc-wc diff of replaced files actually shows a diff against the
@@ -844,7 +839,7 @@ walk_local_nodes_diff(struct edit_baton *eb,
       const char *name = APR_ARRAY_IDX(children, i, const char*);
       const char *child_abspath, *child_path;
       svn_wc__db_status_t status;
-      svn_wc__db_kind_t kind;
+      svn_kind_t kind;
 
       svn_pool_clear(iterpool);
 
@@ -880,12 +875,12 @@ walk_local_nodes_diff(struct edit_baton *eb,
 
       switch (kind)
         {
-        case svn_wc__db_kind_file:
-        case svn_wc__db_kind_symlink:
+        case svn_kind_file:
+        case svn_kind_symlink:
           SVN_ERR(file_diff(eb, child_abspath, child_path, iterpool));
           break;
 
-        case svn_wc__db_kind_dir:
+        case svn_kind_dir:
           /* ### TODO: Don't know how to do replaced dirs. How do I get
              information about what is being replaced? If it was a
              directory then the directory elements are also going to be
@@ -964,8 +959,8 @@ report_wc_file_as_added(struct edit_baton *eb,
 
   if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, db, local_abspath,
-                                     scratch_pool, scratch_pool));
+                                     NULL, NULL, NULL, NULL, NULL, db,
+                                     local_abspath, scratch_pool, scratch_pool));
 
   /* We can't show additions for files that don't exist. */
   SVN_ERR_ASSERT(status != svn_wc__db_status_deleted || eb->use_text_base);
@@ -1085,7 +1080,7 @@ report_wc_directory_as_added(struct edit_baton *eb,
       const char *name = APR_ARRAY_IDX(children, i, const char *);
       const char *child_abspath, *child_path;
       svn_wc__db_status_t status;
-      svn_wc__db_kind_t kind;
+      svn_kind_t kind;
 
       svn_pool_clear(iterpool);
 
@@ -1116,13 +1111,13 @@ report_wc_directory_as_added(struct edit_baton *eb,
 
       switch (kind)
         {
-        case svn_wc__db_kind_file:
-        case svn_wc__db_kind_symlink:
+        case svn_kind_file:
+        case svn_kind_symlink:
           SVN_ERR(report_wc_file_as_added(eb, child_abspath, child_path,
                                           iterpool));
           break;
 
-        case svn_wc__db_kind_dir:
+        case svn_kind_dir:
           if (depth > svn_depth_files || depth == svn_depth_unknown)
             {
               svn_depth_t depth_below_here = depth;
@@ -1149,7 +1144,7 @@ report_wc_directory_as_added(struct edit_baton *eb,
 }
 
 
-/* An editor function. */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 set_target_revision(void *edit_baton,
                     svn_revnum_t target_revision,
@@ -1161,7 +1156,7 @@ set_target_revision(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
-/* An editor function. The root of the comparison hierarchy */
+/* An svn_delta_editor_t function. The root of the comparison hierarchy */
 static svn_error_t *
 open_root(void *edit_baton,
           svn_revnum_t base_revision,
@@ -1178,7 +1173,7 @@ open_root(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
-/* An editor function. */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 delete_entry(const char *path,
              svn_revnum_t base_revision,
@@ -1192,7 +1187,7 @@ delete_entry(const char *path,
   const char *name = svn_dirent_basename(path, NULL);
   const char *local_abspath = svn_dirent_join(pb->local_abspath, name, pool);
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
 
   /* Mark this node as compared in the parent directory's baton. */
   apr_hash_set(pb->compared, apr_pstrdup(pb->pool, path),
@@ -1212,8 +1207,8 @@ delete_entry(const char *path,
   SVN_ERR(get_empty_file(pb->eb, &empty_file));
   switch (kind)
     {
-    case svn_wc__db_kind_file:
-    case svn_wc__db_kind_symlink:
+    case svn_kind_file:
+    case svn_kind_symlink:
       /* A delete is required to change working-copy into requested
          revision, so diff should show this as an add. Thus compare
          the empty file against the current working copy.  If
@@ -1250,7 +1245,7 @@ delete_entry(const char *path,
           SVN_ERR(report_wc_file_as_added(eb, local_abspath, path, pool));
         }
       break;
-    case svn_wc__db_kind_dir:
+    case svn_kind_dir:
       /* A delete is required to change working-copy into requested
          revision, so diff should show this as an add. */
       SVN_ERR(report_wc_directory_as_added(eb,
@@ -1266,7 +1261,7 @@ delete_entry(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An editor function. */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 add_directory(const char *path,
               void *parent_baton,
@@ -1295,7 +1290,7 @@ add_directory(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An editor function. */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 open_directory(const char *path,
                void *parent_baton,
@@ -1326,8 +1321,8 @@ open_directory(const char *path,
 }
 
 
-/* An editor function.  When a directory is closed, all the directory
- * elements that have been added or replaced will already have been
+/* An svn_delta_editor_t function.  When a directory is closed, all the
+ * directory elements that have been added or replaced will already have been
  * diff'd. However there may be other elements in the working copy
  * that have not yet been considered.  */
 static svn_error_t *
@@ -1418,7 +1413,7 @@ close_directory(void *dir_baton,
   return SVN_NO_ERROR;
 }
 
-/* An editor function. */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 add_file(const char *path,
          void *parent_baton,
@@ -1443,7 +1438,7 @@ add_file(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An editor function. */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 open_file(const char *path,
           void *parent_baton,
@@ -1507,7 +1502,7 @@ window_handler(svn_txdelta_window_t *window,
   return SVN_NO_ERROR;
 }
 
-/* An editor function. */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 apply_textdelta(void *file_baton,
                 const char *base_checksum,
@@ -1548,7 +1543,7 @@ apply_textdelta(void *file_baton,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  When the file is closed we have a temporary
+/* An svn_delta_editor_t function.  When the file is closed we have a temporary
  * file containing a pristine version of the repository file. This can
  * be compared against the working copy.
  *
@@ -1664,7 +1659,7 @@ close_file(void *file_baton,
 
   if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, eb->db,
+                                     NULL, NULL, NULL, NULL, NULL, eb->db,
                                      fb->local_abspath,
                                      scratch_pool, scratch_pool));
 
@@ -1800,7 +1795,7 @@ close_file(void *file_baton,
 }
 
 
-/* An editor function. */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 change_file_prop(void *file_baton,
                  const char *name,
@@ -1818,7 +1813,7 @@ change_file_prop(void *file_baton,
 }
 
 
-/* An editor function. */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 change_dir_prop(void *dir_baton,
                 const char *name,
@@ -1836,7 +1831,7 @@ change_dir_prop(void *dir_baton,
 }
 
 
-/* An editor function. */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 close_edit(void *edit_baton,
            apr_pool_t *pool)
@@ -1928,11 +1923,17 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                                                 inner_baton,
                                                 result_pool));
 
-  return svn_delta_get_cancellation_editor(cancel_func,
-                                           cancel_baton,
-                                           inner_editor,
-                                           inner_baton,
-                                           editor,
-                                           edit_baton,
-                                           result_pool);
+  SVN_ERR(svn_delta_get_cancellation_editor(cancel_func,
+                                            cancel_baton,
+                                            inner_editor,
+                                            inner_baton,
+                                            editor,
+                                            edit_baton,
+                                            result_pool));
+
+  SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                   NULL, NULL, NULL, NULL,
+                                   result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
 }

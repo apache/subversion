@@ -202,7 +202,8 @@ run_hook_cmd(svn_string_t **result,
 
   if (err)
     {
-      err = svn_error_createf
+      /* CMD_PROC is not safe to use. Bail. */
+      return svn_error_createf
         (SVN_ERR_REPOS_HOOK_FAILURE, err, _("Failed to start '%s' hook"), cmd);
     }
   else
@@ -616,8 +617,11 @@ svn_repos__hooks_pre_lock(svn_repos_t *repos,
 
       SVN_ERR(run_hook_cmd(&buf, SVN_REPOS__HOOK_PRE_LOCK, hook, args, NULL,
                            pool));
+
       if (token)
+        /* No validation here; the FS will take care of that. */
         *token = buf->data;
+
     }
   else if (token)
     *token = "";

@@ -385,7 +385,7 @@ dump_node(struct edit_baton *eb,
                      pool,
                      _("Referencing data in revision %ld,"
                        " which is older than the oldest"
-                       " dumped revision (%ld).  Loading this dump"
+                       " dumped revision (r%ld).  Loading this dump"
                        " into an empty repository"
                        " will fail."),
                      cmp_rev, eb->oldest_dumped_rev);
@@ -489,7 +489,7 @@ dump_node(struct edit_baton *eb,
                   notify->warning_str = apr_psprintf(
                     pool,
                     _("Mergeinfo referencing revision(s) prior "
-                      "to the oldest dumped revision (%ld). "
+                      "to the oldest dumped revision (r%ld). "
                       "Loading this dump may result in invalid "
                       "mergeinfo."),
                     eb->oldest_dumped_rev);
@@ -896,6 +896,9 @@ get_dump_editor(const svn_delta_editor_t **editor,
   *edit_baton = eb;
   *editor = dump_editor;
 
+  SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                   NULL, NULL, NULL, NULL, pool, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -1282,6 +1285,11 @@ svn_repos_verify_fs2(svn_repos_t *repos,
                                "(youngest revision is %ld)"),
                              end_rev, youngest);
 
+  /* Verify global/auxiliary data before verifying revisions. */
+  if (start_rev == 0)
+    SVN_ERR(svn_fs_verify(svn_fs_path(fs, pool), cancel_func, cancel_baton,
+                          pool));
+
   /* Create a notify object that we can reuse within the loop. */
   if (notify_func)
     notify = svn_repos_notify_create(svn_repos_notify_verify_rev_end,
@@ -1329,10 +1337,11 @@ svn_repos_verify_fs2(svn_repos_t *repos,
   /* We're done. */
   if (notify_func)
     {
-      notify = svn_repos_notify_create(svn_repos_notify_dump_end, iterpool);
+      notify = svn_repos_notify_create(svn_repos_notify_verify_end, iterpool);
       notify_func(notify_baton, notify, iterpool);
     }
 
+  /* Per-backend verification. */
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;

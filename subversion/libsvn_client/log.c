@@ -211,8 +211,7 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
                                   name, &value, pool));
           if (log_entry->revprops == NULL)
             log_entry->revprops = apr_hash_make(pool);
-          apr_hash_set(log_entry->revprops, (const void *)name,
-                       APR_HASH_KEY_STRING, (const void *)value);
+          apr_hash_set(log_entry->revprops, name, APR_HASH_KEY_STRING, value);
         }
       if (log_entry->revprops)
         {
@@ -330,7 +329,7 @@ svn_client_log5(const apr_array_header_t *targets,
       else if (range->start.kind == svn_opt_revision_unspecified)
         {
           /* Default to any specified peg revision.  Otherwise, if the
-           * first target is an URL, then we default to HEAD:0.  Lastly,
+           * first target is a URL, then we default to HEAD:0.  Lastly,
            * the default is BASE:0 since WC@HEAD may not exist. */
           if (peg_rev.kind == svn_opt_revision_unspecified)
             {

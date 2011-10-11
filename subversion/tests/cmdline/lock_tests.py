@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# encoding=utf-8
 #
 #  lock_tests.py:  testing versioned properties
 #
@@ -90,7 +91,7 @@ def lock_file(sbox):
 
   # --- Meanwhile, in our other working copy... ---
   err_re = "(svn\: E195022\: File '.*iota' is locked in another)|" + \
-           "(svn\: E160039: User 'jconstant' does not own lock on path.*iota')"
+           "(svn\: E160039: User '?jconstant'? does not own lock on path.*iota')"
 
   svntest.main.run_svn(None, 'update', wc_b)
   # -- Try to change a file --
@@ -111,7 +112,7 @@ def lock_file(sbox):
   svntest.main.run_svn(None, 'propset', 'sneakyuser', 'Sally', file_path_b)
 
   err_re = "(svn\: E195022\: File '.*iota' is locked in another)|" + \
-           "(svn\: E160039\: User 'jconstant' does not own lock on path)"
+           "(svn\: E160039\: User '?jconstant'? does not own lock on path)"
 
   # attempt (and fail) to commit as user Sally
   svntest.actions.run_and_verify_commit(wc_b, None, None, err_re,
@@ -1334,7 +1335,7 @@ def unlock_wrong_token(sbox):
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      file_path)
 
-  # Steal the lock as the same author, but using an URL to keep the old token
+  # Steal the lock as the same author, but using a URL to keep the old token
   # in the WC.
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                     "--force", file_url)
@@ -1498,9 +1499,9 @@ def lock_path_not_in_head(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
                                      '-m', 'Some deletions', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r1', wc_dir)
-  expected_lock_fail_err_re = "svn: warning:.*" \
+  expected_lock_fail_err_re = "svn: warning: W160042: " \
   "((Path .* doesn't exist in HEAD revision)" \
-  "|(Lock request failed: 405 Method Not Allowed))"
+  "|(L(ock|OCK) request (on '.*' )?failed: 405 Method Not Allowed))"
   # Issue #3524 These lock attemtps were triggering an assert over ra_serf:
   #
   # working_copies\lock_tests-37>svn lock A\D
@@ -1720,6 +1721,27 @@ def block_unlock_if_pre_unlock_hook_fails(sbox):
                                       1, 'unlock', pi_path)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+#----------------------------------------------------------------------
+def lock_invalid_token(sbox):
+  "verify pre-lock hook returning invalid token"
+
+  sbox.build()
+
+  hook_path = os.path.join(sbox.repo_dir, 'hooks', 'pre-lock')
+  svntest.main.create_python_hook_script(hook_path,
+    '# encoding=utf-8\n'
+    'import sys\n'
+    'sys.stdout.write("тест")\n'
+    'sys.exit(0)\n')
+
+  fname = 'iota'
+  file_path = os.path.join(sbox.wc_dir, fname)
+
+  svntest.actions.run_and_verify_svn2(None, None,
+                                      "svn: warning: W160037: " \
+                                      ".*scheme.*'opaquelocktoken'", 0,
+                                      'lock', '-m', '', file_path)
+
 
 ########################################################################
 # Run the tests
@@ -1768,6 +1790,7 @@ test_list = [ None,
               cp_isnt_ro,
               update_locked_deleted,
               block_unlock_if_pre_unlock_hook_fails,
+              lock_invalid_token,
             ]
 
 if __name__ == '__main__':

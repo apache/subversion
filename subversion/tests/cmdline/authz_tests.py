@@ -863,6 +863,7 @@ def authz_svnserve_anon_access_read(sbox):
                                      B_url, B_path)
 
 @XFail()
+@Issue(3796)
 @Skip(svntest.main.is_ra_type_file)
 def authz_switch_to_directory(sbox):
   "switched to directory, no read access on parents"
@@ -879,7 +880,8 @@ def authz_switch_to_directory(sbox):
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
 
   # Switch /A/B/E to /A/B/F.
-  svntest.main.run_svn(None, 'switch', sbox.repo_url + "/A/B/E", G_path)
+  svntest.main.run_svn(None, 'switch', sbox.repo_url + "/A/B/E", G_path,
+                       '--ignore-ancestry')
 
 # Test to reproduce the problem identified by Issue 3242 in which
 # Subversion's authz, as of Subversion 1.5, requires access to the
@@ -1000,6 +1002,7 @@ def multiple_matches(sbox):
                        '-m', 'second copy',
                        root_url, root_url + '/second')
 
+@Issues(4025,4026)
 @Skip(svntest.main.is_ra_type_file)
 def wc_wc_copy_revert(sbox):
   "wc-to-wc-copy with absent nodes and then revert"
@@ -1042,8 +1045,28 @@ def wc_wc_copy_revert(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'st', '--verbose', sbox.ospath('A2'))
 
+
+  # Issue 4025, info SEGV on incomplete working node
+  svntest.actions.run_and_verify_svn(None, None,
+                                     'svn: E145000: .*unrecognized node kind',
+                                     'info', sbox.ospath('A2/B/E'))
+
+  # Issue 4026, copy assertion on incomplete working node
+  svntest.actions.run_and_verify_svn(None, None,
+                             'svn: E145001: cannot handle node kind',
+                             'cp', sbox.ospath('A2/B'), sbox.ospath('B3'))
+
+  expected_output = svntest.verify.ExpectedOutput(
+    ['A  +             -        1 jrandom      ' + sbox.ospath('B3') + '\n',
+     '!                -       ?   ?           ' + sbox.ospath('B3/E') + '\n',
+     ])
+  expected_output.match_all = False
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'st', '--verbose', sbox.ospath('B3'))
+
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'revert', '--recursive', sbox.ospath('A2'))
+                                     'revert', '--recursive',
+                                     sbox.ospath('A2'), sbox.ospath('B3'))
 
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
@@ -1087,7 +1110,7 @@ def authz_recursive_ls(sbox):
 @Issue(3781)
 @Skip(svntest.main.is_ra_type_file)
 def case_sensitive_authz(sbox):
-  "authz issue #3781, check case sensitiveness"
+  "authz issue #3781, check case sensitivity"
 
   sbox.build()
 

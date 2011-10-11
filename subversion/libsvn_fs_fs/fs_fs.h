@@ -38,6 +38,12 @@ svn_error_t *svn_fs_fs__open(svn_fs_t *fs,
 svn_error_t *svn_fs_fs__upgrade(svn_fs_t *fs,
                                 apr_pool_t *pool);
 
+/* Verify the fsfs filesystem FS.  Use POOL for temporary allocations. */
+svn_error_t *svn_fs_fs__verify(svn_fs_t *fs,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *pool);
+
 /* Copy the fsfs filesystem at SRC_PATH into a new copy at DST_PATH.
    Use POOL for temporary allocations. */
 svn_error_t *svn_fs_fs__hotcopy(const char *src_path,
@@ -71,6 +77,7 @@ svn_error_t *svn_fs_fs__put_node_revision(svn_fs_t *fs,
 /* Write the node-revision NODEREV into the stream OUTFILE, compatible with
    filesystem format FORMAT.  Only write mergeinfo-related metadata if
    INCLUDE_MERGEINFO is true.  Temporary allocations are from POOL. */
+/* ### Currently used only by fs_fs.c */
 svn_error_t *
 svn_fs_fs__write_noderev(svn_stream_t *outfile,
                          node_revision_t *noderev,

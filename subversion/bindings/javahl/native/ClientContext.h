@@ -42,11 +42,13 @@ class CommitMessage;
 /**
  * This class contains a Java objects implementing the interface ClientContext
  * and implements the functions read & close of svn_stream_t.
+ *
  */
 class ClientContext
 {
  private:
-  svn_client_ctx_t *persistentCtx;
+  svn_client_ctx_t *m_context;
+  const SVN::Pool *m_pool;
   jobject m_jctx;
 
   std::string m_userName;
@@ -70,12 +72,12 @@ class ClientContext
                                                  apr_pool_t *pool);
 
  public:
-  ClientContext(jobject jsvnclient);
+  ClientContext(jobject jsvnclient, SVN::Pool &pool);
   ~ClientContext();
 
   static svn_error_t *checkCancel(void *cancelBaton);
 
-  svn_client_ctx_t *getContext(CommitMessage *message);
+  svn_client_ctx_t *getContext(CommitMessage *message, SVN::Pool &in_pool);
 
   void username(const char *pi_username);
   void password(const char *pi_password);

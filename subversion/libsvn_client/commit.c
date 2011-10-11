@@ -667,10 +667,12 @@ get_ra_editor(svn_ra_session_t **ra_session,
                                            log_msg, ctx, pool));
 
   /* Fetch RA commit editor. */
-  return svn_ra_get_commit_editor3(*ra_session, editor, edit_baton,
-                                   commit_revprops, commit_callback,
-                                   commit_baton, lock_tokens, keep_locks,
-                                   pool);
+  SVN_ERR(svn_ra_get_commit_editor3(*ra_session, editor, edit_baton,
+                                    commit_revprops, commit_callback,
+                                    commit_baton, lock_tokens, keep_locks,
+                                    pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -696,7 +698,6 @@ svn_client_import4(const char *path,
   apr_hash_t *excludes = apr_hash_make(pool);
   svn_node_kind_t kind;
   const char *local_abspath;
-  const char *base_dir_abspath;
   apr_array_header_t *new_entries = apr_array_make(pool, 4,
                                                    sizeof(const char *));
   const char *temp;
@@ -708,7 +709,6 @@ svn_client_import4(const char *path,
                              _("'%s' is not a local path"), path);
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  base_dir_abspath = local_abspath;
 
   /* Create a new commit item and add it to the array. */
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
@@ -739,8 +739,6 @@ svn_client_import4(const char *path,
     }
 
   SVN_ERR(svn_io_check_path(local_abspath, &kind, pool));
-  if (kind == svn_node_file)
-    base_dir_abspath = svn_dirent_dirname(local_abspath, pool);
 
   /* Figure out all the path components we need to create just to have
      a place to stick our imported tree. */
@@ -770,7 +768,7 @@ svn_client_import4(const char *path,
         }
     }
   while ((err = get_ra_editor(&ra_session,
-                              &editor, &edit_baton, ctx, url, base_dir_abspath,
+                              &editor, &edit_baton, ctx, url, NULL,
                               log_msg, NULL, revprop_table, FALSE, NULL, TRUE,
                               commit_callback, commit_baton, subpool)));
 
@@ -1356,6 +1354,128 @@ svn_client_commit5(const apr_array_header_t *targets,
       goto cleanup;
   }
 
+  /* For every target that was moved verify that both halves of the
+   * move are part of the commit. */
+  for (i = 0; i < commit_items->nelts; i++)
+    {
+      svn_client_commit_item3_t *item =
+        APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
+
+      svn_pool_clear(iterpool);
+
+      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
+        {
+          const char *moved_from_abspath;
+          const char *delete_op_root_abspath;
+
+          cmt_err = svn_error_trace(svn_wc__node_was_moved_here(
+                                      &moved_from_abspath,
+                                      &delete_op_root_abspath,
+                                      ctx->wc_ctx, item->path,
+                                      iterpool, iterpool));
+          if (cmt_err)
+            goto cleanup;
+
+          if (moved_from_abspath && delete_op_root_abspath &&
+              strcmp(moved_from_abspath, delete_op_root_abspath) == 0)
+
+            {
+              svn_boolean_t found_delete_half =
+                (apr_hash_get(committables->by_path, delete_op_root_abspath,
+                               APR_HASH_KEY_STRING) != NULL);
+              
+              if (!found_delete_half)
+                {
+                  const char *delete_half_parent_abspath;
+
+                  /* The delete-half isn't in the commit target list.
+                   * However, it might itself be the child of a deleted node,
+                   * either because of another move or a deletion.
+                   *
+                   * For example, consider: mv A/B B; mv B/C C; commit;
+                   * C's moved-from A/B/C is a child of the deleted A/B.
+                   * A/B/C does not appear in the commit target list, but
+                   * A/B does appear.
+                   * (Note that moved-from information is always stored
+                   * relative to the BASE tree, so we have 'C moved-from
+                   * A/B/C', not 'C moved-from B/C'.)
+                   *
+                   * An example involving a move and a delete would be:
+                   * mv A/B C; rm A; commit;
+                   * Now C is moved-from A/B which does not appear in the
+                   * commit target list, but A does appear.
+                   */
+
+                  /* Scan upwards for a deletion op-root from the
+                   * delete-half's parent directory. */
+                  delete_half_parent_abspath =
+                    svn_dirent_dirname(delete_op_root_abspath, iterpool);
+                  if (strcmp(delete_op_root_abspath,
+                             delete_half_parent_abspath) != 0)
+                    {
+                      const char *parent_delete_op_root_abspath;
+
+                      cmt_err = svn_error_trace(
+                                  svn_wc__node_get_deleted_ancestor(
+                                    &parent_delete_op_root_abspath,
+                                    ctx->wc_ctx, delete_half_parent_abspath,
+                                    iterpool, iterpool));
+                      if (cmt_err)
+                        goto cleanup;
+
+                      if (parent_delete_op_root_abspath)
+                        found_delete_half =
+                          (apr_hash_get(committables->by_path,
+                                        parent_delete_op_root_abspath,
+                                        APR_HASH_KEY_STRING) != NULL);
+                    }
+                }
+
+              if (!found_delete_half)
+                {
+                  cmt_err = svn_error_createf(
+                              SVN_ERR_ILLEGAL_TARGET, NULL,
+                              _("Cannot commit '%s' because it was moved from "
+                                "'%s' which is not part of the commit; both "
+                                "sides of the move must be committed together"),
+                              svn_dirent_local_style(item->path, iterpool),
+                              svn_dirent_local_style(delete_op_root_abspath,
+                                                     iterpool));
+                  goto cleanup;
+                }
+            }
+        }
+      else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+        {
+          const char *moved_to_abspath;
+          const char *copy_op_root_abspath;
+
+          cmt_err = svn_error_trace(svn_wc__node_was_moved_away(
+                                      &moved_to_abspath,
+                                      &copy_op_root_abspath,
+                                      ctx->wc_ctx, item->path,
+                                      iterpool, iterpool));
+          if (cmt_err)
+            goto cleanup;
+
+          if (moved_to_abspath && copy_op_root_abspath &&
+              strcmp(moved_to_abspath, copy_op_root_abspath) == 0 &&
+              apr_hash_get(committables->by_path, copy_op_root_abspath,
+                           APR_HASH_KEY_STRING) == NULL)
+            {
+              cmt_err = svn_error_createf(
+                          SVN_ERR_ILLEGAL_TARGET, NULL,
+                         _("Cannot commit '%s' because it was moved to '%s' "
+                           "which is not part of the commit; both sides of "
+                           "the move must be committed together"),
+                         svn_dirent_local_style(item->path, iterpool),
+                         svn_dirent_local_style(copy_op_root_abspath,
+                                                iterpool));
+              goto cleanup;
+            }
+        }
+    }
+
   /* Go get a log message.  If an error occurs, or no log message is
      specified, abort the operation. */
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
@@ -1451,8 +1571,10 @@ svn_client_commit5(const apr_array_header_t *targets,
 
  cleanup:
   /* Abort the commit if it is still in progress. */
+  svn_pool_clear(iterpool); /* Close open handles before aborting */
   if (commit_in_progress)
-    svn_error_clear(editor->abort_edit(edit_baton, pool));
+    cmt_err = svn_error_compose_create(cmt_err,
+                                       editor->abort_edit(edit_baton, pool));
 
   /* A bump error is likely to occur while running a working copy log file,
      explicitly unlocking and removing temporary files would be wrong in

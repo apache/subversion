@@ -81,6 +81,22 @@ extern "C" {
 # endif
 #endif
 
+
+
+/** YABT:  Yet Another Boolean Type */
+typedef int svn_boolean_t;
+
+#ifndef TRUE
+/** uhh... true */
+#define TRUE 1
+#endif /* TRUE */
+
+#ifndef FALSE
+/** uhh... false */
+#define FALSE 0
+#endif /* FALSE */
+
+
 
 /** Subversion error object.
  *
@@ -131,7 +147,7 @@ typedef struct svn_error_t
 
 } svn_error_t;
 
-/* See svn_version.h. 
+/* See svn_version.h.
    Defined here to avoid including svn_version.h from all public headers. */
 typedef struct svn_version_t svn_version_t;
 
@@ -188,7 +204,33 @@ svn__apr_hash_index_val(const apr_hash_index_t *hi);
 
 /** @} */
 
-/** The various types of nodes in the Subversion filesystem. */
+/** A node kind.
+ *
+ * @since New in 1.8. Replaces svn_node_kind_t.
+ */
+typedef enum svn_kind_t
+{
+  /** something's here, but we don't know what */
+  svn_kind_unknown,
+
+  /** absent */
+  svn_kind_none,
+
+  /** regular file */
+  svn_kind_file,
+
+  /** directory */
+  svn_kind_dir,
+
+  /** symbolic link */
+  svn_kind_symlink
+
+} svn_kind_t;
+
+/** The various types of nodes in the Subversion filesystem.
+ *
+ * This type is superseded by #svn_kind_t and will be deprecated when
+ * transition to the new type is complete. */
 typedef enum svn_node_kind_t
 {
   /** absent */
@@ -222,6 +264,24 @@ svn_node_kind_to_word(svn_node_kind_t kind);
  */
 svn_node_kind_t
 svn_node_kind_from_word(const char *word);
+
+/** Return the #svn_node_kind_t corresponding to the given #svn_kind_t;
+ * #svn_kind_symlink will become #svn_node_file.
+ *
+ * @since New in 1.8.
+ */
+svn_node_kind_t
+svn__node_kind_from_kind(svn_kind_t kind);
+
+/** Return the #svn_kind_t corresponding to the given #svn_node_kind_t,
+ * or #svn_kind_symlink if @a is_symlink is true.
+ *
+ * @since New in 1.8.
+ */
+svn_kind_t
+svn__kind_from_node_kind(svn_node_kind_t kind,
+                         svn_boolean_t is_symlink);
+
 
 /** Generic three-state property to represent an unknown value for values
  * that are just like booleans.  The values have been set deliberately to
@@ -354,20 +414,6 @@ typedef apr_int64_t svn_filesize_t;
 /* FIXME: APR should supply a function to do this, such as "apr_atoui64". */
 #define svn__atoui64(X) ((apr_uint64_t) apr_atoi64(X))
 #endif
-
-
-/** YABT:  Yet Another Boolean Type */
-typedef int svn_boolean_t;
-
-#ifndef TRUE
-/** uhh... true */
-#define TRUE 1
-#endif /* TRUE */
-
-#ifndef FALSE
-/** uhh... false */
-#define FALSE 0
-#endif /* FALSE */
 
 
 /** An enum to indicate whether recursion is needed. */
@@ -757,7 +803,7 @@ svn_log_changed_path2_dup(const svn_log_changed_path2_t *changed_path,
 
 /**
  * A structure to represent a path that changed for a log entry.  Same as
- * #svn_log_changed_path2_t, but without the node kind.
+ * the first three fields of #svn_log_changed_path2_t.
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
@@ -810,7 +856,8 @@ typedef struct svn_log_entry_t
   svn_revnum_t revision;
 
   /** The hash of requested revision properties, which may be NULL if it
-   * would contain no revprops. */
+   * would contain no revprops.  Maps (const char *) property name to
+   * (svn_string_t *) property value. */
   apr_hash_t *revprops;
 
   /**

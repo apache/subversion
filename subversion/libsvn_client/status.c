@@ -85,12 +85,23 @@ tweak_status(void *baton,
   /* If the status item has an entry, but doesn't belong to one of the
      changelists our caller is interested in, we filter out this status
      transmission.  */
-  if (sb->changelist_hash
-      && (! status->changelist
-          || ! apr_hash_get(sb->changelist_hash, status->changelist,
-                            APR_HASH_KEY_STRING)))
+  /* ### duplicated in ../libsvn_wc/diff_local.c */
+  if (sb->changelist_hash)
     {
-      return SVN_NO_ERROR;
+      if (status->changelist)
+        {
+          /* Skip unless the caller requested this changelist. */
+          if (! apr_hash_get(sb->changelist_hash, status->changelist,
+                             APR_HASH_KEY_STRING))
+            return SVN_NO_ERROR;
+        }
+      else
+        {
+          /* Skip unless the caller requested changelist-lacking items. */
+          if (! apr_hash_get(sb->changelist_hash, "",
+                             APR_HASH_KEY_STRING))
+            return SVN_NO_ERROR;
+        }
     }
 
   /* If we know that the target was deleted in HEAD of the repository,
@@ -282,13 +293,12 @@ svn_client_status5(svn_revnum_t *result_rev,
 
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, path, pool));
   {
-    svn_node_kind_t kind, disk_kind;
+    svn_node_kind_t kind;
 
-    SVN_ERR(svn_io_check_path(target_abspath, &disk_kind, pool));
     SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE, pool));
 
-    /* Dir must be an existing directory or the status editor fails */
-    if (kind == svn_node_dir && disk_kind == svn_node_dir)
+    /* Dir must be a working copy directory or the status editor fails */
+    if (kind == svn_node_dir)
       {
         dir_abspath = target_abspath;
         target_basename = "";
@@ -308,15 +318,6 @@ svn_client_status5(svn_revnum_t *result_rev,
             svn_error_clear(err);
 
             if (err || kind != svn_node_dir)
-              {
-                return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                                         _("'%s' is not a working copy"),
-                                         svn_dirent_local_style(path, pool));
-              }
-
-            /* Check for issue #1617 and stat_tests.py 14
-               "status on '..' where '..' is not versioned". */
-            if (strcmp(path, "..") == 0)
               {
                 return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                          _("'%s' is not a working copy"),
@@ -377,7 +378,8 @@ svn_client_status5(svn_revnum_t *result_rev,
                                     &edit_revision, ctx->wc_ctx,
                                     dir_abspath, target_basename,
                                     depth, get_all,
-                                    no_ignore, server_supports_depth,
+                                    no_ignore, depth_as_sticky,
+                                    server_supports_depth,
                                     ignores, tweak_status, &sb,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     pool, pool));
@@ -394,7 +396,7 @@ svn_client_status5(svn_revnum_t *result_rev,
           svn_boolean_t added;
 
           /* Our status target does not exist in HEAD.  If we've got
-             it localled added, that's okay.  But if it was previously
+             it locally added, that's okay.  But if it was previously
              versioned, then it must have since been deleted from the
              repository.  (Note that "locally replaced" doesn't count
              as "added" in this case.)  */
@@ -456,10 +458,11 @@ svn_client_status5(svn_revnum_t *result_rev,
              working copy and HEAD. */
           SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx,
                                           target_abspath,
-                                          &lock_fetch_reporter, &rb, FALSE,
-                                          depth, TRUE,
+                                          &lock_fetch_reporter, &rb,
+                                          FALSE /* restore_files */,
+                                          depth, (! depth_as_sticky),
                                           (! server_supports_depth),
-                                          FALSE,
+                                          FALSE /* use_commit_times */,
                                           ctx->cancel_func, ctx->cancel_baton,
                                           NULL, NULL, pool));
         }
@@ -542,6 +545,9 @@ svn_client_status_dup(const svn_client_status_t *status,
   if (status->repos_root_url)
     st->repos_root_url = apr_pstrdup(result_pool, status->repos_root_url);
 
+  if (status->repos_uuid)
+    st->repos_uuid = apr_pstrdup(result_pool, status->repos_uuid);
+
   if (status->repos_relpath)
     st->repos_relpath = apr_pstrdup(result_pool, status->repos_relpath);
 
@@ -567,6 +573,13 @@ svn_client_status_dup(const svn_client_status_t *status,
       st->backwards_compatibility_baton = svn_wc_dup_status3(wc_st,
                                                              result_pool);
     }
+
+  if (status->moved_from_abspath)
+    st->moved_from_abspath =
+      apr_pstrdup(result_pool, status->moved_from_abspath);
+
+  if (status->moved_to_abspath)
+    st->moved_to_abspath = apr_pstrdup(result_pool, status->moved_to_abspath);
 
   return st;
 }
@@ -603,30 +616,16 @@ svn_client__create_status(svn_client_status_t **cst,
   (*cst)->changed_author = status->changed_author;
 
   (*cst)->repos_root_url = status->repos_root_url;
+  (*cst)->repos_uuid = status->repos_uuid;
   (*cst)->repos_relpath = status->repos_relpath;
 
   (*cst)->switched = status->switched;
-  (*cst)->file_external = FALSE;
 
-  if (/* Old style file-externals */
-      (status->versioned
-       && status->switched
-       && status->kind == svn_node_file))
+  (*cst)->file_external = status->file_external;
+  if (status->file_external)
     {
-      svn_node_kind_t external_kind;
-
-      SVN_ERR(svn_wc__read_external_info(&external_kind, NULL, NULL, NULL,
-                                         NULL, wc_ctx,
-                                         local_abspath /* wri_abspath */,
-                                         local_abspath, TRUE,
-                                         scratch_pool, scratch_pool));
-
-      if (external_kind == svn_node_file)
-        {
-          (*cst)->file_external = TRUE;
-          (*cst)->switched = FALSE;
-          (*cst)->node_status = (*cst)->text_status;
-        }
+      (*cst)->switched = FALSE;
+      (*cst)->node_status = (*cst)->text_status;
     }
 
   (*cst)->lock = status->lock;
@@ -670,6 +669,9 @@ svn_client__create_status(svn_client_status_t **cst,
       if (text_conflicted || prop_conflicted)
         (*cst)->node_status = svn_wc_status_conflicted;
     }
+
+  (*cst)->moved_from_abspath = status->moved_from_abspath;
+  (*cst)->moved_to_abspath = status->moved_to_abspath;
 
   return SVN_NO_ERROR;
 }

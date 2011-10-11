@@ -439,7 +439,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   # Check that all the blather above really happens.  First does
   # svndumpfilter report what we expect to stderr?
   expected_err = [
-      "Excluding (and dropping empty revisions for) prefix patterns:\n",
+      "Excluding (and dropping empty revisions for) prefixes:\n",
       "   '/branches/B2'\n",
       "\n",
       "Revision 6 committed as 6.\n",

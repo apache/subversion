@@ -195,25 +195,25 @@ static void get_prefix_tail(const char *prefix, char *prefix_tail)
 
 /* Initialize all members of TAG except for the content hash.
  */
-static svn_error_t* store_key_part(entry_tag_t *tag,
+static svn_error_t *store_key_part(entry_tag_t *tag,
                                    unsigned char *prefix_hash,
                                    char *prefix_tail,
                                    const void *key,
-                                   apr_size_t size,
+                                   apr_size_t key_len,
                                    apr_pool_t *pool)
 {
   svn_checksum_t *checksum;
   SVN_ERR(svn_checksum(&checksum,
                        svn_checksum_md5,
                        key,
-                       size,
+                       key_len,
                        pool));
 
   memcpy(tag->prefix_hash, prefix_hash, sizeof(tag->prefix_hash));
   memcpy(tag->key_hash, checksum->digest, sizeof(tag->key_hash));
   memcpy(tag->prefix_tail, prefix_tail, sizeof(tag->prefix_tail));
 
-  tag->key_len = size;
+  tag->key_len = key_len;
 
   return SVN_NO_ERROR;
 }
@@ -284,10 +284,10 @@ static svn_error_t* assert_equal_tags(const entry_tag_t *lhs,
 
 #endif /* SVN_DEBUG_CACHE_MEMBUFFER */
 
-/* A single dictionary entry. Since all entries will be allocated once 
- * during cache creation, those entries might be either used or unused. 
- * An entry is used if and only if it is contained in the doubly-linked 
- * list of used entries. An entry is unused if and only if its OFFSET 
+/* A single dictionary entry. Since all entries will be allocated once
+ * during cache creation, those entries might be either used or unused.
+ * An entry is used if and only if it is contained in the doubly-linked
+ * list of used entries. An entry is unused if and only if its OFFSET
  * member is NO_OFFSET.
  */
 typedef struct entry_t
@@ -397,7 +397,7 @@ struct svn_membuffer_t
 
 
   /* Number of used dictionary entries, i.e. number of cached items.
-   * In conjunction with hit_cout, this is used calculate the average
+   * In conjunction with hit_count, this is used calculate the average
    * hit count as part of the randomized LFU algorithm.
    */
   apr_uint32_t used_entries;

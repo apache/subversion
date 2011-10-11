@@ -123,8 +123,8 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
                                                 ra_session, src_url, pool));
       SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
                                               "", src_revnum,
-                                              svn_mergeinfo_inherited, TRUE,
-                                              FALSE, pool));
+                                              svn_mergeinfo_inherited,
+                                              TRUE, pool));
       if (old_session_url)
         SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
     }
@@ -761,7 +761,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
   apr_hash_t *action_hash = apr_hash_make(pool);
   apr_array_header_t *path_infos;
   const char *top_url, *top_url_all, *top_url_dst;
-  const char *message, *repos_root, *ignored_url;
+  const char *message, *repos_root;
   svn_revnum_t youngest = SVN_INVALID_REVNUM;
   svn_ra_session_t *ra_session = NULL;
   const svn_delta_editor_t *editor;
@@ -795,8 +795,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       apr_hash_t *mergeinfo;
-      svn_opt_revision_t *src_rev, *ignored_rev, dead_end_rev;
-      dead_end_rev.kind = svn_opt_revision_unspecified;
+      svn_opt_revision_t *src_rev;
 
       /* Are the source and destination URLs at or under REPOS_ROOT? */
       if (! (svn_uri__is_ancestor(repos_root, pair->src_abspath_or_url)
@@ -816,21 +815,17 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
 
       /* Run the history function to get the source's URL in the
          operational revision. */
-      SVN_ERR(svn_client__ensure_ra_session_url(&ignored_url, ra_session,
-                                                pair->src_abspath_or_url,
-                                                pool));
+      SVN_ERR(svn_ra_reparent(ra_session, pair->src_abspath_or_url, pool));
       SVN_ERR(svn_client__repos_locations(&pair->src_abspath_or_url, &src_rev,
-                                          &ignored_url, &ignored_rev,
+                                          NULL, NULL,
                                           ra_session,
                                           pair->src_abspath_or_url,
                                           &pair->src_peg_revision,
-                                          &pair->src_op_revision,
-                                          &dead_end_rev, ctx, pool));
+                                          &pair->src_op_revision, NULL,
+                                          ctx, pool));
 
       /* Go ahead and grab mergeinfo from the source, too. */
-      SVN_ERR(svn_client__ensure_ra_session_url(&ignored_url, ra_session,
-                                                pair->src_abspath_or_url,
-                                                pool));
+      SVN_ERR(svn_ra_reparent(ra_session, pair->src_abspath_or_url, pool));
       SVN_ERR(calculate_target_mergeinfo(ra_session, &mergeinfo, NULL,
                                          pair->src_abspath_or_url,
                                          pair->src_revnum, ctx, pool));
@@ -895,8 +890,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
     }
 
   /* Point the RA session to our current TOP_URL. */
-  SVN_ERR(svn_client__ensure_ra_session_url(&ignored_url, ra_session,
-                                            top_url, pool));
+  SVN_ERR(svn_ra_reparent(ra_session, top_url, pool));
 
   /* If we're allowed to create nonexistent parent directories of our
      destinations, then make a list in NEW_DIRS of the parent
@@ -1000,15 +994,9 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       svn_node_kind_t dst_kind;
       const char *src_rel, *dst_rel;
 
-      src_rel = svn_uri__is_child(top_url, pair->src_abspath_or_url, pool);
+      src_rel = svn_uri_skip_ancestor(top_url, pair->src_abspath_or_url, pool);
       if (src_rel)
         {
-          SVN_ERR(svn_ra_check_path(ra_session, src_rel, pair->src_revnum,
-                                    &info->src_kind, pool));
-        }
-      else if (strcmp(pair->src_abspath_or_url, top_url) == 0)
-        {
-          src_rel = "";
           SVN_ERR(svn_ra_check_path(ra_session, src_rel, pair->src_revnum,
                                     &info->src_kind, pool));
         }
@@ -1835,19 +1823,16 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
-      const char *src, *ignored_url;
-      svn_opt_revision_t *new_rev, *ignored_rev, dead_end_rev;
+      const char *src;
+      svn_opt_revision_t *new_rev;
 
       svn_pool_clear(iterpool);
-      dead_end_rev.kind = svn_opt_revision_unspecified;
 
-      SVN_ERR(svn_client__repos_locations(&src, &new_rev,
-                                          &ignored_url, &ignored_rev,
+      SVN_ERR(svn_client__repos_locations(&src, &new_rev, NULL, NULL,
                                           NULL,
                                           pair->src_abspath_or_url,
                                           &pair->src_peg_revision,
-                                          &pair->src_op_revision,
-                                          &dead_end_rev,
+                                          &pair->src_op_revision, NULL,
                                           ctx, iterpool));
 
       pair->src_original = pair->src_abspath_or_url;
@@ -2161,9 +2146,9 @@ try_copy(const apr_array_header_t *sources,
     {
       if (!srcs_are_urls)
         {
-          /* If we are doing a wc->* move, but with an operational revision
+          /* If we are doing a wc->* copy, but with an operational revision
              other than the working copy revision, we are really doing a
-             repo->* move, because we're going to need to get the rev from the
+             repo->* copy, because we're going to need to get the rev from the
              repo. */
 
           svn_boolean_t need_repos_op_rev = FALSE;

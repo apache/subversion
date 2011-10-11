@@ -172,6 +172,35 @@ print_info_xml(void *baton,
         svn_cl__xml_tagged_cdata(&sb, pool, "changelist",
                                  info->wc_info->changelist);
 
+      if (info->wc_info->moved_from_abspath)
+        {
+          const char *relpath;
+
+          relpath = svn_dirent_skip_ancestor(info->wc_info->wcroot_abspath,
+                                             info->wc_info->moved_from_abspath);
+
+          /* <moved-from> xx </moved-from> */
+          if (relpath && relpath[0] != '\0')
+            svn_cl__xml_tagged_cdata(&sb, pool, "moved-from", relpath);
+          else
+            svn_cl__xml_tagged_cdata(&sb, pool, "moved-from",
+                                     info->wc_info->moved_from_abspath);
+        }
+
+      if (info->wc_info->moved_to_abspath)
+        {
+          const char *relpath;
+
+          relpath = svn_dirent_skip_ancestor(info->wc_info->wcroot_abspath,
+                                             info->wc_info->moved_to_abspath);
+          /* <moved-to> xx </moved-to> */
+          if (relpath && relpath[0] != '\0')
+            svn_cl__xml_tagged_cdata(&sb, pool, "moved-to", relpath);
+          else
+            svn_cl__xml_tagged_cdata(&sb, pool, "moved-to",
+                                     info->wc_info->moved_to_abspath);
+        }
+
       /* "</wc-info>" */
       svn_xml_make_close_tag(&sb, pool, "wc-info");
     }
@@ -376,6 +405,31 @@ print_info(void *baton,
       if (SVN_IS_VALID_REVNUM(info->wc_info->copyfrom_rev))
         SVN_ERR(svn_cmdline_printf(pool, _("Copied From Rev: %ld\n"),
                                    info->wc_info->copyfrom_rev));
+      if (info->wc_info->moved_from_abspath)
+        {
+          const char *relpath;
+
+          relpath = svn_dirent_skip_ancestor(info->wc_info->wcroot_abspath,
+                                             info->wc_info->moved_from_abspath);
+          if (relpath && relpath[0] != '\0')
+            SVN_ERR(svn_cmdline_printf(pool, _("Moved From: %s\n"), relpath));
+          else
+            SVN_ERR(svn_cmdline_printf(pool, _("Moved From: %s\n"),
+                                       info->wc_info->moved_from_abspath));
+        }
+
+      if (info->wc_info->moved_to_abspath)
+        {
+          const char *relpath;
+
+          relpath = svn_dirent_skip_ancestor(info->wc_info->wcroot_abspath,
+                                             info->wc_info->moved_to_abspath);
+          if (relpath && relpath[0] != '\0')
+            SVN_ERR(svn_cmdline_printf(pool, _("Moved To: %s\n"), relpath));
+          else
+            SVN_ERR(svn_cmdline_printf(pool, _("Moved To: %s\n"),
+                                       info->wc_info->moved_to_abspath));
+        }
     }
 
   if (info->last_changed_author)
@@ -417,20 +471,26 @@ print_info(void *baton,
               switch (conflict->kind)
                 {
                   case svn_wc_conflict_kind_text:
-                    SVN_ERR(svn_cmdline_printf(pool,
-                              _("Conflict Previous Base File: %s\n"),
-                              svn_dirent_local_style(conflict->base_abspath,
-                                                     pool)));
+                    if (conflict->base_abspath)
+                      SVN_ERR(svn_cmdline_printf(pool,
+                                _("Conflict Previous Base File: %s\n"),
+                                svn_cl__local_style_skip_ancestor(
+                                        path_prefix, conflict->base_abspath,
+                                        pool)));
 
-                    SVN_ERR(svn_cmdline_printf(pool,
-                              _("Conflict Previous Working File: %s\n"),
-                              svn_dirent_local_style(conflict->my_abspath,
-                                                     pool)));
+                    if (conflict->my_abspath)
+                      SVN_ERR(svn_cmdline_printf(pool,
+                                _("Conflict Previous Working File: %s\n"),
+                                svn_cl__local_style_skip_ancestor(
+                                        path_prefix, conflict->my_abspath,
+                                        pool)));
 
-                    SVN_ERR(svn_cmdline_printf(pool,
-                              _("Conflict Current Base File: %s\n"),
-                              svn_dirent_local_style(conflict->their_abspath,
-                                                     pool)));
+                    if (conflict->their_abspath)
+                      SVN_ERR(svn_cmdline_printf(pool,
+                                _("Conflict Current Base File: %s\n"),
+                                svn_cl__local_style_skip_ancestor(
+                                        path_prefix, conflict->their_abspath,
+                                        pool)));
                   break;
 
                   case svn_wc_conflict_kind_property:
@@ -589,8 +649,10 @@ svn_cl__info(apr_getopt_t *os,
 
       err = svn_client_info3(truepath,
                              &peg_revision, &(opt_state->start_revision),
-                             receiver, (void *) path_prefix, opt_state->depth,
-                             opt_state->changelists, ctx, subpool);
+                             opt_state->depth, TRUE, TRUE,
+                             opt_state->changelists,
+                             receiver, (void *) path_prefix,
+                             ctx, subpool);
 
       if (err)
         {

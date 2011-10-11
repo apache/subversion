@@ -277,18 +277,15 @@ log_entry_receiver(void *baton,
   /* Print a diff if requested. */
   if (lb->show_diff)
     {
-      apr_file_t *outfile;
-      apr_file_t *errfile;
+      svn_stream_t *outstream;
+      svn_stream_t *errstream;
       apr_array_header_t *diff_options;
-      apr_status_t status;
       svn_opt_revision_t start_revision;
       svn_opt_revision_t end_revision;
       svn_error_t *err;
 
-      if ((status = apr_file_open_stdout(&outfile, pool)))
-        return svn_error_wrap_apr(status, _("Can't open stdout"));
-      if ((status = apr_file_open_stderr(&errfile, pool)))
-        return svn_error_wrap_apr(status, _("Can't open stderr"));
+      SVN_ERR(svn_stream_for_stdout(&outstream, pool));
+      SVN_ERR(svn_stream_for_stderr(&errstream, pool));
 
       /* Fall back to "" to get options initialized either way. */
       if (lb->diff_extensions)
@@ -303,7 +300,7 @@ log_entry_receiver(void *baton,
       end_revision.value.number = log_entry->revision;
 
       SVN_ERR(svn_cmdline_printf(pool, _("\n")));
-      err = svn_client_diff5(diff_options,
+      err = svn_client_diff6(diff_options,
                              lb->target_url,
                              &start_revision,
                              lb->target_url,
@@ -316,8 +313,8 @@ log_entry_receiver(void *baton,
                              FALSE, /* ignore content type */
                              FALSE, /* use git diff format */
                              svn_cmdline_output_encoding(pool),
-                             outfile,
-                             errfile,
+                             outstream,
+                             errstream,
                              NULL,
                              lb->ctx, pool);
       if (err)
@@ -336,7 +333,7 @@ log_entry_receiver(void *baton,
               while (strcmp(parent, lb->target_url) != 0)
                 {
                   svn_pool_clear(iterpool);
-                  err = svn_client_diff5(diff_options,
+                  err = svn_client_diff6(diff_options,
                                          parent,
                                          &start_revision,
                                          parent,
@@ -349,8 +346,8 @@ log_entry_receiver(void *baton,
                                          FALSE, /* ignore content type */
                                          FALSE, /* use git diff format */
                                          svn_cmdline_output_encoding(iterpool),
-                                         outfile,
-                                         errfile,
+                                         outstream,
+                                         errstream,
                                          NULL,
                                          lb->ctx, iterpool);
                   if (err == SVN_NO_ERROR)

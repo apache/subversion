@@ -402,7 +402,7 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
    If COMMIT_RELPATH is not NULL, treat not-added nodes as if it is destined to
    be added as COMMIT_RELPATH, and add 'deleted' entries to COMMITTABLES as
    items to delete in the copy destination.  COPY_MODE_ROOT should be set TRUE
-   for the first call for which COPY_MODE is TRUE, i.e. not for for the
+   for the first call for which COPY_MODE is TRUE, i.e. not for the
    recursive calls, and FALSE otherwise.
 
    If CHANGELISTS is non-NULL, it is a hash whose keys are const char *
@@ -543,12 +543,12 @@ harvest_committables(svn_wc_context_t *wc_ctx,
          svn_dirent_local_style(local_abspath, scratch_pool));
     }
 
+  /* ### in need of comment */
   if (copy_mode
       && is_update_root
       && db_kind == svn_node_file)
     {
-      if (copy_mode)
-        return SVN_NO_ERROR;
+      return SVN_NO_ERROR;
     }
 
   /* If NODE is in our changelist, then examine it for conflicts. We
@@ -587,7 +587,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
   /* Check for the deletion case.
      * We delete explicitly deleted nodes (duh!)
      * We delete not-present children of copies
-     * We delete nodes that directly replace a node in it's ancestor
+     * We delete nodes that directly replace a node in its ancestor
    */
 
   if (is_deleted || is_replaced)
@@ -1341,14 +1341,9 @@ svn_client__condense_commit_items(const char **base_url,
     {
       svn_client_commit_item3_t *this_item
         = APR_ARRAY_IDX(ci, i, svn_client_commit_item3_t *);
-      size_t url_len = strlen(this_item->url);
-      size_t base_url_len = strlen(*base_url);
 
-      if (url_len > base_url_len)
-        this_item->session_relpath = svn_uri__is_child(*base_url,
-                                                       this_item->url, pool);
-      else
-        this_item->session_relpath = "";
+      this_item->session_relpath = svn_uri_skip_ancestor(*base_url,
+                                                         this_item->url, pool);
     }
 #ifdef SVN_CLIENT_COMMIT_DEBUG
   /* ### TEMPORARY CODE ### */
@@ -1845,11 +1840,14 @@ svn_client__do_commit(const char *base_url,
                                          result_pool, iterpool);
 
       if (err)
-        return svn_error_trace(fixup_commit_error(item->path,
-                                                  base_url,
-                                                  item->session_relpath,
-                                                  svn_node_file,
-                                                  err, ctx, iterpool));
+        {
+          svn_pool_destroy(iterpool); /* Close tempfiles */
+          return svn_error_trace(fixup_commit_error(item->path,
+                                                    base_url,
+                                                    item->session_relpath,
+                                                    svn_node_file,
+                                                    err, ctx, scratch_pool));
+        }
 
       if (md5_checksums)
         apr_hash_set(*md5_checksums, item->path, APR_HASH_KEY_STRING,

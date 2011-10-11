@@ -85,13 +85,6 @@ svn_sqlite__insert(apr_int64_t *row_id, svn_sqlite__stmt_t *stmt);
 svn_error_t *
 svn_sqlite__update(int *affected_rows, svn_sqlite__stmt_t *stmt);
 
-/* Return in *VERSION the version of the schema for the database as PATH.
-   Use SCRATCH_POOL for temporary allocations. */
-svn_error_t *
-svn_sqlite__get_schema_version(int *version,
-                               const char *path,
-                               apr_pool_t *scratch_pool);
-
 /* Return in *VERSION the version of the schema in DB. Use SCRATCH_POOL
    for temporary allocations.  */
 svn_error_t *
@@ -99,12 +92,6 @@ svn_sqlite__read_schema_version(int *version,
                                 svn_sqlite__db_t *db,
                                 apr_pool_t *scratch_pool);
 
-/* Set DB's schema version to VERSION. Use SCRATCH_POOL for all temporary
-   allocations.  */
-svn_error_t *
-svn_sqlite__set_schema_version(svn_sqlite__db_t *db,
-                               int version,
-                               apr_pool_t *scratch_pool);
 
 
 /* Open a connection in *DB to the database at PATH. Validate the schema,
@@ -373,13 +360,12 @@ svn_sqlite__with_immediate_transaction(svn_sqlite__db_t *db,
 
 /* Helper function to handle several SQLite operations inside a shared lock.
    This callback is similar to svn_sqlite__with_transaction(), but can be
-   nested (even with a transaction) and changes in the callback are always
-   committed when this function returns.
+   nested (even with a transaction).
 
-   For SQLite 3.6.8 and later using this function as a wrapper around a group
-   of operations can give a *huge* performance boost as the shared-read lock
-   will be shared over multiple statements, instead of being reobtained
-   everytime, which requires disk and/or network io.
+   Using this function as a wrapper around a group of operations can give a
+   *huge* performance boost as the shared-read lock will be shared over
+   multiple statements, instead of being reobtained every time, which may
+   require disk and/or network io, depending on SQLite's locking strategy.
 
    SCRATCH_POOL will be passed to the callback (NULL is valid).
 

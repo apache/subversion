@@ -364,6 +364,8 @@ PREWRITTEN_HOOKS_TEXT
 
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating start-commit hook"));
+
+    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
   }  /* end start-commit hook */
 
   /* Pre-commit hook. */
@@ -454,6 +456,8 @@ PREWRITTEN_HOOKS_TEXT
 
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating pre-commit hook"));
+
+    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
   }  /* end pre-commit hook */
 
 
@@ -477,7 +481,7 @@ PREWRITTEN_HOOKS_TEXT
 "# arguments:"                                                               NL
 "#"                                                                          NL
 "#   [1] REPOS-PATH   (the path to this repository)"                         NL
-"#   [2] REVISION     (the revision being tweaked)"                          NL
+"#   [2] REV          (the revision being tweaked)"                          NL
 "#   [3] USER         (the username of the person tweaking the property)"    NL
 "#   [4] PROPNAME     (the property being set on the revision)"              NL
 "#   [5] ACTION       (the property is being 'A'dded, 'M'odified, or 'D'eleted)"
@@ -530,6 +534,8 @@ PREWRITTEN_HOOKS_TEXT
 
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating pre-revprop-change hook"));
+
+    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
   }  /* end pre-revprop-change hook */
 
 
@@ -620,6 +626,8 @@ PREWRITTEN_HOOKS_TEXT
 
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               "Creating pre-lock hook");
+
+    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
   }  /* end pre-lock hook */
 
 
@@ -702,6 +710,8 @@ PREWRITTEN_HOOKS_TEXT
 
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               "Creating pre-unlock hook");
+
+    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
   }  /* end pre-unlock hook */
 
 
@@ -762,6 +772,8 @@ PREWRITTEN_HOOKS_TEXT
 
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating post-commit hook"));
+
+    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
   } /* end post-commit hook */
 
 
@@ -823,6 +835,8 @@ PREWRITTEN_HOOKS_TEXT
 
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               "Creating post-lock hook");
+
+    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
   } /* end post-lock hook */
 
 
@@ -882,6 +896,8 @@ PREWRITTEN_HOOKS_TEXT
 
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               "Creating post-unlock hook");
+
+    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
   } /* end post-unlock hook */
 
 
@@ -948,6 +964,8 @@ PREWRITTEN_HOOKS_TEXT
 
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating post-revprop-change hook"));
+
+    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
   } /* end post-revprop-change hook */
 
   return SVN_NO_ERROR;
@@ -1262,9 +1280,13 @@ svn_repos_create(svn_repos_t **repos_p,
       /* If there was an error making the filesytem, e.g. unknown/supported
        * filesystem type.  Clean up after ourselves.  Yes this is safe because
        * create_repos_structure will fail if the path existed before we started
-       * so we can't accidentally remove a directory that previously existed. */
-      svn_error_clear(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
-      return svn_error_trace(err);
+       * so we can't accidentally remove a directory that previously existed.
+       */
+
+      return svn_error_trace(
+                   svn_error_compose_create(
+                        err,
+                        svn_io_remove_dir2(path, FALSE, NULL, NULL, pool)));
     }
 
   /* This repository is ready.  Stamp it with a format number. */

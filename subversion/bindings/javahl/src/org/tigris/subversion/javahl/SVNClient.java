@@ -70,7 +70,6 @@ public class SVNClient implements SVNClientInterface
      */
     protected void finalize()
     {
-        aSVNClient.finalize();
     }
 
     /**
@@ -1878,8 +1877,12 @@ public class SVNClient implements SVNClientInterface
         {
             if (Path.isURL(path))
             {
-                aSVNClient.propertySetRemote(path, name,
+                Info2[] infos = info2(path, Revision.HEAD, Revision.HEAD,
+                                      false);
+
+                aSVNClient.propertySetRemote(path, infos[0].getRev(), name,
                                        value == null ? null : value.getBytes(),
+                                       cachedHandler,
                                        force, revpropTable, null);
             }
             else

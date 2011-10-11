@@ -725,7 +725,7 @@ svn_cstring_join(const apr_array_header_t *strings,
                  apr_pool_t *pool)
 {
   svn_stringbuf_t *new_str = svn_stringbuf_create("", pool);
-  int sep_len = strlen(separator);
+  size_t sep_len = strlen(separator);
   int i;
 
   for (i = 0; i < strings->nelts; i++)
@@ -838,4 +838,17 @@ svn_cstring_atoi(int *n, const char *str)
   SVN_ERR(svn_cstring_strtoi64(&val, str, APR_INT32_MIN, APR_INT32_MAX, 10));
   *n = (int)val;
   return SVN_NO_ERROR;
+}
+
+
+apr_status_t
+svn__strtoff(apr_off_t *offset, const char *buf, char **end, int base)
+{
+#if !APR_VERSION_AT_LEAST(1,0,0)
+  errno = 0;
+  *offset = strtol(buf, end, base);
+  return APR_FROM_OS_ERROR(errno);
+#else
+  return apr_strtoff(offset, buf, end, base);
+#endif
 }

@@ -45,7 +45,7 @@ extern "C" {
    For 1.7, we're removing this support. Some old code is being left around
    in case we decide to change this.
 
-   For more information, see ^/notes/api-errata/wc006.txt
+   For more information, see ^/notes/api-errata/1.7/wc006.txt
 */
 #undef SVN__SUPPORT_BASE_MERGE
 
@@ -106,7 +106,7 @@ svn_wc__merge_props(svn_skel_t **work_items,
                     apr_hash_t **new_actual_props,
                     svn_wc__db_t *db,
                     const char *local_abspath,
-                    svn_wc__db_kind_t kind,
+                    svn_kind_t kind,
                     const svn_wc_conflict_version_t *left_version,
                     const svn_wc_conflict_version_t *right_version,
                     apr_hash_t *server_baseprops,

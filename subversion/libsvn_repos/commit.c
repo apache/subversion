@@ -94,6 +94,9 @@ struct edit_baton
   /* The object representing the root directory of the svn txn. */
   svn_fs_root_t *txn_root;
 
+  /* Avoid aborting an fs transaction more than once */
+  svn_boolean_t txn_aborted;
+
   /** Filled in when the edit is closed: **/
 
   /* The new revision created by this commit. */
@@ -531,39 +534,6 @@ open_file(const char *path,
 }
 
 
-/* Verify the mergeinfo property value VALUE and return an error if it
- * is invalid. The PATH on which that property is set is used for error
- * messages only.  Use SCRATCH_POOL for temporary allocations. */
-static svn_error_t *
-verify_mergeinfo(const svn_string_t *value,
-                 const char *path,
-                 apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-  svn_mergeinfo_t mergeinfo;
-
-  /* It's okay to delete svn:mergeinfo. */
-  if (value == NULL)
-    return SVN_NO_ERROR;
-
-  /* Mergeinfo is UTF-8 encoded so the number of bytes returned by strlen()
-   * should match VALUE->LEN. Prevents trailing garbage in the property. */
-  if (strlen(value->data) != value->len)
-    return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
-                             _("Commit rejected because mergeinfo on '%s' "
-                               "contains unexpected string terminator"),
-                             path);
-
-  err = svn_mergeinfo_parse(&mergeinfo, value->data, scratch_pool);
-  if (err)
-    return svn_error_createf(err->apr_err, err,
-                             _("Commit rejected because mergeinfo on '%s' "
-                               "is syntactically invalid"),
-                             path);
-  return SVN_NO_ERROR;
-}
-
-
 static svn_error_t *
 change_file_prop(void *file_baton,
                  const char *name,
@@ -576,9 +546,6 @@ change_file_prop(void *file_baton,
   /* Check for write authorization. */
   SVN_ERR(check_authz(eb, fb->path, eb->txn_root,
                       svn_authz_write, pool));
-
-  if (value && strcmp(name, SVN_PROP_MERGEINFO) == 0)
-    SVN_ERR(verify_mergeinfo(value, fb->path, pool));
 
   return svn_repos_fs_change_node_prop(eb->txn_root, fb->path,
                                        name, value, pool);
@@ -637,9 +604,6 @@ change_dir_prop(void *dir_baton,
       if (db->base_rev < created_rev)
         return out_of_date(db->path, svn_node_dir);
     }
-
-  if (value && strcmp(name, SVN_PROP_MERGEINFO) == 0)
-    SVN_ERR(verify_mergeinfo(value, db->path, pool));
 
   return svn_repos_fs_change_node_prop(eb->txn_root, db->path,
                                        name, value, pool);
@@ -757,12 +721,13 @@ close_edit(void *edit_baton,
          So, in a nutshell: svn commits are an all-or-nothing deal.
          Each commit creates a new fs txn which either succeeds or is
          aborted completely.  No second chances;  the user simply
-         needs to update and commit again  :)
+         needs to update and commit again  :) */
 
-         We ignore the possible error result from svn_fs_abort_txn();
-         it's more important to return the original error. */
-      svn_error_clear(svn_fs_abort_txn(eb->txn, pool));
-      return svn_error_trace(err);
+      eb->txn_aborted = TRUE;
+
+      return svn_error_trace(
+                svn_error_compose_create(err,
+                                         svn_fs_abort_txn(eb->txn, pool)));
     }
 
   /* Pass new revision information to the caller's callback. */
@@ -808,9 +773,12 @@ abort_edit(void *edit_baton,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
-  if ((! eb->txn) || (! eb->txn_owner))
+  if ((! eb->txn) || (! eb->txn_owner) || eb->txn_aborted)
     return SVN_NO_ERROR;
-  return svn_fs_abort_txn(eb->txn, pool);
+
+  eb->txn_aborted = TRUE;
+
+  return svn_error_trace(svn_fs_abort_txn(eb->txn, pool));
 }
 
 
@@ -884,6 +852,9 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
 
   *edit_baton = eb;
   *editor = e;
+
+  SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                   NULL, NULL, NULL, NULL, pool, pool));
 
   return SVN_NO_ERROR;
 }

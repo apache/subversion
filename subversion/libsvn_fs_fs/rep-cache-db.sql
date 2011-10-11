@@ -45,3 +45,10 @@ WHERE hash = ?1
 -- STMT_SET_REP
 INSERT OR FAIL INTO rep_cache (hash, revision, offset, size, expanded_size)
 VALUES (?1, ?2, ?3, ?4, ?5)
+
+
+-- STMT_GET_ALL_REPS
+SELECT hash, revision, offset, size, expanded_size
+FROM rep_cache
+
+

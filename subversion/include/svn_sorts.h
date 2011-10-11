@@ -145,7 +145,7 @@ svn_sort_compare_ranges(const void *a,
 /** Sort @a ht according to its keys, return an @c apr_array_header_t
  * containing @c svn_sort__item_t structures holding those keys and values
  * (i.e. for each @c svn_sort__item_t @a item in the returned array,
- * @a item->key and @a item->size are the hash key, and @a item->data points to
+ * @a item->key and @a item->size are the hash key, and @a item->value points to
  * the hash value).
  *
  * Storage is shared with the original hash, not copied.
@@ -181,6 +181,16 @@ svn_sort__array_insert(const void *new_element,
                        apr_array_header_t *array,
                        int insert_index);
 
+
+/* Remove ELEMENTS_TO_DELETE elements starting  at DELETE_INDEX from the
+   array ARR. If DELETE_INDEX is not a valid element of ARR,
+   ELEMENTS_TO_DELETE is not greater than zero, or
+   DELETE_INDEX + ELEMENTS_TO_DELETE is greater than ARR->NELTS, then do
+   nothing. */
+void
+svn_sort__array_delete(apr_array_header_t *arr,
+                       int delete_index,
+                       int elements_to_delete);
 
 #ifdef __cplusplus
 }

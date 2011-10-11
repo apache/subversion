@@ -38,6 +38,7 @@
 #include "svn_compat.h"
 #include "svn_props.h"
 #include "svn_utf.h"
+#include "svn_string.h"
 
 #include "client.h"
 #include "mergeinfo.h"
@@ -836,6 +837,37 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
 /*** From diff.c ***/
 
 svn_error_t *
+svn_client_diff5(const apr_array_header_t *diff_options,
+                 const char *path1,
+                 const svn_opt_revision_t *revision1,
+                 const char *path2,
+                 const svn_opt_revision_t *revision2,
+                 const char *relative_to_dir,
+                 svn_depth_t depth,
+                 svn_boolean_t ignore_ancestry,
+                 svn_boolean_t no_diff_deleted,
+                 svn_boolean_t show_copies_as_adds,
+                 svn_boolean_t ignore_content_type,
+                 svn_boolean_t use_git_diff_format,
+                 const char *header_encoding,
+                 apr_file_t *outfile,
+                 apr_file_t *errfile,
+                 const apr_array_header_t *changelists,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  svn_stream_t *outstream = svn_stream_from_aprfile2(outfile, TRUE, pool);
+  svn_stream_t *errstream = svn_stream_from_aprfile2(errfile, TRUE, pool);
+
+  return svn_client_diff6(diff_options, path1, revision1, path2,
+                          revision2, relative_to_dir, depth,
+                          ignore_ancestry, no_diff_deleted,
+                          show_copies_as_adds, ignore_content_type,
+                          use_git_diff_format, header_encoding,
+                          outstream, errstream, changelists, ctx, pool);
+}
+
+svn_error_t *
 svn_client_diff4(const apr_array_header_t *options,
                  const char *path1,
                  const svn_opt_revision_t *revision1,
@@ -922,6 +954,49 @@ svn_client_diff(const apr_array_header_t *options,
   return svn_client_diff2(options, path1, revision1, path2, revision2,
                           recurse, ignore_ancestry, no_diff_deleted, FALSE,
                           outfile, errfile, ctx, pool);
+}
+
+svn_error_t *
+svn_client_diff_peg5(const apr_array_header_t *diff_options,
+                     const char *path,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *start_revision,
+                     const svn_opt_revision_t *end_revision,
+                     const char *relative_to_dir,
+                     svn_depth_t depth,
+                     svn_boolean_t ignore_ancestry,
+                     svn_boolean_t no_diff_deleted,
+                     svn_boolean_t show_copies_as_adds,
+                     svn_boolean_t ignore_content_type,
+                     svn_boolean_t use_git_diff_format,
+                     const char *header_encoding,
+                     apr_file_t *outfile,
+                     apr_file_t *errfile,
+                     const apr_array_header_t *changelists,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  svn_stream_t *outstream = svn_stream_from_aprfile2(outfile, TRUE, pool);
+  svn_stream_t *errstream = svn_stream_from_aprfile2(errfile, TRUE, pool);
+
+  return svn_client_diff_peg6(diff_options,
+                              path,
+                              peg_revision,
+                              start_revision,
+                              end_revision,
+                              relative_to_dir,
+                              depth,
+                              ignore_ancestry,
+                              no_diff_deleted,
+                              show_copies_as_adds,
+                              ignore_content_type,
+                              use_git_diff_format,
+                              header_encoding,
+                              outstream,
+                              errstream,
+                              changelists,
+                              ctx,
+                              pool);
 }
 
 svn_error_t *
@@ -1721,6 +1796,40 @@ svn_client_propget(apr_hash_t **props,
 }
 
 
+/* Duplicate a HASH containing (char * -> svn_string_t *) key/value
+   pairs using POOL. */
+static apr_hash_t *
+string_hash_dup(apr_hash_t *hash, apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_hash_t *new_hash = apr_hash_make(pool);
+
+  for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
+    {
+      const char *key = apr_pstrdup(pool, svn__apr_hash_index_key(hi));
+      apr_ssize_t klen = svn__apr_hash_index_klen(hi);
+      svn_string_t *val = svn_string_dup(svn__apr_hash_index_val(hi), pool);
+
+      apr_hash_set(new_hash, key, klen, val);
+    }
+  return new_hash;
+}
+
+svn_client_proplist_item_t *
+svn_client_proplist_item_dup(const svn_client_proplist_item_t *item,
+                             apr_pool_t * pool)
+{
+  svn_client_proplist_item_t *new_item = apr_pcalloc(pool, sizeof(*new_item));
+
+  if (item->node_name)
+    new_item->node_name = svn_stringbuf_dup(item->node_name, pool);
+
+  if (item->prop_hash)
+    new_item->prop_hash = string_hash_dup(item->prop_hash, pool);
+
+  return new_item;
+}
+
 /* Receiver baton used by proplist2() */
 struct proplist_receiver_baton {
   apr_array_header_t *props;
@@ -2142,7 +2251,9 @@ info_from_info2(svn_info_t **new_info,
   info->last_changed_rev    = info2->last_changed_rev;
   info->last_changed_date   = info2->last_changed_date;
   info->last_changed_author = info2->last_changed_author;
-  info->lock                = info2->lock;
+
+  /* Stupid old structure has a non-const LOCK member. Sigh.  */
+  info->lock                = (svn_lock_t *)info2->lock;
 
   info->size64              = info2->size;
   if (info2->size == SVN_INVALID_FILESIZE)
@@ -2302,10 +2413,11 @@ svn_client_info2(const char *path_or_url,
   SVN_ERR(svn_client_info3(abspath_or_url,
                            peg_revision,
                            revision,
+                           depth,
+                           FALSE, TRUE,
+                           changelists,
                            info_receiver_relpath_wrapper,
                            &rb,
-                           depth,
-                           changelists,
                            ctx,
                            pool));
 

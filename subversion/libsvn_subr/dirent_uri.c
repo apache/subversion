@@ -1420,6 +1420,7 @@ svn_uri__is_child(const char *parent_uri,
 {
   const char *relpath;
 
+  assert(pool); /* hysterical raisins. */
   assert(svn_uri_is_canonical(parent_uri, NULL));
   assert(svn_uri_is_canonical(child_uri, NULL));
 

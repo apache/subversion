@@ -1,31 +1,30 @@
 /*
+ * svnmucc.c: Subversion Multiple URL Client
  *
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * ====================================================================
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
+ * ====================================================================
  *
  */
 
 /*  Multiple URL Command Client
 
     Combine a list of mv, cp and rm commands on URLs into a single commit.
-
-    Copyright 2005 Philip Martin <philip@codematters.co.uk>
-
-    Licenced under the same terms as Subversion.
 
     How it works: the command line arguments are parsed into an array of
     action structures.  The action structures are interpreted to build a
@@ -109,14 +108,17 @@ static svn_error_t *
 create_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                     const char *username,
                     const char *password,
+                    const char *config_dir,
                     svn_boolean_t non_interactive,
+                    svn_boolean_t no_auth_cache,
                     apr_pool_t *pool)
 {
   SVN_ERR(svn_ra_create_callbacks(callbacks, pool));
 
   SVN_ERR(svn_cmdline_create_auth_baton(&(*callbacks)->auth_baton,
                                         non_interactive,
-                                        username, password, NULL, FALSE,
+                                        username, password, config_dir,
+                                        no_auth_cache,
                                         FALSE, NULL, NULL, NULL, pool));
 
   (*callbacks)->open_tmp_file = open_tmp_file;
@@ -364,10 +366,7 @@ get_operation(const char *path,
 static const char *
 subtract_anchor(const char *anchor, const char *url, apr_pool_t *pool)
 {
-  if (! strcmp(url, anchor))
-    return "";
-  else
-    return svn_uri__is_child(anchor, url, pool);
+  return svn_uri_skip_ancestor(anchor, url, pool);
 }
 
 /* Add PATH to the operations tree rooted at OPERATION, creating any
@@ -618,6 +617,7 @@ execute(const apr_array_header_t *actions,
         const char *config_dir,
         const apr_array_header_t *config_options,
         svn_boolean_t non_interactive,
+        svn_boolean_t no_auth_cache,
         svn_revnum_t base_revision,
         apr_pool_t *pool)
 {
@@ -634,8 +634,8 @@ execute(const apr_array_header_t *actions,
   SVN_ERR(svn_config_get_config(&config, config_dir, pool));
   SVN_ERR(svn_cmdline__apply_config_options(config, config_options,
                                             "svnmucc: ", "--config-option"));
-  SVN_ERR(create_ra_callbacks(&ra_callbacks, username, password,
-                              non_interactive, pool));
+  SVN_ERR(create_ra_callbacks(&ra_callbacks, username, password, config_dir,
+                              non_interactive, no_auth_cache, pool));
   SVN_ERR(svn_ra_open4(&session, NULL, anchor, NULL, ra_callbacks,
                        NULL, config, pool));
 
@@ -780,7 +780,9 @@ usage(apr_pool_t *pool, int exit_val)
     "  -X, --extra-args ARG  append arguments from file ARG (one per line;\n"
     "                        use \"-\" to read from standard input)\n"
     "  --config-dir ARG      use ARG to override the config directory\n"
-    "  --config-option ARG   use ARG so override a configuration option\n";
+    "  --config-option ARG   use ARG so override a configuration option\n"
+    "  --no-auth-cache       do not cache authentication tokens\n"
+    "  --version             print version information\n";
   svn_error_clear(svn_cmdline_fputs(msg, stream, pool));
   apr_pool_destroy(pool);
   exit(exit_val);
@@ -792,6 +794,22 @@ insufficient(apr_pool_t *pool)
   handle_error(svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
                                 "insufficient arguments"),
                pool);
+}
+
+static svn_error_t *
+display_version(apr_getopt_t *os, apr_pool_t *pool)
+{
+  const char *ra_desc_start
+    = "The following repository access (RA) modules are available:\n\n";
+  svn_stringbuf_t *version_footer;
+
+  version_footer = svn_stringbuf_create(ra_desc_start, pool);
+  SVN_ERR(svn_ra_print_modules(version_footer, pool));
+
+  SVN_ERR(svn_opt_print_help3(os, "svnmucc", TRUE, FALSE, version_footer->data,
+                              NULL, NULL, NULL, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
 }
 
 int
@@ -806,6 +824,8 @@ main(int argc, const char **argv)
   enum {
     config_dir_opt = SVN_OPT_FIRST_LONGOPT_ID,
     config_inline_opt,
+    no_auth_cache_opt,
+    version_opt,
     with_revprop_opt
   };
   const apr_getopt_option_t options[] = {
@@ -821,6 +841,8 @@ main(int argc, const char **argv)
     {"non-interactive", 'n', 0, ""},
     {"config-dir", config_dir_opt, 1, ""},
     {"config-option",  config_inline_opt, 1, ""},
+    {"no-auth-cache",  no_auth_cache_opt, 0, ""},
+    {"version", version_opt, 0, ""},
     {NULL, 0, 0, NULL}
   };
   const char *message = NULL;
@@ -829,6 +851,7 @@ main(int argc, const char **argv)
   const char *config_dir = NULL;
   apr_array_header_t *config_options;
   svn_boolean_t non_interactive = FALSE;
+  svn_boolean_t no_auth_cache = FALSE;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
   apr_array_header_t *action_args;
   apr_hash_t *revprops = apr_hash_make(pool);
@@ -923,6 +946,13 @@ main(int argc, const char **argv)
                                                  pool);
           if (err)
             handle_error(err, pool);
+          break;
+        case no_auth_cache_opt:
+          no_auth_cache = TRUE;
+          break;
+        case version_opt:
+          SVN_INT_ERR(display_version(getopt, pool));
+          exit(EXIT_SUCCESS);
           break;
         case 'h':
           usage(pool, EXIT_SUCCESS);
@@ -1159,7 +1189,7 @@ main(int argc, const char **argv)
 
   if ((err = execute(actions, anchor, revprops, username, password,
                      config_dir, config_options, non_interactive,
-                     base_revision, pool)))
+                     no_auth_cache, base_revision, pool)))
     handle_error(err, pool);
 
   svn_pool_destroy(pool);

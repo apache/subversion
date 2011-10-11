@@ -59,7 +59,6 @@ public class SVNAdmin
      */
     protected void finalize()
     {
-        aSVNAdmin.finalize();
     }
 
     /**

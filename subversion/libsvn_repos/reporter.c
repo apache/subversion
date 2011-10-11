@@ -32,17 +32,19 @@
 #include "svn_props.h"
 #include "repos.h"
 #include "svn_private_config.h"
+
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
+#include "private/svn_subr_private.h"
 
 #define NUM_CACHED_SOURCE_ROOTS 4
 
-/* Theory of operation: we write report operations out to a temporary
-   file as we receive them.  When the report is finished, we read the
+/* Theory of operation: we write report operations out to a spill-buffer
+   as we receive them.  When the report is finished, we read the
    operations back out again, using them to guide the progression of
    the delta between the source and target revs.
 
-   Temporary file format: we use a simple ad-hoc format to store the
+   Spill-buffer content format: we use a simple ad-hoc format to store the
    report operations.  Each report operation is the concatention of
    the following ("+/-" indicates the single character '+' or '-';
    <length> and <revnum> are written out as decimal strings):
@@ -122,8 +124,8 @@ typedef struct report_baton_t
   svn_repos_authz_func_t authz_read_func;
   void *authz_read_baton;
 
-  /* The temporary file in which we are stashing the report. */
-  apr_file_t *tempfile;
+  /* The spill-buffer holding the report. */
+  svn_spillbuf_reader_t *reader;
 
   /* For the actual editor drive, we'll need a lookahead path info
      entry, a cache of FS roots, and a pool to store them. */
@@ -158,14 +160,14 @@ static svn_error_t *delta_dirs(report_baton_t *b, svn_revnum_t s_rev,
 /* --- READING PREVIOUSLY STORED REPORT INFORMATION --- */
 
 static svn_error_t *
-read_number(apr_uint64_t *num, apr_file_t *temp, apr_pool_t *pool)
+read_number(apr_uint64_t *num, svn_spillbuf_reader_t *reader, apr_pool_t *pool)
 {
   char c;
 
   *num = 0;
   while (1)
     {
-      SVN_ERR(svn_io_file_getc(&c, temp, pool));
+      SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
       if (c == ':')
         break;
       *num = *num * 10 + (c - '0');
@@ -174,13 +176,14 @@ read_number(apr_uint64_t *num, apr_file_t *temp, apr_pool_t *pool)
 }
 
 static svn_error_t *
-read_string(const char **str, apr_file_t *temp, apr_pool_t *pool)
+read_string(const char **str, svn_spillbuf_reader_t *reader, apr_pool_t *pool)
 {
   apr_uint64_t len;
   apr_size_t size;
+  apr_size_t amt;
   char *buf;
 
-  SVN_ERR(read_number(&len, temp, pool));
+  SVN_ERR(read_number(&len, reader, pool));
 
   /* Len can never be less than zero.  But could len be so large that
      len + 1 wraps around and we end up passing 0 to apr_palloc(),
@@ -201,22 +204,26 @@ read_string(const char **str, apr_file_t *temp, apr_pool_t *pool)
 
   size = (apr_size_t)len;
   buf = apr_palloc(pool, size+1);
-  SVN_ERR(svn_io_file_read_full2(temp, buf, size, NULL, NULL, pool));
+  if (size > 0)
+    {
+      SVN_ERR(svn_spillbuf__reader_read(&amt, reader, buf, size, pool));
+      SVN_ERR_ASSERT(amt == size);
+    }
   buf[len] = 0;
   *str = buf;
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-read_rev(svn_revnum_t *rev, apr_file_t *temp, apr_pool_t *pool)
+read_rev(svn_revnum_t *rev, svn_spillbuf_reader_t *reader, apr_pool_t *pool)
 {
   char c;
   apr_uint64_t num;
 
-  SVN_ERR(svn_io_file_getc(&c, temp, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   if (c == '+')
     {
-      SVN_ERR(read_number(&num, temp, pool));
+      SVN_ERR(read_number(&num, reader, pool));
       *rev = (svn_revnum_t) num;
     }
   else
@@ -225,15 +232,15 @@ read_rev(svn_revnum_t *rev, apr_file_t *temp, apr_pool_t *pool)
 }
 
 /* Read a single character to set *DEPTH (having already read '+')
-   from TEMP.  PATH is the path to which the depth applies, and is
+   from READER.  PATH is the path to which the depth applies, and is
    used for error reporting only. */
 static svn_error_t *
-read_depth(svn_depth_t *depth, apr_file_t *temp, const char *path,
+read_depth(svn_depth_t *depth, svn_spillbuf_reader_t *reader, const char *path,
            apr_pool_t *pool)
 {
   char c;
 
-  SVN_ERR(svn_io_file_getc(&c, temp, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   switch (c)
     {
     case 'X':
@@ -260,14 +267,16 @@ read_depth(svn_depth_t *depth, apr_file_t *temp, const char *path,
   return SVN_NO_ERROR;
 }
 
-/* Read a report operation *PI out of TEMP.  Set *PI to NULL if we
+/* Read a report operation *PI out of READER.  Set *PI to NULL if we
    have reached the end of the report. */
 static svn_error_t *
-read_path_info(path_info_t **pi, apr_file_t *temp, apr_pool_t *pool)
+read_path_info(path_info_t **pi,
+               svn_spillbuf_reader_t *reader,
+               apr_pool_t *pool)
 {
   char c;
 
-  SVN_ERR(svn_io_file_getc(&c, temp, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   if (c == '-')
     {
       *pi = NULL;
@@ -275,23 +284,23 @@ read_path_info(path_info_t **pi, apr_file_t *temp, apr_pool_t *pool)
     }
 
   *pi = apr_palloc(pool, sizeof(**pi));
-  SVN_ERR(read_string(&(*pi)->path, temp, pool));
-  SVN_ERR(svn_io_file_getc(&c, temp, pool));
+  SVN_ERR(read_string(&(*pi)->path, reader, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   if (c == '+')
-    SVN_ERR(read_string(&(*pi)->link_path, temp, pool));
+    SVN_ERR(read_string(&(*pi)->link_path, reader, pool));
   else
     (*pi)->link_path = NULL;
-  SVN_ERR(read_rev(&(*pi)->rev, temp, pool));
-  SVN_ERR(svn_io_file_getc(&c, temp, pool));
+  SVN_ERR(read_rev(&(*pi)->rev, reader, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   if (c == '+')
-    SVN_ERR(read_depth(&((*pi)->depth), temp, (*pi)->path, pool));
+    SVN_ERR(read_depth(&((*pi)->depth), reader, (*pi)->path, pool));
   else
     (*pi)->depth = svn_depth_infinity;
-  SVN_ERR(svn_io_file_getc(&c, temp, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   (*pi)->start_empty = (c == '+');
-  SVN_ERR(svn_io_file_getc(&c, temp, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   if (c == '+')
-    SVN_ERR(read_string(&(*pi)->lock_token, temp, pool));
+    SVN_ERR(read_string(&(*pi)->lock_token, reader, pool));
   else
     (*pi)->lock_token = NULL;
   (*pi)->pool = pool;
@@ -306,7 +315,7 @@ relevant(path_info_t *pi, const char *prefix, apr_size_t plen)
           (!*prefix || pi->path[plen] == '/'));
 }
 
-/* Fetch the next pathinfo from B->tempfile for a descendant of
+/* Fetch the next pathinfo from B->reader for a descendant of
    PREFIX.  If the next pathinfo is for an immediate child of PREFIX,
    set *ENTRY to the path component of the report information and
    *INFO to the path information for that entry.  If the next pathinfo
@@ -353,7 +362,7 @@ fetch_path_info(report_baton_t *b, const char **entry, path_info_t **info,
           *entry = relpath;
           *info = b->lookahead;
           subpool = svn_pool_create(b->pool);
-          SVN_ERR(read_path_info(&b->lookahead, b->tempfile, subpool));
+          SVN_ERR(read_path_info(&b->lookahead, b->reader, subpool));
         }
     }
   return SVN_NO_ERROR;
@@ -371,7 +380,7 @@ skip_path_info(report_baton_t *b, const char *prefix)
     {
       svn_pool_destroy(b->lookahead->pool);
       subpool = svn_pool_create(b->pool);
-      SVN_ERR(read_path_info(&b->lookahead, b->tempfile, subpool));
+      SVN_ERR(read_path_info(&b->lookahead, b->reader, subpool));
     }
   return SVN_NO_ERROR;
 }
@@ -1233,6 +1242,8 @@ drive(report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
 
   /* Collect information about the source and target nodes. */
   s_fullpath = svn_fspath__join(b->fs_base, b->s_operand, pool);
+  /* ### Weird: When I have a file external defined as "^/A/a X/xa",
+   * ### S_FULLPATH becomes "/A/a/xa" here, which is complete nonsense. */
   SVN_ERR(get_source_root(b, &s_root, s_rev));
   SVN_ERR(fake_dirent(&s_entry, s_root, s_fullpath, pool));
   SVN_ERR(fake_dirent(&t_entry, b->t_root, b->t_path, pool));
@@ -1277,7 +1288,6 @@ drive(report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
 static svn_error_t *
 finish_report(report_baton_t *b, apr_pool_t *pool)
 {
-  apr_off_t offset;
   path_info_t *info;
   apr_pool_t *subpool;
   svn_revnum_t s_rev;
@@ -1286,14 +1296,12 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
   /* Save our pool to manage the lookahead and fs_root cache with. */
   b->pool = pool;
 
-  /* Add an end marker and rewind the temporary file. */
-  SVN_ERR(svn_io_file_write_full(b->tempfile, "-", 1, NULL, pool));
-  offset = 0;
-  SVN_ERR(svn_io_file_seek(b->tempfile, APR_SET, &offset, pool));
+  /* Add the end marker. */
+  SVN_ERR(svn_spillbuf__reader_write(b->reader, "-", 1, pool));
 
   /* Read the first pathinfo from the report and verify that it is a top-level
      set_path entry. */
-  SVN_ERR(read_path_info(&info, b->tempfile, pool));
+  SVN_ERR(read_path_info(&info, b->reader, pool));
   if (!info || strcmp(info->path, b->s_operand) != 0
       || info->link_path || !SVN_IS_VALID_REVNUM(info->rev))
     return svn_error_create(SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
@@ -1302,7 +1310,7 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
 
   /* Initialize the lookahead pathinfo. */
   subpool = svn_pool_create(pool);
-  SVN_ERR(read_path_info(&b->lookahead, b->tempfile, subpool));
+  SVN_ERR(read_path_info(&b->lookahead, b->reader, subpool));
 
   if (b->lookahead && strcmp(b->lookahead->path, b->s_operand) == 0)
     {
@@ -1320,7 +1328,7 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
           b->lookahead->depth = info->depth;
         }
       info = b->lookahead;
-      SVN_ERR(read_path_info(&b->lookahead, b->tempfile, subpool));
+      SVN_ERR(read_path_info(&b->lookahead, b->reader, subpool));
     }
 
   /* Open the target root and initialize the source root cache. */
@@ -1331,15 +1339,18 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
   {
     svn_error_t *err = drive(b, s_rev, info, pool);
     if (err == SVN_NO_ERROR)
-      return b->editor->close_edit(b->edit_baton, pool);
-    svn_error_clear(b->editor->abort_edit(b->edit_baton, pool));
-    return svn_error_trace(err);
+      return svn_error_trace(b->editor->close_edit(b->edit_baton, pool));
+
+    return svn_error_trace(
+                svn_error_compose_create(err,
+                                         b->editor->abort_edit(b->edit_baton,
+                                                               pool)));
   }
 }
 
 /* --- COLLECTING THE REPORT INFORMATION --- */
 
-/* Record a report operation into the temporary file.  Return an error
+/* Record a report operation into the spill buffer.  Return an error
    if DEPTH is svn_depth_unknown. */
 static svn_error_t *
 write_path_info(report_baton_t *b, const char *path, const char *lpath,
@@ -1378,7 +1389,7 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
   rep = apr_psprintf(pool, "+%" APR_SIZE_T_FMT ":%s%s%s%s%c%s",
                      strlen(path), path, lrep, rrep, drep,
                      start_empty ? '+' : '-', ltrep);
-  return svn_io_file_write_full(b->tempfile, rep, strlen(rep), NULL, pool);
+  return svn_spillbuf__reader_write(b->reader, rep, strlen(rep), pool);
 }
 
 svn_error_t *
@@ -1417,21 +1428,14 @@ svn_error_t *
 svn_repos_finish_report(void *baton, apr_pool_t *pool)
 {
   report_baton_t *b = baton;
-  svn_error_t *finish_err, *close_err;
 
-  finish_err = finish_report(b, pool);
-  close_err = svn_io_file_close(b->tempfile, pool);
-  if (finish_err)
-    svn_error_clear(close_err);
-  return finish_err ? finish_err : close_err;
+  return svn_error_trace(finish_report(b, pool));
 }
 
 svn_error_t *
 svn_repos_abort_report(void *baton, apr_pool_t *pool)
 {
-  report_baton_t *b = baton;
-
-  return svn_io_file_close(b->tempfile, pool);
+  return SVN_NO_ERROR;
 }
 
 /* --- BEGINNING THE REPORT --- */
@@ -1480,10 +1484,9 @@ svn_repos_begin_report2(void **report_baton,
   b->authz_read_baton = authz_read_baton;
   b->revision_infos = apr_hash_make(pool);
   b->pool = pool;
-
-  SVN_ERR(svn_io_open_unique_file3(&b->tempfile, NULL, NULL,
-                                   svn_io_file_del_on_pool_cleanup,
-                                   pool, pool));
+  b->reader = svn_spillbuf__reader_create(1000 /* blocksize */,
+                                          1000000 /* maxsize */,
+                                          pool);
 
   /* Hand reporter back to client. */
   *report_baton = b;
