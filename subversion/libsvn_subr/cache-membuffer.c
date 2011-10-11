@@ -1111,6 +1111,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
        */
       find_entry(cache, group_index, to_find, TRUE);
     }
+  return SVN_NO_ERROR;
 }
 
 /* Try to insert the ITEM and use the KEY to unqiuely identify it.
