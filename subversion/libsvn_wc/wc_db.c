@@ -142,7 +142,7 @@ apr_int64_t svn_wc__db_op_depth_for_upgrade(const char *local_relpath)
 typedef struct insert_base_baton_t {
   /* common to all insertions into BASE */
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   apr_int64_t repos_id;
   const char *repos_relpath;
   svn_revnum_t revision;
@@ -192,7 +192,7 @@ typedef struct insert_base_baton_t {
 typedef struct insert_working_baton_t {
   /* common to all insertions into WORKING (including NODE_DATA) */
   svn_wc__db_status_t presence;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   apr_int64_t op_depth;
 
   /* common to all "normal" presence insertions */
@@ -226,7 +226,7 @@ typedef struct insert_working_baton_t {
 
 typedef struct insert_external_baton_t {
   /* common to all insertions into EXTERNALS */
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_wc__db_status_t presence;
 
   /* The repository of the external */
@@ -274,10 +274,10 @@ typedef struct insert_external_baton_t {
 
 
 static const svn_token_map_t kind_map[] = {
-  { "file", svn_wc__db_kind_file },
-  { "dir", svn_wc__db_kind_dir },
-  { "symlink", svn_wc__db_kind_symlink },
-  { "unknown", svn_wc__db_kind_unknown },
+  { "file", svn_kind_file },
+  { "dir", svn_kind_dir },
+  { "symlink", svn_kind_symlink },
+  { "unknown", svn_kind_unknown },
   { NULL }
 };
 
@@ -329,7 +329,7 @@ db_read_pristine_props(apr_hash_t **props,
 
 static svn_error_t *
 read_info(svn_wc__db_status_t *status,
-          svn_wc__db_kind_t *kind,
+          svn_kind_t *kind,
           svn_revnum_t *revision,
           const char **repos_relpath,
           apr_int64_t *repos_id,
@@ -830,17 +830,17 @@ insert_base_node(void *baton,
                             pibb->repos_relpath,
                             pibb->revision,
                             presence_map, pibb->status, /* 8 */
-                            (pibb->kind == svn_wc__db_kind_dir) ? /* 9 */
+                            (pibb->kind == svn_kind_dir) ? /* 9 */
                                svn_depth_to_word(pibb->depth) : NULL,
                             kind_map, pibb->kind, /* 10 */
                             pibb->changed_rev,    /* 11 */
                             pibb->changed_date,   /* 12 */
                             pibb->changed_author, /* 13 */
-                            (pibb->kind == svn_wc__db_kind_symlink) ?
+                            (pibb->kind == svn_kind_symlink) ?
                                 pibb->target : NULL, /* 19 */
                             NULL /* 20 */,
                             moved_to_relpath /* 21 */));
-  if (pibb->kind == svn_wc__db_kind_file)
+  if (pibb->kind == svn_kind_file)
     {
       SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, pibb->checksum,
                                         scratch_pool));
@@ -886,7 +886,7 @@ insert_base_node(void *baton,
                                wcroot->sdb, scratch_pool));
     }
 
-  if (pibb->kind == svn_wc__db_kind_dir && pibb->children)
+  if (pibb->kind == svn_kind_dir && pibb->children)
     SVN_ERR(insert_incomplete_children(wcroot->sdb, wcroot->wc_id,
                                        local_relpath,
                                        repos_id,
@@ -1023,18 +1023,18 @@ insert_working_node(void *baton,
                 piwb->op_depth,
                 parent_relpath,
                 presence_map, piwb->presence,
-                (piwb->kind == svn_wc__db_kind_dir)
+                (piwb->kind == svn_kind_dir)
                             ? svn_depth_to_word(piwb->depth) : NULL,
                 kind_map, piwb->kind,
                 piwb->changed_rev,
                 piwb->changed_date,
                 piwb->changed_author,
                 /* Note: incomplete nodes may have a NULL target.  */
-                (piwb->kind == svn_wc__db_kind_symlink)
+                (piwb->kind == svn_kind_symlink)
                             ? piwb->target : NULL,
                 (apr_int64_t)piwb->moved_here));
 
-  if (piwb->kind == svn_wc__db_kind_file)
+  if (piwb->kind == svn_kind_file)
     {
       SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, piwb->checksum,
                                         scratch_pool));
@@ -1055,7 +1055,7 @@ insert_working_node(void *baton,
      The children are part of the same op and so have the same op_depth.
      (The only time we'd want a different depth is during a recursive
      simple add, but we never insert children here during a simple add.) */
-  if (piwb->kind == svn_wc__db_kind_dir && piwb->children)
+  if (piwb->kind == svn_kind_dir && piwb->children)
     SVN_ERR(insert_incomplete_children(wcroot->sdb, wcroot->wc_id,
                                        local_relpath,
                                        INVALID_REPOS_ID /* inherit repos_id */,
@@ -1065,7 +1065,7 @@ insert_working_node(void *baton,
                                        piwb->op_depth,
                                        scratch_pool));
 
-  if (piwb->kind == svn_wc__db_kind_dir)
+  if (piwb->kind == svn_kind_dir)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_UPDATE_ACTUAL_CLEAR_CHANGELIST));
@@ -1463,7 +1463,7 @@ svn_wc__db_init(svn_wc__db_t *db,
     ibb.status = svn_wc__db_status_incomplete;
   else
     ibb.status = svn_wc__db_status_normal;
-  ibb.kind = svn_wc__db_kind_dir;
+  ibb.kind = svn_kind_dir;
   ibb.repos_id = repos_id;
   ibb.repos_relpath = repos_relpath;
   ibb.revision = initial_rev;
@@ -1613,7 +1613,7 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
   ibb.repos_uuid = repos_uuid;
 
   ibb.status = svn_wc__db_status_normal;
-  ibb.kind = svn_wc__db_kind_dir;
+  ibb.kind = svn_kind_dir;
   ibb.repos_relpath = repos_relpath;
   ibb.revision = revision;
 
@@ -1694,7 +1694,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
   ibb.repos_uuid = repos_uuid;
 
   ibb.status = svn_wc__db_status_normal;
-  ibb.kind = svn_wc__db_kind_file;
+  ibb.kind = svn_kind_file;
   ibb.repos_relpath = repos_relpath;
   ibb.revision = revision;
 
@@ -1773,7 +1773,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
   ibb.repos_uuid = repos_uuid;
 
   ibb.status = svn_wc__db_status_normal;
-  ibb.kind = svn_wc__db_kind_symlink;
+  ibb.kind = svn_kind_symlink;
   ibb.repos_relpath = repos_relpath;
   ibb.revision = revision;
 
@@ -1812,7 +1812,7 @@ add_excluded_or_not_present_node(svn_wc__db_t *db,
                                  const char *repos_root_url,
                                  const char *repos_uuid,
                                  svn_revnum_t revision,
-                                 svn_wc__db_kind_t kind,
+                                 svn_kind_t kind,
                                  svn_wc__db_status_t status,
                                  const svn_skel_t *conflict,
                                  const svn_skel_t *work_items,
@@ -1884,7 +1884,7 @@ svn_wc__db_base_add_excluded_node(svn_wc__db_t *db,
                                   const char *repos_root_url,
                                   const char *repos_uuid,
                                   svn_revnum_t revision,
-                                  svn_wc__db_kind_t kind,
+                                  svn_kind_t kind,
                                   svn_wc__db_status_t status,
                                   const svn_skel_t *conflict,
                                   const svn_skel_t *work_items,
@@ -1906,7 +1906,7 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
                                      const char *repos_root_url,
                                      const char *repos_uuid,
                                      svn_revnum_t revision,
-                                     svn_wc__db_kind_t kind,
+                                     svn_kind_t kind,
                                      const svn_skel_t *conflict,
                                      const svn_skel_t *work_items,
                                      apr_pool_t *scratch_pool)
@@ -1983,7 +1983,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
    DB+LOCAL_ABSPATH and outputting REPOS_ID instead of URL+UUID. */
 static svn_error_t *
 base_get_info(svn_wc__db_status_t *status,
-              svn_wc__db_kind_t *kind,
+              svn_kind_t *kind,
               svn_revnum_t *revision,
               const char **repos_relpath,
               apr_int64_t *repos_id,
@@ -2013,7 +2013,7 @@ base_get_info(svn_wc__db_status_t *status,
 
   if (have_row)
     {
-      svn_wc__db_kind_t node_kind = svn_sqlite__column_token(stmt, 3,
+      svn_kind_t node_kind = svn_sqlite__column_token(stmt, 3,
                                                              kind_map);
 
       if (kind)
@@ -2047,7 +2047,7 @@ base_get_info(svn_wc__db_status_t *status,
         }
       if (depth)
         {
-          if (node_kind != svn_wc__db_kind_dir)
+          if (node_kind != svn_kind_dir)
             {
               *depth = svn_depth_unknown;
             }
@@ -2063,7 +2063,7 @@ base_get_info(svn_wc__db_status_t *status,
         }
       if (checksum)
         {
-          if (node_kind != svn_wc__db_kind_file)
+          if (node_kind != svn_kind_file)
             {
               *checksum = NULL;
             }
@@ -2081,7 +2081,7 @@ base_get_info(svn_wc__db_status_t *status,
         }
       if (target)
         {
-          if (node_kind != svn_wc__db_kind_symlink)
+          if (node_kind != svn_kind_symlink)
             *target = NULL;
           else
             *target = svn_sqlite__column_text(stmt, 11, result_pool);
@@ -2110,7 +2110,7 @@ base_get_info(svn_wc__db_status_t *status,
 
 svn_error_t *
 svn_wc__db_base_get_info(svn_wc__db_status_t *status,
-                         svn_wc__db_kind_t *kind,
+                         svn_kind_t *kind,
                          svn_revnum_t *revision,
                          const char **repos_relpath,
                          const char **repos_root_url,
@@ -2362,7 +2362,7 @@ svn_wc__db_base_clear_dav_cache_recursive(svn_wc__db_t *db,
    DB+LOCAL_ABSPATH and outputting REPOS_ID instead of URL+UUID. */
 static svn_error_t *
 depth_get_info(svn_wc__db_status_t *status,
-                svn_wc__db_kind_t *kind,
+                svn_kind_t *kind,
                 svn_revnum_t *revision,
                 const char **repos_relpath,
                 apr_int64_t *repos_id,
@@ -2391,7 +2391,7 @@ depth_get_info(svn_wc__db_status_t *status,
 
   if (have_row)
     {
-      svn_wc__db_kind_t node_kind = svn_sqlite__column_token(stmt, 3,
+      svn_kind_t node_kind = svn_sqlite__column_token(stmt, 3,
                                                              kind_map);
 
       if (kind)
@@ -2423,7 +2423,7 @@ depth_get_info(svn_wc__db_status_t *status,
         }
       if (depth)
         {
-          if (node_kind != svn_wc__db_kind_dir)
+          if (node_kind != svn_kind_dir)
             {
               *depth = svn_depth_unknown;
             }
@@ -2439,7 +2439,7 @@ depth_get_info(svn_wc__db_status_t *status,
         }
       if (checksum)
         {
-          if (node_kind != svn_wc__db_kind_file)
+          if (node_kind != svn_kind_file)
             {
               *checksum = NULL;
             }
@@ -2457,7 +2457,7 @@ depth_get_info(svn_wc__db_status_t *status,
         }
       if (target)
         {
-          if (node_kind != svn_wc__db_kind_symlink)
+          if (node_kind != svn_kind_symlink)
             *target = NULL;
           else
             *target = svn_sqlite__column_text(stmt, 11, result_pool);
@@ -2616,8 +2616,8 @@ insert_external_node(void *baton,
   else if (status == svn_wc__db_status_normal && !update_root)
     return svn_error_create(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL, NULL);
 
-  if (ieb->kind == svn_wc__db_kind_file
-      || ieb->kind == svn_wc__db_kind_symlink)
+  if (ieb->kind == svn_kind_file
+      || ieb->kind == svn_kind_symlink)
     {
       struct insert_base_baton_t ibb;
 
@@ -2738,7 +2738,7 @@ svn_wc__db_external_add_file(svn_wc__db_t *db,
 
   blank_ieb(&ieb);
 
-  ieb.kind = svn_wc__db_kind_file;
+  ieb.kind = svn_kind_file;
   ieb.presence = svn_wc__db_status_normal;
 
   ieb.repos_root_url = repos_root_url;
@@ -2822,7 +2822,7 @@ svn_wc__db_external_add_symlink(svn_wc__db_t *db,
 
   blank_ieb(&ieb);
 
-  ieb.kind = svn_wc__db_kind_symlink;
+  ieb.kind = svn_kind_symlink;
   ieb.presence = svn_wc__db_status_normal;
 
   ieb.repos_root_url = repos_root_url;
@@ -2895,7 +2895,7 @@ svn_wc__db_external_add_dir(svn_wc__db_t *db,
 
   blank_ieb(&ieb);
 
-  ieb.kind = svn_wc__db_kind_dir;
+  ieb.kind = svn_kind_dir;
   ieb.presence = svn_wc__db_status_normal;
 
   ieb.repos_root_url = repos_root_url;
@@ -2972,7 +2972,7 @@ svn_wc__db_external_remove(svn_wc__db_t *db,
 
 svn_error_t *
 svn_wc__db_external_read(svn_wc__db_status_t *status,
-                         svn_wc__db_kind_t *kind,
+                         svn_kind_t *kind,
                          const char **definining_abspath,
                          const char **repos_root_url,
                          const char **repos_uuid,
@@ -3240,7 +3240,7 @@ cross_db_copy(svn_wc__db_wcroot_t *src_wcroot,
               svn_wc__db_status_t dst_status,
               apr_int64_t dst_op_depth,
               apr_int64_t dst_np_op_depth,
-              svn_wc__db_kind_t kind,
+              svn_kind_t kind,
               const apr_array_header_t *children,
               apr_int64_t copyfrom_id,
               const char *copyfrom_relpath,
@@ -3255,8 +3255,8 @@ cross_db_copy(svn_wc__db_wcroot_t *src_wcroot,
   apr_hash_t *props;
   svn_depth_t depth;
 
-  SVN_ERR_ASSERT(kind == svn_wc__db_kind_file
-                 || kind == svn_wc__db_kind_dir
+  SVN_ERR_ASSERT(kind == svn_kind_file
+                 || kind == svn_kind_dir
                  );
 
   SVN_ERR(read_info(NULL, NULL, NULL, NULL, NULL,
@@ -3307,7 +3307,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                   const char **copyfrom_relpath,
                   svn_revnum_t *copyfrom_rev,
                   svn_wc__db_status_t *status,
-                  svn_wc__db_kind_t *kind,
+                  svn_kind_t *kind,
                   svn_boolean_t *op_root,
                   svn_boolean_t *have_work,
                   svn_wc__db_wcroot_t *wcroot,
@@ -3332,7 +3332,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
          adjust the relpath */
       const char *parent_relpath, *base_name;
       svn_wc__db_status_t parent_status;
-      svn_wc__db_kind_t parent_kind;
+      svn_kind_t parent_kind;
       svn_boolean_t parent_have_work;
 
       svn_dirent_split(&parent_relpath, &base_name, local_relpath,
@@ -3453,7 +3453,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
   apr_int64_t copyfrom_id;
   apr_int64_t dst_op_depth;
   apr_int64_t dst_np_op_depth;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   const apr_array_header_t *children;
 
   SVN_ERR(get_info_for_copy(&copyfrom_id, &copyfrom_relpath, &copyfrom_rev,
@@ -3464,7 +3464,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
                             copyfrom_relpath, copyfrom_rev,
                             dst_wcroot, dst_relpath, scratch_pool));
 
-  SVN_ERR_ASSERT(kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_dir);
+  SVN_ERR_ASSERT(kind == svn_kind_file || kind == svn_kind_dir);
 
   /* ### New status, not finished, see notes/wc-ng/copying */
   switch (status)
@@ -3532,7 +3532,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
                                                       scratch_pool));
     }
 
-  if (kind == svn_wc__db_kind_dir)
+  if (kind == svn_kind_dir)
     {
       apr_int64_t src_op_depth;
 
@@ -3595,7 +3595,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
          The children are part of the same op and so have the same op_depth.
          (The only time we'd want a different depth is during a recursive
          simple add, but we never insert children here during a simple add.) */
-      if (kind == svn_wc__db_kind_dir
+      if (kind == svn_kind_dir
           && dst_presence == svn_wc__db_status_normal)
         SVN_ERR(insert_incomplete_children(
                   dst_wcroot->sdb,
@@ -3716,7 +3716,7 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
   const apr_array_header_t *children;
   apr_pool_t *iterpool;
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_revnum_t node_revision;
   const char *node_repos_relpath;
   apr_int64_t node_repos_id;
@@ -4203,7 +4203,7 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
   blank_iwb(&iwb);
 
   iwb.presence = svn_wc__db_status_normal;
-  iwb.kind = svn_wc__db_kind_dir;
+  iwb.kind = svn_kind_dir;
 
   iwb.props = props;
   iwb.changed_rev = changed_rev;
@@ -4278,7 +4278,7 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
   blank_iwb(&iwb);
 
   iwb.presence = svn_wc__db_status_normal;
-  iwb.kind = svn_wc__db_kind_file;
+  iwb.kind = svn_kind_file;
 
   iwb.props = props;
   iwb.changed_rev = changed_rev;
@@ -4347,7 +4347,7 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
   blank_iwb(&iwb);
 
   iwb.presence = svn_wc__db_status_normal;
-  iwb.kind = svn_wc__db_kind_symlink;
+  iwb.kind = svn_kind_symlink;
 
   iwb.props = props;
   iwb.changed_rev = changed_rev;
@@ -4401,7 +4401,7 @@ svn_wc__db_op_add_directory(svn_wc__db_t *db,
   blank_iwb(&iwb);
 
   iwb.presence = svn_wc__db_status_normal;
-  iwb.kind = svn_wc__db_kind_dir;
+  iwb.kind = svn_kind_dir;
   iwb.op_depth = relpath_depth(local_relpath);
 
   iwb.work_items = work_items;
@@ -4436,7 +4436,7 @@ svn_wc__db_op_add_file(svn_wc__db_t *db,
   blank_iwb(&iwb);
 
   iwb.presence = svn_wc__db_status_normal;
-  iwb.kind = svn_wc__db_kind_file;
+  iwb.kind = svn_kind_file;
   iwb.op_depth = relpath_depth(local_relpath);
 
   iwb.work_items = work_items;
@@ -4470,7 +4470,7 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
   blank_iwb(&iwb);
 
   iwb.presence = svn_wc__db_status_normal;
-  iwb.kind = svn_wc__db_kind_symlink;
+  iwb.kind = svn_kind_symlink;
   iwb.op_depth = relpath_depth(local_relpath);
 
   iwb.target = target;
@@ -5494,7 +5494,7 @@ struct revert_list_read_baton {
   const char **conflict_working;
   const char **prop_reject;
   svn_boolean_t *copied_here;
-  svn_wc__db_kind_t *kind;
+  svn_kind_t *kind;
   apr_pool_t *result_pool;
 };
 
@@ -5512,7 +5512,7 @@ revert_list_read(void *baton,
   *(b->conflict_new) = *(b->conflict_old) = *(b->conflict_working) = NULL;
   *(b->prop_reject) = NULL;
   *(b->copied_here) = FALSE;
-  *(b->kind) = svn_wc__db_kind_unknown;
+  *(b->kind) = svn_kind_unknown;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_REVERT_LIST));
@@ -5587,7 +5587,7 @@ svn_wc__db_revert_list_read(svn_boolean_t *reverted,
                             const char **conflict_working,
                             const char **prop_reject,
                             svn_boolean_t *copied_here,
-                            svn_wc__db_kind_t *kind,
+                            svn_kind_t *kind,
                             svn_wc__db_t *db,
                             const char *local_abspath,
                             apr_pool_t *result_pool,
@@ -5901,7 +5901,7 @@ svn_wc__db_op_read_tree_conflict(
 struct remove_node_baton
 {
   svn_revnum_t not_present_rev;
-  svn_wc__db_kind_t not_present_kind;
+  svn_kind_t not_present_kind;
 };
 
 /* Implements svn_wc__db_txn_callback_t for svn_wc__db_op_remove_node */
@@ -5966,7 +5966,7 @@ svn_error_t *
 svn_wc__db_op_remove_node(svn_wc__db_t *db,
                           const char *local_abspath,
                           svn_revnum_t not_present_revision,
-                          svn_wc__db_kind_t not_present_kind,
+                          svn_kind_t not_present_kind,
                           apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -6234,7 +6234,7 @@ op_delete_txn(void *baton,
   svn_sqlite__stmt_t *stmt;
   apr_int64_t select_depth; /* Depth of what is to be deleted */
   svn_boolean_t refetch_depth = FALSE;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
 
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, STMT_CREATE_DELETE_LIST));
 
@@ -6296,7 +6296,7 @@ op_delete_txn(void *baton,
       /* If a subtree is being moved-away, we need to update moved-to
        * information in BASE for all children that were moved into this
        * subtree. */
-      if (kind == svn_wc__db_kind_dir)
+      if (kind == svn_kind_dir)
         {
           apr_pool_t *iterpool;
 
@@ -6586,7 +6586,7 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
    DB+LOCAL_ABSPATH, and outputting repos ids instead of URL+UUID. */
 static svn_error_t *
 read_info(svn_wc__db_status_t *status,
-          svn_wc__db_kind_t *kind,
+          svn_kind_t *kind,
           svn_revnum_t *revision,
           const char **repos_relpath,
           apr_int64_t *repos_id,
@@ -6645,7 +6645,7 @@ read_info(svn_wc__db_status_t *status,
   if (have_info)
     {
       apr_int64_t op_depth;
-      svn_wc__db_kind_t node_kind;
+      svn_kind_t node_kind;
 
       op_depth = svn_sqlite__column_int64(stmt_info, 0);
       node_kind = svn_sqlite__column_token(stmt_info, 4, kind_map);
@@ -6704,7 +6704,7 @@ read_info(svn_wc__db_status_t *status,
         }
       if (depth)
         {
-          if (node_kind != svn_wc__db_kind_dir)
+          if (node_kind != svn_kind_dir)
             {
               *depth = svn_depth_unknown;
             }
@@ -6722,7 +6722,7 @@ read_info(svn_wc__db_status_t *status,
         }
       if (checksum)
         {
-          if (node_kind != svn_wc__db_kind_file)
+          if (node_kind != svn_kind_file)
             {
               *checksum = NULL;
             }
@@ -6748,7 +6748,7 @@ read_info(svn_wc__db_status_t *status,
         }
       if (target)
         {
-          if (node_kind != svn_wc__db_kind_symlink)
+          if (node_kind != svn_kind_symlink)
             *target = NULL;
           else
             *target = svn_sqlite__column_text(stmt_info, 12, result_pool);
@@ -6865,7 +6865,7 @@ read_info(svn_wc__db_status_t *status,
       if (status)
         *status = svn_wc__db_status_normal;  /* What! No it's not! */
       if (kind)
-        *kind = svn_wc__db_kind_unknown;
+        *kind = svn_kind_unknown;
       if (revision)
         *revision = SVN_INVALID_REVNUM;
       if (repos_relpath)
@@ -6930,7 +6930,7 @@ read_info(svn_wc__db_status_t *status,
 
 svn_error_t *
 svn_wc__db_read_info(svn_wc__db_status_t *status,
-                     svn_wc__db_kind_t *kind,
+                     svn_kind_t *kind,
                      svn_revnum_t *revision,
                      const char **repos_relpath,
                      const char **repos_root_url,
@@ -7114,7 +7114,7 @@ read_children_info(void *baton,
           child->changed_author = svn_sqlite__column_text(stmt, 10,
                                                           result_pool);
 
-          if (child->kind != svn_wc__db_kind_dir)
+          if (child->kind != svn_kind_dir)
             child->depth = svn_depth_unknown;
           else
             {
@@ -7285,7 +7285,7 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
 
 svn_error_t *
 svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
-                              svn_wc__db_kind_t *kind,
+                              svn_kind_t *kind,
                               svn_revnum_t *changed_rev,
                               apr_time_t *changed_date,
                               const char **changed_author,
@@ -7305,7 +7305,7 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
   svn_error_t *err = NULL;
   apr_int64_t op_depth;
   svn_wc__db_status_t raw_status;
-  svn_wc__db_kind_t node_kind;
+  svn_kind_t node_kind;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -7375,7 +7375,7 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
     }
   if (depth)
     {
-      if (node_kind != svn_wc__db_kind_dir)
+      if (node_kind != svn_kind_dir)
         {
           *depth = svn_depth_unknown;
         }
@@ -7393,7 +7393,7 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
     }
   if (checksum)
     {
-      if (node_kind != svn_wc__db_kind_file)
+      if (node_kind != svn_kind_file)
         {
           *checksum = NULL;
         }
@@ -7419,7 +7419,7 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
     }
   if (target)
     {
-      if (node_kind != svn_wc__db_kind_symlink)
+      if (node_kind != svn_kind_symlink)
         *target = NULL;
       else
         *target = svn_sqlite__column_text(stmt, 12, result_pool);
@@ -8535,7 +8535,7 @@ commit_node(void *baton,
   const char *changelist = NULL;
   const char *parent_relpath;
   svn_wc__db_status_t new_presence;
-  svn_wc__db_kind_t new_kind;
+  svn_kind_t new_kind;
   const char *new_depth_str = NULL;
   svn_sqlite__stmt_t *stmt;
   apr_int64_t repos_id;
@@ -8573,7 +8573,7 @@ commit_node(void *baton,
   new_kind = svn_sqlite__column_token(stmt_info, 4, kind_map);
 
   /* What will the new depth be?  */
-  if (new_kind == svn_wc__db_kind_dir)
+  if (new_kind == svn_kind_dir)
     new_depth_str = svn_sqlite__column_text(stmt_info, 11, scratch_pool);
 
   /* Check that the repository information is not being changed.  */
@@ -8711,7 +8711,7 @@ commit_node(void *baton,
         }
     }
 
-  if (new_kind == svn_wc__db_kind_dir)
+  if (new_kind == svn_kind_dir)
     {
       /* When committing a directory, we should have its new children.  */
       /* ### one day. just not today.  */
@@ -8808,7 +8808,7 @@ struct update_baton_t {
 svn_error_t *
 svn_wc__db_global_update(svn_wc__db_t *db,
                          const char *local_abspath,
-                         svn_wc__db_kind_t new_kind,
+                         svn_kind_t new_kind,
                          const char *new_repos_relpath,
                          svn_revnum_t new_revision,
                          const apr_hash_t *new_props,
@@ -8945,7 +8945,7 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
   const apr_array_header_t *children;
   int i;
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t db_kind;
+  svn_kind_t db_kind;
   svn_revnum_t revision;
   const char *repos_relpath;
   apr_int64_t repos_id;
@@ -8965,11 +8965,11 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
 
   /* Skip file externals */
   if (update_root
-      && db_kind == svn_wc__db_kind_file
+      && db_kind == svn_kind_file
       && !is_root)
     return SVN_NO_ERROR;
 
-  if (skip_when_dir && db_kind == svn_wc__db_kind_dir)
+  if (skip_when_dir && db_kind == svn_kind_dir)
     return SVN_NO_ERROR;
 
   /* If the node is still marked 'not-present', then the server did not
@@ -9001,7 +9001,7 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
 
   /* Early out */
   if (depth <= svn_depth_empty
-      || db_kind != svn_wc__db_kind_dir
+      || db_kind != svn_kind_dir
       || status == svn_wc__db_status_server_excluded
       || status == svn_wc__db_status_excluded
       || status == svn_wc__db_status_not_present)
@@ -9066,7 +9066,7 @@ bump_revisions_post_update(void *baton,
 {
   struct bump_revisions_baton_t *brb = baton;
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_error_t *err;
   apr_int64_t new_repos_id = INVALID_REPOS_ID;
 
@@ -10372,7 +10372,7 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
 svn_error_t *
 svn_wc__db_upgrade_insert_external(svn_wc__db_t *db,
                                    const char *local_abspath,
-                                   svn_wc__db_kind_t kind,
+                                   svn_kind_t kind,
                                    const char *parent_abspath,
                                    const char *def_local_abspath,
                                    const char *repos_relpath,
@@ -10981,7 +10981,7 @@ svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
 
 
 svn_error_t *
-svn_wc__db_read_kind(svn_wc__db_kind_t *kind,
+svn_wc__db_read_kind(svn_kind_t *kind,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_boolean_t allow_missing,
@@ -11007,7 +11007,7 @@ svn_wc__db_read_kind(svn_wc__db_kind_t *kind,
     {
       if (allow_missing)
         {
-          *kind = svn_wc__db_kind_unknown;
+          *kind = svn_kind_unknown;
           SVN_ERR(svn_sqlite__reset(stmt_info));
           return SVN_NO_ERROR;
         }
@@ -12061,7 +12061,7 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
   ibb.repos_uuid = repos_uuid;
 
   ibb.status = svn_wc__db_status_incomplete;
-  ibb.kind = svn_wc__db_kind_dir;
+  ibb.kind = svn_kind_dir;
   ibb.repos_relpath = repos_relpath;
   ibb.revision = revision;
   ibb.depth = depth;

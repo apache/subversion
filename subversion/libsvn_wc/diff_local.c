@@ -138,7 +138,7 @@ file_diff(struct diff_baton *eb,
   const char *empty_file;
   const char *original_repos_relpath;
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_revnum_t revision;
   const svn_checksum_t *checksum;
   svn_boolean_t op_root;
@@ -167,7 +167,7 @@ file_diff(struct diff_baton *eb,
 
       if (replaced && base_replace /* && !have_more_work */)
         {
-          svn_wc__db_kind_t base_kind;
+          svn_kind_t base_kind;
           SVN_ERR(svn_wc__db_base_get_info(&base_status, &base_kind,
                                            &base_revision,
                                            NULL, NULL, NULL, NULL, NULL, NULL,
@@ -560,14 +560,14 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
              apr_pool_t *scratch_pool)
 {
   struct diff_baton eb = { 0 };
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_boolean_t get_all;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, FALSE,
                                scratch_pool));
 
-  if (kind == svn_wc__db_kind_dir)
+  if (kind == svn_kind_dir)
       eb.anchor_abspath = local_abspath;
   else
     eb.anchor_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
