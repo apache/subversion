@@ -134,7 +134,7 @@ static int sasl_mutex_unlock_cb(void *mutex)
 {
   if (!svn_ra_svn__sasl_status)
     return 0;
-  return check_result(svn_mutex__unlock(mutex));
+  return check_result(svn_mutex__unlock(mutex, SVN_NO_ERROR));
 }
 
 static svn_error_t *
