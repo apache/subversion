@@ -7856,6 +7856,24 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
 
 /** @} */
 
+/** Set @a kind to the node kind of @a abspath.  Use @a wc_ctx
+ * to access the working copy, and @a scratch_pool for all temporary
+ * allocations.
+ *
+ * If @a abspath is not under version control, set @a kind to #svn_node_none.
+ * 
+ * Like svn_wc_read_kind2() except for the base rather than the working
+ * version.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_wc_read_base_kind(svn_kind_t *kind,
+                      svn_wc_context_t *wc_ctx,
+                      const char *abspath,
+                      svn_boolean_t show_hidden,
+                      apr_pool_t *scratch_pool);
+
 /**
  * Set @a kind to the node kind of @a abspath.  Use @a wc_ctx
  * to access the working copy, and @a scratch_pool for all temporary
@@ -7881,7 +7899,10 @@ svn_wc_read_kind2(svn_kind_t *kind,
                   svn_boolean_t show_hidden,
                   apr_pool_t *scratch_pool);
 
-/* @deprecated
+/* Like svn_wc_read_kind2() but using svn_node_kind_t and thus reporting
+ * symlinks as files.
+ * 
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  * @since New in 1.7.
  */
 svn_error_t *

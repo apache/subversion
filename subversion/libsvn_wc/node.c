@@ -54,6 +54,70 @@
 
 
 /* Set *CHILDREN_ABSPATHS to a new array of the full paths formed by joining
+ * each name in REL_CHILDREN onto DIR_ABSPATH.
+ *
+ * Allocate the output array and its elements in RESULT_POOL. */
+static svn_error_t *
+make_absolute(const apr_array_header_t **children_abspaths,
+              const char *dir_abspath,
+              const apr_array_header_t *rel_children,
+              apr_pool_t *result_pool)
+{
+  apr_array_header_t *children;
+  int i;
+
+  children = apr_array_make(result_pool, rel_children->nelts,
+                            sizeof (const char *));
+  for (i = 0; i < rel_children->nelts; i++)
+    {
+      const char *child_abspath
+        = svn_dirent_join(dir_abspath,
+                          APR_ARRAY_IDX(rel_children, i, const char *),
+                          result_pool);
+
+      APR_ARRAY_PUSH(children, const char *) = child_abspath;
+    }
+
+  *children_abspaths = children;
+  return SVN_NO_ERROR;
+}
+
+/* Set *CHILDREN_OUT to a shallow copy of CHILDREN_IN, but omitting any
+ * paths that are reported as 'hidden' by svn_wc__db_node_hidden().
+ *
+ * Allocate the output array and its elements in RESULT_POOL. */
+static svn_error_t *
+filter_hidden_base_nodes(const apr_array_header_t **children_out,
+                         svn_wc_context_t *wc_ctx,
+                         const apr_array_header_t *children_in,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *children;
+  int i;
+
+  children = apr_array_make(result_pool, children_in->nelts,
+                            sizeof(const char *));
+  for (i = 0; i < children_in->nelts; i++)
+    {
+      const char *child_abspath = APR_ARRAY_IDX(children_in, i, const char *);
+      svn_boolean_t child_is_hidden;
+
+      /* Don't add hidden nodes to *CHILDREN. */
+      /* ### What's the correct call here? */
+      SVN_ERR(svn_wc__db_node_hidden(&child_is_hidden, wc_ctx->db,
+                                     child_abspath, scratch_pool));
+      if (child_is_hidden)
+        continue;
+
+      APR_ARRAY_PUSH(children, const char *) = child_abspath;
+    }
+
+  *children_out = children;
+  return SVN_NO_ERROR;
+}
+
+/* Set *CHILDREN_ABSPATHS to a new array of the full paths formed by joining
  * each name in REL_CHILDREN onto DIR_ABSPATH.  If SHOW_HIDDEN is false then
  * omit any paths that are reported as 'hidden' by svn_wc__db_node_hidden().
  *
@@ -137,6 +201,22 @@ svn_wc__node_get_children(const apr_array_header_t **children,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__base_get_children(const apr_array_header_t **children,
+                          svn_wc_context_t *wc_ctx,
+                          const char *dir_abspath,
+                          svn_boolean_t show_hidden,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc__db_base_get_children(children, wc_ctx->db, dir_abspath,
+                                       scratch_pool, scratch_pool));
+  SVN_ERR(make_absolute(children, dir_abspath, *children, result_pool));
+  if (! show_hidden)
+    SVN_ERR(filter_hidden_base_nodes(children, wc_ctx, *children,
+                                     result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__internal_get_repos_info(const char **repos_root_url,
@@ -315,6 +395,37 @@ convert_db_kind_to_node_kind2(svn_kind_t *kind,
         default:
           break;
       }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_read_base_kind(svn_kind_t *kind,
+                      svn_wc_context_t *wc_ctx,
+                      const char *local_abspath,
+                      svn_boolean_t show_hidden,
+                      apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t db_status;
+  svn_wc__db_kind_t db_kind;
+  svn_error_t *err;
+
+  err = svn_wc__db_base_get_info(&db_status, &db_kind, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
+                                 wc_ctx->db, local_abspath,
+                                 scratch_pool, scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      *kind = svn_node_none;
+      return SVN_NO_ERROR;
+    }
+  else
+    SVN_ERR(err);
+
+  SVN_ERR(convert_db_kind_to_node_kind2(kind, db_kind, db_status, show_hidden));
 
   return SVN_NO_ERROR;
 }
