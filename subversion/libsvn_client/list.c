@@ -30,6 +30,7 @@
 #include "svn_props.h"
 
 #include "client.h"
+#include "tree.h"
 
 #include "private/svn_fspath.h"
 #include "svn_private_config.h"
@@ -121,6 +122,52 @@ get_dir_contents(apr_uint32_t dirent_fields,
   return SVN_NO_ERROR;
 }
 
+/* */
+static svn_error_t *
+list_tree(svn_client_tree_t *tree,
+          const char *relpath,
+          const char *abs_path,
+          svn_depth_t depth,
+          apr_uint32_t dirent_fields,
+          svn_boolean_t fetch_locks,
+          svn_client_list_func_t list_func,
+          void *list_baton,
+          svn_client_ctx_t *ctx,
+          apr_pool_t *pool)
+{
+  svn_kind_t kind;
+  svn_dirent_t dirent = { 0 };
+
+  SVN_ERR(svn_tree_get_kind(tree, &kind, relpath, pool));
+  /* dirent.kind = svn__node_kind_from_kind(kind); */
+  /* if (dirent.kind == svn_kind_file)
+    dirent.size = svn_tree_stat ... */
+  SVN_ERR(list_func(list_baton, relpath, &dirent, NULL /* lock */,
+                    abs_path, pool));
+
+  /* Recurse. */
+  if (kind == svn_kind_dir && depth > svn_depth_empty)
+    {
+      apr_hash_t *dirents;
+      apr_hash_t *props;
+      apr_hash_index_t *hi;
+
+      SVN_ERR(svn_tree_get_dir(tree, &dirents, &props, relpath, pool, pool));
+      for (hi = apr_hash_first(pool, dirents);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *name = svn__apr_hash_index_key(hi);
+          const char *child_relpath = svn_relpath_join(relpath, name, pool);
+
+          SVN_ERR(list_tree(tree, child_relpath, abs_path, depth,
+                            dirent_fields, fetch_locks,
+                            list_func, list_baton, ctx, pool));
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_list2(const char *path_or_url,
                  const svn_opt_revision_t *peg_revision,
@@ -145,6 +192,24 @@ svn_client_list2(const char *path_or_url,
   /* We use the kind field to determine if we should recurse, so we
      always need it. */
   dirent_fields |= SVN_DIRENT_KIND;
+
+  {
+    static svn_opt_revision_t head_rev = { svn_opt_revision_head, { 0 } };
+    static svn_opt_revision_t work_rev = { svn_opt_revision_working, { 0 } };
+    svn_client_tree_t *tree;
+
+    /* Look at the local tree if given a local path.  This is a departure
+     * from the semantics svn <= 1.7 which always looked at the repository. */
+    if (revision->kind == svn_opt_revision_unspecified)
+      revision = svn_path_is_url(path_or_url) ? &head_rev : &work_rev;
+
+    SVN_ERR(svn_client__open_tree(&tree, path_or_url, revision, peg_revision,
+                                  ctx, pool, pool));
+    SVN_ERR(list_tree(tree, "", path_or_url, depth,
+                      dirent_fields, fetch_locks,
+                      list_func, baton, ctx, pool));
+    return SVN_NO_ERROR;
+  }
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev,
