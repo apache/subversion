@@ -22,6 +22,7 @@
  */
 
 #include "svn_dirent_uri.h"
+#include "svn_path.h"
 #include "client.h"
 #include "tree.h"
 #include "private/svn_wc_private.h"
@@ -256,9 +257,8 @@ wc_tree_get_kind(svn_client_tree_t *tree,
 
   if (baton->is_base)
     {
-      /* ### svn_wc_read_base_kind()? */
-      SVN_ERR(svn_wc_read_kind2(kind, baton->wc_ctx, abspath,
-                                FALSE /* show_hidden */, scratch_pool));
+      SVN_ERR(svn_wc_read_base_kind(kind, baton->wc_ctx, abspath,
+                                    FALSE /* show_hidden */, scratch_pool));
     }
   else
     SVN_ERR(svn_wc_read_kind2(kind, baton->wc_ctx, abspath,
@@ -316,15 +316,19 @@ wc_tree_get_dir(svn_client_tree_t *tree,
 
   if (dirents)
     {
-      /* if (baton->is_base) { ### ... } else */
-
       const apr_array_header_t *children;
       int i;
 
       *dirents = apr_hash_make(result_pool);
-      SVN_ERR(svn_wc__node_get_children_of_working_node(
-                &children, baton->wc_ctx, abspath, FALSE /* show_hidden */,
-                result_pool, scratch_pool));
+
+      if (baton->is_base)
+        SVN_ERR(svn_wc__base_get_children(
+                  &children, baton->wc_ctx, abspath, FALSE /* show_hidden */,
+                  result_pool, scratch_pool));
+      else
+        SVN_ERR(svn_wc__node_get_children_of_working_node(
+                  &children, baton->wc_ctx, abspath, FALSE /* show_hidden */,
+                  result_pool, scratch_pool));
       for (i = 0; i < children->nelts; i++)
         {
           const char *child_abspath = APR_ARRAY_IDX(children, i, const char *);
@@ -590,3 +594,43 @@ svn_client__repository_tree(svn_client_tree_t **tree_p,
 }
 
 /*-----------------------------------------------------------------*/
+
+svn_error_t *
+svn_client__open_tree(svn_client_tree_t **tree,
+                      const char *path,
+                      const svn_opt_revision_t *revision,
+                      const svn_opt_revision_t *peg_revision,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(revision->kind != svn_opt_revision_unspecified);
+
+  if (svn_path_is_url(path)
+      || ! SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
+    {
+      SVN_ERR(svn_client__repository_tree(tree, path, peg_revision, revision,
+                                          ctx, result_pool));
+    }
+  else
+    {
+      const char *abspath;
+      int wc_format;
+
+      SVN_ERR(svn_dirent_get_absolute(&abspath, path, scratch_pool));
+      SVN_ERR(svn_wc_check_wc2(&wc_format, ctx->wc_ctx, abspath, scratch_pool));
+      if (wc_format > 0)
+        {
+          if (revision->kind == svn_opt_revision_working)
+            SVN_ERR(svn_client__wc_working_tree(tree, abspath, ctx,
+                                                result_pool));
+          else
+            SVN_ERR(svn_client__wc_base_tree(tree, abspath, ctx, result_pool));
+        }
+      else
+        SVN_ERR(svn_client__disk_tree(tree, abspath, result_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+

@@ -173,6 +173,16 @@ svn_client__repository_tree(svn_client_tree_t **tree_p,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *result_pool);
 
+/* Open a tree, whether in the repository or a WC or unversioned on disk. */
+svn_error_t *
+svn_client__open_tree(svn_client_tree_t **tree,
+                      const char *path,
+                      const svn_opt_revision_t *revision,
+                      const svn_opt_revision_t *peg_revision,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
 
 #ifdef	__cplusplus
 }
