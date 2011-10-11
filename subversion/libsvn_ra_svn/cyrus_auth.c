@@ -85,7 +85,7 @@ static apr_status_t sasl_done_cb(void *data)
 static apr_array_header_t *free_mutexes = NULL;
 
 /* A mutex to serialize access to the array. */
-static svn_mutext__t *array_mutex = NULL;
+static svn_mutex__t *array_mutex = NULL;
 
 /* Callbacks we pass to sasl_set_mutex(). */
 
