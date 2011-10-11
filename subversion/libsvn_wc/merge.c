@@ -1503,12 +1503,12 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
    * unless the merge target is a copyfrom text, which lives in a
    * temporary file and does not exist in ACTUAL yet. */
   {
-    svn_wc__db_kind_t kind;
+    svn_kind_t kind;
     svn_boolean_t hidden;
     SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, target_abspath, TRUE,
                                  scratch_pool));
 
-    if (kind == svn_wc__db_kind_unknown)
+    if (kind == svn_kind_unknown)
       {
         *merge_outcome = svn_wc_merge_no_merge;
         return SVN_NO_ERROR;

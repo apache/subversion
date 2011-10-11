@@ -225,7 +225,7 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
 {
   int i;
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   apr_hash_t *pristine_props = NULL;
   apr_hash_t *actual_props = NULL;
   apr_hash_t *new_pristine_props;
@@ -315,7 +315,7 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
   {
     const char *dir_abspath;
 
-    if (kind == svn_wc__db_kind_dir)
+    if (kind == svn_kind_dir)
       dir_abspath = local_abspath;
     else
       dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
@@ -1532,7 +1532,7 @@ svn_wc__merge_props(svn_skel_t **work_items,
                     apr_hash_t **new_actual_props,
                     svn_wc__db_t *db,
                     const char *local_abspath,
-                    svn_wc__db_kind_t kind,
+                    svn_kind_t kind,
                     const svn_wc_conflict_version_t *left_version,
                     const svn_wc_conflict_version_t *right_version,
                     apr_hash_t *server_baseprops,
@@ -1561,7 +1561,7 @@ svn_wc__merge_props(svn_skel_t **work_items,
   *new_pristine_props = NULL;
   *new_actual_props = NULL;
 
-  is_dir = (kind == svn_wc__db_kind_dir);
+  is_dir = (kind == svn_kind_dir);
 
   if (!server_baseprops)
     server_baseprops = pristine_props;
@@ -2421,7 +2421,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                  apr_pool_t *scratch_pool)
 {
   enum svn_prop_kind prop_kind = svn_property_kind(NULL, name);
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   const char *dir_abspath;
 
   /* we don't do entry properties here */
@@ -2445,7 +2445,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
                                scratch_pool));
 
-  if (kind == svn_wc__db_kind_dir)
+  if (kind == svn_kind_dir)
     dir_abspath = local_abspath;
   else
     dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
@@ -2465,7 +2465,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
         return SVN_NO_ERROR;
 
       SVN_ERR(do_propset(wc_ctx->db, local_abspath,
-                         kind == svn_wc__db_kind_dir
+                         kind == svn_kind_dir
                             ? svn_node_dir
                             : svn_node_file,
                          name, value, skip_checks,
