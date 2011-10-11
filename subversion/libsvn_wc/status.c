@@ -273,7 +273,7 @@ read_info(const struct svn_wc__db_info_t **info,
   if (mtb->have_base
       && (mtb->status == svn_wc__db_status_added
           || mtb->status == svn_wc__db_status_deleted
-          || mtb->kind == svn_wc__db_kind_file))
+          || mtb->kind == svn_kind_file))
     {
       svn_boolean_t update_root;
       svn_wc__db_lock_t **lock_arg = NULL;
@@ -288,7 +288,7 @@ read_info(const struct svn_wc__db_info_t **info,
                                        db, local_abspath,
                                        result_pool, scratch_pool));
 
-      mtb->file_external = (update_root && mtb->kind == svn_wc__db_kind_file);
+      mtb->file_external = (update_root && mtb->kind == svn_kind_file);
 
       if (mtb->status == svn_wc__db_status_deleted)
         {
@@ -359,7 +359,7 @@ read_info(const struct svn_wc__db_info_t **info,
   mtb->has_checksum = (checksum != NULL);
 
 #ifdef HAVE_SYMLINK
-  if (mtb->kind == svn_wc__db_kind_file
+  if (mtb->kind == svn_kind_file
       && (mtb->had_props || mtb->props_mod))
     {
       apr_hash_t *properties;
@@ -512,7 +512,7 @@ assemble_status(svn_wc_status3_t **status,
 
   /* Examine whether our target is missing or obstructed. To detect
    * obstructions, we have to look at the on-disk status in DIRENT. */
-  if (info->kind == svn_wc__db_kind_dir)
+  if (info->kind == svn_kind_dir)
     {
       if (info->status == svn_wc__db_status_incomplete || info->incomplete)
         {
@@ -575,7 +575,7 @@ assemble_status(svn_wc_status3_t **status,
 
      If it was changed, then the subdir is incomplete or missing/obstructed.
    */
-  if (info->kind != svn_wc__db_kind_dir
+  if (info->kind != svn_kind_dir
       && node_status == svn_wc_status_normal)
     {
       svn_boolean_t text_modified_p = FALSE;
@@ -587,8 +587,8 @@ assemble_status(svn_wc_status3_t **status,
             precedence over M. */
 
       /* If the entry is a file, check for textual modifications */
-      if ((info->kind == svn_wc__db_kind_file
-          || info->kind == svn_wc__db_kind_symlink)
+      if ((info->kind == svn_kind_file
+          || info->kind == svn_kind_symlink)
 #ifdef HAVE_SYMLINK
              && (info->special == (dirent && dirent->special))
 #endif /* HAVE_SYMLINK */
@@ -663,7 +663,7 @@ assemble_status(svn_wc_status3_t **status,
         {
           if (!info->op_root)
             copied = TRUE; /* And keep status normal */
-          else if (info->kind == svn_wc__db_kind_file
+          else if (info->kind == svn_kind_file
                    && !info->have_base && !info->have_more_work)
             {
               /* Simple addition or copy, no replacement */
@@ -735,14 +735,14 @@ assemble_status(svn_wc_status3_t **status,
 
   switch (info->kind)
     {
-      case svn_wc__db_kind_dir:
+      case svn_kind_dir:
         stat->kind = svn_node_dir;
         break;
-      case svn_wc__db_kind_file:
-      case svn_wc__db_kind_symlink:
+      case svn_kind_file:
+      case svn_kind_symlink:
         stat->kind = svn_node_file;
         break;
-      case svn_wc__db_kind_unknown:
+      case svn_kind_unknown:
       default:
         stat->kind = svn_node_unknown;
     }
@@ -1146,11 +1146,11 @@ one_child_status(const struct walk_status_baton *wb,
       && info->status != svn_wc__db_status_not_present
       && info->status != svn_wc__db_status_excluded
       && info->status != svn_wc__db_status_server_excluded
-      && !(info->kind == svn_wc__db_kind_unknown
+      && !(info->kind == svn_kind_unknown
            && info->status == svn_wc__db_status_normal))
     {
       if (depth == svn_depth_files
-          && info->kind == svn_wc__db_kind_dir)
+          && info->kind == svn_kind_dir)
         {
           return SVN_NO_ERROR;
         }
@@ -1165,7 +1165,7 @@ one_child_status(const struct walk_status_baton *wb,
 
       /* Descend in subdirectories. */
       if (depth == svn_depth_infinity
-          && info->kind == svn_wc__db_kind_dir)
+          && info->kind == svn_kind_dir)
         {
           SVN_ERR(get_dir_status(wb, local_abspath, TRUE,
                                  dir_repos_root_url, dir_repos_relpath,
@@ -2003,7 +2003,7 @@ delete_entry(const char *path,
   struct dir_baton *db = parent_baton;
   struct edit_baton *eb = db->edit_baton;
   const char *local_abspath = svn_dirent_join(eb->anchor_abspath, path, pool);
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
 
   /* Note:  when something is deleted, it's okay to tweak the
      statushash immediately.  No need to wait until close_file or
@@ -2012,7 +2012,7 @@ delete_entry(const char *path,
 
   SVN_ERR(svn_wc__db_read_kind(&kind, eb->db, local_abspath, FALSE, pool));
   SVN_ERR(tweak_statushash(db, db, TRUE, eb->db,
-                           local_abspath, kind == svn_wc__db_kind_dir,
+                           local_abspath, kind == svn_kind_dir,
                            svn_wc_status_deleted, 0, 0, revision, NULL, pool));
 
   /* Mark the parent dir -- it lost an entry (unless that parent dir
@@ -2021,7 +2021,7 @@ delete_entry(const char *path,
   if (db->parent_baton && (! *eb->target_basename))
     SVN_ERR(tweak_statushash(db->parent_baton, db, TRUE,eb->db,
                              db->local_abspath,
-                             kind == svn_wc__db_kind_dir,
+                             kind == svn_kind_dir,
                              svn_wc_status_modified, svn_wc_status_modified,
                              0, SVN_INVALID_REVNUM, NULL, pool));
 
@@ -2604,7 +2604,7 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
   SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
                              scratch_pool, scratch_pool));
 
-  if (info && info->kind == svn_wc__db_kind_dir)
+  if (info && info->kind == svn_kind_dir)
     {
       SVN_ERR(get_dir_status(&wb,
                              local_abspath,
@@ -2716,7 +2716,7 @@ internal_status(svn_wc_status3_t **status,
                 apr_pool_t *scratch_pool)
 {
   const svn_io_dirent2_t *dirent;
-  svn_wc__db_kind_t node_kind;
+  svn_kind_t node_kind;
   const char *parent_repos_relpath;
   const char *parent_repos_root_url;
   const char *parent_repos_uuid;
@@ -2740,7 +2740,7 @@ internal_status(svn_wc_status3_t **status,
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       svn_error_clear(err);
-      node_kind = svn_wc__db_kind_unknown;
+      node_kind = svn_kind_unknown;
       /* Ensure conflicted is always set, but don't hide tree conflicts
          on 'hidden' nodes. */
       conflicted = FALSE;
@@ -2753,10 +2753,10 @@ internal_status(svn_wc_status3_t **status,
            || node_status == svn_wc__db_status_server_excluded
            || node_status == svn_wc__db_status_excluded)
     {
-      node_kind = svn_wc__db_kind_unknown;
+      node_kind = svn_kind_unknown;
     }
 
-  if (node_kind == svn_wc__db_kind_unknown)
+  if (node_kind == svn_kind_unknown)
     return svn_error_trace(assemble_unversioned(status,
                                                 db, local_abspath,
                                                 dirent, conflicted,

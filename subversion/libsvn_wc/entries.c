@@ -61,7 +61,7 @@ typedef struct db_node_t {
   const char *parent_relpath;
   svn_wc__db_status_t presence;
   svn_revnum_t revision;
-  svn_node_kind_t kind;  /* ### should switch to svn_wc__db_kind_t */
+  svn_node_kind_t kind;  /* ### should switch to svn_kind_t */
   svn_checksum_t *checksum;
   svn_filesize_t translated_size;
   svn_revnum_t changed_rev;
@@ -148,7 +148,7 @@ check_file_external(svn_wc_entry_t *entry,
                     apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   const char *repos_relpath;
   svn_revnum_t peg_revision;
   svn_revnum_t revision;
@@ -169,7 +169,7 @@ check_file_external(svn_wc_entry_t *entry,
     }
 
   if (status == svn_wc__db_status_normal
-      && kind == svn_wc__db_kind_file)
+      && kind == svn_kind_file)
     {
       entry->file_external_path = repos_relpath;
       if (SVN_IS_VALID_REVNUM(peg_revision))
@@ -204,7 +204,7 @@ check_file_external(svn_wc_entry_t *entry,
 */
 static svn_error_t *
 get_info_for_deleted(svn_wc_entry_t *entry,
-                     svn_wc__db_kind_t *kind,
+                     svn_kind_t *kind,
                      const char **repos_relpath,
                      const svn_checksum_t **checksum,
                      svn_wc__db_t *db,
@@ -384,7 +384,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_wc__db_status_t status;
   svn_wc__db_lock_t *lock;
   const char *repos_relpath;
@@ -840,11 +840,11 @@ read_one_entry(const svn_wc_entry_t **new_entry,
   if (entry->depth == svn_depth_unknown)
     entry->depth = svn_depth_infinity;
 
-  if (kind == svn_wc__db_kind_dir)
+  if (kind == svn_kind_dir)
     entry->kind = svn_node_dir;
-  else if (kind == svn_wc__db_kind_file)
+  else if (kind == svn_kind_file)
     entry->kind = svn_node_file;
-  else if (kind == svn_wc__db_kind_symlink)
+  else if (kind == svn_kind_symlink)
     entry->kind = svn_node_file;  /* ### no symlink kind */
   else
     entry->kind = svn_node_unknown;
@@ -926,7 +926,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
 
   /* Let's check for a file external.  ugh.  */
   if (status == svn_wc__db_status_normal
-      && kind == svn_wc__db_kind_file)
+      && kind == svn_kind_file)
     SVN_ERR(check_file_external(entry, db, entry_abspath, dir_abspath,
                                 result_pool, scratch_pool));
 
@@ -2500,7 +2500,7 @@ svn_wc_walk_entries3(const char *path,
   const char *local_abspath;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   svn_error_t *err;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_depth_t depth;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
@@ -2524,7 +2524,7 @@ svn_wc_walk_entries3(const char *path,
         walk_baton, pool);
     }
 
-  if (kind == svn_wc__db_kind_file || depth == svn_depth_exclude)
+  if (kind == svn_kind_file || depth == svn_depth_exclude)
     {
       const svn_wc_entry_t *entry;
 
@@ -2566,7 +2566,7 @@ svn_wc_walk_entries3(const char *path,
       return SVN_NO_ERROR;
     }
 
-  if (kind == svn_wc__db_kind_dir)
+  if (kind == svn_kind_dir)
     return walker_helper(path, adm_access, walk_callbacks, walk_baton,
                          walk_depth, show_hidden, cancel_func, cancel_baton,
                          pool);

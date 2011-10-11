@@ -128,37 +128,6 @@ extern "C" {
 typedef struct svn_wc__db_t svn_wc__db_t;
 
 
-/* Enum indicating what kind of versioned object we're talking about.
-
-   ### KFF: That is, my understanding is that this is *not* an enum
-   ### indicating what kind of storage the DB is using, even though
-   ### one might think that from its name.  Rather, the "svn_wc__db_"
-   ### is a generic prefix, and this "_kind_t" type indicates the kind
-   ### of something that's being stored in the DB.
-
-   ### KFF: Does this overlap too much with what svn_node_kind_t does?
-
-   ### gjs: possibly. but that doesn't have a symlink kind. and that
-   ###   cannot simply be added. it would surprise too much code.
-   ###   (we could probably create svn_node_kind2_t though)
-*/
-typedef enum svn_wc__db_kind_t {
-    /* The node is a directory. */
-    svn_wc__db_kind_dir,
-
-    /* The node is a file. */
-    svn_wc__db_kind_file,
-
-    /* The node is a symbolic link. */
-    svn_wc__db_kind_symlink,
-
-    /* The type of the node is not known, due to its absence, exclusion,
-       deletion, or incomplete status. */
-    svn_wc__db_kind_unknown,
-
-} svn_wc__db_kind_t;
-
-
 /* Enumerated values describing the state of a node. */
 typedef enum svn_wc__db_status_t {
     /* The node is present and has no known modifications applied to it. */
@@ -630,7 +599,7 @@ svn_wc__db_base_add_excluded_node(svn_wc__db_t *db,
                                   const char *repos_root_url,
                                   const char *repos_uuid,
                                   svn_revnum_t revision,
-                                  svn_wc__db_kind_t kind,
+                                  svn_kind_t kind,
                                   svn_wc__db_status_t status,
                                   const svn_skel_t *conflict,
                                   const svn_skel_t *work_items,
@@ -661,7 +630,7 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
                                      const char *repos_root_url,
                                      const char *repos_uuid,
                                      svn_revnum_t revision,
-                                     svn_wc__db_kind_t kind,
+                                     svn_kind_t kind,
                                      const svn_skel_t *conflict,
                                      const svn_skel_t *work_items,
                                      apr_pool_t *scratch_pool);
@@ -740,7 +709,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 */
 svn_error_t *
 svn_wc__db_base_get_info(svn_wc__db_status_t *status,
-                         svn_wc__db_kind_t *kind,
+                         svn_kind_t *kind,
                          svn_revnum_t *revision,
                          const char **repos_relpath,
                          const char **repos_root_url,
@@ -763,7 +732,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
    fields needed by the adm crawler. */
 struct svn_wc__db_base_info_t {
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_revnum_t revnum;
   const char *repos_relpath;
   const char *repos_root_url;
@@ -1148,7 +1117,7 @@ svn_wc__db_external_remove(svn_wc__db_t *db,
  */
 svn_error_t *
 svn_wc__db_external_read(svn_wc__db_status_t *status,
-                         svn_wc__db_kind_t *kind,
+                         svn_kind_t *kind,
                          const char **defining_abspath,
 
                          const char **repos_root_url,
@@ -1521,7 +1490,7 @@ svn_wc__db_revert_list_read(svn_boolean_t *reverted,
                             const char **conflict_working,
                             const char **prop_reject,
                             svn_boolean_t *copied_here,
-                            svn_wc__db_kind_t *kind,
+                            svn_kind_t *kind,
                             svn_wc__db_t *db,
                             const char *local_abspath,
                             apr_pool_t *result_pool,
@@ -1531,7 +1500,7 @@ svn_wc__db_revert_list_read(svn_boolean_t *reverted,
  * svn_wc__db_revert_list_read_copied_children(). */
 typedef struct svn_wc__db_revert_list_copied_child_info_t {
   const char *abspath;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
 } svn_wc__db_revert_list_copied_child_info_t ;
 
 /* Return in *CHILDREN a list of reverted copied nodes at or within
@@ -1642,7 +1611,7 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
 
    The OUT parameters, and their "not available" values are:
      STATUS                  n/a (always available)
-     KIND                    svn_wc__db_kind_unknown   (For ACTUAL only nodes)
+     KIND                    svn_kind_unknown   (For ACTUAL only nodes)
      REVISION                SVN_INVALID_REVNUM
      REPOS_RELPATH           NULL
      REPOS_ROOT_URL          NULL
@@ -1791,7 +1760,7 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
 */
 svn_error_t *
 svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
-                     svn_wc__db_kind_t *kind,
+                     svn_kind_t *kind,
                      svn_revnum_t *revision,
                      const char **repos_relpath,
                      const char **repos_root_url,
@@ -1839,7 +1808,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
    fields needed by status. */
 struct svn_wc__db_info_t {
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_revnum_t revnum;
   const char *repos_relpath;
   const char *repos_root_url;
@@ -1897,7 +1866,7 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
    fields needed by svn_wc__internal_walk_children(). */
 struct svn_wc__db_walker_info_t {
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
 };
 
 /* When a node is deleted in WORKING, some of its information is no longer
@@ -1916,7 +1885,7 @@ struct svn_wc__db_walker_info_t {
  */
 svn_error_t *
 svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
-                              svn_wc__db_kind_t *kind,
+                              svn_kind_t *kind,
                               svn_revnum_t *changed_rev,
                               apr_time_t *changed_date,
                               const char **changed_author,
@@ -2123,13 +2092,13 @@ svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
 
 /* Return the kind of the node in DB at LOCAL_ABSPATH. The WORKING tree will
    be examined first, then the BASE tree. If the node is not present in either
-   tree and ALLOW_MISSING is TRUE, then svn_wc__db_kind_unknown is returned.
+   tree and ALLOW_MISSING is TRUE, then svn_kind_unknown is returned.
    If the node is missing and ALLOW_MISSING is FALSE, then it will return
    SVN_ERR_WC_PATH_NOT_FOUND.
 
    Uses SCRATCH_POOL for temporary allocations.  */
 svn_error_t *
-svn_wc__db_read_kind(svn_wc__db_kind_t *kind,
+svn_wc__db_read_kind(svn_kind_t *kind,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_boolean_t allow_missing,
@@ -2289,7 +2258,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_global_update(svn_wc__db_t *db,
                          const char *local_abspath,
-                         svn_wc__db_kind_t new_kind,
+                         svn_kind_t new_kind,
                          const char *new_repos_relpath,
                          svn_revnum_t new_revision,
                          const apr_hash_t *new_props,
@@ -2659,7 +2628,7 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
 svn_error_t *
 svn_wc__db_upgrade_insert_external(svn_wc__db_t *db,
                                    const char *local_abspath,
-                                   svn_wc__db_kind_t kind,
+                                   svn_kind_t kind,
                                    const char *parent_abspath,
                                    const char *def_local_abspath,
                                    const char *repos_relpath,
@@ -2787,7 +2756,7 @@ svn_error_t *
 svn_wc__db_op_remove_node(svn_wc__db_t *db,
                           const char *local_abspath,
                           svn_revnum_t not_present_revision,
-                          svn_wc__db_kind_t not_present_kind,
+                          svn_kind_t not_present_kind,
                           apr_pool_t *scratch_pool);
 
 /* Remove the WORKING_NODE row of LOCAL_ABSPATH in DB. */

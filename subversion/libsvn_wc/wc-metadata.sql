@@ -23,12 +23,11 @@
 
 /*
  * the KIND column in these tables has one of the following values
- * (documented in the corresponding C type #svn_wc__db_kind_t):
+ * (documented in the corresponding C type #svn_kind_t):
  *   "file"
  *   "dir"
  *   "symlink"
  *   "unknown"
- *   "subdir"
  *
  * the PRESENCE column in these tables has one of the following values
  * (see also the C type #svn_wc__db_status_t):
