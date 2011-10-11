@@ -2613,3 +2613,27 @@ svn_mergeinfo__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
   *mergeinfo_p = mergeinfo;
   return SVN_NO_ERROR;
 }
+
+const char *
+svn_inheritance_to_word(svn_mergeinfo_inheritance_t inherit)
+{
+  switch (inherit)
+    {
+    case svn_mergeinfo_inherited:
+      return "inherited";
+    case svn_mergeinfo_nearest_ancestor:
+      return "nearest-ancestor";
+    default:
+      return "explicit";
+    }
+}
+
+svn_mergeinfo_inheritance_t
+svn_inheritance_from_word(const char *word)
+{
+  if (strcmp(word, "inherited") == 0)
+    return svn_mergeinfo_inherited;
+  if (strcmp(word, "nearest-ancestor") == 0)
+    return svn_mergeinfo_nearest_ancestor;
+  return svn_mergeinfo_explicit;
+}

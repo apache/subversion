@@ -26,7 +26,7 @@
 
 #include "svn_types.h"
 #include "svn_error.h"
-#include "svn_mergeinfo.h"
+#include "svn_string.h"
 #include "svn_private_config.h"
 
 svn_error_t *
@@ -118,31 +118,6 @@ svn_depth_from_word(const char *word)
      they're not depending on it (e.g., option parsing in main() ).
   */
   return svn_depth_unknown;
-}
-
-const char *
-svn_inheritance_to_word(svn_mergeinfo_inheritance_t inherit)
-{
-  switch (inherit)
-    {
-    case svn_mergeinfo_inherited:
-      return "inherited";
-    case svn_mergeinfo_nearest_ancestor:
-      return "nearest-ancestor";
-    default:
-      return "explicit";
-    }
-}
-
-
-svn_mergeinfo_inheritance_t
-svn_inheritance_from_word(const char *word)
-{
-  if (strcmp(word, "inherited") == 0)
-    return svn_mergeinfo_inherited;
-  if (strcmp(word, "nearest-ancestor") == 0)
-    return svn_mergeinfo_nearest_ancestor;
-  return svn_mergeinfo_explicit;
 }
 
 const char *
