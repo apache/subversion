@@ -338,8 +338,6 @@ static svn_error_t *
 ev2_close_directory(void *dir_baton,
                     apr_pool_t *scratch_pool)
 {
-  struct ev2_dir_baton *db = dir_baton;
-
   return SVN_NO_ERROR;
 }
 
@@ -348,7 +346,6 @@ ev2_absent_directory(const char *path,
                      void *parent_baton,
                      apr_pool_t *scratch_pool)
 {
-  struct ev2_dir_baton *pb = parent_baton;
   return SVN_NO_ERROR;
 }
 
@@ -400,8 +397,6 @@ ev2_apply_textdelta(void *file_baton,
                     svn_txdelta_window_handler_t *handler,
                     void **handler_baton)
 {
-  struct ev2_file_baton *fb = file_baton;
-
   *handler_baton = NULL;
   *handler = svn_delta_noop_window_handler;
   return SVN_NO_ERROR;
@@ -429,7 +424,6 @@ ev2_close_file(void *file_baton,
                const char *text_checksum,
                apr_pool_t *scratch_pool)
 {
-  struct ev2_file_baton *fb = file_baton;
   return SVN_NO_ERROR;
 }
 
@@ -438,7 +432,6 @@ ev2_absent_file(const char *path,
                 void *parent_baton,
                 apr_pool_t *scratch_pool)
 {
-  struct ev2_dir_baton *pb = parent_baton;
   return SVN_NO_ERROR;
 }
 
@@ -855,9 +848,6 @@ complete_cb(void *baton,
 
   for (i = 0; i < sorted_hash->nelts; i++)
     {
-      svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_hash, i, svn_sort__item_t);
-      const char *path = item->key;
-
       /* ### We should actually do something here, but for now... */
     }
 
