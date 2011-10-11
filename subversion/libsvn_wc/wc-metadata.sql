@@ -23,7 +23,7 @@
 
 /*
  * the KIND column in these tables has one of the following values
- * (documented in the corresponding C type #svn_wc__db_kind_t):
+ * (documented in the corresponding C type #svn_kind_t):
  *   "file"
  *   "dir"
  *   "symlink"
