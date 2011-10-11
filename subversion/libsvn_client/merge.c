@@ -293,7 +293,7 @@ typedef struct merge_cmd_baton_t {
 /*** Utilities ***/
 
 /* Return SVN_ERR_UNSUPPORTED_FEATURE if URL is not inside the repository
-   of LOCAL_ABSPAT.  Use SCRATCH_POOL for temporary allocations. */
+   of LOCAL_ABSPATH.  Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 check_repos_match(merge_cmd_baton_t *merge_b,
                   const char *local_abspath,
