@@ -40,6 +40,7 @@ repository) is:
   revprops/           Subdirectory containing rev-props
     <shard>/          Shard directory, if sharding is in use (see below)
       <revnum>        File containing rev-props for <revnum>
+    revprops.db       SQLite database of the packed revision properties
   transactions/       Subdirectory containing transactions
     <txnid>.txn/      Directory containing transaction <txnid>
   txn-protorevs/      Subdirectory containing transaction proto-revision files
@@ -61,7 +62,6 @@ repository) is:
   min-unpacked-rev    File containing the oldest revision not in a pack file
   min-unpacked-revprop File containing the oldest revision of unpacked revprop
   rep-cache.db        SQLite database mapping rep checksums to locations
-  revprops.db         SQLite database of the packed revision properties
 
 Files in the revprops directory are in the hash dump format used by
 svn_hash_write.
@@ -171,6 +171,8 @@ Revision changed paths list:
   Format 1-3: Does not contain the node's kind.
   Format 4-5: Contains the node's kind.
 
+# Incomplete list.  See SVN_FS_FS__MIN_*_FORMAT
+
 
 Filesystem format options
 -------------------------
@@ -205,10 +207,10 @@ The known layouts, and the parameters they require, are as follows:
   revs/0/ directory will contain revisions 0-999, revs/1/ will contain
   1000-1999, and so on.
 
-Packing
--------
+Packing revisions
+-----------------
 
-A repository can optionally be "packed" to conserve space on disk.  The
+A filesystem can optionally be "packed" to conserve space on disk.  The
 packing process concatenates all the revision files in each full shard to
 create pack files.  A manifest file is also created for each shard which
 records the indexes of the corresponding revision files in the pack file.
@@ -218,6 +220,18 @@ pack file.
 The manifest file consists of a list of offsets, one for each revision in the
 pack file.  The offsets are stored as ASCII decimal, and separated by a newline
 character.
+
+Packing revision properties
+---------------------------
+
+Revprop shards may be packed too.  The packing process moves all revprops from
+a the oldest unpacked shard to the SQLite database "revprops/revprops.db".  The
+sequel documents the schema of FSFS format 5, which corresponds to schema
+version USER_VERSION=1:
+
+The database maps revision numbers to serialized "proplist" skels.  Every 
+packed revision must have a mapping entry (a table row), even if it maps the
+revnum to an empty skel.
 
 Node-revision IDs
 -----------------

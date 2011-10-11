@@ -180,6 +180,10 @@ typedef struct merge_cmd_baton_t {
                                          is TRUE.*/
   svn_boolean_t mergeinfo_capable;    /* Whether the merge source server
                                          is capable of Merge Tracking. */
+  svn_boolean_t mergeinfo_validation_capable; /* Whether the merge source
+                                                 server is capable of
+                                                 validating inherited
+                                                 mergeinfo. */
   svn_boolean_t ignore_ancestry;      /* Are we ignoring ancestry (and by
                                          extension, mergeinfo)?  FALSE if
                                          SOURCES_ANCESTRAL is FALSE. */
@@ -3163,18 +3167,15 @@ fix_deleted_subtree_ranges(const char *url1,
    base revision and set *VALIDATED to indicate to the caller if we can
    determine what portions of that inherited mergeinfo are invalid.
 
-   If no mergeinfo is inherited set *INVALID_INHERITED_MERGEINFO to NULL and
-   *VALIDATED to true.
+   If no mergeinfo is inherited set *INVALID_INHERITED_MERGEINFO to NULL.
 
    If only empty mergeinfo is inherited set *INVALID_INHERITED_MERGEINFO to
-   and empty hash and *VALIDATED to true.
+   and empty hash.
 
-   If non-empty inherited mergeinfo is inherited then, if the server (1.7+)
-   supports inherited mergeinfo validation, remove all valid path-revisions
-   from the raw inherited mergeinfo, set *INVALID_INHERITED_MERGEINFO to the
-   remainder, and set *VALIDATED to true.  If the server doesn't support
-   inherited mergeinfo validation then set *INVALID_INHERITED_MERGEINFO to
-   NULL and set *VALIDATED to false.
+   If non-empty inherited mergeinfo is inherited then, if the server
+   supports the SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO capability,
+   remove all valid path-revisions from the raw inherited mergeinfo, and set
+   *INVALID_INHERITED_MERGEINFO to the remainder.
 
    Note that if validation occurs, but all inherited mergeinfo describes
    non-existent paths, then *INVALID_INHERITED_MERGEINFO is set to an empty
@@ -3188,7 +3189,6 @@ fix_deleted_subtree_ranges(const char *url1,
    is used for any temporary allocations. */
 static svn_error_t *
 get_invalid_inherited_mergeinfo(svn_mergeinfo_t *invalid_inherited_mergeinfo,
-                                svn_boolean_t *validated,
                                 svn_ra_session_t *ra_session,
                                 const char *target_abspath,
                                 svn_client_ctx_t *ctx,
@@ -3198,11 +3198,9 @@ get_invalid_inherited_mergeinfo(svn_mergeinfo_t *invalid_inherited_mergeinfo,
   svn_mergeinfo_t repos_raw_inherited;
   svn_mergeinfo_t repos_validated_inherited;
   svn_revnum_t base_revision;
-  svn_boolean_t validate_inherited_mergeinfo;
 
   /* Our starting assumptions. */
   *invalid_inherited_mergeinfo = NULL;
-  *validated = TRUE;
 
   SVN_ERR(svn_wc__node_get_base_rev(&base_revision, ctx->wc_ctx,
                                     target_abspath, scratch_pool));
@@ -3223,12 +3221,10 @@ get_invalid_inherited_mergeinfo(svn_mergeinfo_t *invalid_inherited_mergeinfo,
       /* Contact the repository to derive the portion of
          TARGET_ABSPATH's inherited mergeinfo which is non-existent
          and remove it from */
-      validate_inherited_mergeinfo = FALSE;
       SVN_ERR(svn_client__get_repos_mergeinfo(
         ra_session, &repos_raw_inherited, "", base_revision,
         svn_mergeinfo_inherited, TRUE,
-        &validate_inherited_mergeinfo,
-        scratch_pool));
+        FALSE, scratch_pool));
 
       if (repos_raw_inherited == NULL)
         {
@@ -3243,15 +3239,11 @@ get_invalid_inherited_mergeinfo(svn_mergeinfo_t *invalid_inherited_mergeinfo,
           SVN_ERR(svn_client__get_repos_mergeinfo(
             ra_session, &repos_validated_inherited, "", base_revision,
             svn_mergeinfo_inherited, TRUE,
-            validated,
-            scratch_pool));
-          if (*validated)
-            SVN_ERR(svn_mergeinfo_remove2(invalid_inherited_mergeinfo,
-                                          repos_validated_inherited,
-                                          repos_raw_inherited, FALSE,
-                                          result_pool, scratch_pool));
-          else
-            *invalid_inherited_mergeinfo = NULL;
+            TRUE, scratch_pool));
+          SVN_ERR(svn_mergeinfo_remove2(invalid_inherited_mergeinfo,
+                                        repos_validated_inherited,
+                                        repos_raw_inherited, FALSE,
+                                        result_pool, scratch_pool));
         }
       SVN_ERR(svn_client__ensure_ra_session_url(&session_url, ra_session,
                                                 session_url, scratch_pool));
@@ -3277,6 +3269,11 @@ get_invalid_inherited_mergeinfo(svn_mergeinfo_t *invalid_inherited_mergeinfo,
    is inherited and not explicit.  If RECORDED_MERGEINFO is NULL then
    INDIRECT is ignored.
 
+   If the server supports the SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO
+   capability, the resulting *RECORDED_MERGEINFO is inherited, and
+   VALIDATE_INHERITED us TRUE, then *RECORDED_MERGEINFO is validated as per
+   svn_ra_get_mergeinfo2().
+
    If IMPLICIT_MERGEINFO is not NULL then START and END are limits on the
    the natural history sought, must both be valid revision numbers, and
    START must be greater than END.  If TARGET_ABSPATH's base revision
@@ -3293,6 +3290,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                    svn_mergeinfo_t *implicit_mergeinfo,
                    svn_boolean_t *indirect,
                    svn_mergeinfo_inheritance_t inherit,
+                   svn_boolean_t validate_inherited,
                    svn_ra_session_t *ra_session,
                    const char *target_abspath,
                    svn_revnum_t start,
@@ -3302,7 +3300,6 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                    apr_pool_t *scratch_pool)
 {
   svn_boolean_t inherited = FALSE;
-  svn_boolean_t inherited_validated = FALSE;
 
   /* First, we get the real mergeinfo.  We use SCRATCH_POOL throughout this
      block because we'll make a final copy of *RECORDED_MERGEINFO only after
@@ -3319,17 +3316,16 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
 
       /* Issue #3669: Remove any non-existent mergeinfo sources
          from TARGET_ABSPATH's inherited mergeinfo. */
-      if (inherited)
+      if (inherited && validate_inherited)
         {
           svn_mergeinfo_t invalid_inherited_mergeinfo;
 
           SVN_ERR(get_invalid_inherited_mergeinfo(
-            &invalid_inherited_mergeinfo, &inherited_validated,
+            &invalid_inherited_mergeinfo,
             ra_session, target_abspath, ctx,
             scratch_pool, scratch_pool));
 
-          if (inherited_validated
-              && invalid_inherited_mergeinfo
+          if (invalid_inherited_mergeinfo
               && apr_hash_count(invalid_inherited_mergeinfo))
             SVN_ERR(svn_mergeinfo_remove2(recorded_mergeinfo,
                                           invalid_inherited_mergeinfo,
@@ -3421,7 +3417,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
          http://subversion.tigris.org/issues/show_bug.cgi?id=3668#desc5 */
       if (implicit_mergeinfo
           && inherited
-          && inherited_validated)
+          && validate_inherited)
         SVN_ERR(svn_mergeinfo_remove2(recorded_mergeinfo,
                                       *implicit_mergeinfo,
                                       *recorded_mergeinfo, FALSE,
@@ -3443,6 +3439,9 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
 
    If PARENT->IMPLICIT_MERGEINFO is NULL, obtain it from the server.
 
+   VALIDATE_INHERITED functions as per the argument of the same name
+   in get_full_mergeinfo().
+
    Set CHILD->IMPLICIT_MERGEINFO to the mergeinfo inherited from
    PARENT->IMPLICIT_MERGEINFO.  CHILD->IMPLICIT_MERGEINFO is allocated
    in POOL.
@@ -3452,6 +3451,7 @@ inherit_implicit_mergeinfo_from_parent(svn_client__merge_path_t *parent,
                                        svn_client__merge_path_t *child,
                                        svn_revnum_t revision1,
                                        svn_revnum_t revision2,
+                                       svn_boolean_t validate_inherited,
                                        svn_ra_session_t *ra_session,
                                        svn_client_ctx_t *ctx,
                                        apr_pool_t *result_pool,
@@ -3468,7 +3468,7 @@ inherit_implicit_mergeinfo_from_parent(svn_client__merge_path_t *parent,
   if (!parent->implicit_mergeinfo)
     SVN_ERR(get_full_mergeinfo(NULL, &(parent->implicit_mergeinfo),
                                NULL, svn_mergeinfo_inherited,
-                               ra_session, child->abspath,
+                               validate_inherited, ra_session, child->abspath,
                                MAX(revision1, revision2),
                                MIN(revision1, revision2),
                                ctx, result_pool, scratch_pool));
@@ -3496,6 +3496,9 @@ inherit_implicit_mergeinfo_from_parent(svn_client__merge_path_t *parent,
    PARNET->IMPLICIT_MERGEINFO, otherwise contact the repository.  Use
    SCRATCH_POOL for all temporary allocations.
 
+   VALIDATE_INHERITED functions as per the argument of the same name
+   in get_full_mergeinfo().
+
    PARENT, CHILD, REVISION1, REVISION2, RA_SESSION, and
    CTX are all cascased from the arguments of the same name in
    filter_merged_revisions() and the same conditions for that function
@@ -3504,6 +3507,7 @@ static svn_error_t *
 ensure_implicit_mergeinfo(svn_client__merge_path_t *parent,
                           svn_client__merge_path_t *child,
                           svn_boolean_t child_inherits_parent,
+                          svn_boolean_t validate_inherited,
                           svn_revnum_t revision1,
                           svn_revnum_t revision2,
                           svn_ra_session_t *ra_session,
@@ -3522,6 +3526,7 @@ ensure_implicit_mergeinfo(svn_client__merge_path_t *parent,
                                                    child,
                                                    revision1,
                                                    revision2,
+                                                   validate_inherited,
                                                    ra_session,
                                                    ctx,
                                                    result_pool,
@@ -3530,6 +3535,7 @@ ensure_implicit_mergeinfo(svn_client__merge_path_t *parent,
     SVN_ERR(get_full_mergeinfo(NULL,
                                &(child->implicit_mergeinfo),
                                NULL, svn_mergeinfo_inherited,
+                               validate_inherited,
                                ra_session, child->abspath,
                                MAX(revision1, revision2),
                                MIN(revision1, revision2),
@@ -3577,6 +3583,9 @@ ensure_implicit_mergeinfo(svn_client__merge_path_t *parent,
    mergeinfo on CHILD->ABSPATH or an empty hash if CHILD->ABSPATH has empty
    mergeinfo.
 
+   VALIDATE_INHERITED functions as per the argument of the same name
+   in get_full_mergeinfo().
+
    SCRATCH_POOL is used for all temporary allocations.
 
    NOTE: This should only be called when honoring mergeinfo.
@@ -3592,6 +3601,7 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
                         svn_revnum_t revision1,
                         svn_revnum_t revision2,
                         svn_boolean_t child_inherits_implicit,
+                        svn_boolean_t validate_inherited,
                         svn_ra_session_t *ra_session,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *result_pool,
@@ -3681,6 +3691,7 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
           SVN_ERR(ensure_implicit_mergeinfo(parent,
                                             child,
                                             child_inherits_implicit,
+                                            validate_inherited,
                                             revision1,
                                             revision2,
                                             ra_session,
@@ -3770,6 +3781,7 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
           SVN_ERR(ensure_implicit_mergeinfo(parent,
                                             child,
                                             child_inherits_implicit,
+                                            validate_inherited,
                                             revision1,
                                             revision2,
                                             ra_session,
@@ -3823,6 +3835,9 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
    If not null, IMPLICIT_SRC_GAP is the gap, if any, in the natural history
    of URL1@REVISION1:URL2@REVISION2, see merge_cmd_baton_t.implicit_src_gap.
 
+   VALIDATE_INHERITED functions as per the argument of the same name
+   in get_full_mergeinfo().
+
    SCRATCH_POOL is used for all temporary allocations.  Changes to CHILD and
    PARENT are made in RESULT_POOL.
 
@@ -3850,6 +3865,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
                            svn_mergeinfo_t target_mergeinfo,
                            const apr_array_header_t *implicit_src_gap,
                            svn_boolean_t child_inherits_implicit,
+                           svn_boolean_t validate_inherited,
                            svn_ra_session_t *ra_session,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *result_pool,
@@ -3900,6 +3916,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
                                   adjusted_target_mergeinfo,
                                   revision1, revision2,
                                   child_inherits_implicit,
+                                  validate_inherited,
                                   ra_session, ctx, result_pool,
                                   scratch_pool));
 
@@ -4177,6 +4194,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
               SVN_ERR(get_full_mergeinfo(NULL, /* child->pre_merge_mergeinfo */
                                          &(child->implicit_mergeinfo),
                                          NULL, /* child->indirect_mergeinfo */
+                                         merge_b->mergeinfo_validation_capable,
                                          svn_mergeinfo_inherited, ra_session,
                                          child->abspath,
                                          MAX(revision1, revision2),
@@ -4198,11 +4216,13 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
               SVN_ERR_ASSERT(parent);
 
               child_inherits_implicit = (parent && !child->switched);
-              SVN_ERR(ensure_implicit_mergeinfo(parent, child,
-                                                child_inherits_implicit,
-                                                revision1, revision2,
-                                                ra_session, merge_b->ctx,
-                                                result_pool, iterpool));
+              SVN_ERR(ensure_implicit_mergeinfo(
+                parent, child,
+                child_inherits_implicit,
+                merge_b->mergeinfo_validation_capable,
+                revision1, revision2,
+                ra_session, merge_b->ctx,
+                result_pool, iterpool));
             }
 
           child->remaining_ranges = svn_rangelist__initialize(revision1,
@@ -4274,7 +4294,8 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
         /* Get implicit only for merge target. */
         (i == 0) ? &(child->implicit_mergeinfo) : NULL,
         &(child->indirect_mergeinfo),
-        svn_mergeinfo_inherited, ra_session,
+        svn_mergeinfo_inherited,
+        merge_b->mergeinfo_validation_capable, ra_session,
         child->abspath,
         MAX(revision1, revision2),
         0, /* Get all implicit mergeinfo */
@@ -4300,16 +4321,18 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
          exists but is not CHILD's repository parent. */
       child_inherits_implicit = (parent && !child->switched);
 
-      SVN_ERR(calculate_remaining_ranges(parent, child,
-                                         source_root_url,
-                                         child_url1, revision1,
-                                         child_url2, revision2,
-                                         child->pre_merge_mergeinfo,
-                                         merge_b->implicit_src_gap,
-                                         child_inherits_implicit,
-                                         ra_session,
-                                         merge_b->ctx, result_pool,
-                                         iterpool));
+      SVN_ERR(calculate_remaining_ranges(
+        parent, child,
+        source_root_url,
+        child_url1, revision1,
+        child_url2, revision2,
+        child->pre_merge_mergeinfo,
+        merge_b->implicit_src_gap,
+        child_inherits_implicit,
+        merge_b->mergeinfo_validation_capable,
+        ra_session,
+        merge_b->ctx, result_pool,
+        iterpool));
 
       /* Deal with any gap in URL1@REVISION1:URL2@REVISION2's natural history.
 
@@ -6742,6 +6765,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
       err = get_full_mergeinfo(&target_mergeinfo,
                                &(merge_target->implicit_mergeinfo),
                                &indirect, svn_mergeinfo_inherited,
+                               merge_b->mergeinfo_validation_capable,
                                merge_b->ra_session1, target_abspath,
                                MAX(revision1, revision2),
                                0, /* Get all implicit mergeinfo */
@@ -6767,14 +6791,16 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
          by REVISION1:REVISION2. */
       if (!merge_b->record_only)
         {
-          SVN_ERR(calculate_remaining_ranges(NULL, merge_target,
-                                             source_root_url,
-                                             url1, revision1, url2, revision2,
-                                             target_mergeinfo,
-                                             merge_b->implicit_src_gap, FALSE,
-                                             merge_b->ra_session1,
-                                             ctx, scratch_pool,
-                                             iterpool));
+          SVN_ERR(calculate_remaining_ranges(
+            NULL, merge_target,
+            source_root_url,
+            url1, revision1, url2, revision2,
+            target_mergeinfo,
+            merge_b->implicit_src_gap, FALSE,
+            merge_b->mergeinfo_validation_capable,
+            merge_b->ra_session1,
+            ctx, scratch_pool,
+            iterpool));
           remaining_ranges = merge_target->remaining_ranges;
         }
     }
@@ -8658,6 +8684,7 @@ do_merge(apr_hash_t **modified_subtrees,
   merge_cmd_baton.ignore_ancestry = ignore_ancestry;
   merge_cmd_baton.same_repos = same_repos;
   merge_cmd_baton.mergeinfo_capable = FALSE;
+  merge_cmd_baton.mergeinfo_validation_capable = FALSE;
   merge_cmd_baton.sources_ancestral = sources_ancestral;
   merge_cmd_baton.ctx = ctx;
   merge_cmd_baton.target_missing_child = FALSE;
@@ -8739,10 +8766,30 @@ do_merge(apr_hash_t **modified_subtrees,
          an RA session to set, but shouldn't be reset for each iteration. */
       if (! checked_mergeinfo_capability)
         {
+          svn_error_t *err;
+
           SVN_ERR(svn_ra_has_capability(ra_session1,
                                         &merge_cmd_baton.mergeinfo_capable,
                                         SVN_RA_CAPABILITY_MERGEINFO,
                                         iterpool));
+          err = svn_ra_has_capability(
+            ra_session1,
+            &merge_cmd_baton.mergeinfo_validation_capable,
+            SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO,
+            iterpool);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_UNKNOWN_CAPABILITY)
+                {
+                  svn_error_clear(err);
+                  merge_cmd_baton.mergeinfo_validation_capable = FALSE;
+                }
+              else
+                {
+                  return svn_error_trace(err);
+                }
+            }
+
           checked_mergeinfo_capability = TRUE;
         }
 
@@ -9939,7 +9986,6 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
           svn_node_kind_t kind;
           svn_mergeinfo_catalog_t subtree_catalog;
           apr_array_header_t *source_repos_rel_path_as_array;
-          svn_boolean_t validate_inherited_mergeinfo = FALSE;
 
           SVN_ERR(svn_ra_check_path(source_ra_session,
                                     source_path_rel_to_session,
@@ -9956,7 +10002,7 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
           SVN_ERR(svn_ra_get_mergeinfo2(source_ra_session, &subtree_catalog,
                                         source_repos_rel_path_as_array,
                                         source_rev, svn_mergeinfo_inherited,
-                                        &validate_inherited_mergeinfo, FALSE,
+                                        FALSE, FALSE,
                                         iterpool));
           if (subtree_catalog)
             source_mergeinfo = apr_hash_get(subtree_catalog, source_path,
@@ -10199,7 +10245,6 @@ calculate_left_hand_side(const char **url_left,
   svn_revnum_t youngest_merged_rev;
   const char *yc_ancestor_path;
   svn_revnum_t yc_ancestor_rev;
-  svn_boolean_t validate_inherited_mergeinfo = FALSE;
   const char *source_url;
   const char *target_url;
 
@@ -10303,7 +10348,7 @@ calculate_left_hand_side(const char **url_left,
   SVN_ERR(svn_ra_get_mergeinfo2(source_ra_session, &mergeinfo_catalog,
                                 source_repos_rel_path_as_array, source_rev,
                                 svn_mergeinfo_inherited,
-                                &validate_inherited_mergeinfo, TRUE,
+                                FALSE, TRUE,
                                 iterpool));
 
   if (mergeinfo_catalog)

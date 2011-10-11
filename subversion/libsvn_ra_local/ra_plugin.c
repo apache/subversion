@@ -700,7 +700,7 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
                             const apr_array_header_t *paths,
                             svn_revnum_t revision,
                             svn_mergeinfo_inheritance_t inherit,
-                            svn_boolean_t *validate_inherited_mergeinfo,
+                            svn_boolean_t validate_inherited_mergeinfo,
                             svn_boolean_t include_descendants,
                             apr_pool_t *pool)
 {
@@ -719,7 +719,7 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
 
   SVN_ERR(svn_repos_fs_get_mergeinfo2(&tmp_catalog, sess->repos, abs_paths,
                                       revision, inherit,
-                                      *validate_inherited_mergeinfo,
+                                      validate_inherited_mergeinfo,
                                       include_descendants,
                                       NULL, NULL, pool));
   if (apr_hash_count(tmp_catalog) > 0)
@@ -1422,7 +1422,9 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
     {
       *has = TRUE;
     }
-  else if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+  else if ((strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+           || (strcmp(capability,
+                      SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO) == 0))
     {
       /* With mergeinfo, the code's capabilities may not reflect the
          repository's, so inquire further. */

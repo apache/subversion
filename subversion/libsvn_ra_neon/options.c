@@ -195,10 +195,15 @@ parse_capabilities(ne_request *req,
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
                      APR_HASH_KEY_STRING, capability_yes);
 
+      /* For mergeinfo capabilities, the server doesn't know what repository
+         we're referring to, so it can't just say capability_yes. */
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
-        /* The server doesn't know what repository we're referring
-           to, so it can't just say capability_yes. */
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                     APR_HASH_KEY_STRING, capability_server_yes);
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_MERGEINFO_VALIDATION,
+                                 vals))
+        apr_hash_set(ras->capabilities,
+                     SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO,
                      APR_HASH_KEY_STRING, capability_server_yes);
 
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
@@ -402,7 +407,9 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
      check there as well. */
   if (cap_result == capability_server_yes)
     {
-      if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+      if ((strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+          || (strcmp(capability,
+                     SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO) == 0))
         {
           /* Handle mergeinfo specially.  Mergeinfo depends on the
              repository as well as the server, but the server routine
@@ -422,7 +429,7 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
 
           err = svn_ra_neon__get_mergeinfo(session, &ignored, paths, 0,
                                            FALSE,
-                                           &validate_inherited_mergeinfo,
+                                           validate_inherited_mergeinfo,
                                            FALSE, pool);
 
           if (err)
@@ -447,9 +454,14 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
           else
             cap_result = capability_yes;
 
-          apr_hash_set(ras->capabilities,
-                       SVN_RA_CAPABILITY_MERGEINFO, APR_HASH_KEY_STRING,
-                       cap_result);
+          if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+            apr_hash_set(ras->capabilities,
+                         SVN_RA_CAPABILITY_MERGEINFO, APR_HASH_KEY_STRING,
+                         cap_result);
+          else
+            apr_hash_set(ras->capabilities,
+                         SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO,
+                         APR_HASH_KEY_STRING, cap_result);
         }
       else
         {

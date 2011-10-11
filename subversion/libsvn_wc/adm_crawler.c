@@ -131,7 +131,9 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
   if (status != svn_wc__db_status_normal
       && status != svn_wc__db_status_copied
       && status != svn_wc__db_status_moved_here
-      && !(status == svn_wc__db_status_added && kind == svn_wc__db_kind_dir))
+      && !(kind == svn_wc__db_kind_dir
+           && (status == svn_wc__db_status_added
+               || status == svn_wc__db_status_incomplete)))
     {
       return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                                _("The node '%s' can not be restored."),
@@ -192,12 +194,11 @@ restore_node(svn_wc__db_t *db,
 /* The recursive crawler that describes a mixed-revision working
    copy to an RA layer.  Used to initiate updates.
 
-   This is a depth-first recursive walk of DIR_ABSPATH using DB.  Look
-   at each entry and check if its revision is different than DIR_REV.
-   If so, report this fact to REPORTER.  If an entry is.  If a node has
-   a different URL than expected, report that to REPORTER.  If an
-   entry has a different depth than its parent, report that to
-   REPORTER.
+   This is a depth-first recursive walk of the children of DIR_ABSPATH
+   (not including DIR_ABSPATH itself) using DB.  Look at each node and
+   check if its revision is different than DIR_REV.  If so, report this
+   fact to REPORTER.  If a node has a different URL than expected, or
+   a different depth than its parent, report that to REPORTER.
 
    Report DIR_ABSPATH to the reporter as REPORT_RELPATH.
 
@@ -389,7 +390,10 @@ report_revisions_and_depths(svn_wc__db_t *db,
 
           if (wrk_status == svn_wc__db_status_normal
               || wrk_status == svn_wc__db_status_copied
-              || wrk_status == svn_wc__db_status_moved_here)
+              || wrk_status == svn_wc__db_status_moved_here
+              || (wrk_kind == svn_wc__db_kind_dir
+                  && (wrk_status == svn_wc__db_status_added
+                      || wrk_status == svn_wc__db_status_incomplete)))
             {
               svn_node_kind_t dirent_kind;
 
@@ -646,9 +650,8 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
   svn_depth_t report_depth;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  /* The first thing we do is get the base_rev from the working copy's
-     ROOT_DIRECTORY.  This is the first revnum that entries will be
-     compared to. */
+  /* Get the base rev, which is the first revnum that entries will be
+     compared to, and some other WC info about the target. */
   err = svn_wc__db_base_get_info(&status, &target_kind, &target_rev,
                                  &repos_relpath, &repos_root_url,
                                  NULL, NULL, NULL, NULL, &target_depth,
@@ -738,7 +741,10 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
 
       if (wrk_status == svn_wc__db_status_normal
           || wrk_status == svn_wc__db_status_copied
-          || wrk_status == svn_wc__db_status_moved_here)
+          || wrk_status == svn_wc__db_status_moved_here
+          || (wrk_kind == svn_wc__db_kind_dir
+              && (wrk_status == svn_wc__db_status_added
+                  || wrk_status == svn_wc__db_status_incomplete))) 
         {
           SVN_ERR(restore_node(wc_ctx->db, local_abspath,
                                wrk_kind, use_commit_times,

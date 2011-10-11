@@ -113,8 +113,6 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
 
   if (! locally_added)
     {
-      svn_boolean_t validate_inherited_mergeinfo = FALSE;
-
       /* Fetch any existing (explicit) mergeinfo.  We'll temporarily
          reparent to the target URL here, just to keep the code simple.
          We could, as an alternative, first see if the target URL was a
@@ -126,8 +124,7 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
       SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
                                               "", src_revnum,
                                               svn_mergeinfo_inherited, TRUE,
-                                              &validate_inherited_mergeinfo,
-                                              pool));
+                                              FALSE, pool));
       if (old_session_url)
         SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
     }

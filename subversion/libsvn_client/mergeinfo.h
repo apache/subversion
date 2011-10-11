@@ -173,13 +173,12 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
    will only contain merge source path-revisions that actually
    exist in repository.
 
-   If the *TARGET_MERGEINFO for REL_PATH path is inherited and
-   *VALIDATE_INHERITED_MERGEINFO is TRUE, then request that the server
-   validate the mergeinfo in *TARGET_MERGEINFO, so it contains only merge
-   source path-revisions that actually exist in repository.  If validation
-   is requested and the server supports it, then set
-   *VALIDATE_INHERITED_MERGEINFO to TRUE on return.  Set it to FALSE in
-   all other cases. */
+   If the *TARGET_MERGEINFO for REL_PATH path is inherited,
+   VALIDATE_INHERITED_MERGEINFO is TRUE, and the server supports
+   the #SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO capability,
+   then request that the server validate the mergeinfo in
+   *TARGET_MERGEINFO, so it contains only merge source path-revisions
+   that actually exist in repository. */
 svn_error_t *
 svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
                                 svn_mergeinfo_t *target_mergeinfo,
@@ -187,7 +186,7 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
                                 svn_revnum_t rev,
                                 svn_mergeinfo_inheritance_t inherit,
                                 svn_boolean_t squelch_incapable,
-                                svn_boolean_t *validate_inherited_mergeinfo,
+                                svn_boolean_t validate_inherited_mergeinfo,
                                 apr_pool_t *pool);
 
 /* If INCLUDE_DESCENDANTS is FALSE, behave exactly like
@@ -209,7 +208,7 @@ svn_client__get_repos_mergeinfo_catalog(
   svn_mergeinfo_inheritance_t inherit,
   svn_boolean_t squelch_incapable,
   svn_boolean_t include_descendants,
-  svn_boolean_t *validate_inherited_mergeinfo,
+  svn_boolean_t validate_inherited_mergeinfo,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
 

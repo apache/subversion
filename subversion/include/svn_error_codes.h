@@ -522,7 +522,8 @@ SVN_ERROR_START
   /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_WC_CLEANUP_REQUIRED,
              SVN_ERR_WC_CATEGORY_START + 37,
-             "Previous operation was interrupted; run 'svn cleanup'")
+             "Previous operation has not finished; "
+             "run 'cleanup' if it was interrupted")
 
   /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_WC_INVALID_OPERATION_DEPTH,

@@ -1144,6 +1144,7 @@ modcheck_callback(void *baton,
       case svn_wc_status_ignored:
       case svn_wc_status_none:
       case svn_wc_status_unversioned:
+      case svn_wc_status_external:
         break;
 
       case svn_wc_status_deleted:
