@@ -127,7 +127,7 @@ static int sasl_mutex_lock_cb(void *mutex)
 {
   if (!svn_ra_svn__sasl_status)
     return 0;
-  return check_result(svn_mutex__lock(mutex);
+  return check_result(svn_mutex__lock(mutex));
 }
 
 static int sasl_mutex_unlock_cb(void *mutex)
