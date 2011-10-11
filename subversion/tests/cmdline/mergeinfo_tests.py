@@ -489,6 +489,196 @@ def mergeinfo_on_pegged_wc_path(sbox):
     adjust_error_for_server_version(''),
     ['4', '5'], A_path, A_COPY_path + '@PREV', '--show-revs', 'eligible')
 
+#----------------------------------------------------------------------
+# A test for issue 3986 'svn_client_mergeinfo_log API is broken'.
+@Issue(3986)
+@SkipUnless(server_has_mergeinfo)
+def wc_target_inherits_mergeinfo_from_repos(sbox):
+  "wc target inherits mergeinfo from repos"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox, nbr_of_branches=2)
+
+  A_COPY_path   = os.path.join(wc_dir, 'A_COPY')
+  rho_COPY_path = os.path.join(wc_dir, 'A_COPY', 'D', 'G', 'rho')
+  gamma_2_path  = os.path.join(wc_dir, 'A_COPY_2', 'D', 'gamma')
+  tau_path      = os.path.join(wc_dir, 'A', 'D', 'G', 'tau')
+  D_COPY_path   = os.path.join(wc_dir, 'A_COPY', 'D')
+  
+  # Merge -c5 ^/A/D/G/rho A_COPY\D\G\rho
+  # Merge -c7 ^/A A_COPY
+  # Commit as r8
+  #
+  # This gives us some explicit mergeinfo on the "branch" root and
+  # one of its subtrees:
+  #
+  #   Properties on 'A_COPY\D\G\rho':
+  #     svn:mergeinfo
+  #       /A/D/G/rho:5
+  #   Properties on 'A_COPY':
+  #     svn:mergeinfo
+  #       /A:7
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A/D/G/rho',
+                                     rho_COPY_path, '-c5')
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A',
+                                     A_COPY_path, '-c7')
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Cherrypicks to branch subtree and root',
+                                     wc_dir)
+
+  # Checkout a new wc rooted at ^/A_COPY/D.
+  subtree_wc = sbox.add_wc_path('D_COPY')
+  svntest.actions.run_and_verify_svn(None, None, [], 'co',
+                                     sbox.repo_url + '/A_COPY/D',
+                                     subtree_wc)
+
+  # Check the merged and eligible revisions both recursively and
+  # non-recursively.
+
+  # Eligible : Non-recursive  
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['4','5'], sbox.repo_url + '/A/D', subtree_wc,
+    '--show-revs', 'eligible')
+
+  # Eligible : Recursive
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['4'], sbox.repo_url + '/A/D', subtree_wc,
+    '--show-revs', 'eligible', '-R')
+
+  # Merged : Non-recursive
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['7'], sbox.repo_url + '/A/D', subtree_wc,
+    '--show-revs', 'merged')
+
+  # Merged : Recursive
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['5','7'], sbox.repo_url + '/A/D', subtree_wc,
+    '--show-revs', 'merged', '-R')
+
+  # Test that intersecting revisions in the 'svn mergeinfo' target
+  # from one source don't show up as merged when asking about a different
+  # source.
+  #
+  # In r9 make a change that effects two branches:
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.main.file_write(gamma_2_path, "New content.\n")
+  svntest.main.file_write(tau_path, "New content.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Make changes under both A and A_COPY_2',
+                                     wc_dir)
+
+  # In r10 merge r9 from A_COPY_2 to A_COPY.
+  #
+  # This gives us this mergeinfo:
+  #
+  #   Properties on 'A_COPY':
+  #     svn:mergeinfo
+  #       /A:7
+  #       /A_COPY_2:9
+  #   Properties on 'A_COPY\D\G\rho':
+  #     svn:mergeinfo
+  #       /A/D/G/rho:5
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A_COPY_2',
+                                     A_COPY_path, '-c9')
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Merge r8 from A_COPY_2 to A_COPY',
+                                     wc_dir)
+ 
+  def test_svn_mergeinfo_4_way(wc_target):
+    # Eligible : Non-recursive
+    svntest.actions.run_and_verify_mergeinfo(
+      adjust_error_for_server_version(''),
+      ['4','5','9'], sbox.repo_url + '/A/D', wc_target,
+      '--show-revs', 'eligible')
+
+    # Eligible : Recursive
+    svntest.actions.run_and_verify_mergeinfo(
+      adjust_error_for_server_version(''),
+      ['4','9'], sbox.repo_url + '/A/D', wc_target,
+      '--show-revs', 'eligible', '-R')
+
+    # Merged : Non-recursive
+    svntest.actions.run_and_verify_mergeinfo(
+      adjust_error_for_server_version(''),
+      ['7'], sbox.repo_url + '/A/D', wc_target,
+      '--show-revs', 'merged')
+
+    # Merged : Recursive
+    svntest.actions.run_and_verify_mergeinfo(
+      adjust_error_for_server_version(''),
+      ['5','7'], sbox.repo_url + '/A/D', wc_target,
+      '--show-revs', 'merged', '-R')
+
+  # Test while the target is the full WC and then with the subtree WC:
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', subtree_wc)
+
+  test_svn_mergeinfo_4_way(D_COPY_path)
+  test_svn_mergeinfo_4_way(subtree_wc)
+
+#----------------------------------------------------------------------
+# A test for issue 3791 'svn mergeinfo shows natural history of added
+# subtrees as eligible'.
+@Issue(3791)
+@SkipUnless(server_has_mergeinfo)
+def natural_history_is_not_eligible_nor_merged(sbox):
+  "natural history is not eligible nor merged"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  nu_path      = os.path.join(wc_dir, 'A', 'C', 'nu')
+  A_COPY_path  = os.path.join(wc_dir, 'A_COPY')
+  nu_COPY_path = os.path.join(wc_dir, 'A_COPY', 'C', 'nu')
+
+  # r7 - Add a new file A/C/nu
+  svntest.main.file_write(nu_path, "This is the file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', nu_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Add a file', wc_dir)
+
+  # r8 - Sync merge ^/A to A_COPY
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Add a file', wc_dir)
+
+  # r9 - Modify the file added in r7
+  svntest.main.file_write(nu_path, "Modification to file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Modify added file', wc_dir)
+
+  # r10 - Merge ^/A/C/nu to A_COPY/C/nu, creating subtree mergeinfo.
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A/C/nu', nu_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Add a file', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # We've effectively merged everything from ^/A to A_COPY, check
+  # that svn mergeinfo -R agrees.
+  #
+  # First check if there are eligible revisions, there should be none.
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    [], sbox.repo_url + '/A',
+    A_COPY_path, '--show-revs', 'eligible', '-R')
+
+  # Now check that all operative revisions show as merged.
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['3','4','5','6','7','9'], sbox.repo_url + '/A',
+    A_COPY_path, '--show-revs', 'merged', '-R')
+
 ########################################################################
 # Run the tests
 
@@ -503,6 +693,8 @@ test_list = [ None,
               non_inheritable_mergeinfo,
               recursive_mergeinfo,
               mergeinfo_on_pegged_wc_path,
+              wc_target_inherits_mergeinfo_from_repos,
+              natural_history_is_not_eligible_nor_merged,
              ]
 
 if __name__ == '__main__':

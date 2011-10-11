@@ -51,7 +51,7 @@ def print_format(wc_path):
   #   1.4.x: format 8
   #   1.5.x: format 9
   #   1.6.x: format 10
-  #   1.7.x: format XXX
+  #   1.7.x: format 29
   formatno = get_format(wc_path)
   print '%s: %s' % (wc_path, formatno)
 

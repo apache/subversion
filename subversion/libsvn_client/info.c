@@ -186,20 +186,18 @@ same_resource_in_head(svn_boolean_t *same_p,
                       apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_opt_revision_t start_rev, end_rev, peg_rev;
+  svn_opt_revision_t start_rev, peg_rev;
   svn_opt_revision_t *ignored_rev;
-  const char *head_url, *ignored_url;
+  const char *head_url;
 
   start_rev.kind = svn_opt_revision_head;
   peg_rev.kind = svn_opt_revision_number;
   peg_rev.value.number = rev;
-  end_rev.kind = svn_opt_revision_unspecified;
 
-  err = svn_client__repos_locations(&head_url, &ignored_rev,
-                                    &ignored_url, &ignored_rev,
+  err = svn_client__repos_locations(&head_url, &ignored_rev, NULL, NULL,
                                     ra_session,
                                     url, &peg_rev,
-                                    &start_rev, &end_rev,
+                                    &start_rev, NULL,
                                     ctx, pool);
   if (err &&
       ((err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES) ||
@@ -262,10 +260,12 @@ svn_error_t *
 svn_client_info3(const char *abspath_or_url,
                  const svn_opt_revision_t *peg_revision,
                  const svn_opt_revision_t *revision,
+                 svn_depth_t depth,
+                 svn_boolean_t fetch_excluded,
+                 svn_boolean_t fetch_actual_only,
+                 const apr_array_header_t *changelists,
                  svn_client_info_receiver2_t receiver,
                  void *receiver_baton,
-                 svn_depth_t depth,
-                 const apr_array_header_t *changelists,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -294,7 +294,8 @@ svn_client_info3(const char *abspath_or_url,
       wc_info_receiver_baton_t b = { receiver, receiver_baton };
       return svn_error_trace(
         svn_wc__get_info(ctx->wc_ctx, abspath_or_url, depth,
-                         wc_info_receiver, &b, changelists,
+                        fetch_excluded, fetch_actual_only, changelists,
+                         wc_info_receiver, &b,
                          ctx->cancel_func, ctx->cancel_baton, pool));
     }
 

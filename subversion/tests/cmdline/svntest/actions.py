@@ -350,10 +350,36 @@ def run_and_verify_svnrdump(dumpfile_content, expected_stdout,
   if sys.platform == 'win32':
     err = map(lambda x : x.replace('\r\n', '\n'), err)
 
+  for index, line in enumerate(err[:]):
+    if re.search("warning: W200007", line):
+      del err[index]
+
   verify.verify_outputs("Unexpected output", output, err,
                         expected_stdout, expected_stderr)
   verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
   return output
+
+
+def run_and_verify_svnmucc(message, expected_stdout, expected_stderr,
+                           *varargs):
+  """Run svnmucc command and check its output"""
+
+  expected_exit = 0
+  if expected_stderr is not None and expected_stderr != []:
+    expected_exit = 1
+  return run_and_verify_svnmucc2(message, expected_stdout, expected_stderr,
+                                 expected_exit, *varargs)
+
+def run_and_verify_svnmucc2(message, expected_stdout, expected_stderr,
+                            expected_exit, *varargs):
+  """Run svnmucc command and check its output and exit code."""
+
+  exit_code, out, err = main.run_svnmucc(*varargs)
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_stdout, expected_stderr)
+  verify.verify_exit_code(message, exit_code, expected_exit)
+  return exit_code, out, err
+
 
 def load_repo(sbox, dumpfile_path = None, dump_str = None,
               bypass_prop_validation = False):
@@ -921,7 +947,7 @@ def run_and_verify_info(expected_infos, *args):
         if value is not None and key not in actual:
           raise main.SVNLineUnequal("Expected key '%s' (with value '%s') "
                                     "not found" % (key, value))
-        if value is not None and not re.search(value, actual[key]):
+        if value is not None and not re.match(value, actual[key]):
           raise verify.SVNUnexpectedStdout("Values of key '%s' don't match:\n"
                                            "  Expected: '%s' (regex)\n"
                                            "  Found:    '%s' (string)\n"
@@ -1372,8 +1398,9 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
     status_tree = status_tree.old_tree()
 
   # Commit.
+  if '-m' not in args and '-F' not in args:
+    args = list(args) + ['-m', 'log msg']
   exit_code, output, errput = main.run_svn(error_re_string, 'ci',
-                                           '-m', 'log msg',
                                            *args)
 
   if error_re_string:
@@ -1796,12 +1823,12 @@ def set_prop(name, value, path, expected_err=None):
   if value and (value[0] == '-' or '\x00' in value or sys.platform == 'win32'):
     from tempfile import mkstemp
     (fd, value_file_path) = mkstemp()
+    os.close(fd)
     value_file = open(value_file_path, 'wb')
     value_file.write(value)
     value_file.flush()
     value_file.close()
     main.run_svn(expected_err, 'propset', '-F', value_file_path, name, path)
-    os.close(fd)
     os.remove(value_file_path)
   else:
     main.run_svn(expected_err, 'propset', name, value, path)

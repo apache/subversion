@@ -1106,6 +1106,18 @@ migrate_text_bases(apr_hash_t **text_bases_info,
             is_revert_base = FALSE;
           }
 
+        if (! versioned_file_name)
+          {
+             /* Some file that doesn't end with .svn-base or .svn-revert.
+                No idea why that would be in our administrative area, but
+                we shouldn't segfault on this case.
+
+                Note that we already copied this file in the pristine store,
+                but the next cleanup will take care of that.
+              */
+            continue;
+          }
+
         /* Create a new info struct for this versioned file, or fill in the
          * existing one if this is the second text-base we've found for it. */
         info = apr_hash_get(*text_bases_info, versioned_file_name,
@@ -1273,16 +1285,14 @@ upgrade_externals(struct bump_baton *bb,
   while (have_row)
     {
       apr_hash_t *props;
-      const svn_string_t *externals = NULL;
+      const char *externals;
 
       svn_pool_clear(iterpool);
 
       SVN_ERR(svn_sqlite__column_properties(&props, stmt, 0,
                                             iterpool, iterpool));
 
-      if (props)
-        externals = apr_hash_get(props, SVN_PROP_EXTERNALS,
-                                 APR_HASH_KEY_STRING);
+      externals = svn_prop_get_value(props, SVN_PROP_EXTERNALS);
 
       if (externals)
         {
@@ -1296,7 +1306,7 @@ upgrade_externals(struct bump_baton *bb,
                                           iterpool);
 
           SVN_ERR(svn_wc_parse_externals_description3(&ext, local_abspath,
-                                                      externals->data, FALSE,
+                                                      externals, FALSE,
                                                       iterpool));
 
           for (i = 0; i < ext->nelts; i++)
@@ -1756,6 +1766,8 @@ is_old_wcroot(const char *local_abspath,
         _("Can't upgrade '%s' as it is not a pre-1.7 working copy directory"),
         svn_dirent_local_style(local_abspath, scratch_pool));
     }
+  else if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
+    return SVN_NO_ERROR;
 
   svn_dirent_split(&parent_abspath, &name, local_abspath, scratch_pool);
 
@@ -1770,14 +1782,15 @@ is_old_wcroot(const char *local_abspath,
   entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
   if (!entry
       || entry->absent
-      || (entry->deleted && entry->schedule != svn_wc_schedule_add))
+      || (entry->deleted && entry->schedule != svn_wc_schedule_add)
+      || entry->depth == svn_depth_exclude)
     {
       return SVN_NO_ERROR;
     }
 
-  svn_dirent_split(&parent_abspath, &name, parent_abspath, scratch_pool);
   while (!svn_dirent_is_root(parent_abspath, strlen(parent_abspath)))
     {
+      svn_dirent_split(&parent_abspath, &name, parent_abspath, scratch_pool);
       err = svn_wc__read_entries_old(&entries, parent_abspath,
                                      scratch_pool, scratch_pool);
       if (err)
@@ -1789,12 +1802,12 @@ is_old_wcroot(const char *local_abspath,
       entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
       if (!entry
           || entry->absent
-          || (entry->deleted && entry->schedule != svn_wc_schedule_add))
+          || (entry->deleted && entry->schedule != svn_wc_schedule_add)
+          || entry->depth == svn_depth_exclude)
         {
           parent_abspath = svn_dirent_join(parent_abspath, name, scratch_pool);
           break;
         }
-      svn_dirent_split(&parent_abspath, &name, parent_abspath, scratch_pool);
     }
 
   return svn_error_createf(
@@ -1901,12 +1914,12 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                              scratch_pool));
   SVN_ERR(svn_wc__ensure_directory(root_adm_abspath, scratch_pool));
 
-  /* Create an empty sqlite database for this directory. */
+  /* Create an empty sqlite database for this directory and store it in DB. */
   SVN_ERR(svn_wc__db_upgrade_begin(&data.sdb,
                                    &data.repos_id, &data.wc_id,
-                                   data.root_abspath,
+                                   db, data.root_abspath,
                                    this_dir->repos, this_dir->uuid,
-                                   scratch_pool, scratch_pool));
+                                   scratch_pool));
 
   /* Migrate the entries over to the new database.
    ### We need to think about atomicity here.
@@ -1951,7 +1964,6 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__db_wq_add(db, data.root_abspath, work_items, scratch_pool));
 
   SVN_ERR(svn_wc__db_wclock_release(db, data.root_abspath, scratch_pool));
-  SVN_ERR(svn_sqlite__close(data.sdb));
   SVN_ERR(svn_wc__db_close(db));
 
   /* Renaming the db file is what makes the pre-wcng into a wcng */
@@ -1973,3 +1985,44 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__upgrade_add_external_info(svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  svn_node_kind_t kind,
+                                  const char *def_local_abspath,
+                                  const char *repos_relpath,
+                                  const char *repos_root_url,
+                                  const char *repos_uuid,
+                                  svn_revnum_t def_peg_revision,
+                                  svn_revnum_t def_revision,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_kind_t db_kind;
+  switch (kind)
+    {
+      case svn_node_dir:
+        db_kind = svn_kind_dir;
+        break;
+
+      case svn_node_file:
+        db_kind = svn_kind_file;
+        break;
+
+      case svn_node_unknown:
+        db_kind = svn_kind_unknown;
+        break;
+
+      default:
+        SVN_ERR_MALFUNCTION();
+    }
+
+  SVN_ERR(svn_wc__db_upgrade_insert_external(wc_ctx->db, local_abspath,
+                                             db_kind,
+                                             svn_dirent_dirname(local_abspath,
+                                                                scratch_pool),
+                                             def_local_abspath, repos_relpath,
+                                             repos_root_url, repos_uuid,
+                                             def_peg_revision, def_revision,
+                                             scratch_pool));
+  return SVN_NO_ERROR;
+}

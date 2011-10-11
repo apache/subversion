@@ -59,8 +59,9 @@ class WCTestCase(unittest.TestCase):
         dumpfile = open(os.path.join(os.path.split(__file__)[0],
                         'test.dumpfile'))
 
-        # Just in case a preivous test instance was not properly cleaned up
-        self.tearDown()
+        # Just in case a previous test instance was not properly cleaned up
+        self.remove_from_disk()
+
         self.repos = LocalRepository(repos_location, create=True)
         self.repos.load(dumpfile)
 
@@ -68,12 +69,18 @@ class WCTestCase(unittest.TestCase):
         self.wc.checkout(repo_url)
 
     def tearDown(self):
+        self.repos.close()
+        self.wc.close()
+        self.remove_from_disk()
+        self.wc = None
+
+    def remove_from_disk(self):
+        """Remove anything left on disk"""
         pool = Pool()
         if os.path.exists(wc_location):
             svn_io_remove_dir(wc_location, pool)
         if os.path.exists(repos_location):
             svn_repos_delete(repos_location, pool)
-        self.wc = None
 
     def _info_receiver(self, path, info):
         self.last_info = info
@@ -247,5 +254,5 @@ def suite():
     return unittest.makeSuite(WCTestCase, 'test')
 
 if __name__ == '__main__':
-    runner = unittest.TextTestRunner(verbosity=2)
+    runner = unittest.TextTestRunner()
     runner.run(suite())

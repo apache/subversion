@@ -180,7 +180,7 @@ resolve_conflict_on_node(svn_wc__db_t *db,
   const char *conflict_new = NULL;
   const char *conflict_working = NULL;
   const char *prop_reject_file = NULL;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   int i;
   const apr_array_header_t *conflicts;
   const char *conflict_dir_abspath;
@@ -208,14 +208,13 @@ resolve_conflict_on_node(svn_wc__db_t *db,
         prop_reject_file = desc->their_abspath;
     }
 
-  if (kind == svn_wc__db_kind_dir)
+  if (kind == svn_kind_dir)
     conflict_dir_abspath = local_abspath;
   else
     conflict_dir_abspath = svn_dirent_dirname(local_abspath, pool);
 
   if (resolve_text)
     {
-      svn_stream_t *tmp_stream = NULL;
       const char *auto_resolve_src;
 
       /* Handle automatic conflict resolution before the temporary files are
@@ -240,6 +239,7 @@ resolve_conflict_on_node(svn_wc__db_t *db,
             if (conflict_old && conflict_working && conflict_new)
               {
                 const char *temp_dir;
+                svn_stream_t *tmp_stream = NULL;
                 svn_diff_t *diff;
                 svn_diff_conflict_display_style_t style =
                   conflict_choice == svn_wc_conflict_choose_theirs_conflict
@@ -252,7 +252,7 @@ resolve_conflict_on_node(svn_wc__db_t *db,
                 SVN_ERR(svn_stream_open_unique(&tmp_stream,
                                                &auto_resolve_src,
                                                temp_dir,
-                                               svn_io_file_del_on_close,
+                                               svn_io_file_del_on_pool_cleanup,
                                                pool, pool));
 
                 SVN_ERR(svn_diff_file_diff3_2(&diff,
@@ -269,6 +269,7 @@ resolve_conflict_on_node(svn_wc__db_t *db,
                                                     NULL, NULL, NULL, NULL,
                                                     style,
                                                     pool));
+                SVN_ERR(svn_stream_close(tmp_stream));
               }
             else
               auto_resolve_src = NULL;
@@ -283,9 +284,6 @@ resolve_conflict_on_node(svn_wc__db_t *db,
         SVN_ERR(svn_io_copy_file(
           svn_dirent_join(conflict_dir_abspath, auto_resolve_src, pool),
           local_abspath, TRUE, pool));
-
-      if (tmp_stream)
-        SVN_ERR(svn_stream_close(tmp_stream));
     }
 
   /* Records whether we found any of the conflict files.  */
@@ -505,7 +503,7 @@ recursive_resolve_conflict(svn_wc__db_t *db,
       const char *name = APR_ARRAY_IDX(children, i, const char *);
       const char *child_abspath;
       svn_wc__db_status_t status;
-      svn_wc__db_kind_t kind;
+      svn_kind_t kind;
       svn_boolean_t conflicted;
 
       svn_pool_clear(iterpool);
@@ -528,10 +526,10 @@ recursive_resolve_conflict(svn_wc__db_t *db,
         continue;
 
       apr_hash_set(visited, name, APR_HASH_KEY_STRING, name);
-      if (kind == svn_wc__db_kind_dir && depth < svn_depth_immediates)
+      if (kind == svn_kind_dir && depth < svn_depth_immediates)
         continue;
 
-      if (kind == svn_wc__db_kind_dir)
+      if (kind == svn_kind_dir)
         SVN_ERR(recursive_resolve_conflict(db,
                                            child_abspath,
                                            conflicted,
@@ -605,7 +603,7 @@ svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
                           void *notify_baton,
                           apr_pool_t *scratch_pool)
 {
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_boolean_t conflicted;
   /* ### the underlying code does NOT support resolving individual
      ### properties. bail out if the caller tries it.  */
@@ -623,7 +621,7 @@ svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
 
   /* When the implementation still used the entry walker, depth
      unknown was translated to infinity. */
-  if (kind != svn_wc__db_kind_dir)
+  if (kind != svn_kind_dir)
     depth = svn_depth_empty;
   else if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;

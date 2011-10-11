@@ -1,5 +1,16 @@
+Version 1.8.0
+(?? ??? 2011, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.0
+
+ User-visible changes:
+
+ Developer-visible changes:
+  - API changes:
+    * fix inconsistent handling of log revs without changed paths (issue #3694)
+
+
 Version 1.7.0
-(?? ??? 2011, from /branches/1.7.x)
+(11 Oct 2011, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.0
 
 See the 1.7 release notes for a more verbose overview of the changes since
@@ -13,12 +24,11 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * Less verbose HTTP-based repository access protocol (issue #1161, #3371)
     * Rewritten working copy metadata storage (issue #3357)
     * New 'svn patch' subcommand (issue #511)
-    * Property packing on FSFS backends (issue #3444)
-    * Limit FSFS memory consumption (issue #3478, #3593)
+    * Rewritten FSFS in-memory caching for better performance
+    * New remote repository dump/load client 'svnrdump'
 
   - Minor new features and improvements:
     * Better handling of HTTP redirects (issue #2779)
-    * make Serf the default DAV access method, if available (r875974)
     * Improved and much more consistent path handling (issue #2028, and others)
     * 'svnadmin load' rewrites changed revnums in mergeinfo (issue #3020)
     * Error message and help text improvements
@@ -42,6 +52,8 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * add configurable caching to svnadmin (r1078357)
     * make server-side network data compression rate configurable (r1072288)
     * added support for auto-detecting mime-types with libmagic (r1131120)
+    * 'svn rm url1 url2 url3' uses single txn per repo (issue #1199)
+    * don't leave unversioned files when reverting copies (issue #3101)
 
   - Client-side bugfixes:
     * 'svn cp A B; svn mv B C' is equivalent to 'svn cp A C' (issue #756)
@@ -49,7 +61,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * allow subdirs of moved dirs to be moved and committed (issue #1259)
     * improved performance of 'svn mv' with whole directories (issue #1284)
     * 'svn rm B; svn cp A B' now works (issue #1516)
-    * 'svn diff URL1 URL2' now reverse of 'svn diff URL2 URL1) (issue #2333)
+    * 'svn diff URL1 URL2' now reverse of 'svn diff URL2 URL1' (issue #2333)
     * error if relocating to an unused URL (issue #2531)
     * 'svn blame -rWORKING' is now supported (issue #2544)
     * improve correctness of commit on a relocated wc over ra_dav (issue #2578)
@@ -80,6 +92,12 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * can now commit multiple wc paths lacking a common parent (issue #2381)
     * 'svn export --depth $WC' now works correctly (issue #3800)
     * added support for case-only renames on Windows (issue #3702)
+    * 'svn delete --force' removes tree conflicts (issue #3805)
+    * don't throw an error when skipping tree conflicts in update (issue #3329)
+    * don't break commits of wc->wc copies with file externals (issue #3589)
+    * allow 'svn info' to work on symlinks to working copies (issue #2305)
+    * allow 'svn st --show-updates' to work across symlinks (issue #3117)
+    * 'svn revert' shouldn't loop on symlinks (issue #3972)
     * fixed: wc-to-wc copy of a switch source (issue #1802)
     * fixed: 'svn st' reports symlinks as obstructed items (issue #2284)
     * fixed: 'cd e:\; svn up e:\' fails (issue #2556)
@@ -114,9 +132,16 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed: executable flag of binary file lost during merge (issue #3686)
     * fixed: merging a symlink-turned-regular-file breaks the wc (issue #2530)
     * fixed: can't remove file externals (issue #3351)
-    * fixed: 'svn unlock' attempts to unlock  wrong token on DAV (issue #3794)
+    * fixed: 'svn unlock' attempts to unlock wrong token on DAV (issue #3794)
     * fixed: forced DAV 'svn unlock' results in 403, not warning (issue #3801)
     * fixed: rm -> ci -> cp = missing directory (issue #2763)
+    * fixed: 'svn info' returns parent info on missing dirs (issue #3178)
+    * fixed: spurious prop conflict with 'merge --reintegrate' (issue #3919)
+    * fixed: 'svn --version' fails with non-existant $HOME (issue #3947)
+    * fixed: unforced export silently overwites existing file (issue #3799)
+    * fixed: reverse merge which adds subtree mergeinfo fails (issue #3978)
+    * fixed: 'svn up -r{R>HEAD}' hangs client over ra_svn (issue #3963)
+    * fixed: 'svn up' updates file externals in target siblings (issue #3819)
     * many other minor bugfixes, optimizations, plugs of memory leaks, etc
   
   - Server-side bugfixes:
@@ -124,7 +149,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * allow SVNListParentPath to be used with authz (issue #2753)
     * allow nav to repo list from repo top with SVNListParentPath (issue #3159)
     * allow repositories in the root of a drive on windows (issue #3535)
-    * don't destroy mergeinnfo with 'svnadmin load --parent-dir' (issue #3547)
+    * don't destroy mergeinfo with 'svnadmin load --parent-dir' (issue #3547)
     * fixed: 'svnadmin hotcopy' does not duplicate symlinks (issue #2591)
     * fixed: post-revprop-change errors cancel commit (issue #2990)
     * fixed: mod_dav_svn runs pre-revprop-change hook twice (issue #3085)
@@ -132,9 +157,13 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed: hotcopy may corrupt target rep-cache.db (issue #3596)
     * fixed: mod_dav_svn can cause spurious merge conflicts (issue #3657)
     * fixed: DAV can overwrite directories during copy (issue #3314)
+    * fixed: 'svn log' returns log of unrelated path (issue #3931)
     * match paths against authz rules in case sensitive way (issue #3781)
     * svnserve can now force usernames to upper/lower case (issue #3726)
     * reduce duplicate log messages in 'log -g' (issue #3650)
+    * svnserve: don't crash on shutdown with SASL in inetd mode (issue #3664)
+    * disallow arbitrary HTTP headers from committers (issue #2872)
+    * limit FSFS memory consumption (issue #3478, #3593)
     * many other minor bugfixes too numerous to list here
 
   - Other tool improvements and bugfixes:
@@ -153,6 +182,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * support running tests against older servers (r876016)
     * notification of unversioned obstructions (r877344)
     * removed virtually all abort() calls (issue #2780)
+    * don't include client-specific suggestions in error msgs (issue #3887)
 
   - API changes:
     * don't crash svn_client_copy if ctx->log_msg_func is NULL (issue #3234)
@@ -163,6 +193,9 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * notifications sent when mergeinfo changes (r877588)
     * add information on text and property mods in log APIs (r877688)
     * fixed: svn_ra_local__get_file() leaks file descriptors (issue #3290)
+    * svn_ra_neon__get_dir() returns correct dir set for URLs (issue #3093)
+    * swig-py: always set ChangedPath.path (also for deletes) (issue #2630)
+    * improve conflict resolver API for a specific direction (issue #3049)
 
   - Bindings:
     * New JavaHL package: org.apache.subversion

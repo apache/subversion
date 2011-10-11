@@ -138,6 +138,7 @@ def commit_props(sbox):
 
 #----------------------------------------------------------------------
 
+@Issue(3951)
 def update_props(sbox):
   "receive properties via update"
 
@@ -1124,7 +1125,7 @@ def recursive_base_wc_ops(sbox):
 #----------------------------------------------------------------------
 
 def url_props_ops(sbox):
-  "property operations on an URL"
+  "property operations on a URL"
 
   # Bootstrap
   sbox.build()

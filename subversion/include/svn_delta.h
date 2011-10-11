@@ -41,6 +41,7 @@
 #include "svn_string.h"
 #include "svn_io.h"
 #include "svn_checksum.h"
+#include "svn_editor.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -649,10 +650,12 @@ svn_txdelta_skip_svndiff_window(apr_file_t *file,
  *
  * Each of these takes a directory baton, indicating the directory
  * in which the change takes place, and a @a path argument, giving the
- * path (relative to the root of the edit) of the file,
- * subdirectory, or directory entry to change. Editors will usually
- * want to join this relative path with some base stored in the edit
- * baton (e.g. a URL, a location in the OS filesystem).
+ * path of the file, subdirectory, or directory entry to change.
+ * 
+ * The @a path argument to each of the callbacks is relative to the
+ * root of the edit.  Editors will usually want to join this relative
+ * path with some base stored in the edit baton (e.g. a URL, or a
+ * location in the OS filesystem).
  *
  * Since every call requires a parent directory baton, including
  * @c add_directory and @c open_directory, where do we ever get our
@@ -826,7 +829,7 @@ typedef struct svn_delta_editor_t
                             void **root_baton);
 
 
-  /** Remove the directory entry named @a path, a child of the directory
+  /** Remove the directory entry at @a path, a child of the directory
    * represented by @a parent_baton.  If @a revision is a valid
    * revision number, it is used as a sanity check to ensure that you
    * are really removing the revision of @a path that you think you are.
@@ -847,9 +850,10 @@ typedef struct svn_delta_editor_t
                                apr_pool_t *scratch_pool);
 
 
-  /** We are going to add a new subdirectory named @a path.  We will use
+  /** We are going to add a new subdirectory at @a path, a child of
+   * the directory represented by @a parent_baton.  We will use
    * the value this callback stores in @a *child_baton as the
-   * @a parent_baton for further changes in the new subdirectory.
+   * parent baton for further changes in the new subdirectory.
    *
    * If @a copyfrom_path is non-@c NULL, this add has history (i.e., is a
    * copy), and the origin of the copy may be recorded as
@@ -866,10 +870,10 @@ typedef struct svn_delta_editor_t
                                 apr_pool_t *result_pool,
                                 void **child_baton);
 
-  /** We are going to make changes in a subdirectory (of the directory
-   * identified by @a parent_baton). The subdirectory is specified by
-   * @a path. The callback must store a value in @a *child_baton that
-   * should be used as the @a parent_baton for subsequent changes in this
+  /** We are going to make changes in the subdirectory at @a path, a
+   * child of the directory represented by @a parent_baton.
+   * The callback must store a value in @a *child_baton that
+   * should be used as the parent baton for subsequent changes in this
    * subdirectory.  If a valid revnum, @a base_revision is the current
    * revision of the subdirectory.
    *
@@ -921,7 +925,8 @@ typedef struct svn_delta_editor_t
                                    void *parent_baton,
                                    apr_pool_t *scratch_pool);
 
-  /** We are going to add a new file named @a path.  The callback can
+  /** We are going to add a new file at @a path, a child of the
+   * directory represented by @a parent_baton.  The callback can
    * store a baton for this new file in @a **file_baton; whatever value
    * it stores there should be passed through to @c apply_textdelta.
    *
@@ -950,8 +955,8 @@ typedef struct svn_delta_editor_t
                            apr_pool_t *result_pool,
                            void **file_baton);
 
-  /** We are going to make change to a file named @a path, which resides
-   * in the directory identified by @a parent_baton.
+  /** We are going to make changes to a file at @a path, a child of the
+   * directory represented by @a parent_baton.
    *
    * The callback can store a baton for this new file in @a **file_baton;
    * whatever value it stores there should be passed through to
@@ -1080,6 +1085,93 @@ typedef struct svn_delta_editor_t
  */
 svn_delta_editor_t *
 svn_delta_default_editor(apr_pool_t *pool);
+
+/** Callback to retrieve a node's entire set of properties.  This is
+ * needed by the various editor shims in order to effect backward compat.
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *(*svn_delta_fetch_props_func_t)(
+  apr_hash_t **props,
+  void *baton,
+  const char *path,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool
+  );
+
+/** Callback to retrieve a node's kind.  This is needed by the various editor
+ * shims in order to effect backward compat.
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *(*svn_delta_fetch_kind_func_t)(
+  svn_node_kind_t *kind,
+  void *baton,
+  const char *path,
+  apr_pool_t *scratch_pool
+  );
+
+/* Return a delta editor and baton which will forward calls to @a editor,
+ * allocated in @a pool.
+ *
+ * @note: Since the semantics behind the two editors are different, calls
+ * the timing of calls forwarded to @a editor may be imprecise.  That is,
+ * the memory and computational overhead in using this forwarding
+ * mechanism may be large.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_delta_from_editor(const svn_delta_editor_t **deditor,
+                      void **dedit_baton,
+                      svn_editor_t *editor,
+                      svn_delta_fetch_props_func_t fetch_props_func,
+                      void *fetch_props_baton,
+                      apr_pool_t *pool);
+
+/* Return an editor allocated in @a result_pool which will forward calls
+ * to @a deditor using @a dedit_baton.
+ *
+ * @note Since the sematics behind the two editors are different, the
+ * timing of calls forwarded to the @a editor may be imprecise, and the
+ * overhead large.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_editor_from_delta(svn_editor_t **editor,
+                      const svn_delta_editor_t *deditor,
+                      void *dedit_baton,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      svn_delta_fetch_kind_func_t fetch_kind_func,
+                      void *fetch_kind_baton,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
+/** A temporary API which conditionally inserts a double editor shim
+ * into the chain of delta editors.  Used for testing Editor v2.
+ *
+ * Whether or not the shims are inserted is controlled by a compile-time
+ * option in libsvn_delta/compat.c.
+ *
+ * @note The use of these shims and this API will likely cause all kinds
+ * of performance degredation.  (Which is actually a moot point since they
+ * don't even work properly yet anyway.)
+ *
+ * ### This should not ship in the final release.
+ */
+svn_error_t *
+svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
+                         void **dedit_baton_out,
+                         const svn_delta_editor_t *deditor_in,
+                         void *dedit_baton_in,
+                         svn_delta_fetch_props_func_t fetch_props_func,
+                         void *fetch_props_baton,
+                         svn_delta_fetch_kind_func_t fetch_kind_func,
+                         void *fetch_kind_baton,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
 /** A text-delta window handler which does nothing.
  *

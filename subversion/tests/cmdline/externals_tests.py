@@ -28,7 +28,7 @@
 import sys
 import os
 import re
-import tempfile
+import shutil
 
 # Our testing module
 import svntest
@@ -214,25 +214,18 @@ def externals_test_setup(sbox):
 def change_external(path, new_val, commit=True):
   """Change the value of the externals property on PATH to NEW_VAL,
   and commit the change unless COMMIT is False."""
-  (fd, tmp_f) = tempfile.mkstemp(dir=svntest.main.temp_dir)
-  svntest.main.file_append(tmp_f, new_val)
-  svntest.actions.run_and_verify_svn(None, None, [], 'pset',
-                                     '-F', tmp_f, 'svn:externals', path)
+
+  svntest.actions.set_prop('svn:externals', new_val, path)
   if commit:
     svntest.actions.run_and_verify_svn(None, None, [], 'ci',
                                        '-m', 'log msg', '--quiet', path)
-  os.close(fd)
-  os.remove(tmp_f)
 
 def change_external_expect_error(path, new_val, expected_err):
   """Try to change the value of the externals property on PATH to NEW_VAL,
   but expect to get an error message that matches EXPECTED_ERR."""
-  (fd, tmp_f) = tempfile.mkstemp(dir=svntest.main.temp_dir)
-  svntest.main.file_append(tmp_f, new_val)
-  svntest.actions.run_and_verify_svn(None, None, expected_err, 'pset',
-                                     '-F', tmp_f, 'svn:externals', path)
-  os.close(fd)
-  os.remove(tmp_f)
+
+  svntest.actions.set_prop('svn:externals', new_val, path,
+                           expected_err=expected_err)
 
 
 def probe_paths_exist(paths):
@@ -1884,6 +1877,228 @@ def exclude_externals(sbox):
                                         None, None, None, None, False,
                                         '--set-depth', 'infinity', wc_dir)
 
+def file_externals_different_repos(sbox):
+  "update file externals via different url"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  r1_url = sbox.repo_url
+
+  r2_dir, r2_url = sbox.add_repo_path('2')
+  svntest.main.copy_repos(sbox.repo_dir, r2_dir, 1, 0)
+
+
+  sbox.simple_propset('svn:externals',
+                      'r1-e-1   ' + r1_url + '/iota\n' +
+                      r1_url + '/iota  r1-e-2\n' +
+                      'r2-e-1   ' + r2_url + '/iota\n' +
+                      r2_url + '/iota  r2-e-2\n' +
+                      '^/iota  rr-e-1\n', '')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'r1-e-1'            : Item(status='A '),
+    'r1-e-2'            : Item(status='A '),
+    'rr-e-1'            : Item(status='A '),
+  })
+
+  # The externals from r2 should fail, but currently pass.
+  # This creates a wc.db inconsistency
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None,
+                                        'svn: warning: W200007: Unsupported.*')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'relocate', r1_url, r2_url, wc_dir)
+
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'r2-e-1'            : Item(status='A '),
+    'r2-e-2'            : Item(status='A '),
+  })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None,
+                                        'svn: warning: W200007: Unsupported.*')
+
+def file_external_in_unversioned(sbox):
+  "file external in unversioned dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('svn:externals', '^/A/mu X/mu', 'A')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/X/mu' : Item(status='A '),
+  })
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None, None)
+
+  # At one point this failed with SVN_DEBUG wcng consistency checks enabled
+  svntest.actions.run_and_verify_svn(None, None, [], 'cleanup', wc_dir)
+
+
+from svntest import verify, actions, main
+
+@Issue(3589, 4000)
+def copy_file_externals(sbox):
+  "a WC->WC copy should exclude file externals"
+
+  #  svntest.factory.make(sbox,"""
+  #  svn mkdir X
+  #  ### manual edit: add '\n ^/A/mu xmu' to externals definition:
+  #  svn ps svn:externals "^/iota xiota" X
+  #  """)
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  X = os.path.join(wc_dir, 'X')
+
+  # svn mkdir X
+  expected_stdout = ['A         ' + X + '\n']
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'mkdir', X)
+
+  # svn ps svn:externals "^/iota xiota" X
+  expected_stdout = ["property 'svn:externals' set on '" + X + "'\n"]
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps',
+    'svn:externals', '''
+    ^/iota xiota
+    ^/A/mu xmu
+    ''', X)
+
+  #  svntest.factory.make(sbox, '''
+  #  svn ci
+  #  svn up
+  #  # have a commit on one of the files
+  #  echo mod >> X/xmu
+  #  svn ci X/xmu
+  #  svn up
+  #  # now perform the WC->WC copy
+  #  svn cp X X_copy
+  #  ### manual edit: add a verify_disk(check_props=True) here
+  #  svn ci
+  #  ### manual edit: add check_props=True to below update
+  #  svn up
+  #  ''')
+
+  X = os.path.join(wc_dir, 'X')
+  X_copy = os.path.join(wc_dir, 'X_copy')
+  X_xmu = os.path.join(wc_dir, 'X', 'xmu')
+
+  # svn ci
+  expected_output = svntest.wc.State(wc_dir, {
+    'X'                 : Item(verb='Adding'),
+  })
+
+  expected_status = actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'X'                 : Item(status='  ', wc_rev='2'),
+  })
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, wc_dir)
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {
+    'X/xmu'             : Item(status='A '),
+    'X/xiota'           : Item(status='A '),
+  })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'X'                 : Item(),
+    'X/xiota'           : Item(contents="This is the file 'iota'.\n"),
+    'X/xmu'             : Item(contents="This is the file 'mu'.\n"),
+  })
+
+  expected_status.add({
+    'X/xiota'           : Item(status='  ', wc_rev='2', switched='X'),
+    'X/xmu'             : Item(status='  ', wc_rev='2', switched='X'),
+  })
+  expected_status.tweak(wc_rev='2')
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
+  # have a commit on one of the files
+  # echo mod >> X/xmu
+  main.file_append(X_xmu, 'mod\n')
+
+  # svn ci X/xmu
+  expected_output = svntest.wc.State(wc_dir, {
+    'X/xmu'             : Item(verb='Sending'),
+  })
+
+  expected_status.tweak('X/xmu', wc_rev='3')
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, X_xmu)
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'              : Item(status='U '),
+  })
+
+  expected_disk.tweak('A/mu', 'X/xmu',
+    contents="This is the file 'mu'.\nmod\n")
+
+  expected_status.tweak(wc_rev='3')
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
+  # now perform the WC->WC copy
+  # svn cp X X_copy
+  expected_stdout = ['A         ' + X_copy + '\n']
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'cp', X,
+    X_copy)
+
+  # svn ci
+  expected_output = svntest.wc.State(wc_dir, {
+    'X_copy'            : Item(verb='Adding'),
+  })
+
+  expected_status.add({
+    'X_copy'            : Item(status='  ', wc_rev='4'),
+  })
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, wc_dir)
+
+  # verify disk state, also verifying props
+  expected_disk.add({
+    'X_copy'            : Item(),
+  })
+  expected_disk.tweak('X', 'X_copy',
+    props={'svn:externals' : '\n    ^/iota xiota\n    ^/A/mu xmu\n    \n'})
+
+  actions.verify_disk(wc_dir, expected_disk, True)
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {
+    'X_copy/xmu'        : Item(status='A '),
+    'X_copy/xiota'      : Item(status='A '),
+  })
+
+  expected_disk.add({
+    'X_copy/xmu'        : Item(contents="This is the file 'mu'.\nmod\n"),
+    'X_copy/xiota'      : Item(contents="This is the file 'iota'.\n"),
+  })
+
+  expected_status.add({
+    'X_copy/xmu'        : Item(status='  ', wc_rev='4', switched='X'),
+    'X_copy/xiota'      : Item(status='  ', wc_rev='4', switched='X'),
+  })
+  expected_status.tweak(wc_rev='4')
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, True, wc_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -1922,6 +2137,9 @@ test_list = [ None,
               incoming_file_on_file_external,
               incoming_file_external_on_file,
               exclude_externals,
+              file_externals_different_repos,
+              file_external_in_unversioned,
+              copy_file_externals,
              ]
 
 if __name__ == '__main__':

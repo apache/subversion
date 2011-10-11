@@ -32,12 +32,14 @@
 #include "svn_mergeinfo.h"
 #include "svn_path.h"
 #include "svn_version.h"
+#include "svn_cache_config.h"
 
 #include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_repos_private.h"
 #include "private/svn_fspath.h"
+#include "private/svn_atomic.h"
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
@@ -124,6 +126,35 @@ get_username(svn_ra_session_t *session,
          destroyed. */
       apr_pool_cleanup_register(session->pool, sess->fs, cleanup_access,
                                 apr_pool_cleanup_null);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements an svn_atomic__init_once callback.  Sets the FSFS memory
+   cache size. */
+static svn_error_t *
+cache_init(void *baton, apr_pool_t *pool)
+{
+  apr_hash_t *config_hash = baton;
+  svn_config_t *config = NULL;
+  const char *memory_cache_size_str;
+
+  if (config_hash)
+    config = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_CONFIG,
+                          APR_HASH_KEY_STRING);
+  svn_config_get(config, &memory_cache_size_str, SVN_CONFIG_SECTION_MISCELLANY,
+                 SVN_CONFIG_OPTION_MEMORY_CACHE_SIZE, NULL);
+  if (memory_cache_size_str)
+    {
+      apr_uint64_t memory_cache_size;
+      svn_cache_config_t settings = *svn_cache_config_get();
+
+      SVN_ERR(svn_error_quick_wrap(svn_cstring_atoui64(&memory_cache_size,
+                                                       memory_cache_size_str),
+                                   _("memory-cache-size invalid")));
+      settings.cache_size = 1024 * 1024 * memory_cache_size; 
+      svn_cache_config_set(&settings);
     }
 
   return SVN_NO_ERROR;
@@ -238,6 +269,15 @@ static const svn_ra_reporter3_t ra_local_reporter =
 };
 
 
+/* ...
+ *
+ * Wrap a cancellation editor using SESSION's cancellation function around
+ * the supplied EDITOR.  ### Some callers (via svn_ra_do_update2() etc.)
+ * don't appear to know that we do this, and are supplying an editor that
+ * they have already wrapped with the same cancellation editor, so it ends
+ * up double-wrapped.
+ *
+ * ... */
 static svn_error_t *
 make_reporter(svn_ra_session_t *session,
               const svn_ra_reporter3_t **reporter,
@@ -256,7 +296,6 @@ make_reporter(svn_ra_session_t *session,
   svn_ra_local__session_baton_t *sess = session->priv;
   void *rbaton;
   const char *other_fs_path = NULL;
-  const char *repos_url_decoded;
 
   /* Get the HEAD revision if one is not supplied. */
   if (! SVN_IS_VALID_REVNUM(revision))
@@ -266,22 +305,19 @@ make_reporter(svn_ra_session_t *session,
      regular filesystem path. */
   if (other_url)
     {
-      size_t repos_url_len;
-
-      other_url = svn_path_uri_decode(other_url, pool);
-      repos_url_decoded = svn_path_uri_decode(sess->repos_url, pool);
-      repos_url_len = strlen(repos_url_decoded);
+      const char *other_relpath
+        = svn_uri_skip_ancestor(sess->repos_url, other_url, pool);
 
       /* Sanity check:  the other_url better be in the same repository as
          the original session url! */
-      if (strncmp(other_url, repos_url_decoded, repos_url_len) != 0)
+      if (! other_relpath)
         return svn_error_createf
           (SVN_ERR_RA_ILLEGAL_URL, NULL,
            _("'%s'\n"
              "is not the same repository as\n"
              "'%s'"), other_url, sess->repos_url);
 
-      other_fs_path = other_url + repos_url_len;
+      other_fs_path = apr_pstrcat(pool, "/", other_relpath, (char *)NULL);
     }
 
   /* Pass back our reporter */
@@ -455,6 +491,12 @@ svn_ra_local__open(svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sess;
   const char *fs_path;
+  static volatile svn_atomic_t cache_init_state = 0;
+
+  /* Initialise the FSFS memory cache size.  We can only do this once
+     so one CONFIG will win the race and all others will be ignored
+     silently.  */
+  SVN_ERR(svn_atomic__init_once(&cache_init_state, cache_init, config, pool));
 
   /* We don't support redirections in ra-local. */
   if (corrected_url)
@@ -700,7 +742,6 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
                             const apr_array_header_t *paths,
                             svn_revnum_t revision,
                             svn_mergeinfo_inheritance_t inherit,
-                            svn_boolean_t validate_inherited_mergeinfo,
                             svn_boolean_t include_descendants,
                             apr_pool_t *pool)
 {
@@ -717,11 +758,9 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
         svn_fspath__join(sess->fs_path->data, relative_path, pool);
     }
 
-  SVN_ERR(svn_repos_fs_get_mergeinfo2(&tmp_catalog, sess->repos, abs_paths,
-                                      revision, inherit,
-                                      validate_inherited_mergeinfo,
-                                      include_descendants,
-                                      NULL, NULL, pool));
+  SVN_ERR(svn_repos_fs_get_mergeinfo(&tmp_catalog, sess->repos, abs_paths,
+                                     revision, inherit, include_descendants,
+                                     NULL, NULL, pool));
   if (apr_hash_count(tmp_catalog) > 0)
     SVN_ERR(svn_mergeinfo__remove_prefix_from_catalog(catalog,
                                                       tmp_catalog,
@@ -855,14 +894,26 @@ struct log_baton
 };
 
 static svn_error_t *
-cancellation_log_receiver(void *baton,
-                          svn_log_entry_t *log_entry,
-                          apr_pool_t *pool)
+log_receiver_wrapper(void *baton,
+                     svn_log_entry_t *log_entry,
+                     apr_pool_t *pool)
 {
   struct log_baton *b = baton;
   svn_ra_local__session_baton_t *sess = b->sess;
 
-  SVN_ERR((sess->callbacks->cancel_func)(sess->callback_baton));
+  if (sess->callbacks->cancel_func)
+    SVN_ERR((sess->callbacks->cancel_func)(sess->callback_baton));
+
+  /* For consistency with the other RA layers, replace an empty
+     changed-paths hash with a NULL one.
+
+     ### Should this be done by svn_ra_get_log2() instead, then? */
+  if ((log_entry->changed_paths2)
+      && (apr_hash_count(log_entry->changed_paths2) == 0))
+    {
+      log_entry->changed_paths = NULL;
+      log_entry->changed_paths2 = NULL;
+    }
 
   return b->real_cb(b->real_baton, log_entry, pool);
 }
@@ -899,16 +950,11 @@ svn_ra_local__get_log(svn_ra_session_t *session,
         }
     }
 
-  if (sess->callbacks &&
-      sess->callbacks->cancel_func)
-    {
-      lb.real_cb = receiver;
-      lb.real_baton = receiver_baton;
-      lb.sess = sess;
-
-      receiver = cancellation_log_receiver;
-      receiver_baton = &lb;
-    }
+  lb.real_cb = receiver;
+  lb.real_baton = receiver_baton;
+  lb.sess = sess;
+  receiver = log_receiver_wrapper;
+  receiver_baton = &lb;
 
   return svn_repos_get_logs4(sess->repos,
                              abs_paths,
@@ -1422,9 +1468,7 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
     {
       *has = TRUE;
     }
-  else if ((strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
-           || (strcmp(capability,
-                      SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO) == 0))
+  else if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
     {
       /* With mergeinfo, the code's capabilities may not reflect the
          repository's, so inquire further. */

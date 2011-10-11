@@ -70,7 +70,11 @@ attlist.wc-status &=
   attribute switched { "true" | "false" }?,
   ## Tree-conflict status of the item.
   [ a:defaultValue = "false" ]
-  attribute tree-conflicted { "true" | "false" }?
+  attribute tree-conflicted { "true" | "false" }?,
+  ## If root of a move-here, the local path to the move source.
+  attribute moved-from { text }?,
+  ## If root of a move-away, the local path to the move destination.
+  attribute moved-to { text }?
 
 ## Status in repository (if --update was specified).
 repos-status = element repos-status { attlist.repos-status, lock? }

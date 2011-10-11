@@ -46,7 +46,7 @@ svn_path_condense_targets(const char **pcommon,
   int i, j, num_condensed = targets->nelts;
   svn_boolean_t *removed;
   apr_array_header_t *abs_targets;
-  int basedir_len;
+  size_t basedir_len;
   const char *first_target;
   svn_boolean_t first_target_is_url;
 

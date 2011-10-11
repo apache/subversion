@@ -105,9 +105,12 @@ svn_error_t *svn_client__get_copy_source(const char *path_or_url,
    specify the point(s) of interest (typically the revisions referred
    to as the "operative range" for a given operation) along that history.
 
-   END may be of kind svn_opt_revision_unspecified (in which case
+   END may be NULL or of kind svn_opt_revision_unspecified (in either case
    END_URL and END_REVISION are not touched by the function);
    START and REVISION may not.
+
+   If PATH is a WC path and REVISION is of kind svn_opt_revision_working,
+   then look at the PATH's copy-from URL instead of its base URL.
 
    RA_SESSION should be an open RA session pointing at the URL of PATH,
    or NULL, in which case this function will open its own temporary session.
@@ -191,7 +194,8 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
    is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
 
    BASE_DIR_ABSPATH is the working copy path the ra_session corresponds to,
-   should only be used if PATH_OR_URL is a url.
+   and should only be used if PATH_OR_URL is a url
+     ### else NULL? what's it for?
 
    If PEG_REVISION's kind is svn_opt_revision_unspecified, it is
    interpreted as "head" for a URL or "working" for a working-copy path.
@@ -223,21 +227,37 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
    NULL.
 
    If SESSION_URL is NULL, treat this as a magic value meaning "point
-   the RA session to the root of the repository".  */
+   the RA session to the root of the repository".
+
+   NOTE: The typical usage pattern for this functions is:
+
+       const char *old_session_url;
+       SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
+                                                 ra_session,
+                                                 new_session_url,
+                                                 pool);
+
+       [...]
+
+       if (old_session_url)
+         SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
+*/
 svn_error_t *
 svn_client__ensure_ra_session_url(const char **old_session_url,
                                   svn_ra_session_t *ra_session,
                                   const char *session_url,
                                   apr_pool_t *pool);
 
-/* Set REPOS_ROOT, allocated in RESULT_POOL to the URL which represents
+/* Set *REPOS_ROOT and *REPOS_UUID, to the URL and UUID that represent
    the root of the repository in with ABSPATH_OR_URL is versioned.
    Use the authentication baton and working copy context cached in CTX as
-   necessary.
+   necessary.  REPOS_ROOT and/or REPOS_UUID may be NULL if not wanted.
 
+   Allocate *REPOS_ROOT and *REPOS_UUID in RESULT_POOL.
    Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_client__get_repos_root(const char **repos_root,
+                           const char **repos_uuid,
                            const char *abspath_or_url,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *result_pool,
@@ -570,23 +590,27 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 /* Create an editor for a pure repository comparison, i.e. comparing one
    repository version against the other.
 
-   TARGET is a working-copy path, the base of the hierarchy to be
-   compared.  It corresponds to the URL opened in RA_SESSION below.
-
-   WC_CTX is a context for the working copy and should be NULL for
-   operations that do not involve a working copy.
-
    DIFF_CMD/DIFF_CMD_BATON represent the callback and callback argument that
    implement the file comparison function
 
    DEPTH is the depth to recurse.
 
-   DRY_RUN is set if this is a dry-run merge. It is not relevant for diff.
-
-   RA_SESSION defines the additional RA session for requesting file
-   contents.
+   RA_SESSION is an RA session through which this editor may fetch
+   properties, file contents and directory listings of the 'old' side of the
+   diff. It is a separate RA session from the one through which this editor
+   is being driven.
 
    REVISION is the start revision in the comparison.
+
+   For each deleted directory, if WALK_DELETED_DIRS is true then just call
+   the 'dir_deleted' callback once, otherwise call the 'file_deleted' or
+   'dir_deleted' callback for each individual node in that subtree.
+
+   If TEXT_DELTAS is FALSE, then do not expect text deltas from the edit
+   drive, nor send the 'before' and 'after' texts to the diff callbacks;
+   instead, send empty files to the diff callbacks if there was a change.
+   This must be FALSE if the edit producer is not sending text deltas,
+   otherwise the file content checksum comparisons will fail.
 
    If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
    file and directory operated on during the edit.
@@ -595,50 +619,41 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 svn_error_t *
 svn_client__get_diff_editor(const svn_delta_editor_t **editor,
                             void **edit_baton,
-                            svn_wc_context_t *wc_ctx,
-                            const char *target,
                             svn_depth_t depth,
                             svn_ra_session_t *ra_session,
                             svn_revnum_t revision,
                             svn_boolean_t walk_deleted_dirs,
-                            svn_boolean_t dry_run,
+                            svn_boolean_t text_deltas,
                             const svn_wc_diff_callbacks4_t *diff_callbacks,
                             void *diff_cmd_baton,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
                             svn_wc_notify_func2_t notify_func,
                             void *notify_baton,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
+                            apr_pool_t *result_pool);
 
 
 /* ---------------------------------------------------------------- */
 
 /*** Editor for diff summary ***/
 
-/* Create an editor for a repository diff summary, i.e. comparing one
-   repository version against the other and only providing information
-   about the changed items without the text deltas.
+/* Set *CALLBACKS and *CALLBACK_BATON to a set of diff callbacks that will
+   report a diff summary, i.e. only providing information about the changed
+   items without the text deltas.
 
-   TARGET is the target of the diff, relative to the root of the edit.
+   TARGET is the target path, relative to the anchor, of the diff.
 
    SUMMARIZE_FUNC is called with SUMMARIZE_BATON as parameter by the
-   created svn_delta_editor_t for each changed item.
-
-   See svn_client__get_diff_editor() for a description of the other
-   parameters.  */
+   created callbacks for each changed item.
+*/
 svn_error_t *
-svn_client__get_diff_summarize_editor(const char *target,
-                                      svn_client_diff_summarize_func_t
-                                      summarize_func,
-                                      void *summarize_baton,
-                                      svn_ra_session_t *ra_session,
-                                      svn_revnum_t revision,
-                                      svn_cancel_func_t cancel_func,
-                                      void *cancel_baton,
-                                      const svn_delta_editor_t **editor,
-                                      void **edit_baton,
-                                      apr_pool_t *pool);
+svn_client__get_diff_summarize_callbacks(
+                        svn_wc_diff_callbacks4_t **callbacks,
+                        void **callback_baton,
+                        const char *target,
+                        svn_client_diff_summarize_func_t summarize_func,
+                        void *summarize_baton,
+                        apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 
@@ -1041,13 +1056,21 @@ svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
 
 /* Return a potentially translated version of local file LOCAL_ABSPATH
    in NORMAL_STREAM.  REVISION must be one of the following: BASE, COMMITTED,
-   WORKING.  Uses SCRATCH_POOL for temporary allocations. */
+   WORKING.
+
+   EXPAND_KEYWORDS operates as per the EXPAND argument to
+   svn_subst_stream_translated, which see.  If NORMALIZE_EOLS is TRUE and
+   LOCAL_ABSPATH requires translation, then normalize the line endings in
+   *NORMAL_STREAM.
+
+   Uses SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_client__get_normalized_stream(svn_stream_t **normal_stream,
                                   svn_wc_context_t *wc_ctx,
                                   const char *local_abspath,
                                   const svn_opt_revision_t *revision,
                                   svn_boolean_t expand_keywords,
+                                  svn_boolean_t normalize_eols,
                                   svn_cancel_func_t cancel_func,
                                   void *cancel_baton,
                                   apr_pool_t *result_pool,

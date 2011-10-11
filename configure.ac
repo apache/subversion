@@ -105,7 +105,6 @@ if test `expr $apr_version : 2` -ne 0; then
   AC_SUBST(SVN_APRUTIL_INCLUDES)
   AC_SUBST(SVN_APRUTIL_CONFIG, ["$apu_config"])
   AC_SUBST(SVN_APRUTIL_LIBS)
-  AC_SUBST(SVN_APRUTIL_PREFIX)
 else
   SVN_LT_SOVERSION="-version-info 0"
   APU_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
@@ -215,15 +214,21 @@ AC_DEFINE_UNQUOTED(SVN_LOCALE_DIR, "${svn_localedir}",
                    [Defined to be the path to the installed locale dirs])
 
 dnl Check for libtool -- we'll definitely need it for all our shared libs!
-AC_ARG_WITH(custom-libtool,
-AS_HELP_STRING([--with-custom-libtool=PATH],
-               [Specify the command to run libtool]),
-               [ AC_MSG_NOTICE([using $withval as libtool])
-                 sh_libtool="$withval" ],
-               [ AC_MSG_NOTICE([using APR's libtool])
-                 sh_libtool="`$apr_config --apr-libtool`" ])
-LIBTOOL="$sh_libtool"
-SVN_LIBTOOL="$sh_libtool"
+AC_MSG_NOTICE([configuring libtool now])
+ifdef([LT_INIT], [LT_INIT], [AC_PROG_LIBTOOL])
+AC_ARG_ENABLE(experimental-libtool,
+  AS_HELP_STRING([--enable-experimental-libtool],[Use APR's libtool]),
+  [experimental_libtool=$enableval],[experimental_libtool=no])
+
+if test "$experimental_libtool" = "yes"; then
+  echo "using APR's libtool"
+  sh_libtool="`$apr_config --apr-libtool`"
+  LIBTOOL="$sh_libtool"
+  SVN_LIBTOOL="$sh_libtool"
+else
+  sh_libtool="$abs_builddir/libtool"
+  SVN_LIBTOOL="\$(SHELL) $sh_libtool"
+fi
 AC_SUBST(SVN_LIBTOOL)
 
 dnl Determine the libtool version
@@ -562,6 +567,25 @@ int main()
   fi
 fi
 
+dnl GPG Agent -------------------
+
+AC_ARG_WITH(gpg_agent,
+AS_HELP_STRING([--without-gpg-agent], 
+               [Disable support for GPG-Agent]),
+               [with_gpg_agent=no], [with_gpg_agent=yes])
+AC_MSG_CHECKING([whether to support GPG-Agent])
+if test "$svn_enable_shared" != "yes"; then
+  AC_MSG_RESULT([no (shared library support is disabled)])
+elif test "$with_gpg_agent" = "yes"; then
+  AC_MSG_RESULT([yes])
+  AC_DEFINE([SVN_HAVE_GPG_AGENT], [1], 
+            [Is GPG Agent support enabled?])
+else
+  AC_MSG_RESULT([no])
+fi
+
+AC_SUBST(SVN_HAVE_GPG_AGENT)
+
 dnl GNOME Keyring -------------------
 
 AC_ARG_WITH(gnome_keyring,
@@ -713,7 +737,7 @@ AC_ARG_WITH(libmagic,AS_HELP_STRING([--with-libmagic=PREFIX],
       AC_CHECK_LIB(magic, magic_open, [libmagic_found="builtin"])
     ])
     libmagic_prefix="the default locations"
-  else
+  elif test "$withval" != "no"; then
     libmagic_prefix=$withval
     save_cppflags="$CPPFLAGS"
     CPPFLAGS="$CPPFLAGS -I$libmagic_prefix/include"
@@ -1100,12 +1124,20 @@ SVN_CHECK_JDK($JAVA_OLDEST_WORKING_VER)
 
 AC_PATH_PROG(PERL, perl, none)
 
-AC_PATH_PROGS(RUBY, "$RUBY" ruby ruby1.9 ruby19 ruby1.8 ruby18, none)
+if test -n "$RUBY"; then
+  AC_PATH_PROG(RUBY, "$RUBY", none)
+else
+  AC_PATH_PROGS(RUBY, ruby ruby1.8 ruby18, none)
+fi
 if test "$RUBY" != "none"; then
   AC_MSG_CHECKING([rb_hash_foreach])
   if "$RUBY" -r mkmf -e 'exit(have_func("rb_hash_foreach") ? 0 : 1)' >/dev/null; then
     AC_MSG_RESULT([yes])
-    AC_PATH_PROGS(RDOC, "$RDOC" rdoc rdoc1.9 rdoc19 rdoc1.8 rdoc18, none)
+    if test -n "$RDOC"; then
+      AC_PATH_PROG(RDOC, "$RDOC", none)
+    else
+      AC_PATH_PROGS(RDOC, rdoc rdoc1.8 rdoc18, none)
+    fi
     AC_CACHE_CHECK([for Ruby major version], [svn_cv_ruby_major],[
     svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(MAJOR))'`"
     ])
@@ -1118,6 +1150,13 @@ if test "$RUBY" != "none"; then
 
     AC_SUBST(RUBY_MAJOR)
     AC_SUBST(RUBY_MINOR)
+    if test ! \( "$RUBY_MAJOR" -eq "1" -a "$RUBY_MINOR" -eq "8" \); then
+      # Disallow Ruby 1.9 or later until the binding tests get fixed
+      # to run with those versions.
+      RUBY="none"
+      AC_MSG_WARN([The detected Ruby is too new for Subversion to use])
+      AC_MSG_WARN([Only 1.8.x releases are supported at this time])
+    fi
   else
     AC_MSG_RESULT([no])
     RUBY="none"

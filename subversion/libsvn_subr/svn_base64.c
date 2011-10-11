@@ -35,10 +35,10 @@
 #include "svn_base64.h"
 #include "private/svn_string_private.h"
 
-/* When asked to format the the base64-encoded output as multiple lines, 
+/* When asked to format the the base64-encoded output as multiple lines,
    we put this many chars in each line (plus one new line char) unless
    we run out of data.
-   It is vital for some of the optimizations below that this value is 
+   It is vital for some of the optimizations below that this value is
    a multiple of 4. */
 #define BASE64_LINELEN 76
 
@@ -73,7 +73,7 @@ encode_group(const unsigned char *in, char *out)
   apr_size_t part0 = in[0];
   apr_size_t part1 = in[1];
   apr_size_t part2 = in[2];
-  
+
   /* ... to prevent these arithmetic operations from being limited to
      byte size.  This saves non-zero cost conversions of the result when
      calculating the addresses within base64tab. */
@@ -88,7 +88,7 @@ encode_group(const unsigned char *in, char *out)
    a new line char will be appended, though.
    The code in this function will simply transform the data without
    performing any boundary checks.  Therefore, DATA must have at least
-   BYTES_PER_LINE left and space for at least another BASE64_LINELEN 
+   BYTES_PER_LINE left and space for at least another BASE64_LINELEN
    chars must have been pre-allocated in STR before calling this
    function. */
 static void
@@ -99,11 +99,11 @@ encode_line(svn_stringbuf_t *str, const char *data)
   char *out = str->data + str->len;
   char *end = out + BASE64_LINELEN;
 
-  /* We assume that BYTES_PER_LINE is a multiple of 3 and BASE64_LINELEN 
+  /* We assume that BYTES_PER_LINE is a multiple of 3 and BASE64_LINELEN
      a multiple of 4. */
   for ( ; out != end; in += 3, out += 4)
     encode_group(in, out);
-  
+
   /* Expand and terminate the string. */
   *out = '\0';
   str->len += BASE64_LINELEN;
@@ -127,7 +127,7 @@ encode_bytes(svn_stringbuf_t *str, const void *data, apr_size_t len,
   apr_size_t buflen;
 
   /* Resize the stringbuf to make room for the (approximate) size of
-     output, to avoid repeated resizes later. 
+     output, to avoid repeated resizes later.
      Please note that our optimized code relies on the fact that STR
      never needs to be resized until we leave this function. */
   buflen = len * 4 / 3 + 4;
@@ -144,7 +144,7 @@ encode_bytes(svn_stringbuf_t *str, const void *data, apr_size_t len,
       /* May we encode BYTES_PER_LINE bytes without caring about
          line breaks, data in the temporary INBUF or running out
          of data? */
-      if (   *inbuflen == 0 
+      if (   *inbuflen == 0
           && (*linelen == 0 || !break_lines)
           && (end - p >= BYTES_PER_LINE))
         {
@@ -155,7 +155,7 @@ encode_bytes(svn_stringbuf_t *str, const void *data, apr_size_t len,
         }
       else
         {
-          /* No, this is one of a number of special cases. 
+          /* No, this is one of a number of special cases.
              Encode the data byte by byte. */
           memcpy(inbuf + *inbuflen, p, 3 - *inbuflen);
           p += (3 - *inbuflen);
@@ -361,7 +361,7 @@ decode_group_directly(const unsigned char *in, char *out)
    in between.
    The code in this function will simply transform the data without
    performing any boundary checks.  Therefore, DATA must have at least
-   BASE64_LINELEN left and space for at least another BYTES_PER_LINE 
+   BASE64_LINELEN left and space for at least another BYTES_PER_LINE
    chars must have been pre-allocated in STR before calling this
    function. */
 static svn_boolean_t
@@ -372,7 +372,7 @@ decode_line(svn_stringbuf_t *str, const char **data)
   char *out = str->data + str->len;
   char *end = out + BYTES_PER_LINE;
 
-  /* We assume that BYTES_PER_LINE is a multiple of 3 and BASE64_LINELEN 
+  /* We assume that BYTES_PER_LINE is a multiple of 3 and BASE64_LINELEN
      a multiple of 4.  Stop translation as soon as we encounter a special
      char.  Leave the entire group untouched in that case. */
   for (; out < end; p += 4, out += 3)
@@ -383,7 +383,7 @@ decode_line(svn_stringbuf_t *str, const char **data)
   str->len = out - str->data;
   *out = '\0';
   *data = (const char *)p;
-  
+
   /* Return FALSE, if the caller should continue the decoding process
      using the slow standard method. */
   return out == end;
@@ -408,7 +408,7 @@ decode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
   const char *end = data + len;
 
   /* Resize the stringbuf to make room for the (approximate) size of
-     output, to avoid repeated resizes later. 
+     output, to avoid repeated resizes later.
      The optimizations in decode_line rely on no resizes being necessary! */
   svn_stringbuf_ensure(str, str->len + (len / 4) * 3 + 3);
 
@@ -420,7 +420,7 @@ decode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
       if ((*inbuflen == 0) && (p + BASE64_LINELEN <= end))
         if (decode_line(str, &p))
           continue;
-        
+
       /* A special case or decode_line encountered a special char. */
       if (*p == '=')
         {

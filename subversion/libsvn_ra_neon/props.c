@@ -571,7 +571,7 @@ svn_error_t * svn_ra_neon__get_props_resource(svn_ra_neon__resource_t **rsrc,
 {
   apr_hash_t *props;
   char * url_path = apr_pstrdup(pool, url);
-  int len = strlen(url);
+  size_t len = strlen(url);
   /* Clean up any trailing slashes. */
   if (len > 1 && url[len - 1] == '/')
       url_path[len - 1] = '\0';
@@ -1011,9 +1011,13 @@ svn_error_t *svn_ra_neon__get_baseline_info(const char **bc_url_p,
         }
       if (bc_relative_p)
         {
-          const char *relpath = svn_uri__is_child(sess->repos_root, url, pool);
+          const char *relpath = svn_uri_skip_ancestor(sess->repos_root, url,
+                                                      pool);
           if (! relpath)
-            relpath = "";
+            return svn_error_createf(SVN_ERR_RA_REPOS_ROOT_URL_MISMATCH, NULL,
+                                     _("Url '%s' is not in repository '%s'"),
+                                     url, sess->repos_root);
+
           *bc_relative_p = relpath;
         }
       if (latest_rev)

@@ -54,6 +54,7 @@ svn_cl__resolve(apr_getopt_t *os,
   apr_array_header_t *targets;
   int i;
   apr_pool_t *iterpool;
+  svn_boolean_t had_error = FALSE;
 
   switch (opt_state->accept_which)
     {
@@ -111,9 +112,15 @@ svn_cl__resolve(apr_getopt_t *os,
         {
           svn_handle_warning2(stderr, err, "svn: ");
           svn_error_clear(err);
+          had_error = TRUE;
         }
     }
   svn_pool_destroy(iterpool);
+
+  if (had_error)
+    return svn_error_create(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS, NULL,
+                            _("Failure occurred resolving one or more "
+                              "conflicts"));
 
   return SVN_NO_ERROR;
 }

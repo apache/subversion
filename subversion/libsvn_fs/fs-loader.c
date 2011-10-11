@@ -29,6 +29,7 @@
 #include <apr_thread_mutex.h>
 #include <apr_uuid.h>
 
+#include "svn_ctype.h"
 #include "svn_types.h"
 #include "svn_dso.h"
 #include "svn_version.h"
@@ -387,6 +388,31 @@ svn_fs_upgrade(const char *path, apr_pool_t *pool)
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->upgrade_fs(fs, path, pool, common_pool));
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_verify(const char *path,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *pool) 
+{
+  svn_error_t *err;
+  svn_error_t *err2;
+  fs_library_vtable_t *vtable;
+  svn_fs_t *fs;
+
+  SVN_ERR(fs_library_vtable(&vtable, path, pool));
+  fs = fs_new(NULL, pool);
+  SVN_ERR(acquire_fs_mutex());
+  err = vtable->verify_fs(fs, path, cancel_func, cancel_baton,
+                          pool, common_pool);
+  err2 = release_fs_mutex();
+  if (err)
+    {
+      svn_error_clear(err2);
+      return svn_error_trace(err);
+    }
+  return svn_error_trace(err2);
 }
 
 const char *
@@ -872,22 +898,6 @@ svn_fs_closest_copy(svn_fs_root_t **root_p, const char **path_p,
 }
 
 svn_error_t *
-svn_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
-                      svn_fs_root_t *root,
-                      const apr_array_header_t *paths,
-                      svn_mergeinfo_inheritance_t inherit,
-                      svn_boolean_t validate_inherited_mergeinfo,
-                      svn_boolean_t include_descendants,
-                      apr_pool_t *pool)
-{
-  return svn_error_trace(root->vtable->get_mergeinfo(catalog, root, paths,
-                                                     inherit,
-                                                     validate_inherited_mergeinfo,
-                                                     include_descendants,
-                                                     pool));
-}
-
-svn_error_t *
 svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                      svn_fs_root_t *root,
                      const apr_array_header_t *paths,
@@ -895,24 +905,10 @@ svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                      svn_boolean_t include_descendants,
                      apr_pool_t *pool)
 {
-  return svn_error_trace(svn_fs_get_mergeinfo2(catalog, root, paths,
-                                               inherit,
-                                               FALSE,
-                                               include_descendants,
-                                               pool));
-}
-
-svn_error_t *
-svn_fs_validate_mergeinfo(svn_mergeinfo_t *validated_mergeinfo,
-                          svn_fs_t *fs,
-                          svn_mergeinfo_t mergeinfo,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(fs->vtable->validate_mergeinfo(validated_mergeinfo,
-                                                        fs, mergeinfo,
-                                                        result_pool,
-                                                        scratch_pool));
+  return svn_error_trace(root->vtable->get_mergeinfo(catalog, root, paths,
+                                                     inherit,
+                                                     include_descendants,
+                                                     pool));
 }
 
 svn_error_t *
@@ -1178,6 +1174,31 @@ svn_fs_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path,
         return svn_error_create
           (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
            _("Lock comment contains illegal characters"));
+    }
+
+  /* Enforce that the token be an XML-safe URI. */
+  if (token)
+    {
+      const char *c;
+
+      if (strncmp(token, "opaquelocktoken:", 16))
+        return svn_error_createf(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+                                 _("Lock token URI '%s' has bad scheme; "
+                                   "expected '%s'"),
+                                 token, "opaquelocktoken");
+
+      for (c = token; *c; c++)
+        if (! svn_ctype_isascii(*c))
+          return svn_error_createf(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+                                   _("Lock token '%s' is not ASCII "
+                                     "at byte %u"),
+                                   token, (unsigned)(c - token));
+
+      /* strlen(token) == c - token. */
+      if (! svn_xml_is_xml_safe(token, c - token))
+        return svn_error_createf(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+                                 _("Lock token URI '%s' is not XML-safe"),
+                                 token);
     }
 
   if (expiration_date < 0)

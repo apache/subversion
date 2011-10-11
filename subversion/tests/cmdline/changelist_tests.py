@@ -1132,7 +1132,115 @@ def revert_deleted_in_changelist(sbox):
                                      'revert', '-R', sbox.ospath('A'))
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
 
+def add_remove_non_existent_target(sbox):
+  "add and remove non-existent target to changelist"
 
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  bogus_path = os.path.join(wc_dir, 'A', 'bogus')
+
+  expected_err = "svn: warning: W155010: The node '" + \
+                 re.escape(os.path.abspath(bogus_path)) + \
+                 "' was not found"
+
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'changelist', 'testlist',
+                                     bogus_path)
+
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'changelist', bogus_path,
+                                      '--remove')
+
+def add_remove_unversioned_target(sbox):
+  "add and remove unversioned target to changelist"
+
+  sbox.build(read_only = True)
+  unversioned = sbox.ospath('unversioned')
+  svntest.main.file_write(unversioned, "dummy contents", 'w+')
+
+  expected_err = "svn: warning: W155010: The node '" + \
+                 re.escape(os.path.abspath(unversioned)) + \
+                 "' was not found"
+
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'changelist', 'testlist',
+                                     unversioned)
+
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'changelist', unversioned,
+                                      '--remove')
+
+@Issue(3985)
+def readd_after_revert(sbox):
+  "add new file to changelist, revert and readd"
+  sbox.build(read_only = True)
+
+  dummy = sbox.ospath('dummy')
+  svntest.main.file_write(dummy, "dummy contents")
+
+  sbox.simple_add('dummy')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'changelist', 'testlist',
+                                     dummy)
+
+  sbox.simple_revert('dummy')
+
+  svntest.main.file_write(dummy, "dummy contents")
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'add', dummy)
+
+def empty_pseudo_changelist(sbox):
+  "the empty pseudo-changelist"
+
+  # Boilerplate.
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  # Helper functions.
+
+  def found_nodes(*args):
+    # Extract the Greek-tree-relative paths.
+    return set(map(lambda info: info['Path'][len(wc_dir)+1:],
+                    svntest.actions.run_and_parse_info(*args)))
+
+  def find_nodes(nodeset, *args):
+    assert isinstance(nodeset, set)
+    foundset = found_nodes(*args)
+    nodeset = set(map(lambda path: path.replace('/', os.path.sep), nodeset))
+    if nodeset != foundset:
+      raise svntest.Failure("Expected nodeset %s but found %s"
+                            % (nodeset, foundset))
+
+  # Convenience variables.
+  E_path = sbox.ospath('A/B/E')
+  alpha_path = sbox.ospath('A/B/E/alpha')
+  beta_path = sbox.ospath('A/B/E/beta')
+  iota_path = sbox.ospath('iota')
+
+  # Can't add an item to the empty changelist.
+  expected_err = 'svn: E125014: .*'
+  svntest.actions.run_and_verify_svn(None, [], expected_err,
+                                     'changelist', '', iota_path)
+
+  # Modify alpha and beta
+  svntest.main.file_append(alpha_path, "More stuff in alpha\n")
+  svntest.main.file_append(beta_path, "More stuff in beta\n")
+
+  # Add beta to 'testlist'.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'changelist', 'testlist', beta_path)
+
+  # Convenience variables.
+  changelist = {
+    'testlist' : set(['A/B/E/beta']),
+    '' : set(['A/B/E', 'A/B/E/alpha']),
+  }
+
+  # Some basic validations.
+  find_nodes(changelist['testlist'] | changelist[''], '-R', E_path)
+  find_nodes(changelist['testlist'], '--cl', 'testlist', '-R', E_path)
+  find_nodes(changelist[''], '--cl', '', '-R', E_path)
 
 ########################################################################
 # Run the tests
@@ -1153,6 +1261,10 @@ test_list = [ None,
               move_added_keeps_changelist,
               change_to_dir,
               revert_deleted_in_changelist,
+              add_remove_non_existent_target,
+              add_remove_unversioned_target,
+              readd_after_revert,
+              empty_pseudo_changelist,
              ]
 
 if __name__ == '__main__':

@@ -181,6 +181,8 @@ change_node_prop(svn_fs_root_t *txn_root,
 
 /* Prepend the mergeinfo source paths in MERGEINFO_ORIG with PARENT_DIR, and
    return it in *MERGEINFO_VAL. */
+/* ### FIXME:  Consider somehow sharing code with
+   ### svnrdump/load_editor.c:prefix_mergeinfo_paths() */
 static svn_error_t *
 prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
                        const svn_string_t *mergeinfo_orig,
@@ -214,6 +216,8 @@ prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
 /* Examine the mergeinfo in INITIAL_VAL, renumber revisions in rangelists
    as appropriate, and return the (possibly new) mergeinfo in *FINAL_VAL
    (allocated from POOL). */
+/* ### FIXME:  Consider somehow sharing code with
+   ### svnrdump/load_editor.c:renumber_mergeinfo_revs() */
 static svn_error_t *
 renumber_mergeinfo_revs(svn_string_t **final_val,
                         const svn_string_t *initial_val,

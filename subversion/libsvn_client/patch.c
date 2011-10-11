@@ -365,7 +365,7 @@ obtain_eol_and_keywords_for_file(apr_hash_t **keywords,
 static svn_error_t *
 resolve_target_path(patch_target_t *target,
                     const char *path_from_patchfile,
-                    const char *local_abspath,
+                    const char *wcroot_abspath,
                     int strip_count,
                     svn_boolean_t prop_changes_only,
                     svn_wc_context_t *wc_ctx,
@@ -398,7 +398,8 @@ resolve_target_path(patch_target_t *target,
 
   if (svn_dirent_is_absolute(stripped_path))
     {
-      target->local_relpath = svn_dirent_is_child(local_abspath, stripped_path,
+      target->local_relpath = svn_dirent_is_child(wcroot_abspath,
+                                                  stripped_path,
                                                   result_pool);
 
       if (! target->local_relpath)
@@ -419,7 +420,7 @@ resolve_target_path(patch_target_t *target,
   /* Make sure the path is secure to use. We want the target to be inside
    * of the working copy and not be fooled by symlinks it might contain. */
   SVN_ERR(svn_dirent_is_under_root(&under_root,
-                                   &target->local_abspath, local_abspath,
+                                   &target->local_abspath, wcroot_abspath,
                                    target->local_relpath, result_pool));
 
   if (! under_root)
@@ -478,11 +479,32 @@ resolve_target_path(patch_target_t *target,
       return SVN_NO_ERROR;
     }
 
-  /* ### Shouldn't libsvn_wc flag an obstruction in this case? */
-  if (target->locally_deleted && target->kind_on_disk != svn_node_none)
+  if (target->locally_deleted)
     {
-      target->skipped = TRUE;
-      return SVN_NO_ERROR;
+      const char *moved_to_abspath;
+
+      SVN_ERR(svn_wc__node_was_moved_away(&moved_to_abspath, NULL,
+                                          wc_ctx, target->local_abspath,
+                                          result_pool, scratch_pool));
+      if (moved_to_abspath)
+        {
+          target->local_abspath = moved_to_abspath;
+          target->local_relpath = svn_dirent_skip_ancestor(wcroot_abspath,
+                                                          moved_to_abspath);
+          SVN_ERR_ASSERT(target->local_relpath &&
+                         target->local_relpath[0] != '\0');
+
+          /* As far as we are concerned this target is not locally deleted. */
+          target->locally_deleted = FALSE;
+
+          SVN_ERR(svn_io_check_path(target->local_abspath,
+                                    &target->kind_on_disk, scratch_pool));
+        }
+      else if (target->kind_on_disk != svn_node_none)
+        {
+          target->skipped = TRUE;
+          return SVN_NO_ERROR;
+        }
     }
 
   return SVN_NO_ERROR;
@@ -828,7 +850,7 @@ choose_target_filename(const svn_patch_t *patch)
 static svn_error_t *
 init_patch_target(patch_target_t **patch_target,
                   const svn_patch_t *patch,
-                  const char *base_dir,
+                  const char *wcroot_abspath,
                   svn_wc_context_t *wc_ctx, int strip_count,
                   svn_boolean_t remove_tempfiles,
                   apr_pool_t *result_pool, apr_pool_t *scratch_pool)
@@ -873,7 +895,7 @@ init_patch_target(patch_target_t **patch_target,
   target->prop_targets = apr_hash_make(result_pool);
 
   SVN_ERR(resolve_target_path(target, choose_target_filename(patch),
-                              base_dir, strip_count, prop_changes_only,
+                              wcroot_abspath, strip_count, prop_changes_only,
                               wc_ctx, result_pool, scratch_pool));
   if (! target->skipped)
     {
@@ -2333,20 +2355,15 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
             {
               svn_stream_t *stream;
               svn_stream_t *patched_stream;
-              apr_file_t *file;
 
-              SVN_ERR(svn_io_file_open(&file, target->patched_path,
-                                       APR_READ | APR_BINARY, APR_OS_DEFAULT,
-                                       pool));
-
-              patched_stream = svn_stream_from_aprfile2(file, FALSE /* disown */,
-                                                pool);
+              SVN_ERR(svn_stream_open_readonly(&patched_stream,
+                                               target->patched_path,
+                                               pool, pool));
               SVN_ERR(svn_subst_create_specialfile(&stream,
                                                    target->local_abspath,
                                                    pool, pool));
               SVN_ERR(svn_stream_copy3(patched_stream, stream,
-                                       NULL, /* cancel_func */
-                                       NULL, /* cancel_baton */
+                                       ctx->cancel_func, ctx->cancel_baton,
                                        pool));
             }
           else
@@ -2476,8 +2493,15 @@ install_patched_prop_targets(patch_target_t *target,
           target->added = TRUE;
         }
 
-      /* Attempt to set the property, and reject all hunks if this fails. */
-      prop_val = svn_stringbuf__morph_into_string(prop_target->patched_value);
+      /* Attempt to set the property, and reject all hunks if this
+         fails.  If the property had a non-empty value, but now has
+         an empty one, we'll just delete the property altogether.  */
+      if (prop_target->value && prop_target->value->len
+          && prop_target->patched_value && !prop_target->patched_value->len)
+        prop_val = NULL;
+      else
+        prop_val = svn_stringbuf__morph_into_string(prop_target->patched_value);
+
       if (dry_run)
         {
           const svn_string_t *canon_propval;
@@ -2896,7 +2920,7 @@ apply_patches(void *baton,
                                                    btn->ctx, btn->dry_run,
                                                    iterpool));
 
-                  if (target->has_prop_changes)
+                  if (target->has_prop_changes && (!target->deleted))
                     SVN_ERR(install_patched_prop_targets(target, btn->ctx,
                                                          btn->dry_run,
                                                          iterpool));

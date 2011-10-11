@@ -402,7 +402,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
    conflict resolver as older_version and their_version.
 
    ## TODO: We should store the information in LEFT_VERSION and RIGHT_VERSION
-            in the workingcopy for future retrieval via svn info.
+            in the working copy for future retrieval via svn info.
 
    WRI_ABSPATH describes in which working copy information should be
    retrieved. (Interesting for merging file externals).
@@ -680,7 +680,7 @@ svn_wc__wipe_postupgrade(const char *dir_abspath,
  */
 svn_error_t *
 svn_wc__check_wc_root(svn_boolean_t *wc_root,
-                      svn_wc__db_kind_t *kind,
+                      svn_kind_t *kind,
                       svn_boolean_t *switched,
                       svn_wc__db_t *db,
                       const char *local_abspath,

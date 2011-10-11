@@ -794,14 +794,14 @@ class SVNTests extends TestCase
     {
         /**
          * Retrieve a commit message from the user based on the items
-         * to be commited
-         * @param elementsToBeCommited  Array of elements to be commited
+         * to be committed
+         * @param elementsToBeCommitted  Array of elements to be committed
          * @return  the log message of the commit.
          */
-        public String getLogMessage(Set<CommitItem> elementsToBeCommited)
+        public String getLogMessage(Set<CommitItem> elementsToBeCommitted)
         {
             // check all received CommitItems are expected as received
-            for (CommitItem commitItem : elementsToBeCommited)
+            for (CommitItem commitItem : elementsToBeCommitted)
             {
                 // since imports do not provide a url, the key is either url or
                 // path
@@ -840,7 +840,7 @@ class SVNTests extends TestCase
          */
         NodeKind myNodeKind;
         /**
-         * the reason why this item is commited (see CommitItemStateFlag)
+         * the reason why this item is committed (see CommitItemStateFlag)
          */
         int myStateFlags;
         /**

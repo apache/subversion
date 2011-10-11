@@ -938,7 +938,8 @@ static const apr_getopt_option_t options_table[] =
     {"preserve-revprops",  svndumpfilter__preserve_revprops, 0,
      N_("Don't filter revision properties.") },
     {"targets", svndumpfilter__targets, 1,
-     N_("Pass contents of file ARG as additional args")},
+     N_("Read additional prefixes, one per line, from\n"
+        "                             file ARG.")},
     {NULL}
   };
 
@@ -1104,26 +1105,26 @@ do_filter(apr_getopt_t *os,
           SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
                                       do_exclude
                                       ? opt_state->drop_empty_revs
-                                      ? _("Excluding (and dropping empty "
-                                          "revisions for) prefixes:\n")
-                                      : _("Excluding prefixes:\n")
+                                        ? _("Excluding (and dropping empty "
+                                            "revisions for) prefix patterns:\n")
+                                        : _("Excluding prefix patterns:\n")
                                       : opt_state->drop_empty_revs
-                                      ? _("Including (and dropping empty "
-                                          "revisions for) prefixes:\n")
-                                      : _("Including prefixes:\n")));
+                                        ? _("Including (and dropping empty "
+                                            "revisions for) prefix patterns:\n")
+                                        : _("Including prefix patterns:\n")));
         }
       else
         {
           SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
                                       do_exclude
                                       ? opt_state->drop_empty_revs
-                                      ? _("Excluding (and dropping empty "
-                                          "revisions for) prefix patterns:\n")
-                                      : _("Excluding prefix patterns:\n")
+                                        ? _("Excluding (and dropping empty "
+                                            "revisions for) prefixes:\n")
+                                        : _("Excluding prefixes:\n")
                                       : opt_state->drop_empty_revs
-                                      ? _("Including (and dropping empty "
-                                          "revisions for) prefix patterns:\n")
-                                      : _("Including prefix patterns:\n")));
+                                        ? _("Including (and dropping empty "
+                                            "revisions for) prefixes:\n")
+                                        : _("Including prefixes:\n")));
         }
 
       for (i = 0; i < opt_state->prefixes->nelts; i++)

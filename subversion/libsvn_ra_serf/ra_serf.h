@@ -74,7 +74,7 @@ typedef struct svn_ra_serf__connection_t {
   serf_bucket_alloc_t *bkt_alloc;
 
   /* Host name */
-  const char *hostinfo;
+  const char *hostname;
 
   /* Are we using ssl */
   svn_boolean_t using_ssl;
@@ -139,9 +139,13 @@ struct svn_ra_serf__session_t {
   const svn_ra_callbacks2_t *wc_callbacks;
   void *wc_callback_baton;
 
-  /* Callback function to send info to WC */
-  svn_ra_progress_notify_func_t wc_progress_func;
-  void *wc_progress_baton;
+  /* Callback function to send progress info to the client */
+  svn_ra_progress_notify_func_t progress_func;
+  void *progress_baton;
+
+  /* Callback function to handle cancellation */
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
 
   /* Error that we've received but not yet returned upstream. */
   svn_error_t *pending_error;
@@ -174,6 +178,9 @@ struct svn_ra_serf__session_t {
 
   /* Connection timeout value */
   long timeout;
+
+  /* HTTPv1 flags */
+  svn_tristate_t supports_deadprop_count;
 
   /*** HTTP v2 protocol stuff. ***
    *
@@ -535,6 +542,10 @@ struct svn_ra_serf__xml_parser_t {
   /* Temporary allocations should be made in this pool. */
   apr_pool_t *pool;
 
+  /* What kind of response are we parsing? If set, this should typically
+     define the report name.  */
+  const char *response_type;
+
   /* Caller-specific data passed to the start, end, cdata callbacks.  */
   void *user_data;
 
@@ -618,6 +629,11 @@ struct svn_ra_serf__xml_parser_t {
 
      See libsvn_ra_serf/util.c  */
   struct svn_ra_serf__pending_t *pending;
+
+  /* Response restart support */
+  const void *headers_baton; /* Last pointer to headers */
+  apr_off_t skip_size; /* Number of bytes to skip */
+  apr_off_t read_size; /* Number of bytes read from response */
 };
 
 /*
@@ -1370,15 +1386,13 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
                        svn_depth_t depth,
                        apr_pool_t *pool);
 
-svn_error_t * svn_ra_serf__get_mergeinfo(
-  svn_ra_session_t *ra_session,
-  apr_hash_t **mergeinfo,
-  const apr_array_header_t *paths,
-  svn_revnum_t revision,
-  svn_mergeinfo_inheritance_t inherit,
-  svn_boolean_t validate_inherited_mergeinfo,
-  svn_boolean_t include_descendants,
-  apr_pool_t *pool);
+svn_error_t * svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
+                                         apr_hash_t **mergeinfo,
+                                         const apr_array_header_t *paths,
+                                         svn_revnum_t revision,
+                                         svn_mergeinfo_inheritance_t inherit,
+                                         svn_boolean_t include_descendants,
+                                         apr_pool_t *pool);
 
 /* Exchange capabilities with the server, by sending an OPTIONS
  * request announcing the client's capabilities, and by filling

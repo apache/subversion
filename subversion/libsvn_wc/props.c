@@ -167,7 +167,8 @@ combine_mergeinfo_props(const svn_string_t **output,
 
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo1, prop_val1->data, scratch_pool));
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo2, prop_val2->data, scratch_pool));
-  SVN_ERR(svn_mergeinfo_merge(mergeinfo1, mergeinfo2, scratch_pool));
+  SVN_ERR(svn_mergeinfo_merge2(mergeinfo1, mergeinfo2, scratch_pool,
+                               scratch_pool));
   SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string, mergeinfo1, result_pool));
   *output = mergeinfo_string;
   return SVN_NO_ERROR;
@@ -181,27 +182,33 @@ combine_forked_mergeinfo_props(const svn_string_t **output,
                                const svn_string_t *from_prop_val,
                                const svn_string_t *working_prop_val,
                                const svn_string_t *to_prop_val,
-                               apr_pool_t *pool)
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
 {
   svn_mergeinfo_t from_mergeinfo, l_deleted, l_added, r_deleted, r_added;
   svn_string_t *mergeinfo_string;
 
   /* ### OPTIMIZE: Use from_mergeinfo when diff'ing. */
   SVN_ERR(diff_mergeinfo_props(&l_deleted, &l_added, from_prop_val,
-                               working_prop_val, pool));
+                               working_prop_val, scratch_pool));
   SVN_ERR(diff_mergeinfo_props(&r_deleted, &r_added, from_prop_val,
-                               to_prop_val, pool));
-  SVN_ERR(svn_mergeinfo_merge(l_deleted, r_deleted, pool));
-  SVN_ERR(svn_mergeinfo_merge(l_added, r_added, pool));
+                               to_prop_val, scratch_pool));
+  SVN_ERR(svn_mergeinfo_merge2(l_deleted, r_deleted,
+                               scratch_pool, scratch_pool));
+  SVN_ERR(svn_mergeinfo_merge2(l_added, r_added,
+                               scratch_pool, scratch_pool));
 
   /* Apply the combined deltas to the base. */
-  SVN_ERR(svn_mergeinfo_parse(&from_mergeinfo, from_prop_val->data, pool));
-  SVN_ERR(svn_mergeinfo_merge(from_mergeinfo, l_added, pool));
+  SVN_ERR(svn_mergeinfo_parse(&from_mergeinfo, from_prop_val->data,
+                              scratch_pool));
+  SVN_ERR(svn_mergeinfo_merge2(from_mergeinfo, l_added,
+                               scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_mergeinfo_remove2(&from_mergeinfo, l_deleted,
-                                from_mergeinfo, TRUE, pool, pool));
+  SVN_ERR(svn_mergeinfo_remove2(&from_mergeinfo, l_deleted, from_mergeinfo,
+                                TRUE, scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string, from_mergeinfo, pool));
+  SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string, from_mergeinfo,
+                                  result_pool));
   *output = mergeinfo_string;
   return SVN_NO_ERROR;
 }
@@ -225,7 +232,7 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
 {
   int i;
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   apr_hash_t *pristine_props = NULL;
   apr_hash_t *actual_props = NULL;
   apr_hash_t *new_pristine_props;
@@ -315,7 +322,7 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
   {
     const char *dir_abspath;
 
-    if (kind == svn_wc__db_kind_dir)
+    if (kind == svn_kind_dir)
       dir_abspath = local_abspath;
     else
       dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
@@ -803,7 +810,6 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
                             apr_pool_t *scratch_pool)
 {
   svn_wc_conflict_result_t *result = NULL;
-  svn_string_t *mime_propval = NULL;
   apr_pool_t *filepool = svn_pool_create(scratch_pool);
   svn_wc_conflict_description2_t *cdesc;
   const char *dirpath = svn_dirent_dirname(local_abspath, filepool);
@@ -930,12 +936,10 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
     }
 
   /* Build the rest of the description object: */
-  if (!is_dir && working_props)
-    mime_propval = apr_hash_get(working_props, SVN_PROP_MIME_TYPE,
-                                APR_HASH_KEY_STRING);
-  cdesc->mime_type = mime_propval ? mime_propval->data : NULL;
-  cdesc->is_binary = mime_propval ?
-      svn_mime_type_is_binary(mime_propval->data) : FALSE;
+  cdesc->mime_type = (is_dir ? NULL : svn_prop_get_value(working_props,
+                                                         SVN_PROP_MIME_TYPE));
+  cdesc->is_binary = (cdesc->mime_type
+                      && svn_mime_type_is_binary(cdesc->mime_type));
 
   if (!incoming_old_val && incoming_new_val)
     cdesc->action = svn_wc_conflict_action_add;
@@ -1299,7 +1303,8 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
                   SVN_ERR(combine_forked_mergeinfo_props(&new_val, old_val,
                                                          working_val,
                                                          new_val,
-                                                         result_pool));
+                                                         result_pool,
+                                                         scratch_pool));
                   apr_hash_set(working_props, propname,
                                APR_HASH_KEY_STRING, new_val);
                   set_prop_merge_state(state, svn_wc_notify_state_merged);
@@ -1351,7 +1356,8 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
                  them to base to get the new value. */
               SVN_ERR(combine_forked_mergeinfo_props(&new_val, old_val,
                                                      working_val,
-                                                     new_val, result_pool));
+                                                     new_val, result_pool,
+                                                     scratch_pool));
               apr_hash_set(working_props, propname,
                            APR_HASH_KEY_STRING, new_val);
               set_prop_merge_state(state, svn_wc_notify_state_merged);
@@ -1396,7 +1402,9 @@ apply_single_generic_prop_change(svn_wc_notify_state_t *state,
   if (working_val && new_val
       && svn_string_compare(working_val, new_val))
     {
-       set_prop_merge_state(state, svn_wc_notify_state_merged);
+      /* All values identical is a trivial, non-notifiable merge */
+      if (! old_val || ! svn_string_compare(old_val, new_val))
+        set_prop_merge_state(state, svn_wc_notify_state_merged);
     }
   /* If working_val is the same as old_val... */
   else if (working_val && old_val
@@ -1533,7 +1541,7 @@ svn_wc__merge_props(svn_skel_t **work_items,
                     apr_hash_t **new_actual_props,
                     svn_wc__db_t *db,
                     const char *local_abspath,
-                    svn_wc__db_kind_t kind,
+                    svn_kind_t kind,
                     const svn_wc_conflict_version_t *left_version,
                     const svn_wc_conflict_version_t *right_version,
                     apr_hash_t *server_baseprops,
@@ -1562,7 +1570,7 @@ svn_wc__merge_props(svn_skel_t **work_items,
   *new_pristine_props = NULL;
   *new_actual_props = NULL;
 
-  is_dir = (kind == svn_wc__db_kind_dir);
+  is_dir = (kind == svn_kind_dir);
 
   if (!server_baseprops)
     server_baseprops = pristine_props;
@@ -1930,7 +1938,7 @@ svn_wc__get_pristine_props(apr_hash_t **props,
          while a simple add does not.  */
       SVN_ERR(svn_wc__db_scan_addition(&status, NULL,
                                        NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
                                        db, local_abspath,
                                        scratch_pool, scratch_pool));
     }
@@ -2422,7 +2430,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                  apr_pool_t *scratch_pool)
 {
   enum svn_prop_kind prop_kind = svn_property_kind(NULL, name);
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   const char *dir_abspath;
 
   /* we don't do entry properties here */
@@ -2446,7 +2454,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
                                scratch_pool));
 
-  if (kind == svn_wc__db_kind_dir)
+  if (kind == svn_kind_dir)
     dir_abspath = local_abspath;
   else
     dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
@@ -2466,7 +2474,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
         return SVN_NO_ERROR;
 
       SVN_ERR(do_propset(wc_ctx->db, local_abspath,
-                         kind == svn_wc__db_kind_dir
+                         kind == svn_kind_dir
                             ? svn_node_dir
                             : svn_node_file,
                          name, value, skip_checks,

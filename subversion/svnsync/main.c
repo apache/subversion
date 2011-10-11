@@ -185,9 +185,11 @@ static const apr_getopt_option_t svnsync_options[] =
                           "                             "
                           "see --source-password and --sync-password)") },
     {"trust-server-cert", svnsync_opt_trust_server_cert, 0,
-                       N_("accept unknown SSL server certificates without\n"
+                       N_("accept SSL server certificates from unknown\n"
                           "                             "
-                          "prompting (but only with '--non-interactive')") },
+                          "certificate authorities without prompting (but only\n"
+                          "                             "
+                          "with '--non-interactive')") },
     {"source-username", svnsync_opt_source_username, 1,
                        N_("connect to source repository with username ARG") },
     {"source-password", svnsync_opt_source_password, 1,
@@ -1115,6 +1117,9 @@ replay_rev_started(svn_revnum_t revision,
                                             pool));
   *editor = cancel_editor;
   *edit_baton = cancel_baton;
+
+  SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                   NULL, NULL, NULL, NULL, pool, pool));
 
   return SVN_NO_ERROR;
 }
