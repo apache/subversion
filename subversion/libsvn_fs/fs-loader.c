@@ -403,16 +403,11 @@ svn_fs_verify(const char *path,
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   fs = fs_new(NULL, pool);
-  SVN_ERR(acquire_fs_mutex());
-  err = vtable->verify_fs(fs, path, cancel_func, cancel_baton,
-                          pool, common_pool);
-  err2 = release_fs_mutex();
-  if (err)
-    {
-      svn_error_clear(err2);
-      return svn_error_trace(err);
-    }
-  return svn_error_trace(err2);
+
+  SVN_MUTEX__WITH_LOCK(common_pool_lock,
+                       vtable->verify_fs(fs, path, cancel_func, cancel_baton,
+                                         pool, common_pool));
+  return SVN_NO_ERROR;
 }
 
 const char *
