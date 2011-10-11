@@ -120,9 +120,6 @@ xlate_handle_node_cleanup(void *arg)
 void
 svn_utf_initialize(apr_pool_t *pool)
 {
-  apr_pool_t *subpool;
-  svn_mutex__t *mutex;
-
   if (!xlate_handle_hash)
     {
       /* We create our own subpool, which we protect with the mutex.
@@ -331,11 +328,7 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
                       const char *topage, const char *frompage,
                       const char *userdata_key, apr_pool_t *pool)
 {
-  xlate_handle_node_t **old_node_p;
   xlate_handle_node_t *old_node = NULL;
-  apr_status_t apr_err;
-  apr_xlate_t *handle;
-  svn_error_t *err = NULL;
 
   /* If we already have a handle, just return it. */
   if (userdata_key)
@@ -423,8 +416,6 @@ put_xlate_handle_node(xlate_handle_node_t *node,
   /* push previous global node to the hash */
   if (xlate_handle_hash)
     {
-      xlate_handle_node_t **node_p;
-
       /* 1st level: global, static items */
       if (userdata_key == SVN_UTF_NTOU_XLATE_HANDLE)
         node = atomic_swap(&xlat_ntou_static_handle, node);
@@ -728,7 +719,6 @@ svn_utf_stringbuf_to_utf8(svn_stringbuf_t **dest,
 {
   xlate_handle_node_t *node;
   svn_error_t *err;
-  svn_error_t *err2;
 
   SVN_ERR(get_ntou_xlate_handle_node(&node, pool));
 

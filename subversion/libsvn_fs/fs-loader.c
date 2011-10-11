@@ -396,8 +396,6 @@ svn_fs_verify(const char *path,
               void *cancel_baton,
               apr_pool_t *pool) 
 {
-  svn_error_t *err;
-  svn_error_t *err2;
   fs_library_vtable_t *vtable;
   svn_fs_t *fs;
 
