@@ -182,27 +182,33 @@ combine_forked_mergeinfo_props(const svn_string_t **output,
                                const svn_string_t *from_prop_val,
                                const svn_string_t *working_prop_val,
                                const svn_string_t *to_prop_val,
-                               apr_pool_t *pool)
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
 {
   svn_mergeinfo_t from_mergeinfo, l_deleted, l_added, r_deleted, r_added;
   svn_string_t *mergeinfo_string;
 
   /* ### OPTIMIZE: Use from_mergeinfo when diff'ing. */
   SVN_ERR(diff_mergeinfo_props(&l_deleted, &l_added, from_prop_val,
-                               working_prop_val, pool));
+                               working_prop_val, scratch_pool));
   SVN_ERR(diff_mergeinfo_props(&r_deleted, &r_added, from_prop_val,
-                               to_prop_val, pool));
-  SVN_ERR(svn_mergeinfo_merge2(l_deleted, r_deleted, pool, pool));
-  SVN_ERR(svn_mergeinfo_merge2(l_added, r_added, pool, pool));
+                               to_prop_val, scratch_pool));
+  SVN_ERR(svn_mergeinfo_merge2(l_deleted, r_deleted,
+                               scratch_pool, scratch_pool));
+  SVN_ERR(svn_mergeinfo_merge2(l_added, r_added,
+                               scratch_pool, scratch_pool));
 
   /* Apply the combined deltas to the base. */
-  SVN_ERR(svn_mergeinfo_parse(&from_mergeinfo, from_prop_val->data, pool));
-  SVN_ERR(svn_mergeinfo_merge2(from_mergeinfo, l_added, pool, pool));
+  SVN_ERR(svn_mergeinfo_parse(&from_mergeinfo, from_prop_val->data,
+                              scratch_pool));
+  SVN_ERR(svn_mergeinfo_merge2(from_mergeinfo, l_added,
+                               scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_mergeinfo_remove2(&from_mergeinfo, l_deleted,
-                                from_mergeinfo, TRUE, pool, pool));
+  SVN_ERR(svn_mergeinfo_remove2(&from_mergeinfo, l_deleted, from_mergeinfo,
+                                TRUE, scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string, from_mergeinfo, pool));
+  SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string, from_mergeinfo,
+                                  result_pool));
   *output = mergeinfo_string;
   return SVN_NO_ERROR;
 }
@@ -1297,7 +1303,8 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
                   SVN_ERR(combine_forked_mergeinfo_props(&new_val, old_val,
                                                          working_val,
                                                          new_val,
-                                                         result_pool));
+                                                         result_pool,
+                                                         scratch_pool));
                   apr_hash_set(working_props, propname,
                                APR_HASH_KEY_STRING, new_val);
                   set_prop_merge_state(state, svn_wc_notify_state_merged);
@@ -1349,7 +1356,8 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
                  them to base to get the new value. */
               SVN_ERR(combine_forked_mergeinfo_props(&new_val, old_val,
                                                      working_val,
-                                                     new_val, result_pool));
+                                                     new_val, result_pool,
+                                                     scratch_pool));
               apr_hash_set(working_props, propname,
                            APR_HASH_KEY_STRING, new_val);
               set_prop_merge_state(state, svn_wc_notify_state_merged);
