@@ -2157,44 +2157,6 @@ diff_repos_wc(const char *path1,
 }
 
 
-/* Open a tree, whether in the repository or a WC or unversioned on disk. */
-static svn_error_t *
-open_tree(svn_client_tree_t **tree,
-          const char *path,
-          const svn_opt_revision_t *revision,
-          const svn_opt_revision_t *peg_revision,
-          svn_client_ctx_t *ctx,
-          apr_pool_t *result_pool,
-          apr_pool_t *scratch_pool)
-{
-  if (svn_path_is_url(path)
-      || ! SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
-    {
-      SVN_ERR(svn_client__repository_tree(tree, path, peg_revision, revision,
-                                          ctx, result_pool));
-    }
-  else
-    {
-      const char *abspath;
-      int wc_format;
-
-      SVN_ERR(svn_path_get_absolute(&abspath, path, scratch_pool));
-      SVN_ERR(svn_wc_check_wc2(&wc_format, ctx->wc_ctx, abspath, scratch_pool));
-      if (wc_format > 0)
-        {
-          if (revision->kind == svn_opt_revision_working)
-            SVN_ERR(svn_client__wc_working_tree(tree, abspath, ctx,
-                                                result_pool));
-          else
-            SVN_ERR(svn_client__wc_base_tree(tree, abspath, ctx, result_pool));
-        }
-      else
-        SVN_ERR(svn_client__disk_tree(tree, abspath, result_pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* This is basically just the guts of svn_client_diff[_peg]5(). */
 static svn_error_t *
 do_diff(const svn_wc_diff_callbacks4_t *callbacks,
@@ -2223,8 +2185,10 @@ do_diff(const svn_wc_diff_callbacks4_t *callbacks,
   {
     svn_client_tree_t *tree1, *tree2;
 
-    SVN_ERR(open_tree(&tree1, path1, revision1, peg_revision, ctx, pool, pool));
-    SVN_ERR(open_tree(&tree2, path2, revision2, peg_revision, ctx, pool, pool));
+    SVN_ERR(svn_client__open_tree(&tree1, path1, revision1, peg_revision,
+                                  ctx, pool, pool));
+    SVN_ERR(svn_client__open_tree(&tree2, path2, revision2, peg_revision,
+                                  ctx, pool, pool));
 
     SVN_ERR(compare_two_trees(tree1, "" /* relpath1 */,
                               tree2, "" /* relpath2 */,
