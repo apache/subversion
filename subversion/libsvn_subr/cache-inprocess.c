@@ -213,8 +213,6 @@ inprocess_cache_get(void **value_p,
                     apr_pool_t *result_pool)
 {
   inprocess_cache_t *cache = cache_void;
-  svn_error_t *err = NULL;
-  struct cache_entry *entry;
   char* buffer;
   apr_size_t size;
 
