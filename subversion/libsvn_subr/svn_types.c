@@ -1,5 +1,5 @@
 /*
- * kitchensink.c :  When no place else seems to fit...
+ * svn_types.c :  Implementation for Subversion's data types.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
