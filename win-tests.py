@@ -496,6 +496,9 @@ class Httpd:
     fp.write('ServerName   localhost\n')
     fp.write('PidFile      pid\n')
     fp.write('ErrorLog     log\n')
+    fp.write('LogFormat    "%h %l %u %t \\"%r\\" %>s %b" common\n')
+    fp.write('Customlog    log common\n')
+    fp.write('LogLevel     Debug\n')
     fp.write('Listen       ' + str(self.httpd_port) + '\n')
 
     # Write LoadModule for minimal system module
@@ -529,7 +532,6 @@ class Httpd:
              'REDIRECT-TEMP-(.*)$ /svn-test-work/repositories/$1\n')
 
     fp.write('TypesConfig     ' + self._quote(self.httpd_mime_types) + '\n')
-    fp.write('LogLevel        Debug\n')
     fp.write('HostNameLookups Off\n')
 
     fp.close()

@@ -1376,7 +1376,7 @@ svn_error_t * svn_ra_serf__get_mergeinfo(
   const apr_array_header_t *paths,
   svn_revnum_t revision,
   svn_mergeinfo_inheritance_t inherit,
-  svn_boolean_t *validate_inherited_mergeinfo,
+  svn_boolean_t validate_inherited_mergeinfo,
   svn_boolean_t include_descendants,
   apr_pool_t *pool);
 

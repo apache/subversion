@@ -225,19 +225,10 @@ I.    INTRODUCTION
         | expected to either have the APR libraries already installed  |
         | on their system, or to be capable of fetching them easily.   |
         |                                                              |
-        | For convenience, we still offer a "deps" distribution too,   |
-        | containing APR, APR-UTIL, and various other dependencies.    |
-        | The deps dist used to contain APR[-UTIL] 0.9.x, but as of    |
-        | 1.5.0 we are finally upgrading it to APR[-UTIL] 1.X.  This   |
-        | is because we think by now there are very few systems that   |
-        | will have binary compatibility issues, and of those, few are |
-        | likely to build using the "deps" dist.                       |
-        |                                                              |
         | Note that it's *perfectly* safe to use APR 1.X from the      |
         | beginning.  In fact, we recommend it.  If you're building    |
         | Subversion for the first time, there's no compatibility      |
-        | issue to worry about, so grab the latest version of APR (or  |
-        | just use our deps dist).                                     |
+        | issue to worry about, so grab the latest version of APR.
         |                                                              |
         | If you already have a Subversion installation using APR      |
         | 0.9.x, it's still possible to move to APR 1.X safely.  Just  |

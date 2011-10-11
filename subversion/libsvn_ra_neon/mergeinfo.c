@@ -51,7 +51,6 @@ struct mergeinfo_baton
   svn_stringbuf_t *curr_path;
   svn_stringbuf_t *curr_info;
   svn_mergeinfo_catalog_t catalog;
-  svn_boolean_t validated_inherited_mergeinfo;
   svn_error_t *err;
 };
 
@@ -63,8 +62,6 @@ static const svn_ra_neon__xml_elm_t mergeinfo_report_elements[] =
       SVN_RA_NEON__XML_CDATA },
     { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_INFO, ELEM_mergeinfo_info,
       SVN_RA_NEON__XML_CDATA },
-    { SVN_XML_NAMESPACE, SVN_DAV__VALIDATE_INHERITED,
-      ELEM_validate_inherited_mergeinfo, SVN_RA_NEON__XML_CDATA },
     { NULL }
   };
 
@@ -95,10 +92,6 @@ start_element(int *elem, void *baton, int parent_state, const char *nspace,
     {
       svn_stringbuf_setempty(mb->curr_info);
       svn_stringbuf_setempty(mb->curr_path);
-    }
-  else if (elm->id == ELEM_validate_inherited_mergeinfo)
-    {
-      mb->validated_inherited_mergeinfo = TRUE;
     }
 
   SVN_ERR(mb->err);
@@ -170,7 +163,7 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                            const apr_array_header_t *paths,
                            svn_revnum_t revision,
                            svn_mergeinfo_inheritance_t inherit,
-                           svn_boolean_t *validate_inherited_mergeinfo,
+                           svn_boolean_t validate_inherited_mergeinfo,
                            svn_boolean_t include_descendants,
                            apr_pool_t *pool)
 {
@@ -202,7 +195,7 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                                         "</S:inherit>",
                                         svn_inheritance_to_word(inherit)));
 
-  if (*validate_inherited_mergeinfo)
+  if (validate_inherited_mergeinfo)
     {
       /* Send it only if true; server will default to "no". */
       svn_stringbuf_appendcstr(request_body,
@@ -240,7 +233,6 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
   mb.curr_path = svn_stringbuf_create("", pool);
   mb.curr_info = svn_stringbuf_create("", pool);
   mb.catalog = apr_hash_make(pool);
-  mb.validated_inherited_mergeinfo = FALSE;
   mb.err = SVN_NO_ERROR;
 
   /* ras's URL may not exist in HEAD, and thus it's not safe to send
@@ -267,8 +259,6 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
 
   if (mb.err == SVN_NO_ERROR && apr_hash_count(mb.catalog))
     *catalog = mb.catalog;
-
-  *validate_inherited_mergeinfo = mb.validated_inherited_mergeinfo;
 
   return mb.err;
 }
