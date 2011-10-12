@@ -1,0 +1,9 @@
+This 'showing-merge-info' branch is a feature branch to experiment with
+improvements to the user interface to merging.  As a 'feature' branch, it
+is maintained by periodic 'catch-up' (aka 'sync') merges from trunk, but
+it is not currently expected to be reintegrated to trunk as a whole.
+
+### Many commits on this branch are intentionally experimental, unfinished,
+### undocumented, and in other ways not of the quality expected on trunk.
+
+- Julian Foad, October 2011
