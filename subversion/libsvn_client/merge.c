@@ -1060,8 +1060,9 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
       /* Combine whatever older and younger filtered mergeinfo exists
          into filtered_mergeinfo. */
       if (filtered_mergeinfo && filtered_younger_mergeinfo)
-        SVN_ERR(svn_mergeinfo_merge(filtered_mergeinfo,
-                                    filtered_younger_mergeinfo, iterpool));
+        SVN_ERR(svn_mergeinfo_merge2(filtered_mergeinfo,
+                                     filtered_younger_mergeinfo, iterpool,
+                                     iterpool));
       else if (filtered_younger_mergeinfo)
         filtered_mergeinfo = filtered_younger_mergeinfo;
 
@@ -7177,9 +7178,9 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
              explicit mergeinfo. */
           if (path_inherited_mergeinfo)
             {
-              SVN_ERR(svn_mergeinfo_merge(path_explicit_mergeinfo,
-                                          path_inherited_mergeinfo,
-                                          iterpool));
+              SVN_ERR(svn_mergeinfo_merge2(path_explicit_mergeinfo,
+                                           path_inherited_mergeinfo,
+                                           iterpool, iterpool));
               SVN_ERR(svn_client__record_wc_mergeinfo(
                                           abspath_with_new_mergeinfo,
                                           path_explicit_mergeinfo,
@@ -7947,8 +7948,9 @@ record_mergeinfo_for_added_subtrees(
           /* Combine the explict mergeinfo on the added path (if any)
              with the mergeinfo describing this merge. */
           if (added_path_mergeinfo)
-            SVN_ERR(svn_mergeinfo_merge(merge_mergeinfo, added_path_mergeinfo,
-                                        iterpool));
+            SVN_ERR(svn_mergeinfo_merge2(merge_mergeinfo,
+                                         added_path_mergeinfo,
+                                         iterpool, iterpool));
           SVN_ERR(svn_client__record_wc_mergeinfo(
             added_abspath, merge_mergeinfo,
             !squelch_mergeinfo_notifications, merge_b->ctx, iterpool));
@@ -10213,8 +10215,9 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
                                                   ctx, iterpool));
       SVN_ERR(svn_mergeinfo__mergeinfo_from_segments(
         &source_history_as_mergeinfo, segments, iterpool));
-      SVN_ERR(svn_mergeinfo_merge(source_mergeinfo,
-                                  source_history_as_mergeinfo, iterpool));
+      SVN_ERR(svn_mergeinfo_merge2(source_mergeinfo,
+                                   source_history_as_mergeinfo, iterpool,
+                                   iterpool));
 
       /* Now source_mergeinfo represents everything we know about
          source_path's history.  Now we need to know what part, if any, of the
@@ -10330,9 +10333,9 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
                 ctx, iterpool));
               SVN_ERR(svn_mergeinfo__mergeinfo_from_segments(
                 &source_history_as_mergeinfo, segments, iterpool));
-              SVN_ERR(svn_mergeinfo_merge(source_mergeinfo,
-                                          source_history_as_mergeinfo,
-                                          iterpool));
+              SVN_ERR(svn_mergeinfo_merge2(source_mergeinfo,
+                                           source_history_as_mergeinfo,
+                                           iterpool, iterpool));
               SVN_ERR(svn_mergeinfo_intersect2(&common_mergeinfo,
                                                source_mergeinfo,
                                                target_history_as_mergeinfo,
