@@ -13,6 +13,11 @@ If this works out and can be made efficient, it should enable existing
 libsvn_client code to be simplified and new client code to be written
 more easily.
 
+Then a more interesting stage: we should be able to write e.g. a 'diff'
+routine that compares two arbitrary trees - e.g. in r100 in repo A against
+r100 in repo B, or the unversioned tree '/tmp/saved-tests' against the WC tree
+'wc/subversion/tests'.
+
 At the time of this writing, the API is in subversion/libsvn_client/tree.h,
 but I expect to move it.
 
