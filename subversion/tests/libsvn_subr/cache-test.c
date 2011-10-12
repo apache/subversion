@@ -135,7 +135,11 @@ test_inprocess_cache_basic(apr_pool_t *pool)
                                       APR_HASH_KEY_STRING,
                                       1,
                                       1,
+#if APR_HAS_THREADS
                                       TRUE,
+#else
+                                      FALSE,
+#endif
                                       "",
                                       pool));
 
