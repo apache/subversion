@@ -109,7 +109,7 @@ remove_base_node(svn_wc__db_t *db,
                  apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t base_status, wrk_status;
-  svn_wc__db_kind_t base_kind, wrk_kind;
+  svn_kind_t base_kind, wrk_kind;
   svn_boolean_t have_base, have_work;
   svn_error_t *err;
 
@@ -148,7 +148,7 @@ remove_base_node(svn_wc__db_t *db,
                                      scratch_pool, scratch_pool));
 
   /* Children first */
-  if (base_kind == svn_wc__db_kind_dir
+  if (base_kind == svn_kind_dir
       && base_status == svn_wc__db_status_normal)
     {
       const apr_array_header_t *children;
@@ -179,12 +179,12 @@ remove_base_node(svn_wc__db_t *db,
       && wrk_status != svn_wc__db_status_excluded)
     {
       if (wrk_status != svn_wc__db_status_deleted
-          && (base_kind == svn_wc__db_kind_file
-              || base_kind == svn_wc__db_kind_symlink))
+          && (base_kind == svn_kind_file
+              || base_kind == svn_kind_symlink))
         {
           SVN_ERR(svn_io_remove_file2(local_abspath, TRUE, scratch_pool));
         }
-      else if (base_kind == svn_wc__db_kind_dir
+      else if (base_kind == svn_kind_dir
                && wrk_status != svn_wc__db_status_deleted)
         {
           err = svn_io_dir_remove_nonrecursive(local_abspath, scratch_pool);
@@ -218,7 +218,7 @@ run_base_remove(svn_wc__db_t *db,
   const char *local_relpath;
   const char *local_abspath;
   svn_revnum_t not_present_rev = SVN_INVALID_REVNUM;
-  svn_wc__db_kind_t not_present_kind;
+  svn_kind_t not_present_kind;
   const char *repos_relpath, *repos_root_url, *repos_uuid;
   apr_int64_t val;
 
@@ -232,7 +232,7 @@ run_base_remove(svn_wc__db_t *db,
       not_present_rev = (svn_revnum_t)val;
 
       SVN_ERR(svn_skel__parse_int(&val, arg1->next->next, scratch_pool));
-      not_present_kind = (svn_wc__db_kind_t)val;
+      not_present_kind = (svn_kind_t)val;
 
       if (SVN_IS_VALID_REVNUM(not_present_rev))
         {
@@ -295,7 +295,7 @@ svn_wc__wq_build_base_remove(svn_skel_t **work_item,
                              svn_wc__db_t *db,
                              const char *local_abspath,
                              svn_revnum_t not_present_revision,
-                             svn_wc__db_kind_t not_present_kind,
+                             svn_kind_t not_present_kind,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {

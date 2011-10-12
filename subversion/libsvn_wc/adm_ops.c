@@ -123,7 +123,7 @@ process_committed_leaf(svn_wc__db_t *db,
                        apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   const svn_checksum_t *copied_checksum;
   svn_revnum_t new_changed_rev = new_revnum;
   svn_boolean_t have_base;
@@ -145,7 +145,7 @@ process_committed_leaf(svn_wc__db_t *db,
   {
     const char *adm_abspath;
 
-    if (kind == svn_wc__db_kind_dir)
+    if (kind == svn_kind_dir)
       adm_abspath = local_abspath;
     else
       adm_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
@@ -176,7 +176,7 @@ process_committed_leaf(svn_wc__db_t *db,
   SVN_ERR_ASSERT(status == svn_wc__db_status_normal
                  || status == svn_wc__db_status_added);
 
-  if (kind != svn_wc__db_kind_dir)
+  if (kind != svn_kind_dir)
     {
       /* If we sent a delta (meaning: post-copy modification),
          then this file will appear in the queue and so we should have
@@ -249,7 +249,7 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                    const svn_wc_committed_queue_t *queue,
                                    apr_pool_t *scratch_pool)
 {
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
 
   /* NOTE: be wary of making crazy semantic changes in this function, since
      svn_wc_process_committed4() calls this.  */
@@ -265,7 +265,7 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
      have been deleted */
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
 
-  if (recurse && kind == svn_wc__db_kind_dir)
+  if (recurse && kind == svn_kind_dir)
     {
       const apr_array_header_t *children;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -301,7 +301,7 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
             continue;
 
           sha1_checksum = NULL;
-          if (kind != svn_wc__db_kind_dir && queue != NULL)
+          if (kind != svn_kind_dir && queue != NULL)
             {
               const committed_queue_item_t *cqi;
 
@@ -611,7 +611,7 @@ svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
   svn_wc__db_t *db = wc_ctx->db;
   svn_error_t *err;
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_boolean_t conflicted;
   const apr_array_header_t *conflicts;
 
@@ -650,7 +650,7 @@ svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
     }
 
   if (status == svn_wc__db_status_normal
-      && kind == svn_wc__db_kind_dir)
+      && kind == svn_kind_dir)
     {
       svn_boolean_t is_wcroot;
       SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, local_abspath, pool));
@@ -788,7 +788,7 @@ check_can_add_to_parent(const char **repos_root_url,
 {
   const char *parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
   svn_wc__db_status_t parent_status;
-  svn_wc__db_kind_t parent_kind;
+  svn_kind_t parent_kind;
   svn_error_t *err;
 
   SVN_ERR(svn_wc__write_check(db, parent_abspath, scratch_pool));
@@ -821,7 +821,7 @@ check_can_add_to_parent(const char **repos_root_url,
                           svn_dirent_local_style(local_abspath,
                                                  scratch_pool));
     }
-  else if (parent_kind != svn_wc__db_kind_dir)
+  else if (parent_kind != svn_kind_dir)
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("Can't schedule an addition of '%s'"
                                " below a not-directory node"),
@@ -1354,7 +1354,7 @@ revert_restore_handle_copied_dirs(svn_boolean_t *removed_self,
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      if (child_info->kind != svn_wc__db_kind_file)
+      if (child_info->kind != svn_kind_file)
         continue;
 
       svn_pool_clear(iterpool);
@@ -1384,7 +1384,7 @@ revert_restore_handle_copied_dirs(svn_boolean_t *removed_self,
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      if (child_info->kind != svn_wc__db_kind_dir)
+      if (child_info->kind != svn_kind_dir)
         continue;
 
       svn_pool_clear(iterpool);
@@ -1439,7 +1439,7 @@ revert_restore(svn_wc__db_t *db,
 {
   svn_error_t *err;
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_node_kind_t on_disk;
   svn_boolean_t notify_required;
   const char *conflict_old;
@@ -1453,7 +1453,7 @@ revert_restore(svn_wc__db_t *db,
   svn_boolean_t special;
 #endif
   svn_boolean_t copied_here;
-  svn_wc__db_kind_t reverted_kind;
+  svn_kind_t reverted_kind;
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
@@ -1497,7 +1497,7 @@ revert_restore(svn_wc__db_t *db,
            * ### trying to restore anything to disk.
            * ### 'status' should be status_unknown but that doesn't exist. */
           status = svn_wc__db_status_normal;
-          kind = svn_wc__db_kind_unknown;
+          kind = svn_kind_unknown;
           recorded_size = SVN_INVALID_FILESIZE;
           recorded_mod_time = 0;
         }
@@ -1538,12 +1538,12 @@ revert_restore(svn_wc__db_t *db,
   if (copied_here)
     {
       /* The revert target itself is the op-root of a copy. */
-      if (reverted_kind == svn_wc__db_kind_file && on_disk == svn_node_file)
+      if (reverted_kind == svn_kind_file && on_disk == svn_node_file)
         {
           SVN_ERR(svn_io_remove_file2(local_abspath, TRUE, scratch_pool));
           on_disk = svn_node_none;
         }
-      else if (reverted_kind == svn_wc__db_kind_dir && on_disk == svn_node_dir)
+      else if (reverted_kind == svn_kind_dir && on_disk == svn_node_dir)
         {
           svn_boolean_t removed;
 
@@ -1565,13 +1565,13 @@ revert_restore(svn_wc__db_t *db,
       && status != svn_wc__db_status_excluded
       && status != svn_wc__db_status_not_present)
     {
-      if (on_disk == svn_node_dir && kind != svn_wc__db_kind_dir)
+      if (on_disk == svn_node_dir && kind != svn_kind_dir)
         {
           SVN_ERR(svn_io_remove_dir2(local_abspath, FALSE,
                                      cancel_func, cancel_baton, scratch_pool));
           on_disk = svn_node_none;
         }
-      else if (on_disk == svn_node_file && kind != svn_wc__db_kind_file)
+      else if (on_disk == svn_node_file && kind != svn_kind_file)
         {
           SVN_ERR(svn_io_remove_file2(local_abspath, FALSE, scratch_pool));
           on_disk = svn_node_none;
@@ -1696,10 +1696,10 @@ revert_restore(svn_wc__db_t *db,
       && status != svn_wc__db_status_excluded
       && status != svn_wc__db_status_not_present)
     {
-      if (kind == svn_wc__db_kind_dir)
+      if (kind == svn_kind_dir)
         SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
 
-      if (kind == svn_wc__db_kind_file)
+      if (kind == svn_kind_file)
         {
           svn_skel_t *work_item;
 
@@ -1730,7 +1730,7 @@ revert_restore(svn_wc__db_t *db,
                                      scratch_pool),
                 scratch_pool);
 
-  if (depth == svn_depth_infinity && kind == svn_wc__db_kind_dir)
+  if (depth == svn_depth_infinity && kind == svn_kind_dir)
     {
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       const apr_array_header_t *children;
@@ -1946,11 +1946,11 @@ revert_partial(svn_wc__db_t *db,
       /* For svn_depth_files: don't revert non-files.  */
       if (depth == svn_depth_files)
         {
-          svn_wc__db_kind_t kind;
+          svn_kind_t kind;
 
           SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE,
                                        iterpool));
-          if (kind != svn_wc__db_kind_file)
+          if (kind != svn_kind_file)
             continue;
         }
 
@@ -2092,7 +2092,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
   svn_error_t *err;
   svn_boolean_t left_something = FALSE;
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
 
   /* ### This whole function should be rewritten to run inside a transaction,
      ### to allow a stable cancel behavior.
@@ -2116,7 +2116,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                NULL, NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
-  if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
+  if (kind == svn_kind_file || kind == svn_kind_symlink)
     {
       svn_boolean_t text_modified_p = FALSE;
 
@@ -2140,7 +2140,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
       /* Remove NAME from DB */
       SVN_ERR(svn_wc__db_op_remove_node(db, local_abspath,
                                         SVN_INVALID_REVNUM,
-                                        svn_wc__db_kind_unknown,
+                                        svn_kind_unknown,
                                         scratch_pool));
 
       /* If we were asked to destroy the working file, do so unless
@@ -2172,7 +2172,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
           const char *node_name = APR_ARRAY_IDX(children, i, const char*);
           const char *node_abspath;
           svn_wc__db_status_t node_status;
-          svn_wc__db_kind_t node_kind;
+          svn_kind_t node_kind;
 
           svn_pool_clear(iterpool);
 
@@ -2187,7 +2187,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                        iterpool, iterpool));
 
           if (node_status == svn_wc__db_status_normal
-              && node_kind == svn_wc__db_kind_dir)
+              && node_kind == svn_kind_dir)
             {
               svn_boolean_t is_root;
 
@@ -2206,7 +2206,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                  versioned nodes */
               SVN_ERR(svn_wc__db_op_remove_node(db, node_abspath,
                                                 SVN_INVALID_REVNUM,
-                                                svn_wc__db_kind_unknown,
+                                                svn_kind_unknown,
                                                 iterpool));
 
               continue;
@@ -2250,7 +2250,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
           {
             SVN_ERR(svn_wc__db_op_remove_node(db, local_abspath,
                                               SVN_INVALID_REVNUM,
-                                              svn_wc__db_kind_unknown,
+                                              svn_kind_unknown,
                                               iterpool));
           }
         else

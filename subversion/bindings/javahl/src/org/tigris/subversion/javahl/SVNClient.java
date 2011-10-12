@@ -70,7 +70,6 @@ public class SVNClient implements SVNClientInterface
      */
     protected void finalize()
     {
-        aSVNClient.finalize();
     }
 
     /**

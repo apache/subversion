@@ -839,7 +839,7 @@ walk_local_nodes_diff(struct edit_baton *eb,
       const char *name = APR_ARRAY_IDX(children, i, const char*);
       const char *child_abspath, *child_path;
       svn_wc__db_status_t status;
-      svn_wc__db_kind_t kind;
+      svn_kind_t kind;
 
       svn_pool_clear(iterpool);
 
@@ -875,12 +875,12 @@ walk_local_nodes_diff(struct edit_baton *eb,
 
       switch (kind)
         {
-        case svn_wc__db_kind_file:
-        case svn_wc__db_kind_symlink:
+        case svn_kind_file:
+        case svn_kind_symlink:
           SVN_ERR(file_diff(eb, child_abspath, child_path, iterpool));
           break;
 
-        case svn_wc__db_kind_dir:
+        case svn_kind_dir:
           /* ### TODO: Don't know how to do replaced dirs. How do I get
              information about what is being replaced? If it was a
              directory then the directory elements are also going to be
@@ -1080,7 +1080,7 @@ report_wc_directory_as_added(struct edit_baton *eb,
       const char *name = APR_ARRAY_IDX(children, i, const char *);
       const char *child_abspath, *child_path;
       svn_wc__db_status_t status;
-      svn_wc__db_kind_t kind;
+      svn_kind_t kind;
 
       svn_pool_clear(iterpool);
 
@@ -1111,13 +1111,13 @@ report_wc_directory_as_added(struct edit_baton *eb,
 
       switch (kind)
         {
-        case svn_wc__db_kind_file:
-        case svn_wc__db_kind_symlink:
+        case svn_kind_file:
+        case svn_kind_symlink:
           SVN_ERR(report_wc_file_as_added(eb, child_abspath, child_path,
                                           iterpool));
           break;
 
-        case svn_wc__db_kind_dir:
+        case svn_kind_dir:
           if (depth > svn_depth_files || depth == svn_depth_unknown)
             {
               svn_depth_t depth_below_here = depth;
@@ -1187,7 +1187,7 @@ delete_entry(const char *path,
   const char *name = svn_dirent_basename(path, NULL);
   const char *local_abspath = svn_dirent_join(pb->local_abspath, name, pool);
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
 
   /* Mark this node as compared in the parent directory's baton. */
   apr_hash_set(pb->compared, apr_pstrdup(pb->pool, path),
@@ -1207,8 +1207,8 @@ delete_entry(const char *path,
   SVN_ERR(get_empty_file(pb->eb, &empty_file));
   switch (kind)
     {
-    case svn_wc__db_kind_file:
-    case svn_wc__db_kind_symlink:
+    case svn_kind_file:
+    case svn_kind_symlink:
       /* A delete is required to change working-copy into requested
          revision, so diff should show this as an add. Thus compare
          the empty file against the current working copy.  If
@@ -1245,7 +1245,7 @@ delete_entry(const char *path,
           SVN_ERR(report_wc_file_as_added(eb, local_abspath, path, pool));
         }
       break;
-    case svn_wc__db_kind_dir:
+    case svn_kind_dir:
       /* A delete is required to change working-copy into requested
          revision, so diff should show this as an add. */
       SVN_ERR(report_wc_directory_as_added(eb,

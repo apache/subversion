@@ -180,7 +180,7 @@ resolve_conflict_on_node(svn_wc__db_t *db,
   const char *conflict_new = NULL;
   const char *conflict_working = NULL;
   const char *prop_reject_file = NULL;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   int i;
   const apr_array_header_t *conflicts;
   const char *conflict_dir_abspath;
@@ -208,7 +208,7 @@ resolve_conflict_on_node(svn_wc__db_t *db,
         prop_reject_file = desc->their_abspath;
     }
 
-  if (kind == svn_wc__db_kind_dir)
+  if (kind == svn_kind_dir)
     conflict_dir_abspath = local_abspath;
   else
     conflict_dir_abspath = svn_dirent_dirname(local_abspath, pool);
@@ -503,7 +503,7 @@ recursive_resolve_conflict(svn_wc__db_t *db,
       const char *name = APR_ARRAY_IDX(children, i, const char *);
       const char *child_abspath;
       svn_wc__db_status_t status;
-      svn_wc__db_kind_t kind;
+      svn_kind_t kind;
       svn_boolean_t conflicted;
 
       svn_pool_clear(iterpool);
@@ -526,10 +526,10 @@ recursive_resolve_conflict(svn_wc__db_t *db,
         continue;
 
       apr_hash_set(visited, name, APR_HASH_KEY_STRING, name);
-      if (kind == svn_wc__db_kind_dir && depth < svn_depth_immediates)
+      if (kind == svn_kind_dir && depth < svn_depth_immediates)
         continue;
 
-      if (kind == svn_wc__db_kind_dir)
+      if (kind == svn_kind_dir)
         SVN_ERR(recursive_resolve_conflict(db,
                                            child_abspath,
                                            conflicted,
@@ -603,7 +603,7 @@ svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
                           void *notify_baton,
                           apr_pool_t *scratch_pool)
 {
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_boolean_t conflicted;
   /* ### the underlying code does NOT support resolving individual
      ### properties. bail out if the caller tries it.  */
@@ -621,7 +621,7 @@ svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
 
   /* When the implementation still used the entry walker, depth
      unknown was translated to infinity. */
-  if (kind != svn_wc__db_kind_dir)
+  if (kind != svn_kind_dir)
     depth = svn_depth_empty;
   else if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;

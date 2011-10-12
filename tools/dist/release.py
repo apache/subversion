@@ -626,7 +626,7 @@ def check_sigs(args):
         target = args.target
     else:
         target = os.path.join(os.getenv('HOME'), 'public_html', 'svn',
-                              str(args.version), 'deploy')
+                              str(args.version))
 
     good_sigs = {}
 

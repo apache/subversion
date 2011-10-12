@@ -187,7 +187,7 @@ svn_client_upgrade(const char *path,
       if (!err)
         err = svn_wc_parse_externals_description3(
                   &externals_p, svn_dirent_dirname(path, iterpool),
-                  external_desc->data, TRUE, iterpool);
+                  external_desc->data, FALSE, iterpool);
       if (err)
         {
           svn_wc_notify_t *notify =
