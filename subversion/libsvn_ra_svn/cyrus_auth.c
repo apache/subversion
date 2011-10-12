@@ -103,11 +103,17 @@ sasl_mutex_alloc_cb_internal(svn_mutex__t **mutex)
 static void *sasl_mutex_alloc_cb(void)
 {
   svn_mutex__t *mutex = NULL;
+  svn_error_t *err;
 
   if (!svn_ra_svn__sasl_status)
     return NULL;
 
-  SVN_MUTEX__WITH_LOCK(array_mutex, sasl_mutex_alloc_cb_internal(&mutex));
+  err = svn_mutex__lock(array_mutex);
+  if (err)
+    svn_error_clear(err);
+  else
+    svn_error_clear(svn_mutex__unlock(array_mutex,
+                                      sasl_mutex_alloc_cb_internal(&mutex)));
 
   return mutex;
 }
@@ -146,8 +152,17 @@ sasl_mutex_free_cb_internal(void *mutex)
 
 static void sasl_mutex_free_cb(void *mutex)
 {
-  if (svn_ra_svn__sasl_status)
-    SVN_MUTEX__WITH_LOCK(array_mutex, sasl_mutex_free_cb_internal(mutex));
+  svn_error_t *err;
+
+  if (!svn_ra_svn__sasl_status)
+    return;
+
+  err = svn_mutex__lock(array_mutex);
+  if (err)
+    svn_error_clear(err);
+  else
+    svn_error_clear(svn_mutex__unlock(array_mutex,
+                                      sasl_mutex_free_cb_internal(mutex)));
 }
 #endif /* APR_HAS_THREADS */
 
