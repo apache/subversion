@@ -40,9 +40,6 @@ extern "C" {
  */
 typedef struct svn_client_tree_t svn_client_tree_t;
 
-/* */
-typedef svn_io_dirent2_t svn_client_tree_dirent_t;
-
 /*
  * Paths are relpaths, relative to the tree root.
  *
@@ -102,7 +99,7 @@ svn_tree_get_file(svn_client_tree_t *tree,
  *
  * If @a dirents is non-NULL, set @a *dirents to contain all the entries
  * of directory @a relpath.  The keys will be (<tt>const char *</tt>)
- * entry names, and the values (#svn_client_tree_dirent_t *) dirents.
+ * entry names; the values are unspecified.
  * Only the @c kind and @c filesize fields are filled in.
  * ### @c special would be useful too.
  *

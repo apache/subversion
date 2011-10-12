@@ -334,7 +334,7 @@ wc_tree_get_dir(svn_client_tree_t *tree,
           const char *child_abspath = APR_ARRAY_IDX(children, i, const char *);
           const char *name = svn_dirent_basename(child_abspath, scratch_pool);
 
-          apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, (void *)1);
+          apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, name);
         }
     }
   if (props)
@@ -494,33 +494,12 @@ ra_tree_get_dir(svn_client_tree_t *tree,
                 apr_pool_t *scratch_pool)
 {
   ra_tree_baton_t *baton = tree->priv;
-  apr_hash_t *ra_dirents = NULL;
 
   SVN_ERR(svn_ra_get_dir2(baton->ra_session,
-                          dirents ? &ra_dirents : NULL, NULL, props,
+                          dirents, NULL, props,
                           relpath, baton->revnum,
-                          SVN_DIRENT_KIND | SVN_DIRENT_SIZE,
+                          0 /* dirent_fields */,
                           result_pool));
-  if (ra_dirents)
-    {
-      apr_hash_index_t *hi;
-
-      *dirents = apr_hash_make(result_pool);
-      for (hi = apr_hash_first(scratch_pool, ra_dirents);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          const char *entry_name = svn__apr_hash_index_key(hi);
-          svn_dirent_t *ra_dirent = svn__apr_hash_index_val(hi);
-          svn_client_tree_dirent_t *dirent
-            = apr_palloc(result_pool, sizeof(*dirent));
-
-          dirent->kind = ra_dirent->kind;
-          dirent->filesize = ra_dirent->size;
-          /* ### dirent->special = ... */
-          apr_hash_set(*dirents, entry_name, APR_HASH_KEY_STRING, dirent);
-        }
-    }
   return SVN_NO_ERROR;
 }
 
