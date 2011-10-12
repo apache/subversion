@@ -123,10 +123,10 @@ static int check_result(svn_error_t *err)
   if (err)
     {
       svn_error_clear(err);
-      return 0;
+      return -1;
     }
     
-  return -1;
+  return 0;
 }
 
 static int sasl_mutex_lock_cb(void *mutex)
