@@ -24,18 +24,6 @@
 #include "svn_private_config.h"
 #include "private/svn_mutex.h"
 
-#if APR_HAS_THREADS
-/* Destructor to be called as part of the pool cleanup procedure. */
-static apr_status_t
-destroy_mutex(void *data)
-{
-  svn_mutex__t **mutex_p = data;
-  *mutex_p = NULL;
-
-  return APR_SUCCESS;
-}
-#endif
-
 svn_error_t *
 svn_mutex__init(svn_mutex__t **mutex_p, 
                 svn_boolean_t enable_mutex, 
@@ -54,8 +42,6 @@ svn_mutex__init(svn_mutex__t **mutex_p,
         return svn_error_wrap_apr(status, _("Can't create mutex"));
 
       *mutex_p = apr_mutex;
-      apr_pool_cleanup_register(pool, mutex_p, destroy_mutex,
-                                apr_pool_cleanup_null);
     }
 #else
   if (enable_mutex)
