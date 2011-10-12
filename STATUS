@@ -111,6 +111,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1178942, r1182527 
+   Fix issue #4009, "Big trivial text files merged MUCH slower than binary"
+   Justification:
+     Much improved merge performance for, well, trivial text file merges!
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
