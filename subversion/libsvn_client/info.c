@@ -269,14 +269,12 @@ svn_client_info3(const char *abspath_or_url,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  svn_ra_session_t *ra_session, *parent_ra_session;
+  svn_ra_session_t *ra_session;
   svn_revnum_t rev;
   const char *url;
-  svn_node_kind_t url_kind;
   const char *repos_root_URL, *repos_UUID;
   svn_lock_t *lock;
   svn_boolean_t related;
-  apr_hash_t *parent_ents;
   const char *parent_url, *base_name;
   svn_dirent_t *the_ent;
   svn_client_info2_t *info;
@@ -323,6 +321,10 @@ svn_client_info3(const char *abspath_or_url,
   if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
     {
       /* Fall back to pre-1.2 strategy for fetching dirent's URL. */
+      svn_node_kind_t url_kind;
+      svn_ra_session_t *parent_ra_session;
+      apr_hash_t *parent_ents;
+
       svn_error_clear(err);
 
       if (strcmp(url, repos_root_URL) == 0)
