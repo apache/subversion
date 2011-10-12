@@ -332,7 +332,7 @@ wc_tree_get_dir(svn_client_tree_t *tree,
       for (i = 0; i < children->nelts; i++)
         {
           const char *child_abspath = APR_ARRAY_IDX(children, i, const char *);
-          const char *name = svn_dirent_basename(child_abspath, scratch_pool);
+          const char *name = svn_dirent_basename(child_abspath, result_pool);
 
           apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, name);
         }
