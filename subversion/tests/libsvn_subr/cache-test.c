@@ -127,6 +127,13 @@ static svn_error_t *
 test_inprocess_cache_basic(apr_pool_t *pool)
 {
   svn_cache__t *cache;
+  svn_boolean_t thread_safe;
+
+#if APR_HAS_THREADS
+  thread_safe = TRUE;
+#else
+  thread_safe = FALSE;
+#endif
 
   /* Create a cache with just one entry. */
   SVN_ERR(svn_cache__create_inprocess(&cache,
@@ -135,11 +142,7 @@ test_inprocess_cache_basic(apr_pool_t *pool)
                                       APR_HASH_KEY_STRING,
                                       1,
                                       1,
-#if APR_HAS_THREADS
-                                      TRUE,
-#else
-                                      FALSE,
-#endif
+                                      thread_safe,
                                       "",
                                       pool));
 
