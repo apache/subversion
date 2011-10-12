@@ -1463,7 +1463,6 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
   if (wc_kind != svn_node_file || is_deleted)
     {
       const char *moved_to_abspath;
-      svn_wc_conflict_reason_t reason;
       svn_error_t *err;
 
       /* Maybe the node is excluded via depth filtering? */
@@ -1513,6 +1512,8 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
         }
       else
         {
+          svn_wc_conflict_reason_t reason;
+
           if (is_deleted)
             reason = svn_wc_conflict_reason_deleted;
           else
