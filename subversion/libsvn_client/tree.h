@@ -1,12 +1,28 @@
-/* 
- * File:   tree.h
- * Author: julianfoad
+/*
+ * tree.h: reading a generic tree
  *
- * Created on 07 October 2011, 17:39
+ * ====================================================================
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
+ * ====================================================================
  */
 
-#ifndef TREE_H
-#define	TREE_H
+#ifndef SVN_LIBSVN_CLIENT_TREE_H
+#define SVN_LIBSVN_CLIENT_TREE_H
 
 #include <apr_hash.h>
 #include "svn_types.h"
@@ -16,7 +32,7 @@
 #include "svn_client.h"
 
 
-#ifdef	__cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -36,7 +52,7 @@ extern "C" {
 typedef struct svn_tree_t svn_tree_t;
 
 
-/* Fetch the node kind of the node at @a relpath.
+/** Fetch the node kind of the node at @a relpath.
  * (### and other metadata? revnum? props?)
  *
  * The kind will be 'file', 'dir', 'symlink' or 'none'; not 'unknown'.
@@ -49,7 +65,7 @@ svn_tree_get_kind(svn_tree_t *tree,
                   const char *relpath,
                   apr_pool_t *scratch_pool);
 
-/* Fetch the contents and/or properties of the file at @a relpath.
+/** Fetch the contents and/or properties of the file at @a relpath.
  *
  * If @a stream is non-NULL, set @a *stream to a readable stream yielding
  * the contents of the file at @a relpath.  (### ? The stream
@@ -70,7 +86,7 @@ svn_tree_get_file(svn_tree_t *tree,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool);
 
-/* Fetch the entries and/or properties of the directory at @a relpath.
+/** Fetch the entries and/or properties of the directory at @a relpath.
  *
  * If @a dirents is non-NULL, set @a *dirents to contain all the entries
  * of directory @a relpath.  The keys will be (<tt>const char *</tt>)
@@ -93,7 +109,7 @@ svn_tree_get_dir(svn_tree_t *tree,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool);
 
-/* Fetch the target and/or properties of the symlink at @a relpath.
+/** Fetch the target and/or properties of the symlink at @a relpath.
  *
  * If @a link_target is non-NULL, set @a *link_target to the target of
  * the symbolic link.
@@ -156,9 +172,9 @@ svn_client__open_tree(svn_tree_t **tree,
                       apr_pool_t *scratch_pool);
 
 
-#ifdef	__cplusplus
+#ifdef __cplusplus
 }
 #endif
 
-#endif	/* TREE_H */
+#endif /* SVN_LIBSVN_CLIENT_TREE_H */
 
