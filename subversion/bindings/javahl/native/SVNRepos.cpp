@@ -678,7 +678,6 @@ jobject SVNRepos::lslocks(File &path, svn_depth_t depth)
 void SVNRepos::rmlocks(File &path, StringArray &locks)
 {
   SVN::Pool requestPool;
-  apr_pool_t *pool = requestPool.getPool();
   svn_repos_t *repos;
   svn_fs_t *fs;
   svn_fs_access_t *access;
@@ -700,10 +699,11 @@ void SVNRepos::rmlocks(File &path, StringArray &locks)
     apr_uid_t uid;
     apr_gid_t gid;
     char *un;
-    if (apr_uid_current (&uid, &gid, pool) == APR_SUCCESS &&
-        apr_uid_name_get (&un, uid, pool) == APR_SUCCESS)
+    if (apr_uid_current (&uid, &gid, requestPool.getPool()) == APR_SUCCESS &&
+        apr_uid_name_get (&un, uid, requestPool.getPool()) == APR_SUCCESS)
       {
-        svn_error_t *err = svn_utf_cstring_to_utf8(&username, un, pool);
+        svn_error_t *err = svn_utf_cstring_to_utf8(&username, un,
+                                                   requestPool.getPool());
         svn_error_clear (err);
         if (err)
           username = "administrator";
@@ -711,7 +711,7 @@ void SVNRepos::rmlocks(File &path, StringArray &locks)
   }
 
   /* Create an access context describing the current user. */
-  SVN_JNI_ERR(svn_fs_create_access(&access, username, pool), );
+  SVN_JNI_ERR(svn_fs_create_access(&access, username, requestPool.getPool()), );
 
   /* Attach the access context to the filesystem. */
   SVN_JNI_ERR(svn_fs_set_access(fs, access), );
