@@ -655,9 +655,9 @@ svn_client__repos_locations(const char **start_url,
       end = &unspecified_rev;
     }
 
-  /* Check to see if this is schedule add with history working copy
-     path.  If it is, then we need to use the URL and peg revision of
-     the copyfrom information. */
+  /* Determine LOCAL_ABSPATH_OR_URL, URL, and possibly PEG_REVNUM.
+     If we are looking at the working version of a WC path that is scheduled
+     as a copy, then we need to use the copy-from URL and peg revision. */
   if (! svn_path_is_url(path))
     {
       SVN_ERR(svn_dirent_get_absolute(&local_abspath_or_url, path, subpool));

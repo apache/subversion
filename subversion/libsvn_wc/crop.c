@@ -98,7 +98,7 @@ crop_children(svn_wc__db_t *db,
       const char *child_name = APR_ARRAY_IDX(children, i, const char *);
       const char *child_abspath;
       svn_wc__db_status_t child_status;
-      svn_wc__db_kind_t kind;
+      svn_kind_t kind;
       svn_depth_t child_depth;
 
       svn_pool_clear(iterpool);
@@ -117,18 +117,18 @@ crop_children(svn_wc__db_t *db,
           child_status == svn_wc__db_status_excluded ||
           child_status == svn_wc__db_status_not_present)
         {
-          svn_depth_t remove_below = (kind == svn_wc__db_kind_dir)
+          svn_depth_t remove_below = (kind == svn_kind_dir)
                                             ? svn_depth_immediates
                                             : svn_depth_files;
           if (new_depth < remove_below)
             SVN_ERR(svn_wc__db_op_remove_node(db, local_abspath,
                                               SVN_INVALID_REVNUM,
-                                              svn_wc__db_kind_unknown,
+                                              svn_kind_unknown,
                                               iterpool));
 
           continue;
         }
-      else if (kind == svn_wc__db_kind_file)
+      else if (kind == svn_kind_file)
         {
           /* We currently crop on a directory basis. So don't worry about
              svn_depth_exclude here. And even we permit excluding a single
@@ -148,7 +148,7 @@ crop_children(svn_wc__db_t *db,
             continue;
 
         }
-      else if (kind == svn_wc__db_kind_dir)
+      else if (kind == svn_kind_dir)
         {
           if (new_depth < svn_depth_immediates)
             {
@@ -209,7 +209,7 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
 {
   svn_boolean_t is_root, is_switched;
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_revnum_t revision;
   const char *repos_relpath, *repos_root, *repos_uuid;
 
@@ -318,7 +318,7 @@ svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
 {
   svn_wc__db_t *db = wc_ctx->db;
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_depth_t dir_depth;
 
   /* Only makes sense when the depth is restrictive. */
@@ -335,7 +335,7 @@ svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
-  if (kind != svn_wc__db_kind_dir)
+  if (kind != svn_kind_dir)
     return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
       _("Can only crop directories"));
 

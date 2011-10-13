@@ -222,12 +222,12 @@ svn_error_t *
 svn_wc__conflict_skel_add_tree_conflict(
   svn_skel_t *skel,
   svn_wc_conflict_reason_t local_change,
-  svn_wc__db_kind_t original_local_kind,
+  svn_kind_t original_local_kind,
   const svn_checksum_t *original_checksum,
-  svn_wc__db_kind_t mine_local_kind,
+  svn_kind_t mine_local_kind,
   const svn_checksum_t *mine_checksum,
   svn_wc_conflict_action_t incoming_change,
-  svn_wc__db_kind_t incoming_kind,
+  svn_kind_t incoming_kind,
   const svn_checksum_t *incoming_checksum,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);

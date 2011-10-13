@@ -1037,7 +1037,10 @@ $(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST)
 	chmod +x $(PYTHON_SRCDIR)/setup.py
 	# Fixes shared library linking on OpenBSD
 	# http://bugs.python.org/issue12560
+	# Also fix compilation error on OpenBSD 5.0 and later (undefined
+	# reference to 'lstat' -- already fixed in hg.python.org/cpython).
 	sed -e '4930s#NetBSD\*|#NetBSD*|OpenBSD*|#' \
+	 	-e 's#OpenBSD/4\.\[789\]#OpenBSD/*#' \
 		< $(PYTHON_SRCDIR)/configure \
 		> $(PYTHON_SRCDIR)/configure.patched
 	mv $(PYTHON_SRCDIR)/configure.patched $(PYTHON_SRCDIR)/configure

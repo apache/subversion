@@ -930,10 +930,10 @@ svn_wc_add3(const char *path,
   /* Make sure the caller gets the new access baton in the set. */
   if (svn_wc__adm_retrieve_internal2(wc_db, local_abspath, pool) == NULL)
     {
-      svn_wc__db_kind_t kind;
+      svn_kind_t kind;
 
       SVN_ERR(svn_wc__db_read_kind(&kind, wc_db, local_abspath, FALSE, pool));
-      if (kind == svn_wc__db_kind_dir)
+      if (kind == svn_kind_dir)
         {
           svn_wc_adm_access_t *adm_access;
 

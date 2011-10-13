@@ -60,7 +60,7 @@ svn_ra_svn__default_secprops(sasl_security_properties_t *secprops);
 
 /* This function is called by the client and the server before
    calling sasl_{client, server}_init, pool is used for allocations. */
-apr_status_t
+svn_error_t *
 svn_ra_svn__sasl_common_init(apr_pool_t *pool);
 
 /* Sets local_addrport and remote_addrport to a string containing the

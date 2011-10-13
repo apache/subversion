@@ -117,7 +117,7 @@ verify_mergeinfo_parse(const char *input,
    -> merge ranges. */
 static apr_hash_t *info1, *info2;
 
-#define NBR_MERGEINFO_VALS 20
+#define NBR_MERGEINFO_VALS 24
 
 /* Valid mergeinfo values. */
 static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
@@ -146,7 +146,12 @@ static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
     "/gunther_branch:7-12*,1,5-10*",
     /* Adjacent rangelists of differing inheritability. */
     "/b5:5-53,1-4,54-90*",
-    "/c0:1-77,12-44"
+    "/c0:1-77,12-44",
+    /* Non-canonical paths. */
+    "/A/:7-8",
+    "/A///:7-8",
+    "/A/.:7-8",
+    "/A/./B:7-8"
   };
 /* Paths corresponding to mergeinfo_vals. */
 static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
@@ -173,7 +178,13 @@ static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
     "/gunther_branch",
     "/gunther_branch",
     "/b5",
-    "/c0"
+    "/c0",
+
+    /* non-canonical paths converted to canonical */
+    "/A",
+    "/A",
+    "/A",
+    "/A/B"
   };
 /* First ranges from the paths identified by mergeinfo_paths. */
 static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS][MAX_NBR_RANGES] =
@@ -200,6 +211,10 @@ static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS][MAX_NBR_RANGES] =
     { {0, 1, TRUE}, {4, 12, FALSE} },
     { {0, 53, TRUE}, {53, 90, FALSE} },
     { {0, 77, TRUE} },
+    { {6, 8, TRUE} },
+    { {6, 8, TRUE} },
+    { {6, 8, TRUE} },
+    { {6, 8, TRUE} },
   };
 
 static svn_error_t *
@@ -1181,7 +1196,7 @@ test_rangelist_merge(apr_pool_t *pool)
     svn_merge_range_t expected_merge[6];
   };
 
-  #define SIZE_OF_RANGE_MERGE_TEST_ARRAY 59
+  #define SIZE_OF_RANGE_MERGE_TEST_ARRAY 68
   /* The actual test data. */
   struct rangelist_merge_test_data test_data[SIZE_OF_RANGE_MERGE_TEST_ARRAY] =
     {
@@ -1265,6 +1280,29 @@ test_rangelist_merge(apr_pool_t *pool)
 
       {"/A: 2-17", "/A: 1-5*,7*,12-13*", 2,
        {{0, 1, FALSE}, {1, 17, TRUE}}},
+
+      {"/A: 3-4*,10-15,20", "/A: 5-60*", 5,
+       {{2, 9, FALSE}, {9, 15, TRUE}, {15, 19, FALSE},{19, 20, TRUE},
+        {20, 60, FALSE}}},
+
+      {"/A: 5-60*", "/A: 3-4*,10-15,20", 5,
+       {{2, 9, FALSE}, {9, 15, TRUE}, {15, 19, FALSE},{19, 20, TRUE},
+        {20, 60, FALSE}}},
+
+      {"/A: 3-4*,50-100*", "/A: 5-60*", 1, {{2, 100, FALSE}}},
+
+      {"/A: 5-60*", "/A: 3-4*,50-100*", 1, {{2, 100, FALSE}}},
+
+      {"/A: 3-4*,50-100", "/A: 5-60*", 2, {{2, 49, FALSE}, {49, 100, TRUE}}},
+
+      {"/A: 5-60*", "/A: 3-4*,50-100", 2, {{2, 49, FALSE}, {49, 100, TRUE}}},
+
+      {"/A: 3-4,50-100*", "/A: 5-60", 2, {{2, 60, TRUE}, {60, 100, FALSE}}},
+
+      {"/A: 5-60", "/A: 3-4,50-100*", 2, {{2, 60, TRUE}, {60, 100, FALSE}}},
+
+      {"/A: 5,9,11-15,17,200-300,999", "/A: 7-50", 4,
+       {{4, 5, TRUE}, {6, 50, TRUE}, {199, 300, TRUE}, {998, 999, TRUE}}},
 
       /* A rangelist merged with an empty rangelist should equal the
          non-empty rangelist but in compacted form. */
