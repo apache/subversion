@@ -31,17 +31,17 @@
 /*-----------------------------------------------------------------*/
 
 
-/* V-table for #svn_client_tree_t. */
-struct svn_client_tree__vtable_t
+/* V-table for #svn_tree_t. */
+typedef struct svn_tree__vtable_t
 {
   /* See svn_tree_get_kind(). */
-  svn_error_t *(*get_kind)(svn_client_tree_t *tree,
+  svn_error_t *(*get_kind)(svn_tree_t *tree,
                            svn_kind_t *kind,
                            const char *relpath,
                            apr_pool_t *scratch_pool);
 
   /* See svn_tree_get_file(). */
-  svn_error_t *(*get_file)(svn_client_tree_t *tree,
+  svn_error_t *(*get_file)(svn_tree_t *tree,
                            svn_stream_t **stream,
                            apr_hash_t **props,
                            const char *relpath,
@@ -49,7 +49,7 @@ struct svn_client_tree__vtable_t
                            apr_pool_t *scratch_pool);
 
   /* See svn_tree_get_dir(). */
-  svn_error_t *(*get_dir)(svn_client_tree_t *tree,
+  svn_error_t *(*get_dir)(svn_tree_t *tree,
                           apr_hash_t **dirents,
                           apr_hash_t **props,
                           const char *relpath,
@@ -57,16 +57,29 @@ struct svn_client_tree__vtable_t
                           apr_pool_t *scratch_pool);
 
   /* See svn_tree_get_symlink(). */
-  svn_error_t *(*get_symlink)(svn_client_tree_t *tree,
+  svn_error_t *(*get_symlink)(svn_tree_t *tree,
                               const char **link_target,
                               apr_hash_t **props,
                               const char *relpath,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
+} svn_tree__vtable_t;
+
+/* The implementation of the typedef svn_tree_t. */
+struct svn_tree_t
+{
+  const svn_tree__vtable_t *vtable;
+
+  /* Pool used to manage this session. */
+  apr_pool_t *pool;
+
+  /* Private data for the tree implementation. */
+  void *priv;
 };
 
+
 svn_error_t *
-svn_tree_get_kind(svn_client_tree_t *tree,
+svn_tree_get_kind(svn_tree_t *tree,
                   svn_kind_t *kind,
                   const char *relpath,
                   apr_pool_t *scratch_pool)
@@ -75,7 +88,7 @@ svn_tree_get_kind(svn_client_tree_t *tree,
 }
 
 svn_error_t *
-svn_tree_get_file(svn_client_tree_t *tree,
+svn_tree_get_file(svn_tree_t *tree,
                   svn_stream_t **stream,
                   apr_hash_t **props,
                   const char *relpath,
@@ -87,7 +100,7 @@ svn_tree_get_file(svn_client_tree_t *tree,
 }
 
 svn_error_t *
-svn_tree_get_dir(svn_client_tree_t *tree,
+svn_tree_get_dir(svn_tree_t *tree,
                  apr_hash_t **dirents,
                  apr_hash_t **props,
                  const char *relpath,
@@ -99,7 +112,7 @@ svn_tree_get_dir(svn_client_tree_t *tree,
 }
 
 svn_error_t *
-svn_tree_get_symlink(svn_client_tree_t *tree,
+svn_tree_get_symlink(svn_tree_t *tree,
                      const char **link_target,
                      apr_hash_t **props,
                      const char *relpath,
@@ -122,7 +135,7 @@ typedef struct disk_tree_baton_t
 
 /* */
 static svn_error_t *
-disk_tree_get_kind(svn_client_tree_t *tree,
+disk_tree_get_kind(svn_tree_t *tree,
                    svn_kind_t *kind,
                    const char *relpath,
                    apr_pool_t *scratch_pool)
@@ -137,7 +150,7 @@ disk_tree_get_kind(svn_client_tree_t *tree,
 
 /* */
 static svn_error_t *
-disk_tree_get_file(svn_client_tree_t *tree,
+disk_tree_get_file(svn_tree_t *tree,
                    svn_stream_t **stream,
                    apr_hash_t **props,
                    const char *relpath,
@@ -159,7 +172,7 @@ disk_tree_get_file(svn_client_tree_t *tree,
 
 /* */
 static svn_error_t *
-disk_tree_get_dir(svn_client_tree_t *tree,
+disk_tree_get_dir(svn_tree_t *tree,
                   apr_hash_t **dirents,
                   apr_hash_t **props,
                   const char *relpath,
@@ -183,7 +196,7 @@ disk_tree_get_dir(svn_client_tree_t *tree,
 
 /* */
 static svn_error_t *
-disk_tree_get_symlink(svn_client_tree_t *tree,
+disk_tree_get_symlink(svn_tree_t *tree,
                       const char **link_target,
                       apr_hash_t **props,
                       const char *relpath,
@@ -207,7 +220,7 @@ disk_tree_get_symlink(svn_client_tree_t *tree,
 }
 
 /* */
-static const svn_client_tree__vtable_t disk_tree_vtable =
+static const svn_tree__vtable_t disk_tree_vtable =
 {
   disk_tree_get_kind,
   disk_tree_get_file,
@@ -216,11 +229,11 @@ static const svn_client_tree__vtable_t disk_tree_vtable =
 };
 
 svn_error_t *
-svn_client__disk_tree(svn_client_tree_t **tree_p,
+svn_client__disk_tree(svn_tree_t **tree_p,
                       const char *abspath,
                       apr_pool_t *result_pool)
 {
-  svn_client_tree_t *tree = apr_palloc(result_pool, sizeof(*tree));
+  svn_tree_t *tree = apr_palloc(result_pool, sizeof(*tree));
   disk_tree_baton_t *baton = apr_palloc(result_pool, sizeof(*baton));
 
   baton->tree_abspath = abspath;
@@ -246,7 +259,7 @@ typedef struct wc_tree_baton_t
 
 /* */
 static svn_error_t *
-wc_tree_get_kind(svn_client_tree_t *tree,
+wc_tree_get_kind(svn_tree_t *tree,
                  svn_kind_t *kind,
                  const char *relpath,
                  apr_pool_t *scratch_pool)
@@ -268,7 +281,7 @@ wc_tree_get_kind(svn_client_tree_t *tree,
 
 /* */
 static svn_error_t *
-wc_tree_get_file(svn_client_tree_t *tree,
+wc_tree_get_file(svn_tree_t *tree,
                  svn_stream_t **stream,
                  apr_hash_t **props,
                  const char *relpath,
@@ -303,7 +316,7 @@ wc_tree_get_file(svn_client_tree_t *tree,
 
 /* */
 static svn_error_t *
-wc_tree_get_dir(svn_client_tree_t *tree,
+wc_tree_get_dir(svn_tree_t *tree,
                 apr_hash_t **dirents,
                 apr_hash_t **props,
                 const char *relpath,
@@ -352,7 +365,7 @@ wc_tree_get_dir(svn_client_tree_t *tree,
 
 /* */
 static svn_error_t *
-wc_tree_get_symlink(svn_client_tree_t *tree,
+wc_tree_get_symlink(svn_tree_t *tree,
                     const char **link_target,
                     apr_hash_t **props,
                     const char *relpath,
@@ -388,7 +401,7 @@ wc_tree_get_symlink(svn_client_tree_t *tree,
 }
 
 /* */
-static const svn_client_tree__vtable_t wc_tree_vtable =
+static const svn_tree__vtable_t wc_tree_vtable =
 {
   wc_tree_get_kind,
   wc_tree_get_file,
@@ -397,12 +410,12 @@ static const svn_client_tree__vtable_t wc_tree_vtable =
 };
 
 svn_error_t *
-svn_client__wc_base_tree(svn_client_tree_t **tree_p,
+svn_client__wc_base_tree(svn_tree_t **tree_p,
                          const char *abspath,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *result_pool)
 {
-  svn_client_tree_t *tree = apr_pcalloc(result_pool, sizeof(*tree));
+  svn_tree_t *tree = apr_pcalloc(result_pool, sizeof(*tree));
   wc_tree_baton_t *baton = apr_palloc(result_pool, sizeof(*baton));
 
   baton->tree_abspath = abspath;
@@ -418,12 +431,12 @@ svn_client__wc_base_tree(svn_client_tree_t **tree_p,
 }
 
 svn_error_t *
-svn_client__wc_working_tree(svn_client_tree_t **tree_p,
+svn_client__wc_working_tree(svn_tree_t **tree_p,
                             const char *abspath,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *result_pool)
 {
-  svn_client_tree_t *tree = apr_pcalloc(result_pool, sizeof(*tree));
+  svn_tree_t *tree = apr_pcalloc(result_pool, sizeof(*tree));
   wc_tree_baton_t *baton = apr_palloc(result_pool, sizeof(*baton));
 
   baton->tree_abspath = abspath;
@@ -450,7 +463,7 @@ typedef struct ra_tree_baton_t
 
 /* */
 static svn_error_t *
-ra_tree_get_kind(svn_client_tree_t *tree,
+ra_tree_get_kind(svn_tree_t *tree,
                  svn_kind_t *kind,
                  const char *relpath,
                  apr_pool_t *scratch_pool)
@@ -464,7 +477,7 @@ ra_tree_get_kind(svn_client_tree_t *tree,
 
 /* */
 static svn_error_t *
-ra_tree_get_file(svn_client_tree_t *tree,
+ra_tree_get_file(svn_tree_t *tree,
                  svn_stream_t **stream,
                  apr_hash_t **props,
                  const char *relpath,
@@ -486,7 +499,7 @@ ra_tree_get_file(svn_client_tree_t *tree,
 
 /* */
 static svn_error_t *
-ra_tree_get_dir(svn_client_tree_t *tree,
+ra_tree_get_dir(svn_tree_t *tree,
                 apr_hash_t **dirents,
                 apr_hash_t **props,
                 const char *relpath,
@@ -505,7 +518,7 @@ ra_tree_get_dir(svn_client_tree_t *tree,
 
 /* */
 static svn_error_t *
-ra_tree_get_symlink(svn_client_tree_t *tree,
+ra_tree_get_symlink(svn_tree_t *tree,
                     const char **link_target,
                     apr_hash_t **props,
                     const char *relpath,
@@ -520,7 +533,7 @@ ra_tree_get_symlink(svn_client_tree_t *tree,
 }
 
 /* */
-static const svn_client_tree__vtable_t ra_tree_vtable =
+static const svn_tree__vtable_t ra_tree_vtable =
 {
   ra_tree_get_kind,
   ra_tree_get_file,
@@ -530,12 +543,12 @@ static const svn_client_tree__vtable_t ra_tree_vtable =
 
 /* */
 static svn_error_t *
-read_ra_tree(svn_client_tree_t **tree_p,
+read_ra_tree(svn_tree_t **tree_p,
              svn_ra_session_t *ra_session,
              svn_revnum_t revnum,
              apr_pool_t *result_pool)
 {
-  svn_client_tree_t *tree = apr_pcalloc(result_pool, sizeof(*tree));
+  svn_tree_t *tree = apr_pcalloc(result_pool, sizeof(*tree));
   ra_tree_baton_t *baton = apr_palloc(result_pool, sizeof(*baton));
 
   baton->ra_session = ra_session;
@@ -550,7 +563,7 @@ read_ra_tree(svn_client_tree_t **tree_p,
 }
 
 svn_error_t *
-svn_client__repository_tree(svn_client_tree_t **tree_p,
+svn_client__repository_tree(svn_tree_t **tree_p,
                             const char *path_or_url,
                             const svn_opt_revision_t *peg_revision,
                             const svn_opt_revision_t *revision,
@@ -575,7 +588,7 @@ svn_client__repository_tree(svn_client_tree_t **tree_p,
 /*-----------------------------------------------------------------*/
 
 svn_error_t *
-svn_client__open_tree(svn_client_tree_t **tree,
+svn_client__open_tree(svn_tree_t **tree,
                       const char *path,
                       const svn_opt_revision_t *revision,
                       const svn_opt_revision_t *peg_revision,

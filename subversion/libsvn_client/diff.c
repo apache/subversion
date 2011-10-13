@@ -71,7 +71,7 @@ static const char under_string[] =
 
 /* */
 static svn_error_t *
-tree_get_tmp_file(svn_client_tree_t *tree,
+tree_get_tmp_file(svn_tree_t *tree,
                   const char **tmpfile_abspath,
                   apr_hash_t **props,
                   const char *relpath,
@@ -97,9 +97,9 @@ tree_get_tmp_file(svn_client_tree_t *tree,
 
 /* Compare two (independent) trees */
 static svn_error_t *
-compare_two_trees(svn_client_tree_t *tree1,
+compare_two_trees(svn_tree_t *tree1,
                   const char *relpath1,
-                  svn_client_tree_t *tree2,
+                  svn_tree_t *tree2,
                   const char *relpath2,
                   const svn_wc_diff_callbacks4_t *callbacks,
                   void *callback_baton,
@@ -2183,7 +2183,7 @@ do_diff(const svn_wc_diff_callbacks4_t *callbacks,
 
   /* Compare two independent trees */
   {
-    svn_client_tree_t *tree1, *tree2;
+    svn_tree_t *tree1, *tree2;
 
     SVN_ERR(svn_client__open_tree(&tree1, path1, revision1, peg_revision,
                                   ctx, pool, pool));

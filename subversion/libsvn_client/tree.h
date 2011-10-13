@@ -21,45 +21,20 @@ extern "C" {
 #endif
 
 
-/* Present as a tree:
- *   an unversioned disk tree;
- *   a WC base tree
- *   a WC working tree
- *   a repository tree
- * 
- * The consumer "pulls" parts of the tree and can omit unwanted parts.
- * Consumer can pull any subtree "recursively" for efficient streaming.
- */
-
-/**
- * A readable tree.  This object is used to perform read requests to a
- * repository tree or a working-copy (base or working) tree or any other
- * readable tree.
+/** A readable tree.  This object presents an interface for reading from
+ * a generic version-controlled tree in which each node is a file, a
+ * directory or a symbolic link, and each node can have properties.
+ *
+ * An implementation of this interface could read from a tree that exists
+ * at some revision of a repository, or the base or working version of
+ * a Working Copy tree, or an unversioned tree on disk, or something else.
+ *
+ * Paths are relpaths, relative to the tree root, unless otherwise stated.
  *
  * @since New in 1.8.
  */
-typedef struct svn_client_tree_t svn_client_tree_t;
+typedef struct svn_tree_t svn_tree_t;
 
-/*
- * Paths are relpaths, relative to the tree root.
- *
- * Revision numbers and repository ids are #SVN_INVALID_REVNUM and NULL
- * for an unversioned node (including a node that is a local add/copy/move
- * in a WC working tree).
- */
-typedef struct svn_client_tree__vtable_t svn_client_tree__vtable_t;
-
-/* */
-struct svn_client_tree_t
-{
-  const svn_client_tree__vtable_t *vtable;
-
-  /* Pool used to manage this session. */
-  apr_pool_t *pool;
-
-  /* Private data for the tree implementation. */
-  void *priv;
-};
 
 /* Fetch the node kind of the node at @a relpath.
  * (### and other metadata? revnum? props?)
@@ -69,7 +44,7 @@ struct svn_client_tree_t
  * Set @a *kind to the node kind.
  */
 svn_error_t *
-svn_tree_get_kind(svn_client_tree_t *tree,
+svn_tree_get_kind(svn_tree_t *tree,
                   svn_kind_t *kind,
                   const char *relpath,
                   apr_pool_t *scratch_pool);
@@ -88,7 +63,7 @@ svn_tree_get_kind(svn_client_tree_t *tree,
  * #SVN_ERR_WRONG_KIND error.
  */
 svn_error_t *
-svn_tree_get_file(svn_client_tree_t *tree,
+svn_tree_get_file(svn_tree_t *tree,
                   svn_stream_t **stream,
                   apr_hash_t **props,
                   const char *relpath,
@@ -111,7 +86,7 @@ svn_tree_get_file(svn_client_tree_t *tree,
  * #SVN_ERR_WRONG_KIND error.
  */
 svn_error_t *
-svn_tree_get_dir(svn_client_tree_t *tree,
+svn_tree_get_dir(svn_tree_t *tree,
                  apr_hash_t **dirents,
                  apr_hash_t **props,
                  const char *relpath,
@@ -131,7 +106,7 @@ svn_tree_get_dir(svn_client_tree_t *tree,
  * #SVN_ERR_WRONG_KIND error.
  */
 svn_error_t *
-svn_tree_get_symlink(svn_client_tree_t *tree,
+svn_tree_get_symlink(svn_tree_t *tree,
                      const char **link_target,
                      apr_hash_t **props,
                      const char *relpath,
@@ -143,27 +118,27 @@ svn_tree_get_symlink(svn_client_tree_t *tree,
 
 /* */
 svn_error_t *
-svn_client__disk_tree(svn_client_tree_t **tree_p,
+svn_client__disk_tree(svn_tree_t **tree_p,
                       const char *abspath,
                       apr_pool_t *result_pool);
 
 /* */
 svn_error_t *
-svn_client__wc_base_tree(svn_client_tree_t **tree_p,
+svn_client__wc_base_tree(svn_tree_t **tree_p,
                          const char *abspath,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *result_pool);
 
 /* */
 svn_error_t *
-svn_client__wc_working_tree(svn_client_tree_t **tree_p,
+svn_client__wc_working_tree(svn_tree_t **tree_p,
                             const char *abspath,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *result_pool);
 
 /* */
 svn_error_t *
-svn_client__repository_tree(svn_client_tree_t **tree_p,
+svn_client__repository_tree(svn_tree_t **tree_p,
                             const char *path_or_url,
                             const svn_opt_revision_t *peg_revision,
                             const svn_opt_revision_t *revision,
@@ -172,7 +147,7 @@ svn_client__repository_tree(svn_client_tree_t **tree_p,
 
 /* Open a tree, whether in the repository or a WC or unversioned on disk. */
 svn_error_t *
-svn_client__open_tree(svn_client_tree_t **tree,
+svn_client__open_tree(svn_tree_t **tree,
                       const char *path,
                       const svn_opt_revision_t *revision,
                       const svn_opt_revision_t *peg_revision,

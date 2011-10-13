@@ -124,7 +124,7 @@ get_dir_contents(apr_uint32_t dirent_fields,
 
 /* */
 static svn_error_t *
-list_tree(svn_client_tree_t *tree,
+list_tree(svn_tree_t *tree,
           const char *relpath,
           const char *abs_path,
           svn_depth_t depth,
@@ -298,7 +298,7 @@ svn_client_list2(const char *path_or_url,
   {
     static svn_opt_revision_t head_rev = { svn_opt_revision_head, { 0 } };
     static svn_opt_revision_t work_rev = { svn_opt_revision_working, { 0 } };
-    svn_client_tree_t *tree;
+    svn_tree_t *tree;
 
     /* Look at the local tree if given a local path.  This is a departure
      * from the semantics svn <= 1.7 which always looked at the repository. */
