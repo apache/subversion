@@ -182,16 +182,9 @@ test_membuffer_cache_basic(apr_pool_t *pool)
 {
   svn_cache__t *cache;
   svn_membuffer_t *membuffer;
-  svn_boolean_t thread_safe;
-
-#if APR_HAS_THREADS
-  thread_safe = TRUE;
-#else
-  thread_safe = FALSE;
-#endif
 
   SVN_ERR(svn_cache__membuffer_cache_create(&membuffer, 10*1024, 1,
-                                            thread_safe, pool));
+                                            APR_HAS_THREADS, pool));
 
   /* Create a cache with just one entry. */
   SVN_ERR(svn_cache__create_membuffer_cache(&cache,
