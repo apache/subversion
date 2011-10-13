@@ -42,8 +42,8 @@ extern "C" {
 #if APR_HAS_THREADS
 
 /** A mutex for synchronization between threads. It may be NULL, in
- * which case no synchronization will take place. The latter is useful,
- * if implement some functionality where synchronization is optional.
+ * which case no synchronization will take place. The latter is useful
+ * when implementing some functionality with optional synchronization.
  */
 typedef apr_thread_mutex_t svn_mutex__t;
 
