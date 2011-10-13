@@ -312,8 +312,8 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
 
   if (predates_stream_mergeinfo)
     {
-      SVN_ERR(svn_mergeinfo_merge(final_mergeinfo, predates_stream_mergeinfo,
-                                  subpool));
+      SVN_ERR(svn_mergeinfo_merge2(final_mergeinfo, predates_stream_mergeinfo,
+                                   subpool, subpool));
     }
 
   SVN_ERR(svn_mergeinfo_sort(final_mergeinfo, subpool));
