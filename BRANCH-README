@@ -14,9 +14,13 @@ libsvn_client code to be simplified and new client code to be written
 more easily.
 
 Then a more interesting stage: we should be able to write e.g. a 'diff'
-routine that compares two arbitrary trees - e.g. in r100 in repo A against
+routine that compares two arbitrary trees, such as r100 in repo A against
 r100 in repo B, or the unversioned tree '/tmp/saved-tests' against the WC tree
-'wc/subversion/tests'.
+'wc/subversion/tests'.  Diffing large unrelated trees byte-by-byte is
+inherently expensive compared with Subversion's present diff methods, and we
+might want to consider ways to shortcut the full comparison such as by
+comparing checksums, but even without optimization, at least such diffs
+become possible and can be much faster than a manual process.
 
 At the time of this writing, the API is in subversion/libsvn_client/tree.h,
 but I expect to move it.
