@@ -118,6 +118,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1182904, r1182909
+   Print an error message if a working copy upgrade fails due to bad MD5
+   base checksums, rather than asserting.
+   Justification:
+     Should reduce amount of spurious TortoiseSVN assertion reports on users@.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
