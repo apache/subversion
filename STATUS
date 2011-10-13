@@ -123,8 +123,9 @@ Candidate changes:
    base checksums, rather than asserting.
    Justification:
      Should reduce amount of spurious TortoiseSVN assertion reports on users@.
+     Invalid on-disk data does not merit an assertion.
    Votes:
-     +1: stsp
+     +1: stsp, danielsh
 
 Veto-blocked changes:
 =====================
