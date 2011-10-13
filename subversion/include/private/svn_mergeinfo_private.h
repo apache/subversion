@@ -252,6 +252,17 @@ svn_mergeinfo__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
                                        const apr_array_header_t *segments,
                                        apr_pool_t *pool);
 
+/* Merge every rangelist in MERGEINFO into the given MERGED_RANGELIST,
+ * ignoring the source paths of MERGEINFO. MERGED_RANGELIST may
+ * initially be empty. New elements added to @a rangelist are allocated in
+ * @a result_pool. See svn_rangelist_merge2() for details of inheritability
+ * etc. */
+svn_error_t *
+svn_rangelist__merge_many(apr_array_header_t *merged_rangelist,
+                          svn_mergeinfo_t mergeinfo,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

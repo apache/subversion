@@ -2608,6 +2608,33 @@ svn_mergeinfo__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_rangelist__merge_many(apr_array_header_t *merged_rangelist,
+                          svn_mergeinfo_t merge_history,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  if (apr_hash_count(merge_history))
+    {
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first(scratch_pool, merge_history);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          apr_array_header_t *subtree_rangelist = svn__apr_hash_index_val(hi);
+
+          svn_pool_clear(iterpool);
+          SVN_ERR(svn_rangelist_merge2(merged_rangelist, subtree_rangelist,
+                                       result_pool, iterpool));
+        }
+      svn_pool_destroy(iterpool);
+    }
+  return SVN_NO_ERROR;
+}
+
+
 const char *
 svn_inheritance_to_word(svn_mergeinfo_inheritance_t inherit)
 {

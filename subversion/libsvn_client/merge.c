@@ -4142,21 +4142,10 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
       apr_array_header_t *implicit_rangelist =
         apr_array_make(scratch_pool, 2, sizeof(svn_merge_range_t *));
       apr_array_header_t *gap_rangelist;
-      apr_hash_index_t *hi;
-      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-      for (hi = apr_hash_first(scratch_pool, implicit_src_mergeinfo);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          apr_array_header_t *value = svn__apr_hash_index_val(hi);
-
-          svn_pool_clear(iterpool);
-
-          SVN_ERR(svn_rangelist_merge2(implicit_rangelist, value,
-                                       scratch_pool, iterpool));
-        }
-      svn_pool_destroy(iterpool);
+      SVN_ERR(svn_rangelist__merge_many(implicit_rangelist,
+                                        implicit_src_mergeinfo,
+                                        scratch_pool, scratch_pool));
       SVN_ERR(svn_rangelist_remove(&gap_rangelist, implicit_rangelist,
                                    requested_rangelist, FALSE,
                                    scratch_pool));
@@ -9969,21 +9958,10 @@ find_unsynced_ranges(const char *source_repos_rel_path,
            hi_catalog = apr_hash_next(hi_catalog))
         {
           svn_mergeinfo_t mergeinfo = svn__apr_hash_index_val(hi_catalog);
-          apr_hash_index_t *hi_mergeinfo;
-          apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-          for (hi_mergeinfo = apr_hash_first(scratch_pool, mergeinfo);
-               hi_mergeinfo;
-               hi_mergeinfo = apr_hash_next(hi_mergeinfo))
-            {
-              apr_array_header_t *rangelist =
-                svn__apr_hash_index_val(hi_mergeinfo);
-
-              svn_pool_clear(iterpool);
-              SVN_ERR(svn_rangelist_merge2(potentially_unmerged_ranges,
-                                           rangelist, scratch_pool, iterpool));
-            }
-          svn_pool_destroy(iterpool);
+          SVN_ERR(svn_rangelist__merge_many(potentially_unmerged_ranges,
+                                            mergeinfo,
+                                            scratch_pool, scratch_pool));
         }
     }
 
