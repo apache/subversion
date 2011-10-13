@@ -122,64 +122,64 @@ svn_wc__internal_check_wc(int *wc_format,
         }
     }
 
-    if (*wc_format >= SVN_WC__WC_NG_VERSION)
-      {
-        svn_wc__db_status_t db_status;
-        svn_kind_t db_kind;
+  if (*wc_format >= SVN_WC__WC_NG_VERSION)
+    {
+      svn_wc__db_status_t db_status;
+      svn_kind_t db_kind;
 
-        if (check_path)
-          {
-            /* If a node is not a directory, it is not a working copy
-               directory.  This allows creating new working copies as
-               a path below an existing working copy. */
-            svn_node_kind_t wc_kind;
+      if (check_path)
+        {
+          /* If a node is not a directory, it is not a working copy
+             directory.  This allows creating new working copies as
+             a path below an existing working copy. */
+          svn_node_kind_t wc_kind;
 
-            SVN_ERR(svn_io_check_path(local_abspath, &wc_kind, scratch_pool));
-            if (wc_kind != svn_node_dir)
-              {
-                *wc_format = 0; /* Not a directory, so not a wc-directory */
-                return SVN_NO_ERROR;
-              }
-          }
-
-        err = svn_wc__db_read_info(&db_status, &db_kind, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL,
-                                   db, local_abspath,
-                                   scratch_pool, scratch_pool);
-
-        if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-          {
-            svn_error_clear(err);
-            *wc_format = 0;
-            return SVN_NO_ERROR;
-          }
-        else
-          SVN_ERR(err);
-
-        if (db_kind != svn_kind_dir)
-          {
-            /* The WC thinks there must be a file, so this is not
-               a wc-directory */
-            *wc_format = 0;
-            return SVN_NO_ERROR;
-          }
-
-        switch (db_status)
-          {
-            case svn_wc__db_status_not_present:
-            case svn_wc__db_status_server_excluded:
-            case svn_wc__db_status_excluded:
-              /* If there is a directory here, it is not related to the parent
-                 working copy: Obstruction */
-              *wc_format = 0;
+          SVN_ERR(svn_io_check_path(local_abspath, &wc_kind, scratch_pool));
+          if (wc_kind != svn_node_dir)
+            {
+              *wc_format = 0; /* Not a directory, so not a wc-directory */
               return SVN_NO_ERROR;
-            default:
-              break;
-          }
-      }
+            }
+        }
+
+      err = svn_wc__db_read_info(&db_status, &db_kind, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
+                                 db, local_abspath,
+                                 scratch_pool, scratch_pool);
+
+      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          *wc_format = 0;
+          return SVN_NO_ERROR;
+        }
+      else
+        SVN_ERR(err);
+
+      if (db_kind != svn_kind_dir)
+        {
+          /* The WC thinks there must be a file, so this is not
+             a wc-directory */
+          *wc_format = 0;
+          return SVN_NO_ERROR;
+        }
+
+      switch (db_status)
+        {
+          case svn_wc__db_status_not_present:
+          case svn_wc__db_status_server_excluded:
+          case svn_wc__db_status_excluded:
+            /* If there is a directory here, it is not related to the parent
+               working copy: Obstruction */
+            *wc_format = 0;
+            return SVN_NO_ERROR;
+          default:
+            break;
+        }
+    }
 
   return SVN_NO_ERROR;
 }
