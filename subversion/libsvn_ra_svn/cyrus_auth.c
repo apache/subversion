@@ -123,10 +123,10 @@ static int check_result(svn_error_t *err)
   if (err)
     {
       svn_error_clear(err);
-      return 0;
+      return -1;
     }
     
-  return -1;
+  return 0;
 }
 
 static int sasl_mutex_lock_cb(void *mutex)
@@ -771,7 +771,7 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
   const char *local_addrport = NULL, *remote_addrport = NULL;
   svn_boolean_t success;
   sasl_callback_t *callbacks;
-  cred_baton_t cred_baton;
+  cred_baton_t cred_baton = { 0 };
   int i;
 
   if (!sess->is_tunneled)
@@ -801,7 +801,6 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
   realmstring = apr_psprintf(pool, "%s %s", sess->realm_prefix, realm);
 
   /* Initialize the credential baton. */
-  memset(&cred_baton, 0, sizeof(cred_baton));
   cred_baton.auth_baton = sess->callbacks->auth_baton;
   cred_baton.realmstring = realmstring;
   cred_baton.pool = pool;

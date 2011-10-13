@@ -1937,23 +1937,9 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
 
       /* Keep track of all ranges partially merged to any and all
          subtrees. */
-      if (apr_hash_count(merged_noninheritable))
-        {
-          apr_pool_t *iterpool2 = svn_pool_create(iterpool);
-
-          for (hi = apr_hash_first(iterpool, merged_noninheritable);
-               hi;
-               hi = apr_hash_next(hi))
-            {
-              apr_array_header_t *list = svn__apr_hash_index_val(hi);
-              svn_pool_clear(iterpool2);
-              SVN_ERR(svn_rangelist_merge2(
-                master_noninheritable_rangelist,
-                svn_rangelist_dup(list, scratch_pool),
-                scratch_pool, iterpool2));
-            }
-          svn_pool_destroy(iterpool2);
-        }
+      SVN_ERR(svn_rangelist__merge_many(master_noninheritable_rangelist,
+                                        merged_noninheritable,
+                                        scratch_pool, iterpool));
 
       /* Find the intersection of the inheritable part of TGT_MERGEINFO
          and SOURCE_HISTORY. */
@@ -1970,25 +1956,11 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
              to SUBTREE_PATH. */
           apr_array_header_t *subtree_merged_rangelist =
             apr_array_make(scratch_pool, 1, sizeof(svn_merge_range_t *));
-          apr_pool_t *iterpool2 = svn_pool_create(iterpool);
 
-          for (hi = apr_hash_first(iterpool, merged);
-               hi;
-               hi = apr_hash_next(hi))
-            {
-              apr_array_header_t *list = svn__apr_hash_index_val(hi);
-
-              svn_pool_clear(iterpool2);
-              SVN_ERR(svn_rangelist_merge2(master_inheritable_rangelist,
-                                           svn_rangelist_dup(list,
-                                                             scratch_pool),
-                                           scratch_pool, iterpool2));
-              SVN_ERR(svn_rangelist_merge2(subtree_merged_rangelist,
-                                           svn_rangelist_dup(list,
-                                                            scratch_pool),
-                                           scratch_pool, iterpool2));
-            }
-          svn_pool_destroy(iterpool2);
+          SVN_ERR(svn_rangelist__merge_many(master_inheritable_rangelist,
+                                            merged, scratch_pool, iterpool));
+          SVN_ERR(svn_rangelist__merge_many(subtree_merged_rangelist,
+                                            merged, scratch_pool, iterpool));
 
           apr_hash_set(inheritable_subtree_merges,
                        apr_pstrdup(scratch_pool, subtree_path),
@@ -2062,18 +2034,9 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
       apr_array_header_t *source_master_rangelist =
         apr_array_make(scratch_pool, 1, sizeof(svn_merge_range_t *));
 
-      for (hi = apr_hash_first(scratch_pool, source_history);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          apr_array_header_t *subtree_merged_rangelist =
-            svn__apr_hash_index_val(hi);
-
-          svn_pool_clear(iterpool);
-          SVN_ERR(svn_rangelist_merge2(source_master_rangelist,
-                                       subtree_merged_rangelist,
-                                       scratch_pool, iterpool));
-        }
+      SVN_ERR(svn_rangelist__merge_many(source_master_rangelist,
+                                        source_history,
+                                        scratch_pool, scratch_pool));
 
       /* From what might be eligible subtract what we know is partially merged
          and then merge that back. */

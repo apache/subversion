@@ -265,8 +265,9 @@ svn_fs_initialize(apr_pool_t *pool)
     return SVN_NO_ERROR;
 
   common_pool = svn_pool_create(pool);
+#if APR_HAS_THREADS
   SVN_ERR(svn_mutex__init(&common_pool_lock, TRUE, common_pool));
-
+#endif
   /* ### This won't work if POOL is NULL and libsvn_fs is loaded as a DSO
      ### (via libsvn_ra_local say) since the global common_pool will live
      ### longer than the DSO, which gets unloaded when the pool used to

@@ -95,7 +95,8 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
       SVN_ERR(svn_mutex__init(&ffsd->txn_current_lock, 
                               SVN_FS_FS__USE_LOCK_MUTEX, common_pool));
 
-      SVN_ERR(svn_mutex__init(&ffsd->txn_list_lock, TRUE, common_pool));
+      SVN_ERR(svn_mutex__init(&ffsd->txn_list_lock,
+                              SVN_FS_FS__USE_LOCK_MUTEX, common_pool));
 
       key = apr_pstrdup(common_pool, key);
       status = apr_pool_userdata_set(ffsd, key, NULL, common_pool);

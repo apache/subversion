@@ -1060,8 +1060,9 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
       /* Combine whatever older and younger filtered mergeinfo exists
          into filtered_mergeinfo. */
       if (filtered_mergeinfo && filtered_younger_mergeinfo)
-        SVN_ERR(svn_mergeinfo_merge(filtered_mergeinfo,
-                                    filtered_younger_mergeinfo, iterpool));
+        SVN_ERR(svn_mergeinfo_merge2(filtered_mergeinfo,
+                                     filtered_younger_mergeinfo, iterpool,
+                                     iterpool));
       else if (filtered_younger_mergeinfo)
         filtered_mergeinfo = filtered_younger_mergeinfo;
 
@@ -1463,7 +1464,6 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
   if (wc_kind != svn_node_file || is_deleted)
     {
       const char *moved_to_abspath;
-      svn_wc_conflict_reason_t reason;
       svn_error_t *err;
 
       /* Maybe the node is excluded via depth filtering? */
@@ -1513,6 +1513,8 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
         }
       else
         {
+          svn_wc_conflict_reason_t reason;
+
           if (is_deleted)
             reason = svn_wc_conflict_reason_deleted;
           else
@@ -4140,21 +4142,10 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
       apr_array_header_t *implicit_rangelist =
         apr_array_make(scratch_pool, 2, sizeof(svn_merge_range_t *));
       apr_array_header_t *gap_rangelist;
-      apr_hash_index_t *hi;
-      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-      for (hi = apr_hash_first(scratch_pool, implicit_src_mergeinfo);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          apr_array_header_t *value = svn__apr_hash_index_val(hi);
-
-          svn_pool_clear(iterpool);
-
-          SVN_ERR(svn_rangelist_merge2(implicit_rangelist, value,
-                                       scratch_pool, iterpool));
-        }
-      svn_pool_destroy(iterpool);
+      SVN_ERR(svn_rangelist__merge_many(implicit_rangelist,
+                                        implicit_src_mergeinfo,
+                                        scratch_pool, scratch_pool));
       SVN_ERR(svn_rangelist_remove(&gap_rangelist, implicit_rangelist,
                                    requested_rangelist, FALSE,
                                    scratch_pool));
@@ -7176,9 +7167,9 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
              explicit mergeinfo. */
           if (path_inherited_mergeinfo)
             {
-              SVN_ERR(svn_mergeinfo_merge(path_explicit_mergeinfo,
-                                          path_inherited_mergeinfo,
-                                          iterpool));
+              SVN_ERR(svn_mergeinfo_merge2(path_explicit_mergeinfo,
+                                           path_inherited_mergeinfo,
+                                           iterpool, iterpool));
               SVN_ERR(svn_client__record_wc_mergeinfo(
                                           abspath_with_new_mergeinfo,
                                           path_explicit_mergeinfo,
@@ -7946,8 +7937,9 @@ record_mergeinfo_for_added_subtrees(
           /* Combine the explict mergeinfo on the added path (if any)
              with the mergeinfo describing this merge. */
           if (added_path_mergeinfo)
-            SVN_ERR(svn_mergeinfo_merge(merge_mergeinfo, added_path_mergeinfo,
-                                        iterpool));
+            SVN_ERR(svn_mergeinfo_merge2(merge_mergeinfo,
+                                         added_path_mergeinfo,
+                                         iterpool, iterpool));
           SVN_ERR(svn_client__record_wc_mergeinfo(
             added_abspath, merge_mergeinfo,
             !squelch_mergeinfo_notifications, merge_b->ctx, iterpool));
@@ -9966,21 +9958,10 @@ find_unsynced_ranges(const char *source_repos_rel_path,
            hi_catalog = apr_hash_next(hi_catalog))
         {
           svn_mergeinfo_t mergeinfo = svn__apr_hash_index_val(hi_catalog);
-          apr_hash_index_t *hi_mergeinfo;
-          apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-          for (hi_mergeinfo = apr_hash_first(scratch_pool, mergeinfo);
-               hi_mergeinfo;
-               hi_mergeinfo = apr_hash_next(hi_mergeinfo))
-            {
-              apr_array_header_t *rangelist =
-                svn__apr_hash_index_val(hi_mergeinfo);
-
-              svn_pool_clear(iterpool);
-              SVN_ERR(svn_rangelist_merge2(potentially_unmerged_ranges,
-                                           rangelist, scratch_pool, iterpool));
-            }
-          svn_pool_destroy(iterpool);
+          SVN_ERR(svn_rangelist__merge_many(potentially_unmerged_ranges,
+                                            mergeinfo,
+                                            scratch_pool, scratch_pool));
         }
     }
 
@@ -10212,8 +10193,9 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
                                                   ctx, iterpool));
       SVN_ERR(svn_mergeinfo__mergeinfo_from_segments(
         &source_history_as_mergeinfo, segments, iterpool));
-      SVN_ERR(svn_mergeinfo_merge(source_mergeinfo,
-                                  source_history_as_mergeinfo, iterpool));
+      SVN_ERR(svn_mergeinfo_merge2(source_mergeinfo,
+                                   source_history_as_mergeinfo, iterpool,
+                                   iterpool));
 
       /* Now source_mergeinfo represents everything we know about
          source_path's history.  Now we need to know what part, if any, of the
@@ -10329,9 +10311,9 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
                 ctx, iterpool));
               SVN_ERR(svn_mergeinfo__mergeinfo_from_segments(
                 &source_history_as_mergeinfo, segments, iterpool));
-              SVN_ERR(svn_mergeinfo_merge(source_mergeinfo,
-                                          source_history_as_mergeinfo,
-                                          iterpool));
+              SVN_ERR(svn_mergeinfo_merge2(source_mergeinfo,
+                                           source_history_as_mergeinfo,
+                                           iterpool, iterpool));
               SVN_ERR(svn_mergeinfo_intersect2(&common_mergeinfo,
                                                source_mergeinfo,
                                                target_history_as_mergeinfo,

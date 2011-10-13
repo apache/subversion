@@ -367,6 +367,7 @@ static apr_status_t
 clear_cache(void *data)
 {
   bdb_cache = NULL;
+  bdb_cache_lock = NULL;
   return APR_SUCCESS;
 }
 
@@ -540,6 +541,7 @@ svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
 #endif
     }
 
+  /* This may run during final pool cleanup when the lock is NULL. */
   SVN_MUTEX__WITH_LOCK(bdb_cache_lock, svn_fs_bdb__close_internal(bdb));
   
   return SVN_NO_ERROR;
