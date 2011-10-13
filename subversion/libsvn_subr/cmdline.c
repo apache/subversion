@@ -204,7 +204,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
 
   /* DSO pool must be created before any other pools used by the
      application so that pool cleanup doesn't unload DSOs too
-     early. */
+     early. See docstring of svn_dso_initialize2(). */
   if ((err = svn_dso_initialize2()))
     {
       if (error_stream)
