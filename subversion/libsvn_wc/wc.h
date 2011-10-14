@@ -350,10 +350,8 @@ svn_wc__prop_array_to_hash(const apr_array_header_t *props,
  *
  * If EXACT_COMPARISON is FALSE, translate LOCAL_ABSPATH's EOL
  * style and keywords to repository-normal form according to its properties,
- * and compare the result with the text base.  If COMPARE_TEXTBASES is
- * TRUE, translate the text base's EOL style and keywords to working-copy
- * form according to LOCAL_ABSPATH's properties, and compare the
- * result with LOCAL_ABSPATH.  Usually, EXACT_COMPARISON should be FALSE.
+ * and compare the result with the text base.
+ * Usually, EXACT_COMPARISON should be FALSE.
  *
  * If LOCAL_ABSPATH does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
