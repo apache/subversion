@@ -141,6 +141,23 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1149103, r1149135
+   Fix a possible assertion during merge: svn: E235000: In file
+   'subversion/libsvn_subr/mergeinfo.c' line 802: assertion failed
+   (IS_VALID_FORWARD_RANGE(first))
+   Justification:
+     Assertions are bad.
+   Notes:
+     Reported privately to me by a Subversion user running OpenBSD.
+     I don't know how to reproduce it, and no public issue was filed.
+     The user patiently tried several builds and patches for me.
+     We discovered that the merge succeeded with a trunk build.
+     Reverse-merging r1149135 from trunk made the assertion failure appear.
+     This revision was not intended to fix a bug but apparently it did :)
+     r1149103 is a non-functional change which avoids a merge conflict.
+   Votes:
+     +1: stsp, julianfoad
+
 Veto-blocked changes:
 =====================
 
