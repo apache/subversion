@@ -383,12 +383,19 @@ public class SVNClient implements SVNClientInterface
         public String askQuestion(String realm, String question,
                                   boolean showAnswer, boolean maySave)
         {
-            return askQuestion(realm, question, showAnswer);
+            if (oldPrompt3 != null)
+                return oldPrompt3.askQuestion(realm, question, showAnswer,
+                                              maySave);
+            else
+                return askQuestion(realm, question, showAnswer);
         }
 
         public boolean prompt(String realm, String username, boolean maySave)
         {
-            return prompt(realm, username);
+            if (oldPrompt3 != null)
+                return oldPrompt3.prompt(realm, username, maySave);
+            else
+                return prompt(realm, username);
         }
     }
 
