@@ -150,6 +150,16 @@ Candidate changes:
    Votes:
      +1: stsp, julianfoad
 
+ * r1148652
+   Update serf revision numbers in STATUS.
+   Justification:
+     We don't support serf 0.3 any more.
+   Notes:
+     When merging, exchange serf<->neon in the paragraph that starts
+     "If you link against both,".
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
