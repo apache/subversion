@@ -126,13 +126,6 @@ Candidate changes:
    Votes:
      +1: hwright
 
- * r1183263
-   Avoid dereferencing an error pointer that could be NULL.
-   Justification:
-     SEGV seen by some TSVN users
-   Votes:
-     +1: philip, stsp
-
  * r1149103, r1149135
    Fix a possible assertion during merge: svn: E235000: In file
    'subversion/libsvn_subr/mergeinfo.c' line 802: assertion failed
@@ -165,3 +158,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1183263
+   Avoid dereferencing an error pointer that could be NULL.
+   Justification:
+     SEGV seen by some TSVN users
+   Votes:
+     +1: philip, stsp, steveking
+
