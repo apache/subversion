@@ -119,10 +119,10 @@ Candidate changes:
    Votes:
      +1: stsp, danielsh
 
- * r1183054
-   Fix a potential infinite recursion in the JavaHL tigris compat wrappers.
+ * r1183054, r1183347
+   Fix some backward compat in the JavaHL tigris wrappers.
    Justification:
-     Breaking backward compat is bad.
+     Infinite recursion and other nastiness is Bad.
    Votes:
      +1: hwright
 
