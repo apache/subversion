@@ -155,11 +155,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1182115
-   Update references to subversion.tigris.org in INSTALL.
-   Justification:
-     "If you tell the truth you don't have to remember anything."
-     --- Mark Twain
-   Votes:
-     +1: danielsh, philip

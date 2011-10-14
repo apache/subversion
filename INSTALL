@@ -602,7 +602,7 @@ II.   INSTALLATION
 
       Download the most recent distribution tarball from:
 
-          http://subversion.tigris.org/servlets/ProjectDocumentList
+          http://subversion.apache.org/download/
 
       Unpack it, and use the standard GNU procedure to compile:
 
@@ -779,7 +779,7 @@ II.   INSTALLATION
       easiest.  Download a Zip (*.zip) or self-extracting installer
       (*-setup.exe) file from:
 
-      http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91
+      http://subversion.apache.org/packages#windows
 
       For a Zip file, run your unzipping utility (WinZIP, ZipGenius,
       UltimateZIP, FreeZIP, whatever) and extract the DLLs and EXEs to
@@ -839,7 +839,7 @@ II.   INSTALLATION
         from http://www.apache.org/dist/apr/.
       * ZLib 1.2 or higher is required and is included in the Subversion
         dependencies zip file or can be obtained from http://www.zlib.org
-      * Either a Subversion client binary from http://subversion.tigris.org/ to
+      * Either a Subversion client binary from http://subversion.apache.org/ to
         do the initial checkout of the Subversion source or the zip file
         source distribution. See the section "Bootstrapping from a Zip or
         Installer File under Windows" above for more.
