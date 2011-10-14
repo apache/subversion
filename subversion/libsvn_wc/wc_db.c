@@ -6728,18 +6728,10 @@ read_info(svn_wc__db_status_t *status,
             }
           else
             {
-              svn_error_t *err2;
-              err2 = svn_sqlite__column_checksum(checksum, stmt_info, 6,
-                                                 result_pool);
 
-              if (err2 != NULL)
-                err = svn_error_compose_create(
-                         err,
-                         svn_error_createf(
-                               err->apr_err, err2,
-                              _("The node '%s' has a corrupt checksum value."),
-                              path_for_error_message(wcroot, local_relpath,
-                                                     scratch_pool)));
+              err = svn_error_compose_create(
+                        err, svn_sqlite__column_checksum(checksum, stmt_info, 6,
+                                                         result_pool));
             }
         }
       if (recorded_size)
@@ -6921,6 +6913,12 @@ read_info(svn_wc__db_status_t *status,
 
   if (stmt_act != NULL)
     err = svn_error_compose_create(err, svn_sqlite__reset(stmt_act));
+
+  if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+    err = svn_error_quick_wrap(err, 
+                               apr_psprintf(scratch_pool,
+                                            "Error reading node '%s'",
+                                            local_relpath));
 
   SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt_info)));
 
