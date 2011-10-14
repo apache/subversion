@@ -150,7 +150,7 @@ extend_wc_mergeinfo(const char *target_abspath,
 
   /* Combine the provided mergeinfo with any mergeinfo from the WC. */
   if (wc_mergeinfo && mergeinfo)
-    SVN_ERR(svn_mergeinfo_merge(wc_mergeinfo, mergeinfo, pool));
+    SVN_ERR(svn_mergeinfo_merge2(wc_mergeinfo, mergeinfo, pool, pool));
   else if (! wc_mergeinfo)
     wc_mergeinfo = mergeinfo;
 
@@ -1400,7 +1400,8 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                           pair->src_abspath_or_url,
                                           iterpool, iterpool));
       if (wc_mergeinfo && mergeinfo)
-        SVN_ERR(svn_mergeinfo_merge(mergeinfo, wc_mergeinfo, iterpool));
+        SVN_ERR(svn_mergeinfo_merge2(mergeinfo, wc_mergeinfo, iterpool,
+                                     iterpool));
       else if (! mergeinfo)
         mergeinfo = wc_mergeinfo;
       if (mergeinfo)
