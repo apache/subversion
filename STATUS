@@ -150,7 +150,7 @@ Candidate changes:
    Votes:
      +1: stsp, julianfoad
 
- * r1148652
+ * r1148652, r1148662, r1148699
    Update serf revision numbers in STATUS.
    Justification:
      We don't support serf 0.3 any more.
