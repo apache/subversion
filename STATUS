@@ -134,6 +134,13 @@ Candidate changes:
    Votes:
      +1: hwright
 
+ * r1183263
+   Avoid dereferencing an error pointer that could be NULL.
+   Justification:
+     SEGV seen by some TSVN users
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
