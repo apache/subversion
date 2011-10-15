@@ -54,7 +54,7 @@ svn_dso_initialize2(void)
 
   dso_pool = svn_pool_create(NULL);
 
-  SVN_ERR(svn_mutex__init(&dso_mutex, APR_HAS_THREADS, dso_pool));
+  SVN_ERR(svn_mutex__init(&dso_mutex, TRUE, dso_pool));
 
   dso_cache = apr_hash_make(dso_pool);
   return SVN_NO_ERROR;

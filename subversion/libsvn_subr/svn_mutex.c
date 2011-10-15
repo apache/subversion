@@ -43,10 +43,6 @@ svn_mutex__init(svn_mutex__t **mutex_p,
 
       *mutex_p = apr_mutex;
     }
-#else
-  if (enable_mutex)
-    return svn_error_wrap_apr(SVN_ERR_UNSUPPORTED_FEATURE,
-                              _("APR doesn't support threads"));
 #endif
     
   return SVN_NO_ERROR;
