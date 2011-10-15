@@ -158,11 +158,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1183263
-   Avoid dereferencing an error pointer that could be NULL.
-   Justification:
-     SEGV seen by some TSVN users
-   Votes:
-     +1: philip, stsp, steveking
-
