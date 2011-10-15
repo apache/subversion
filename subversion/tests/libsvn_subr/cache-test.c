@@ -135,7 +135,7 @@ test_inprocess_cache_basic(apr_pool_t *pool)
                                       APR_HASH_KEY_STRING,
                                       1,
                                       1,
-                                      APR_HAS_THREADS,
+                                      TRUE,
                                       "",
                                       pool));
 
@@ -184,7 +184,7 @@ test_membuffer_cache_basic(apr_pool_t *pool)
   svn_membuffer_t *membuffer;
 
   SVN_ERR(svn_cache__membuffer_cache_create(&membuffer, 10*1024, 1,
-                                            APR_HAS_THREADS, pool));
+                                            TRUE, pool));
 
   /* Create a cache with just one entry. */
   SVN_ERR(svn_cache__create_membuffer_cache(&cache,

@@ -379,7 +379,7 @@ bdb_init_cb(void *baton, apr_pool_t *pool)
   bdb_cache_pool = svn_pool_create(pool);
   bdb_cache = apr_hash_make(bdb_cache_pool);
   
-  SVN_ERR(svn_mutex__init(&bdb_cache_lock, APR_HAS_THREADS, bdb_cache_pool));
+  SVN_ERR(svn_mutex__init(&bdb_cache_lock, TRUE, bdb_cache_pool));
   apr_pool_cleanup_register(bdb_cache_pool, NULL, clear_cache,
                             apr_pool_cleanup_null);
 
