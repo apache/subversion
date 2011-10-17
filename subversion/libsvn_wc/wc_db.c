@@ -10019,6 +10019,8 @@ scan_deletion_txn(void *baton,
                       svn_error_clear(err); 
                       moved_to_relpath = NULL;
                       moved_to_op_root_relpath = NULL;
+                      if (sd_baton->moved_to_relpath)
+                        *sd_baton->moved_to_relpath = NULL;
                       found_child = FALSE;
                     }
                   else
