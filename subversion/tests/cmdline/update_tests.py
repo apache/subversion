@@ -5476,6 +5476,95 @@ def update_moved_dir_edited_leaf_del(sbox):
                                         None, None, None,
                                         None, None, 1)
 
+def update_moved_dir_file_add(sbox):
+  "update locally moved dir with incoming file"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  foo_path = "A/B/E/foo"
+  foo_content = "This is the file 'foo'.\n"
+
+  svntest.main.file_write(sbox.ospath(foo_path), foo_content, 'wb')
+  sbox.simple_add(foo_path)
+  sbox.simple_commit()
+  # update to go back in time, before the last commit
+  svntest.main.run_svn(False, 'update', '-r', '1', wc_dir)
+  sbox.simple_move("A/B/E", "A/B/E2")
+
+  # the incoming file should auto-merge
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E2/foo' : Item(status='A '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
+  expected_disk.add({
+    'A/B/E2'           : Item(),
+    'A/B/E2/alpha'     : Item(contents="This is the file 'alpha'.\n"),
+    'A/B/E2/beta'      : Item(contents="This is the file 'beta'.\n"),
+    'A/B/E2/foo'       : Item(contents=foo_content),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.add({
+    'A/B/E/foo'         : Item(status='D ', wc_rev='2'),
+    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2/beta'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E2/alpha'      : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E2/foo'        : Item(status='A ', copied='+', wc_rev='-'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1)
+
+def update_moved_dir_dir_add(sbox):
+  "update locally moved dir with incoming dir"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  foo_path = "A/B/E/foo"
+  bar_path = "A/B/E/foo/bar"
+  bar_content = "This is the file 'bar'.\n"
+
+  sbox.simple_mkdir(foo_path)
+  svntest.main.file_write(sbox.ospath(bar_path), bar_content, 'wb')
+  sbox.simple_add(bar_path)
+  sbox.simple_commit()
+  # update to go back in time, before the last commit
+  svntest.main.run_svn(False, 'update', '-r', '1', wc_dir)
+  sbox.simple_move("A/B/E", "A/B/E2")
+
+  # the incoming file should auto-merge
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E2/foo'      : Item(status='A '),
+    'A/B/E2/foo/bar'  : Item(status='A '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
+  expected_disk.add({
+    'A/B/E2'           : Item(),
+    'A/B/E2/alpha'     : Item(contents="This is the file 'alpha'.\n"),
+    'A/B/E2/beta'      : Item(contents="This is the file 'beta'.\n"),
+    'A/B/E2/foo'       : Item(),
+    'A/B/E2/foo/bar'   : Item(contents=bar_content),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.add({
+    'A/B/E/foo'         : Item(status='D ', wc_rev='2'),
+    'A/B/E/foo/bar'     : Item(status='D ', wc_rev='2'),
+    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2/beta'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E2/alpha'      : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E2/foo'        : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2/foo/bar'    : Item(status='A ', copied='+', wc_rev='-'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1)
 
 #######################################################################
 # Run the tests
@@ -5545,6 +5634,8 @@ test_list = [ None,
               update_to_HEAD_plus_1,
               update_moved_dir_leaf_del,
               update_moved_dir_edited_leaf_del,
+              update_moved_dir_file_add,
+              update_moved_dir_dir_add,
              ]
 
 if __name__ == '__main__':
