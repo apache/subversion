@@ -76,24 +76,12 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
- * r1176915
-   Improve handling of temporary allocations in svn_mergeinfo_intersect2().
-   Justification:
-     Should reduce memory footprint.
-   Votes:
-     +1: stsp, hwright
-
  * r1178280, r1178282
    Add a sanity check to FSFS.
    Justification:
      Detects a user-visible corruption seen on svn-master.apache.org.
    Votes:
-     +1: danielsh
-
- * r1153540, r1153566
-   Silence a build warning.
-   Votes:
-     +1: danielsh, hwright
+     +1: danielsh, rhuijben
 
  * r1181609
    Fill in the repos_* fields of svn_wc_status3_t for nodes that only exist
@@ -103,19 +91,12 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
- * r1178942, r1182527 
+ * r1178942, r1182527
    Fix issue #4009, "Big trivial text files merged MUCH slower than binary"
    Justification:
      Much improved merge performance for, well, trivial text file merges!
    Votes:
      +1: stsp
-
- * r1183054, r1183347
-   Fix some backward compat in the JavaHL tigris wrappers.
-   Justification:
-     Infinite recursion and other nastiness is Bad.
-   Votes:
-     +1: hwright
 
  * r1149103, r1149135
    Fix a possible assertion during merge: svn: E235000: In file
@@ -158,3 +139,22 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1153540, r1153566
+   Silence a build warning.
+   Votes:
+     +1: danielsh, hwright, rhuijben
+
+ * r1176915
+   Improve handling of temporary allocations in svn_mergeinfo_intersect2().
+   Justification:
+     Should reduce memory footprint.
+   Votes:
+     +1: stsp, hwright, rhuijben
+
+ * r1183054, r1183347
+   Fix some backward compat in the JavaHL tigris wrappers.
+   Justification:
+     Infinite recursion and other nastiness is Bad.
+   Votes:
+     +1: hwright, rhuijben
