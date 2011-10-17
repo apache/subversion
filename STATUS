@@ -133,6 +133,16 @@ Candidate changes:
      r1149103 is a non-functional change which avoids a merge conflict.
    Votes:
      +1: stsp, julianfoad
+     
+ * r1185222
+   Make 'svn add --parents D/file' work if D is deleted.
+   'svn add D; svn add D/file' would work. 
+   Justification:
+     Makes it easier to use 'svn add --parents'.
+     Reported on the AnkhSVN error list a few times. It's better to apply this
+     fix here than having to fix all clients.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
