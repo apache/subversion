@@ -630,6 +630,8 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
                                    _("The node '%s' was not found."),
                                    svn_dirent_local_style(src_abspath,
                                                           scratch_pool));
+        default:
+          break;
       }
 
     SVN_ERR(svn_wc__db_read_info(&dstdir_status, NULL, NULL, NULL,

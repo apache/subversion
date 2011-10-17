@@ -140,11 +140,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1153540, r1153566
-   Silence a build warning.
-   Votes:
-     +1: danielsh, hwright, rhuijben
-
  * r1176915
    Improve handling of temporary allocations in svn_mergeinfo_intersect2().
    Justification:
