@@ -125,7 +125,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1185280     
+ * r1185280, r1185282
    Open SQLite databases as writable in some test code before we try to update
    the database.
    Justification:
