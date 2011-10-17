@@ -296,6 +296,9 @@ def up(*args):
 def st(*args):
   return svn('status', *args)
 
+def info(*args):
+  return svn('info', *args)
+
 _chars = [chr(x) for x in range(ord('a'), ord('z') +1)]
 
 def randstr(len=8):
@@ -444,6 +447,7 @@ def run(levels, spread, N):
         ci(wc)
         up(wc)
         st(wc)
+        info('-R', wc)
 
         trunk_url = file_url + '/trunk'
         branch_url = file_url + '/branch'
@@ -453,6 +457,7 @@ def run(levels, spread, N):
 
         up(wc)
         st(wc)
+        info('-R', wc)
 
         svn('checkout', trunk_url, wc2)
         st(wc2)
@@ -465,6 +470,7 @@ def run(levels, spread, N):
         svn('switch', branch_url, wc2)
         modify_tree(wc2, 0.5)
         st(wc2)
+        info('-R', wc2)
         ci(wc2)
         up(wc2)
         up(wc)
@@ -477,10 +483,12 @@ def run(levels, spread, N):
 
         svn('merge', '--accept=postpone', trunk_url, wc2)
         st(wc2)
+        info('-R', wc2)
         svn('resolve', '--accept=mine-conflict', wc2)
         st(wc2)
         svn('resolved', '-R', wc2)
         st(wc2)
+        info('-R', wc2)
         ci(wc2)
         up(wc2)
         up(wc)
