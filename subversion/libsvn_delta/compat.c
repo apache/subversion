@@ -724,6 +724,11 @@ add_directory_cb(void *baton,
                  svn_revnum_t replaces_rev,
                  apr_pool_t *scratch_pool)
 {
+  struct editor_baton *eb = baton;
+
+  SVN_ERR(build(eb, ACTION_MKDIR, relpath, NULL, SVN_INVALID_REVNUM,
+                NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -837,29 +842,35 @@ move_cb(void *baton,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+drive(struct operation *operation,
+      const svn_delta_editor_t *editor,
+      apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, operation->children);
+       hi; hi = apr_hash_next(hi))
+    {
+      const struct operation *child;
+
+      svn_pool_clear(iterpool);
+      child = svn__apr_hash_index_val(hi);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* This implements svn_editor_cb_complete_t */
 static svn_error_t *
 complete_cb(void *baton,
             apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
-  apr_array_header_t *sorted_hash;
-  int i;
 
-  /* Sort the paths touched by this edit.
-   * Ev2 doesn't really have any particular need for depth-first-ness, but
-   * we want to ensure all parent directories are handled before children in
-   * the case of adds (which does introduce an element of depth-first-ness). */
-  sorted_hash = svn_sort__hash(eb->paths, svn_sort_compare_items_as_paths,
-                               scratch_pool);
-
-  for (i = 0; i < sorted_hash->nelts; i++)
-    {
-      svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_hash, i, svn_sort__item_t);
-      const char *path = item->key;
-
-      /* ### We should actually do something here, but for now... */
-    }
+  /* Drive the tree we've created. */
+  SVN_ERR(drive(&eb->root, eb->deditor, scratch_pool));
 
   return svn_error_trace(eb->deditor->close_edit(eb->dedit_baton,
                                                  scratch_pool));
