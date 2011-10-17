@@ -140,13 +140,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1176915
-   Improve handling of temporary allocations in svn_mergeinfo_intersect2().
-   Justification:
-     Should reduce memory footprint.
-   Votes:
-     +1: stsp, hwright, rhuijben
-
  * r1183054, r1183347
    Fix some backward compat in the JavaHL tigris wrappers.
    Justification:

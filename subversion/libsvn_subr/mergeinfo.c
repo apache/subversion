@@ -1431,26 +1431,29 @@ svn_mergeinfo_intersect2(svn_mergeinfo_t *mergeinfo,
                          apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
 
   *mergeinfo = apr_hash_make(result_pool);
+  iterpool = svn_pool_create(scratch_pool);
 
   /* ### TODO(reint): Do we care about the case when a path in one
      ### mergeinfo hash has inheritable mergeinfo, and in the other
      ### has non-inhertiable mergeinfo?  It seems like that path
      ### itself should really be an intersection, while child paths
      ### should not be... */
-  for (hi = apr_hash_first(apr_hash_pool_get(mergeinfo1), mergeinfo1);
+  for (hi = apr_hash_first(scratch_pool, mergeinfo1);
        hi; hi = apr_hash_next(hi))
     {
       const char *path = svn__apr_hash_index_key(hi);
       apr_array_header_t *rangelist1 = svn__apr_hash_index_val(hi);
       apr_array_header_t *rangelist2;
 
+      svn_pool_clear(iterpool);
       rangelist2 = apr_hash_get(mergeinfo2, path, APR_HASH_KEY_STRING);
       if (rangelist2)
         {
           SVN_ERR(svn_rangelist_intersect(&rangelist2, rangelist1, rangelist2,
-                                          consider_inheritance, scratch_pool));
+                                          consider_inheritance, iterpool));
           if (rangelist2->nelts > 0)
             apr_hash_set(*mergeinfo,
                          apr_pstrdup(result_pool, path),
@@ -1458,6 +1461,7 @@ svn_mergeinfo_intersect2(svn_mergeinfo_t *mergeinfo,
                          svn_rangelist_dup(rangelist2, result_pool));
         }
     }
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
