@@ -140,15 +140,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1182904, r1182909
-   Print an error message if a working copy upgrade fails due to bad MD5
-   base checksums, rather than asserting.
-   Justification:
-     Should reduce amount of spurious TortoiseSVN assertion reports on users@.
-     Invalid on-disk data does not merit an assertion.
-   Votes:
-     +1: stsp, danielsh, hwright
-
  * r1148652, r1148662, r1148699
    Update serf revision numbers in INSTALL.
    Justification:
