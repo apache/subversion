@@ -35,6 +35,7 @@
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_delta.h"
+#include "svn_hash.h"
 #include "svn_string.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -283,10 +284,12 @@ struct dir_baton
   /* Absolute path of this directory */
   const char *local_abspath;
 
-  /* Absolute path to the new location of the directory if it was moved away.
+  /* Absolute path to the new location of the directory if it was moved away,
+   * and the op-root of the move operation.
    * This is set on the root of a move operation and all children.
    * If the directory was not moved away, this is NULL. */
   const char *moved_to_abspath;
+  const char *moved_to_op_root_abspath;
 
   /* The repository relative path this directory will correspond to. */
   const char *new_relpath;
@@ -623,6 +626,7 @@ make_dir_baton(struct dir_baton **d_p,
   d->changed_rev  = SVN_INVALID_REVNUM;
   d->not_present_files = apr_hash_make(dir_pool);
   d->moved_to_abspath = NULL;
+  d->moved_to_op_root_abspath = NULL;
 
   /* Copy some flags from the parent baton */
   if (pb)
@@ -1158,8 +1162,8 @@ open_root(void *edit_baton,
     }
   else if (status == svn_wc__db_status_deleted)
     SVN_ERR(svn_wc__db_scan_deletion(NULL, &db->moved_to_abspath, NULL,
-                                     NULL, eb->db, db->local_abspath,
-                                     db->pool, pool));
+                                     &db->moved_to_op_root_abspath,
+                                     eb->db, db->local_abspath, db->pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2335,6 +2339,16 @@ add_directory(const char *path,
       do_notification(eb, db->local_abspath, svn_node_dir,
                       svn_wc_notify_tree_conflict, pool);
     }
+  else if (wc_kind == svn_kind_unknown &&
+           versioned_locally_and_present == FALSE &&
+           pb->moved_to_abspath)
+    {
+      /* The parent directory of the directory we're adding was moved.
+       * Add the new directory at the new location. */
+      db->moved_to_abspath = svn_dirent_join(pb->moved_to_abspath,
+                                             db->name, db->pool);
+      db->moved_to_op_root_abspath = pb->moved_to_op_root_abspath;
+    }
 
 
 
@@ -2356,7 +2370,9 @@ add_directory(const char *path,
 
       db->already_notified = TRUE;
 
-      do_notification(eb, db->local_abspath, svn_node_dir, action, pool);
+      do_notification(eb, db->moved_to_abspath ? db->moved_to_abspath
+                                               : db->local_abspath,
+                      svn_node_dir, action, pool);
     }
 
   return SVN_NO_ERROR;
@@ -2468,7 +2484,8 @@ open_directory(const char *path,
     }
   else if (status == svn_wc__db_status_deleted)
     SVN_ERR(svn_wc__db_scan_deletion(NULL, &db->moved_to_abspath, NULL,
-                                     NULL, eb->db, db->local_abspath,
+                                     &db->moved_to_op_root_abspath,
+                                     eb->db, db->local_abspath,
                                      db->pool, pool));
 
   /* Check for conflicts only when we haven't already recorded
@@ -2917,6 +2934,41 @@ close_directory(void *dir_baton,
                 new_actual_props,
                 all_work_items,
                 scratch_pool));
+
+      if (db->moved_to_abspath)
+        {
+          /* Perform another in-DB move of the directory to sync meta-data
+           * of the moved-away node with the new BASE node. */
+          apr_array_header_t *children = NULL;
+          apr_hash_t *children_hash = apr_hash_get(eb->dir_dirents,
+                                                   db->new_relpath,
+                                                   APR_HASH_KEY_STRING);
+          /* The op-root of the move needs to retain its moved-here flag.
+           * Its children are normal copied children. */
+          svn_boolean_t is_move = (strcmp(db->moved_to_op_root_abspath,
+                                          db->moved_to_abspath) == 0);
+
+          /* Add the new directory as a copy and create it on disk. */
+          if (children_hash)
+            SVN_ERR(svn_hash_keys(&children, children_hash, scratch_pool));
+          SVN_ERR(svn_wc__db_op_copy_dir(eb->db, db->moved_to_abspath,
+                                         new_actual_props ? new_actual_props
+                                                          : actual_props,
+                                         db->changed_rev,
+                                         db->changed_date,
+                                         db->changed_author,
+                                         db->new_relpath,
+                                         eb->repos_root,
+                                         eb->repos_uuid,
+                                         *eb->target_revision,
+                                         children,
+                                         is_move,
+                                         db->ambient_depth,
+                                         NULL /* conflict */,
+                                         NULL, /* no work, just modify DB */
+                                         scratch_pool));
+          SVN_ERR(svn_wc__ensure_directory(db->moved_to_abspath, pool));
+        }
     }
 
   /* Process all of the queued work items for this directory.  */
