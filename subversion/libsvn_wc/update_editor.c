@@ -3369,6 +3369,15 @@ add_file(const char *path,
       do_notification(eb, fb->local_abspath, svn_node_file,
                       svn_wc_notify_tree_conflict, scratch_pool);
     }
+  else if (wc_kind == svn_kind_unknown &&
+           versioned_locally_and_present == FALSE &&
+           pb->moved_to_abspath)
+    {
+      /* The parent directory of the file we're adding was moved.
+       * Add the new file at the new location. */
+      fb->moved_to_abspath = svn_dirent_join(pb->moved_to_abspath,
+                                             fb->name, fb->pool);
+    }
 
   svn_pool_destroy(scratch_pool);
 
