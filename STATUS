@@ -144,6 +144,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1185242
+   Don't enable the SQLite shared process cache.
+   Justification:
+     Resolves common errors of multithreaded application users.
+   Notes:
+     See also log message of this revision.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
