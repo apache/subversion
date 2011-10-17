@@ -139,13 +139,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1148652, r1148662, r1148699
-   Update serf revision numbers in INSTALL.
-   Justification:
-     We don't support serf 0.3 any more.
-   Notes:
-     When merging, exchange serf<->neon in the paragraph that starts
-     "If you link against both,".
-   Votes:
-     +1: danielsh, blair, hwright
