@@ -141,7 +141,7 @@ class Timings:
     return '\n'.join(s)
 
 
-  def compare_to(self, other):
+  def compare_to(self, other, verbose):
     def do_div(a, b):
       if b:
         return float(a) / float(b)
@@ -170,7 +170,10 @@ class Timings:
                % (' ' * len(TOTAL_RUN), selftotal, selfname))
 
 
-    s.append('      min              max              avg         operation')
+    if not verbose:
+      s.append('      avg         operation')
+    else:
+      s.append('      min              max              avg         operation')
 
     names = sorted(self.timings.keys())
 
@@ -182,23 +185,18 @@ class Timings:
       min_me, max_me, avg_me = self.min_max_avg(name)
       min_other, max_other, avg_other = other.min_max_avg(name)
 
-      s.append('%-16s %-16s %-16s  %s' % (
-                 '%7.2f|%+7.3f' % (
-                     do_div(min_me, min_other),
-                     do_diff(min_me, min_other)
-                   ),
+      avg_str = '%7.2f|%+7.3f' % (do_div(avg_me, avg_other),
+                                  do_diff(avg_me, avg_other))
 
-                 '%7.2f|%+7.3f' % (
-                     do_div(max_me, max_other),
-                     do_diff(max_me, max_other)
-                   ),
+      if not verbose:
+        s.append('%-16s  %s' % (avg_str, name))
+      else:
+        min_str = '%7.2f|%+7.3f' % (do_div(min_me, min_other),
+                                    do_diff(min_me, min_other))
+        max_str = '%7.2f|%+7.3f' % (do_div(max_me, max_other),
+                                    do_diff(max_me, max_other))
 
-                 '%7.2f|%+7.3f' % (
-                     do_div(avg_me, avg_other),
-                     do_diff(avg_me, avg_other)
-                   ),
-
-                 name))
+        s.append('%-16s %-16s %-16s  %s' % (min_str, max_str, avg_str, name))
 
     s.extend([
       '(legend: "1.23|+0.45" means: slower by factor 1.23 and by 0.45 seconds;',
@@ -550,11 +548,12 @@ def cmd_compare(path1, path2):
   t1 = read_from_file(path1)
   t2 = read_from_file(path2)
 
-  print t1.summary()
-  print '---'
-  print t2.summary()
-  print '---'
-  print t2.compare_to(t1)
+  if options.verbose:
+    print t1.summary()
+    print '---'
+    print t2.summary()
+    print '---'
+  print t2.compare_to(t1, options.verbose)
 
 def cmd_combine(dest, *paths):
   total = Timings('--version');
