@@ -4178,6 +4178,7 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
                        const char *original_uuid,
                        svn_revnum_t original_revision,
                        const apr_array_header_t *children,
+                       svn_boolean_t is_move,
                        svn_depth_t depth,
                        const svn_skel_t *conflict,
                        const svn_skel_t *work_items,
@@ -4209,7 +4210,7 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
   iwb.changed_rev = changed_rev;
   iwb.changed_date = changed_date;
   iwb.changed_author = changed_author;
-  iwb.moved_here = FALSE;
+  iwb.moved_here = is_move;
 
   if (original_root_url != NULL)
     {
