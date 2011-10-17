@@ -2310,8 +2310,8 @@ add_directory(const char *path,
                                                        pool));
 
   /* Make sure there is a real directory at LOCAL_ABSPATH, unless we are just
-     updating the DB */
-  if (!db->shadowed)
+     updating the DB or the parent was moved away. */
+  if (!db->shadowed && !pb->moved_to_abspath)
     SVN_ERR(svn_wc__ensure_directory(db->local_abspath, pool));
 
   if (!db->shadowed && status == svn_wc__db_status_added)
