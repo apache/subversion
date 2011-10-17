@@ -1905,9 +1905,9 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                            subtree_history,
                                            subtree_source_history, TRUE,
                                            scratch_pool, iterpool));
-          SVN_ERR(svn_mergeinfo_merge(subtree_mergeinfo,
-                                      merged_via_history,
-                                      scratch_pool));
+          SVN_ERR(svn_mergeinfo_merge2(subtree_mergeinfo,
+                                       merged_via_history,
+                                       scratch_pool, scratch_pool));
         }
 
       SVN_ERR(svn_mergeinfo_inheritable2(&subtree_inheritable_mergeinfo,
