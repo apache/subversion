@@ -1184,7 +1184,6 @@ insert_dirs(svn_test__sandbox_t *b,
     NULL,
   };
 
-  SVN_DBG(("HERE!\n"));
   SVN_ERR(open_wc_db(&sdb, b->wc_abspath, statements, b->pool, b->pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 0));
