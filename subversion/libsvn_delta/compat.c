@@ -843,7 +843,7 @@ move_cb(void *baton,
 }
 
 static svn_error_t *
-drive(struct operation *operation,
+drive(const struct operation *operation,
       const svn_delta_editor_t *editor,
       apr_pool_t *scratch_pool)
 {
@@ -857,6 +857,9 @@ drive(struct operation *operation,
 
       svn_pool_clear(iterpool);
       child = svn__apr_hash_index_val(hi);
+
+      if (operation->kind == svn_node_dir)
+        SVN_ERR(drive(child, editor, iterpool));
     }
 
   return SVN_NO_ERROR;
