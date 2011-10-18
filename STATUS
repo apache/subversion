@@ -155,6 +155,17 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1185738, r1185763, r1185768, r1185886
+   Add support for upgrading absent nodes to the wonderfull wc-ng world.
+   Justification:
+     This should have been part of 1.7.0. Without this patch it is impossible
+     to upgrade working copies with server excluded/absent directories.
+   Notes:
+     r1185738, r1185763, r1185768: adds a test for this problem.
+     r1185886: fixes this issue and cleans up whitespace in the test.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
