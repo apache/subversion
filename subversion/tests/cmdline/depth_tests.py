@@ -2811,6 +2811,36 @@ def sparse_update_with_dash_dash_parents(sbox):
                                         None, None, None, None, None, False,
                                         '--parents', omega_path)
 
+@XFail()
+def update_below_depth_empty(sbox):
+  "update below depth empty shouldn't be applied"
+  sbox.build()
+
+  repo_url = sbox.repo_url
+  A = sbox.ospath('A')
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+      'A/C'               : Item(status='D '),
+      'A/B'               : Item(status='D '),
+      'A/mu'              : Item(status='D '),
+      'A/D'               : Item(status='D '),
+    })
+  svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output, None,
+                                        None, None, None, None, None, None,
+                                        False,
+                                        '--set-depth', 'empty', A)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', repo_url + '/iota',
+                                           repo_url + '/A/B',
+                                     '-m', 'remote copy')
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    })
+
+  # This update should just update the revision of the working copy
+  svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output, None,
+                                        None, None)
 
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
@@ -2858,6 +2888,7 @@ test_list = [ None,
               update_excluded_path_sticky_depths,
               update_depth_empty_root_of_infinite_children,
               sparse_update_with_dash_dash_parents,
+              update_below_depth_empty,
               ]
 
 if __name__ == "__main__":
