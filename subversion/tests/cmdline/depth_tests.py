@@ -2811,7 +2811,6 @@ def sparse_update_with_dash_dash_parents(sbox):
                                         None, None, None, None, None, False,
                                         '--parents', omega_path)
 
-@XFail()
 def update_below_depth_empty(sbox):
   "update below depth empty shouldn't be applied"
   sbox.build()
