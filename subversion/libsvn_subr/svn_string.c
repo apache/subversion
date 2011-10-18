@@ -246,10 +246,17 @@ create_stringbuf(char *data, apr_size_t size, apr_size_t blocksize,
   return new_string;
 }
 
+static char empty_buffer[1] = {0};
+  
 svn_stringbuf_t *
 svn_stringbuf_create_empty(apr_pool_t *pool)
 {
-  return create_stringbuf((char*)"", 0, 0, pool);
+  /* All instances share the same zero-length buffer.
+   * Some algorithms, however, assume that they may write
+   * the terminating zero. So, empty_buffer must be writable 
+   * (a simple (char *)"" will cause SEGFAULTs). */
+
+  return create_stringbuf(empty_buffer, 0, 0, pool);
 }
 
 svn_stringbuf_t *
