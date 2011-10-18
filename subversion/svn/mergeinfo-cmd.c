@@ -161,7 +161,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   svn_client_target_t *source;
   svn_client_target_t *target;
   const char *marker;
-  /* Default to depth empty. */
+  /* Default to depth infinity. */
   svn_depth_t depth = opt_state->depth == svn_depth_unknown
     ? svn_depth_infinity : opt_state->depth;
   struct print_log_rev_baton_t log_rev_baton;
