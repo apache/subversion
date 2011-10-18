@@ -1208,8 +1208,10 @@ def upgrade_absent(sbox):
   replace_sbox_repo_with_tarfile(sbox, 'upgrade_absent_repos.tar.bz2')
   
   # Update config for authz
-  write_restrictive_svnserve_conf(sbox.repo_dir)
-  write_authz_file(sbox, {"/": "*=rw", "/A/B": "*=", "/A/B/E": "jrandom = rw"})
+  svntest.main.write_restrictive_svnserve_conf(sbox.repo_dir)
+  svntest.main.write_authz_file(sbox, { "/"      : "*=rw",
+                                        "/A/B"   : "*=",
+                                        "/A/B/E" : "jrandom = rw"})
   
   # Attempt to use the working copy, this should give an error
   expected_stderr = wc_is_too_old_regex
