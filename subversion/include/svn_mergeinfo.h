@@ -209,8 +209,9 @@ svn_mergeinfo_diff(svn_mergeinfo_t *deleted, svn_mergeinfo_t *added,
 /** Merge a shallow copy of one mergeinfo, @a changes, into another mergeinfo
  * @a mergeinfo.
  *
- * Additions to @a mergeinfo are allocated in @a result_pool.  Temporary
- * allocations are made in @a scratch_pool.
+ * Rangelists for merge source paths common to @a changes and @a mergeinfo may
+ * result in new rangelists; these are allocated in @a result_pool.
+ * Temporary allocations are made in @a scratch_pool.
  *
  * When intersecting rangelists for a path are merged, the inheritability of
  * the resulting svn_merge_range_t depends on the inheritability of the
