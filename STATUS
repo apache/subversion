@@ -150,6 +150,11 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1185746
+   Fix up some erroneous "Could not frob some targets because..." warnings.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
