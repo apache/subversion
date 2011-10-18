@@ -937,7 +937,7 @@ svn_cl__error_checked_fputs(const char *string, FILE* stream)
 
 svn_error_t *
 svn_cl__try(svn_error_t *err,
-            svn_boolean_t *success,
+            apr_array_header_t *errors_seen,
             svn_boolean_t quiet,
             ...)
 {
@@ -946,12 +946,27 @@ svn_cl__try(svn_error_t *err,
       apr_status_t apr_err;
       va_list ap;
 
-      if (success)
-        *success = FALSE;
-
       va_start(ap, quiet);
       while ((apr_err = va_arg(ap, apr_status_t)) != SVN_NO_ERROR)
         {
+          if (errors_seen)
+            {
+              int i;
+              svn_boolean_t add = TRUE;
+
+              /* Don't report duplicate error codes. */
+              for (i = 0; i < errors_seen->nelts; i++)
+                {
+                  if (APR_ARRAY_IDX(errors_seen, i,
+                                    apr_status_t) == err->apr_err)
+                    {
+                      add = FALSE;
+                      break;
+                    }
+                }
+              if (add)
+                APR_ARRAY_PUSH(errors_seen, apr_status_t) = err->apr_err;
+            }
           if (err->apr_err == apr_err)
             {
               if (! quiet)
@@ -961,10 +976,6 @@ svn_cl__try(svn_error_t *err,
             }
         }
       va_end(ap);
-    }
-  else if (success)
-    {
-      *success = TRUE;
     }
 
   return svn_error_trace(err);

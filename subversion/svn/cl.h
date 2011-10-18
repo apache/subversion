@@ -294,15 +294,14 @@ extern const apr_getopt_option_t svn_cl__options[];
  * invoked on an unversioned, nonexistent, or otherwise innocuously
  * errorful resource.  Meant to be wrapped with SVN_ERR().
  *
- * If ERR is null, return SVN_NO_ERROR, setting *SUCCESS to TRUE
- * if SUCCESS is not NULL.
+ * If ERR is null, return SVN_NO_ERROR.
  *
  * Else if ERR->apr_err is one of the error codes supplied in varargs,
  * then handle ERR as a warning (unless QUIET is true), clear ERR, and
- * return SVN_NO_ERROR, setting *SUCCESS to FALSE if SUCCESS is not
- * NULL.
+ * return SVN_NO_ERROR, and push the value of ERR->apr_err into the
+ * ERRORS_SEEN array, if ERRORS_SEEN is not NULL.
  *
- * Else return ERR, setting *SUCCESS to FALSE if SUCCESS is not NULL.
+ * Else return ERR.
  *
  * Typically, error codes like SVN_ERR_UNVERSIONED_RESOURCE,
  * SVN_ERR_ENTRY_NOT_FOUND, etc, are supplied in varargs.  Don't
@@ -310,7 +309,7 @@ extern const apr_getopt_option_t svn_cl__options[];
  */
 svn_error_t *
 svn_cl__try(svn_error_t *err,
-            svn_boolean_t *success,
+            apr_array_header_t *errors_seen,
             svn_boolean_t quiet,
             ...);
 
