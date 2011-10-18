@@ -4755,7 +4755,7 @@ fetch_props_func(apr_hash_t **props,
 }
 
 static svn_error_t *
-fetch_kind_func(svn_node_kind_t *kind,
+fetch_kind_func(svn_kind_t *kind,
                 void *baton,
                 const char *path,
                 apr_pool_t *scratch_pool)
@@ -4763,17 +4763,9 @@ fetch_kind_func(svn_node_kind_t *kind,
   struct fetch_baton *fpb = baton;
   const char *local_abspath = svn_dirent_join(fpb->target_abspath, path,
                                               scratch_pool);
-  svn_kind_t db_kind;
 
-  SVN_ERR(svn_wc__db_read_kind(&db_kind, fpb->db, local_abspath, FALSE,
+  SVN_ERR(svn_wc__db_read_kind(kind, fpb->db, local_abspath, FALSE,
                                scratch_pool));
-
-  if (db_kind == svn_kind_dir)
-    *kind = svn_node_dir;
-  else if (db_kind == svn_kind_file)
-    *kind = svn_node_file;
-  else
-    *kind = svn_node_none;
   
   return SVN_NO_ERROR;
 }

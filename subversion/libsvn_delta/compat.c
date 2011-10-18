@@ -287,7 +287,7 @@ ev2_add_directory(const char *path,
 {
   struct ev2_dir_baton *pb = parent_baton;
   struct ev2_dir_baton *cb = apr_palloc(result_pool, sizeof(*cb));
-  svn_node_kind_t *kind;
+  svn_kind_t *kind;
 
   kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
   *kind = svn_node_dir;
@@ -362,7 +362,7 @@ ev2_add_file(const char *path,
 {
   struct ev2_file_baton *fb = apr_palloc(result_pool, sizeof(*fb));
   struct ev2_dir_baton *pb = parent_baton;
-  svn_node_kind_t *kind;
+  svn_kind_t *kind;
 
   fb->eb = pb->eb;
   fb->path = apr_pstrdup(result_pool, path);
@@ -547,7 +547,7 @@ struct operation {
                             occuring; directories are OP_OPEN with non-empty
                             props */
   } operation;
-  svn_node_kind_t kind;  /* to copy, mkdir, put or set revprops */
+  svn_kind_t kind;  /* to copy, mkdir, put or set revprops */
   svn_revnum_t rev;      /* to copy, valid for add and replace */
   const char *url;       /* to copy, valid for add and replace */
   const char *src_file;  /* for put, the source file for contents */
@@ -761,7 +761,7 @@ add_symlink_cb(void *baton,
 static svn_error_t *
 add_absent_cb(void *baton,
               const char *relpath,
-              svn_node_kind_t kind,
+              svn_kind_t kind,
               svn_revnum_t replaces_rev,
               apr_pool_t *scratch_pool)
 {

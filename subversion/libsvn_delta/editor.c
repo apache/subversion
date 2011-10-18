@@ -354,7 +354,7 @@ svn_editor_add_symlink(svn_editor_t *editor,
 svn_error_t *
 svn_editor_add_absent(svn_editor_t *editor,
                       const char *relpath,
-                      svn_node_kind_t kind,
+                      svn_kind_t kind,
                       svn_revnum_t replaces_rev)
 {
   svn_error_t *err;
