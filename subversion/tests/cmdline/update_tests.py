@@ -5566,6 +5566,51 @@ def update_moved_dir_dir_add(sbox):
                                         None, None, None,
                                         None, None, 1)
 
+@XFail()
+@Issue(4037)
+def update_moved_dir_file_move(sbox):
+  "update locally moved dir with incoming file move"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_move("A/B/E/alpha", "A/B/F/alpha")
+  sbox.simple_commit()
+  # update to go back in time, before the previous commit
+  svntest.main.run_svn(False, 'update', '-r', '1', wc_dir)
+  sbox.simple_move("A/B/E", "A/B/E2")
+
+  # The incoming move should auto-merge such that A/B/F/alpha appears
+  # as moved to A/B/E2/alpha -- this strategy prefers the local user's
+  # change as the solution to the conflict.
+  # ### Ideally, the user should be offered a set of alternative solutions.
+  # ### E.g. the user might prefer if A/B/E2/alpha disappeared and A/B/E/alpha
+  # ### appeared as moved to A/B/F/alpha. But the --accept option does not yet
+  # ### support tree conflicts.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E2/alpha' : Item(status='A '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
+  expected_disk.add({
+    'A/B/E2'           : Item(),
+    'A/B/E2/alpha'     : Item(contents="This is the file 'alpha'.\n"),
+    'A/B/E2/beta'      : Item(contents="This is the file 'beta'.\n"),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.add({
+    'A/B/F/alpha'       : Item(status='D '),
+    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2/alpha'      : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2/beta'       : Item(status='  ', copied='+', wc_rev='-'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1)
+
 #######################################################################
 # Run the tests
 
@@ -5636,6 +5681,7 @@ test_list = [ None,
               update_moved_dir_edited_leaf_del,
               update_moved_dir_file_add,
               update_moved_dir_dir_add,
+              update_moved_dir_file_move,
              ]
 
 if __name__ == '__main__':
