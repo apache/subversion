@@ -1598,31 +1598,32 @@ walk_mergeinfo_hash_for_diff(svn_mergeinfo_t from, svn_mergeinfo_t to,
 }
 
 svn_error_t *
-svn_mergeinfo_diff(svn_mergeinfo_t *deleted, svn_mergeinfo_t *added,
-                   svn_mergeinfo_t from, svn_mergeinfo_t to,
-                   svn_boolean_t consider_inheritance,
-                   apr_pool_t *pool)
+svn_mergeinfo_diff2(svn_mergeinfo_t *deleted, svn_mergeinfo_t *added,
+                    svn_mergeinfo_t from, svn_mergeinfo_t to,
+                    svn_boolean_t consider_inheritance,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   if (from && to == NULL)
     {
-      *deleted = svn_mergeinfo_dup(from, pool);
-      *added = apr_hash_make(pool);
+      *deleted = svn_mergeinfo_dup(from, result_pool);
+      *added = apr_hash_make(result_pool);
     }
   else if (from == NULL && to)
     {
-      *deleted = apr_hash_make(pool);
-      *added = svn_mergeinfo_dup(to, pool);
+      *deleted = apr_hash_make(result_pool);
+      *added = svn_mergeinfo_dup(to, result_pool);
     }
   else
     {
-      *deleted = apr_hash_make(pool);
-      *added = apr_hash_make(pool);
+      *deleted = apr_hash_make(result_pool);
+      *added = apr_hash_make(result_pool);
 
       if (from && to)
         {
           SVN_ERR(walk_mergeinfo_hash_for_diff(from, to, *deleted, *added,
-                                               consider_inheritance, pool,
-                                               pool));
+                                               consider_inheritance,
+                                               result_pool, scratch_pool));
         }
     }
 
@@ -1639,8 +1640,8 @@ svn_mergeinfo__equals(svn_boolean_t *is_equal,
   if (apr_hash_count(info1) == apr_hash_count(info2))
     {
       svn_mergeinfo_t deleted, added;
-      SVN_ERR(svn_mergeinfo_diff(&deleted, &added, info1, info2,
-                                 consider_inheritance, pool));
+      SVN_ERR(svn_mergeinfo_diff2(&deleted, &added, info1, info2,
+                                  consider_inheritance, pool, pool));
       *is_equal = apr_hash_count(deleted) == 0 && apr_hash_count(added) == 0;
     }
   else

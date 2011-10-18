@@ -1083,6 +1083,17 @@ svn_rangelist_merge(apr_array_header_t **rangelist,
 }
 
 svn_error_t *
+svn_mergeinfo_diff(svn_mergeinfo_t *deleted, svn_mergeinfo_t *added,
+                   svn_mergeinfo_t from, svn_mergeinfo_t to,
+                   svn_boolean_t consider_inheritance,
+                   apr_pool_t *pool)
+{
+  return svn_error_trace(svn_mergeinfo_diff2(deleted, added, from, to,
+                                             consider_inheritance, pool,
+                                             pool));
+}
+
+svn_error_t *
 svn_mergeinfo_merge(svn_mergeinfo_t mergeinfo,
                     svn_mergeinfo_t changes,
                     apr_pool_t *pool)

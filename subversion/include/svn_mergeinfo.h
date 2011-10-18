@@ -167,7 +167,8 @@ svn_mergeinfo_parse(svn_mergeinfo_t *mergeinfo, const char *input,
 
 /** Calculate the delta between two mergeinfos, @a mergefrom and @a mergeto
  * (which may be @c NULL), and place the result in @a *deleted and @a
- * *added (neither output argument may be @c NULL).
+ * *added (neither output argument may be @c NULL), both allocated in @a
+ * result_pool.
  *
  * @a consider_inheritance determines how the rangelists in the two
  * hashes are compared for equality.  If @a consider_inheritance is FALSE,
@@ -184,8 +185,21 @@ svn_mergeinfo_parse(svn_mergeinfo_t *mergeinfo, const char *input,
  *       '/trunk: 1,3-4*,5' == '/trunk: 1,3-4*,5'
  *       '/trunk: 1,3-4,5'  == '/trunk: 1,3-4,5'
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_mergeinfo_diff2(svn_mergeinfo_t *deleted, svn_mergeinfo_t *added,
+                    svn_mergeinfo_t mergefrom, svn_mergeinfo_t mergeto,
+                    svn_boolean_t consider_inheritance,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+/** Similar to svn_mergeinfo_diff2(), but users only one pool.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_mergeinfo_diff(svn_mergeinfo_t *deleted, svn_mergeinfo_t *added,
                    svn_mergeinfo_t mergefrom, svn_mergeinfo_t mergeto,
