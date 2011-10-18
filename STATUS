@@ -166,6 +166,19 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1185911, r1185918
+   Fix reporting of depth empty directories
+   Justification:
+     Without this patch 'svn update' sometimes tries to apply updates to nodes
+     that don't exist locally.
+     (1.6 received the same nodes but filtered the incoming data before
+      applying it to the working copy)
+   Notes:
+     r1185911 adds a simple test for this case and r1185918 resolves this
+     regression.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
