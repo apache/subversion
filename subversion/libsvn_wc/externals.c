@@ -201,8 +201,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
       for (num_line_parts = 0; line_parts[num_line_parts]; num_line_parts++)
         ;
 
-      SVN_ERR(svn_wc_external_item_create
-              ((const svn_wc_external_item2_t **) &item, pool));
+      SVN_ERR(svn_wc_external_item2_create(&item, pool));
       item->revision.kind = svn_opt_revision_unspecified;
       item->peg_revision.kind = svn_opt_revision_unspecified;
 

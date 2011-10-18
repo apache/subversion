@@ -781,7 +781,7 @@ svn_wc_traversed_depths(apr_hash_t **depths,
  * canonicalized.
  *
  * In order to avoid backwards compatibility problems clients should use
- * svn_wc_external_item_create() to allocate and initialize this structure
+ * svn_wc_external_item2_create() to allocate and initialize this structure
  * instead of doing so themselves.
  *
  * @since New in 1.5.
@@ -822,8 +822,20 @@ typedef struct svn_wc_external_item2_t
  * The current implementation never returns error, but callers should
  * still check for error, for compatibility with future versions.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_wc_external_item2_create(svn_wc_external_item2_t **item,
+                             apr_pool_t *pool);
+
+/* Same as svn_wc_external_item2_create() except the pointer to the new
+ * empty item is 'const' which is stupid since the next thing you need to do
+ * is fill in its fields.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_external_item_create(const svn_wc_external_item2_t **item,
                             apr_pool_t *pool);

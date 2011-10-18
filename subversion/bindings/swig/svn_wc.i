@@ -45,6 +45,7 @@
 
 #ifdef SWIGRUBY
 %ignore svn_wc_external_item_create;
+%ignore svn_wc_external_item2_create;
 %ignore svn_wc_external_item_dup;
 %ignore svn_wc_external_item2_dup;
 %ignore svn_wc_revision_status;
@@ -268,11 +269,11 @@ svn_wc_swig_init_asp_dot_net_hack (apr_pool_t *pool)
 {
   svn_wc_external_item2_t(apr_pool_t *pool) {
     svn_error_t *err;
-    const svn_wc_external_item2_t *self;
-    err = svn_wc_external_item_create(&self, pool);
+    svn_wc_external_item2_t *self;
+    err = svn_wc_external_item2_create(&self, pool);
     if (err)
       svn_swig_rb_handle_svn_error(err);
-    return (svn_wc_external_item2_t *)self;
+    return self;
   };
 
   ~svn_wc_external_item2_t() {
