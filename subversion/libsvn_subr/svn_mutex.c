@@ -29,8 +29,12 @@ svn_mutex__init(svn_mutex__t **mutex_p,
                 svn_boolean_t enable_mutex, 
                 apr_pool_t *result_pool)
 {
-#if APR_HAS_THREADS
+  // always initialize the mutex pointer, even though it is not
+  // strictly necessary if APR_HAS_THREADS has not been set
+
   *mutex_p = NULL;
+
+#if APR_HAS_THREADS
   if (enable_mutex)
     {
       apr_thread_mutex_t *apr_mutex;
