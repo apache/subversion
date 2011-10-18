@@ -98,7 +98,8 @@ svn_cl__propset(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, scratch_pool));
+                                                      ctx, FALSE,
+                                                      scratch_pool));
 
   /* Implicit "." is okay for revision properties; it just helps
      us find the right repository. */
@@ -130,9 +131,6 @@ svn_cl__propset(apr_getopt_t *os,
     }
   else  /* operate on a normal, versioned property (not a revprop) */
     {
-      apr_pool_t *iterpool;
-      int i;
-
       if (opt_state->depth == svn_depth_unknown)
         opt_state->depth = svn_depth_empty;
 
@@ -172,28 +170,13 @@ svn_cl__propset(apr_getopt_t *os,
             }
         }
 
-      iterpool = svn_pool_create(scratch_pool);
-      for (i = 0; i < targets->nelts; i++)
-        {
-          const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      SVN_ERR(svn_client_propset_local(pname_utf8, propval, targets,
+                                       opt_state->depth, opt_state->force,
+                                       opt_state->changelists, ctx,
+                                       scratch_pool));
 
-          svn_pool_clear(iterpool);
-          SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-          SVN_ERR(svn_cl__try(svn_client_propset4(
-                               pname_utf8, propval, target,
-                               opt_state->depth, opt_state->force,
-                               SVN_INVALID_REVNUM, opt_state->changelists,
-                               NULL, svn_cl__print_commit_info, NULL, ctx,
-                               iterpool),
-                              NULL, opt_state->quiet,
-                              SVN_ERR_UNVERSIONED_RESOURCE,
-                              SVN_ERR_ENTRY_NOT_FOUND,
-                              SVN_NO_ERROR));
-
-          if (! opt_state->quiet)
-            svn_cl__check_boolean_prop_val(pname_utf8, propval->data, iterpool);
-        }
-      svn_pool_destroy(iterpool);
+      if (! opt_state->quiet)
+        svn_cl__check_boolean_prop_val(pname_utf8, propval->data, scratch_pool);
     }
 
   return SVN_NO_ERROR;

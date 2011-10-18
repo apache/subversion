@@ -62,6 +62,7 @@
 #include "private/svn_token.h"
 #include "private/svn_opt_private.h"
 #include "private/svn_client_private.h"
+#include "private/svn_string_private.h"
 
 
 
@@ -438,11 +439,21 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       goto cleanup;
     }
 
-  /* Now, run the editor command line.  */
+  /* Prepare the editor command line.  */
   err = svn_utf_cstring_from_utf8(&tmpfile_native, tmpfile_name, pool);
   if (err)
     goto cleanup;
   cmd = apr_psprintf(pool, "%s %s", editor, tmpfile_native);
+
+  /* If the caller wants us to leave the file around, return the path
+     of the file we'll use, and make a note not to destroy it.  */
+  if (tmpfile_left)
+    {
+      *tmpfile_left = svn_dirent_join(base_dir, tmpfile_name, pool);
+      remove_file = FALSE;
+    }
+
+  /* Now, run the editor command line.  */
   sys_err = system(cmd);
   if (sys_err != 0)
     {
@@ -462,14 +473,6 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       goto cleanup;
     }
 
-  /* If the caller wants us to leave the file around, return the path
-     of the file we used, and make a note not to destroy it.  */
-  if (tmpfile_left)
-    {
-      *tmpfile_left = svn_dirent_join(base_dir, tmpfile_name, pool);
-      remove_file = FALSE;
-    }
-
   /* If the file looks changed... */
   if ((finfo_before.mtime != finfo_after.mtime) ||
       (finfo_before.size != finfo_after.size))
@@ -479,7 +482,7 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       if (err)
         goto cleanup;
 
-      *edited_contents = svn_string_create_from_buf(edited_contents_s, pool);
+      *edited_contents = svn_stringbuf__morph_into_string(edited_contents_s);
 
       /* Translate back to UTF8/LF if desired. */
       if (as_text)
@@ -526,7 +529,7 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
                         stderr, TRUE /* fatal */, "svn: ");
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -817,7 +820,7 @@ svn_cl__get_log_message(const char **log_msg,
               (err, _("Could not use external editor to fetch log message; "
                       "consider setting the $SVN_EDITOR environment variable "
                       "or using the --message (-m) or --file (-F) options"));
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
 
       if (msg_string)
@@ -854,7 +857,7 @@ svn_cl__get_log_message(const char **log_msg,
                      "(a)bort, (c)ontinue, (e)dit:\n"), NULL, pool));
           if (reply)
             {
-              char letter = apr_tolower(reply[0]);
+              int letter = apr_tolower(reply[0]);
 
               /* If the user chooses to abort, we cleanup the
                  temporary file and exit the loop with a NULL
@@ -907,7 +910,7 @@ svn_cl__may_need_force(svn_error_t *err)
          "may be lost)"));
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -934,7 +937,7 @@ svn_cl__error_checked_fputs(const char *string, FILE* stream)
 
 svn_error_t *
 svn_cl__try(svn_error_t *err,
-            svn_boolean_t *success,
+            apr_array_header_t *errors_seen,
             svn_boolean_t quiet,
             ...)
 {
@@ -943,12 +946,27 @@ svn_cl__try(svn_error_t *err,
       apr_status_t apr_err;
       va_list ap;
 
-      if (success)
-        *success = FALSE;
-
       va_start(ap, quiet);
       while ((apr_err = va_arg(ap, apr_status_t)) != SVN_NO_ERROR)
         {
+          if (errors_seen)
+            {
+              int i;
+              svn_boolean_t add = TRUE;
+
+              /* Don't report duplicate error codes. */
+              for (i = 0; i < errors_seen->nelts; i++)
+                {
+                  if (APR_ARRAY_IDX(errors_seen, i,
+                                    apr_status_t) == err->apr_err)
+                    {
+                      add = FALSE;
+                      break;
+                    }
+                }
+              if (add)
+                APR_ARRAY_PUSH(errors_seen, apr_status_t) = err->apr_err;
+            }
           if (err->apr_err == apr_err)
             {
               if (! quiet)
@@ -959,12 +977,8 @@ svn_cl__try(svn_error_t *err,
         }
       va_end(ap);
     }
-  else if (success)
-    {
-      *success = TRUE;
-    }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -1009,14 +1023,45 @@ svn_cl__print_xml_commit(svn_stringbuf_t **sb,
 }
 
 
+void
+svn_cl__print_xml_lock(svn_stringbuf_t **sb,
+                       const svn_lock_t *lock,
+                       apr_pool_t *pool)
+{
+  /* "<lock>" */
+  svn_xml_make_open_tag(sb, pool, svn_xml_normal, "lock", NULL);
+
+  /* "<token>xx</token>" */
+  svn_cl__xml_tagged_cdata(sb, pool, "token", lock->token);
+
+  /* "<owner>xx</owner>" */
+  svn_cl__xml_tagged_cdata(sb, pool, "owner", lock->owner);
+
+  /* "<comment>xx</comment>" */
+  svn_cl__xml_tagged_cdata(sb, pool, "comment", lock->comment);
+
+  /* "<created>xx</created>" */
+  svn_cl__xml_tagged_cdata(sb, pool, "created",
+                           svn_time_to_cstring(lock->creation_date, pool));
+
+  /* "<expires>xx</expires>" */
+  if (lock->expiration_date != 0)
+    svn_cl__xml_tagged_cdata(sb, pool, "expires",
+                             svn_time_to_cstring(lock->expiration_date, pool));
+
+  /* "</lock>" */
+  svn_xml_make_close_tag(sb, pool, "lock");
+}
+
+
 svn_error_t *
 svn_cl__xml_print_header(const char *tagname,
                          apr_pool_t *pool)
 {
   svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
 
-  /* <?xml version="1.0"?> */
-  svn_xml_make_header(&sb, pool);
+  /* <?xml version="1.0" encoding="UTF-8"?> */
+  svn_xml_make_header2(&sb, "UTF-8", pool);
 
   /* "<TAGNAME>" */
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, tagname, NULL);
@@ -1109,11 +1154,15 @@ svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets,
                                             apr_getopt_t *os,
                                             const apr_array_header_t *known_targets,
                                             svn_client_ctx_t *ctx,
+                                            svn_boolean_t keep_last_origpath_on_truepath_collision,
                                             apr_pool_t *pool)
 {
-  svn_error_t *err = svn_client_args_to_target_array(targets, os,
-                                                     known_targets,
-                                                     ctx, pool);
+  svn_error_t *err = svn_client_args_to_target_array2(targets,
+                                                      os,
+                                                      known_targets,
+                                                      ctx,
+                                                      keep_last_origpath_on_truepath_collision,
+                                                      pool);
   if (err)
     {
       if (err->apr_err ==  SVN_ERR_RESERVED_FILENAME_SPECIFIED)
@@ -1122,7 +1171,7 @@ svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets,
           svn_error_clear(err);
         }
       else
-        return svn_error_return(err);
+        return svn_error_trace(err);
     }
   return SVN_NO_ERROR;
 }
@@ -1176,7 +1225,7 @@ svn_cl__changelist_paths(apr_array_header_t **paths,
   svn_pool_destroy(iterpool);
 
   SVN_ERR(svn_hash_from_cstring_keys(&paths_hash, found, result_pool));
-  return svn_error_return(svn_hash_keys(paths, paths_hash, result_pool));
+  return svn_error_trace(svn_hash_keys(paths, paths_hash, result_pool));
 }
 
 svn_cl__show_revs_t
@@ -1208,7 +1257,7 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
       return SVN_NO_ERROR;
     }
   else if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   *human_cstring = svn_time_to_human_cstring(when, pool);
 
@@ -1323,22 +1372,6 @@ svn_cl__eat_peg_revisions(apr_array_header_t **true_targets_p,
 }
 
 svn_error_t *
-svn_cl__opt_parse_path(svn_opt_revision_t *rev,
-                       const char **truepath,
-                       const char *path /* UTF-8! */,
-                       apr_pool_t *pool)
-{
-  SVN_ERR(svn_opt_parse_path(rev, truepath, path, pool));
-
-  if (svn_path_is_url(*truepath))
-    *truepath = svn_uri_canonicalize(*truepath, pool);
-  else
-    *truepath = svn_dirent_canonicalize(*truepath, pool);
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets)
 {
   svn_error_t *err;
@@ -1349,4 +1382,40 @@ svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets)
                              _("Cannot mix repository and working copy "
                                "targets"));
   return err;
+}
+
+svn_error_t *
+svn_cl__check_target_is_local_path(const char *target)
+{
+  if (svn_path_is_url(target))
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("'%s' is not a local path"), target);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cl__check_targets_are_local_paths(const apr_array_header_t *targets)
+{
+  int i;
+
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+
+      SVN_ERR(svn_cl__check_target_is_local_path(target));
+    }
+  return SVN_NO_ERROR;
+}
+
+const char *
+svn_cl__local_style_skip_ancestor(const char *parent_path,
+                                  const char *path,
+                                  apr_pool_t *pool)
+{
+  const char *relpath = NULL;
+
+  if (parent_path)
+    relpath = svn_dirent_skip_ancestor(parent_path, path);
+
+  return svn_dirent_local_style(relpath ? relpath : path, pool);
 }

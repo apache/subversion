@@ -33,7 +33,6 @@
 #include "svn_xml.h"
 #include "svn_config.h"
 #include "svn_delta.h"
-#include "svn_version.h"
 #include "svn_path.h"
 #include "svn_base64.h"
 #include "svn_props.h"
@@ -160,8 +159,7 @@ create_propval(blame_info_t *info)
                                     info->prop_attr_len + 1);
     }
 
-  /* Include the null term. */
-  s = svn_string_ncreate(info->prop_attr, info->prop_attr_len + 1, info->pool);
+  s = svn_string_ncreate(info->prop_attr, info->prop_attr_len, info->pool);
   if (info->prop_base64)
     {
       s = svn_base64_decode_string(s, info->pool);
@@ -454,7 +452,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   blame_ctx->done = FALSE;
 
   SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
-                                         NULL, session->repos_url.path,
+                                         NULL, session->session_url.path,
                                          end, NULL, pool));
   req_url = svn_path_url_add_component2(basecoll_url, relative_url, pool);
 
@@ -491,5 +489,5 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                                          parser_ctx->location),
             err);
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }

@@ -36,7 +36,7 @@ II.   DOCUMENTATION
 
       It is written in DocBook XML, and the sources can be found at:
 
-         http://svn.red-bean.com/svnbook/
+         http://svnbook.googlecode.com/svn/trunk/
          
       If you wish to build the documentation from source, read the
       src/en/README file within the book source.

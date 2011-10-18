@@ -294,17 +294,17 @@ read_digest_file(apr_hash_t **children_p,
       lock->path = path;
 
       if (! ((lock->token = hash_fetch(hash, TOKEN_KEY, pool))))
-        return svn_error_return(err_corrupt_lockfile(fs_path, path));
+        return svn_error_trace(err_corrupt_lockfile(fs_path, path));
 
       if (! ((lock->owner = hash_fetch(hash, OWNER_KEY, pool))))
-        return svn_error_return(err_corrupt_lockfile(fs_path, path));
+        return svn_error_trace(err_corrupt_lockfile(fs_path, path));
 
       if (! ((val = hash_fetch(hash, IS_DAV_COMMENT_KEY, pool))))
-        return svn_error_return(err_corrupt_lockfile(fs_path, path));
+        return svn_error_trace(err_corrupt_lockfile(fs_path, path));
       lock->is_dav_comment = (val[0] == '1');
 
       if (! ((val = hash_fetch(hash, CREATION_DATE_KEY, pool))))
-        return svn_error_return(err_corrupt_lockfile(fs_path, path));
+        return svn_error_trace(err_corrupt_lockfile(fs_path, path));
       SVN_ERR(svn_time_from_cstring(&(lock->creation_date), val, pool));
 
       if ((val = hash_fetch(hash, EXPIRATION_DATE_KEY, pool)))

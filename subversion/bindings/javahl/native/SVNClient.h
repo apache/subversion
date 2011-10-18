@@ -78,9 +78,13 @@ class SVNClient :public SVNBase
                 bool ignoreExternals);
   void streamFileContent(const char *path, Revision &revision,
                          Revision &pegRevision, OutputStream &outputStream);
-  void propertySet(const char *path, const char *name, JNIByteArray &value,
-                   svn_depth_t depth, StringArray &changelists, bool force,
-                   RevpropTable &revprops, CommitCallback *callback);
+  void propertySetLocal(Targets &targets, const char *name, JNIByteArray &value,
+                        svn_depth_t depth, StringArray &changelists,
+                        bool force);
+  void propertySetRemote(const char *path, long base_rev, const char *name,
+                         CommitMessage *message,
+                         JNIByteArray &value, bool force,
+                         RevpropTable &revprops, CommitCallback *callback);
   void properties(const char *path, Revision &revision,
                   Revision &pegRevision, svn_depth_t depth,
                   StringArray &changelists, ProplistCallback *callback);
@@ -107,7 +111,7 @@ class SVNClient :public SVNBase
   jlong doSwitch(const char *path, const char *url, Revision &revision,
                  Revision &pegRevision, svn_depth_t depth,
                  bool depthIsSticky, bool ignoreExternals,
-                 bool allowUnverObstructions);
+                 bool allowUnverObstructions, bool ignoreAncestry);
   jlong doExport(const char *srcPath, const char *destPath,
                  Revision &revision, Revision &pegRevision, bool force,
                  bool ignoreExternals, svn_depth_t depth,
@@ -170,13 +174,13 @@ class SVNClient :public SVNBase
                          Revision &revision, Revision &pegRevision);
   void diff(const char *target1, Revision &revision1,
             const char *target2, Revision &revision2,
-            const char *relativeToDir, const char *outfileName,
+            const char *relativeToDir, OutputStream &outputStream,
             svn_depth_t depth, StringArray &changelists,
             bool ignoreAncestry, bool noDiffDelete, bool force,
             bool showCopiesAsAdds);
   void diff(const char *target, Revision &pegevision,
             Revision &startRevision, Revision &endRevision,
-            const char *relativeToDir, const char *outfileName,
+            const char *relativeToDir, OutputStream &outputStream,
             svn_depth_t depth, StringArray &changelists,
             bool ignoreAncestry, bool noDiffDelete, bool force,
             bool showCopiesAsAdds);
@@ -205,7 +209,8 @@ class SVNClient :public SVNBase
   void diff(const char *target1, Revision &revision1,
             const char *target2, Revision &revision2,
             Revision *pegRevision, const char *relativeToDir,
-            const char *outfileName, svn_depth_t depth, StringArray &changelists,
+            OutputStream &outputStream, svn_depth_t depth,
+            StringArray &changelists,
             bool ignoreAncestry, bool noDiffDelete, bool force,
             bool showCopiesAsAdds);
 

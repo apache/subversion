@@ -59,7 +59,8 @@ svn_cl__relocate(apr_getopt_t *os,
   */
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, scratch_pool));
+                                                      ctx, FALSE,
+                                                      scratch_pool));
   if (targets->nelts < 1)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
@@ -101,10 +102,7 @@ svn_cl__relocate(apr_getopt_t *os,
           for (i = 2; i < targets->nelts; i++)
             {
               path = APR_ARRAY_IDX(targets, i, const char *);
-              if (svn_path_is_url(path))
-                return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                         _("'%s' is not a local path"),
-                                         path);
+              SVN_ERR(svn_cl__check_target_is_local_path(path));
             }
 
           for (i = 2; i < targets->nelts; i++)

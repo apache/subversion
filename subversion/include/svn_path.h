@@ -66,8 +66,7 @@ extern "C" {
 /** Convert @a path from the local style to the canonical internal style.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
- * New code should use svn_dirent_internal_style() or
- * svn_relpath_internal_style().
+ * New code should use svn_dirent_internal_style().
  */
 SVN_DEPRECATED
 const char *
@@ -76,8 +75,7 @@ svn_path_internal_style(const char *path, apr_pool_t *pool);
 /** Convert @a path from the canonical internal style to the local style.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
- * New code should use svn_dirent_local_style() or
- * svn_relpath_local_style().
+ * New code should use svn_dirent_local_style().
  */
 SVN_DEPRECATED
 const char *

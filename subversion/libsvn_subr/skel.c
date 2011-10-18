@@ -675,7 +675,7 @@ svn_skel__parse_int(apr_int64_t *n, const svn_skel_t *skel,
   /* We need to duplicate the SKEL contents in order to get a NUL-terminated
      version of it. The SKEL may not have valid memory at DATA[LEN].  */
   str = apr_pstrmemdup(scratch_pool, skel->data, skel->len);
-  return svn_error_return(svn_cstring_atoi64(n, str));
+  return svn_error_trace(svn_cstring_atoi64(n, str));
 }
 
 
@@ -705,6 +705,39 @@ svn_skel__parse_proplist(apr_hash_t **proplist_p,
 
   /* Return the structure. */
   *proplist_p = proplist;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_skel__parse_prop(svn_string_t **propval,
+                     const svn_skel_t *skel,
+                     const char *propname,
+                     apr_pool_t *pool /* result_pool */)
+{
+  svn_skel_t *elt;
+
+  *propval = NULL;
+
+  /* Validate the skel. */
+  if (! is_valid_proplist_skel(skel))
+    return skel_err("proplist");
+
+  /* Look for PROPNAME in SKEL. */
+  for (elt = skel->children; elt; elt = elt->next->next)
+    {
+      if (elt->len == strlen(propname)
+          && strncmp(propname, elt->data, elt->len) == 0)
+        {
+          *propval = svn_string_ncreate(elt->next->data, elt->next->len,
+                                        pool);
+          break;
+        }
+      else
+        {
+          continue;
+        }
+    }
   return SVN_NO_ERROR;
 }
 

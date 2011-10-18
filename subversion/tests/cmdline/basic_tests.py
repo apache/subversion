@@ -400,7 +400,7 @@ def basic_corruption(sbox):
   # This commit should fail due to text base corruption.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
-                                        "svn: E155017: Checksum",
+                                        "svn: E200014: Checksum",
                                         wc_dir)
 
   # Restore the uncorrupted text base.
@@ -907,11 +907,19 @@ def basic_switch(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', switched='S')
 
-  # Do the switch and check the results in three ways.
+  # First, try the switch without the --ignore-ancestry flag,
+  # expecting failure.
+  expected_error = "svn: E195012: .*no common ancestry.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'switch', gamma_url, iota_path)
+
+  # Now ignore ancestry so we can ge through this switch.
   svntest.actions.run_and_verify_switch(wc_dir, iota_path, gamma_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        False, '--ignore-ancestry')
 
   ### Switch the directory `A/D/H' to `A/D/G'.
 
@@ -959,11 +967,19 @@ def basic_switch(sbox):
     })
   expected_status.tweak('iota', 'A/D/H', switched='S')
 
+  # First, try the switch without the --ignore-ancestry flag,
+  # expecting failure.
+  expected_error = "svn: E195012: .*no common ancestry.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'switch', ADG_url, ADH_path)
+
   # Do the switch and check the results in three ways.
   svntest.actions.run_and_verify_switch(wc_dir, ADH_path, ADG_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        False, '--ignore-ancestry')
 
 #----------------------------------------------------------------------
 
@@ -1166,7 +1182,7 @@ def basic_delete(sbox):
                                      'rm', '--force', foo_path)
   verify_file_deleted("Failed to remove unversioned file foo", foo_path)
 
-  # At one stage deleting an URL dumped core
+  # At one stage deleting a URL dumped core
   iota_URL = sbox.repo_url + '/iota'
 
   svntest.actions.run_and_verify_svn(None,
@@ -1598,6 +1614,12 @@ def basic_add_parents(sbox):
                                         None,
                                         wc_dir)
 
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', X_path, '--keep-local')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'add', '--parents', zeta_path)
+
 #----------------------------------------------------------------------
 def uri_syntax(sbox):
   'make sure URI syntaxes are parsed correctly'
@@ -1706,9 +1728,9 @@ def basic_peg_revision(sbox):
 
   # Without the trailing "@", expect failure.
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, None, ".*Syntax error parsing revision 'abc'", 'cat', wc_file)
+    None, None, ".*Syntax error parsing peg revision 'abc'", 'cat', wc_file)
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, None, ".*Syntax error parsing revision 'abc'", 'cat', url)
+    None, None, ".*Syntax error parsing peg revision 'abc'", 'cat', url)
 
   # With the trailing "@", expect success.
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
@@ -1968,7 +1990,6 @@ def basic_rm_urls_one_repo(sbox):
                                         expected_status)
 
 # Test for issue #1199
-@XFail()
 @Issue(1199)
 def basic_rm_urls_multi_repos(sbox):
   "remotely remove directories from two repositories"
@@ -2589,9 +2610,8 @@ def delete_child_parent_update(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
 
-  # This produces a tree-conflict
+  # This produced a tree-conflict until we fixed issue #3533
   expected_status.tweak(wc_rev=2)
-  expected_status.tweak('A/B/E', treeconflict='C')
   svntest.actions.run_and_verify_update(wc_dir,
                                         [],
                                         expected_disk,
@@ -2609,7 +2629,7 @@ def basic_relocate(sbox):
   repo_dir = sbox.repo_dir
   repo_url = sbox.repo_url
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
-  shutil.copytree(repo_dir, other_repo_dir)
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
 
   def _verify_url(wc_path, url):
     name = os.path.basename(wc_path)
@@ -2690,6 +2710,118 @@ def ls_url_special_characters(sbox):
                                        [], 'ls',
                                        url)
 
+def ls_multiple_and_non_existent_targets(sbox):
+  "ls multiple and non-existent targets"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  def non_existent_wc_target():
+    "non-existent wc target"
+    non_existent_path = os.path.join(wc_dir, 'non-existent')
+
+    expected_err = ".*W155010.*"
+    svntest.actions.run_and_verify_svn2(None, None, expected_err,
+                                        1, 'ls', non_existent_path)
+
+  def non_existent_url_target():
+    "non-existent url target"
+    non_existent_url = sbox.repo_url + '/non-existent'
+    expected_err = ".*W160013.*"
+
+    svntest.actions.run_and_verify_svn2(None, None, expected_err,
+                                        1, 'ls', non_existent_url)
+  def multiple_wc_targets():
+    "multiple wc targets"
+
+    alpha = sbox.ospath('A/B/E/alpha')
+    beta = sbox.ospath('A/B/E/beta')
+    non_existent_path = os.path.join(wc_dir, 'non-existent')
+
+    # All targets are existing
+    svntest.actions.run_and_verify_svn2(None, None, [],
+                                        0, 'ls', alpha, beta)
+
+    # One non-existing target
+    expected_err = ".*W155010.*\n.*E200009.*"
+    expected_err_re = re.compile(expected_err, re.DOTALL)
+
+    exit_code, output, error = svntest.main.run_svn(1, 'ls', alpha,
+                                                    non_existent_path, beta)
+
+    # Verify error
+    if not expected_err_re.match("".join(error)):
+      raise svntest.Failure('ls failed: expected error "%s", but received '
+                            '"%s"' % (expected_err, "".join(error)))
+
+  def multiple_url_targets():
+    "multiple url targets"
+
+    alpha = sbox.repo_url +  '/A/B/E/alpha'
+    beta = sbox.repo_url +  '/A/B/E/beta'
+    non_existent_url = sbox.repo_url +  '/non-existent'
+
+    # All targets are existing
+    svntest.actions.run_and_verify_svn2(None, None, [],
+                                        0, 'ls', alpha, beta)
+
+    # One non-existing target
+    expected_err = ".*W160013.*\n.*E200009.*"
+    expected_err_re = re.compile(expected_err, re.DOTALL)
+
+    exit_code, output, error = svntest.main.run_svn(1, 'ls', alpha,
+                                                    non_existent_url, beta)
+
+    # Verify error
+    if not expected_err_re.match("".join(error)):
+      raise svntest.Failure('ls failed: expected error "%s", but received '
+                            '"%s"' % (expected_err, "".join(error)))
+  # Test one by one
+  non_existent_wc_target()
+  non_existent_url_target()
+  multiple_wc_targets()
+  multiple_url_targets()
+
+def add_multiple_targets(sbox):
+  "add multiple targets"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  file1 = sbox.ospath('file1')
+  file2 = sbox.ospath('file2')
+  non_existent_path = os.path.join(wc_dir, 'non-existent')
+
+  svntest.main.file_write(file1, "file1 contents", 'w+')
+  svntest.main.file_write(file2, "file2 contents", 'w+')
+
+  # One non-existing target
+  expected_err = ".*W155010.*\n.*E200009.*"
+  expected_err_re = re.compile(expected_err, re.DOTALL)
+
+  # Build expected state
+  expected_output = wc.State(wc_dir, {
+      'file1' : Item(verb='Adding'),
+      'file2' : Item(verb='Adding'),
+    })
+
+  exit_code, output, error = svntest.main.run_svn(1, 'add', file1,
+                                                  non_existent_path, file2)
+
+  # Verify error
+  if not expected_err_re.match("".join(error)):
+    raise svntest.Failure('add failed: expected error "%s", but received '
+                          '"%s"' % (expected_err, "".join(error)))
+
+  # Verify status
+  expected_status = svntest.verify.UnorderedOutput(
+        ['A       ' + file1 + '\n',
+         'A       ' + file2 + '\n'])
+  svntest.actions.run_and_verify_svn(None, expected_status, [],
+                                     'status', wc_dir)
+
+
+
 ########################################################################
 # Run the tests
 
@@ -2751,6 +2883,8 @@ test_list = [ None,
               basic_relocate,
               delete_urls_with_spaces,
               ls_url_special_characters,
+              ls_multiple_and_non_existent_targets,
+              add_multiple_targets,
              ]
 
 if __name__ == '__main__':

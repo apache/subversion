@@ -33,15 +33,21 @@ class LocalRepositoryTestCase(unittest.TestCase):
         dumpfile = open(os.path.join(os.path.split(__file__)[0],
                         'test.dumpfile'))
 
-        # Just in case a preivous test instance was not properly cleaned up
-        self.tearDown()
+        # Just in case a previous test instance was not properly cleaned up
+        self.remove_from_disk()
+
         self.repos = LocalRepository(repos_location, create=True)
         self.repos.load(dumpfile)
 
     def tearDown(self):
+        self.repos.close()
+        self.remove_from_disk()
+        self.repos = None
+
+    def remove_from_disk(self):
+        """Remove anything left on disk"""
         if os.path.exists(repos_location):
             svn_repos_delete(repos_location, Pool())
-        self.repos = None
 
     def test_local_latest_revnum(self):
         self.assertEqual(9, self.repos.latest_revnum())

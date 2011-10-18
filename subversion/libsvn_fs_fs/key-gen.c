@@ -41,8 +41,8 @@
 void
 svn_fs_fs__add_keys(const char *key1, const char *key2, char *result)
 {
-  int i1 = strlen(key1) - 1;
-  int i2 = strlen(key2) - 1;
+  apr_size_t i1 = strlen(key1) - 1;
+  apr_size_t i2 = strlen(key2) - 1;
   int i3 = 0;
   int val;
   int carry = 0;
@@ -79,8 +79,8 @@ svn_fs_fs__add_keys(const char *key1, const char *key2, char *result)
 void
 svn_fs_fs__next_key(const char *this, apr_size_t *len, char *next)
 {
+  apr_ssize_t i;
   apr_size_t olen = *len;     /* remember the first length */
-  int i = olen - 1;           /* initial index; we work backwards */
   char c;                     /* current char */
   svn_boolean_t carry = TRUE; /* boolean: do we have a carry or not?
                                  We start with a carry, because we're
@@ -146,8 +146,8 @@ svn_fs_fs__next_key(const char *this, apr_size_t *len, char *next)
 int
 svn_fs_fs__key_compare(const char *a, const char *b)
 {
-  int a_len = strlen(a);
-  int b_len = strlen(b);
+  apr_size_t a_len = strlen(a);
+  apr_size_t b_len = strlen(b);
   int cmp;
 
   if (a_len > b_len)

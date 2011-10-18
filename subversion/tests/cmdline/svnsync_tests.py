@@ -27,6 +27,9 @@
 # General modules
 import sys, os
 
+# Test suite-specific modules
+import locale, re
+
 # Our testing module
 import svntest
 from svntest.verify import SVNUnexpectedStdout, SVNUnexpectedStderr
@@ -57,18 +60,25 @@ def build_repos(sbox):
   svntest.main.create_repos(sbox.repo_dir)
 
 
-def run_sync(url, source_url=None, expected_error=None):
+def run_sync(url, source_url=None, expected_error=None,
+             source_prop_encoding=None):
   "Synchronize the mirror repository with the master"
   if source_url is not None:
-    exit_code, output, errput = svntest.main.run_svnsync(
-      "synchronize", url, source_url,
+    args = ["synchronize", url, source_url,
       "--username", svntest.main.wc_author,
-      "--password", svntest.main.wc_passwd)
+      "--password", svntest.main.wc_passwd]
   else: # Allow testing of old source-URL-less syntax
-    exit_code, output, errput = svntest.main.run_svnsync(
-      "synchronize", url,
+    args = ["synchronize", url,
       "--username", svntest.main.wc_author,
-      "--password", svntest.main.wc_passwd)
+      "--password", svntest.main.wc_passwd]
+  if source_prop_encoding:
+    args.append("--source-prop-encoding")
+    args.append(source_prop_encoding)
+
+  exit_code, output, errput = svntest.main.run_svnsync(*args)
+  for index, line in enumerate(errput[:]):
+    if re.search("warning: W200007", line):
+      del errput[index]
   if errput:
     if expected_error is None:
       raise SVNUnexpectedStderr(errput)
@@ -83,12 +93,20 @@ def run_sync(url, source_url=None, expected_error=None):
     # should be: ['Committed revision 1.\n', 'Committed revision 2.\n']
     raise SVNUnexpectedStdout("Missing stdout")
 
-def run_copy_revprops(url, source_url, expected_error=None):
+def run_copy_revprops(url, source_url, expected_error=None,
+                      source_prop_encoding=None):
   "Copy revprops to the mirror repository from the master"
-  exit_code, output, errput = svntest.main.run_svnsync(
-    "copy-revprops", url, source_url,
+  args = ["copy-revprops", url, source_url,
     "--username", svntest.main.wc_author,
-    "--password", svntest.main.wc_passwd)
+    "--password", svntest.main.wc_passwd]
+  if source_prop_encoding:
+    args.append("--source-prop-encoding")
+    args.append(source_prop_encoding)
+
+  exit_code, output, errput = svntest.main.run_svnsync(*args)
+  for index, line in enumerate(errput[:]):
+    if re.search("warning: W200007", line):
+      del errput[index]
   if errput:
     if expected_error is None:
       raise SVNUnexpectedStderr(errput)
@@ -104,12 +122,19 @@ def run_copy_revprops(url, source_url, expected_error=None):
     #             'Copied properties for revision 2.\n']
     raise SVNUnexpectedStdout("Missing stdout")
 
-def run_init(dst_url, src_url):
+def run_init(dst_url, src_url, source_prop_encoding=None):
   "Initialize the mirror repository from the master"
-  exit_code, output, errput = svntest.main.run_svnsync(
-    "initialize", dst_url, src_url,
+  args = ["initialize", dst_url, src_url,
     "--username", svntest.main.wc_author,
-    "--password", svntest.main.wc_passwd)
+    "--password", svntest.main.wc_passwd]
+  if source_prop_encoding:
+    args.append("--source-prop-encoding")
+    args.append(source_prop_encoding)
+
+  exit_code, output, errput = svntest.main.run_svnsync(*args)
+  for index, line in enumerate(errput[:]):
+    if re.search("warning: W200007", line):
+      del errput[index]
   if errput:
     raise SVNUnexpectedStderr(errput)
   if output != ['Copied properties for revision 0.\n']:
@@ -139,8 +164,9 @@ def run_info(url, expected_error=None):
 
 
 def setup_and_sync(sbox, dump_file_contents, subdir=None,
-                   bypass_prop_validation=False):
-  """Create a repository for SBOX, load it with DUMP_FILE_CONTENTS, then create a mirror repository and sync it with SBOX.  Return the mirror sandbox."""
+                   bypass_prop_validation=False, source_prop_encoding=None,
+                   is_src_ra_local=None, is_dest_ra_local=None):
+  """Create a repository for SBOX, load it with DUMP_FILE_CONTENTS, then create a mirror repository and sync it with SBOX. If is_src_ra_local or is_dest_ra_local is True, then run_init, run_sync, and run_copy_revprops will use the file:// scheme for the source and destination URLs.  Return the mirror sandbox."""
 
   # Create the empty master repository.
   build_repos(sbox)
@@ -163,12 +189,22 @@ def setup_and_sync(sbox, dump_file_contents, subdir=None,
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
   repo_url = sbox.repo_url
+  cwd = os.getcwd()
+  if is_src_ra_local:
+    repo_url = svntest.main.file_scheme_prefix + svntest.main.pathname2url(os.path.join(cwd, sbox.repo_dir))
+
   if subdir:
     repo_url = repo_url + subdir
-  run_init(dest_sbox.repo_url, repo_url)
 
-  run_sync(dest_sbox.repo_url, repo_url)
-  run_copy_revprops(dest_sbox.repo_url, repo_url)
+  dest_repo_url = dest_sbox.repo_url
+  if is_dest_ra_local:
+    dest_repo_url = svntest.main.file_scheme_prefix + svntest.main.pathname2url(os.path.join(cwd, dest_sbox.repo_dir))
+  run_init(dest_repo_url, repo_url, source_prop_encoding)
+
+  run_sync(dest_repo_url, repo_url,
+           source_prop_encoding=source_prop_encoding)
+  run_copy_revprops(dest_repo_url, repo_url,
+                    source_prop_encoding=source_prop_encoding)
 
   return dest_sbox
 
@@ -190,7 +226,9 @@ def verify_mirror(dest_sbox, exp_dump_file_contents):
     "Dump files", "DUMP", exp_dump_file_contents, dest_dump)
 
 def run_test(sbox, dump_file_name, subdir=None, exp_dump_file_name=None,
-             bypass_prop_validation=False):
+             bypass_prop_validation=False, source_prop_encoding=None,
+             is_src_ra_local=None, is_dest_ra_local=None):
+
   """Load a dump file, sync repositories, and compare contents with the original
 or another dump file."""
 
@@ -204,7 +242,8 @@ or another dump file."""
                                   'rb').readlines()
 
   dest_sbox = setup_and_sync(sbox, master_dumpfile_contents, subdir,
-                             bypass_prop_validation)
+                             bypass_prop_validation, source_prop_encoding,
+                             is_src_ra_local, is_dest_ra_local)
 
   # Compare the dump produced by the mirror repository with either the original
   # dump file (used to create the master repository) or another specified dump
@@ -794,10 +833,44 @@ def copy_bad_line_endings(sbox):
            exp_dump_file_name="copy-bad-line-endings.expected.dump",
            bypass_prop_validation=True)
 
+def copy_bad_line_endings2(sbox):
+  "copy with non-LF line endings in svn:* props"
+  run_test(sbox, "copy-bad-line-endings2.dump",
+           exp_dump_file_name="copy-bad-line-endings2.expected.dump",
+           bypass_prop_validation=True)
+
+def copy_bad_encoding(sbox):
+  "copy and reencode non-UTF-8 svn:* props"
+  run_test(sbox, "copy-bad-encoding.dump",
+           exp_dump_file_name="copy-bad-encoding.expected.dump",
+           bypass_prop_validation=True, source_prop_encoding="ISO-8859-3")
+
+def identity_copy(sbox):
+  "copy UTF-8 svn:* props identically"
+  orig_lc_all = locale.setlocale(locale.LC_ALL)
+  other_locales = [ "English.1252", "German.1252", "French.1252",
+                    "en_US.ISO-8859-1", "en_GB.ISO-8859-1", "de_DE.ISO-8859-1",
+                    "en_US.ISO8859-1", "en_GB.ISO8859-1", "de_DE.ISO8859-1" ]
+  for other_locale in other_locales:
+    try:
+      locale.setlocale(locale.LC_ALL, other_locale)
+      break
+    except:
+      pass
+  if locale.setlocale(locale.LC_ALL) != other_locale:
+    raise svntest.Skip
+
+  try:
+    run_test(sbox, "copy-bad-encoding.expected.dump",
+             exp_dump_file_name="copy-bad-encoding.expected.dump",
+             bypass_prop_validation=True)
+  finally:
+    locale.setlocale(locale.LC_ALL, orig_lc_all)
+
 #----------------------------------------------------------------------
 
 def delete_svn_props(sbox):
-  "copy with svn:prop deletions"
+  "copy with svn:* prop deletions"
   run_test(sbox, "delete-svn-props.dump")
 
 @Issue(3438)
@@ -805,6 +878,67 @@ def commit_a_copy_of_root(sbox):
   "commit a copy of root causes sync to fail"
   #Testcase for issue 3438.
   run_test(sbox, "repo-with-copy-of-root-dir.dump")
+
+
+@Skip(svntest.main.is_ra_type_file)
+def specific_deny_authz(sbox):
+  "verify if specifically denied paths dont sync"
+
+  sbox.build("specific-deny-authz")
+
+  dest_sbox = sbox.clone_dependent()
+  build_repos(dest_sbox)
+
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
+
+  run_init(dest_sbox.repo_url, sbox.repo_url)
+
+  svntest.main.run_svn(None, "cp",
+                       os.path.join(sbox.wc_dir, "A"),
+                       os.path.join(sbox.wc_dir, "A_COPY")
+                       )
+  svntest.main.run_svn(None, "ci", "-mm", sbox.wc_dir)
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  # For mod_dav_svn's parent path setup we need per-repos permissions in
+  # the authz file...
+  if sbox.repo_url.startswith('http'):
+    svntest.main.file_write(sbox.authz_file,
+                            "[specific-deny-authz:/]\n"
+                            "* = r\n"
+                            "\n"
+                            "[specific-deny-authz:/A]\n"
+                            "* = \n"
+                            "\n"
+                            "[specific-deny-authz:/A_COPY/B/lambda]\n"
+                            "* = \n"
+                            "\n"
+                            "[specific-deny-authz-1:/]\n"
+                            "* = rw\n")
+  # Otherwise we can just go with the permissions needed for the source
+  # repository.
+  else:
+    svntest.main.file_write(sbox.authz_file,
+                            "[/]\n"
+                            "* = r\n"
+                            "\n"
+                            "[/A]\n"
+                            "* = \n"
+                            "\n"
+                            "[/A_COPY/B/lambda]\n"
+                            "* = \n")
+
+  run_sync(dest_sbox.repo_url)
+
+  lambda_url = dest_sbox.repo_url + '/A_COPY/B/lambda'
+
+  # this file should have been blocked by authz
+  svntest.actions.run_and_verify_svn(None,
+                                     [], svntest.verify.AnyOutput,
+                                     'cat',
+                                     lambda_url)
+
 
 # issue #3641 'svnsync fails to partially copy a repository'.
 # This currently fails because while replacements with history
@@ -880,6 +1014,13 @@ def delete_revprops(sbox):
   # Does the result look as we expected?
   verify_mirror(dest_sbox, expected_contents)
 
+@Issue(3870)
+@SkipUnless(svntest.main.is_posix_os)
+def fd_leak_sync_from_serf_to_local(sbox):
+  "fd leak during sync from serf to local"
+  import resource
+  resource.setrlimit(resource.RLIMIT_NOFILE, (128, 128))
+  run_test(sbox, "largemods.dump", is_src_ra_local=None, is_dest_ra_local=True)
 ########################################################################
 # Run the tests
 
@@ -912,10 +1053,15 @@ test_list = [ None,
               info_synchronized,
               info_not_synchronized,
               copy_bad_line_endings,
+              copy_bad_line_endings2,
+              copy_bad_encoding,
+              identity_copy,
               delete_svn_props,
               commit_a_copy_of_root,
+              specific_deny_authz,
               descend_into_replace,
               delete_revprops,
+              fd_leak_sync_from_serf_to_local,
              ]
 serial_only = True
 

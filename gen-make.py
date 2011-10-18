@@ -207,6 +207,9 @@ def _usage_exit(err=None):
   print("  --disable-shared")
   print("           only build static libraries")
   print("")
+  print("  --with-static-apr")
+  print("           Use static apr and apr-util")
+  print("")
   print("  --vsnet-version=VER")
   print("           generate for VS.NET version VER (2002, 2003, 2005, 2008 or 2010)")
   print("           [only valid in combination with '-t vcproj']")
@@ -252,6 +255,7 @@ if __name__ == '__main__':
                             'with-sqlite=',
                             'with-sasl=',
                             'with-apr_memcache=',
+                            'with-static-apr',
                             'enable-pool-debug',
                             'enable-purify',
                             'enable-quantify',

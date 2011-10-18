@@ -75,7 +75,7 @@ def filter_and_return_output(dump, bufsize=0, *varargs):
   # Since we call svntest.main.run_command_stdin() in binary mode,
   # normalize the stderr line endings on Windows ourselves.
   if sys.platform == 'win32':
-      errput = map(lambda x : x.replace('\r\n', '\n'), errput)
+    errput = map(lambda x : x.replace('\r\n', '\n'), errput)
 
   return output, errput
 
@@ -439,7 +439,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   # Check that all the blather above really happens.  First does
   # svndumpfilter report what we expect to stderr?
   expected_err = [
-      "Excluding (and dropping empty revisions for) prefix patterns:\n",
+      "Excluding (and dropping empty revisions for) prefixes:\n",
       "   '/branches/B2'\n",
       "\n",
       "Revision 6 committed as 6.\n",

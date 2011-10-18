@@ -36,6 +36,7 @@
 #include "svn_props.h"
 
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_fs_private.h"
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
 
@@ -242,6 +243,37 @@ dump_node(struct edit_baton *eb,
   svn_fs_root_t *compare_root = NULL;
   apr_file_t *delta_file = NULL;
 
+  /* Maybe validate the path. */
+  if (eb->verify || eb->notify_func)
+    {
+      svn_error_t *err = svn_fs__path_valid(path, pool);
+
+      if (err)
+        {
+          if (eb->notify_func)
+            {
+              char errbuf[512]; /* ### svn_strerror() magic number  */
+              svn_repos_notify_t *notify;
+              notify = svn_repos_notify_create(svn_repos_notify_warning, pool);
+
+              notify->warning = svn_repos_notify_warning_invalid_fspath;
+              notify->warning_str = apr_psprintf(
+                     pool,
+                     _("E%06d: While validating fspath '%s': %s"),
+                     err->apr_err, path,
+                     svn_err_best_message(err, errbuf, sizeof(errbuf)));
+
+              eb->notify_func(eb->notify_baton, notify, pool);
+            }
+
+          /* Return the error in addition to notifying about it. */
+          if (eb->verify)
+            return svn_error_trace(err);
+          else
+            svn_error_clear(err);
+        }
+    }
+
   /* Write out metadata headers for this file node. */
   SVN_ERR(svn_stream_printf(eb->stream, pool,
                             SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n",
@@ -348,13 +380,14 @@ dump_node(struct edit_baton *eb,
               svn_repos_notify_t *notify =
                     svn_repos_notify_create(svn_repos_notify_warning, pool);
 
-              notify->warning = apr_psprintf(
+              notify->warning = svn_repos_notify_warning_found_old_reference;
+              notify->warning_str = apr_psprintf(
                      pool,
-                     _("WARNING: Referencing data in revision %ld,"
-                       " which is older than the oldest\n"
-                       "WARNING: dumped revision (%ld).  Loading this dump"
-                       " into an empty repository\n"
-                       "WARNING: will fail.\n"),
+                     _("Referencing data in revision %ld,"
+                       " which is older than the oldest"
+                       " dumped revision (r%ld).  Loading this dump"
+                       " into an empty repository"
+                       " will fail."),
                      cmp_rev, eb->oldest_dumped_rev);
               eb->found_old_reference = TRUE;
               eb->notify_func(eb->notify_baton, notify, pool);
@@ -452,12 +485,13 @@ dump_node(struct edit_baton *eb,
                   svn_repos_notify_t *notify =
                     svn_repos_notify_create(svn_repos_notify_warning, pool);
 
-                  notify->warning = apr_psprintf(
+                  notify->warning = svn_repos_notify_warning_found_old_mergeinfo;
+                  notify->warning_str = apr_psprintf(
                     pool,
-                    _("WARNING: Mergeinfo referencing revision(s) prior "
-                      "to the oldest dumped revision (%ld).\n"
-                      "WARNING: Loading this dump may result in invalid "
-                      "mergeinfo.\n"),
+                    _("Mergeinfo referencing revision(s) prior "
+                      "to the oldest dumped revision (r%ld). "
+                      "Loading this dump may result in invalid "
+                      "mergeinfo."),
                     eb->oldest_dumped_rev);
 
                   eb->found_old_mergeinfo = TRUE;
@@ -680,7 +714,7 @@ open_directory(const char *path,
 
   /* If the parent directory has explicit comparison path and rev,
      record the same for this one. */
-  if (pb && ARE_VALID_COPY_ARGS(pb->cmp_path, pb->cmp_rev))
+  if (ARE_VALID_COPY_ARGS(pb->cmp_path, pb->cmp_rev))
     {
       cmp_path = svn_relpath_join(pb->cmp_path,
                                   svn_relpath_basename(path, pool), pool);
@@ -777,7 +811,7 @@ open_file(const char *path,
 
   /* If the parent directory has explicit comparison path and rev,
      record the same for this one. */
-  if (pb && ARE_VALID_COPY_ARGS(pb->cmp_path, pb->cmp_rev))
+  if (ARE_VALID_COPY_ARGS(pb->cmp_path, pb->cmp_rev))
     {
       cmp_path = svn_relpath_join(pb->cmp_path,
                                   svn_relpath_basename(path, pool), pool);
@@ -861,6 +895,9 @@ get_dump_editor(const svn_delta_editor_t **editor,
 
   *edit_baton = eb;
   *editor = dump_editor;
+
+  SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                   NULL, NULL, NULL, NULL, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1113,14 +1150,18 @@ svn_repos_dump_fs3(svn_repos_t *repos,
          warning, since the inline warnings already issued might easily be
          missed. */
 
-      notify = svn_repos_notify_create(svn_repos_notify_warning, subpool);
+      notify = svn_repos_notify_create(svn_repos_notify_dump_end, subpool);
+      notify_func(notify_baton, notify, subpool);
 
       if (found_old_reference)
         {
-          notify->warning = _("WARNING: The range of revisions dumped "
-                              "contained references to\n"
-                              "WARNING: copy sources outside that "
-                              "range.\n");
+          notify = svn_repos_notify_create(svn_repos_notify_warning, subpool);
+
+          notify->warning = svn_repos_notify_warning_found_old_reference;
+          notify->warning_str = _("The range of revisions dumped "
+                                  "contained references to "
+                                  "copy sources outside that "
+                                  "range.");
           notify_func(notify_baton, notify, subpool);
         }
 
@@ -1128,10 +1169,13 @@ svn_repos_dump_fs3(svn_repos_t *repos,
          in dumped mergeinfo. */
       if (found_old_mergeinfo)
         {
-          notify->warning = _("WARNING: The range of revisions dumped "
-                              "contained mergeinfo\n"
-                              "WARNING: which reference revisions outside "
-                              "that range.\n");
+          notify = svn_repos_notify_create(svn_repos_notify_warning, subpool);
+
+          notify->warning = svn_repos_notify_warning_found_old_mergeinfo;
+          notify->warning_str = _("The range of revisions dumped "
+                                  "contained mergeinfo "
+                                  "which reference revisions outside "
+                                  "that range.");
           notify_func(notify_baton, notify, subpool);
         }
     }
@@ -1241,6 +1285,11 @@ svn_repos_verify_fs2(svn_repos_t *repos,
                                "(youngest revision is %ld)"),
                              end_rev, youngest);
 
+  /* Verify global/auxiliary data before verifying revisions. */
+  if (start_rev == 0)
+    SVN_ERR(svn_fs_verify(svn_fs_path(fs, pool), cancel_func, cancel_baton,
+                          pool));
+
   /* Create a notify object that we can reuse within the loop. */
   if (notify_func)
     notify = svn_repos_notify_create(svn_repos_notify_verify_rev_end,
@@ -1285,6 +1334,14 @@ svn_repos_verify_fs2(svn_repos_t *repos,
         }
     }
 
+  /* We're done. */
+  if (notify_func)
+    {
+      notify = svn_repos_notify_create(svn_repos_notify_verify_end, iterpool);
+      notify_func(notify_baton, notify, iterpool);
+    }
+
+  /* Per-backend verification. */
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;

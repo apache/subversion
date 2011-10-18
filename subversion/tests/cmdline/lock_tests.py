@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# encoding=utf-8
 #
 #  lock_tests.py:  testing versioned properties
 #
@@ -89,7 +90,8 @@ def lock_file(sbox):
                                      '-m', '', file_path)
 
   # --- Meanwhile, in our other working copy... ---
-  err_re = "((.*User 'jconstant' does not own lock on path.*)|(.*423 Locked.*))"
+  err_re = "(svn\: E195022\: File '.*iota' is locked in another)|" + \
+           "(svn\: E160039: User '?jconstant'? does not own lock on path.*iota')"
 
   svntest.main.run_svn(None, 'update', wc_b)
   # -- Try to change a file --
@@ -109,8 +111,8 @@ def lock_file(sbox):
   # change the locked file's properties
   svntest.main.run_svn(None, 'propset', 'sneakyuser', 'Sally', file_path_b)
 
-  err_re = "((.*User 'jconstant' does not own lock on path.*)" + \
-             "|(.*At least one property change failed.*))"
+  err_re = "(svn\: E195022\: File '.*iota' is locked in another)|" + \
+           "(svn\: E160039\: User '?jconstant'? does not own lock on path)"
 
   # attempt (and fail) to commit as user Sally
   svntest.actions.run_and_verify_commit(wc_b, None, None, err_re,
@@ -867,9 +869,11 @@ def lock_switched_files(sbox):
   alpha_URL = sbox.repo_url + '/A/B/E/alpha'
 
   svntest.actions.run_and_verify_svn(None, None, [], 'switch',
-                                     iota_URL, gamma_path)
+                                     iota_URL, gamma_path,
+                                     '--ignore-ancestry')
   svntest.actions.run_and_verify_svn(None, None, [], 'switch',
-                                     alpha_URL, lambda_path)
+                                     alpha_URL, lambda_path,
+                                     '--ignore-ancestry')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/gamma', 'A/B/lambda', switched='S')
@@ -1316,7 +1320,6 @@ def ls_url_encoded(sbox):
 
 #----------------------------------------------------------------------
 # Make sure unlocking a path with the wrong lock token fails.
-@XFail(svntest.main.is_ra_type_dav)
 @Issue(3794)
 def unlock_wrong_token(sbox):
   "verify unlocking with wrong lock token"
@@ -1332,7 +1335,7 @@ def unlock_wrong_token(sbox):
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      file_path)
 
-  # Steal the lock as the same author, but using an URL to keep the old token
+  # Steal the lock as the same author, but using a URL to keep the old token
   # in the WC.
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                     "--force", file_url)
@@ -1378,7 +1381,7 @@ def examine_lock_encoded_recurse(sbox):
                                         svntest.main.wc_author)
 
 # Trying to unlock someone else's lock with --force should fail.
-@XFail(svntest.main.is_ra_type_dav)
+@Issue(3801)
 def unlocked_lock_of_other_user(sbox):
   "unlock file locked by other user"
 
@@ -1449,7 +1452,8 @@ def lock_twice_in_one_wc(sbox):
   # Switch a second location for the same file in the same working copy
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'switch', sbox.repo_url + '/A',
-                                     os.path.join(wc_dir, 'A', 'B'))
+                                     os.path.join(wc_dir, 'A', 'B'),
+                                     '--ignore-ancestry')
 
   # Lock location 1
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1495,9 +1499,9 @@ def lock_path_not_in_head(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
                                      '-m', 'Some deletions', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r1', wc_dir)
-  expected_lock_fail_err_re = "svn: warning:.*" \
+  expected_lock_fail_err_re = "svn: warning: W160042: " \
   "((Path .* doesn't exist in HEAD revision)" \
-  "|(Lock request failed: 405 Method Not Allowed))"
+  "|(L(ock|OCK) request (on '.*' )?failed: 405 Method Not Allowed))"
   # Issue #3524 These lock attemtps were triggering an assert over ra_serf:
   #
   # working_copies\lock_tests-37>svn lock A\D
@@ -1645,6 +1649,100 @@ def cp_isnt_ro(sbox):
   is_readonly(mu3_path)
 
 
+#----------------------------------------------------------------------
+# Issue #3525: Locked file which is scheduled for delete causes tree
+# conflict
+@Issue(3525)
+def update_locked_deleted(sbox):
+  "updating locked scheduled-for-delete file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = sbox.ospath('iota')
+  mu_path = sbox.ospath('A/mu')
+  alpha_path = sbox.ospath('A/B/E/alpha')
+
+  svntest.main.run_svn(None, 'lock', '-m', 'locked', mu_path, iota_path,
+                       alpha_path)
+  sbox.simple_rm('iota')
+  sbox.simple_rm('A/mu')
+  sbox.simple_rm('A/B/E')
+
+  # Create expected output tree for an update.
+  expected_output = svntest.wc.State(wc_dir, {
+  })
+
+  # Create expected status tree for the update.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E', status='D ')
+  expected_status.tweak('iota', 'A/mu', 'A/B/E/alpha',
+                        status='D ', writelocked='K')
+  expected_status.tweak('A/B/E/beta', status='D ')
+
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        None, expected_status)
+
+  # Now we steal the lock of iota and A/mu via URL and retry
+  svntest.main.run_svn(None, 'lock', '-m', 'locked', sbox.repo_url + '/iota',
+                       '--force', sbox.repo_url + '/A/mu',
+                       sbox.repo_url + '/A/B/E/alpha')
+
+  expected_status.tweak('iota', 'A/mu', 'A/B/E/alpha',
+                        status='D ', writelocked='O')
+
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        None, expected_status)
+
+
+#----------------------------------------------------------------------
+def block_unlock_if_pre_unlock_hook_fails(sbox):
+  "block unlock operation if pre-unlock hook fails"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  svntest.actions.create_failing_hook(repo_dir, "pre-unlock", "error text")
+
+  # lock a file.
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G/pi', writelocked='K')
+
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     '-m', '', pi_path)
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Make sure the unlock operation fails as pre-unlock hook blocks it.
+  expected_unlock_fail_err_re = ".*error text|.*500 Internal Server Error"
+  svntest.actions.run_and_verify_svn2(None, None, expected_unlock_fail_err_re,
+                                      1, 'unlock', pi_path)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+#----------------------------------------------------------------------
+def lock_invalid_token(sbox):
+  "verify pre-lock hook returning invalid token"
+
+  sbox.build()
+
+  hook_path = os.path.join(sbox.repo_dir, 'hooks', 'pre-lock')
+  svntest.main.create_python_hook_script(hook_path,
+    '# encoding=utf-8\n'
+    'import sys\n'
+    'sys.stdout.write("тест")\n'
+    'sys.exit(0)\n')
+
+  fname = 'iota'
+  file_path = os.path.join(sbox.wc_dir, fname)
+
+  svntest.actions.run_and_verify_svn2(None, None,
+                                      "svn: warning: W160037: " \
+                                      ".*scheme.*'opaquelocktoken'", 0,
+                                      'lock', '-m', '', file_path)
+
+
 ########################################################################
 # Run the tests
 
@@ -1690,6 +1788,9 @@ test_list = [ None,
               verify_path_escaping,
               replace_and_propset_locked_path,
               cp_isnt_ro,
+              update_locked_deleted,
+              block_unlock_if_pre_unlock_hook_fails,
+              lock_invalid_token,
             ]
 
 if __name__ == '__main__':

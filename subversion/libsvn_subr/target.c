@@ -46,7 +46,7 @@ svn_path_condense_targets(const char **pcommon,
   int i, j, num_condensed = targets->nelts;
   svn_boolean_t *removed;
   apr_array_header_t *abs_targets;
-  int basedir_len;
+  size_t basedir_len;
   const char *first_target;
   svn_boolean_t first_target_is_url;
 
@@ -156,7 +156,7 @@ svn_path_condense_targets(const char **pcommon,
 
                   if (i_is_url != j_is_url)
                     continue;
-                  
+
                   if (i_is_url)
                     ancestor = svn_uri_get_longest_ancestor(abs_targets_i,
                                                             abs_targets_j,
@@ -312,7 +312,7 @@ svn_path_remove_redundancies(apr_array_header_t **pcondensed_targets,
 
           /* Quit here if this path is a child of one of the keepers. */
           if (is_url)
-            child_relpath = svn_uri_is_child(keeper, abs_path, temp_pool);
+            child_relpath = svn_uri__is_child(keeper, abs_path, temp_pool);
           else
             child_relpath = svn_dirent_is_child(keeper, abs_path, temp_pool);
           if (child_relpath)

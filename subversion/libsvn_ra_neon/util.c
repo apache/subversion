@@ -623,6 +623,7 @@ generate_error(svn_ra_neon__request_t *req, apr_pool_t *pool)
                           req->code_desc, req->method, req->url));
         }
     case NE_AUTH:
+    case NE_PROXYAUTH:
       errcode = SVN_ERR_RA_NOT_AUTHORIZED;
 #ifdef SVN_NEON_0_27
       /* neon >= 0.27 gives a descriptive error message after auth
@@ -1576,4 +1577,75 @@ svn_ra_neon__request_get_location(svn_ra_neon__request_t *request,
 {
   const char *val = ne_get_response_header(request->ne_req, "Location");
   return val ? svn_urlpath__canonicalize(val, pool) : NULL;
+}
+
+const char *
+svn_ra_neon__uri_unparse(const ne_uri *uri,
+                         apr_pool_t *pool)
+{
+  char *unparsed_uri;
+  const char *result;
+
+  /* Unparse uri. */
+  unparsed_uri = ne_uri_unparse(uri);
+
+  /* Copy string to result pool, and make sure it conforms to
+     Subversion rules */
+  result = svn_uri_canonicalize(unparsed_uri, pool);
+
+  /* Free neon's allocated copy. */
+  ne_free(unparsed_uri);
+
+  /* Return string allocated in result pool. */
+  return result;
+}
+
+/* Sets *SUPPORTS_DEADPROP_COUNT to non-zero if server supports
+ * deadprop-count property. */
+svn_error_t *
+svn_ra_neon__get_deadprop_count_support(svn_boolean_t *supported,
+                                        svn_ra_neon__session_t *ras,
+                                        const char *final_url,
+                                        apr_pool_t *pool)
+{
+  /* The property we need to fetch to see whether the server we are
+     connected to supports the deadprop-count property. */
+  static const ne_propname deadprop_count_support_props[] =
+  {
+    { SVN_DAV_PROP_NS_DAV, "deadprop-count" },
+    { NULL }
+  };
+
+  if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras))
+    {
+      /* HTTPv2 enabled servers always supports deadprop-count property. */
+      *supported = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  /* Check if we already checked deadprop_count support. */
+  if (ras->supports_deadprop_count == svn_tristate_unknown)
+    {
+      svn_ra_neon__resource_t *rsrc;
+      const svn_string_t *deadprop_count;
+
+      SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, ras, final_url, NULL,
+                                              deadprop_count_support_props,
+                                              pool));
+      deadprop_count = apr_hash_get(rsrc->propset,
+                                    SVN_RA_NEON__PROP_DEADPROP_COUNT,
+                                    APR_HASH_KEY_STRING);
+      if (deadprop_count != NULL)
+        {
+          ras->supports_deadprop_count = svn_tristate_true;
+        }
+      else
+        {
+          ras->supports_deadprop_count = svn_tristate_false;
+        }
+    }
+
+  *supported = (ras->supports_deadprop_count == svn_tristate_true);
+
+  return SVN_NO_ERROR;
 }

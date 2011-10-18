@@ -70,7 +70,6 @@ public class SVNClient implements SVNClientInterface
      */
     protected void finalize()
     {
-        aSVNClient.finalize();
     }
 
     /**
@@ -194,8 +193,14 @@ public class SVNClient implements SVNClientInterface
                               changelists == null ? null
                                 : Arrays.asList(changelists),
         new org.apache.subversion.javahl.callback.StatusCallback () {
-         public void doStatus(org.apache.subversion.javahl.types.Status aStatus)
-                    { callback.doStatus(new Status(aStatus)); }
+         public void doStatus(String path,
+                              org.apache.subversion.javahl.types.Status aStatus)
+                    {
+                        if (aStatus != null)
+                            callback.doStatus(new Status(aSVNClient, aStatus));
+                        else
+                            callback.doStatus(new Status(path));
+                    }
                 });
         }
         catch (org.apache.subversion.javahl.ClientException ex)
@@ -319,10 +324,20 @@ public class SVNClient implements SVNClientInterface
         implements org.apache.subversion.javahl.callback.UserPasswordCallback
     {
         PromptUserPassword oldPrompt;
+        PromptUserPassword2 oldPrompt2;
+        PromptUserPassword3 oldPrompt3;
 
         PromptUser1Wrapper(PromptUserPassword prompt)
         {
             oldPrompt = prompt;
+
+            /* This mirrors the insanity that was going on in the C++ layer
+               prior to 1.7.  Don't ask, just pray it works. */
+            if (prompt instanceof PromptUserPassword2)
+              oldPrompt2 = (PromptUserPassword2) prompt;
+
+            if (prompt instanceof PromptUserPassword3)
+              oldPrompt3 = (PromptUserPassword3) prompt;
         }
 
         public String getPassword()
@@ -354,7 +369,10 @@ public class SVNClient implements SVNClientInterface
 
         public int askTrustSSLServer(String info, boolean allowPermanently)
         {
-            return askTrustSSLServer(info, allowPermanently);
+            if (oldPrompt2 != null)
+                return oldPrompt2.askTrustSSLServer(info, allowPermanently);
+            else
+                return 0;
         }
 
         public boolean userAllowedSave()
@@ -365,12 +383,19 @@ public class SVNClient implements SVNClientInterface
         public String askQuestion(String realm, String question,
                                   boolean showAnswer, boolean maySave)
         {
-            return askQuestion(realm, question, showAnswer);
+            if (oldPrompt3 != null)
+                return oldPrompt3.askQuestion(realm, question, showAnswer,
+                                              maySave);
+            else
+                return askQuestion(realm, question, showAnswer);
         }
 
         public boolean prompt(String realm, String username, boolean maySave)
         {
-            return prompt(realm, username);
+            if (oldPrompt3 != null)
+                return oldPrompt3.prompt(realm, username, maySave);
+            else
+                return prompt(realm, username);
         }
     }
 
@@ -567,8 +592,8 @@ public class SVNClient implements SVNClientInterface
 
         try
         {
-            List<org.apache.subversion.javahl.RevisionRange> aRevisions =
-              new ArrayList<org.apache.subversion.javahl.RevisionRange>(revisionRanges.length);
+            List<org.apache.subversion.javahl.types.RevisionRange> aRevisions =
+              new ArrayList<org.apache.subversion.javahl.types.RevisionRange>(revisionRanges.length);
 
             for (RevisionRange range : revisionRanges)
             {
@@ -980,8 +1005,8 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            List<org.apache.subversion.javahl.CopySource> aCopySources =
-                new ArrayList<org.apache.subversion.javahl.CopySource>(
+            List<org.apache.subversion.javahl.types.CopySource> aCopySources =
+                new ArrayList<org.apache.subversion.javahl.types.CopySource>(
                                                             sources.length);
 
             for (CopySource src : sources)
@@ -1226,6 +1251,9 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
+     * @deprecated Use {@link #doSwitch(String, String, Revision, Revision,
+     *                                  int, boolean, boolean, boolean,
+     *                                  boolean)} instead.
      * @since 1.5
      */
     public long doSwitch(String path, String url, Revision revision,
@@ -1234,13 +1262,27 @@ public class SVNClient implements SVNClientInterface
                          boolean allowUnverObstructions)
             throws ClientException
     {
+        return doSwitch(path, url, revision, pegRevision, depth, depthIsSticky,
+                        ignoreExternals, allowUnverObstructions, true);
+    }
+
+    /**
+     * @since 1.7
+     */
+    public long doSwitch(String path, String url, Revision revision,
+                         Revision pegRevision, int depth,
+                         boolean depthIsSticky, boolean ignoreExternals,
+                         boolean allowUnverObstructions,
+                         boolean ignoreAncestry)
+            throws ClientException
+    {
         try
         {
             return aSVNClient.doSwitch(path, url,
                           revision == null ? null : revision.toApache(),
                           pegRevision == null ? null : pegRevision.toApache(),
                           Depth.toADepth(depth), depthIsSticky, ignoreExternals,
-                          allowUnverObstructions);
+                          allowUnverObstructions, ignoreAncestry);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -1382,8 +1424,8 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            List<org.apache.subversion.javahl.RevisionRange> aRevisions =
-              new ArrayList<org.apache.subversion.javahl.RevisionRange>(revisions.length);
+            List<org.apache.subversion.javahl.types.RevisionRange> aRevisions =
+              new ArrayList<org.apache.subversion.javahl.types.RevisionRange>(revisions.length);
 
             for (RevisionRange range : revisions )
             {
@@ -1428,7 +1470,7 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            org.apache.subversion.javahl.Mergeinfo aMergeinfo =
+            org.apache.subversion.javahl.types.Mergeinfo aMergeinfo =
                          aSVNClient.getMergeinfo(path,
                          pegRevision == null ? null : pegRevision.toApache());
 
@@ -1489,7 +1531,7 @@ public class SVNClient implements SVNClientInterface
         try
         {
             aSVNClient.getMergeinfoLog(
-                org.apache.subversion.javahl.Mergeinfo.LogKind.values()[kind],
+                org.apache.subversion.javahl.types.Mergeinfo.LogKind.values()[kind],
                 pathOrUrl, pegRevision == null ? null : pegRevision.toApache(),
                 mergeSourceUrl,
                 srcPegRevision == null ? null : srcPegRevision.toApache(),
@@ -1853,12 +1895,27 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.propertySet(path, name,
+            if (Path.isURL(path))
+            {
+                Info2[] infos = info2(path, Revision.HEAD, Revision.HEAD,
+                                      false);
+
+                aSVNClient.propertySetRemote(path, infos[0].getRev(), name,
+                                       value == null ? null : value.getBytes(),
+                                       cachedHandler,
+                                       force, revpropTable, null);
+            }
+            else
+            {
+                Set<String> paths = new HashSet<String>();
+                paths.add(path);
+
+                aSVNClient.propertySetLocal(paths, name,
                                    value == null ? null : value.getBytes(),
                                    Depth.toADepth(depth),
                                    changelists == null ? null
-                                    : Arrays.asList(changelists),
-                                   force, revpropTable, null);
+                                    : Arrays.asList(changelists), force);
+            }
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -2350,15 +2407,15 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-        	final List<org.apache.subversion.javahl.Info> infos =
-        		new ArrayList<org.apache.subversion.javahl.Info>();
+        	final List<org.apache.subversion.javahl.types.Info> infos =
+        		new ArrayList<org.apache.subversion.javahl.types.Info>();
         	aSVNClient.info2(path,
         					org.apache.subversion.javahl.types.Revision.HEAD,
         					org.apache.subversion.javahl.types.Revision.HEAD,
         					org.apache.subversion.javahl.types.Depth.empty,
         				    null, new org.apache.subversion.javahl.callback.InfoCallback()
         	{
-				public void singleInfo(org.apache.subversion.javahl.Info info) {
+				public void singleInfo(org.apache.subversion.javahl.types.Info info) {
 					infos.add(info);
 				}
         	});
@@ -2595,7 +2652,7 @@ public class SVNClient implements SVNClientInterface
                           Depth.toADepth(depth), changelists == null ? null
                             : Arrays.asList(changelists),
         new org.apache.subversion.javahl.callback.InfoCallback () {
-            public void singleInfo(org.apache.subversion.javahl.Info aInfo)
+            public void singleInfo(org.apache.subversion.javahl.types.Info aInfo)
             {
                 callback.singleInfo(aInfo == null ? null : new Info2(aInfo));
             }

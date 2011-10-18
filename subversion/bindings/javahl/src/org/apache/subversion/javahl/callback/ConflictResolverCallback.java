@@ -32,8 +32,6 @@ import java.util.EventListener;
 /**
  * The callback API used to handle conflicts encountered during
  * merge/update/switch operations.
- *
- * @since 1.5
  */
 public interface ConflictResolverCallback extends EventListener
 {

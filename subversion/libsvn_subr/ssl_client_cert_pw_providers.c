@@ -251,8 +251,8 @@ svn_auth__ssl_client_cert_pw_file_save_creds_helper
                       apr_pool_t *cached_answer_pool;
 
                       /* Nothing cached for this realm, prompt the user. */
-                      SVN_ERR((*b->plaintext_passphrase_prompt_func)
-                               (&may_save_passphrase,
+                      SVN_ERR((*b->plaintext_passphrase_prompt_func)(
+                                &may_save_passphrase,
                                 realmstring,
                                 b->prompt_baton,
                                 pool));

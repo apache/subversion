@@ -40,6 +40,7 @@
 #include "svn_utf.h"
 #include "svn_path.h"
 #include "svn_opt.h"
+#include "svn_version.h"
 
 #include "private/svn_wc_private.h"
 
@@ -192,7 +193,7 @@ raise_tree_conflict(int argc, const char **argv, apr_pool_t *pool)
   const char *wc_path, *wc_abspath;
   const char *repos_url1, *repos_url2, *path_in_repos1, *path_in_repos2;
   int operation, action, reason;
-  int peg_rev1, peg_rev2;
+  long peg_rev1, peg_rev2;
   int kind, kind1, kind2;
 
   if (argc != 13)

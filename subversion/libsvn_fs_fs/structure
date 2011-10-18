@@ -34,12 +34,13 @@ repository) is:
   revs/               Subdirectory containing revs
     <shard>/          Shard directory, if sharding is in use (see below)
       <revnum>        File containing rev <revnum>
-    <shard>.pack      Pack directory, if the repo has been packed (see below)
+    <shard>.pack/     Pack directory, if the repo has been packed (see below)
       pack            Pack file, if the repository has been packed (see below)
       manifest        Pack manifest file, if a pack file exists (see below)
   revprops/           Subdirectory containing rev-props
     <shard>/          Shard directory, if sharding is in use (see below)
       <revnum>        File containing rev-props for <revnum>
+    revprops.db       SQLite database of the packed revision properties
   transactions/       Subdirectory containing transactions
     <txnid>.txn/      Directory containing transaction <txnid>
   txn-protorevs/      Subdirectory containing transaction proto-revision files
@@ -61,7 +62,6 @@ repository) is:
   min-unpacked-rev    File containing the oldest revision not in a pack file
   min-unpacked-revprop File containing the oldest revision of unpacked revprop
   rep-cache.db        SQLite database mapping rep checksums to locations
-  revprops.db         SQLite database of the packed revision properties
 
 Files in the revprops directory are in the hash dump format used by
 svn_hash_write.
@@ -102,8 +102,10 @@ When representation sharing is enabled, the filesystem tracks
 representation checksum and location mappings using a SQLite database in
 "rep-cache.db".  The database has a single table, which stores the sha1
 hash text as the primary key, mapped to the representation revision, offset,
-size and expanded size.  This file is not required, and may be removed at an
-abritrary time, with the subsequent loss of rep-sharing capabilities.
+size and expanded size.  This file is only consulted during writes and never
+during reads.  Consequently, it is not required, and may be removed at an
+abritrary time, with the subsequent loss of rep-sharing capabilities for
+revisions written thereafter.
 
 Filesystem formats
 ------------------
@@ -131,45 +133,47 @@ The formats are:
   Format 2, understood by Subversion 1.4+
   Format 3, understood by Subversion 1.5+
   Format 4, understood by Subversion 1.6+
-  Format 5, understood by Subversion 1.7+
+  Format 5, understood by Subversion 1.7-dev, never released
 
 The differences between the formats are:
 
 Delta representation in revision files
   Format 1: svndiff0 only
-  Formats 2-5: svndiff0 or svndiff1
+  Formats 2+: svndiff0 or svndiff1
 
 Format options
   Formats 1-2: none permitted
-  Format 3-5: "layout" option
+  Format 3+:   "layout" option
 
 Transaction name reuse
   Formats 1-2: transaction names may be reused
-  Format 3-5: transaction names generated using txn-current file
+  Format 3+:   transaction names generated using txn-current file
 
 Location of proto-rev file and its lock
   Formats 1-2: transactions/<txnid>/rev and
     transactions/<txnid>/rev-lock.
-  Format 3-5: txn-protorevs/<txnid>.rev and
+  Format 3+:   txn-protorevs/<txnid>.rev and
     txn-protorevs/<txnid>.rev-lock.
 
 Node-ID and copy-ID generation
   Formats 1-2: Node-IDs and copy-IDs are guaranteed to form a
     monotonically increasing base36 sequence using the "current"
     file.
-  Format 3-5: Node-IDs and copy-IDs use the new revision number to
+  Format 3+:   Node-IDs and copy-IDs use the new revision number to
     ensure uniqueness and the "current" file just contains the
     youngest revision.
 
 Mergeinfo metadata:
   Format 1-2: minfo-here and minfo-count node-revision fields are not
     stored.  svn_fs_get_mergeinfo returns an error.
-  Format 3-5: minfo-here and minfo-count node-revision fields are
+  Format 3+:  minfo-here and minfo-count node-revision fields are
     maintained.  svn_fs_get_mergeinfo works.
 
 Revision changed paths list:
   Format 1-3: Does not contain the node's kind.
-  Format 4-5: Contains the node's kind.
+  Format 4+:  Contains the node's kind.
+
+# Incomplete list.  See SVN_FS_FS__MIN_*_FORMAT
 
 
 Filesystem format options
@@ -205,10 +209,10 @@ The known layouts, and the parameters they require, are as follows:
   revs/0/ directory will contain revisions 0-999, revs/1/ will contain
   1000-1999, and so on.
 
-Packing
--------
+Packing revisions
+-----------------
 
-A repository can optionally be "packed" to conserve space on disk.  The
+A filesystem can optionally be "packed" to conserve space on disk.  The
 packing process concatenates all the revision files in each full shard to
 create pack files.  A manifest file is also created for each shard which
 records the indexes of the corresponding revision files in the pack file.
@@ -218,6 +222,15 @@ pack file.
 The manifest file consists of a list of offsets, one for each revision in the
 pack file.  The offsets are stored as ASCII decimal, and separated by a newline
 character.
+
+Packing revision properties (format 5: SQLite)
+---------------------------
+
+This was supported by 1.7-dev builds but never included in a blessed release.
+
+See r1143829 of this file:
+http://svn.apache.org/viewvc/subversion/trunk/subversion/libsvn_fs_fs/structure?view=markup&pathrev=1143829
+
 
 Node-revision IDs
 -----------------

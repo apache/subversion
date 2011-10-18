@@ -25,24 +25,20 @@
 
 #include <apr_uri.h>
 
-#include <expat.h>
-
 #include <serf.h>
 
+#include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
-#include "svn_xml.h"
-#include "../libsvn_ra/ra_loader.h"
-#include "svn_config.h"
-#include "svn_delta.h"
-#include "svn_version.h"
-#include "svn_path.h"
 #include "svn_time.h"
+#include "svn_xml.h"
 
 #include "private/svn_dav_protocol.h"
 #include "private/svn_fspath.h"
 #include "svn_private_config.h"
+
+#include "../libsvn_ra/ra_loader.h"
 
 #include "ra_serf.h"
 
@@ -331,7 +327,7 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   const char *req_url, *rel_path;
   int status_code;
 
-  req_url = svn_path_url_add_component2(session->repos_url.path, path, pool);
+  req_url = svn_path_url_add_component2(session->session_url.path, path, pool);
   SVN_ERR(svn_ra_serf__get_relative_path(&rel_path, req_url, session,
                                          NULL, pool));
 

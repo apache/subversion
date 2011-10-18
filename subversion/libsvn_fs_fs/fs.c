@@ -85,33 +85,18 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
       ffsd = apr_pcalloc(common_pool, sizeof(*ffsd));
       ffsd->common_pool = common_pool;
 
-#if SVN_FS_FS__USE_LOCK_MUTEX
       /* POSIX fcntl locks are per-process, so we need a mutex for
          intra-process synchronization when grabbing the repository write
          lock. */
-      status = apr_thread_mutex_create(&ffsd->fs_write_lock,
-                                       APR_THREAD_MUTEX_DEFAULT, common_pool);
-      if (status)
-        return svn_error_wrap_apr(status,
-                                  _("Can't create FSFS write-lock mutex"));
+      SVN_ERR(svn_mutex__init(&ffsd->fs_write_lock,
+                              SVN_FS_FS__USE_LOCK_MUTEX, common_pool));
 
       /* ... not to mention locking the txn-current file. */
-      status = apr_thread_mutex_create(&ffsd->txn_current_lock,
-                                       APR_THREAD_MUTEX_DEFAULT, common_pool);
-      if (status)
-        return svn_error_wrap_apr(status,
-                                  _("Can't create FSFS txn-current mutex"));
-#endif
-#if APR_HAS_THREADS
-      /* We also need a mutex for synchronising access to the active
-         transaction list and free transaction pointer. */
-      status = apr_thread_mutex_create(&ffsd->txn_list_lock,
-                                       APR_THREAD_MUTEX_DEFAULT, common_pool);
-      if (status)
-        return svn_error_wrap_apr(status,
-                                  _("Can't create FSFS txn list mutex"));
-#endif
+      SVN_ERR(svn_mutex__init(&ffsd->txn_current_lock, 
+                              SVN_FS_FS__USE_LOCK_MUTEX, common_pool));
 
+      SVN_ERR(svn_mutex__init(&ffsd->txn_list_lock,
+                              SVN_FS_FS__USE_LOCK_MUTEX, common_pool));
 
       key = apr_pstrdup(common_pool, key);
       status = apr_pool_userdata_set(ffsd, key, NULL, common_pool);
@@ -149,7 +134,6 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__set_uuid,
   svn_fs_fs__revision_root,
   svn_fs_fs__begin_txn,
-  svn_fs_fs__begin_obliteration_txn,
   svn_fs_fs__open_txn,
   svn_fs_fs__purge_txn,
   svn_fs_fs__list_transactions,
@@ -159,8 +143,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__unlock,
   svn_fs_fs__get_lock,
   svn_fs_fs__get_locks,
-  fs_set_errcall,
-  svn_fs_fs__validate_mergeinfo,
+  fs_set_errcall
 };
 
 
@@ -257,6 +240,21 @@ fs_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 }
 
 static svn_error_t *
+fs_verify(svn_fs_t *fs, const char *path,
+          svn_cancel_func_t cancel_func,
+          void *cancel_baton,
+          apr_pool_t *pool,
+          apr_pool_t *common_pool)
+{
+  SVN_ERR(svn_fs__check_fs(fs, FALSE));
+  SVN_ERR(initialize_fs_struct(fs));
+  SVN_ERR(svn_fs_fs__open(fs, path, pool));
+  SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
+  SVN_ERR(fs_serialized_init(fs, common_pool, pool));
+  return svn_fs_fs__verify(fs, cancel_func, cancel_baton, pool);
+}
+
+static svn_error_t *
 fs_pack(svn_fs_t *fs,
         const char *path,
         svn_fs_pack_notify_t notify_func,
@@ -343,6 +341,7 @@ static fs_library_vtable_t library_vtable = {
   fs_open,
   fs_open_for_recovery,
   fs_upgrade,
+  fs_verify,
   fs_delete_fs,
   fs_hotcopy,
   fs_get_description,

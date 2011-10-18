@@ -28,8 +28,6 @@ import org.apache.subversion.javahl.callback.ProgressCallback;
 /**
  * The event passed to the {@link ProgressCallback#onProgress} API to inform
  * {@link ISVNClient} of command progress (in terms of bytes).
- *
- * @since 1.5
  */
 public class ProgressEvent implements java.io.Serializable
 {

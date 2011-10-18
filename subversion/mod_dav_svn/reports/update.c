@@ -82,6 +82,11 @@ typedef struct update_ctx_t {
 
   /* SVNDIFF version to send to client.  */
   int svndiff_version;
+
+  /* Did the client submit this REPORT request via the HTTPv2 "me
+     resource" and are we advertising support for as much? */
+  svn_boolean_t enable_v2_response;
+
 } update_ctx_t;
 
 typedef struct item_baton_t {
@@ -95,7 +100,6 @@ typedef struct item_baton_t {
                             without dst_path as prefix. */
 
   const char *base_checksum;   /* base_checksum (from apply_textdelta) */
-  const char *text_checksum;   /* text_checksum (from close_file) */
 
   svn_boolean_t text_changed;        /* Did the file's contents change? */
   svn_boolean_t added;               /* File added? (Implies text_changed.) */
@@ -220,9 +224,18 @@ send_vsn_url(item_baton_t *baton, apr_pool_t *pool)
   path = get_real_fs_path(baton, pool);
   revision = dav_svn__get_safe_cr(baton->uc->rev_root, path, pool);
 
-  href = dav_svn__build_uri(baton->uc->resource->info->repos,
-                            DAV_SVN__BUILD_URI_VERSION,
-                            revision, path, 0 /* add_href */, pool);
+  if (baton->uc->enable_v2_response)
+    {
+      href = dav_svn__build_uri(baton->uc->resource->info->repos,
+                                DAV_SVN__BUILD_URI_REVROOT,
+                                revision, path, 0 /* add_href */, pool);
+    }
+  else
+    {
+      href = dav_svn__build_uri(baton->uc->resource->info->repos,
+                                DAV_SVN__BUILD_URI_VERSION,
+                                revision, path, 0 /* add_href */, pool);
+    }
 
   return dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
                                  "<D:checked-in><D:href>%s</D:href>"
@@ -296,18 +309,10 @@ add_helper(svn_boolean_t is_dir,
       const char *qname = apr_xml_quote_string(pool, child->name, 1);
       const char *elt;
       const char *real_path = get_real_fs_path(child, pool);
+      const char *bc_url_str = "";
+      const char *sha1_checksum_str = "";
 
-      if (! is_dir)
-        {
-          /* files have checksums */
-          svn_checksum_t *checksum;
-          SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
-                                       uc->rev_root, real_path, TRUE,
-                                       pool));
-
-          child->text_checksum = svn_checksum_to_cstring(checksum, pool);
-        }
-      else
+      if (is_dir)
         {
           /* we send baseline-collection urls when we add a directory */
           svn_revnum_t revision;
@@ -331,36 +336,39 @@ add_helper(svn_boolean_t is_dir,
           /* make sure that the BC_URL is xml attribute safe. */
           bc_url = apr_xml_quote_string(pool, bc_url, 1);
         }
+      else
+        {
+          svn_checksum_t *sha1_checksum;
 
+          SVN_ERR(svn_fs_file_checksum(&sha1_checksum, svn_checksum_sha1,
+                                       uc->rev_root, real_path, FALSE, pool));
+          if (sha1_checksum)
+            sha1_checksum_str =
+              apr_psprintf(pool, " sha1-checksum=\"%s\"",
+                           svn_checksum_to_cstring(sha1_checksum, pool));
+        }
+
+      if (bc_url)
+        bc_url_str = apr_psprintf(pool, " bc-url=\"%s\"", bc_url);
 
       if (copyfrom_path == NULL)
         {
-          if (bc_url)
-            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
-                               "bc-url=\"%s\">" DEBUG_CR,
-                               DIR_OR_FILE(is_dir), qname, bc_url);
-          else
-            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\">" DEBUG_CR,
-                               DIR_OR_FILE(is_dir), qname);
+          elt = apr_psprintf(pool,
+                             "<S:add-%s name=\"%s\"%s%s>" DEBUG_CR,
+                             DIR_OR_FILE(is_dir), qname, bc_url_str,
+                             sha1_checksum_str);
         }
       else
         {
           const char *qcopy = apr_xml_quote_string(pool, copyfrom_path, 1);
 
-          if (bc_url)
-            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
-                               "copyfrom-path=\"%s\" copyfrom-rev=\"%ld\" "
-                               "bc-url=\"%s\">" DEBUG_CR,
-                               DIR_OR_FILE(is_dir),
-                               qname, qcopy, copyfrom_revision,
-                               bc_url);
-          else
-            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
-                               "copyfrom-path=\"%s\""
-                               " copyfrom-rev=\"%ld\">" DEBUG_CR,
-                               DIR_OR_FILE(is_dir),
-                               qname, qcopy, copyfrom_revision);
-
+          elt = apr_psprintf(pool,
+                             "<S:add-%s name=\"%s\"%s%s "
+                             "copyfrom-path=\"%s\" copyfrom-rev=\"%ld\">"
+                             DEBUG_CR,
+                             DIR_OR_FILE(is_dir),
+                             qname, bc_url_str, sha1_checksum_str,
+                             qcopy, copyfrom_revision);
           child->copyfrom = TRUE;
         }
 
@@ -427,15 +435,6 @@ close_helper(svn_boolean_t is_dir, item_baton_t *baton)
                                           "<S:remove-prop name=\"%s\"/>"
                                           DEBUG_CR, qname));
         }
-    }
-
-  if (baton->text_checksum)
-    {
-      SVN_ERR(dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
-                                      "<S:prop>"
-                                      "<V:md5-checksum>%s</V:md5-checksum>"
-                                      "</S:prop>",
-                                      baton->text_checksum));
     }
 
   if (baton->added)
@@ -779,9 +778,9 @@ upd_apply_textdelta(void *file_baton,
                                                      wb->uc->output,
                                                      file->pool);
 
-  svn_txdelta_to_svndiff2(&(wb->handler), &(wb->handler_baton),
+  svn_txdelta_to_svndiff3(&(wb->handler), &(wb->handler_baton),
                           base64_stream, file->uc->svndiff_version,
-                          file->pool);
+                          dav_svn__get_compression_level(), file->pool);
 
   *handler = window_handler;
   *handler_baton = wb;
@@ -795,20 +794,40 @@ upd_close_file(void *file_baton, const char *text_checksum, apr_pool_t *pool)
 {
   item_baton_t *file = file_baton;
 
-  file->text_checksum = text_checksum ?
-    apr_pstrdup(file->pool, text_checksum) : NULL;
-
   /* If we are not in "send all" mode, and this file is not a new
      addition or didn't otherwise have changed text, tell the client
      to fetch it. */
   if ((! file->uc->send_all) && (! file->added) && file->text_changed)
     {
+      svn_checksum_t *sha1_checksum;
+      const char *real_path = get_real_fs_path(file, pool);
+      const char *sha1_digest = NULL;
+
+      /* Try to grab the SHA1 checksum, if it's readily available, and
+         pump it down to the client, too. */
+      SVN_ERR(svn_fs_file_checksum(&sha1_checksum, svn_checksum_sha1,
+                                   file->uc->rev_root, real_path, FALSE, pool));
+      if (sha1_checksum)
+        sha1_digest = svn_checksum_to_cstring(sha1_checksum, pool);
+
       SVN_ERR(dav_svn__brigade_printf
               (file->uc->bb, file->uc->output,
-               "<S:fetch-file%s%s%s/>" DEBUG_CR,
+               "<S:fetch-file%s%s%s%s%s%s/>" DEBUG_CR,
                file->base_checksum ? " base-checksum=\"" : "",
                file->base_checksum ? file->base_checksum : "",
-               file->base_checksum ? "\"" : ""));
+               file->base_checksum ? "\"" : "",
+               sha1_digest ? " sha1-checksum=\"" : "",
+               sha1_digest ? sha1_digest : "",
+               sha1_digest ? "\"" : ""));
+    }
+
+  if (text_checksum)
+    {
+      SVN_ERR(dav_svn__brigade_printf(file->uc->bb, file->uc->output,
+                                      "<S:prop>"
+                                      "<V:md5-checksum>%s</V:md5-checksum>"
+                                      "</S:prop>",
+                                      text_checksum));
     }
 
   return close_helper(FALSE /* is_dir */, file);
@@ -1068,6 +1087,9 @@ dav_svn__update_report(const dav_resource *resource,
   uc.target = target;
   uc.bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
   uc.pathmap = NULL;
+  uc.enable_v2_response = ((resource->info->restype == DAV_SVN_RESTYPE_ME)
+                           && (resource->info->repos->v2_protocol));
+
   if (dst_path) /* we're doing a 'switch' */
     {
       if (*target)
@@ -1176,18 +1198,24 @@ dav_svn__update_report(const dav_resource *resource,
                     saw_rev = TRUE;
                     if (revnum_is_head && rev > revnum)
                       {
-                        /* ### This error could be improved with more details
-                           ### if we know  that this repository is a slave
-                           ### repository in a master-slave setup. */
-                        return dav_svn__new_error_tag(
-                                            resource->pool,
-                                            HTTP_INTERNAL_SERVER_ERROR,
-                                            0,
-                                            "A reported revision is higher"
-                                            " than the current HEAD revision"
-                                            " of the repository.",
-                                            SVN_DAV_ERROR_NAMESPACE,
-                                            SVN_DAV_ERROR_TAG);
+                        if (dav_svn__get_master_uri(resource->info->r))
+                          return dav_svn__new_error_tag(
+                                     resource->pool,
+                                     HTTP_INTERNAL_SERVER_ERROR, 0,
+                                     "A reported revision is higher than the "
+                                     "current repository HEAD revision.  "
+                                     "Perhaps the repository is out of date "
+                                     "with respect to the master repository?",
+                                     SVN_DAV_ERROR_NAMESPACE,
+                                     SVN_DAV_ERROR_TAG);
+                        else
+                          return dav_svn__new_error_tag(
+                                     resource->pool,
+                                     HTTP_INTERNAL_SERVER_ERROR, 0,
+                                     "A reported revision is higher than the "
+                                     "current repository HEAD revision.",
+                                     SVN_DAV_ERROR_NAMESPACE,
+                                     SVN_DAV_ERROR_TAG);
                       }
                   }
                 else if (strcmp(this_attr->name, "depth") == 0)
@@ -1317,6 +1345,11 @@ dav_svn__update_report(const dav_resource *resource,
   /* this will complete the report, and then drive our editor to generate
      the response to the client. */
   serr = svn_repos_finish_report(rbaton, resource->pool);
+
+  /* Whether svn_repos_finish_report returns an error or not we can no
+     longer abort this report as the file has been closed. */
+  rbaton = NULL;
+
   if (serr)
     {
       derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1325,10 +1358,6 @@ dav_svn__update_report(const dav_resource *resource,
                                   resource->pool);
       goto cleanup;
     }
-
-  /* We're finished with the report baton.  Note that so we don't try
-     to abort this report later. */
-  rbaton = NULL;
 
   /* ### Temporarily disable resource_walks for single-file switch
      operations.  It isn't strictly necessary. */

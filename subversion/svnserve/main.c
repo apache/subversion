@@ -45,7 +45,7 @@
 #include "svn_opt.h"
 #include "svn_repos.h"
 #include "svn_string.h"
-#include "svn_fs.h"
+#include "svn_cache_config.h"
 #include "svn_version.h"
 #include "svn_io.h"
 
@@ -136,15 +136,17 @@ void winservice_notify_stop(void)
  * APR requires that options without abbreviations
  * have codes greater than 255.
  */
-#define SVNSERVE_OPT_LISTEN_PORT 256
-#define SVNSERVE_OPT_LISTEN_HOST 257
-#define SVNSERVE_OPT_FOREGROUND  258
-#define SVNSERVE_OPT_TUNNEL_USER 259
-#define SVNSERVE_OPT_VERSION     260
-#define SVNSERVE_OPT_PID_FILE    261
-#define SVNSERVE_OPT_SERVICE     262
-#define SVNSERVE_OPT_CONFIG_FILE 263
-#define SVNSERVE_OPT_LOG_FILE 264
+#define SVNSERVE_OPT_LISTEN_PORT     256
+#define SVNSERVE_OPT_LISTEN_HOST     257
+#define SVNSERVE_OPT_FOREGROUND      258
+#define SVNSERVE_OPT_TUNNEL_USER     259
+#define SVNSERVE_OPT_VERSION         260
+#define SVNSERVE_OPT_PID_FILE        261
+#define SVNSERVE_OPT_SERVICE         262
+#define SVNSERVE_OPT_CONFIG_FILE     263
+#define SVNSERVE_OPT_LOG_FILE        264
+#define SVNSERVE_OPT_CACHE_TXDELTAS  265
+#define SVNSERVE_OPT_CACHE_FULLTEXTS 266
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -189,7 +191,13 @@ static const apr_getopt_option_t svnserve__options[] =
         "at the same time is not supported in daemon mode.\n"
         "                             "
         "Use inetd mode or tunnel mode if you need this.]")},
-    {"memory-cache-size", 'M', 1, 
+    {"compression",      'c', 1,
+     N_("compression level to use for network transmissions\n"
+        "                             "
+        "[0 .. no compression, 5 .. default, \n"
+        "                             "
+        " 9 .. maximum compression]")},
+    {"memory-cache-size", 'M', 1,
      N_("size of the extra in-memory cache in MB used to\n"
         "                             "
         "minimize redundant operations.\n"
@@ -197,6 +205,20 @@ static const apr_getopt_option_t svnserve__options[] =
         "Default is 128 for threaded and 16 for non-\n"
         "                             "
         "threaded mode.\n"
+        "                             "
+        "[used for FSFS repositories only]")},
+    {"cache-txdeltas", SVNSERVE_OPT_CACHE_TXDELTAS, 1,
+     N_("enable or disable caching of deltas between older\n"
+        "                             "
+        "revisions.\n"
+        "                             "
+        "Default is no.\n"
+        "                             "
+        "[used for FSFS repositories only]")},
+    {"cache-fulltexts", SVNSERVE_OPT_CACHE_FULLTEXTS, 1,
+     N_("enable or disable caching of file contents\n"
+        "                             "
+        "Default is yes.\n"
         "                             "
         "[used for FSFS repositories only]")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
@@ -299,7 +321,9 @@ static void sigchld_handler(int signo)
 }
 #endif
 
-/* In tunnel or inetd mode, we don't want hook scripts corrupting the
+/* Redirect stdout to stderr.  ARG is the pool.
+ *
+ * In tunnel or inetd mode, we don't want hook scripts corrupting the
  * data stream by sending data to stdout, so we need to redirect
  * stdout somewhere else.  Sending it to stderr is acceptable; sending
  * it to /dev/null is another option, but apr doesn't provide a way to
@@ -445,9 +469,12 @@ int main(int argc, const char *argv[])
   params.cfg = NULL;
   params.pwdb = NULL;
   params.authzdb = NULL;
+  params.compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
   params.log_file = NULL;
   params.username_case = CASE_ASIS;
   params.memory_cache_size = (apr_uint64_t)-1;
+  params.cache_fulltexts = TRUE;
+  params.cache_txdeltas = FALSE;
 
   while (1)
     {
@@ -560,8 +587,26 @@ int main(int argc, const char *argv[])
           handling_mode = connection_mode_thread;
           break;
 
+        case 'c':
+          params.compression_level = atoi(arg);
+          if (params.compression_level < SVN_DELTA_COMPRESSION_LEVEL_NONE)
+            params.compression_level = SVN_DELTA_COMPRESSION_LEVEL_NONE;
+          if (params.compression_level > SVN_DELTA_COMPRESSION_LEVEL_MAX)
+            params.compression_level = SVN_DELTA_COMPRESSION_LEVEL_MAX;
+          break;
+
         case 'M':
           params.memory_cache_size = 0x100000 * apr_strtoi64(arg, NULL, 0);
+          break;
+
+        case SVNSERVE_OPT_CACHE_TXDELTAS:
+          params.cache_txdeltas
+             = svn_tristate__from_word(arg) == svn_tristate_true;
+          break;
+
+        case SVNSERVE_OPT_CACHE_FULLTEXTS:
+          params.cache_fulltexts
+             = svn_tristate__from_word(arg) == svn_tristate_true;
           break;
 
 #ifdef WIN32
@@ -662,8 +707,14 @@ int main(int argc, const char *argv[])
           return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
         }
 
-      conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
-      svn_error_clear(serve(conn, &params, pool));
+      /* Use a subpool for the connection to ensure that if SASL is used
+       * the pool cleanup handlers that call sasl_dispose() (connection_pool)
+       * and sasl_done() (pool) are run in the right order. See issue #3664. */
+      connection_pool = svn_pool_create(pool);
+      conn = svn_ra_svn_create_conn2(NULL, in_file, out_file,
+                                     params.compression_level,
+                                     connection_pool);
+      svn_error_clear(serve(conn, &params, connection_pool));
       exit(0);
     }
 
@@ -817,22 +868,17 @@ int main(int argc, const char *argv[])
     winservice_running();
 #endif
 
-  /* Configure FS caches for maximum efficiency with svnserve. 
+  /* Configure FS caches for maximum efficiency with svnserve.
    * For pre-forked (i.e. multi-processed) mode of operation,
    * keep the per-process caches smaller than the default.
    * Also, apply the respective command line parameters, if given. */
   {
-    svn_fs_cache_config_t settings = *svn_fs_get_cache_config();
+    svn_cache_config_t settings = *svn_cache_config_get();
 
     if (params.memory_cache_size != -1)
       settings.cache_size = params.memory_cache_size;
-    else if (handling_mode != connection_mode_thread)
-      settings.cache_size = 0x1000000;
 
-    settings.cache_fulltexts = TRUE;
-    settings.cache_txdeltas = FALSE;
     settings.single_threaded = TRUE;
-
     if (handling_mode == connection_mode_thread)
       {
 #ifdef APR_HAS_THREADS
@@ -847,7 +893,7 @@ int main(int argc, const char *argv[])
 #endif
       }
 
-    svn_fs_set_cache_config(&settings);
+    svn_cache_config_set(&settings);
   }
 
   while (1)
@@ -908,7 +954,9 @@ int main(int argc, const char *argv[])
           /* It's not a fatal error if we cannot enable keep-alives. */
         }
 
-      conn = svn_ra_svn_create_conn(usock, NULL, NULL, connection_pool);
+      conn = svn_ra_svn_create_conn2(usock, NULL, NULL,
+                                     params.compression_level,
+                                     connection_pool);
 
       if (run_mode == run_mode_listen_once)
         {

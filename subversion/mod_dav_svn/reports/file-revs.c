@@ -206,8 +206,9 @@ file_rev_handler(void *baton,
 
       base64_stream = dav_svn__make_base64_output_stream(frb->bb, frb->output,
                                                          pool);
-      svn_txdelta_to_svndiff2(&frb->window_handler, &frb->window_baton,
-                              base64_stream, frb->svndiff_version, pool);
+      svn_txdelta_to_svndiff3(&frb->window_handler, &frb->window_baton,
+                              base64_stream, frb->svndiff_version,
+                              dav_svn__get_compression_level(), pool);
       *window_handler = delta_window_handler;
       *window_baton = frb;
       /* Start the txdelta element wich will be terminated by the window

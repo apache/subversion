@@ -477,8 +477,11 @@ def nested_dir_replacements(sbox):
 
   # Verify pre-commit status:
   #
-  #    - A/D and A/D/H should both be scheduled as "R" at rev 1
+  #    - A/D should both be scheduled as addition, A/D as "R" at rev 1
   #         (rev 1 because they both existed before at rev 1)
+  #
+  #    - A/D/H should be a local addition "A"
+  #         (and exists as shadowed node in BASE)
   #
   #    - A/D/bloo scheduled as "A" at rev 0
   #         (rev 0 because it did not exist before)
@@ -486,7 +489,11 @@ def nested_dir_replacements(sbox):
   #    - ALL other children of A/D scheduled as "D" at rev 1
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/D', 'A/D/H', status='R ', wc_rev=1)
+  expected_status.tweak('A/D', status='R ', wc_rev=1)
+  # In the entries world we couldn't represent H properly, so it shows
+  # A/D/H as a replacement against BASE
+  expected_status.tweak('A/D/H', status='A ', wc_rev='-',
+                                 entry_status='R ', entry_rev='1')
   expected_status.add({
     'A/D/bloo' : Item(status='A ', wc_rev=0),
     })
@@ -1377,7 +1384,6 @@ def failed_commit(sbox):
 # Also related to issue #959, this test here doesn't use svn:externals
 # but the behaviour needs to be considered.
 # In this test two WCs are nested, one WC is child of the other.
-@XFail()
 @Issue(2381)
 def commit_multiple_wc_nested(sbox):
   "commit from two nested working copies"
@@ -1420,7 +1426,6 @@ def commit_multiple_wc_nested(sbox):
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
 # Same as commit_multiple_wc_nested except that the two WCs are not nested.
-@XFail()
 @Issue(2381)
 def commit_multiple_wc(sbox):
   "commit from two working copies"
@@ -1529,7 +1534,7 @@ def commit_multiple_wc_multiple_repos(sbox):
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
 #----------------------------------------------------------------------
-@Issues([1195,1239])
+@Issues(1195,1239)
 def commit_nonrecursive(sbox):
   "commit named targets with -N"
 
@@ -2696,20 +2701,6 @@ def start_commit_detect_capabilities(sbox):
   if data != 'yes':
     raise svntest.Failure
 
-def commit_url(sbox):
-  "'svn commit SOME_URL' should error"
-  sbox.build()
-  url = sbox.repo_url
-
-  # Commit directly to a URL
-  expected_error = ("svn: E205000: '" + url +
-                    "' is a URL, but URLs cannot be commit targets")
-  svntest.actions.run_and_verify_commit(None,
-                                        None,
-                                        None,
-                                        expected_error,
-                                        url)
-
 # Test for issue #3198
 @Issue(3198)
 def commit_added_missing(sbox):
@@ -2798,6 +2789,20 @@ def tree_conflicts_resolved(sbox):
   expected_status.wc_dir = wc_dir_2
   svntest.actions.run_and_verify_status(wc_dir_2, expected_status)
 
+#----------------------------------------------------------------------
+def commit_multiple_nested_deletes(sbox):
+  "committing multiple nested deletes"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A = os.path.join(wc_dir, 'A')
+  A_B = os.path.join(A, 'B')
+
+  sbox.simple_rm('A')
+
+  svntest.main.run_svn(None, 'ci', A, A_B, '-m', 'Q')
+
 
 ########################################################################
 # Run the tests
@@ -2862,10 +2867,10 @@ test_list = [ None,
               changelist_near_conflict,
               commit_out_of_date_file,
               start_commit_detect_capabilities,
-              commit_url,
               commit_added_missing,
               tree_conflicts_block_commit,
               tree_conflicts_resolved,
+              commit_multiple_nested_deletes,
              ]
 
 if __name__ == '__main__':

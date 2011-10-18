@@ -28,7 +28,6 @@ import java.util.Date;
 
 /**
  * Class to describe a lock.  It is returned by the lock operation.
- * @since 1.2
  */
 public class Lock implements java.io.Serializable
 {

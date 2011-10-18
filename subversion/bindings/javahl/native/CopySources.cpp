@@ -60,7 +60,7 @@ CopySources::makeJCopySource(const char *path, svn_revnum_t rev, SVN::Pool &pool
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/CopySource");
+  jclass clazz = env->FindClass(JAVA_PACKAGE "/types/CopySource");
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -85,10 +85,10 @@ CopySources::makeJCopySource(const char *path, svn_revnum_t rev, SVN::Pool &pool
 apr_array_header_t *
 CopySources::array(SVN::Pool &pool)
 {
-  apr_pool_t *p = pool.pool();
+  apr_pool_t *p = pool.getPool();
 
   JNIEnv *env = JNIUtil::getEnv();
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/CopySource");
+  jclass clazz = env->FindClass(JAVA_PACKAGE "/types/CopySource");
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
@@ -122,7 +122,7 @@ CopySources::array(SVN::Pool &pool)
 
       src->path = apr_pstrdup(p, path);
       env->ReleaseStringUTFChars(jpath, path);
-      SVN_JNI_ERR(JNIUtil::preprocessPath(src->path, pool.pool()),
+      SVN_JNI_ERR(JNIUtil::preprocessPath(src->path, pool.getPool()),
                   NULL);
       env->DeleteLocalRef(jpath);
 

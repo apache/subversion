@@ -73,7 +73,7 @@ from svntest.actions import inject_conflict_into_expected_state
 #         This is *not* a full test of issue #2829, see also merge_tests.py,
 #         search for "2829".  This tests the problem where a merge adds a path
 #         with a missing sibling and so needs its own explicit mergeinfo.
-@Issue([2893,2997,2829])
+@Issues(2893,2997,2829)
 @SkipUnless(svntest.main.server_has_mergeinfo)
 @Skip(svntest.main.is_ra_type_file)
 def mergeinfo_and_skipped_paths(sbox):
@@ -420,7 +420,7 @@ def mergeinfo_and_skipped_paths(sbox):
                    props={SVN_PROP_MERGEINFO : '/A/D/H/omega:8-9'}),
     'chi'   : Item("This is the file 'chi'.\n"),
     'zeta'  : Item("This is the file 'zeta'.\n",
-                   props={SVN_PROP_MERGEINFO : '/A/D/H/zeta:8-9'}),
+                   props={SVN_PROP_MERGEINFO : '/A/D/H/zeta:9'}),
     })
   expected_skip = wc.State(A_COPY_2_H_path, {})
   svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '7', '9',

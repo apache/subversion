@@ -132,6 +132,7 @@ svn_wc__wq_build_file_remove(svn_skel_t **work_item,
 svn_error_t *
 svn_wc__wq_build_file_move(svn_skel_t **work_item,
                            svn_wc__db_t *db,
+                           const char *wri_abspath,
                            const char *src_abspath,
                            const char *dst_abspath,
                            apr_pool_t *result_pool,
@@ -191,20 +192,11 @@ svn_wc__wq_build_prej_install(svn_skel_t **work_item,
    ### it is unclear whether this should survive.  */
 svn_error_t *
 svn_wc__wq_build_record_fileinfo(svn_skel_t **work_item,
+                                 svn_wc__db_t *db,
                                  const char *local_abspath,
                                  apr_time_t set_time,
-                                 apr_pool_t *result_pool);
-
-
-/* Record a work item to revert LOCAL_ABSPATH;
-   REVERT_ROOT designates the root of the entire revert operation. */
-svn_error_t *
-svn_wc__wq_add_revert(svn_boolean_t *will_revert,
-                      svn_wc__db_t *db,
-                      const char *revert_root,
-                      const char *local_abspath,
-                      svn_boolean_t use_commit_times,
-                      apr_pool_t *scratch_pool);
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 /* Set *WORK_ITEM to a new work item that will remove all the data of
    the BASE_NODE of LOCAL_ABSPATH and all it's descendants, but keeping
@@ -219,7 +211,8 @@ svn_error_t *
 svn_wc__wq_build_base_remove(svn_skel_t **work_item,
                              svn_wc__db_t *db,
                              const char *local_abspath,
-                             svn_boolean_t keep_not_present,
+                             svn_revnum_t not_present_revision,
+                             svn_kind_t not_present_kind,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
@@ -239,9 +232,9 @@ svn_error_t *
 svn_wc__wq_tmp_build_set_text_conflict_markers(svn_skel_t **work_item,
                                                svn_wc__db_t *db,
                                                const char *local_abspath,
-                                               const char *old_basename,
-                                               const char *new_basename,
-                                               const char *wrk_basename,
+                                               const char *old_abspath,
+                                               const char *new_abspath,
+                                               const char *wrk_abspath,
                                                apr_pool_t *result_pool,
                                                apr_pool_t *scratch_pool);
 
@@ -260,46 +253,29 @@ svn_error_t *
 svn_wc__wq_tmp_build_set_property_conflict_marker(svn_skel_t **work_item,
                                                   svn_wc__db_t *db,
                                                   const char *local_abspath,
-                                                  const char *prej_basename,
+                                                  const char *prej_abspath,
                                                   apr_pool_t *result_pool,
                                                   apr_pool_t *scratch_pool);
 
-/* Set *WORK_ITEM to a new work item that will create the file NEW_ABSPATH
- * with the pristine text identified by PRISTINE_SHA1, translated into
- * working-copy form according to the versioned properties of
- * VERSIONED_ABSPATH that are current when the work item is executed.  The
- * work item will overwrite NEW_ABSPATH if that already exists. */
-svn_error_t *
-svn_wc__wq_build_pristine_get_translated(svn_skel_t **work_item,
-                                         svn_wc__db_t *db,
-                                         const char *versioned_abspath,
-                                         const char *new_abspath,
-                                         const svn_checksum_t *pristine_sha1,
-                                         apr_pool_t *result_pool,
-                                         apr_pool_t *scratch_pool);
+/* Handle the final post-commit step of retranslating and recording the
+   working copy state of a committed file.
 
-svn_error_t *
-svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   svn_revnum_t new_revision,
-                                   svn_boolean_t no_unlock,
-                                   apr_pool_t *scratch_pool);
+   If PROP_MODS is false, assume that properties are not changed.
 
+   (Property modifications are read when svn_wc__wq_build_file_commit
+    is called and processed when the working queue is being evaluated)
 
-/* Queue a work item that will call log_do_committed() with all of these
- * parameters.  See log_do_committed(). */
+    Allocate *work_item in RESULT_POOL. Perform temporary allocations
+    in SCRATCH_POOL.
+   */
 svn_error_t *
-svn_wc__wq_add_postcommit(svn_wc__db_t *db,
-                          const char *local_abspath,
-                          svn_revnum_t new_revision,
-                          svn_revnum_t changed_rev,
-                          apr_time_t changed_date,
-                          const char *changed_author,
-                          const svn_checksum_t *new_checksum,
-                          apr_hash_t *new_dav_cache,
-                          svn_boolean_t keep_changelist,
-                          svn_boolean_t no_unlock,
-                          apr_pool_t *scratch_pool);
+svn_wc__wq_build_file_commit(svn_skel_t **work_item,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             svn_boolean_t prop_mods,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
 
 svn_error_t *
 svn_wc__wq_build_postupgrade(svn_skel_t **work_item,

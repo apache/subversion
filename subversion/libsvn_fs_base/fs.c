@@ -486,7 +486,6 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__set_uuid,
   svn_fs_base__revision_root,
   svn_fs_base__begin_txn,
-  svn_fs_base__begin_obliteration_txn,
   svn_fs_base__open_txn,
   svn_fs_base__purge_txn,
   svn_fs_base__list_transactions,
@@ -497,7 +496,6 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__get_lock,
   svn_fs_base__get_locks,
   base_bdb_set_errcall,
-  svn_fs_base__validate_mergeinfo,
 };
 
 /* Where the format number is stored. */
@@ -670,9 +668,6 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
       else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
                                         APR_HASH_KEY_STRING))
         format = 3;
-      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_7_COMPATIBLE,
-                                        APR_HASH_KEY_STRING))
-        format = 4;
     }
 
   /* Create the environment and databases. */
@@ -874,6 +869,17 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
       svn_pool_destroy(subpool);
     }
 
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+base_verify(svn_fs_t *fs, const char *path,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            apr_pool_t *pool,
+            apr_pool_t *common_pool)
+{
+  /* Verifying is currently a no op for BDB. */
   return SVN_NO_ERROR;
 }
 
@@ -1275,7 +1281,7 @@ base_hotcopy(const char *src_path,
                    "the problem persists, try deactivating this feature\n"
                    "in DB_CONFIG"));
             else
-              return svn_error_return(err);
+              return svn_error_trace(err);
           }
       }
     svn_pool_destroy(subpool);
@@ -1294,7 +1300,7 @@ base_hotcopy(const char *src_path,
              "hotcopy algorithm.  If the problem persists, try deactivating\n"
              "this feature in DB_CONFIG"));
       else
-        return svn_error_return(err);
+        return svn_error_trace(err);
     }
 
   /* Only now that the hotcopied filesystem is complete,
@@ -1346,6 +1352,7 @@ static fs_library_vtable_t library_vtable = {
   base_open,
   base_open_for_recovery,
   base_upgrade,
+  base_verify,
   base_delete_fs,
   base_hotcopy,
   base_get_description,

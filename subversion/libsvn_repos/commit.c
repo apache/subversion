@@ -36,6 +36,7 @@
 #include "svn_repos.h"
 #include "svn_checksum.h"
 #include "svn_props.h"
+#include "svn_mergeinfo.h"
 #include "repos.h"
 #include "svn_private_config.h"
 #include "private/svn_fspath.h"
@@ -92,6 +93,9 @@ struct edit_baton
 
   /* The object representing the root directory of the svn txn. */
   svn_fs_root_t *txn_root;
+
+  /* Avoid aborting an fs transaction more than once */
+  svn_boolean_t txn_aborted;
 
   /** Filled in when the edit is closed: **/
 
@@ -530,7 +534,6 @@ open_file(const char *path,
 }
 
 
-
 static svn_error_t *
 change_file_prop(void *file_baton,
                  const char *name,
@@ -568,16 +571,9 @@ close_file(void *file_baton,
                                      text_digest, pool));
 
       if (!svn_checksum_match(text_checksum, checksum))
-        {
-          return svn_error_createf
-            (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-             apr_psprintf(pool, "%s:\n%s\n%s\n",
-                          _("Checksum mismatch for resulting fulltext\n(%s)"),
-                          _("   expected:  %s"),
-                          _("     actual:  %s")),
-             fb->path, svn_checksum_to_cstring_display(text_checksum, pool),
-             svn_checksum_to_cstring_display(checksum, pool));
-        }
+        return svn_checksum_mismatch_err(text_checksum, checksum, pool,
+                            _("Checksum mismatch for resulting fulltext\n(%s)"),
+                            fb->path);
     }
 
   return SVN_NO_ERROR;
@@ -651,16 +647,16 @@ svn_repos__post_commit_error_str(svn_error_t *err,
           if (hook_err2->message)
             msg = apr_pstrdup(pool, hook_err2->message);
           else
-            msg = _("post-commit hook failed with no error message");
+            msg = _("post-commit hook failed with no error message.");
         }
       else
         {
           msg = hook_err2->message
-                  ? hook_err2->message
+                  ? apr_pstrdup(pool, hook_err2->message)
                   : _("post-commit hook failed with no error message.");
           msg = apr_psprintf(
                   pool,
-                  _("post commit FS processing had error '%s' and %s"),
+                  _("post commit FS processing had error:\n%s\n%s"),
                   err->message ? err->message : _("(no error message)"),
                   msg);
         }
@@ -668,7 +664,7 @@ svn_repos__post_commit_error_str(svn_error_t *err,
   else
     {
       msg = apr_psprintf(pool,
-                         _("post-commit FS processing had error '%s'."),
+                         _("post commit FS processing had error:\n%s"),
                          err->message ? err->message
                                       : _("(no error message)"));
     }
@@ -725,12 +721,13 @@ close_edit(void *edit_baton,
          So, in a nutshell: svn commits are an all-or-nothing deal.
          Each commit creates a new fs txn which either succeeds or is
          aborted completely.  No second chances;  the user simply
-         needs to update and commit again  :)
+         needs to update and commit again  :) */
 
-         We ignore the possible error result from svn_fs_abort_txn();
-         it's more important to return the original error. */
-      svn_error_clear(svn_fs_abort_txn(eb->txn, pool));
-      return svn_error_return(err);
+      eb->txn_aborted = TRUE;
+
+      return svn_error_trace(
+                svn_error_compose_create(err,
+                                         svn_fs_abort_txn(eb->txn, pool)));
     }
 
   /* Pass new revision information to the caller's callback. */
@@ -767,7 +764,7 @@ close_edit(void *edit_baton,
       }
   }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -776,9 +773,12 @@ abort_edit(void *edit_baton,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
-  if ((! eb->txn) || (! eb->txn_owner))
+  if ((! eb->txn) || (! eb->txn_owner) || eb->txn_aborted)
     return SVN_NO_ERROR;
-  return svn_fs_abort_txn(eb->txn, pool);
+
+  eb->txn_aborted = TRUE;
+
+  return svn_error_trace(svn_fs_abort_txn(eb->txn, pool));
 }
 
 
@@ -852,6 +852,9 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
 
   *edit_baton = eb;
   *editor = e;
+
+  SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                   NULL, NULL, NULL, NULL, pool, pool));
 
   return SVN_NO_ERROR;
 }

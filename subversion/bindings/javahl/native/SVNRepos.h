@@ -72,11 +72,15 @@ class SVNRepos : public SVNBase
   void dispose();
   static SVNRepos *getCppObject(jobject jthis);
 
+  static svn_error_t *checkCancel(void *cancelBaton);
+  void cancelOperation();
+
  private:
   static svn_error_t *getRevnum(svn_revnum_t *revnum,
                                 const svn_opt_revision_t *revision,
                                 svn_revnum_t youngest, svn_repos_t *repos,
                                 apr_pool_t *pool);
+  bool m_cancelOperation;
 };
 
 #endif // SVNADMIN_H

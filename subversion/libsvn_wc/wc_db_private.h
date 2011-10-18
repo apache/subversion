@@ -27,16 +27,13 @@
 #error "You should not be using these data structures directly"
 #endif /* SVN_WC__I_AM_WC_DB */
 
-#ifndef WC_DB_PDH_H
-#define WC_DB_PDH_H
+#ifndef WC_DB_PRIVATE_H
+#define WC_DB_PRIVATE_H
 
 #include "wc_db.h"
 
 
 struct svn_wc__db_t {
-  /* What's the appropriate mode for this datastore? */
-  svn_wc__db_openmode_t mode;
-
   /* We need the config whenever we run into a new WC directory, in order
      to figure out where we should look for the corresponding datastore. */
   const svn_config_t *config;
@@ -49,21 +46,32 @@ struct svn_wc__db_t {
   svn_boolean_t enforce_empty_wq;
 
   /* Map a given working copy directory to its relevant data.
-     const char *local_abspath -> svn_wc__db_pdh_t *pdh  */
+     const char *local_abspath -> svn_wc__db_wcroot_t *wcroot  */
   apr_hash_t *dir_data;
+
+  /* A few members to assist with caching of kind values for paths.  See
+     get_path_kind() for use. */
+  struct
+  {
+    svn_stringbuf_t *abspath;
+    svn_node_kind_t kind;
+  } parse_cache;
 
   /* As we grow the state of this DB, allocate that state here. */
   apr_pool_t *state_pool;
 };
+
 
 /* Hold information about an owned lock */
 typedef struct svn_wc__db_wclock_t
 {
   /* Relative path of the lock root */
   const char *local_relpath;
+
   /* Number of levels locked (0 for infinity) */
   int levels;
 } svn_wc__db_wclock_t;
+
 
 /** Hold information about a WCROOT.
  *
@@ -84,41 +92,17 @@ typedef struct svn_wc__db_wcroot_t {
      format has not (yet) been determined, this will be UNKNOWN_FORMAT.  */
   int format;
 
-  /* Array of svn_wc__db_wclock_t fields (not pointers!).
+  /* Array of svn_wc__db_wclock_t structures (not pointers!).
      Typically just one or two locks maximum. */
   apr_array_header_t *owned_locks;
 
+  /* Map a working copy diretory to a cached adm_access baton.
+     const char *local_abspath -> svn_wc_adm_access_t *adm_access */
+  apr_hash_t *access_cache;
+
 } svn_wc__db_wcroot_t;
 
-/**  Pristine Directory Handle
- *
- * This structure records all the information that we need to deal with
- * a given working copy directory.
- */
-typedef struct svn_wc__db_pdh_t {
-
-  /* The absolute path to this working copy directory. */
-  const char *local_abspath;
-
-  /* What wcroot does this directory belong to?  */
-  svn_wc__db_wcroot_t *wcroot;
-
-  /* The parent directory's per-dir information. */
-  struct svn_wc__db_pdh_t *parent;
-
-  /* Hold onto the old-style access baton that corresponds to this PDH.  */
-  svn_wc_adm_access_t *adm_access;
-} svn_wc__db_pdh_t;
-
-
 
-/* */
-svn_wc__db_pdh_t *
-svn_wc__db_pdh_get_or_create(svn_wc__db_t *db,
-                             const char *local_dir_abspath,
-                             svn_boolean_t create_allowed,
-                             apr_pool_t *scratch_pool);
-
 /* */
 svn_error_t *
 svn_wc__db_close_many_wcroots(apr_hash_t *roots,
@@ -139,45 +123,31 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
-/* For a given LOCAL_ABSPATH, figure out what sqlite database (PDH) to
-   use and the RELPATH within that wcroot.  If a sqlite database needs
-   to be opened, then use SMODE for it.
+
+/* For a given LOCAL_ABSPATH, figure out what sqlite database (WCROOT) to
+   use and the RELPATH within that wcroot.
 
    *LOCAL_RELPATH will be allocated within RESULT_POOL. Temporary allocations
    will be made in SCRATCH_POOL.
 
-   *PDH will be allocated within DB->STATE_POOL.
+   *WCROOT will be allocated within DB->STATE_POOL.
 
    Certain internal structures will be allocated in DB->STATE_POOL.
 */
 svn_error_t *
-svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
-                                   const char **local_relpath,
-                                   svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   svn_sqlite__mode_t smode,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool);
+svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
+                                      const char **local_relpath,
+                                      svn_wc__db_t *db,
+                                      const char *local_abspath,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
 
-/* POOL may be NULL if the lifetime of LOCAL_ABSPATH is sufficient.  */
-const char *
-svn_wc__db_pdh_compute_relpath(const svn_wc__db_pdh_t *pdh,
-                               apr_pool_t *result_pool);
 
-/* Gets or opens the PDH of the parent directory of CHILD_PDH.
-   (This function doesn't verify if the PDHs are related) */
-svn_error_t *
-svn_wc__db_pdh_navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
-                                  svn_wc__db_t *db,
-                                  svn_wc__db_pdh_t *child_pdh,
-                                  svn_sqlite__mode_t smode,
-                                  apr_pool_t *scratch_pool);
-
-/* Assert that the given PDH is usable.
+/* Assert that the given WCROOT is usable.
    NOTE: the expression is multiply-evaluated!!  */
-#define VERIFY_USABLE_PDH(pdh) SVN_ERR_ASSERT(  \
-    (pdh)->wcroot != NULL                       \
-    && (pdh)->wcroot->format == SVN_WC__VERSION)
+#define VERIFY_USABLE_WCROOT(wcroot)  SVN_ERR_ASSERT(               \
+    (wcroot) != NULL && (wcroot)->format == SVN_WC__VERSION)
+
 
 /* */
 svn_error_t *
@@ -185,14 +155,44 @@ svn_wc__db_util_fetch_wc_id(apr_int64_t *wc_id,
                             svn_sqlite__db_t *sdb,
                             apr_pool_t *scratch_pool);
 
-/* */
+/* Open a connection in *SDB to the WC database found in the WC metadata
+ * directory inside DIR_ABSPATH, having the filename SDB_FNAME.
+ *
+ * SMODE is passed to svn_sqlite__open().
+ *
+ * Register MY_STATEMENTS, or if that is null, the default set of WC DB
+ * statements, as the set of statements to be prepared now and executed
+ * later.  MY_STATEMENTS (the strings and the array itself) is not duplicated
+ * internally, and should have a lifetime at least as long as RESULT_POOL.
+ * See svn_sqlite__open() for details. */
 svn_error_t *
 svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
                         const char *dir_abspath,
                         const char *sdb_fname,
                         svn_sqlite__mode_t smode,
+                        const char *const *my_statements,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
+
+/* Transaction handling */
 
-#endif /* WC_DB_PDH_H */
+/* A callback which supplies WCROOTs and LOCAL_RELPATHs. */
+typedef svn_error_t *(*svn_wc__db_txn_callback_t)(void *baton,
+                                          svn_wc__db_wcroot_t *wcroot,
+                                          const char *local_relpath,
+                                          apr_pool_t *scratch_pool);
+
+
+/* Run CB_FUNC in a SQLite transaction with CB_BATON, using WCROOT and
+   LOCAL_RELPATH.  If callbacks require additional information, they may
+   provide it using CB_BATON. */
+svn_error_t *
+svn_wc__db_with_txn(svn_wc__db_wcroot_t *wcroot,
+                    const char *local_relpath,
+                    svn_wc__db_txn_callback_t cb_func,
+                    void *cb_baton,
+                    apr_pool_t *scratch_pool);
+
+
+#endif /* WC_DB_PRIVATE_H */

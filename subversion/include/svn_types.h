@@ -81,6 +81,22 @@ extern "C" {
 # endif
 #endif
 
+
+
+/** YABT:  Yet Another Boolean Type */
+typedef int svn_boolean_t;
+
+#ifndef TRUE
+/** uhh... true */
+#define TRUE 1
+#endif /* TRUE */
+
+#ifndef FALSE
+/** uhh... false */
+#define FALSE 0
+#endif /* FALSE */
+
+
 
 /** Subversion error object.
  *
@@ -133,6 +149,12 @@ typedef struct svn_error_t
 
 
 
+/* See svn_version.h.
+   Defined here to avoid including svn_version.h from all public headers. */
+typedef struct svn_version_t svn_version_t;
+
+
+
 /** @defgroup APR_ARRAY_compat_macros APR Array Compatibility Helper Macros
  * These macros are provided by APR itself from version 1.3.
  * Definitions are provided here for when using older versions of APR.
@@ -150,6 +172,8 @@ typedef struct svn_error_t
 #endif
 
 /** @} */
+
+
 
 /** @defgroup apr_hash_utilities APR Hash Table Helpers
  * These functions enable the caller to dereference an APR hash table index
@@ -171,6 +195,10 @@ svn__apr_hash_index_klen(const apr_hash_index_t *hi);
 void *
 svn__apr_hash_index_val(const apr_hash_index_t *hi);
 
+/** @} */
+
+
+
 /** On Windows, APR_STATUS_IS_ENOTDIR includes several kinds of
  * invalid-pathname error but not ERROR_INVALID_NAME, so we include it.
  * We also include ERROR_DIRECTORY as that was not included in apr versions
@@ -185,8 +213,36 @@ svn__apr_hash_index_val(const apr_hash_index_t *hi);
 #endif
 
 /** @} */
+
+
 
-/** The various types of nodes in the Subversion filesystem. */
+/** A node kind.
+ *
+ * @since New in 1.8. Replaces svn_node_kind_t.
+ */
+typedef enum svn_kind_t
+{
+  /** something's here, but we don't know what */
+  svn_kind_unknown,
+
+  /** absent */
+  svn_kind_none,
+
+  /** regular file */
+  svn_kind_file,
+
+  /** directory */
+  svn_kind_dir,
+
+  /** symbolic link */
+  svn_kind_symlink
+
+} svn_kind_t;
+
+/** The various types of nodes in the Subversion filesystem.
+ *
+ * This type is superseded by #svn_kind_t and will be deprecated when
+ * transition to the new type is complete. */
 typedef enum svn_node_kind_t
 {
   /** absent */
@@ -221,6 +277,25 @@ svn_node_kind_to_word(svn_node_kind_t kind);
 svn_node_kind_t
 svn_node_kind_from_word(const char *word);
 
+/** Return the #svn_node_kind_t corresponding to the given #svn_kind_t;
+ * #svn_kind_symlink will become #svn_node_file.
+ *
+ * @since New in 1.8.
+ */
+svn_node_kind_t
+svn__node_kind_from_kind(svn_kind_t kind);
+
+/** Return the #svn_kind_t corresponding to the given #svn_node_kind_t,
+ * or #svn_kind_symlink if @a is_symlink is true.
+ *
+ * @since New in 1.8.
+ */
+svn_kind_t
+svn__kind_from_node_kind(svn_node_kind_t kind,
+                         svn_boolean_t is_symlink);
+
+
+
 /** Generic three-state property to represent an unknown value for values
  * that are just like booleans.  The values have been set deliberately to
  * make tristates disjoint from #svn_boolean_t.
@@ -242,7 +317,7 @@ typedef enum svn_tristate_t
  * @since New in 1.7.
  */
 const char *
-svn_tristate_to_word(svn_tristate_t tristate);
+svn_tristate__to_word(svn_tristate_t tristate);
 
 /** Return the appropriate tristate for @a word. If @a word is "true", returns
  * #svn_tristate_true; if @a word is "false", returns #svn_tristate_false,
@@ -251,9 +326,10 @@ svn_tristate_to_word(svn_tristate_t tristate);
  * @since New in 1.7.
  */
 svn_tristate_t
-svn_tristate_from_word(const char * word);
+svn_tristate__from_word(const char * word);
 
 
+
 /** About Special Files in Subversion
  *
  * Subversion denotes files that cannot be portably created or
@@ -291,6 +367,8 @@ svn_tristate_from_word(const char * word);
  *     routines from 1.
  */
 
+
+
 /** A revision number. */
 typedef long int svn_revnum_t;
 
@@ -337,6 +415,7 @@ svn_revnum_parse(svn_revnum_t *rev,
 #define SVN_REVNUM_T_FMT "ld"
 
 
+
 /** The size of a file in the Subversion FS. */
 typedef apr_int64_t svn_filesize_t;
 
@@ -354,20 +433,7 @@ typedef apr_int64_t svn_filesize_t;
 #endif
 
 
-/** YABT:  Yet Another Boolean Type */
-typedef int svn_boolean_t;
-
-#ifndef TRUE
-/** uhh... true */
-#define TRUE 1
-#endif /* TRUE */
-
-#ifndef FALSE
-/** uhh... false */
-#define FALSE 0
-#endif /* FALSE */
-
-
+
 /** An enum to indicate whether recursion is needed. */
 enum svn_recurse_kind
 {
@@ -425,7 +491,6 @@ typedef enum svn_depth_t
 
 } svn_depth_t;
 
-
 /** Return a constant string expressing @a depth as an English word,
  * e.g., "infinity", "immediates", etc.  The string is not localized,
  * as it may be used for client<->server communications.
@@ -435,7 +500,6 @@ typedef enum svn_depth_t
 const char *
 svn_depth_to_word(svn_depth_t depth);
 
-
 /** Return the appropriate depth for @a depth_str.  @a word is as
  * returned from svn_depth_to_word().  If @a depth_str does not
  * represent a recognized depth, return #svn_depth_unknown.
@@ -444,7 +508,6 @@ svn_depth_to_word(svn_depth_t depth);
  */
 svn_depth_t
 svn_depth_from_word(const char *word);
-
 
 /* Return #svn_depth_infinity if boolean @a recurse is TRUE, else
  * return #svn_depth_files.
@@ -457,7 +520,6 @@ svn_depth_from_word(const char *word);
 #define SVN_DEPTH_INFINITY_OR_FILES(recurse) \
   ((recurse) ? svn_depth_infinity : svn_depth_files)
 
-
 /* Return #svn_depth_infinity if boolean @a recurse is TRUE, else
  * return #svn_depth_immediates.
  *
@@ -469,7 +531,6 @@ svn_depth_from_word(const char *word);
 #define SVN_DEPTH_INFINITY_OR_IMMEDIATES(recurse) \
   ((recurse) ? svn_depth_infinity : svn_depth_immediates)
 
-
 /* Return #svn_depth_infinity if boolean @a recurse is TRUE, else
  * return #svn_depth_empty.
  *
@@ -480,7 +541,6 @@ svn_depth_from_word(const char *word);
  */
 #define SVN_DEPTH_INFINITY_OR_EMPTY(recurse) \
   ((recurse) ? svn_depth_infinity : svn_depth_empty)
-
 
 /* Return a recursion boolean based on @a depth.
  *
@@ -494,6 +554,7 @@ svn_depth_from_word(const char *word);
    ? TRUE : FALSE)
 
 
+
 /**
  * It is sometimes convenient to indicate which parts of an #svn_dirent_t
  * object you are actually interested in, so that calculating and sending
@@ -551,7 +612,6 @@ typedef struct svn_dirent_t
   /* IMPORTANT: If you extend this struct, check svn_dirent_dup(). */
 } svn_dirent_t;
 
-
 /** Return a deep copy of @a dirent, allocated in @a pool.
  *
  * @since New in 1.4.
@@ -560,8 +620,8 @@ svn_dirent_t *
 svn_dirent_dup(const svn_dirent_t *dirent,
                apr_pool_t *pool);
 
-
 
+
 /** Keyword substitution.
  *
  * All the keywords Subversion recognizes.
@@ -638,6 +698,7 @@ svn_dirent_dup(const svn_dirent_t *dirent,
 
 /** @} */
 
+
 
 /** All information about a commit.
  *
@@ -666,7 +727,6 @@ typedef struct svn_commit_info_t
 
 } svn_commit_info_t;
 
-
 /**
  * Allocate an object of type #svn_commit_info_t in @a pool and
  * return it.
@@ -684,7 +744,6 @@ typedef struct svn_commit_info_t
 svn_commit_info_t *
 svn_create_commit_info(apr_pool_t *pool);
 
-
 /**
  * Return a deep copy @a src_commit_info allocated in @a pool.
  *
@@ -693,6 +752,7 @@ svn_create_commit_info(apr_pool_t *pool);
 svn_commit_info_t *
 svn_commit_info_dup(const svn_commit_info_t *src_commit_info,
                     apr_pool_t *pool);
+
 
 
 /**
@@ -755,7 +815,7 @@ svn_log_changed_path2_dup(const svn_log_changed_path2_t *changed_path,
 
 /**
  * A structure to represent a path that changed for a log entry.  Same as
- * #svn_log_changed_path2_t, but without the node kind.
+ * the first three fields of #svn_log_changed_path2_t.
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
@@ -771,7 +831,6 @@ typedef struct svn_log_changed_path_t
   svn_revnum_t copyfrom_rev;
 
 } svn_log_changed_path_t;
-
 
 /**
  * Return a deep copy of @a changed_path, allocated in @a pool.
@@ -808,7 +867,8 @@ typedef struct svn_log_entry_t
   svn_revnum_t revision;
 
   /** The hash of requested revision properties, which may be NULL if it
-   * would contain no revprops. */
+   * would contain no revprops.  Maps (const char *) property name to
+   * (svn_string_t *) property value. */
   apr_hash_t *revprops;
 
   /**
@@ -825,7 +885,7 @@ typedef struct svn_log_entry_t
    * HAS_CHILDREN flag is always FALSE.
    *
    * For more information see:
-   * http://subversion.tigris.org/merge-tracking/design.html#commutative-reporting
+   * https://svn.apache.org/repos/asf/subversion/trunk/notes/merge-tracking/design.html#commutative-reporting
    */
   svn_boolean_t has_children;
 
@@ -839,6 +899,9 @@ typedef struct svn_log_entry_t
    * value as changed_paths for compatibility with users assuming an older
    * version.
    *
+   * @note See http://svn.haxx.se/dev/archive-2010-08/0362.shtml for
+   * further explanation.
+   *
    * @since New in 1.6.
    */
   apr_hash_t *changed_paths2;
@@ -850,6 +913,13 @@ typedef struct svn_log_entry_t
    * @since New in 1.7.
    */
   svn_boolean_t non_inheritable;
+
+  /**
+   * Whether @a revision is a merged revision resulting from a reverse merge.
+   *
+   * @since New in 1.7.
+   */
+  svn_boolean_t subtractive_merge;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update
@@ -911,7 +981,6 @@ svn_log_entry_dup(const svn_log_entry_t *log_entry, apr_pool_t *pool);
  *
  * @since New in 1.5.
  */
-
 typedef svn_error_t *(*svn_log_entry_receiver_t)(
   void *baton,
   svn_log_entry_t *log_entry,
@@ -931,6 +1000,7 @@ typedef svn_error_t *(*svn_log_message_receiver_t)(
   const char *date,  /* use svn_time_from_cstring() if need apr_time_t */
   const char *message,
   apr_pool_t *pool);
+
 
 
 /** Callback function type for commits.
@@ -956,6 +1026,7 @@ typedef svn_error_t *(*svn_commit_callback_t)(
   const char *date,
   const char *author,
   void *baton);
+
 
 
 /** A buffer size that may be used when processing a stream of data.
@@ -1008,7 +1079,6 @@ typedef svn_error_t *(*svn_commit_callback_t)(
 svn_error_t *
 svn_mime_type_validate(const char *mime_type,
                        apr_pool_t *pool);
-
 
 /** Return FALSE iff @a mime_type is a textual type.
  *
@@ -1080,6 +1150,8 @@ svn_lock_create(apr_pool_t *pool);
 svn_lock_t *
 svn_lock_dup(const svn_lock_t *lock, apr_pool_t *pool);
 
+
+
 /**
  * Return a formatted Universal Unique IDentifier (UUID) string.
  *
@@ -1088,6 +1160,8 @@ svn_lock_dup(const svn_lock_t *lock, apr_pool_t *pool);
 const char *
 svn_uuid_generate(apr_pool_t *pool);
 
+
+
 /**
  * Mergeinfo representing a merge of a range of revisions.
  *
@@ -1153,7 +1227,6 @@ typedef struct svn_location_segment_t
 
 } svn_location_segment_t;
 
-
 /**
  * A callback invoked by generators of #svn_location_segment_t
  * objects, used to report information about a versioned object's
@@ -1165,7 +1238,6 @@ typedef svn_error_t *(*svn_location_segment_receiver_t)(
   void *baton,
   apr_pool_t *pool);
 
-
 /**
  * Return a deep copy of @a segment, allocated in @a pool.
  *
@@ -1175,6 +1247,10 @@ svn_location_segment_t *
 svn_location_segment_dup(const svn_location_segment_t *segment,
                          apr_pool_t *pool);
 
+/** @} */
+
+
+
 /** A line number, such as in a file or a stream.
  *
  * @since New in 1.7.
@@ -1187,9 +1263,8 @@ typedef unsigned long svn_linenum_t;
  */
 #define SVN_LINENUM_MAX_VALUE ULONG_MAX
 
-/** @} */
 
-
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

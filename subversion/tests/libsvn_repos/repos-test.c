@@ -1314,6 +1314,14 @@ authz(apr_pool_t *pool)
                             "Regression: incomplete ancestry test "
                             "for recursive access lookup.");
 
+  /* The authz rules for the phase 4 tests */
+  contents =
+    "[greek:/dir2//secret]"                                                  NL
+    "* ="                                                                    NL;
+  err = authz_get_handle(&authz_cfg, contents, subpool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_AUTHZ_INVALID_CONFIG);
+  svn_error_clear(err);
+
   /* That's a wrap! */
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
