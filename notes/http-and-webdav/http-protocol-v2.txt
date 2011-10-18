@@ -119,7 +119,6 @@ PHASE 1 IN DETAIL
        are unversioned transaction props, rather than file or directory
        props.
 
-
      - transaction root resource (!svn/txr/TXN-NAME/[PATH])
 
        Represents the directory tree snapshot associated with a
@@ -127,6 +126,14 @@ PHASE 1 IN DETAIL
        transaction-type svn_fs_root_t/path pair in the FS layer.
        Various read- and write-type requests can be issued against
        these resources (MKCOL, PUT, PROPFIND, PROPPATCH, GET, etc.).
+
+     - alternate transaction resource (!svn/vtxn/VTXN-NAME)
+     - alternate transaction root resource (!svn/vtxr/VTXN-NAME/[PATH])
+
+       Alternative names for the transaction based on a virtual, or
+       visible, name supplied by the client when the transaction
+       was created.  The client supplied name is optional, if not
+       supplied these resource names are not valid.
 
  * Opening an RA session:
 
@@ -144,6 +151,8 @@ PHASE 1 IN DETAIL
      SVN-Rev-Root-Stub:  /REPOS-ROOT/!svn/rvr
      SVN-Txn-Stub:  /REPOS-ROOT/!svn/txn
      SVN-Txn-Root-Stub:  /REPOS-ROOT/!svn/txr
+     SVN-VTxn-Stub:  /REPOS-ROOT/!svn/vtxn
+     SVN-VTxn-Root-Stub:  /REPOS-ROOT/!svn/vtxr
 
    The presence of these new stubs (which can be appended to by the
    client to create full-fledged resource URLs) tells ra_serf that
@@ -220,11 +229,17 @@ PHASE 1 IN DETAIL
 
        - no more need to "discover" the activity URI;  !svn/act/ is gone.
 
-       - client no longer creates an activity UUID itself.
+       - client no longer needs to create an activity UUID itself.
 
        - instead, POST returns the name of the transaction it created,
-         which can then be appended to the transaction stub and
-         transaction root stub as necessary.
+         as TXN-NAME, which can then be appended to the transaction
+         stub and transaction root stub as necessary.
+
+       - if the client does choose to supply a UUID with the POST
+         request then the POST returns that UUID as VTXN-NAME, instead of
+         returning TXN-NAME, and the client then uses that with the
+         alternate transaction stub and transaction root stub in subsequent
+         requests.
 
      - Once the commit transaction is created, the client is free to
        send write requests against transaction resources it constructs
@@ -315,7 +330,7 @@ STATUS
 
     - REPORT against the new "me resource" instead of VCC URI  [DONE]
     - use new URIs to avoid unnecessary PROPFIND discovery     [DONE]
-    - eliminate now-unnecessary wcprops cache
+    - eliminate now-unnecessary wcprops cache                  [DEFERRED]
 
  * Rework ra_serf commit editor implementation to use new direct
    methods as described in the design doc.
@@ -333,4 +348,10 @@ STATUS
     - get me resource, and pegrev stub from OPTIONS          [DONE]
     - use me resource instead of the VCC                     [STARTED]
     - use pegrev stubs instead of get_baseline_info() walks  [STARTED]
-    - use rev stubs for revprop stuff
+    - use rev stubs for revprop stuff                        [DONE]
+    - use POST to 'me' resource to get txn name              [DONE]
+    - set revprops using PROPPATCH on the txn resource       [DONE]
+    - abort edit with DELETE against the txn resource        [DONE]
+    - send write requests against txn and txn root URLs      [DONE]
+    - send X-SVN-Version-Name for out-of-dateness checks     [DONE]
+    - enable pipelined PUTs                                  [OUT-OF-SCOPE]

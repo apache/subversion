@@ -136,12 +136,20 @@ svn_repos_get_commit_editor(const svn_delta_editor_t **editor,
                                       callback_baton, pool);
 }
 
+svn_error_t *
+svn_repos_open(svn_repos_t **repos_p,
+               const char *path,
+               apr_pool_t *pool)
+{
+  return svn_repos_open2(repos_p, path, NULL, pool);
+}
+
+
 /*** From repos.c ***/
 struct recover_baton
 {
   svn_error_t *(*start_callback)(void *baton);
   void *start_callback_baton;
-  apr_pool_t *pool;
 };
 
 static void
@@ -151,7 +159,8 @@ recovery_started(void *baton,
 {
   struct recover_baton *rb = baton;
 
-  if (notify->action == svn_repos_notify_mutex_acquired)
+  if (notify->action == svn_repos_notify_mutex_acquired
+      && rb->start_callback != NULL)
     svn_error_clear(rb->start_callback(rb->start_callback_baton));
 }
 
@@ -419,10 +428,10 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
                        void *authz_read_baton,
                        apr_pool_t *pool)
 {
-  return svn_error_return(svn_repos_fs_get_locks2(locks, repos, path,
-                                                  svn_depth_infinity,
-                                                  authz_read_func,
-                                                  authz_read_baton, pool));
+  return svn_error_trace(svn_repos_fs_get_locks2(locks, repos, path,
+                                                 svn_depth_infinity,
+                                                 authz_read_func,
+                                                 authz_read_baton, pool));
 }
 
 
@@ -561,8 +570,8 @@ repos_notify_handler(void *baton,
   switch (notify->action)
   {
     case svn_repos_notify_warning:
-      len = strlen(notify->warning);
-      svn_error_clear(svn_stream_write(feedback_stream, notify->warning, &len));
+      len = strlen(notify->warning_str);
+      svn_error_clear(svn_stream_write(feedback_stream, notify->warning_str, &len));
       return;
 
     case svn_repos_notify_dump_rev_end:
@@ -667,19 +676,19 @@ svn_repos_dump_fs2(svn_repos_t *repos,
                    void *cancel_baton,
                    apr_pool_t *pool)
 {
-  return svn_error_return(svn_repos_dump_fs3(repos,
-                                             stream,
-                                             start_rev,
-                                             end_rev,
-                                             incremental,
-                                             use_deltas,
-                                             feedback_stream
-                                               ? repos_notify_handler
-                                               : NULL,
-                                             feedback_stream,
-                                             cancel_func,
-                                             cancel_baton,
-                                             pool));
+  return svn_error_trace(svn_repos_dump_fs3(repos,
+                                            stream,
+                                            start_rev,
+                                            end_rev,
+                                            incremental,
+                                            use_deltas,
+                                            feedback_stream
+                                              ? repos_notify_handler
+                                              : NULL,
+                                            feedback_stream,
+                                            cancel_func,
+                                            cancel_baton,
+                                            pool));
 }
 
 svn_error_t *
@@ -691,16 +700,16 @@ svn_repos_verify_fs(svn_repos_t *repos,
                     void *cancel_baton,
                     apr_pool_t *pool)
 {
-  return svn_error_return(svn_repos_verify_fs2(repos,
-                                               start_rev,
-                                               end_rev,
-                                               feedback_stream
-                                                 ? repos_notify_handler
-                                                 : NULL,
-                                               feedback_stream,
-                                               cancel_func,
-                                               cancel_baton,
-                                               pool));
+  return svn_error_trace(svn_repos_verify_fs2(repos,
+                                              start_rev,
+                                              end_rev,
+                                              feedback_stream
+                                                ? repos_notify_handler
+                                                : NULL,
+                                              feedback_stream,
+                                              cancel_func,
+                                              cancel_baton,
+                                              pool));
 }
 
 /*** From load.c ***/

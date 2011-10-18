@@ -35,6 +35,8 @@
 #include "svn_path.h"
 #include "client.h"
 
+#include "private/svn_wc_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -75,7 +77,7 @@ validator_func(void *baton,
     {
       struct url_uuid_t *uu = &APR_ARRAY_IDX(uuids, i,
                                              struct url_uuid_t);
-      if (svn_uri_is_ancestor(uu->root, url))
+      if (svn_uri__is_ancestor(uu->root, url))
         {
           url_uuid = uu;
           break;
@@ -137,6 +139,7 @@ relocate_externals(const char *local_abspath,
                    apr_array_header_t *ext_desc,
                    const char *old_parent_repos_root_url,
                    const char *new_parent_repos_root_url,
+                   svn_boolean_t ignore_externals,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *scratch_pool)
 {
@@ -157,6 +160,7 @@ relocate_externals(const char *local_abspath,
         APR_ARRAY_IDX(ext_desc, i, svn_wc_external_item2_t *);
       const char *target_repos_root_url;
       const char *target_abspath;
+      svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
@@ -181,14 +185,25 @@ relocate_externals(const char *local_abspath,
                                                       ext_item->target_dir,
                                                       iterpool),
                                       iterpool));
-      SVN_ERR(svn_client_root_url_from_path(&target_repos_root_url,
-                                            target_abspath, ctx, iterpool));
+      err = svn_client_root_url_from_path(&target_repos_root_url,
+                                          target_abspath, ctx, iterpool);
+
+      /* Ignore externals that aren't present in the working copy.
+       * This can happen if an external is deleted from disk accidentally,
+       * or if an external is configured on a locally added directory. */
+      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          continue;
+        }
+      else
+        SVN_ERR(err);
 
       if (strcmp(target_repos_root_url, old_parent_repos_root_url) == 0)
         SVN_ERR(svn_client_relocate2(target_abspath,
                                      old_parent_repos_root_url,
                                      new_parent_repos_root_url,
-                                     TRUE, ctx, iterpool));
+                                     ignore_externals, ctx, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -227,9 +242,9 @@ svn_client_relocate2(const char *wcroot_dir,
   /* If we're ignoring externals, just relocate and get outta here. */
   if (ignore_externals)
     {
-      return svn_error_return(svn_wc_relocate4(ctx->wc_ctx, local_abspath,
-                                               from_prefix, to_prefix,
-                                               validator_func, &vb, pool));
+      return svn_error_trace(svn_wc_relocate4(ctx->wc_ctx, local_abspath,
+                                              from_prefix, to_prefix,
+                                              validator_func, &vb, pool));
     }
 
   /* Fetch our current root URL. */
@@ -246,8 +261,10 @@ svn_client_relocate2(const char *wcroot_dir,
 
 
   /* Relocate externals, too (if any). */
-  SVN_ERR(svn_client__crawl_for_externals(&externals_hash, local_abspath,
-                                          svn_depth_infinity, ctx, pool, pool));
+  SVN_ERR(svn_wc__externals_gather_definitions(&externals_hash, NULL,
+                                               ctx->wc_ctx, local_abspath,
+                                               svn_depth_infinity,
+                                               pool, pool));
   if (! apr_hash_count(externals_hash))
     return SVN_NO_ERROR;
 
@@ -258,17 +275,18 @@ svn_client_relocate2(const char *wcroot_dir,
        hi = apr_hash_next(hi))
     {
       const char *this_abspath = svn__apr_hash_index_key(hi);
-      const svn_string_t *pval = svn__apr_hash_index_val(hi);
+      const char *value = svn__apr_hash_index_val(hi);
       apr_array_header_t *ext_desc;
 
       svn_pool_clear(iterpool);
 
       SVN_ERR(svn_wc_parse_externals_description3(&ext_desc, this_abspath,
-                                                  pval->data, FALSE,
+                                                  value, FALSE,
                                                   iterpool));
       if (ext_desc->nelts)
         SVN_ERR(relocate_externals(this_abspath, ext_desc, old_repos_root_url,
-                                   new_repos_root_url, ctx, iterpool));
+                                   new_repos_root_url, ignore_externals, ctx,
+                                   iterpool));
     }
 
   svn_pool_destroy(iterpool);

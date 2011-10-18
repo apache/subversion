@@ -25,6 +25,8 @@
 #include "svn_pools.h"
 #include "svn_xml.h"
 
+#include "private/svn_string_private.h"
+
 #include "../libsvn_ra/ra_loader.h"
 
 #include "ra_neon.h"
@@ -389,14 +391,13 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
     case ELEM_change_dir_prop:
       {
         const svn_string_t *decoded_value;
-        svn_string_t prop;
 
         if (rb->prop_accum)
           {
-            prop.data = rb->prop_accum->data;
-            prop.len = rb->prop_accum->len;
+            const svn_string_t *prop;
 
-            decoded_value = svn_base64_decode_string(&prop, rb->prop_pool);
+            prop = svn_stringbuf__morph_into_string(rb->prop_accum);
+            decoded_value = svn_base64_decode_string(prop, rb->prop_pool);
           }
         else
           decoded_value = NULL; /* It's a delete */

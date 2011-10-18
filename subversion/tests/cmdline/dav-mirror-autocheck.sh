@@ -1,5 +1,22 @@
 #!/bin/bash
 #
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
 # Script to automate testing of an svnsync master/slave
 # configuration.  Commits to the slave should write through
 # to the master, and the master's post-commit hook svnsync's
@@ -399,10 +416,6 @@ $svnmucc rm "$BASE_URL/branch" cp 2 "$BASE_URL/trunk" "$BASE_URL/branch" put /de
 say "svn log on $BASE_URL : "
 $SVN --username jrandom --password rayjandom log -vq "$BASE_URL"
 
-# shut it down
-echo -n "${SCRIPT}: stopping httpd: "
-$HTTPD -f $HTTPD_CONFIG -k stop
-echo "."
 
 # verify result: should be at rev 4 in both repos
 # FIXME: do more rigorous verification here
@@ -421,5 +434,67 @@ fi
 
 say "PASS: master, slave are both at r4, as expected"
 
-exit 0
+# The following test case is for the regression issue triggered by r917523.
+# The revision r917523 do some url encodings to the paths and uris which are
+# not url-encoded. But there is one additional url-encoding of an uri which is
+# already encoded. With this extra encoding, committing a path to slave which
+# has space in it fails. Please see this thread
+# http://svn.haxx.se/dev/archive-2011-03/0641.shtml for more info.
 
+say "Test case for regression issue triggered by r917523"
+
+$svnmucc cp 2 "$BASE_URL/trunk" "$BASE_URL/branch new"
+$svnmucc put /dev/null "$BASE_URL/branch new/file" \
+--config-option servers:global:http-library=neon
+RETVAL=$?
+
+if [ $RETVAL -eq 0 ] ; then
+  say "PASS: committing a path which has space in it passes"
+else
+  say "FAIL: committing a path which has space in it fails as there are extra
+  url-encodings happening in server side"
+fi
+
+# Test case for commit to out-dated(though target path is up to date) slave.
+# See issue #3860 for details.
+say "Test case for out-dated slave commit"
+
+svn="$SVN --non-interactive --username=jrandom --password=rayjandom"
+# Make a working copy of the slave.
+$svn checkout $SLAVE_URL $HTTPD_ROOT/wc
+cd $HTTPD_ROOT/wc
+# Add a new file named newfile and commit it.
+touch branch/newfile
+$svn add branch/newfile
+$svn commit -mm
+
+say "De-activating post-commit hook on $MASTER_REPOS to make $SLAVE_REPOS go out of sync"
+mv "$MASTER_REPOS/hooks/post-commit" "$MASTER_REPOS/hooks/post-commit_"
+
+echo "Change made to file in branch" > $HTTPD_ROOT/wc/branch/newfile
+$svn ci -m "Commit from slave"
+
+MASTER_HEAD=`$SVNLOOK youngest "$MASTER_REPOS"`
+SLAVE_HEAD=`$SVNLOOK youngest "$SLAVE_REPOS"`
+say "Now the slave is at r$SLAVE_HEAD and master is at r$MASTER_HEAD."
+
+# Now any other commit operation will fail with an out-of-date error
+
+$svn cp -m "Creating a branch" ^/trunk ^/branch/newbranch --config-option "servers:global:http-library=neon"
+RETVAL=$?
+
+if [ $RETVAL -eq 0 ]; then
+  say "PASS: Commits succeed even with an out-of-date slave"
+else
+  say "FAIL: Commits fail with an out-of-date slave"
+fi
+say "Some house-keeping..."
+say "Re-activating the post-commit hook on the master repo: $MASTER_REPOS."
+mv "$MASTER_REPOS/hooks/post-commit_" "$MASTER_REPOS/hooks/post-commit"
+say "Syncing slave with master."
+$SVNSYNC --non-interactive sync "$SYNC_URL" --username=svnsync --password=svnsync 
+# shut it down
+echo -n "${SCRIPT}: stopping httpd: "
+$HTTPD -f $HTTPD_CONFIG -k stop
+echo "."
+exit 0

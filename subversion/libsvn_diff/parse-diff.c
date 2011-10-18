@@ -22,6 +22,7 @@
  */
 
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 
 #include "svn_types.h"
@@ -40,6 +41,9 @@
 /* Helper macro for readability */
 #define starts_with(str, start)  \
   (strncmp((str), (start), strlen(start)) == 0)
+
+/* Like strlen() but for string literals. */
+#define STRLEN_LITERAL(str) (sizeof(str) - 1)
 
 /* This struct describes a range within a file, as well as the
  * current cursor position within the range. All numbers are in bytes. */
@@ -266,61 +270,11 @@ parse_hunk_header(const char *header, svn_diff_hunk_t *hunk,
   return TRUE;
 }
 
-/* Set *EOL to the first end-of-line string found in FILE.
- * Start scanning at the current file cursor offset and scan up
- * to MAX_LEN bytes. Leave the current file cursor position unchanged.
- * Allocate *EOL statically; POOL is a scratch pool. */
-static svn_error_t *
-scan_eol(const char **eol, apr_file_t *file, apr_size_t max_len,
-         apr_pool_t *pool)
-{
-  const char *eol_str;
-  apr_off_t pos;
-  apr_size_t total_len;
-
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos, pool));
-
-  eol_str = NULL;
-  total_len = 0;
-  while (! eol_str)
-    {
-      char buf[256];
-      apr_size_t len;
-      svn_error_t *err;
-
-      if (total_len >= max_len)
-        break;
-
-      len = sizeof(buf) - 1 < (max_len - total_len) ? sizeof(buf) - 1
-                                                    : (max_len - total_len);
-      err = svn_io_file_read_full(file, buf, sizeof(buf) - 1, &len, pool);
-      if (err && APR_STATUS_IS_EOF(err->apr_err))
-        svn_error_clear(err);
-      else
-        SVN_ERR(err);
-
-      if (len == 0)
-        break; /* EOF */
-
-      buf[len] = '\0';
-      total_len += len;
-      eol_str = svn_eol__detect_eol(buf, buf + len);
-    }
-
-  SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, pool));
-
-  *eol = eol_str;
-
-  return SVN_NO_ERROR;
-}
-
-/* A helper function similar to svn_stream_readline_detect_eol(),
- * suitable for reading a line of text from a range in the patch file.
+/* A helper for reading a line of text from a range in the patch file.
  *
  * Allocate *STRINGBUF in RESULT_POOL, and read into it one line from FILE.
- * Reading stops either after a line-terminator was found or after
- * MAX_LEN bytes have been read.
+ * Reading stops either after a line-terminator was found or after MAX_LEN
+ * bytes have been read. The line-terminator is not stored in *STRINGBUF.
  *
  * The line-terminator is detected automatically and stored in *EOL
  * if EOL is not NULL. If EOF is reached and FILE does not end
@@ -340,52 +294,72 @@ readline(apr_file_t *file,
   svn_stringbuf_t *str;
   const char *eol_str;
   apr_size_t numbytes;
-  const char *match;
   char c;
   apr_size_t len;
+  svn_boolean_t found_eof;
 
   str = svn_stringbuf_create_ensure(80, result_pool);
 
-  SVN_ERR(scan_eol(&eol_str, file, max_len, scratch_pool));
-  if (eol)
-    *eol = eol_str;
-  if (eol_str == NULL)
-    {
-      /* No newline until EOF, EOL_STR can be anything. */
-      eol_str = APR_EOL_STR;
-    }
-
-  /* Read into STR up to and including the next EOL sequence. */
-  match = eol_str;
+  /* Read bytes into STR up to and including, but not storing,
+   * the next EOL sequence. */
+  eol_str = NULL;
   numbytes = 1;
   len = 0;
-  while (*match)
+  found_eof = FALSE;
+  while (!found_eof)
     {
-      svn_error_t *err;
-
-      err = svn_io_file_read_full(file, &c, sizeof(c), &numbytes,
-                                  scratch_pool);
-      if (err && APR_STATUS_IS_EOF(err->apr_err))
-        svn_error_clear(err);
-      else
-        SVN_ERR(err);
+      if (len < max_len)
+        SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
+                                       &found_eof, scratch_pool));
       len++;
       if (numbytes != 1 || len > max_len)
         {
-          *eof = TRUE;
-          *stringbuf = str;
-          return SVN_NO_ERROR;
+          found_eof = TRUE;
+          break;
         }
-      if (c == *match)
-        match++;
-      else
-        match = eol_str;
 
-      svn_stringbuf_appendbyte(str, c);
+      if (c == '\n')
+        {
+          eol_str = "\n";
+        }
+      else if (c == '\r')
+        {
+          eol_str = "\r";
+
+          if (!found_eof && len < max_len)
+            {
+              apr_off_t pos;
+
+              /* Check for "\r\n" by peeking at the next byte. */
+              pos = 0;
+              SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos, scratch_pool));
+              SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
+                                             &found_eof, scratch_pool));
+              if (numbytes == 1 && c == '\n')
+                {
+                  eol_str = "\r\n";
+                  len++;
+                }
+              else
+                {
+                  /* Pretend we never peeked. */
+                  SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
+                  found_eof = FALSE;
+                  numbytes = 1;
+                }
+            }
+        }
+      else
+        svn_stringbuf_appendbyte(str, c);
+
+      if (eol_str)
+        break;
     }
 
-  *eof = FALSE;
-  svn_stringbuf_chop(str, match - eol_str);
+  if (eol)
+    *eol = eol_str;
+  if (eof)
+    *eof = found_eof;
   *stringbuf = str;
 
   return SVN_NO_ERROR;
@@ -397,7 +371,7 @@ readline(apr_file_t *file,
  * Any lines commencing with the VERBOTEN character are discarded.
  * VERBOTEN should be '+' or '-', depending on which form of hunk text
  * is being read.
- * 
+ *
  * All other parameters are as in svn_diff_hunk_readline_original_text()
  * and svn_diff_hunk_readline_modified_text().
  */
@@ -469,7 +443,7 @@ svn_diff_hunk_readline_original_text(svn_diff_hunk_t *hunk,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool)
 {
-  return svn_error_return(
+  return svn_error_trace(
     hunk_readline_original_or_modified(hunk->apr_file,
                                        hunk->patch->reverse ?
                                          &hunk->modified_text_range :
@@ -487,7 +461,7 @@ svn_diff_hunk_readline_modified_text(svn_diff_hunk_t *hunk,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool)
 {
-  return svn_error_return(
+  return svn_error_trace(
     hunk_readline_original_or_modified(hunk->apr_file,
                                        hunk->patch->reverse ?
                                          &hunk->original_text_range :
@@ -531,7 +505,7 @@ svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
   SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_CUR,
                            &hunk->diff_text_range.current, scratch_pool));
   SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_SET, &pos, scratch_pool));
-  
+
   if (hunk->patch->reverse)
     {
       if (parse_hunk_header(line->data, &dummy, "@@", scratch_pool))
@@ -684,11 +658,14 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
             }
 
           c = line->data[0];
-          /* Tolerate chopped leading spaces on empty lines. */
           if (original_lines > 0 && modified_lines > 0 &&
-              ((c == ' ') || (! eof && line->len == 0) ||
-               (ignore_whitespace && c != del && c != add)))
+              ((c == ' ')
+               /* Tolerate chopped leading spaces on empty lines. */
+               || (! eof && line->len == 0)
+               /* Maybe tolerate chopped leading spaces on non-empty lines. */
+               || (ignore_whitespace && c != del && c != add)))
             {
+              /* It's a "context" line in the hunk. */
               hunk_seen = TRUE;
               original_lines--;
               modified_lines--;
@@ -699,6 +676,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
             }
           else if (original_lines > 0 && c == del)
             {
+              /* It's a "deleted" line in the hunk. */
               hunk_seen = TRUE;
               changed_line_seen = TRUE;
 
@@ -711,6 +689,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
             }
           else if (modified_lines > 0 && c == add)
             {
+              /* It's an "added" line in the hunk. */
               hunk_seen = TRUE;
               changed_line_seen = TRUE;
 
@@ -723,8 +702,6 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
             }
           else
             {
-              in_hunk = FALSE;
-
               /* The start of the current line marks the first byte
                * after the hunk text. */
               end = last_line;
@@ -847,8 +824,6 @@ enum parse_state
    state_copy_from_seen,  /* copy from foo.c */
    state_minus_seen,      /* --- foo.c */
    state_unidiff_found,   /* valid start of a regular unidiff header */
-   state_add_seen,        /* ### unused? */
-   state_del_seen,        /* ### unused? */
    state_git_header_found /* valid start of a --git diff header */
 };
 
@@ -859,7 +834,7 @@ struct transition
   enum parse_state required_state;
 
   /* A callback called upon each parser state transition. */
-  svn_error_t *(*fn)(enum parse_state *new_state, const char *input,
+  svn_error_t *(*fn)(enum parse_state *new_state, char *input,
                      svn_patch_t *patch, apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 };
@@ -891,7 +866,7 @@ grab_filename(const char **file_name, const char *line, apr_pool_t *result_pool,
 
 /* Parse the '--- ' line of a regular unidiff. */
 static svn_error_t *
-diff_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+diff_minus(enum parse_state *new_state, char *line, svn_patch_t *patch,
            apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* If we can find a tab, it separates the filename from
@@ -900,7 +875,7 @@ diff_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
   if (tab)
     *tab = '\0';
 
-  SVN_ERR(grab_filename(&patch->old_filename, line + strlen("--- "),
+  SVN_ERR(grab_filename(&patch->old_filename, line + STRLEN_LITERAL("--- "),
                         result_pool, scratch_pool));
 
   *new_state = state_minus_seen;
@@ -910,7 +885,7 @@ diff_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the '+++ ' line of a regular unidiff. */
 static svn_error_t *
-diff_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+diff_plus(enum parse_state *new_state, char *line, svn_patch_t *patch,
            apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* If we can find a tab, it separates the filename from
@@ -919,7 +894,7 @@ diff_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
   if (tab)
     *tab = '\0';
 
-  SVN_ERR(grab_filename(&patch->new_filename, line + strlen("+++ "),
+  SVN_ERR(grab_filename(&patch->new_filename, line + STRLEN_LITERAL("+++ "),
                         result_pool, scratch_pool));
 
   *new_state = state_unidiff_found;
@@ -929,7 +904,7 @@ diff_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the first line of a git extended unidiff. */
 static svn_error_t *
-git_start(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_start(enum parse_state *new_state, char *line, svn_patch_t *patch,
           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   const char *old_path_start;
@@ -985,14 +960,14 @@ git_start(enum parse_state *new_state, const char *line, svn_patch_t *patch,
    * files. In those cases the old_path and new_path is identical on the
    * 'diff --git' line.  For all other cases we fetch the filenames from
    * other header lines. */
-  old_path_start = line + strlen("diff --git a/");
+  old_path_start = line + STRLEN_LITERAL("diff --git a/");
   new_path_end = line + strlen(line);
   new_path_start = old_path_start;
 
   while (TRUE)
     {
-      int len_old;
-      int len_new;
+      ptrdiff_t len_old;
+      ptrdiff_t len_new;
 
       new_path_marker = strstr(new_path_start, " b/");
 
@@ -1001,7 +976,7 @@ git_start(enum parse_state *new_state, const char *line, svn_patch_t *patch,
         break;
 
       old_path_end = new_path_marker;
-      new_path_start = new_path_marker + strlen(" b/");
+      new_path_start = new_path_marker + STRLEN_LITERAL(" b/");
 
       /* No path after the marker. */
       if (! *new_path_start)
@@ -1034,7 +1009,7 @@ git_start(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the '--- ' line of a git extended unidiff. */
 static svn_error_t *
-git_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_minus(enum parse_state *new_state, char *line, svn_patch_t *patch,
           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* If we can find a tab, it separates the filename from
@@ -1047,7 +1022,7 @@ git_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
     SVN_ERR(grab_filename(&patch->old_filename, "/dev/null",
                           result_pool, scratch_pool));
   else
-    SVN_ERR(grab_filename(&patch->old_filename, line + strlen("--- a/"),
+    SVN_ERR(grab_filename(&patch->old_filename, line + STRLEN_LITERAL("--- a/"),
                           result_pool, scratch_pool));
 
   *new_state = state_git_minus_seen;
@@ -1056,20 +1031,20 @@ git_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the '+++ ' line of a git extended unidiff. */
 static svn_error_t *
-git_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_plus(enum parse_state *new_state, char *line, svn_patch_t *patch,
           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* If we can find a tab, it separates the filename from
    * the rest of the line which we can discard. */
   char *tab = strchr(line, '\t');
   if (tab)
-    *tab = '\0'; /* ### indirectly modifying LINE, which is const */
+    *tab = '\0';
 
   if (starts_with(line, "+++ /dev/null"))
     SVN_ERR(grab_filename(&patch->new_filename, "/dev/null",
                           result_pool, scratch_pool));
   else
-    SVN_ERR(grab_filename(&patch->new_filename, line + strlen("+++ b/"),
+    SVN_ERR(grab_filename(&patch->new_filename, line + STRLEN_LITERAL("+++ b/"),
                           result_pool, scratch_pool));
 
   *new_state = state_git_header_found;
@@ -1078,10 +1053,11 @@ git_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the 'rename from ' line of a git extended unidiff. */
 static svn_error_t *
-git_move_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_move_from(enum parse_state *new_state, char *line, svn_patch_t *patch,
               apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(grab_filename(&patch->old_filename, line + strlen("rename from "),
+  SVN_ERR(grab_filename(&patch->old_filename,
+                        line + STRLEN_LITERAL("rename from "),
                         result_pool, scratch_pool));
 
   *new_state = state_move_from_seen;
@@ -1090,10 +1066,11 @@ git_move_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the 'rename to ' line of a git extended unidiff. */
 static svn_error_t *
-git_move_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_move_to(enum parse_state *new_state, char *line, svn_patch_t *patch,
             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(grab_filename(&patch->new_filename, line + strlen("rename to "),
+  SVN_ERR(grab_filename(&patch->new_filename,
+                        line + STRLEN_LITERAL("rename to "),
                         result_pool, scratch_pool));
 
   patch->operation = svn_diff_op_moved;
@@ -1104,10 +1081,11 @@ git_move_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the 'copy from ' line of a git extended unidiff. */
 static svn_error_t *
-git_copy_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_copy_from(enum parse_state *new_state, char *line, svn_patch_t *patch,
               apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(grab_filename(&patch->old_filename, line + strlen("copy from "),
+  SVN_ERR(grab_filename(&patch->old_filename,
+                        line + STRLEN_LITERAL("copy from "),
                         result_pool, scratch_pool));
 
   *new_state = state_copy_from_seen;
@@ -1116,10 +1094,10 @@ git_copy_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the 'copy to ' line of a git extended unidiff. */
 static svn_error_t *
-git_copy_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_copy_to(enum parse_state *new_state, char *line, svn_patch_t *patch,
             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(grab_filename(&patch->new_filename, line + strlen("copy to "),
+  SVN_ERR(grab_filename(&patch->new_filename, line + STRLEN_LITERAL("copy to "),
                         result_pool, scratch_pool));
 
   patch->operation = svn_diff_op_copied;
@@ -1130,7 +1108,7 @@ git_copy_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the 'new file ' line of a git extended unidiff. */
 static svn_error_t *
-git_new_file(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_new_file(enum parse_state *new_state, char *line, svn_patch_t *patch,
              apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch->operation = svn_diff_op_added;
@@ -1143,7 +1121,7 @@ git_new_file(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 
 /* Parse the 'deleted file ' line of a git extended unidiff. */
 static svn_error_t *
-git_deleted_file(enum parse_state *new_state, const char *line, svn_patch_t *patch,
+git_deleted_file(enum parse_state *new_state, char *line, svn_patch_t *patch,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch->operation = svn_diff_op_deleted;
@@ -1310,6 +1288,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
   do
     {
       svn_stringbuf_t *line;
+      svn_boolean_t valid_header_line = FALSE;
       int i;
 
       svn_pool_clear(iterpool);
@@ -1336,6 +1315,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
             {
               SVN_ERR(transitions[i].fn(&state, line->data, *patch,
                                         result_pool, iterpool));
+              valid_header_line = TRUE;
               break;
             }
         }
@@ -1356,7 +1336,19 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
           break;
         }
       else if (state == state_git_tree_seen)
-        line_after_tree_header_read = TRUE;
+        {
+          line_after_tree_header_read = TRUE;
+        }
+      else if (! valid_header_line && state != state_start)
+        {
+          /* We've encountered an invalid diff header.
+           *
+           * Rewind to the start of the line just read - it may be a new
+           * header that begins there. */
+          SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_SET, &last_line,
+                                   scratch_pool));
+          state = state_start;
+        }
 
     }
   while (! eof);
@@ -1402,6 +1394,6 @@ svn_error_t *
 svn_diff_close_patch_file(svn_patch_file_t *patch_file,
                           apr_pool_t *scratch_pool)
 {
-  return svn_error_return(svn_io_file_close(patch_file->apr_file,
-                                            scratch_pool));
+  return svn_error_trace(svn_io_file_close(patch_file->apr_file,
+                                           scratch_pool));
 }

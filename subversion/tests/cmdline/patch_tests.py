@@ -3428,6 +3428,7 @@ def patch_strip_cwd(sbox):
   return patch_one_property(sbox, True)
 
 @XFail()
+@Issue(3814)
 def patch_set_prop_no_eol(sbox):
   "patch doesn't append newline to properties"
   return patch_one_property(sbox, False)
@@ -3483,6 +3484,379 @@ def patch_add_symlink(sbox):
                                        1, # check-props
                                        1) # dry-run
 
+def patch_moved_away(sbox):
+  "patch a file that was moved away"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  mu_contents = [
+    "Dear internet user,\n",
+    "\n",
+    "We wish to congratulate you over your email success in our computer\n",
+    "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
+    "in which email addresses were used. All participants were selected\n",
+    "through a computer ballot system drawn from over 100,000 company\n",
+    "and 50,000,000 individual email addresses from all over the world.\n",
+    "\n",
+    "Your email address drew and have won the sum of  750,000 Euros\n",
+    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    "file with\n",
+    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
+    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
+    "    BATCH NUMBERS :\n",
+    "    EULO/1007/444/606/08;\n",
+    "    SERIAL NUMBER: 45327\n",
+    "and PROMOTION DATE: 13th June. 2009\n",
+    "\n",
+    "To claim your winning prize, you are to contact the appointed\n",
+    "agent below as soon as possible for the immediate release of your\n",
+    "winnings with the below details.\n",
+    "\n",
+    "Again, we wish to congratulate you over your email success in our\n"
+    "computer Balloting.\n"
+  ]
+
+  # Set mu contents
+  svntest.main.file_write(mu_path, ''.join(mu_contents))
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'       : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Move mu away
+  sbox.simple_move("A/mu", "A/mu2")
+
+  # Apply patch
+  unidiff_patch = [
+    "--- A/mu.orig	2009-06-24 15:23:55.000000000 +0100\n",
+    "+++ A/mu	2009-06-24 15:21:23.000000000 +0100\n",
+    "@@ -6,6 +6,9 @@\n",
+    " through a computer ballot system drawn from over 100,000 company\n",
+    " and 50,000,000 individual email addresses from all over the world.\n",
+    " \n",
+    "+It is a promotional program aimed at encouraging internet users;\n",
+    "+therefore you do not need to buy ticket to enter for it.\n",
+    "+\n",
+    " Your email address drew and have won the sum of  750,000 Euros\n",
+    " ( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    " file with\n",
+    "@@ -14,11 +17,8 @@\n",
+    "     BATCH NUMBERS :\n",
+    "     EULO/1007/444/606/08;\n",
+    "     SERIAL NUMBER: 45327\n",
+    "-and PROMOTION DATE: 13th June. 2009\n",
+    "+and PROMOTION DATE: 14th June. 2009\n",
+    " \n",
+    " To claim your winning prize, you are to contact the appointed\n",
+    " agent below as soon as possible for the immediate release of your\n",
+    " winnings with the below details.\n",
+    "-\n",
+    "-Again, we wish to congratulate you over your email success in our\n",
+    "-computer Balloting.\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  mu_contents = [
+    "Dear internet user,\n",
+    "\n",
+    "We wish to congratulate you over your email success in our computer\n",
+    "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
+    "in which email addresses were used. All participants were selected\n",
+    "through a computer ballot system drawn from over 100,000 company\n",
+    "and 50,000,000 individual email addresses from all over the world.\n",
+    "\n",
+    "It is a promotional program aimed at encouraging internet users;\n",
+    "therefore you do not need to buy ticket to enter for it.\n",
+    "\n",
+    "Your email address drew and have won the sum of  750,000 Euros\n",
+    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    "file with\n",
+    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
+    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
+    "    BATCH NUMBERS :\n",
+    "    EULO/1007/444/606/08;\n",
+    "    SERIAL NUMBER: 45327\n",
+    "and PROMOTION DATE: 14th June. 2009\n",
+    "\n",
+    "To claim your winning prize, you are to contact the appointed\n",
+    "agent below as soon as possible for the immediate release of your\n",
+    "winnings with the below details.\n",
+  ]
+
+  expected_output = [
+    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu2'),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'A/mu2': Item(contents=''.join(mu_contents))})
+  expected_disk.remove('A/mu')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({'A/mu2' : Item(status='A ', copied='+', wc_rev='-')})
+
+  expected_status.tweak('A/mu', status='D ', wc_rev=2)
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
+@XFail()
+@Issue(3991)
+def patch_lacking_trailing_eol(sbox):
+  "patch file lacking trailing eol"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # Prepare
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # Apply patch
+  unidiff_patch = [
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    # TODO: -1 +1
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'iota'.\n",
+    "+Some more bytes", # No trailing \n on this line!
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  gamma_contents = "It is the file 'gamma'.\n"
+  iota_contents = "This is the file 'iota'.\n"
+  new_contents = "new\n"
+
+  expected_output = [
+    'U         %s\n' % os.path.join(wc_dir, 'iota'),
+    'svn: W[0-9]+: .*', # warning about appending a newline to iota's last line
+  ]
+
+  # Expect a newline to be appended
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents=iota_contents+"Some more bytes\n")
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status='M ')
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
+@Issue(4003)
+def patch_deletes_prop(sbox):
+  "patch deletes prop, directly and via reversed add"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  svntest.main.run_svn(None, 'propset', 'propname', 'propvalue',
+                       iota_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Apply patch
+  unidiff_patch = [
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Deleted: propname\n",
+    "## -1 +0,0 ##\n",
+    "-propvalue\n",
+    ]
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  # Expect the original state of the working copy in r1, exception
+  # that iota is at r2 now.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status=' M')
+  expected_status.tweak('iota', wc_rev=2)
+  expected_skip = wc.State('', { })
+  expected_output = [
+    ' U        %s\n' % os.path.join(wc_dir, 'iota'),
+  ]
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       0) # dry-run
+
+  # Revert any local mods, then try to reverse-apply a patch which
+  # *adds* the property.
+  svntest.main.run_svn(None, 'revert', iota_path)
+
+  # Apply patch 
+  unidiff_patch = [
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Added: propname\n",
+    "## -0,0 +1 ##\n",
+    "+propvalue\n",
+    ]
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1, # dry-run
+                                       '--reverse-diff') 
+
+@Issue(4004)
+def patch_reversed_add_with_props(sbox):
+  "reverse patch new file+props atop uncommitted"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  patch_file_path = make_patch_path(sbox)
+
+  # Add a new file which also has props set on it.
+  newfile_path = os.path.join(wc_dir, 'newfile')
+  newfile_contents = ["This is the file 'newfile'.\n"]
+  svntest.main.file_write(newfile_path, ''.join(newfile_contents))
+  svntest.main.run_svn(None, 'add', newfile_path)
+  svntest.main.run_svn(None, 'propset', 'propname', 'propvalue',
+                       newfile_path)
+
+  # Generate a patch file from our current diff (rooted at the working
+  # copy root).
+  cwd = os.getcwd()
+  try:
+    os.chdir(wc_dir)
+    exit_code, diff_output, err_output = svntest.main.run_svn(None, 'diff')
+  finally:
+    os.chdir(cwd)
+  svntest.main.file_write(patch_file_path, ''.join(diff_output))
+
+  # Okay, now commit up.
+  expected_output = svntest.wc.State(wc_dir, {
+    'newfile' : Item(verb='Adding'),
+    })
+
+  # Now, we'll try to reverse-apply the very diff we just created.  We
+  # expect the original state of the working copy in r1.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_skip = wc.State('', { })
+  expected_output = [
+    'D         %s\n' % newfile_path,
+  ]
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1, # dry-run
+                                       '--reverse-diff') 
+
+@Issue(4004)
+def patch_reversed_add_with_props2(sbox):
+  "reverse patch new file+props"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  patch_file_path = make_patch_path(sbox)
+
+  # Add a new file which also has props set on it.
+  newfile_path = os.path.join(wc_dir, 'newfile')
+  newfile_contents = ["This is the file 'newfile'.\n"]
+  svntest.main.file_write(newfile_path, ''.join(newfile_contents))
+  svntest.main.run_svn(None, 'add', newfile_path)
+  svntest.main.run_svn(None, 'propset', 'propname', 'propvalue',
+                       newfile_path)
+
+  # Generate a patch file from our current diff (rooted at the working
+  # copy root).
+  cwd = os.getcwd()
+  try:
+    os.chdir(wc_dir)
+    exit_code, diff_output, err_output = svntest.main.run_svn(None, 'diff')
+  finally:
+    os.chdir(cwd)
+  svntest.main.file_write(patch_file_path, ''.join(diff_output))
+
+  # Okay, now commit up.
+  expected_output = svntest.wc.State(wc_dir, {
+    'newfile' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({'newfile' : Item(wc_rev=2, status='  ')})
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Now, we'll try to reverse-apply the very diff we just created.  We
+  # expect the original state of the working copy in r1 plus 'newfile'
+  # scheduled for deletion.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({'newfile' : Item(status='D ', wc_rev=2)})
+  expected_skip = wc.State('', { })
+  expected_output = [
+    'D         %s\n' % newfile_path,
+  ]
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1, # dry-run
+                                       '--reverse-diff') 
 
 ########################################################################
 #Run the tests
@@ -3519,6 +3893,11 @@ test_list = [ None,
               patch_strip_cwd,
               patch_set_prop_no_eol,
               patch_add_symlink,
+              patch_moved_away,
+              patch_lacking_trailing_eol,
+              patch_deletes_prop,
+              patch_reversed_add_with_props,
+              patch_reversed_add_with_props2,
             ]
 
 if __name__ == '__main__':

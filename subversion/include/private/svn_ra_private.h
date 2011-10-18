@@ -45,29 +45,6 @@ svn_ra__assert_mergeinfo_capable_server(svn_ra_session_t *ra_session,
                                         const char *path_or_url,
                                         apr_pool_t *pool);
 
-/** Permanently delete @a path (relative to the URL of @a session) in revision
- * @a rev.
- *
- * Do not change the content of other node in the repository, even other nodes
- * that were copied from this one. The only other change in the repository is
- * to "copied from" pointers that were pointing to the now-deleted node. These
- * are removed or made to point to a previous version of the now-deleted node.
- * (### TODO: details.)
- *
- * If administratively forbidden, return @c SVN_ERR_RA_NOT_AUTHORIZED. If not
- * implemented by the server, return @c SVN_ERR_RA_NOT_IMPLEMENTED.
- *
- * @note This functionality is not implemented in pre-1.7 servers and may not
- * be implemented in all 1.7 and later servers.
- *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_ra__obliterate_path_rev(svn_ra_session_t *session,
-                            svn_revnum_t rev,
-                            const char *path,
-                            apr_pool_t *pool);
-
 
 /*** Operational Locks ***/
 

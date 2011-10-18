@@ -44,19 +44,21 @@
 struct fns_wrapper_baton
 {
   /* We put the old baton in front of this one, so that we can still use
-     this baton in place of the old.  This prevents us from having to 
+     this baton in place of the old.  This prevents us from having to
      implement simple wrappers around each member of diff_fns_t. */
   void *old_baton;
   const svn_diff_fns_t *vtable;
 };
 
 static svn_error_t *
-datasources_open(void *baton, apr_off_t *prefix_lines,
+datasources_open(void *baton,
+                 apr_off_t *prefix_lines,
+                 apr_off_t *suffix_lines,
                  const svn_diff_datasource_e *datasources,
                  apr_size_t datasource_len)
 {
   struct fns_wrapper_baton *fwb = baton;
-  int i;
+  apr_size_t i;
 
   /* Just iterate over the datasources, using the old singular version. */
   for (i = 0; i < datasource_len; i++)
@@ -64,8 +66,9 @@ datasources_open(void *baton, apr_off_t *prefix_lines,
       SVN_ERR(fwb->vtable->datasource_open(fwb->old_baton, datasources[i]));
     }
 
-  /* Don't claim any prefix matches. */
+  /* Don't claim any prefix or suffix matches. */
   *prefix_lines = 0;
+  *suffix_lines = 0;
 
   return SVN_NO_ERROR;
 }
@@ -104,14 +107,14 @@ token_discard(void *baton,
               void *token)
 {
   struct fns_wrapper_baton *fwb = baton;
-  return fwb->vtable->token_discard(fwb->old_baton, token);
+  fwb->vtable->token_discard(fwb->old_baton, token);
 }
 
 static void
 token_discard_all(void *baton)
 {
   struct fns_wrapper_baton *fwb = baton;
-  return fwb->vtable->token_discard_all(fwb->old_baton);
+  fwb->vtable->token_discard_all(fwb->old_baton);
 }
 
 

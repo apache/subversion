@@ -158,7 +158,7 @@ jobject
 Revision::makeJRevision(svn_revnum_t rev)
 {
   JNIEnv *env = JNIUtil::getEnv();
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/Revision");
+  jclass clazz = env->FindClass(JAVA_PACKAGE "/types/Revision");
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 

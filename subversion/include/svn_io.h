@@ -98,7 +98,7 @@ typedef struct svn_io_dirent2_t {
 } svn_io_dirent2_t;
 
 
-/** Creates a new @a svn_io_dirent2_t structure
+/** Creates a new #svn_io_dirent2_t structure
  *
  * @since New in 1.7.
  */
@@ -240,7 +240,7 @@ svn_io_open_uniquely_named(apr_file_t **file,
 /** Create a writable file, with an arbitrary and unique name, in the
  * directory @a dirpath.  Set @a *temp_path to its full path, and set
  * @a *file to the file handle, both allocated from @a result_pool.  Either
- * @a file or @a unique_name may be @c NULL.  If @a file is @c NULL, the file
+ * @a file or @a temp_path may be @c NULL.  If @a file is @c NULL, the file
  * will be created but not open.
  *
  * If @a dirpath is @c NULL, use the path returned from svn_io_temp_dir().
@@ -749,6 +749,13 @@ typedef svn_error_t *(*svn_read_fn_t)(void *baton,
                                       char *buffer,
                                       apr_size_t *len);
 
+/** Skip data handler function for a generic stream.  @see svn_stream_t
+ * and svn_stream_skip().
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_stream_skip_fn_t)(void *baton,
+                                             apr_size_t len);
+
 /** Write handler function for a generic stream.  @see svn_stream_t. */
 typedef svn_error_t *(*svn_write_fn_t)(void *baton,
                                        const char *data,
@@ -757,7 +764,9 @@ typedef svn_error_t *(*svn_write_fn_t)(void *baton,
 /** Close handler function for a generic stream.  @see svn_stream_t. */
 typedef svn_error_t *(*svn_close_fn_t)(void *baton);
 
-/** An opaque type which represents a mark on a stream.
+/** An opaque type which represents a mark on a stream.  There is no
+ * concrete definition of this type, it is a named type for stream
+ * implementation specific baton pointers.
  *
  * @see svn_stream_mark().
  * @since New in 1.7.
@@ -769,7 +778,7 @@ typedef struct svn_stream_mark_t svn_stream_mark_t;
  *
  * @since New in 1.7.
  */
-typedef svn_error_t *(*svn_io_mark_fn_t)(void *baton,
+typedef svn_error_t *(*svn_stream_mark_fn_t)(void *baton,
                                          svn_stream_mark_t **mark,
                                          apr_pool_t *pool);
 
@@ -778,8 +787,8 @@ typedef svn_error_t *(*svn_io_mark_fn_t)(void *baton,
  *
  * @since New in 1.7.
  */
-typedef svn_error_t *(*svn_io_seek_fn_t)(void *baton,
-                                         svn_stream_mark_t *mark);
+typedef svn_error_t *(*svn_stream_seek_fn_t)(void *baton,
+                                         const svn_stream_mark_t *mark);
 
 /** Create a generic stream.  @see svn_stream_t. */
 svn_stream_t *
@@ -795,6 +804,14 @@ svn_stream_set_baton(svn_stream_t *stream,
 void
 svn_stream_set_read(svn_stream_t *stream,
                     svn_read_fn_t read_fn);
+
+/** Set @a stream's skip function to @a skip_fn
+ *
+ * @since New in 1.7
+ */
+void
+svn_stream_set_skip(svn_stream_t *stream,
+                    svn_stream_skip_fn_t skip_fn);
 
 /** Set @a stream's write function to @a write_fn */
 void
@@ -812,7 +829,7 @@ svn_stream_set_close(svn_stream_t *stream,
  */
 void
 svn_stream_set_mark(svn_stream_t *stream,
-                    svn_io_mark_fn_t mark_fn);
+                    svn_stream_mark_fn_t mark_fn);
 
 /** Set @a stream's seek function to @a seek_fn
  *
@@ -820,7 +837,7 @@ svn_stream_set_mark(svn_stream_t *stream,
  */
 void
 svn_stream_set_seek(svn_stream_t *stream,
-                    svn_io_seek_fn_t seek_fn);
+                    svn_stream_seek_fn_t seek_fn);
 
 /** Create a stream that is empty for reading and infinite for writing. */
 svn_stream_t *
@@ -930,6 +947,26 @@ svn_stream_t *
 svn_stream_from_aprfile(apr_file_t *file,
                         apr_pool_t *pool);
 
+/** Set @a *in to a generic stream connected to stdin, allocated in
+ * @a pool.  The stream and its underlying APR handle will be closed
+ * when @a pool is cleared or destroyed.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_stream_for_stdin(svn_stream_t **in,
+                     apr_pool_t *pool);
+
+/** Set @a *err to a generic stream connected to stderr, allocated in
+ * @a pool.  The stream and its underlying APR handle will be closed
+ * when @a pool is cleared or destroyed.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_stream_for_stderr(svn_stream_t **err,
+                      apr_pool_t *pool);
+
 /** Set @a *out to a generic stream connected to stdout, allocated in
  * @a pool.  The stream and its underlying APR handle will be closed
  * when @a pool is cleared or destroyed.
@@ -1016,6 +1053,22 @@ svn_stream_read(svn_stream_t *stream,
                 char *buffer,
                 apr_size_t *len);
 
+/**
+ * Skip @a len bytes from a generic @a stream. If the stream is exhausted
+ * before @a len bytes have been read, return an error.
+ *
+ * @note  No assumption can be made on the semantics of this function
+ * other than that the stream read pointer will be advanced by *len
+ * bytes. Depending on the capabilities of the underlying stream
+ * implementation, this may for instance be translated into a sequence
+ * of reads or a simple seek operation. If the stream implementation has
+ * not provided a skip function, this will read from the stream and
+ * discard the data.
+ */
+svn_error_t *
+svn_stream_skip(svn_stream_t *stream,
+                apr_size_t len);
+
 /** Write to a generic stream. @see svn_stream_t. */
 svn_error_t *
 svn_stream_write(svn_stream_t *stream,
@@ -1035,6 +1088,14 @@ svn_stream_close(svn_stream_t *stream);
  */
 svn_error_t *
 svn_stream_reset(svn_stream_t *stream);
+
+/** Returns @c TRUE if the generic @a stream supports svn_stream_mark().
+ *
+ * @see svn_stream_mark()
+ * @since New in 1.7.
+ */
+svn_boolean_t
+svn_stream_supports_mark(svn_stream_t *stream);
 
 /** Set a @a mark at the current position of a generic @a stream,
  * which can later be sought back to using svn_stream_seek().
@@ -1060,7 +1121,7 @@ svn_stream_mark(svn_stream_t *stream,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_stream_seek(svn_stream_t *stream, svn_stream_mark_t *mark);
+svn_stream_seek(svn_stream_t *stream, const svn_stream_mark_t *mark);
 
 /** Return a writable stream which, when written to, writes to both of the
  * underlying streams.  Both of these streams will be closed upon closure of
@@ -1117,21 +1178,6 @@ svn_stream_readline(svn_stream_t *stream,
                     const char *eol,
                     svn_boolean_t *eof,
                     apr_pool_t *pool);
-
-/**
- * Similar to svn_stream_readline(). The line-terminator is detected
- * automatically.  If @a eol is not NULL, the detected line-terminator
- * is returned in @a *eol.  If EOF is reached and the stream does not
- * end with a newline character, @a *eol will be NULL.
- *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_stream_readline_detect_eol(svn_stream_t *stream,
-                               svn_stringbuf_t **stringbuf,
-                               const char **eol,
-                               svn_boolean_t *eof,
-                               apr_pool_t *pool);
 
 /**
  * Read the contents of the readable stream @a from and write them to the
@@ -1283,6 +1329,9 @@ svn_stringbuf_from_aprfile(svn_stringbuf_t **result,
  * the file is not present (APR_STATUS_IS_ENOENT returns TRUE), then no
  * error will be returned.
  *
+ * The file will be removed even if it is not writable.  (On Windows and
+ * OS/2, this function first clears the file's read-only bit.)
+ *
  * @since New in 1.7.
  */
 svn_error_t *
@@ -1415,7 +1464,8 @@ typedef svn_error_t * (*svn_io_walk_func_t)(void *baton,
  * on the directory itself before invoking it on any children thereof.
  *
  * Deliver to @a walk_func the information specified by @a wanted,
- * plus the items specified by @c APR_FINFO_TYPE and @c APR_FINFO_NAME.
+ * which is a combination of @c APR_FINFO_* flags, plus the
+ * information specified by @c APR_FINFO_TYPE and @c APR_FINFO_NAME.
  *
  * Use @a pool for all allocations.
  *
@@ -1736,6 +1786,16 @@ svn_io_detect_mimetype(const char **mimetype,
                        apr_pool_t *pool);
 
 
+/** Examine up to @a len bytes of data in @a buf to determine if the
+ * can be considered binary data, in which case return TRUE.
+ * If the data can be considered plain-text data, return FALSE.
+ *
+ * @since New in 1.7.
+ */
+svn_boolean_t
+svn_io_is_binary_data(const void *buf, apr_size_t len);
+
+
 /** Wrapper for apr_file_open().  @a fname is utf8-encoded. */
 svn_error_t *
 svn_io_file_open(apr_file_t **new_file,
@@ -1758,6 +1818,15 @@ svn_io_file_getc(char *ch,
                  apr_pool_t *pool);
 
 
+/** Wrapper for apr_file_putc().
+  * @since New in 1.7
+  */
+svn_error_t *
+svn_io_file_putc(char ch,
+                 apr_file_t *file,
+                 apr_pool_t *pool);
+
+
 /** Wrapper for apr_file_info_get(). */
 svn_error_t *
 svn_io_file_info_get(apr_finfo_t *finfo,
@@ -1774,7 +1843,28 @@ svn_io_file_read(apr_file_t *file,
                  apr_pool_t *pool);
 
 
-/** Wrapper for apr_file_read_full(). */
+/** Wrapper for apr_file_read_full().
+ *
+ * If @a hit_eof is not NULL, EOF will be indicated there and no
+ * svn_error_t error object will be created upon EOF.
+ *
+ * @since New in 1.7
+ */
+svn_error_t *
+svn_io_file_read_full2(apr_file_t *file,
+                       void *buf,
+                       apr_size_t nbytes,
+                       apr_size_t *bytes_read,
+                       svn_boolean_t *hit_eof,
+                       apr_pool_t *pool);
+
+
+/** Similar to svn_io_file_read_full2 with hit_eof being set
+ * to @c NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_file_read_full(apr_file_t *file,
                       void *buf,
@@ -1906,6 +1996,12 @@ svn_io_dir_open(apr_dir_t **new_dir,
                 const char *dirname,
                 apr_pool_t *pool);
 
+/** Wrapper for apr_dir_close().
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_io_dir_close(apr_dir_t *thedir);
 
 /** Wrapper for apr_dir_remove().  @a dirname is utf8-encoded.
  * @note This function has this name to avoid confusion with

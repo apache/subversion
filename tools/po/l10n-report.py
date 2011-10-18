@@ -43,6 +43,7 @@ import subprocess
 FROM_ADDRESS = "Subversion Translation Status <noreply@subversion.apache.org>"
 LIST_ADDRESS = "dev@subversion.apache.org"
 SUBJECT_TEMPLATE = "[l10n] Translation status report for %s r%s"
+MAIL_THREAD_ID = '<translation_status_report_for_%s@subversion.apache.org>'
 
 def _rev():
   dollar = "$Revision$"
@@ -132,6 +133,25 @@ class l10nReport:
         self.safe_command(cmd)
 
 
+def bar_graph(nominal_length, trans, untrans, fuzzy, obsolete):
+    """Format the given four counts into a bar graph string in which the
+    total length of the bars representing the TRANS, UNTRANS and FUZZY
+    counts is NOMINAL_LENGTH characters, and the bar representing the
+    OBSOLETE count extends beyond that."""
+
+    total_count = trans + untrans + fuzzy  # don't include 'obsolete'
+    accum_bar = 0
+    accum_count = 0
+    s = ''
+    for count, letter in [(trans, '+'), (untrans, 'U'), (fuzzy, '~'),
+                          (obsolete, 'o')]:
+        accum_count += count
+        new_bar_end = nominal_length * accum_count / total_count
+        s += letter * (new_bar_end - accum_bar)
+        accum_bar = new_bar_end
+    return s
+
+
 def main():
     # Parse the command-line options and arguments.
     try:
@@ -186,6 +206,7 @@ def main():
         [trans, untrans, fuzzy, obsolete]  = l10n.get_msgattribs(file)
         po_format = "%6s %7d %7d %7d %7d" %\
                     (lang, trans, untrans, fuzzy, obsolete)
+        po_format += "  " + bar_graph(30, trans, untrans, fuzzy, obsolete)
         body += "%s\n" % po_format
         print(po_format)
 
@@ -204,8 +225,12 @@ def main():
         msg["X-Mailer"] = "l10n-report.py r%s" % _rev()
         msg["Reply-To"] = LIST_ADDRESS
         msg["Mail-Followup-To"] = LIST_ADDRESS
+        msg["In-Reply-To"] = MAIL_THREAD_ID % (branch_name.replace('/', '_'))
+        msg["References"] = msg["In-Reply-To"]
+
         # http://www.iana.org/assignments/auto-submitted-keywords/auto-submitted-keywords.xhtml
         msg["Auto-Submitted"] = 'auto-generated'
+
         msg.set_type("text/plain")
         msg.set_payload("\n".join((title, format_head, format_line, body)))
 

@@ -31,6 +31,8 @@
 #include "svn_client.h"
 #include "svn_error.h"
 
+#include "private/svn_wc_private.h"
+
 
 /*** Code. ***/
 
@@ -46,14 +48,47 @@ call_notify_func(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                      n->revision);
 }
 
+static svn_error_t *
+call_conflict_func(svn_wc_conflict_result_t **result,
+                   const svn_wc_conflict_description2_t *conflict,
+                   void *baton,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  svn_client_ctx_t *ctx = baton;
+
+  if (ctx->conflict_func)
+    {
+      const svn_wc_conflict_description_t *cd;
+
+      cd = svn_wc__cd2_to_cd(conflict, scratch_pool);
+      SVN_ERR(ctx->conflict_func(result, cd, ctx->conflict_baton,
+                                 result_pool));
+    }
+  else
+    {
+      /* We have to set a result; so we postpone */
+      *result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
+                                              NULL, result_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_create_context(svn_client_ctx_t **ctx,
                           apr_pool_t *pool)
 {
   *ctx = apr_pcalloc(pool, sizeof(svn_client_ctx_t));
+
   (*ctx)->notify_func2 = call_notify_func;
+  (*ctx)->notify_baton2 = *ctx;
+
+  (*ctx)->conflict_func2 = call_conflict_func;
+  (*ctx)->conflict_baton2 = *ctx;
+
   SVN_ERR(svn_wc_context_create(&(*ctx)->wc_ctx, NULL /* config */, pool,
                                 pool));
-  (*ctx)->notify_baton2 = *ctx;
+
   return SVN_NO_ERROR;
 }

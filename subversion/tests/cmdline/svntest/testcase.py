@@ -84,7 +84,7 @@ class TestCase:
 
     DOC is ...
 
-    WIP is ...
+    WIP is a string describing the reason for the work-in-progress
     """
     assert hasattr(cond_func, '__call__')
 
@@ -92,10 +92,7 @@ class TestCase:
     self._cond_func = cond_func
     self.description = doc or delegate.description
     self.inprogress = wip
-    if type(issues) == type(0):
-      self.issues = [issues]
-    else:
-      self.issues = issues
+    self.issues = issues
 
   def get_function_name(self):
     """Return the name of the python function implementing the test."""
@@ -110,10 +107,7 @@ class TestCase:
 
   def set_issues(self, issues):
     """Set the issues associated with this test."""
-    if type(issues) == type(0):
-      self.issues = [issues]
-    else:
-      self.issues = issues
+    self.issues = issues
 
   def run(self, sandbox):
     """Run the test within the given sandbox."""
@@ -203,7 +197,7 @@ class _XFail(TestCase):
     that we're running over a particular RA layer).
 
     WIP is ...
-    
+
     ISSUES is an issue number (or a list of issue numbers) tracking this."""
 
     TestCase.__init__(self, create_test_case(test_case), cond_func, wip=wip,
@@ -285,11 +279,14 @@ def XFail_deco(cond_func = lambda: True):
   return _second
 
 
-def Wimp_deco(func):
-  if isinstance(func, TestCase):
-    return _Wimp(func, issues=func.issues)
-  else:
-    return _Wimp(func)
+def Wimp_deco(wip, cond_func = lambda: True):
+  def _second(func):
+    if isinstance(func, TestCase):
+      return _Wimp(wip, func, cond_func, issues=func.issues)
+    else:
+      return _Wimp(wip, func, cond_func)
+
+  return _second
 
 
 def Skip_deco(cond_func = lambda: True):
@@ -312,7 +309,7 @@ def SkipUnless_deco(cond_func):
   return _second
 
 
-def Issues_deco(issues):
+def Issues_deco(*issues):
   def _second(func):
     if isinstance(func, TestCase):
       # if the wrapped thing is already a test case, just set the issues
@@ -320,7 +317,7 @@ def Issues_deco(issues):
       return func
 
     else:
-      # we need to wrap the function 
+      # we need to wrap the function
       return create_test_case(func, issues=issues)
 
   return _second

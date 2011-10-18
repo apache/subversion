@@ -48,7 +48,26 @@ extern "C" {
 #define SVN_TEST_ASSERT(expr)                                     \
   do {                                                            \
     if (!(expr))                                                  \
-      return svn_error_create(SVN_ERR_TEST_FAILED, NULL, #expr);  \
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,         \
+                               "assertion '%s' failed at %s:%d",  \
+                               #expr, __FILE__, __LINE__);        \
+  } while (0)
+
+/** Handy macro for testing an expected svn_error_t return value.
+ * EXPECTED must be a real error (neither SVN_NO_ERROR nor APR_SUCCESS). */
+#define SVN_TEST_ASSERT_ERROR(expr, expected)                             \
+  do {                                                                    \
+    svn_error_t *err__ = (expr);                                          \
+    SVN_ERR_ASSERT((expected));                                           \
+    if (err__ == SVN_NO_ERROR || err__->apr_err != (expected))            \
+      return err__ ? svn_error_createf(SVN_ERR_TEST_FAILED, err__,        \
+                                       "Expected error %d but got %d",    \
+                                       (expected),                        \
+                                       err__->apr_err)                    \
+                   : svn_error_createf(SVN_ERR_TEST_FAILED, err__,        \
+                                        "Expected error %d but got %s",   \
+                                        (expected),                       \
+                                        "SVN_NO_ERROR");                  \
   } while (0)
 
 /** Handy macro for testing string equality.
@@ -63,8 +82,9 @@ extern "C" {
     if (   (tst_str2 != NULL && tst_str1 == NULL)                   \
         || (strcmp(tst_str2, tst_str1) != 0)  )                     \
       return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,           \
-          "Strings not equal\n  Expected: '%s'\n  Found:    '%s'",  \
-          tst_str2, tst_str1);                                      \
+          "Strings not equal\n  Expected: '%s'\n  Found:    '%s'"   \
+          "\n  at %s:%d",                                           \
+          tst_str2, tst_str1, __FILE__, __LINE__);                  \
   } while(0)
 
 
@@ -172,6 +192,27 @@ apr_uint32_t svn_test_rand(apr_uint32_t *seed);
 
 /* Add PATH to the test cleanup list.  */
 void svn_test_add_dir_cleanup(const char *path);
+
+
+/* A simple representation for a tree node. */
+typedef struct svn_test__tree_entry_t
+{
+  const char *path;     /* relpath of this node */
+  const char *contents; /* text contents, or NULL for a directory */
+}
+svn_test__tree_entry_t;
+
+/* Wrapper for an array of svn_test__tree_entry_t's. */
+typedef struct svn_test__tree_t
+{
+  svn_test__tree_entry_t *entries;
+  int num_entries;
+}
+svn_test__tree_t;
+
+
+/* The standard Greek tree, terminated by a node with path=NULL. */
+extern const svn_test__tree_entry_t svn_test__greek_tree_nodes[21];
 
 
 #ifdef __cplusplus

@@ -36,6 +36,7 @@
 #include "svn_private_config.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_repos_private.h"
+#include "private/svn_string_private.h"
 
 
 
@@ -73,7 +74,7 @@ check_hook_result(const char *name, const char *cmd, apr_proc_t *cmd_proc,
   if (err)
     {
       svn_error_clear(err2);
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   if (APR_PROC_CHECK_EXIT(exitwhy) && exitcode == 0)
@@ -126,8 +127,6 @@ check_hook_result(const char *name, const char *cmd, apr_proc_t *cmd_proc,
         action = _("Commit");
       else if (strcmp(name, "pre-revprop-change") == 0)
         action = _("Revprop change");
-      else if (strcmp(name, "pre-obliterate") == 0)
-        action = _("Obliteration");
       else if (strcmp(name, "pre-lock") == 0)
         action = _("Lock");
       else if (strcmp(name, "pre-unlock") == 0)
@@ -203,7 +202,8 @@ run_hook_cmd(svn_string_t **result,
 
   if (err)
     {
-      err = svn_error_createf
+      /* CMD_PROC is not safe to use. Bail. */
+      return svn_error_createf
         (SVN_ERR_REPOS_HOOK_FAILURE, err, _("Failed to start '%s' hook"), cmd);
     }
   else
@@ -228,7 +228,7 @@ run_hook_cmd(svn_string_t **result,
         return svn_error_wrap_apr
           (apr_err, _("Error closing read end of stderr pipe"));
 
-      *result = svn_string_create_from_buf(native_stdout, pool);
+      *result = svn_stringbuf__morph_into_string(native_stdout);
     }
   else
     {
@@ -237,7 +237,7 @@ run_hook_cmd(svn_string_t **result,
         return svn_error_wrap_apr(apr_err, _("Error closing null file"));
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -396,7 +396,7 @@ lock_token_content(apr_file_t **handle, apr_hash_t *lock_tokens,
 
   svn_stringbuf_appendcstr(lock_str, "\n");
   return create_temp_file(handle,
-                          svn_string_create_from_buf(lock_str, pool), pool);
+                          svn_stringbuf__morph_into_string(lock_str), pool);
 }
 
 
@@ -587,92 +587,6 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
 
 
 svn_error_t  *
-svn_repos__hooks_pre_obliterate(svn_repos_t *repos,
-                                svn_revnum_t rev,
-                                const char *author,
-                                const svn_string_t *obliteration_set,
-                                apr_pool_t *pool)
-{
-  const char *hook = svn_repos__pre_obliterate_hook(repos, pool);
-  svn_boolean_t broken_link;
-
-  if ((hook = check_hook_cmd(hook, &broken_link, pool)) && broken_link)
-    {
-      return hook_symlink_error(hook);
-    }
-  else if (hook)
-    {
-      const char *args[4];
-      apr_file_t *stdin_handle = NULL;
-
-      /* Pass the Obliteration Set as stdin to hook */
-      SVN_ERR(create_temp_file(&stdin_handle, obliteration_set, pool));
-
-      args[0] = hook;
-      args[1] = svn_dirent_local_style(svn_repos_path(repos, pool), pool);
-      args[2] = author ? author : "";
-      args[3] = NULL;
-
-      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_PRE_OBLITERATE, hook, args,
-                           stdin_handle, pool));
-
-      SVN_ERR(svn_io_file_close(stdin_handle, pool));
-    }
-  else
-    {
-      /* If the pre- hook doesn't exist at all, then default to
-         MASSIVE PARANOIA.  Obliteration is a lossy
-         operation; so unless the repository admininstrator has
-         *deliberately* created the pre-hook, disallow all changes. */
-      return
-        svn_error_create
-        (SVN_ERR_REPOS_DISABLED_FEATURE, NULL,
-         _("Repository has not been enabled to accept obliteration"));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t  *
-svn_repos__hooks_post_obliterate(svn_repos_t *repos,
-                                 svn_revnum_t rev,
-                                 const char *author,
-                                 const svn_string_t *obliteration_set,
-                                 apr_pool_t *pool)
-{
-  const char *hook = svn_repos_post_revprop_change_hook(repos, pool);
-  svn_boolean_t broken_link;
-
-  if ((hook = check_hook_cmd(hook, &broken_link, pool)) && broken_link)
-    {
-      return hook_symlink_error(hook);
-    }
-  else if (hook)
-    {
-      const char *args[4];
-      apr_file_t *stdin_handle = NULL;
-
-      /* Pass the Obliteration Set as stdin to hook */
-      SVN_ERR(create_temp_file(&stdin_handle, obliteration_set, pool));
-
-      args[0] = hook;
-      args[1] = svn_dirent_local_style(svn_repos_path(repos, pool), pool);
-      args[2] = author ? author : "";
-      args[3] = NULL;
-
-      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_POST_REVPROP_CHANGE, hook,
-                           args, stdin_handle, pool));
-
-      SVN_ERR(svn_io_file_close(stdin_handle, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-
-svn_error_t  *
 svn_repos__hooks_pre_lock(svn_repos_t *repos,
                           const char **token,
                           const char *path,
@@ -703,8 +617,11 @@ svn_repos__hooks_pre_lock(svn_repos_t *repos,
 
       SVN_ERR(run_hook_cmd(&buf, SVN_REPOS__HOOK_PRE_LOCK, hook, args, NULL,
                            pool));
+
       if (token)
+        /* No validation here; the FS will take care of that. */
         *token = buf->data;
+
     }
   else if (token)
     *token = "";

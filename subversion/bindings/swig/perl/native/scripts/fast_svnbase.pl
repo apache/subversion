@@ -72,21 +72,21 @@ sub _compile_import {
     my @subs;
     no strict 'refs';
     for (keys %{"SVN::_${pkg}::"}) {
-	my $name = $_;
-	next unless s/^$prefix_re//;
-	next if $ignore_re && m/$ignore_re/;
+        my $name = $_;
+        next unless s/^$prefix_re//;
+        next if $ignore_re && m/$ignore_re/;
 
-	# insert the accessor
-	if (m/(.*)_get$/) {
-	    my $member = $1;
-	    push @subs, qq!*$member = sub { &{"SVN::_${pkg}::${prefix}${member}_".
-		      (\@_ > 1 ? 'set' : 'get')}(\@_)} !;
-	}
-	elsif (m/(.*)_set$/) {
-	}
-	else {
-	    push @subs, qq!*$_ = \$SVN::_${pkg}::{$name}!;
-	}
+        # insert the accessor
+        if (m/(.*)_get$/) {
+            my $member = $1;
+            push @subs, qq!*$member = sub { &{"SVN::_${pkg}::${prefix}${member}_".
+                                            (\@_ > 1 ? 'set' : 'get')}(\@_)} !;
+        }
+        elsif (m/(.*)_set$/) {
+        }
+        else {
+            push @subs, qq!*$_ = \$SVN::_${pkg}::{$name}!;
+        }
     }
     return "{ no strict 'refs';\n  ". join(";\n  ", @subs, '')."}\n";
 }

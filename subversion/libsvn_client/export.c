@@ -49,21 +49,24 @@
 
 /* Add EXTERNALS_PROP_VAL for the export destination path PATH to
    TRAVERSAL_INFO.  */
-static void
+static svn_error_t *
 add_externals(apr_hash_t *externals,
               const char *path,
               const svn_string_t *externals_prop_val)
 {
   apr_pool_t *pool = apr_hash_pool_get(externals);
+  const char *local_abspath;
 
   if (! externals_prop_val)
-    return;
+    return SVN_NO_ERROR;
 
-  apr_hash_set(externals,
-               apr_pstrdup(pool, path),
-               APR_HASH_KEY_STRING,
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  apr_hash_set(externals, local_abspath, APR_HASH_KEY_STRING,
                apr_pstrmemdup(pool, externals_prop_val->data,
                               externals_prop_val->len));
+
+  return SVN_NO_ERROR;
 }
 
 /* Helper function that gets the eol style and optionally overrides the
@@ -124,10 +127,33 @@ append_basename_if_dir(const char **appendable_dirent_p,
   return SVN_NO_ERROR;
 }
 
+/* Make an unversioned copy of the versioned file at FROM_ABSPATH.  Copy it
+ * to the destination path TO_ABSPATH.
+ *
+ * If REVISION is svn_opt_revision_working, copy the working version,
+ * otherwise copy the base version.
+ *
+ * Expand the file's keywords according to the source file's 'svn:keywords'
+ * property, if present.  If copying a locally modified working version,
+ * append 'M' to the revision number and use '(local)' for the author.
+ *
+ * Translate the file's line endings according to the source file's
+ * 'svn:eol-style' property, if present.  If NATIVE_EOL is not NULL, use it
+ * in place of the native EOL style.  Throw an error if the source file has
+ * inconsistent line endings and EOL translation is attempted.
+ *
+ * Set the destination file's modification time to the source file's
+ * modification time if copying the working version and the working version
+ * is locally modified; otherwise set it to the versioned file's last
+ * changed time.
+ *
+ * Set the destination file's 'executable' flag according to the source
+ * file's 'svn:executable' property.
+ */
 static svn_error_t *
 copy_one_versioned_file(const char *from_abspath,
                         const char *to_abspath,
-                        svn_wc_context_t *wc_ctx,
+                        svn_client_ctx_t *ctx,
                         const svn_opt_revision_t *revision,
                         const char *native_eol,
                         svn_boolean_t ignore_keywords,
@@ -145,6 +171,7 @@ copy_one_versioned_file(const char *from_abspath,
   const char *dst_tmp;
   svn_error_t *err;
   svn_boolean_t is_deleted;
+  svn_wc_context_t *wc_ctx = ctx->wc_ctx;
 
   SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, wc_ctx, from_abspath,
                                          scratch_pool));
@@ -214,7 +241,7 @@ copy_one_versioned_file(const char *from_abspath,
          details into the destination stream. */
       SVN_ERR(svn_subst_create_specialfile(&dst_stream, to_abspath,
                                            scratch_pool, scratch_pool));
-      return svn_error_return(
+      return svn_error_trace(
         svn_stream_copy3(source, dst_stream, NULL, NULL, scratch_pool));
     }
 
@@ -307,12 +334,37 @@ copy_one_versioned_file(const char *from_abspath,
                                                              scratch_pool));
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
-  return svn_io_file_rename(dst_tmp, to_abspath, scratch_pool);
+  SVN_ERR(svn_io_file_rename(dst_tmp, to_abspath, scratch_pool));
+
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify(to_abspath,
+                                      svn_wc_notify_update_add, scratch_pool);
+      notify->kind = svn_node_file;
+      (*ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
+/* Make an unversioned copy of the versioned file or directory tree at the
+ * source path FROM_ABSPATH.  Copy it to the destination path TO_ABSPATH.
+ *
+ * If REVISION is svn_opt_revision_working, copy the working version,
+ * otherwise copy the base version.
+ *
+ * See copy_one_versioned_file() for details of file copying behaviour,
+ * including IGNORE_KEYWORDS and NATIVE_EOL.
+ *
+ * Include externals unless IGNORE_EXTERNALS is true.
+ *
+ * Recurse according to DEPTH.
+ *
+
+ */
 static svn_error_t *
-copy_versioned_files(const char *from,
-                     const char *to,
+copy_versioned_files(const char *from_abspath,
+                     const char *to_abspath,
                      const svn_opt_revision_t *revision,
                      svn_boolean_t force,
                      svn_boolean_t ignore_externals,
@@ -325,13 +377,11 @@ copy_versioned_files(const char *from,
   svn_error_t *err;
   apr_pool_t *iterpool;
   const apr_array_header_t *children;
-  const char *from_abspath;
-  const char *to_abspath;
   svn_node_kind_t from_kind;
   svn_depth_t node_depth;
 
-  SVN_ERR(svn_dirent_get_absolute(&from_abspath, from, pool));
-  SVN_ERR(svn_dirent_get_absolute(&to_abspath, to, pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(from_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(to_abspath));
 
   /* Only export 'added' and 'replaced' files when the revision is WORKING;
      when the revision is BASE (i.e. != WORKING), only export 'added' and
@@ -349,18 +399,15 @@ copy_versioned_files(const char *from,
   if (revision->kind != svn_opt_revision_working)
     {
       svn_boolean_t is_added;
+      const char *repos_relpath;
 
-      SVN_ERR(svn_wc__node_is_added(&is_added, ctx->wc_ctx,
-                                    from_abspath, pool));
-      if (is_added)
-        {
-          const char *is_copied;
-          SVN_ERR(svn_wc__node_get_copyfrom_info(&is_copied, NULL, NULL,
-                                                 NULL, NULL, ctx->wc_ctx,
-                                                 from_abspath, pool, pool));
-          if (! is_copied)
-            return SVN_NO_ERROR;
-        }
+      SVN_ERR(svn_wc__node_get_origin(&is_added, NULL, &repos_relpath,
+                                      NULL, NULL,
+                                      ctx->wc_ctx, from_abspath, FALSE,
+                                      pool, pool));
+
+      if (is_added && !repos_relpath)
+        return SVN_NO_ERROR; /* Local addition */
     }
   else
     {
@@ -393,15 +440,15 @@ copy_versioned_files(const char *from,
       if (revision->kind == svn_opt_revision_working)
         {
           apr_finfo_t finfo;
-          SVN_ERR(svn_io_stat(&finfo, from, APR_FINFO_PROT, pool));
+          SVN_ERR(svn_io_stat(&finfo, from_abspath, APR_FINFO_PROT, pool));
           perm = finfo.protection;
         }
 #endif
-      err = svn_io_dir_make(to, perm, pool);
+      err = svn_io_dir_make(to_abspath, perm, pool);
       if (err)
         {
           if (! APR_STATUS_IS_EEXIST(err->apr_err))
-            return svn_error_return(err);
+            return svn_error_trace(err);
           if (! force)
             SVN_ERR_W(err, _("Destination directory exists, and will not be "
                              "overwritten unless forced"));
@@ -416,57 +463,62 @@ copy_versioned_files(const char *from,
       for (j = 0; j < children->nelts; j++)
         {
           const char *child_abspath = APR_ARRAY_IDX(children, j, const char *);
-          const char *child_basename;
+          const char *child_name = svn_dirent_basename(child_abspath, NULL);
+          const char *target_abspath;
           svn_node_kind_t child_kind;
 
           svn_pool_clear(iterpool);
-          child_basename = svn_dirent_basename(child_abspath, iterpool);
 
           if (ctx->cancel_func)
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-          /* ### We could also invoke ctx->notify_func somewhere in
-             ### here... Is it called for, though?  Not sure. */
+          target_abspath = svn_dirent_join(to_abspath, child_name, iterpool);
 
           SVN_ERR(svn_wc_read_kind(&child_kind, ctx->wc_ctx, child_abspath,
                                    FALSE, iterpool));
 
           if (child_kind == svn_node_dir)
             {
-              if (depth == svn_depth_infinity)
+              if (depth == svn_depth_infinity
+                  || depth == svn_depth_immediates)
                 {
-                  const char *new_from = svn_dirent_join(from, child_basename,
-                                                       iterpool);
-                  const char *new_to = svn_dirent_join(to, child_basename,
-                                                     iterpool);
+                  if (ctx->notify_func2)
+                    {
+                      svn_wc_notify_t *notify =
+                          svn_wc_create_notify(target_abspath,
+                                               svn_wc_notify_update_add, pool);
+                      notify->kind = svn_node_dir;
+                      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+                    }
 
-                  SVN_ERR(copy_versioned_files(new_from, new_to,
-                                               revision, force,
-                                               ignore_externals,
-                                               ignore_keywords, depth,
-                                               native_eol, ctx, iterpool));
+                  if (depth == svn_depth_infinity)
+                    SVN_ERR(copy_versioned_files(child_abspath, target_abspath,
+                                                 revision, force,
+                                                 ignore_externals,
+                                                 ignore_keywords, depth,
+                                                 native_eol, ctx, iterpool));
+                  else
+                    SVN_ERR(svn_io_make_dir_recursively(target_abspath,
+                                                        iterpool));
                 }
             }
-          else if (child_kind == svn_node_file)
+          else if (child_kind == svn_node_file
+                   && depth >= svn_depth_files)
             {
-              const char *new_from_abspath;
-              const char *new_to_abspath;
+              svn_node_kind_t external_kind;
 
-              SVN_ERR(svn_dirent_get_absolute(&new_from_abspath,
-                                              svn_dirent_join(from,
-                                                              child_basename,
-                                                              iterpool),
-                                              iterpool));
-              SVN_ERR(svn_dirent_get_absolute(&new_to_abspath,
-                                              svn_dirent_join(to,
-                                                              child_basename,
-                                                              iterpool),
-                                              iterpool));
+              SVN_ERR(svn_wc__read_external_info(&external_kind,
+                                                 NULL, NULL, NULL,
+                                                 NULL, ctx->wc_ctx,
+                                                 child_abspath,
+                                                 child_abspath, TRUE,
+                                                 pool, pool));
 
-              SVN_ERR(copy_one_versioned_file(new_from_abspath, new_to_abspath,
-                                              ctx->wc_ctx, revision,
-                                              native_eol, ignore_keywords,
-                                              iterpool));
+              if (external_kind != svn_node_file)
+                SVN_ERR(copy_one_versioned_file(child_abspath, target_abspath,
+                                                ctx, revision,
+                                                native_eol, ignore_keywords,
+                                                iterpool));
             }
         }
 
@@ -486,7 +538,8 @@ copy_versioned_files(const char *from,
             {
               int i;
 
-              SVN_ERR(svn_wc_parse_externals_description3(&ext_items, from,
+              SVN_ERR(svn_wc_parse_externals_description3(&ext_items,
+                                                          from_abspath,
                                                           prop_val->data,
                                                           FALSE, pool));
               for (i = 0; i < ext_items->nelts; ++i)
@@ -498,9 +551,11 @@ copy_versioned_files(const char *from,
 
                   ext_item = APR_ARRAY_IDX(ext_items, i,
                                            svn_wc_external_item2_t *);
-                  new_from = svn_dirent_join(from, ext_item->target_dir,
+                  new_from = svn_dirent_join(from_abspath,
+                                             ext_item->target_dir,
                                              iterpool);
-                  new_to = svn_dirent_join(to, ext_item->target_dir, iterpool);
+                  new_to = svn_dirent_join(to_abspath, ext_item->target_dir,
+                                           iterpool);
 
                    /* The target dir might have parents that don't exist.
                       Guarantee the path upto the last component. */
@@ -524,19 +579,24 @@ copy_versioned_files(const char *from,
     }
   else if (from_kind == svn_node_file)
     {
-      SVN_ERR(append_basename_if_dir(&to_abspath, from_abspath, FALSE, pool));
-      SVN_ERR(copy_one_versioned_file(from_abspath, to_abspath, ctx->wc_ctx,
+      svn_node_kind_t to_kind;
+
+      SVN_ERR(svn_io_check_path(to_abspath, &to_kind, pool));
+
+      if ((to_kind == svn_node_file || to_kind == svn_node_unknown) && ! force)
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("Destination file '%s' exists, and "
+                                   "will not be overwritten unless forced"),
+                                 svn_dirent_local_style(to_abspath, pool));
+      else if (to_kind == svn_node_dir)
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("Destination '%s' exists. Cannot "
+                                   "overwrite directory with non-directory"),
+                                 svn_dirent_local_style(to_abspath, pool));
+
+      SVN_ERR(copy_one_versioned_file(from_abspath, to_abspath, ctx,
                                       revision, native_eol, ignore_keywords,
                                       pool));
-
-      /* Notify. */
-      if (ctx->notify_func2)
-        {
-          svn_wc_notify_t *notify = svn_wc_create_notify(to_abspath,
-                                          svn_wc_notify_update_add, pool);
-          notify->kind = svn_node_file;
-          (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
-        }
     }
 
   return SVN_NO_ERROR;
@@ -783,7 +843,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       svn_error_clear(svn_io_remove_file2(hb->tmppath, TRUE, hb->pool));
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -872,7 +932,7 @@ change_dir_prop(void *dir_baton,
   struct edit_baton *eb = db->edit_baton;
 
   if (value && (strcmp(name, SVN_PROP_EXTERNALS) == 0))
-    add_externals(eb->externals, db->path, value);
+    SVN_ERR(add_externals(eb->externals, db->path, value));
 
   return SVN_NO_ERROR;
 }
@@ -900,9 +960,13 @@ close_file(void *file_baton,
   actual_checksum = svn_checksum__from_digest(fb->text_digest,
                                               svn_checksum_md5, pool);
 
-  SVN_ERR(svn_checksum_mismatch_err(text_checksum, actual_checksum, pool,
-                                    _("Checksum mismatch for '%s'"),
-                                    svn_dirent_local_style(fb->path, pool)));
+  /* Note that text_digest can be NULL when talking to certain repositories.
+     In that case text_checksum will be NULL and the following match code
+     will note that the checksums match */
+  if (!svn_checksum_match(text_checksum, actual_checksum))
+    return svn_checksum_mismatch_err(text_checksum, actual_checksum, pool,
+                                     _("Checksum mismatch for '%s'"),
+                                     svn_dirent_local_style(fb->path, pool));
 
   if ((! fb->eol_style_val) && (! fb->keywords_val) && (! fb->special))
     {
@@ -975,7 +1039,6 @@ svn_client_export5(svn_revnum_t *result_rev,
                    apr_pool_t *pool)
 {
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
-  const char *url;
   svn_boolean_t from_is_url = svn_path_is_url(from_path_or_url);
 
   SVN_ERR_ASSERT(peg_revision != NULL);
@@ -992,19 +1055,16 @@ svn_client_export5(svn_revnum_t *result_rev,
   if (from_is_url || ! SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
       svn_revnum_t revnum;
+      const char *url;
       svn_ra_session_t *ra_session;
       svn_node_kind_t kind;
       struct edit_baton *eb = apr_pcalloc(pool, sizeof(*eb));
-      const char *repos_root_url;
 
       /* Get the RA connection. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
                                                &url, from_path_or_url, NULL,
                                                peg_revision,
                                                revision, ctx, pool));
-
-      /* Get the repository root. */
-      SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
 
       eb->root_path = to_path;
       eb->root_url = url;
@@ -1025,6 +1085,7 @@ svn_client_export5(svn_revnum_t *result_rev,
           apr_hash_t *props;
           apr_hash_index_t *hi;
           struct file_baton *fb = apr_pcalloc(pool, sizeof(*fb));
+          svn_node_kind_t to_kind;
 
           if (svn_path_is_empty(to_path))
             {
@@ -1041,6 +1102,19 @@ svn_client_export5(svn_revnum_t *result_rev,
               eb->root_path = to_path;
             }
 
+          SVN_ERR(svn_io_check_path(to_path, &to_kind, pool));
+
+          if ((to_kind == svn_node_file || to_kind == svn_node_unknown) &&
+              ! overwrite)
+            return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                     _("Destination file '%s' exists, and "
+                                       "will not be overwritten unless forced"),
+                                     svn_dirent_local_style(to_path, pool));
+          else if (to_kind == svn_node_dir)
+            return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                     _("Destination '%s' exists. Cannot "
+                                       "overwrite directory with non-directory"),
+                                     svn_dirent_local_style(to_path, pool));
 
           /* Since you cannot actually root an editor at a file, we
            * manually drive a few functions of our editor. */
@@ -1104,6 +1178,10 @@ svn_client_export5(svn_revnum_t *result_rev,
                                                     &edit_baton,
                                                     pool));
 
+          SVN_ERR(svn_editor__insert_shims(&export_editor, &edit_baton,
+                                           export_editor, edit_baton,
+                                           NULL, NULL, NULL, NULL,
+                                           pool, pool));
 
           /* Manufacture a basic 'report' to the update reporter. */
           SVN_ERR(svn_ra_do_update2(ra_session,
@@ -1141,14 +1219,17 @@ svn_client_export5(svn_revnum_t *result_rev,
 
           if (! ignore_externals && depth == svn_depth_infinity)
             {
+              const char *repos_root_url;
               const char *to_abspath;
 
+              SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
               SVN_ERR(svn_dirent_get_absolute(&to_abspath, to_path, pool));
-              SVN_ERR(svn_client__fetch_externals(eb->externals,
-                                                  from_path_or_url, to_abspath,
-                                                  repos_root_url, depth, TRUE,
-                                                  native_eol, &use_sleep,
-                                                  ctx, pool));
+              SVN_ERR(svn_client__export_externals(eb->externals,
+                                                   from_path_or_url,
+                                                   to_abspath, repos_root_url,
+                                                   depth, native_eol,
+                                                   ignore_keywords, &use_sleep,
+                                                   ctx, pool));
             }
         }
       else if (kind == svn_node_none)
@@ -1161,8 +1242,55 @@ svn_client_export5(svn_revnum_t *result_rev,
     }
   else
     {
+      svn_node_kind_t kind;
       /* This is a working copy export. */
       /* just copy the contents of the working copy into the target path. */
+      SVN_ERR(svn_dirent_get_absolute(&from_path_or_url, from_path_or_url,
+                                      pool));
+
+      SVN_ERR(svn_dirent_get_absolute(&to_path, to_path, pool));
+
+      SVN_ERR(svn_io_check_path(from_path_or_url, &kind, pool));
+
+      /* ### [JAF] If something already exists on disk at the destination path,
+       * the behaviour depends on the node kinds of the source and destination
+       * and on the FORCE flag.  The intention (I guess) is to follow the
+       * semantics of svn_client_export5(), semantics that are not fully
+       * documented but would be something like:
+       *
+       * -----------+---------------------------------------------------------
+       *        Src | DIR                 FILE                SPECIAL
+       * Dst (disk) +---------------------------------------------------------
+       * NONE       | simple copy         simple copy         (as src=file?)
+       * DIR        | merge if forced [2] inside if root [1]  (as src=file?)
+       * FILE       | err                 overwr if forced[3] (as src=file?)
+       * SPECIAL    | ???                 ???                 ???
+       * -----------+---------------------------------------------------------
+       *
+       * [1] FILE onto DIR case: If this file is the root of the copy and thus
+       *     the only node to be copied, then copy it as a child of the
+       *     directory TO, applying these same rules again except that if this
+       *     case occurs again (the child path is already a directory) then
+       *     error out.  If this file is not the root of the copy (it is
+       *     reached by recursion), then error out.
+       *
+       * [2] DIR onto DIR case.  If the 'FORCE' flag is true then copy the
+       *     source's children inside the target dir, else error out.  When
+       *     copying the children, apply the same set of rules, except in the
+       *     FILE onto DIR case error out like in note [1].
+       *
+       * [3] If the 'FORCE' flag is true then overwrite the destination file
+       *     else error out.
+       *
+       * The reality (apparently, looking at the code) is somewhat different.
+       * For a start, to detect the source kind, it looks at what is on disk
+       * rather than the versioned working or base node.
+       */
+
+      if (kind == svn_node_file)
+        SVN_ERR(append_basename_if_dir(&to_path, from_path_or_url, FALSE,
+                                       pool));
+
       SVN_ERR(copy_versioned_files(from_path_or_url, to_path, revision,
                                    overwrite, ignore_externals, ignore_keywords,
                                    depth, native_eol, ctx, pool));

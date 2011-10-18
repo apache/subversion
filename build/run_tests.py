@@ -27,6 +27,7 @@
             [--verbose] [--log-to-stdout] [--cleanup] [--parallel]
             [--url=<base-url>] [--http-library=<http-library>] [--enable-sasl]
             [--fs-type=<fs-type>] [--fsfs-packing] [--fsfs-sharding=<n>]
+            [--list] [--milestone-filter=<regex>] [--mode-filter=<type>]
             [--server-minor-version=<version>]
             [--config-file=<file>]
             <abs_srcdir> <abs_builddir>
@@ -43,6 +44,7 @@ separated list of test numbers; the default is to run all the tests in it.
 
 # A few useful constants
 LINE_LENGTH = 45
+SVN_VER_MINOR = 8
 
 import os, re, subprocess, sys, imp
 from datetime import datetime
@@ -79,7 +81,8 @@ class TestHarness:
                server_minor_version=None, verbose=None,
                cleanup=None, enable_sasl=None, parallel=None, config_file=None,
                fsfs_sharding=None, fsfs_packing=None,
-               list_tests=None, svn_bin=None, mode_filter=None):
+               list_tests=None, svn_bin=None, mode_filter=None,
+               milestone_filter=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -91,8 +94,12 @@ class TestHarness:
     HTTP_LIBRARY is the HTTP library for DAV-based communications.
     SERVER_MINOR_VERSION is the minor version of the server being tested.
     SVN_BIN is the path where the svn binaries are installed.
-    mode_filter restricts the TestHarness to tests with the expected mode
-    XFail, Skip, Pass, or All tests (default).
+    MODE_FILTER restricts the TestHarness to tests with the expected mode
+    XFail, Skip, Pass, or All tests (default).  MILESTONE_FILTER is a
+    string representation of a valid regular expression pattern; when used
+    in conjunction with LIST_TESTS, the only tests that are listed are
+    those with an associated issue in the tracker which has a target
+    milestone that matches the regex.
     '''
     self.srcdir = abs_srcdir
     self.builddir = abs_builddir
@@ -102,6 +109,13 @@ class TestHarness:
     self.fs_type = fs_type
     self.http_library = http_library
     self.server_minor_version = server_minor_version
+    # If you change the below condition then change in
+    # ../subversion/tests/cmdline/svntest/main.py too.
+    if server_minor_version is not None:
+      if int(server_minor_version) not in range(3, 1+SVN_VER_MINOR):
+        sys.stderr.write("Test harness only supports server minor versions 3-%d\n"
+                         % SVN_VER_MINOR)
+        sys.exit(1)
     self.verbose = verbose
     self.cleanup = cleanup
     self.enable_sasl = enable_sasl
@@ -114,6 +128,7 @@ class TestHarness:
     if config_file is not None:
       self.config_file = os.path.abspath(config_file)
     self.list_tests = list_tests
+    self.milestone_filter = milestone_filter
     self.svn_bin = svn_bin
     self.mode_filter = mode_filter
     self.log = None
@@ -277,9 +292,8 @@ class TestHarness:
     'Run a c test, escaping parameters as required.'
     progdir, progbase = os.path.split(prog)
 
-    if not self.list_tests:
-      sys.stdout.write('.' * dot_count)
-      sys.stdout.flush()
+    if self.list_tests and self.milestone_filter:
+      print 'WARNING: --milestone-filter option does not currently work with C tests'
 
     if os.access(progbase, os.X_OK):
       progname = './' + progbase
@@ -287,7 +301,6 @@ class TestHarness:
                  '--srcdir=' + os.path.join(self.srcdir, progdir)]
       if self.config_file is not None:
         cmdline.append('--config-file=' + self.config_file)
-      cmdline.append('--trap-assertion-failures')
     else:
       print('Don\'t know what to do about ' + progbase)
       sys.exit(1)
@@ -309,7 +322,48 @@ class TestHarness:
       test_nums = test_nums.split(',')
       cmdline.extend(test_nums)
 
-    return self._run_prog(progname, cmdline)
+    if test_nums:
+      total = len(test_nums)
+    else:
+      total_cmdline = [cmdline[0], '--list']
+      prog = subprocess.Popen(total_cmdline, stdout=subprocess.PIPE)
+      lines = prog.stdout.readlines()
+      total = len(lines) - 2
+
+    # This has to be class-scoped for use in the progress_func()
+    self.dots_written = 0
+    def progress_func(completed):
+      dots = (completed * dot_count) / total
+
+      dots_to_write = dots - self.dots_written
+      if self.log:
+        os.write(sys.stdout.fileno(), '.' * dots_to_write)
+
+      self.dots_written = dots
+
+    tests_completed = 0
+    prog = subprocess.Popen(cmdline, stdout=subprocess.PIPE,
+                            stderr=self.log)
+    line = prog.stdout.readline()
+    while line:
+      if sys.platform == 'win32':
+        # Remove CRs inserted because we parse the output as binary.
+        line = line.replace('\r', '')
+
+      # If using --log-to-stdout self.log in None.
+      if self.log:
+        self.log.write(line)
+
+      if line.startswith('PASS') or line.startswith('FAIL') \
+           or line.startswith('XFAIL') or line.startswith('XPASS') \
+           or line.startswith('SKIP'):
+        tests_completed += 1
+        progress_func(tests_completed)
+
+      line = prog.stdout.readline()
+
+    prog.wait()
+    return prog.returncode
 
   def _run_py_test(self, prog, test_nums, dot_count):
     'Run a python test, passing parameters as needed.'
@@ -346,13 +400,15 @@ class TestHarness:
     if self.http_library is not None:
       svntest.main.options.http_library = self.http_library
     if self.server_minor_version is not None:
-      svntest.main.options.server_minor_version = self.server_minor_version
+      svntest.main.options.server_minor_version = int(self.server_minor_version)
     if self.list_tests is not None:
       svntest.main.options.list_tests = True
+    if self.milestone_filter is not None:
+      svntest.main.options.milestone_filter = self.milestone_filter
     if self.svn_bin is not None:
       svntest.main.options.svn_bin = self.svn_bin
     if self.fsfs_sharding is not None:
-      svntest.main.options.fsfs_sharding = self.fsfs_sharding
+      svntest.main.options.fsfs_sharding = int(self.fsfs_sharding)
     if self.fsfs_packing is not None:
       svntest.main.options.fsfs_packing = self.fsfs_packing
     if self.mode_filter is not None:
@@ -390,17 +446,22 @@ class TestHarness:
       prog_f = None
     else:
       prog_f = progress_func
-      
+
     if test_nums:
       test_selection = [test_nums]
     else:
       test_selection = []
 
-    failed = svntest.main.execute_tests(prog_mod.test_list,
-                                        serial_only=serial_only,
-                                        test_name=progbase,
-                                        progress_func=prog_f,
-                                        test_selection=test_selection)
+    try:
+      failed = svntest.main.execute_tests(prog_mod.test_list,
+                                          serial_only=serial_only,
+                                          test_name=progbase,
+                                          progress_func=prog_f,
+                                          test_selection=test_selection)
+    except svntest.Failure:
+      if self.log:
+        os.write(old_stdout, '.' * dot_count)
+      failed = True
 
     # restore some values
     sys.path = old_path
@@ -496,14 +557,6 @@ class TestHarness:
 
     return failed
 
-  def _run_prog(self, progname, arglist):
-    '''Execute the file PROGNAME in a subprocess, with ARGLIST as its
-    arguments (a list/tuple of arg0..argN), redirecting standard output and
-    error to the log file. Return the command's exit code.'''
-    prog = subprocess.Popen(arglist, stdout=self.log, stderr=self.log)
-    prog.wait()
-    return prog.returncode
-
 
 def main():
   try:
@@ -512,7 +565,8 @@ def main():
                             'http-library=', 'server-minor-version=',
                             'fsfs-packing', 'fsfs-sharding=',
                             'enable-sasl', 'parallel', 'config-file=',
-                            'log-to-stdout'])
+                            'log-to-stdout', 'list', 'milestone-filter=',
+                            'mode-filter='])
   except getopt.GetoptError:
     args = []
 
@@ -522,9 +576,9 @@ def main():
 
   base_url, fs_type, verbose, cleanup, enable_sasl, http_library, \
     server_minor_version, fsfs_sharding, fsfs_packing, parallel, \
-    config_file, log_to_stdout = \
+    config_file, log_to_stdout, list_tests, mode_filter, milestone_filter= \
             None, None, None, None, None, None, None, None, None, None, None, \
-            None
+            None, None, None, None
   for opt, val in opts:
     if opt in ['-u', '--url']:
       base_url = val
@@ -550,6 +604,12 @@ def main():
       config_file = val
     elif opt in ['--log-to-stdout']:
       log_to_stdout = 1
+    elif opt in ['--list']:
+      list_tests = 1
+    elif opt in ['--milestone-filter']:
+      milestone_filter = val
+    elif opt in ['--mode-filter']:
+      mode_filter = val
     else:
       raise getopt.GetoptError
 
@@ -563,7 +623,8 @@ def main():
   th = TestHarness(args[0], args[1], logfile, faillogfile,
                    base_url, fs_type, http_library, server_minor_version,
                    verbose, cleanup, enable_sasl, parallel, config_file,
-                   fsfs_sharding, fsfs_packing)
+                   fsfs_sharding, fsfs_packing, list_tests,
+                   mode_filter=mode_filter, milestone_filter=milestone_filter)
 
   failed = th.run(args[2:])
   if failed:

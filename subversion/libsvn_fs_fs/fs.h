@@ -25,7 +25,6 @@
 
 #include <apr_pools.h>
 #include <apr_hash.h>
-#include <apr_thread_mutex.h>
 #include <apr_network_io.h>
 
 #include "svn_fs.h"
@@ -34,6 +33,7 @@
 #include "private/svn_cache.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_sqlite.h"
+#include "private/svn_mutex.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,10 +60,6 @@ extern "C" {
 #define PATH_LOCKS_DIR        "locks"            /* Directory of locks */
 #define PATH_MIN_UNPACKED_REV "min-unpacked-rev" /* Oldest revision which
                                                     has not been packed. */
-#define PATH_MIN_UNPACKED_REVPROP "min-unpacked-revprop" /* Oldest revision
-                                                            property which has
-                                                            not been packed. */
-#define PATH_REVPROPS_DB "revprops.db"
 /* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
 #define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 
@@ -90,7 +86,7 @@ extern "C" {
 /* The format number of this filesystem.
    This is independent of the repository format number, and
    independent of any other FS back ends. */
-#define SVN_FS_FS__FORMAT_NUMBER   5
+#define SVN_FS_FS__FORMAT_NUMBER   4
 
 /* The minimum format number that supports svndiff version 1.  */
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
@@ -122,8 +118,12 @@ extern "C" {
 /* The minimum format number that stores node kinds in changed-paths lists. */
 #define SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT 4
 
+/* The 1.7-dev format, never released, that packed revprops into SQLite
+   revprops.db . */
+#define SVN_FS_FS__PACKED_REVPROP_SQLITE_DEV_FORMAT 5
+
 /* The minimum format number that supports packed revprop shards. */
-#define SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT 5
+#define SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT SVN_FS_FS__PACKED_REVPROP_SQLITE_DEV_FORMAT
 
 /* The minimum format number that supports a configuration file (fsfs.conf) */
 #define SVN_FS_FS__MIN_CONFIG_FILE 4
@@ -182,19 +182,16 @@ typedef struct fs_fs_shared_data_t
      Access to this object is synchronised under TXN_LIST_LOCK. */
   fs_fs_shared_txn_data_t *free_txn;
 
-#if APR_HAS_THREADS
   /* A lock for intra-process synchronization when accessing the TXNS list. */
-  apr_thread_mutex_t *txn_list_lock;
-#endif
-#if SVN_FS_FS__USE_LOCK_MUTEX
+  svn_mutex__t *txn_list_lock;
+
   /* A lock for intra-process synchronization when grabbing the
      repository write lock. */
-  apr_thread_mutex_t *fs_write_lock;
+  svn_mutex__t *fs_write_lock;
 
   /* A lock for intra-process synchronization when locking the
      txn-current file. */
-  apr_thread_mutex_t *txn_current_lock;
-#endif
+  svn_mutex__t *txn_current_lock;
 
   /* The common pool, under which this object is allocated, subpools
      of which are used to allocate the transaction objects. */
@@ -238,9 +235,24 @@ typedef struct fs_fs_data_t
      rep key to svn_string_t. */
   svn_cache__t *fulltext_cache;
 
-  /* Pack manifest cache; maps revision numbers to offsets in their respective
-     pack files. */
+  /* Pack manifest cache; a cache mapping (svn_revnum_t) shard number to
+     a manifest; and a manifest is a mapping from (svn_revnum_t) revision
+     number offset within a shard to (apr_off_t) byte-offset in the
+     respective pack file. */
   svn_cache__t *packed_offset_cache;
+
+  /* Cache for txdelta_window_t objects; the key is (revFilePath, offset) */
+  svn_cache__t *txdelta_window_cache;
+
+  /* Cache for node_revision_t objects; the key is (revision, id offset) */
+  svn_cache__t *node_revision_cache;
+
+  /* If set, there are or have been more than one concurrent transaction */
+  svn_boolean_t concurrent_transactions;
+
+  /* Tempoary cache for changed directories yet to be committed; maps from
+     unparsed FS ID to ###x.  NULL outside transactions. */
+  svn_cache__t *txn_dir_cache;
 
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
@@ -251,14 +263,8 @@ typedef struct fs_fs_data_t
   /* Thread-safe boolean */
   svn_atomic_t rep_cache_db_opened;
 
-   /* The sqlite database used for revprops. */
-   svn_sqlite__db_t *revprop_db;
-
   /* The oldest revision not in a pack file. */
   svn_revnum_t min_unpacked_rev;
-
-   /* The oldest revision property not in a pack db. */
-   svn_revnum_t min_unpacked_revprop;
 
   /* Whether rep-sharing is supported by the filesystem
    * and allowed by the configuration. */
@@ -317,7 +323,8 @@ typedef struct representation_t
      file. */
   svn_filesize_t size;
 
-  /* The size of the fulltext of the representation. */
+  /* The size of the fulltext of the representation. If this is 0,
+   * the fulltext size is equal to representation size in the rev file, */
   svn_filesize_t expanded_size;
 
   /* Is this representation a transaction? */

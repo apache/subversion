@@ -131,7 +131,7 @@ def redirected_update(sbox):
   exit_code, out, err = svntest.main.run_svn(None, 'up', wc_dir)
   if err:
     raise svntest.Failure
-  if not re.match("^Updating '.*' ...", out[0]):
+  if not re.match("^Updating '.*':", out[0]):
     raise svntest.Failure
   if not redirect_regex.match(out[1]):
     raise svntest.Failure

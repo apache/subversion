@@ -90,8 +90,7 @@ def invalid_wcpath_commit(sbox):
   "non-working copy paths for 'commit'"
   sbox.build(read_only=True)
   for target in _invalid_wc_path_targets:
-    run_and_verify_svn_in_wc(sbox, "svn: E205000: '.*' is a URL, but URLs cannot be " +
-                             "commit targets", 'commit', target)
+    run_and_verify_svn_in_wc(sbox, "svn: E205000: '.*' is not a local path", 'commit', target)
 
 def invalid_copy_sources(sbox):
   "invalid sources for 'copy'"
@@ -121,14 +120,11 @@ def invalid_diff_targets(sbox):
   for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
     run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot mix repository and working "
                              "copy targets", 'diff', target1, target2)
-  run_and_verify_svn_in_wc(sbox, "svn: E200007: Summarizing diff can only compare "
-                           "repository to repository",
-                           'diff', '--summarize', "iota", "A")
 
 def invalid_export_targets(sbox):
   "invalid targets for 'export'"
   sbox.build(read_only=True)
-  run_and_verify_svn_in_wc(sbox, "svn: (E000017|E720183): Can't create directory 'iota':.*",
+  run_and_verify_svn_in_wc(sbox, "svn: (E000017|E720183): Can't create directory '.*iota':.*",
                            'export', '.', 'iota')
   for target in ["^/", "file://"]:
     run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path",

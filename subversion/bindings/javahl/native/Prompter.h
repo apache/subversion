@@ -30,12 +30,10 @@
 #include <jni.h>
 #include "svn_auth.h"
 #include <string>
-
+#include "Pool.h"
 /**
  * This class requests username/password and informations about
- * ssl-certificates from the user. There are 3 Java interfaces for that.
- * PromptUserPassword, PromptUserPassword2 and PromptUserPassword3
- * each following interface extends the previous interface.
+ * ssl-certificates from the user.
  */
 class Prompter
 {
@@ -98,11 +96,11 @@ class Prompter
  public:
   static Prompter *makeCPrompter(jobject jprompter);
   ~Prompter();
-  svn_auth_provider_object_t *getProviderUsername();
-  svn_auth_provider_object_t *getProviderSimple();
-  svn_auth_provider_object_t *getProviderServerSSLTrust();
-  svn_auth_provider_object_t *getProviderClientSSL();
-  svn_auth_provider_object_t *getProviderClientSSLPassword();
+  svn_auth_provider_object_t *getProviderUsername(SVN::Pool &in_pool);
+  svn_auth_provider_object_t *getProviderSimple(SVN::Pool &in_pool);
+  svn_auth_provider_object_t *getProviderServerSSLTrust(SVN::Pool &in_pool);
+  svn_auth_provider_object_t *getProviderClientSSL(SVN::Pool &in_pool);
+  svn_auth_provider_object_t *getProviderClientSSLPassword(SVN::Pool &in_pool);
 
   static svn_error_t *plaintext_prompt(svn_boolean_t *may_save_plaintext,
                                        const char *realmstring,

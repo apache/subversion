@@ -200,7 +200,7 @@ open_editor(svn_boolean_t *performed_edit,
           svn_error_clear(err);
         }
       else if (err)
-        return svn_error_return(err);
+        return svn_error_trace(err);
       else
         *performed_edit = TRUE;
     }
@@ -247,7 +247,7 @@ launch_resolver(svn_boolean_t *performed_edit,
       svn_error_clear(err);
     }
   else if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
   else if (performed_edit)
     *performed_edit = TRUE;
 
@@ -328,7 +328,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
               b->external_failed = TRUE;
             }
           else if (err)
-            return svn_error_return(err);
+            return svn_error_trace(err);
           (*result)->choice = svn_wc_conflict_choose_merged;
           return SVN_NO_ERROR;
         }
@@ -361,7 +361,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                                           _("No merge tool found;"
                                             " leaving all conflicts.")));
               b->external_failed = TRUE;
-              return svn_error_return(err);
+              return svn_error_trace(err);
             }
           else if (err && err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
             {
@@ -370,10 +370,10 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                                           _("Error running merge tool;"
                                             " leaving all conflicts.")));
               b->external_failed = TRUE;
-              return svn_error_return(err);
+              return svn_error_trace(err);
             }
           else if (err)
-            return svn_error_return(err);
+            return svn_error_trace(err);
 
           if (remains_in_conflict)
             (*result)->choice = svn_wc_conflict_choose_postpone;

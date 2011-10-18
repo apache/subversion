@@ -73,7 +73,7 @@ import svntest
 # Working revision, last-changed revision, and last author are whitespace
 # only if the item is missing.
 #
-_re_parse_status = re.compile('^([?!MACDRUGI_~ ][MACDRUG_ ])'
+_re_parse_status = re.compile('^([?!MACDRUGXI_~ ][MACDRUG_ ])'
                               '([L ])'
                               '([+ ])'
                               '([SX ])'
@@ -83,18 +83,20 @@ _re_parse_status = re.compile('^([?!MACDRUGI_~ ][MACDRUG_ ])'
                               '((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?'
                               '(?P<path>.+)$')
 
-_re_parse_skipped = re.compile("^Skipped.* '(.+)'\n")
+_re_parse_skipped = re.compile("^Skipped[^']* '(.+)'( --.*)?\n")
 
 _re_parse_summarize = re.compile("^([MAD ][M ])      (.+)\n")
 
 _re_parse_checkout = re.compile('^([RMAGCUDE_ ][MAGCUDE_ ])'
                                 '([B ])'
-                                '([C ])\s+'
+                                '([CAUD ])\s+'
                                 '(.+)')
-_re_parse_co_skipped = re.compile('^(Restored|Skipped)\s+\'(.+)\'')
+_re_parse_co_skipped = re.compile('^(Restored|Skipped|Removed external)'
+                                  '\s+\'(.+)\'(( --|: ).*)?')
 _re_parse_co_restored = re.compile('^(Restored)\s+\'(.+)\'')
 
 # Lines typically have a verb followed by whitespace then a path.
+_re_parse_commit_ext = re.compile('^(([A-Za-z]+( [a-z]+)*)) \'(.+)\'( --.*)?')
 _re_parse_commit = re.compile('^(\w+(  \(bin\))?)\s+(.+)')
 
 
@@ -133,9 +135,17 @@ class State:
       self.desc[path] = item
 
   def remove(self, *paths):
-    "Remove a path from the state (the path must exist)."
+    "Remove PATHS from the state (the paths must exist)."
     for path in paths:
       del self.desc[to_relpath(path)]
+
+  def remove_subtree(self, *paths):
+    "Remove PATHS recursively from the state (the paths must exist)."
+    for subtree_path in paths:
+      subtree_path = to_relpath(subtree_path)
+      for path, item in self.desc.items():
+        if path == subtree_path or path[:len(subtree_path) + 1] == subtree_path + '/':
+          del self.desc[path]
 
   def copy(self, new_root=None):
     """Make a deep copy of self.  If NEW_ROOT is not None, then set the
@@ -178,13 +188,12 @@ class State:
 
   def subtree(self, subtree_path):
     """Return a State object which is a deep copy of the sub-tree
-    identified by SUBTREE_PATH (which is assumed to contain only one
-    element rooted at the tree of this State object's WC_DIR)."""
+    beneath SUBTREE_PATH (which is assumed to be rooted at the tree of
+    this State object's WC_DIR).  Exclude SUBTREE_PATH itself."""
     desc = { }
     for path, item in self.desc.items():
-      path_elements = path.split("/")
-      if len(path_elements) > 1 and path_elements[0] == subtree_path:
-        desc["/".join(path_elements[1:])] = item.copy()
+      if path[:len(subtree_path) + 1] == subtree_path + '/':
+        desc[path[len(subtree_path) + 1:]] = item.copy()
     return State(self.wc_dir, desc)
 
   def write_to_disk(self, target_dir):
@@ -460,8 +469,8 @@ class State:
 
       match = _re_parse_checkout.search(line)
       if match:
-        if match.group(3) == 'C':
-          treeconflict = 'C'
+        if match.group(3) != ' ':
+          treeconflict = match.group(3)
         else:
           treeconflict = None
         desc[to_relpath(match.group(4))] = StateItem(status=match.group(1),
@@ -480,6 +489,11 @@ class State:
     desc = { }
     for line in lines:
       if line.startswith('DBG:') or line.startswith('Transmitting'):
+        continue
+
+      match = _re_parse_commit_ext.search(line)
+      if match:
+        desc[to_relpath(match.group(4))] = StateItem(verb=match.group(1))
         continue
 
       match = _re_parse_commit.search(line)
@@ -842,36 +856,23 @@ def open_wc_db(local_path):
 def text_base_path(file_path):
   """Return the path to the text-base file for the versioned file
      FILE_PATH."""
+
+  info = svntest.actions.run_and_parse_info(file_path)[0]
+
+  checksum = info['Checksum']
   db, root_path, relpath = open_wc_db(file_path)
 
-  c = db.cursor()
-  # NODES conversion is complete enough that we can use it if it exists
-  c.execute("""pragma table_info(nodes)""")
-  if c.fetchone():
-    c.execute("""select checksum from nodes
-                 where local_relpath = '""" + relpath + """'
-                 and op_depth = 0""")
-  else:
-    c.execute("""select checksum from base_node
-                 where local_relpath = '""" + relpath + """'""")
-  row = c.fetchone()
-  if row is not None:
-    checksum = row[0]
-    if checksum is not None and checksum[0:6] == "$md5 $":
-      c.execute("""select checksum from pristine
-                   where md5_checksum = '""" + checksum + """'""")
-      checksum = c.fetchone()[0]
-  if row is None or checksum is None:
-    raise svntest.Failure("No SHA1 checksum for " + relpath)
-  db.close()
-
-  checksum = checksum[6:]
   # Calculate single DB location
   dot_svn = svntest.main.get_admin_name()
   fn = os.path.join(root_path, dot_svn, 'pristine', checksum[0:2], checksum)
 
+  # For SVN_WC__VERSION < 29
   if os.path.isfile(fn):
     return fn
+
+  # For SVN_WC__VERSION >= 29
+  if os.path.isfile(fn + ".svn-base"):
+    return fn + ".svn-base"
 
   raise svntest.Failure("No pristine text for " + relpath)
 

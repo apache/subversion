@@ -176,6 +176,8 @@ svn_iter_apr_array(svn_boolean_t *completed,
   return err;
 }
 
+/* Note: Although this is a "__" function, it is in the public ABI, so
+ * we can never remove it or change its signature. */
 svn_error_t *
 svn_iter__break(void)
 {

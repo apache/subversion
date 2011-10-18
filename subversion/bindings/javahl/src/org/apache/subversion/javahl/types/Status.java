@@ -112,16 +112,9 @@ public class Status implements java.io.Serializable
     private boolean fileExternal;
 
     /**
-     * @since 1.6
-     * is this item in a tree conflicted state
+     * is this item in a conflicted state
      */
-    private boolean treeConflicted;
-
-    /**
-     * @since 1.6
-     * description of the tree conflict
-     */
-    private ConflictDescriptor conflictDescriptor;
+    private boolean isConflicted;
 
     /**
      * the file or directory status of base (See StatusKind)
@@ -134,93 +127,39 @@ public class Status implements java.io.Serializable
     private Kind repositoryPropStatus;
 
     /**
-     * if there is a conflict, the filename of the new version
-     * from the repository
+     * the current lock
      */
-    private String conflictNew;
+    private Lock localLock;
 
     /**
-     * if there is a conflict, the filename of the common base version
-     * from the repository
-     */
-    private String conflictOld;
-
-    /**
-     * if there is a conflict, the filename of the former working copy
-     * version
-     */
-    private String conflictWorking;
-
-    /**
-     * if copied, the url of the copy source
-     */
-    private String urlCopiedFrom;
-
-    /**
-     * if copied, the revision number of the copy source
-     */
-    private long revisionCopiedFrom;
-
-    /**
-     * @since 1.2
-     * token specified for the lock (null if not locked)
-     */
-    private String lockToken;
-
-    /**
-     * @since 1.2
-     * owner of the lock (null if not locked)
-     */
-    private String lockOwner;
-
-    /**
-     * @since 1.2
-     * comment specified for the lock (null if not locked)
-     */
-    private String lockComment;
-
-    /**
-     * @since 1.2
-     * date of the creation of the lock (represented in microseconds
-     * since the epoch)
-     */
-    private long lockCreationDate;
-
-    /**
-     * @since 1.2
      * the lock in the repository
      */
     private Lock reposLock;
 
     /**
-     * @since 1.3
      * Set to the youngest committed revision, or {@link
      * Revision#SVN_INVALID_REVNUM} if not out of date.
      */
     private long reposLastCmtRevision = Revision.SVN_INVALID_REVNUM;
 
     /**
-     * @since 1.3
      * Set to the most recent commit date, or 0 if not out of date.
      */
     private long reposLastCmtDate = 0;
 
     /**
-     * @since 1.3
      * Set to the node kind of the youngest commit, or {@link
      * NodeKind#none} if not out of date.
      */
     private NodeKind reposKind = NodeKind.none;
 
     /**
-     * @since 1.3
      * Set to the user name of the youngest commit, or
      * <code>null</code> if not out of date.
      */
     private String reposLastCmtAuthor;
 
     /**
-     * @since 1.5
      * Set to the changelist of the item, or <code>null</code> if not under
      * version control.
      */
@@ -243,7 +182,7 @@ public class Status implements java.io.Serializable
      * @param locked                if the item is locked (running or aborted
      *                              operation)
      * @param copied                if the item is copy
-     * @param treeConflicted        if the item is part of a tree conflict
+     * @param isConflicted          if the item is part of a conflict
      * @param conflictDescriptor    the description of the tree conflict
      * @param conflictOld           in case of conflict, the file name of the
      *                              the common base version
@@ -251,16 +190,10 @@ public class Status implements java.io.Serializable
      *                              repository version
      * @param conflictWorking       in case of conflict, the file name of the
      *                              former working copy version
-     * @param urlCopiedFrom         if copied, the url of the copy source
-     * @param revisionCopiedFrom    if copied, the revision number of the copy
-     *                              source
      * @param switched              flag if the node has been switched in the
      *                              path
      * @param fileExternal          flag if the node is a file external
-     * @param lockToken             the token for the current lock if any
-     * @param lockOwner             the owner of the current lock is any
-     * @param lockComment           the comment of the current lock if any
-     * @param lockCreationDate      the date, the lock was created if any
+     * @param localLock             the current lock
      * @param reposLock             the lock as stored in the repository if
      *                              any
      * @param reposLastCmtRevision  the youngest revision, if out of date
@@ -275,12 +208,8 @@ public class Status implements java.io.Serializable
                   long lastChangedRevision, long lastChangedDate,
                   String lastCommitAuthor, Kind textStatus, Kind propStatus,
                   Kind repositoryTextStatus, Kind repositoryPropStatus,
-                  boolean locked, boolean copied, boolean treeConflicted,
-                  ConflictDescriptor conflictDescriptor, String conflictOld,
-                  String conflictNew, String conflictWorking,
-                  String urlCopiedFrom, long revisionCopiedFrom,
-                  boolean switched, boolean fileExternal, String lockToken,
-                  String lockOwner, String lockComment, long lockCreationDate,
+                  boolean locked, boolean copied, boolean isConflicted,
+                  boolean switched, boolean fileExternal, Lock localLock,
                   Lock reposLock, long reposLastCmtRevision,
                   long reposLastCmtDate, NodeKind reposKind,
                   String reposLastCmtAuthor, String changelist)
@@ -296,21 +225,12 @@ public class Status implements java.io.Serializable
         this.propStatus = propStatus;
         this.locked = locked;
         this.copied = copied;
-        this.treeConflicted = treeConflicted;
-        this.conflictDescriptor = conflictDescriptor;
+        this.isConflicted = isConflicted;
         this.repositoryTextStatus = repositoryTextStatus;
         this.repositoryPropStatus = repositoryPropStatus;
-        this.conflictOld = conflictOld;
-        this.conflictNew = conflictNew;
-        this.conflictWorking = conflictWorking;
-        this.urlCopiedFrom = urlCopiedFrom;
-        this.revisionCopiedFrom = revisionCopiedFrom;
         this.switched = switched;
         this.fileExternal = fileExternal;
-        this.lockToken = lockToken;
-        this.lockOwner = lockOwner;
-        this.lockComment = lockComment;
-        this.lockCreationDate = lockCreationDate;
+        this.localLock = localLock;
         this.reposLock = reposLock;
         this.reposLastCmtRevision = reposLastCmtRevision;
         this.reposLastCmtDate = reposLastCmtDate;
@@ -360,7 +280,6 @@ public class Status implements java.io.Serializable
      * Returns the last date the item was changed measured in the
      * number of microseconds since 00:00:00 January 1, 1970 UTC.
      * @return the last time the item was changed.
-     * @since 1.5
      */
     public long getLastChangedDateMicros()
     {
@@ -451,35 +370,6 @@ public class Status implements java.io.Serializable
     }
 
     /**
-     * Returns in case of conflict, the filename of the most recent repository
-     * version
-     * @return the filename of the most recent repository version
-     */
-    public String getConflictNew()
-    {
-        return conflictNew;
-    }
-
-    /**
-     * Returns in case of conflict, the filename of the common base version
-     * @return the filename of the common base version
-     */
-    public String getConflictOld()
-    {
-        return conflictOld;
-    }
-
-    /**
-     * Returns in case of conflict, the filename of the former working copy
-     * version
-     * @return the filename of the former working copy version
-     */
-    public String getConflictWorking()
-    {
-        return conflictWorking;
-    }
-
-    /**
      * Returns the URI to where the item might exist in the
      * repository.  We say "might" because the item might exist in
      * your working copy, but have been deleted from the repository.
@@ -519,33 +409,6 @@ public class Status implements java.io.Serializable
     public NodeKind getNodeKind()
     {
         return nodeKind;
-    }
-
-    /**
-     * Returns if copied the copy source url or null
-     * @return the source url
-     */
-    public String getUrlCopiedFrom()
-    {
-        return urlCopiedFrom;
-    }
-
-    /**
-     * Returns if copied the source revision as a Revision object
-     * @return the source revision
-     */
-    public Revision.Number getRevisionCopiedFrom()
-    {
-        return Revision.createNumber(revisionCopiedFrom);
-    }
-
-    /**
-     * Returns if copied the source revision as s long integer
-     * @return the source revision
-     */
-    public long getRevisionCopiedFromNumber()
-    {
-        return revisionCopiedFrom;
     }
 
     /**
@@ -634,60 +497,17 @@ public class Status implements java.io.Serializable
     }
 
     /**
-     * Returns the lock token
-     * @return the lock token
-     * @since 1.2
+     * Returns the local lock
+     * @return the local lock
      */
-    public String getLockToken()
+    public Lock getLocalLock()
     {
-        return lockToken;
-    }
-
-    /**
-     * Returns the lock  owner
-     * @return the lock owner
-     * @since 1.2
-     */
-    public String getLockOwner()
-    {
-        return lockOwner;
-    }
-
-    /**
-     * Returns the lock comment
-     * @return the lock comment
-     * @since 1.2
-     */
-    public String getLockComment()
-    {
-        return lockComment;
-    }
-
-    /**
-     * Returns the lock creation date
-     * @return the lock creation date
-     * @since 1.2
-     */
-    public Date getLockCreationDate()
-    {
-        return microsecondsToDate(lockCreationDate);
-    }
-
-    /**
-     * Returns the lock creation date measured in the number of
-     * microseconds since 00:00:00 January 1, 1970 UTC.
-     * @return the lock creation date
-     * @since 1.5
-     */
-    public long getLockCreationDateMicros()
-    {
-        return lockCreationDate;
+        return localLock;
     }
 
     /**
      * Returns the lock as in the repository
      * @return the lock as in the repository
-     * @since 1.2
      */
     public Lock getReposLock()
     {
@@ -697,7 +517,6 @@ public class Status implements java.io.Serializable
     /**
      * @return The last committed revision, or {@link
      * Revision#SVN_INVALID_REVNUM} if up to date.
-     * @since 1.3
      */
     public Revision.Number getReposLastCmtRevision()
     {
@@ -707,7 +526,6 @@ public class Status implements java.io.Serializable
     /**
      * @return The last committed revision as a long integer, or
      * <code>-1</code> if up to date.
-     * @since 1.3
      */
     public long getReposLastCmtRevisionNumber()
     {
@@ -717,7 +535,6 @@ public class Status implements java.io.Serializable
     /**
      * @return The last committed date, or <code>null</code> if up to
      * date.
-     * @since 1.3
      */
     public Date getReposLastCmtDate()
     {
@@ -728,7 +545,6 @@ public class Status implements java.io.Serializable
      * Return the last committed date measured in the number of
      * microseconds since 00:00:00 January 1, 1970 UTC.
      * @return the last committed date
-     * @since 1.5
      */
     public long getReposLastCmtDateMicros()
     {
@@ -738,7 +554,6 @@ public class Status implements java.io.Serializable
     /**
      * @return The node kind (e.g. file, directory, etc.), or
      * <code>null</code> if up to date.
-     * @since 1.3
      */
     public NodeKind getReposKind()
     {
@@ -748,7 +563,6 @@ public class Status implements java.io.Serializable
     /**
      * @return The author of the last commit, or <code>null</code> if
      * up to date.
-     * @since 1.3
      */
     public String getReposLastCmtAuthor()
     {
@@ -757,7 +571,6 @@ public class Status implements java.io.Serializable
 
     /**
      * @return the changelist name
-     * @since 1.5
      */
     public String getChangelist()
     {
@@ -765,21 +578,11 @@ public class Status implements java.io.Serializable
     }
 
     /**
-     * @return the tree conflicted state
-     * @since 1.6
+     * @return the conflicted state
      */
-    public boolean hasTreeConflict()
+    public boolean isConflicted()
     {
-        return treeConflicted;
-    }
-
-    /**
-     * @return the conflict descriptor for the tree conflict
-     * @since 1.6
-     */
-    public ConflictDescriptor getConflictDescriptor()
-    {
-        return conflictDescriptor;
+        return isConflicted;
     }
 
     /**

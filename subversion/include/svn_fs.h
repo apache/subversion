@@ -73,6 +73,18 @@ typedef struct svn_fs_t svn_fs_t;
 #define SVN_FS_CONFIG_BDB_TXN_NOSYNC            "bdb-txn-nosync"
 #define SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE        "bdb-log-autoremove"
 
+/** Enable / disable text delta caching for a FSFS repository.
+ *
+ * @since New in 1.7.
+ */
+#define SVN_FS_CONFIG_FSFS_CACHE_DELTAS         "fsfs-cache-deltas"
+
+/** Enable / disable full-text caching for a FSFS repository.
+ *
+ * @since New in 1.7.
+ */
+#define SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS      "fsfs-cache-fulltexts"
+
 /* See also svn_fs_type(). */
 /** @since New in 1.1. */
 #define SVN_FS_CONFIG_FS_TYPE                   "fs-type"
@@ -101,13 +113,6 @@ typedef struct svn_fs_t svn_fs_t;
  * @since New in 1.6.
  */
 #define SVN_FS_CONFIG_PRE_1_6_COMPATIBLE        "pre-1.6-compatible"
-
-/** Create repository format compatible with Subversion versions
- * earlier than 1.7.
- *
- * @since New in 1.7.
- */
-#define SVN_FS_CONFIG_PRE_1_7_COMPATIBLE        "pre-1.7-compatible"
 /** @} */
 
 
@@ -214,7 +219,7 @@ svn_fs_create(svn_fs_t **fs_p,
  * they open separate filesystem objects.
  *
  * @note You probably don't want to use this directly.  Take a look at
- * svn_repos_open() instead.
+ * svn_repos_open2() instead.
  *
  * @since New in 1.1.
  */
@@ -239,6 +244,23 @@ svn_fs_open(svn_fs_t **fs_p,
 svn_error_t *
 svn_fs_upgrade(const char *path,
                apr_pool_t *pool);
+
+/**
+ * Perform backend-specific data consistency and correctness validations
+ * to the Subversion filesystem located in the directory @a path.
+ * Use @a pool for necessary allocations.
+ *
+ * @note You probably don't want to use this directly.  Take a look at
+ * svn_repos_verify_fs2() instead, which does non-backend-specific
+ * verifications as well.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_verify(const char *path,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *pool);
 
 /**
  * Return, in @a *fs_type, a string identifying the back-end type of
@@ -932,7 +954,7 @@ svn_fs_change_txn_prop(svn_fs_txn_t *txn,
 
 /** Change, add, and/or delete transaction property values in
  * transaction @a txn.  @a props is an array of <tt>svn_prop_t</tt>
- * elements.  This is equivalent to calling svn_fs_change_txp_prop()
+ * elements.  This is equivalent to calling svn_fs_change_txn_prop()
  * multiple times with the @c name and @c value fields of each
  * successive <tt>svn_prop_t</tt>, but may be more efficient.
  * (Properties not mentioned are left alone.)  Do any necessary
@@ -1165,7 +1187,7 @@ svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
  * #svn_fs_path_change2_t * values will be #svn_node_unknown or
  * that and some of the @c copyfrom_known fields will be FALSE.
  *
- * Use @c pool for all allocations, including the hash and its values.
+ * Use @a pool for all allocations, including the hash and its values.
  *
  * @since New in 1.6.
  */
@@ -1479,11 +1501,6 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  * @a inherit indicates whether to retrieve explicit,
  * explicit-or-inherited, or only inherited mergeinfo.
  *
- * If the mergeinfo for any path is inherited and
- * @a validate_inherited_mergeinfo is TRUE, then the mergeinfo for
- * that path in @a *catalog will only contain merge source
- * path-revisions that actually exist in repository.
- *
  * If @a include_descendants is TRUE, then additionally return the
  * mergeinfo for any descendant of any element of @a paths which has
  * the #SVN_PROP_MERGEINFO property explicitly set on it.  (Note
@@ -1493,22 +1510,7 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  *
  * Do any necessary temporary allocation in @a pool.
  *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
-                      svn_fs_root_t *root,
-                      const apr_array_header_t *paths,
-                      svn_mergeinfo_inheritance_t inherit,
-                      svn_boolean_t validate_inherited_mergeinfo,
-                      svn_boolean_t include_descendants,
-                      apr_pool_t *pool);
-
-/**
- * Similar to svn_fs_get_mergeinfo2(), but with
- * @a validate_inherited_mergeinfo always passed as FALSE.
- *
- * @deprecated Provided for backward compatibility with the 1.7 API.
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
@@ -1517,25 +1519,6 @@ svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                      svn_mergeinfo_inheritance_t inherit,
                      svn_boolean_t include_descendants,
                      apr_pool_t *pool);
-
-/**
- * Set @a *validated_mergeinfo equal to deep copy of @a mergeinfo, less
- * any mergeinfo that describes path-revs that do not exist in @a FS.
- * If @a mergeinfo is empty then @a *validated_mergeinfo is set to an empty
- * mergeinfo hash.  If @a mergeinfo is NULL then @a *validated_mergeinfo is
- * set to NULL.
- *
- * @a *validated_mergeinfo is allocated in @a result_pool.  All temporary
- * allocations are performed in @a scratch_pool.
- *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_fs_validate_mergeinfo(svn_mergeinfo_t *validated_mergeinfo,
-                          svn_fs_t *fs,
-                          svn_mergeinfo_t mergeinfo,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
 
 /** Merge changes between two nodes into a third node.
  *
@@ -2010,7 +1993,7 @@ svn_fs_get_uuid(svn_fs_t *fs,
 
 /** If not @c NULL, associate @a *uuid with @a fs.  Otherwise (if @a
  * uuid is @c NULL), generate a new UUID for @a fs.  Use @a pool for
- * any scratchwork.
+ * any scratch work.
  */
 svn_error_t *
 svn_fs_set_uuid(svn_fs_t *fs,
@@ -2270,49 +2253,6 @@ svn_fs_pack(const char *db_path,
             void *cancel_baton,
             apr_pool_t *pool);
 
-
-/** @defgroup svn_fs_cach_config Filesystem caching configuration
- * @{
- * @since New in 1.7. */
-
-/* FSFS cache settings. It controls what caches, in what size and
-   how they will be created. The settings apply for the whole process.
- */
-typedef struct svn_fs_cache_config_t
-{
-  /* total cache size in bytes. May be 0, resulting in no cache being used */
-  apr_uint64_t cache_size;
-
-  /* maximum number of files kept open */
-  apr_size_t file_handle_count;
-
-  /* shall fulltexts be cached? */
-  svn_boolean_t cache_fulltexts;
-
-  /* shall text deltas be cached? */
-  svn_boolean_t cache_txdeltas;
-
-  /* is this a guaranteed single-threaded application? */
-  svn_boolean_t single_threaded;
-} svn_fs_cache_config_t;
-
-/* Get the current FSFS cache configuration. If it has not been set,
-   this function will return the default settings.
- */
-const svn_fs_cache_config_t *
-svn_fs_get_cache_config(void);
-
-/* Set the FSFS cache configuration. Please note that it may not change
-   the actual configuration *in use*. Therefore, call it before reading
-   data from any FSFS repo and call it only once.
-
-   This function is not thread-safe. Therefore, it should be called once
-   from the processes' initialization code only.
- */
-void
-svn_fs_set_cache_config(const svn_fs_cache_config_t *settings);
-
-/** @} */
 
 /** @} */
 

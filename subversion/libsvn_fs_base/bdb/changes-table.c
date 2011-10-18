@@ -360,7 +360,7 @@ svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
 
   /* If we had an error prior to closing the cursor, return the error. */
   if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   /* If our only error thus far was when we closed the cursor, return
      that error. */
@@ -443,7 +443,7 @@ svn_fs_bdb__changes_fetch_raw(apr_array_header_t **changes_p,
 
   /* If we had an error prior to closing the cursor, return the error. */
   if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   /* If our only error thus far was when we closed the cursor, return
      that error. */

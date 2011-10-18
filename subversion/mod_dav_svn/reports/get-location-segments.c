@@ -115,7 +115,7 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
   apr_bucket_brigade *bb;
   int ns;
   apr_xml_elem *child;
-  const char *abs_path;
+  const char *abs_path = NULL;
   svn_revnum_t peg_revision = SVN_INVALID_REVNUM;
   svn_revnum_t start_rev = SVN_INVALID_REVNUM;
   svn_revnum_t end_rev = SVN_INVALID_REVNUM;

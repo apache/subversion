@@ -147,10 +147,10 @@ svn_fs_bdb__lock_token_get(const char **lock_token_p,
       delete_err = svn_fs_bdb__lock_token_delete(fs, path, trail, pool);
       if (delete_err)
         svn_error_compose(err, delete_err);
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
   else if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   *lock_token_p = lock_token;
   return SVN_NO_ERROR;

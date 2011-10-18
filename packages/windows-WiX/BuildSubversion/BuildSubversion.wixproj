@@ -5,12 +5,11 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <OutputType>Package</OutputType>
     <RootNamespace>BuildSubversion</RootNamespace>
-    <OutputName>Setup-Subversion-1.6.2</OutputName>
+    <OutputName>Setup-Subversion-1.6.6</OutputName>
     <WixToolPath Condition=" '$(WixToolPath)' == '' ">$(SharpDevelopBinPath)\Tools\Wix</WixToolPath>
     <WixTargetsPath Condition=" '$(WixTargetsPath)' == '' ">$(WixToolPath)\wix.targets</WixTargetsPath>
     <WixTasksPath Condition=" '$(WixTasksPath)' == '' ">$(WixToolPath)\WixTasks.dll</WixTasksPath>
     <SupressIces>ICE45</SupressIces>
-    <WixVariables>WixUIInfoRtf=Pre.rtf;WixUIPostRtf=Post.rtf</WixVariables>
     <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -38,7 +37,6 @@
     <None Include="CommonSASLFeature.wxi" />
     <Compile Include="CreateIcons.wxs" />
     <Compile Include="Files.wxs" />
-    <None Include="Post.rtf" />
     <None Include="ProgramMenu.wxi" />
     <None Include="iconvFeature22x.wxi" />
     <None Include="iconvFiles22x.wxi" />
@@ -49,22 +47,27 @@
     <Compile Include="Setup.wxs" />
     <None Include="WixDialog\AdminExitDialog.wxs" />
     <None Include="WixDialog\InfoDlg.wxs" />
+    <None Include="WixDialog\loc\en-us\Post.rtf" />
+    <None Include="WixDialog\loc\en-us\Pre.rtf" />
+    <None Include="WixDialog\loc\en-us\WixUI_en-us-subversion.wxl" />
+    <None Include="WixDialog\loc\en-us\WixUI_en-us.wxl">
+      <Link>WixUI_en-us.wxl</Link>
+    </None>
     <None Include="WixDialog\PostDlg.wxs" />
     <None Include="WixDialog\ReadyDlg.wxs" />
     <None Include="WixDialog\WelcomeDlgSv.wxs" />
-    <None Include="WixDialog\WixUI_en-us-subversion.wxl" />
-    <None Include="WixDialog\WixUI_en-us.wxl" />
     <None Include="WixDialog\WixUI_Subversion.wxs" />
     <None Include="dlgbmp.bmp" />
-    <None Include="Pre.rtf" />
-    <EmbeddedResource Include="WixDialog\WixUI_en-us-subversion.wxl">
-      <Link>WixUI_en-us-subversion.wxl</Link>
-    </EmbeddedResource>
-    <EmbeddedResource Include="WixDialog\WixUI_en-us.wxl">
+    <EmbeddedResource Include="WixDialog\loc\en-us\WixUI_en-us.wxl">
       <Link>WixUI_en-us.wxl</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="WixDialog\loc\en-us\WixUI_en-us-subversion.wxl">
+      <Link>WixUI_en-us-subversion.wxl</Link>
     </EmbeddedResource>
     <None Include="wiz-55x55x24.bmp" />
     <Folder Include="WixDialog" />
+    <Folder Include="WixDialog\loc" />
+    <Folder Include="WixDialog\loc\en-us" />
     <WixLibrary Include="WixDialog\WixUI_Subversion.wixlib" />
   </ItemGroup>
   <PropertyGroup>

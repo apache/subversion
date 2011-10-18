@@ -40,14 +40,17 @@
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_config.h"
-#include "svn_private_config.h"
 #include "svn_ra.h"
-#include "../libsvn_ra/ra_loader.h"
 #include "svn_ra_svn.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
+#include "svn_version.h"
+
+#include "svn_private_config.h"
 
 #include "private/svn_fspath.h"
+
+#include "../libsvn_ra/ra_loader.h"
 
 #include "ra_svn.h"
 
@@ -87,8 +90,6 @@ typedef struct ra_svn_reporter_baton_t {
 static void parse_tunnel(const char *url, const char **tunnel,
                          apr_pool_t *pool)
 {
-  const char *p;
-
   *tunnel = NULL;
 
   if (strncasecmp(url, "svn", 3) != 0)
@@ -98,12 +99,13 @@ static void parse_tunnel(const char *url, const char **tunnel,
   /* Get the tunnel specification, if any. */
   if (*url == '+')
     {
+      const char *p;
+
       url++;
       p = strchr(url, ':');
       if (!p)
         return;
       *tunnel = apr_pstrmemdup(pool, url, p - url);
-      url = p;
     }
 }
 
@@ -452,7 +454,8 @@ static void handle_child_process_error(apr_pool_t *pool, apr_status_t status,
       || apr_file_open_stdout(&out_file, pool))
     return;
 
-  conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
+  conn = svn_ra_svn_create_conn2(NULL, in_file, out_file,
+                                 SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, pool);
   err = svn_error_wrap_apr(status, _("Error in child process: %s"), desc);
   svn_error_clear(svn_ra_svn_write_cmd_failure(conn, pool, err));
   svn_error_clear(err);
@@ -519,7 +522,8 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   apr_file_inherit_unset(proc->out);
 
   /* Guard against dotfile output to stdout on the server. */
-  *conn = svn_ra_svn_create_conn(NULL, proc->out, proc->in, pool);
+  *conn = svn_ra_svn_create_conn2(NULL, proc->out, proc->in,
+                                  SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, pool);
   err = svn_ra_svn_skip_leading_garbage(*conn, pool);
   if (err)
     return svn_error_quick_wrap(
@@ -588,7 +592,9 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   else
     {
       SVN_ERR(make_connection(uri->hostname, uri->port, &sock, pool));
-      conn = svn_ra_svn_create_conn(sock, NULL, NULL, pool);
+      conn = svn_ra_svn_create_conn2(sock, NULL, NULL,
+                                     SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
+                                     pool);
     }
 
   /* Make sure we set conn->session before reading from it,
@@ -633,7 +639,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
                                  SVN_RA_SVN_CAP_DEPTH,
                                  SVN_RA_SVN_CAP_MERGEINFO,
                                  SVN_RA_SVN_CAP_LOG_REVPROPS,
-                                 url, "SVN/" SVN_VERSION, client_string));
+                                 url, "SVN/" SVN_VER_NUMBER, client_string));
   SVN_ERR(handle_auth_request(sess, pool));
 
   /* This is where the security layer would go into effect if we
@@ -1012,7 +1018,8 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   apr_array_header_t *proplist;
-  const char *expected_checksum;
+  const char *expected_digest;
+  svn_checksum_t *expected_checksum = NULL;
   svn_checksum_ctx_t *checksum_ctx;
   apr_pool_t *iterpool;
 
@@ -1020,7 +1027,7 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
                                rev, (props != NULL), (stream != NULL)));
   SVN_ERR(handle_auth_request(sess_baton, pool));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?c)rl",
-                                       &expected_checksum,
+                                       &expected_digest,
                                        &rev, &proplist));
 
   if (fetched_rev)
@@ -1032,8 +1039,12 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
   if (!stream)
     return SVN_NO_ERROR;
 
-  if (expected_checksum)
-    checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  if (expected_digest)
+    {
+      SVN_ERR(svn_checksum_parse_hex(&expected_checksum, svn_checksum_md5,
+                                     expected_digest, pool));
+      checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+    }
 
   /* Read the file's contents. */
   iterpool = svn_pool_create(pool);
@@ -1063,18 +1074,12 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
   if (expected_checksum)
     {
       svn_checksum_t *checksum;
-      const char *hex_digest;
 
       SVN_ERR(svn_checksum_final(&checksum, checksum_ctx, pool));
-      hex_digest = svn_checksum_to_cstring_display(checksum, pool);
-      if (strcmp(hex_digest, expected_checksum) != 0)
-        return svn_error_createf
-          (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-           apr_psprintf(pool, "%s:\n%s\n%s\n",
-                        _("Checksum mismatch for '%s'"),
-                        _("   expected:  %s"),
-                        _("     actual:  %s")),
-           path, expected_checksum, hex_digest);
+      if (!svn_checksum_match(checksum, expected_checksum))
+        return svn_checksum_mismatch_err(expected_checksum, checksum, pool,
+                                         _("Checksum mismatch for '%s'"),
+                                         path);
     }
 
   return SVN_NO_ERROR;
@@ -1174,15 +1179,13 @@ optbool_to_tristate(apr_uint64_t v)
 
 /* If REVISION is SVN_INVALID_REVNUM, no value is sent to the
    server, which defaults to youngest. */
-static svn_error_t *ra_svn_get_mergeinfo(
-  svn_ra_session_t *session,
-  svn_mergeinfo_catalog_t *catalog,
-  const apr_array_header_t *paths,
-  svn_revnum_t revision,
-  svn_mergeinfo_inheritance_t inherit,
-  svn_boolean_t *validate_inherited_mergeinfo,
-  svn_boolean_t include_descendants,
-  apr_pool_t *pool)
+static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
+                                         svn_mergeinfo_catalog_t *catalog,
+                                         const apr_array_header_t *paths,
+                                         svn_revnum_t revision,
+                                         svn_mergeinfo_inheritance_t inherit,
+                                         svn_boolean_t include_descendants,
+                                         apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
@@ -1190,7 +1193,6 @@ static svn_error_t *ra_svn_get_mergeinfo(
   apr_array_header_t *mergeinfo_tuple;
   svn_ra_svn_item_t *elt;
   const char *path;
-  apr_uint64_t validated_inherited_mergeinfo;
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "get-mergeinfo"));
   for (i = 0; i < paths->nelts; i++)
@@ -1198,17 +1200,12 @@ static svn_error_t *ra_svn_get_mergeinfo(
       path = APR_ARRAY_IDX(paths, i, const char *);
       SVN_ERR(svn_ra_svn_write_cstring(conn, pool, path));
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)wbb)", revision,
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)wb)", revision,
                                  svn_inheritance_to_word(inherit),
-                                 include_descendants,
-                                 *validate_inherited_mergeinfo));
+                                 include_descendants));
 
   SVN_ERR(handle_auth_request(sess_baton, pool));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l?B", &mergeinfo_tuple,
-                                       &validated_inherited_mergeinfo));
-
-  *validate_inherited_mergeinfo =
-    (optbool_to_tristate(validated_inherited_mergeinfo) == svn_tristate_true);
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l", &mergeinfo_tuple));
 
   *catalog = NULL;
   if (mergeinfo_tuple->nelts > 0)
@@ -1403,10 +1400,12 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
   while (1)
     {
       apr_uint64_t has_children_param, invalid_revnum_param;
+      apr_uint64_t has_subtractive_merge_param;
       svn_string_t *author, *date, *message;
       apr_array_header_t *cplist, *rplist;
       svn_log_entry_t *log_entry;
       svn_boolean_t has_children;
+      svn_boolean_t subtractive_merge = FALSE;
       apr_uint64_t revprop_count;
       svn_ra_svn_item_t *item;
       apr_hash_t *cphash;
@@ -1421,11 +1420,12 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Log entry not a list"));
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, iterpool,
-                                     "lr(?s)(?s)(?s)?BBnl",
+                                     "lr(?s)(?s)(?s)?BBnl?B",
                                      &cplist, &rev, &author, &date,
                                      &message, &has_children_param,
                                      &invalid_revnum_param,
-                                     &revprop_count, &rplist));
+                                     &revprop_count, &rplist,
+                                     &has_subtractive_merge_param));
       if (want_custom_revprops && rplist == NULL)
         {
           /* Caller asked for custom revprops, but server is too old. */
@@ -1438,6 +1438,11 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
         has_children = FALSE;
       else
         has_children = (svn_boolean_t) has_children_param;
+
+      if (has_subtractive_merge_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+        subtractive_merge = FALSE;
+      else
+        subtractive_merge = (svn_boolean_t) has_subtractive_merge_param;
 
       /* Because the svn protocol won't let us send an invalid revnum, we have
          to recover that fact using the extra parameter. */
@@ -1491,6 +1496,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
           log_entry->changed_paths2 = cphash;
           log_entry->revision = rev;
           log_entry->has_children = has_children;
+          log_entry->subtractive_merge = subtractive_merge;
           if (rplist)
             SVN_ERR(svn_ra_svn_parse_proplist(rplist, pool,
                                               &log_entry->revprops));
@@ -2270,19 +2276,12 @@ static svn_error_t *path_relative_to_root(svn_ra_session_t *session,
   const char *root_url;
 
   SVN_ERR(ra_svn_get_repos_root(session, &root_url, pool));
-  if (strcmp(root_url, url) == 0)
-    {
-      *rel_path = "";
-    }
-  else
-    {
-      *rel_path = svn_uri_is_child(root_url, url, pool);
-      if (! *rel_path)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("'%s' isn't a child of repository root "
-                                   "URL '%s'"),
-                                 url, root_url);
-    }
+  *rel_path = svn_uri_skip_ancestor(root_url, url, pool);
+  if (! *rel_path)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("'%s' isn't a child of repository root "
+                               "URL '%s'"),
+                             url, root_url);
   return SVN_NO_ERROR;
 }
 
@@ -2536,8 +2535,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_replay,
   ra_svn_has_capability,
   ra_svn_replay_range,
-  ra_svn_get_deleted_rev,
-  NULL  /* ra_svn_obliterate_path_rev */
+  ra_svn_get_deleted_rev
 };
 
 svn_error_t *

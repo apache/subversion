@@ -67,7 +67,7 @@ svn_wc_context_create(svn_wc_context_t **wc_ctx,
 
   /* Create the state_pool, and open up a wc_db in it. */
   ctx->state_pool = result_pool;
-  SVN_ERR(svn_wc__db_open(&ctx->db, svn_wc__db_openmode_readwrite, config,
+  SVN_ERR(svn_wc__db_open(&ctx->db, config,
                           TRUE, TRUE, ctx->state_pool, scratch_pool));
   ctx->close_db_on_destroy = TRUE;
 

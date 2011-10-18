@@ -119,7 +119,7 @@ construct_config(apr_hash_t **config_p,
   svn_config_t *servers;
 
   /* Populate SERVERS. */
-  SVN_ERR(svn_config_create(&servers, pool));
+  SVN_ERR(svn_config_create(&servers, FALSE,  pool));
   svn_config_set(servers, SVN_CONFIG_SECTION_GLOBAL,
                  SVN_CONFIG_OPTION_HTTP_LIBRARY, http_library);
 
@@ -178,7 +178,7 @@ change_rev_prop(const char *url,
                                 "An error was expected but not seen");
       else
       	/* A real (non-SVN_ERR_FS_PROP_BASEVALUE_MISMATCH) error. */
-      	return svn_error_return(err);
+      	return svn_error_trace(err);
     }
   else
     /* Running under --server-minor-version? */

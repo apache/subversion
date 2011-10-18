@@ -46,6 +46,7 @@
 
 #include "private/svn_utf_private.h"
 #include "private/svn_eol_private.h"
+#include "private/svn_dep_compat.h"
 #include "private/svn_adler32.h"
 
 /* A token, i.e. a line read from a file. */
@@ -140,7 +141,8 @@ read_chunk(apr_file_t *file, const char *path,
    * XXX: Check.
    */
   SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
-  return svn_io_file_read_full(file, buffer, (apr_size_t) length, NULL, pool);
+  return svn_io_file_read_full2(file, buffer, (apr_size_t) length,
+                                NULL, NULL, pool);
 }
 
 
@@ -191,8 +193,8 @@ map_or_read_file(apr_file_t **file,
     {
       *buffer = apr_palloc(pool, (apr_size_t) finfo.size);
 
-      SVN_ERR(svn_io_file_read_full(*file, *buffer, (apr_size_t) finfo.size,
-                                    NULL, pool));
+      SVN_ERR(svn_io_file_read_full2(*file, *buffer, (apr_size_t) finfo.size,
+                                     NULL, NULL, pool));
 
       /* Since we have the entire contents of the file we can
        * close it now.
@@ -266,7 +268,7 @@ increment_chunk(struct file_info *file, apr_pool_t *pool)
     {
       /* There are still chunks left. Read next chunk and reset pointers. */
       file->chunk++;
-      length = file->chunk == last_chunk ? 
+      length = file->chunk == last_chunk ?
         offset_in_chunk(file->size) : CHUNK_SIZE;
       SVN_ERR(read_chunk(file->file, file->path, file->buffer,
                          length, chunk_to_offset(file->chunk),
@@ -274,7 +276,7 @@ increment_chunk(struct file_info *file, apr_pool_t *pool)
       file->endp = file->buffer + length;
       file->curp = file->buffer;
     }
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -288,7 +290,7 @@ decrement_chunk(struct file_info *file, apr_pool_t *pool)
          by setting chunk = -1 and curp = endp - 1. Both conditions are
          important. They help the increment step to catch the BOF situation
          in an efficient way. */
-      file->chunk--; 
+      file->chunk--;
       file->curp = file->endp - 1;
     }
   else
@@ -301,7 +303,7 @@ decrement_chunk(struct file_info *file, apr_pool_t *pool)
       file->endp = file->buffer + CHUNK_SIZE;
       file->curp = file->endp - 1;
     }
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -353,10 +355,10 @@ is_one_at_eof(struct file_info file[], apr_size_t file_len)
 #endif
 
 #if SVN_UNALIGNED_ACCESS_IS_OK
-static svn_boolean_t contains_eol(apr_size_t chunk)
+static svn_boolean_t contains_eol(apr_uintptr_t chunk)
 {
-  apr_size_t r_test = chunk ^ R_MASK;
-  apr_size_t n_test = chunk ^ N_MASK;
+  apr_uintptr_t r_test = chunk ^ R_MASK;
+  apr_uintptr_t n_test = chunk ^ N_MASK;
 
   r_test |= (r_test & LOWER_7BITS_SET) + LOWER_7BITS_SET;
   n_test |= (n_test & LOWER_7BITS_SET) + LOWER_7BITS_SET;
@@ -368,10 +370,10 @@ static svn_boolean_t contains_eol(apr_size_t chunk)
 /* Find the prefix which is identical between all elements of the FILE array.
  * Return the number of prefix lines in PREFIX_LINES.  REACHED_ONE_EOF will be
  * set to TRUE if one of the FILEs reached its end while scanning prefix,
- * i.e. at least one file consisted entirely of prefix.  Otherwise, 
+ * i.e. at least one file consisted entirely of prefix.  Otherwise,
  * REACHED_ONE_EOF is set to FALSE.
  *
- * After this function is finished, the buffers, chunks, curp's and endp's 
+ * After this function is finished, the buffers, chunks, curp's and endp's
  * of the FILEs are set to point at the first byte after the prefix. */
 static svn_error_t *
 find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
@@ -383,6 +385,8 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
   apr_off_t lines = 0;
   apr_size_t i;
 
+  *reached_one_eof = FALSE;
+
   for (i = 1, is_match = TRUE; i < file_len; i++)
     is_match = is_match && *file[0].curp == *file[i].curp;
   while (is_match)
@@ -391,7 +395,7 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
       apr_ssize_t max_delta, delta;
 #endif /* SVN_UNALIGNED_ACCESS_IS_OK */
 
-      /* ### TODO: see if we can take advantage of 
+      /* ### TODO: see if we can take advantage of
          diff options like ignore_eol_style or ignore_space. */
       /* check for eol, and count */
       if (*file[0].curp == '\r')
@@ -403,7 +407,7 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
         {
           lines++;
         }
-      else 
+      else
         {
           had_cr = FALSE;
         }
@@ -417,18 +421,18 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
        * endp for any of the files.
        * Signedness is important here if curp gets close to endp.
        */
-      max_delta = file[0].endp - file[0].curp - sizeof(apr_size_t);
+      max_delta = file[0].endp - file[0].curp - sizeof(apr_uintptr_t);
       for (i = 1; i < file_len; i++)
         {
-          delta = file[i].endp - file[i].curp - sizeof(apr_size_t);
+          delta = file[i].endp - file[i].curp - sizeof(apr_uintptr_t);
           if (delta < max_delta)
             max_delta = delta;
         }
 
       is_match = TRUE;
-      for (delta = 0; delta < max_delta && is_match; delta += sizeof(apr_size_t))
+      for (delta = 0; delta < max_delta && is_match; delta += sizeof(apr_uintptr_t))
         {
-          apr_size_t chunk = *(const apr_size_t *)(file[0].curp + delta);
+          apr_uintptr_t chunk = *(const apr_size_t *)(file[0].curp + delta);
           if (contains_eol(chunk))
             break;
 
@@ -460,13 +464,13 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
 
   if (had_cr)
     {
-      /* Check if we ended in the middle of a \r\n for one file, but \r for 
+      /* Check if we ended in the middle of a \r\n for one file, but \r for
          another. If so, back up one byte, so the next loop will back up
          the entire line. Also decrement lines, since we counted one
          too many for the \r. */
       svn_boolean_t ended_at_nonmatching_newline = FALSE;
       for (i = 0; i < file_len; i++)
-        ended_at_nonmatching_newline = ended_at_nonmatching_newline 
+        ended_at_nonmatching_newline = ended_at_nonmatching_newline
                                        || *file[i].curp == '\n';
       if (ended_at_nonmatching_newline)
         {
@@ -479,7 +483,7 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
   DECREMENT_POINTERS(file, file_len, pool);
 
   /* Back up to the last eol sequence (\n, \r\n or \r) */
-  while (!is_one_at_bof(file, file_len) && 
+  while (!is_one_at_bof(file, file_len) &&
          *file[0].curp != '\n' && *file[0].curp != '\r')
     DECREMENT_POINTERS(file, file_len, pool);
 
@@ -492,28 +496,44 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
 }
 
 
+/* The number of identical suffix lines to keep with the middle section. These
+ * lines are not eliminated as suffix, and can be picked up by the token
+ * parsing and lcs steps. This is mainly for backward compatibility with
+ * the previous diff (and blame) output (if there are multiple diff solutions,
+ * our lcs algorithm prefers taking common lines from the start, rather than
+ * from the end. By giving it back some suffix lines, we give it some wiggle
+ * room to find the exact same diff as before).
+ *
+ * The number 50 is more or less arbitrary, based on some real-world tests
+ * with big files (and then doubling the required number to be on the safe
+ * side). This has a negligible effect on the power of the optimization. */
+#ifndef SUFFIX_LINES_TO_KEEP
 #define SUFFIX_LINES_TO_KEEP 50
+#endif
 
 /* Find the suffix which is identical between all elements of the FILE array.
+ * Return the number of suffix lines in SUFFIX_LINES.
  *
- * Before this function is called the FILEs' pointers and chunks should be 
- * positioned right after the identical prefix (which is the case after 
- * find_identical_prefix), so we can determine where suffix scanning should 
+ * Before this function is called the FILEs' pointers and chunks should be
+ * positioned right after the identical prefix (which is the case after
+ * find_identical_prefix), so we can determine where suffix scanning should
  * ultimately stop. */
 static svn_error_t *
-find_identical_suffix(struct file_info file[], apr_size_t file_len,
-                      apr_pool_t *pool)
+find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
+                      apr_size_t file_len, apr_pool_t *pool)
 {
-  struct file_info file_for_suffix[4];
+  struct file_info file_for_suffix[4] = { { 0 }  };
   apr_off_t length[4];
   apr_off_t suffix_min_chunk0;
   apr_off_t suffix_min_offset0;
   apr_off_t min_file_size;
   int suffix_lines_to_keep = SUFFIX_LINES_TO_KEEP;
-  svn_boolean_t is_match, can_read, reached_prefix;
+  svn_boolean_t is_match;
+  svn_boolean_t reached_prefix;
+  apr_off_t lines = 0;
+  svn_boolean_t had_cr;
+  svn_boolean_t had_nl;
   apr_size_t i;
-
-  memset(file_for_suffix, 0, sizeof(file_for_suffix));
 
   /* Initialize file_for_suffix[].
      Read last chunk, position curp at last byte. */
@@ -560,13 +580,43 @@ find_identical_suffix(struct file_info file[], apr_size_t file_len,
     }
 
   /* Scan backwards until mismatch or until we reach the prefix. */
-  while (1)
+  for (i = 1, is_match = TRUE; i < file_len; i++)
+    is_match = is_match
+               && *file_for_suffix[0].curp == *file_for_suffix[i].curp;
+  if (is_match && *file_for_suffix[0].curp != '\r'
+               && *file_for_suffix[0].curp != '\n')
+    /* Count an extra line for the last line not ending in an eol. */
+    lines++;
+
+  had_nl = FALSE;
+  while (is_match)
     {
+#if SVN_UNALIGNED_ACCESS_IS_OK
       /* Initialize the minimum pointer positions. */
       const char *min_curp[4];
-#if SVN_UNALIGNED_ACCESS_IS_OK
       svn_boolean_t can_read_word;
 #endif /* SVN_UNALIGNED_ACCESS_IS_OK */
+
+      /* ### TODO: see if we can take advantage of
+         diff options like ignore_eol_style or ignore_space. */
+      /* check for eol, and count */
+      if (*file_for_suffix[0].curp == '\n')
+        {
+          lines++;
+          had_nl = TRUE;
+        }
+      else if (*file_for_suffix[0].curp == '\r' && !had_nl)
+        {
+          lines++;
+        }
+      else
+        {
+          had_nl = FALSE;
+        }
+
+      DECREMENT_POINTERS(file_for_suffix, file_len, pool);
+
+#if SVN_UNALIGNED_ACCESS_IS_OK
 
       min_curp[0] = file_for_suffix[0].chunk == suffix_min_chunk0
                   ? file_for_suffix[0].buffer + suffix_min_offset0 + 1
@@ -574,73 +624,59 @@ find_identical_suffix(struct file_info file[], apr_size_t file_len,
       for (i = 1; i < file_len; i++)
         min_curp[i] = file_for_suffix[i].buffer + 1;
 
-#if SVN_UNALIGNED_ACCESS_IS_OK
-
       /* Scan quickly by reading with machine-word granularity. */
       for (i = 0, can_read_word = TRUE; i < file_len; i++)
-        can_read_word = can_read_word 
-                        && (   file_for_suffix[i].curp - sizeof(apr_size_t)
+        can_read_word = can_read_word
+                        && (   file_for_suffix[i].curp - sizeof(apr_uintptr_t)
                             >= min_curp[i]);
       if (can_read_word)
         {
           do
             {
+              apr_uintptr_t chunk;
               for (i = 0; i < file_len; i++)
-                file_for_suffix[i].curp -= sizeof(apr_size_t);
+                file_for_suffix[i].curp -= sizeof(apr_uintptr_t);
+
+              chunk = *(const apr_uintptr_t *)(file_for_suffix[0].curp + 1);
+              if (contains_eol(chunk))
+                break;
 
               for (i = 0, can_read_word = TRUE; i < file_len; i++)
-                can_read_word = can_read_word 
-                                && (   file_for_suffix[i].curp - sizeof(apr_size_t)
+                can_read_word = can_read_word
+                                && (   file_for_suffix[i].curp - sizeof(apr_uintptr_t)
                                     >= min_curp[i]);
               for (i = 1, is_match = TRUE; i < file_len; i++)
                 is_match = is_match
-                           && (   *(const apr_size_t *)(file_for_suffix[0].curp + 1)
-                               == *(const apr_size_t *)(file_for_suffix[i].curp + 1));
+                           && (   chunk
+                               == *(const apr_uintptr_t *)(file_for_suffix[i].curp + 1));
             } while (can_read_word && is_match);
 
             for (i = 0; i < file_len; i++)
-              file_for_suffix[i].curp += sizeof(apr_size_t);
+              file_for_suffix[i].curp += sizeof(apr_uintptr_t);
         }
 
 #endif
 
-      for (i = 1, is_match = TRUE; i < file_len; i++)
-        is_match =
-          is_match && *file_for_suffix[0].curp == *file_for_suffix[i].curp;
-      for (i = 0, can_read = TRUE; i < file_len; i++)
-        can_read = can_read && (file_for_suffix[i].curp > min_curp[i]);
-      while (is_match && can_read)
-        {
-          for (i = 0; i < file_len; i++)
-            file_for_suffix[i].curp--;
-          for (i = 1, is_match = TRUE; i < file_len; i++)
-            is_match =
-              is_match && *file_for_suffix[0].curp == *file_for_suffix[i].curp;
-          for (i = 0, can_read = TRUE; i < file_len; i++)
-            can_read = can_read && (file_for_suffix[i].curp > min_curp[i]);
-        }
-
-      if (!is_match)
-        break;
-
-      DECREMENT_POINTERS(file_for_suffix, file_len, pool);
-
-      reached_prefix = file_for_suffix[0].chunk == suffix_min_chunk0 
+      reached_prefix = file_for_suffix[0].chunk == suffix_min_chunk0
                        && (file_for_suffix[0].curp - file_for_suffix[0].buffer)
                           == suffix_min_offset0;
-
       if (reached_prefix || is_one_at_bof(file_for_suffix, file_len))
         break;
+
+      for (i = 1, is_match = TRUE; i < file_len; i++)
+        is_match = is_match
+                   && *file_for_suffix[0].curp == *file_for_suffix[i].curp;
     }
 
   /* Slide one byte forward, to point at the first byte of identical suffix */
   INCREMENT_POINTERS(file_for_suffix, file_len, pool);
 
   /* Slide forward until we find an eol sequence to add the rest of the line
-     we're in. Then add SUFFIX_LINES_TO_KEEP more lines. Stop if at least 
+     we're in. Then add SUFFIX_LINES_TO_KEEP more lines. Stop if at least
      one file reaches its end. */
   do
     {
+      had_cr = FALSE;
       while (!is_one_at_eof(file_for_suffix, file_len)
              && *file_for_suffix[0].curp != '\n'
              && *file_for_suffix[0].curp != '\r')
@@ -649,21 +685,34 @@ find_identical_suffix(struct file_info file[], apr_size_t file_len,
       /* Slide one or two more bytes, to point past the eol. */
       if (!is_one_at_eof(file_for_suffix, file_len)
           && *file_for_suffix[0].curp == '\r')
-        INCREMENT_POINTERS(file_for_suffix, file_len, pool);
+        {
+          lines--;
+          had_cr = TRUE;
+          INCREMENT_POINTERS(file_for_suffix, file_len, pool);
+        }
       if (!is_one_at_eof(file_for_suffix, file_len)
           && *file_for_suffix[0].curp == '\n')
-        INCREMENT_POINTERS(file_for_suffix, file_len, pool);
+        {
+          if (!had_cr)
+            lines--;
+          INCREMENT_POINTERS(file_for_suffix, file_len, pool);
+        }
     }
-  while (!is_one_at_eof(file_for_suffix, file_len) 
+  while (!is_one_at_eof(file_for_suffix, file_len)
          && suffix_lines_to_keep--);
+
+  if (is_one_at_eof(file_for_suffix, file_len))
+    lines = 0;
 
   /* Save the final suffix information in the original file_info */
   for (i = 0; i < file_len; i++)
     {
       file[i].suffix_start_chunk = file_for_suffix[i].chunk;
-      file[i].suffix_offset_in_chunk = 
+      file[i].suffix_offset_in_chunk =
         file_for_suffix[i].curp - file_for_suffix[i].buffer;
     }
+
+  *suffix_lines = lines;
 
   return SVN_NO_ERROR;
 }
@@ -673,19 +722,22 @@ find_identical_suffix(struct file_info file[], apr_size_t file_len,
  * that are indexed by the elements of the DATASOURCE array.
  * BATON's type is (svn_diff__file_baton_t *).
  *
- * For each file in the FILE array, open the file at FILE.path; initialize 
- * FILE.file, FILE.size, FILE.buffer, FILE.curp and FILE.endp; allocate a 
+ * For each file in the FILE array, open the file at FILE.path; initialize
+ * FILE.file, FILE.size, FILE.buffer, FILE.curp and FILE.endp; allocate a
  * buffer and read the first chunk.  Then find the prefix and suffix lines
  * which are identical between all the files.  Return the number of identical
- * prefix lines in PREFIX_LINES.
+ * prefix lines in PREFIX_LINES, and the number of identical suffix lines in
+ * SUFFIX_LINES.
  *
  * Finding the identical prefix and suffix allows us to exclude those from the
- * rest of the diff algorithm, which increases performance by reducing the 
+ * rest of the diff algorithm, which increases performance by reducing the
  * problem space.
  *
  * Implements svn_diff_fns2_t::datasources_open. */
 static svn_error_t *
-datasources_open(void *baton, apr_off_t *prefix_lines,
+datasources_open(void *baton,
+                 apr_off_t *prefix_lines,
+                 apr_off_t *suffix_lines,
                  const svn_diff_datasource_e *datasources,
                  apr_size_t datasources_len)
 {
@@ -696,9 +748,10 @@ datasources_open(void *baton, apr_off_t *prefix_lines,
   svn_boolean_t reached_one_eof;
   apr_size_t i;
 
-  /* Make sure prefix_lines is set correctly, even if we exit early because
-   * one of the files is empty. */
+  /* Make sure prefix_lines and suffix_lines are set correctly, even if we
+   * exit early because one of the files is empty. */
   *prefix_lines = 0;
+  *suffix_lines = 0;
 
   /* Open datasources and read first chunk */
   for (i = 0; i < datasources_len; i++)
@@ -730,13 +783,18 @@ datasources_open(void *baton, apr_off_t *prefix_lines,
       /* There will not be any identical prefix/suffix, so we're done. */
       return SVN_NO_ERROR;
 
+#ifndef SVN_DISABLE_PREFIX_SUFFIX_SCANNING
+
   SVN_ERR(find_identical_prefix(&reached_one_eof, prefix_lines,
                                 files, datasources_len, file_baton->pool));
 
   if (!reached_one_eof)
     /* No file consisted totally of identical prefix,
      * so there may be some identical suffix.  */
-    SVN_ERR(find_identical_suffix(files, datasources_len, file_baton->pool));
+    SVN_ERR(find_identical_suffix(suffix_lines, files, datasources_len,
+                                  file_baton->pool));
+
+#endif
 
   /* Copy local results back to baton. */
   for (i = 0; i < datasources_len; i++)
@@ -1177,9 +1235,8 @@ svn_diff_file_diff_2(svn_diff_t **diff,
                      const svn_diff_file_options_t *options,
                      apr_pool_t *pool)
 {
-  svn_diff__file_baton_t baton;
+  svn_diff__file_baton_t baton = { 0 };
 
-  memset(&baton, 0, sizeof(baton));
   baton.options = options;
   baton.files[0].path = original;
   baton.files[1].path = modified;
@@ -1199,9 +1256,8 @@ svn_diff_file_diff3_2(svn_diff_t **diff,
                       const svn_diff_file_options_t *options,
                       apr_pool_t *pool)
 {
-  svn_diff__file_baton_t baton;
+  svn_diff__file_baton_t baton = { 0 };
 
-  memset(&baton, 0, sizeof(baton));
   baton.options = options;
   baton.files[0].path = original;
   baton.files[1].path = modified;
@@ -1223,9 +1279,8 @@ svn_diff_file_diff4_2(svn_diff_t **diff,
                       const svn_diff_file_options_t *options,
                       apr_pool_t *pool)
 {
-  svn_diff__file_baton_t baton;
+  svn_diff__file_baton_t baton = { 0 };
 
-  memset(&baton, 0, sizeof(baton));
   baton.options = options;
   baton.files[0].path = original;
   baton.files[1].path = modified;
@@ -1580,7 +1635,7 @@ output_unified_diff_modified(void *baton,
 
       if (output_baton->show_c_function)
         {
-          int p;
+          apr_size_t p;
           const char *invalid_character;
 
           /* Save the extra context for later use.
@@ -1864,7 +1919,7 @@ flush_context_saver(context_saver_t *cs,
   int i;
   for (i = 0; i < SVN_DIFF__UNIFIED_CONTEXT_SIZE; i++)
     {
-      int slot = (i + cs->next_slot) % SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+      apr_size_t slot = (i + cs->next_slot) % SVN_DIFF__UNIFIED_CONTEXT_SIZE;
       if (cs->data[slot])
         {
           apr_size_t len = cs->len[slot];
@@ -2258,7 +2313,8 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
   /* Check what eol marker we should use for conflict markers.
      We use the eol marker of the modified file and fall back on the
      platform's eol marker if that file doesn't contain any newlines. */
-  eol = svn_eol__detect_eol(baton.buffer[1], baton.endp[1]);
+  eol = svn_eol__detect_eol(baton.buffer[1], baton.endp[1] - baton.buffer[1],
+                            NULL);
   if (! eol)
     eol = APR_EOL_STR;
   baton.marker_eol = eol;

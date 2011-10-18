@@ -32,6 +32,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
+import java.io.UnsupportedEncodingException;
 import java.text.ParseException;
 import java.util.Collection;
 import java.util.Arrays;
@@ -127,6 +128,35 @@ public class BasicTests extends SVNTests
             fail("Version should always be available unless the " +
                  "native libraries failed to initialize: " + e);
         }
+    }
+
+    /**
+     * Test the JNIError class functionality
+     * @throws Throwable
+     */
+    public void testJNIError() throws Throwable
+    {
+        // build the test setup.
+        OneTest thisTest = new OneTest();
+
+        // Create a client, dispose it, then try to use it later
+        ISVNClient tempclient = new SVNClient();
+        tempclient.dispose();
+
+        // create Y and Y/Z directories in the repository
+        addExpectedCommitItem(null, thisTest.getUrl().toString(), "Y", NodeKind.none,
+                              CommitItemStateFlags.Add);
+        Set<String> urls = new HashSet<String>(1);
+        urls.add(thisTest.getUrl() + "/Y");
+        try 
+        {
+            tempclient.mkdir(urls, false, null, new ConstMsg("log_msg"), null);
+        } 
+        catch(JNIError e)
+        {
+	        return; // Test passes!
+        }
+        fail("A JNIError should have been thrown here.");
     }
 
     /**
@@ -1331,7 +1361,7 @@ public class BasicTests extends SVNTests
                 greekWC.getItemContent("A/D/gamma"));
         thisTest.getWc().setItemIsSwitched("iota", true);
         client.doSwitch(iotaPath, gammaUrl, null, Revision.HEAD, Depth.unknown,
-                false, false, false);
+                        false, false, false, true);
 
         // check the status of the working copy
         thisTest.checkStatus();
@@ -1350,7 +1380,7 @@ public class BasicTests extends SVNTests
         thisTest.getWc().addItem("A/D/H/tau",
                 thisTest.getWc().getItemContent("A/D/G/tau"));
         client.doSwitch(adhPath, adgURL, null, Revision.HEAD, Depth.files,
-                false, false, false);
+                        false, false, false, true);
 
         // check the status of the working copy
         thisTest.checkStatus();
@@ -1374,9 +1404,10 @@ public class BasicTests extends SVNTests
         thisTest.getWc().setItemTextStatus("A/D/H/chi", Status.Kind.modified);
 
         // set a property on A/D/G/rho file
-        client.propertySet(thisTest.getWCPath()+"/A/D/G/rho", "abc",
-                           (new String("def")).getBytes(),
-                           Depth.infinity, null, false, null, null);
+        pathSet.clear();
+        pathSet.add(thisTest.getWCPath()+"/A/D/G/rho");
+        client.propertySetLocal(pathSet, "abc", (new String("def")).getBytes(),
+                                Depth.infinity, null, false);
         thisTest.getWc().setItemPropStatus("A/D/G/rho", Status.Kind.modified);
 
         // set a property on A/B/F directory
@@ -2048,7 +2079,9 @@ public class BasicTests extends SVNTests
                          -1, info.getReposSize());
 
            // Examine depth
-           assertEquals(Depth.infinity, info.getDepth());
+           assertEquals("Unexpected depth for '" + info + "'",
+                        (isFile ? Depth.unknown : Depth.infinity),
+                        info.getDepth());
         }
 
         // Create wc with a depth of Depth.empty
@@ -3060,7 +3093,9 @@ public class BasicTests extends SVNTests
         MyInfoCallback callback = new MyInfoCallback();
         client.info2(tcTest.getWCPath() + "/A/B/E/alpha", null,
                 null, Depth.unknown, null, callback);
-        ConflictDescriptor conflict = callback.getInfo().getConflictDescriptor();
+        Set<ConflictDescriptor> conflicts = callback.getInfo().getConflicts();
+        assertNotNull("Conflict should not be null", conflicts);
+        ConflictDescriptor conflict = conflicts.iterator().next();
 
         assertNotNull("Conflict should not be null", conflict);
 
@@ -3072,6 +3107,53 @@ public class BasicTests extends SVNTests
         assertEquals(conflict.getSrcRightVersion().getNodeKind(), NodeKind.none);
         assertEquals(conflict.getSrcRightVersion().getReposURL(), tcTest.getUrl().toString());
         assertEquals(conflict.getSrcRightVersion().getPegRevision(), 2L);
+
+    }
+
+    /**
+     * Test the basic SVNClient.propertySetRemote functionality.
+     * @throws Throwable
+     */
+    public void testPropEdit() throws Throwable
+    {
+        final String PROP = "abc";
+        final byte[] VALUE = new String("def").getBytes();
+        final byte[] NEWVALUE = new String("newvalue").getBytes();
+        // create the test working copy
+        OneTest thisTest = new OneTest();
+
+        Set<String> pathSet = new HashSet<String>();
+        // set a property on A/D/G/rho file
+        pathSet.clear();
+        pathSet.add(thisTest.getWCPath()+"/A/D/G/rho");
+        client.propertySetLocal(pathSet, PROP, VALUE,
+                                Depth.infinity, null, false);
+        thisTest.getWc().setItemPropStatus("A/D/G/rho", Status.Kind.modified);
+
+        // test the status of the working copy
+        thisTest.checkStatus();
+
+        // commit the changes
+        checkCommitRevision(thisTest, "wrong revision number from commit", 2,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+
+        thisTest.getWc().setItemPropStatus("A/D/G/rho", Status.Kind.normal);
+
+        // check the status of the working copy
+        thisTest.checkStatus();
+        
+        // now edit the propval directly in the repository
+        long baseRev = 2L;
+        client.propertySetRemote(thisTest.getUrl()+"/A/D/G/rho", baseRev, PROP, NEWVALUE,
+                                 new ConstMsg("edit prop"), false, null, null);
+        
+        // update the WC and verify that the property was changed
+        client.update(thisTest.getWCPathSet(), Revision.HEAD, Depth.infinity, false, false,
+                      false, false);
+        byte[] propVal = client.propertyGet(thisTest.getWCPath()+"/A/D/G/rho", PROP, null, null);
+
+        assertEquals(new String(propVal), new String(NEWVALUE));
 
     }
 
@@ -3338,6 +3420,16 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test an explicit expose of SVNClient.
+     * (This used to cause a fatal exception in the Java Runtime)
+     */
+    public void testDispose() throws Throwable
+    {
+      SVNClient cl = new SVNClient();
+      cl.dispose();
+    }
+
+    /**
      * @return <code>file</code> converted into a -- possibly
      * <code>canonical</code>-ized -- Subversion-internal path
      * representation.
@@ -3462,9 +3554,10 @@ public class BasicTests extends SVNTests
     {
         private List<Status> statuses = new ArrayList<Status>();
 
-        public void doStatus(Status status)
+        public void doStatus(String path, Status status)
         {
-            statuses.add(status);
+            if (status != null)
+                statuses.add(status);
         }
 
         public Status[] getStatusArray()
@@ -3587,8 +3680,17 @@ public class BasicTests extends SVNTests
                                       Map<String, byte[]> revprops,
                                       boolean hasChildren)
             {
-                String author = new String(revprops.get("svn:author"));
-                String message = new String(revprops.get("svn:log"));
+                String author, message;
+                try {
+                    author = new String(revprops.get("svn:author"), "UTF8");
+                } catch (UnsupportedEncodingException e) {
+                    author = new String(revprops.get("svn:author"));
+                }
+                try {
+                    message = new String(revprops.get("svn:log"), "UTF8");
+                } catch (UnsupportedEncodingException e) {
+                    message = new String(revprops.get("svn:log"));
+                }
                 long timeMicros;
 
                 try {
@@ -3944,15 +4046,22 @@ public class BasicTests extends SVNTests
     private void setprop(String path, String name, String value)
         throws ClientException
     {
-        client.propertySet(path, name, value != null ? value.getBytes() : null,
-                           Depth.empty, null, false, null, null);
+        Set<String> paths = new HashSet<String>();
+        paths.add(path);
+
+        client.propertySetLocal(paths, name,
+                                value != null ? value.getBytes() : null,
+                                Depth.empty, null, false);
     }
 
     private void setprop(String path, String name, byte[] value)
         throws ClientException
     {
-        client.propertySet(path, name, value, Depth.empty,
-                           null, false, null, null);
+        Set<String> paths = new HashSet<String>();
+        paths.add(path);
+
+        client.propertySetLocal(paths, name, value, Depth.empty,
+                                null, false);
     }
 
     private long commit(OneTest thisTest, String msg)

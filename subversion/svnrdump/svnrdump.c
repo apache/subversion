@@ -36,8 +36,7 @@
 #include "svn_string.h"
 #include "svn_props.h"
 
-#include "dump_editor.h"
-#include "load_editor.h"
+#include "svnrdump.h"
 
 #include "private/svn_cmdline_private.h"
 
@@ -80,6 +79,7 @@ enum svn_svnrdump__longopt_t
     opt_auth_nocache,
     opt_non_interactive,
     opt_incremental,
+    opt_trust_server_cert,
     opt_version,
   };
 
@@ -88,6 +88,7 @@ enum svn_svnrdump__longopt_t
                                    opt_auth_username, \
                                    opt_auth_password, \
                                    opt_auth_nocache, \
+                                   opt_trust_server_cert, \
                                    opt_non_interactive
 
 static const svn_opt_subcommand_desc2_t svnrdump__cmd_table[] =
@@ -139,6 +140,12 @@ static const apr_getopt_option_t svnrdump__options[] =
                          "For example:\n"
                          "                             "
                          "    servers:global:http-library=serf")},
+    {"trust-server-cert", opt_trust_server_cert, 0,
+                      N_("accept SSL server certificates from unknown\n"
+                         "                             "
+                         "certificate authorities without prompting (but only\n"
+                         "                             "
+                         "with '--non-interactive')") },
     {0, 0, 0, 0}
   };
 
@@ -156,6 +163,7 @@ struct replay_baton {
 
 /* Option set */
 typedef struct opt_baton_t {
+  svn_client_ctx_t *ctx;
   svn_ra_session_t *session;
   const char *url;
   svn_boolean_t help;
@@ -178,6 +186,7 @@ replay_revstart(svn_revnum_t revision,
                 apr_pool_t *pool)
 {
   struct replay_baton *rb = replay_baton;
+  apr_hash_t *normal_props;
   svn_stringbuf_t *propstring;
   svn_stream_t *stdout_stream;
   svn_stream_t *revprop_stream;
@@ -188,10 +197,10 @@ replay_revstart(svn_revnum_t revision,
   SVN_ERR(svn_stream_printf(stdout_stream, pool,
                             SVN_REPOS_DUMPFILE_REVISION_NUMBER
                             ": %ld\n", revision));
-  SVN_ERR(normalize_props(rev_props, pool));
+  SVN_ERR(svn_rdump__normalize_props(&normal_props, rev_props, pool));
   propstring = svn_stringbuf_create_ensure(0, pool);
   revprop_stream = svn_stream_from_stringbuf(propstring, pool);
-  SVN_ERR(svn_hash_write2(rev_props, revprop_stream, "PROPS-END", pool));
+  SVN_ERR(svn_hash_write2(normal_props, revprop_stream, "PROPS-END", pool));
   SVN_ERR(svn_stream_close(revprop_stream));
 
   /* Prop-content-length: 13 */
@@ -237,22 +246,21 @@ replay_revend(svn_revnum_t revision,
   return SVN_NO_ERROR;
 }
 
-/* Set *SESSION to a new RA session opened to URL.  Allocate *SESSION
- * and related data structures in POOL.  Use CONFIG_DIR and pass
- * USERNAME, PASSWORD, CONFIG_DIR and NO_AUTH_CACHE to initialize the
- * authorization baton.  CONFIG_OPTIONS (if not NULL) is a list of
- * configuration overrides.
+/* Initialize the RA layer, and set *CTX to a new client context baton
+ * allocated from POOL.  Use CONFIG_DIR and pass USERNAME, PASSWORD,
+ * CONFIG_DIR and NO_AUTH_CACHE to initialize the authorization baton.
+ * CONFIG_OPTIONS (if not NULL) is a list of configuration overrides.
  */
 static svn_error_t *
-open_connection(svn_ra_session_t **session,
-                const char *url,
-                svn_boolean_t non_interactive,
-                const char *username,
-                const char *password,
-                const char *config_dir,
-                svn_boolean_t no_auth_cache,
-                apr_array_header_t *config_options,
-                apr_pool_t *pool)
+init_client_context(svn_client_ctx_t **ctx_p,
+                    svn_boolean_t non_interactive,
+                    const char *username,
+                    const char *password,
+                    const char *config_dir,
+                    svn_boolean_t no_auth_cache,
+                    svn_boolean_t trust_server_cert,
+                    apr_array_header_t *config_options,
+                    apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx = NULL;
   svn_config_t *cfg_config;
@@ -277,10 +285,10 @@ open_connection(svn_ra_session_t **session,
   /* Default authentication providers for non-interactive use */
   SVN_ERR(svn_cmdline_create_auth_baton(&(ctx->auth_baton), non_interactive,
                                         username, password, config_dir,
-                                        no_auth_cache, FALSE, cfg_config,
-                                        ctx->cancel_func, ctx->cancel_baton,
-                                        pool));
-  SVN_ERR(svn_client_open_ra_session(session, url, ctx, pool));
+                                        no_auth_cache, trust_server_cert,
+                                        cfg_config, ctx->cancel_func,
+                                        ctx->cancel_baton, pool));
+  *ctx_p = ctx;
   return SVN_NO_ERROR;
 }
 
@@ -350,8 +358,8 @@ replay_revisions(svn_ra_session_t *session,
 
   SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
 
-  SVN_ERR(get_dump_editor(&dump_editor, &dump_baton, stdout_stream,
-                          check_cancel, NULL, pool));
+  SVN_ERR(svn_rdump__get_dump_editor(&dump_editor, &dump_baton, stdout_stream,
+                                     check_cancel, NULL, pool));
 
   replay_baton = apr_pcalloc(pool, sizeof(*replay_baton));
   replay_baton->editor = dump_editor;
@@ -431,25 +439,25 @@ replay_revisions(svn_ra_session_t *session,
 
 /* Read a dumpstream from stdin, and use it to feed a loader capable
  * of transmitting that information to the repository located at URL
- * (to which SESSION has been opened).
+ * (to which SESSION has been opened).  AUX_SESSION is a second RA
+ * session opened to the same URL for performing auxiliary out-of-band
+ * operations.
  */
 static svn_error_t *
 load_revisions(svn_ra_session_t *session,
+               svn_ra_session_t *aux_session,
                const char *url,
                svn_boolean_t quiet,
                apr_pool_t *pool)
 {
   apr_file_t *stdin_file;
   svn_stream_t *stdin_stream;
-  const svn_repos_parse_fns2_t *parser;
-  void *parse_baton;
 
   apr_file_open_stdin(&stdin_file, pool);
   stdin_stream = svn_stream_from_aprfile2(stdin_file, FALSE, pool);
 
-  SVN_ERR(get_dumpstream_loader(&parser, &parse_baton, session, pool));
-  SVN_ERR(drive_dumpstream_loader(stdin_stream, parser, parse_baton,
-                                  session, check_cancel, NULL, pool));
+  SVN_ERR(svn_rdump__load_dumpstream(stdin_stream, session, aux_session,
+                                     quiet, check_cancel, NULL, pool));
 
   SVN_ERR(svn_stream_close(stdin_stream));
 
@@ -536,7 +544,11 @@ load_cmd(apr_getopt_t *os,
          apr_pool_t *pool)
 {
   opt_baton_t *opt_baton = baton;
-  return load_revisions(opt_baton->session, opt_baton->url,
+  svn_ra_session_t *aux_session;
+
+  SVN_ERR(svn_client_open_ra_session(&aux_session, opt_baton->url,
+                                     opt_baton->ctx, pool));
+  return load_revisions(opt_baton->session, aux_session, opt_baton->url,
                         opt_baton->quiet, pool);
 }
 
@@ -577,6 +589,11 @@ validate_and_resolve_revisions(opt_baton_t *opt_baton,
     {
       provided_start_rev = opt_baton->start_revision.value.number;
     }
+  else if (opt_baton->start_revision.kind == svn_opt_revision_head)
+    {
+      opt_baton->start_revision.kind = svn_opt_revision_number;
+      opt_baton->start_revision.value.number = latest_revision;
+    }
   else if (opt_baton->start_revision.kind == svn_opt_revision_unspecified)
     {
       opt_baton->start_revision.kind = svn_opt_revision_number;
@@ -610,6 +627,11 @@ validate_and_resolve_revisions(opt_baton_t *opt_baton,
         opt_baton->end_revision.value.number = provided_start_rev;
       else
         opt_baton->end_revision.value.number = latest_revision;
+    }
+  else if (opt_baton->end_revision.kind == svn_opt_revision_head)
+    {
+      opt_baton->end_revision.kind = svn_opt_revision_number;
+      opt_baton->end_revision.value.number = latest_revision;
     }
 
   if (opt_baton->end_revision.kind != svn_opt_revision_number)
@@ -652,17 +674,29 @@ main(int argc, const char **argv)
   const char *username = NULL;
   const char *password = NULL;
   svn_boolean_t no_auth_cache = FALSE;
+  svn_boolean_t trust_server_cert = FALSE;
   svn_boolean_t non_interactive = FALSE;
   apr_array_header_t *config_options = NULL;
   apr_getopt_t *os;
   const char *first_arg;
   apr_array_header_t *received_opts;
+  apr_allocator_t *allocator;
   int i;
 
   if (svn_cmdline_init ("svnrdump", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
-  pool = svn_pool_create(NULL);
+  /* Create our top-level pool.  Use a separate mutexless allocator,
+   * given this application is single threaded.
+   */
+  if (apr_allocator_create(&allocator))
+    return EXIT_FAILURE;
+
+  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
+
+  pool = svn_pool_create_ex(NULL, allocator);
+  apr_allocator_owner_set(allocator, pool);
+
   opt_baton = apr_pcalloc(pool, sizeof(*opt_baton));
   opt_baton->start_revision.kind = svn_opt_revision_unspecified;
   opt_baton->end_revision.kind = svn_opt_revision_unspecified;
@@ -770,6 +804,9 @@ main(int argc, const char **argv)
         case opt_incremental:
           opt_baton->incremental = TRUE;
           break;
+        case opt_trust_server_cert:
+          trust_server_cert = TRUE;
+          break;
         case opt_config_option:
           if (!config_options)
               config_options =
@@ -803,7 +840,7 @@ main(int argc, const char **argv)
             }
 
           else
-            { 
+            {
               SVNRDUMP_ERR(help_cmd(NULL, NULL, pool));
               svn_pool_destroy(pool);
               exit(EXIT_FAILURE);
@@ -877,29 +914,53 @@ main(int argc, const char **argv)
       exit(EXIT_SUCCESS);
     }
 
-  /* Only continue if the only not option argument is a url */
-  if ((os->ind != os->argc-1)
-      || !svn_path_is_url(os->argv[os->ind]))
+  /* --trust-server-cert can only be used with --non-interactive */
+  if (trust_server_cert && !non_interactive)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--trust-server-cert requires "
+                               "--non-interactive"));
+      return svn_cmdline_handle_exit_error(err, pool, "svnrdump: ");
+    }
+
+  /* Expect one more non-option argument:  the repository URL. */
+  if (os->ind != os->argc - 1)
     {
       SVNRDUMP_ERR(usage(argv[0], pool));
       svn_pool_destroy(pool);
       exit(EXIT_FAILURE);
     }
+  else
+    {
+      const char *repos_url;
 
-  SVNRDUMP_ERR(svn_utf_cstring_to_utf8(&(opt_baton->url),
-                                       os->argv[os->ind], pool));
+      SVNRDUMP_ERR(svn_utf_cstring_to_utf8(&repos_url,
+                                           os->argv[os->ind], pool));
+      if (! svn_path_is_url(repos_url))
+        {
+          err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, 0,
+                                  "Target '%s' is not a URL",
+                                  repos_url);
+          SVNRDUMP_ERR(err);
+          svn_pool_destroy(pool);
+          exit(EXIT_FAILURE);
+        }
+      opt_baton->url = svn_uri_canonicalize(repos_url, pool);
+    }
 
-  opt_baton->url = svn_uri_canonicalize(os->argv[os->ind], pool);
+  SVNRDUMP_ERR(init_client_context(&(opt_baton->ctx),
+                                   non_interactive,
+                                   username,
+                                   password,
+                                   config_dir,
+                                   no_auth_cache,
+                                   trust_server_cert,
+                                   config_options,
+                                   pool));
 
-  SVNRDUMP_ERR(open_connection(&(opt_baton->session),
-                               opt_baton->url,
-                               non_interactive,
-                               username,
-                               password,
-                               config_dir,
-                               no_auth_cache,
-                               config_options,
-                               pool));
+  SVNRDUMP_ERR(svn_client_open_ra_session(&(opt_baton->session),
+                                          opt_baton->url,
+                                          opt_baton->ctx, pool));
 
   /* Have sane opt_baton->start_revision and end_revision defaults if
      unspecified.  */

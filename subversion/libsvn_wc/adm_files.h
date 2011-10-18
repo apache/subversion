@@ -61,34 +61,19 @@ svn_boolean_t svn_wc__adm_area_exists(const char *adm_abspath,
  * locally added (even if it replaces an existing base node).  Return an
  * error if there is no pristine text for any other reason.
  *
+ * If SIZE is not NULL, set *SIZE to the length of the pristine stream in
+ * BYTES or to SVN_INVALID_FILESIZE if no pristine is available for this
+ * file.
+ *
  * For more detail, see the description of svn_wc_get_pristine_contents2().
  */
 svn_error_t *
 svn_wc__get_pristine_contents(svn_stream_t **contents,
+                              svn_filesize_t *size,
                               svn_wc__db_t *db,
                               const char *local_abspath,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
-
-
-/* Set *CONTENTS to a readonly stream on the pristine text of the base
- * version of LOCAL_ABSPATH in DB.  If LOCAL_ABSPATH is locally replaced,
- * this is distinct from svn_wc__get_pristine_contents(), otherwise it is
- * the same.
- *
- * (In WC-1 terminology, this was known as "the revert base" if the node is
- * replaced by a copy, otherwise simply as "the base".)
- *
- * If the base version of LOCAL_ABSPATH is not present (e.g. because the
- * file is locally added), set *CONTENTS to NULL.
- * The base version of LOCAL_ABSPATH must be a file. */
-svn_error_t *
-svn_wc__get_ultimate_base_contents(svn_stream_t **contents,
-                                   svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool);
-
 
 /* Set *RESULT_ABSPATH to the absolute path to a readable file containing
    the WC-1 "normal text-base" of LOCAL_ABSPATH in DB.
@@ -115,69 +100,6 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
                                const char *local_abspath,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
-
-/* Set *FINFO to the status of the pristine text of LOCAL_ABSPATH in DB.
-   Only the following fields are guaranteed to be set:
-     APR_FINFO_TYPE
-     APR_FINFO_SIZE
-     APR_FINFO_MTIME
- */
-svn_error_t *
-svn_wc__get_pristine_text_status(apr_finfo_t *finfo,
-                                 svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool);
-
-/* Set *RESULT_ABSPATH to the path of the ultimate base text of the
-   versioned file LOCAL_ABSPATH in DB.  In WC-1 terms this means the
-   "normal text-base" or, if the node is replaced by a copy or move, the
-   "revert-base".  */
-svn_error_t *
-svn_wc__ultimate_base_text_path(const char **result_abspath,
-                                svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool);
-
-/* Set *RESULT_ABSPATH to the path of the ultimate base text of the
-   versioned file LOCAL_ABSPATH in DB.  In WC-1 terms this means the
-   "normal text-base" or, if the node is replaced by a copy or move, the
-   "revert-base".
-
-   If the node LOCAL_ABSPATH has no such pristine text, return an error of
-   type SVN_ERR_WC_PATH_UNEXPECTED_STATUS.  */
-svn_error_t *
-svn_wc__ultimate_base_text_path_to_read(const char **result_abspath,
-                                        svn_wc__db_t *db,
-                                        const char *local_abspath,
-                                        apr_pool_t *result_pool,
-                                        apr_pool_t *scratch_pool);
-
-/* Set *SHA1_CHECKSUM and *MD5_CHECKSUM to the SHA-1 and MD-5 checksums of
- * the BASE_NODE pristine text of LOCAL_ABSPATH in DB, or to NULL if it has
- * no BASE_NODE.  SHA1_CHECKSUM or MD5_CHECKSUM may be NULL if not required.
- * Allocate the checksums in RESULT_POOL. */
-svn_error_t *
-svn_wc__get_ultimate_base_checksums(const svn_checksum_t **sha1_checksum,
-                                    const svn_checksum_t **md5_checksum,
-                                    svn_wc__db_t *db,
-                                    const char *local_abspath,
-                                    apr_pool_t *result_pool,
-                                    apr_pool_t *scratch_pool);
-
-/* Set *SHA1_CHECKSUM and *MD5_CHECKSUM to the SHA-1 and MD-5 checksums of
- * the WORKING_NODE pristine text of LOCAL_ABSPATH in DB, or to NULL if it has
- * no WORKING_NODE.  SHA1_CHECKSUM or MD5_CHECKSUM may be NULL if not required.
- * Allocate the checksums in RESULT_POOL. */
-svn_error_t *
-svn_wc__get_working_checksums(const svn_checksum_t **sha1_checksum,
-                              const svn_checksum_t **md5_checksum,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *result_pool,
-                              apr_pool_t *scratch_pool);
-
 
 
 /*** Opening all kinds of adm files ***/
@@ -209,7 +131,7 @@ svn_wc__open_writable_base(svn_stream_t **stream,
                            svn_checksum_t **md5_checksum,
                            svn_checksum_t **sha1_checksum,
                            svn_wc__db_t *db,
-                           const char *local_abspath,
+                           const char *wri_abspath,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
@@ -230,14 +152,6 @@ svn_error_t *
 svn_wc__adm_cleanup_tmp_area(svn_wc__db_t *db,
                              const char *adm_abspath,
                              apr_pool_t *scratch_pool);
-
-
-/* Return a path where nothing exists on disk, within the admin directory
-   belonging to the versioned directory ADM_ABSPATH in DB. */
-const char *
-svn_wc__nonexistent_path(svn_wc__db_t *db,
-                         const char *adm_abspath,
-                         apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

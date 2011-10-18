@@ -26,7 +26,7 @@ package org.apache.subversion.javahl;
 import org.apache.subversion.javahl.types.NodeKind;
 
 /**
- * This class describes a item which will be commited.
+ * This class describes a item which will be committed.
  */
 public class CommitItem implements java.io.Serializable
 {
@@ -50,7 +50,7 @@ public class CommitItem implements java.io.Serializable
     NodeKind nodeKind;
 
     /**
-     * the kind of change to be commited (See CommitItemStateFlages)
+     * the kind of change to be committed (See CommitItemStateFlages)
      */
     int stateFlags;
 

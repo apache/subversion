@@ -101,7 +101,7 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
     {
       path = svn_dirent_join(path, summary->path, pool);
 
-      /* Convert non-urls to local style, so that things like "" 
+      /* Convert non-urls to local style, so that things like ""
          show up as "." */
       path = svn_dirent_local_style(path, pool);
     }
@@ -137,7 +137,7 @@ summarize_regular(const svn_client_diff_summarize_t *summary,
     {
       path = svn_dirent_join(path, summary->path, pool);
 
-      /* Convert non-urls to local style, so that things like "" 
+      /* Convert non-urls to local style, so that things like ""
          show up as "." */
       path = svn_dirent_local_style(path, pool);
     }
@@ -166,8 +166,8 @@ svn_cl__diff(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *options;
   apr_array_header_t *targets;
-  apr_file_t *outfile, *errfile;
-  apr_status_t status;
+  svn_stream_t *outstream;
+  svn_stream_t *errstream;
   const char *old_target, *new_target;
   apr_pool_t *iterpool;
   svn_boolean_t pegged_diff = FALSE;
@@ -180,12 +180,10 @@ svn_cl__diff(apr_getopt_t *os,
   else
     options = NULL;
 
-  /* Get an apr_file_t representing stdout and stderr, which is where
+  /* Get streams representing stdout and stderr, which is where
      we'll have the external 'diff' program print to. */
-  if ((status = apr_file_open_stdout(&outfile, pool)))
-    return svn_error_wrap_apr(status, _("Can't open stdout"));
-  if ((status = apr_file_open_stderr(&errfile, pool)))
-    return svn_error_wrap_apr(status, _("Can't open stderr"));
+  SVN_ERR(svn_stream_for_stdout(&outstream, pool));
+  SVN_ERR(svn_stream_for_stderr(&errstream, pool));
 
   if (opt_state->xml)
     {
@@ -206,7 +204,7 @@ svn_cl__diff(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   if (! opt_state->old_target && ! opt_state->new_target
       && (targets->nelts == 2)
@@ -246,7 +244,7 @@ svn_cl__diff(apr_getopt_t *os,
                                                            const char *));
 
       SVN_ERR(svn_cl__args_to_target_array_print_reserved(&tmp2, os, tmp,
-                                                          ctx, pool));
+                                                          ctx, FALSE, pool));
       SVN_ERR(svn_opt_parse_path(&old_rev, &old_target,
                                  APR_ARRAY_IDX(tmp2, 0, const char *),
                                  pool));
@@ -325,13 +323,19 @@ svn_cl__diff(apr_getopt_t *os,
                                      _("Path '%s' not relative to base URLs"),
                                      path);
 
-          path = svn_relpath_canonicalize(path, iterpool);
           if (svn_path_is_url(old_target))
-            target1 = svn_path_url_add_component2(old_target, path, iterpool);
+            target1 = svn_path_url_add_component2(
+                          old_target,
+                          svn_relpath_canonicalize(path, iterpool),
+                          iterpool);
           else
             target1 = svn_dirent_join(old_target, path, iterpool);
-          if (svn_path_is_url(old_target))
-            target2 = svn_path_url_add_component2(new_target, path, iterpool);
+
+          if (svn_path_is_url(new_target))
+            target2 = svn_path_url_add_component2(
+                          new_target,
+                          svn_relpath_canonicalize(path, iterpool),
+                          iterpool);
           else
             target2 = svn_dirent_join(new_target, path, iterpool);
 
@@ -347,8 +351,8 @@ svn_cl__diff(apr_getopt_t *os,
                      summarize_func, &target1,
                      ctx, iterpool));
           else
-            SVN_ERR(svn_client_diff5
-                    (options,
+            SVN_ERR(svn_client_diff6(
+                     options,
                      target1,
                      &(opt_state->start_revision),
                      target2,
@@ -361,8 +365,8 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->force,
                      opt_state->use_git_diff_format,
                      svn_cmdline_output_encoding(pool),
-                     outfile,
-                     errfile,
+                     outstream,
+                     errstream,
                      opt_state->changelists,
                      ctx, iterpool));
         }
@@ -392,8 +396,8 @@ svn_cl__diff(apr_getopt_t *os,
                      summarize_func, &truepath,
                      ctx, iterpool));
           else
-            SVN_ERR(svn_client_diff_peg5
-                    (options,
+            SVN_ERR(svn_client_diff_peg6(
+                     options,
                      truepath,
                      &peg_revision,
                      &opt_state->start_revision,
@@ -406,8 +410,8 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->force,
                      opt_state->use_git_diff_format,
                      svn_cmdline_output_encoding(pool),
-                     outfile,
-                     errfile,
+                     outstream,
+                     errstream,
                      opt_state->changelists,
                      ctx, iterpool));
         }

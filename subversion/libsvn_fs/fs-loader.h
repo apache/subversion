@@ -36,13 +36,14 @@ extern "C" {
 /* The FS loader library implements the a front end to "filesystem
    abstract providers" (FSAPs), which implement the svn_fs API.
 
-   The loader library divides up the FS API into five categories:
+   The loader library divides up the FS API into several categories:
 
      - Top-level functions, which operate on paths to an FS
      - Functions which operate on an FS object
      - Functions which operate on a transaction object
      - Functions which operate on a root object
      - Functions which operate on a history object
+     - Functions which operate on a noderev-ID object
 
    Some generic fields of the FS, transaction, root, and history
    objects are defined by the loader library; the rest are stored in
@@ -86,6 +87,11 @@ typedef struct fs_library_vtable_t
                                        apr_pool_t *common_pool);
   svn_error_t *(*upgrade_fs)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
                              apr_pool_t *common_pool);
+  svn_error_t *(*verify_fs)(svn_fs_t *fs, const char *path,
+                            /* ### notification? */
+                            svn_cancel_func_t cancel_func, void *cancel_baton,
+                            apr_pool_t *pool,
+                            apr_pool_t *common_pool);
   svn_error_t *(*delete_fs)(const char *path, apr_pool_t *pool);
   svn_error_t *(*hotcopy)(const char *src_path, const char *dest_path,
                           svn_boolean_t clean, apr_pool_t *pool);
@@ -168,9 +174,6 @@ typedef struct fs_vtable_t
   svn_error_t *(*begin_txn)(svn_fs_txn_t **txn_p, svn_fs_t *fs,
                             svn_revnum_t rev, apr_uint32_t flags,
                             apr_pool_t *pool);
-  svn_error_t *(*begin_obliteration_txn)(svn_fs_txn_t **txn_p, svn_fs_t *fs,
-                                         svn_revnum_t replacing_rev,
-                                         apr_pool_t *pool);
   svn_error_t *(*open_txn)(svn_fs_txn_t **txn, svn_fs_t *fs,
                            const char *name, apr_pool_t *pool);
   svn_error_t *(*purge_txn)(svn_fs_t *fs, const char *txn_id,
@@ -197,11 +200,6 @@ typedef struct fs_vtable_t
   svn_error_t *(*bdb_set_errcall)(svn_fs_t *fs,
                                   void (*handler)(const char *errpfx,
                                                   char *msg));
-  svn_error_t *(*validate_mergeinfo)(svn_mergeinfo_t *validated_mergeinfo,
-                                     svn_fs_t *fs,
-                                     svn_mergeinfo_t mergeinfo,
-                                     apr_pool_t *result_pool,
-                                     apr_pool_t *scratch_pool);
 } fs_vtable_t;
 
 
@@ -209,8 +207,6 @@ typedef struct txn_vtable_t
 {
   svn_error_t *(*commit)(const char **conflict_p, svn_revnum_t *new_rev,
                          svn_fs_txn_t *txn, apr_pool_t *pool);
-  svn_error_t *(*commit_obliteration)(svn_revnum_t replacing_rev,
-                                      svn_fs_txn_t *txn, apr_pool_t *pool);
   svn_error_t *(*abort)(svn_fs_txn_t *txn, apr_pool_t *pool);
   svn_error_t *(*get_prop)(svn_string_t **value_p, svn_fs_txn_t *txn,
                            const char *propname, apr_pool_t *pool);
@@ -336,7 +332,6 @@ typedef struct root_vtable_t
                                 svn_fs_root_t *root,
                                 const apr_array_header_t *paths,
                                 svn_mergeinfo_inheritance_t inherit,
-                                svn_boolean_t validate_inherited_mergeinfo,
                                 svn_boolean_t include_descendants,
                                 apr_pool_t *pool);
 } root_vtable_t;

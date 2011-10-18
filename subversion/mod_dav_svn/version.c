@@ -250,6 +250,12 @@ get_option(const dav_resource *resource,
       apr_table_set(r->headers_out, SVN_DAV_TXN_STUB_HEADER,
                     apr_pstrcat(resource->pool, repos_root_uri, "/",
                                 dav_svn__get_txn_stub(r), (char *)NULL));
+      apr_table_set(r->headers_out, SVN_DAV_VTXN_ROOT_STUB_HEADER,
+                    apr_pstrcat(resource->pool, repos_root_uri, "/",
+                                dav_svn__get_vtxn_root_stub(r), (char *)NULL));
+      apr_table_set(r->headers_out, SVN_DAV_VTXN_STUB_HEADER,
+                    apr_pstrcat(resource->pool, repos_root_uri, "/",
+                                dav_svn__get_vtxn_stub(r), (char *)NULL));
     }
 
   return NULL;
@@ -342,7 +348,6 @@ dav_svn__checkout(dav_resource *resource,
   /* Auto-Versioning Stuff */
   if (auto_checkout)
     {
-      dav_resource *res; /* ignored */
       const char *uuid_buf;
       void *data;
       const char *shared_activity, *shared_txn_name = NULL;
@@ -423,9 +428,9 @@ dav_svn__checkout(dav_resource *resource,
 
       /* Tweak the VCR in-place, making it into a WR.  (Ignore the
          NULL return value.) */
-      res = dav_svn__create_working_resource(resource,
-                                             shared_activity, shared_txn_name,
-                                             TRUE /* tweak in place */);
+      dav_svn__create_working_resource(resource,
+                                       shared_activity, shared_txn_name,
+                                       TRUE /* tweak in place */);
 
       /* Remember that this resource was auto-checked-out, so that
          auto_versionable allows us to do an auto-checkin and
@@ -792,7 +797,7 @@ cleanup_deltify(void *data)
      subpool, then destroy it before exiting. */
   apr_pool_t *subpool = svn_pool_create(cdb->pool);
 
-  err = svn_repos_open(&repos, cdb->repos_path, subpool);
+  err = svn_repos_open2(&repos, cdb->repos_path, NULL, subpool);
   if (err)
     {
       ap_log_perror(APLOG_MARK, APLOG_ERR, err->apr_err, cdb->pool,
@@ -1271,11 +1276,13 @@ dav_svn__push_locks(dav_resource *resource,
   svn_error_t *serr;
 
   serr = svn_fs_get_access(&fsaccess, resource->info->repos->fs);
-  if (serr)
+  if (serr || !fsaccess)
     {
       /* If an authenticated user name was attached to the request,
          then dav_svn_get_resource() should have already noticed and
          created an fs_access_t in the filesystem.  */
+      if (serr == NULL)
+        serr = svn_error_create(SVN_ERR_FS_LOCK_OWNER_MISMATCH, NULL, NULL);
       return dav_svn__sanitize_error(serr, "Lock token(s) in request, but "
                                      "missing an user name", HTTP_BAD_REQUEST,
                                      resource->info->r);
@@ -1425,6 +1432,12 @@ merge(dav_resource *target,
           svn_error_clear(serr);
           serr = SVN_NO_ERROR;
         }
+
+      /* HTTPv2 doesn't send DELETE after a successful MERGE so if
+         using the optional vtxn name mapping then delete it here. */
+      if (source->info->root.vtxn_name)
+        dav_svn__delete_activity(source->info->repos,
+                                 source->info->root.vtxn_name);
     }
   else
     {

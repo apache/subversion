@@ -454,11 +454,11 @@ authz_get_any_access(svn_config_t *cfg, const char *repos_name,
   baton.repos_path = "/";
   baton.qualified_repos_path = apr_pstrcat(pool, repos_name,
                                            ":/", (char *)NULL);
-  
+
   /* We could have used svn_config_enumerate2 for "repos_name:/".
    * However, this requires access for root explicitly (which the user
-   * may not always have). So we end up enumerating the sections in 
-   * the authz CFG and stop on the first match with some access for 
+   * may not always have). So we end up enumerating the sections in
+   * the authz CFG and stop on the first match with some access for
    * this user. */
   svn_config_enumerate_sections2(cfg, authz_get_any_access_parser_cb,
                                  &baton, pool);
@@ -723,8 +723,25 @@ static svn_boolean_t authz_validate_section(const char *name,
     svn_config_enumerate2(b->config, name, authz_validate_alias,
                           baton, pool);
   else
-    svn_config_enumerate2(b->config, name, authz_validate_rule,
-                          baton, pool);
+    {
+      /* Validate the section's name. Skip the optional REPOS_NAME. */
+      const char *fspath = strchr(name, ':');
+      if (fspath)
+        fspath++;
+      else
+        fspath = name;
+      if (! svn_fspath__is_canonical(fspath))
+        {
+          b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                                     "Section name '%s' contains non-canonical "
+                                     "fspath '%s'",
+                                     name, fspath);
+          return FALSE;
+        }
+
+      svn_config_enumerate2(b->config, name, authz_validate_rule,
+                            baton, pool);
+    }
 
   if (b->err)
     return FALSE;
@@ -746,7 +763,7 @@ svn_repos_authz_read(svn_authz_t **authz_p, const char *file,
   baton.err = SVN_NO_ERROR;
 
   /* Load the rule file. */
-  SVN_ERR(svn_config_read(&authz->cfg, file, must_exist, pool));
+  SVN_ERR(svn_config_read2(&authz->cfg, file, must_exist, TRUE, pool));
   baton.config = authz->cfg;
 
   /* Step through the entire rule file, stopping on error. */
@@ -776,10 +793,13 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
       return SVN_NO_ERROR;
     }
 
+  /* Sanity check. */
+  SVN_ERR_ASSERT(path[0] == '/');
+
   /* Determine the granted access for the requested path. */
   path = svn_fspath__canonicalize(path, pool);
   current_path = path;
-  
+
   while (!authz_get_path_access(authz->cfg, repos_name,
                                 current_path, user,
                                 required_access,

@@ -28,6 +28,8 @@
 
 import sys, os
 import getopt
+import shlex
+
 try:
   # Python >=3.0
   from subprocess import getstatusoutput as subprocess_getstatusoutput
@@ -129,7 +131,7 @@ class Permission:
     def parse_groups(self, groupsiter):
         for option, value in groupsiter:
             groupusers = []
-            for token in value.split():
+            for token in shlex.split(value):
                 # expand nested groups in place; no forward decls
                 if token[0] == "@":
                     try:
@@ -283,7 +285,7 @@ Options:
     -s NAME    Use section NAME as permission section (default is
                repository name, extracted from repository path)
     -R REV     Query revision REV for commit information (for tests)
-    -A AUTHOR  Check commit as if AUTHOR had commited it (for tests)
+    -A AUTHOR  Check commit as if AUTHOR had committed it (for tests)
     -h         Show this message
 """
 

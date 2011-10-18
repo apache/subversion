@@ -451,8 +451,12 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                                         apr_pool_t *pool)
 {
   const char *exceptions, *port_str, *timeout_str, *server_group;
-  const char *debug_str, *http_auth_types;
+  const char *debug_str;
   svn_boolean_t is_exception = FALSE;
+#ifdef SVN_NEON_0_26
+  const char *http_auth_types = NULL;
+#endif
+
   /* If we find nothing, default to nulls. */
   *proxy_host     = NULL;
   *proxy_port     = (unsigned int) -1;
@@ -461,7 +465,6 @@ static svn_error_t *get_server_settings(const char **proxy_host,
   port_str        = NULL;
   timeout_str     = NULL;
   debug_str       = NULL;
-  http_auth_types = NULL;
   *pk11_provider  = NULL;
 
   /* Use the default proxy-specific settings if and only if
@@ -791,7 +794,6 @@ svn_ra_neon__open(svn_ra_session_t *session,
   const char *pkcs11_provider;
   const char *useragent = NULL;
   const char *client_string = NULL;
-  svn_revnum_t ignored_revnum;
 
   SVN_ERR_ASSERT(svn_uri_is_canonical(repos_URL, pool));
 
@@ -799,10 +801,10 @@ svn_ra_neon__open(svn_ra_session_t *session,
     callbacks->get_client_string(callback_baton, &client_string, pool);
 
   if (client_string)
-    useragent = apr_pstrcat(pool, "SVN/" SVN_VERSION "/", client_string,
+    useragent = apr_pstrcat(pool, "SVN/" SVN_VER_NUMBER "/", client_string,
                             (char *)NULL);
   else
-    useragent = "SVN/" SVN_VERSION;
+    useragent = "SVN/" SVN_VER_NUMBER;
 
   /* Sanity check the URI */
   SVN_ERR(parse_url(uri, repos_URL));
@@ -927,8 +929,8 @@ svn_ra_neon__open(svn_ra_session_t *session,
     }
   else
     {
-      ne_set_useragent(sess, "SVN/" SVN_VERSION);
-      ne_set_useragent(sess2, "SVN/" SVN_VERSION);
+      ne_set_useragent(sess, "SVN/" SVN_VER_NUMBER);
+      ne_set_useragent(sess2, "SVN/" SVN_VER_NUMBER);
     }
 
   /* clean up trailing slashes from the URL */
@@ -950,6 +952,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
   ras->progress_baton = callbacks->progress_baton;
   ras->progress_func = callbacks->progress_func;
   ras->capabilities = apr_hash_make(ras->pool);
+  ras->supports_deadprop_count = svn_tristate_unknown;
   ras->vcc = NULL;
   ras->uuid = NULL;
   /* save config and server group in the auth parameter hash */
@@ -1075,8 +1078,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
 
   session->priv = ras;
 
-  return svn_ra_neon__exchange_capabilities(ras, corrected_url,
-                                            &ignored_revnum, pool);
+  return svn_ra_neon__exchange_capabilities(ras, corrected_url, NULL, pool);
 }
 
 
@@ -1113,18 +1115,18 @@ static svn_error_t *svn_ra_neon__get_repos_root(svn_ra_session_t *session,
 
   if (! ras->repos_root)
     {
-      svn_string_t bc_relative;
+      const char *bc_relative;
       svn_stringbuf_t *url_buf;
 
-      SVN_ERR(svn_ra_neon__get_baseline_info(NULL, NULL, &bc_relative,
-                                             NULL, ras, ras->url->data,
+      SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_relative, NULL,
+                                             ras, ras->url->data,
                                              SVN_INVALID_REVNUM, pool));
 
       /* Remove as many path components from the URL as there are components
          in bc_relative. */
       url_buf = svn_stringbuf_dup(ras->url, pool);
       svn_path_remove_components
-        (url_buf, svn_path_component_count(bc_relative.data));
+        (url_buf, svn_path_component_count(bc_relative));
       ras->repos_root = apr_pstrdup(ras->pool, url_buf->data);
     }
 
@@ -1143,19 +1145,13 @@ svn_ra_neon__get_path_relative_to_root(svn_ra_session_t *session,
   const char *root_url;
 
   SVN_ERR(svn_ra_neon__get_repos_root(session, &root_url, pool));
-  if (strcmp(root_url, url) == 0)
-    {
-      *rel_path = "";
-    }
-  else
-    {
-      *rel_path = svn_uri_is_child(root_url, url, pool);
-      if (! *rel_path)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("'%s' isn't a child of repository root "
-                                   "URL '%s'"),
-                                 url, root_url);
-    }
+  *rel_path = svn_uri_skip_ancestor(root_url, url, pool);
+  if (! *rel_path)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("'%s' isn't a child of repository root "
+                               "URL '%s'"),
+                             url, root_url);
+
   return SVN_NO_ERROR;
 }
 
@@ -1231,8 +1227,7 @@ static const svn_ra__vtable_t neon_vtable = {
   svn_ra_neon__replay,
   svn_ra_neon__has_capability,
   svn_ra_neon__replay_range,
-  svn_ra_neon__get_deleted_rev,
-  NULL  /* svn_ra_neon__obliterate_path_rev */
+  svn_ra_neon__get_deleted_rev
 };
 
 svn_error_t *

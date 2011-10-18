@@ -353,6 +353,11 @@ svn_subst_stream_translated_to_normal_form(svn_stream_t **stream,
  * in @a result_pool, and any temporary allocations will be made in
  * @a scratch_pool.
  *
+ * If the file at @a path is in fact a regular file, just read its content,
+ * which should be in the "normal form" for a special file.  This enables
+ * special files to be written and read on platforms that do not treat them
+ * as special.
+ *
  * @since New in 1.6.
  */
 svn_error_t *
@@ -367,6 +372,11 @@ svn_subst_read_specialfile(svn_stream_t **stream,
  * will create that file when the stream is closed. The stream will be
  * allocated in @a result_pool, and any temporary allocations will be
  * made in @a scratch_pool.
+ *
+ * If the platform does not support the semantics of the special file, write
+ * a regular file containing the "normal form" text.  This enables special
+ * files to be written and read on platforms that do not treat them as
+ * special.
  *
  * Note: the target file is created in a temporary location, then renamed
  *   into position, so the creation can be considered "atomic".
@@ -592,17 +602,6 @@ svn_subst_stream_detranslated(svn_stream_t **stream_p,
 
 /* EOL conversion and character encodings */
 
-/** Similar to svn_subst_translate_string2(), except that the information about
- * whether re-encoding or line ending translation were performed is discarded.
- *
- * @deprecated Provided for backward compatibility with the 1.6 API.
- */
-SVN_DEPRECATED
-svn_error_t *svn_subst_translate_string(svn_string_t **new_value,
-                                        const svn_string_t *value,
-                                        const char *encoding,
-                                        apr_pool_t *pool);
-
 /** Translate the string @a value from character encoding @a encoding to
  * UTF8, and also from its current line-ending style to LF line-endings.  If
  * @a encoding is @c NULL, translate from the system-default encoding.
@@ -635,6 +634,17 @@ svn_subst_translate_string2(svn_string_t **new_value,
                             svn_boolean_t repair,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
+
+/** Similar to svn_subst_translate_string2(), except that the information about
+ * whether re-encoding or line ending translation were performed is discarded.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
+svn_error_t *svn_subst_translate_string(svn_string_t **new_value,
+                                        const svn_string_t *value,
+                                        const char *encoding,
+                                        apr_pool_t *pool);
 
 /** Translate the string @a value from UTF8 and LF line-endings into native
  * character encoding and native line-endings.  If @a for_output is TRUE,

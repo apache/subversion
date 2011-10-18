@@ -27,6 +27,7 @@
 #include <apr_want.h>
 
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 #include <apr_pools.h>
 #include <apr_general.h>
@@ -383,7 +384,15 @@ svn_opt_print_generic_help2(const char *header,
   return;
 
  print_error:
-  svn_handle_error2(err, stderr, FALSE, "svn: ");
+  /* Issue #3014:
+   * Don't print anything on broken pipes. The pipe was likely
+   * closed by the process at the other end. We expect that
+   * process to perform error reporting as necessary.
+   *
+   * ### This assumes that there is only one error in a chain for
+   * ### SVN_ERR_IO_PIPE_WRITE_ERROR. See svn_cmdline_fputs(). */
+  if (err->apr_err != SVN_ERR_IO_PIPE_WRITE_ERROR)
+    svn_handle_error2(err, stderr, FALSE, "svn: ");
   svn_error_clear(err);
 }
 
@@ -766,10 +775,26 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
         }
 
       if (ret || end_revision.kind != svn_opt_revision_unspecified)
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("Syntax error parsing revision '%s'"),
-                                 &peg_rev[1]);
+        {
+          /* If an svn+ssh URL was used and it contains only one @,
+           * provide an error message that presents a possible solution
+           * to the parsing error (issue #2349). */
+          if (strncmp(path, "svn+ssh://", 10) == 0)
+            {
+              const char *at;
 
+              at = strchr(path, '@');
+              if (at && strrchr(path, '@') == at)
+                return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                         _("Syntax error parsing peg revision "
+                                           "'%s'; did you mean '%s@'?"),
+                                       &peg_rev[1], path);
+            }
+
+          return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                   _("Syntax error parsing peg revision '%s'"),
+                                   &peg_rev[1]);
+        }
       rev->kind = start_revision.kind;
       rev->value = start_revision.value;
     }
@@ -1048,13 +1073,14 @@ svn_opt__print_version_info(const char *pgm_name,
   SVN_ERR(svn_cmdline_printf(pool, _("%s, version %s\n"
                                      "   compiled %s, %s\n\n"), pgm_name,
                              SVN_VERSION, __DATE__, __TIME__));
-  SVN_ERR(svn_cmdline_fputs(_("Copyright (C) 2011 The Apache Software Foundation.\n"
-                              "This software consists of"
-                              " contributions made by many people;\n"
-                              "see the NOTICE file for more information.\n"
-                              "Subversion is open source software, see"
-                              " http://subversion.apache.org/\n\n"),
-                            stdout, pool));
+  SVN_ERR(svn_cmdline_fputs(
+             _("Copyright (C) 2011 The Apache Software Foundation.\n"
+               "This software consists of contributions made by many "
+               "people; see the NOTICE\n"
+               "file for more information.\n"
+               "Subversion is open source software, see "
+               "http://subversion.apache.org/\n\n"),
+             stdout, pool));
 
   if (footer)
     {

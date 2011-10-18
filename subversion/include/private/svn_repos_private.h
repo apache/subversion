@@ -37,57 +37,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/**
- * Permanently delete @a path at revision @a revision in @a fs.
- *
- * Do not change the content of any other node in the repository, even other
- * nodes that were copied from this one. The only other change in the
- * repository is to "copied from" pointers that were pointing to the
- * now-deleted node. These are removed or made to point to a previous
- * version of the now-deleted node.
- * (### TODO: details.)
- *
- * @a path is relative to the repository root and must start with "/".
- *
- * If administratively forbidden, return @c SVN_ERR_RA_NOT_AUTHORIZED. If not
- * implemented by the RA layer or by the server, return
- * @c SVN_ERR_RA_NOT_IMPLEMENTED.
- *
- * @note This functionality is not implemented in pre-1.7 servers and may not
- * be implemented in all 1.7 and later servers.
- *
- * @note TODO: Maybe create svn_repos_fs_begin_obliteration_txn() and
- * svn_repos_fs_commit_obliteration_txn() to enable an obliteration txn to be
- * constructed at a higher level.
- *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_repos__obliterate_path_rev(svn_repos_t *repos,
-                               const char *username,
-                               svn_revnum_t revision,
-                               const char *path,
-                               apr_pool_t *pool);
-
-/** Return the path to @a repos's pre-obliterate hook, allocated in
- * @a pool.
- *
- * @since New in 1.7.
- */
-const char *
-svn_repos__pre_obliterate_hook(svn_repos_t *repos,
-                               apr_pool_t *pool);
-
-/** Return the path to @a repos's post-obliterate hook, allocated in
- * @a pool.
- *
- * @since New in 1.7.
- */
-const char *
-svn_repos__post_obliterate_hook(svn_repos_t *repos,
-                                apr_pool_t *pool);
-
-
 /** Validate that property @a name is valid for use in a Subversion
  * repository; return @c SVN_ERR_REPOS_BAD_ARGS if it isn't.  For some
  * "svn:" properties, also validate the @a value, and return
