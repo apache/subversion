@@ -366,7 +366,7 @@ svn_wc__serialize_conflict(svn_skel_t **skel,
 
   /* Victim path (escaping separator chars). */
   victim_basename = svn_dirent_basename(conflict->local_abspath, result_pool);
-  SVN_ERR_ASSERT(strlen(victim_basename) > 0);
+  SVN_ERR_ASSERT(victim_basename[0]);
   svn_skel__prepend(svn_skel__str_atom(victim_basename, result_pool), c_skel);
 
   svn_skel__prepend(svn_skel__str_atom("conflict", result_pool), c_skel);
