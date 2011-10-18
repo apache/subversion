@@ -1199,36 +1199,40 @@ def upgrade_file_externals(sbox):
       })
 
 @Skip(svntest.main.is_ra_type_file)
-@XFail()
 def upgrade_absent(sbox):
-  "upgrade absent nodes"
-  
+  "upgrade absent nodes to server-excluded"
+
   # Install wc and repos
   replace_sbox_with_tarfile(sbox, 'upgrade_absent.tar.bz2')
   replace_sbox_repo_with_tarfile(sbox, 'upgrade_absent_repos.tar.bz2')
-  
+
   # Update config for authz
   svntest.main.write_restrictive_svnserve_conf(sbox.repo_dir)
   svntest.main.write_authz_file(sbox, { "/"      : "*=rw",
                                         "/A/B"   : "*=",
                                         "/A/B/E" : "jrandom = rw"})
-  
+
   # Attempt to use the working copy, this should give an error
   expected_stderr = wc_is_too_old_regex
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'info', sbox.wc_dir)
+
   # Now upgrade the working copy
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'upgrade', sbox.wc_dir)
 
-  # 
+  # Relocate to allow finding the repository
   svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
                                      'svn://127.0.0.1/authz_tests-2',
                                      sbox.repo_url, sbox.wc_dir)  
 
-  # This currently fails because the absent node is incorrectly upgraded
-  sbox.simple_update()
-  
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+  })
+
+  # Expect no changes and certainly no errors
+  svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output,
+                                        None, None)
+
 ########################################################################
 # Run the tests
 
