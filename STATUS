@@ -145,6 +145,11 @@ Candidate changes:
      +1: rhuijben (after r1185280 has been backported)
      +1: ivan
 
+ * r1185730
+   Update links in INSTALL.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
