@@ -149,7 +149,7 @@ extern "C" {
  * The bump to 29 renamed the pristine files from '<SHA1>' to '<SHA1>.svn-base'
  * and introduced the EXTERNALS store. Bumped in r1129286.
  *
- * == 1.7.x shipped with format ???
+ * == 1.7.x shipped with format 29
  *
  * Please document any further format changes here.
  */
