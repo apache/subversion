@@ -715,6 +715,28 @@ svn_repos_verify_fs(svn_repos_t *repos,
 /*** From load.c ***/
 
 svn_error_t *
+svn_repos_load_fs3(svn_repos_t *repos,
+                   svn_stream_t *dumpstream,
+                   enum svn_repos_load_uuid uuid_action,
+                   const char *parent_dir,
+                   svn_boolean_t use_pre_commit_hook,
+                   svn_boolean_t use_post_commit_hook,
+                   svn_boolean_t validate_props,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
+{
+  return svn_repos_load_fs4(repos, dumpstream,
+                            SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+                            uuid_action, parent_dir,
+                            use_pre_commit_hook, use_post_commit_hook,
+                            validate_props, notify_func, notify_baton,
+                            cancel_func, cancel_baton, pool);
+}
+
+svn_error_t *
 svn_repos_load_fs2(svn_repos_t *repos,
                    svn_stream_t *dumpstream,
                    svn_stream_t *feedback_stream,
@@ -800,6 +822,25 @@ svn_repos_load_fs(svn_repos_t *repos,
   return svn_repos_load_fs2(repos, dumpstream, feedback_stream,
                             uuid_action, parent_dir, FALSE, FALSE,
                             cancel_func, cancel_baton, pool);
+}
+
+svn_error_t *
+svn_repos_get_fs_build_parser3(const svn_repos_parse_fns2_t **callbacks,
+                               void **parse_baton,
+                               svn_repos_t *repos,
+                               svn_boolean_t use_history,
+                               svn_boolean_t validate_props,
+                               enum svn_repos_load_uuid uuid_action,
+                               const char *parent_dir,
+                               svn_repos_notify_func_t notify_func,
+                               void *notify_baton,
+                               apr_pool_t *pool)
+{
+  return svn_repos_get_fs_build_parser4(callbacks, parse_baton, repos,
+                                        SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+                                        use_history, validate_props,
+                                        uuid_action, parent_dir,
+                                        notify_func, notify_baton, pool);
 }
 
 svn_error_t *
