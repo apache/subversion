@@ -148,14 +148,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1167681
-   Don't invoke quicksort unnecessarily when combining mergeinfo rangelists.
-   Justification:
-     This speeds up --reintegrate merges, especially the pathological case
-     described here: http://svn.haxx.se/dev/archive-2011-09/0247.shtml
-   Votes:
-     +1: stsp, rhuijben, pburba
-
  * r1181609
    Fill in the repos_* fields of svn_wc_status3_t for nodes that only exist
    in the repository.
