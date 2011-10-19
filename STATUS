@@ -61,6 +61,15 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * 1177732, r1186092, r1186101, r1186107, r1186109
+   Fix issue 4035.
+   Justification:
+     Lots of user reports of checksum!=NULL assertions.
+   Branch:
+     1.7.x-issue4035
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
