@@ -27,7 +27,7 @@ Candidate changes:
  * r1185746, r1186059
    Fix up some erroneous "Could not frob some targets because..." warnings.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r1177732, r1186092, r1186101, r1186107, r1186109
    Fix issue 4035.
