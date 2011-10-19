@@ -219,6 +219,17 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
+/* Open an RA session (not connected to a WC) to TARGET.
+ * Similar to svn_client__ra_session_from_path() without BASE_DIR_ABSPATH. */
+svn_error_t *
+svn_client__ra_session_from_target(svn_ra_session_t **ra_session_p,
+                                   svn_revnum_t *rev_p,
+                                   const char **url_p,
+                                   svn_client_target_t *target,
+                                   const svn_opt_revision_t *revision,
+                                   svn_client_ctx_t *ctx,
+                                   apr_pool_t *pool);
+
 /* Ensure that RA_SESSION's session URL matches SESSION_URL,
    reparenting that session if necessary.  If reparenting occurs,
    store the previous session URL in *OLD_SESSION_URL (so that if the

@@ -541,6 +541,21 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_client__ra_session_from_target(svn_ra_session_t **ra_session_p,
+                                   svn_revnum_t *rev_p,
+                                   const char **url_p,
+                                   svn_client_target_t *target,
+                                   const svn_opt_revision_t *revision,
+                                   svn_client_ctx_t *ctx,
+                                   apr_pool_t *pool)
+{
+  SVN_ERR(svn_client__ra_session_from_path(ra_session_p, rev_p, url_p,
+                                           target->path_or_url, NULL,
+                                           &target->peg_revision, revision,
+                                           ctx, pool));
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_client__ensure_ra_session_url(const char **old_session_url,
