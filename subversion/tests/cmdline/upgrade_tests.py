@@ -1181,6 +1181,36 @@ def upgrade_file_externals(sbox):
       'alpha' : {'pname3' : 'pvalue3' },
       })
 
+@Issue(4035)
+def upgrade_missing_replaced(sbox):
+  "upgrade with missing replaced dir"
+
+  sbox.build(read_only=True)
+  replace_sbox_with_tarfile(sbox, 'upgrade_missing_replaced.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+  svntest.main.run_svnadmin('setuuid', sbox.repo_dir,
+                            'd7130b12-92f6-45c9-9217-b9f0472c3fab')
+  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
+                                     'file:///tmp/repo', sbox.repo_url,
+                                     sbox.wc_dir)
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+      'A/B/E'         : Item(status='  ', treeconflict='C'),
+      'A/B/E/alpha'   : Item(status='  ', treeconflict='A'),
+      'A/B/E/beta'    : Item(status='  ', treeconflict='A'),
+      })
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.tweak('A/B/E', status='! ', treeconflict='C', wc_rev='-')
+  expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status='D ')
+  svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output,
+                                        None, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, 'Reverted.*', [], 'revert', '-R',
+                                     sbox.wc_dir)
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -1230,6 +1260,7 @@ test_list = [ None,
               upgrade_with_missing_subdir,
               upgrade_locked,
               upgrade_file_externals,
+              upgrade_missing_replaced,
              ]
 
 
