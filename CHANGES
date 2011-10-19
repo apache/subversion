@@ -23,7 +23,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.1
    * error instead of assert when upgrading corrupt WCs (r1182904, -9)
    * improve memory usage in merge (r1176915)
    * fix an assertion in merge (r1149103, -35)
-   * improve performance of 'merge --reintegrate) (r1167681)
+   * improve performance of 'merge --reintegrate' (r1167681)
 
   Developer-visible changes:
    * fix object lifetime issues in the JavaHL bindings (r1175888)
