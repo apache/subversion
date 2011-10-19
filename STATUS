@@ -113,7 +113,7 @@ Candidate changes:
      +1: rhuijben (after r1185280 has been backported)
      +1: ivan
 
- * r1185746
+ * r1185746, r1186059
    Fix up some erroneous "Could not frob some targets because..." warnings.
    Votes:
      +1: stsp
