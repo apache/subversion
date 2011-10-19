@@ -248,22 +248,32 @@ svn_sort__array_insert(const void *new_element,
 
 void
 svn_sort__array_delete(apr_array_header_t *arr,
-                       int delete_index)
+                       int delete_index,
+                       int elements_to_delete)
 {
-  /* Do we have a valid index? */
-  if (delete_index >= 0 && delete_index < arr->nelts)
+  /* Do we have a valid index and are there enough elements? */
+  if (delete_index >= 0
+      && delete_index < arr->nelts
+      && elements_to_delete > 0
+      && (elements_to_delete + delete_index) <= arr->nelts)
     {
       if (delete_index == (arr->nelts - 1))
         {
           /* Deleting the last or only element in an array is easy. */
           apr_array_pop(arr);
         }
+      else if ((delete_index + elements_to_delete) == arr->nelts)
+        {
+          /* Delete the last ELEMENTS_TO_DELETE elements. */
+          arr->nelts -= elements_to_delete;
+        }
       else
         {
-          memmove(arr->elts + arr->elt_size * delete_index,
-                  arr->elts + arr->elt_size * (delete_index + 1),
-                  arr->elt_size * (arr->nelts - 1 - delete_index));
-          --(arr->nelts);
+          memmove(
+            arr->elts + arr->elt_size * delete_index,
+            arr->elts + (arr->elt_size * (delete_index + elements_to_delete)),
+            arr->elt_size * (arr->nelts - elements_to_delete - delete_index));
+          arr->nelts -= elements_to_delete;
         }
     }
 }

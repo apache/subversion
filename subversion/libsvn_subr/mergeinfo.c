@@ -891,8 +891,7 @@ adjust_remaining_ranges(apr_array_header_t *rangelist,
     }
 
   if (elements_to_delete)
-    for (i = starting_index; i < (elements_to_delete + starting_index); i++)
-      svn_sort__array_delete(rangelist, starting_index);
+    svn_sort__array_delete(rangelist, starting_index, elements_to_delete);
 }
 
 svn_error_t *
