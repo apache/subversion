@@ -5873,6 +5873,29 @@ write_hash_rep(svn_filesize_t *size,
   return svn_stream_printf(whb->stream, pool, "ENDREP\n");
 }
 
+/* Sanity check ROOT_NODEREV, a candidate for being the root node-revision
+   of (not yet committed) revision REV.  Use OCEAN for temporary allocations.
+ */
+static APR_INLINE svn_error_t *
+validate_root_noderev(node_revision_t *root_noderev,
+                      svn_revnum_t rev)
+{
+  /* Bogosity seen on svn.apache.org; see
+       http://mid.gmane.org/20111002202833.GA12373@daniel3.local
+   */
+  if (root_noderev->predecessor_count != -1
+      && root_noderev->predecessor_count != rev)
+    {
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               _("predecessor count for "
+                                 "the root node-revision is wrong: "
+                                 "found %d, committing r%ld"),
+                                 root_noderev->predecessor_count, rev);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Copy a node-revision specified by id ID in fileystem FS from a
    transaction into the proto-rev-file FILE.  Set *NEW_ID_P to a
    pointer to the new node-id which will be allocated in POOL.
@@ -5890,6 +5913,10 @@ write_hash_rep(svn_filesize_t *size,
    If REPS_TO_CACHE is not NULL, append to it a copy (allocated in
    REPS_POOL) of each data rep that is new in this revision.
 
+   AT_ROOT is true if the node revision being written is the root
+   node-revision.  It is only controls additional sanity checking
+   logic.
+
    Temporary allocations are also from POOL. */
 static svn_error_t *
 write_final_rev(const svn_fs_id_t **new_id_p,
@@ -5902,6 +5929,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                 apr_off_t initial_offset,
                 apr_array_header_t *reps_to_cache,
                 apr_pool_t *reps_pool,
+                svn_boolean_t at_root,
                 apr_pool_t *pool)
 {
   node_revision_t *noderev;
@@ -5938,7 +5966,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           svn_pool_clear(subpool);
           SVN_ERR(write_final_rev(&new_id, file, rev, fs, dirent->id,
                                   start_node_id, start_copy_id, initial_offset,
-                                  reps_to_cache, reps_pool,
+                                  reps_to_cache, reps_pool, FALSE,
                                   subpool));
           if (new_id && (svn_fs_fs__id_rev(new_id) == rev))
             dirent->id = svn_fs_fs__id_copy(new_id, pool);
@@ -6036,6 +6064,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   noderev->id = new_id;
 
   /* Write out our new node-revision. */
+  if (at_root)
+    SVN_ERR(validate_root_noderev(noderev, rev));
   SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_aprfile2(file, TRUE, pool),
                                    noderev, ffd->format,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
@@ -6315,7 +6345,7 @@ commit_body(void *baton, apr_pool_t *pool)
   root_id = svn_fs_fs__id_txn_create("0", "0", cb->txn->id, pool);
   SVN_ERR(write_final_rev(&new_root_id, proto_file, new_rev, cb->fs, root_id,
                           start_node_id, start_copy_id, initial_offset,
-                          cb->reps_to_cache, cb->reps_pool,
+                          cb->reps_to_cache, cb->reps_pool, TRUE,
                           pool));
 
   /* Write the changed-path information. */

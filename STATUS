@@ -124,10 +124,3 @@ Approved changes:
      fix here than having to fix all clients.
    Votes:
      +1: rhuijben, pburba, stsp
-
- * r1178280, r1178282
-   Add a sanity check to FSFS.
-   Justification:
-     Detects a user-visible corruption seen on svn-master.apache.org.
-   Votes:
-     +1: danielsh, rhuijben, stsp
