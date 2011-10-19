@@ -5807,6 +5807,9 @@ svn_client_url_from_path(const char **url,
  * necessary. @a repos_root_url and/or @a repos_uuid may be NULL if not
  * wanted.
  *
+ * This function will open a temporary RA session to the repository if
+ * necessary to get the information.
+ *
  * Allocate @a *repos_root_url and @a *repos_uuid in @a result_pool.
  * Use @a scratch_pool for temporary allocations.
  *
@@ -5827,8 +5830,9 @@ svn_client_get_repos_root(const char **repos_root_url,
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.7 API. Use
- * svn_client_get_repos_root().
+ * svn_client_get_repos_root() instead, with an absolute path.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_root_url_from_path(const char **url,
                               const char *path_or_url,
@@ -5843,8 +5847,9 @@ svn_client_root_url_from_path(const char **url,
  * authentication.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API. Use
- * svn_client_get_repos_root().
+ * svn_client_get_repos_root() instead.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_uuid_from_url(const char **uuid,
                          const char *url,
@@ -5860,8 +5865,9 @@ svn_client_uuid_from_url(const char **uuid,
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.7 API. Use
- * svn_client_get_repos_root().
+ * svn_client_get_repos_root() instead.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_uuid_from_path2(const char **uuid,
                            const char *local_abspath,

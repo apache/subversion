@@ -9116,8 +9116,9 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
 
       SVN_ERR(svn_ra_get_uuid2(URL1_ra_session, &source_repos_uuid,
                                subpool));
-      SVN_ERR(svn_client_uuid_from_path2(&wc_repos_uuid, target_abspath,
-                                         ctx, subpool, subpool));
+      SVN_ERR(svn_client_get_repos_root(NULL /* root_url */, &wc_repos_uuid,
+                                        target_abspath,
+                                        ctx, subpool, subpool));
       same_repos = (strcmp(wc_repos_uuid, source_repos_uuid) == 0);
     }
   else
