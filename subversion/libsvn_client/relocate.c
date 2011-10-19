@@ -143,12 +143,8 @@ relocate_externals(const char *local_abspath,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *scratch_pool)
 {
-  const char *url;
   apr_pool_t *iterpool;
   int i;
-
-  SVN_ERR(svn_client_url_from_path2(&url, local_abspath, ctx,
-                                    scratch_pool, scratch_pool));
 
   /* Parse an externals definition into an array of external items. */
 
