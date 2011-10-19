@@ -562,7 +562,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                    || (dir_depth == svn_depth_immediates
                        && ths->depth != svn_depth_empty)
                    || (ths->depth < svn_depth_infinity
-                       && depth == svn_depth_infinity))
+                       && SVN_DEPTH_IS_RECURSIVE(depth)))
             {
               /* ... or perhaps just a differing revision, lock token,
                  incomplete subdir, the mere presence of the directory
