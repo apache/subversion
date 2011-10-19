@@ -185,8 +185,8 @@ relocate_externals(const char *local_abspath,
                                                       ext_item->target_dir,
                                                       iterpool),
                                       iterpool));
-      err = svn_client_root_url_from_path(&target_repos_root_url,
-                                          target_abspath, ctx, iterpool);
+      err = svn_client_get_repos_root(&target_repos_root_url, NULL /* uuid */,
+                                      target_abspath, ctx, iterpool, iterpool);
 
       /* Ignore externals that aren't present in the working copy.
        * This can happen if an external is deleted from disk accidentally,
@@ -248,16 +248,16 @@ svn_client_relocate2(const char *wcroot_dir,
     }
 
   /* Fetch our current root URL. */
-  SVN_ERR(svn_client_root_url_from_path(&old_repos_root_url, local_abspath,
-                                        ctx, pool));
+  SVN_ERR(svn_client_get_repos_root(&old_repos_root_url, NULL /* uuid */,
+                                    local_abspath, ctx, pool, pool));
 
   /* Perform the relocation. */
   SVN_ERR(svn_wc_relocate4(ctx->wc_ctx, local_abspath, from_prefix, to_prefix,
                            validator_func, &vb, pool));
 
   /* Now fetch new current root URL. */
-  SVN_ERR(svn_client_root_url_from_path(&new_repos_root_url, local_abspath,
-                                        ctx, pool));
+  SVN_ERR(svn_client_get_repos_root(&new_repos_root_url, NULL /* uuid */,
+                                    local_abspath, ctx, pool, pool));
 
 
   /* Relocate externals, too (if any). */

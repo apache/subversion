@@ -39,6 +39,7 @@
 #include "svn_props.h"
 #include "svn_utf.h"
 #include "svn_string.h"
+#include "svn_pools.h"
 
 #include "client.h"
 #include "mergeinfo.h"
@@ -2464,6 +2465,41 @@ svn_client_revert(const apr_array_header_t *paths,
 
 /*** From ra.c ***/
 svn_error_t *
+svn_client_uuid_from_url(const char **uuid,
+                         const char *url,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *pool)
+{
+  svn_ra_session_t *ra_session;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  /* use subpool to create a temporary RA session */
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, url,
+                                               NULL, /* no base dir */
+                                               NULL, FALSE, TRUE,
+                                               ctx, subpool));
+
+  SVN_ERR(svn_ra_get_uuid2(ra_session, uuid, pool));
+
+  /* destroy the RA session */
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_uuid_from_path2(const char **uuid,
+                           const char *local_abspath,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+    svn_wc__node_get_repos_info(NULL, uuid, ctx->wc_ctx, local_abspath,
+                                result_pool, scratch_pool));
+}
+
+svn_error_t *
 svn_client_uuid_from_path(const char **uuid,
                           const char *path,
                           svn_wc_adm_access_t *adm_access,
@@ -2478,6 +2514,20 @@ svn_client_uuid_from_path(const char **uuid,
 }
 
 /*** From url.c ***/
+svn_error_t *
+svn_client_root_url_from_path(const char **url,
+                              const char *path_or_url,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *pool)
+{
+  if (!svn_path_is_url(path_or_url))
+    SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url, pool));
+
+  return svn_error_trace(
+           svn_client_get_repos_root(url, NULL, path_or_url,
+                                     ctx, pool, pool));
+}
+
 svn_error_t *
 svn_client_url_from_path(const char **url,
                          const char *path_or_url,
