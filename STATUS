@@ -73,8 +73,9 @@ Approved changes:
    Notes:
      r1185738, r1185763, r1185768: adds a test for this problem.
      r1185886: fixes this issue and cleans up whitespace in the test.
+     r1186240: small test reorganization.
      Merge conflicts with issue r1177732 group.  Branch includes both sets.
    Branch:
      ^/subversion/branches/1.7.x-issue4035-r1185738
    Votes:
-     +1: rhuijben, philip, stsp
+     +1: rhuijben, philip, stsp, gstein
