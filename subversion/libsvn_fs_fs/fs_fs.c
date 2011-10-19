@@ -2907,7 +2907,7 @@ set_revision_proplist(svn_fs_t *fs,
 {
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  if (1)
+  /* if (1); null condition for easier merging to revprop-packing */
     {
       const char *final_path = path_revprops(fs, rev, pool);
       const char *tmp_path;
@@ -2945,7 +2945,7 @@ revision_proplist(apr_hash_t **proplist_p,
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  if (1)
+  /* if (1); null condition for easier merging to revprop-packing */
     {
       apr_file_t *revprop_file = NULL;
       svn_error_t *err = SVN_NO_ERROR;
@@ -6387,7 +6387,7 @@ commit_body(void *baton, apr_pool_t *pool)
      fails because the shard already existed for some reason. */
   if (ffd->max_files_per_dir && new_rev % ffd->max_files_per_dir == 0)
     {
-      if (1)
+      /* if (1); null condition for easier merging to revprop-packing */
         {
           const char *new_dir = path_rev_shard(cb->fs, new_rev, pool);
           svn_error_t *err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
@@ -7043,7 +7043,7 @@ recover_body(void *baton, apr_pool_t *pool)
                             &youngest_revprops_kind, pool));
   if (youngest_revprops_kind == svn_node_none)
     {
-      if (1)
+      /* if (1); null condition for easier merging to revprop-packing */
         {
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                    _("Revision %ld has a revs file but no "
