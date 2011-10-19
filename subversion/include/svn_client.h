@@ -68,63 +68,6 @@ svn_client_version(void);
  * @{
  */
 
-
-
-/*** Repository and Target location ***/
-
-/* */
-typedef struct svn_client_target_t
-  {
-    const char *path_or_url;
-    const char *abspath_or_url;
-    svn_opt_revision_t peg_revision;
-    svn_opt_revision_t revision;
-
-    /* The following fields are the resolved location after contacting
-     * the repository, else NULL or SVN_INVALID_REVNUM. */
-    const char *repos_root_url;
-    const char *repos_uuid;
-    const char *repos_relpath;
-    svn_revnum_t repos_revnum;
-
-    /* The pool in which to allocate new fields */
-    apr_pool_t *pool;
-  } svn_client_target_t;
-
-/* Allocate a svn_client_target_t structure. Initialize pool and
- * abspath_or_url fields. */
-svn_error_t *
-svn_client__target(svn_client_target_t **target,
-                   const char *path_or_url,
-                   const svn_opt_revision_t *peg_revision,
-                   apr_pool_t *pool);
-
-/* Like svn_opt_parse_path(). */
-svn_error_t *
-svn_client__parse_target(svn_client_target_t **target,
-                         const char *target_string,
-                         apr_pool_t *pool);
-
-/* */
-svn_error_t *
-svn_client__resolve_location(const char **repo_root_url_p,
-                             const char **repo_uuid_p,
-                             svn_revnum_t *repo_revnum_p,
-                             const char **repo_relpath_p,
-                             const char *path_or_url,
-                             const svn_opt_revision_t *peg_revision,
-                             const svn_opt_revision_t *revision,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool);
-
-/* */
-svn_error_t *
-svn_client__resolve_target_location(svn_client_target_t *target,
-                                    svn_client_ctx_t *ctx,
-                                    apr_pool_t *scratch_pool);
-
-
 
 /*** Authentication stuff ***/
 
@@ -1059,6 +1002,64 @@ svn_client_create_context(svn_client_ctx_t **ctx,
 #define SVN_CLIENT_AUTH_PASSWORD            "password"
 /** @} group end: Authentication information file names */
 
+
+
+/*** Repository and Target location ***/
+
+/* */
+typedef struct svn_client_target_t
+  {
+    const char *path_or_url;
+    const char *abspath_or_url;
+    svn_opt_revision_t peg_revision;
+    svn_opt_revision_t revision;
+
+    /* The following fields are the resolved location after contacting
+     * the repository, else NULL or SVN_INVALID_REVNUM. */
+    const char *repos_root_url;
+    const char *repos_uuid;
+    const char *repos_relpath;
+    svn_revnum_t repos_revnum;
+
+    /* The pool in which to allocate new fields */
+    apr_pool_t *pool;
+  } svn_client_target_t;
+
+/* Allocate a svn_client_target_t structure. Initialize pool and
+ * abspath_or_url fields. */
+svn_error_t *
+svn_client__target(svn_client_target_t **target,
+                   const char *path_or_url,
+                   const svn_opt_revision_t *peg_revision,
+                   apr_pool_t *pool);
+
+/* Like svn_opt_parse_path(). */
+svn_error_t *
+svn_client__parse_target(svn_client_target_t **target,
+                         const char *target_string,
+                         apr_pool_t *pool);
+
+/* */
+svn_error_t *
+svn_client__resolve_location(const char **repo_root_url_p,
+                             const char **repo_uuid_p,
+                             svn_revnum_t *repo_revnum_p,
+                             const char **repo_relpath_p,
+                             const char *path_or_url,
+                             const svn_opt_revision_t *peg_revision,
+                             const svn_opt_revision_t *revision,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
+/* */
+svn_error_t *
+svn_client__resolve_target_location(svn_client_target_t *target,
+                                    svn_client_ctx_t *ctx,
+                                    apr_pool_t *scratch_pool);
+
+
+
 /** Client argument processing
  *
  * @defgroup clnt_cmdline Client command-line processing
