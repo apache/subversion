@@ -1614,6 +1614,12 @@ def basic_add_parents(sbox):
                                         None,
                                         wc_dir)
 
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', X_path, '--keep-local')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'add', '--parents', zeta_path)
+
 #----------------------------------------------------------------------
 def uri_syntax(sbox):
   'make sure URI syntaxes are parsed correctly'
