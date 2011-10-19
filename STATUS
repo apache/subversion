@@ -53,26 +53,6 @@ Candidate changes:
    Votes:
      +1: pburba, rhuijben
 
- * r1185280, r1185282
-   Open SQLite databases as writable in some test code before we try to update
-   the database.
-   Justification:
-     General correctness and the tests start failing after r1185242.
-   Votes:
-     +1: rhuijben, stsp
-   
- * r1185242
-   Don't enable the SQLite shared process cache.
-   Justification:
-     Resolves common errors of multithreaded application users.
-   Notes:
-     See also log message of this revision.
-     If r1185280 isn't applied before this patch the op-depth tests will
-     start failing.
-   Votes:
-     +1: rhuijben (after r1185280 has been backported)
-     +1: ivan
-
  * r1185746, r1186059
    Fix up some erroneous "Could not frob some targets because..." warnings.
    Votes:
@@ -107,3 +87,23 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1185280, r1185282
+   Open SQLite databases as writable in some test code before we try to update
+   the database.
+   Justification:
+     General correctness and the tests start failing after r1185242.
+   Votes:
+     +1: rhuijben, stsp, hwright
+   
+ * r1185242
+   Don't enable the SQLite shared process cache.
+   Justification:
+     Resolves common errors of multithreaded application users.
+   Notes:
+     See also log message of this revision.
+     If r1185280 isn't applied before this patch the op-depth tests will
+     start failing.
+   Votes:
+     +1: rhuijben (after r1185280 has been backported)
+     +1: ivan, hwright
