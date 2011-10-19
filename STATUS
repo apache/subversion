@@ -43,15 +43,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
- * r1186121, r1186231
-   FSFS: Fix validation so it doesn't hork preexisting repositories that
-   triggered a bug once in their history.
-   Justification:
-     Such repositories are unusable without this revision.
-     Either this must be backported to 1.7.1 or r1186144 must be undone.
-   Votes:
-     +1: danielsh, stsp
-
  * r1177732, r1186092, r1186101, r1186107, r1186109
    Fix issue 4035.
    Justification:
@@ -87,3 +78,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1186121, r1186231
+   FSFS: Fix validation so it doesn't hork preexisting repositories that
+   triggered a bug once in their history.
+   Justification:
+     Such repositories are unusable by 1.7.x without this revision.
+     Either this must be backported to 1.7.1 or r1186144 must be undone.
+   Votes:
+     +1: danielsh, stsp, philip
