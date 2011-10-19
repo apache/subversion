@@ -1052,13 +1052,14 @@ svn_client__resolve_location(const char **repo_root_url_p,
                              const svn_opt_revision_t *peg_revision,
                              const svn_opt_revision_t *revision,
                              svn_client_ctx_t *ctx,
-                             apr_pool_t *pool);
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 /* */
 svn_error_t *
 svn_client__resolve_target_location(svn_client_target_t *target,
                                     svn_client_ctx_t *ctx,
-                                    apr_pool_t *pool);
+                                    apr_pool_t *scratch_pool);
 
 /**
  * Pull remaining target arguments from @a os into @a *targets_p,
