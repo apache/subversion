@@ -1259,6 +1259,11 @@ def upgrade_missing_replaced(sbox):
   svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output,
                                         None, expected_status)
 
+  svntest.actions.run_and_verify_svn(None, 'Reverted.*', [], 'revert', '-R',
+                                     sbox.wc_dir)
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
 ########################################################################
 # Run the tests
 
