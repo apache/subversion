@@ -53,6 +53,14 @@ Candidate changes:
    Votes:
      +1: rhuijben, stsp
 
+ * r1186231
+   FSFS: Fix validation so it doesn't hork preexisting repositories that
+   triggered a bug once in their history.
+   Justification:
+     Such repositories are unusable without this revision.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
