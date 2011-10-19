@@ -160,6 +160,169 @@ is_empty_wc(svn_boolean_t *clean_checkout,
   return svn_io_dir_close(dir);
 }
 
+struct scan_moves_log_receiver_baton {
+  /* The moved nodes hash to be populated.
+   * Maps moved-from path to moved-to path. */
+  apr_hash_t *moved_nodes;
+} scan_moves_log_receiver_baton;
+
+static svn_error_t *
+scan_moves_log_recevier(void *baton,
+                        svn_log_entry_t *log_entry,
+                        apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+  apr_hash_t *copied_paths = apr_hash_make(scratch_pool); /* copyfrom->path */
+  apr_array_header_t *deleted_paths = apr_array_make(scratch_pool, 0,
+                                                     sizeof(const char *));
+  struct scan_moves_log_receiver_baton *b = baton;
+  int i;
+
+  /* Scan for copied and deleted nodes in this revision. */
+  for (hi = apr_hash_first(scratch_pool, log_entry->changed_paths2);
+       hi; hi = apr_hash_next(hi))
+    {
+      const char *path = svn__apr_hash_index_key(hi);
+      svn_log_changed_path2_t *data = svn__apr_hash_index_val(hi);
+
+      if (data->action == 'A' && data->copyfrom_path)
+        {
+          if (apr_hash_get(copied_paths, data->copyfrom_path,
+                           APR_HASH_KEY_STRING))
+            {
+              /* The same copyfrom path appears multiple times. In this
+               * limited and simplified client-side heuristic, this means
+               * that the node was not moved.
+               * Mark this entry as invalid by setting the value to "".
+               * ### Extend this check to ignore copies crossing branch-roots?
+               */
+              apr_hash_set(copied_paths, data->copyfrom_path,
+                           APR_HASH_KEY_STRING, "");
+            }
+          else
+            apr_hash_set(copied_paths, data->copyfrom_path,
+                         APR_HASH_KEY_STRING, path);
+        }
+      else if (data->action == 'D')
+        APR_ARRAY_PUSH(deleted_paths, const char *) = path;
+    }
+
+  /* If a node was deleted at one location and copied from the deleted
+   * location to a new location within the same revision, put the node
+   * on the moved-nodes list. */
+  for (i = 0; i < deleted_paths->nelts; i++)
+    {
+      const char *deleted_path = APR_ARRAY_IDX(deleted_paths, i, const char *);
+      const char *copied_path = apr_hash_get(copied_paths, deleted_path,
+                                             APR_HASH_KEY_STRING);
+      if (copied_path && copied_path[0] != '\0')
+        {
+          apr_hash_index_t *hi2;
+          svn_boolean_t first_move = TRUE;
+
+          /* We found a single deleted node which matches the copyfrom
+           * of single a copied node. This is a non-ambiguous move.
+           * In case we previously found a move of the same node,
+           * update the existing entry to point to the node's current
+           * location. */
+          for (hi2 = apr_hash_first(scratch_pool, b->moved_nodes);
+               hi2; hi2 = apr_hash_next(hi2))
+            {
+              const char *moved_from = svn__apr_hash_index_key(hi2);
+              const char *moved_to = svn__apr_hash_index_key(hi2);
+
+              if (strcmp(moved_to, deleted_path))
+                {
+                  first_move = FALSE;
+                  apr_hash_set(b->moved_nodes, moved_from,
+                               APR_HASH_KEY_STRING,
+                               apr_pstrdup(apr_hash_pool_get(b->moved_nodes),
+                                           copied_path));
+                }
+            }
+
+          /* If we haven't seen this node being moved before, add it. */
+          if (first_move)
+            apr_hash_set(b->moved_nodes,
+                         apr_pstrdup(apr_hash_pool_get(b->moved_nodes),
+                                     deleted_path),
+                         APR_HASH_KEY_STRING,
+                         apr_pstrdup(apr_hash_pool_get(b->moved_nodes),
+                                     copied_path));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+scan_for_server_side_moves(apr_hash_t **server_side_moves,
+                           const char *anchor_abspath,
+                           svn_ra_session_t *ra_session,
+                           svn_revnum_t target_rev,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  svn_revnum_t local_min_rev;
+  svn_revnum_t local_max_rev;
+  svn_revnum_t start;
+  svn_revnum_t end;
+  struct scan_moves_log_receiver_baton b;
+  svn_boolean_t adjust_moves_list = FALSE;
+
+  /* Determine the min/max revisions of the working copy. */
+  SVN_ERR(svn_wc__min_max_revisions(&local_min_rev, &local_max_rev,
+                                    ctx->wc_ctx, anchor_abspath,
+                                    FALSE, scratch_pool));
+
+  /* Determine the range of revisions we'll have to scan for moves.
+   * We always scan the log forwards, and adjust the resulting moves
+   * map if the target revision is below or within the local min:max range. */
+  if (target_rev == SVN_INVALID_REVNUM || target_rev > local_max_rev)
+    {
+      /* We're updating to HEAD for some other revision newer than
+       * the local max. */
+      start = local_min_rev; 
+      end = target_rev;
+    }
+  else if (target_rev < local_min_rev)
+    {
+      /* We're updating down to a revision older than the local max. */
+      start = target_rev;
+      end = local_max_rev;
+      adjust_moves_list = TRUE;
+    }
+  else if (target_rev >= local_min_rev && target_rev <= local_max_rev)
+    {
+      /* We're updating to a revision within the local min:max. */
+      start = local_min_rev;
+      end = local_max_rev;
+      adjust_moves_list = TRUE;
+    }
+
+  b.moved_nodes = apr_hash_make(result_pool);
+  SVN_ERR(svn_ra_get_log2(ra_session, NULL, start, end, 0, TRUE, FALSE, FALSE,
+                          apr_array_make(scratch_pool, 0,
+                                         sizeof(const char *)),
+                          scan_moves_log_recevier, &b, scratch_pool));
+#ifdef SVN_DEBUG
+  {
+    apr_hash_index_t *hi;
+    for (hi = apr_hash_first(scratch_pool, b.moved_nodes);
+         hi; hi = apr_hash_next(hi))
+      {
+        const char *moved_from = svn__apr_hash_index_key(hi);
+        const char *moved_to = svn__apr_hash_index_val(hi);
+        SVN_DBG(("found server-side move: '%s' -> '%s'\n",
+                 moved_from, moved_to));
+      }
+  }
+#endif
+
+  return SVN_NO_ERROR;
+}
+
 /* This is a helper for svn_client__update_internal(), which see for
    an explanation of most of these parameters.  Some stuff that's
    unique is as follows:
@@ -367,6 +530,12 @@ update_internal(svn_revnum_t *result_rev,
   dfb.ra_session = ra_session;
   dfb.target_revision = revnum;
   dfb.anchor_url = anchor_url;
+
+  /* Scan the log within the min:target-revision range for moves which
+   * happened on the server within this range. */
+  SVN_ERR(scan_for_server_side_moves(NULL /* ### TODO */, anchor_abspath,
+                                     ra_session, revnum, ctx,
+                                     pool, pool));
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
