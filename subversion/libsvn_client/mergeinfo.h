@@ -99,7 +99,7 @@ svn_client__merge_path_dup(const svn_client__merge_path_t *old,
    the range of the parent's last committed revision to the parent's base
    revision (inclusive) or is LOCAL_ABSPATH is a local addition.  If asking
    for the inherited mergeinfo of an added path (i.e. one with no base
-   revision), that path may inherit mergeinfo from it's nearest parent
+   revision), that path may inherit mergeinfo from its nearest parent
    with a base revision and explicit mergeinfo.
 
    INHERIT indicates whether explicit, explicit or inherited, or only
