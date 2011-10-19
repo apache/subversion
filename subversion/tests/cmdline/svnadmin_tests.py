@@ -1489,7 +1489,8 @@ def load_ranges(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnadmin_tests_data',
                                    'skeleton_repos.dump')
-  dumpdata = open(dumpfile_location).read()
+  dumplines = open(dumpfile_location).readlines()
+  dumpdata = "".join(dumplines)
 
   # Load our dumpfile, 2 revisions at a time, verifying that we have
   # the correct youngest revision after each load.
@@ -1503,13 +1504,11 @@ def load_ranges(sbox):
   svntest.actions.run_and_verify_svnlook("Unexpected output", ['6\n'],
                                          None, 'youngest', sbox.repo_dir)
 
-  ### Would prefer to do a dump comparison such as the following, by
-  ### there are ordering differences, it seems, in the property
-  ### blocks.
-  #dumpdata = open(dumpfile_location).readlines()
-  #new_dumpdata = svntest.actions.run_and_verify_dump(sbox.repo_dir)
-  #svntest.verify.compare_and_display_lines("Dump files", "DUMP",
-  #                                         dumpdata, new_dumpdata)
+  # There are ordering differences in the property blocks.
+  expected_dump = UnorderedOutput(dumplines)
+  new_dumpdata = svntest.actions.run_and_verify_dump(sbox.repo_dir)
+  svntest.verify.compare_and_display_lines("Dump files", "DUMP",
+                                           expected_dump, new_dumpdata)
 
 ########################################################################
 # Run the tests
