@@ -732,73 +732,403 @@ svn_mergeinfo_parse(svn_mergeinfo_t *mergeinfo,
   return err;
 }
 
+/* Cleanup after svn_rangelist_merge when it modifies the ending range of
+   a single rangelist element in-place.
+
+   If *INDEX is not a valid element in RANGELIST do nothing.  Otherwise ensure
+   that RANGELIST[*INDEX]->END does not adjoin or overlap any subsequent
+   ranges in RANGELIST.
+
+   If overlap is found, then remove, modify, and/or add elements to RANGELIST
+   as per the invariants for rangelists documented in svn_mergeinfo.h.  If
+   RANGELIST[*INDEX]->END adjoins a subsequent element then combine the
+   elements if their inheritability permits -- The inheritance of intersecting
+   and adjoining ranges is handled as per svn_mergeinfo_merge2.  Upon return
+   set *INDEX to the index of the youngest element modified, added, or
+   adjoined to RANGELIST[*INDEX].
+
+   Note: Adjoining rangelist elements are those where the end rev of the older
+   element is equal to the start rev of the younger element.
+
+   Any new elements inserted into RANGELIST are allocated in  RESULT_POOL.*/
+static void
+adjust_remaining_ranges(apr_array_header_t *rangelist,
+                        int *index,
+                        apr_pool_t *result_pool)
+{
+  int i;
+  int starting_index;
+  int elements_to_delete = 0;
+  svn_merge_range_t *modified_range;
+
+  if (*index >= rangelist->nelts)
+    return;
+
+  starting_index = *index + 1;
+  modified_range = APR_ARRAY_IDX(rangelist, *index, svn_merge_range_t *);
+
+  for (i = *index + 1; i < rangelist->nelts; i++)
+    {
+      svn_merge_range_t *next_range = APR_ARRAY_IDX(rangelist, i,
+                                                    svn_merge_range_t *);
+
+      /* If MODIFIED_RANGE doesn't adjoin or overlap the next range in
+         RANGELIST then we are finished. */
+      if (modified_range->end < next_range->start)
+        break;
+
+      /* Does MODIFIED_RANGE adjoin NEXT_RANGE? */
+      if (modified_range->end == next_range->start)
+        {
+          if (modified_range->inheritable == next_range->inheritable)
+            {
+              /* Combine adjoining ranges with the same inheritability. */
+              modified_range->end = next_range->end;
+              elements_to_delete++;
+            }
+          else
+            {
+              /* Cannot join because inheritance differs. */
+              (*index)++;
+            }
+          break;
+        }
+
+      /* Alright, we know MODIFIED_RANGE overlaps NEXT_RANGE, but how? */
+      if (modified_range->end > next_range->end)
+        {
+          /* NEXT_RANGE is a proper subset of MODIFIED_RANGE and the two
+             don't share the same end range. */
+          if (modified_range->inheritable
+              || (modified_range->inheritable == next_range->inheritable))
+            {
+              /* MODIFIED_RANGE absorbs NEXT_RANGE. */
+              elements_to_delete++;
+            }
+          else
+            {
+              /* NEXT_RANGE is a proper subset MODIFIED_RANGE but
+                 MODIFIED_RANGE is non-inheritable and NEXT_RANGE is
+                 inheritable.  This means MODIFIED_RANGE is truncated,
+                 NEXT_RANGE remains, and the portion of MODIFIED_RANGE
+                 younger than NEXT_RANGE is added as a separate range:
+                  ______________________________________________
+                 |                                              |
+                 M                 MODIFIED_RANGE               N
+                 |                 (!inhertiable)               |
+                 |______________________________________________|
+                                  |              |
+                                  O  NEXT_RANGE  P
+                                  | (inheritable)|
+                                  |______________|
+                                         |
+                                         V
+                  _______________________________________________
+                 |                |              |               |
+                 M MODIFIED_RANGE O  NEXT_RANGE  P   NEW_RANGE   N
+                 | (!inhertiable) | (inheritable)| (!inheritable)|
+                 |________________|______________|_______________|
+              */
+              svn_merge_range_t *new_modified_range =
+                apr_palloc(result_pool, sizeof(*new_modified_range));
+              new_modified_range->start = next_range->end;
+              new_modified_range->end = modified_range->end;
+              new_modified_range->inheritable = FALSE;
+              modified_range->end = next_range->start;
+              (*index)+=2;
+              svn_sort__array_insert(&new_modified_range, rangelist, *index);
+              /* Recurse with the new range. */
+              adjust_remaining_ranges(rangelist, index, result_pool);
+              break;
+            }
+        }
+      else if (modified_range->end == next_range->end)
+        {
+          /* NEXT_RANGE is a proper subset MODIFIED_RANGE and share
+             the same end range. */
+          if (modified_range->inheritable
+              || (modified_range->inheritable == next_range->inheritable))
+            {
+              /* MODIFIED_RANGE absorbs NEXT_RANGE. */
+              elements_to_delete++;
+            }
+          else
+            {
+              /* The intersection between MODIFIED_RANGE and NEXT_RANGE is
+                 absorbed by the latter. */
+              modified_range->end = next_range->start;
+              (*index)++;
+            }
+          break;
+        }
+      else
+        {
+          /* NEXT_RANGE and MODIFIED_RANGE intersect but NEXT_RANGE is not
+             a proper subset of MODIFIED_RANGE, nor do the two share the
+             same end revision, i.e. they overlap. */
+          if (modified_range->inheritable == next_range->inheritable)
+            {
+              /* Combine overlapping ranges with the same inheritability. */
+              modified_range->end = next_range->end;
+              elements_to_delete++;
+            }
+          else if (modified_range->inheritable)
+            {
+              /* MODIFIED_RANGE absorbs the portion of NEXT_RANGE it overlaps
+                 and NEXT_RANGE is truncated. */
+              next_range->start = modified_range->end;
+              (*index)++;
+            }
+          else
+            {
+              /* NEXT_RANGE absorbs the portion of MODIFIED_RANGE it overlaps
+                 and MODIFIED_RANGE is truncated. */
+              modified_range->end = next_range->start;
+              (*index)++;
+            }
+          break;
+        }
+    }
+
+  if (elements_to_delete)
+    svn_sort__array_delete(rangelist, starting_index, elements_to_delete);
+}
 
 svn_error_t *
 svn_rangelist_merge(apr_array_header_t **rangelist,
                     const apr_array_header_t *changes,
                     apr_pool_t *pool)
 {
-  int i, j;
-  apr_array_header_t *output = apr_array_make(pool, 1,
-                                              sizeof(svn_merge_range_t *));
-  i = 0;
-  j = 0;
+  int i = 0;
+  int j = 0;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  /* We may modify CHANGES, so make a copy in SUBPOOL. */
+  changes = svn_rangelist_dup(changes, subpool);
+
   while (i < (*rangelist)->nelts && j < changes->nelts)
     {
-      svn_merge_range_t *elt1, *elt2;
-      int res;
+      svn_merge_range_t *range =
+        APR_ARRAY_IDX(*rangelist, i, svn_merge_range_t *);
+      svn_merge_range_t *change =
+        APR_ARRAY_IDX(changes, j, svn_merge_range_t *);
+      int res = svn_sort_compare_ranges(&range, &change);
 
-      elt1 = APR_ARRAY_IDX(*rangelist, i, svn_merge_range_t *);
-      elt2 = APR_ARRAY_IDX(changes, j, svn_merge_range_t *);
-
-      res = svn_sort_compare_ranges(&elt1, &elt2);
       if (res == 0)
         {
           /* Only when merging two non-inheritable ranges is the result also
              non-inheritable.  In all other cases ensure an inheritiable
              result. */
-          if (elt1->inheritable || elt2->inheritable)
-            elt1->inheritable = TRUE;
-          SVN_ERR(combine_with_lastrange(elt1, output,
-                                         TRUE, pool, pool));
+          if (range->inheritable || change->inheritable)
+            range->inheritable = TRUE;
           i++;
           j++;
         }
-      else if (res < 0)
+      else if (res < 0) /* CHANGE is younger than RANGE */
         {
-          SVN_ERR(combine_with_lastrange(elt1, output,
-                                         TRUE, pool, pool));
-          i++;
+          if (range->end < change->start)
+            {
+              /* RANGE is older than CHANGE and the two do not
+                 adjoin or overlap */
+              i++;
+            }
+          else if (range->end == change->start)
+            {
+              /* RANGE and CHANGE adjoin */
+              if (range->inheritable == change->inheritable)
+                {
+                  /* RANGE and CHANGE have the same inheritability so
+                     RANGE expands to absord CHANGE. */
+                  range->end = change->end;
+                  adjust_remaining_ranges(*rangelist, &i, pool);
+                  j++;
+                }
+              else
+                {
+                  /* RANGE and CHANGE adjoin, but have different
+                     inheritability.  Since RANGE is older, just
+                     move on to the next RANGE. */
+                  i++;
+                }
+            }
+          else
+            {
+              /* RANGE and CHANGE overlap, but how? */
+              if ((range->inheritable == change->inheritable)
+                  || range->inheritable)
+                {
+                  /* If CHANGE is a proper subset of RANGE, it absorbs RANGE
+                      with no adjustment otherwise only the intersection is
+                      absorbed and CHANGE is truncated. */
+                  if (range->end >= change->end)
+                    j++;
+                  else
+                    change->start = range->end;
+                }
+              else
+                {
+                  /* RANGE is non-inheritable and CHANGE is inheritable. */
+                  if (range->start < change->start)
+                    {
+                      /* CHANGE absorbs intersection with RANGE and RANGE
+                         is truncated. */
+                      svn_merge_range_t *range_copy =
+                        svn_merge_range_dup(range, pool);
+                      range_copy->end = change->start;
+                      range->start = change->start;
+                      svn_sort__array_insert(&range_copy, *rangelist, i++);
+                    }
+                  else
+                    {
+                      /* CHANGE and RANGE share the same start rev, but
+                         RANGE is considered older because its end rev
+                         is older. */
+                      range->inheritable = TRUE;
+                      change->start = range->end;
+                    }
+                }
+            }
         }
-      else
+      else /* res > 0, CHANGE is older than RANGE */
         {
-          SVN_ERR(combine_with_lastrange(elt2, output,
-                                         TRUE, pool, pool));
-          j++;
+          if (change->end < range->start)
+            {
+              /* CHANGE is older than RANGE and the two do not
+                 adjoin or overlap, so insert a copy of CHANGE
+                 into *RANGELIST. */
+              svn_merge_range_t *change_copy =
+                svn_merge_range_dup(change, pool);
+              svn_sort__array_insert(&change_copy, *rangelist, i++);
+              j++;
+            }
+          else if (change->end == range->start)
+            {
+              /* RANGE and CHANGE adjoin */
+              if (range->inheritable == change->inheritable)
+                {
+                  /* RANGE and CHANGE have the same inheritability so we
+                     can simply combine the two in place. */
+                  range->start = change->start;
+                  j++;
+                }
+              else
+                {
+                  /* RANGE and CHANGE have different inheritability so insert
+                     a copy of CHANGE into *RANGELIST. */
+                  svn_merge_range_t *change_copy =
+                    svn_merge_range_dup(change, pool);
+                  svn_sort__array_insert(&change_copy, *rangelist, i);
+                  j++;
+                }
+            }
+          else
+            {
+              /* RANGE and CHANGE overlap. */
+              if (range->inheritable == change->inheritable)
+                {
+                  /* RANGE and CHANGE have the same inheritability so we
+                     can simply combine the two in place... */
+                  range->start = change->start;
+                  if (range->end < change->end)
+                    {
+                      /* ...but if RANGE is expanded ensure that we don't
+                         violate any rangelist invariants. */
+                      range->end = change->end;
+                      adjust_remaining_ranges(*rangelist, &i, pool);
+                    }
+                  j++;
+                }
+              else if (range->inheritable)
+                {
+                  if (change->start < range->start)
+                    {
+                      /* RANGE is inheritable so absorbs any part of CHANGE
+                         it overlaps.  CHANGE is truncated and the remainder
+                         inserted into *RANGELIST. */
+                      svn_merge_range_t *change_copy =
+                        svn_merge_range_dup(change, pool);
+                      change_copy->end = range->start;
+                      change->start = range->start;
+                      svn_sort__array_insert(&change_copy, *rangelist, i++);
+                    }
+                  else
+                    {
+                      /* CHANGE and RANGE share the same start rev, but
+                         CHANGE is considered older because CHANGE->END is
+                         older than RANGE->END. */
+                      j++;
+                    }
+                }
+              else
+                {
+                  /* RANGE is non-inheritable and CHANGE is inheritable. */
+                  if (change->start < range->start)
+                    {
+                      if (change->end == range->end)
+                        {
+                          /* RANGE is a proper subset of CHANGE and share the
+                             same end revision, so set RANGE equal to CHANGE. */
+                          range->start = change->start;
+                          range->inheritable = TRUE;
+                          j++;
+                        }
+                      else if (change->end > range->end)
+                        {
+                          /* RANGE is a proper subset of CHANGE and CHANGE has
+                             a younger end revision, so set RANGE equal to its
+                             intersection with CHANGE and truncate CHANGE. */
+                          range->start = change->start;
+                          range->inheritable = TRUE;
+                          change->start = range->end;
+                        }
+                      else
+                        {
+                          /* CHANGE and RANGE overlap. Set RANGE equal to its
+                             intersection with CHANGE and take the remainder
+                             of RANGE and insert it into *RANGELIST. */
+                          svn_merge_range_t *range_copy =
+                            svn_merge_range_dup(range, pool);
+                          range_copy->start = change->end;
+                          range->start = change->start;
+                          range->end = change->end;
+                          range->inheritable = TRUE;
+                          svn_sort__array_insert(&range_copy, *rangelist, ++i);
+                          j++;
+                        }
+                    }
+                  else 
+                    {
+                      /* CHANGE and RANGE share the same start rev, but
+                         CHANGE is considered older because its end rev
+                         is older.
+                         
+                         Insert the intersection of RANGE and CHANGE into
+                         *RANGELIST and then set RANGE to the non-intersecting
+                         portion of RANGE. */
+                      svn_merge_range_t *range_copy =
+                        svn_merge_range_dup(range, pool);
+                      range_copy->end = change->end;
+                      range_copy->inheritable = TRUE;
+                      range->start = change->end;
+                      svn_sort__array_insert(&range_copy, *rangelist, i++);
+                      j++;
+                    }
+                }
+            }
         }
     }
-  /* Copy back any remaining elements.
-     Only one of these loops should end up running, if anything. */
 
-  SVN_ERR_ASSERT(!(i < (*rangelist)->nelts && j < changes->nelts));
-
-  for (; i < (*rangelist)->nelts; i++)
+  /* Copy any remaining elements in CHANGES into *RANGELIST. */
+  for (; j < (changes)->nelts; j++)
     {
-      svn_merge_range_t *elt = APR_ARRAY_IDX(*rangelist, i,
-                                             svn_merge_range_t *);
-      SVN_ERR(combine_with_lastrange(elt, output,
-                                     TRUE, pool, pool));
+      svn_merge_range_t *change =
+        APR_ARRAY_IDX(changes, j, svn_merge_range_t *);
+      svn_merge_range_t *change_copy = svn_merge_range_dup(change,
+                                                           pool);
+      svn_sort__array_insert(&change_copy, *rangelist, (*rangelist)->nelts);
     }
 
-
-  for (; j < changes->nelts; j++)
-    {
-      svn_merge_range_t *elt = APR_ARRAY_IDX(changes, j, svn_merge_range_t *);
-      SVN_ERR(combine_with_lastrange(elt, output,
-                                     TRUE, pool, pool));
-    }
-
-  *rangelist = output;
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
