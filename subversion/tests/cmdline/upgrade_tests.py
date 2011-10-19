@@ -1229,6 +1229,21 @@ def upgrade_missing_replaced(sbox):
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
+@Issue(4033)
+@Wimp(4033)
+def upgrade_not_present_replaced(sbox):
+  "upgrade with not-present replaced nodes"
+
+  sbox.build(read_only=True)
+  replace_sbox_with_tarfile(sbox, 'upgrade_not_present_replaced.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+  svntest.main.run_svnadmin('setuuid', sbox.repo_dir,
+                            'd7130b12-92f6-45c9-9217-b9f0472c3fab')
+  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
+                                     'file:///tmp/repo', sbox.repo_url,
+                                     sbox.wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -1279,6 +1294,7 @@ test_list = [ None,
               upgrade_locked,
               upgrade_file_externals,
               upgrade_missing_replaced,
+              upgrade_not_present_replaced,
              ]
 
 
