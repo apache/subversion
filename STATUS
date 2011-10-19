@@ -76,18 +76,6 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-   
- * r1185242
-   Don't enable the SQLite shared process cache.
-   Justification:
-     Resolves common errors of multithreaded application users.
-   Notes:
-     See also log message of this revision.
-     If r1185280 isn't applied before this patch the op-depth tests will
-     start failing.
-   Votes:
-     +1: rhuijben (after r1185280 has been backported)
-     +1: ivan, hwright
 
  * r1163243, r1163383
    Fix issue #3791 'svn mergeinfo shows natural history of added subtrees
