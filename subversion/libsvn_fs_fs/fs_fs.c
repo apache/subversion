@@ -5837,7 +5837,7 @@ write_hash_rep(svn_filesize_t *size,
 }
 
 /* Sanity check ROOT_NODEREV, a candidate for being the root node-revision
-   of (not yet committed) revision REV.  Use OCEAN for temporary allocations.
+   of (not yet committed) revision REV.
  */
 static APR_INLINE svn_error_t *
 validate_root_noderev(node_revision_t *root_noderev,
