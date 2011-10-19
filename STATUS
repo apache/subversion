@@ -147,11 +147,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1181609
-   Fill in the repos_* fields of svn_wc_status3_t for nodes that only exist
-   in the repository.
-   Justification:
-     Resolves a regression identified by markphip.
-   Votes:
-     +1: rhuijben, philip, pburba

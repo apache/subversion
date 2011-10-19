@@ -184,6 +184,9 @@ struct dir_baton
   /* The pool in which this baton itself is allocated. */
   apr_pool_t *pool;
 
+  /* The repository root relative path to this item in the repository. */
+  const char *repos_relpath;
+
   /* out-of-date info corresponding to ood_* fields in svn_wc_status3_t. */
   svn_node_kind_t ood_kind;
   svn_revnum_t ood_changed_rev;
@@ -222,6 +225,9 @@ struct file_baton
   /* This gets set if the file underwent a prop change, which guides
      the code that syncs up the adm dir and working copy. */
   svn_boolean_t prop_changed;
+
+  /* The repository root relative path to this item in the repository. */
+  const char *repos_relpath;
 
   /* out-of-date info corresponding to ood_* fields in svn_wc_status3_t. */
   svn_node_kind_t ood_kind;
@@ -1348,6 +1354,27 @@ tweak_statushash(void *baton,
     {
       struct dir_baton *b = this_dir_baton;
 
+      if (!statstruct->repos_relpath && b->repos_relpath)
+        {
+          if (statstruct->repos_node_status == svn_wc_status_deleted)
+            {
+              /* When deleting PATH, BATON is for PATH's parent,
+                 so we must construct PATH's real statstruct->url. */
+              statstruct->repos_relpath =
+                            svn_relpath_join(b->repos_relpath,
+                                             svn_dirent_basename(local_abspath,
+                                                                 NULL),
+                                             pool);
+            }
+          else
+            statstruct->repos_relpath = apr_pstrdup(pool, b->repos_relpath);
+
+          statstruct->repos_root_url = 
+                              b->edit_baton->anchor_status->repos_root_url;
+          statstruct->repos_uuid = 
+                              b->edit_baton->anchor_status->repos_uuid;
+        }
+
       /* The last committed date, and author for deleted items
          isn't available. */
       if (statstruct->repos_node_status == svn_wc_status_deleted)
@@ -1381,6 +1408,14 @@ tweak_statushash(void *baton,
       struct file_baton *b = baton;
       statstruct->ood_changed_rev = b->ood_changed_rev;
       statstruct->ood_changed_date = b->ood_changed_date;
+      if (!statstruct->repos_relpath && b->repos_relpath)
+        {
+          statstruct->repos_relpath = apr_pstrdup(pool, b->repos_relpath);
+          statstruct->repos_root_url =
+                          b->edit_baton->anchor_status->repos_root_url;
+          statstruct->repos_uuid =
+                          b->edit_baton->anchor_status->repos_uuid;
+        }
       statstruct->ood_kind = b->ood_kind;
       if (b->ood_changed_author)
         statstruct->ood_changed_author =
@@ -1403,9 +1438,9 @@ find_dir_repos_relpath(const struct dir_baton *db, apr_pool_t *pool)
       const svn_wc_status3_t *status = apr_hash_get(pb->statii,
                                                     db->local_abspath,
                                                     APR_HASH_KEY_STRING);
-      /* Note that status->url is NULL in the case of a missing
-       * directory, which means we need to recurse up another level to
-       * get a useful URL. */
+      /* Note that status->repos_relpath could be NULL in the case of a missing
+       * directory, which means we need to recurse up another level to get
+       * a useful relpath. */
       if (status)
         return status->repos_relpath;
 
@@ -1450,6 +1485,7 @@ make_dir_baton(void **dir_baton,
   d->statii = apr_hash_make(pool);
   d->ood_changed_rev = SVN_INVALID_REVNUM;
   d->ood_changed_date = 0;
+  d->repos_relpath = apr_pstrdup(pool, find_dir_repos_relpath(d, pool));
   d->ood_kind = svn_node_dir;
   d->ood_changed_author = NULL;
 
@@ -1543,6 +1579,8 @@ make_file_baton(struct dir_baton *parent_dir_baton,
   f->edit_baton = eb;
   f->ood_changed_rev = SVN_INVALID_REVNUM;
   f->ood_changed_date = 0;
+  f->repos_relpath = svn_relpath_join(find_dir_repos_relpath(pb, pool),
+                                      f->name, pool);
   f->ood_kind = svn_node_file;
   f->ood_changed_author = NULL;
   return f;
