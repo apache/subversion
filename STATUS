@@ -43,7 +43,7 @@ Candidate changes:
      is a minor optimization along with more new tests.  r1181110 is just
      a doc string typo fix.  
    Votes:
-     +1: pburba
+     +1: pburba, rhuijben
 
  * r1185746, r1186059
    Fix up some erroneous "Could not frob some targets because..." warnings.
@@ -60,10 +60,9 @@ Candidate changes:
      r1185886: fixes this issue and cleans up whitespace in the test.
      Merge conflicts with issue r1177732 group.  Branch includes both sets.
    Branch:
-     1.7.x-issue4035-r1185738
+     ^/subversion/branches/1.7.x-issue4035-r1185738
    Votes:
-     +1: rhuijben (not r1186240)
-     +1: philip
+     +1: rhuijben, philip
 
  * r1186231
    FSFS: Fix validation so it doesn't hork preexisting repositories that
@@ -78,11 +77,11 @@ Candidate changes:
    Justification:
      Lots of user reports of checksum!=NULL assertions.
    Branch:
-     1.7.x-issue4035
+     ^/subversion/branches/1.7.x-issue4035
    Notes:
      Merge conflicts with r1185738 group.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
 Veto-blocked changes:
 =====================
