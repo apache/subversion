@@ -5798,12 +5798,36 @@ svn_client_url_from_path(const char **url,
                          apr_pool_t *pool);
 
 
+
+/* Fetching a repository's root URL and UUID. */
+
+/** Set @a *repos_root_url and @a *repos_uuid, to the root URL and UUID of
+ * the repository in which @a abspath_or_url is versioned. Use the
+ * authentication baton and working copy context cached in @a ctx as
+ * necessary. @a repos_root_url and/or @a repos_uuid may be NULL if not
+ * wanted.
+ *
+ * Allocate @a *repos_root_url and @a *repos_uuid in @a result_pool.
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_get_repos_root(const char **repos_root_url,
+                          const char **repos_uuid,
+                          const char *abspath_or_url,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
 /** Set @a *url to the repository root URL of the repository in which
  * @a path_or_url is versioned (or scheduled to be versioned),
  * allocated in @a pool.  @a ctx is required for possible repository
  * authentication.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.7 API. Use
+ * svn_client_get_repos_root().
  */
 svn_error_t *
 svn_client_root_url_from_path(const char **url,
@@ -5811,16 +5835,15 @@ svn_client_root_url_from_path(const char **url,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool);
 
-
-
-/* Fetching repository UUIDs. */
-
 /** Get repository @a uuid for @a url.
  *
  * Use a @a pool to open a temporary RA session to @a url, discover the
  * repository uuid, and free the session.  Return the uuid in @a uuid,
  * allocated in @a pool.  @a ctx is required for possible repository
  * authentication.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API. Use
+ * svn_client_get_repos_root().
  */
 svn_error_t *
 svn_client_uuid_from_url(const char **uuid,
@@ -5836,6 +5859,8 @@ svn_client_uuid_from_url(const char **uuid,
  * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API. Use
+ * svn_client_get_repos_root().
  */
 svn_error_t *
 svn_client_uuid_from_path2(const char **uuid,

@@ -144,12 +144,12 @@ svn_client__path_relative_to_root(const char **rel_path,
 }
 
 svn_error_t *
-svn_client__get_repos_root(const char **repos_root,
-                           const char **repos_uuid,
-                           const char *abspath_or_url,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
+svn_client_get_repos_root(const char **repos_root,
+                          const char **repos_uuid,
+                          const char *abspath_or_url,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   svn_ra_session_t *ra_session;
 
