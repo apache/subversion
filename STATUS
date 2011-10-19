@@ -68,14 +68,6 @@ Candidate changes:
                          performance should be better, I wonder if that's
                          been tested at all)
 
- * r1167681
-   Don't invoke quicksort unnecessarily when combining mergeinfo rangelists.
-   Justification:
-     This speeds up --reintegrate merges, especially the pathological case
-     described here: http://svn.haxx.se/dev/archive-2011-09/0247.shtml
-   Votes:
-     +1: stsp, rhuijben
-
  * r1178280, r1178282
    Add a sanity check to FSFS.
    Justification:
@@ -83,37 +75,13 @@ Candidate changes:
    Votes:
      +1: danielsh, rhuijben
 
- * r1181609
-   Fill in the repos_* fields of svn_wc_status3_t for nodes that only exist
-   in the repository.
-   Justification:
-     Resolves a regression identified by markphip.
-   Votes:
-     +1: rhuijben, philip
-
  * r1178942, r1182527
    Fix issue #4009, "Big trivial text files merged MUCH slower than binary"
    Justification:
      Much improved merge performance for, well, trivial text file merges!
    Votes:
-     +1: stsp
+     +1: stsp, pburba
 
- * r1149103, r1149135
-   Fix a possible assertion during merge: svn: E235000: In file
-   'subversion/libsvn_subr/mergeinfo.c' line 802: assertion failed
-   (IS_VALID_FORWARD_RANGE(first))
-   Justification:
-     Assertions are bad.
-   Notes:
-     Reported privately to me by a Subversion user running OpenBSD.
-     I don't know how to reproduce it, and no public issue was filed.
-     The user patiently tried several builds and patches for me.
-     We discovered that the merge succeeded with a trunk build.
-     Reverse-merging r1149135 from trunk made the assertion failure appear.
-     This revision was not intended to fix a bug but apparently it did :)
-     r1149103 is a non-functional change which avoids a merge conflict.
-   Votes:
-     +1: stsp, julianfoad
      
  * r1185222
    Make 'svn add --parents D/file' work if D is deleted.
@@ -123,7 +91,7 @@ Candidate changes:
      Reported on the AnkhSVN error list a few times. It's better to apply this
      fix here than having to fix all clients.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, pburba
 
  * r1185280, r1185282
    Open SQLite databases as writable in some test code before we try to update
@@ -179,6 +147,40 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1149103, r1149135
+   Fix a possible assertion during merge: svn: E235000: In file
+   'subversion/libsvn_subr/mergeinfo.c' line 802: assertion failed
+   (IS_VALID_FORWARD_RANGE(first))
+   Justification:
+     Assertions are bad.
+   Notes:
+     Reported privately to me by a Subversion user running OpenBSD.
+     I don't know how to reproduce it, and no public issue was filed.
+     The user patiently tried several builds and patches for me.
+     We discovered that the merge succeeded with a trunk build.
+     Reverse-merging r1149135 from trunk made the assertion failure appear.
+     This revision was not intended to fix a bug but apparently it did :)
+     r1149103 is a non-functional change which avoids a merge conflict.
+   Votes:
+     +1: stsp, julianfoad, pburba
+
+ * r1167681
+   Don't invoke quicksort unnecessarily when combining mergeinfo rangelists.
+   Justification:
+     This speeds up --reintegrate merges, especially the pathological case
+     described here: http://svn.haxx.se/dev/archive-2011-09/0247.shtml
+   Votes:
+     +1: stsp, rhuijben, pburba
+
+ * r1181609
+   Fill in the repos_* fields of svn_wc_status3_t for nodes that only exist
+   in the repository.
+   Justification:
+     Resolves a regression identified by markphip.
+   Votes:
+     +1: rhuijben, philip, pburba
+
  * r1185730
    Update links in INSTALL.
    Votes:
