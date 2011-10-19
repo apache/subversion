@@ -5874,17 +5874,50 @@ write_hash_rep(svn_filesize_t *size,
 }
 
 /* Sanity check ROOT_NODEREV, a candidate for being the root node-revision
-   of (not yet committed) revision REV.  Use OCEAN for temporary allocations.
+   of (not yet committed) revision REV in FS.  Use POOL for temporary
+   allocations.
  */
-static APR_INLINE svn_error_t *
-validate_root_noderev(node_revision_t *root_noderev,
-                      svn_revnum_t rev)
+static svn_error_t *
+validate_root_noderev(svn_fs_t *fs,
+                      node_revision_t *root_noderev,
+                      svn_revnum_t rev,
+                      apr_pool_t *pool)
 {
-  /* Bogosity seen on svn.apache.org; see
+  svn_revnum_t head_revnum = rev-1;
+  int head_predecessor_count;
+
+  SVN_ERR_ASSERT(rev > 0);
+
+  /* Compute HEAD_PREDECESSOR_COUNT. */
+  {
+    svn_fs_root_t *head_revision;
+    const svn_fs_id_t *head_root_id;
+    node_revision_t *head_root_noderev;
+
+    /* Get /@HEAD's noderev. */
+    SVN_ERR(svn_fs_fs__revision_root(&head_revision, fs, head_revnum, pool));
+    SVN_ERR(svn_fs_fs__node_id(&head_root_id, head_revision, "/", pool));
+    SVN_ERR(svn_fs_fs__get_node_revision(&head_root_noderev, fs, head_root_id,
+                                         pool));
+
+    head_predecessor_count = head_root_noderev->predecessor_count;
+  }
+
+  /* Check that the root noderev's predecessor count equals REV.
+
+     This kind of corruption was seen on svn.apache.org (both on
+     the root noderev and on other fspaths' noderevs); see
        http://mid.gmane.org/20111002202833.GA12373@daniel3.local
+
+     Normally (rev == root_noderev->predecessor_count), but here we
+     use a more roundabout check that should only trigger on new instances
+     of the corruption, rather then trigger on each and every new commit
+     to a repository that has triggered the bug somewhere in its root
+     noderev's history.
    */
   if (root_noderev->predecessor_count != -1
-      && root_noderev->predecessor_count != rev)
+      && (root_noderev->predecessor_count - head_predecessor_count)
+         != (rev - head_revnum))
     {
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                _("predecessor count for "
@@ -6065,7 +6098,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
   /* Write out our new node-revision. */
   if (at_root)
-    SVN_ERR(validate_root_noderev(noderev, rev));
+    SVN_ERR(validate_root_noderev(fs, noderev, rev, pool));
   SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_aprfile2(file, TRUE, pool),
                                    noderev, ffd->format,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),

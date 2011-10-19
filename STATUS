@@ -1,19 +1,4 @@
-      * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-      *                                                     *
-      *  THIS RELEASE STREAM IS OPEN TO BUG FIXES.          *
-      *                                                     *
-      * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-This file tracks the status of releases in the 1.7.x line.
-
-See http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
-for details on how release lines and voting work, what kinds of bugs can
-delay a release, etc.
-
-Status of 1.7.1:
-
-Candidate changes:
-==================
+      '"=============
 
  * r1147540, r1147541
    Remove unused variables in build system.
@@ -78,12 +63,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1186121, r1186231
-   FSFS: Fix validation so it doesn't hork preexisting repositories that
-   triggered a bug once in their history.
-   Justification:
-     Such repositories are unusable by 1.7.x without this revision.
-     Either this must be backported to 1.7.1 or r1186144 must be undone.
-   Votes:
-     +1: danielsh, stsp, philip
