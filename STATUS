@@ -69,7 +69,7 @@ Candidate changes:
      r1185911 adds a simple test for this case and r1185918 resolves this
      regression.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
 Veto-blocked changes:
 =====================
