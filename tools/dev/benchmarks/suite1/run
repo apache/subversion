@@ -44,13 +44,8 @@ batch(){
   spread="$2"
   N="$3"
   pre="${levels}x${spread}_"
-  echo
-  echo "---------------------------------------------------------------------"
-  echo
-  echo "Results for dir levels: $levels  spread: $spread"
   "$benchmark" "--svn=$SVN_A" run "${pre}$SVN_A_NAME" $levels $spread $N >/dev/null
   "$benchmark" "--svn=$SVN_B" run "${pre}$SVN_B_NAME" $levels $spread $N >/dev/null
-  "$benchmark" compare "${pre}$SVN_A_NAME" "${pre}$SVN_B_NAME"
 }
 
 N=6
@@ -75,20 +70,42 @@ cs=100
 {
 started="$(date)"
 echo "Started at $started"
-echo ""
 
 batch $al $as $N
 batch $bl $bs $N
 batch $cl $cs $N
 
-echo ""
-echo =========================================================================
-echo ""
 "$benchmark" combine "total_$SVN_A_NAME" *x*"_$SVN_A_NAME" >/dev/null
 "$benchmark" combine "total_$SVN_B_NAME" *x*"_$SVN_B_NAME" >/dev/null
 
-echo "comparing averaged totals..."
+echo ""
+echo "Averaged-total results across all runs:"
+echo "---------------------------------------"
+echo ""
 "$benchmark" compare "total_$SVN_A_NAME" "total_$SVN_B_NAME"
+
+echo ""
+echo ""
+echo "Above totals split into separate <dir-levels>x<dir-spread> runs:"
+echo "----------------------------------------------------------------"
+echo ""
+
+for pre in "${al}x${as}_" "${bl}x${bs}_" "${cl}x${cs}_"; do
+  "$benchmark" compare "${pre}$SVN_A_NAME" "${pre}$SVN_B_NAME"
+  echo ""
+done
+
+echo ""
+echo ""
+echo "More detail:"
+echo "------------"
+echo ""
+
+for pre in "${al}x${as}_" "${bl}x${bs}_" "${cl}x${cs}_" "total_"; do
+  "$benchmark" compare -v "${pre}$SVN_A_NAME" "${pre}$SVN_B_NAME"
+  echo ""
+  echo ""
+done
 
 echo ""
 echo "Had started at $started,"

@@ -591,9 +591,9 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
   had_nl = FALSE;
   while (is_match)
     {
+#if SVN_UNALIGNED_ACCESS_IS_OK
       /* Initialize the minimum pointer positions. */
       const char *min_curp[4];
-#if SVN_UNALIGNED_ACCESS_IS_OK
       svn_boolean_t can_read_word;
 #endif /* SVN_UNALIGNED_ACCESS_IS_OK */
 
@@ -616,14 +616,13 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
 
       DECREMENT_POINTERS(file_for_suffix, file_len, pool);
 
+#if SVN_UNALIGNED_ACCESS_IS_OK
 
       min_curp[0] = file_for_suffix[0].chunk == suffix_min_chunk0
                   ? file_for_suffix[0].buffer + suffix_min_offset0 + 1
                   : file_for_suffix[0].buffer + 1;
       for (i = 1; i < file_len; i++)
         min_curp[i] = file_for_suffix[i].buffer + 1;
-
-#if SVN_UNALIGNED_ACCESS_IS_OK
 
       /* Scan quickly by reading with machine-word granularity. */
       for (i = 0, can_read_word = TRUE; i < file_len; i++)

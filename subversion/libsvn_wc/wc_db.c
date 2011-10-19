@@ -4178,6 +4178,7 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
                        const char *original_uuid,
                        svn_revnum_t original_revision,
                        const apr_array_header_t *children,
+                       svn_boolean_t is_move,
                        svn_depth_t depth,
                        const svn_skel_t *conflict,
                        const svn_skel_t *work_items,
@@ -4209,7 +4210,7 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
   iwb.changed_rev = changed_rev;
   iwb.changed_date = changed_date;
   iwb.changed_author = changed_author;
-  iwb.moved_here = FALSE;
+  iwb.moved_here = is_move;
 
   if (original_root_url != NULL)
     {
@@ -6403,6 +6404,33 @@ op_delete_txn(void *baton,
         }
 
       select_depth = relpath_depth(local_relpath);
+
+      /* When deleting a moved-here op-root, clear moved-to data at the
+       * pre-move location, transforming the move into a normal delete.
+       * This way, deleting the copied half of a move has the same effect
+       * as reverting it. */
+      if (status == svn_wc__db_status_added ||
+          status == svn_wc__db_status_moved_here)
+        {
+          const char *moved_from_relpath;
+          const char *moved_from_op_root_relpath;
+
+          SVN_ERR(scan_addition(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                                &moved_from_relpath,
+                                &moved_from_op_root_relpath,
+                                wcroot, local_relpath,
+                                scratch_pool, scratch_pool));
+          if (status == svn_wc__db_status_moved_here &&
+              moved_from_relpath && moved_from_op_root_relpath &&
+              strcmp(moved_from_relpath, moved_from_op_root_relpath) == 0)
+            {
+              SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                                STMT_CLEAR_MOVED_TO_RELPATH));
+              SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
+                                        moved_from_op_root_relpath));
+              SVN_ERR(svn_sqlite__step_done(stmt));
+            }
+        }
     }
   else
     {
@@ -6728,18 +6756,10 @@ read_info(svn_wc__db_status_t *status,
             }
           else
             {
-              svn_error_t *err2;
-              err2 = svn_sqlite__column_checksum(checksum, stmt_info, 6,
-                                                 result_pool);
 
-              if (err2 != NULL)
-                err = svn_error_compose_create(
-                         err,
-                         svn_error_createf(
-                               err->apr_err, err2,
-                              _("The node '%s' has a corrupt checksum value."),
-                              path_for_error_message(wcroot, local_relpath,
-                                                     scratch_pool)));
+              err = svn_error_compose_create(
+                        err, svn_sqlite__column_checksum(checksum, stmt_info, 6,
+                                                         result_pool));
             }
         }
       if (recorded_size)
@@ -6921,6 +6941,12 @@ read_info(svn_wc__db_status_t *status,
 
   if (stmt_act != NULL)
     err = svn_error_compose_create(err, svn_sqlite__reset(stmt_act));
+
+  if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+    err = svn_error_quick_wrap(err, 
+                               apr_psprintf(scratch_pool,
+                                            "Error reading node '%s'",
+                                            local_relpath));
 
   SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt_info)));
 
@@ -9994,6 +10020,8 @@ scan_deletion_txn(void *baton,
                       svn_error_clear(err); 
                       moved_to_relpath = NULL;
                       moved_to_op_root_relpath = NULL;
+                      if (sd_baton->moved_to_relpath)
+                        *sd_baton->moved_to_relpath = NULL;
                       found_child = FALSE;
                     }
                   else

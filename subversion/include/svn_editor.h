@@ -411,7 +411,7 @@ typedef svn_error_t *(*svn_editor_cb_add_symlink_t)(
 typedef svn_error_t *(*svn_editor_cb_add_absent_t)(
   void *baton,
   const char *relpath,
-  svn_node_kind_t kind,
+  svn_kind_t kind,
   svn_revnum_t replaces_rev,
   apr_pool_t *scratch_pool);
 
@@ -787,7 +787,7 @@ svn_editor_add_symlink(svn_editor_t *editor,
 svn_error_t *
 svn_editor_add_absent(svn_editor_t *editor,
                       const char *relpath,
-                      svn_node_kind_t kind,
+                      svn_kind_t kind,
                       svn_revnum_t replaces_rev);
 
 /** Drive @a editor's #svn_editor_cb_set_props_t callback.

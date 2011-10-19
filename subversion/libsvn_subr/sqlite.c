@@ -667,13 +667,6 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
     flags |= SQLITE_OPEN_NOMUTEX;
 #endif
 
-    /* SQLite 3.5 allows sharing cache instances, even in a multithreaded
-       environment. This allows sharing cached data when we open a database
-       more than once.
-
-       OS X 10.7 doesn't support sqlite3_enable_shared_cache. */
-    flags |= SQLITE_OPEN_SHAREDCACHE;
-
     /* Open the database. Note that a handle is returned, even when an error
        occurs (except for out-of-memory); thus, we can safely use it to
        extract an error message and construct an svn_error_t. */

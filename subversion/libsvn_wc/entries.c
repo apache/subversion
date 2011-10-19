@@ -1466,6 +1466,8 @@ insert_node(svn_sqlite__db_t *sdb,
     SVN_ERR(svn_sqlite__bind_text(stmt, 8, "incomplete"));
   else if (node->presence == svn_wc__db_status_excluded)
     SVN_ERR(svn_sqlite__bind_text(stmt, 8, "excluded"));
+  else if (node->presence == svn_wc__db_status_server_excluded)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "absent"));
 
   if (node->kind == svn_node_none)
     SVN_ERR(svn_sqlite__bind_text(stmt, 10, "unknown"));
@@ -1697,10 +1699,10 @@ write_entry(struct write_baton **entry_node,
       SVN_ERR_ASSERT(!entry->incomplete);
       base_node->presence = svn_wc__db_status_not_present;
     }
-
-  if (entry->absent)
+  else if (entry->absent)
     {
-      SVN_ERR_ASSERT(base_node && !working_node);
+      SVN_ERR_ASSERT(base_node && !working_node && !below_working_node);
+      SVN_ERR_ASSERT(!entry->incomplete);
       base_node->presence = svn_wc__db_status_server_excluded;
     }
 
@@ -1873,9 +1875,22 @@ write_entry(struct write_baton **entry_node,
 
       if (entry->deleted)
         {
-          base_node->presence = svn_wc__db_status_not_present;
+          SVN_ERR_ASSERT(base_node->presence == svn_wc__db_status_not_present);
           /* ### should be svn_node_unknown, but let's store what we have. */
           base_node->kind = entry->kind;
+        }
+      else if (entry->absent)
+        {
+          SVN_ERR_ASSERT(base_node->presence 
+                                == svn_wc__db_status_server_excluded);
+          /* ### should be svn_node_unknown, but let's store what we have. */
+          base_node->kind = entry->kind;
+
+          /* Store the most likely revision in the node to avoid
+             base nodes without a valid revision. Of course
+             we remember that the data is still incomplete. */
+          if (!SVN_IS_VALID_REVNUM(base_node->revision) && parent_node->base)
+            base_node->revision = parent_node->base->revision;
         }
       else
         {
@@ -1934,9 +1949,20 @@ write_entry(struct write_baton **entry_node,
                 found_md5_checksum = text_base_info->normal_base.md5_checksum;
               else
                 found_md5_checksum = NULL;
-              if (entry_md5_checksum && found_md5_checksum)
-                SVN_ERR_ASSERT(svn_checksum_match(entry_md5_checksum,
-                                                  found_md5_checksum));
+              if (entry_md5_checksum && found_md5_checksum &&
+                  !svn_checksum_match(entry_md5_checksum, found_md5_checksum))
+                return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                                         _("Bad base MD5 checksum for '%s'; "
+                                           "expected: '%s'; found '%s'; "),
+                                       svn_dirent_local_style(
+                                         svn_dirent_join(root_abspath,
+                                                         local_relpath,
+                                                         scratch_pool),
+                                         scratch_pool),
+                                       svn_checksum_to_cstring_display(
+                                         entry_md5_checksum, scratch_pool),
+                                       svn_checksum_to_cstring_display(
+                                         found_md5_checksum, scratch_pool));
               else
                 {
                   /* ### Not sure what conditions this should cover. */

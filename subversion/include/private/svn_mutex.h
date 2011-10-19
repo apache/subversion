@@ -42,8 +42,8 @@ extern "C" {
 #if APR_HAS_THREADS
 
 /** A mutex for synchronization between threads. It may be NULL, in
- * which case no synchronization will take place. The latter is useful,
- * if implement some functionality where synchronization is optional.
+ * which case no synchronization will take place. The latter is useful
+ * when implementing some functionality with optional synchronization.
  */
 typedef apr_thread_mutex_t svn_mutex__t;
 
@@ -60,8 +60,7 @@ typedef void svn_mutex__t;
  * the pointer will be set to @c NULL and @ref svn_mutex__lock as well as
  * @ref svn_mutex__unlock will be no-ops.
  * 
- * If @a enable_mutex is set but threading is not supported by APR, this 
- * function returns an @c APR_ENOTIMPL error.
+ * If threading is not supported by APR, this function is a no-op.
  */
 svn_error_t *
 svn_mutex__init(svn_mutex__t **mutex,
@@ -111,7 +110,7 @@ do {                                      \
   if (e) return svn_error_trace(e);       \
   e = svn_mutex__unlock(m, (expr));       \
   if (e) return svn_error_trace(e);       \
-} while (0);
+} while (0)
 
 #ifdef __cplusplus
 }

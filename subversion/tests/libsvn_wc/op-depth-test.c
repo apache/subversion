@@ -77,7 +77,7 @@ open_wc_db(svn_sqlite__db_t **sdb,
            apr_pool_t *scratch_pool)
 {
   SVN_ERR(svn_wc__db_util_open_db(sdb, wc_root_abspath, "wc.db",
-                                  svn_sqlite__mode_readonly, my_statements,
+                                  svn_sqlite__mode_readwrite, my_statements,
                                   result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -481,6 +481,7 @@ check_db_rows(svn_test__sandbox_t *b,
   /* Compare EXPECTED_HASH with ACTUAL_HASH and return any errors. */
   SVN_ERR(svn_hash_diff(expected_hash, found_hash,
                         compare_nodes_rows, &comparison_baton, b->pool));
+  SVN_ERR(svn_sqlite__close(sdb));
   return comparison_baton.errors;
 }
 

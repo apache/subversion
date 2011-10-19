@@ -1165,7 +1165,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                          repos_relpath,
                                          repos_root_url, repos_uuid,
                                          copyfrom_rev,
-                                         NULL /* children */, depth,
+                                         NULL /* children */, FALSE, depth,
                                          NULL /* conflicts */,
                                          NULL /* work items */,
                                          scratch_pool));

@@ -1111,13 +1111,13 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
     SVN_ERR(err);
 
   /* Then calculate and merge the differences. */
-  SVN_ERR(svn_mergeinfo_diff(&deleted, &changed, prev_mergeinfo, curr_mergeinfo,
-                             FALSE, subpool));
-  SVN_ERR(svn_mergeinfo_merge(changed, deleted, subpool));
+  SVN_ERR(svn_mergeinfo_diff2(&deleted, &changed, prev_mergeinfo,
+                              curr_mergeinfo, FALSE, pool, subpool));
+  SVN_ERR(svn_mergeinfo_merge2(changed, deleted, pool, subpool));
 
   /* Store the result. */
   if (apr_hash_count(changed))
-    *merged_mergeinfo = svn_mergeinfo_dup(changed, pool);
+    *merged_mergeinfo = changed;
   else
     *merged_mergeinfo = NULL;
 

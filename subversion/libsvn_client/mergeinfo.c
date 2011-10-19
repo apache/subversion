@@ -1803,19 +1803,18 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
   /* Open RA sessions to the repository for the source and target.
    * ### TODO: As the source and target must be in the same repository, we
    * should share a single session, tracking the two URLs separately. */
-  
+
   if (!finding_merged)
     {
       svn_revnum_t target_peg_revnum;
-      const char *url;
 
       SVN_ERR(svn_client__ra_session_from_path(&target_session,
-                                               &target_peg_revnum, &url,
+                                               &target_peg_revnum, NULL,
                                                target_path_or_url, NULL,
                                                target_peg_revision,
                                                target_peg_revision,
                                                ctx, scratch_pool));
-      
+
       SVN_ERR(svn_client__get_history_as_mergeinfo(&target_history, NULL,
                                                    target_peg_revnum,
                                                    SVN_INVALID_REVNUM,
@@ -1826,10 +1825,9 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
 
   {
     svn_revnum_t source_peg_revnum;
-    const char *url;
 
     SVN_ERR(svn_client__ra_session_from_path(&source_session,
-                                             &source_peg_revnum, &url,
+                                             &source_peg_revnum, NULL,
                                              source_path_or_url, NULL,
                                              source_peg_revision,
                                              source_peg_revision,
@@ -1905,9 +1903,9 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                            subtree_history,
                                            subtree_source_history, TRUE,
                                            scratch_pool, iterpool));
-          SVN_ERR(svn_mergeinfo_merge(subtree_mergeinfo,
-                                      merged_via_history,
-                                      scratch_pool));
+          SVN_ERR(svn_mergeinfo_merge2(subtree_mergeinfo,
+                                       merged_via_history,
+                                       scratch_pool, scratch_pool));
         }
 
       SVN_ERR(svn_mergeinfo_inheritable2(&subtree_inheritable_mergeinfo,

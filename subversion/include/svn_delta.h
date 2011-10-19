@@ -1105,7 +1105,7 @@ typedef svn_error_t *(*svn_delta_fetch_props_func_t)(
  * @since New in 1.8.
  */
 typedef svn_error_t *(*svn_delta_fetch_kind_func_t)(
-  svn_node_kind_t *kind,
+  svn_kind_t *kind,
   void *baton,
   const char *path,
   apr_pool_t *scratch_pool
