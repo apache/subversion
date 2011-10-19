@@ -63,17 +63,10 @@ Candidate changes:
      running 'svn info --depth infinity' shows it to be 2 or 3 times faster.
      On a larger working copy it's orders of magnitude faster.
    Votes:
-     +1: philip
+     +1: philip, stsp
      +0: peters, gstein (looks correct, but I didn't test, and while
                          performance should be better, I wonder if that's
                          been tested at all)
-
- * r1178280, r1178282
-   Add a sanity check to FSFS.
-   Justification:
-     Detects a user-visible corruption seen on svn-master.apache.org.
-   Votes:
-     +1: danielsh, rhuijben
 
  * r1178942, r1182527
    Fix issue #4009, "Big trivial text files merged MUCH slower than binary"
@@ -81,17 +74,6 @@ Candidate changes:
      Much improved merge performance for, well, trivial text file merges!
    Votes:
      +1: stsp, pburba
-
-     
- * r1185222
-   Make 'svn add --parents D/file' work if D is deleted.
-   'svn add D; svn add D/file' would work. 
-   Justification:
-     Makes it easier to use 'svn add --parents'.
-     Reported on the AnkhSVN error list a few times. It's better to apply this
-     fix here than having to fix all clients.
-   Votes:
-     +1: rhuijben, pburba
 
  * r1185280, r1185282
    Open SQLite databases as writable in some test code before we try to update
@@ -147,3 +129,20 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+     
+ * r1185222
+   Make 'svn add --parents D/file' work if D is deleted.
+   'svn add D; svn add D/file' would work. 
+   Justification:
+     Makes it easier to use 'svn add --parents'.
+     Reported on the AnkhSVN error list a few times. It's better to apply this
+     fix here than having to fix all clients.
+   Votes:
+     +1: rhuijben, pburba, stsp
+
+ * r1178280, r1178282
+   Add a sanity check to FSFS.
+   Justification:
+     Detects a user-visible corruption seen on svn-master.apache.org.
+   Votes:
+     +1: danielsh, rhuijben, stsp
