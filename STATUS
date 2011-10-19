@@ -29,7 +29,7 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1185738, r1185763, r1185768, r1185886
+ * r1185738, r1185763, r1185768, r1185886, r1186240
    Add support for upgrading absent nodes to the wonderfull wc-ng world.
    Justification:
      This should have been part of 1.7.0. Without this patch it is impossible
@@ -37,8 +37,11 @@ Candidate changes:
    Notes:
      r1185738, r1185763, r1185768: adds a test for this problem.
      r1185886: fixes this issue and cleans up whitespace in the test.
+     Merge conflicts with issue r1177732 group.
    Votes:
-     +1: rhuijben
+     +1: rhuijben (not r1186240)
+     +0: philip (needs r1186240 but there are merge conflicts)
+
 
  * r1185911, r1185918
    Fix reporting of depth empty directories
@@ -61,12 +64,14 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * 1177732, r1186092, r1186101, r1186107, r1186109
+ * r1177732, r1186092, r1186101, r1186107, r1186109
    Fix issue 4035.
    Justification:
      Lots of user reports of checksum!=NULL assertions.
    Branch:
      1.7.x-issue4035
+   Notes:
+     Merge conflicts with r1185738 group.
    Votes:
      +1: philip
 
