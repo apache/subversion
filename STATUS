@@ -108,13 +108,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1178942, r1182527
-   Fix issue #4009, "Big trivial text files merged MUCH slower than binary"
-   Justification:
-     Much improved merge performance for, well, trivial text file merges!
-   Votes:
-     +1: stsp, pburba, rhuijben
-
  * r1185222
    Make 'svn add --parents D/file' work if D is deleted.
    'svn add D; svn add D/file' would work. 
