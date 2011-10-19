@@ -59,7 +59,7 @@ Candidate changes:
    Justification:
      General correctness and the tests start failing after r1185242.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
    
  * r1185242
    Don't enable the SQLite shared process cache.
