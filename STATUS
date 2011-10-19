@@ -24,27 +24,6 @@ Candidate changes:
      -0: stsp (we can backport these when we need to)
      -0: gstein
 
- * r1180154, r1181090, r1181110, r1181215
-   Fix svn_rangelist_merge so it allocates new svn_merge_range_t elements
-   only when absolutely necessary.
-   Justification:
-     This addresses a serious inefficiency in memory usage when
-     svn_rangelist_merge (or any of its callers like
-     svn_mergeinfo_catalog_merge and svn_mergeinfo_merge2) are called in
-     a loop.  Prior to this change svn_rangelist_merge2 could potentially
-     reallocate *every* range in both rangelists.  For example, the peak
-     working set memory for the reintegrate merge described in
-     http://svn.haxx.se/dev/archive-2011-09/0254.shtml was 1,324,664 KB
-     with trunk@1179545.  With this group that drops to 26,880 KB.
-   Branch:
-     ^/subversion/branches/1.7.x-r1180154
-   Notes:
-     r1180154 is the primary fix with some new tests.  r1181090 and r1181215
-     is a minor optimization along with more new tests.  r1181110 is just
-     a doc string typo fix.  
-   Votes:
-     +1: pburba, rhuijben
-
  * r1185746, r1186059
    Fix up some erroneous "Could not frob some targets because..." warnings.
    Votes:
@@ -107,3 +86,24 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1180154, r1181090, r1181110, r1181215
+   Fix svn_rangelist_merge so it allocates new svn_merge_range_t elements
+   only when absolutely necessary.
+   Justification:
+     This addresses a serious inefficiency in memory usage when
+     svn_rangelist_merge (or any of its callers like
+     svn_mergeinfo_catalog_merge and svn_mergeinfo_merge2) are called in
+     a loop.  Prior to this change svn_rangelist_merge2 could potentially
+     reallocate *every* range in both rangelists.  For example, the peak
+     working set memory for the reintegrate merge described in
+     http://svn.haxx.se/dev/archive-2011-09/0254.shtml was 1,324,664 KB
+     with trunk@1179545.  With this group that drops to 26,880 KB.
+   Branch:
+     ^/subversion/branches/1.7.x-r1180154
+   Notes:
+     r1180154 is the primary fix with some new tests.  r1181090 and r1181215
+     is a minor optimization along with more new tests.  r1181110 is just
+     a doc string typo fix.  
+   Votes:
+     +1: pburba, rhuijben, stsp
