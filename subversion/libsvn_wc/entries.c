@@ -1672,6 +1672,13 @@ write_entry(struct write_baton **entry_node,
 
       case svn_wc_schedule_add:
         working_node = MAYBE_ALLOC(working_node, result_pool);
+        if (entry->deleted)
+          {
+            if (parent_node->base)
+              base_node = MAYBE_ALLOC(base_node, result_pool);
+            else
+              below_working_node = MAYBE_ALLOC(below_working_node, result_pool);
+          }
         break;
 
       case svn_wc_schedule_delete:
@@ -1695,9 +1702,12 @@ write_entry(struct write_baton **entry_node,
      BASE node to indicate the not-present node.  */
   if (entry->deleted)
     {
-      SVN_ERR_ASSERT(base_node && !working_node && !below_working_node);
+      SVN_ERR_ASSERT(base_node || below_working_node);
       SVN_ERR_ASSERT(!entry->incomplete);
-      base_node->presence = svn_wc__db_status_not_present;
+      if (base_node)
+        base_node->presence = svn_wc__db_status_not_present;
+      else
+        below_working_node->presence = svn_wc__db_status_not_present;
     }
   else if (entry->absent)
     {

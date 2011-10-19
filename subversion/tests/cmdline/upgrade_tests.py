@@ -1244,6 +1244,16 @@ def upgrade_not_present_replaced(sbox):
                                      'file:///tmp/repo', sbox.repo_url,
                                      sbox.wc_dir)
 
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+      'A/B/E'         : Item(status='E '),
+      'A/B/E/alpha'   : Item(status='A '),
+      'A/B/E/beta'    : Item(status='A '),
+      'A/B/lambda'    : Item(status='E '),
+      })
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output,
+                                        None, expected_status)
+
 ########################################################################
 # Run the tests
 
