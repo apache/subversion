@@ -182,6 +182,12 @@ svn_sort__array_insert(const void *new_element,
                        int insert_index);
 
 
+/* Remove the element at DELETE_INDEX from the array ARR.
+   If DELETE_INDEX is not a valid element of ARR do nothing. */
+void
+svn_sort__array_delete(apr_array_header_t *arr,
+                       int delete_index);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
