@@ -1234,7 +1234,6 @@ def upgrade_absent(sbox):
                                         None, None)
 
 @Issue(4035)
-@Wimp(4035)
 def upgrade_missing_replaced(sbox):
   "upgrade with missing replaced dir"
 

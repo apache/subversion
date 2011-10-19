@@ -9665,6 +9665,7 @@ scan_addition_txn(void *baton,
     {
       SVN_ERR_ASSERT(*sab->status == svn_wc__db_status_added
                      || *sab->status == svn_wc__db_status_copied
+                     || *sab->status == svn_wc__db_status_incomplete
                      || *sab->status == svn_wc__db_status_moved_here);
       if (*sab->status == svn_wc__db_status_added)
         {
@@ -9918,8 +9919,8 @@ scan_deletion_txn(void *baton,
                                                         local_relpath,
                                                         scratch_pool));
 
-      /* ### incomplete not handled */
       SVN_ERR_ASSERT(work_presence == svn_wc__db_status_normal
+                     || work_presence == svn_wc__db_status_incomplete
                      || work_presence == svn_wc__db_status_not_present
                      || work_presence == svn_wc__db_status_base_deleted);
 
