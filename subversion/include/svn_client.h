@@ -5218,8 +5218,7 @@ svn_client_ls(apr_hash_t **dirents,
  * Output the content of a file.
  *
  * @param[in] out           The stream to which the content will be written.
- * @param[in] path_or_url   The path or URL of the file.
- * @param[in] peg_revision  The peg revision.
+ * @param[in] target        The path or URL and peg revision of the file.
  * @param[in] revision  The operative revision.
  * @param[in] ctx   The standard client context, used for possible
  *                  authentication.
