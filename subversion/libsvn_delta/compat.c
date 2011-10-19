@@ -743,9 +743,18 @@ add_file_cb(void *baton,
             apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
+  const char *tmp_filename;
+  svn_stream_t *tmp_stream;
+
+  /* Spool the contents to a tempfile, and provide that to the driver. */
+  SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_filename, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 eb->edit_pool, scratch_pool));
+  SVN_ERR(svn_stream_copy3(svn_stream_disown(contents, scratch_pool),
+                           tmp_stream, NULL, NULL, scratch_pool));
 
   SVN_ERR(build(eb, ACTION_PUT, relpath, NULL, SVN_INVALID_REVNUM,
-                NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
+                NULL, tmp_filename, SVN_INVALID_REVNUM, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -799,6 +808,20 @@ set_text_cb(void *baton,
             svn_stream_t *contents,
             apr_pool_t *scratch_pool)
 {
+  struct editor_baton *eb = baton;
+  const char *tmp_filename;
+  svn_stream_t *tmp_stream;
+
+  /* Spool the contents to a tempfile, and provide that to the driver. */
+  SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_filename, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 eb->edit_pool, scratch_pool));
+  SVN_ERR(svn_stream_copy3(svn_stream_disown(contents, scratch_pool),
+                           tmp_stream, NULL, NULL, scratch_pool));
+
+  SVN_ERR(build(eb, ACTION_PUT, relpath, NULL, SVN_INVALID_REVNUM,
+                NULL, tmp_filename, SVN_INVALID_REVNUM, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -878,6 +901,22 @@ drive(const struct operation *operation,
                                      child->copyfrom_url,
                                      child->copyfrom_revision, iterpool,
                                      &file_baton));
+        }
+
+      if (child->src_file && file_baton)
+        {
+          /* We need to change textual contents. */
+          svn_txdelta_window_handler_t handler;
+          void *handler_baton;
+          svn_stream_t *contents;
+
+          SVN_ERR(editor->apply_textdelta(file_baton, NULL, iterpool,
+                                          &handler, &handler_baton));
+          SVN_ERR(svn_stream_open_readonly(&contents, child->src_file,
+                                           iterpool, iterpool));
+          SVN_ERR(svn_txdelta_send_stream(contents, handler, handler_baton,
+                                          NULL, iterpool));
+          SVN_ERR(svn_stream_close(contents));
         }
 
       /*SVN_DBG(("child: '%s'; operation: %d\n", path, child->operation));*/
