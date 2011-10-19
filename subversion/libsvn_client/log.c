@@ -283,7 +283,6 @@ svn_client_log5(const apr_array_header_t *targets,
   svn_boolean_t has_log_revprops;
   const char *actual_url;
   apr_array_header_t *condensed_targets;
-  svn_revnum_t ignored_revnum;
   svn_opt_revision_t session_opt_rev;
   const char *ra_target;
   pre_15_receiver_baton_t rb = {0};
@@ -485,8 +484,8 @@ svn_client_log5(const apr_array_header_t *targets,
     else
       ra_target = url_or_path;
 
-    SVN_ERR(svn_client__ra_session_from_path(&ra_session, &ignored_revnum,
-                                             &actual_url, ra_target, NULL,
+    SVN_ERR(svn_client__ra_session_from_path(&ra_session, NULL, &actual_url,
+                                             ra_target, NULL,
                                              &peg_rev, &session_opt_rev,
                                              ctx, pool));
 
