@@ -202,7 +202,7 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
 
    Store the resulting ra_session in *RA_SESSION_P.  Store the actual
    revision number of the object in *REV_P, and the final resulting
-   URL in *URL_P.
+   URL in *URL_P. REV_P and/or URL_P may be NULL if not wanted.
 
    Use authentication baton cached in CTX to authenticate against the
    repository.

@@ -447,7 +447,8 @@ path_or_url_local_style(const char *path_or_url,
    as "head" for a URL or "working" for a working-copy path.
 
    Store the actual revision number of the object in *REV_P, and the
-   final resulting URL in *URL_P.
+   final resulting URL in *URL_P. REV_P and/or URL_P may be NULL if not
+   wanted.
 
    Use authentication baton cached in CTX to authenticate against the
    repository.
@@ -485,8 +486,10 @@ resolve_rev_and_url(svn_revnum_t *rev_p,
     good_rev->kind = svn_opt_revision_head;
   SVN_ERR(svn_client__get_revision_number(&rev, NULL, ctx->wc_ctx, url,
                                           ra_session, good_rev, pool));
-  *rev_p = rev;
-  *url_p = url;
+  if (rev_p)
+    *rev_p = rev;
+  if (url_p)
+    *url_p = url;
 
   return SVN_NO_ERROR;
 }
@@ -505,6 +508,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
   svn_ra_session_t *ra_session;
   const char *initial_url;
   const char *corrected_url;
+  const char *resolved_url;
 
   SVN_ERR(svn_client_url_from_path2(&initial_url, path_or_url, ctx, pool,
                                     pool));
@@ -523,14 +527,16 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
   if (corrected_url && svn_path_is_url(path_or_url))
     path_or_url = corrected_url;
 
-  SVN_ERR(resolve_rev_and_url(rev_p, url_p, ra_session,
+  SVN_ERR(resolve_rev_and_url(rev_p, &resolved_url, ra_session,
                               path_or_url, peg_revision, revision,
                               ctx, pool));
 
   /* Make the session point to the real URL. */
-  SVN_ERR(svn_ra_reparent(ra_session, *url_p, pool));
+  SVN_ERR(svn_ra_reparent(ra_session, resolved_url, pool));
 
   *ra_session_p = ra_session;
+  if (url_p)
+    *url_p = resolved_url;
 
   return SVN_NO_ERROR;
 }
@@ -823,14 +829,11 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
    * ### TODO: As they are assumed to be in the same repository, we
    * should share a single session, tracking the two URLs separately. */
   {
-    svn_revnum_t peg;
-    const char *url;
-
-    SVN_ERR(svn_client__ra_session_from_path(&session1, &peg, &url,
+    SVN_ERR(svn_client__ra_session_from_path(&session1, NULL, NULL,
                                              path_or_url1, NULL,
                                              &revision1, &revision1,
                                              ctx, pool));
-    SVN_ERR(svn_client__ra_session_from_path(&session2, &peg, &url,
+    SVN_ERR(svn_client__ra_session_from_path(&session2, NULL, NULL,
                                              path_or_url2, NULL,
                                              &revision2, &revision2,
                                              ctx, pool));
