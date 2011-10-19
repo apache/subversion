@@ -48,8 +48,9 @@ Candidate changes:
    triggered a bug once in their history.
    Justification:
      Such repositories are unusable without this revision.
+     Either this must be backported to 1.7.1 or r1186144 must be undone.
    Votes:
-     +1: danielsh
+     +1: danielsh, stsp
 
  * r1177732, r1186092, r1186101, r1186107, r1186109
    Fix issue 4035.
