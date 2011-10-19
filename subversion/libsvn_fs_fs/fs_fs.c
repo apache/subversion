@@ -2905,29 +2905,32 @@ set_revision_proplist(svn_fs_t *fs,
                       apr_hash_t *proplist,
                       apr_pool_t *pool)
 {
-  const char *final_path;
-  const char *tmp_path;
-  const char *perms_reference;
-  svn_stream_t *stream;
-
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  final_path = path_revprops(fs, rev, pool);
+  if (1)
+    {
+      const char *final_path = path_revprops(fs, rev, pool);
+      const char *tmp_path;
+      const char *perms_reference;
+      svn_stream_t *stream;
 
-  /* ### do we have a directory sitting around already? we really shouldn't
-     ### have to get the dirname here. */
-  SVN_ERR(svn_stream_open_unique(&stream, &tmp_path,
-                                 svn_dirent_dirname(final_path, pool),
-                                 svn_io_file_del_none, pool, pool));
-  SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, pool));
-  SVN_ERR(svn_stream_close(stream));
+      /* ### do we have a directory sitting around already? we really shouldn't
+         ### have to get the dirname here. */
+      SVN_ERR(svn_stream_open_unique(&stream, &tmp_path,
+                                     svn_dirent_dirname(final_path, pool),
+                                     svn_io_file_del_none, pool, pool));
+      SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, pool));
+      SVN_ERR(svn_stream_close(stream));
 
-  /* We use the rev file of this revision as the perms reference,
-     because when setting revprops for the first time, the revprop
-     file won't exist and therefore can't serve as its own reference.
-     (Whereas the rev file should already exist at this point.) */
-  SVN_ERR(svn_fs_fs__path_rev_absolute(&perms_reference, fs, rev, pool));
-  SVN_ERR(move_into_place(tmp_path, final_path, perms_reference, pool));
+      /* We use the rev file of this revision as the perms reference,
+         because when setting revprops for the first time, the revprop
+         file won't exist and therefore can't serve as its own reference.
+         (Whereas the rev file should already exist at this point.) */
+      SVN_ERR(svn_fs_fs__path_rev_absolute(&perms_reference, fs, rev, pool));
+      SVN_ERR(move_into_place(tmp_path, final_path, perms_reference, pool));
+
+      return SVN_NO_ERROR;
+    }
 
   return SVN_NO_ERROR;
 }
