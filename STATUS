@@ -29,20 +29,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1185738, r1185763, r1185768, r1185886, r1186240
-   Add support for upgrading absent nodes to the wonderfull wc-ng world.
-   Justification:
-     This should have been part of 1.7.0. Without this patch it is impossible
-     to upgrade working copies with server excluded/absent directories.
-   Notes:
-     r1185738, r1185763, r1185768: adds a test for this problem.
-     r1185886: fixes this issue and cleans up whitespace in the test.
-     Merge conflicts with issue r1177732 group.  Branch includes both sets.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4035-r1185738
-   Votes:
-     +1: rhuijben, philip
-
  * r1177732, r1186092, r1186101, r1186107, r1186109
    Fix issue 4035.
    Justification:
@@ -78,3 +64,17 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1185738, r1185763, r1185768, r1185886, r1186240
+   Add support for upgrading absent nodes to the wonderfull wc-ng world.
+   Justification:
+     This should have been part of 1.7.0. Without this patch it is impossible
+     to upgrade working copies with server excluded/absent directories.
+   Notes:
+     r1185738, r1185763, r1185768: adds a test for this problem.
+     r1185886: fixes this issue and cleans up whitespace in the test.
+     Merge conflicts with issue r1177732 group.  Branch includes both sets.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4035-r1185738
+   Votes:
+     +1: rhuijben, philip, stsp
