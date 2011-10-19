@@ -34,7 +34,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.1
    * improve test suite correctness (r1174111)
    * fix potential segfault seen by TSVN (r1183263)
    * fix backward compat crashes in JavaHL (r1183054, -347)
-   * fill in repos_* fiels of svn_wc_status3_t for repos-only nodes (r1181609)
+   * fill in repos_* fields of svn_wc_status3_t for repos-only nodes (r1181609)
 
 
 Version 1.7.0
