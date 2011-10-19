@@ -1478,6 +1478,39 @@ def test_lslocks_and_rmlocks(sbox):
     "Unexpected output while running 'svnadmin rmlocks'.",
     output, [], expected_output, None)
 
+#----------------------------------------------------------------------
+@Issue(3734)
+def load_ranges(sbox):
+  "'svnadmin load --revision X:Y'"
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3734. ##
+  test_create(sbox)
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svnadmin_tests_data',
+                                   'skeleton_repos.dump')
+  dumpdata = open(dumpfile_location).read()
+
+  # Load our dumpfile, 2 revisions at a time, verifying that we have
+  # the correct youngest revision after each load.
+  load_and_verify_dumpstream(sbox, [], [], None, dumpdata, '-r0:2')
+  svntest.actions.run_and_verify_svnlook("Unexpected output", ['2\n'],
+                                         None, 'youngest', sbox.repo_dir)
+  load_and_verify_dumpstream(sbox, [], [], None, dumpdata, '-r3:4')
+  svntest.actions.run_and_verify_svnlook("Unexpected output", ['4\n'],
+                                         None, 'youngest', sbox.repo_dir)
+  load_and_verify_dumpstream(sbox, [], [], None, dumpdata, '-r5:6')
+  svntest.actions.run_and_verify_svnlook("Unexpected output", ['6\n'],
+                                         None, 'youngest', sbox.repo_dir)
+
+  ### Would prefer to do a dump comparison such as the following, by
+  ### there are ordering differences, it seems, in the property
+  ### blocks.
+  #dumpdata = open(dumpfile_location).readlines()
+  #new_dumpdata = svntest.actions.run_and_verify_dump(sbox.repo_dir)
+  #svntest.verify.compare_and_display_lines("Dump files", "DUMP",
+  #                                         dumpdata, new_dumpdata)
+
 ########################################################################
 # Run the tests
 
@@ -1508,6 +1541,7 @@ test_list = [ None,
               load_bad_props,
               verify_non_utf8_paths,
               test_lslocks_and_rmlocks,
+              load_ranges,
              ]
 
 if __name__ == '__main__':
