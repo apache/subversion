@@ -180,8 +180,3 @@ Approved changes:
      Resolves a regression identified by markphip.
    Votes:
      +1: rhuijben, philip, pburba
-
- * r1185730
-   Update links in INSTALL.
-   Votes:
-     +1: danielsh, rhuijben

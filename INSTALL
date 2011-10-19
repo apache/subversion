@@ -449,7 +449,7 @@ I.    INTRODUCTION
       a precompiled version of the Berkeley DB library is available for
       download at the Subversion web site "Documents & files" area:
 
-          http://subversion.tigris.org/servlets/ProjectDocumentList
+          http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=688
 
       Look in the "Releases > Windows > Windows BDB" section.
 
@@ -887,8 +887,8 @@ II.   INSTALLATION
         libraries is not supported.
       * [Optional] Berkeley DB for backend support of the server
         components -- versions 4.3.27 and 4.4.20 are available from
-        http://subversion.tigris.org/servlets/ProjectDocumentList as
-        db-4.3.27-win32.zip and db-4.4.20-win32.zip.
+        http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=688
+        as db-4.3.27-win32.zip and db-4.4.20-win32.zip.
         For more information see Section I.5.
       * [Optional] Openssl 0.9.7f or higher can be obtained from
         http://www.openssl.org/source/openssl-0.9.7f.tar.gz
