@@ -53,13 +53,6 @@ Candidate changes:
    Votes:
      +1: pburba, rhuijben
 
- * r1178942, r1182527
-   Fix issue #4009, "Big trivial text files merged MUCH slower than binary"
-   Justification:
-     Much improved merge performance for, well, trivial text file merges!
-   Votes:
-     +1: stsp, pburba
-
  * r1185280, r1185282
    Open SQLite databases as writable in some test code before we try to update
    the database.
@@ -131,6 +124,13 @@ Approved changes:
      +0: peters, gstein (looks correct, but I didn't test, and while
                          performance should be better, I wonder if that's
                          been tested at all)
+
+ * r1178942, r1182527
+   Fix issue #4009, "Big trivial text files merged MUCH slower than binary"
+   Justification:
+     Much improved merge performance for, well, trivial text file merges!
+   Votes:
+     +1: stsp, pburba, rhuijben
 
  * r1185222
    Make 'svn add --parents D/file' work if D is deleted.
