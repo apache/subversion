@@ -1230,7 +1230,6 @@ def upgrade_missing_replaced(sbox):
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
 @Issue(4033)
-@Wimp(4033)
 def upgrade_not_present_replaced(sbox):
   "upgrade with not-present replaced nodes"
 
