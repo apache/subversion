@@ -442,7 +442,7 @@ assemble_status(svn_wc_status3_t **status,
      */
   if (info->kind == svn_wc__db_kind_dir)
     {
-      if (info->status == svn_wc__db_status_incomplete)
+      if (info->status == svn_wc__db_status_incomplete || info->incomplete)
         {
           /* Highest precedence.  */
           node_status = svn_wc_status_incomplete;
