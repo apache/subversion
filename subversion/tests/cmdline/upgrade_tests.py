@@ -1203,7 +1203,7 @@ def upgrade_file_externals(sbox):
 def upgrade_missing_replaced(sbox):
   "upgrade with missing replaced dir"
 
-  sbox.build(read_only=True)
+  sbox.build(create_wc=False)
   replace_sbox_with_tarfile(sbox, 'upgrade_missing_replaced.tar.bz2')
 
   svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
@@ -1233,7 +1233,7 @@ def upgrade_missing_replaced(sbox):
 def upgrade_not_present_replaced(sbox):
   "upgrade with not-present replaced nodes"
 
-  sbox.build(read_only=True)
+  sbox.build(create_wc=False)
   replace_sbox_with_tarfile(sbox, 'upgrade_not_present_replaced.tar.bz2')
 
   svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
