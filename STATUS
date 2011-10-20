@@ -28,8 +28,6 @@ Candidate changes:
    Fix up some erroneous "Could not frob some targets because..." warnings.
    Votes:
      +1: stsp, rhuijben
-     -0: ivan (breaking ABI even for private function is not good thing for
-               patch release)
 
  * r1186422, r1186434, r1186732, r1186755
    Fix issue 4033, upgrade with deleted=TRUE replaced nodes.
