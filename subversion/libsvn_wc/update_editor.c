@@ -4270,6 +4270,7 @@ close_file(void *file_baton,
 
       {
         int i;
+        svn_boolean_t seen_special_prop = FALSE;
 
         for (i = 0; i < regular_prop_changes->nelts; ++i)
           {
@@ -4278,9 +4279,14 @@ close_file(void *file_baton,
 
             if (strcmp(prop->name, SVN_PROP_SPECIAL) == 0)
               {
-                incoming_is_link = TRUE;
+                seen_special_prop = TRUE;
+                incoming_is_link = (prop->value != NULL);
+                break;
               }
           }
+
+        if (!seen_special_prop)
+         incoming_is_link = local_is_link; 
       }
 
 
