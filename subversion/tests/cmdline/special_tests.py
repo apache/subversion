@@ -865,6 +865,8 @@ def symlink_to_wc_svnversion(sbox):
 def update_symlink(sbox):
   "update a symlink"
 
+  svntest.actions.do_sleep_for_timestamps()
+
   sbox.build()
   wc_dir = sbox.wc_dir
   mu_path = sbox.ospath('A/mu')
