@@ -257,23 +257,16 @@ svn_sort__array_delete(apr_array_header_t *arr,
       && elements_to_delete > 0
       && (elements_to_delete + delete_index) <= arr->nelts)
     {
-      if (delete_index == (arr->nelts - 1))
-        {
-          /* Deleting the last or only element in an array is easy. */
-          apr_array_pop(arr);
-        }
-      else if ((delete_index + elements_to_delete) == arr->nelts)
-        {
-          /* Delete the last ELEMENTS_TO_DELETE elements. */
-          arr->nelts -= elements_to_delete;
-        }
-      else
-        {
-          memmove(
-            arr->elts + arr->elt_size * delete_index,
-            arr->elts + (arr->elt_size * (delete_index + elements_to_delete)),
-            arr->elt_size * (arr->nelts - elements_to_delete - delete_index));
-          arr->nelts -= elements_to_delete;
-        }
+      /* If we are not deleting a block of elements that extends to the end
+         of the array, then we need to move the remaining elements to keep
+         the array contiguous. */
+      if ((elements_to_delete + delete_index) < arr->nelts)
+        memmove(
+          arr->elts + arr->elt_size * delete_index,
+          arr->elts + (arr->elt_size * (delete_index + elements_to_delete)),
+          arr->elt_size * (arr->nelts - elements_to_delete - delete_index));
+
+      /* Delete the last ELEMENTS_TO_DELETE elements. */
+      arr->nelts -= elements_to_delete;
     }
 }
