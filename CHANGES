@@ -31,6 +31,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.1
    * improve correctness/performance of recursive info and proplist (r1164426)
    * fix memory leak in 'merge --reintegrate' (r1180154)
    * fix handling of directories after 'update --set-depth=empty' (r1185911)
+   * fix 'checksum != NULL' assertions in some upgraded WCs (r1177732)
+   * fix upgrading of WCs containing authz-restricted dirs (r1185738)
 
   Developer-visible changes:
    * fix object lifetime issues in the JavaHL bindings (r1175888)
