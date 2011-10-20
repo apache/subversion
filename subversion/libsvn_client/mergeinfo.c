@@ -502,38 +502,21 @@ svn_client__get_repos_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
     }
   else
     {
-      const char *repos_root;
+      const char *session_relpath;
       const char *session_url;
 
-      SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, scratch_pool));
       SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, scratch_pool));
+      SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &session_relpath,
+                                               session_url, scratch_pool));
 
-      if (strcmp(repos_root, session_url) == 0)
-        {
-          *mergeinfo_cat = repos_mergeinfo_cat;
-        }
+      if (session_relpath[0] == '\0')
+        *mergeinfo_cat = repos_mergeinfo_cat;
       else
-        {
-          apr_hash_index_t *hi;
-          svn_mergeinfo_catalog_t rekeyed_mergeinfo_cat =
-            apr_hash_make(result_pool);
-
-          for (hi = apr_hash_first(scratch_pool, repos_mergeinfo_cat);
-               hi;
-               hi = apr_hash_next(hi))
-            {
-              const char *path =
-                svn_path_url_add_component2(session_url,
-                                            svn__apr_hash_index_key(hi),
-                                            scratch_pool);
-              SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &path,
-                                                       path,
-                                                       result_pool));
-              apr_hash_set(rekeyed_mergeinfo_cat, path, APR_HASH_KEY_STRING,
-                           svn__apr_hash_index_val(hi));
-            }
-          *mergeinfo_cat = rekeyed_mergeinfo_cat;
-        }
+        SVN_ERR(svn_mergeinfo__add_prefix_to_catalog(mergeinfo_cat,
+                                                     repos_mergeinfo_cat,
+                                                     session_relpath,
+                                                     result_pool,
+                                                     scratch_pool));
     }
   return SVN_NO_ERROR;
 }
@@ -1602,25 +1585,9 @@ logs_for_mergeinfo_rangelist(const char *source_url,
 
   /* FILTER_LOG_ENTRY_BATON_T->TARGET_MERGEINFO_CATALOG's keys are required
      to be repository-absolute. */
-  if (apr_hash_count(target_mergeinfo_catalog))
-    {
-      apr_hash_index_t *hi;
-      svn_mergeinfo_catalog_t rekeyed_catalog = apr_hash_make(scratch_pool);
-
-      for (hi = apr_hash_first(scratch_pool, target_mergeinfo_catalog);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          const char *path = svn__apr_hash_index_key(hi);
-
-          if (!svn_dirent_is_absolute(path))
-            apr_hash_set(rekeyed_catalog,
-                         svn_dirent_join("/", path, scratch_pool),
-                         APR_HASH_KEY_STRING,
-                         svn__apr_hash_index_val(hi));
-        }
-      target_mergeinfo_catalog = rekeyed_catalog;
-    }
+  SVN_ERR(svn_mergeinfo__add_prefix_to_catalog(&target_mergeinfo_catalog,
+                                               target_mergeinfo_catalog, "/",
+                                               scratch_pool, scratch_pool));
 
   /* Build the log filtering callback baton. */
   fleb.filtering_merged = filtering_merged;
