@@ -4286,7 +4286,7 @@ close_file(void *file_baton,
           }
 
         if (!seen_special_prop)
-         incoming_is_link = local_is_link; 
+          incoming_is_link = local_is_link; 
       }
 
 
