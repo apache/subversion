@@ -42,6 +42,13 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r1186944
+   Fix an assertion failure when a symlink is updated.
+   Justification:
+     Regression in 1.7.0.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
