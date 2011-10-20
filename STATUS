@@ -49,6 +49,13 @@ Candidate changes:
    Votes:
      +1: philip, stsp
 
+ * r1186422,r1186434,r1186732
+   Fix issue 4033, upgrade with deleted=TRUE replaced nodes.
+   Justification:
+     Seen by at least one user.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
