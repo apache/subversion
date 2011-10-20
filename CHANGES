@@ -33,6 +33,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.1
    * fix handling of directories after 'update --set-depth=empty' (r1185911)
    * fix 'checksum != NULL' assertions in some upgraded WCs (r1177732)
    * fix upgrading of WCs containing authz-restricted dirs (r1185738)
+   * make the server tolerate svn:mergeinfo with malformed paths (r1182771)
 
   Developer-visible changes:
    * fix object lifetime issues in the JavaHL bindings (r1175888)
