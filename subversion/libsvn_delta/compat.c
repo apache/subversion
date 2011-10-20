@@ -933,12 +933,19 @@ complete_cb(void *baton,
             apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
+  svn_error_t *err;
+
+  SVN_ERR(eb->deditor->open_root(eb->dedit_baton, SVN_INVALID_REVNUM,
+                                 eb->edit_pool, &eb->root.baton));
 
   /* Drive the tree we've created. */
-  SVN_ERR(drive(&eb->root, eb->deditor, scratch_pool));
+  err = drive(&eb->root, eb->deditor, scratch_pool);
+  if (!err)
+     err = eb->deditor->close_edit(eb->dedit_baton, scratch_pool);
+  if (err)
+    svn_error_clear(eb->deditor->abort_edit(eb->dedit_baton, scratch_pool));
 
-  return svn_error_trace(eb->deditor->close_edit(eb->dedit_baton,
-                                                 scratch_pool));
+  return svn_error_trace(err);
 }
 
 /* This implements svn_editor_cb_abort_t */
