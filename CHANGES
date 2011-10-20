@@ -23,7 +23,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.1
    * error instead of assert when upgrading corrupt WCs (r1182904, -9)
    * improve memory usage in merge (r1176915)
    * fix an invalid assertion in merge (r1149103, -35)
-   * improve performance of 'merge --reintegrate' in edge case (r1167681)
+   * improve performance of 'merge --reintegrate' in edge-case (r1167681)
    * fixed: 'svn mergeinfo' shows wrong revisions for added nodes (issue #3791)
    * make 'svn add --parents D/file' work if D is deleted (r1185222)
    * improve performance of trivial text file merges (issue #4009)
@@ -35,6 +35,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.1
    * fix upgrading of WCs containing authz-restricted dirs (r1185738)
    * make the server tolerate svn:mergeinfo with malformed paths (r1182771)
    * fix some erroneous warning messages from the svn client (r1185746)
+   * fix WC upgrade with replaced nodes in edge-case (issue #4033)
 
   Developer-visible changes:
    * fix object lifetime issues in the JavaHL bindings (r1175888)
