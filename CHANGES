@@ -29,6 +29,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.1
    * improve performance of trivial text file merges (issue #4009)
    * add FSFS sanity check to prevent corruption seen in the wild (r1178280)
    * improve correctness/performance of recursive info and proplist (r1164426)
+   * fix memory leak in 'merge --reintegrate' (r1180154)
+   * fix handling of directories after 'update --set-depth=empty' (r1185911)
 
   Developer-visible changes:
    * fix object lifetime issues in the JavaHL bindings (r1175888)
