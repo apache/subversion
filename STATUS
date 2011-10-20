@@ -40,21 +40,12 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
- * r1182771
-   Fix issue 4032
-   Justification:
-     Allow us to operate on existing invalid svn:mergeinfo
-   Branch:
-     1.7.x-issue4032
-   Votes:
-     +1: philip, stsp
-
- * r1186422,r1186434,r1186732
+ * r1186422, r1186434, r1186732
    Fix issue 4033, upgrade with deleted=TRUE replaced nodes.
    Justification:
      Seen by at least one user.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
 Veto-blocked changes:
 =====================
@@ -95,3 +86,12 @@ Approved changes:
      ^/subversion/branches/1.7.x-issue4035-r1185738
    Votes:
      +1: rhuijben, philip, stsp, gstein
+
+ * r1182771
+   Fix issue 4032
+   Justification:
+     Allow us to operate on existing invalid svn:mergeinfo
+   Branch:
+     1.7.x-issue4032
+   Votes:
+     +1: philip, stsp, rhuijben
