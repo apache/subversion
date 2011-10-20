@@ -236,6 +236,37 @@ process_actions(void *edit_baton,
 }
 
 static svn_error_t *
+run_ev2_actions(void *edit_baton,
+                apr_pool_t *scratch_pool)
+{
+  struct ev2_edit_baton *eb = edit_baton;
+  apr_array_header_t *sorted_hash;
+  apr_pool_t *iterpool;
+  int i;
+
+  /* Sort the paths touched by this edit.
+   * Ev2 doesn't really have any particular need for depth-first-ness, but
+   * we want to ensure all parent directories are handled before children in
+   * the case of adds (which does introduce an element of depth-first-ness). */
+  sorted_hash = svn_sort__hash(eb->paths, svn_sort_compare_items_as_paths,
+                               scratch_pool);
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < sorted_hash->nelts; i++)
+    {
+      svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_hash, i, svn_sort__item_t);
+      apr_array_header_t *actions = item->value;
+      const char *path = item->key;
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(process_actions(edit_baton, path, actions, iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 ev2_set_target_revision(void *edit_baton,
                         svn_revnum_t target_revision,
                         apr_pool_t *scratch_pool)
@@ -447,29 +478,8 @@ ev2_close_edit(void *edit_baton,
                apr_pool_t *scratch_pool)
 {
   struct ev2_edit_baton *eb = edit_baton;
-  apr_array_header_t *sorted_hash;
-  apr_pool_t *iterpool;
-  int i;
 
-  /* Sort the paths touched by this edit.
-   * Ev2 doesn't really have any particular need for depth-first-ness, but
-   * we want to ensure all parent directories are handled before children in
-   * the case of adds (which does introduce an element of depth-first-ness). */
-  sorted_hash = svn_sort__hash(eb->paths, svn_sort_compare_items_as_paths,
-                               scratch_pool);
-
-  iterpool = svn_pool_create(scratch_pool);
-  for (i = 0; i < sorted_hash->nelts; i++)
-    {
-      svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_hash, i, svn_sort__item_t);
-      apr_array_header_t *actions = item->value;
-      const char *path = item->key;
-
-      svn_pool_clear(iterpool);
-      SVN_ERR(process_actions(edit_baton, path, actions, iterpool));
-    }
-  svn_pool_destroy(iterpool);
-
+  SVN_ERR(run_ev2_actions(edit_baton, scratch_pool));
   return svn_error_trace(svn_editor_complete(eb->editor));
 }
 
@@ -479,6 +489,7 @@ ev2_abort_edit(void *edit_baton,
 {
   struct ev2_edit_baton *eb = edit_baton;
 
+  SVN_ERR(run_ev2_actions(edit_baton, scratch_pool));
   return svn_error_trace(svn_editor_abort(eb->editor));
 }
 
@@ -954,8 +965,28 @@ abort_cb(void *baton,
          apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
-  return svn_error_trace(eb->deditor->abort_edit(eb->dedit_baton,
-                                                 scratch_pool));
+  svn_error_t *err;
+  svn_error_t *err2;
+
+  /* We still need to drive anything we collected in the editor to this
+     point. */
+  SVN_ERR(eb->deditor->open_root(eb->dedit_baton, SVN_INVALID_REVNUM,
+                                 eb->edit_pool, &eb->root.baton));
+
+  /* Drive the tree we've created. */
+  err = drive(&eb->root, eb->deditor, scratch_pool);
+
+  err2 = eb->deditor->abort_edit(eb->dedit_baton, scratch_pool);
+
+  if (err2)
+    {
+      if (err)
+        svn_error_clear(err2);
+      else
+        err = err2;
+    }
+
+  return svn_error_trace(err);
 }
 
 svn_error_t *
