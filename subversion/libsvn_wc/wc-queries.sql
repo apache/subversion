@@ -126,13 +126,9 @@ LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
 WHERE wc_id = ?1 AND parent_relpath = ?2
 
 -- STMT_SELECT_NODE_CHILDREN_WALKER_INFO
-/* ### See comment at STMT_SELECT_NODE_CHILDREN_INFO.
-   ### Should C code handle GROUP BY local_relpath ORDER BY op_depths DESC? */
 SELECT local_relpath, op_depth, presence, kind
-FROM nodes
+FROM nodes_current
 WHERE wc_id = ?1 AND parent_relpath = ?2
-GROUP BY local_relpath
-ORDER BY op_depth DESC
 
 -- STMT_SELECT_ACTUAL_CHILDREN_INFO
 SELECT prop_reject, changelist, conflict_old, conflict_new,

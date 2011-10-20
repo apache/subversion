@@ -15,6 +15,34 @@ Status of 1.7.1:
 Candidate changes:
 ==================
 
+ * r1147540, r1147541
+   Remove unused variables in build system.
+   Justification:
+     Backporting of future changes will be easier.
+   Votes:
+     +1: arfrever
+     -0: stsp (we can backport these when we need to)
+     -0: gstein
+
+ * r1185746, r1186059
+   Fix up some erroneous "Could not frob some targets because..." warnings.
+   Votes:
+     +1: stsp, rhuijben
+
+ * r1177732, r1186092, r1186101, r1186107, r1186109
+   Fix issue 4035.
+   Justification:
+     Lots of user reports of checksum!=NULL assertions.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4035
+   Notes:
+     Merge conflicts with r1185738 group.
+   Votes:
+     +1: philip, rhuijben
+
+Veto-blocked changes:
+=====================
+
  * r1146131 and followups
    Add svn_fs_verify() and implement rep-cache verification in FSFS using it.
    Branch:
@@ -32,94 +60,22 @@ Candidate changes:
          too anemic. I'd prefer this be a private function in 1.7.x, leaving
          room for a future public API that really does full verification.)
          (without r1161164, r1161180)
-
- * r1147540, r1147541
-   Remove unused variables in build system.
-   Justification:
-     Backporting of future changes will be easier.
-   Votes:
-     +1: arfrever
-     -0: stsp (we can backport these when we need to)
-     -0: gstein
-
- * r1163243, r1163383
-   Fix issue #3791 'svn mergeinfo shows natural history of added subtrees
-   as eligible'.
-   Justification:
-     The 'svn mergeinfo [ -R | --depth [ files | immediates | infinity ] ]'
-     subcommand gives incorrect answers in some use cases.
-   Notes:
-     r1163243 is a test for the issue, r1163383 is the fix.
-   Votes:
-     +1: pburba
-
- * r1164426, r1164614
-   Fix STMT_SELECT_NODE_CHILDREN_WALKER_INFO for correctness and speed.
-   Justification:
-     Recursive info and propset don't scale well with large working copies
-     and may possibly act on the wrong nodes.  Correctness discussion:
-     http://colabti.org/irclogger/irclogger_log/svn-dev?date=2011-09-02#l214
-     On a Linux machine with a Subversion trunk working copy on a local disk
-     running 'svn info --depth infinity' shows it to be 2 or 3 times faster.
-     On a larger working copy it's orders of magnitude faster.
-   Votes:
-     +1: philip
-     +0: peters, gstein (looks correct, but I didn't test, and while
-                         performance should be better, I wonder if that's
-                         been tested at all)
-
- * r1167681
-   Don't invoke quicksort unnecessarily when combining mergeinfo rangelists.
-   Justification:
-     This speeds up --reintegrate merges, especially the pathological case
-     described here: http://svn.haxx.se/dev/archive-2011-09/0247.shtml
-   Votes:
-     +1: stsp, rhuijben
-
- * r1176915
-   Improve handling of temporary allocations in svn_mergeinfo_intersect2().
-   Justification:
-     Should reduce memory footprint.
-   Votes:
-     +1: stsp, hwright
-
- * r1178280, r1178282
-   Add a sanity check to FSFS.
-   Justification:
-     Detects a user-visible corruption seen on svn-master.apache.org.
-   Votes:
-     +1: danielsh
-
- * r1153540, r1153566
-   Silence a build warning.
-   Votes:
-     +1: danielsh, hwright
-
- * r1181609
-   Fill in the repos_* fields of svn_wc_status3_t for nodes that only exist
-   in the repository.
-   Justification:
-     Resolves a regression identified by markphip.
-   Votes:
-     +1: rhuijben
-
- * r1182115
-   Update references to subversion.tigris.org in INSTALL.
-   Justification:
-     "If you tell the truth you don't have to remember anything."
-     --- Mark Twain
-   Votes:
-     +1: danielsh
-
- * r1178942, r1182527 
-   Fix issue #4009, "Big trivial text files merged MUCH slower than binary"
-   Justification:
-     Much improved merge performance for, well, trivial text file merges!
-   Votes:
-     +1: stsp
-
-Veto-blocked changes:
-=====================
+     -1: danielsh (invasive, new feature)
 
 Approved changes:
 =================
+
+ * r1185738, r1185763, r1185768, r1185886, r1186240
+   Add support for upgrading absent nodes to the wonderfull wc-ng world.
+   Justification:
+     This should have been part of 1.7.0. Without this patch it is impossible
+     to upgrade working copies with server excluded/absent directories.
+   Notes:
+     r1185738, r1185763, r1185768: adds a test for this problem.
+     r1185886: fixes this issue and cleans up whitespace in the test.
+     r1186240: small test reorganization.
+     Merge conflicts with issue r1177732 group.  Branch includes both sets.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4035-r1185738
+   Votes:
+     +1: rhuijben, philip, stsp, gstein

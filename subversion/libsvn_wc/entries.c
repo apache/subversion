@@ -1930,9 +1930,20 @@ write_entry(struct write_baton **entry_node,
                 found_md5_checksum = text_base_info->normal_base.md5_checksum;
               else
                 found_md5_checksum = NULL;
-              if (entry_md5_checksum && found_md5_checksum)
-                SVN_ERR_ASSERT(svn_checksum_match(entry_md5_checksum,
-                                                  found_md5_checksum));
+              if (entry_md5_checksum && found_md5_checksum &&
+                  !svn_checksum_match(entry_md5_checksum, found_md5_checksum))
+                return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                                         _("Bad base MD5 checksum for '%s'; "
+                                           "expected: '%s'; found '%s'; "),
+                                       svn_dirent_local_style(
+                                         svn_dirent_join(root_abspath,
+                                                         local_relpath,
+                                                         scratch_pool),
+                                         scratch_pool),
+                                       svn_checksum_to_cstring_display(
+                                         entry_md5_checksum, scratch_pool),
+                                       svn_checksum_to_cstring_display(
+                                         found_md5_checksum, scratch_pool));
               else
                 {
                   /* ### Not sure what conditions this should cover. */

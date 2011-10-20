@@ -924,6 +924,77 @@ maybe_resolve_conflicts(svn_skel_t **work_items,
   return SVN_NO_ERROR;
 }
 
+
+/* Attempt a trivial merge of LEFT_ABSPATH and RIGHT_ABSPATH to TARGET_ABSPATH.
+ * The merge is trivial if the file at LEFT_ABSPATH equals TARGET_ABSPATH,
+ * because in this case the content of RIGHT_ABSPATH can be copied to the
+ * target. On success, set *MERGE_OUTCOME to SVN_WC_MERGE_MERGED in case the
+ * target was changed, or to SVN_WC_MERGE_UNCHANGED if the target was not
+ * changed. Install work queue items allocated in RESULT_POOL in *WORK_ITEMS.
+ * On failure, set *MERGE_OUTCOME to SVN_WC_MERGE_NO_MERGE. */
+static svn_error_t *
+merge_file_trivial(svn_skel_t **work_items,
+                   enum svn_wc_merge_outcome_t *merge_outcome,
+                   const char *left_abspath,
+                   const char *right_abspath,
+                   const char *target_abspath,
+                   svn_boolean_t dry_run,
+                   svn_wc__db_t *db,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  svn_skel_t *work_item;
+  svn_boolean_t same_contents = FALSE;
+  svn_node_kind_t kind;
+  svn_boolean_t is_special;
+
+  /* If the target is not a normal file, do not attempt a trivial merge. */
+  SVN_ERR(svn_io_check_special_path(target_abspath, &kind, &is_special,
+                                    scratch_pool));
+  if (kind != svn_node_file || is_special)
+    {
+      *merge_outcome = svn_wc_merge_no_merge;
+      return SVN_NO_ERROR;
+    }
+
+  /* If the LEFT side of the merge is equal to WORKING, then we can
+   * copy RIGHT directly. */
+  SVN_ERR(svn_io_files_contents_same_p(&same_contents, left_abspath,
+                                       target_abspath, scratch_pool));
+  if (same_contents)
+    {
+      /* Check whether the left side equals the right side.
+       * If it does, there is no change to merge so we leave the target
+       * unchanged. */
+      SVN_ERR(svn_io_files_contents_same_p(&same_contents, left_abspath,
+                                           right_abspath, scratch_pool));
+      if (same_contents)
+        {
+          *merge_outcome = svn_wc_merge_unchanged;
+        }
+      else
+        {
+          *merge_outcome = svn_wc_merge_merged;
+          if (!dry_run)
+            {
+              SVN_ERR(svn_wc__wq_build_file_install(
+                        &work_item, db, target_abspath, right_abspath,
+                        FALSE /* use_commit_times */,
+                        FALSE /* record_fileinfo */,
+                        result_pool, scratch_pool));
+              *work_items = svn_wc__wq_merge(*work_items, work_item,
+                                             result_pool);
+            }
+        }
+
+      return SVN_NO_ERROR;
+    }
+
+  *merge_outcome = svn_wc_merge_no_merge;
+  return SVN_NO_ERROR;
+}
+
+
 /* XXX Insane amount of parameters... */
 static svn_error_t*
 merge_text_file(svn_skel_t **work_items,
@@ -1112,37 +1183,15 @@ merge_binary_file(svn_skel_t **work_items,
   const char *merge_dirpath, *merge_filename;
   const char *conflict_wrk;
   svn_skel_t *work_item;
-  svn_boolean_t same_contents = FALSE;
 
   *work_items = NULL;
 
   svn_dirent_split(&merge_dirpath, &merge_filename, mt->local_abspath, pool);
 
-  /* Attempt to merge the binary file. At the moment, we can only
-     handle the special case: if the LEFT side of the merge is equal
-     to WORKING, then we can copy RIGHT directly. */
-  SVN_ERR(svn_io_files_contents_same_p(&same_contents,
-                                      left_abspath,
-                                      mt->local_abspath,
-                                      scratch_pool));
+  /* If we get here the binary files differ. Because we don't know how
+   * to merge binary files in a non-trivial way we always flag a conflict. */
 
-  if (same_contents)
-    {
-      if (!dry_run)
-        {
-          SVN_ERR(svn_wc__wq_build_file_install(&work_item,
-                                                mt->db, mt->local_abspath,
-                                                right_abspath,
-                                                FALSE /* use_commit_times */,
-                                                FALSE /* record_fileinfo */,
-                                                result_pool, scratch_pool));
-          *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
-        }
-
-      *merge_outcome = svn_wc_merge_merged;
-      return SVN_NO_ERROR;
-    }
-  else if (dry_run)
+  if (dry_run)
     {
       *merge_outcome = svn_wc_merge_conflict;
       return SVN_NO_ERROR;
@@ -1366,41 +1415,48 @@ svn_wc__internal_merge(svn_skel_t **work_items,
   SVN_ERR(maybe_update_target_eols(&left_abspath, &mt, left_abspath,
                                    cancel_func, cancel_baton, pool, pool));
 
-  if (is_binary)
+  SVN_ERR(merge_file_trivial(work_items, merge_outcome,
+                             left_abspath, right_abspath,
+                             target_abspath, dry_run, db,
+                             result_pool, scratch_pool));
+  if (*merge_outcome == svn_wc_merge_no_merge)
     {
-      SVN_ERR(merge_binary_file(work_items,
-                                merge_outcome,
-                                &mt,
-                                left_abspath,
-                                right_abspath,
-                                left_label,
-                                right_label,
-                                target_label,
-                                dry_run,
-                                left_version,
-                                right_version,
-                                detranslated_target_abspath,
-                                conflict_func,
-                                conflict_baton,
-                                result_pool, scratch_pool));
-    }
-  else
-    {
-      SVN_ERR(merge_text_file(work_items,
-                              merge_outcome,
-                              &mt,
-                              left_abspath,
-                              right_abspath,
-                              left_label,
-                              right_label,
-                              target_label,
-                              dry_run,
-                              left_version,
-                              right_version,
-                              detranslated_target_abspath,
-                              conflict_func, conflict_baton,
-                              cancel_func, cancel_baton,
-                              result_pool, scratch_pool));
+      if (is_binary)
+        {
+          SVN_ERR(merge_binary_file(work_items,
+                                    merge_outcome,
+                                    &mt,
+                                    left_abspath,
+                                    right_abspath,
+                                    left_label,
+                                    right_label,
+                                    target_label,
+                                    dry_run,
+                                    left_version,
+                                    right_version,
+                                    detranslated_target_abspath,
+                                    conflict_func,
+                                    conflict_baton,
+                                    result_pool, scratch_pool));
+        }
+      else
+        {
+          SVN_ERR(merge_text_file(work_items,
+                                  merge_outcome,
+                                  &mt,
+                                  left_abspath,
+                                  right_abspath,
+                                  left_label,
+                                  right_label,
+                                  target_label,
+                                  dry_run,
+                                  left_version,
+                                  right_version,
+                                  detranslated_target_abspath,
+                                  conflict_func, conflict_baton,
+                                  cancel_func, cancel_baton,
+                                  result_pool, scratch_pool));
+        }
     }
 
   /* Merging is complete.  Regardless of text or binariness, we might

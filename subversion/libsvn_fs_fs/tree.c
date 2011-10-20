@@ -870,11 +870,11 @@ add_change(svn_fs_t *fs,
 
 /* Get the id of a node referenced by path PATH in ROOT.  Return the
    id in *ID_P allocated in POOL. */
-static svn_error_t *
-fs_node_id(const svn_fs_id_t **id_p,
-           svn_fs_root_t *root,
-           const char *path,
-           apr_pool_t *pool)
+svn_error_t *
+svn_fs_fs__node_id(const svn_fs_id_t **id_p,
+                   svn_fs_root_t *root,
+                   const char *path,
+                   apr_pool_t *pool)
 {
   if ((! root->is_txn_root)
       && (path[0] == '\0' || ((path[0] == '/') && (path[1] == '\0'))))
@@ -939,7 +939,7 @@ node_kind(svn_node_kind_t *kind_p,
   dag_node_t *node;
 
   /* Get the node id. */
-  SVN_ERR(fs_node_id(&node_id, root, path, pool));
+  SVN_ERR(svn_fs_fs__node_id(&node_id, root, path, pool));
 
   /* Use the node id to get the real kind. */
   SVN_ERR(svn_fs_fs__dag_get_node(&node, root->fs, node_id, pool));
@@ -2975,7 +2975,7 @@ fs_node_origin_rev(svn_revnum_t *revision,
   path = svn_fs__canonicalize_abspath(path, pool);
 
   /* Check the cache first. */
-  SVN_ERR(fs_node_id(&given_noderev_id, root, path, pool));
+  SVN_ERR(svn_fs_fs__node_id(&given_noderev_id, root, path, pool));
   node_id = svn_fs_fs__id_node_id(given_noderev_id);
 
   /* Is it a brand new uncommitted node? */
@@ -3047,7 +3047,7 @@ fs_node_origin_rev(svn_revnum_t *revision,
       }
 
     /* Walk the predecessor links back to origin. */
-    SVN_ERR(fs_node_id(&pred_id, curroot, lastpath->data, predidpool));
+    SVN_ERR(svn_fs_fs__node_id(&pred_id, curroot, lastpath->data, predidpool));
     while (pred_id)
       {
         svn_pool_clear(subpool);
@@ -3682,7 +3682,7 @@ static root_vtable_t root_vtable = {
   fs_paths_changed,
   svn_fs_fs__check_path,
   fs_node_history,
-  fs_node_id,
+  svn_fs_fs__node_id,
   svn_fs_fs__node_created_rev,
   fs_node_origin_rev,
   fs_node_created_path,

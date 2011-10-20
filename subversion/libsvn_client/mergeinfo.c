@@ -1319,15 +1319,19 @@ svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
    Return a pointer to the mergeinfo value of the nearest path-wise ancestor
    of ABS_REPOS_PATH in DEPTH_FIRST_CATALOG_INDEX.  A path is considered its
    own ancestor, so if a key exactly matches ABS_REPOS_PATH, return that
-   key's mergeinfo.
+   key's mergeinfo and set *ANCESTOR_IS_SELF to true (set it to false in all
+   other cases).
 
    If DEPTH_FIRST_CATALOG_INDEX is NULL, empty, or no ancestor is found, then
    return NULL. */
 static svn_mergeinfo_t
 find_nearest_ancestor(const apr_array_header_t *depth_first_catalog_index,
+                      svn_boolean_t *ancestor_is_self,
                       const char *abs_repos_path)
 {
   int ancestor_index = -1;
+
+  *ancestor_is_self = FALSE;
 
   if (depth_first_catalog_index)
     {
@@ -1337,9 +1341,18 @@ find_nearest_ancestor(const apr_array_header_t *depth_first_catalog_index,
         {
           svn_sort__item_t item = APR_ARRAY_IDX(depth_first_catalog_index, i,
                                                 svn_sort__item_t);
-          if (svn_fspath__is_ancestor(item.key, abs_repos_path)
-              || svn_path_compare_paths(item.key, abs_repos_path) == 0)
-            ancestor_index = i;
+          if (svn_fspath__is_ancestor(item.key, abs_repos_path))
+            {
+              ancestor_index = i;
+
+              /* There's no nearer ancestor than ABS_REPOS_PATH itself. */
+              if (strcmp(item.key, abs_repos_path) == 0)
+                {
+                  *ancestor_is_self = TRUE;
+                  break;
+                }
+            }
+
         }
     }
 
@@ -1466,6 +1479,7 @@ filter_log_entry_with_rangelist(void *baton,
           svn_boolean_t found_this_revision = FALSE;
           const char *merge_source_rel_target;
           const char *merge_source_path;
+          svn_boolean_t ancestor_is_self;
 
           svn_pool_clear(iterpool);
 
@@ -1501,7 +1515,36 @@ filter_log_entry_with_rangelist(void *baton,
 
           nearest_ancestor_mergeinfo =
             find_nearest_ancestor(fleb->depth_first_catalog_index,
+                                  &ancestor_is_self,
                                   target_path_affected);
+
+          /* Issue #3791: A path should never have explicit mergeinfo
+             describing its own addition (that's self-referential).  Nor will
+             it have explicit mergeinfo describing its own deletion (we
+             obviously can't add new mergeinfo to a path we are deleting).
+
+             This lack of explicit mergeinfo should not cause such revisions
+             to show up as eligible however.  If PATH was deleted, replaced,
+             or added in LOG_ENTRY->REVISION, but the corresponding
+             TARGET_PATH_AFFECTED already exists and has explicit mergeinfo
+             describing merges from PATH *after* LOG_ENTRY->REVISION, then
+             ignore this PATH.  If it was deleted in LOG_ENTRY->REVISION it's
+             obviously back.  If it was added or replaced it's still around
+             possibly it was replaced one or more times, but it's back now.
+             Regardless, LOG_ENTRY->REVISION is *not* an eligible revision! */
+          if (ancestor_is_self /* Explicit mergeinfo on TARGET_PATH_AFFECTED */
+              && (change->action != 'M'))
+            {
+              apr_array_header_t *rangelist = apr_hash_get(
+                nearest_ancestor_mergeinfo, path, APR_HASH_KEY_STRING);
+              svn_merge_range_t *youngest_range = APR_ARRAY_IDX(
+                rangelist, rangelist->nelts - 1, svn_merge_range_t *);
+
+              if (youngest_range
+                  && (youngest_range->end > log_entry->revision))
+                continue;
+            }
+
           if (nearest_ancestor_mergeinfo)
             {
               for (hi2 = apr_hash_first(iterpool, nearest_ancestor_mergeinfo);

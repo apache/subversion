@@ -6466,18 +6466,10 @@ read_info(svn_wc__db_status_t *status,
             }
           else
             {
-              svn_error_t *err2;
-              err2 = svn_sqlite__column_checksum(checksum, stmt_info, 6,
-                                                 result_pool);
 
-              if (err2 != NULL)
-                err = svn_error_compose_create(
-                         err,
-                         svn_error_createf(
-                               err->apr_err, err2,
-                              _("The node '%s' has a corrupt checksum value."),
-                              path_for_error_message(wcroot, local_relpath,
-                                                     scratch_pool)));
+              err = svn_error_compose_create(
+                        err, svn_sqlite__column_checksum(checksum, stmt_info, 6,
+                                                         result_pool));
             }
         }
       if (recorded_size)
@@ -6660,6 +6652,12 @@ read_info(svn_wc__db_status_t *status,
   if (stmt_act != NULL)
     err = svn_error_compose_create(err, svn_sqlite__reset(stmt_act));
 
+  if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+    err = svn_error_quick_wrap(err, 
+                               apr_psprintf(scratch_pool,
+                                            "Error reading node '%s'",
+                                            local_relpath));
+
   SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt_info)));
 
   return SVN_NO_ERROR;
@@ -6739,7 +6737,8 @@ struct read_children_info_baton_t
   apr_pool_t *result_pool;
 };
 
-/* What we really want to store about a node */
+/* What we really want to store about a node.  This relies on the
+   offset of svn_wc__db_info_t being zero. */
 struct read_children_info_item_t
 {
   struct svn_wc__db_info_t info;
@@ -7167,7 +7166,6 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
   const char *dir_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  apr_int64_t op_depth;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
 
@@ -7187,13 +7185,10 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
       struct svn_wc__db_walker_info_t *child;
       const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
       const char *name = svn_relpath_basename(child_relpath, NULL);
+      apr_int64_t op_depth = svn_sqlite__column_int(stmt, 1);
       svn_error_t *err;
 
-      child = apr_hash_get(*nodes, name, APR_HASH_KEY_STRING);
-      if (child == NULL)
-        child = apr_palloc(result_pool, sizeof(*child));
-
-      op_depth = svn_sqlite__column_int(stmt, 1);
+      child = apr_palloc(result_pool, sizeof(*child));
       child->status = svn_sqlite__column_token(stmt, 2, presence_map);
       if (op_depth > 0)
         {
