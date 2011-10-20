@@ -490,6 +490,7 @@ svn_client__get_repos_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
         {
           svn_error_clear(err);
           *mergeinfo_cat = NULL;
+          return SVN_NO_ERROR;
         }
       else
         return svn_error_trace(err);
