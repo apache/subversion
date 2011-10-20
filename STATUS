@@ -35,8 +35,6 @@ Candidate changes:
    Fix issue 4033, upgrade with deleted=TRUE replaced nodes.
    Justification:
      Seen by at least one user.
-   Notes:
-     Do this merge after ^/subversion/branches/1.7.x-issue4035-r1185738
    Votes:
      +1: philip
      +1: rhuijben (not r1186755)
