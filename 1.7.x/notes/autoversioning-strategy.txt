@@ -1,0 +1,346 @@
+
+Auto-versioning Research Notes
+==============================
+
+[Note from sussman:  if you don't understand rfc 2518 (webdav) and rfc
+3253 (deltav) intimately, you'll probably not understand these notes.
+Read the rfcs, and also read the 'webdav-general-summary' notes in
+this directory as a quick review.]
+
+
+Phase 1: a lone PUT results in an immediate commit.  This can be done
+          purely via libsvn_fs, using an auto-generated log message.
+         This covers the "drag-n-drop" use-case -- when a user simply
+         drops a file into a mounted repository.
+
+Phase 2: come up with a system for dealing with the more common
+         class-2 DAV sequence:  LOCK, GET, PUT, PUT, PUT, UNLOCK.
+         This covers most DAV clients, such as MSOffice and OpenOffice.
+
+On first glance, it seems that Phase 1 should be doable by simply
+noticing a PUT on a public URI, and triggering a commit.  But
+apparently this completely circumvents the fact that mod_dav *already*
+has a notion of auto-versioning, and we want to mesh with that.  This
+feature was added by the Rational guys, but isn't well-reviewed by
+gstein.  Apparently mod_dav defines a concept of whether resources are
+auto-versionable, and then deals with the checkout/modify/checkin of
+those resources.  So *first* we need to understand the existing
+system before we can do anything else, and figure out how mod_dav_svn
+can act as a "provider" to that framework.
+
+(Greg also warns:  this autoversioning feature added by Rational was
+done based on an OLD version of the deltaV RFC, so watch out for
+mismatches with the final RFC 3253.)
+
+[gstein sez: Note: the reason for the auto-versioning framework is to
+take the load off of the provider for modeling WebDAV's auto-vsn
+concepts to clients. mod_dav itself can deal with the property
+management, sequence of operations, error responses, whatnot. That
+said, it is also open to change and refinement -- there is no way that
+it is set in stone. That only happens once an Open Source
+implementation has used it.]
+
+
+Phase 2 is more complicated:
+
+  * Greg proposed a system whereby the LOCK creates a txn, the PUTs
+    only write to the txn (the txn name is the lock "token"), and the
+    UNLOCK commits the txn.  The problem with this is that DAV clients
+    expect real locking here, and this is just a "fake out":
+
+      - If client #1 LOCKS a file, then when client #2 does a GET,
+        they should see the latest version that client #1 has PUT, not
+        some older version. 
+
+        [gstein sez he doesn't believe that the GET sans locktoken has
+        to reflect the latest PUT-with-locktoken.  I disagree. See
+        below for a response from the DeltaV IETF Working Group]
+
+      - Also, if client #2 tries to work on the file, its LOCK request
+        should be denied if it's already locked.  Users will be mighty
+        pissed if they get a LOCK on the file, but when they finally
+        close MSWord, they get an out-of-date error!
+
+        [gstein sez this is only if we take an exclusive lock.  shared
+        locks are more interesting.  I say, yah, but so what.  We only
+        care about write-locks anyway, which according to 2518, are
+        always exclusive, I think.  shared-locks are just read-locks,
+        and can be done with unversioned props.]
+
+  * It seems that the Right Way to do this is to actually design and
+    implement some kind of locking system.  We've had a huuuuge
+    discussion on the dev list about this, and folks like jimb and
+    kfogel want the system to be more of a "communication" system,
+    rather than a system for unconditionally handcuffing naughty
+    users.  This goal doesn't necessarily contradict the needs of DAV
+    clients, however.  Smart svn clients should be able to easily
+    override a LOCK failure, perhaps by using some special 'Force:
+    true' request header.  Dumb DAV clients won't know about this
+    technique, so they effectively end up with the 'handcuff' locking
+    system they expect.
+
+    [brane sez: Exclusive and shared lcoks can both be used for
+    communication, and which one you use depends on context --
+    see below.]
+
+----------------------------------------------------------------
+
+I sent a mail off to the deltaV working group, asking about the
+locking issue.
+
+Geoff Clemm came back and said, "yah, if a lock-holder does a PUT to a
+locked resource, then the changes should be immediately visible to
+*all* users who do a GET, whether they hold the lock token or not."
+
+This is my (sussman)'s intuition too, but it throws a big wrench into
+gstein's proposal about how to do Phase 2.
+
+[brane sez: Not really. All you have to do is maintain a list of the
+public URLs of objects that were actually modified through a "locked"
+PUT -- *not* the bubble-up dirs -- and you have to maintain that
+anyway, if you want to implement exclusive locks. A GET will just
+check that list first, and if it finds the URL, look into the
+associated txn instead of HEAD.]
+
+[ gstein: note that list is cross-txn; we probably want a new dbm in
+  the REPOS/dav/ subdir. map the repos path (derived from the URL) to
+  the txn-name containing the most recent copy.
+  
+  my hope was to avoid additional state like this, and encode that
+  state in something like the locktoken. ]
+
+----------------------------------------------------------------
+
+Here are some thoughts Bill Tutt and I shared on IRC some time
+ago. They're more about locking than auto-versioning, but the two
+concepts are related, so this brain dump might as well go in here.
+
+<<<It's pretty late/early right now, so I'll just dump Bill's mail in
+here for reference, and edit it later.>>>
+-----
+From: "Bill Tutt" <billtut@microsoft.com>
+To: "Branko Cibej" <brane@xbc.nu>
+Subject: Locks Discussion
+Date: Wed, 4 Sep 2002 15:49:54 -0700
+
+Edited from IRC:
+<brane> "svn edit" has other uses, too
+<brane> e.g., you could check out a wc that has only checksums, not text
+bases, and makes wc files read-only. "svn edit" would make them
+writable, and temporarily store the text base. it doesn't have to cerate
+a lock.
+<brane> "svn edit" can be completely client-side.
+
+It could, but ideally it would just work as if it were connected. i.e.
+executing "svn note" if connected, and not if not. i.e. laptop on bus
+mode.
+
+<brane> basically, you're non-exclusive lock would add an unversioned
+annotation to an object.
+<brane> ok. so we have "svn lock", which is an exclusive lock
+<brane> and "svn edit", which may or may not create locks
+
+At a minimum annotates the file in the WC, for the "svn commit" default
+log message case below. At the far out end, it would create an exclusive
+lock if the file (via the pluggable diff protocol) was determined to be
+non-mergable.
+
+<brane> and "svn note", which just adds a note to the object
+<brane> and "svn lock" can also add a note to the object
+<brane> and "svn unlock" takes the note away
+<brane> and "svn rmnote" takes the note away, too
+<brane> and "svn commit" clears locks and removes notes
+<brane> and "svn commit" uses the note (if any, keyed off the username)
+as the default log message
+<brane> "svn note" and "svn rmnote", always contacts the server
+
+"svn revert" now becomes "svn revert" + "svn rmnote" all rolled into
+one.
+"svn rmnote" undos (as appropriate) any annotation on a WC entry. If
+created via "svn note" functionality, then the server is contacted. If
+via "svn edit" disconnected client functionality, then the server is NOT
+contacted.
+
+I've edited out my original comments, and inserted my own post log
+comments.
+
+Bill
+----
+Do you want a dangerous fugitive staying in your flat?
+No.
+Well, don't upset him and he'll be a nice fugitive staying in your flat.
+-----
+
+
+-----------------------------------------------
+
+PHASE 1 STRATEGY:
+
+* ? options response includes autoversioning feature... required?
+
+* all resources gain new live property:  'DAV:auto-version'.  This
+  property will always be set to 'DAV:checkout-checkin'.  (There are
+  four possible values, and this is the one that has nothing
+  whatsoever to do with locking.)
+
+* use-case 1:  PUT or PROPPATCH against existing VCR, or a PUT of a
+  new VCR.
+
+* use-case 2: DELETE of VCR
+
+* use-case 3: MKCOL (totally new, by definition)
+
+
+-----------------------------------------------------------
+
+Analysis of dav_svn_put()
+=========================
+
+At the moment, ra_dav is only attempting to PUT WR's.  
+
+mod_dav, however, already has an autoversioning infrastructure, and it
+currently attempts to bookend the stream-writing with an auto-checkout
+and auto-checkin.  But mod_dav_svn doesn't support those operations
+yet, so they're just no-ops.
+
+By supporting auto_checkout and auto_checkin, we're adding the magic
+ability for a PUT on a VCR to happen: the VCR is magically transformed
+'in place' into a WR, and then back again.
+
+auto_checkout:
+
+  * tries to checkout parent resource if deemed necessary, i.e. the
+    resource doesn't exist, or if explicit parent checkout was
+    requested by caller:
+
+      - vsn_hooks->auto_versionable() 
+
+        We should *always* return DAV_AUTO_VERSION_ALWAYS for now.
+        The other values require that locks exist or not, and we're
+        not supporting any kind of locks yet.
+
+      - vsn_hooks->checkout(parent, 1 /*auto-checkout*/...)
+
+        So we need to allow an auto-checkout of a parent VCR.
+        See checkout() discussion below.
+
+  * if the resource doesn't exist, then create the resource:
+
+      - vsn_hooks->vsn_control(resource, NULL).
+
+        We need to implement this from scratch.  For now, we only
+        allow a NULL target, which means, 'create an empty file'.  The
+        resource itself must be tweaked in-place into a true VCR.
+
+  * if the resource exists but isn't a WR, check it out:
+
+      - vsn_hooks->checkout(resource, 1 /*auto-checkout*/...)
+
+        This routine currently takes a VR and an activity, and returns
+        a totally new WR.
+
+        Here's what we need to make happen if we get 'auto-checkout'
+        flag passed in:
+
+            - verify we have a VCR, and get the VCR's VR.
+            - create a new activity (txn)
+            - checkout the VR into the activity, creating a WR.
+            - don't return the WR via pointer, but instead tweak the
+              VCR to look like the WR (think about how to do this.)
+              [ gstein: the docco for checkout() states you're allowed
+                to tweak the passed-in resource; that is why it is
+                non-const ]
+
+
+dav_svn_put() then attempts to push data into the WR's stream, no prob.
+
+
+auto_checkin:
+
+  * if something went wrong when PUTting data into the resource's
+    stream, then this function attempts to either
+
+     - vsn_hooks->uncheckout()  [if a resource or parent was checked out]
+
+       I guess we would abort the svn txn and magically change the WR back
+       into the VCR?  (think about how to do this.)
+
+       [ gstein: the dav_resource is non-const; just change it. we
+         aren't talking a stateful change, just altering a runtime
+         structure. ]
+
+     - vsn_hooks->remove_resource()  [if a new resource was created]
+
+       No prob.  This just calls svn_fs_delete_tree() on the newly
+       created object.
+
+  * otherwise, in normal case, if resource was checked out:
+
+     - vsn_hooks->checkin(resource)
+
+       Need to write this routine!  It would commit the txn hidden
+       within the WR, using an auto-generated log message.
+       Furthermore, it needs to possibly return the new VR that was
+       created, and convert the WR resource back into a VCR that
+       points to the new VR.
+       
+       (Do our VCR's point to VR's right now?
+
+        [ gstein: VCRs never "point"; semantically, they just get
+          updated with properties and content to match a VR. ]
+
+       just implicitly through the checked-in property, right?)
+
+  * then, if parent was checked out too,
+
+     - vsn_hooks->checkin(parent)
+
+       Oops, this is a problem.  it's very likely that we just
+       committed the txn in the previous call to checkin().  the best
+       strategy here, I suppose, is to not throw an error... i.e. if
+       the txn no longer exists, just do nothing.  (cmpilato isn't
+       sure what happens if you try to open_txn() on a txn that is
+       already committed.)
+
+       [ gstein: mod_dav should auto-checkin a set of resources rather
+         than one at a time. the provider can then do it atomically,
+         or one at a time, as they see fit ]
+
+
+[ gstein: note that we're more than likely going to need to update the
+
+  mod_dav provider APIs. I think the answer is to add a binary API
+  version to the new ap_provider() interface, to publish a mod_dav
+  provider (binary) API version, and to state that the old provider
+  registration function now throws an error (by definition, modules
+  using it would be obsolete). as we rev the API, we just bump the
+  published mod_dav API version.
+
+  one problem here is that the current httpd release strategy might
+  get in our way; I need to review some of the recent decisions to see
+  how that affects us from an ongoing "httpd needs some fixes for svn"
+  standpoint.
+  ]
+
+
+-----------------------------------------------------------
+
+Late 2004 Notes:
+
+  We're working on a real locking system now.  Eventually, we'll be
+  able to use this feature to complete autoversioning ("phase 2"
+  above.)
+
+  - remember that we'll need to be able to look up a lock in the
+    lock-table by UUID.  Generic DAV clients use UUID URIs to talk
+    about locks.
+
+  - MSWord locks a document with a timeout of 180 seconds, then
+    continuously re-LOCKs every so often, passing the existing
+    lock-token back in an If: header.   mod_dav_fs returns the same
+    lock-token UUID (presumably with a newer expiration time).  Our
+    current implementation doesn't allow for mutable lock tokens.  We
+    need to make sure that this doesn't mess up MSWord... that it's
+    usin the *last* token to renew locks, not the first one.
+
+

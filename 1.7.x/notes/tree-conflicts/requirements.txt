@@ -1,0 +1,176 @@
+Status of this file: In progress.
+
+Purpose of the file: To record the requirements and principles that guide the design of tree-conflict handling. ("Policy" is not a good name for it.)
+
+
+BACKGROUND AND TERMINOLOGY
+==========================
+
+MERGE TRACKING
+--------------
+
+The merge tracking feature helps the client software to determine which changes
+(revisions) from the source branch to apply to the specified target tree. After
+that has been determined, the application of one change to one target is where
+conflict detection becomes involved.
+
+At this level of applying changes to the target, merge tracking is irrelevant.
+
+MERGE IS DIFF-AND-APPLY
+-----------------------
+
+Subversion's definition of "merging" is to determine the difference between two
+source trees SOURCE-LEFT and SOURCE-RIGHT, and try to apply that difference to
+a TARGET tree. The diff that it tries to apply is an arbitrary low-level
+representation of the overall difference between SOURCE-LEFT and SOURCE-RIGHT,
+not the series of logically meaningful transformations by which the user
+originally transformed SOURCE-LEFT into SOURCE-RIGHT.
+
+Typically, SOURCE-LEFT is an ancestor of SOURCE-RIGHT in a source branch, but
+this need not be so. (One effect of the "--ignore-ancestry" option is to force
+the merge to perform a detailed diff between the sources even if they are not
+so related, where it would otherwise present the diff as "delete SOURCE-LEFT;
+add SOURCE-RIGHT".)
+
+The differences are applied to a working copy of the TARGET tree (which may
+include some local modifications against its base).
+
+The degree of success of a merge depends on the degree to which the TARGET tree
+is similar enough to SOURCE-LEFT for Subversion to be able to match each file
+or directory involved in the diff to a corresponding file or directory in
+TARGET. This matching is done purely by path. Where this matching fails, the
+merge cannot apply that part of the diff. Some of these failures will be
+defined as "tree conflicts".
+
+
+USE CASES
+=========
+
+The use cases (in "use-cases.txt") illustrate some of the cases that are to be
+handled, but are not a complete set of requirements.
+
+The user-level requirements are presented in terms of user-interface actions.
+Note that the design is formulated and presented in terms of lower-level
+operations that do not include a "rename" operation.
+
+
+REQUIREMENTS
+============
+
+These requirements specify what a tree conflict means, how a tree conflict
+behaves, and under exactly what conditions a tree conflict is raised. These
+requirements are intended to apply in all merge, switch and update commands
+unless otherwise stated.
+
+DEFINITION OF A TREE CONFLICT
+-----------------------------
+
+A conflict is the condition that occurs when Subversion cannot apply a source
+change correctly and with certainty to a corresponding target object. A tree
+conflict is a kind of conflict that occurs due to a part of the TARGET tree
+being in some sense "incompatible" with the SOURCE-LEFT tree in kind, name,
+location, absence or presence.
+
+Every tree conflict shall be signaled both by an indication when the conflict
+occurs and by being marked in the WC in a way that shows up as a conflict in
+the "svn status" output.
+
+The state of conflict shall persist until the user confirms that it has been
+resolved. The user shall be able to confirm the resolution of each and every
+conflict individually, and shall also be able to confirm the resolution of all
+conflicts in a tree with a single command.
+
+Confirming the resolution of each and every tree conflict means being
+able to confirm the resolution of a tree conflict with a single tree conflict
+victim, even though there might be more than one tree conflict victim
+in a directory. A tree conflict victim is a file or directory in the tree
+which is affected by a tree conflict. For example, it might be a file
+which is deleted during an update operation while carrying local modifications,
+or it might be a file being blocked during a merge by an unversioned file of
+the same name. Each tree conflict has only a single victim.
+
+Every condition that results in the source diff not being fully applied to the
+target shall result in either a conflict or an error exit, with a strong
+preference for a conflict.
+
+CONSEQUENCES OF A TREE CONFLICT
+-------------------------------
+
+A commit shall be disallowed if any item considered as part of the commit is
+marked with a conflict (a tree conflict or any other conflict).
+
+A merge or switch or update shall be disallowed if it affects a part of the WC
+that is marked with a conflict.
+
+NON-REQUIREMENTS
+----------------
+
+It is desirable for a tree conflict to be resolved automatically (and thus not
+to be signaled as a conflict) when there is a way to do so that is clearly what
+the user wants. This might require some configurable rules. This is not
+presently a requirement.
+
+FAILURE TO GENERATE THE DIFF
+----------------------------
+
+When the diff cannot be completely determined due to read access restrictions
+in the source repository, tree conflicts shall be handled as defined herein for
+those parts of the diff that are determined. Rules for whether and how to
+proceed with an incomplete diff are out of scope of this tree-conflicts
+document.
+
+FAILURE TO APPLY THE DIFF
+-------------------------
+
+When a part of the diff should apply to a part of the WC that is switched, the
+rule for whether to apply the diff to this switched subtree or to the natural
+(unswitched) subtree or to both or to neither is out of scope of this
+tree-conflicts document, but tree conflict handling shall apply wherever the
+diff is applied.
+
+When a part of the diff cannot be applied, due to not finding a corresponding
+object or due to an unversioned item being present in the working copy at this
+path, a conflict is to be signaled. (Previously, in some cases a conflict was
+raised, in some cases a warning was issued, and in some cases the change was
+silently discarded.)
+
+When a part of the diff should apply to a part of the WC that is absent
+(perhaps due to authz restrictions or due to an intentionally sparse WC), a
+conflict shall be signaled. ###? This seems to be use case 4, right?
+
+LOCAL WC MODIFICATIONS
+----------------------
+
+Correct behaviour with local WC mods in TARGET is conceptually the same as if
+that uncommitted revision were just another committed revision. (Any necessary
+differences are to be detailed on delivery.) Correct behaviour with local mods
+is required for "update". For "switch" and "merge", correct behaviour with
+local mods is desired but not required for initial delivery.
+
+If there is already a conflict in a part of the WC that is to be affected by
+the merge, then the application of the merge shall be disallowed and no part of
+the WC shall be altered.
+
+### TODO: How can users use 'svn merge' to resolve a tree conflict?
+
+NON-CONFLICTS
+-------------
+
+When a file is to be deleted or renamed, there shall be a conflict unless the
+target file is identical to the SOURCE-LEFT file. Identical shall mean
+identical text and properties except for "svn:mergeinfo".
+
+When a directory is to be deleted or renamed, there shall be a conflict unless
+the target directory is identical to the SOURCE-LEFT directory. Identical shall
+mean identical properties except for "svn:mergeinfo", and an identical list of
+children (including their types), and recursively identical directory children
+and file children according to these definitions of "identical" for directories
+and for files respectively.
+
+### Is that last test (directory being identical) too expensive/impractical to
+calculate?
+
+### This is something I've also been thinking about - determining equality
+    of directories may turn out to be a major problem. Would requiring only
+    the direct children to be equal be an acceptable compromise?
+

@@ -1,0 +1,7 @@
+%_topdir        @RPMSDIR@
+%_builddir      %{_topdir}/build
+%_rpmdir        %{_topdir}/rpms
+%_sourcedir     %{_topdir}/sources/%{name}-%{version}-%{release}
+%_specdir       %{_sourcedir}
+%_srcrpmdir     %{_topdir}/srpms
+%_tmppath       %{_topdir}/tmp

@@ -1,0 +1,81 @@
+      * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      *                                                     *
+      *  THIS RELEASE STREAM IS OPEN TO BUG FIXES.          *
+      *                                                     *
+      * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+This file tracks the status of releases in the 1.7.x line.
+
+See http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
+for details on how release lines and voting work, what kinds of bugs can
+delay a release, etc.
+
+Status of 1.7.1:
+
+Candidate changes:
+==================
+
+ * r1147540, r1147541
+   Remove unused variables in build system.
+   Justification:
+     Backporting of future changes will be easier.
+   Votes:
+     +1: arfrever
+     -0: stsp (we can backport these when we need to)
+     -0: gstein
+
+ * r1185746, r1186059
+   Fix up some erroneous "Could not frob some targets because..." warnings.
+   Votes:
+     +1: stsp, rhuijben
+
+ * r1177732, r1186092, r1186101, r1186107, r1186109
+   Fix issue 4035.
+   Justification:
+     Lots of user reports of checksum!=NULL assertions.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4035
+   Notes:
+     Merge conflicts with r1185738 group.
+   Votes:
+     +1: philip, rhuijben
+
+Veto-blocked changes:
+=====================
+
+ * r1146131 and followups
+   Add svn_fs_verify() and implement rep-cache verification in FSFS using it.
+   Branch:
+     1.7.x-fs-verify
+   Justification:
+     Would be nice to extend verify already in 1.7.x.
+   Notes:
+     This does not include progress reporting; that has been postponed to 1.8.
+   Conflicts:
+     On fs_fs.c.  Resolve with 'theirs-conflict'.
+   Votes:
+     +1: danielsh, rhuijben
+     +0: gstein (progress would be nice) (without r1161164, r1161180)
+     -0: cmpilato (For a function with this name, the implementation is far
+         too anemic. I'd prefer this be a private function in 1.7.x, leaving
+         room for a future public API that really does full verification.)
+         (without r1161164, r1161180)
+     -1: danielsh (invasive, new feature)
+
+Approved changes:
+=================
+
+ * r1185738, r1185763, r1185768, r1185886, r1186240
+   Add support for upgrading absent nodes to the wonderfull wc-ng world.
+   Justification:
+     This should have been part of 1.7.0. Without this patch it is impossible
+     to upgrade working copies with server excluded/absent directories.
+   Notes:
+     r1185738, r1185763, r1185768: adds a test for this problem.
+     r1185886: fixes this issue and cleans up whitespace in the test.
+     r1186240: small test reorganization.
+     Merge conflicts with issue r1177732 group.  Branch includes both sets.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4035-r1185738
+   Votes:
+     +1: rhuijben, philip, stsp, gstein

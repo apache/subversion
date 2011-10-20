@@ -1,0 +1,92 @@
+API ERRATA -- $Id$
+
+Root Cause of Errata: incompatible
+ Library(s) Affected: libsvn_wc
+Function(s) Affected: svn_wc_entry
+                      svn_wc_entries_read
+     New Behavior in: 1.7
+      Related Issues: n/a
+
+
+== Details of Previous Behavior ==
+
+When a working copy directory is being constructed, based on a *copy*,
+then it will transiently report its URL (via entry->url) as matching
+that of the copyfrom_url. The correct behavior should have been to
+report its intended location in the repository when the newly-added
+(-copied) directory is committed. By the time svn_wc_add3() completes,
+as part of the svn_client_{copy,move}5() ... wc_to_wc_copy() ... call
+chain, the URL will have been rewritten properly (see the call to
+svn_wc__do_update_cleanup in svn_wc_add3).
+
+Only Subversion has control during this copy operation. It is possible
+that an API user will never see this transient state.
+
+
+== Details of New Behavior ==
+
+In version 1.7, the new working copy format does not have a way to
+store an intended URL that is *different* from the location specified
+or implied by its parent. In this case, the URL of the directory being
+copied will always report its correct, intended location, rather than
+that of the copyfrom URL.
+
+As noted above, it may be possible that an API user will never see
+this different behavior in the entry->url value.
+
+
+== Rationale for Change ==
+
+We do not have a way to model the transient reporting of an incorrect
+URL. Because that transient value is *incorrect*, and because the
+window of the (previous) behavior is narrow, it appears that the
+change in behavior will not have an impact on API consumers.
+
+
+== Impact on API Users ==
+
+It appears there will be no to minimal impact on consumers of the
+Subversion API.
+
+Internally to libsvn_wc, some calls to svn_wc_ensure_adm3() are aware
+of this erroneous behavior and pass the copyfrom URL as the "expected"
+URL of the entry. We can maintain backwards compatibility in the
+ensure_adm interface by recognizing that the URL-matching behavior is
+being used as an assertion. By relaxing the assertion, the test will
+still be able to pass while keeping its original purpose: ensuring the
+directory is prepared as a working copy directory for the given
+repository directory.
+
+The assertion will be satisfied if one of the following is true:
+
+* entry->url matches the provided URL (previous behavior)
+* entry->copyfrom_url matches the provided URL
+  -- this condition is seen in certain cases where the source has
+     already recorded a copyfrom_url
+* entry->url is a child of the passed repository root URL and
+  entry->uuid matches the passed UUID
+  -- children of a copied subroot do not record the copyfrom_url, so
+     it is not always available for verification. in this situation,
+     all we can do is to verify that the specified directory is from
+     the requested repository
+
+This relaxed assertion behavior *does* mean that if an API user is
+relying on svn_wc_ensure_adm3() to raise an error for a mismatched
+directory, then it will NOT see that error in all cases.
+
+### an alternate fix may be to keep svn_wc_ensure_adm3() strict, but
+    change the callers which are operating during this transitional
+    period to use a different mechanism. since Subversion is supposed
+    to be the only code in control, this may be possible.
+
+### hmmm. need to examine svn_wc_add3() in detail. it fixes the URLs
+    before returning, so the question becomes at what point does this
+    transitional (bad, previous) behavior start? is that within
+    svn_wc_add3() and, thus, never visible to a caller. are there
+    other API entry points that would expose that behavior to API
+    users? if NOT, then yes: keep ensure_adm3 strict, and only change
+    the (internal) operation of add3.
+
+### note that wc-ng could end up rewriting svn_wc_add3() anyways. but
+    we still need to determine whether and when the transitory state
+    begins to determine the exposure to API users.

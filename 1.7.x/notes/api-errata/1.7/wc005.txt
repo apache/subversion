@@ -1,0 +1,47 @@
+API ERRATA -- $Id$
+
+Root Cause of Errata: schema limitation
+ Library(s) Affected: libsvn_wc
+Function(s) Affected: svn_wc_ensure_adm3
+                      svn_wc_ensure_adm2
+                      svn_wc_ensure_adm
+     New Behavior in: 1.7
+      Related Issues: n/a
+
+
+== Details of Previous Behavior ==
+
+These functions were documented to allow passing NULL for the REPOS or
+the UUID parameters. The working copy library would construct an entry
+for the directory, recording the node's URL in the repository and
+(potentially) empty values for REPOS ("repos_root_url") and UUID
+("repos_uuid").
+
+In normal usage, immediately following the call to svn_wc_ensure_adm(),
+the client code would perform an "update". This sequence is used to
+perform a checkout. The checkout process only needs the target URL,
+and doesn't really worry about the repository root or the uuid. These
+values will be filled in later, as part of the checkout/update process.
+
+
+== Details of New Behavior ==
+
+If NULL is passed for REPOS or UUID, then SVN_ERR_BAD_URL or
+SVN_ERR_BAD_UUID will be returned.
+
+
+== Rationale for Change ==
+
+Our schema does not allow NULL for either of these values (see the
+REPOSITORY table in wc-metadata.sql). There is really no way to
+support this particular scenario without relaxing these constraints.
+
+
+== Impact on API Users ==
+
+Clients typically never call these functions. If they *do*, then they
+should pass all values, or be subject to an error return.
+
+Using Google Code Search, I found only two callers: our client code
+(which passes non-NULL values), and the KDESVN project which appears
+to also pass non-NULL values.

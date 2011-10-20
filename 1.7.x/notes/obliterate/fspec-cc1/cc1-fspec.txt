@@ -1,0 +1,315 @@
+******************************************************************************
+                           FUNCTIONAL SPECIFICATION
+                                     FOR
+                            ISSUE #516: OBLITERATE
+******************************************************************************
+
+
+TABLE OF CONTENTS
+
+    OPEN ISSUES
+
+     1. INTRODUCTION
+        1.1 REQUIREMENTS
+        1.2 CONCEPT
+
+     2. THE CORE OBLITERATION OPERATION
+        2.1 DEFINITION
+        2.2 DIAGRAMS
+        2.3 CONSEQUENCES
+        2.4 ALGEBRA
+        2.5 EXAMPLES OF USE
+
+     3. LOG MESSAGES, WORKING COPIES AND SURROUNDING ISSUES
+        3.1 LOG MESSAGES AND OTHER REVISION PROPERTIES
+        3.2 WORKING COPY VALIDITY
+        3.3 MERGEINFO
+
+     4. INVOCATION
+        4.1 SPECIFYING COMMON KINDS OF OBLITERATION
+        4.2 THE API
+        4.3 THE COMMAND_LINE UI
+
+
+OPEN ISSUES
+
+  * Useful parts of ../obliterate-functional-spec.txt
+     1.
+        1.1. Use Case Overview
+        1.2. Current Solution
+        2.1. Supporting Definitions
+        2.3. Notes
+     3. DIFFERENT TYPES OF (CORE) OBLITERATION
+        3.1. ABSOLUTE vs. VIRTUAL obliteration
+        3.2. ONLINE vs. OFFLINE vs. REPO-INVALIDATING
+     5. USE-CASES IN DETAIL
+
+  * In a Subversion repository, is a replacement or copy, with the copy-from
+    source being (the object's natural source path @ REV-1), distinguishable
+    from a natural continuation of the object's history?
+
+  * Add null-change diagrams.
+
+
+1. INTRODUCTION
+
+  This document serves as the functional specification for what's
+  commonly called the 'svn obliterate' feature.
+
+  1.1 REQUIREMENTS
+
+    This section summarizes the requirements that this specification aims to
+    satisfy and any that it explicitly does not aim to satisfy, along with
+    explanations, restrictions and reasons where appropriate.
+
+    The requirements referred to are found in <req-spec.txt>.
+
+    REQUIREMENTS SATISFIED
+
+    ###
+
+    REQUIREMENTS NOT SATISFIED
+
+    ###
+
+  1.2 CONCEPT
+
+    This section explains the concept of "obliteration" as meant in this
+    specification.
+
+    * We obliterate ###
+
+    * Granularity.  The granularity of obliteration is a whole change to a
+      whole node. A whole node means a whole file or a whole directory tree,
+      including its versioned properties, within a single revision of the
+      repository. Smaller changes, such as removing a versioned property from
+      a node, are not supported. A whole change means the change from the
+      PREVIOUS VERSION to the current version of the node. Usually, this
+      change is a modification or creation or deletion, but it could also be a
+      replacement by a different kind of node. Obliterating just part of the
+      change, for example the add part but not the delete part of a
+      replacement, is not supported.
+
+
+2. THE CORE OBLITERATION OPERATION
+
+  This section deals with how the versioned filesystem in the repository is
+  transformed by obliteration.
+
+  2.1 DEFINITION
+
+    This section lists the rules for transforming the repository in order to
+    obliterate the change made to a specified node-rev.
+
+    All unqualified references to the state of the repository are to the state
+    before the obliteration in question commences.
+
+    SUPPORTING DEFINITIONS
+
+    * Let the node-rev to be obliterated be called "N". N is either the
+      repository root node in revision R or is at the path "PARENT/BASENAME" in
+      revision R, where PARENT is the path of a directory and BASENAME is N's
+      name as an immediate child of PARENT.
+
+    * The node N may be of any kind (file, dir or none) in revision "R".
+
+    * PARENT must exist in revision R. (It is not meaningful to obliterate a
+      (non-existent) node-rev in a non-existent parent unless the obliteration
+      is simultaneously restoring the parent to existence, and in that case
+      obliterating the child separately is redundant because obliteration of a
+      directory is recursive. Operations with a non-existent PARENT are
+      therefore undefined, for simplicity. ### Is it recursive?)
+
+    * Let the node at path (PARENT's copy-from path)/BASENAME in revision
+      (PARENT's copy-from revision) be called "P", known as the "PREVIOUS
+      VERSION" of N. Note that P is not necessarily the copy-from source of N.
+
+    * The node P may be of any kind (file, dir or none), and is not
+      necessarily the same kind as N.
+
+    RULES OF TRANSFORMATION
+
+    * Change the node kind, content and versioned properties of N to those of
+      P, including cases where N and/or P is non-existent.
+
+    * If the new N exists, set its copy-from source to point to P.
+
+    * If N exists and P does not, change any nodes that refer to N to "newly
+      added". If N and P exist, do not change the copy-from source of any
+      nodes that refer to N, including any succeeding version(s) of N.  If N
+      does not exist and P does, do not change the copy-from source of any
+      node to refer to it, even if there is a node at N's path in revision
+      (R+1).
+### OR
+    * If N exists and is not copied from P, in other words if N is added or
+      replaced with or without history, then replace the copy-from source of
+      each copy of N with the copy-from source of N.  (### My wording here
+      depends on whether a "replacement" or "copy-from", with source being (the
+      natural source @ R-1), is distinguishable from a natural continuation.)
+
+    * Ensure that no change is made to the node kind, content or versioned
+      properties of any node-rev in the repository other than N. Note that
+      this includes nodes that were explicitly or implicitly copied from N.
+
+    * Revision properties and other parts of the repository are unchanged by
+      this transformation.
+
+    NOTES
+
+    * If a whole revision is reverted, the revision will still exist as a
+      "null change" revision; the subsequent revisions will not be renumbered
+      to "close the gap".
+
+  2.2 DIAGRAMS
+
+    Diagrams of the transformations can be seen in the following files:
+
+      <http://www.foad.me.uk/tmp/obliterate/fspec-cc1/cc1-dir-ops-4.svg>
+      <http://www.foad.me.uk/tmp/obliterate/fspec-cc1/cc1-file-ops-4.svg>
+
+    in SVG format (readable by Firefox, Inkscape, etc.) or
+
+      <http://www.foad.me.uk/tmp/obliterate/fspec-cc1/cc1-dir-ops-4.png>
+      <http://www.foad.me.uk/tmp/obliterate/fspec-cc1/cc1-file-ops-4.png>
+
+    Each file shows the obliteration of a Modification, an Addition, a
+    Deletion, a Replacement of a single node-rev. Each file also shows the
+    obliteration of a Move, in which the source and destination nodes at the
+    same revision are obliterated together.
+
+  2.3 CONSEQUENCES
+
+    * Obliterating a node-rev N that was an added node (without history) can
+      result in several unrelated adds of the content of N appearing, where
+      previously they were copies related by their common ancestor N.
+
+  2.4 ALGEBRA
+
+    The following statements are derived from the RULES OF TRANSFORMATION.
+
+    The notation Ob(N) means obliterate the change at node-rev N. The notation
+    Ob(N1,N2) means obliterate those changes together, with no meaningful
+    ordering among them. The notation "Ob(N1),Ob(N2)" means carry out those
+    obliterations consecutively in the order shown.
+
+    * Adjacent revisions can be obliterated in order.
+
+        Ob(PATH@50, PATH@51)          ==   Ob(PATH@50),
+                                           Ob(PATH@51)
+      ### I am not sure this is true.
+
+    * Order of revisions matters.
+
+        Ob(PATH@50),                  !=   Ob(PATH@51),
+        Ob(PATH@51)                        Ob(PATH@50)
+
+    * Siblings are independent.
+
+        Ob(PARENT/A@50, PARENT/B@50)  ==   Ob(PARENT/A@50),
+                                           Ob(PARENT/B@50)
+
+        Ob(PARENT/A@50),              ==   Ob(PARENT/B@50),
+        Ob(PARENT/B@50)               ==   Ob(PARENT/A@50)
+
+    * Always recursive in a directory.
+
+        Ob(PARENT@50, PARENT/A@50)      ==   Ob(PARENT@50)
+
+    * Idempotent.
+
+        Ob(PATH@50),                  ==   Ob(PATH@50)
+        Ob(PATH@50)
+
+    * Null change.
+
+        Ob(PARENT/A@50)               ==   no change
+          where PARENT/A@50 is the same as ###
+
+  2.5 EXAMPLES OF USE
+
+    1. Obliterate a whole revision R.
+
+      Operation: Ob(/@R)
+
+      Result: Revision R becomes identical to revision (R-1): "svn diff -c R
+      ^/" shows no change, and "svn log -v -c R /^" lists no paths in the
+      "Changed paths" section.
+
+      Comments: In some potential use cases, a user would like the revision
+      number R not to show up at all in the repository's history. In some
+      other potential use cases, a user would like the revisions numbered from
+      (R+1) upwards to be renumbered from (R) upwards. These possibilities are
+      not considered in this document, but see the design "cc2" for something
+      like the former, and see "svndumpfilter" for achieving the latter.
+
+    2. Obliterate the whole head revision.
+
+      Operation: Ob(/@HEAD)
+
+      Result: Revision R (which was and still is HEAD) becomes identical to
+      revision (R-1). The next revision to be committed will still be (R+1).
+      Nothing changes in any revision other than R.
+
+      Comments: Note that this does not remove the evidence that a commit had
+      occurred.
+
+    3. Obliterate all but the head revision of a file.
+
+      Operation: Ob(BIGFILE@1, BIGFILE@2, ..., BIGFILE@HEAD-1)
+
+      Result: 
+
+      Comments: 
+
+    4. Obliterate one intermediate revision of a file.
+
+      Operation: Ob(SECRET@50)
+
+      Result: 
+
+      Comments: 
+
+
+3. LOG MESSAGES, WORKING COPIES AND SURROUNDING ISSUES
+
+  3.1 LOG MESSAGES AND OTHER REVISION PROPERTIES
+
+  This section deals with changes that may be required to log messages and
+  other revision properties, to stay consistent with the changed history.
+
+  * When a change in revision R is obliterated, and the change thereby appears
+    to be combined into the changes of revision (R+1), the user SHOULD be
+    given the opportunity to adjust the log messages of both R and (R+1).
+    Whether any such adjustment is wanted will depend on the nature of the
+    changes, the details in the log messages, and whether the user wants to
+    explain or attempt to hide the obliteration.
+
+  * When changes in revision R are obliterated, the user MAY be given the
+    opportunity to adjust any revision properties of revisions R through HEAD.
+
+  3.2 WORKING COPY VALIDITY
+
+  This section deals with the client-side issues that result from the changed
+  history.
+
+  3.3 MERGEINFO
+
+  When a change in revision R is obliterated, the svn:mergeinfo versioned
+  property may need to be adjusted on revision (R+1) and subsequent revisions
+  to keep it consistent.
+
+  ### Not yet known.
+
+4. INVOCATION
+
+  This section deals with the way in which a user or administrator carries out
+  an obliteration. It covers how to specify what should be obliterated, what
+  happens to log messages, the user interface and the API.
+
+  4.1 SPECIFYING COMMON KINDS OF OBLITERATION
+
+  4.2 THE API
+
+  4.3 THE COMMAND_LINE UI
+
+

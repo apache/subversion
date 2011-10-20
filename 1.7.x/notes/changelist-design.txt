@@ -1,0 +1,566 @@
+
+The Problem We're Solving
+-------------------------
+
+Subversion users typically edit sets of files in their working copy.
+If a working copy contains a set of edited files which represents a
+single logical change, then commands like 'svn diff', 'svn status',
+'svn revert' and 'svn commit' automatically discover the edited files
+and act on them.
+
+A common problem, however, is that users often work on more than one
+set of logical changes at a time.  The user is required to remember
+which edited file belongs to which set, and carefully run 'diff',
+'revert', or 'commit' commands only on lists of files which belong
+together.
+
+One workaround for this problem is to checkout multiple working
+copies, and have one task per working copy.  Of course, this uses a
+lot of disk space, and it's sometimes inconvenient to move around
+between working copies.
+
+The simple solution we're proposing here is to teach the svn client
+(and working copy) do some simple management of local, human-named
+sets of files, known as 'changesets'.  The goal is to allow users to
+create, view, and manipulate sets of files in a working copy by
+referring to them by name.
+
+
+Doesn't Perforce Do This?
+-------------------------
+
+Perforce performs changelist management, and it's a large motivation
+for this new feature.  But there's no way to emulate Perforce's
+feature exactly; it has a different network model than Subversion.  So
+instead, we'll examine the use-cases that Perforce enables, and
+discuss how to solve those same use-cases in Subversion.
+
+
+Non-Problems
+-------------
+
+Here are problems/features that are NOT in our list of goals:
+
+  * Server management of changesets
+
+    Subversion prides itself on being disconnected;  that's why it
+    scales so well.  A changeset is an ephemeral thing created by a
+    single user in a single working copy, whose only purpose is to
+    make it easier to manipulate a change-in-progress.  It's not a
+    "named revision", or a long-lived object in the repository.
+    That's what global revision numbers are for.
+
+    Some people aren't happy with the way tags work in Subversion, and
+    have asked for the ability to identify repository revisions by
+    human name.  While everybody wants to see the ability to search
+    over revprops (for many reasons!), that whole issue is out of
+    scope for this changelist feature.  It's been suggested that when
+    a changelist gets committed, it become a searchable revprop;
+    sounds fine, but lets get changelists and searchable revprops
+    implemented independently first!
+
+  * Enforcement of groupings
+
+    Changesets don't exist as a prescriptive SCM process.  Some have
+    suggested that the client not allow people to commit individual
+    files in a changelist, or to do some side of server-side process
+    enforcement revolving around changelists.  This is definitely not
+    in the Subversion spirit, which allows teams to create whatever
+    policies they wish.  The only purpose of changelists is to do
+    provide some convenient bookkeeping to the user.
+
+  * Overlapping changelists
+
+    A number of people ask "but what if two different changes within a
+    single file belong to different logical changes?"  My reply is:
+    either "tough luck" or "don't do that" or "checkout a separate
+    working copy".  My feeling is that trying to create a UI to
+    manipulate individual diff-hunks within a file is a HUGE can of
+    worms, probably best suited for a GUI.  While I wouldn't rule it
+    out as a future *enhancement* to a changelist feature, it's
+    certainly not worth the initial effort in the first draft of
+    changelist management.  Overlapping changelists do occasionally
+    happen, but they're rare enough that's it's not worth spending 90%
+    of our time on a 10% case -- at least not in the beginning.
+
+  * "Shelving" of changes
+
+    Distributed version control systems don't have this sort of
+    problem;  one could just do a 'local commit' of each
+    changeset-in-progress, create local branches, and magically swap
+    patches in and out as needed.  To that end, many have talked about
+    making subversion working copies into "deep" objects containing
+    some degree of history, or to write a nice 'svn patch' command to
+    read custom 'svn diff' output.  My response is:  nice ideas, and
+    those sort of really advanced designs are certainly things that
+    simple changelist management can grow to take advantage of, but
+    aren't prerequisites for tackling this problem.
+
+
+
+Use-Cases
+---------
+
+A. Define a changelist by explicitly adding/removing paths to it.
+
+B. See all existing changelist names (and their member paths)
+
+C. Destroy a changelist definition all at once.
+
+D. Examine all edits within a changelist (svn diff)
+
+E. Revert all edits within a changelist (svn revert)
+
+F. Commit all edits within a changelist (svn commit)
+
+G. Receive server changes only paths within a changelist (svn update)
+
+H. See the history of all paths within a changelst (svn log)
+
+I. Fetch or set props on every path within a changelist (svn pl/ps/pe/pg/pd)
+
+
+
+How Perforce Tackles the Use-Cases
+----------------------------------
+
+A.  Defining changelists
+
+The Perforce server tracks each and every working copy, as well as
+every changelist within every working copy.  All working copy files
+are read-only until the user declares the intent to edit ('p4 edit')
+one.  The server then makes the file read-write and places it into a
+changelist with the name 'default'.
+
+Users aren't allowed to invent their own names for changelists, as
+this might lead to namespace overlaps.  (This is a side effect of
+having the server track all changelists.)  'p4 change' creates a new
+changelist by prompting the user for a log message, at which point the
+server yanks the 'next' global global revision number and assigns it
+as a name for the changelist.  The server not only tracks the
+changelist via some number, but also tracks the
+log-message-in-progress for the list.  ('p4 describe' can show the log
+message attached to a changelist.)
+
+B.  Viewing changelists
+
+At any time, the 'p4 open' command shows all files that are being
+edited, and which changelists they belong to.  It's quite similar to
+the 'svn status' command, except that the output is somewhat harder to
+read, due to non-aligned columns.
+
+The response time is also quite fast, since p4 doesn't need to crawl
+the working copy to discover edited files.  On the other hand, p4
+doesn't scale so well when the server tries to track thousands of
+users.
+
+C.  Destroying changelists
+
+'p4 change -d' will delete a changelist, but only if the edited files
+within the changelist have been reverted.
+
+D.  Viewing edits in a changelist
+
+'p4 diff' shows contextual diffs for all edited files.  This is
+actually a bit weak, as it shows diffs for *all* changelists in a
+working copy.  Subversion should improve on this by allowing one to
+'diff' just a single changelist.
+
+E.  Reverting a changelist
+
+'p4 revert -c NNN' reverts all edited files within changelist #NNN.
+Note that it's also possible to revert single files ('p4 revert
+foo.c').  If a single file within a changelist is reverted, its path
+is removed from the changelist.
+
+F.  Committing a changelist
+
+'p4 submit -c NNN' atomically commits changelist #NNN to the
+repository.  If the commit succeeds, a *new* global revision number is
+assigned to the final commit, and the old 'NNN' number is discarded.
+(This means that p4 actually burns through global revnums at twice the
+speed as subversion!)  After the commit, the working copy no longer
+has any record of the changelist.
+
+G.  Updating a changelist
+
+'p4 sync' is equivalent to 'svn up'.  Like subversion, 'p4 sync' can
+be restricted to specific path targets, but amazingly not restricted
+to a set of paths that make up a changelist.  This may be something
+subversion can improve upon.
+
+H.  Examining the history of changelist members
+
+'p4 changes' is the closest thing to 'svn log'.  With no arguments, it
+shows all changelists ever submitted.  With specific path arguments,
+it limits the response to showing only changelists that affected those
+paths.  Again, a changelist number cannot be supplied, which is
+surprising.
+
+I.  Propgets/sets on a changelist
+
+Perforce has no versioned metadata.
+
+
+
+
+Proposal for Subversion's Tackling of Use-Cases
+-----------------------------------------------
+
+A.  Defining changelists
+
+Subversion's changelist feature will be entirely client-side
+bookkeeping.  The purpose is to allow users to 'talk about' a set of
+local paths via a convenient name, often restricting subcommands to
+operate only on those paths.
+
+The 'svn changelist' command allows a user to define a changelist with
+an arbitrary UTF-8 name, as well as add member paths.  (At the moment,
+a --remove flag is used to remove member paths.)  Unversioned items may
+not be added to changelists.
+
+$ svn changelist MYCHANGE foo.c bar.c
+Path 'foo.c' is now part of changelist 'mychange'.
+Path 'bar.c' is now part of changelist 'mychange'.
+
+$ svn changelist bar.c --remove
+Path 'bar.c' is no longer associated with a changelist.
+
+
+### Open question: should we add a UI which allows the working copy to
+    manage a log-message-in-progress for each changelist, the way p4
+    does?  This could be something stored in ~/.subversion/ area.
+
+
+B.  Viewing changelists
+
+'svn status' currently shows changelist definitions by crawling the
+working copy.  Output is much more readable than perforce, because
+we're still preserving column alignment.
+
+$ svn st
+?      1.2-backports.txt
+M      notes/wc-improvements
+
+--- Changelist 'status-cleanup':
+M      subversion/svn/main.c
+       subversion/svn/revert-cmd.c
+M      subversion/svn/info-cmd.c
+
+--- Changelist 'status-printing':
+M      subversion/svn/status-cmd.c
+
+
+
+Note that unlike perforce, changelist membership is orthogonal to
+whether or not the file has local modifications.  So it's possible for
+'svn status' to show a changelist containing unmodified files.
+Conversely, it's possible for a file to be modified, but unassociated
+with any changelist.
+
+'svn status' considers changelist membership to be inherently
+"interesting enough" to justify displaying a path, regardless of
+whether it's modified.
+
+Note that merely upgrading subversion won't break scripts that parse
+'svn status' output.  Such scripts might break *only* if users begin
+to use the new changelist feature.  This is a good balance between
+allowing subversion's development to progress, while not automatically
+punishing users for upgrading.  (Either way, the "---" characters
+should prevent scripts from accidentally detecting conflicts with "^C"
+regular expressions.)
+
+### Open question:  at the moment, changelists are implemented by
+    simply storing a new attribute in the .svn/entries file.  Rather
+    than having the svn client crawl and 'discover' changelists,
+    should we take a hint from p4 and have them centrally managed in
+    the ~/.subversion/ area?
+
+     Pros:
+       - much faster than crawling
+       - whole changelist definition available, regardless of CWD
+
+     Cons:
+       - breaks the 'portable WC' ideal.  (If WC moves to another box,
+         changelist definition is lost.)
+
+
+### Open question:  should 'svn status' be able to restrict its output
+    to a single changelist, a la 'svn status --changelist mychange'?
+
+
+C.  Destroying changelists
+
+Commands can be restricted to operate only on changelist members by
+specifying the "--changelist NAME" flag.  (Perhaps it can be shortened
+to '--cl' also?)
+
+To destroy a changelist, one would need to remove all member-paths
+from it.  There's no good UI for this yet, other than to use 'svn
+changelist --remove path1 path2 path3 ...'.  ### Improve this?
+
+
+D.  Viewing edits in a changelist
+
+Improve on perforce by allowing 'svn diff' to restrict its output to
+only members of a certain changelist:
+
+$ svn diff --changelist mychange
+[...]
+
+
+E.  Reverting a changelist
+
+Allow 'svn revert' to restrict its effect just to members of a
+changelist:
+
+$ svn revert --changelist mychange
+[...]
+
+Again, note that this won't destroy the changelist.  The changelist
+would now contain just a set of unmodified paths, and 'svn status'
+would continue to display them.  (This differs from perforce, whereby
+local-edits are intimately tied to changelist membership.)
+
+
+F.  Committing a changelist
+
+'svn commit' should be able to commit only changelist members, just as
+if the paths had been typed on the commandline individually:
+
+$ svn commit --changelist mychange
+Modifying foo.c
+Adding bar.c
+[...]
+Committed revision YYY.
+
+
+After the commit succeeds, the committed files are NO LONGER
+associated with the changelist, and so the changelist definition
+ceases to exist.  (Note: we probably want to have a switch to
+'preserve the changelist' after a commit, similar to the way in which
+the '--no-unlock' switch preserves locks after a commit.)
+
+If the user chooses to commit just a single member of a changelist,
+that member is removed from the changelist after the commit.
+
+
+G.  Updating a changelist
+
+### Open question:  is this a useful use-case?  Perforce doesn't have
+    it, and I've never missed it.  I always want to update the entire
+    working copy, not just some small set of files.
+
+
+H.  Examining the history of changelist members
+
+'svn log' should be able to restrict its history retrieval to only
+revisions which affected members of the changelist.  So running
+
+$ svn log --changelist mychange
+
+...should produce output equivalent to
+
+$ svn log member1 member2 member3 ...
+
+
+'svn log' already knows not to print log messages more than once
+(i.e. it prints the union of all revisions).
+
+Note that this feature would be an improvement over perforce, which
+allows multiple targets on the commandline, but no changelist
+shorthand for them.
+
+
+I.  Propgets/sets on a changelist
+
+'svn proplist', 'svn propget', 'svn propset', 'svn propdel' should all
+work with the --changelist switch as well, so that a user can quickly
+perform metadata operations on a whole set of files.
+
+ ### Open question: should we also allow 'svn lock/unlock' to operate
+     on changelists?  It might be just as convenient in certain
+     scenarios.
+
+
+
+----------------
+
+### Open UI question:
+
+   If one's CWD is deep within a working copy, how should
+
+        $ svn subcommand --changlist mychange
+
+    ...behave?  Should it operate on *all* members of the changelist,
+    or only those members within the CWD (and recursively "below")?
+
+   --> malcolmr and dlr believe that it's perfectly fine to use only
+       parts of changelists 'below' the target path.
+
+
+--------------------
+
+==> Finished items:
+
+    * svn changelist [--remove]
+
+    * svn status shows grouped changelists
+        -  'svn status --changelist' works too
+    * 'svn info' shows changelists
+
+    * svn commit --changelist
+    * svn revert --changelist
+    * svn log --changelist
+    * svn diff --changelist  (wc-wc and wc-repos cases)
+    * svn update --changelist
+    * svn lock/unlock --changelist
+    * svn propget/propset --changelist
+###    * svn proplist/propdel --changelist
+
+
+
+==> TO-DO:
+
+* make --cl the same as --changelist, for convenience?
+
+* questions about commits:  
+
+    - how does 'svn ci --changelist' interact with nonrecursive commits?
+    - how does it interact with a list of specific targets?
+    - how does it deal with a schedule-delete folder?
+
+
+----------------------------
+
+Commandline UI use-cases:
+
+
+1. add path(s) to a CL:
+
+     svn cl CLNAME foo.c bar.c baz.c
+
+2. remove path(s) from whatever CLs they each belong to.
+
+     svn cl --remove foo.c bar.c baz.c
+
+3. move path(s) from CL1 to CL2.
+
+     svn cl CL2 foo.c
+
+4. undefine a CL all at once (by removing all members)
+
+     svn cl --remove --changelist CLNAME
+
+5. rename a CL
+
+     svn cl NEWNAME --changelist OLDNAME
+
+
+==================================================================
+
+Feature Revamp:  sussman and cmpilato.
+
+
+Goal:  changelists should be treated as 'filters' everywhere, not as a
+way to just add targets to a commandline.
+
+
+The basic syntax of commands will be:
+
+  svn subcommand target1 target2 ... targetN \
+                 --changelist foo1 --changelist foo2 ... --changelist fooM
+
+The CLI parses the targets as usual: possibly inserting an implicit
+'.' target, canonicalizing the list, etc.
+
+The CLI now passes a list of changelist-names down into each
+svn_client_subcommand() routine as a "bunch of filters" to apply while
+working.  If svn_client_subcommand() decides to process a target --
+either one it got explicitly, or one it discovered through recursion
+-- it first checks that the target is a member of one of the
+changelists.  If not, it skips the target and keeps going.
+
+(This is the way 'svn commit' currently works:  harvest_committables()
+only harvests things that are committable *and* a member of the
+passed-in changelist.)
+
+This means that the UI use-cases listed above change slightly:
+
+
+   4. undefine a CL all at once (by removing all members)
+   
+        svn cl TARGET --remove --changelist CLNAME
+   
+        (TARGET might be implicit '.' or not, and depth is empty by
+        default; use --depth to override.)
+   
+   5. rename a CL
+   
+        svn cl NEWNAME TARGET --changelist OLDNAME
+   
+        (TARGET might be implicit '.' or not, and depth is empty by
+        default; use --depth to override.)
+
+
+TO-DO list:
+
+  [X] allow multiple --changelist args
+  [X] svn status should display grouped changelists
+  [X] 'svn info' should display a target's changelist field
+  [X] rename --keep-changelist option to --keep-changelists
+  [X] fix --changelist and allow multiple changelists in subcommands:
+
+      No-problem subcommands:
+      [X] svn changelist --changelist
+      [X] svn commit --changelist
+      [X] svn diff --changelist (only wc-wc and wc-repos cases)
+      [X] svn info --changelist
+      [X] svn propget --changelist
+      [X] svn proplist --changelist
+      [X] svn propset --changelist
+      [X] svn propdel --changelist
+      [X] svn revert --changelist
+      [X] svn status --changelist
+
+      Problem subcommands (see below):
+      [X] svn update --changelist
+      [X] svn lock --changelist              ### removed changelist support
+      [X] svn log --changelist               ### removed changelist support
+      [X] svn unlock --changelist            ### removed changelist support
+
+  [ ] ensure that the bindings implementations of these APIs are up to snuff
+  [X] write tests!
+
+Problem Subcommands:
+
+  Using a definition of --changelist as a filter means that
+  subcommands which are, by default, non-recursive in nature, have a
+  somewhat odd interface.  For example, 'svn info --changelist FOO'
+  (which ultimately translates to 'svn info . --depth empty
+  --changelist FOO') will either return exactly one info result, or
+  exactly none, depending on whether or not the current working
+  directory is in changelist FOO.  This is trivially worked around by
+  deepening the invocation: 'svn info -R --changelist FOO'.  But what
+  about subcommands for which there is no --depth support, such as
+  'lock', 'log', 'unlock'?  Do we lose the changelist support, or grow
+  some sort of depth-crawling ability for these things?  [RESOLUTION:
+  We've removed changelist support from 'lock', 'unlock', and 'log'.]
+
+  'svn update' presents an interesting challenge, too.  The public
+  svn_client_update3() API takes a list of paths, and returns a list
+  of revision numbers to which those paths were updated.  Each path is
+  treated as, effectively, a separate update -- complete with output
+  line that notes the updated-to revision.  So, if we do changelist
+  expansion outside the API, we might turn a single-target operation
+  into a multi-target one, and the user sees N full updates processes
+  happen.  If we push 'changelists' down into the API, we can fake a
+  single update with notification tricks.  But that starts to get
+  nasty when we look at non-file changelist support later and the
+  interactions with externals and such.  And if we push 'changelists'
+  all the way down into the update editor, then we've got a mess of a
+  whole 'nuther type, downloading tons of server data we won't use,
+  and so on.  [RESOLUTION: Let the command-line client do the
+  changelist path expansion.]
+
+  

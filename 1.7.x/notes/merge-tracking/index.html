@@ -1,0 +1,104 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Merge Tracking</title>
+</head>
+
+<body>
+<div class="h2">
+
+<h2>Merge Tracking</h2>
+
+<p>"Make merging changes <em>simple</em>."</p>
+
+<div class="h3" id="internal">
+<h3>Subversion's own Merge Tracking</h3>
+
+<p>Development of Subversion's own merge tracking support is
+currently underway, with basic functionality expected to be included
+in Subversion 1.5.  Additional features may follow in subsequent
+releases; email the development list if you're interested
+in participating in the definition or implementation process.</p>
+
+<ul>
+  <li><a href="requirements.html">Use Cases and Requirements</a></li>
+
+  <li><a href="func-spec.html">Functional Specification</a></li>
+
+  <li><a href="design.html">Design Specification</a></li>
+</ul>
+
+<p>Merge Tracking in Subversion 1.5.0 is roughly equivalent in
+functionality to <a
+href="http://www.orcaware.com/svn/wiki/Svnmerge.py">svnmerge.py</a>,
+recording and using merge history to avoid common cases of the
+repeated merge problem, and allowing for cherry-picking of changes.
+It exposes merge history via properties, and allows for repository
+dump/load (including the ability to re-create the merge history
+index).  It supports both the FSFS and BerkeleyDB Subversion file
+system backends.  (Early implementations added <a
+href="http://www.sqlite.org/">sqlite</a> as a dependency, but this was
+later removed: Subversion 1.5 does <em>not</em> use SQLite.)
+
+</p>
+
+<p>Remaining tasks for 1.5.0 are tracked in the <a
+href="http://subversion.tigris.org/issues/buglist.cgi?component=subversion&amp;issue_status=NEW&amp;issue_status=STARTED&amp;issue_status=REOPENED&amp;target_milestone=1.5&amp;keywords=merge-tracking&amp;keywords_type=anytokens&amp;cmdtype=doit&amp;order=%27Importance%27&amp;Submit+query=Submit+query"
+>issue tracker</a>.</p>
+
+<p>Additional Merge Tracking features planned for post-1.5.0 include
+blocking of changes, misc. auditing/reporting, handling of cyclic
+merges, and other high-level features described in the recorded <a
+href="requirements.html">use cases</a>.  This list of issues can also
+be found in the <a href="http://subversion.tigris.org/issues/">issue tracker</a> (query for the
+<em>merge-tracking</em> keyword to get the comprehensive list).</p>
+
+
+</div>  <!-- internal -->
+
+
+<div class="h3" id="external">
+<h3>External Merge Tracking</h3>
+
+<div class="h4" id="leveraged">
+<h4>Tools built on top of Subversion</h4>
+
+<ul>
+  <li><a href="http://www.orcaware.com/svn/wiki/Svnmerge.py"
+  >svnmerge</a></li>
+
+  <li><a href="http://svk.elixus.org/">svk</a></li>
+</ul>
+</div>
+
+<!-- ### Do we want this info here, or buried deeper in this web
+space?
+<div class="h4" id="non-svn">
+<h4>Other tools</h4>
+
+<ul>
+  <li><a href="http://perforce.com/">Perforce</a></li>
+
+  <li><a href="http://www.ibm.com/software/awdtools/clearcase/support/"
+  >ClearCase</a></li>
+
+  <li><a href="http://www.bitkeeper.com/">BitKeeper</a></li>
+
+  <li><a href="http://users.footprints.net/~kaz/mcvs.html">MetaCVS</a></li>
+</ul>
+</div>
+-->
+
+</div>  <!-- external -->
+
+<!-- TODO: "Import" from CollabNet's site (this should become a
+"tasks" or "status" document):
+  <li><p><a
+  href="https://scm-roadmap.extranet.collab.net/merge-tracking.html"
+  >VC Team Merge Tracking Roadmap</a></p></li>
+-->
+
+</div>  <!-- h2 -->
+</body>
+</html>

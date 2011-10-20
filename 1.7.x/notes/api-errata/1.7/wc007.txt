@@ -1,0 +1,80 @@
+API ERRATA -- $Id$
+
+Root Cause of Errata: 
+ Library(s) Affected: libsvn_wc
+Function(s) Affected: svn_wc_get_pristine_copy_path
+     New Behavior in: 1.7
+      Related Issues: n/a
+
+
+== Details of Previous Behavior ==
+
+The function svn_wc_get_pristine_copy_path() returns (via a pointer) the
+path where the pristine text of the specified node is stored.  In versions
+before 1.7,
+
+  - The returned path is derived purely from the working-copy node path, and
+    is always the same for a given working-copy path.
+
+  - Whenever the node has a pristine text, it will exist on disk at that
+    path.  Whenever the node has no pristine text, nothing will be found on
+    disk at that path.  When the node's pristine state changes, the file at
+    the returned path will be added or deleted or replaced with the new
+    content.
+
+
+== Details of New Behavior ==
+
+The function svn_wc_get_pristine_copy_path() still returns (via a pointer)
+the path where the pristine text of the specified node is stored, if the
+node has a pristine text, or else a path where nothing will be found on
+disk, if it does not have one.  From version 1.7,
+
+  - The path remains valid only as long as the node has the same pristine
+    text.  After the node's pristine state has changed, the file at that
+    path may disappear at any time, and if it still exists it is no longer
+    guaranteed to be the correct pristine text for the node.
+
+  - The path may be to a shared file that is simultaneously the pristine
+    text file for other nodes that have same pristine text.
+
+  - If the node has no pristine text then the returned path is one where
+    there is guaranteed to be nothing on disk but is otherwise arbitrary.
+
+
+== Rationale for Change ==
+
+Supported uses of this API are:
+
+  - Reading the pristine text from the returned path, immediately.
+
+  - Testing for existence of the returned path, immediately.
+
+Unsupported uses of this API include:
+
+  - Storing the returned path and using it later, after a state change.
+
+  - Writing, deleting, or any kind of modification to the returned path.
+
+The storage of pristine texts has been changed for WC-NG, such that the path
+where a given text is stored is now derived from the content of the text
+rather than from the path of the node to which it belongs.  Therefore the
+returned path can no longer remain valid when the node's pristine state
+changes.
+
+Other compatibility behaviours were considered.  One option was to make a
+copy of the current pristine text when this API is called and return the
+path to that.  That behaviour has difficulties with clean-up.
+
+(###  Before 1.7, were there any cases where the returned path did not
+remain valid?  Maybe when revert-base <-> normal-base?  File external?)
+
+The API was already deprecated in version 1.6.
+
+
+== Impact on API Users ==
+
+Callers that open the returned path for reading, or test for its existence,
+immediately after the call or before the node's pristine state changes, are
+unaffected.  Callers that do other things may no longer work as expected.
+

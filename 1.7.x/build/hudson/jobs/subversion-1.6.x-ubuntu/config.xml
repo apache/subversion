@@ -1,0 +1,112 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+   
+      http://www.apache.org/licenses/LICENSE-2.0
+   
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+-->
+<project>
+  <actions /> 
+  <description>Build Subversion from 1.6.x branch on Ubuntu system</description> 
+  <logRotator>
+    <daysToKeep>-1</daysToKeep> 
+    <numToKeep>40</numToKeep> 
+    <artifactDaysToKeep>-1</artifactDaysToKeep> 
+    <artifactNumToKeep>-1</artifactNumToKeep> 
+  </logRotator>
+  <keepDependencies>false</keepDependencies> 
+  <properties>
+    <hudson.plugins.descriptionsetter.JobByDescription /> 
+    <hudson.plugins.disk__usage.DiskUsageProperty /> 
+    <hudson.plugins.jira.JiraProjectProperty>
+      <siteName>https://issues.apache.org/jira/</siteName> 
+    </hudson.plugins.jira.JiraProjectProperty>
+  </properties>
+  <scm class="hudson.scm.SubversionSCM">
+    <locations>
+      <hudson.scm.SubversionSCM_-ModuleLocation>
+        <remote>https://svn.apache.org/repos/asf/subversion/branches/1.6.x</remote> 
+        <local>subversion-1.6.x</local> 
+      </hudson.scm.SubversionSCM_-ModuleLocation>
+    </locations>
+    <useUpdate>false</useUpdate> 
+    <doRevert>false</doRevert> 
+    <browser class="hudson.scm.browsers.ViewSVN">
+      <url>http://svn.apache.org/viewcvs.cgi/?root=Apache-SVN</url> 
+    </browser>
+    <excludedRegions /> 
+    <includedRegions /> 
+    <excludedUsers /> 
+    <excludedRevprop /> 
+    <excludedCommitMessages /> 
+  </scm>
+  <assignedNode>minerva.apache.org (Ubuntu)</assignedNode> 
+  <canRoam>false</canRoam> 
+  <disabled>false</disabled> 
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding> 
+  <jdk>(Default)</jdk> 
+  <triggers class="vector">
+    <hudson.triggers.SCMTrigger>
+      <spec>0 * * * *</spec> 
+    </hudson.triggers.SCMTrigger>
+  </triggers>
+  <concurrentBuild>false</concurrentBuild> 
+  <builders>
+    <hudson.tasks.Shell>
+      <command>
+        cd subversion-1.6.x 
+        # make distclean 
+        ./autogen.sh 
+        # cp /home/bhuvan/apr . -r 
+        # cp /home/bhuvan/apr-util . -r 
+        # cp /home/bhuvan/sqlite-amalgamation . -r 
+        ./configure 
+          --enable-maintainer-mode 
+          --disable-shared 
+          --with-apr=/usr/local/apr/apr-1.4.2 
+          --with-apr-util=/usr/local/apr/apr-util-1.3.9 
+          --with-sqlite=/usr/local/svn-deps/subversion-1.6.11/sqlite-amalgamation/sqlite3.c 
+        make
+      </command> 
+    </hudson.tasks.Shell>
+    <hudson.tasks.Shell>
+      <command>
+        #!/bin/bash 
+        cd subversion-1.6.x 
+        make check 
+        ret=$? 
+        echo "Generating junit files ..." 
+        python ../../subversion-trunk-ubuntu/subversion-trunk/tools/dev/gen_junit_report.py 
+          --log-file=./tests.log 
+          --output-dir=build/junit-reports 
+        exit 
+        $ret
+      </command> 
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers>
+    <hudson.tasks.junit.JUnitResultArchiver>
+      <testResults>subversion-1.6.x/build/junit-reports/*</testResults> 
+      <testDataPublishers /> 
+    </hudson.tasks.junit.JUnitResultArchiver>
+    <hudson.tasks.Mailer>
+      <recipients>notifications@subversion.apache.org</recipients> 
+      <dontNotifyEveryUnstableBuild>true</dontNotifyEveryUnstableBuild> 
+      <sendToIndividuals>false</sendToIndividuals> 
+    </hudson.tasks.Mailer>
+  </publishers>
+  <buildWrappers /> 
+</project>
+

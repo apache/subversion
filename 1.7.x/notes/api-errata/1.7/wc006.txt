@@ -1,0 +1,57 @@
+API ERRATA -- $Id$
+
+Root Cause of Errata: incompatible
+ Library(s) Affected: libsvn_wc
+Function(s) Affected: svn_wc_merge_props2
+                      svn_wc_merge_props
+                      svn_wc_merge_prop_diffs
+     New Behavior in: 1.7
+      Related Issues: 953
+
+
+== Details of Previous Behavior ==
+
+The affected functions have a BASE_MERGE parameter that will cause the
+function to apply the specified property changes to the pristine
+("base") properties when set to TRUE.
+
+This capability originated in r843714 (aka r3640) to solve issue #953.
+Prior to that change, merges were updating the pristine properties,
+and this flag enabled merge to *avoid* that effect.
+
+The affected functions are wrappers around internal functions. The
+(internal) svn_wc__merge_prop_diffs() and its later equivalent,
+svn_wc__merge_props(), are used by the update editor, so its BASE_MERGE
+parameter is necessary and appropriate.
+
+
+== Details of New Behavior ==
+
+Passing TRUE for BASE_MERGE to any of the affected functions, while
+DRY_RUN is FALSE, will result in SVN_ERR_UNSUPPORTED_FEATURE.
+
+The parameter has been removed from svn_wc_merge_props3().
+
+Internal functions still support the parameter, for the benefit up the
+update editor.
+
+
+== Rationale for Change ==
+
+Allowing third-party clients to alter pristine data, to a state NOT
+defined by the repository could easily lead to working copy corruption
+(as seen in issue #953), and potentially lead to improper changes
+applied against a repository.
+
+No good use is known, even in legacy code, for setting the BASE_MERGE
+parameter to TRUE.
+
+
+== Impact on API Users ==
+
+Clients using the old (deprecated) interfaces which pass TRUE for
+BASE_MERGE, and FALSE for DRY_RUN, will no longer work after an
+upgrade to the 1.7 libsvn_wc library.
+
+Subversion itself does not use this feature, nor does TortoiseSVN, nor
+AnkhSVN.

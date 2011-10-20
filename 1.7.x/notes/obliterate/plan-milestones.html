@@ -1,0 +1,294 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Project Milestones for Svn Obliterate</title>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style>
+  table { text-align: left }
+  th { vertical-align: top }
+  th a { font-size: smaller; font-weight: normal }
+  td { vertical-align: top }
+  .done { background-color: #dfd }
+</style>
+</head>
+
+<body>
+
+<div class="h1">
+<h1 style="text-align: center">Project Milestones for Svn Obliterate</h1>
+</div>
+
+<div class="h1">
+<h2>Table of Contents</h2>
+<ol id="toc">
+  <p><a href="#milestones">Project Milestones</a>
+  </p>
+</ol>
+</div>
+
+<!--
+  ================================================================
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+  ====================================================================
+
+  This software consists of voluntary contributions made by many
+  individuals on behalf of CollabNet.
+-->
+
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+<div class="h2" id="milestones" title="#milestones">
+  <h2>Project Milestones</h2>
+
+  <table border="1">
+    <colgroup></colgroup>
+    <colgroup span="5"></colgroup>
+    <thead valign="top" style="background-color: #eee">
+    <tr>
+      <th></th>
+      <th>November 2009</th>
+      <th>Milestone 1</th>
+      <th>Milestone 2</th>
+      <th>Milestone 3a</th>
+      <th>Milestone 3b</th>
+      <th>Not planned</th>
+    </tr>
+    <tr>
+      <th>Summary</th>
+      <td>
+        Requirements capture mostly complete.  Design to a functional level.
+        Skeleton of implementation.  Some documentation.
+      </td>
+      <td>
+        Basic obliteration of last version of a node.
+      </td>
+      <td>
+        Obliteration of any node-rev. Some user docs.
+      </td>
+      <td>
+        Support FSFS.
+      </td>
+      <td>
+        Support for large-scale deployment.
+      </td>
+      <td>
+        Enhancements that other people might like to make.
+      </td>
+    </tr>
+    <tbody>
+    <tr>
+      <th>UI<br/><!--a href="design-ui.html">design doc</a--></th>
+      <td class="done">
+        <p>single node (PATH@REV)</p>
+      </td>
+      <td class="done">
+        <p></p>
+      </td>
+      <td>
+        <p></p>
+      </td>
+      <td>
+        <p></p>
+      </td>
+      <td>
+        <p>multiple paths (PATH1 PATH2 ...)</p>
+        <p>revision range (PATH@X:Y)</p>
+      </td>
+      <td>
+        <p>GUI</p>
+        <p>find all copies of the specified nodes</p>
+        <p>dry-run mode</p>
+      </td>
+    </tr>
+    <tr>
+      <th>AUTHZ<br/><a href="design-authz.html">design doc</a></th>
+      <td class="done">
+        <p>pre-oblit hook designed</p>
+        <p>pre-oblit hook template generated on repository creation</p>
+      </td>
+      <td class="done">
+        <p>call the pre-oblit hook</p>
+      </td>
+      <td>
+        <p></p>
+      </td>
+      <td>
+        <p></p>
+      </td>
+      <td>
+        <p></p>
+      </td>
+      <td>
+        <p></p>
+      </td>
+    </tr>
+    <tr>
+      <th>CORE (history change)<br/><a href="design-repos.html#history"
+        >design doc</a></th>
+      <td class="done">
+        <p>design of txn replacement written up (needs more depth)</p>
+        <p>skeleton of txn-replacement functions created (doesn't work)</p>
+      </td>
+      <td>
+        <p class="done">oblit the last revision of a node's history (in BDB)</p>
+        <p>(to do: understand &amp; doc the DAG node-copy-ids)</p>
+        <p class="done">(to design: refine <a href="design-repos.html"
+          >oblit txn replacement</a>)</p>
+      </td>
+      <td>
+        <p>oblit any rev of a node's history</p>
+        <p>(to design: adjusting of back-refs)</p>
+        <p>(to design: forward-refs for efficient searching - see <a href=
+        "http://svn.apache.org/repos/asf/subversion/branches/fs-successor-ids/BRANCH-README"
+        >fs-successor-ids</a> branch for BDB)</p>
+      </td>
+      <td>
+        <p>FSFS implementation</p>
+        <p>(to design: FSFS rev-file replacement: offset mapping)</p>
+      </td>
+      <td>
+        <p>forward-refs for efficient searching</p>
+        <p>efficient revision-range support (foo@1:500000)
+        </p>
+      </td>
+      <td>
+        <p>BDB implementation</p>
+      </td>
+    </tr>
+    <tr>
+      <th>SPACE RECOVERY<br/><a href="design-repos.html#space"
+        >design doc</a></th>
+      <td class="done">
+        <p></p>
+      </td>
+      <td class="done">
+        <p></p>
+      </td>
+      <td>
+        <p></p>
+      </td>
+      <td>
+        <p></p>
+      </td>
+      <td>
+        <p>space recovery (FSFS)</p>
+      </td>
+      <td>
+        <p></p>
+      </td>
+    </tr>
+    <tr>
+      <th>AUDIT TRAIL<br/><a href="design-audit.html">design doc</a></th>
+      <td class="done">
+        <p>post-oblit hook designed</p>
+        <p>post-oblit hook template generated on repository creation</p>
+      </td>
+      <td class="done">
+        <p></p>
+      </td>
+      <td>
+        <p>call post-oblit hook</p>
+      </td>
+      <td>
+        <p></p>
+      </td>
+      <td>
+        <p>server log file</p>
+      </td>
+      <td>
+        <p></p>
+      </td>
+    </tr>
+    <tr>
+      <th>WC/MIRROR/DISCOVERY<br/><a href="design-wc.html">design doc</a></th>
+      <td class="done">
+        <p></p>
+      </td>
+      <td class="done">
+        <p></p>
+      </td>
+      <td>
+        <p>discover &amp; doc the WC behaviour &amp; how to survive it</p>
+      </td>
+      <td>
+        <p></p>
+      </td>
+      <td>
+        <p>design WC behaviour improvements</p>
+        <p>obliteration discovery protocol</p>
+      </td>
+      <td>
+        <p>support for svnsync to discover obliterations and re-synchronize</p>
+      </td>
+    </tr>
+    <tr>
+      <th>TESTS</th>
+      <td class="done">
+        <p>skeleton of one automated test (doesn't work)</p>
+      </td>
+      <td class="done">
+        <p>some automated tests</p>
+      </td>
+      <td>
+        <p>automated tests for most parts</p>
+      </td>
+      <td>
+        <p></p>
+      </td>
+      <td>
+        <p>complete automated tests</p>
+        <p>stress test (manually checked)</p>
+      </td>
+      <td>
+        <p></p>
+      </td>
+    </tr>
+    <tr>
+      <th>DOC</th>
+      <td class="done">
+        <p>some project docs</p>
+        <p>some developer docs</p>
+        <p>user-oriented presentations</p>
+      </td>
+      <td>
+        <p>more depth to present docs</p>
+      </td>
+      <td>
+        <p>some user docs</p>
+      </td>
+      <td>
+        <p></p>
+      </td>
+      <td>
+        <p>user documentation</p>
+      </td>
+      <td>
+        <p></p>
+      </td>
+    </tr>
+  </table>
+
+</div>
+
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+</body>
+</html>

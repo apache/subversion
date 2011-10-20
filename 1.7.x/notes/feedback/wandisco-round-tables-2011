@@ -1,0 +1,144 @@
+During February 2011, WANdisco twice held a one-day conference that included
+a Subversion "round table" feedback session.  Attendees were mainly on the
+technical side - project admins and sys admins - and some were customers.
+
+The points below were raised in those discussions.
+
+The purpose of this report is to record feedback from the users, so the
+replies given by committers at the time are not reported.  Some discussion
+points are omitted because I forgot to record them or because they did not
+seem relevant to being reported here.  I apologize for any mistakes I may
+have made in understanding or reporting the feedback.  Editorial comments
+are marked with '[...]'.
+
+
+* Do we have a standard repo that people can use to reproduce bugs against?
+
+  [The questioner felt that would make it easier for them to report bugs.]
+
+
+* Can we comment on branching and merging: why svn throws so many apparently
+  trivial conflicts?
+
+
+* Can we split mrg-tracking phase from mrg application phase (like ClearCase
+  does)?  That would reduce user frustration because at least they'd see
+  progress.  Separating these two phases could potentially give users more
+  flexibility in tackling a large merge.
+
+  Going further: in a merge dry run, could we cache the mrg-tracking phase
+  result so that a subsequent real merge doesn't need to re-calculate it?
+
+
+* Changelists - does anyone use them?  Are they good enough?  They
+  don't support overlapped changes (multiple changelists for different
+  changes in the same file).
+
+
+* Branch management tools: Do we plan to support commands for marking a
+  branch as "end of life" (like deleted, except still visible in branch
+  listings) and "locked" as in a code-freeze?  These can be done by
+  pre-commit hooks but would be very useful as client-side commands.
+
+
+* Merge info.
+
+  There are mergeinfo conflicts when merging a branch (presumably
+  when merging in both directions).  Any improvements in this?
+
+  Does WCNG make mergeinfo a first-class citizen?
+
+  These users delete all mergeinfo on trunk after merging to a branch.
+  Enables bi-directional merging.  They never need to merge *from*
+  trunk.  [Did I get that right?  I didn't properly understand this
+  scenario.]
+
+  These users delete mergeinfo relating to a branch when they delete the
+  branch.  It seems that mergeinfo is obsolete.  Two of the attendees
+  do.  [Did I get this right?]
+
+
+* Verbose mode for svn commands.  To help with diagnosing and reporting
+  bugs, could we give more detailed diagnostic output, like e.g.  "ssh -vv"
+  does?  [I think the questioner was imagining debug output at the level of
+  the RA commands that we issue, or similar.]
+
+
+* Gnome keyring.  It's flaky: to get password into it first time doesn't
+  always work.
+
+  [Others agree.  Perhaps not Subversion's fault - it seems to be like this
+  with other software too.]
+
+
+* Merge dry run bug: A prop conflict invokes the interactive resolver, but
+  shouldn't.
+
+  [This had already been fixed in trunk.  It has now been proposed for
+  back-port.]
+
+
+* Merge: can we improve user experience by having a multi-phase option?
+  That is, one in which svn stops after each "hard" bit (a history segment
+  that involves one or more conflicts, perhaps) and lets the user sort it
+  out (perhaps resolving and committing the result).  The user can then
+  resume the merge from that point later.  Advantages in perceived
+  usability: the user is involved and seeing progress and so more likely to
+  be sympathetic to the delays, as well as improved chance of success.
+
+
+* Off-line commits - what exactly is intended?
+
+  [We indicated that the main options we're envisaging are better
+  described as "shelving" (putting a change aside, like a patch file, to
+  work on something else) and "checkpoint" (save the current state and
+  carry on from there).]
+
+  What about the AccuRev "Keep" command?  That saves changes that are local
+  to this WC, but saves them in the repo.  They go away when the WC is
+  deleted.
+
+  Why use shelving rather than another WC?
+
+  [Answer: Because some people have very big WCs.]
+
+  My users have big WCs and would love shelving.  Is there currently any
+  better (faster) way to check out a new WC to work in?
+
+  [Answer: Copy an existing one and then run 'revert' and/or 'switch'.]
+
+
+* Cancellation often doesn't work, at least not quickly.  It would be good
+  to test it.
+
+
+* We use GitSvn.  It downloads a complete repo quicker than a trunk
+  checkout, and then have most of Git's strengths - off-line commits,
+  hunk-based commits, fast history access.  As a user, once you've tried it
+  you won't want to go back to plain Svn.
+
+
+* You mentioned several times that you'd like feedback from the user
+  community.  How should we go about giving this feedback to the Subversion
+  team?  Can we have some tracker where we can vote for issues?
+
+  [We explained about dev@ etc.]
+
+
+* Would TortoiseSVN do 3-way merges?  It often seems to do 2-way merges.
+
+  [Tortoise does do 3-way merges when it can, but Svn doesn't always give it
+  all three file-version references.]
+
+
+* Could TortoiseSVN warn before upgrading a WC to 1.7?  Otherwise users will
+  not realize their other clients need to be upgraded at the same time.
+
+  [Seems like we should, both in TortoiseSVN and command-line client.]
+
+
+* The Svn warning given when a WC is too new confuses users and they ask
+  their admin.  If it could simply read "You need a newer client" instead of
+  "This client is too old", that would help.
+
+

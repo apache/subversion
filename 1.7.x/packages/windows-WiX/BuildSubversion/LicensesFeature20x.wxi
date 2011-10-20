@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+				<ComponentRef Id="LICENSE"/>
+				<ComponentRef Id="NOTICE"/>
+				<ComponentRef Id="Apr_iconvLICENSE"/>
+				<ComponentRef Id="APRICONVNOTICE"/>
+				<ComponentRef Id="Apr_utilLICENSE"/>
+				<ComponentRef Id="APRUTILNOTICE"/>
+</Include>
