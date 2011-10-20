@@ -29,17 +29,6 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
- * r1177732, r1186092, r1186101, r1186107, r1186109
-   Fix issue 4035.
-   Justification:
-     Lots of user reports of checksum!=NULL assertions.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4035
-   Notes:
-     Merge conflicts with r1185738 group.
-   Votes:
-     +1: philip, rhuijben
-
  * r1186422, r1186434, r1186732
    Fix issue 4033, upgrade with deleted=TRUE replaced nodes.
    Justification:
@@ -95,3 +84,14 @@ Approved changes:
      1.7.x-issue4032
    Votes:
      +1: philip, stsp, rhuijben
+
+ * r1177732, r1186092, r1186101, r1186107, r1186109
+   Fix issue 4035.
+   Justification:
+     Lots of user reports of checksum!=NULL assertions.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4035
+   Notes:
+     Merge conflicts with r1185738 group.
+   Votes:
+     +1: philip, rhuijben, stsp
