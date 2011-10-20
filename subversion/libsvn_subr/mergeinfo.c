@@ -77,7 +77,7 @@ combine_ranges(svn_merge_range_t *output,
 static svn_error_t *
 parse_pathname(const char **input,
                const char *end,
-               const char **pathname,
+               svn_stringbuf_t **pathname,
                apr_pool_t *pool)
 {
   const char *curr = *input;
@@ -100,11 +100,17 @@ parse_pathname(const char **input,
     return svn_error_create(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
                             _("No pathname preceding ':'"));
 
-  /* Tolerate relative repository paths, but convert them to absolute.
-     ### Efficiency?  1 string duplication here, 2 in canonicalize. */
-  *pathname = svn_fspath__canonicalize(apr_pstrndup(pool, *input,
-                                                    last_colon - *input),
-                                       pool);
+  /* Tolerate relative repository paths, but convert them to absolute. */
+  if (**input == '/')
+    {
+      *pathname = svn_stringbuf_ncreate(*input, last_colon - *input, pool);
+    }
+  else
+    {
+      const char *repos_rel_path = apr_pstrndup(pool, *input,
+                                                last_colon - *input);
+      *pathname = svn_stringbuf_createf(pool, "/%s",  repos_rel_path);
+    }
 
   *input = last_colon;
 
@@ -609,7 +615,7 @@ static svn_error_t *
 parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
                     apr_pool_t *pool)
 {
-  const char *pathname;
+  svn_stringbuf_t *pathname;
   apr_array_header_t *existing_rangelist;
   apr_array_header_t *rangelist = apr_array_make(pool, 1,
                                                  sizeof(svn_merge_range_t *));
@@ -622,7 +628,7 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
 
   *input = *input + 1;
 
-  SVN_ERR(parse_rangelist(input, end, rangelist, pathname, pool));
+  SVN_ERR(parse_rangelist(input, end, rangelist, pathname->data, pool));
 
   if (*input != end && *(*input) != '\n')
     return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
@@ -688,11 +694,11 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
      leading slash, e.g. "trunk:4033\n/trunk:4039-4995".  In the event
      we encounter this we merge the rangelists together under a single
      absolute path key. */
-  existing_rangelist = apr_hash_get(hash, pathname, APR_HASH_KEY_STRING);
+  existing_rangelist = apr_hash_get(hash, pathname->data, APR_HASH_KEY_STRING);
   if (existing_rangelist)
     SVN_ERR(svn_rangelist_merge(&rangelist, existing_rangelist, pool));
 
-  apr_hash_set(hash, pathname, APR_HASH_KEY_STRING, rangelist);
+  apr_hash_set(hash, pathname->data, APR_HASH_KEY_STRING, rangelist);
 
   return SVN_NO_ERROR;
 }
