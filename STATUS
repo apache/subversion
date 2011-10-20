@@ -63,12 +63,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1182771
-   Fix issue 4032
-   Justification:
-     Allow us to operate on existing invalid svn:mergeinfo
-   Branch:
-     1.7.x-issue4032
-   Votes:
-     +1: philip, stsp, rhuijben
