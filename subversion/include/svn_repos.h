@@ -2578,7 +2578,7 @@ svn_repos_dump_fs(svn_repos_t *repos,
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the load.
  *
- * @note If @a start_rev and @end_rev are valid revisions, this
+ * @note If @a start_rev and @a end_rev are valid revisions, this
  * function presumes the revisions as numbered in @a dumpstream only
  * increase from the beginning of the stream to the end.  Gaps in the
  * number sequence are ignored, but upon finding a revision number
