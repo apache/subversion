@@ -24,18 +24,6 @@ Candidate changes:
      -0: stsp (we can backport these when we need to)
      -0: gstein
 
- * r1185746, r1186059
-   Fix up some erroneous "Could not frob some targets because..." warnings.
-   Votes:
-     +1: stsp, rhuijben
-
- * r1186422, r1186434, r1186732, r1186755
-   Fix issue 4033, upgrade with deleted=TRUE replaced nodes.
-   Justification:
-     Seen by at least one user.
-   Votes:
-     +1: philip, rhuijben
-
 Veto-blocked changes:
 =====================
 
@@ -60,3 +48,15 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1185746, r1186059
+   Fix up some erroneous "Could not frob some targets because..." warnings.
+   Votes:
+     +1: stsp, rhuijben, hwright
+
+ * r1186422, r1186434, r1186732, r1186755
+   Fix issue 4033, upgrade with deleted=TRUE replaced nodes.
+   Justification:
+     Seen by at least one user.
+   Votes:
+     +1: philip, rhuijben, hwright
