@@ -170,6 +170,9 @@ process_actions(void *edit_baton,
   apr_hash_t *props = NULL;
   int i;
 
+  if (*path == '/')
+    path++;
+
   /* Go through all of our actions, populating various datastructures
    * dependent on them. */
   for (i = 0; i < actions->nelts; i++)
@@ -212,7 +215,21 @@ process_actions(void *edit_baton,
 
           case ACTION_ADD:
             {
-              /* ### do something  */
+              svn_kind_t *kind = action->args;
+
+              if (*kind == svn_kind_dir)
+                {
+                  apr_array_header_t *children = apr_array_make(
+                                    scratch_pool, 1, sizeof(const char *));
+                  SVN_ERR(svn_editor_add_directory(eb->editor, path, children,
+                                                   NULL, SVN_INVALID_REVNUM));
+                }
+              else
+                {
+                  svn_stream_t *contents = svn_stream_empty(scratch_pool);
+                  SVN_ERR(svn_editor_add_file(eb->editor, path, NULL, contents,
+                                              NULL, SVN_INVALID_REVNUM));
+                }
               break;
             }
 
@@ -705,10 +722,9 @@ build(struct editor_baton *eb,
         }
       else
         {
-          operation->kind = kind;
-          if (operation->kind == svn_kind_file)
+          if (kind == svn_kind_file)
             operation->operation = OP_OPEN;
-          else if (operation->kind == svn_kind_none)
+          else if (kind == svn_kind_none)
             operation->operation = OP_ADD;
           else
             return svn_error_createf(SVN_ERR_BAD_URL, NULL,
@@ -765,7 +781,7 @@ add_file_cb(void *baton,
   SVN_ERR(svn_stream_copy3(svn_stream_disown(contents, scratch_pool),
                            tmp_stream, NULL, NULL, scratch_pool));
 
-  SVN_ERR(build(eb, ACTION_PUT, relpath, svn_kind_file,
+  SVN_ERR(build(eb, ACTION_PUT, relpath, svn_kind_none,
                 NULL, SVN_INVALID_REVNUM,
                 NULL, tmp_filename, SVN_INVALID_REVNUM, scratch_pool));
 
