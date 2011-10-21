@@ -2817,7 +2817,7 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
  * loaded nodes, from root to @a parent_dir.  The directory @a parent_dir
  * must be an existing directory in the repository.
  *
- * @note If @a start_rev and @end_rev are valid revisions, this
+ * @note If @a start_rev and @a end_rev are valid revisions, this
  * function presumes the revisions as numbered in @a dumpstream only
  * increase from the beginning of the stream to the end.  Gaps in the
  * number sequence are ignored, but upon finding a revision number
