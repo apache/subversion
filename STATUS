@@ -49,6 +49,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1187311
+   Fix issue 4040, spurious NODES rows after interrupt
+   Justification:
+     Corrupts the working copy.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
