@@ -605,6 +605,7 @@ test_merge_mergeinfo(apr_pool_t *pool)
   struct mergeinfo_merge_path_range
     {
       const char *path;
+      int expected_n;
       svn_merge_range_t expected_rngs[MAX_NBR_MERGEINFO_RANGES];
     };
 
@@ -627,75 +628,75 @@ test_merge_mergeinfo(apr_pool_t *pool)
       /* One path, intersecting inheritable ranges */
       { "/trunk: 5-10",
         "/trunk: 6", 1,
-        { {"/trunk", { {4, 10, TRUE} } } } },
+        { {"/trunk", 1, { {4, 10, TRUE} } } } },
 
       /* One path, intersecting non-inheritable ranges */
       { "/trunk: 5-10*",
         "/trunk: 6*", 1,
-        { {"/trunk", { {4, 10, FALSE} } } } },
+        { {"/trunk", 1, { {4, 10, FALSE} } } } },
 
       /* One path, intersecting ranges with different inheritability */
       { "/trunk: 5-10",
         "/trunk: 6*", 1,
-        { {"/trunk", { {4, 10, TRUE} } } } },
+        { {"/trunk", 1, { {4, 10, TRUE} } } } },
 
       /* One path, intersecting ranges with different inheritability */
       { "/trunk: 5-10*",
         "/trunk: 6", 1,
-        { {"/trunk", { {4, 5, FALSE}, {5, 6, TRUE}, {6, 10, FALSE} } } } },
+        { {"/trunk", 3, { {4, 5, FALSE}, {5, 6, TRUE}, {6, 10, FALSE} } } } },
 
       /* Adjacent ranges all inheritable ranges */
       { "/trunk: 1,3,5-11,13",
         "/trunk: 2,4,12,14-22", 1,
-         { {"/trunk", { {0, 22, TRUE} } } } },
+        { {"/trunk", 1, { {0, 22, TRUE} } } } },
 
       /* Adjacent ranges all non-inheritable ranges */
       { "/trunk: 1*,3*,5-11*,13*",
         "/trunk: 2*,4*,12*,14-22*", 1,
-         { {"/trunk", { {0, 22, FALSE} } } } },
+        { {"/trunk", 1, { {0, 22, FALSE} } } } },
 
       /* Adjacent ranges differing inheritability */
       { "/trunk: 1*,3*,5-11*,13*",
         "/trunk: 2,4,12,14-22", 1,
-         { {"/trunk", { { 0,  1, FALSE}, { 1,  2, TRUE},
-                        { 2,  3, FALSE}, { 3,  4, TRUE},
-                        { 4, 11, FALSE}, {11, 12, TRUE},
-                        {12, 13, FALSE}, {13, 22, TRUE} } } } },
+        { {"/trunk", 8, { { 0,  1, FALSE}, { 1,  2, TRUE},
+                          { 2,  3, FALSE}, { 3,  4, TRUE},
+                          { 4, 11, FALSE}, {11, 12, TRUE},
+                          {12, 13, FALSE}, {13, 22, TRUE} } } } },
 
       /* Adjacent ranges differing inheritability */
       { "/trunk: 1,3,5-11,13",
         "/trunk: 2*,4*,12*,14-22*", 1,
-         { {"/trunk", { { 0,  1, TRUE}, { 1,  2, FALSE},
-                        { 2,  3, TRUE}, { 3,  4, FALSE},
-                        { 4, 11, TRUE}, {11, 12, FALSE},
-                        {12, 13, TRUE}, {13, 22, FALSE} } } } },
+        { {"/trunk", 8, { { 0,  1, TRUE}, { 1,  2, FALSE},
+                          { 2,  3, TRUE}, { 3,  4, FALSE},
+                          { 4, 11, TRUE}, {11, 12, FALSE},
+                          {12, 13, TRUE}, {13, 22, FALSE} } } } },
 
       /* Two paths all inheritable ranges */
       { "/trunk::1: 3,5,7-9,10,11,13,14\n/fred:8-10",
         "/trunk::1: 1-4,6\n/fred:9-12", 2,
-        { {"/trunk::1", { {0, 11, TRUE}, {12, 14, TRUE} } },
-          {"/fred",  { {7, 12, TRUE} } } } },
+        { {"/trunk::1", 2, { {0, 11, TRUE}, {12, 14, TRUE} } },
+          {"/fred",     1, { {7, 12, TRUE} } } } },
 
       /* Two paths all non-inheritable ranges */
       { "/trunk: 3*,5*,7-9*,10*,11*,13*,14*\n/fred:8-10*",
         "/trunk: 1-4*,6*\n/fred:9-12*", 2,
-        { {"/trunk", { {0, 11, FALSE}, {12, 14, FALSE} } },
-          {"/fred",  { {7, 12, FALSE} } } } },
+        { {"/trunk", 2, { {0, 11, FALSE}, {12, 14, FALSE} } },
+          {"/fred",  1, { {7, 12, FALSE} } } } },
 
       /* Two paths mixed inheritability */
       { "/trunk: 3,5*,7-9,10,11*,13,14\n/fred:8-10",
         "/trunk: 1-4,6\n/fred:9-12*", 2,
-        { {"/trunk", { { 0,  4, TRUE }, { 4,  5, FALSE}, {5, 10, TRUE},
-                       {10, 11, FALSE}, {12, 14, TRUE } } },
-          {"/fred",  { { 7, 10, TRUE }, {10, 12, FALSE} } } } },
+        { {"/trunk", 5, { { 0,  4, TRUE }, { 4,  5, FALSE}, {5, 10, TRUE},
+                          {10, 11, FALSE}, {12, 14, TRUE } } },
+          {"/fred",  2, { { 7, 10, TRUE }, {10, 12, FALSE} } } } },
 
       /* A slew of different paths but no ranges to be merged */
       { "/trunk: 3,5-9*\n/betty: 2-4",
         "/fred: 1-18\n/:barney: 1,3-43", 4,
-        { {"/trunk",   { {2,  3, TRUE}, {4,  9, FALSE} } },
-          {"/betty",   { {1,  4, TRUE} } },
-          {"/:barney", { {0,  1, TRUE}, {2, 43, TRUE} } },
-          {"/fred",    { {0, 18, TRUE} } } } }
+        { {"/trunk",   2, { {2,  3, TRUE}, {4,  9, FALSE} } },
+          {"/betty",   1, { {1,  4, TRUE} } },
+          {"/:barney", 2, { {0,  1, TRUE}, {2, 43, TRUE} } },
+          {"/fred",    1, { {0, 18, TRUE} } } } }
     };
 
   for (i = 0; i < NBR_MERGEINFO_MERGES; i++)
@@ -730,36 +731,18 @@ test_merge_mergeinfo(apr_pool_t *pool)
 
       for (j = 0; j < mergeinfo[i].expected_paths; j++)
         {
-          int k;
           apr_array_header_t *rangelist =
             apr_hash_get(info1, mergeinfo[i].path_rngs[j].path,
                          APR_HASH_KEY_STRING);
           if (!rangelist)
             return fail(pool, "Missing path '%s' in merged mergeinfo",
-                        mergeinfo[i].path_rngs->path);
-          for (k = 0; k < rangelist->nelts; k++)
-            {
-              svn_merge_range_t *ranges =
-                APR_ARRAY_IDX(rangelist, k, svn_merge_range_t *);
-              if (ranges->start
-                    != mergeinfo[i].path_rngs[j].expected_rngs[k].start
-                  || ranges->end
-                    != mergeinfo[i].path_rngs[j].expected_rngs[k].end
-                  || ranges->inheritable
-                    != mergeinfo[i].path_rngs[j].expected_rngs[k].inheritable)
-                return fail(
-                  pool,
-                  "Range'%i-%i%s' not found in merged mergeinfo",
-                  mergeinfo[i].path_rngs->expected_rngs[k].start,
-                  mergeinfo[i].path_rngs->expected_rngs[k].end,
-                  mergeinfo[i].path_rngs->expected_rngs[k].inheritable
-                  ? "" : "*");
-            }
-          /* Were more ranges expected? */
-          if (k < MAX_NBR_MERGEINFO_RANGES
-              && mergeinfo[i].path_rngs[j].expected_rngs[k].start != 0)
-            return fail(pool,
-                        "Not all expected ranges found in merged mergeinfo");
+                        mergeinfo[i].path_rngs[j].path);
+          SVN_ERR(verify_ranges_match(
+                    rangelist,
+                    mergeinfo[i].path_rngs[j].expected_rngs,
+                    mergeinfo[i].path_rngs[j].expected_n,
+                    apr_psprintf(pool, "svn_rangelist_merge case %i:%i", i, j),
+                    "merge", pool));
         }
     }
 
@@ -1721,7 +1704,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_diff_mergeinfo,
                    "diff of mergeinfo"),
     SVN_TEST_PASS2(test_merge_mergeinfo,
-                   "merging of mergeinfo hashs"),
+                   "merging of mergeinfo hashes"),
     SVN_TEST_PASS2(test_mergeinfo_intersect,
                    "intersection of mergeinfo"),
     SVN_TEST_PASS2(test_rangelist_to_string,
