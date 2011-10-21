@@ -711,17 +711,16 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
           if (prev_mergeinfo_value)
             SVN_ERR(svn_mergeinfo_parse(&prev_mergeinfo,
                                         prev_mergeinfo_value->data, iterpool));
-          SVN_ERR(svn_mergeinfo_diff(&deleted, &added, prev_mergeinfo,
-                                     mergeinfo, FALSE, iterpool));
+          SVN_ERR(svn_mergeinfo_diff2(&deleted, &added, prev_mergeinfo,
+                                      mergeinfo, FALSE, result_pool,
+                                      iterpool));
 
           /* Toss interesting stuff into our return catalogs. */
           hash_path = apr_pstrdup(result_pool, changed_path);
           apr_hash_set(*deleted_mergeinfo_catalog, hash_path,
-                       APR_HASH_KEY_STRING, svn_mergeinfo_dup(deleted,
-                                                              result_pool));
+                       APR_HASH_KEY_STRING, deleted);
           apr_hash_set(*added_mergeinfo_catalog, hash_path,
-                       APR_HASH_KEY_STRING, svn_mergeinfo_dup(added,
-                                                              result_pool));
+                       APR_HASH_KEY_STRING, added);
         }
     }
 
@@ -859,13 +858,11 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
         continue;
 
       /* Compare, constrast, and combine the results. */
-      SVN_ERR(svn_mergeinfo_diff(&deleted, &added, prev_mergeinfo,
-                                 mergeinfo, FALSE, iterpool));
-      SVN_ERR(svn_mergeinfo_merge2(*deleted_mergeinfo,
-                                   svn_mergeinfo_dup(deleted, result_pool),
+      SVN_ERR(svn_mergeinfo_diff2(&deleted, &added, prev_mergeinfo,
+                                  mergeinfo, FALSE, result_pool, iterpool));
+      SVN_ERR(svn_mergeinfo_merge2(*deleted_mergeinfo, deleted,
                                    result_pool, iterpool));
-      SVN_ERR(svn_mergeinfo_merge2(*added_mergeinfo,
-                                   svn_mergeinfo_dup(added, result_pool),
+      SVN_ERR(svn_mergeinfo_merge2(*added_mergeinfo, added,
                                    result_pool, iterpool));
      }
 
