@@ -627,6 +627,7 @@ static svn_error_t *
 build(struct editor_baton *eb,
       action_code_t action,
       const char *relpath,
+      svn_kind_t kind,
       const char *url,
       svn_revnum_t rev,
       apr_hash_t *props,
@@ -683,8 +684,11 @@ build(struct editor_baton *eb,
       operation->operation =
         operation->operation == OP_DELETE ? OP_REPLACE : OP_ADD;
 
-      SVN_ERR(eb->fetch_kind_func(&operation->kind, eb->fetch_kind_baton,
-                                  relpath, scratch_pool));
+      if (kind == svn_kind_none)
+        SVN_ERR(eb->fetch_kind_func(&operation->kind, eb->fetch_kind_baton,
+                                    relpath, scratch_pool));
+      else
+        operation->kind = kind;
       operation->copyfrom_url = url;
       operation->copyfrom_revision = rev;
     }
@@ -704,8 +708,7 @@ build(struct editor_baton *eb,
         }
       else
         {
-          SVN_ERR(eb->fetch_kind_func(&operation->kind, eb->fetch_kind_baton,
-                                      relpath, scratch_pool));
+          operation->kind = kind;
           if (operation->kind == svn_kind_file)
             operation->operation = OP_OPEN;
           else if (operation->kind == svn_kind_none)
@@ -737,7 +740,8 @@ add_directory_cb(void *baton,
 {
   struct editor_baton *eb = baton;
 
-  SVN_ERR(build(eb, ACTION_MKDIR, relpath, NULL, SVN_INVALID_REVNUM,
+  SVN_ERR(build(eb, ACTION_MKDIR, relpath, svn_kind_dir,
+                NULL, SVN_INVALID_REVNUM,
                 NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -764,7 +768,8 @@ add_file_cb(void *baton,
   SVN_ERR(svn_stream_copy3(svn_stream_disown(contents, scratch_pool),
                            tmp_stream, NULL, NULL, scratch_pool));
 
-  SVN_ERR(build(eb, ACTION_PUT, relpath, NULL, SVN_INVALID_REVNUM,
+  SVN_ERR(build(eb, ACTION_PUT, relpath, svn_kind_file,
+                NULL, SVN_INVALID_REVNUM,
                 NULL, tmp_filename, SVN_INVALID_REVNUM, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -804,7 +809,8 @@ set_props_cb(void *baton,
 {
   struct editor_baton *eb = baton;
 
-  SVN_ERR(build(eb, ACTION_PROPSET, relpath, NULL, SVN_INVALID_REVNUM,
+  SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_none,
+                NULL, SVN_INVALID_REVNUM,
                 props, NULL, SVN_INVALID_REVNUM, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -830,7 +836,8 @@ set_text_cb(void *baton,
   SVN_ERR(svn_stream_copy3(svn_stream_disown(contents, scratch_pool),
                            tmp_stream, NULL, NULL, scratch_pool));
 
-  SVN_ERR(build(eb, ACTION_PUT, relpath, NULL, SVN_INVALID_REVNUM,
+  SVN_ERR(build(eb, ACTION_PUT, relpath, svn_kind_file,
+                NULL, SVN_INVALID_REVNUM,
                 NULL, tmp_filename, SVN_INVALID_REVNUM, scratch_pool));
 
   return SVN_NO_ERROR;
