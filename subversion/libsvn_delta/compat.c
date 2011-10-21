@@ -369,8 +369,6 @@ static svn_error_t *
 ev2_close_directory(void *dir_baton,
                     apr_pool_t *scratch_pool)
 {
-  struct ev2_dir_baton *db = dir_baton;
-
   return SVN_NO_ERROR;
 }
 
@@ -460,7 +458,6 @@ ev2_close_file(void *file_baton,
                const char *text_checksum,
                apr_pool_t *scratch_pool)
 {
-  struct ev2_file_baton *fb = file_baton;
   return SVN_NO_ERROR;
 }
 
