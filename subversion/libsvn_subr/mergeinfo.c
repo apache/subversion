@@ -598,6 +598,18 @@ parse_rangelist(const char **input, const char *end,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_rangelist__parse(apr_array_header_t **rangelist,
+                     const char *str,
+                     apr_pool_t *result_pool)
+{
+  const char *s = str;
+
+  *rangelist = apr_array_make(result_pool, 1, sizeof(svn_merge_range_t *));
+  SVN_ERR(parse_rangelist(&s, s + strlen(s), *rangelist, result_pool));
+  return SVN_NO_ERROR;
+}
+
 /* revisionline -> PATHNAME COLON revisionlist */
 static svn_error_t *
 parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
