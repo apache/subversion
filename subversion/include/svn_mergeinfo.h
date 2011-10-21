@@ -569,8 +569,9 @@ typedef enum svn_mergeinfo_inheritance_t
       ancestor. */
   svn_mergeinfo_inherited,
 
-  /** Mergeinfo on target's nearest (path-wise, not history-wise)
-      ancestor, regardless of whether target has explicit mergeinfo. */
+  /** Mergeinfo inherited from a target's nearest (path-wise, not
+      history-wise) ancestor, regardless of whether target has explicit
+      mergeinfo. */
   svn_mergeinfo_nearest_ancestor
 } svn_mergeinfo_inheritance_t;
 
