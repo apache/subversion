@@ -32,7 +32,7 @@ Candidate changes:
      Avoid segfaults by relying on undocumented API behavior is never a
      good idea.
    Votes:
-     +1: pburba
+     +1: pburba, stsp
 
  * r1186944, r1186981, r1187676
    Fix an assertion failure when a symlink is updated.
