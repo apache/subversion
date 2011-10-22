@@ -4262,34 +4262,28 @@ close_file(void *file_baton,
   if (!fb->shadowed
       && (! fb->adding_file || fb->add_existed))
     {
-      svn_boolean_t local_is_link = FALSE;
-      svn_boolean_t incoming_is_link = FALSE;
+      svn_boolean_t local_is_link;
+      svn_boolean_t incoming_is_link;
+      int i;
 
       local_is_link = apr_hash_get(local_actual_props,
                                 SVN_PROP_SPECIAL,
                                 APR_HASH_KEY_STRING) != NULL;
 
-      {
-        int i;
-        svn_boolean_t seen_special_prop = FALSE;
+      incoming_is_link = local_is_link;
 
-        for (i = 0; i < regular_prop_changes->nelts; ++i)
-          {
-            const svn_prop_t *prop = &APR_ARRAY_IDX(regular_prop_changes, i,
-                                                    svn_prop_t);
+      /* Does an incoming propchange affect symlink-ness? */
+      for (i = 0; i < regular_prop_changes->nelts; ++i)
+        {
+          const svn_prop_t *prop = &APR_ARRAY_IDX(regular_prop_changes, i,
+                                                  svn_prop_t);
 
-            if (strcmp(prop->name, SVN_PROP_SPECIAL) == 0)
-              {
-                seen_special_prop = TRUE;
-                incoming_is_link = (prop->value != NULL);
-                break;
-              }
-          }
-
-        if (!seen_special_prop)
-          incoming_is_link = local_is_link; 
-      }
-
+          if (strcmp(prop->name, SVN_PROP_SPECIAL) == 0)
+            {
+              incoming_is_link = (prop->value != NULL);
+              break;
+            }
+        }
 
       if (local_is_link != incoming_is_link)
         {
