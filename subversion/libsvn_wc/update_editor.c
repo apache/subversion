@@ -4293,15 +4293,12 @@ close_file(void *file_baton,
           fb->obstruction_found = TRUE;
           fb->add_existed = FALSE;
 
-          /* ### Performance: We should just create the conflict here, without
-             ### verifying again */
-          SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
-                                      svn_wc__db_status_added,
-                                      svn_kind_file, TRUE,
-                                      svn_wc_conflict_action_add,
-                                      svn_node_file, fb->new_relpath, NULL,
-                                      scratch_pool, scratch_pool));
-          SVN_ERR_ASSERT(tree_conflict != NULL);
+          SVN_ERR(create_tree_conflict(&tree_conflict, eb,
+                                       fb->local_abspath,
+                                       svn_wc_conflict_reason_added,
+                                       svn_wc_conflict_action_add,
+                                       svn_node_file, fb->new_relpath,
+                                       scratch_pool, scratch_pool));
           SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
                                                   fb->local_abspath,
                                                   tree_conflict,
