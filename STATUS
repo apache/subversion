@@ -42,10 +42,14 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r1186944, r1186981
+ * r1186944, r1186981, r1187676
    Fix an assertion failure when a symlink is updated.
    Justification:
      Regression in 1.7.0.
+   Notes:
+     r1186944 is the actual fix, including a new test
+     r1186981 fixes spurious failures of the new test
+     r1187676 is a cosmetic follow-up tweak
    Votes:
      +1: stsp
 
