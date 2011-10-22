@@ -52,6 +52,13 @@ Candidate changes:
    Votes:
      +1: philip, stsp
 
+ * r1187695
+   Have mod_dav_svn ignore non-Subversion POST requests.
+   Justification:
+     mod_dav_svn does not play well with others.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
