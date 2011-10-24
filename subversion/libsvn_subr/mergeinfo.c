@@ -2230,7 +2230,7 @@ svn_mergeinfo__add_suffix_to_mergeinfo(svn_mergeinfo_t *out_mergeinfo,
       apr_hash_set(*out_mergeinfo,
                    svn_dirent_join(path, suffix_relpath, result_pool),
                    APR_HASH_KEY_STRING,
-                   svn_rangelist_dup(rangelist, result_pool));
+                   rangelist);
     }
 
   return SVN_NO_ERROR;

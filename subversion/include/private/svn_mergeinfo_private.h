@@ -138,11 +138,11 @@ svn_mergeinfo__relpaths_to_urls(apr_hash_t **out_mergeinfo,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
 
-/* Set *OUT_MERGEINFO to a deep copy of MERGEINFO with the relpath
+/* Set *OUT_MERGEINFO to a shallow copy of MERGEINFO with the relpath
    SUFFIX_RELPATH added to the end of each key path.
 
-   Allocate *OUT_MERGEINFO in RESULT_POOL.  Use SCRATCH_POOL for any
-   temporary allocations. */
+   Allocate *OUT_MERGEINFO and the new keys in RESULT_POOL.  Use
+   SCRATCH_POOL for any temporary allocations. */
 svn_error_t *
 svn_mergeinfo__add_suffix_to_mergeinfo(svn_mergeinfo_t *out_mergeinfo,
                                        svn_mergeinfo_t mergeinfo,

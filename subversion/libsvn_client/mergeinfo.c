@@ -148,7 +148,6 @@ svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
 {
   apr_hash_index_t *hi;
   const char *path;
-  apr_array_header_t *copied_rangelist;
 
   SVN_ERR_ASSERT(adjusted_mergeinfo);
   SVN_ERR_ASSERT(mergeinfo);
@@ -161,9 +160,8 @@ svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
       /* Copy inherited mergeinfo into our output hash, adjusting the
          merge source as appropriate. */
       path = svn_fspath__join(merge_source, rel_path, pool);
-      copied_rangelist = svn_rangelist_dup(rangelist, pool);
       apr_hash_set(adjusted_mergeinfo, path, APR_HASH_KEY_STRING,
-                   copied_rangelist);
+                   rangelist);
     }
   return SVN_NO_ERROR;
 }
