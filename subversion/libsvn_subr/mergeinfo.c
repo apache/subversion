@@ -2228,7 +2228,7 @@ svn_mergeinfo__add_suffix_to_mergeinfo(svn_mergeinfo_t *out_mergeinfo,
       apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
 
       apr_hash_set(*out_mergeinfo,
-                   svn_dirent_join(path, suffix_relpath, result_pool),
+                   svn_fspath__join(path, suffix_relpath, result_pool),
                    APR_HASH_KEY_STRING,
                    rangelist);
     }
