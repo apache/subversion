@@ -3520,7 +3520,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
 
    Set CHILD->IMPLICIT_MERGEINFO to the mergeinfo inherited from
    PARENT->IMPLICIT_MERGEINFO.  CHILD->IMPLICIT_MERGEINFO is allocated
-   in POOL.
+   in RESULT_POOL.
    */
 static svn_error_t *
 inherit_implicit_mergeinfo_from_parent(svn_client__merge_path_t *parent,
@@ -3560,6 +3560,8 @@ inherit_implicit_mergeinfo_from_parent(svn_client__merge_path_t *parent,
   SVN_ERR(svn_client__adjust_mergeinfo_source_paths(
     child->implicit_mergeinfo, path_diff,
     parent->implicit_mergeinfo, result_pool));
+  child->implicit_mergeinfo = svn_mergeinfo_dup(child->implicit_mergeinfo,
+                                                result_pool);
   return SVN_NO_ERROR;
 }
 
