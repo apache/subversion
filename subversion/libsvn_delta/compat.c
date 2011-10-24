@@ -591,6 +591,7 @@ struct editor_baton
   void *fetch_kind_baton;
 
   struct operation root;
+  svn_boolean_t root_opened;
 
   apr_hash_t *paths;
   apr_pool_t *edit_pool;
@@ -753,6 +754,13 @@ add_directory_cb(void *baton,
 {
   struct editor_baton *eb = baton;
 
+  if (!eb->root_opened)
+    {
+      SVN_ERR(eb->deditor->open_root(eb->dedit_baton, SVN_INVALID_REVNUM,
+                                     eb->edit_pool, &eb->root.baton));
+      eb->root_opened = TRUE;
+    }
+
   SVN_ERR(build(eb, ACTION_MKDIR, relpath, svn_kind_dir,
                 NULL, SVN_INVALID_REVNUM,
                 NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
@@ -773,6 +781,13 @@ add_file_cb(void *baton,
   struct editor_baton *eb = baton;
   const char *tmp_filename;
   svn_stream_t *tmp_stream;
+
+  if (!eb->root_opened)
+    {
+      SVN_ERR(eb->deditor->open_root(eb->dedit_baton, SVN_INVALID_REVNUM,
+                                     eb->edit_pool, &eb->root.baton));
+      eb->root_opened = TRUE;
+    }
 
   /* Spool the contents to a tempfile, and provide that to the driver. */
   SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_filename, NULL,
@@ -797,6 +812,15 @@ add_symlink_cb(void *baton,
                svn_revnum_t replaces_rev,
                apr_pool_t *scratch_pool)
 {
+  struct editor_baton *eb = baton;
+
+  if (!eb->root_opened)
+    {
+      SVN_ERR(eb->deditor->open_root(eb->dedit_baton, SVN_INVALID_REVNUM,
+                                     eb->edit_pool, &eb->root.baton));
+      eb->root_opened = TRUE;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -808,6 +832,15 @@ add_absent_cb(void *baton,
               svn_revnum_t replaces_rev,
               apr_pool_t *scratch_pool)
 {
+  struct editor_baton *eb = baton;
+
+  if (!eb->root_opened)
+    {
+      SVN_ERR(eb->deditor->open_root(eb->dedit_baton, SVN_INVALID_REVNUM,
+                                     eb->edit_pool, &eb->root.baton));
+      eb->root_opened = TRUE;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -821,6 +854,13 @@ set_props_cb(void *baton,
              apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
+
+  if (!eb->root_opened)
+    {
+      SVN_ERR(eb->deditor->open_root(eb->dedit_baton, SVN_INVALID_REVNUM,
+                                     eb->edit_pool, &eb->root.baton));
+      eb->root_opened = TRUE;
+    }
 
   SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_none,
                 NULL, SVN_INVALID_REVNUM,
@@ -841,6 +881,13 @@ set_text_cb(void *baton,
   struct editor_baton *eb = baton;
   const char *tmp_filename;
   svn_stream_t *tmp_stream;
+
+  if (!eb->root_opened)
+    {
+      SVN_ERR(eb->deditor->open_root(eb->dedit_baton, SVN_INVALID_REVNUM,
+                                     eb->edit_pool, &eb->root.baton));
+      eb->root_opened = TRUE;
+    }
 
   /* Spool the contents to a tempfile, and provide that to the driver. */
   SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_filename, NULL,
@@ -864,6 +911,15 @@ set_target_cb(void *baton,
               const char *target,
               apr_pool_t *scratch_pool)
 {
+  struct editor_baton *eb = baton;
+
+  if (!eb->root_opened)
+    {
+      SVN_ERR(eb->deditor->open_root(eb->dedit_baton, SVN_INVALID_REVNUM,
+                                     eb->edit_pool, &eb->root.baton));
+      eb->root_opened = TRUE;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -874,6 +930,15 @@ delete_cb(void *baton,
           svn_revnum_t revision,
           apr_pool_t *scratch_pool)
 {
+  struct editor_baton *eb = baton;
+
+  if (!eb->root_opened)
+    {
+      SVN_ERR(eb->deditor->open_root(eb->dedit_baton, SVN_INVALID_REVNUM,
+                                     eb->edit_pool, &eb->root.baton));
+      eb->root_opened = TRUE;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -886,6 +951,15 @@ copy_cb(void *baton,
         svn_revnum_t replaces_rev,
         apr_pool_t *scratch_pool)
 {
+  struct editor_baton *eb = baton;
+
+  if (!eb->root_opened)
+    {
+      SVN_ERR(eb->deditor->open_root(eb->dedit_baton, SVN_INVALID_REVNUM,
+                                     eb->edit_pool, &eb->root.baton));
+      eb->root_opened = TRUE;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -898,6 +972,15 @@ move_cb(void *baton,
         svn_revnum_t replaces_rev,
         apr_pool_t *scratch_pool)
 {
+  struct editor_baton *eb = baton;
+
+  if (!eb->root_opened)
+    {
+      SVN_ERR(eb->deditor->open_root(eb->dedit_baton, SVN_INVALID_REVNUM,
+                                     eb->edit_pool, &eb->root.baton));
+      eb->root_opened = TRUE;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -966,9 +1049,6 @@ complete_cb(void *baton,
   struct editor_baton *eb = baton;
   svn_error_t *err;
 
-  SVN_ERR(eb->deditor->open_root(eb->dedit_baton, SVN_INVALID_REVNUM,
-                                 eb->edit_pool, &eb->root.baton));
-
   /* Drive the tree we've created. */
   err = drive(&eb->root, eb->deditor, scratch_pool);
   if (!err)
@@ -990,8 +1070,6 @@ abort_cb(void *baton,
 
   /* We still need to drive anything we collected in the editor to this
      point. */
-  SVN_ERR(eb->deditor->open_root(eb->dedit_baton, SVN_INVALID_REVNUM,
-                                 eb->edit_pool, &eb->root.baton));
 
   /* Drive the tree we've created. */
   err = drive(&eb->root, eb->deditor, scratch_pool);
@@ -1050,6 +1128,8 @@ svn_editor_from_delta(svn_editor_t **editor_p,
   eb->root.operation = OP_OPEN;
   eb->root.props = NULL;
   eb->root.copyfrom_revision = SVN_INVALID_REVNUM;
+
+  eb->root_opened = FALSE;
 
   SVN_ERR(svn_editor_create(&editor, eb, cancel_func, cancel_baton,
                             result_pool, scratch_pool));
