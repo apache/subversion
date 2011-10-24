@@ -1632,7 +1632,6 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo_p,
                                 apr_pool_t *pool)
 {
   const char *repos_root;
-  apr_hash_t *full_path_mergeinfo;
   svn_mergeinfo_catalog_t mergeinfo_cat;
   svn_mergeinfo_t mergeinfo;
 
@@ -1658,26 +1657,8 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo_p,
       mergeinfo = NULL;
     }
 
-  /* Copy the MERGEINFO hash items into another hash, but change
-     the relative paths into full URLs. */
-  *mergeinfo_p = NULL;
-  if (mergeinfo)
-    {
-      apr_hash_index_t *hi;
-
-      full_path_mergeinfo = apr_hash_make(pool);
-      for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
-        {
-          const char *key = svn__apr_hash_index_key(hi);
-          void *val = svn__apr_hash_index_val(hi);
-
-          apr_hash_set(full_path_mergeinfo,
-                       svn_path_url_add_component2(repos_root, key + 1, pool),
-                       APR_HASH_KEY_STRING, val);
-        }
-      *mergeinfo_p = full_path_mergeinfo;
-    }
-
+  SVN_ERR(svn_mergeinfo__relpaths_to_urls(mergeinfo_p, mergeinfo,
+                                          repos_root, pool, pool));
   return SVN_NO_ERROR;
 }
 
