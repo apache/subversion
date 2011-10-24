@@ -82,6 +82,7 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
                        apr_pool_t *pool)
 {
   apr_hash_t *old_mergeinfo_hash, *new_mergeinfo_hash, *added, *deleted;
+  apr_pool_t *iterpool = svn_pool_create(pool);
   apr_hash_index_t *hi;
 
   if (old_mergeinfo_val)
@@ -94,9 +95,9 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
   else
     new_mergeinfo_hash = NULL;
 
-  SVN_ERR(svn_mergeinfo_diff(&deleted, &added, old_mergeinfo_hash,
-                             new_mergeinfo_hash,
-                             TRUE, pool));
+  SVN_ERR(svn_mergeinfo_diff2(&deleted, &added, old_mergeinfo_hash,
+                              new_mergeinfo_hash,
+                              TRUE, pool, pool));
 
   for (hi = apr_hash_first(pool, deleted);
        hi; hi = apr_hash_next(hi))
@@ -105,9 +106,11 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
       apr_array_header_t *merge_revarray = svn__apr_hash_index_val(hi);
       svn_string_t *merge_revstr;
 
-      SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray,
+                                      iterpool));
 
-      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
+      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, iterpool,
                                           _("   Reverse-merged %s:r%s%s"),
                                           from_path, merge_revstr->data,
                                           APR_EOL_STR));
@@ -120,14 +123,17 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
       apr_array_header_t *merge_revarray = svn__apr_hash_index_val(hi);
       svn_string_t *merge_revstr;
 
-      SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray,
+                                      iterpool));
 
-      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
+      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, iterpool,
                                           _("   Merged %s:r%s%s"),
                                           from_path, merge_revstr->data,
                                           APR_EOL_STR));
     }
 
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
