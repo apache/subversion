@@ -4603,9 +4603,9 @@ update_wc_mergeinfo(svn_mergeinfo_catalog_t result_catalog,
                                                         local_abspath,
                                                         iterpool);
       if (local_abspath_rel_to_target)
-        rel_path = svn_dirent_join(repos_rel_path,
-                                   local_abspath_rel_to_target,
-                                   iterpool);
+        rel_path = svn_fspath__join(repos_rel_path,
+                                    local_abspath_rel_to_target,
+                                    iterpool);
       else
         rel_path = repos_rel_path;
       rangelist = apr_hash_get(mergeinfo, rel_path, APR_HASH_KEY_STRING);
@@ -7906,9 +7906,9 @@ record_mergeinfo_for_added_subtrees(
           rel_added_path = svn_dirent_is_child(target_merge_path->abspath,
                                                added_abspath, iterpool);
           SVN_ERR_ASSERT(rel_added_path);
-          added_path_mergeinfo_path = svn_dirent_join(mergeinfo_path,
-                                                      rel_added_path,
-                                                      iterpool);
+          added_path_mergeinfo_path = svn_fspath__join(mergeinfo_path,
+                                                       rel_added_path,
+                                                       iterpool);
           apr_hash_set(merge_mergeinfo, added_path_mergeinfo_path,
                        APR_HASH_KEY_STRING, rangelist);
 
@@ -8110,7 +8110,7 @@ log_noop_revs(void *baton,
 
           /* Didn't find anything so crawl up to the parent. */
           cwmi_path = svn_dirent_dirname(cwmi_path, scratch_pool);
-          path = svn_dirent_dirname(path, scratch_pool);
+          path = svn_fspath__dirname(path, scratch_pool);
 
           /* At this point *if* we find mergeinfo it will be inherited. */
           mergeinfo_inherited = TRUE;
