@@ -432,8 +432,8 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
 }
 
 svn_error_t *
-svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
-                                svn_mergeinfo_t *target_mergeinfo,
+svn_client__get_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
+                                svn_ra_session_t *ra_session,
                                 const char *rel_path,
                                 svn_revnum_t rev,
                                 svn_mergeinfo_inheritance_t inherit,

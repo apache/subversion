@@ -121,7 +121,7 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
       const char *old_session_url = NULL;
       SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
                                                 ra_session, src_url, pool));
-      SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
+      SVN_ERR(svn_client__get_repos_mergeinfo(&src_mergeinfo, ra_session,
                                               "", src_revnum,
                                               svn_mergeinfo_inherited,
                                               TRUE, pool));
