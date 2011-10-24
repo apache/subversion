@@ -183,7 +183,7 @@ svn_client__resolve_target_location(svn_client_target_t *target,
   return SVN_NO_ERROR;
 }
 
-/* Set *MARKER to the value of the branch-root-identifier of TARGET. */
+/* Set *MARKER to the value of the branch root marker property of TARGET. */
 static svn_error_t *
 get_branch_root_marker(const char **marker,
                        svn_client_target_t *target,
@@ -191,13 +191,19 @@ get_branch_root_marker(const char **marker,
                        apr_pool_t *pool)
 {
   apr_hash_t *props;
-  const char *propname = SVN_PROP_BRANCHING_ROOT;
+  const char *propname = SVN_PROP_BRANCH_ROOT;
   svn_string_t *propval;
 
   SVN_ERR(svn_client_propget5(&props, propname, target, svn_depth_empty,
                               NULL, ctx, pool, pool));
   propval = apr_hash_get(props, target->abspath_or_url, APR_HASH_KEY_STRING);
   *marker = propval ? propval->data : NULL;
+
+  /* ### if SVN_PROP_BRANCH_ROOT is "svn:ignore", for testing, just
+   * look at the first 10 characters otherwise we'll see differences that
+   * we don't care about and error messages will be unreadably long. */
+  *marker = apr_pstrndup(pool, *marker, 10);
+
   return SVN_NO_ERROR;
 }
 
@@ -210,7 +216,7 @@ svn_client__check_branch_root_marker(const char **marker,
 {
   const char *source_marker, *target_marker;
 
-  /* Check the source's and target's branch-marker properties. */
+  /* Check the source's and target's branch root marker properties. */
   SVN_ERR(get_branch_root_marker(&target_marker, target, ctx, pool));
   SVN_ERR(get_branch_root_marker(&source_marker, source, ctx, pool));
   if (! source_marker && ! target_marker)
@@ -221,13 +227,13 @@ svn_client__check_branch_root_marker(const char **marker,
     {
       if (source_marker)
         return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                                 _("Source is marked as a branch of "
-                                   "project '%s', but target is not marked"),
+                                 _("Source branch marker is '%s' but "
+                                   "target has no branch marker"),
                                  source_marker);
       else
         return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                                 _("Target is marked as a branch of "
-                                   "project '%s', but source is not marked"),
+                                 _("Target branch marker is '%s' but "
+                                   "source has no branch marker"),
                                  target_marker);
     }
   else if (strcmp(source_marker, target_marker) != 0)
@@ -235,8 +241,8 @@ svn_client__check_branch_root_marker(const char **marker,
       /* ### The '.99' is just for display tidiness when I'm messing about
        * with using 'svn:ignore' as the branch marker property. */
       return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                               _("error: Source is marked as branch of project '%.99s' "
-                                 "but target is marked as branch of project '%.99s'"),
+                               _("Source branch marker is '%s' but "
+                                 "target branch marker is '%s'"),
                                source_marker, target_marker);
     }
   *marker = source_marker;

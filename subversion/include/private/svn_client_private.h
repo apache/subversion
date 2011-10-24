@@ -61,9 +61,9 @@ svn_client__create_status(svn_client_status_t **cst,
 
 /* This property marks a branch root. Branches with the same value of this
  * property are mergeable. */
-#define SVN_PROP_BRANCHING_ROOT "svn:ignore" /* ### should be "svn:branching-root" */
+#define SVN_PROP_BRANCH_ROOT "svn:ignore" /* ### should be "svn:branch-root" */
 
-/* Set *MARKER to the project-root marker that is common to SOURCE and
+/* Set *MARKER to the branch root marker that is common to SOURCE and
  * TARGET, or to NULL if neither has such a marker.
  * If only one has such a marker or they are different, throw an error. */
 svn_error_t *
