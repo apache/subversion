@@ -3463,6 +3463,7 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
                        svn_fs_root_t *rev_root,
                        const char *path,
                        svn_mergeinfo_inheritance_t inherit,
+                       svn_boolean_t adjust_inherited_mergeinfo,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
@@ -3549,7 +3550,7 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
      can return the mergeinfo results directly.  Otherwise, we're
      inheriting the mergeinfo, so we need to a) remove non-inheritable
      ranges and b) telescope the merged-from paths. */
-  if (nearest_ancestor != parent_path)
+  if (adjust_inherited_mergeinfo && (nearest_ancestor != parent_path))
     {
       svn_mergeinfo_t tmp_mergeinfo;
 
@@ -3604,10 +3605,12 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
                          const apr_array_header_t *paths,
                          svn_mergeinfo_inheritance_t inherit,
                          svn_boolean_t include_descendants,
-                         apr_pool_t *pool)
+                         svn_boolean_t adjust_inherited_mergeinfo,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
-  svn_mergeinfo_catalog_t result_catalog = apr_hash_make(pool);
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_mergeinfo_catalog_t result_catalog = apr_hash_make(result_pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
 
   for (i = 0; i < paths->nelts; i++)
@@ -3619,7 +3622,8 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
       svn_pool_clear(iterpool);
 
       err = get_mergeinfo_for_path(&path_mergeinfo, root, path,
-                                   inherit, pool, iterpool);
+                                   inherit, adjust_inherited_mergeinfo,
+                                   result_pool, iterpool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
@@ -3638,8 +3642,8 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
         apr_hash_set(result_catalog, path, APR_HASH_KEY_STRING,
                      path_mergeinfo);
       if (include_descendants)
-        SVN_ERR(add_descendant_mergeinfo(result_catalog, root, path, pool,
-                                         iterpool));
+        SVN_ERR(add_descendant_mergeinfo(result_catalog, root, path,
+                                         result_pool, scratch_pool));
     }
   svn_pool_destroy(iterpool);
 
@@ -3655,7 +3659,9 @@ fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                  const apr_array_header_t *paths,
                  svn_mergeinfo_inheritance_t inherit,
                  svn_boolean_t include_descendants,
-                 apr_pool_t *pool)
+                 svn_boolean_t adjust_inherited_mergeinfo,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = root->fs->fsap_data;
 
@@ -3674,7 +3680,9 @@ fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
   /* Retrieve a path -> mergeinfo hash mapping. */
   return get_mergeinfos_for_paths(root, catalog, paths,
                                   inherit,
-                                  include_descendants, pool);
+                                  include_descendants,
+                                  adjust_inherited_mergeinfo,
+                                  result_pool, scratch_pool);
 }
 
 
