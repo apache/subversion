@@ -1177,6 +1177,8 @@ svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
   struct elide_mergeinfo_catalog_cb_baton cb = { 0 };
   void *eb;
   int i;
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                                     svn_delta_shim_callbacks_default(pool);
 
   cb.elidable_paths = elidable_paths;
   cb.mergeinfo_catalog = mergeinfo_catalog;
@@ -1187,8 +1189,7 @@ svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
 
   eb = mergeinfo_catalog;
   SVN_ERR(svn_editor__insert_shims((const svn_delta_editor_t **)&editor, &eb,
-                                   editor, eb, NULL, NULL, NULL, NULL,
-                                   pool, pool));
+                                   editor, eb, shim_callbacks, pool, pool));
 
   /* Walk over the paths, and build up a list of elidable ones. */
   SVN_ERR(svn_hash_keys(&paths, mergeinfo_catalog, pool));

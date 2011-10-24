@@ -1348,6 +1348,8 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
   apr_pool_t *editor_pool = svn_pool_create(result_pool);
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(editor_pool);
   struct edit_baton *eb = apr_pcalloc(editor_pool, sizeof(*eb));
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                                svn_delta_shim_callbacks_default(editor_pool);
 
   eb->pool = editor_pool;
   eb->depth = depth;
@@ -1388,7 +1390,7 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
                                             eb->pool));
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   NULL, NULL, NULL, NULL,
+                                   shim_callbacks,
                                    result_pool, result_pool));
 
   return SVN_NO_ERROR;

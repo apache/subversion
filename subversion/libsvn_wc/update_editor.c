@@ -4806,6 +4806,8 @@ make_editor(svn_revnum_t *target_revision,
   const svn_delta_editor_t *inner_editor;
   const char *repos_root, *repos_uuid;
   struct fetch_baton *fpb;
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                                svn_delta_shim_callbacks_default(edit_pool);
 
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
@@ -5036,9 +5038,14 @@ make_editor(svn_revnum_t *target_revision,
   fpb = apr_palloc(result_pool, sizeof(*fpb));
   fpb->db = db;
   fpb->target_abspath = eb->target_abspath;
+
+  shim_callbacks->fetch_kind_func = fetch_kind_func;
+  shim_callbacks->fetch_kind_baton = fpb;
+  shim_callbacks->fetch_props_func = fetch_props_func;
+  shim_callbacks->fetch_props_baton = fpb;
+
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   fetch_props_func, fpb, fetch_kind_func, fpb,
-                                   result_pool, scratch_pool));
+                                   shim_callbacks, result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }

@@ -870,6 +870,8 @@ get_dump_editor(const svn_delta_editor_t **editor,
      root baton. */
   struct edit_baton *eb = apr_pcalloc(pool, sizeof(*eb));
   svn_delta_editor_t *dump_editor = svn_delta_default_editor(pool);
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                                svn_delta_shim_callbacks_default(pool);
 
   /* Set up the edit baton. */
   eb->stream = stream;
@@ -897,7 +899,7 @@ get_dump_editor(const svn_delta_editor_t **editor,
   *editor = dump_editor;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   NULL, NULL, NULL, NULL, pool, pool));
+                                   shim_callbacks, pool, pool));
 
   return SVN_NO_ERROR;
 }

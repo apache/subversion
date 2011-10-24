@@ -1880,6 +1880,8 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
   void *inner_baton;
   svn_delta_editor_t *tree_editor;
   const svn_delta_editor_t *inner_editor;
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                                svn_delta_shim_callbacks_default(result_pool);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(anchor_abspath));
 
@@ -1932,8 +1934,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                                             result_pool));
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   NULL, NULL, NULL, NULL,
-                                   result_pool, scratch_pool));
+                                   shim_callbacks, result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
