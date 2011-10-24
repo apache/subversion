@@ -365,27 +365,4 @@ svn_client__mergeinfo_status(svn_boolean_t *mergeinfo_changes,
                              const char *local_abspath,
                              apr_pool_t *scratch_pool);
 
-svn_error_t *
-print_mergeinfo(svn_mergeinfo_t mergeinfo,
-                const char *msg,
-                apr_pool_t *pool);
-
-svn_error_t *
-print_mergeinfo_cat(svn_mergeinfo_catalog_t mergeinfo_catalog,
-                    const char *msg,
-                    apr_pool_t *pool);
-svn_error_t *
-print_rangelist(apr_array_header_t *rangelist,
-                const char *msg,
-                apr_pool_t *pool);
-svn_error_t *
-print_cwmi(apr_array_header_t *children_with_mergeinfo,
-           apr_pool_t *scratch_pool);
-
-svn_error_t *
-cwmi_to_mergeinfo_catlog(svn_mergeinfo_catalog_t *mergeinfo_catalog,
-                         apr_array_header_t *children_with_mergeinfo,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool);
-
 #endif /* SVN_LIBSVN_CLIENT_MERGEINFO_H */
