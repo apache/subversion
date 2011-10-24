@@ -238,8 +238,6 @@ svn_client__check_branch_root_marker(const char **marker,
     }
   else if (strcmp(source_marker, target_marker) != 0)
     {
-      /* ### The '.99' is just for display tidiness when I'm messing about
-       * with using 'svn:ignore' as the branch marker property. */
       return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                                _("Source branch marker is '%s' but "
                                  "target branch marker is '%s'"),
