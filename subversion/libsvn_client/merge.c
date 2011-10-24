@@ -3549,17 +3549,15 @@ inherit_implicit_mergeinfo_from_parent(svn_client__merge_path_t *parent,
                                ctx, result_pool, scratch_pool));
 
   /* Let CHILD inherit PARENT's implicit mergeinfo. */
-  child->implicit_mergeinfo = apr_hash_make(result_pool);
 
   path_diff = svn_dirent_is_child(parent->abspath, child->abspath,
                                   scratch_pool);
-
   /* PARENT->PATH better be an ancestor of CHILD->ABSPATH! */
   SVN_ERR_ASSERT(path_diff);
 
-  SVN_ERR(svn_client__adjust_mergeinfo_source_paths(
-    child->implicit_mergeinfo, path_diff,
-    parent->implicit_mergeinfo, result_pool));
+  SVN_ERR(svn_mergeinfo__add_suffix_to_mergeinfo(
+            &child->implicit_mergeinfo, parent->implicit_mergeinfo,
+            path_diff, result_pool, scratch_pool));
   child->implicit_mergeinfo = svn_mergeinfo_dup(child->implicit_mergeinfo,
                                                 result_pool);
   return SVN_NO_ERROR;

@@ -357,17 +357,6 @@ svn_error_t *
 svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
                                     apr_pool_t *pool);
 
-/* For each source path : rangelist pair in MERGEINFO, append REL_PATH to
-   the source path and add the new source path : rangelist pair to
-   ADJUSTED_MERGEINFO.  The new source path and rangelist are both deep
-   copies allocated in POOL.  Neither ADJUSTED_MERGEINFO
-   nor MERGEINFO should be NULL. */
-svn_error_t *
-svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
-                                          const char *rel_path,
-                                          svn_mergeinfo_t mergeinfo,
-                                          apr_pool_t *pool);
-
 /* Set *MERGEINFO_CHANGES to TRUE if LOCAL_ABSPATH has locally modified
    mergeinfo, set *MERGEINFO_CHANGES to FALSE otherwise. */
 svn_error_t *

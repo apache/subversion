@@ -141,33 +141,6 @@ svn_client__record_wc_mergeinfo(const char *local_abspath,
 /*** Retrieving mergeinfo. ***/
 
 svn_error_t *
-svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
-                                          const char *rel_path,
-                                          svn_mergeinfo_t mergeinfo,
-                                          apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-  const char *path;
-
-  SVN_ERR_ASSERT(adjusted_mergeinfo);
-  SVN_ERR_ASSERT(mergeinfo);
-
-  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
-    {
-      const char *merge_source = svn__apr_hash_index_key(hi);
-      apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
-
-      /* Copy inherited mergeinfo into our output hash, adjusting the
-         merge source as appropriate. */
-      path = svn_fspath__join(merge_source, rel_path, pool);
-      apr_hash_set(adjusted_mergeinfo, path, APR_HASH_KEY_STRING,
-                   rangelist);
-    }
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
 svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                              svn_boolean_t *inherited,
                              svn_mergeinfo_inheritance_t inherit,
@@ -294,11 +267,11 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
       if (wc_mergeinfo)
         {
           *inherited = TRUE;
-          *mergeinfo = apr_hash_make(result_pool);
-          SVN_ERR(svn_client__adjust_mergeinfo_source_paths(*mergeinfo,
-                                                            walk_relpath,
-                                                            wc_mergeinfo,
-                                                            result_pool));
+          SVN_ERR(svn_mergeinfo__add_suffix_to_mergeinfo(mergeinfo,
+                                                         wc_mergeinfo,
+                                                         walk_relpath,
+                                                         result_pool,
+                                                         scratch_pool));
         }
       else
         {
@@ -810,13 +783,11 @@ should_elide_mergeinfo(svn_boolean_t *elides,
       svn_mergeinfo_t path_tweaked_parent_mergeinfo;
       apr_pool_t *subpool = svn_pool_create(pool);
 
-      path_tweaked_parent_mergeinfo = apr_hash_make(subpool);
-
       /* If we need to adjust the paths in PARENT_MERGEINFO do it now. */
       if (path_suffix)
-        SVN_ERR(svn_client__adjust_mergeinfo_source_paths(
-          path_tweaked_parent_mergeinfo,
-          path_suffix, parent_mergeinfo, subpool));
+        SVN_ERR(svn_mergeinfo__add_suffix_to_mergeinfo(
+                  &path_tweaked_parent_mergeinfo, parent_mergeinfo,
+                  path_suffix, subpool, subpool));
       else
         path_tweaked_parent_mergeinfo = parent_mergeinfo;
 
