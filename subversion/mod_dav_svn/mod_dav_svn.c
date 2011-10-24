@@ -902,13 +902,17 @@ merge_xml_in_filter(ap_filter_t *f,
 /* Response handler for POST requests (protocol-v2 commits).  */
 static int dav_svn__handler(request_rec *r)
 {
-  /* HTTP-defined Methods we handle */
-  r->allowed = 0
-    | (AP_METHOD_BIT << M_POST);
+  dir_conf_t *conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
 
-  if (r->method_number == M_POST) {
-    return dav_svn__method_post(r);
-  }
+  if (conf->fs_path || conf->fs_parent_path)
+    {
+      /* HTTP-defined Methods we handle */
+      r->allowed = 0
+        | (AP_METHOD_BIT << M_POST);
+
+      if (r->method_number == M_POST)
+        return dav_svn__method_post(r);
+    }
 
   return DECLINED;
 }

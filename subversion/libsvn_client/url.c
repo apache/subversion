@@ -65,20 +65,6 @@ svn_client_url_from_path2(const char **url,
 
 
 svn_error_t *
-svn_client_root_url_from_path(const char **url,
-                              const char *path_or_url,
-                              svn_client_ctx_t *ctx,
-                              apr_pool_t *pool)
-{
-  if (!svn_path_is_url(path_or_url))
-    SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url, pool));
-
-  return svn_error_trace(
-           svn_client__get_repos_root(url, NULL, path_or_url,
-                                      ctx, pool, pool));
-}
-
-svn_error_t *
 svn_client__target(svn_client_target_t **target_p,
                    const char *path_or_url,
                    const svn_opt_revision_t *peg_revision,
@@ -133,9 +119,9 @@ svn_client__resolve_location(const char **repo_root_url_p,
     SVN_ERR(svn_dirent_get_absolute(&abspath_or_url, path_or_url,
                                     scratch_pool));
 
-  SVN_ERR(svn_client__get_repos_root(&repos_root_url, repo_uuid_p,
-                                     abspath_or_url,
-                                     ctx, result_pool, scratch_pool));
+  SVN_ERR(svn_client_get_repos_root(&repos_root_url, repo_uuid_p,
+                                    abspath_or_url,
+                                    ctx, result_pool, scratch_pool));
   if (repo_root_url_p)
     *repo_root_url_p = repos_root_url;
 

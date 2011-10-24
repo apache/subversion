@@ -385,43 +385,6 @@ svn_client_open_ra_session(svn_ra_session_t **session,
 }
 
 
-svn_error_t *
-svn_client_uuid_from_url(const char **uuid,
-                         const char *url,
-                         svn_client_ctx_t *ctx,
-                         apr_pool_t *pool)
-{
-  svn_ra_session_t *ra_session;
-  apr_pool_t *subpool = svn_pool_create(pool);
-
-  /* use subpool to create a temporary RA session */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, url,
-                                               NULL, /* no base dir */
-                                               NULL, FALSE, TRUE,
-                                               ctx, subpool));
-
-  SVN_ERR(svn_ra_get_uuid2(ra_session, uuid, pool));
-
-  /* destroy the RA session */
-  svn_pool_destroy(subpool);
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_client_uuid_from_path2(const char **uuid,
-                           const char *local_abspath,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(
-    svn_wc__node_get_repos_info(NULL, uuid, ctx->wc_ctx, local_abspath,
-                                result_pool, scratch_pool));
-}
-
-
 
 
 /* Convert a path or URL for display: if it is a local path, convert it to

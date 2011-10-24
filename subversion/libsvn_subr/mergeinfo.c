@@ -488,13 +488,10 @@ range_to_string(const svn_merge_range_t *range,
    revisionlist -> (revisionelement)(COMMA revisionelement)*
    revisionrange -> REVISION "-" REVISION("*")
    revisionelement -> revisionrange | REVISION("*")
-
-   PATHNAME is the path this revisionlist is mapped to.  It is
-   used only for producing a more descriptive error message.
 */
 static svn_error_t *
 parse_rangelist(const char **input, const char *end,
-                apr_array_header_t *rangelist, const char *pathname,
+                apr_array_header_t *rangelist,
                 apr_pool_t *pool)
 {
   const char *curr = *input;
@@ -507,9 +504,7 @@ parse_rangelist(const char **input, const char *end,
     {
       /* Empty range list. */
       *input = curr;
-      return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
-                               _("Mergeinfo for '%s' maps to an "
-                                 "empty revision range"), pathname);
+      return SVN_NO_ERROR;
     }
 
   while (curr < end && *curr != '\n')
@@ -603,6 +598,18 @@ parse_rangelist(const char **input, const char *end,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_rangelist__parse(apr_array_header_t **rangelist,
+                     const char *str,
+                     apr_pool_t *result_pool)
+{
+  const char *s = str;
+
+  *rangelist = apr_array_make(result_pool, 1, sizeof(svn_merge_range_t *));
+  SVN_ERR(parse_rangelist(&s, s + strlen(s), *rangelist, result_pool));
+  return SVN_NO_ERROR;
+}
+
 /* revisionline -> PATHNAME COLON revisionlist */
 static svn_error_t *
 parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
@@ -621,8 +628,12 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
 
   *input = *input + 1;
 
-  SVN_ERR(parse_rangelist(input, end, rangelist, pathname, scratch_pool));
+  SVN_ERR(parse_rangelist(input, end, rangelist, scratch_pool));
 
+  if (rangelist->nelts == 0)
+      return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+                               _("Mergeinfo for '%s' maps to an "
+                                 "empty revision range"), pathname);
   if (*input != end && *(*input) != '\n')
     return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
                              _("Could not find end of line in range list line "

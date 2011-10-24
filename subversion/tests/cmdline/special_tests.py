@@ -860,6 +860,49 @@ def symlink_to_wc_svnversion(sbox):
                                             symlink_path, sbox.repo_url,
                                             [ "1\n" ], [])
 
+# Regression in 1.7.0: Update fails to change a symlink
+@SkipUnless(svntest.main.is_posix_os)
+def update_symlink(sbox):
+  "update a symlink"
+
+  svntest.actions.do_sleep_for_timestamps()
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  mu_path = sbox.ospath('A/mu')
+  iota_path = sbox.ospath('iota')
+  symlink_path = sbox.ospath('symlink')
+
+  # create a symlink to /A/mu
+  os.symlink("A/mu", symlink_path)
+  sbox.simple_add('symlink')
+  sbox.simple_commit()
+
+  # change the symlink to /iota
+  os.remove(symlink_path)
+  os.symlink("iota", symlink_path)
+  sbox.simple_commit()
+
+  # update back to r2
+  svntest.main.run_svn(False, 'update', '-r', '2', wc_dir)
+
+  # now update to head; 1.7.0 throws an assertion here
+  expected_output = svntest.wc.State(wc_dir, {
+    'symlink'          : Item(status='U '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'symlink': Item(contents="This is the file 'iota'.\n",
+                                     props={'svn:special' : '*'})})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'symlink'           : Item(status='  ', wc_rev='3'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1)
 
 ########################################################################
 # Run the tests
@@ -887,6 +930,7 @@ test_list = [ None,
               merge_foreign_symlink,
               symlink_to_wc_basic,
               symlink_to_wc_svnversion,
+              update_symlink,
              ]
 
 if __name__ == '__main__':

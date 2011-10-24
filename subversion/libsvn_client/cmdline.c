@@ -114,8 +114,8 @@ check_root_url_of_target(const char **root_url,
   if (!svn_path_is_url(truepath))
     SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, pool));
 
-  err = svn_client__get_repos_root(&tmp_root_url, NULL, truepath,
-                                   ctx, pool, pool);
+  err = svn_client_get_repos_root(&tmp_root_url, NULL, truepath,
+                                  ctx, pool, pool);
 
   if (err)
     {
@@ -347,7 +347,11 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
        */
       if (root_url == NULL)
         {
-          err = svn_client_root_url_from_path(&root_url, "", ctx, pool);
+          const char *current_abspath;
+
+          SVN_ERR(svn_dirent_get_absolute(&current_abspath, "", pool));
+          err = svn_client_get_repos_root(&root_url, NULL /* uuid */,
+                                          current_abspath, ctx, pool, pool);
           if (err || root_url == NULL)
             return svn_error_create(SVN_ERR_WC_NOT_WORKING_COPY, err,
                                     _("Resolving '^/': no repository root "

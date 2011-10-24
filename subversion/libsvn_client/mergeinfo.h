@@ -168,8 +168,8 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
    doesn't support a mergeinfo capability and SQUELCH_INCAPABLE is
    TRUE, set *TARGET_MERGEINFO to NULL. */
 svn_error_t *
-svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
-                                svn_mergeinfo_t *target_mergeinfo,
+svn_client__get_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
+                                svn_ra_session_t *ra_session,
                                 const char *rel_path,
                                 svn_revnum_t rev,
                                 svn_mergeinfo_inheritance_t inherit,
@@ -287,7 +287,7 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
                                      apr_pool_t *pool);
 
 /* Parse any explicit mergeinfo on LOCAL_ABSPATH and store it in
-   MERGEINFO.  If no record of any mergeinfo exists, set MERGEINFO to NULL.
+   *MERGEINFO.  If no record of any mergeinfo exists, set *MERGEINFO to NULL.
    Does not acount for inherited mergeinfo. */
 svn_error_t *
 svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,

@@ -33,6 +33,9 @@ import svntest
 from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import write_authz_file
 from svntest.main import server_authz_has_aliases
+from upgrade_tests import (replace_sbox_with_tarfile,
+                           replace_sbox_repo_with_tarfile,
+                           wc_is_too_old_regex)
 
 # (abbreviation)
 Item = svntest.wc.StateItem
@@ -1354,6 +1357,41 @@ def wc_commit_error_handling(sbox):
                                      'ci', wc_dir, '-m', '')
 
 
+@Skip(svntest.main.is_ra_type_file)
+def upgrade_absent(sbox):
+  "upgrade absent nodes to server-excluded"
+
+  # Install wc and repos
+  replace_sbox_with_tarfile(sbox, 'upgrade_absent.tar.bz2')
+  replace_sbox_repo_with_tarfile(sbox, 'upgrade_absent_repos.tar.bz2')
+
+  # Update config for authz
+  svntest.main.write_restrictive_svnserve_conf(sbox.repo_dir)
+  svntest.main.write_authz_file(sbox, { "/"      : "*=rw",
+                                        "/A/B"   : "*=",
+                                        "/A/B/E" : "jrandom = rw"})
+
+  # Attempt to use the working copy, this should give an error
+  expected_stderr = wc_is_too_old_regex
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'info', sbox.wc_dir)
+
+  # Now upgrade the working copy
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', sbox.wc_dir)
+
+  # Relocate to allow finding the repository
+  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
+                                     'svn://127.0.0.1/authz_tests-2',
+                                     sbox.repo_url, sbox.wc_dir)  
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+  })
+
+  # Expect no changes and certainly no errors
+  svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output,
+                                        None, None)
+
 ########################################################################
 # Run the tests
 
@@ -1382,6 +1420,7 @@ test_list = [ None,
               authz_tree_conflict,
               wc_delete,
               wc_commit_error_handling,
+              upgrade_absent,
              ]
 serial_only = True
 

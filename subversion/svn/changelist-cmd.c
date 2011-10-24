@@ -129,15 +129,15 @@ svn_cl__changelist(apr_getopt_t *os,
       for (i = 0; i < errors->nelts; i++)
         {
           apr_status_t status = APR_ARRAY_IDX(errors, i, apr_status_t);
-          
+
           if (status == SVN_ERR_WC_PATH_NOT_FOUND)
             err = svn_error_quick_wrap(err,
-                                       _("Could not display changelists of "
+                                       _("Could not set changelists on "
                                          "all targets because some targets "
                                          "don't exist"));
           else if (status == SVN_ERR_UNVERSIONED_RESOURCE)
             err = svn_error_quick_wrap(err,
-                                       _("Could not display changelists of "
+                                       _("Could not set changelists on "
                                          "all targets because some targets "
                                          "are not versioned"));
         }

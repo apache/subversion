@@ -121,7 +121,7 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
       const char *old_session_url = NULL;
       SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
                                                 ra_session, src_url, pool));
-      SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
+      SVN_ERR(svn_client__get_repos_mergeinfo(&src_mergeinfo, ra_session,
                                               "", src_revnum,
                                               svn_mergeinfo_inherited,
                                               TRUE, pool));
@@ -1746,8 +1746,9 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
       parent = top_dst_path;
 
     SVN_ERR(svn_dirent_get_absolute(&parent_abspath, parent, scratch_pool));
-    dst_err = svn_client_uuid_from_path2(&dst_uuid, parent_abspath, ctx,
-                                         scratch_pool, scratch_pool);
+    dst_err = svn_client_get_repos_root(NULL /* root_url */, &dst_uuid,
+                                        parent_abspath, ctx,
+                                        scratch_pool, scratch_pool);
     if (dst_err && dst_err->apr_err != SVN_ERR_RA_NO_REPOS_UUID)
       return dst_err;
 

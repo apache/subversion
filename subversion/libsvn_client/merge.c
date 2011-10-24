@@ -9116,8 +9116,9 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
 
       SVN_ERR(svn_ra_get_uuid2(URL1_ra_session, &source_repos_uuid,
                                subpool));
-      SVN_ERR(svn_client_uuid_from_path2(&wc_repos_uuid, target_abspath,
-                                         ctx, subpool, subpool));
+      SVN_ERR(svn_client_get_repos_root(NULL /* root_url */, &wc_repos_uuid,
+                                        target_abspath,
+                                        ctx, subpool, subpool));
       same_repos = (strcmp(wc_repos_uuid, source_repos_uuid) == 0);
     }
   else
@@ -9444,9 +9445,9 @@ merge_locked(const char *source1,
                                              scratch_pool));
 
   /* Determine the working copy target's repository root URL. */
-  SVN_ERR(svn_client__get_repos_root(&wc_repos_root, &wc_repos_uuid,
-                                     target_abspath,
-                                     ctx, scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_get_repos_root(&wc_repos_root, &wc_repos_uuid,
+                                    target_abspath,
+                                    ctx, scratch_pool, scratch_pool));
 
   /* Open some RA sessions to our merge source sides. */
   sesspool = svn_pool_create(scratch_pool);
@@ -10653,12 +10654,12 @@ merge_reintegrate_locked(const char *source,
                              svn_dirent_local_style(source, scratch_pool));
 
   /* Determine the working copy target's repository root URL. */
-  SVN_ERR(svn_client__get_repos_root(&wc_repos_root, NULL, target_abspath,
-                                     ctx, scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_get_repos_root(&wc_repos_root, NULL, target_abspath,
+                                    ctx, scratch_pool, scratch_pool));
 
   /* Determine the source's repository root URL. */
-  SVN_ERR(svn_client__get_repos_root(&source_repos_root, NULL, url2,
-                                     ctx, scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_get_repos_root(&source_repos_root, NULL, url2,
+                                    ctx, scratch_pool, scratch_pool));
 
   /* source_repos_root and wc_repos_root are required to be the same,
      as mergeinfo doesn't come into play for cross-repository merging. */
@@ -10935,9 +10936,9 @@ merge_peg_locked(const char *source,
                                              scratch_pool));
 
   /* Determine the working copy target's repository root URL. */
-  SVN_ERR(svn_client__get_repos_root(&wc_repos_root, &wc_repos_uuid,
-                                     target_abspath,
-                                     ctx, scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_get_repos_root(&wc_repos_root, &wc_repos_uuid,
+                                    target_abspath,
+                                    ctx, scratch_pool, scratch_pool));
 
   /* Open an RA session to our source URL, and determine its root URL. */
   sesspool = svn_pool_create(scratch_pool);

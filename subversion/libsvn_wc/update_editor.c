@@ -1192,6 +1192,7 @@ modcheck_callback(void *baton,
   switch (status->node_status)
     {
       case svn_wc_status_normal:
+      case svn_wc_status_incomplete:
       case svn_wc_status_ignored:
       case svn_wc_status_none:
       case svn_wc_status_unversioned:
@@ -4261,28 +4262,28 @@ close_file(void *file_baton,
   if (!fb->shadowed
       && (! fb->adding_file || fb->add_existed))
     {
-      svn_boolean_t local_is_link = FALSE;
-      svn_boolean_t incoming_is_link = FALSE;
+      svn_boolean_t local_is_link;
+      svn_boolean_t incoming_is_link;
+      int i;
 
       local_is_link = apr_hash_get(local_actual_props,
                                 SVN_PROP_SPECIAL,
                                 APR_HASH_KEY_STRING) != NULL;
 
-      {
-        int i;
+      incoming_is_link = local_is_link;
 
-        for (i = 0; i < regular_prop_changes->nelts; ++i)
-          {
-            const svn_prop_t *prop = &APR_ARRAY_IDX(regular_prop_changes, i,
-                                                    svn_prop_t);
+      /* Does an incoming propchange affect symlink-ness? */
+      for (i = 0; i < regular_prop_changes->nelts; ++i)
+        {
+          const svn_prop_t *prop = &APR_ARRAY_IDX(regular_prop_changes, i,
+                                                  svn_prop_t);
 
-            if (strcmp(prop->name, SVN_PROP_SPECIAL) == 0)
-              {
-                incoming_is_link = TRUE;
-              }
-          }
-      }
-
+          if (strcmp(prop->name, SVN_PROP_SPECIAL) == 0)
+            {
+              incoming_is_link = (prop->value != NULL);
+              break;
+            }
+        }
 
       if (local_is_link != incoming_is_link)
         {
@@ -4292,15 +4293,12 @@ close_file(void *file_baton,
           fb->obstruction_found = TRUE;
           fb->add_existed = FALSE;
 
-          /* ### Performance: We should just create the conflict here, without
-             ### verifying again */
-          SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
-                                      svn_wc__db_status_added,
-                                      svn_kind_file, TRUE,
-                                      svn_wc_conflict_action_add,
-                                      svn_node_file, fb->new_relpath, NULL,
-                                      scratch_pool, scratch_pool));
-          SVN_ERR_ASSERT(tree_conflict != NULL);
+          SVN_ERR(create_tree_conflict(&tree_conflict, eb,
+                                       fb->local_abspath,
+                                       svn_wc_conflict_reason_added,
+                                       svn_wc_conflict_action_add,
+                                       svn_node_file, fb->new_relpath,
+                                       scratch_pool, scratch_pool));
           SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
                                                   fb->local_abspath,
                                                   tree_conflict,

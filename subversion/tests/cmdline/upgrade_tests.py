@@ -1198,40 +1198,60 @@ def upgrade_file_externals(sbox):
       'alpha' : {'pname3' : 'pvalue3' },
       })
 
-@Skip(svntest.main.is_ra_type_file)
-def upgrade_absent(sbox):
-  "upgrade absent nodes to server-excluded"
 
-  # Install wc and repos
-  replace_sbox_with_tarfile(sbox, 'upgrade_absent.tar.bz2')
-  replace_sbox_repo_with_tarfile(sbox, 'upgrade_absent_repos.tar.bz2')
+@Issue(4035)
+def upgrade_missing_replaced(sbox):
+  "upgrade with missing replaced dir"
 
-  # Update config for authz
-  svntest.main.write_restrictive_svnserve_conf(sbox.repo_dir)
-  svntest.main.write_authz_file(sbox, { "/"      : "*=rw",
-                                        "/A/B"   : "*=",
-                                        "/A/B/E" : "jrandom = rw"})
+  sbox.build(create_wc=False)
+  replace_sbox_with_tarfile(sbox, 'upgrade_missing_replaced.tar.bz2')
 
-  # Attempt to use the working copy, this should give an error
-  expected_stderr = wc_is_too_old_regex
-  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
-                                     'info', sbox.wc_dir)
-
-  # Now upgrade the working copy
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'upgrade', sbox.wc_dir)
-
-  # Relocate to allow finding the repository
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+  svntest.main.run_svnadmin('setuuid', sbox.repo_dir,
+                            'd7130b12-92f6-45c9-9217-b9f0472c3fab')
   svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
-                                     'svn://127.0.0.1/authz_tests-2',
-                                     sbox.repo_url, sbox.wc_dir)  
+                                     'file:///tmp/repo', sbox.repo_url,
+                                     sbox.wc_dir)
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
-  })
-
-  # Expect no changes and certainly no errors
+      'A/B/E'         : Item(status='  ', treeconflict='C'),
+      'A/B/E/alpha'   : Item(status='  ', treeconflict='A'),
+      'A/B/E/beta'    : Item(status='  ', treeconflict='A'),
+      })
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.tweak('A/B/E', status='! ', treeconflict='C', wc_rev='-')
+  expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status='D ')
   svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output,
-                                        None, None)
+                                        None, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, 'Reverted.*', [], 'revert', '-R',
+                                     sbox.wc_dir)
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+@Issue(4033)
+def upgrade_not_present_replaced(sbox):
+  "upgrade with not-present replaced nodes"
+
+  sbox.build(create_wc=False)
+  replace_sbox_with_tarfile(sbox, 'upgrade_not_present_replaced.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+  svntest.main.run_svnadmin('setuuid', sbox.repo_dir,
+                            'd7130b12-92f6-45c9-9217-b9f0472c3fab')
+  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
+                                     'file:///tmp/repo', sbox.repo_url,
+                                     sbox.wc_dir)
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+      'A/B/E'         : Item(status='E '),
+      'A/B/E/alpha'   : Item(status='A '),
+      'A/B/E/beta'    : Item(status='A '),
+      'A/B/lambda'    : Item(status='E '),
+      })
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output,
+                                        None, expected_status)
 
 ########################################################################
 # Run the tests
@@ -1282,7 +1302,8 @@ test_list = [ None,
               upgrade_with_missing_subdir,
               upgrade_locked,
               upgrade_file_externals,
-              upgrade_absent,
+              upgrade_missing_replaced,
+              upgrade_not_present_replaced,
              ]
 
 
