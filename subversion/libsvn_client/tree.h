@@ -51,13 +51,12 @@ extern "C" {
  */
 typedef struct svn_tree_t svn_tree_t;
 
-
-/** Fetch the node kind of the node at @a relpath.
- * (### and other metadata? revnum? props?)
+/** Set @a *kind to the node kind of the node at @a relpath in @a tree.
  *
  * The kind will be 'file', 'dir', 'symlink' or 'none'; not 'unknown'.
  *
- * Set @a *kind to the node kind.
+ * If the node at @a relpath is not readable due to lack of authorization,
+ * return a #SVN_ERR_AUTHZ_UNREADABLE error.
  */
 svn_error_t *
 svn_tree_get_kind(svn_tree_t *tree,
@@ -75,8 +74,9 @@ svn_tree_get_kind(svn_tree_t *tree,
  * versioned properties of the file (not 'wcprops', 'entryprops', etc.).
  * The hash maps (const char *) names to (#svn_string_t *) values.
  *
- * If the node at @a relpath is not a symlink, return a
- * #SVN_ERR_WRONG_KIND error.
+ * If the node at @a relpath is not readable due to lack of authorization,
+ * return a #SVN_ERR_AUTHZ_UNREADABLE error; otherwise, if it is the wrong
+ * kind of node, return a #SVN_ERR_WRONG_KIND error.
  */
 svn_error_t *
 svn_tree_get_file(svn_tree_t *tree,
@@ -98,8 +98,9 @@ svn_tree_get_file(svn_tree_t *tree,
  * versioned properties of the file (not 'wcprops', 'entryprops', etc.).
  * The hash maps (const char *) names to (#svn_string_t *) values.
  *
- * If the node at @a relpath is not a symlink, return a
- * #SVN_ERR_WRONG_KIND error.
+ * If the node at @a relpath is not readable due to lack of authorization,
+ * return a #SVN_ERR_AUTHZ_UNREADABLE error; otherwise, if it is the wrong
+ * kind of node, return a #SVN_ERR_WRONG_KIND error.
  */
 svn_error_t *
 svn_tree_get_dir(svn_tree_t *tree,
@@ -118,8 +119,9 @@ svn_tree_get_dir(svn_tree_t *tree,
  * versioned properties of the file (not 'wcprops', 'entryprops', etc.).
  * The hash maps (const char *) names to (#svn_string_t *) values.
  *
- * If the node at @a relpath is not a symlink, return a
- * #SVN_ERR_WRONG_KIND error.
+ * If the node at @a relpath is unreadable due to lack of authorization,
+ * return a #SVN_ERR_AUTHZ_UNREADABLE error; otherwise, if it is the wrong
+ * kind of node, return a #SVN_ERR_WRONG_KIND error.
  */
 svn_error_t *
 svn_tree_get_symlink(svn_tree_t *tree,
@@ -128,6 +130,31 @@ svn_tree_get_symlink(svn_tree_t *tree,
                      const char *relpath,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
+
+/* */
+typedef svn_error_t *(*svn_tree_walk_func_t)(svn_tree_t *tree,
+                                             const char *relpath,
+                                             svn_kind_t kind,
+                                             void *baton,
+                                             apr_pool_t *scratch_pool);
+
+/** Walk the generic @a tree, starting at @a relpath, recursing to @a depth.
+ * 
+ * Call @a callback_func for each node, passing @a callback_baton and the
+ * node kind. If a node that is reached through recursion is unreadable due
+ * to lack of authorization, pass #svn_kind_unknown for the kind.
+ *
+ * Use @a cancel_func with @a cancel_baton to check for cancellation.
+ */
+svn_error_t *
+svn_tree_walk(svn_tree_t *tree,
+              const char *relpath,
+              svn_depth_t depth,
+              svn_tree_walk_func_t callback_func,
+              void *callback_baton,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *scratch_pool);
 
 /*-----------------------------------------------------------------*/
 

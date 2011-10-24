@@ -21,11 +21,14 @@
  * ====================================================================
  */
 
+#include "svn_pools.h"
+#include "svn_sorts.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "client.h"
 #include "tree.h"
 #include "private/svn_wc_private.h"
+#include "svn_private_config.h"
 
 
 /*-----------------------------------------------------------------*/
@@ -121,6 +124,121 @@ svn_tree_get_symlink(svn_tree_t *tree,
 {
   return tree->vtable->get_symlink(tree, link_target, props, relpath,
                                    result_pool, scratch_pool);
+}
+
+/* */
+static svn_error_t *
+tree_get_kind_or_unknown(svn_tree_t *tree,
+                         svn_kind_t *kind,
+                         const char *relpath,
+                         apr_pool_t *scratch_pool)
+{
+  svn_error_t *err = svn_tree_get_kind(tree, kind, relpath, scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_AUTHZ_UNREADABLE)
+    {
+      /* Can't read this node's kind. That's fine; pass 'unknown'. */
+      svn_error_clear(err);
+      *kind = svn_kind_unknown;
+      return SVN_NO_ERROR;
+    }
+  return svn_error_trace(err);
+}
+
+/* The body of svn_tree_walk(), which see.
+ *
+ * ### The handling of unauthorized-read errors is a bit under-defined.
+ * For example, if the get_kind call returns 'dir' but then the 'get_dir'
+ * returns unauthorized, the callback only gets an empty dir with no
+ * indication that reading the children was unauthorized.
+ */
+static svn_error_t *
+tree_walk(svn_tree_t *tree,
+          const char *relpath,
+          svn_depth_t depth,
+          svn_tree_walk_func_t callback_func,
+          void *callback_baton,
+          svn_cancel_func_t cancel_func,
+          void *cancel_baton,
+          apr_pool_t *scratch_pool)
+{
+  svn_kind_t kind;
+  apr_hash_t *dirents;
+
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
+
+  SVN_ERR(tree_get_kind_or_unknown(tree, &kind, relpath, scratch_pool));
+
+  /* Fetch the dir's children, if needed, before calling the callback, so
+   * that we can pass kind=unknown if fetching the children fails. */
+  if (kind == svn_kind_dir && depth > svn_depth_empty)
+    {
+      svn_error_t *err
+        = svn_tree_get_dir(tree, &dirents, NULL /* props */,
+                           relpath, scratch_pool, scratch_pool);
+
+      if (err && err->apr_err == SVN_ERR_AUTHZ_UNREADABLE)
+        {
+          /* Can't read this directory. That's fine; skip it. */
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
+      else
+        SVN_ERR(err);
+    }
+
+  SVN_ERR(callback_func(tree, relpath, kind, callback_baton, scratch_pool));
+
+  /* Recurse (visiting the children in sorted order). */
+  if (kind == svn_kind_dir && depth > svn_depth_empty)
+    {
+      apr_array_header_t *dirents_sorted
+        = svn_sort__hash(dirents, svn_sort_compare_items_lexically,
+                         scratch_pool);
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+      int i;
+
+      for (i = 0; i < dirents_sorted->nelts; i++)
+        {
+          const svn_sort__item_t *item
+            = &APR_ARRAY_IDX(dirents_sorted, i, svn_sort__item_t);
+          const char *name = item->key;
+          const char *child_relpath;
+          svn_kind_t child_kind;
+
+          svn_pool_clear(iterpool);
+          child_relpath = svn_relpath_join(relpath, name, iterpool);
+          SVN_ERR(tree_get_kind_or_unknown(tree, &child_kind, child_relpath,
+                                           scratch_pool));
+          if (depth > svn_depth_files || child_kind == svn_kind_file)
+            {
+              SVN_ERR(svn_tree_walk(tree, child_relpath,
+                                    depth == svn_depth_infinity ? depth
+                                           : svn_depth_empty,
+                                    callback_func, callback_baton,
+                                    cancel_func, cancel_baton, iterpool));
+            }
+        }
+      svn_pool_destroy(iterpool);
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_tree_walk(svn_tree_t *tree,
+              const char *relpath,
+              svn_depth_t depth,
+              svn_tree_walk_func_t callback_func,
+              void *callback_baton,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *scratch_pool)
+{
+  SVN_ERR(tree_walk(tree, relpath, depth,
+                    callback_func, callback_baton,
+                    cancel_func, cancel_baton, scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 
@@ -461,6 +579,19 @@ typedef struct ra_tree_baton_t
   svn_revnum_t revnum;
 } ra_tree_baton_t;
 
+/* Wrap any RA-layer 'unauthorized read' error in an
+ * SVN_ERR_AUTHZ_UNREADABLE error. */
+static svn_error_t *
+ra_unauthz_err(svn_error_t *err)
+{
+  if (err && ((err->apr_err == SVN_ERR_RA_NOT_AUTHORIZED) ||
+              (err->apr_err == SVN_ERR_RA_DAV_FORBIDDEN)))
+    {
+      err = svn_error_createf(SVN_ERR_AUTHZ_UNREADABLE, err, NULL);
+    }
+  return err;
+}
+
 /* */
 static svn_error_t *
 ra_tree_get_kind(svn_tree_t *tree,
@@ -470,8 +601,9 @@ ra_tree_get_kind(svn_tree_t *tree,
 {
   ra_tree_baton_t *baton = tree->priv;
 
-  SVN_ERR(svn_ra_check_path2(baton->ra_session, relpath, baton->revnum,
-                             kind, scratch_pool));
+  SVN_ERR(ra_unauthz_err(svn_ra_check_path2(baton->ra_session, relpath,
+                                            baton->revnum, kind,
+                                            scratch_pool)));
   return SVN_NO_ERROR;
 }
 
@@ -490,8 +622,9 @@ ra_tree_get_file(svn_tree_t *tree,
   SVN_ERR(svn_stream_open_unique(&holding_stream, NULL, NULL,
                                  svn_io_file_del_on_close,
                                  scratch_pool, scratch_pool));
-  SVN_ERR(svn_ra_get_file(baton->ra_session, relpath, baton->revnum,
-                          holding_stream, NULL, props, result_pool));
+  SVN_ERR(ra_unauthz_err(svn_ra_get_file(baton->ra_session, relpath,
+                                         baton->revnum, holding_stream,
+                                         NULL, props, result_pool)));
   SVN_ERR(svn_stream_reset(holding_stream));
   *stream = holding_stream;
   return SVN_NO_ERROR;
@@ -508,11 +641,11 @@ ra_tree_get_dir(svn_tree_t *tree,
 {
   ra_tree_baton_t *baton = tree->priv;
 
-  SVN_ERR(svn_ra_get_dir2(baton->ra_session,
-                          dirents, NULL, props,
-                          relpath, baton->revnum,
-                          0 /* dirent_fields */,
-                          result_pool));
+  SVN_ERR(ra_unauthz_err(svn_ra_get_dir2(baton->ra_session,
+                                         dirents, NULL, props,
+                                         relpath, baton->revnum,
+                                         0 /* dirent_fields */,
+                                         result_pool)));
   return SVN_NO_ERROR;
 }
 
@@ -527,8 +660,9 @@ ra_tree_get_symlink(svn_tree_t *tree,
 {
   ra_tree_baton_t *baton = tree->priv;
 
-  SVN_ERR(svn_ra_get_symlink(baton->ra_session, relpath, baton->revnum,
-                             link_target, NULL, props, result_pool));
+  SVN_ERR(ra_unauthz_err(svn_ra_get_symlink(baton->ra_session, relpath,
+                                            baton->revnum, link_target,
+                                            NULL, props, result_pool)));
   return SVN_NO_ERROR;
 }
 
