@@ -1103,23 +1103,17 @@ svn_editor_from_delta(svn_editor_t **editor_p,
   return SVN_NO_ERROR;
 }
 
-/* Uncomment below to add editor shims throughout Subversion.  In it's
- * current state, that will likely break The World. */
-/* #define ENABLE_EDITOR_SHIMS*/
-
-
 svn_delta_shim_callbacks_t *
 svn_delta_shim_callbacks_default(apr_pool_t *result_pool)
 {
-#ifndef ENABLE_EDITOR_SHIMS
-  return NULL;
-#else
   svn_delta_shim_callbacks_t *shim_callbacks = apr_pcalloc(result_pool,
                                                      sizeof(*shim_callbacks));
   return shim_callbacks;
-#endif
 }
 
+/* Uncomment below to add editor shims throughout Subversion.  In it's
+ * current state, that will likely break The World. */
+/* #define ENABLE_EDITOR_SHIMS*/
 
 svn_error_t *
 svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
