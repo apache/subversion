@@ -1133,44 +1133,6 @@ svn_delta_shim_callbacks_t *
 svn_delta_shim_callbacks_default(apr_pool_t *result_pool);
 
 
-/* Return a delta editor and baton which will forward calls to @a editor,
- * allocated in @a pool.
- *
- * @note: Since the semantics behind the two editors are different, calls
- * the timing of calls forwarded to @a editor may be imprecise.  That is,
- * the memory and computational overhead in using this forwarding
- * mechanism may be large.
- *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_delta_from_editor(const svn_delta_editor_t **deditor,
-                      void **dedit_baton,
-                      svn_editor_t *editor,
-                      svn_delta_fetch_props_func_t fetch_props_func,
-                      void *fetch_props_baton,
-                      apr_pool_t *pool);
-
-/* Return an editor allocated in @a result_pool which will forward calls
- * to @a deditor using @a dedit_baton.
- *
- * @note Since the sematics behind the two editors are different, the
- * timing of calls forwarded to the @a editor may be imprecise, and the
- * overhead large.
- *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_editor_from_delta(svn_editor_t **editor,
-                      const svn_delta_editor_t *deditor,
-                      void *dedit_baton,
-                      svn_cancel_func_t cancel_func,
-                      void *cancel_baton,
-                      svn_delta_fetch_kind_func_t fetch_kind_func,
-                      void *fetch_kind_baton,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool);
-
 /** A temporary API which conditionally inserts a double editor shim
  * into the chain of delta editors.  Used for testing Editor v2.
  *
