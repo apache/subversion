@@ -507,13 +507,13 @@ ev2_abort_edit(void *edit_baton,
   return svn_error_trace(svn_editor_abort(eb->editor));
 }
 
-svn_error_t *
-svn_delta_from_editor(const svn_delta_editor_t **deditor,
-                      void **dedit_baton,
-                      svn_editor_t *editor,
-                      svn_delta_fetch_props_func_t fetch_props_func,
-                      void *fetch_props_baton,
-                      apr_pool_t *pool)
+static svn_error_t *
+delta_from_editor(const svn_delta_editor_t **deditor,
+                  void **dedit_baton,
+                  svn_editor_t *editor,
+                  svn_delta_fetch_props_func_t fetch_props_func,
+                  void *fetch_props_baton,
+                  apr_pool_t *pool)
 {
   /* Static 'cause we don't want it to be on the stack. */
   static svn_delta_editor_t delta_editor = {
@@ -1050,16 +1050,16 @@ abort_cb(void *baton,
   return svn_error_trace(err);
 }
 
-svn_error_t *
-svn_editor_from_delta(svn_editor_t **editor_p,
-                      const svn_delta_editor_t *deditor,
-                      void *dedit_baton,
-                      svn_cancel_func_t cancel_func,
-                      void *cancel_baton,
-                      svn_delta_fetch_kind_func_t fetch_kind_func,
-                      void *fetch_kind_baton,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool)
+static svn_error_t *
+editor_from_delta(svn_editor_t **editor_p,
+                  const svn_delta_editor_t *deditor,
+                  void *dedit_baton,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  svn_delta_fetch_kind_func_t fetch_kind_func,
+                  void *fetch_kind_baton,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   svn_editor_t *editor;
   static const svn_editor_cb_many_t editor_cbs = {
@@ -1134,14 +1134,14 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
      a lot of overhead. */
   svn_editor_t *editor;
 
-  SVN_ERR(svn_editor_from_delta(&editor, deditor_in, dedit_baton_in,
-                                NULL, NULL, shim_callbacks->fetch_kind_func,
-                                shim_callbacks->fetch_kind_baton,
-                                result_pool, scratch_pool));
-  SVN_ERR(svn_delta_from_editor(deditor_out, dedit_baton_out, editor,
-                                shim_callbacks->fetch_props_func,
-                                shim_callbacks->fetch_props_baton,
-                                result_pool));
+  SVN_ERR(editor_from_delta(&editor, deditor_in, dedit_baton_in,
+                            NULL, NULL, shim_callbacks->fetch_kind_func,
+                            shim_callbacks->fetch_kind_baton,
+                            result_pool, scratch_pool));
+  SVN_ERR(delta_from_editor(deditor_out, dedit_baton_out, editor,
+                            shim_callbacks->fetch_props_func,
+                            shim_callbacks->fetch_props_baton,
+                            result_pool));
 
 #endif
   return SVN_NO_ERROR;
