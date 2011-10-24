@@ -9745,7 +9745,6 @@ mergeinfo_in_catalog(svn_boolean_t *in_catalog,
                      const char **cat_key_path,
                      const char *repos_rel_path,
                      svn_mergeinfo_t mergeinfo,
-                     svn_revnum_t revision,
                      svn_mergeinfo_catalog_t catalog,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
@@ -9862,7 +9861,7 @@ log_find_operative_revs(void *baton,
 
       SVN_ERR(mergeinfo_in_catalog(&in_catalog, &subtree_missing_this_rev,
                                    source_rel_path, log_entry_as_mergeinfo,
-                                   revision, log_baton->merged_catalog,
+                                   log_baton->merged_catalog,
                                    pool, pool));
 
       if (!in_catalog)
