@@ -116,6 +116,7 @@ svn_client__resolve_location(const char **repo_root_url_p,
                              const char **repo_uuid_p,
                              svn_revnum_t *repo_revnum_p,
                              const char **repo_relpath_p,
+                             svn_ra_session_t **ra_session_p,
                              const char *path_or_url,
                              const svn_opt_revision_t *peg_revision,
                              const svn_opt_revision_t *revision,
@@ -138,37 +139,33 @@ svn_client__resolve_location(const char **repo_root_url_p,
   if (repo_root_url_p)
     *repo_root_url_p = repos_root_url;
 
-  if (repo_relpath_p)
+  if (repo_relpath_p || repo_revnum_p)
     {
+      svn_ra_session_t *ra_session;
       const char *url;
 
-      SVN_ERR(svn_client_url_from_path2(&url, path_or_url,
-                                        ctx, scratch_pool, scratch_pool));
+      SVN_ERR(svn_client__ra_session_from_path(&ra_session,
+                                               repo_revnum_p,
+                                               &url,
+                                               abspath_or_url,
+                                               NULL /* base_dir_abspath */,
+                                               peg_revision, revision,
+                                               ctx, result_pool));
       if (! url)
         return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                  _("Path '%s' has no URL in the repository"),
                                  path_or_url);
-      *repo_relpath_p = svn_uri_skip_ancestor(repos_root_url, url,
-                                              result_pool);
-    }
-
-  if (repo_revnum_p)
-    {
-      svn_ra_session_t *ra_session = NULL;
-
-      SVN_ERR(svn_client__get_revision_number(repo_revnum_p,
-                                              NULL /* youngest */,
-                                              ctx->wc_ctx,
-                                              abspath_or_url,
-                                              ra_session,
-                                              peg_revision,
-                                              scratch_pool));
+      if (repo_relpath_p)
+        *repo_relpath_p = svn_uri_skip_ancestor(repos_root_url, url, result_pool);
+      if (ra_session_p != NULL && *ra_session_p == NULL)
+        *ra_session_p = ra_session;
     }
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_client__resolve_target_location(svn_client_target_t *target,
+                                    svn_ra_session_t **ra_session_p,
                                     svn_client_ctx_t *ctx,
                                     apr_pool_t *scratch_pool)
 {
@@ -176,6 +173,7 @@ svn_client__resolve_target_location(svn_client_target_t *target,
                                        &target->repos_uuid,
                                        &target->repos_revnum,
                                        &target->repos_relpath,
+                                       ra_session_p,
                                        target->path_or_url,
                                        &target->peg_revision,
                                        &target->revision,

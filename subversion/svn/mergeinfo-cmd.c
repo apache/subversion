@@ -190,7 +190,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
       target->revision.kind = svn_opt_revision_working;
     }
 
-  SVN_ERR(svn_client__resolve_target_location(target, ctx, pool));
+  SVN_ERR(svn_client__resolve_target_location(target, NULL, ctx, pool));
 
   /* Locate the source branch: the first argument or automatic. */
   if (targets->nelts >= 1)
@@ -210,7 +210,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
       SVN_ERR(find_source_branch(&source, target, ctx, pool));
     }
 
-  SVN_ERR(svn_client__resolve_target_location(source, ctx, pool));
+  SVN_ERR(svn_client__resolve_target_location(source, NULL, ctx, pool));
 
   printf("Source branch: %s\n", target_for_display(source, pool));
   printf("Target branch: %s\n", target_for_display(target, pool));

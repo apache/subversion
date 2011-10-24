@@ -68,7 +68,7 @@ svn_client_version(void);
  * @{
  */
 
-
+
 /*** Authentication stuff ***/
 
 /**  The new authentication system allows the RA layer to "pull"
@@ -1045,6 +1045,7 @@ svn_client__resolve_location(const char **repo_root_url_p,
                              const char **repo_uuid_p,
                              svn_revnum_t *repo_revnum_p,
                              const char **repo_relpath_p,
+                             svn_ra_session_t **ra_session_p,
                              const char *path_or_url,
                              const svn_opt_revision_t *peg_revision,
                              const svn_opt_revision_t *revision,
@@ -1052,9 +1053,14 @@ svn_client__resolve_location(const char **repo_root_url_p,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
-/* */
+/* @a ra_session_p is an optional in/out parameter. If an RA session is
+ * needed and @a ra_session_p and @a *ra_session_p are both non-null, use
+ * that session; otherwise open a new sesssion (allocated
+ * in @a target->pool) and if @a ra_session_p is non-null then set
+ * @a *ra_session_p to the new session. */
 svn_error_t *
 svn_client__resolve_target_location(svn_client_target_t *target,
+                                    svn_ra_session_t **ra_session_p,
                                     svn_client_ctx_t *ctx,
                                     apr_pool_t *scratch_pool);
 
