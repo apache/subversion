@@ -802,6 +802,8 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   svn_delta_editor_t *e;
   apr_pool_t *subpool = svn_pool_create(pool);
   struct edit_baton *eb;
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                                    svn_delta_shim_callbacks_default(pool);
 
   /* Do a global authz access lookup.  Users with no write access
      whatsoever to the repository don't get a commit editor. */
@@ -854,7 +856,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   *editor = e;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   NULL, NULL, NULL, NULL, pool, pool));
+                                   shim_callbacks, pool, pool));
 
   return SVN_NO_ERROR;
 }

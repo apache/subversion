@@ -1051,6 +1051,8 @@ replay_rev_started(svn_revnum_t revision,
   apr_hash_t *filtered;
   int filtered_count;
   int normalized_count;
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                                    svn_delta_shim_callbacks_default(pool);
 
   /* We set this property so that if we error out for some reason
      we can later determine where we were in the process of
@@ -1119,7 +1121,7 @@ replay_rev_started(svn_revnum_t revision,
   *edit_baton = cancel_baton;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   NULL, NULL, NULL, NULL, pool, pool));
+                                   shim_callbacks, pool, pool));
 
   return SVN_NO_ERROR;
 }
