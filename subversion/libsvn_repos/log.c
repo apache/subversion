@@ -885,7 +885,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
       for (i = 0; i < paths->nelts; i++)
         {
           const char *path = APR_ARRAY_IDX(paths, i, const char *);
-          if (! svn_dirent_is_ancestor(path, changed_path))
+          if (! svn_fspath__is_ancestor(path, changed_path))
             continue;
           svn_pool_clear(iterpool);
           deleted = apr_hash_get(deleted_mergeinfo_catalog, key, klen);
