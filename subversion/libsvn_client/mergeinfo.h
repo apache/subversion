@@ -166,7 +166,9 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
 
    If there is no mergeinfo available for REL_PATH, or if the server
    doesn't support a mergeinfo capability and SQUELCH_INCAPABLE is
-   TRUE, set *TARGET_MERGEINFO to NULL. */
+   TRUE, set *TARGET_MERGEINFO to NULL. If the server doesn't support
+   a mergeinfo capability and SQUELCH_INCAPABLE is FALSE, return an
+   SVN_ERR_UNSUPPORTED_FEATURE error. */
 svn_error_t *
 svn_client__get_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                 svn_ra_session_t *ra_session,
