@@ -89,13 +89,3 @@ Approved changes:
      Save headaches.
    Votes:
      +1: julianfoad, danielsh, stsp
-     
- * r1186928
-   Don't rely on the current implementation of svn_ra_get_mergeinfo to
-   avoid a segfault when asking for mergeinfo from a repository which isn't
-   mergeinfo capable.
-   Justification:
-     Avoid segfaults by relying on undocumented API behavior is never a
-     good idea.
-   Votes:
-     +1: pburba, stsp, rhuijben
