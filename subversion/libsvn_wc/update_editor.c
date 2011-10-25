@@ -1159,6 +1159,7 @@ modcheck_callback(void *baton,
   switch (status->node_status)
     {
       case svn_wc_status_normal:
+      case svn_wc_status_incomplete:
       case svn_wc_status_ignored:
       case svn_wc_status_none:
       case svn_wc_status_unversioned:

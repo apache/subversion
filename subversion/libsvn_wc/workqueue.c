@@ -149,7 +149,8 @@ remove_base_node(svn_wc__db_t *db,
 
   /* Children first */
   if (base_kind == svn_wc__db_kind_dir
-      && base_status == svn_wc__db_status_normal)
+      && (base_status == svn_wc__db_status_normal
+          || base_status == svn_wc__db_status_incomplete))
     {
       const apr_array_header_t *children;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);

@@ -3488,6 +3488,56 @@ commit_file_external(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Issue 4040 */
+static svn_error_t *
+incomplete_switch(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "incomplete_switch", opts, pool));
+
+  SVN_ERR(wc_mkdir(&b, "A"));
+  SVN_ERR(wc_mkdir(&b, "A/B"));
+  SVN_ERR(wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(wc_mkdir(&b, "A/B/C/D"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_copy(&b, "A", "X"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_copy(&b, "A", "X/A"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_delete(&b, "X/A"));
+  SVN_ERR(wc_commit(&b, ""));
+
+  {
+    /* Interrupted switch from A@1 to X@3 */
+    nodes_row_t before[] = {
+      {0, "",      "incomplete", 3, "X"},
+      {0, "A",     "incomplete", 3, "X/A"},
+      {0, "A/B",   "incomplete", 3, "X/A/B"},
+      {0, "A/B/C", "incomplete", 3, "X/A/B/C"},
+      {0, "B",     "normal",     1, "A/B"},
+      {0, "B/C",   "normal",     1, "A/B/C"},
+      {0, "B/C/D", "normal",     1, "A/B/C/D"},
+      {0}
+    };
+
+    nodes_row_t after_update[] = { 
+      {0, "",      "normal", 4, "X"},
+      {0, "B",     "normal", 4, "A/B"},
+      {0, "B/C",   "normal", 4, "A/B/C"},
+      {0, "B/C/D", "normal", 4, "A/B/C/D"},
+      {0}
+    };
+
+    SVN_ERR(insert_dirs(&b, before));
+    SVN_ERR(check_db_rows(&b, "", before));
+    SVN_ERR(wc_update(&b, "", 4));
+    SVN_ERR(check_db_rows(&b, "", after_update));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -3548,5 +3598,7 @@ struct svn_test_descriptor_t test_funcs[] =
 #endif
     SVN_TEST_OPTS_PASS(commit_file_external,
                        "commit_file_external (issue #4002)"),
+    SVN_TEST_OPTS_PASS(incomplete_switch,
+                       "incomplete_switch (issue 4040)"),
     SVN_TEST_NULL
   };

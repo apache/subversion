@@ -99,9 +99,3 @@ Approved changes:
      good idea.
    Votes:
      +1: pburba, stsp, rhuijben
- * r1187311
-   Fix issue 4040, spurious NODES rows after interrupt
-   Justification:
-     Corrupts the working copy.
-   Votes:
-     +1: philip, stsp, rhuijben
