@@ -1219,8 +1219,8 @@ svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
    each path.
 
    Return a pointer to the mergeinfo value of the nearest path-wise ancestor
-   of ABS_REPOS_PATH in DEPTH_FIRST_CATALOG_INDEX.  A path is considered its
-   own ancestor, so if a key exactly matches ABS_REPOS_PATH, return that
+   of FSPATH in DEPTH_FIRST_CATALOG_INDEX.  A path is considered its
+   own ancestor, so if a key exactly matches FSPATH, return that
    key's mergeinfo and set *ANCESTOR_IS_SELF to true (set it to false in all
    other cases).
 
@@ -1229,7 +1229,7 @@ svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
 static svn_mergeinfo_t
 find_nearest_ancestor(const apr_array_header_t *depth_first_catalog_index,
                       svn_boolean_t *ancestor_is_self,
-                      const char *abs_repos_path)
+                      const char *fspath)
 {
   int ancestor_index = -1;
 
@@ -1243,12 +1243,12 @@ find_nearest_ancestor(const apr_array_header_t *depth_first_catalog_index,
         {
           svn_sort__item_t item = APR_ARRAY_IDX(depth_first_catalog_index, i,
                                                 svn_sort__item_t);
-          if (svn_fspath__is_ancestor(item.key, abs_repos_path))
+          if (svn_fspath__is_ancestor(item.key, fspath))
             {
               ancestor_index = i;
 
-              /* There's no nearer ancestor than ABS_REPOS_PATH itself. */
-              if (strcmp(item.key, abs_repos_path) == 0)
+              /* There's no nearer ancestor than FSPATH itself. */
+              if (strcmp(item.key, fspath) == 0)
                 {
                   *ancestor_is_self = TRUE;
                   break;
@@ -1276,12 +1276,12 @@ struct filter_log_entry_baton_t
 
   /* Unsorted array of repository relative paths representing the merge
      sources.  There will be more than one source  */
-  const apr_array_header_t *merge_source_paths;
+  const apr_array_header_t *merge_source_fspaths;
 
   /* The repository-absolute path we are calling svn_client_log5() on. */
-  const char *abs_repos_target_path;
+  const char *target_fspath;
 
-  /* Mergeinfo catalog for the tree rooted at ABS_REPOS_TARGET_PATH.
+  /* Mergeinfo catalog for the tree rooted at TARGET_FSPATH.
      The path keys must be repository-absolute. */
   svn_mergeinfo_catalog_t target_mergeinfo_catalog;
 
@@ -1307,16 +1307,16 @@ struct filter_log_entry_baton_t
 
    Call the wrapped log receiver BATON->log_receiver (with
    BATON->log_receiver_baton) if:
-   
+
    BATON->FILTERING_MERGED is FALSE and the changes represented by LOG_ENTRY
-   have been fully merged from BATON->MERGE_SOURCE_PATHS to the WC target
+   have been fully merged from BATON->merge_source_fspaths to the WC target
    based on the mergeinfo for the WC contained in BATON->TARGET_MERGEINFO_CATALOG.
 
    Or
 
    BATON->FILTERING_MERGED is TRUE and the changes represented by LOG_ENTRY
    have not been merged, or only partially merged, from
-   BATON->MERGE_SOURCE_PATHS to the WC target based on the mergeinfo for the
+   BATON->merge_source_fspaths to the WC target based on the mergeinfo for the
    WC contained in BATON->TARGET_MERGEINFO_CATALOG. */
 static svn_error_t *
 filter_log_entry_with_rangelist(void *baton,
@@ -1375,25 +1375,25 @@ filter_log_entry_with_rangelist(void *baton,
         {
           const char *path = svn__apr_hash_index_key(hi);
           svn_log_changed_path2_t *change = svn__apr_hash_index_val(hi);
-          const char *target_path_affected;
+          const char *target_fspath_affected;
           svn_mergeinfo_t nearest_ancestor_mergeinfo;
           apr_hash_index_t *hi2;
           svn_boolean_t found_this_revision = FALSE;
           const char *merge_source_rel_target;
-          const char *merge_source_path;
+          const char *merge_source_fspath;
           svn_boolean_t ancestor_is_self;
 
           svn_pool_clear(iterpool);
 
           /* Check that PATH is a subtree of at least one of the
              merge sources.  If not then ignore this path.  */
-          for (i = 0; i < fleb->merge_source_paths->nelts; i++)
+          for (i = 0; i < fleb->merge_source_fspaths->nelts; i++)
             {
-              merge_source_path = APR_ARRAY_IDX(fleb->merge_source_paths,
-                                                i, const char *);
+              merge_source_fspath = APR_ARRAY_IDX(fleb->merge_source_fspaths,
+                                                  i, const char *);
 
               merge_source_rel_target
-                = svn_fspath__skip_ancestor(merge_source_path, path);
+                = svn_fspath__skip_ancestor(merge_source_fspath, path);
               if (merge_source_rel_target)
                 {
                   /* If MERGE_SOURCE was itself deleted, replaced, or added
@@ -1401,24 +1401,24 @@ filter_log_entry_with_rangelist(void *baton,
                      can't merge a addition or deletion of yourself. */
                   if (merge_source_rel_target[0] == '\0'
                       && (change->action != 'M'))
-                    i = fleb->merge_source_paths->nelts;
+                    i = fleb->merge_source_fspaths->nelts;
                   break;
                 }
             }
           /* If we examined every merge source path and PATH is a child of
              none of them then we can ignore this PATH. */
-          if (i == fleb->merge_source_paths->nelts)
+          if (i == fleb->merge_source_fspaths->nelts)
             continue;
 
           /* Calculate the target path which PATH would affect if merged. */
-          target_path_affected = svn_fspath__join(fleb->abs_repos_target_path,
-                                                  merge_source_rel_target,
-                                                  iterpool);
+          target_fspath_affected = svn_fspath__join(fleb->target_fspath,
+                                                    merge_source_rel_target,
+                                                    iterpool);
 
           nearest_ancestor_mergeinfo =
             find_nearest_ancestor(fleb->depth_first_catalog_index,
                                   &ancestor_is_self,
-                                  target_path_affected);
+                                  target_fspath_affected);
 
           /* Issue #3791: A path should never have explicit mergeinfo
              describing its own addition (that's self-referential).  Nor will
@@ -1458,11 +1458,11 @@ filter_log_entry_with_rangelist(void *baton,
 
                   /* Does the mergeinfo for PATH reflect if
                      LOG_ENTRY->REVISION was previously merged
-                     from MERGE_SOURCE_PATH? */
-                  if (svn_fspath__is_ancestor(merge_source_path,
+                     from MERGE_SOURCE_FSPATH? */
+                  if (svn_fspath__is_ancestor(merge_source_fspath,
                                               mergeinfo_path))
                     {
-                      /* Something was merged from MERGE_SOURCE_PATH, does
+                      /* Something was merged from MERGE_SOURCE_FSPATH, does
                          it include LOG_ENTRY->REVISION? */
                       SVN_ERR(svn_rangelist_intersect(&intersection,
                                                       rangelist,
@@ -1511,11 +1511,11 @@ filter_log_entry_with_rangelist(void *baton,
 
 static svn_error_t *
 logs_for_mergeinfo_rangelist(const char *source_url,
-                             const apr_array_header_t *merge_source_paths,
+                             const apr_array_header_t *merge_source_fspaths,
                              svn_boolean_t filtering_merged,
                              const apr_array_header_t *rangelist,
                              svn_mergeinfo_t target_mergeinfo_catalog,
-                             const char *abs_repos_target_path,
+                             const char *target_fspath,
                              svn_boolean_t discover_changed_paths,
                              const apr_array_header_t *revprops,
                              svn_log_entry_receiver_t log_receiver,
@@ -1561,13 +1561,13 @@ logs_for_mergeinfo_rangelist(const char *source_url,
 
   /* Build the log filtering callback baton. */
   fleb.filtering_merged = filtering_merged;
-  fleb.merge_source_paths = merge_source_paths;
+  fleb.merge_source_fspaths = merge_source_fspaths;
   fleb.target_mergeinfo_catalog = target_mergeinfo_catalog;
   fleb.depth_first_catalog_index =
     svn_sort__hash(target_mergeinfo_catalog,
                    svn_sort_compare_items_as_paths,
                    scratch_pool);
-  fleb.abs_repos_target_path = abs_repos_target_path;
+  fleb.target_fspath = target_fspath;
   fleb.rangelist = rangelist;
   fleb.log_receiver = log_receiver;
   fleb.log_receiver_baton = log_receiver_baton;
@@ -1662,7 +1662,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
   svn_mergeinfo_t target_history;
   apr_array_header_t *master_noninheritable_rangelist;
   apr_array_header_t *master_inheritable_rangelist;
-  apr_array_header_t *merge_source_paths =
+  apr_array_header_t *merge_source_fspaths =
     apr_array_make(scratch_pool, 1, sizeof(const char *));
   apr_hash_index_t *hi_catalog;
   apr_hash_index_t *hi;
@@ -1693,7 +1693,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                             ctx->wc_ctx,
                                             target_path_or_url,
                                             repos_root,
-                                            FALSE, NULL,
+                                            FALSE /* leading_slash */, NULL,
                                             scratch_pool,
                                             scratch_pool));
 
@@ -2005,7 +2005,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                           subtree_merged_rangelist,
                                           FALSE, iterpool));
 
-          APR_ARRAY_PUSH(merge_source_paths, const char *) =
+          APR_ARRAY_PUSH(merge_source_fspaths, const char *) =
             apr_pstrdup(scratch_pool, key);
 
           if (intersecting_rangelist->nelts)
@@ -2021,7 +2021,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
   log_target = svn_path_url_add_component2(repos_root, log_target + 1,
                                            scratch_pool);
 
-  SVN_ERR(logs_for_mergeinfo_rangelist(log_target, merge_source_paths,
+  SVN_ERR(logs_for_mergeinfo_rangelist(log_target, merge_source_fspaths,
                                        finding_merged,
                                        master_inheritable_rangelist,
                                        target_mergeinfo_cat,
