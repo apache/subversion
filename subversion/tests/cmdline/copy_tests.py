@@ -5545,6 +5545,36 @@ def commit_deleted_half_of_move(sbox):
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'commit', '-m', 'foo', A_path)
 
+@Issue(4026)
+@XFail()
+def wc_wc_copy_incomplete(sbox):
+  "wc-to-wc copy of an incomplete directory"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.set_incomplete(sbox.ospath('A/B/E'), 1)
+
+  # Copy fails with no changes to wc
+  svntest.actions.run_and_verify_svn(None, None,
+                                     'svn: E155035: Cannot handle status',
+                                     'copy',
+                                     sbox.ospath('A/B/E'),
+                                     sbox.ospath('A/B/E2'))
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E', status='! ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Issue 4026, this asserts
+  svntest.actions.run_and_verify_svn(None, None,
+                                     'svn: E155035: Cannot handle status',
+                                     'copy',
+                                     sbox.ospath('A/B'),
+                                     sbox.ospath('A/B2'))
+
+  ### Tweak status if some of B has been copied?
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -5657,6 +5687,7 @@ test_list = [ None,
               copy_deleted_dir,
               commit_copied_half_of_move,
               commit_deleted_half_of_move,
+              wc_wc_copy_incomplete,
              ]
 
 if __name__ == '__main__':
