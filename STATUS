@@ -57,6 +57,15 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1188774
+   Fix issue #4044, "empty parents of externals not removed along with
+   externals on update".
+   Justification:
+     Currently empty unversioned directories are left behind, possibly
+     obstructing future updates which re-add the directory.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
