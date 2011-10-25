@@ -1860,83 +1860,6 @@ test_dirent_is_child(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_relpath_is_child(apr_pool_t *pool)
-{
-  int i, j;
-
-  static const char * const paths[] = {
-    "",
-    "foo",
-    "foo/bar",
-    "foo/bars",
-    "foo/baz",
-    "foo/bar/baz",
-    "flu/blar/blaz",
-    "foo/bar/baz/bing/boom",
-    ".foo",
-    ":",
-    "foo2",
-    "food",
-    "bar",
-    "baz",
-    "ba",
-    "bad"
-    };
-
-  /* Maximum number of path[] items for all platforms */
-#define MAX_PATHS 32
-
-  static const char * const
-    remainders[COUNT_OF(paths)][MAX_PATHS] = {
-    { 0, "foo", "foo/bar", "foo/bars", "foo/baz", "foo/bar/baz",
-      "flu/blar/blaz", "foo/bar/baz/bing/boom", ".foo", ":", "foo2", "food",
-      "bar", "baz", "ba", "bad" },
-    { 0, 0, "bar", "bars", "baz", "bar/baz", 0, "bar/baz/bing/boom", 0, 0, 0,
-      0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  };
-
-  for (i = 0; i < COUNT_OF(paths); i++)
-    {
-      for (j = 0; j < COUNT_OF(paths); j++)
-        {
-          const char *remainder;
-
-          remainder = svn_dirent_is_child(paths[i], paths[j], pool);
-
-          if (strcmp(paths[j], "foodbar") == 0)
-            SVN_ERR_MALFUNCTION();
-
-          if (((remainder) && (! remainders[i][j]))
-              || ((! remainder) && (remainders[i][j]))
-              || (remainder && strcmp(remainder, remainders[i][j])))
-            return svn_error_createf
-              (SVN_ERR_TEST_FAILED, NULL,
-               "svn_relpath_is_child(%s, %s) returned '%s' instead of '%s'",
-               paths[i], paths[j],
-               remainder ? remainder : "(null)",
-               remainders[i][j] ? remainders[i][j] : "(null)" );
-        }
-    }
-
-#undef NUM_TEST_PATHS
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
 test_uri_is_child(apr_pool_t *pool)
 {
   int i, j;
@@ -2861,8 +2784,6 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_uri_get_longest_ancestor"),
     SVN_TEST_PASS2(test_dirent_is_child,
                    "test svn_dirent_is_child"),
-    SVN_TEST_PASS2(test_relpath_is_child,
-                   "test svn_relpath_is_child"),
     SVN_TEST_PASS2(test_uri_is_child,
                    "test svn_uri_is_child"),
     SVN_TEST_PASS2(test_dirent_is_ancestor,

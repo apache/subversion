@@ -12165,8 +12165,8 @@ svn_wc__db_get_not_present_descendants(const apr_array_header_t **descendants,
           const char *found_relpath = svn_sqlite__column_text(stmt, 0, NULL);
 
           APR_ARRAY_PUSH(paths, const char *)
-              = svn_relpath__is_child(local_relpath, found_relpath,
-                                      result_pool);
+              = apr_pstrdup(result_pool, svn_relpath_skip_ancestor(
+                                           local_relpath, found_relpath));
 
           SVN_ERR(svn_sqlite__step(&have_row, stmt));
         }
