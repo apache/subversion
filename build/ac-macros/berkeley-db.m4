@@ -65,11 +65,11 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
 
       if test "$withval" = "yes"; then
         if test "$apu_db_version" -lt "4"; then
-          AC_MSG_ERROR([APR-UTIL wasn't linked against Berkeley DB 4,
-                        while the fs component is required.  Reinstall
-                        APR-UTIL with the appropiate options.])
+          AC_MSG_ERROR([APR-UTIL was linked against Berkeley DB version $apu_db_version,
+                        while version 4 or higher is required.  Reinstall
+                        APR-UTIL with the appropriate options.])
         fi
-        
+
         status=required
 
       elif test "$apu_found" != "reconfig"; then

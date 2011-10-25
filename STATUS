@@ -81,11 +81,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1186784
-   Fix a 'configure' error message to make sense when '--with-berkeley-db'
-   is given and Berkeley DB > 4 is linked into APR-UTIL.
-   Justification:
-     Save headaches.
-   Votes:
-     +1: julianfoad, danielsh, stsp
