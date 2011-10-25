@@ -1536,12 +1536,6 @@ svn_dirent_is_ancestor(const char *parent_dirent, const char *child_dirent)
 }
 
 svn_boolean_t
-svn_relpath__is_ancestor(const char *parent_relpath, const char *child_relpath)
-{
-  return svn_relpath_skip_ancestor(parent_relpath, child_relpath) != NULL;
-}
-
-svn_boolean_t
 svn_uri__is_ancestor(const char *parent_uri, const char *child_uri)
 {
   return uri_skip_ancestor(parent_uri, child_uri) != NULL;

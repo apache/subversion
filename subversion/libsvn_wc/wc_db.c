@@ -11368,7 +11368,7 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
           svn_wc__db_wclock_t* lock = &APR_ARRAY_IDX(wcroot->owned_locks,
                                                      i, svn_wc__db_wclock_t);
 
-          if (svn_relpath__is_ancestor(lock->local_relpath, local_relpath)
+          if (svn_relpath_skip_ancestor(lock->local_relpath, local_relpath)
               && (lock->levels == -1
                   || (lock->levels + relpath_depth(lock->local_relpath))
                             >= depth))
@@ -11433,7 +11433,7 @@ is_wclocked(void *baton,
     {
       const char *relpath = svn_sqlite__column_text(stmt, 0, NULL);
 
-      if (svn_relpath__is_ancestor(relpath, dir_relpath))
+      if (svn_relpath_skip_ancestor(relpath, dir_relpath))
         {
           /* Any row here means there can be no locks closer to root
              that extend past here. */
@@ -11568,7 +11568,7 @@ wclock_owns_lock(svn_boolean_t *own_lock,
           svn_wc__db_wclock_t *lock = &APR_ARRAY_IDX(owned_locks, i,
                                                      svn_wc__db_wclock_t);
 
-          if (svn_relpath__is_ancestor(lock->local_relpath, local_relpath)
+          if (svn_relpath_skip_ancestor(lock->local_relpath, local_relpath)
               && (lock->levels == -1
                   || ((relpath_depth(lock->local_relpath) + lock->levels)
                       >= lock_level)))
