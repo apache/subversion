@@ -3525,6 +3525,9 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
                                                       src_relpath,
                                                       scratch_pool));
     default:
+      /* Perhaps we should allow incomplete to incomplete? We can't
+         avoid incomplete working nodes as one step in copying a
+         directory is to add incomplete children. */
       return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                                _("Cannot handle status of '%s'"),
                                path_for_error_message(src_wcroot,
