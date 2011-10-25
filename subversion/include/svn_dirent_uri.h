@@ -597,13 +597,6 @@ svn_boolean_t
 svn_dirent_is_ancestor(const char *parent_dirent,
                        const char *child_dirent);
 
-/** Return TRUE if @a parent_relpath is an ancestor of @a child_relpath or
- * the relpaths are equal, and FALSE otherwise.
- */
-svn_boolean_t
-svn_relpath__is_ancestor(const char *parent_relpath,
-                         const char *child_relpath);
-
 /** Return TRUE if @a parent_uri is an ancestor of @a child_uri or
  * the uris are equal, and FALSE otherwise.
  */

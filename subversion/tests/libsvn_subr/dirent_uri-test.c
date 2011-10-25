@@ -1441,28 +1441,6 @@ static const testcase_ancestor_t relpath_ancestor_tests[] =
     { "X:foo",          "X:bar",            NULL },
   };
 
-static svn_error_t *
-test_relpath_is_ancestor(apr_pool_t *pool)
-{
-  const testcase_ancestor_t *t;
-
-  for (t = relpath_ancestor_tests;
-       t < relpath_ancestor_tests + COUNT_OF(relpath_ancestor_tests);
-       t++)
-    {
-      svn_boolean_t retval;
-
-      retval = svn_relpath__is_ancestor(t->path1, t->path2);
-      if (!!t->result != retval)
-        return svn_error_createf
-          (SVN_ERR_TEST_FAILED, NULL,
-           "svn_relpath_is_ancestor (%s, %s) returned %s instead of %s",
-           t->path1, t->path2, retval ? "TRUE" : "FALSE",
-           t->result ? "TRUE" : "FALSE");
-    }
-  return SVN_NO_ERROR;
-}
-
 static const testcase_ancestor_t uri_ancestor_tests[] =
   {
     { "http://test",    "http://test",      "" },
@@ -2788,8 +2766,6 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_uri_is_child"),
     SVN_TEST_PASS2(test_dirent_is_ancestor,
                    "test svn_dirent_is_ancestor"),
-    SVN_TEST_PASS2(test_relpath_is_ancestor,
-                   "test svn_relpath_is_ancestor"),
     SVN_TEST_PASS2(test_uri_is_ancestor,
                    "test svn_uri_is_ancestor"),
     SVN_TEST_PASS2(test_dirent_skip_ancestor,
