@@ -24,16 +24,6 @@ Candidate changes:
      -0: stsp (we can backport these when we need to)
      -0: gstein
 
- * r1186928
-   Don't rely on the current implementation of svn_ra_get_mergeinfo to
-   avoid a segfault when asking for mergeinfo from a repository which isn't
-   mergeinfo capable.
-   Justification:
-     Avoid segfaults by relying on undocumented API behavior is never a
-     good idea.
-   Votes:
-     +1: pburba, stsp
-
  * r1186944, r1186981, r1187676
    Fix an assertion failure when a symlink is updated.
    Justification:
@@ -45,19 +35,20 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1187311
-   Fix issue 4040, spurious NODES rows after interrupt
-   Justification:
-     Corrupts the working copy.
-   Votes:
-     +1: philip, stsp
-
  * r1187695
    Have mod_dav_svn ignore non-Subversion POST requests.
    Justification:
      mod_dav_svn does not play well with others.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
+
+ * r1188609
+   Properly define WIN64 in Windows x64 builds.
+   Justification:
+     Older apr.h versions depend on WIN64 being defined and our
+     diff libraries optimizations depend on the definitions being correct.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
@@ -91,4 +82,19 @@ Approved changes:
      Save headaches.
    Votes:
      +1: julianfoad, danielsh, stsp
-
+     
+ * r1186928
+   Don't rely on the current implementation of svn_ra_get_mergeinfo to
+   avoid a segfault when asking for mergeinfo from a repository which isn't
+   mergeinfo capable.
+   Justification:
+     Avoid segfaults by relying on undocumented API behavior is never a
+     good idea.
+   Votes:
+     +1: pburba, stsp, rhuijben
+ * r1187311
+   Fix issue 4040, spurious NODES rows after interrupt
+   Justification:
+     Corrupts the working copy.
+   Votes:
+     +1: philip, stsp, rhuijben
