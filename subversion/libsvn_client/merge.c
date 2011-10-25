@@ -457,21 +457,13 @@ make_conflict_versions(const svn_wc_conflict_version_t **left,
 
   /* Construct the source URLs of the victim. */
   {
-    const char *child = svn_dirent_is_child(merge_b->target_abspath,
-                                            victim_abspath,
-                                            merge_b->pool);
-    if (child != NULL)
-      {
-        left_url = svn_path_url_add_component2(merge_b->merge_source.url1,
-                                               child, merge_b->pool);
-        right_url = svn_path_url_add_component2(merge_b->merge_source.url2,
-                                                child, merge_b->pool);
-      }
-    else
-      {
-        left_url = merge_b->merge_source.url1;
-        right_url = merge_b->merge_source.url2;
-      }
+    const char *child = svn_dirent_skip_ancestor(merge_b->target_abspath,
+                                                 victim_abspath);
+    SVN_ERR_ASSERT(child != NULL);
+    left_url = svn_path_url_add_component2(merge_b->merge_source.url1,
+                                           child, merge_b->pool);
+    right_url = svn_path_url_add_component2(merge_b->merge_source.url2,
+                                            child, merge_b->pool);
   }
 
   *left = svn_wc_conflict_version_create(
@@ -1756,14 +1748,12 @@ merge_file_added(svn_wc_notify_state_t *content_state,
             if (merge_b->same_repos)
               {
                 const char *child =
-                  svn_dirent_is_child(merge_b->target_abspath, mine_abspath,
-                                      scratch_pool);
-                if (child != NULL)
-                  copyfrom_url = svn_path_url_add_component2(
-                                               merge_b->merge_source.url2,
-                                               child, scratch_pool);
-                else
-                  copyfrom_url = merge_b->merge_source.url2;
+                  svn_dirent_skip_ancestor(merge_b->target_abspath,
+                                           mine_abspath);
+                SVN_ERR_ASSERT(child != NULL);
+                copyfrom_url = svn_path_url_add_component2(
+                                             merge_b->merge_source.url2,
+                                             child, scratch_pool);
                 copyfrom_rev = rev2;
                 SVN_ERR(check_repos_match(merge_b, mine_abspath, copyfrom_url,
                                           scratch_pool));
@@ -4320,11 +4310,9 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
 
       svn_pool_clear(iterpool);
 
-      child_repos_path = svn_dirent_is_child(merge_b->target_abspath,
-                                             child->abspath, iterpool);
-      if (!child_repos_path)
-        child_repos_path = "";
-
+      child_repos_path = svn_dirent_skip_ancestor(merge_b->target_abspath,
+                                                  child->abspath);
+      SVN_ERR_ASSERT(child_repos_path != NULL);
       child_url1 = svn_path_url_add_component2(url1, child_repos_path,
                                                iterpool);
       child_url2 = svn_path_url_add_component2(url2, child_repos_path,
@@ -4599,15 +4587,12 @@ update_wc_mergeinfo(svn_mergeinfo_catalog_t result_catalog,
       if (mergeinfo == NULL)
         mergeinfo = apr_hash_make(iterpool);
 
-      local_abspath_rel_to_target = svn_dirent_is_child(target_abspath,
-                                                        local_abspath,
-                                                        iterpool);
-      if (local_abspath_rel_to_target)
-        fspath = svn_fspath__join(source_fspath,
-                                  local_abspath_rel_to_target,
-                                  iterpool);
-      else
-        fspath = source_fspath;
+      local_abspath_rel_to_target = svn_dirent_skip_ancestor(target_abspath,
+                                                             local_abspath);
+      SVN_ERR_ASSERT(local_abspath_rel_to_target != NULL);
+      fspath = svn_fspath__join(source_fspath,
+                                local_abspath_rel_to_target,
+                                iterpool);
       rangelist = apr_hash_get(mergeinfo, fspath, APR_HASH_KEY_STRING);
       if (rangelist == NULL)
         rangelist = apr_array_make(iterpool, 0, sizeof(svn_merge_range_t *));
@@ -7584,11 +7569,9 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
                              APR_HASH_KEY_STRING))
             continue;
 
-          child_repos_path = svn_dirent_is_child(merge_b->target_abspath,
-                                                 child->abspath, iterpool);
-          if (!child_repos_path)
-            child_repos_path = "";
-
+          child_repos_path = svn_dirent_skip_ancestor(merge_b->target_abspath,
+                                                      child->abspath);
+          SVN_ERR_ASSERT(child_repos_path != NULL);
           child_merge_src_fspath = svn_fspath__join(mergeinfo_fspath,
                                                     child_repos_path,
                                                     iterpool);
