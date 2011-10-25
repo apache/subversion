@@ -3201,7 +3201,7 @@ history_prev(void *baton, apr_pool_t *pool)
          the copy source.  Finally, if our current path doesn't meet
          one of these other criteria ... ### for now just fallback to
          the old copy hunt algorithm. */
-      remainder_path = svn_relpath_skip_ancestor(copy_dst, path);
+      remainder_path = svn_fspath__skip_ancestor(copy_dst, path);
 
       if (remainder_path)
         {
