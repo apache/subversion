@@ -259,7 +259,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
     }
 
   /* a collection or regular resource */
-  if (! svn_urlpath__is_ancestor(mc->base_href, mc->href->data))
+  if (! svn_urlpath__skip_ancestor(mc->base_href, mc->href->data))
     {
       /* ### need something better than APR_EGENERAL */
       return svn_error_createf(APR_EGENERAL, NULL,

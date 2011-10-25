@@ -151,15 +151,6 @@ const char *
 svn_fspath__skip_ancestor(const char *parent_fspath,
                           const char *child_fspath);
 
-/** Return TRUE if @a parent_fspath is an ancestor of @a child_fspath or
- * the fspaths are equal, and FALSE otherwise.
- *
- * @since New in 1.7.
- */
-svn_boolean_t
-svn_fspath__is_ancestor(const char *parent_fspath,
-                        const char *child_fspath);
-
 /** Return the longest common path shared by two fspaths, @a fspath1 and
  * @a fspath2.  If there's no common ancestor, return "/".
  *
@@ -179,7 +170,6 @@ svn_fspath__get_longest_ancestor(const char *fspath1,
 #define svn_urlpath__basename             svn_fspath__basename
 #define svn_urlpath__dirname              svn_fspath__dirname
 #define svn_urlpath__get_longest_ancestor svn_fspath__get_longest_ancestor
-#define svn_urlpath__is_ancestor          svn_fspath__is_ancestor
 #define svn_urlpath__is_canonical         svn_fspath__is_canonical
 #define svn_urlpath__is_child             svn_fspath__is_child
 #define svn_urlpath__is_root              svn_fspath__is_root

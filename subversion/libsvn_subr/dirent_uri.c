@@ -2472,16 +2472,6 @@ svn_fspath__skip_ancestor(const char *parent_fspath,
   return svn_relpath_skip_ancestor(parent_fspath + 1, child_fspath + 1);
 }
 
-svn_boolean_t
-svn_fspath__is_ancestor(const char *parent_fspath,
-                        const char *child_fspath)
-{
-  assert(svn_fspath__is_canonical(parent_fspath));
-  assert(svn_fspath__is_canonical(child_fspath));
-
-  return svn_relpath__is_ancestor(parent_fspath + 1, child_fspath + 1);
-}
-
 
 const char *
 svn_fspath__dirname(const char *fspath,

@@ -523,8 +523,8 @@ svn_path_is_child(const char *path1, const char *path2, apr_pool_t *pool);
  * @since New in 1.3.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
- * New code should use svn_dirent_is_ancestor(), svn_uri_is_ancestor(),
- * svn_relpath_is_ancestor() or svn_fspath__is_ancestor().
+ * For replacement functionality, see svn_dirent_skip_ancestor(),
+ * svn_uri_skip_ancestor(), and svn_relpath_skip_ancestor().
  */
 SVN_DEPRECATED
 svn_boolean_t
