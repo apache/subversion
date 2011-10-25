@@ -2442,21 +2442,6 @@ svn_fspath__is_root(const char *fspath, apr_size_t len)
 
 
 const char *
-svn_fspath__is_child(const char *parent_fspath,
-                     const char *child_fspath,
-                     apr_pool_t *pool)
-{
-  const char *result;
-  assert(svn_fspath__is_canonical(parent_fspath));
-  assert(svn_fspath__is_canonical(child_fspath));
-
-  result = is_child(type_relpath, parent_fspath + 1, child_fspath + 1, pool);
-
-  assert(result == NULL || svn_relpath_is_canonical(result));
-  return result;
-}
-
-const char *
 svn_fspath__skip_ancestor(const char *parent_fspath,
                           const char *child_fspath)
 {

@@ -257,13 +257,11 @@ getlocks_end_element(void *userdata, int state,
       else if ((baton->requested_depth == svn_depth_files) ||
                (baton->requested_depth == svn_depth_immediates))
         {
-          const char *rel_uri = svn_fspath__is_child(baton->path,
-                                                     baton->current_lock->path,
-                                                     baton->scratchpool);
+          const char *rel_uri = svn_fspath__skip_ancestor(
+                                  baton->path, baton->current_lock->path);
           if (rel_uri && (svn_path_component_count(rel_uri) == 1))
             apr_hash_set(baton->lock_hash, baton->current_lock->path,
                          APR_HASH_KEY_STRING, baton->current_lock);
-          svn_pool_clear(baton->scratchpool);
         }
       break;
 
