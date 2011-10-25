@@ -292,7 +292,7 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
           const char *href;
 
           href = apr_hash_get(info->props, "href", APR_HASH_KEY_STRING);
-          if (! svn_urlpath__is_ancestor(ctx->merge_url, href))
+          if (! svn_urlpath__skip_ancestor(ctx->merge_url, href))
             {
               return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                        _("A MERGE response for '%s' is not "

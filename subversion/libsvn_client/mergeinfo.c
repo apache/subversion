@@ -1243,7 +1243,7 @@ find_nearest_ancestor(const apr_array_header_t *depth_first_catalog_index,
         {
           svn_sort__item_t item = APR_ARRAY_IDX(depth_first_catalog_index, i,
                                                 svn_sort__item_t);
-          if (svn_fspath__is_ancestor(item.key, fspath))
+          if (svn_fspath__skip_ancestor(item.key, fspath))
             {
               ancestor_index = i;
 
@@ -1459,8 +1459,8 @@ filter_log_entry_with_rangelist(void *baton,
                   /* Does the mergeinfo for PATH reflect if
                      LOG_ENTRY->REVISION was previously merged
                      from MERGE_SOURCE_FSPATH? */
-                  if (svn_fspath__is_ancestor(merge_source_fspath,
-                                              mergeinfo_path))
+                  if (svn_fspath__skip_ancestor(merge_source_fspath,
+                                                mergeinfo_path))
                     {
                       /* Something was merged from MERGE_SOURCE_FSPATH, does
                          it include LOG_ENTRY->REVISION? */
