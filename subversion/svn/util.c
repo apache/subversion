@@ -1419,3 +1419,55 @@ svn_cl__local_style_skip_ancestor(const char *parent_path,
 
   return svn_dirent_local_style(relpath ? relpath : path, pool);
 }
+
+/* */
+static svn_boolean_t
+location_is_resolved(const svn_client_target_t *location)
+{
+  return (location->repos_uuid != NULL);
+}
+
+const char *
+svn_cl__target_for_display(const svn_client_target_t *target,
+                           apr_pool_t *pool)
+{
+  SVN_ERR_ASSERT_NO_RETURN(location_is_resolved(target));
+  if (target->revision.kind == svn_opt_revision_working)
+    {
+      SVN_ERR_ASSERT_NO_RETURN(target->peg_revision.kind == svn_opt_revision_working);
+      return apr_psprintf(pool, "^/%s (working copy)",
+                          target->repos_relpath);
+    }
+  if (target->revision.kind == svn_opt_revision_base)
+    {
+      SVN_ERR_ASSERT_NO_RETURN(target->peg_revision.kind == svn_opt_revision_base);
+      return apr_psprintf(pool, "^/%s (wc base)",
+                          target->repos_relpath);
+    }
+  return apr_psprintf(pool, "^/%s (r%ld)",
+                      target->repos_relpath, target->repos_revnum);
+}
+
+svn_error_t *
+svn_cl__find_merge_source_branch(svn_client_target_t **source_p,
+                                 svn_client_target_t *target,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool)
+{
+  apr_array_header_t *suggestions;
+  const char *copyfrom_url;
+  svn_opt_revision_t peg_revision = { svn_opt_revision_head, { 0 } };
+
+  /* This isn't properly doc'd, but the first result it gives is the
+   * copyfrom source URL. */
+  SVN_ERR(svn_client_suggest_merge_sources(&suggestions,
+                                           target->path_or_url,
+                                           &target->peg_revision,
+                                           ctx, pool));
+  copyfrom_url = APR_ARRAY_IDX(suggestions, 0, const char *);
+
+  SVN_ERR(svn_client__target(source_p, copyfrom_url, &peg_revision, pool));
+  (*source_p)->revision.kind = svn_opt_revision_unspecified;
+
+  return SVN_NO_ERROR;
+}

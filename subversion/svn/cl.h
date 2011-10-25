@@ -833,6 +833,19 @@ svn_cl__local_style_skip_ancestor(const char *parent_path,
                                   const char *path,
                                   apr_pool_t *pool);
 
+/* */
+const char *
+svn_cl__target_for_display(const svn_client_target_t *target,
+                           apr_pool_t *pool);
+
+/* Find the preferred "parent" branch.  At the moment, returns the
+ * copyfrom path, assumed still to exist at the same path in head. */
+svn_error_t *
+svn_cl__find_merge_source_branch(svn_client_target_t **source_p,
+                                 svn_client_target_t *target,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

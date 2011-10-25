@@ -85,35 +85,6 @@ print_log_rev(const svn_client_merged_rev_t *info,
   return SVN_NO_ERROR;
 }
 
-/* */
-static svn_boolean_t
-location_is_resolved(const svn_client_target_t *location)
-{
-  return (location->repos_uuid != NULL);
-}
-
-/* */
-static const char *
-target_for_display(const svn_client_target_t *target,
-                   apr_pool_t *pool)
-{
-  SVN_ERR_ASSERT_NO_RETURN(location_is_resolved(target));
-  if (target->revision.kind == svn_opt_revision_working)
-    {
-      SVN_ERR_ASSERT_NO_RETURN(target->peg_revision.kind == svn_opt_revision_working);
-      return apr_psprintf(pool, "^/%s (working copy)",
-                          target->repos_relpath);
-    }
-  if (target->revision.kind == svn_opt_revision_base)
-    {
-      SVN_ERR_ASSERT_NO_RETURN(target->peg_revision.kind == svn_opt_revision_base);
-      return apr_psprintf(pool, "^/%s (wc base)",
-                          target->repos_relpath);
-    }
-  return apr_psprintf(pool, "^/%s (r%ld)",
-                      target->repos_relpath, target->repos_revnum);
-}
-
 /* Return TRUE iff SOURCE and TARGET refer to the same repository branch. */
 static svn_boolean_t
 targets_are_same_branch(svn_client_target_t *source,
@@ -121,32 +92,6 @@ targets_are_same_branch(svn_client_target_t *source,
                         apr_pool_t *pool)
 {
   return (strcmp(source->repos_relpath, target->repos_relpath) == 0);
-}
-
-/* Find the preferred "parent" branch.  At the moment, returns the
- * copyfrom path (at peg rev r1170000). */
-static svn_error_t *
-find_source_branch(svn_client_target_t **source_p,
-                   svn_client_target_t *target,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  apr_array_header_t *suggestions;
-  const char *copyfrom_url;
-  svn_opt_revision_t peg_revision = { svn_opt_revision_number, { 1170000 } };
-
-  /* This isn't properly doc'd, but the first result it gives is the
-   * copyfrom source URL. */
-  SVN_ERR(svn_client_suggest_merge_sources(&suggestions,
-                                           target->path_or_url,
-                                           &target->peg_revision,
-                                           ctx, pool));
-  copyfrom_url = APR_ARRAY_IDX(suggestions, 0, const char *);
-
-  SVN_ERR(svn_client__target(source_p, copyfrom_url, &peg_revision, pool));
-  (*source_p)->revision.kind = svn_opt_revision_unspecified;
-
-  return SVN_NO_ERROR;
 }
 
 /* This implements the `svn_opt_subcommand_t' interface. */
@@ -207,13 +152,13 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   else
     {
       printf("Assuming source branch is copied-from source of target branch.\n");
-      SVN_ERR(find_source_branch(&source, target, ctx, pool));
+      SVN_ERR(svn_cl__find_merge_source_branch(&source, target, ctx, pool));
     }
 
   SVN_ERR(svn_client__resolve_target_location(source, NULL, ctx, pool));
 
-  printf("Source branch: %s\n", target_for_display(source, pool));
-  printf("Target branch: %s\n", target_for_display(target, pool));
+  printf("Source branch: %s\n", svn_cl__target_for_display(source, pool));
+  printf("Target branch: %s\n", svn_cl__target_for_display(target, pool));
 
   if (targets_are_same_branch(source, target, pool))
     {
