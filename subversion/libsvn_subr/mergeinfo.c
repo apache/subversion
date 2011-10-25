@@ -2224,11 +2224,11 @@ svn_mergeinfo__add_suffix_to_mergeinfo(svn_mergeinfo_t *out_mergeinfo,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
+      const char *fspath = svn__apr_hash_index_key(hi);
       apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
 
       apr_hash_set(*out_mergeinfo,
-                   svn_fspath__join(path, suffix_relpath, result_pool),
+                   svn_fspath__join(fspath, suffix_relpath, result_pool),
                    APR_HASH_KEY_STRING,
                    rangelist);
     }
