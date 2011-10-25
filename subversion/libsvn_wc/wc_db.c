@@ -8567,6 +8567,7 @@ commit_node(void *baton,
   apr_int64_t repos_id;
   const char *repos_relpath;
   apr_int64_t op_depth;
+  svn_wc__db_status_t old_presence;
 
     /* If we are adding a file or directory, then we need to get
      repository information from the parent node since "this node" does
@@ -8629,6 +8630,8 @@ commit_node(void *baton,
   if (cb->keep_changelist && have_act)
     changelist = svn_sqlite__column_text(stmt_act, 1, scratch_pool);
 
+  old_presence = svn_sqlite__column_token(stmt_info, 3, presence_map);
+
   /* ### other stuff?  */
 
   SVN_ERR(svn_sqlite__reset(stmt_info));
@@ -8684,8 +8687,10 @@ commit_node(void *baton,
   else
     parent_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
 
-  /* ### other presences? or reserve that for separate functions?  */
-  new_presence = svn_wc__db_status_normal;
+  /* Preserve any incomplete status */
+  new_presence = (old_presence == svn_wc__db_status_incomplete
+                  ? svn_wc__db_status_incomplete
+                  : svn_wc__db_status_normal);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_APPLY_CHANGES_TO_BASE_NODE));
