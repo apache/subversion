@@ -891,6 +891,21 @@ svn_fs_closest_copy(svn_fs_root_t **root_p, const char **path_p,
 }
 
 svn_error_t *
+svn_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
+                      svn_fs_root_t *root,
+                      const apr_array_header_t *paths,
+                      svn_mergeinfo_inheritance_t inherit,
+                      svn_boolean_t include_descendants,
+                      svn_boolean_t adjust_inherited_mergeinfo,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(root->vtable->get_mergeinfo(
+    catalog, root, paths, inherit, include_descendants,
+    adjust_inherited_mergeinfo, result_pool, scratch_pool));
+}
+
+svn_error_t *
 svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                      svn_fs_root_t *root,
                      const apr_array_header_t *paths,
@@ -901,7 +916,7 @@ svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
   return svn_error_trace(root->vtable->get_mergeinfo(catalog, root, paths,
                                                      inherit,
                                                      include_descendants,
-                                                     pool));
+                                                     TRUE, pool, pool));
 }
 
 svn_error_t *

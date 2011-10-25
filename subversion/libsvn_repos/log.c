@@ -794,8 +794,9 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
       const char *prev_path;
       svn_revnum_t appeared_rev, prev_rev;
       svn_fs_root_t *prev_root;
-      svn_mergeinfo_catalog_t catalog;
-      svn_mergeinfo_t prev_mergeinfo, mergeinfo, deleted, added;
+      svn_mergeinfo_catalog_t catalog, inherited_catalog;
+      svn_mergeinfo_t prev_mergeinfo, mergeinfo, deleted, added,
+        prev_inherited_mergeinfo, inherited_mergeinfo;
       apr_array_header_t *query_paths;
 
       svn_pool_clear(iterpool);
@@ -845,17 +846,56 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
           continue;
         }
       SVN_ERR(err);
+
+      /* Issue #4022 'svn log -g interprets change in inherited mergeinfo due
+         to move as a merge': A copy where the source and destination inherit
+         mergeinfo from the same parent means the inherited mergeinfo of the
+         source and destination will differ, but this diffrence is not
+         indicative of a merge unless the mergeinfo on the inherited parent
+         has actually changed.
+
+         To check for this we must fetch the "raw" previous inherited
+         mergeinfo and the "raw" mergeinfo @REV then compare these. */
+      SVN_ERR(svn_fs_get_mergeinfo2(&inherited_catalog, prev_root, query_paths,
+                                    svn_mergeinfo_nearest_ancestor, FALSE,
+                                    FALSE, /* adjust_inherited_mergeinfo */
+                                    iterpool, iterpool));
+
       prev_mergeinfo = apr_hash_get(catalog, prev_path, APR_HASH_KEY_STRING);
+      prev_inherited_mergeinfo = apr_hash_get(inherited_catalog, prev_path, APR_HASH_KEY_STRING);
 
       /* Fetch the current mergeinfo (as of REV, and including
          inherited stuff) for this path. */
       APR_ARRAY_IDX(query_paths, 0, const char *) = path;
       SVN_ERR(svn_fs_get_mergeinfo(&catalog, root, query_paths,
                                    svn_mergeinfo_inherited, FALSE, iterpool));
+
+      /* Issue #4022 again, fetch the raw inherited mergeinfo. */
+      SVN_ERR(svn_fs_get_mergeinfo2(&inherited_catalog, root, query_paths,
+                                    svn_mergeinfo_nearest_ancestor, FALSE,
+                                    FALSE, /* adjust_inherited_mergeinfo */
+                                    iterpool, iterpool));
+
       mergeinfo = apr_hash_get(catalog, path, APR_HASH_KEY_STRING);
+      inherited_mergeinfo = apr_hash_get(inherited_catalog, path, APR_HASH_KEY_STRING);
 
       if (!prev_mergeinfo && !mergeinfo)
         continue;
+
+      /* Last bit of issue #4022 checking. */
+      if (prev_inherited_mergeinfo && inherited_mergeinfo)
+        {
+          svn_boolean_t inherits_same_mergeinfo;
+
+          SVN_ERR(svn_mergeinfo__equals(&inherits_same_mergeinfo,
+                                        prev_inherited_mergeinfo,
+                                        inherited_mergeinfo,
+                                        TRUE, iterpool));
+          /* If a copy rather than an actual merge brought about an
+             inherited mergeinfo change then we are finished. */
+          if (inherits_same_mergeinfo)
+            continue;
+        }
 
       /* Compare, constrast, and combine the results. */
       SVN_ERR(svn_mergeinfo_diff2(&deleted, &added, prev_mergeinfo,
@@ -885,7 +925,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
       for (i = 0; i < paths->nelts; i++)
         {
           const char *path = APR_ARRAY_IDX(paths, i, const char *);
-          if (! svn_dirent_is_ancestor(path, changed_path))
+          if (! svn_fspath__is_ancestor(path, changed_path))
             continue;
           svn_pool_clear(iterpool);
           deleted = apr_hash_get(deleted_mergeinfo_catalog, key, klen);

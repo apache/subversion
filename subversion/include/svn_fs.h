@@ -1501,6 +1501,15 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  * @a inherit indicates whether to retrieve explicit,
  * explicit-or-inherited, or only inherited mergeinfo.
  *
+ * If @a adjust_inherited_mergeinfo is TRUE, then any inherited
+ * mergeinfo returned in @a *catalog is normalized to represent the
+ * inherited mergeinfo on the path doing the inheriting.  If
+ * @a adjust_inherited_mergeinfo is FALSE, then any inherited
+ * mergeinfo is the raw explicit mergeinfo from the nearest parent
+ * of the path with explicit mergeinfo, unadjusted for the path-wise
+ * difference between the path and its parent.  This may include
+ * non-inheritable mergeinfo.
+ *
  * If @a include_descendants is TRUE, then additionally return the
  * mergeinfo for any descendant of any element of @a paths which has
  * the #SVN_PROP_MERGEINFO property explicitly set on it.  (Note
@@ -1508,10 +1517,28 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  * paths; descendants of the elements in @a paths which get their
  * mergeinfo via inheritance are not included in @a *catalog.)
  *
- * Do any necessary temporary allocation in @a pool.
+ * Allocate @a *catalog in result_pool.  Do any necessary temporary
+ * allocations in @a scratch_pool.
  *
- * @since New in 1.5.
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
+                      svn_fs_root_t *root,
+                      const apr_array_header_t *paths,
+                      svn_mergeinfo_inheritance_t inherit,
+                      svn_boolean_t include_descendants,
+                      svn_boolean_t adjust_inherited_mergeinfo,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
+/**
+ * Same as svn_fs_get_mergeinfo2(), but with @a adjust_inherited_mergeinfo
+ * set always set to TRUE and only one pool.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                      svn_fs_root_t *root,

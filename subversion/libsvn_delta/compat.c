@@ -507,13 +507,13 @@ ev2_abort_edit(void *edit_baton,
   return svn_error_trace(svn_editor_abort(eb->editor));
 }
 
-svn_error_t *
-svn_delta_from_editor(const svn_delta_editor_t **deditor,
-                      void **dedit_baton,
-                      svn_editor_t *editor,
-                      svn_delta_fetch_props_func_t fetch_props_func,
-                      void *fetch_props_baton,
-                      apr_pool_t *pool)
+static svn_error_t *
+delta_from_editor(const svn_delta_editor_t **deditor,
+                  void **dedit_baton,
+                  svn_editor_t *editor,
+                  svn_delta_fetch_props_func_t fetch_props_func,
+                  void *fetch_props_baton,
+                  apr_pool_t *pool)
 {
   /* Static 'cause we don't want it to be on the stack. */
   static svn_delta_editor_t delta_editor = {
@@ -591,6 +591,7 @@ struct editor_baton
   void *fetch_kind_baton;
 
   struct operation root;
+  svn_boolean_t root_opened;
 
   apr_hash_t *paths;
   apr_pool_t *edit_pool;
@@ -742,6 +743,19 @@ build(struct editor_baton *eb,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+ensure_root_opened(struct editor_baton *eb)
+{
+  if (!eb->root_opened)
+    {
+      SVN_ERR(eb->deditor->open_root(eb->dedit_baton, SVN_INVALID_REVNUM,
+                                     eb->edit_pool, &eb->root.baton));
+      eb->root_opened = TRUE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* This implements svn_editor_cb_add_directory_t */
 static svn_error_t *
 add_directory_cb(void *baton,
@@ -752,6 +766,8 @@ add_directory_cb(void *baton,
                  apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
+
+  SVN_ERR(ensure_root_opened(eb));
 
   SVN_ERR(build(eb, ACTION_MKDIR, relpath, svn_kind_dir,
                 NULL, SVN_INVALID_REVNUM,
@@ -773,6 +789,8 @@ add_file_cb(void *baton,
   struct editor_baton *eb = baton;
   const char *tmp_filename;
   svn_stream_t *tmp_stream;
+
+  SVN_ERR(ensure_root_opened(eb));
 
   /* Spool the contents to a tempfile, and provide that to the driver. */
   SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_filename, NULL,
@@ -797,6 +815,10 @@ add_symlink_cb(void *baton,
                svn_revnum_t replaces_rev,
                apr_pool_t *scratch_pool)
 {
+  struct editor_baton *eb = baton;
+
+  SVN_ERR(ensure_root_opened(eb));
+
   return SVN_NO_ERROR;
 }
 
@@ -808,6 +830,10 @@ add_absent_cb(void *baton,
               svn_revnum_t replaces_rev,
               apr_pool_t *scratch_pool)
 {
+  struct editor_baton *eb = baton;
+
+  SVN_ERR(ensure_root_opened(eb));
+
   return SVN_NO_ERROR;
 }
 
@@ -821,6 +847,8 @@ set_props_cb(void *baton,
              apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
+
+  SVN_ERR(ensure_root_opened(eb));
 
   SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_none,
                 NULL, SVN_INVALID_REVNUM,
@@ -841,6 +869,8 @@ set_text_cb(void *baton,
   struct editor_baton *eb = baton;
   const char *tmp_filename;
   svn_stream_t *tmp_stream;
+
+  SVN_ERR(ensure_root_opened(eb));
 
   /* Spool the contents to a tempfile, and provide that to the driver. */
   SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_filename, NULL,
@@ -864,6 +894,10 @@ set_target_cb(void *baton,
               const char *target,
               apr_pool_t *scratch_pool)
 {
+  struct editor_baton *eb = baton;
+
+  SVN_ERR(ensure_root_opened(eb));
+
   return SVN_NO_ERROR;
 }
 
@@ -874,6 +908,10 @@ delete_cb(void *baton,
           svn_revnum_t revision,
           apr_pool_t *scratch_pool)
 {
+  struct editor_baton *eb = baton;
+
+  SVN_ERR(ensure_root_opened(eb));
+
   return SVN_NO_ERROR;
 }
 
@@ -886,6 +924,10 @@ copy_cb(void *baton,
         svn_revnum_t replaces_rev,
         apr_pool_t *scratch_pool)
 {
+  struct editor_baton *eb = baton;
+
+  SVN_ERR(ensure_root_opened(eb));
+
   return SVN_NO_ERROR;
 }
 
@@ -898,6 +940,10 @@ move_cb(void *baton,
         svn_revnum_t replaces_rev,
         apr_pool_t *scratch_pool)
 {
+  struct editor_baton *eb = baton;
+
+  SVN_ERR(ensure_root_opened(eb));
+
   return SVN_NO_ERROR;
 }
 
@@ -966,9 +1012,6 @@ complete_cb(void *baton,
   struct editor_baton *eb = baton;
   svn_error_t *err;
 
-  SVN_ERR(eb->deditor->open_root(eb->dedit_baton, SVN_INVALID_REVNUM,
-                                 eb->edit_pool, &eb->root.baton));
-
   /* Drive the tree we've created. */
   err = drive(&eb->root, eb->deditor, scratch_pool);
   if (!err)
@@ -990,8 +1033,6 @@ abort_cb(void *baton,
 
   /* We still need to drive anything we collected in the editor to this
      point. */
-  SVN_ERR(eb->deditor->open_root(eb->dedit_baton, SVN_INVALID_REVNUM,
-                                 eb->edit_pool, &eb->root.baton));
 
   /* Drive the tree we've created. */
   err = drive(&eb->root, eb->deditor, scratch_pool);
@@ -1009,16 +1050,16 @@ abort_cb(void *baton,
   return svn_error_trace(err);
 }
 
-svn_error_t *
-svn_editor_from_delta(svn_editor_t **editor_p,
-                      const svn_delta_editor_t *deditor,
-                      void *dedit_baton,
-                      svn_cancel_func_t cancel_func,
-                      void *cancel_baton,
-                      svn_delta_fetch_kind_func_t fetch_kind_func,
-                      void *fetch_kind_baton,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool)
+static svn_error_t *
+editor_from_delta(svn_editor_t **editor_p,
+                  const svn_delta_editor_t *deditor,
+                  void *dedit_baton,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  svn_delta_fetch_kind_func_t fetch_kind_func,
+                  void *fetch_kind_baton,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   svn_editor_t *editor;
   static const svn_editor_cb_many_t editor_cbs = {
@@ -1051,6 +1092,8 @@ svn_editor_from_delta(svn_editor_t **editor_p,
   eb->root.props = NULL;
   eb->root.copyfrom_revision = SVN_INVALID_REVNUM;
 
+  eb->root_opened = FALSE;
+
   SVN_ERR(svn_editor_create(&editor, eb, cancel_func, cancel_baton,
                             result_pool, scratch_pool));
   SVN_ERR(svn_editor_setcb_many(editor, &editor_cbs, scratch_pool));
@@ -1060,6 +1103,13 @@ svn_editor_from_delta(svn_editor_t **editor_p,
   return SVN_NO_ERROR;
 }
 
+svn_delta_shim_callbacks_t *
+svn_delta_shim_callbacks_default(apr_pool_t *result_pool)
+{
+  svn_delta_shim_callbacks_t *shim_callbacks = apr_pcalloc(result_pool,
+                                                     sizeof(*shim_callbacks));
+  return shim_callbacks;
+}
 
 /* Uncomment below to add editor shims throughout Subversion.  In it's
  * current state, that will likely break The World. */
@@ -1070,10 +1120,7 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
                          void **dedit_baton_out,
                          const svn_delta_editor_t *deditor_in,
                          void *dedit_baton_in,
-                         svn_delta_fetch_props_func_t fetch_props_func,
-                         void *fetch_props_baton,
-                         svn_delta_fetch_kind_func_t fetch_kind_func,
-                         void *fetch_kind_baton,
+                         svn_delta_shim_callbacks_t *shim_callbacks,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
@@ -1087,12 +1134,14 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
      a lot of overhead. */
   svn_editor_t *editor;
 
-  SVN_ERR(svn_editor_from_delta(&editor, deditor_in, dedit_baton_in,
-                                NULL, NULL, fetch_kind_func, fetch_kind_baton,
-                                result_pool, scratch_pool));
-  SVN_ERR(svn_delta_from_editor(deditor_out, dedit_baton_out, editor,
-                                fetch_props_func, fetch_props_baton,
-                                result_pool));
+  SVN_ERR(editor_from_delta(&editor, deditor_in, dedit_baton_in,
+                            NULL, NULL, shim_callbacks->fetch_kind_func,
+                            shim_callbacks->fetch_kind_baton,
+                            result_pool, scratch_pool));
+  SVN_ERR(delta_from_editor(deditor_out, dedit_baton_out, editor,
+                            shim_callbacks->fetch_props_func,
+                            shim_callbacks->fetch_props_baton,
+                            result_pool));
 
 #endif
   return SVN_NO_ERROR;

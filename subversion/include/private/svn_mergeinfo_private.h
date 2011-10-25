@@ -124,11 +124,25 @@ svn_mergeinfo__add_prefix_to_catalog(svn_mergeinfo_catalog_t *out_catalog,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
 
-/* Set *OUT_MERGEINFO to a deep copy of MERGEINFO with the relpath
+/* Set *OUT_MERGEINFO to a shallow copy of MERGEINFO with each source path
+   converted to a (URI-encoded) URL based on REPOS_ROOT_URL. *OUT_MERGEINFO
+   is declared as 'apr_hash_t *' because its key do not obey the rules of
+   'svn_mergeinfo_t'.
+
+   Allocate *OUT_MERGEINFO and the new keys in RESULT_POOL.  Use
+   SCRATCH_POOL for any temporary allocations. */
+svn_error_t *
+svn_mergeinfo__relpaths_to_urls(apr_hash_t **out_mergeinfo,
+                                svn_mergeinfo_t mergeinfo,
+                                const char *repos_root_url,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
+
+/* Set *OUT_MERGEINFO to a shallow copy of MERGEINFO with the relpath
    SUFFIX_RELPATH added to the end of each key path.
 
-   Allocate *OUT_MERGEINFO in RESULT_POOL.  Use SCRATCH_POOL for any
-   temporary allocations. */
+   Allocate *OUT_MERGEINFO and the new keys in RESULT_POOL.  Use
+   SCRATCH_POOL for any temporary allocations. */
 svn_error_t *
 svn_mergeinfo__add_suffix_to_mergeinfo(svn_mergeinfo_t *out_mergeinfo,
                                        svn_mergeinfo_t mergeinfo,

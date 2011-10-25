@@ -333,7 +333,9 @@ typedef struct root_vtable_t
                                 const apr_array_header_t *paths,
                                 svn_mergeinfo_inheritance_t inherit,
                                 svn_boolean_t include_descendants,
-                                apr_pool_t *pool);
+                                svn_boolean_t adjust_inherited_mergeinfo,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
 } root_vtable_t;
 
 
