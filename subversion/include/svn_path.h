@@ -509,8 +509,9 @@ svn_path_is_dotpath_present(const char *path);
  *       identify the remainder path.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
- * New code should use svn_dirent_is_child(), svn_uri_is_child(),
- * svn_relpath_is_child() or svn_fspath__is_child().
+ * For replacement functionality, see svn_dirent_skip_ancestor(),
+ * svn_dirent_is_child(), svn_uri_skip_ancestor(), and
+ * svn_relpath_skip_ancestor().
  */
 SVN_DEPRECATED
 const char *
