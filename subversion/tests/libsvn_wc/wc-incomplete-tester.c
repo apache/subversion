@@ -29,15 +29,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static
-svn_error_t *incomplete(const char *wc_path,
-                        const char *rev_str,
-                        const char *repos_relpath,
-                        apr_pool_t *pool)
+static svn_error_t *
+incomplete(const char *wc_path,
+           const char *rev_str,
+           const char *repos_relpath,
+           apr_pool_t *pool)
 {
   svn_wc_context_t *wc_ctx;
   const char *local_abspath;
-  svn_revnum_t revnum;
+  apr_int64_t revnum;
 
   SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
 
@@ -60,7 +60,7 @@ svn_error_t *incomplete(const char *wc_path,
   SVN_ERR(svn_wc__db_temp_op_start_directory_update(wc_ctx->db,
                                                     local_abspath,
                                                     repos_relpath,
-                                                    revnum,
+                                                    (svn_revnum_t)revnum,
                                                     pool));
 
   return SVN_NO_ERROR;
