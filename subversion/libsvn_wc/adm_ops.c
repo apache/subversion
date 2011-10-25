@@ -174,6 +174,7 @@ process_committed_leaf(svn_wc__db_t *db,
     }
 
   SVN_ERR_ASSERT(status == svn_wc__db_status_normal
+                 || status == svn_wc__db_status_incomplete
                  || status == svn_wc__db_status_added);
 
   if (kind != svn_kind_dir)
