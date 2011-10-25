@@ -50,7 +50,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1188652
+ * r1188652, r1188677, r1188762
    Fix issue 4042, commit incomplete directory asserts.
    Justification:
      Regression from 1.6.
