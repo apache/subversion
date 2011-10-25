@@ -2523,7 +2523,7 @@ verify_locks(const char *txn_name,
       /* If this path has already been verified as part of a recursive
          check of one of its parents, no need to do it again.  */
       if (last_recursed
-          && svn_fspath__is_child(last_recursed->data, path, subpool))
+          && svn_fspath__skip_ancestor(last_recursed->data, path))
         continue;
 
       /* Fetch the change associated with our path.  */
@@ -4349,10 +4349,7 @@ txn_body_history_prev(void *baton, trail_t *trail)
          the copy source.  Finally, if our current path doesn't meet
          one of these other criteria ... ### for now just fallback to
          the old copy hunt algorithm. */
-      if (strcmp(path, copy_dst) == 0)
-        remainder = "";
-      else
-        remainder = svn_fspath__is_child(copy_dst, path, trail->pool);
+      remainder = svn_fspath__skip_ancestor(copy_dst, path);
 
       if (remainder)
         {
@@ -4745,7 +4742,7 @@ prev_location(const char **prev_path,
               const char *path,
               apr_pool_t *pool)
 {
-  const char *copy_path, *copy_src_path, *remainder = "";
+  const char *copy_path, *copy_src_path, *remainder;
   svn_fs_root_t *copy_root;
   svn_revnum_t copy_src_rev;
 
@@ -4774,8 +4771,7 @@ prev_location(const char **prev_path,
   */
   SVN_ERR(base_copied_from(&copy_src_rev, &copy_src_path,
                            copy_root, copy_path, pool));
-  if (! strcmp(copy_path, path) == 0)
-    remainder = svn_fspath__is_child(copy_path, path, pool);
+  remainder = svn_fspath__skip_ancestor(copy_path, path);
   *prev_path = svn_fspath__join(copy_src_path, remainder, pool);
   *prev_rev = copy_src_rev;
   return SVN_NO_ERROR;

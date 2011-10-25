@@ -269,9 +269,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
     }
 
   /* given HREF of the form: BASE "/" RELATIVE, extract the relative portion */
-  relative = svn_urlpath__is_child(mc->base_href, mc->href->data, NULL);
-  if (! relative) /* the paths are equal */
-    relative = "";
+  relative = svn_urlpath__skip_ancestor(mc->base_href, mc->href->data);
 
   /* bump the resource */
   relative = svn_path_uri_decode(relative, pool);

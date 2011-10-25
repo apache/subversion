@@ -2587,7 +2587,7 @@ test_fspath_join(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_fspath_is_child(apr_pool_t *pool)
+test_fspath_skip_ancestor(apr_pool_t *pool)
 {
   int i, j;
 
@@ -2602,12 +2602,12 @@ test_fspath_is_child(apr_pool_t *pool)
 
   static const char * const
     remainders[COUNT_OF(paths)][COUNT_OF(paths)] = {
-    { 0,  "f",  "foo",  "foo/bar",  "foo/bars", "foo/bar/baz" },
-    { 0,  0,    0,      0,          0,          0             },
-    { 0,  0,    0,      "bar",      "bars",     "bar/baz"     },
-    { 0,  0,    0,      0,          0,          "baz"         },
-    { 0,  0,    0,      0,          0,          0             },
-    { 0,  0,    0,      0,          0,          0             },
+    { "", "f",  "foo",  "foo/bar",  "foo/bars", "foo/bar/baz" },
+    { 0,  "",   0,      0,          0,          0             },
+    { 0,  0,    "",     "bar",      "bars",     "bar/baz"     },
+    { 0,  0,    0,      "",         0,          "baz"         },
+    { 0,  0,    0,      0,          "",         0             },
+    { 0,  0,    0,      0,          0,          ""            },
   };
 
   for (i = 0; i < COUNT_OF(paths); i++)
@@ -2615,7 +2615,7 @@ test_fspath_is_child(apr_pool_t *pool)
       for (j = 0; j < COUNT_OF(paths); j++)
         {
           const char *remainder
-            = svn_fspath__is_child(paths[i], paths[j], pool);
+            = svn_fspath__skip_ancestor(paths[i], paths[j]);
 
           SVN_TEST_STRING_ASSERT(remainder, remainders[i][j]);
         }
@@ -2802,8 +2802,8 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_fspath__is_canonical"),
     SVN_TEST_PASS2(test_fspath_join,
                    "test svn_fspath__join"),
-    SVN_TEST_PASS2(test_fspath_is_child,
-                   "test svn_fspath__is_child"),
+    SVN_TEST_PASS2(test_fspath_skip_ancestor,
+                   "test svn_fspath__skip_ancestor"),
     SVN_TEST_PASS2(test_fspath_dirname_basename_split,
                    "test svn_fspath__dirname/basename/split"),
     SVN_TEST_PASS2(test_fspath_get_longest_ancestor,

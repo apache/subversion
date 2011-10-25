@@ -590,7 +590,7 @@ svn_repos__prev_location(svn_revnum_t *appeared_rev,
                          apr_pool_t *pool)
 {
   svn_fs_root_t *root, *copy_root;
-  const char *copy_path, *copy_src_path, *remainder = "";
+  const char *copy_path, *copy_src_path, *remainder;
   svn_revnum_t copy_src_rev;
 
   /* Initialize return variables. */
@@ -623,8 +623,7 @@ svn_repos__prev_location(svn_revnum_t *appeared_rev,
   */
   SVN_ERR(svn_fs_copied_from(&copy_src_rev, &copy_src_path,
                              copy_root, copy_path, pool));
-  if (! strcmp(copy_path, path) == 0)
-    remainder = svn_fspath__is_child(copy_path, path, pool);
+  remainder = svn_fspath__skip_ancestor(copy_path, path);
   if (prev_path)
     *prev_path = svn_fspath__join(copy_src_path, remainder, pool);
   if (appeared_rev)
