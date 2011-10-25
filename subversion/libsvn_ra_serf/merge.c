@@ -292,7 +292,7 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
           const char *href;
 
           href = apr_hash_get(info->props, "href", APR_HASH_KEY_STRING);
-          if (! svn_urlpath__is_ancestor(ctx->merge_url, href))
+          if (! svn_urlpath__skip_ancestor(ctx->merge_url, href))
             {
               return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                        _("A MERGE response for '%s' is not "
@@ -311,11 +311,9 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
 
               /* From the above check, we know that CTX->MERGE_URL is
                  an ancestor of HREF.  All that remains is to
-                 determine of HREF is the same as CTX->MERGE_URL, or --
-                 if not -- is relative value as a child thereof. */
-              href = svn_urlpath__is_child(ctx->merge_url, href, NULL);
-              if (! href)
-                href = "";
+                 determine if HREF is the same as CTX->MERGE_URL, or --
+                 if not -- its relative value as a child thereof. */
+              href = svn_urlpath__skip_ancestor(ctx->merge_url, href);
 
               checked_in = apr_hash_get(info->props, "checked-in",
                                         APR_HASH_KEY_STRING);
@@ -447,7 +445,7 @@ svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
       path.data = key;
       path.len = klen;
 
-      if (parent && !svn_relpath__is_ancestor(parent, key))
+      if (parent && !svn_relpath_skip_ancestor(parent, key))
         continue;
 
       svn_ra_serf__add_open_tag_buckets(body, alloc, "S:lock", NULL);

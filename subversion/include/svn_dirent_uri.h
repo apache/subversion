@@ -585,15 +585,6 @@ svn_dirent_is_child(const char *parent_dirent,
                     const char *child_dirent,
                     apr_pool_t *pool);
 
-/** Similar to svn_relpath_skip_ancestor(), except that if @a child_relpath is
- * the same as @a parent_relpath, it is not considered a child, so the result
- * is @c NULL; an empty string is never returned.
- */
-const char *
-svn_relpath__is_child(const char *parent_relpath,
-                      const char *child_relpath,
-                      apr_pool_t *pool);
-
 /** Return TRUE if @a parent_dirent is an ancestor of @a child_dirent or
  * the dirents are equal, and FALSE otherwise.
  *
@@ -605,13 +596,6 @@ svn_relpath__is_child(const char *parent_relpath,
 svn_boolean_t
 svn_dirent_is_ancestor(const char *parent_dirent,
                        const char *child_dirent);
-
-/** Return TRUE if @a parent_relpath is an ancestor of @a child_relpath or
- * the relpaths are equal, and FALSE otherwise.
- */
-svn_boolean_t
-svn_relpath__is_ancestor(const char *parent_relpath,
-                         const char *child_relpath);
 
 /** Return TRUE if @a parent_uri is an ancestor of @a child_uri or
  * the uris are equal, and FALSE otherwise.

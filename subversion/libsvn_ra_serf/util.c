@@ -2408,15 +2408,8 @@ svn_ra_serf__get_relative_path(const char **rel_path,
 
   decoded_root = svn_path_uri_decode(session->repos_root.path, pool);
   decoded_orig = svn_path_uri_decode(orig_path, pool);
-  if (strcmp(decoded_root, decoded_orig) == 0)
-    {
-      *rel_path = "";
-    }
-  else
-    {
-      *rel_path = svn_urlpath__is_child(decoded_root, decoded_orig, pool);
-      SVN_ERR_ASSERT(*rel_path != NULL);
-    }
+  *rel_path = svn_urlpath__skip_ancestor(decoded_root, decoded_orig);
+  SVN_ERR_ASSERT(*rel_path != NULL);
   return SVN_NO_ERROR;
 }
 

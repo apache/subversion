@@ -573,8 +573,9 @@ path_driver_cb_func(void **dir_baton,
                                                   struct copy_info);
           if (info->copyfrom_path)
             {
-              const char *relpath = svn_relpath__is_child(info->path,
-                                                          edit_path, pool);
+              const char *relpath = svn_relpath_skip_ancestor(info->path,
+                                                              edit_path);
+              SVN_ERR_ASSERT(relpath && *relpath);
               SVN_ERR(svn_fs_revision_root(&source_root,
                                            svn_fs_root_fs(root),
                                            info->copyfrom_rev, pool));

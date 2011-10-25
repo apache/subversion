@@ -496,6 +496,15 @@ copy_versioned_dir(svn_wc__db_t *db,
           /* Don't recurse on children while all we do is creating not-present
              children */
         }
+      else if (child_status == svn_wc__db_status_incomplete)
+        {
+          /* Should go ahead and copy incomplete to incomplete? Try to
+             copy as much as possible, or give up early? */
+          return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                                   _("Cannot handle status of '%s'"),
+                                   svn_dirent_local_style(src_abspath,
+                                                          iterpool));
+        }
       else
         {
           SVN_ERR_ASSERT(child_status == svn_wc__db_status_server_excluded);

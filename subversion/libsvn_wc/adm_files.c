@@ -503,7 +503,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
       /* ### comparing URLs, should they be canonicalized first? */
       if (strcmp(db_repos_uuid, repos_uuid)
           || strcmp(db_repos_root_url, repos_root_url)
-          || !svn_relpath__is_ancestor(db_repos_relpath, repos_relpath))
+          || !svn_relpath_skip_ancestor(db_repos_relpath, repos_relpath))
         {
           const char *copyfrom_root_url, *copyfrom_repos_relpath;
 

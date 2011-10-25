@@ -1441,28 +1441,6 @@ static const testcase_ancestor_t relpath_ancestor_tests[] =
     { "X:foo",          "X:bar",            NULL },
   };
 
-static svn_error_t *
-test_relpath_is_ancestor(apr_pool_t *pool)
-{
-  const testcase_ancestor_t *t;
-
-  for (t = relpath_ancestor_tests;
-       t < relpath_ancestor_tests + COUNT_OF(relpath_ancestor_tests);
-       t++)
-    {
-      svn_boolean_t retval;
-
-      retval = svn_relpath__is_ancestor(t->path1, t->path2);
-      if (!!t->result != retval)
-        return svn_error_createf
-          (SVN_ERR_TEST_FAILED, NULL,
-           "svn_relpath_is_ancestor (%s, %s) returned %s instead of %s",
-           t->path1, t->path2, retval ? "TRUE" : "FALSE",
-           t->result ? "TRUE" : "FALSE");
-    }
-  return SVN_NO_ERROR;
-}
-
 static const testcase_ancestor_t uri_ancestor_tests[] =
   {
     { "http://test",    "http://test",      "" },
@@ -1858,83 +1836,6 @@ test_dirent_is_child(apr_pool_t *pool)
 #undef NUM_TEST_PATHS
   return SVN_NO_ERROR;
 }
-
-static svn_error_t *
-test_relpath_is_child(apr_pool_t *pool)
-{
-  int i, j;
-
-  static const char * const paths[] = {
-    "",
-    "foo",
-    "foo/bar",
-    "foo/bars",
-    "foo/baz",
-    "foo/bar/baz",
-    "flu/blar/blaz",
-    "foo/bar/baz/bing/boom",
-    ".foo",
-    ":",
-    "foo2",
-    "food",
-    "bar",
-    "baz",
-    "ba",
-    "bad"
-    };
-
-  /* Maximum number of path[] items for all platforms */
-#define MAX_PATHS 32
-
-  static const char * const
-    remainders[COUNT_OF(paths)][MAX_PATHS] = {
-    { 0, "foo", "foo/bar", "foo/bars", "foo/baz", "foo/bar/baz",
-      "flu/blar/blaz", "foo/bar/baz/bing/boom", ".foo", ":", "foo2", "food",
-      "bar", "baz", "ba", "bad" },
-    { 0, 0, "bar", "bars", "baz", "bar/baz", 0, "bar/baz/bing/boom", 0, 0, 0,
-      0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  };
-
-  for (i = 0; i < COUNT_OF(paths); i++)
-    {
-      for (j = 0; j < COUNT_OF(paths); j++)
-        {
-          const char *remainder;
-
-          remainder = svn_dirent_is_child(paths[i], paths[j], pool);
-
-          if (strcmp(paths[j], "foodbar") == 0)
-            SVN_ERR_MALFUNCTION();
-
-          if (((remainder) && (! remainders[i][j]))
-              || ((! remainder) && (remainders[i][j]))
-              || (remainder && strcmp(remainder, remainders[i][j])))
-            return svn_error_createf
-              (SVN_ERR_TEST_FAILED, NULL,
-               "svn_relpath_is_child(%s, %s) returned '%s' instead of '%s'",
-               paths[i], paths[j],
-               remainder ? remainder : "(null)",
-               remainders[i][j] ? remainders[i][j] : "(null)" );
-        }
-    }
-
-#undef NUM_TEST_PATHS
-  return SVN_NO_ERROR;
-}
-
 
 static svn_error_t *
 test_uri_is_child(apr_pool_t *pool)
@@ -2686,7 +2587,7 @@ test_fspath_join(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_fspath_is_child(apr_pool_t *pool)
+test_fspath_skip_ancestor(apr_pool_t *pool)
 {
   int i, j;
 
@@ -2701,12 +2602,12 @@ test_fspath_is_child(apr_pool_t *pool)
 
   static const char * const
     remainders[COUNT_OF(paths)][COUNT_OF(paths)] = {
-    { 0,  "f",  "foo",  "foo/bar",  "foo/bars", "foo/bar/baz" },
-    { 0,  0,    0,      0,          0,          0             },
-    { 0,  0,    0,      "bar",      "bars",     "bar/baz"     },
-    { 0,  0,    0,      0,          0,          "baz"         },
-    { 0,  0,    0,      0,          0,          0             },
-    { 0,  0,    0,      0,          0,          0             },
+    { "", "f",  "foo",  "foo/bar",  "foo/bars", "foo/bar/baz" },
+    { 0,  "",   0,      0,          0,          0             },
+    { 0,  0,    "",     "bar",      "bars",     "bar/baz"     },
+    { 0,  0,    0,      "",         0,          "baz"         },
+    { 0,  0,    0,      0,          "",         0             },
+    { 0,  0,    0,      0,          0,          ""            },
   };
 
   for (i = 0; i < COUNT_OF(paths); i++)
@@ -2714,7 +2615,7 @@ test_fspath_is_child(apr_pool_t *pool)
       for (j = 0; j < COUNT_OF(paths); j++)
         {
           const char *remainder
-            = svn_fspath__is_child(paths[i], paths[j], pool);
+            = svn_fspath__skip_ancestor(paths[i], paths[j]);
 
           SVN_TEST_STRING_ASSERT(remainder, remainders[i][j]);
         }
@@ -2861,14 +2762,10 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_uri_get_longest_ancestor"),
     SVN_TEST_PASS2(test_dirent_is_child,
                    "test svn_dirent_is_child"),
-    SVN_TEST_PASS2(test_relpath_is_child,
-                   "test svn_relpath_is_child"),
     SVN_TEST_PASS2(test_uri_is_child,
                    "test svn_uri_is_child"),
     SVN_TEST_PASS2(test_dirent_is_ancestor,
                    "test svn_dirent_is_ancestor"),
-    SVN_TEST_PASS2(test_relpath_is_ancestor,
-                   "test svn_relpath_is_ancestor"),
     SVN_TEST_PASS2(test_uri_is_ancestor,
                    "test svn_uri_is_ancestor"),
     SVN_TEST_PASS2(test_dirent_skip_ancestor,
@@ -2905,8 +2802,8 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_fspath__is_canonical"),
     SVN_TEST_PASS2(test_fspath_join,
                    "test svn_fspath__join"),
-    SVN_TEST_PASS2(test_fspath_is_child,
-                   "test svn_fspath__is_child"),
+    SVN_TEST_PASS2(test_fspath_skip_ancestor,
+                   "test svn_fspath__skip_ancestor"),
     SVN_TEST_PASS2(test_fspath_dirname_basename_split,
                    "test svn_fspath__dirname/basename/split"),
     SVN_TEST_PASS2(test_fspath_get_longest_ancestor,

@@ -420,9 +420,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
         }
       else
         {
-          const char *childname = svn_relpath__is_child(dir_repos_relpath,
-                                                        ths->repos_relpath,
-                                                        NULL);
+          const char *childname
+            = svn_relpath_skip_ancestor(dir_repos_relpath, ths->repos_relpath);
 
           if (childname == NULL || strcmp(childname, child) != 0)
             {

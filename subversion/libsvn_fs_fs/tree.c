@@ -2925,7 +2925,7 @@ prev_location(const char **prev_path,
               const char *path,
               apr_pool_t *pool)
 {
-  const char *copy_path, *copy_src_path, *remainder_path = "";
+  const char *copy_path, *copy_src_path, *remainder_path;
   svn_fs_root_t *copy_root;
   svn_revnum_t copy_src_rev;
 
@@ -2954,8 +2954,7 @@ prev_location(const char **prev_path,
   */
   SVN_ERR(fs_copied_from(&copy_src_rev, &copy_src_path,
                          copy_root, copy_path, pool));
-  if (strcmp(copy_path, path) != 0)
-    remainder_path = svn_relpath__is_child(copy_path, path, pool);
+  remainder_path = svn_relpath_skip_ancestor(copy_path, path);
   *prev_path = svn_fspath__join(copy_src_path, remainder_path, pool);
   *prev_rev = copy_src_rev;
   return SVN_NO_ERROR;
@@ -3202,10 +3201,7 @@ history_prev(void *baton, apr_pool_t *pool)
          the copy source.  Finally, if our current path doesn't meet
          one of these other criteria ... ### for now just fallback to
          the old copy hunt algorithm. */
-      if (strcmp(path, copy_dst) == 0)
-        remainder_path = "";
-      else
-        remainder_path = svn_relpath__is_child(copy_dst, path, pool);
+      remainder_path = svn_fspath__skip_ancestor(copy_dst, path);
 
       if (remainder_path)
         {

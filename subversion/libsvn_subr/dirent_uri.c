@@ -1403,17 +1403,6 @@ svn_dirent_is_child(const char *parent_dirent,
 }
 
 const char *
-svn_relpath__is_child(const char *parent_relpath,
-                      const char *child_relpath,
-                      apr_pool_t *pool)
-{
-  /* assert(relpath_is_canonical(parent_relpath)); */
-  /* assert(relpath_is_canonical(child_relpath)); */
-
-  return is_child(type_relpath, parent_relpath, child_relpath, pool);
-}
-
-const char *
 svn_uri__is_child(const char *parent_uri,
                   const char *child_uri,
                   apr_pool_t *pool)
@@ -1544,12 +1533,6 @@ svn_boolean_t
 svn_dirent_is_ancestor(const char *parent_dirent, const char *child_dirent)
 {
   return svn_dirent_skip_ancestor(parent_dirent, child_dirent) != NULL;
-}
-
-svn_boolean_t
-svn_relpath__is_ancestor(const char *parent_relpath, const char *child_relpath)
-{
-  return svn_relpath_skip_ancestor(parent_relpath, child_relpath) != NULL;
 }
 
 svn_boolean_t
@@ -2459,21 +2442,6 @@ svn_fspath__is_root(const char *fspath, apr_size_t len)
 
 
 const char *
-svn_fspath__is_child(const char *parent_fspath,
-                     const char *child_fspath,
-                     apr_pool_t *pool)
-{
-  const char *result;
-  assert(svn_fspath__is_canonical(parent_fspath));
-  assert(svn_fspath__is_canonical(child_fspath));
-
-  result = svn_relpath__is_child(parent_fspath + 1, child_fspath + 1, pool);
-
-  assert(result == NULL || svn_relpath_is_canonical(result));
-  return result;
-}
-
-const char *
 svn_fspath__skip_ancestor(const char *parent_fspath,
                           const char *child_fspath)
 {
@@ -2481,16 +2449,6 @@ svn_fspath__skip_ancestor(const char *parent_fspath,
   assert(svn_fspath__is_canonical(child_fspath));
 
   return svn_relpath_skip_ancestor(parent_fspath + 1, child_fspath + 1);
-}
-
-svn_boolean_t
-svn_fspath__is_ancestor(const char *parent_fspath,
-                        const char *child_fspath)
-{
-  assert(svn_fspath__is_canonical(parent_fspath));
-  assert(svn_fspath__is_canonical(child_fspath));
-
-  return svn_relpath__is_ancestor(parent_fspath + 1, child_fspath + 1);
 }
 
 
