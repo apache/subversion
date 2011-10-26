@@ -69,14 +69,14 @@ Candidate changes:
      -0: rhuijben (r1188774 checks if the defining directory must be removed 
                    instead of the parent directory of the external)
 
- * r1189190
+ * r1189190, r1189395
    Restore backwards compatibility of 'svn status -u' in the javahl api to
    allow detecting deletes and adds.
    Justification:
      Without this patch only the text status is visible and restructuring
      changes aren't available.
    Votes:
-     +1: rhuijben
+     +1: markphip, rhuijben (r1189190 only)
 
  * r1189261
    Bump copyright year in Windows executables and DLLs to 2011 (from 2009).
