@@ -56,6 +56,7 @@ Candidate changes:
      Regression from 1.6.
    Votes:
      +1: philip
+     +0: rhuijben (Patch appears ok. Will bump to +1 after further review)
 
  * r1188774
    Fix issue #4044, "empty parents of externals not removed along with
@@ -65,6 +66,22 @@ Candidate changes:
      obstructing future updates which re-add the directory.
    Votes:
      +1: stsp
+     -0: rhuijben (r1188774 checks if the defining directory must be removed 
+                   instead of the parent directory of the external)
+
+ * r1189190
+   Restore backwards compatibility of 'svn status -u' in the javahl api to
+   allow detecting deletes and adds.
+   Justification:
+     Without this patch only the text status is visible and restructuring
+     changes aren't available.
+   Votes:
+     +1: rhuijben
+
+ * r1189261
+   Bump copyright year in Windows executables and DLLs to 2011 (from 2009).
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
