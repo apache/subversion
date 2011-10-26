@@ -1923,16 +1923,10 @@ svn_error_t *
 svn_mergeinfo_to_string(svn_string_t **output, svn_mergeinfo_t input,
                         apr_pool_t *pool)
 {
-  if (apr_hash_count(input) > 0)
-    {
-      svn_stringbuf_t *mergeinfo_buf;
-      SVN_ERR(mergeinfo_to_stringbuf(&mergeinfo_buf, input, NULL, pool));
-      *output = svn_stringbuf__morph_into_string(mergeinfo_buf);
-    }
-  else
-    {
-      *output = svn_string_create("", pool);
-    }
+  svn_stringbuf_t *mergeinfo_buf;
+
+  SVN_ERR(mergeinfo_to_stringbuf(&mergeinfo_buf, input, NULL, pool));
+  *output = svn_stringbuf__morph_into_string(mergeinfo_buf);
   return SVN_NO_ERROR;
 }
 
