@@ -91,7 +91,7 @@ get_dir_contents(apr_uint32_t dirent_fields,
     {
       svn_sort__item_t *item = &APR_ARRAY_IDX(array, i, svn_sort__item_t);
       const char *path;
-      svn_dirent_t *the_ent = apr_hash_get(tmpdirents, item->key, item->klen);
+      svn_dirent_t *the_ent = item->value;
       svn_lock_t *lock;
 
       svn_pool_clear(iterpool);
