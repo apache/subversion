@@ -73,6 +73,17 @@ svn_client__check_branch_root_marker(const char **marker,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
 
+/* Set *MERGEINFO to describe the merges into TARGET from (paths in the
+ * history of) SOURCE_BRANCH. */
+svn_error_t *
+svn_client__get_source_target_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_cat,
+                                        svn_client_target_t *target,
+                                        svn_client_target_t *source_branch,
+                                        svn_client_ctx_t *ctx,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -720,6 +720,125 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
 }
 
 
+/* Add into MERGEINFO_OUT (which must exist already) shallow copies of
+ * the parts of MERGEINFO_IN that match SEGMENT.
+ *
+ * Make any new allocations in RESULT_POOL. */
+static svn_error_t *
+filter_mergeinfo(svn_mergeinfo_t mergeinfo_out,
+                 svn_mergeinfo_t mergeinfo_in,
+                 svn_location_segment_t *segment,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  SVN_DBG(("filter_mergeinfo(in[%d], %8ld-%-8ld %s)\n",
+          apr_hash_count(mergeinfo_in),
+          segment->range_start, segment->range_end, segment->path));
+  for (hi = apr_hash_first(scratch_pool, mergeinfo_in); hi; hi = apr_hash_next(hi))
+    {
+      const char *src_path = svn__apr_hash_index_key(hi);
+      apr_array_header_t *ranges = svn__apr_hash_index_val(hi);
+
+      /* ### This needs to check the revision ranges. It presently just
+       *     assumes any matching path is OK. */
+      SVN_ERR_ASSERT(src_path[0] == '/');
+      if (svn_relpath_skip_ancestor(segment->path, src_path + 1))
+        {
+          apr_array_header_t *rangelist_out;
+          {
+            svn_string_t *ranges_string;
+            SVN_ERR(svn_rangelist_to_string(&ranges_string, ranges, scratch_pool));
+            SVN_DBG(("  %s[%d]: %s\n", src_path, ranges->nelts, ranges_string->data));
+          }
+          SVN_ERR(svn_client__rangelist_intersect_range(&rangelist_out, ranges,
+                                                        segment->range_start,
+                                                        segment->range_end,
+                                                        FALSE /* consider_inheritance */,
+                                                        result_pool, scratch_pool));
+
+          apr_hash_set(mergeinfo_out, src_path, APR_HASH_KEY_STRING,
+                       rangelist_out);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Remove from MERGEINFO_CAT all the (source-path, merge-range) entries
+ * that don't match the (svn_location_segment_t *) elements of SOURCE_LOCATIONS.
+ *
+ * Make any new allocations in RESULT_POOL. */
+static svn_error_t *
+filter_mergeinfo_catalog(svn_mergeinfo_catalog_t mergeinfo_cat,
+                         const apr_array_header_t *source_locations,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, mergeinfo_cat);
+       hi; hi = apr_hash_next(hi))
+    {
+      const char *path = svn__apr_hash_index_key(hi);
+      svn_mergeinfo_t mergeinfo_in = svn__apr_hash_index_val(hi);
+      svn_mergeinfo_t mergeinfo_out = apr_hash_make(result_pool);
+      int i;
+
+      for (i = 0; i < source_locations->nelts; i++)
+        {
+          svn_location_segment_t *segment
+            = APR_ARRAY_IDX(source_locations, i, svn_location_segment_t *);
+
+          SVN_ERR(filter_mergeinfo(mergeinfo_out, mergeinfo_in, segment,
+                                   result_pool, scratch_pool));
+        }
+
+      apr_hash_set(mergeinfo_cat, path, APR_HASH_KEY_STRING, mergeinfo_out);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__get_source_target_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_cat,
+                                        svn_client_target_t *target,
+                                        svn_client_target_t *source_branch,
+                                        svn_client_ctx_t *ctx,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *source_locations;
+
+  /* Find the source location-segments. */
+  {
+    svn_ra_session_t *ra_session;
+
+    SVN_ERR(svn_client__ra_session_from_target(&ra_session, NULL, NULL,
+                                               source_branch,
+                                               &source_branch->peg_revision,
+                                               ctx, scratch_pool));
+    SVN_ERR(svn_client__repos_location_segments(&source_locations, ra_session,
+                                                "", source_branch->repos_revnum,
+                                                source_branch->repos_revnum,
+                                                SVN_INVALID_REVNUM,
+                                                ctx, scratch_pool));
+  }
+
+  /* Find the target mergeinfo */
+  SVN_ERR(svn_client_get_mergeinfo_catalog(mergeinfo_cat,
+                                           target->abspath_or_url,
+                                           &target->peg_revision,
+                                           ctx, result_pool, scratch_pool));
+
+  /* Filter, keeping only the merges from SOURCE_BRANCH location segments. */
+  SVN_ERR(filter_mergeinfo_catalog(*mergeinfo_cat, source_locations,
+                                   result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
                                      svn_boolean_t *has_rev_zero_history,
