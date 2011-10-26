@@ -1471,3 +1471,37 @@ svn_cl__find_merge_source_branch(svn_client_target_t **source_p,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_cl__rangelist_to_string_elided(const char **ranges_string,
+                                   apr_array_header_t *ranges,
+                                   int max_ranges,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
+{
+  if (ranges->nelts <= max_ranges)
+    {
+      svn_string_t *str;
+
+      SVN_ERR(svn_rangelist_to_string(&str, ranges, result_pool));
+      *ranges_string = str->data;
+    }
+  else
+    {
+      /* Print in the form "FIRST,SECOND,...,LAST" */
+      int n_ranges = ranges->nelts;
+      svn_string_t *str1, *str2;
+
+      ranges = svn_rangelist_dup(ranges, scratch_pool);
+      ranges->nelts = max_ranges - 2;
+      SVN_ERR(svn_rangelist_to_string(&str1, ranges, scratch_pool));
+
+      APR_ARRAY_IDX(ranges, 0, svn_merge_range_t *)
+        = APR_ARRAY_IDX(ranges, n_ranges - 1, svn_merge_range_t *);
+      ranges->nelts = 1;
+      SVN_ERR(svn_rangelist_to_string(&str2, ranges, scratch_pool));
+      *ranges_string = apr_psprintf(result_pool, "%s,...,%s",
+                                    str1->data, str2->data);
+    }
+  return SVN_NO_ERROR;
+}

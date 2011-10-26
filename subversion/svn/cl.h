@@ -846,6 +846,16 @@ svn_cl__find_merge_source_branch(svn_client_target_t **source_p,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
+/* Pretty-print the rangelist RANGES. If the number N of ranges is more than
+ * MAX_RANGES, print the first few ranges, an ellipsis "...", and the last
+ * range, such that the total number of ranges printed is MAX_RANGES-1. */
+svn_error_t *
+svn_cl__rangelist_to_string_elided(const char **ranges_string,
+                                   apr_array_header_t *ranges,
+                                   int max_ranges,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
