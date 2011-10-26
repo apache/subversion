@@ -365,4 +365,22 @@ svn_client__mergeinfo_status(svn_boolean_t *mergeinfo_changes,
                              const char *local_abspath,
                              apr_pool_t *scratch_pool);
 
+/* Set *OUT_RANGELIST to the intersection of IN_RANGELIST with the simple
+ * (inheritable) revision range REV1:REV2, according to CONSIDER_INHERITANCE.
+ * If REV1 is equal to REV2, the result is an empty rangelist, otherwise
+ * REV1 must be less than REV2.
+ *
+ * Note: If CONSIDER_INHERITANCE is FALSE, the effect is to treat any non-
+ * inheritable input ranges as if they were inheritable.  If it is TRUE, the
+ * effect is to discard any non-inheritable input ranges.  Therefore the
+ * ranges in *OUT_RANGELIST will always be inheritable. */
+svn_error_t *
+svn_client__rangelist_intersect_range(apr_array_header_t **out_rangelist,
+                                      const apr_array_header_t *in_rangelist,
+                                      svn_revnum_t rev1,
+                                      svn_revnum_t rev2,
+                                      svn_boolean_t consider_inheritance,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
+
 #endif /* SVN_LIBSVN_CLIENT_MERGEINFO_H */

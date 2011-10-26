@@ -42,6 +42,7 @@
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_fspath.h"
+#include "private/svn_client_private.h"
 #include "client.h"
 #include "mergeinfo.h"
 #include "svn_private_config.h"
@@ -133,6 +134,34 @@ svn_client__record_wc_mergeinfo(const char *local_abspath,
       ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
     }
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__rangelist_intersect_range(apr_array_header_t **out_rangelist,
+                                      const apr_array_header_t *in_rangelist,
+                                      svn_revnum_t rev1,
+                                      svn_revnum_t rev2,
+                                      svn_boolean_t consider_inheritance,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(rev1 <= rev2);
+
+  if (rev1 < rev2)
+    {
+      apr_array_header_t *simple_rangelist =
+        svn_rangelist__initialize(rev1, rev2, TRUE, scratch_pool);
+
+      SVN_ERR(svn_rangelist_intersect(out_rangelist,
+                                      simple_rangelist, in_rangelist,
+                                      consider_inheritance, result_pool));
+    }
+  else
+    {
+      *out_rangelist = apr_array_make(result_pool, 0,
+                                      sizeof(svn_merge_range_t *));
+    }
   return SVN_NO_ERROR;
 }
 

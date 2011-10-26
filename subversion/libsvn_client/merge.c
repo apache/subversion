@@ -2908,43 +2908,6 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
     }
 }
 
-/* Set *OUT_RANGELIST to the intersection of IN_RANGELIST with the simple
- * (inheritable) revision range REV1:REV2, according to CONSIDER_INHERITANCE.
- * If REV1 is equal to REV2, the result is an empty rangelist, otherwise
- * REV1 must be less than REV2.
- *
- * Note: If CONSIDER_INHERITANCE is FALSE, the effect is to treat any non-
- * inheritable input ranges as if they were inheritable.  If it is TRUE, the
- * effect is to discard any non-inheritable input ranges.  Therefore the
- * ranges in *OUT_RANGELIST will always be inheritable. */
-static svn_error_t *
-rangelist_intersect_range(apr_array_header_t **out_rangelist,
-                          const apr_array_header_t *in_rangelist,
-                          svn_revnum_t rev1,
-                          svn_revnum_t rev2,
-                          svn_boolean_t consider_inheritance,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool)
-{
-  SVN_ERR_ASSERT(rev1 <= rev2);
-
-  if (rev1 < rev2)
-    {
-      apr_array_header_t *simple_rangelist =
-        svn_rangelist__initialize(rev1, rev2, TRUE, scratch_pool);
-
-      SVN_ERR(svn_rangelist_intersect(out_rangelist,
-                                      simple_rangelist, in_rangelist,
-                                      consider_inheritance, result_pool));
-    }
-  else
-    {
-      *out_rangelist = apr_array_make(result_pool, 0,
-                                      sizeof(svn_merge_range_t *));
-    }
-  return SVN_NO_ERROR;
-}
-
 /* Helper for fix_deleted_subtree_ranges().  Like fix_deleted_subtree_ranges()
    this function should only be called when honoring mergeinfo.
 
@@ -3128,22 +3091,20 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
               /* Find the intersection of CHILD->REMAINING_RANGES with the
                  range over which PRIMARY_URL@older_rev exists (ending at
                  the youngest revision at which it still exists). */
-              SVN_ERR(rangelist_intersect_range(&child->remaining_ranges,
-                                                child->remaining_ranges,
-                                                older_rev,
-                                                rev_primary_url_deleted - 1,
-                                                FALSE,
-                                                scratch_pool, scratch_pool));
+              SVN_ERR(svn_client__rangelist_intersect_range(
+                        &child->remaining_ranges, child->remaining_ranges,
+                        older_rev, rev_primary_url_deleted - 1,
+                        FALSE /* consider_inheritance */,
+                        scratch_pool, scratch_pool));
 
               /* Merge into CHILD->REMANING_RANGES the intersection of
                  PARENT->REMAINING_RANGES with the range beginning when
                  PRIMARY_URL@older_rev was deleted until younger_rev. */
-              SVN_ERR(rangelist_intersect_range(&deleted_rangelist,
-                                                parent->remaining_ranges,
-                                                rev_primary_url_deleted - 1,
-                                                peg_rev,
-                                                FALSE,
-                                                scratch_pool, scratch_pool));
+              SVN_ERR(svn_client__rangelist_intersect_range(
+                        &deleted_rangelist, parent->remaining_ranges,
+                        rev_primary_url_deleted - 1, peg_rev,
+                        FALSE /* consider_inheritance */,
+                        scratch_pool, scratch_pool));
               SVN_ERR(svn_rangelist_merge2(child->remaining_ranges,
                                            deleted_rangelist, scratch_pool,
                                            scratch_pool));
@@ -3197,18 +3158,20 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
          exists.  Since segment doesn't span older_rev:peg_rev we know
          PRIMARY_URL@peg_rev didn't come into existence until
          segment->range_start + 1. */
-      SVN_ERR(rangelist_intersect_range(&child->remaining_ranges,
-                                        child->remaining_ranges,
-                                        segment->range_start, peg_rev,
-                                        FALSE, scratch_pool, scratch_pool));
+      SVN_ERR(svn_client__rangelist_intersect_range(
+                &child->remaining_ranges, child->remaining_ranges,
+                segment->range_start, peg_rev,
+                FALSE /* consider_inheritance */,
+                scratch_pool, scratch_pool));
 
       /* Merge into CHILD->REMANING_RANGES the intersection of
          PARENT->REMAINING_RANGES with the range before PRIMARY_URL@peg_rev
          came into existence. */
-      SVN_ERR(rangelist_intersect_range(&non_existent_rangelist,
-                                        parent->remaining_ranges,
-                                        older_rev, segment->range_start,
-                                        FALSE, scratch_pool, scratch_pool));
+      SVN_ERR(svn_client__rangelist_intersect_range(
+                &non_existent_rangelist, parent->remaining_ranges,
+                older_rev, segment->range_start,
+                FALSE /* consider_inheritance */,
+                scratch_pool, scratch_pool));
       SVN_ERR(svn_rangelist_merge2(child->remaining_ranges,
                                    non_existent_rangelist, scratch_pool,
                                    scratch_pool));
