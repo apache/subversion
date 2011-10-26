@@ -116,8 +116,17 @@ svn_cl__merge(apr_getopt_t *os,
   */
   if (targets->nelts < 1)
     {
-      return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
-                              _("Merge source required"));
+      /* Infer the merge source automatically, assuming a sync merge. */
+      svn_client_target_t *source;
+      svn_client_target_t *target;
+
+      SVN_ERR(svn_client__target(&target, "", NULL, pool));
+      SVN_ERR(svn_cl__find_merge_source_branch(&source, target, ctx, pool));
+      SVN_ERR(svn_client__resolve_target_location(source, NULL, ctx, pool));
+      printf("Assuming source branch is copied-from source of target branch: '%s'\n",
+             svn_cl__target_for_display(source, pool));
+      peg_revision1 = source->peg_revision;
+      sourcepath1 = source->path_or_url;
     }
   else  /* Parse at least one, and possible two, sources. */
     {
