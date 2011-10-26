@@ -1595,6 +1595,24 @@ logs_for_mergeinfo_rangelist(const char *source_url,
 /*** Public APIs ***/
 
 svn_error_t *
+svn_client_get_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat_p,
+                                 const char *path_or_url,
+                                 const svn_opt_revision_t *peg_revision,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
+{
+  const char *repos_root;
+
+  SVN_ERR(get_mergeinfo(mergeinfo_cat_p, &repos_root, path_or_url,
+                        peg_revision, TRUE /* include_descendants */,
+                        FALSE /* ignore_invalid_mergeinfo */,
+                        ctx, result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo_p,
                                 const char *path_or_url,
                                 const svn_opt_revision_t *peg_revision,

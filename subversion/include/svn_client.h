@@ -3605,6 +3605,22 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
                                  apr_pool_t *pool);
 
 
+/** Set @a *mergeinfo_cat_p to a catalog of all the mergeinfo found in
+ * @a path_or_url at @a peg_revision, including inherited mergeinfo.
+ * If @a path_or_url is a working copy path and has no explicit mergeinfo,
+ * look into its parent working copy paths and into the repository if
+ * necessary to find the inherited mergeinfo.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_get_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat_p,
+                                 const char *path_or_url,
+                                 const svn_opt_revision_t *peg_revision,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
 /**
  * Set @a *mergeinfo to a hash mapping <tt>const char *</tt> merge
  * source URLs to <tt>apr_array_header_t *</tt> rangelists (arrays of
