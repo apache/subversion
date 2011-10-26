@@ -34,6 +34,7 @@
 #include "svn_error.h"
 #include "svn_error_codes.h"
 #include "svn_types.h"
+#include "svn_sorts.h"
 #include "cl.h"
 
 #include "private/svn_client_private.h"
@@ -57,7 +58,9 @@ print_log_rev(const svn_client_merged_rev_t *info,
   struct print_log_rev_baton_t *b = baton;
   const char *kind;
 
-  /* Don't print too much unless the user wants a verbose listing */
+  /* Don't print many entries unless the user wants a verbose listing */
+  /* ### For efficiency we should of course use the 'limit' option or
+   * implement the ability for this callback to signal a 'break'. */
   if (++b->count >= 5)
     {
       if (b->count == 5)
@@ -68,11 +71,11 @@ print_log_rev(const svn_client_merged_rev_t *info,
   /* Identify this source-rev as "original change" or "no-op" or "a merge" */
   if (info->is_merge)
     {
-      kind = "merge";
+      kind = (info->content_modified ? "merge" : "no-op merge");
     }
   else if (info->content_modified)
     {
-      kind = "operative (at least on some paths)";
+      kind = "change (at least on some paths)";
     }
   else
     {
@@ -92,6 +95,93 @@ targets_are_same_branch(svn_client_target_t *source,
                         apr_pool_t *pool)
 {
   return (strcmp(source->repos_relpath, target->repos_relpath) == 0);
+}
+
+/* */
+static const char *
+path_relative_to_branch(const char *src_path,
+                        apr_array_header_t *src_ranges,
+                        svn_client_target_t *source,
+                        /*source_segments*/
+                        apr_pool_t *scratch_pool)
+{
+  const char *src_relpath;
+
+  /* ### incomplete: should consider source_location_segments and ranges */
+  SVN_ERR_ASSERT_NO_RETURN(src_path[0] == '/');
+  src_relpath = svn_relpath_skip_ancestor(source->repos_relpath, src_path + 1);
+  if (src_relpath == NULL)
+    {
+      printf("warning: source path '%s' was not in the source branch\n",
+             src_path);
+      src_relpath = src_path;
+    }
+  return src_relpath;
+}
+
+/* Pretty-print the mergeinfo recorded on TARGET that pertains to merges
+ * from SOURCE. */
+static svn_error_t *
+print_recorded_ranges(svn_client_target_t *target,
+                      svn_client_target_t *source,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *scratch_pool)
+{
+  svn_mergeinfo_catalog_t mergeinfo_cat;
+  apr_array_header_t *mergeinfo_cat_sorted;
+  int i;
+
+  SVN_ERR(svn_client__get_source_target_mergeinfo(
+            &mergeinfo_cat, target, source, ctx, scratch_pool, scratch_pool));
+  mergeinfo_cat_sorted = svn_sort__hash(mergeinfo_cat,
+                                        svn_sort_compare_items_as_paths,
+                                        scratch_pool);
+  for (i = 0; i < mergeinfo_cat_sorted->nelts; i++)
+    {
+      svn_sort__item_t *item = &APR_ARRAY_IDX(mergeinfo_cat_sorted, i,
+                                              svn_sort__item_t);
+      const char *tgt_path = item->key;
+      svn_mergeinfo_t mergeinfo = item->value;
+      const char *tgt_relpath
+        = svn_relpath_skip_ancestor(target->repos_relpath, tgt_path);
+      
+      if (apr_hash_count(mergeinfo))
+        {
+          apr_hash_index_t *hi;
+
+          printf("  to target path '%s':\n",
+                 tgt_relpath[0] ? tgt_relpath : ".");
+          for (hi = apr_hash_first(scratch_pool, mergeinfo);
+               hi; hi = apr_hash_next(hi))
+            {
+              const char *src_path = svn__apr_hash_index_key(hi);
+              apr_array_header_t *ranges = svn__apr_hash_index_val(hi);
+              const char *ranges_string;
+              const char *src_relpath;
+
+              SVN_ERR(svn_cl__rangelist_to_string_abbreviated(
+                        &ranges_string, ranges, 4, scratch_pool, scratch_pool));
+
+              /* ### Is it possible (however unlikely) that a single src_path
+               * maps to more than one src_relpath because of the source
+               * branch root having moved during this range and yet the source
+               * node continuing to have the same path? */
+              src_relpath = path_relative_to_branch(src_path, ranges, source,
+                                                    /*source_segments*/
+                                                    scratch_pool);
+              printf("    %s", ranges_string);
+              if (ranges->nelts >= 4)
+                printf(" (%d ranges)", ranges->nelts);
+              if (strcmp(src_relpath, tgt_relpath) != 0)
+                printf(" from source path\n"
+                       "                 '%s'", src_relpath);
+              else
+                printf(" from same relative path");
+              printf("\n");
+            }
+        }
+    }
+  return SVN_NO_ERROR;
 }
 
 /* This implements the `svn_opt_subcommand_t' interface. */
@@ -157,9 +247,6 @@ svn_cl__mergeinfo(apr_getopt_t *os,
 
   SVN_ERR(svn_client__resolve_target_location(source, NULL, ctx, pool));
 
-  printf("Source branch: %s\n", svn_cl__target_for_display(source, pool));
-  printf("Target branch: %s\n", svn_cl__target_for_display(target, pool));
-
   if (targets_are_same_branch(source, target, pool))
     {
       return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
@@ -173,8 +260,13 @@ svn_cl__mergeinfo(apr_getopt_t *os,
     }
   else
     {
-      printf("Source and target are marked as branches of the same project.\n");
+      printf("Branch marker: '%s' (found on both source and target)\n",
+             marker);
     }
+
+  printf("Source branch: %s\n", svn_cl__target_for_display(source, pool));
+  printf("Target branch: %s\n", svn_cl__target_for_display(target, pool));
+  printf("\n");
 
   /* If no peg-rev was attached to a URL target, then assume HEAD; if
      no peg-rev was attached to a non-URL target, then assume BASE. */
@@ -185,6 +277,14 @@ svn_cl__mergeinfo(apr_getopt_t *os,
       else
         target->peg_revision.kind = svn_opt_revision_base;
     }
+
+  printf(_("Revision range that could be merged:\n"));
+  printf(  "  origin-%ld\n", source->repos_revnum);
+  printf("\n");
+
+  printf(_("Revision range(s) recorded as merged:\n"));
+  SVN_ERR(print_recorded_ranges(target, source, ctx, pool));
+  printf("\n");
 
   printf(_("Merged revisions:\n"));
   log_rev_baton.count = 0;
