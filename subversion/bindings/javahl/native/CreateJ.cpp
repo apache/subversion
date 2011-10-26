@@ -533,10 +533,10 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
       || text_status == svn_wc_status_conflicted)
     text_status = status->text_status;
 
-  enum svn_wc_status_kind repos_text_status = status->node_status;
+  enum svn_wc_status_kind repos_text_status = status->repos_node_status;
 
-  if (status->repos_node_status == svn_wc_status_modified
-      || status->repos_node_status == svn_wc_status_conflicted)
+  if (repos_text_status == svn_wc_status_modified
+      || repos_text_status == svn_wc_status_conflicted)
     repos_text_status = status->repos_text_status;
 
   jboolean jIsConflicted = (status->conflicted == 1) ? JNI_TRUE : JNI_FALSE;
