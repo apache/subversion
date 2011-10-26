@@ -1009,9 +1009,12 @@ svn_client_create_context(svn_client_ctx_t **ctx,
 /* */
 typedef struct svn_client_target_t
   {
+    /* The following fields are assumed to be initialized and valid.
+     * peg_revision->kind and revision->kind may be 'unspecified'. */
     const char *path_or_url;
     const char *abspath_or_url;
     svn_opt_revision_t peg_revision;
+
     svn_opt_revision_t revision;
 
     /* The following fields are the resolved location after contacting
@@ -1025,15 +1028,18 @@ typedef struct svn_client_target_t
     apr_pool_t *pool;
   } svn_client_target_t;
 
-/* Allocate a svn_client_target_t structure. Initialize pool and
- * abspath_or_url fields. */
+/** Set @a *target to a new #svn_client_target_t structure. Initialize the
+ * @c abspath_or_url field as well as those corresponding to @a path_or_url,
+ * @a peg_revision and @a pool.  @a peg_revision may be NULL meaning
+ * unspecified. */
 svn_error_t *
 svn_client__target(svn_client_target_t **target,
                    const char *path_or_url,
                    const svn_opt_revision_t *peg_revision,
                    apr_pool_t *pool);
 
-/* Like svn_opt_parse_path(). */
+/** Like svn_opt_parse_path() but constructs a new #svn_client_target_t
+ * structure. */
 svn_error_t *
 svn_client__parse_target(svn_client_target_t **target,
                          const char *target_string,
@@ -1053,7 +1059,7 @@ svn_client__resolve_location(const char **repo_root_url_p,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
-/* @a ra_session_p is an optional in/out parameter. If an RA session is
+/** @a ra_session_p is an optional in/out parameter. If an RA session is
  * needed and @a ra_session_p and @a *ra_session_p are both non-null, use
  * that session; otherwise open a new sesssion (allocated
  * in @a target->pool) and if @a ra_session_p is non-null then set

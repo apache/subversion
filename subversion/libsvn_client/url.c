@@ -70,6 +70,7 @@ svn_client__target(svn_client_target_t **target_p,
                    const svn_opt_revision_t *peg_revision,
                    apr_pool_t *pool)
 {
+  svn_opt_revision_t unspecified_rev = { svn_opt_revision_unspecified, { 0 } };
   *target_p = apr_pcalloc(pool, sizeof(**target_p));
 
   (*target_p)->pool = pool;
@@ -79,7 +80,7 @@ svn_client__target(svn_client_target_t **target_p,
   else
     svn_error_clear(svn_dirent_get_absolute(&(*target_p)->abspath_or_url,
                                     path_or_url, pool));
-  (*target_p)->peg_revision = *peg_revision;
+  (*target_p)->peg_revision = peg_revision ? *peg_revision : unspecified_rev;
   return SVN_NO_ERROR;
 }
 
