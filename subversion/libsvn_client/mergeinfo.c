@@ -1722,7 +1722,6 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
   /* Open RA sessions to the repository for the source and target.
    * ### TODO: As the source and target must be in the same repository, we
    * should share a single session, tracking the two URLs separately. */
-
   if (!finding_merged)
     {
       svn_revnum_t target_peg_revnum;
@@ -1732,7 +1731,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                                target_path_or_url, NULL,
                                                target_peg_revision,
                                                target_peg_revision,
-                                               ctx, scratch_pool));
+                                               ctx, sesspool));
 
       SVN_ERR(svn_client__get_history_as_mergeinfo(&target_history, NULL,
                                                    target_peg_revnum,
@@ -1741,7 +1740,6 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                                    target_session, ctx,
                                                    scratch_pool));
     }
-
   {
     svn_revnum_t source_peg_revnum;
 
@@ -1750,7 +1748,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                              source_path_or_url, NULL,
                                              source_peg_revision,
                                              source_peg_revision,
-                                             ctx, scratch_pool));
+                                             ctx, sesspool));
 
     SVN_ERR(svn_client__get_history_as_mergeinfo(&source_history, NULL,
                                                  source_peg_revnum,
@@ -1759,7 +1757,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                                  source_session, ctx,
                                                  scratch_pool));
   }
-
+  /* Close the source and target sessions. */
   svn_pool_destroy(sesspool);
 
   /* Separate the explicit or inherited mergeinfo on TARGET_PATH_OR_URL, and possibly
