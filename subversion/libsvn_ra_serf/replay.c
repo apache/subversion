@@ -55,7 +55,7 @@ typedef enum replay_state_e {
   ADD_FILE,
   DELETE_ENTRY,
   APPLY_TEXTDELTA,
-  CHANGE_PROP,
+  CHANGE_PROP
 } replay_state_e;
 
 typedef struct replay_info_t replay_info_t;

@@ -80,7 +80,7 @@ enum svn_svnrdump__longopt_t
     opt_non_interactive,
     opt_incremental,
     opt_trust_server_cert,
-    opt_version,
+    opt_version
   };
 
 #define SVN_SVNRDUMP__BASE_OPTIONS opt_config_dir, \

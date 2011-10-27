@@ -54,7 +54,7 @@ typedef enum blame_state_e {
   SET_PROP,
   REMOVE_PROP,
   MERGED_REVISION,
-  TXDELTA,
+  TXDELTA
 } blame_state_e;
 
 typedef struct blame_info_t {
