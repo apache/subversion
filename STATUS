@@ -74,21 +74,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1189580
-   Make sure no \r characters are encoded in strings in our generated sql
-   headers.
-   Justification:
-     Appears to work ok on Windows for some time, but was reported broken on
-     netware.
-   Votes:
-     +1: rhuijben, danielsh
-
  * r1189665
    Remove comma after last element of enum definitions.
    Justification:
      Unbreaks the build for some people.
    Votes:
      +1: danielsh
+     -0: philip (needs a branch for the 1.7 only comma at wc_db.h:157)
 
 Veto-blocked changes:
 =====================
@@ -123,3 +115,12 @@ Approved changes:
      changes aren't available.
    Votes:
      +1: markphip, rhuijben
+
+ * r1189580
+   Make sure no \r characters are encoded in strings in our generated sql
+   headers.
+   Justification:
+     Appears to work ok on Windows for some time, but was reported broken on
+     netware.
+   Votes:
+     +1: rhuijben, danielsh, philip
