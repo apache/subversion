@@ -61,6 +61,8 @@ print_log_rev(const svn_client_merged_rev_t *info,
   /* Don't print many entries unless the user wants a verbose listing */
   /* ### For efficiency we should of course use the 'limit' option or
    * implement the ability for this callback to signal a 'break'. */
+  if (b->count == 0)
+    printf("  warning: The 'no-op', 'merge' and 'change' classifications are currently fake.\n");
   if (++b->count >= 5)
     {
       if (b->count == 5)
