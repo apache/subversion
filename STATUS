@@ -74,6 +74,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1189580
+   Make sure no \r characters are encoded in strings in our generated sql
+   headers.
+   Justification:
+     Appears to work ok on Windows for some time, but was reported broken on
+     netware.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
