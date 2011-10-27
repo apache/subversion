@@ -123,7 +123,7 @@ typedef enum svn_cl__longopt_t {
   opt_diff,
   opt_internal_diff,
   opt_use_git_diff_format,
-  opt_allow_mixed_revisions,
+  opt_allow_mixed_revisions
 } svn_cl__longopt_t;
 
 
