@@ -49,11 +49,25 @@ struct print_log_rev_baton_t
   int count;
 };
 
+/* Implements the svn_log_entry_receiver_t interface. */
+static svn_error_t *
+print_log_rev(void *baton,
+              svn_log_entry_t *log_entry,
+              apr_pool_t *pool)
+{
+  if (log_entry->non_inheritable)
+    SVN_ERR(svn_cmdline_printf(pool, "r%ld*\n", log_entry->revision));
+  else
+    SVN_ERR(svn_cmdline_printf(pool, "r%ld\n", log_entry->revision));
+
+  return SVN_NO_ERROR;
+}
+
 /* Implements the svn_mergeinfo_receiver_t interface. */
 static svn_error_t *
-print_log_rev(const svn_client_merged_rev_t *info,
-              void *baton,
-              apr_pool_t *pool)
+print_merged_rev(const svn_client_merged_rev_t *info,
+                 void *baton,
+                 apr_pool_t *pool)
 {
   struct print_log_rev_baton_t *b = baton;
   const char *kind;
@@ -197,11 +211,6 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   apr_array_header_t *targets;
   svn_client_target_t *source;
   svn_client_target_t *target;
-  const char *marker;
-  /* Default to depth infinity. */
-  svn_depth_t depth = (opt_state->depth == svn_depth_unknown)
-                      ? svn_depth_infinity : opt_state->depth;
-  struct print_log_rev_baton_t log_rev_baton;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -254,53 +263,78 @@ svn_cl__mergeinfo(apr_getopt_t *os,
       return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                               _("Source and target are the same branch"));
     }
-  SVN_ERR(svn_client__check_branch_root_marker(&marker, source, target,
-                                               ctx, pool));
-  if (marker == NULL)
+
+  if (opt_state->show_revs == svn_cl__show_revs_merged
+      || opt_state->show_revs == svn_cl__show_revs_eligible)
     {
-      printf("warning: Source and target are not marked as branches.\n");
+      /* Print a simple list of revision numbers. This mode is backward-
+       * compatible with 1.5 and 1.6. */
+
+      /* Default to depth empty. */
+      svn_depth_t depth = (opt_state->depth == svn_depth_unknown)
+                          ? svn_depth_infinity : opt_state->depth;
+
+      SVN_ERR(svn_client_mergeinfo_log(
+                opt_state->show_revs == svn_cl__show_revs_merged,
+                target->abspath_or_url, &target->peg_revision,
+                source->abspath_or_url, &source->peg_revision,
+                print_log_rev, NULL /* baton */,
+                TRUE, depth, NULL, ctx, pool));
     }
   else
     {
-      printf("Branch marker: '%s' (found on both source and target)\n",
-             marker);
-    }
+      /* Summary mode */
+      const char *marker;
+      struct print_log_rev_baton_t log_rev_baton;
 
-  printf("Source branch: %s\n", svn_cl__target_for_display(source, pool));
-  printf("Target branch: %s\n", svn_cl__target_for_display(target, pool));
-  printf("\n");
-
-  /* If no peg-rev was attached to a URL target, then assume HEAD; if
-     no peg-rev was attached to a non-URL target, then assume BASE. */
-  if (target->peg_revision.kind == svn_opt_revision_unspecified)
-    {
-      if (svn_path_is_url(target->path_or_url))
-        target->peg_revision.kind = svn_opt_revision_head;
+      SVN_ERR(svn_client__check_branch_root_marker(&marker, source, target,
+                                                   ctx, pool));
+      if (marker == NULL)
+        {
+          printf("warning: Source and target are not marked as branches.\n");
+        }
       else
-        target->peg_revision.kind = svn_opt_revision_base;
+        {
+          printf("Branch marker: '%s' (found on both source and target)\n",
+                 marker);
+        }
+
+      printf("Source branch: %s\n", svn_cl__target_for_display(source, pool));
+      printf("Target branch: %s\n", svn_cl__target_for_display(target, pool));
+      printf("\n");
+
+      /* If no peg-rev was attached to a URL target, then assume HEAD; if
+         no peg-rev was attached to a non-URL target, then assume BASE. */
+      if (target->peg_revision.kind == svn_opt_revision_unspecified)
+        {
+          if (svn_path_is_url(target->path_or_url))
+            target->peg_revision.kind = svn_opt_revision_head;
+          else
+            target->peg_revision.kind = svn_opt_revision_base;
+        }
+
+      printf(_("Revision range that could be merged:\n"));
+      printf(  "  origin-%ld\n", source->repos_revnum);
+      printf("\n");
+
+      printf(_("Revision range(s) recorded as merged:\n"));
+      SVN_ERR(print_recorded_ranges(target, source, ctx, pool));
+      printf("\n");
+
+      printf(_("Merged revisions:\n"));
+      log_rev_baton.count = 0;
+      SVN_ERR(svn_client_mergeinfo_log2(TRUE /* finding_merged */,
+                                        target, source,
+                                        print_merged_rev, &log_rev_baton,
+                                        NULL, ctx, pool));
+
+      printf(_("Eligible revisions:\n"));
+      log_rev_baton.count = 0;
+      SVN_ERR(svn_client_mergeinfo_log2(FALSE /* finding_merged */,
+                                        target, source,
+                                        print_merged_rev, &log_rev_baton,
+                                        NULL, ctx, pool));
     }
-
-  printf(_("Revision range that could be merged:\n"));
-  printf(  "  origin-%ld\n", source->repos_revnum);
-  printf("\n");
-
-  printf(_("Revision range(s) recorded as merged:\n"));
-  SVN_ERR(print_recorded_ranges(target, source, ctx, pool));
-  printf("\n");
-
-  printf(_("Merged revisions:\n"));
-  log_rev_baton.count = 0;
-  SVN_ERR(svn_client_mergeinfo_log2(TRUE /* finding_merged */,
-                                    target, source,
-                                    print_log_rev, &log_rev_baton,
-                                    NULL, ctx, pool));
-
-  printf(_("Eligible revisions:\n"));
-  log_rev_baton.count = 0;
-  SVN_ERR(svn_client_mergeinfo_log2(FALSE /* finding_merged */,
-                                    target, source,
-                                    print_log_rev, &log_rev_baton,
-                                    NULL, ctx, pool));
 
   return SVN_NO_ERROR;
 }

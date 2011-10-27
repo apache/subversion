@@ -1513,7 +1513,7 @@ main(int argc, const char *argv[])
   opt_state.depth = svn_depth_unknown;
   opt_state.set_depth = svn_depth_unknown;
   opt_state.accept_which = svn_cl__accept_unspecified;
-  opt_state.show_revs = svn_cl__show_revs_merged;
+  opt_state.show_revs = svn_cl__show_revs_invalid;
 
   /* No args?  Show usage. */
   if (argc <= 1)
