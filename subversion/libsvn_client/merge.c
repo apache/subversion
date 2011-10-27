@@ -10740,11 +10740,12 @@ merge_reintegrate_locked(const char *source,
 
   /* Left side: trunk@youngest-trunk-rev-merged-to-branch-at-specified-peg-rev
    * Right side: branch@specified-peg-revision */
-  printf(_("The reintegrate merge will be equivalent to:\n"
-           "  merge --old=%s@%ld\n"
-           "        --new=%s@%ld\n"
-           "  ### (this is experimental)\n"),
-         url1, rev1, url2, rev2);
+  {
+    printf(_("The reintegrate merge will be equivalent to:\n"
+             "  merge ^/%s@%ld ^/%s@%ld\n"),
+           svn_uri_skip_ancestor(source_repos_root, url1, scratch_pool), rev1,
+           svn_uri_skip_ancestor(source_repos_root, url2, scratch_pool), rev2);
+  }
 
   /* Do the real merge! */
   /* ### TODO(reint): Make sure that one isn't the same line ancestor
