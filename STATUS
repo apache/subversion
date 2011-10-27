@@ -110,15 +110,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1189190, r1189395
-   Restore backwards compatibility of 'svn status -u' in the javahl api to
-   allow detecting deletes and adds.
-   Justification:
-     Without this patch only the text status is visible and restructuring
-     changes aren't available.
-   Votes:
-     +1: markphip, rhuijben
-
  * r1189580
    Make sure no \r characters are encoded in strings in our generated sql
    headers.
