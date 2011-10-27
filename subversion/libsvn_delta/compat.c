@@ -92,12 +92,24 @@ svn_compat_wrap_file_rev_handler(svn_file_rev_handler_t *handler2,
  * large amount of information in the dir batons, and then process it in the
  * close_directory() handler. */
 
+typedef svn_error_t *(*start_edit_func_t)(
+    void *baton,
+    svn_revnum_t base_revision,
+    apr_pool_t *result_pool,
+    void **root_baton);
+
 struct ev2_edit_baton
 {
   svn_editor_t *editor;
   apr_hash_t *paths;
   svn_revnum_t target_revision;
   apr_pool_t *edit_pool;
+
+  void *root_baton;
+
+  start_edit_func_t start_edit;
+  void *start_edit_baton;
+
   svn_delta_fetch_props_func_t fetch_props_func;
   void *fetch_props_baton;
 };
@@ -307,6 +319,11 @@ ev2_open_root(void *edit_baton,
   db->path = "";
 
   *root_baton = db;
+
+  if (eb->start_edit)
+    SVN_ERR(eb->start_edit(eb->start_edit_baton, base_revision, result_pool,
+                           &eb->root_baton));
+
   return SVN_NO_ERROR;
 }
 
@@ -507,12 +524,34 @@ ev2_abort_edit(void *edit_baton,
   return svn_error_trace(svn_editor_abort(eb->editor));
 }
 
+struct start_edit_baton
+{
+  const svn_delta_editor_t *deditor;
+  void *dedit_baton;
+};
+
+static svn_error_t *
+start_edit_func(void *baton,
+                svn_revnum_t base_revision,
+                apr_pool_t *result_pool,
+                void **root_baton)
+{
+  struct start_edit_baton *seb = baton;
+
+  SVN_ERR(seb->deditor->open_root(seb->dedit_baton, base_revision, result_pool,
+                                  root_baton));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 delta_from_editor(const svn_delta_editor_t **deditor,
                   void **dedit_baton,
                   svn_editor_t *editor,
                   svn_delta_fetch_props_func_t fetch_props_func,
                   void *fetch_props_baton,
+                  start_edit_func_t start_edit,
+                  void *start_edit_baton,
                   apr_pool_t *pool)
 {
   /* Static 'cause we don't want it to be on the stack. */
@@ -534,7 +573,7 @@ delta_from_editor(const svn_delta_editor_t **deditor,
       ev2_close_edit,
       ev2_abort_edit
     };
-  struct ev2_edit_baton *eb = apr_palloc(pool, sizeof(*eb));
+  struct ev2_edit_baton *eb = apr_pcalloc(pool, sizeof(*eb));
 
   eb->editor = editor;
   eb->paths = apr_hash_make(pool);
@@ -542,6 +581,9 @@ delta_from_editor(const svn_delta_editor_t **deditor,
   eb->edit_pool = pool;
   eb->fetch_props_func = fetch_props_func;
   eb->fetch_props_baton = fetch_props_baton;
+
+  eb->start_edit = start_edit;
+  eb->start_edit_baton = start_edit_baton;
 
   *dedit_baton = eb;
   *deditor = &delta_editor;
@@ -1133,6 +1175,10 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
      wrap that again back into a svn_delta_editor_t.  This introduces
      a lot of overhead. */
   svn_editor_t *editor;
+  struct start_edit_baton *seb = apr_palloc(result_pool, sizeof(*seb));
+
+  seb->deditor = deditor_in;
+  seb->dedit_baton = dedit_baton_in;
 
   SVN_ERR(editor_from_delta(&editor, deditor_in, dedit_baton_in,
                             NULL, NULL, shim_callbacks->fetch_kind_func,
@@ -1141,6 +1187,7 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
   SVN_ERR(delta_from_editor(deditor_out, dedit_baton_out, editor,
                             shim_callbacks->fetch_props_func,
                             shim_callbacks->fetch_props_baton,
+                            start_edit_func, seb,
                             result_pool));
 
 #endif
