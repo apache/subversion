@@ -81,7 +81,7 @@ Candidate changes:
      Appears to work ok on Windows for some time, but was reported broken on
      netware.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, danielsh
 
  * r1189665
    Remove comma after last element of enum definitions.
