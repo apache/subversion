@@ -110,11 +110,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1189580
-   Make sure no \r characters are encoded in strings in our generated sql
-   headers.
-   Justification:
-     Appears to work ok on Windows for some time, but was reported broken on
-     netware.
-   Votes:
-     +1: rhuijben, danielsh, philip

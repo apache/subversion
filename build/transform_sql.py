@@ -127,7 +127,7 @@ class Processor(object):
         # got something besides whitespace. write it out. include some whitespace
         # to separate the SQL commands. and a backslash to continue the string
         # onto the next line.
-        self.output.write('  "%s " \\\n' % line)
+        self.output.write('  "%s " \\\n' % line.rstrip())
 
     # previous line had a continuation. end the madness.
     self.close_define()
