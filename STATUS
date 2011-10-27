@@ -83,6 +83,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1189665
+   Remove comma after last element of enum definitions.
+   Justification:
+     Unbreaks the build for some people.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
