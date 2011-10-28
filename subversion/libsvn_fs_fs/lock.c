@@ -205,7 +205,7 @@ write_digest_file(apr_hash_t *children,
     }
   if (apr_hash_count(children))
     {
-      svn_stringbuf_t *children_list = svn_stringbuf_create("", pool);
+      svn_stringbuf_t *children_list = svn_string_create_empty(pool);
       for (hi = apr_hash_first(pool, children); hi; hi = apr_hash_next(hi))
         {
           svn_stringbuf_appendbytes(children_list,

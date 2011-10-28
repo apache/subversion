@@ -670,7 +670,7 @@ init_prop_target(prop_patch_target_t **prop_target,
     }
   content->existed = (value != NULL);
   new_prop_target->value = value;
-  new_prop_target->patched_value = svn_stringbuf_create("", result_pool);
+  new_prop_target->patched_value = svn_string_create_empty(result_pool);
 
 
   /* Wire up the read and write callbacks. */

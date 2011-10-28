@@ -461,7 +461,7 @@ change_dir_prop(void *dir_baton,
              are relative URLs, whereas svn:mergeinfo uses relative
              paths (not URI-encoded). */
           svn_error_t *err;
-          svn_stringbuf_t *mergeinfo_buf = svn_stringbuf_create("", pool);
+          svn_stringbuf_t *mergeinfo_buf = svn_string_create_empty(pool);
           svn_mergeinfo_t mergeinfo;
           int i;
           apr_array_header_t *sources =

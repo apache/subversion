@@ -208,7 +208,7 @@ static svn_error_t *
 encode_data(void *baton, const char *data, apr_size_t *len)
 {
   struct encode_baton *eb = baton;
-  svn_stringbuf_t *encoded = svn_stringbuf_create("", eb->scratch_pool);
+  svn_stringbuf_t *encoded = svn_string_create_empty(eb->scratch_pool);
   apr_size_t enclen;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -227,7 +227,7 @@ static svn_error_t *
 finish_encoding_data(void *baton)
 {
   struct encode_baton *eb = baton;
-  svn_stringbuf_t *encoded = svn_stringbuf_create("", eb->scratch_pool);
+  svn_stringbuf_t *encoded = svn_string_create_empty(eb->scratch_pool);
   apr_size_t enclen;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -267,7 +267,7 @@ svn_base64_encode_string2(const svn_string_t *str,
                           svn_boolean_t break_lines,
                           apr_pool_t *pool)
 {
-  svn_stringbuf_t *encoded = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *encoded = svn_string_create_empty(pool);
   unsigned char ingroup[3];
   size_t ingrouplen = 0;
   size_t linelen = 0;
@@ -461,7 +461,7 @@ decode_data(void *baton, const char *data, apr_size_t *len)
   svn_error_t *err = SVN_NO_ERROR;
 
   /* Decode this block of data.  */
-  decoded = svn_stringbuf_create("", db->scratch_pool);
+  decoded = svn_string_create_empty(db->scratch_pool);
   decode_bytes(decoded, data, *len, db->buf, &db->buflen, &db->done);
 
   /* Write the output, clean up, go home.  */
@@ -507,7 +507,7 @@ svn_base64_decode(svn_stream_t *output, apr_pool_t *pool)
 const svn_string_t *
 svn_base64_decode_string(const svn_string_t *str, apr_pool_t *pool)
 {
-  svn_stringbuf_t *decoded = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *decoded = svn_string_create_empty(pool);
   unsigned char ingroup[4];
   int ingrouplen = 0;
   svn_boolean_t done = FALSE;
@@ -531,7 +531,7 @@ base64_from_checksum(const svn_checksum_t *checksum, apr_pool_t *pool)
   unsigned char ingroup[3];
   size_t ingrouplen = 0;
   size_t linelen = 0;
-  checksum_str = svn_stringbuf_create("", pool);
+  checksum_str = svn_string_create_empty(pool);
 
   encode_bytes(checksum_str, checksum->digest,
                svn_checksum_size(checksum), ingroup, &ingrouplen,

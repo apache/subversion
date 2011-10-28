@@ -1755,9 +1755,9 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
       baton.header_encoding = header_encoding;
       baton.path[0] = original_path;
       baton.path[1] = modified_path;
-      baton.hunk = svn_stringbuf_create("", pool);
+      baton.hunk = svn_string_create_empty(pool);
       baton.show_c_function = show_c_function;
-      baton.extra_context = svn_stringbuf_create("", pool);
+      baton.extra_context = svn_string_create_empty(pool);
       baton.extra_skip_match = apr_array_make(pool, 3, sizeof(char **));
 
       c = apr_array_push(baton.extra_skip_match);

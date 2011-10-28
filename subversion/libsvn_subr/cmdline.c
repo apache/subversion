@@ -637,7 +637,7 @@ svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
   const char *encoding = NULL;
 
   if (*outstr == NULL)
-    *outstr = svn_stringbuf_create("", pool);
+    *outstr = svn_string_create_empty(pool);
 
   if (svn_xml_is_xml_safe(propval->data, propval->len))
     {

@@ -283,7 +283,7 @@ svn_cl__blame(apr_getopt_t *os,
   if (! opt_state->xml)
     SVN_ERR(svn_stream_for_stdout(&bl.out, pool));
   else
-    bl.sbuf = svn_stringbuf_create("", pool);
+    bl.sbuf = svn_string_create_empty(pool);
 
   bl.opt_state = opt_state;
 
