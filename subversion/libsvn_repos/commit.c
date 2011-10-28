@@ -782,6 +782,25 @@ abort_edit(void *edit_baton,
 }
 
 
+static svn_error_t *
+prop_fetch_func(apr_hash_t **props,
+                void *baton,
+                const char *path,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  struct edit_baton *eb = baton;
+  svn_fs_root_t *fs_root;
+
+  SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs,
+                               svn_fs_txn_base_revision(eb->txn),
+                               scratch_pool));
+  SVN_ERR(svn_fs_node_proplist(props, fs_root, path, result_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /*** Public interfaces. ***/
 
@@ -854,6 +873,9 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
 
   *edit_baton = eb;
   *editor = e;
+
+  shim_callbacks->fetch_props_func = prop_fetch_func;
+  shim_callbacks->fetch_props_baton = eb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                    shim_callbacks, pool, pool));
