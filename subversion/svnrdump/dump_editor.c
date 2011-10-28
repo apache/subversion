@@ -383,7 +383,7 @@ open_root(void *edit_baton,
 
   eb->props = apr_hash_make(eb->pool);
   eb->deleted_props = apr_hash_make(eb->pool);
-  eb->propstring = svn_stringbuf_create("", eb->pool);
+  eb->propstring = svn_stringbuf_create_empty(eb->pool);
 
   *root_baton = make_dir_baton(NULL, NULL, SVN_INVALID_REVNUM,
                                edit_baton, NULL, FALSE, eb->pool);

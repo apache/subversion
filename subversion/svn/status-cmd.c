@@ -106,7 +106,7 @@ print_conflict_stats(struct status_baton *sb, apr_pool_t *pool)
 static svn_error_t *
 print_start_target_xml(const char *target, apr_pool_t *pool)
 {
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "target",
                         "path", target, NULL);
@@ -122,7 +122,7 @@ static svn_error_t *
 print_finish_target_xml(svn_revnum_t repos_rev,
                         apr_pool_t *pool)
 {
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
 
   if (SVN_IS_VALID_REVNUM(repos_rev))
     {
@@ -355,7 +355,7 @@ svn_cl__status(apr_getopt_t *os,
       svn_stringbuf_t *buf;
 
       if (opt_state->xml)
-        buf = svn_stringbuf_create("", scratch_pool);
+        buf = svn_stringbuf_create_empty(scratch_pool);
 
       for (hi = apr_hash_first(scratch_pool, master_cl_hash); hi;
            hi = apr_hash_next(hi))

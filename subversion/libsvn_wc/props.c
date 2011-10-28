@@ -595,9 +595,9 @@ prop_conflict_from_skel(const svn_string_t **conflict_desc,
                                   incoming_base, scratch_pool);
 
   if (mine == NULL)
-    mine = svn_string_create("", scratch_pool);
+    mine = svn_string_create_empty(scratch_pool);
   if (incoming == NULL)
-    incoming = svn_string_create("", scratch_pool);
+    incoming = svn_string_create_empty(scratch_pool);
 
   /* Pick a suitable base for the conflict diff.
    * The incoming value is always a change,
@@ -607,7 +607,7 @@ prop_conflict_from_skel(const svn_string_t **conflict_desc,
       if (incoming_base)
         original = incoming_base;
       else
-        original = svn_string_create("", scratch_pool);
+        original = svn_string_create_empty(scratch_pool);
     }
   else if (incoming_base && svn_string_compare(original, mine))
     original = incoming_base;

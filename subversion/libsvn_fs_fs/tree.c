@@ -1648,7 +1648,7 @@ svn_fs_fs__commit_txn(const char **conflict_p,
    */
 
   svn_error_t *err = SVN_NO_ERROR;
-  svn_stringbuf_t *conflict = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *conflict = svn_stringbuf_create_empty(pool);
   svn_fs_t *fs = txn->fs;
 
   /* Limit memory usage when the repository has a high commit rate and
@@ -1756,7 +1756,7 @@ fs_merge(const char **conflict_p,
   dag_node_t *source, *ancestor;
   svn_fs_txn_t *txn;
   svn_error_t *err;
-  svn_stringbuf_t *conflict = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *conflict = svn_stringbuf_create_empty(pool);
 
   if (! target_root->is_txn_root)
     return SVN_FS__NOT_TXN(target_root);
@@ -2455,7 +2455,7 @@ apply_textdelta(void *baton, apr_pool_t *pool)
 
   /* Make a writable "string" stream which writes data to
      tb->target_string. */
-  tb->target_string = svn_stringbuf_create("", tb->pool);
+  tb->target_string = svn_stringbuf_create_empty(tb->pool);
   tb->string_stream = svn_stream_create(tb, tb->pool);
   svn_stream_set_write(tb->string_stream, write_to_string);
 
