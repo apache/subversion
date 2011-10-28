@@ -1197,7 +1197,7 @@ set_revprop(const char *prop_name, const char *filename,
             struct svnadmin_opt_state *opt_state, apr_pool_t *pool)
 {
   svn_repos_t *repos;
-  svn_string_t *prop_value = svn_string_create("", pool);
+  svn_string_t *prop_value = svn_string_create_empty(pool);
   svn_stringbuf_t *file_contents;
 
   SVN_ERR(svn_stringbuf_from_file2(&file_contents, filename, pool));

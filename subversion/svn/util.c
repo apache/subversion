@@ -326,7 +326,7 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       SVN_ERR(svn_subst_translate_cstring2(contents->data, &translated,
                                            APR_EOL_STR, FALSE,
                                            NULL, FALSE, pool));
-      translated_contents = svn_string_create("", pool);
+      translated_contents = svn_string_create_empty(pool);
       if (encoding)
         SVN_ERR(svn_utf_cstring_from_utf8_ex2(&translated_contents->data,
                                               translated, encoding, pool));
@@ -737,7 +737,7 @@ svn_cl__get_log_message(const char **log_msg,
       int i;
       svn_stringbuf_t *tmp_message = svn_stringbuf_dup(default_msg, pool);
       svn_error_t *err = SVN_NO_ERROR;
-      svn_string_t *msg_string = svn_string_create("", pool);
+      svn_string_t *msg_string = svn_string_create_empty(pool);
 
       for (i = 0; i < commit_items->nelts; i++)
         {

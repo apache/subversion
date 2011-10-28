@@ -255,7 +255,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   if (eb->version == 1)
     {
       svn_stringbuf_t *temp = svn_stringbuf_create_empty(pool);
-      svn_string_t *tempstr = svn_string_create("", pool);
+      svn_string_t *tempstr = svn_string_create_empty(pool);
       SVN_ERR(zlib_encode(window->new_data->data, window->new_data->len,
                           temp, eb->compression_level));
       tempstr->data = temp->data;

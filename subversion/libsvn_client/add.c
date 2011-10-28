@@ -293,7 +293,7 @@ svn_client__get_auto_props(apr_hash_t **properties,
       if (executable)
         apr_hash_set(autoprops.properties, SVN_PROP_EXECUTABLE,
                      strlen(SVN_PROP_EXECUTABLE),
-                     svn_string_create("", pool));
+                     svn_string_create_empty(pool));
     }
 
   *mimetype = autoprops.mimetype;

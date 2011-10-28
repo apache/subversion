@@ -1920,7 +1920,7 @@ svn_mergeinfo_to_string(svn_string_t **output, svn_mergeinfo_t input,
     }
   else
     {
-      *output = svn_string_create("", pool);
+      *output = svn_string_create_empty(pool);
     }
   return SVN_NO_ERROR;
 }
@@ -2321,7 +2321,7 @@ svn_mergeinfo__to_formatted_string(svn_string_t **output,
 #endif
 
   *output = output_buf ? svn_stringbuf__morph_into_string(output_buf)
-                       : svn_string_create("", pool);
+                       : svn_string_create_empty(pool);
   return SVN_NO_ERROR;
 }
 
