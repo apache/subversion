@@ -1842,7 +1842,7 @@ svn_rangelist_to_string(svn_string_t **output,
                         const apr_array_header_t *rangelist,
                         apr_pool_t *pool)
 {
-  svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *buf = svn_string_create_empty(pool);
 
   if (rangelist->nelts > 0)
     {
@@ -1879,7 +1879,7 @@ mergeinfo_to_stringbuf(svn_stringbuf_t **output,
                        const char *prefix,
                        apr_pool_t *pool)
 {
-  *output = svn_stringbuf_create("", pool);
+  *output = svn_string_create_empty(pool);
 
   if (apr_hash_count(input) > 0)
     {
@@ -2248,7 +2248,7 @@ svn_mergeinfo__catalog_to_formatted_string(svn_string_t **output,
       apr_array_header_t *sorted_catalog =
         svn_sort__hash(catalog, svn_sort_compare_items_as_paths, pool);
 
-      output_buf = svn_stringbuf_create("", pool);
+      output_buf = svn_string_create_empty(pool);
       for (i = 0; i < sorted_catalog->nelts; i++)
         {
           svn_sort__item_t elt =

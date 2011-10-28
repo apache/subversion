@@ -396,7 +396,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
       *eof = TRUE;
       if (eol)
         *eol = NULL;
-      *stringbuf = svn_stringbuf_create("", result_pool);
+      *stringbuf = svn_string_create_empty(result_pool);
       return SVN_NO_ERROR;
     }
 
@@ -490,7 +490,7 @@ svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
       *eof = TRUE;
       if (eol)
         *eol = NULL;
-      *stringbuf = svn_stringbuf_create("", result_pool);
+      *stringbuf = svn_string_create_empty(result_pool);
       return SVN_NO_ERROR;
     }
 

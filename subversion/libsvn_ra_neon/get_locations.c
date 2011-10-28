@@ -138,7 +138,7 @@ svn_ra_neon__get_locations(svn_ra_session_t *session,
 
   *locations = apr_hash_make(pool);
 
-  request_body = svn_stringbuf_create("", pool);
+  request_body = svn_string_create_empty(pool);
   svn_stringbuf_appendcstr(request_body,
                            "<?xml version=\"1.0\" encoding=\"utf-8\"?>" DEBUG_CR
                            "<S:get-locations xmlns:S=\"" SVN_XML_NAMESPACE

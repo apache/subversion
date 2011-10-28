@@ -704,9 +704,9 @@ svn_error_t * svn_ra_neon__merge_activity(svn_revnum_t *new_rev,
   merge_ctx_t mc = { 0 };
   const char *body;
   apr_hash_t *extra_headers = NULL;
-  svn_stringbuf_t *lockbuf = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *lockbuf = svn_string_create_empty(pool);
 
-  mc.cdata = svn_stringbuf_create("", pool);
+  mc.cdata = svn_string_create_empty(pool);
   mc.pool = pool;
   mc.scratchpool = svn_pool_create(pool);
   mc.base_href = repos_url;

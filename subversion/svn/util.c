@@ -876,7 +876,7 @@ svn_cl__get_log_message(const char **log_msg,
                 {
                   SVN_ERR(svn_io_remove_file2(lmb->tmpfile_left, FALSE, pool));
                   *tmp_file = lmb->tmpfile_left = NULL;
-                  message = svn_stringbuf_create("", pool);
+                  message = svn_string_create_empty(pool);
                 }
 
               /* If the user chooses anything else, the loop will
@@ -1058,7 +1058,7 @@ svn_error_t *
 svn_cl__xml_print_header(const char *tagname,
                          apr_pool_t *pool)
 {
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_string_create_empty(pool);
 
   /* <?xml version="1.0" encoding="UTF-8"?> */
   svn_xml_make_header2(&sb, "UTF-8", pool);
@@ -1074,7 +1074,7 @@ svn_error_t *
 svn_cl__xml_print_footer(const char *tagname,
                          apr_pool_t *pool)
 {
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_string_create_empty(pool);
 
   /* "</TAGNAME>" */
   svn_xml_make_close_tag(&sb, pool, tagname);
@@ -1303,7 +1303,7 @@ svn_cl__indent_string(const char *str,
                       const char *indent,
                       apr_pool_t *pool)
 {
-  svn_stringbuf_t *out = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *out = svn_string_create_empty(pool);
   const char *line;
 
   while ((line = next_line(&str, pool)))

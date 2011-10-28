@@ -1285,7 +1285,7 @@ svn_ra_print_ra_libraries(svn_stringbuf_t **descriptions,
                           void *ra_baton,
                           apr_pool_t *pool)
 {
-  *descriptions = svn_stringbuf_create("", pool);
+  *descriptions = svn_string_create_empty(pool);
   return svn_ra_print_modules(*descriptions, pool);
 }
 

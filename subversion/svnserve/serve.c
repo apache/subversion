@@ -3072,7 +3072,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   apr_array_header_t *caplist, *cap_words;
   server_baton_t b;
   fs_warning_baton_t warn_baton;
-  svn_stringbuf_t *cap_log = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *cap_log = svn_string_create_empty(pool);
 
   b.tunnel = params->tunnel;
   b.tunnel_user = get_tunnel_user(params, pool);
