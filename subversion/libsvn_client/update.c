@@ -389,7 +389,9 @@ update_internal(svn_revnum_t *result_rev,
      invalid revnum, that means RA will use the latest revision.  */
   SVN_ERR(svn_ra_do_update2(ra_session, &reporter, &report_baton,
                             revnum, target,
-                            depth_is_sticky ? depth : svn_depth_unknown,
+                            (!server_supports_depth || depth_is_sticky
+                             ? depth
+                             : svn_depth_unknown),
                             FALSE, update_editor, update_edit_baton, pool));
 
   /* Drive the reporter structure, describing the revisions within
