@@ -24,16 +24,18 @@ Candidate changes:
      -0: stsp (we can backport these when we need to)
      -0: gstein
 
- * r1186944, r1186981, r1187676
+ * r1186944, r1186981, r1186983, r1187676
    Fix an assertion failure when a symlink is updated.
    Justification:
      Regression in 1.7.0.
    Notes:
      r1186944 is the actual fix, including a new test
      r1186981 fixes spurious failures of the new test
+     r1186983 whitespace to avoid conflict
      r1187676 is a cosmetic follow-up tweak
    Votes:
-     +1: stsp
+     +1: stsp (not r1186983)
+     +1: philip
 
  * r1187695
    Have mod_dav_svn ignore non-Subversion POST requests.
@@ -82,8 +84,7 @@ Candidate changes:
      After merging, run:
      perl -pi -e 's/^(\s*svn_wc__db_kind_unknown), *$/\1/' subversion/libsvn_wc/wc_db.h
    Votes:
-     +1: danielsh
-     -0: philip (needs a branch for the 1.7 only comma at wc_db.h:157)
+     +1: danielsh, philip
 
 Veto-blocked changes:
 =====================
