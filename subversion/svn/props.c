@@ -156,7 +156,7 @@ svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
   apr_hash_index_t *hi;
 
   if (*outstr == NULL)
-    *outstr = svn_stringbuf_create("", pool);
+    *outstr = svn_stringbuf_create_empty(pool);
 
   for (hi = apr_hash_first(pool, prop_hash); hi; hi = apr_hash_next(hi))
     {

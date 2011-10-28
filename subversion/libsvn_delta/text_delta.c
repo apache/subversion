@@ -150,7 +150,7 @@ compute_window(const char *data, apr_size_t source_len, apr_size_t target_len,
   svn_txdelta_window_t *window;
 
   /* Compute the delta operations. */
-  build_baton.new_data = svn_stringbuf_create("", pool);
+  build_baton.new_data = svn_stringbuf_create_empty(pool);
 
   if (source_len == 0)
     svn_txdelta__insert_op(&build_baton, svn_txdelta_new, 0, target_len, data,

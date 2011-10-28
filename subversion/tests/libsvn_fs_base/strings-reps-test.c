@@ -360,7 +360,7 @@ verify_expected_record(svn_fs_t *fs,
                              size, expected_len);
 
   /* Read the string back in 100-byte chunks. */
-  text = svn_stringbuf_create("", trail->pool);
+  text = svn_stringbuf_create_empty(trail->pool);
   while (1)
     {
       size = sizeof(buf);

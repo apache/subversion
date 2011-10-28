@@ -914,7 +914,7 @@ svn_ra_serf__handle_discard_body(serf_request_t *request,
               server_err->error = svn_error_create(APR_SUCCESS, NULL, NULL);
               server_err->has_xml_response = TRUE;
               server_err->contains_precondition_error = FALSE;
-              server_err->cdata = svn_stringbuf_create("", pool);
+              server_err->cdata = svn_stringbuf_create_empty(pool);
               server_err->collect_cdata = FALSE;
               server_err->parser.pool = server_err->error->pool;
               server_err->parser.user_data = server_err;
@@ -1182,7 +1182,7 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
           server_err->error = svn_error_create(APR_SUCCESS, NULL, NULL);
           server_err->has_xml_response = TRUE;
           server_err->contains_precondition_error = FALSE;
-          server_err->cdata = svn_stringbuf_create("", server_err->error->pool);
+          server_err->cdata = svn_stringbuf_create_empty(server_err->error->pool);
           server_err->collect_cdata = FALSE;
           server_err->parser.pool = server_err->error->pool;
           server_err->parser.user_data = server_err;
