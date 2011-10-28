@@ -132,6 +132,19 @@ create_string(const char *data, apr_size_t size,
   return new_string;
 }
 
+static char empty_buffer[1] = {0};
+  
+svn_string_t *
+svn_string_create_empty(apr_pool_t *pool)
+{
+  svn_string_t *new_string = apr_palloc(pool, sizeof(*new_string));
+  new_string->data = empty_buffer;
+  new_string->len = 0;
+
+  return new_string;
+}
+
+
 svn_string_t *
 svn_string_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
 {
@@ -284,8 +297,6 @@ create_stringbuf(char *data, apr_size_t size, apr_size_t blocksize,
   return new_string;
 }
 
-static char empty_buffer[1] = {0};
-  
 svn_stringbuf_t *
 svn_stringbuf_create_empty(apr_pool_t *pool)
 {

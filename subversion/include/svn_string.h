@@ -129,6 +129,12 @@ typedef struct svn_stringbuf_t
 svn_string_t *
 svn_string_create(const char *cstring, apr_pool_t *pool);
 
+/** Create a truely empty string object (length and blocksize are 0)
+ * @since New in 1.7.
+ */
+svn_string_t *
+svn_string_create_empty(apr_pool_t *pool);
+
 /** Create a new bytestring containing a generic string of bytes
  * (NOT NULL-terminated) */
 svn_string_t *
