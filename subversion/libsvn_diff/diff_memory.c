@@ -584,7 +584,7 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
       baton.output_stream = output_stream;
       baton.pool = svn_pool_create(pool);
       baton.header_encoding = header_encoding;
-      baton.hunk = svn_string_create_empty(pool);
+      baton.hunk = svn_stringbuf_create_empty(pool);
       baton.hunk_delimiter = hunk_delimiter;
 
       SVN_ERR(svn_utf_cstring_from_utf8_ex2

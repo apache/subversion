@@ -424,7 +424,7 @@ svn_cl__print_status_xml(const char *path,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool)
 {
-  svn_stringbuf_t *sb = svn_string_create_empty(pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
   apr_hash_t *att_hash;
   const char *local_abspath = status->local_abspath;
   svn_boolean_t tree_conflicted = FALSE;

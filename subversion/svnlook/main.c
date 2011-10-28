@@ -921,7 +921,7 @@ print_diff_tree(svn_fs_root_t *root,
   if (! node)
     return SVN_NO_ERROR;
 
-  header = svn_string_create_empty(pool);
+  header = svn_stringbuf_create_empty(pool);
 
   /* Print copyfrom history for the top node of a copied tree. */
   if ((SVN_IS_VALID_REVNUM(node->copyfrom_rev))

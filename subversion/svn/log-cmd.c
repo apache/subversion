@@ -432,7 +432,7 @@ log_entry_receiver_xml(void *baton,
 {
   struct log_receiver_baton *lb = baton;
   /* Collate whole log message into sb before printing. */
-  svn_stringbuf_t *sb = svn_string_create_empty(pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
   char *revstr;
   const char *author;
   const char *date;

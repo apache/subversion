@@ -67,7 +67,7 @@ test_stream_from_string(apr_pool_t *pool)
       apr_size_t len;
 
       inbuf = svn_stringbuf_create(strings[i], subpool);
-      outbuf = svn_string_create_empty(subpool);
+      outbuf = svn_stringbuf_create_empty(subpool);
       stream = svn_stream_from_stringbuf(inbuf, subpool);
       len = TEST_BUF_SIZE;
       while (len == TEST_BUF_SIZE)
@@ -94,7 +94,7 @@ test_stream_from_string(apr_pool_t *pool)
       apr_size_t amt_read, len;
 
       inbuf = svn_stringbuf_create(strings[i], subpool);
-      outbuf = svn_string_create_empty(subpool);
+      outbuf = svn_stringbuf_create_empty(subpool);
       stream = svn_stream_from_stringbuf(outbuf, subpool);
       amt_read = 0;
       while (amt_read < inbuf->len)
@@ -125,7 +125,7 @@ test_stream_from_string(apr_pool_t *pool)
 static svn_stringbuf_t *
 generate_test_bytes(int num_bytes, apr_pool_t *pool)
 {
-  svn_stringbuf_t *buffer = svn_string_create_empty(pool);
+  svn_stringbuf_t *buffer = svn_stringbuf_create_empty(pool);
   int total, repeat, repeat_iter;
   char c;
 
@@ -189,8 +189,8 @@ test_stream_compressed(apr_pool_t *pool)
       apr_size_t len;
 
       origbuf = bufs[i];
-      inbuf = svn_string_create_empty(subpool);
-      outbuf = svn_string_create_empty(subpool);
+      inbuf = svn_stringbuf_create_empty(subpool);
+      outbuf = svn_stringbuf_create_empty(subpool);
 
       stream = svn_stream_compressed(svn_stream_from_stringbuf(outbuf,
                                                                subpool),
@@ -232,8 +232,8 @@ static svn_error_t *
 test_stream_tee(apr_pool_t *pool)
 {
   svn_stringbuf_t *test_bytes = generate_test_bytes(100, pool);
-  svn_stringbuf_t *output_buf1 = svn_string_create_empty(pool);
-  svn_stringbuf_t *output_buf2 = svn_string_create_empty(pool);
+  svn_stringbuf_t *output_buf1 = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_t *output_buf2 = svn_stringbuf_create_empty(pool);
   svn_stream_t *source_stream = svn_stream_from_stringbuf(test_bytes, pool);
   svn_stream_t *output_stream1 = svn_stream_from_stringbuf(output_buf1, pool);
   svn_stream_t *output_stream2 = svn_stream_from_stringbuf(output_buf2, pool);
@@ -538,8 +538,8 @@ static svn_error_t *
 test_stream_base64(apr_pool_t *pool)
 {
   svn_stream_t *stream;
-  svn_stringbuf_t *actual = svn_string_create_empty(pool);
-  svn_stringbuf_t *expected = svn_string_create_empty(pool);
+  svn_stringbuf_t *actual = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_t *expected = svn_stringbuf_create_empty(pool);
   int i;
   static const char *strings[] = {
     "fairly boring test data... blah blah",

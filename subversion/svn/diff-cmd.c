@@ -89,7 +89,7 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
   /* Full path to the object being diffed.  This is created by taking the
    * baton, and appending the target's relative path. */
   const char *path = *(const char **)baton;
-  svn_stringbuf_t *sb = svn_string_create_empty(pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
 
   /* Tack on the target path, so we can differentiate between different parts
    * of the output when we're given multiple targets. */
@@ -197,7 +197,7 @@ svn_cl__diff(apr_getopt_t *os,
 
       SVN_ERR(svn_cl__xml_print_header("diff", pool));
 
-      sb = svn_string_create_empty(pool);
+      sb = svn_stringbuf_create_empty(pool);
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "paths", NULL);
       SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
     }
@@ -419,7 +419,7 @@ svn_cl__diff(apr_getopt_t *os,
 
   if (opt_state->xml)
     {
-      svn_stringbuf_t *sb = svn_string_create_empty(pool);
+      svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
       svn_xml_make_close_tag(&sb, pool, "paths");
       SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
       SVN_ERR(svn_cl__xml_print_footer("diff", pool));

@@ -747,7 +747,7 @@ svn_cstring_join(const apr_array_header_t *strings,
                  const char *separator,
                  apr_pool_t *pool)
 {
-  svn_stringbuf_t *new_str = svn_string_create_empty(pool);
+  svn_stringbuf_t *new_str = svn_stringbuf_create_empty(pool);
   size_t sep_len = strlen(separator);
   int i;
 

@@ -313,12 +313,12 @@ multistatus_parser_create(svn_ra_neon__request_t *req)
                                  start_207_element,
                                  svn_ra_neon__xml_collect_cdata,
                                  end_207_element, b);
-  b->cdata = svn_string_create_empty(req->pool);
-  b->description = svn_string_create_empty(req->pool);
+  b->cdata = svn_stringbuf_create_empty(req->pool);
+  b->description = svn_stringbuf_create_empty(req->pool);
   b->req = req;
 
-  b->propname = svn_string_create_empty(req->pool);
-  b->propstat_description = svn_string_create_empty(req->pool);
+  b->propname = svn_stringbuf_create_empty(req->pool);
+  b->propstat_description = svn_stringbuf_create_empty(req->pool);
 }
 
 
@@ -895,7 +895,7 @@ error_parser_create(svn_ra_neon__request_t *req)
   b->tmp_err = NULL;
 
   b->want_cdata = NULL;
-  b->cdata = svn_string_create_empty(req->pool);
+  b->cdata = svn_stringbuf_create_empty(req->pool);
 
   /* attach a standard <D:error> body parser to the request */
   error_parser = xml_parser_create(req);

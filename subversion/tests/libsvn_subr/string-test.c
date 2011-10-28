@@ -419,7 +419,7 @@ test15(apr_pool_t *pool)
 static svn_error_t *
 test16(apr_pool_t *pool)
 {
-  a = svn_string_create_empty(pool);
+  a = svn_stringbuf_create_empty(pool);
 
   return test_find_char_backward(a->data, a->len, ',', 0, pool);
 }

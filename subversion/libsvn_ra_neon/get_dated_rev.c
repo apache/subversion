@@ -93,7 +93,7 @@ drev_start_element(int *elem, void *baton, int parent,
     return SVN_NO_ERROR;
 
   if (elm->id == ELEM_version_name)
-    b->cdata = svn_string_create_empty(b->pool);
+    b->cdata = svn_stringbuf_create_empty(b->pool);
 
   return SVN_NO_ERROR;
 }

@@ -150,7 +150,7 @@ svn_ra_neon__get_location_segments(svn_ra_session_t *session,
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Build the request body. */
-  request_body = svn_string_create_empty(subpool);
+  request_body = svn_stringbuf_create_empty(subpool);
   svn_stringbuf_appendcstr(request_body,
                            "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
                            DEBUG_CR "<S:get-location-segments xmlns:S=\""

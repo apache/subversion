@@ -200,9 +200,9 @@ svn_config__parse_registry(svn_config_t *cfg, const char *file,
 
 
   subpool = svn_pool_create(pool);
-  section = svn_string_create_empty(subpool);
-  option = svn_string_create_empty(subpool);
-  value = svn_string_create_empty(subpool);
+  section = svn_stringbuf_create_empty(subpool);
+  option = svn_stringbuf_create_empty(subpool);
+  value = svn_stringbuf_create_empty(subpool);
 
   /* The top-level values belong to the [DEFAULT] section */
   svn_err = parse_section(cfg, hkey, SVN_CONFIG__DEFAULT_SECTION,

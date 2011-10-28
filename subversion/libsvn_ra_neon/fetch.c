@@ -1487,7 +1487,7 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
       if (DIR_DEPTH(rb) == 0)
         {
           /* pathbuf has to live for the whole edit! */
-          pathbuf = svn_string_create_empty(rb->pool);
+          pathbuf = svn_stringbuf_create_empty(rb->pool);
 
           /* During switch operations, we need to invalidate the
              tree's version resource URLs in case something goes
@@ -2544,7 +2544,7 @@ make_reporter(svn_ra_session_t *session,
   rb->edit_baton = edit_baton;
   rb->fetch_content = fetch_content;
   rb->in_resource = FALSE;
-  rb->current_wcprop_path = svn_string_create_empty(pool);
+  rb->current_wcprop_path = svn_stringbuf_create_empty(pool);
   rb->is_switch = dst_path != NULL;
   rb->target = target;
   rb->receiving_all = FALSE;
@@ -2553,7 +2553,7 @@ make_reporter(svn_ra_session_t *session,
   rb->whandler_baton = NULL;
   rb->svndiff_decoder = NULL;
   rb->base64_decoder = NULL;
-  rb->cdata_accum = svn_string_create_empty(pool);
+  rb->cdata_accum = svn_stringbuf_create_empty(pool);
   rb->send_copyfrom_args = send_copyfrom_args;
   rb->lock_tokens = apr_hash_make(pool);
 

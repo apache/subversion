@@ -311,7 +311,7 @@ dump_revision_header(svn_ra_session_t *session,
                             ": %ld\n", revision));
 
   prophash = apr_hash_make(pool);
-  propstring = svn_string_create_empty(pool);
+  propstring = svn_stringbuf_create_empty(pool);
   SVN_ERR(svn_ra_rev_proplist(session, revision, &prophash, pool));
 
   propstream = svn_stream_from_stringbuf(propstring, pool);
