@@ -252,7 +252,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
     }
   else
     {
-      printf("Assuming source branch is copied-from source of target branch.\n");
+      printf("Assuming source branch is copy-source of target branch.\n");
       SVN_ERR(svn_cl__find_merge_source_branch(&source, target, ctx, pool));
     }
 
