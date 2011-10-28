@@ -45,7 +45,8 @@ struct svn_stringbuf_t;
  * Opaque structure controlling the serialization process and holding the
  * intermediate as well as final results.
  */
-typedef struct svn_temp_serializer__context_t svn_temp_serializer__context_t;
+typedef
+struct svn__temp_serializer__context_t svn__temp_serializer__context_t;
 
 /**
  * Begin the serialization process for the @a source_struct and all objects
@@ -70,11 +71,11 @@ typedef struct svn_temp_serializer__context_t svn_temp_serializer__context_t;
  *
  * @return the serization context.
  */
-svn_temp_serializer__context_t *
-svn_temp_serializer__init(const void *source_struct,
-                          apr_size_t struct_size,
-                          apr_size_t suggested_buffer_size,
-                          apr_pool_t *pool);
+svn__temp_serializer__context_t *
+svn__temp_serializer__init(const void *source_struct,
+                           apr_size_t struct_size,
+                           apr_size_t suggested_buffer_size,
+                           apr_pool_t *pool);
 
 /**
  * Continue the serialization process of the @a source_struct that has
@@ -120,9 +121,9 @@ svn_temp_serializer__init_append(void *buffer,
  * svn_serializer__pop() to realign the serialization context.
  */
 void
-svn_temp_serializer__push(svn_temp_serializer__context_t *context,
-                          const void * const * source_struct,
-                          apr_size_t struct_size);
+svn__temp_serializer__push(svn__temp_serializer__context_t *context,
+                           const void * const * source_struct,
+                           apr_size_t struct_size);
 
 /**
  * End the serialization of the current sub-structure. The serialization
@@ -133,7 +134,7 @@ svn_temp_serializer__push(svn_temp_serializer__context_t *context,
  * of the serialization process.
  */
 void
-svn_temp_serializer__pop(svn_temp_serializer__context_t *context);
+svn__temp_serializer__pop(svn__temp_serializer__context_t *context);
 
 /**
  * Serialize a string referenced from the current structure within the
@@ -146,8 +147,8 @@ svn_temp_serializer__pop(svn_temp_serializer__context_t *context);
  * @a s will not be related to some struct.
  */
 void
-svn_temp_serializer__add_string(svn_temp_serializer__context_t *context,
-                                const char * const * s);
+svn__temp_serializer__add_string(svn__temp_serializer__context_t *context,
+                                 const char * const * s);
 
 /**
  * Set the serialized representation of the pointer @a ptr inside the
@@ -171,7 +172,7 @@ svn_temp_serializer__get_length(svn_temp_serializer__context_t *context);
  * so far in the given serialization @a context.
  */
 struct svn_stringbuf_t *
-svn_temp_serializer__get(svn_temp_serializer__context_t *context);
+svn__temp_serializer__get(svn__temp_serializer__context_t *context);
 
 /**
  * Deserialization is straightforward: just copy the serialized buffer to
@@ -183,7 +184,7 @@ svn_temp_serializer__get(svn_temp_serializer__context_t *context);
  * the pointer to resolve in @a ptr.
  */
 void
-svn_temp_deserializer__resolve(void *buffer, void **ptr);
+svn__temp_deserializer__resolve(void *buffer, void **ptr);
 
 /**
  * Similar to svn_temp_deserializer__resolve() but instead of modifying
