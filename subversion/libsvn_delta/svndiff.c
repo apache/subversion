@@ -434,8 +434,11 @@ decode_size(apr_size_t *val,
 /* Decode the possibly-zlib compressed string of length INLEN that is in
    IN, into OUT.  We expect an integer is prepended to IN that specifies
    the original size, and that if encoded size == original size, that the
-   remaining data is not compressed.  An error is returned if the decoded
-   length exceeds the given LIMIT.*/
+   remaining data is not compressed.
+   In that case, we will simply return pointer into IN as data pointer for
+   OUT.  The caller is expected not to modify the contents of OUT.
+   An error is returned if the decoded length exceeds the given LIMIT.
+ */
 static svn_error_t *
 zlib_decode(const unsigned char *in, apr_size_t inLen, svn_stringbuf_t *out,
             apr_size_t limit)
@@ -634,6 +637,8 @@ decode_window(svn_txdelta_window_t *window, svn_filesize_t sview_offset,
       svn_stringbuf_t *instout = svn_stringbuf_create_empty(pool);
       svn_stringbuf_t *ndout = svn_stringbuf_create_empty(pool);
 
+      /* these may in fact simply return references to insend */
+      
       SVN_ERR(zlib_decode(insend, newlen, ndout,
                           SVN_DELTA_WINDOW_SIZE));
       SVN_ERR(zlib_decode(data, insend - data, instout,
