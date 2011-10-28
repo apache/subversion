@@ -800,6 +800,21 @@ prop_fetch_func(apr_hash_t **props,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+kind_fetch_func(svn_kind_t *kind,
+                void *baton,
+                const char *path,
+                apr_pool_t *scratch_pool)
+{
+  struct edit_baton *eb = baton;
+  svn_node_kind_t node_kind;
+
+  SVN_ERR(svn_fs_check_path(&node_kind, eb->txn_root, path, scratch_pool));
+  *kind = svn__kind_from_node_kind(node_kind, FALSE);
+
+  return SVN_NO_ERROR;
+} 
+
 
 
 /*** Public interfaces. ***/
@@ -876,6 +891,8 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
 
   shim_callbacks->fetch_props_func = prop_fetch_func;
   shim_callbacks->fetch_props_baton = eb;
+  shim_callbacks->fetch_kind_func = kind_fetch_func;
+  shim_callbacks->fetch_kind_baton = eb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                    shim_callbacks, pool, pool));
