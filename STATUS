@@ -34,8 +34,7 @@ Candidate changes:
      r1186983 whitespace to avoid conflict
      r1187676 is a cosmetic follow-up tweak
    Votes:
-     +1: stsp (not r1186983)
-     +1: philip
+     +1: stsp, philip
 
  * r1187695
    Have mod_dav_svn ignore non-Subversion POST requests.
