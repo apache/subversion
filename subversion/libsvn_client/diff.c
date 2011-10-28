@@ -664,12 +664,12 @@ display_prop_diffs(const apr_array_header_t *propchanges,
            Since the diff is not useful anyway for patching properties an
            eol character is appended when needed to remove those pescious
            ' \ No newline at end of file' lines. */
-        tmp = original_value ? original_value : svn_string_create("",
-                                                                  iterpool);
+        tmp = original_value ? original_value 
+                             : svn_string_create_empty(iterpool);
         orig = maybe_append_eol(tmp, iterpool);
 
         tmp = propchange->value ? propchange->value :
-                                  svn_string_create("", iterpool);
+                                  svn_string_create_empty(iterpool);
         val = maybe_append_eol(tmp, iterpool);
 
         SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options,

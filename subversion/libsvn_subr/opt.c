@@ -944,7 +944,7 @@ svn_opt_parse_revprop(apr_hash_t **revprop_table_p, const char *revprop_spec,
   else
     {
       SVN_ERR(svn_utf_cstring_to_utf8(&propname, revprop_spec, pool));
-      propval = svn_string_create("", pool);
+      propval = svn_string_create_empty(pool);
     }
 
   if (!svn_prop_name_is_valid(propname))
