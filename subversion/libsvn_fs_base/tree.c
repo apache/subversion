@@ -2722,7 +2722,7 @@ svn_fs_base__commit_txn(const char **conflict_p,
       merge_args.ancestor_node = NULL;
       merge_args.source_node = youngish_root_node;
       merge_args.txn = txn;
-      merge_args.conflict = svn_string_create_empty(pool); /* use pool */
+      merge_args.conflict = svn_stringbuf_create_empty(pool); /* use pool */
       err = svn_fs_base__retry_txn(fs, txn_body_merge, &merge_args,
                                    FALSE, subpool);
       if (err)
@@ -2832,7 +2832,7 @@ base_merge(const char **conflict_p,
   merge_args.source_node = source;
   merge_args.ancestor_node = ancestor;
   merge_args.txn = txn;
-  merge_args.conflict = svn_string_create_empty(pool);
+  merge_args.conflict = svn_stringbuf_create_empty(pool);
   err = svn_fs_base__retry_txn(fs, txn_body_merge, &merge_args, FALSE, pool);
   if (err)
     {
@@ -3762,7 +3762,7 @@ txn_body_apply_textdelta(void *baton, trail_t *trail)
 
   /* Make a writable "string" stream which writes data to
      tb->target_string. */
-  tb->target_string = svn_string_create_empty(tb->pool);
+  tb->target_string = svn_stringbuf_create_empty(tb->pool);
   tb->string_stream = svn_stream_create(tb, tb->pool);
   svn_stream_set_write(tb->string_stream, write_to_string);
 

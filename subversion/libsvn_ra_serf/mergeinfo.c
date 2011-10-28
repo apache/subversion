@@ -256,8 +256,8 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
 
   mergeinfo_ctx = apr_pcalloc(pool, sizeof(*mergeinfo_ctx));
   mergeinfo_ctx->pool = pool;
-  mergeinfo_ctx->curr_path = svn_string_create_empty(pool);
-  mergeinfo_ctx->curr_info = svn_string_create_empty(pool);
+  mergeinfo_ctx->curr_path = svn_stringbuf_create_empty(pool);
+  mergeinfo_ctx->curr_info = svn_stringbuf_create_empty(pool);
   mergeinfo_ctx->done = FALSE;
   mergeinfo_ctx->result_catalog = apr_hash_make(pool);
   mergeinfo_ctx->paths = paths;

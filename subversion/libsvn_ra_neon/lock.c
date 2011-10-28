@@ -105,13 +105,13 @@ lock_start_element(int *elem, void *baton, int parent,
     case ELEM_lock_timeout:
     case ELEM_lock_depth:
     case ELEM_status:
-      b->cdata = svn_string_create_empty(b->pool);
+      b->cdata = svn_stringbuf_create_empty(b->pool);
       break;
 
     case ELEM_href:
       if (parent == ELEM_lock_token
           || parent == ELEM_response)
-        b->cdata = svn_string_create_empty(b->pool);
+        b->cdata = svn_stringbuf_create_empty(b->pool);
       break;
 
     default:

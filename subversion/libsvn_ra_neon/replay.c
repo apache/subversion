@@ -345,7 +345,7 @@ start_element(int *elem, void *baton, int parent_state, const char *nspace,
             if (svn_xml_get_attr_value("del", atts))
               rb->prop_accum = NULL;
             else
-              rb->prop_accum = svn_string_create_empty(rb->prop_pool);
+              rb->prop_accum = svn_stringbuf_create_empty(rb->prop_pool);
 
             rb->prop_name = apr_pstrdup(rb->prop_pool, name);
           }
@@ -479,7 +479,7 @@ svn_ra_neon__replay(svn_ra_session_t *session,
   rb.pool = pool;
   rb.dirs = apr_array_make(pool, 5, sizeof(dir_item_t));
   rb.prop_pool = svn_pool_create(pool);
-  rb.prop_accum = svn_string_create_empty(rb.prop_pool);
+  rb.prop_accum = svn_stringbuf_create_empty(rb.prop_pool);
 
   return svn_ra_neon__parsed_request(ras, "REPORT", ras->url->data, body,
                                      NULL, NULL,

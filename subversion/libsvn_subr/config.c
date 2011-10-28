@@ -88,8 +88,8 @@ svn_config_create(svn_config_t **cfgp,
   cfg->pool = result_pool;
   cfg->x_pool = svn_pool_create(result_pool);
   cfg->x_values = FALSE;
-  cfg->tmp_key = svn_string_create_empty(result_pool);
-  cfg->tmp_value = svn_string_create_empty(result_pool);
+  cfg->tmp_key = svn_stringbuf_create_empty(result_pool);
+  cfg->tmp_value = svn_stringbuf_create_empty(result_pool);
   cfg->section_names_case_sensitive = section_names_case_sensitive;
 
   *cfgp = cfg;

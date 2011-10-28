@@ -709,7 +709,7 @@ request_body_to_string(svn_string_t **request_str,
     }
   else
     {
-      buf = svn_string_create_empty(pool);
+      buf = svn_stringbuf_create_empty(pool);
     }
 
   brigade = apr_brigade_create(r->pool, r->connection->bucket_alloc);
