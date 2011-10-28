@@ -41,8 +41,8 @@
 void
 svn_fs_fs__add_keys(const char *key1, const char *key2, char *result)
 {
-  apr_size_t i1 = strlen(key1) - 1;
-  apr_size_t i2 = strlen(key2) - 1;
+  apr_ssize_t i1 = strlen(key1) - 1;
+  apr_ssize_t i2 = strlen(key2) - 1;
   int i3 = 0;
   int val;
   int carry = 0;
