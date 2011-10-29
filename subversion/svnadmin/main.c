@@ -280,6 +280,11 @@ static const apr_getopt_option_t options_table[] =
         "                             minimize redundant operations. Default: 16.\n"
         "                             [used for FSFS repositories only]")},
 
+    {"open-file-count",       'F', 1,
+     N_("maximum number of files kept open after usage\n"
+        "                             to reduce OS and I/O overhead. Default: 64.\n"
+        "                             [used for FSFS repositories only]")},
+
     {NULL}
   };
 
@@ -310,7 +315,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "essence compresses the repository by only storing the differences or\n"
     "delta from the preceding revision.  If no revisions are specified,\n"
     "this will simply deltify the HEAD revision.\n"),
-   {'r', 'q', 'M'} },
+   {'r', 'q', 'M', 'F'} },
 
   {"dump", subcommand_dump, {0}, N_
    ("usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER] [--incremental]]\n\n"
@@ -323,7 +328,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "every path present in the repository as of that revision.  (In either\n"
     "case, the second and subsequent revisions, if any, describe only paths\n"
     "changed in those revisions.)\n"),
-  {'r', svnadmin__incremental, svnadmin__deltas, 'q', 'M'} },
+   {'r', svnadmin__incremental, svnadmin__deltas, 'q', 'M', 'F'} },
 
   {"help", subcommand_help, {"?", "h"}, N_
    ("usage: svnadmin help [SUBCOMMAND...]\n\n"
@@ -357,7 +362,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "in the dump stream whose revision numbers match the specified range.\n"),
    {'q', 'r', svnadmin__ignore_uuid, svnadmin__force_uuid,
     svnadmin__use_pre_commit_hook, svnadmin__use_post_commit_hook,
-    svnadmin__parent_dir, svnadmin__bypass_prop_validation, 'M'} },
+    svnadmin__parent_dir, svnadmin__bypass_prop_validation, 'M', 'F'} },
 
   {"lslocks", subcommand_lslocks, {0}, N_
    ("usage: svnadmin lslocks REPOS_PATH [PATH-IN-REPOS]\n\n"
@@ -440,7 +445,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {"verify", subcommand_verify, {0}, N_
    ("usage: svnadmin verify REPOS_PATH\n\n"
     "Verifies the data stored in the repository.\n"),
-  {'r', 'q', 'M'} },
+   {'r', 'q', 'M', 'F'} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -473,6 +478,7 @@ struct svnadmin_opt_state
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
   apr_uint64_t memory_cache_size;                   /* --memory-cache-size M */
+  apr_size_t open_file_count;                       /* --open-file-count F */
   const char *parent_dir;
 
   const char *config_dir;    /* Overriding Configuration Directory */
@@ -1692,6 +1698,7 @@ main(int argc, const char *argv[])
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
   opt_state.memory_cache_size = svn_cache_config_get()->cache_size;
+  opt_state.open_file_count = 64;
 
   /* Parse options. */
   err = svn_cmdline__getopt_init(&os, argc, argv, pool);
@@ -1754,6 +1761,9 @@ main(int argc, const char *argv[])
       case 'M':
         opt_state.memory_cache_size
             = 0x100000 * apr_strtoi64(opt_arg, NULL, 0);
+        break;
+      case 'F':
+        opt_state.open_file_count = apr_strtoi64(opt_arg, NULL, 0);
         break;
       case svnadmin__version:
         opt_state.version = TRUE;
@@ -1973,6 +1983,7 @@ main(int argc, const char *argv[])
     svn_cache_config_t settings = *svn_cache_config_get();
 
     settings.cache_size = opt_state.memory_cache_size;
+    settings.file_handle_count = opt_state.open_file_count;
     settings.single_threaded = TRUE;
 
     svn_cache_config_set(&settings);

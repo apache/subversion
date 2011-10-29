@@ -44,7 +44,7 @@
 #include "svn_path.h"
 #include "private/svn_eol_private.h"
 #include "private/svn_io_private.h"
-
+#include "private/svn_file_handle_cache.h"
 
 struct svn_stream_t {
   void *baton;
@@ -732,6 +732,10 @@ svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool)
 struct baton_apr {
   apr_file_t *file;
   apr_pool_t *pool;
+
+  /* If not NULL, file is actually wrapped into this cached file handle
+   * and should be returned to the file handle cache asap. */
+  svn_file_handle_cache__handle_t *cached_handle;
 };
 
 /* svn_stream_mark_t for streams backed by APR files. */
@@ -751,7 +755,7 @@ read_handler_apr(void *baton, char *buffer, apr_size_t *len)
       err = svn_io_file_getc(buffer, btn->file, btn->pool);
       if (err)
         {
-          *len = 0;
+        *len = 0;
           if (APR_STATUS_IS_EOF(err->apr_err))
             {
               svn_error_clear(err);
@@ -791,6 +795,17 @@ write_handler_apr(void *baton, const char *data, apr_size_t *len)
     err = svn_io_file_write_full(btn->file, data, *len, len, btn->pool);
 
   return err;
+}
+
+/* Returns the cached file handle back to the respective cache object.
+ * This is call is allowed even for btn->cached_handle == NULL.
+ */
+static svn_error_t *
+close_handler_cached_handle(void *baton)
+{
+  struct baton_apr *btn = baton;
+
+  return svn_file_handle_cache__close(btn->cached_handle);
 }
 
 static svn_error_t *
@@ -886,6 +901,36 @@ svn_stream_open_unique(svn_stream_t **stream,
   return SVN_NO_ERROR;
 }
 
+/* Common initialization code for svn_stream_from_aprfile2() and
+ * svn_stream__from_cached_file_handle().
+ */
+static svn_stream_t *
+stream_from_aprfile(struct baton_apr **baton,
+                    apr_file_t *file,
+                    apr_pool_t *pool)
+{
+  struct baton_apr *new_baton;
+  svn_stream_t *stream;
+
+  /* create and fully initialize the baton */
+  new_baton = apr_palloc(pool, sizeof(*new_baton));
+  new_baton->file = file;
+  new_baton->cached_handle = NULL; /* default */
+  new_baton->pool = pool;
+
+  /* construct the stream vtable, except for the close() function */
+  stream = svn_stream_create(new_baton, pool);
+  svn_stream_set_read(stream, read_handler_apr);
+  svn_stream_set_write(stream, write_handler_apr);
+  svn_stream_set_skip(stream, skip_handler_apr);
+  svn_stream_set_mark(stream, mark_handler_apr);
+  svn_stream_set_seek(stream, seek_handler_apr);
+
+  /* return structures */
+  *baton = new_baton;
+
+  return stream;
+}
 
 svn_stream_t *
 svn_stream_from_aprfile2(apr_file_t *file,
@@ -895,22 +940,42 @@ svn_stream_from_aprfile2(apr_file_t *file,
   struct baton_apr *baton;
   svn_stream_t *stream;
 
+  /* having no file at all is a special case */
   if (file == NULL)
     return svn_stream_empty(pool);
 
-  baton = apr_palloc(pool, sizeof(*baton));
-  baton->file = file;
-  baton->pool = pool;
-  stream = svn_stream_create(baton, pool);
-  svn_stream_set_read(stream, read_handler_apr);
-  svn_stream_set_write(stream, write_handler_apr);
-  svn_stream_set_skip(stream, skip_handler_apr);
-  svn_stream_set_mark(stream, mark_handler_apr);
-  svn_stream_set_seek(stream, seek_handler_apr);
+  /* construct and init the default stream structures */
+  stream = stream_from_aprfile(&baton, file, pool);
   svn_stream__set_is_buffered(stream, is_buffered_handler_apr);
 
+  /* make sure to close the file handle after use if we own it */
   if (! disown)
     svn_stream_set_close(stream, close_handler_apr);
+
+  return stream;
+}
+
+svn_stream_t *
+svn_stream__from_cached_file_handle(svn_file_handle_cache__handle_t *file,
+                                    svn_boolean_t disown,
+                                    apr_pool_t *pool)
+{
+  struct baton_apr *baton;
+  svn_stream_t *stream;
+
+  /* having no file at all is a special case (file == NULL is legal, too) */
+  apr_file_t *apr_file = svn_file_handle_cache__get_apr_handle(file);
+  if (apr_file == NULL)
+    return svn_stream_empty(pool);
+
+  /* construct and init the default stream structures */
+  stream = stream_from_aprfile(&baton, apr_file, pool);
+
+  /* store the cached file handle and return it to the cache after use,
+   * if we own it */
+  baton->cached_handle = file;
+  if (! disown)
+    svn_stream_set_close(stream, close_handler_cached_handle);
 
   return stream;
 }

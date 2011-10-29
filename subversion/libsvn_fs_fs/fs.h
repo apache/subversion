@@ -34,6 +34,7 @@
 #include "private/svn_fs_private.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_mutex.h"
+#include "private/svn_file_handle_cache.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -221,8 +222,14 @@ typedef struct fs_fs_data_t
      multiple svn_fs_t's for the same filesystem.) */
 
   /* A cache of revision root IDs, mapping from (svn_revnum_t *) to
-     (svn_fs_id_t *).  (Not threadsafe.) */
+     (svn_fs_id_t *). Some of the IDs may belong to non-packed revs
+     but these will never be read. This is guaranteed by the fact
+     that the transition from non-packed to packed is irreversable. */
   svn_cache__t *rev_root_id_cache;
+
+  /* Similar to @ref rev_root_id_cache but all IDs are guaranteed
+     to belong to packed revisions. */
+  svn_cache__t *packed_rev_root_id_cache;
 
   /* DAG node cache for immutable nodes */
   svn_cache__t *rev_node_cache;
@@ -253,6 +260,9 @@ typedef struct fs_fs_data_t
   /* Tempoary cache for changed directories yet to be committed; maps from
      unparsed FS ID to ###x.  NULL outside transactions. */
   svn_cache__t *txn_dir_cache;
+
+  /* Reference to the process-global open file handle cache */
+  svn_file_handle_cache_t *file_handle_cache;
 
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;

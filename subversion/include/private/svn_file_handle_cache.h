@@ -24,8 +24,7 @@
  * @brief File handle cache API
  */
 
-#include <apr_file_io.h>
-#include "svn_types.h"
+#include "svn_io.h"
 
 /**
  * An opaque structure representing a cache for open file handles.
@@ -86,6 +85,21 @@ svn_file_handle_cache__get_apr_handle(svn_file_handle_cache__handle_t *f);
 const char *
 svn_file_handle_cache__get_name(svn_file_handle_cache__handle_t *f);
 
+/** Create a stream from a cached file handle.  For convenience, if @a file
+ * is @c NULL, an empty stream created by svn_stream_empty() is returned.
+ *
+ * This function should normally be called with @a disown set to FALSE,
+ * in which case closing the stream will also return the file handle to
+ * the respective cache object.
+ *
+ * If @a disown is TRUE, the stream will disown the file handle, meaning 
+ * that svn_stream_close() will not close the cached file handle.
+ */
+svn_stream_t *
+svn_stream__from_cached_file_handle(svn_file_handle_cache__handle_t *file,
+                                    svn_boolean_t disown,
+                                    apr_pool_t *pool);
+
 /**
  * Return the cached file handle @a f to the cache. Depending on the number
  * of open handles, the underlying handle may actually get closed. If @a f
@@ -113,3 +127,4 @@ svn_file_handle_cache__create_cache(svn_file_handle_cache_t **cache,
                                     size_t max_handles,
                                     svn_boolean_t thread_safe,
                                     apr_pool_t *pool);
+

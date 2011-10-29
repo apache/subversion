@@ -125,6 +125,9 @@ typedef struct serve_params_t {
      Defaults to SVN_DELTA_COMPRESSION_LEVEL_DEFAULT. */
   int compression_level;
 
+  /* Number of handles kept open independently of there actual use
+     (used by FSFS only). */
+  apr_size_t open_file_count;
 } serve_params_t;
 
 /* Serve the connection CONN according to the parameters PARAMS. */

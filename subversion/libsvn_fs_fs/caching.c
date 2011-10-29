@@ -92,6 +92,34 @@ warn_on_cache_errors(svn_error_t *err,
   return SVN_NO_ERROR;
 }
 
+static apr_status_t
+close_unused_file_handles(void *cache_void)
+{
+  svn_file_handle_cache_t *cache = cache_void;
+  apr_status_t result = APR_SUCCESS;
+
+  /* Close all file handles that are not in use anymore. So, as long as
+   * no requests to a given repository are being processed, we may change
+   * the file content and / or structure. However, content that has been
+   * cached *above* the APR layer (e.g. fulltext caches) will *not* be
+   * changed and may become inconsistent with the disk content.
+   *
+   * This will cause concurrent threads to perform somewhat slower because
+   * they might have put those handles to good use a few moments later.
+   * They now have to actually re-open the respective files.
+   */
+  svn_error_t *err = svn_file_handle_cache__flush(cache);
+
+  /* process error returns */
+  if (err)
+  {
+    result = err->apr_err;
+    svn_error_clear(err);
+  }
+
+  return result;
+}
+
 #ifdef SVN_DEBUG_CACHE_DUMP_STATS
 /* Baton to be used for the dump_cache_statistics() pool cleanup function, */
 struct dump_cache_baton_t
@@ -189,6 +217,24 @@ init_callbacks(svn_cache__t *cache,
   return SVN_NO_ERROR;
 }
 
+/* Access the process-global (singleton) open file handle cache. The first
+ * call will automatically allocate the cache using the current cache config.
+ * Even for file handle limit of 0, a cache object will be returned.
+ */
+static svn_file_handle_cache_t *
+get_global_file_handle_cache(void)
+{
+  static svn_file_handle_cache_t *cache = NULL;
+
+  if (!cache)
+    svn_file_handle_cache__create_cache(&cache,
+                                        cache_settings.file_handle_count,
+                                        !cache_settings.single_threaded,
+                                        svn_pool_create(NULL));
+
+  return cache;
+}
+
 /* Sets *CACHE_P to cache instance based on provided options.
  * Creates memcache if MEMCACHE is not NULL. Creates membuffer cache if
  * MEMBUFFER is not NULL. Fallbacks to inprocess cache if MEMCACHE and
@@ -260,11 +306,17 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
   membuffer = svn_cache__get_global_membuffer_cache();
 
-  /* Make the cache for revision roots.  For the vast majority of
-   * commands, this is only going to contain a few entries (svnadmin
-   * dump/verify is an exception here), so to reduce overhead let's
-   * try to keep it to just one page.  I estimate each entry has about
-   * 72 bytes of overhead (svn_revnum_t key, svn_fs_id_t +
+  /* Schedule file handle cache cleanup after finishing the request. */
+  apr_pool_cleanup_register(pool,
+                            svn_fs__get_global_file_handle_cache(),
+                            close_unused_file_handles,
+                            apr_pool_cleanup_null);
+
+  /* Make the caches for non-packed and packed revision roots.  For the
+   * vastmajority of commands, this is only going to contain a few entries
+   * (svnadmin dump/verify is an exception here), so to reduce overhead
+   * let's try to keep it to just one page.  I estimate each entry has
+   * about 72 bytes of overhead (svn_revnum_t key, svn_fs_id_t +
    * id_private_t + 3 strings for value, and the cache_entry); the
    * default pool size is 8192, so about a hundred should fit
    * comfortably. */
@@ -372,6 +424,9 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        fs->pool));
 
   SVN_ERR(init_callbacks(ffd->node_revision_cache, fs, no_handler, pool));
+
+  /* initialize file handle cache as configured */
+  ffd->file_handle_cache = get_global_file_handle_cache();
 
   return SVN_NO_ERROR;
 }

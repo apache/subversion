@@ -363,7 +363,7 @@ find_first(svn_file_handle_cache_t *cache, const char *name)
 
   /* the index must contain only used entries, i.e. those that actually
    * contain an open APR file handle. */
-  assert (!result || result->file);
+  assert(!result || result->file);
   return result;
 }
 
@@ -526,6 +526,7 @@ close_handle_before_cleanup(void *handle_void)
 {
   svn_file_handle_cache__handle_t *f = handle_void;
   svn_error_t *err = SVN_NO_ERROR;
+  apr_status_t result = APR_SUCCESS;
 
   /* if this hasn't been done before: 
    * "close" the handle, i.e. return it to the cache 
@@ -537,7 +538,14 @@ close_handle_before_cleanup(void *handle_void)
   f->entry = NULL;
   f->cache = NULL;
 
-  return err ? err->apr_err : APR_SUCCESS;
+  /* process error returns */
+  if (err)
+    {
+      result = err->apr_err;
+      svn_error_clear(err);
+    }
+
+  return result;
 }
 
 /* Create a cached file handle to be returned to the application in F for
@@ -552,7 +560,7 @@ open_entry(svn_file_handle_cache__handle_t **f,
            apr_pool_t *pool)
 {
   /* any entry can be handed out to the application only once at any time */
-  assert (! entry->open_handle);
+  assert(!entry->open_handle);
 
   /* the entry will no longer be idle */
   remove_from_list(&cache->idle_entries, &entry->idle_link);
@@ -887,10 +895,11 @@ svn_file_handle_cache__create_cache(svn_file_handle_cache_t **cache,
   init_list(&new_cache->unused_entries);
 
   new_cache->first_by_name = apr_hash_make(new_cache->pool);
+
+#if APR_HAS_THREADS
   new_cache->mutex = NULL;
 
   /* synchronization support may or may not be needed or available */
-#if APR_HAS_THREADS
   if (thread_safe)
     {
       apr_status_t status = apr_thread_mutex_create(&(new_cache->mutex),

@@ -221,6 +221,14 @@ static const apr_getopt_option_t svnserve__options[] =
         "Default is yes.\n"
         "                             "
         "[used for FSFS repositories only]")},
+    {"open-file-count", 'F', 1, 
+     N_("maximum number of files kept open after usage\n"
+        "                             "
+        "to reduce OS and I/O overhead.\n"
+        "                             "
+        "Default is 64 and 16 for non-threaded mode.\n"
+        "                             "
+        "[used for FSFS repositories only]")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
     /* ### Making the assumption here that WIN32 never has fork and so
      * ### this option never exists when --service exists. */
@@ -475,6 +483,7 @@ int main(int argc, const char *argv[])
   params.memory_cache_size = (apr_uint64_t)-1;
   params.cache_fulltexts = TRUE;
   params.cache_txdeltas = FALSE;
+  params.open_file_count = -1;
 
   while (1)
     {
@@ -608,6 +617,9 @@ int main(int argc, const char *argv[])
           params.cache_fulltexts
              = svn_tristate__from_word(arg) == svn_tristate_true;
           break;
+
+        case 'F':
+          params.open_file_count = apr_strtoi64(arg, NULL, 0);
 
 #ifdef WIN32
         case SVNSERVE_OPT_SERVICE:
@@ -878,7 +890,9 @@ int main(int argc, const char *argv[])
     if (params.memory_cache_size != -1)
       settings.cache_size = params.memory_cache_size;
 
-    settings.single_threaded = TRUE;
+    if (params.open_file_count != -1)
+      settings.file_handle_count = params.open_file_count;
+
     if (handling_mode == connection_mode_thread)
       {
 #ifdef APR_HAS_THREADS
