@@ -183,8 +183,10 @@ store_current_end_pointer(svn_temp_serializer__context_t *context,
   apr_size_t ptr_offset;
   apr_size_t *target_ptr;
 
-  /* use the serialized pointer as a storage for the offset */
-  apr_size_t *target_string_ptr = (apr_size_t*)(context->buffer->data + offset);
+  /* if *source_pointer is the root struct, there will be no parent structure
+   * to relate it to */
+  if (context->source == NULL)
+    return;
 
   /* position of the serialized pointer relative to the begin of the buffer */
   ptr_offset = (const char *)source_pointer
