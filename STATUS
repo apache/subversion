@@ -43,14 +43,6 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
- * r1188609
-   Properly define WIN64 in Windows x64 builds.
-   Justification:
-     Older apr.h versions depend on WIN64 being defined and our
-     diff libraries optimizations depend on the definitions being correct.
-   Votes:
-     +1: rhuijben, markphip
-
  * r1188652, r1188677, r1188762
    Fix issue 4042, commit incomplete directory asserts.
    Justification:
@@ -73,17 +65,7 @@ Candidate changes:
  * r1189261
    Bump copyright year in Windows executables and DLLs to 2011 (from 2009).
    Votes:
-     +1: rhuijben
-
- * r1189665
-   Remove comma after last element of enum definitions.
-   Justification:
-     Unbreaks the build for some people.
-   Notes:
-     After merging, run:
-     perl -pi -e 's/^(\s*svn_wc__db_kind_unknown), *$/\1/' subversion/libsvn_wc/wc_db.h
-   Votes:
-     +1: danielsh, philip
+     +1: rhuijben, pburba
 
 Veto-blocked changes:
 =====================
@@ -110,3 +92,20 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1188609
+   Properly define WIN64 in Windows x64 builds.
+   Justification:
+     Older apr.h versions depend on WIN64 being defined and our
+     diff libraries optimizations depend on the definitions being correct.
+   Votes:
+     +1: rhuijben, markphip, pburba
+
+ * r1189665
+   Remove comma after last element of enum definitions.
+   Justification:
+     Unbreaks the build for some people.
+   Notes:
+     After merging, run:
+     perl -pi -e 's/^(\s*svn_wc__db_kind_unknown), *$/\1/' subversion/libsvn_wc/wc_db.h
+   Votes:
+     +1: danielsh, philip, pburba
