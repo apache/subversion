@@ -49,7 +49,7 @@ Candidate changes:
      Older apr.h versions depend on WIN64 being defined and our
      diff libraries optimizations depend on the definitions being correct.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, markphip
 
  * r1188652, r1188677, r1188762
    Fix issue 4042, commit incomplete directory asserts.
