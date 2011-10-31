@@ -943,6 +943,7 @@ svn_client__handle_externals(apr_hash_t *externals_new,
     {
       const char *item_abspath = svn__apr_hash_index_key(hi);
       const char *defining_abspath = svn__apr_hash_index_val(hi);
+      svn_wc_status3_t *defining_status;
 
       svn_pool_clear(iterpool);
 
@@ -951,6 +952,20 @@ svn_client__handle_externals(apr_hash_t *externals_new,
                           handle_external_item_removal(&eb, defining_abspath,
                                                        item_abspath, iterpool),
                           iterpool));
+
+      /* Is DEFINING_ABSPATH now an unversioned directory we can remove? */
+      SVN_ERR(svn_wc_status3(&defining_status, ctx->wc_ctx, defining_abspath,
+                             iterpool, iterpool));
+      if (defining_status->node_status == svn_wc_status_unversioned)
+        {
+          svn_error_t *err;
+
+          err = svn_io_dir_remove_nonrecursive(defining_abspath, iterpool);
+          if (err && APR_STATUS_IS_ENOTEMPTY(err->apr_err))
+            svn_error_clear(err);
+          else
+            SVN_ERR(err);
+        }
     }
 
 

@@ -227,8 +227,7 @@ log_entry_receiver(void *baton,
           svn_sort__item_t *item = &(APR_ARRAY_IDX(sorted_paths, i,
                                                    svn_sort__item_t));
           const char *path = item->key;
-          svn_log_changed_path2_t *log_item
-            = apr_hash_get(log_entry->changed_paths2, item->key, item->klen);
+          svn_log_changed_path2_t *log_item = item->value;
           const char *copy_data = "";
 
           if (lb->ctx->cancel_func)
@@ -432,7 +431,7 @@ log_entry_receiver_xml(void *baton,
 {
   struct log_receiver_baton *lb = baton;
   /* Collate whole log message into sb before printing. */
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
   char *revstr;
   const char *author;
   const char *date;

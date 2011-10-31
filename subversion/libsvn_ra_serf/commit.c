@@ -1799,7 +1799,7 @@ change_dir_prop(void *dir_baton,
     }
   else
     {
-      value = svn_string_create("", dir->pool);
+      value = svn_string_create_empty(dir->pool);
       svn_ra_serf__set_prop(dir->removed_props, proppatch_target,
                             ns, name, value, dir->pool);
     }
@@ -2047,7 +2047,7 @@ change_file_prop(void *file_baton,
     }
   else
     {
-      value = svn_string_create("", file->pool);
+      value = svn_string_create_empty(file->pool);
 
       svn_ra_serf__set_prop(file->removed_props, file->url,
                             ns, name, value, file->pool);
@@ -2462,7 +2462,7 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
     }
   else if (old_value_p)
     {
-      svn_string_t *dummy_value = svn_string_create("", proppatch_ctx->pool);
+      svn_string_t *dummy_value = svn_string_create_empty(proppatch_ctx->pool);
 
       svn_ra_serf__set_prop(proppatch_ctx->previous_removed_props,
                             proppatch_ctx->path,
@@ -2476,7 +2476,7 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
     }
   else
     {
-      value = svn_string_create("", proppatch_ctx->pool);
+      value = svn_string_create_empty(proppatch_ctx->pool);
 
       svn_ra_serf__set_prop(proppatch_ctx->removed_props, proppatch_ctx->path,
                             ns, name, value, proppatch_ctx->pool);

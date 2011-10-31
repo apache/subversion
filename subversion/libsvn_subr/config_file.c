@@ -386,9 +386,9 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
                                            pool);
   ctx.line = 1;
   ctx.have_ungotten_char = FALSE;
-  ctx.section = svn_stringbuf_create("", pool);
-  ctx.option = svn_stringbuf_create("", pool);
-  ctx.value = svn_stringbuf_create("", pool);
+  ctx.section = svn_stringbuf_create_empty(pool);
+  ctx.option = svn_stringbuf_create_empty(pool);
+  ctx.value = svn_stringbuf_create_empty(pool);
 
   do
     {

@@ -547,7 +547,7 @@ svn_error_t * svn_ra_neon__get_props(apr_hash_t **results,
   pc.pool = pool;
   pc.propbuffer = apr_hash_make(pool);
   pc.props = apr_hash_make(pool);
-  pc.cdata = svn_stringbuf_create("", pool);
+  pc.cdata = svn_stringbuf_create_empty(pool);
 
   /* Create and dispatch the request! */
   SVN_ERR(svn_ra_neon__parsed_request(sess, "PROPFIND", url,

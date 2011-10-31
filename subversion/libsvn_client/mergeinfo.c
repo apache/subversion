@@ -1888,7 +1888,6 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
   /* Open RA sessions to the repository for the source and target.
    * ### TODO: As the source and target must be in the same repository, we
    * should share a single session, tracking the two URLs separately. */
-
   if (!finding_merged)
     {
       svn_revnum_t target_peg_revnum;
@@ -1898,7 +1897,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                                target_path_or_url, NULL,
                                                target_peg_revision,
                                                target_peg_revision,
-                                               ctx, scratch_pool));
+                                               ctx, sesspool));
 
       SVN_ERR(svn_client__get_history_as_mergeinfo(&target_history, NULL,
                                                    target_peg_revnum,
@@ -1907,7 +1906,6 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                                    target_session, ctx,
                                                    scratch_pool));
     }
-
   {
     svn_revnum_t source_peg_revnum;
 
@@ -1916,7 +1914,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                              source_path_or_url, NULL,
                                              source_peg_revision,
                                              source_peg_revision,
-                                             ctx, scratch_pool));
+                                             ctx, sesspool));
 
     SVN_ERR(svn_client__get_history_as_mergeinfo(&source_history, NULL,
                                                  source_peg_revnum,
@@ -1925,7 +1923,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                                  source_session, ctx,
                                                  scratch_pool));
   }
-
+  /* Close the source and target sessions. */
   svn_pool_destroy(sesspool);
 
   /* Separate the explicit or inherited mergeinfo on TARGET_PATH_OR_URL, and possibly
@@ -2045,8 +2043,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
           SVN_ERR(svn_rangelist__merge_many(subtree_merged_rangelist,
                                             merged, scratch_pool, iterpool));
 
-          apr_hash_set(inheritable_subtree_merges,
-                       apr_pstrdup(scratch_pool, subtree_path),
+          apr_hash_set(inheritable_subtree_merges, subtree_path,
                        APR_HASH_KEY_STRING, subtree_merged_rangelist);
         }
       else
@@ -2054,8 +2051,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
           /* Map SUBTREE_PATH to an empty rangelist if there was nothing
              fully merged. e.g. Only empty or non-inheritable mergienfo
              on the subtree or mergeinfo unrelated to the source. */
-          apr_hash_set(inheritable_subtree_merges,
-                       apr_pstrdup(scratch_pool, subtree_path),
+          apr_hash_set(inheritable_subtree_merges, subtree_path,
                        APR_HASH_KEY_STRING,
                        apr_array_make(scratch_pool, 0,
                        sizeof(svn_merge_range_t *)));
@@ -2147,10 +2143,10 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
   else
     {
       /* Determine the correct (youngest) target for 'svn log'. */
-      svn_merge_range_t *youngest_range = svn_merge_range_dup(
-        APR_ARRAY_IDX(master_inheritable_rangelist,
-        master_inheritable_rangelist->nelts - 1,
-        svn_merge_range_t *), scratch_pool);
+      svn_merge_range_t *youngest_range
+        = APR_ARRAY_IDX(master_inheritable_rangelist,
+                        master_inheritable_rangelist->nelts - 1,
+                        svn_merge_range_t *);
       apr_array_header_t *youngest_rangelist =
         svn_rangelist__initialize(youngest_range->end - 1,
                                   youngest_range->end,
@@ -2165,17 +2161,17 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
           apr_array_header_t *subtree_merged_rangelist =
             svn__apr_hash_index_val(hi);
           apr_array_header_t *intersecting_rangelist;
+
           svn_pool_clear(iterpool);
           SVN_ERR(svn_rangelist_intersect(&intersecting_rangelist,
                                           youngest_rangelist,
                                           subtree_merged_rangelist,
                                           FALSE, iterpool));
 
-          APR_ARRAY_PUSH(merge_source_fspaths, const char *) =
-            apr_pstrdup(scratch_pool, key);
+          APR_ARRAY_PUSH(merge_source_fspaths, const char *) = key;
 
           if (intersecting_rangelist->nelts)
-            log_target = apr_pstrdup(scratch_pool, key);
+            log_target = key;
         }
     }
 

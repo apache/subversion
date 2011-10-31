@@ -67,7 +67,7 @@ enum svnsync__opt {
   svnsync_opt_version,
   svnsync_opt_trust_server_cert,
   svnsync_opt_allow_non_empty,
-  svnsync_opt_steal_lock,
+  svnsync_opt_steal_lock
 };
 
 #define SVNSYNC_OPTS_DEFAULT svnsync_opt_non_interactive, \
@@ -1089,7 +1089,7 @@ replay_rev_started(svn_revnum_t revision,
      replay_rev_finished callback. */
   if (! apr_hash_get(filtered, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING))
     apr_hash_set(filtered, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-                 svn_string_create("", pool));
+                 svn_string_create_empty(pool));
 
   /* If necessary, normalize encoding and line ending style. Add the number
      of properties that required EOL normalization to the overall count

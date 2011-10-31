@@ -810,13 +810,12 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
     SVN_ERR(svn_client__ra_session_from_path(&session1, NULL, NULL,
                                              path_or_url1, NULL,
                                              &revision1, &revision1,
-                                             ctx, pool));
+                                             ctx, sesspool));
     SVN_ERR(svn_client__ra_session_from_path(&session2, NULL, NULL,
                                              path_or_url2, NULL,
                                              &revision2, &revision2,
-                                             ctx, pool));
+                                             ctx, sesspool));
   }
-
   /* We're going to cheat and use history-as-mergeinfo because it
      saves us a bunch of annoying custom data comparisons and such. */
   SVN_ERR(svn_client__get_history_as_mergeinfo(&history1,
@@ -831,7 +830,7 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
                                                session2, ctx, pool));
-
+  /* Close the source and target sessions. */
   svn_pool_destroy(sesspool);
 
   /* Loop through the first location's history, check for overlapping

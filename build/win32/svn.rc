@@ -66,7 +66,7 @@ BEGIN
       VALUE "FileDescription", APR_STRINGIFY(SVN_FILE_DESCRIPTION) "\0"
       VALUE "FileVersion", SVN_VER_NUMBER "\0"
       VALUE "InternalName", "SVN\0"
-      VALUE "LegalCopyright", "Copyright (c) 2009 The Apache Software Foundation\0"
+      VALUE "LegalCopyright", "Copyright (c) 2011 The Apache Software Foundation\0"
       VALUE "OriginalFilename", APR_STRINGIFY(SVN_FILE_NAME) "\0"
       VALUE "ProductName", "Subversion\0"
       VALUE "ProductVersion", SVN_VERSION "\0"

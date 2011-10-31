@@ -154,7 +154,7 @@ prev_log_path(const char **prev_path_p,
                  path, to the change's copyfrom path.  Otherwise, this
                  change isn't really interesting to us, and our search
                  continues. */
-              change = apr_hash_get(changed_paths, ch_path, len);
+              change = item.value;
               if (change->copyfrom_path)
                 {
                   if (action_p)

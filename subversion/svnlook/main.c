@@ -867,11 +867,11 @@ display_prop_diffs(const apr_array_header_t *prop_diffs,
            Since the diff is not useful anyway for patching properties an
            eol character is appended when needed to remove those pescious
            ' \ No newline at end of file' lines. */
-        tmp = orig_value ? orig_value : svn_string_create("", pool);
+        tmp = orig_value ? orig_value : svn_string_create_empty(pool);
         orig = maybe_append_eol(tmp, pool);
 
         tmp = pc->value ? pc->value :
-                                  svn_string_create("", pool);
+                                  svn_string_create_empty(pool);
         val = maybe_append_eol(tmp, pool);
 
         SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options, pool));
@@ -921,7 +921,7 @@ print_diff_tree(svn_fs_root_t *root,
   if (! node)
     return SVN_NO_ERROR;
 
-  header = svn_stringbuf_create("", pool);
+  header = svn_stringbuf_create_empty(pool);
 
   /* Print copyfrom history for the top node of a copied tree. */
   if ((SVN_IS_VALID_REVNUM(node->copyfrom_rev))

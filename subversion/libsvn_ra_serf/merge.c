@@ -60,14 +60,14 @@ typedef enum merge_state_e {
   DATE,
   IGNORE_PROP_NAME,
   NEED_PROP_NAME,
-  PROP_VAL,
+  PROP_VAL
 } merge_state_e;
 
 typedef enum resource_type_e {
   UNSET,
   BASELINE,
   COLLECTION,
-  CHECKED_IN,
+  CHECKED_IN
 } resource_type_e;
 
 typedef struct merge_info_t {

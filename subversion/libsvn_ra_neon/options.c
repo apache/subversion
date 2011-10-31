@@ -288,7 +288,7 @@ svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
   int status_code;
 
   oc.pool = pool;
-  oc.cdata = svn_stringbuf_create("", pool);
+  oc.cdata = svn_stringbuf_create_empty(pool);
 
   if (youngest_rev)
     *youngest_rev = SVN_INVALID_REVNUM;
