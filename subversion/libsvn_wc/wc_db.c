@@ -32,6 +32,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
+#include "svn_sorts.h"
 #include "svn_wc.h"
 #include "svn_checksum.h"
 #include "svn_pools.h"
@@ -6559,38 +6560,71 @@ do_delete_notify(void *baton,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_pool_t *iterpool;
+  apr_array_header_t *delete_list;
+  svn_boolean_t sorted;
+  int i;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_DELETE_LIST));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-  iterpool = svn_pool_create(scratch_pool);
+  /* Build a sorted list of deleted nodes. STMT_SELECT_DELETE_LIST
+   * doesn't sort because sorting in SQL is more expensive than in C. */
+  delete_list = apr_array_make(scratch_pool, 1, sizeof(const char *));
+  sorted = TRUE;
+  i = 0;
   while (have_row)
     {
       const char *notify_relpath;
       const char *notify_abspath;
-
-      svn_pool_clear(iterpool);
-
-      if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
+      const char *prev_abspath;
 
       notify_relpath = svn_sqlite__column_text(stmt, 0, NULL);
       notify_abspath = svn_dirent_join(wcroot->abspath,
                                        notify_relpath,
-                                       iterpool);
+                                       scratch_pool);
+      if (i == 0)
+        {
+          APR_ARRAY_PUSH(delete_list, const char *) = notify_abspath;
+          i++;
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+          continue;
+        }
 
+      prev_abspath = APR_ARRAY_IDX(delete_list, i - 1, const char *);
+      if (sorted)
+        sorted = (svn_path_compare_paths(prev_abspath, notify_abspath) <= 0);
+      APR_ARRAY_PUSH(delete_list, const char *) = notify_abspath;
+      i++;
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (!sorted)
+    qsort(delete_list->elts, delete_list->nelts, delete_list->elt_size,
+          svn_sort_compare_paths);
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < delete_list->nelts; i++)
+    {
+      svn_pool_clear(iterpool);
       notify_func(notify_baton,
-                  svn_wc_create_notify(notify_abspath,
+                  svn_wc_create_notify(APR_ARRAY_IDX(delete_list, i,
+                                                     const char *),
                                        svn_wc_notify_delete,
                                        iterpool),
                   iterpool);
-
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
   svn_pool_destroy(iterpool);
 
-  return svn_error_trace(svn_sqlite__reset(stmt));
+  /* We only allow cancellation after notification for all deleted nodes
+   * has happened. The nodes are already deleted so we should notify for
+   * all of them. */
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
+
+  return SVN_NO_ERROR;
 }
 
 
