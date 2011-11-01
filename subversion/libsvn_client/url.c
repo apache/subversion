@@ -82,7 +82,10 @@ svn_client_peg_create(const char *path_or_url,
   svn_client_peg_t *peg = apr_palloc(pool, sizeof(*peg));
 
   peg->path_or_url = apr_pstrdup(pool, path_or_url);
-  peg->peg_revision = *peg_revision;
+  if (peg_revision)
+    peg->peg_revision = *peg_revision;
+  else
+    peg->peg_revision.kind = svn_opt_revision_unspecified;
   return SVN_NO_ERROR;
 }
 
