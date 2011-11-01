@@ -3444,11 +3444,12 @@ def copy_peg_rev_url(sbox):
                                      wc_dir)
 
   # Copy using a peg rev
-  # Add peg rev '@HEAD' to sigma_url when copying which tests for issue #3651.
+  # Add an empty peg specifier ('@') to sigma_url when copying, to test for
+  # issue #3651 "svn copy does not eat peg revision within copy target path".
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp',
                                      iota_url + '@HEAD', '-r', '1',
-                                     sigma_url + '@HEAD', '-m', 'rev 3')
+                                     sigma_url + '@', '-m', 'rev 3')
 
   # Validate the copy destination's mergeinfo (we expect none).
   svntest.actions.run_and_verify_svn(None, [], [],
