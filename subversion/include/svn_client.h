@@ -68,6 +68,57 @@ svn_client_version(void);
  * @{
  */
 
+/** A "peg" is the location of a versioned node in a repository or in a
+ * working copy, as specified by the client to libsvn_client.
+ *
+ * If @a path_or_url is a URL then @a peg_revision specifies the
+ * revision at which the URL is to be looked up, and the peg revision
+ * kinds 'base', 'committed' and 'prev' are invalid.
+ *
+ * Otherwise, @a path_or_url is a working copy path.
+ *
+ * @note About the meaning of a "peg revision" with a working copy path.
+ * A working-copy path by itself implicitly identifies one line or
+ * sometimes two lines of history.
+ * The line through its base version is not always the same as the line
+ * through its working version.  These differ if the working version is
+ * copied or moved (so its line of history is through its copy-from source)
+ * or added (so it has no line of history in the repository, only locally)
+ * or deleted (so it no longer refers to a versioned object).  In any
+ * case there are only two lines of history to distinguish, and these could
+ * be distinguished by specifying 'base' or 'working'.  Historically,
+ * the libsvn_client API and the 'svn' command-line client accept any peg
+ * revision specifier with a working copy path, and ### ?... (when it is
+ * not 'BASE'?) it acts not as a peg revision but as an operative revision,
+ * with the peg implicitly being ... ### BASE?).
+ *
+ * @since New in 1.8.
+ */
+typedef struct svn_client_peg_t
+{
+  const char *path_or_url;
+  svn_opt_revision_t peg_revision;
+} svn_client_peg_t;
+
+/** Return a deep copy of @a peg, allocated in @a pool.
+ *
+ * @since New in 1.8.
+ */
+svn_client_peg_t *
+svn_client_peg_dup(const svn_client_peg_t *peg,
+                   apr_pool_t *pool);
+
+/** Return a peg created from the given @a path_or_url and @a peg_revision,
+ * allocated in @a pool.
+ * @a peg_revision may be NULL, meaning 'unspecified'.
+ *
+ * @since New in 1.8.
+ */
+svn_client_peg_t *
+svn_client_peg_create(const char *path_or_url,
+                      const svn_opt_revision_t *peg_revision,
+                      apr_pool_t *pool);
+
 
 /*** Authentication stuff ***/
 

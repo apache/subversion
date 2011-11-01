@@ -64,6 +64,45 @@ svn_client_url_from_path2(const char **url,
 }
 
 
+svn_client_peg_t *
+svn_client_peg_dup(const svn_client_peg_t *peg,
+                   apr_pool_t *pool)
+{
+  svn_client_peg_t *peg2 = apr_pmemdup(pool, peg, sizeof(*peg2));
+
+  peg2->path_or_url = apr_pstrdup(pool, peg->path_or_url);
+  return peg2;
+}
+
+svn_client_peg_t *
+svn_client_peg_create(const char *path_or_url,
+                      const svn_opt_revision_t *peg_revision,
+                      apr_pool_t *pool)
+{
+  svn_client_peg_t *peg = apr_palloc(pool, sizeof(*peg));
+
+  peg->path_or_url = apr_pstrdup(pool, path_or_url);
+  peg->peg_revision = *peg_revision;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__peg_resolve(svn_client_target_t **target_p,
+                        svn_ra_session_t **session_p,
+                        const svn_client_peg_t *peg,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_client__target(target_p, peg->path_or_url, &peg->peg_revision,
+                             result_pool));
+  *session_p = NULL;
+  SVN_ERR(svn_client__resolve_target_location(*target_p, session_p,
+                                              ctx, result_pool));
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_client__target(svn_client_target_t **target_p,
                    const char *path_or_url,

@@ -59,6 +59,25 @@ svn_client__create_status(svn_client_status_t **cst,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
+
+/** Resolve @a peg to a repository location and open an RA session to there.
+ * Set @a *target_p to the location and @a *session_p to the new session,
+ * both allocated in @a result_pool.
+ *
+ * If @a peg->path_or_url is a URL then a peg revision kind of 'unspecified'
+ * means 'head', otherwise it means 'base'.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client__peg_resolve(svn_client_target_t **target_p,
+                        svn_ra_session_t **session_p,
+                        const svn_client_peg_t *peg,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+
 /* This property marks a branch root. Branches with the same value of this
  * property are mergeable. */
 #define SVN_PROP_BRANCH_ROOT "svn:ignore" /* ### should be "svn:branch-root" */
