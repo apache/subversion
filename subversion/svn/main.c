@@ -145,7 +145,11 @@ const apr_getopt_option_t svn_cl__options[] =
   {"change",        'c', 1,
                     N_("the change made by revision ARG (like -r ARG-1:ARG)\n"
                        "                             "
-                       "If ARG is negative this is like -r ARG:ARG-1")},
+                       "If ARG is negative this is like -r ARG:ARG-1\n"
+                       "                             "
+                       "If ARG is of the form ARG1-ARG2 then this is like\n"
+                       "                             "
+                       "ARG1:ARG2, where ARG1 is inclusive")},
   {"revision",      'r', 1,
                     N_("ARG (some commands also take ARG1:ARG2 range)\n"
                        "                             "
