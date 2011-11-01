@@ -51,7 +51,7 @@
 typedef enum options_state_e {
   OPTIONS,
   ACTIVITY_COLLECTION,
-  HREF,
+  HREF
 } options_state_e;
 
 typedef struct options_state_list_t {

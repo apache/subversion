@@ -55,7 +55,7 @@ typedef enum lock_state_e {
   OWNER,
   COMMENT,
   CREATION_DATE,
-  EXPIRATION_DATE,
+  EXPIRATION_DATE
 } lock_state_e;
 
 typedef struct lock_info_t {

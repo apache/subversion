@@ -91,13 +91,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1189665
-   Remove comma after last element of enum definitions.
-   Justification:
-     Unbreaks the build for some people.
-   Notes:
-     After merging, run:
-     perl -pi -e 's/^(\s*svn_wc__db_kind_unknown), *$/\1/' subversion/libsvn_wc/wc_db.h
-   Votes:
-     +1: danielsh, philip, pburba

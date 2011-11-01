@@ -55,7 +55,7 @@ typedef enum lock_state_e {
   DEPTH,
   TIMEOUT,
   LOCK_TOKEN,
-  COMMENT,
+  COMMENT
 } lock_state_e;
 
 typedef struct lock_prop_info_t {
