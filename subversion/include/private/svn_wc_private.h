@@ -1132,6 +1132,22 @@ svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
                         void *notify_baton,
                         apr_pool_t *scratch_pool);
 
+
+/* Alternative version of svn_wc_delete4().
+ * It can delete multiple TARGETS more efficiently (within a single sqlite
+ * transaction per working copy), but lacks support for moves. */
+svn_error_t *
+svn_wc__delete_many(svn_wc_context_t *wc_ctx,
+                    const apr_array_header_t *targets,
+                    svn_boolean_t keep_local,
+                    svn_boolean_t delete_unversioned_target,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    svn_wc_notify_func2_t notify_func,
+                    void *notify_baton,
+                    apr_pool_t *scratch_pool);
+
+
 /* If the node at LOCAL_ABSPATH was moved away set *MOVED_TO_ABSPATH to
  * the absolute path of the copied move-target node, and *COPY_OP_ROOT_ABSPATH
  * to the absolute path of the root node of the copy operation.
