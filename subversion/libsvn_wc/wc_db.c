@@ -6110,10 +6110,10 @@ struct op_delete_baton_t {
 };
 
 static svn_error_t *
-op_delete_txn(void *baton,
-              svn_wc__db_wcroot_t *wcroot,
-              const char *local_relpath,
-              apr_pool_t *scratch_pool)
+delete_node(void *baton,
+            svn_wc__db_wcroot_t *wcroot,
+            const char *local_relpath,
+            apr_pool_t *scratch_pool)
 {
   struct op_delete_baton_t *b = baton;
   svn_wc__db_status_t status;
@@ -6122,8 +6122,6 @@ op_delete_txn(void *baton,
   svn_sqlite__stmt_t *stmt;
   apr_int64_t select_depth; /* Depth of what is to be deleted */
   svn_boolean_t refetch_depth = FALSE;
-
-  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, STMT_CREATE_DELETE_LIST));
 
   SVN_ERR(read_info(&status,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -6231,6 +6229,50 @@ op_delete_txn(void *baton,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+op_delete_txn(void *baton,
+              svn_wc__db_wcroot_t *wcroot,
+              const char *local_relpath,
+              apr_pool_t *scratch_pool)
+{
+
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, STMT_CREATE_DELETE_LIST));
+  SVN_ERR(delete_node(baton, wcroot, local_relpath, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+
+struct op_delete_many_baton_t {
+  apr_array_header_t *rel_targets;
+} op_delete_many_baton_t;
+
+static svn_error_t *
+op_delete_many_txn(void *baton,
+                   svn_wc__db_wcroot_t *wcroot,
+                   const char *local_relpath,
+                   apr_pool_t *scratch_pool)
+{
+  struct op_delete_many_baton_t *odmb = baton;
+  int i;
+  apr_pool_t *iterpool;
+
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, STMT_CREATE_DELETE_LIST));
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < odmb->rel_targets->nelts; i++)
+    {
+      const char *target_relpath = APR_ARRAY_IDX(odmb->rel_targets, i,
+                                                 const char *);
+      struct op_delete_baton_t odb;
+      
+      svn_pool_clear(iterpool);
+      odb.delete_depth = relpath_depth(target_relpath);
+      SVN_ERR(delete_node(&odb, wcroot, target_relpath, iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 
 static svn_error_t *
 do_delete_notify(void *baton,
@@ -6308,6 +6350,67 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
      notifications necessary, and then clean out our temporary tables.  */
   return svn_error_trace(with_finalization(wcroot, local_relpath,
                                            op_delete_txn, &odb,
+                                           do_delete_notify, NULL,
+                                           cancel_func, cancel_baton,
+                                           notify_func, notify_baton,
+                                           STMT_FINALIZE_DELETE,
+                                           scratch_pool));
+}
+
+
+svn_error_t *
+svn_wc__db_op_delete_many(svn_wc__db_t *db,
+                          apr_array_header_t *targets,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  struct op_delete_many_baton_t odmb;
+  int i;
+  apr_pool_t *iterpool;
+
+  odmb.rel_targets = apr_array_make(scratch_pool, targets->nelts,
+                                    sizeof(const char *));
+  iterpool = svn_pool_create(scratch_pool);
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db,
+                                                APR_ARRAY_IDX(targets, 0,
+                                                              const char *),
+                                                scratch_pool, iterpool));
+  VERIFY_USABLE_WCROOT(wcroot);
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *local_abspath = APR_ARRAY_IDX(targets, i, const char*);
+      svn_wc__db_wcroot_t *target_wcroot;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&target_wcroot,
+                                                    &local_relpath, db,
+                                                    APR_ARRAY_IDX(targets, i,
+                                                                  const char *),
+                                                    scratch_pool, iterpool));
+      VERIFY_USABLE_WCROOT(target_wcroot);
+      SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+      /* Assert that all targets are within the same working copy. */
+      SVN_ERR_ASSERT(wcroot->wc_id == target_wcroot->wc_id);
+
+      APR_ARRAY_PUSH(odmb.rel_targets, const char *) = local_relpath;
+      SVN_ERR(flush_entries(target_wcroot, local_abspath, svn_depth_infinity,
+                            iterpool));
+
+    }
+  svn_pool_destroy(iterpool);
+  
+  /* Perform the deletion operation (transactionally), perform any
+     notifications necessary, and then clean out our temporary tables.  */
+  return svn_error_trace(with_finalization(wcroot, wcroot->abspath,
+                                           op_delete_many_txn, &odmb,
                                            do_delete_notify, NULL,
                                            cancel_func, cancel_baton,
                                            notify_func, notify_baton,

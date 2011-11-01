@@ -1436,6 +1436,32 @@ svn_wc__db_op_move(svn_wc__db_t *db,
                    apr_pool_t *scratch_pool);
 
 
+/* Mark all LOCAL_ABSPATH in the TARGETS array, and all of their children,
+ * for deletion.
+ *
+ * This function is more efficient than svn_wc__db_op_delete() because
+ * only one sqlite transaction is used for all targets.
+ * It currently lacks support for moves (though this could be changed,
+ * at which point svn_wc__db_op_delete() becomes redundant).
+ *
+ * If NOTIFY_FUNC is not NULL, then it will be called (with NOTIFY_BATON)
+ * for each node deleted. While this processing occurs, if CANCEL_FUNC is
+ * not NULL, then it will be called (with CANCEL_BATON) to detect cancellation
+ * during the processing.
+ *
+ * Note: the notification (and cancellation) occur outside of a SQLite
+ * transaction.
+ */
+svn_error_t *
+svn_wc__db_op_delete_many(svn_wc__db_t *db,
+                          apr_array_header_t *targets,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *scratch_pool);
+
+
 /* ### mark PATH as (possibly) modified. "svn edit" ... right API here? */
 svn_error_t *
 svn_wc__db_op_modified(svn_wc__db_t *db,

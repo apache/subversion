@@ -381,6 +381,19 @@ svn_error_t * svn_client__wc_delete(const char *path,
                                     svn_client_ctx_t *ctx,
                                     apr_pool_t *pool);
 
+
+/* Like svn_client__wc_delete(), but deletes mulitple TARGETS efficiently. */
+svn_error_t *
+svn_client__wc_delete_many(const apr_array_header_t *targets,
+                           svn_boolean_t force,
+                           svn_boolean_t dry_run,
+                           svn_boolean_t keep_local,
+                           svn_wc_notify_func2_t notify_func,
+                           void *notify_baton,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool);
+
+
 /* Make PATH and add it to the working copy, optionally making all the
    intermediate parent directories if MAKE_PARENTS is TRUE. */
 svn_error_t *

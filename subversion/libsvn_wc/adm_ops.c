@@ -594,6 +594,168 @@ erase_unversioned_from_wc(const char *path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__delete_many(svn_wc_context_t *wc_ctx,
+                    const apr_array_header_t *targets,
+                    svn_boolean_t keep_local,
+                    svn_boolean_t delete_unversioned_target,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    svn_wc_notify_func2_t notify_func,
+                    void *notify_baton,
+                    apr_pool_t *scratch_pool)
+{
+  svn_wc__db_t *db = wc_ctx->db;
+  svn_error_t *err;
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+  svn_boolean_t conflicted;
+  const apr_array_header_t *conflicts;
+  apr_array_header_t *versioned_targets;
+  const char *local_abspath;
+  int i;
+  apr_pool_t *iterpool;
+
+  iterpool = svn_pool_create(scratch_pool);
+  versioned_targets = apr_array_make(scratch_pool, targets->nelts,
+                                     sizeof(const char *));
+  for (i = 0; i < targets->nelts; i++)
+    {
+      svn_pool_clear(iterpool);
+
+      local_abspath = APR_ARRAY_IDX(targets, i, const char *);
+      err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, &conflicted,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 db, local_abspath, iterpool, iterpool);
+
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+            {
+              svn_error_clear(err);
+              if (delete_unversioned_target && !keep_local)
+                SVN_ERR(erase_unversioned_from_wc(local_abspath, FALSE,
+                                                  cancel_func, cancel_baton,
+                                                  iterpool));
+              continue;
+            }
+         else
+          return svn_error_trace(err);
+        }
+
+      APR_ARRAY_PUSH(versioned_targets, const char *) = local_abspath;
+
+      switch (status)
+        {
+          /* svn_wc__db_status_server_excluded handled by
+           * svn_wc__db_op_delete_many */
+          case svn_wc__db_status_excluded:
+          case svn_wc__db_status_not_present:
+            return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                     _("'%s' cannot be deleted"),
+                                     svn_dirent_local_style(local_abspath,
+                                                            iterpool));
+
+          /* Explicitly ignore other statii */
+          default:
+            break;
+        }
+
+      if (status == svn_wc__db_status_normal
+          && kind == svn_wc__db_kind_dir)
+        {
+          svn_boolean_t is_wcroot;
+          SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, local_abspath,
+                                       iterpool));
+
+          if (is_wcroot)
+            return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                                     _("'%s' is the root of a working copy and "
+                                       "cannot be deleted"),
+                                     svn_dirent_local_style(local_abspath,
+                                                            iterpool));
+        }
+
+      /* Verify if we have a write lock on the parent of this node as we might
+         be changing the childlist of that directory. */
+      SVN_ERR(svn_wc__write_check(db, svn_dirent_dirname(local_abspath,
+                                                         iterpool),
+                                  iterpool));
+
+      /* Read conflicts, to allow deleting the markers after updating the DB */
+      if (!keep_local && conflicted)
+        SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
+                                          scratch_pool, iterpool));
+
+    }
+
+  if (versioned_targets->nelts == 0)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc__db_op_delete_many(db, versioned_targets,
+                                    cancel_func, cancel_baton,
+                                    notify_func, notify_baton, scratch_pool));
+
+  if (!keep_local && conflicted && conflicts != NULL)
+    {
+      svn_pool_clear(iterpool);
+
+      /* Do we have conflict markers that should be removed? */
+      for (i = 0; i < conflicts->nelts; i++)
+        {
+          const svn_wc_conflict_description2_t *desc;
+
+          desc = APR_ARRAY_IDX(conflicts, i,
+                               const svn_wc_conflict_description2_t*);
+
+          if (desc->kind == svn_wc_conflict_kind_text)
+            {
+              if (desc->base_abspath != NULL)
+                {
+                  SVN_ERR(svn_io_remove_file2(desc->base_abspath, TRUE,
+                                              iterpool));
+                }
+              if (desc->their_abspath != NULL)
+                {
+                  SVN_ERR(svn_io_remove_file2(desc->their_abspath, TRUE,
+                                              iterpool));
+                }
+              if (desc->my_abspath != NULL)
+                {
+                  SVN_ERR(svn_io_remove_file2(desc->my_abspath, TRUE,
+                                              iterpool));
+                }
+            }
+          else if (desc->kind == svn_wc_conflict_kind_property
+                   && desc->their_abspath != NULL)
+            {
+              SVN_ERR(svn_io_remove_file2(desc->their_abspath, TRUE,
+                                          iterpool));
+            }
+        }
+    }
+
+  /* By the time we get here, the db knows that all targets are now
+   * unversioned. */
+  if (!keep_local)
+    {
+      for (i = 0; i < versioned_targets->nelts; i++)
+        {
+          svn_pool_clear(iterpool);
+
+          local_abspath = APR_ARRAY_IDX(versioned_targets, i, const char *);
+          SVN_ERR(erase_unversioned_from_wc(local_abspath, TRUE,
+                                            cancel_func, cancel_baton,
+                                            iterpool));
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc_delete4(svn_wc_context_t *wc_ctx,
