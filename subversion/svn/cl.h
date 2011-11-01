@@ -766,41 +766,18 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
                          const char *wc_repos_root_URL,
                          apr_pool_t *pool);
 
-/* Return, in @a *true_targets_p, a copy of @a targets with peg revision
- * specifiers snipped off the end of each element.
- *
- * ### JAF TODO: This function is not good because it does not allow the
- * ### caller to detect if an invalid peg revision was specified.
- * ###
- * ### Callers should never have a need to silently *discard* all peg
- * ### revisions, even if they are doing this *after* saving any peg
- * ### revisions that might be of interest on certain arguments: I don't
- * ### think it can ever be correct to silently ignore a peg revision that
- * ### is specified, whether it makes semantic sense or not.
- * ###
- * ### Instead, callers should parse all the arguments and silently
- * ### ignore an *empty* peg revision part (just an "@", which can be
- * ### used to escape an earlier "@" in the argument) on any argument,
- * ### even an argument on which a peg revision does not make sense,
- * ### but should not silently ignore a non-empty peg when it does not
- * ### make sense.
- * ###
- * ### Something like:
- * ###   For each (URL-like?) argument that doesn't accept a peg rev:
- * ###     Parse into peg-rev and true-path parts;
- * ###     If (peg rev != unspecified)
- * ###       Error("This arg doesn't accept a peg rev.").
- * ###     Use the true-path part.
+/* Return, in @a *true_targets_p, a shallow copy of @a targets with any
+ * empty peg revision specifier snipped off the end of each element.  If any
+ * target has a non-empty peg revision specifier, throw an error.  The user
+ * may have specified a peg revision where it doesn't make sense to do so,
+ * or may have forgotten to escape an '@' character in a filename.
  *
  * This function is useful for subcommands for which peg revisions
- * do not make any sense. Such subcommands still need to allow peg
- * revisions to be specified on the command line so that users of
+ * do not make any sense. Such subcommands still need to allow an empty
+ * peg revision to be specified on the command line so that users of
  * the command line client can consistently escape '@' characters
  * in filenames by appending an '@' character, regardless of the
  * subcommand being used.
- *
- * If a peg revision is present but cannot be parsed, an error is thrown.
- * The user has likely forgotten to escape an '@' character in a filename.
  *
  * It is safe to pass the address of @a targets as @a true_targets_p.
  *
