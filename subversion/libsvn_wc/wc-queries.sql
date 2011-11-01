@@ -1208,7 +1208,6 @@ WHERE wc_id = ?1
 
 -- STMT_SELECT_DELETE_LIST
 SELECT local_relpath FROM delete_list
-ORDER BY local_relpath
 
 -- STMT_FINALIZE_DELETE
 DROP TABLE IF EXISTS delete_list
