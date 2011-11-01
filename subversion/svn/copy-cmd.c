@@ -83,8 +83,7 @@ svn_cl__copy(apr_getopt_t *os,
     svn_opt_revision_t peg;
 
     SVN_ERR(svn_opt_parse_path(&peg, &dst_path, tgt, pool));
-    if (peg.kind != svn_opt_revision_unspecified
-        && peg.kind != svn_opt_revision_head /* special exemption */)
+    if (peg.kind != svn_opt_revision_unspecified)
       return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                                _("'%s': a peg revision is not allowed here"),
                                tgt);
