@@ -834,7 +834,8 @@ class WinGeneratorBase(GeneratorBase):
 
     fakedefines = ["WIN32","_WINDOWS","alloca=_alloca",
                    "_CRT_SECURE_NO_DEPRECATE=",
-                   "_CRT_NONSTDC_NO_DEPRECATE="]
+                   "_CRT_NONSTDC_NO_DEPRECATE=",
+                   "_CRT_SECURE_NO_WARNINGS="]
 
     if self.sqlite_inline:
       fakedefines.append("SVN_SQLITE_INLINE")

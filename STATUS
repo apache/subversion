@@ -92,14 +92,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1188609
-   Properly define WIN64 in Windows x64 builds.
-   Justification:
-     Older apr.h versions depend on WIN64 being defined and our
-     diff libraries optimizations depend on the definitions being correct.
-   Votes:
-     +1: rhuijben, markphip, pburba
-
  * r1189665
    Remove comma after last element of enum definitions.
    Justification:
