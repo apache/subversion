@@ -154,7 +154,7 @@ typedef enum svn_wc__db_kind_t {
 
     /* The type of the node is not known, due to its absence, exclusion,
        deletion, or incomplete status. */
-    svn_wc__db_kind_unknown,
+    svn_wc__db_kind_unknown
 
 } svn_wc__db_kind_t;
 
