@@ -1358,10 +1358,14 @@ svn_cl__eat_peg_revisions(apr_array_header_t **true_targets_p,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
-      const char *true_target;
+      const char *true_target, *peg;
 
-      SVN_ERR(svn_opt__split_arg_at_peg_revision(&true_target, NULL,
+      SVN_ERR(svn_opt__split_arg_at_peg_revision(&true_target, &peg,
                                                  target, pool));
+      if (peg[0] && peg[1])
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("'%s': a peg revision is not allowed here"),
+                                 target);
       APR_ARRAY_PUSH(true_targets, const char *) = true_target;
     }
 
