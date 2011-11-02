@@ -68,6 +68,22 @@ svn_client_version(void);
  * @{
  */
 
+/* */
+typedef struct svn_client_repo_root_t
+{
+  const char *root_url;
+  const char *uuid;
+} svn_client_repo_root_t;
+
+/* */
+typedef struct svn_client_repo_rev_path_t
+{
+  svn_client_repo_root_t repo;
+  svn_revnum_t revnum;
+  const char *relpath;
+} svn_client_repo_rev_path_t;
+
+
 /** A "peg" is the location of a versioned node in a repository or in a
  * working copy, as specified by the client to libsvn_client.
  *
@@ -97,6 +113,7 @@ svn_client_version(void);
 typedef struct svn_client_peg_t
 {
   const char *path_or_url;
+  const char *abspath_or_url;
   svn_opt_revision_t peg_revision;
 } svn_client_peg_t;
 
@@ -114,8 +131,9 @@ svn_client_peg_dup(const svn_client_peg_t *peg,
  *
  * @since New in 1.8.
  */
-svn_client_peg_t *
-svn_client_peg_create(const char *path_or_url,
+svn_error_t *
+svn_client_peg_create(svn_client_peg_t **peg_p,
+                      const char *path_or_url,
                       const svn_opt_revision_t *peg_revision,
                       apr_pool_t *pool);
 
@@ -1061,11 +1079,8 @@ svn_client_create_context(svn_client_ctx_t **ctx,
 typedef struct svn_client_target_t
   {
     /* The following fields are assumed to be initialized and valid.
-     * peg_revision->kind and revision->kind may be 'unspecified'. */
-    const char *path_or_url;
-    const char *abspath_or_url;
-    svn_opt_revision_t peg_revision;
-
+     * peg.peg_revision.kind and revision.kind may be 'unspecified'. */
+    const svn_client_peg_t *peg;
     svn_opt_revision_t revision;
 
     /* The following fields are the resolved location after contacting
@@ -1080,23 +1095,17 @@ typedef struct svn_client_target_t
   } svn_client_target_t;
 
 /** Set @a *target to a new #svn_client_target_t structure. Initialize the
- * @c abspath_or_url field as well as those corresponding to @a path_or_url,
- * @a peg_revision and @a pool.  @a peg_revision may be NULL meaning
- * unspecified. */
+ * @c peg and @c pool fields. */
 svn_error_t *
 svn_client__target(svn_client_target_t **target,
-                   const char *path_or_url,
-                   const svn_opt_revision_t *peg_revision,
+                   const svn_client_peg_t *peg,
                    apr_pool_t *pool);
 
-/** Like svn_opt_parse_path() but constructs a new #svn_client_target_t
- * structure. */
-svn_error_t *
-svn_client__parse_target(svn_client_target_t **target,
-                         const char *target_string,
-                         apr_pool_t *pool);
-
-/* */
+/** @a ra_session_p is an optional in/out parameter. If an RA session is
+ * needed and @a ra_session_p and @a *ra_session_p are both non-null, use
+ * that session; otherwise open a new sesssion (allocated
+ * in @a target->pool) and if @a ra_session_p is non-null then set
+ * @a *ra_session_p to the new session. */
 svn_error_t *
 svn_client__resolve_location(const char **repo_root_url_p,
                              const char **repo_uuid_p,
@@ -1109,17 +1118,6 @@ svn_client__resolve_location(const char **repo_root_url_p,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
-
-/** @a ra_session_p is an optional in/out parameter. If an RA session is
- * needed and @a ra_session_p and @a *ra_session_p are both non-null, use
- * that session; otherwise open a new sesssion (allocated
- * in @a target->pool) and if @a ra_session_p is non-null then set
- * @a *ra_session_p to the new session. */
-svn_error_t *
-svn_client__resolve_target_location(svn_client_target_t *target,
-                                    svn_ra_session_t **ra_session_p,
-                                    svn_client_ctx_t *ctx,
-                                    apr_pool_t *scratch_pool);
 
 
 
@@ -3725,15 +3723,13 @@ typedef svn_error_t *
 /**
  * If @a finding_merged is TRUE, then drive log entry callbacks
  * @a receiver / @a receiver_baton with the revisions merged from
- * @a source_path_or_url (as of @a source_peg_revision) into
- * @a target_path_or_url (as of @a target_peg_revision).  If @a
- * finding_merged is FALSE then find the revisions eligible for merging.
+ * @a source_peg into @a target_peg.  If @a finding_merged is FALSE
+ * then find the revisions eligible for merging.
  *
  * If @a depth is #svn_depth_empty consider only the explicit or
- * inherited mergeinfo on @a target_path_or_url when calculating merged
- * revisions from @a source_path_or_url.  If @a depth is #svn_depth_infinity
- * then also consider the explicit subtree mergeinfo under @a
- * target_path_or_url.
+ * inherited mergeinfo on @a target_peg when calculating merged
+ * revisions from @a source_peg.  If @a depth is #svn_depth_infinity
+ * then also consider the explicit subtree mergeinfo under @a target_peg.
  * If a depth other than #svn_depth_empty or #svn_depth_infinity is
  * requested then return a #SVN_ERR_UNSUPPORTED_FEATURE error.
  *
@@ -3750,8 +3746,8 @@ typedef svn_error_t *
  */
 svn_error_t *
 svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
-                          svn_client_target_t *target,
-                          svn_client_target_t *source,
+                          svn_client_peg_t *target_peg,
+                          svn_client_peg_t *source_peg,
                           svn_mergeinfo_receiver_t receiver,
                           void *receiver_baton,
                           const apr_array_header_t *revprops,
@@ -4705,7 +4701,8 @@ svn_client_revprop_set(const char *propname,
 svn_error_t *
 svn_client_propget5(apr_hash_t **props,
                     const char *propname,
-                    svn_client_target_t *target,
+                    svn_client_peg_t *target_peg,
+                    const svn_opt_revision_t *revision,
                     svn_depth_t depth,
                     const apr_array_header_t *changelists,
                     svn_client_ctx_t *ctx,
@@ -4713,7 +4710,7 @@ svn_client_propget5(apr_hash_t **props,
                     apr_pool_t *scratch_pool);
 
 /* Like svn_client_propget5() but using separate path and revision arguments
- * instead of svn_client_target_t.
+ * instead of svn_client_peg_t.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.7 API.
@@ -4849,7 +4846,7 @@ svn_client_revprop_get(const char *propname,
  * @since New in 1.8.
  */
 svn_error_t *
-svn_client_proplist4(svn_client_target_t *target,
+svn_client_proplist4(svn_client_peg_t *target,
                      svn_depth_t depth,
                      const apr_array_header_t *changelists,
                      svn_proplist_receiver_t receiver,
@@ -4998,24 +4995,7 @@ svn_client_revprop_list(apr_hash_t **props,
  *
  * All allocations are done in @a pool.
  *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_client_export6(svn_client_target_t *target,
-                   const char *to_path,
-                   svn_boolean_t overwrite,
-                   svn_boolean_t ignore_externals,
-                   svn_boolean_t ignore_keywords,
-                   svn_depth_t depth,
-                   const char *native_eol,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool);
-
-/* Like svn_client_export6() but using separate path and revision arguments
- * instead of svn_client_target_t.
- *
  * @since New in 1.7.
- * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 svn_error_t *
 svn_client_export5(svn_revnum_t *result_rev,
@@ -5180,7 +5160,8 @@ typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
  * @since New in 1.8.
  */
 svn_error_t *
-svn_client_list3(svn_client_target_t *target,
+svn_client_list3(const svn_client_peg_t *target,
+                 const svn_opt_revision_t *revision,
                  svn_depth_t depth,
                  apr_uint32_t dirent_fields,
                  svn_boolean_t fetch_locks,
@@ -5189,8 +5170,8 @@ svn_client_list3(svn_client_target_t *target,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
-/* Like svn_client_list3() but using separate path and revision arguments
- * instead of svn_client_target_t.
+/* Like svn_client_list3() but using separate path and peg revision arguments
+ * instead of svn_client_peg_t.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.7 API.
@@ -5327,12 +5308,13 @@ svn_client_ls(apr_hash_t **dirents,
  */
 svn_error_t *
 svn_client_cat3(svn_stream_t *out,
-                svn_client_target_t *target,
+                const svn_client_peg_t *target,
+                const svn_opt_revision_t *revision,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
 
-/* Like svn_client_cat3() but using separate path and revision arguments
- * instead of svn_client_target_t.
+/* Like svn_client_cat3() but using separate path and peg revision arguments
+ * instead of svn_client_peg_t.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.7 API.
@@ -5819,7 +5801,8 @@ typedef svn_error_t *(*svn_client_info_receiver2_t)(
  * @since New in 1.8.
  */
 svn_error_t *
-svn_client_info4(svn_client_target_t *target,
+svn_client_info4(const svn_client_peg_t *target,
+                 const svn_opt_revision_t *revision,
                  svn_depth_t depth,
                  svn_boolean_t fetch_excluded,
                  svn_boolean_t fetch_actual_only,
@@ -6059,12 +6042,6 @@ svn_error_t *
 svn_client_url_from_path(const char **url,
                          const char *path_or_url,
                          apr_pool_t *pool);
-
-/* */
-svn_error_t *
-svn_client_resolve_repo_location(svn_client_target_t *target,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *pool);
 
                                  
 

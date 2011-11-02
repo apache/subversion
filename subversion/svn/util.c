@@ -1420,6 +1420,19 @@ svn_cl__local_style_skip_ancestor(const char *parent_path,
   return svn_dirent_local_style(relpath ? relpath : path, pool);
 }
 
+svn_error_t *
+svn_client__peg_parse(svn_client_peg_t **peg,
+                      const char *pegged_url_or_path,
+                      apr_pool_t *pool)
+{
+  svn_opt_revision_t rev;
+  const char *path_or_url;
+
+  SVN_ERR(svn_opt_parse_path(&rev, &path_or_url, pegged_url_or_path, pool));
+  SVN_ERR(svn_client_peg_create(peg, path_or_url, &rev, pool));
+  return SVN_NO_ERROR;
+}
+
 /* */
 static svn_boolean_t
 location_is_resolved(const svn_client_target_t *location)
@@ -1434,13 +1447,13 @@ svn_cl__target_for_display(const svn_client_target_t *target,
   SVN_ERR_ASSERT_NO_RETURN(location_is_resolved(target));
   if (target->revision.kind == svn_opt_revision_working)
     {
-      SVN_ERR_ASSERT_NO_RETURN(target->peg_revision.kind == svn_opt_revision_working);
+      SVN_ERR_ASSERT_NO_RETURN(target->peg->peg_revision.kind == svn_opt_revision_working);
       return apr_psprintf(pool, "^/%s (working copy)",
                           target->repos_relpath);
     }
   if (target->revision.kind == svn_opt_revision_base)
     {
-      SVN_ERR_ASSERT_NO_RETURN(target->peg_revision.kind == svn_opt_revision_base);
+      SVN_ERR_ASSERT_NO_RETURN(target->peg->peg_revision.kind == svn_opt_revision_base);
       return apr_psprintf(pool, "^/%s (wc base)",
                           target->repos_relpath);
     }
@@ -1448,9 +1461,32 @@ svn_cl__target_for_display(const svn_client_target_t *target,
                       target->repos_relpath, target->repos_revnum);
 }
 
+const char *
+svn_cl__peg_for_display(const svn_client_peg_t *peg,
+                        apr_pool_t *pool)
+{
+  if (peg->peg_revision.kind == svn_opt_revision_unspecified)
+    {
+      return apr_psprintf(pool, "%s",
+                          peg->path_or_url);
+    }
+  if (peg->peg_revision.kind == svn_opt_revision_working)
+    {
+      return apr_psprintf(pool, "%s (working copy)",
+                          peg->path_or_url);
+    }
+  else
+    {
+      return apr_psprintf(pool, "%s@%s",
+                          peg->path_or_url,
+                          svn_opt__revision_to_string(&peg->peg_revision,
+                                                      pool));
+    }
+}
+
 svn_error_t *
-svn_cl__find_merge_source_branch(svn_client_target_t **source_p,
-                                 svn_client_target_t *target,
+svn_cl__find_merge_source_branch(svn_client_peg_t **source_p,
+                                 svn_client_peg_t *target,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool)
 {
@@ -1466,8 +1502,7 @@ svn_cl__find_merge_source_branch(svn_client_target_t **source_p,
                                            ctx, pool));
   copyfrom_url = APR_ARRAY_IDX(suggestions, 0, const char *);
 
-  SVN_ERR(svn_client__target(source_p, copyfrom_url, &peg_revision, pool));
-  (*source_p)->revision.kind = svn_opt_revision_unspecified;
+  SVN_ERR(svn_client_peg_create(source_p, copyfrom_url, &peg_revision, pool));
 
   return SVN_NO_ERROR;
 }

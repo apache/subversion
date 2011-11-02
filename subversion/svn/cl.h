@@ -833,6 +833,22 @@ svn_cl__local_style_skip_ancestor(const char *parent_path,
                                   const char *path,
                                   apr_pool_t *pool);
 
+/** Return a peg created by parsing the given @a pegged_url_or_path,
+ * which is a WC path or URL optionally followed by '@' and a peg revision
+ * specifier.  Allocate the result in @a pool.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client__peg_parse(svn_client_peg_t **peg,
+                      const char *pegged_url_or_path,
+                      apr_pool_t *pool);
+
+/* */
+const char *
+svn_cl__peg_for_display(const svn_client_peg_t *target,
+                        apr_pool_t *pool);
+
 /* */
 const char *
 svn_cl__target_for_display(const svn_client_target_t *target,
@@ -841,8 +857,8 @@ svn_cl__target_for_display(const svn_client_target_t *target,
 /* Find the preferred "parent" branch.  At the moment, returns the
  * copyfrom path, assumed still to exist at the same path in head. */
 svn_error_t *
-svn_cl__find_merge_source_branch(svn_client_target_t **source_p,
-                                 svn_client_target_t *target,
+svn_cl__find_merge_source_branch(svn_client_peg_t **source_p,
+                                 svn_client_peg_t *target,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 

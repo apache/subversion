@@ -801,7 +801,8 @@ get_prop_from_wc(apr_hash_t *props,
 svn_error_t *
 svn_client_propget5(apr_hash_t **props,
                     const char *propname,
-                    svn_client_target_t *target,
+                    svn_client_peg_t *target_peg,
+                    const svn_opt_revision_t *revision,
                     svn_depth_t depth,
                     const apr_array_header_t *changelists,
                     svn_client_ctx_t *ctx,
@@ -809,9 +810,9 @@ svn_client_propget5(apr_hash_t **props,
                     apr_pool_t *scratch_pool)
 {
   SVN_ERR(svn_client_propget4(props, propname,
-                              target->abspath_or_url,
-                              &target->peg_revision, &target->revision,
-                              &target->repos_revnum,
+                              target_peg->abspath_or_url,
+                              &target_peg->peg_revision, revision,
+                              NULL /* actual_revnum */,
                               depth, changelists,
                               ctx, result_pool, scratch_pool));
   return SVN_NO_ERROR;

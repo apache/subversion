@@ -67,6 +67,8 @@ svn_client__create_status(svn_client_status_t **cst,
  * If @a peg->path_or_url is a URL then a peg revision kind of 'unspecified'
  * means 'head', otherwise it means 'base'.
  *
+ * @a session_p may be NULL, in which case a temporary session is used.
+ *
  * @since New in 1.8.
  */
 svn_error_t *
@@ -87,8 +89,8 @@ svn_client__peg_resolve(svn_client_target_t **target_p,
  * If only one has such a marker or they are different, throw an error. */
 svn_error_t *
 svn_client__check_branch_root_marker(const char **marker,
-                                     svn_client_target_t *source,
-                                     svn_client_target_t *target,
+                                     const svn_client_peg_t *source,
+                                     const svn_client_peg_t *target,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
 
@@ -96,8 +98,8 @@ svn_client__check_branch_root_marker(const char **marker,
  * history of) SOURCE_BRANCH. */
 svn_error_t *
 svn_client__get_source_target_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_cat,
-                                        svn_client_target_t *target,
-                                        svn_client_target_t *source_branch,
+                                        const svn_client_peg_t *target,
+                                        const svn_client_peg_t *source_branch,
                                         svn_client_ctx_t *ctx,
                                         apr_pool_t *result_pool,
                                         apr_pool_t *scratch_pool);

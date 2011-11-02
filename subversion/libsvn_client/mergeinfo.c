@@ -803,8 +803,8 @@ filter_mergeinfo_catalog(svn_mergeinfo_catalog_t mergeinfo_cat,
 
 svn_error_t *
 svn_client__get_source_target_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_cat,
-                                        svn_client_target_t *target,
-                                        svn_client_target_t *source_branch,
+                                        const svn_client_peg_t *target,
+                                        const svn_client_peg_t *source_branch,
                                         svn_client_ctx_t *ctx,
                                         apr_pool_t *result_pool,
                                         apr_pool_t *scratch_pool)
@@ -814,21 +814,21 @@ svn_client__get_source_target_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_cat,
   /* Find the source location-segments. */
   {
     svn_ra_session_t *ra_session;
+    svn_revnum_t rev;
 
-    SVN_ERR(svn_client__ra_session_from_target(&ra_session, NULL, NULL,
+    SVN_ERR(svn_client__ra_session_from_peg(&ra_session, &rev, NULL,
                                                source_branch,
                                                &source_branch->peg_revision,
                                                ctx, scratch_pool));
     SVN_ERR(svn_client__repos_location_segments(&source_locations, ra_session,
-                                                "", source_branch->repos_revnum,
-                                                source_branch->repos_revnum,
+                                                "", rev, rev,
                                                 SVN_INVALID_REVNUM,
                                                 ctx, scratch_pool));
   }
 
   /* Find the target mergeinfo */
   SVN_ERR(svn_client_get_mergeinfo_catalog(mergeinfo_cat,
-                                           target->abspath_or_url,
+                                           target->path_or_url,
                                            &target->peg_revision,
                                            ctx, result_pool, scratch_pool));
 
@@ -2214,22 +2214,16 @@ mergeinfo_log_receiver(void *baton,
 
 svn_error_t *
 svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
-                          svn_client_target_t *target1,
-                          svn_client_target_t *source1,
+                          svn_client_peg_t *target_peg,
+                          svn_client_peg_t *source_peg,
                           svn_mergeinfo_receiver_t receiver,
                           void *receiver_baton,
                           const apr_array_header_t *revprops,
                           svn_client_ctx_t *ctx,
                           apr_pool_t *scratch_pool)
 {
-  svn_client_peg_t *target
-    = svn_client_peg_create(target1->path_or_url, &target1->peg_revision,
-                            scratch_pool);
-  svn_client_peg_t *source
-    = svn_client_peg_create(source1->path_or_url, &source1->peg_revision,
-                            scratch_pool);
   struct baton b;
-
+  
   b.receiver_func = receiver;
   b.receiver_baton = receiver_baton;
 
@@ -2242,7 +2236,7 @@ svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
       revprops = revprops2;
     }
 
-  SVN_ERR(mergeinfo_log(finding_merged, target, source,
+  SVN_ERR(mergeinfo_log(finding_merged, target_peg, source_peg,
                         mergeinfo_log_receiver, &b,
                         FALSE /* discover_changed_paths */,
                         svn_depth_infinity, revprops,
@@ -2266,10 +2260,10 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
 {
   svn_client_peg_t *target, *source;
   
-  target = svn_client_peg_create(target_path_or_url, target_peg_revision,
-                                 scratch_pool);
-  source = svn_client_peg_create(source_path_or_url, source_peg_revision,
-                                 scratch_pool);
+  SVN_ERR(svn_client_peg_create(&target, target_path_or_url,
+                                target_peg_revision, scratch_pool));
+  SVN_ERR(svn_client_peg_create(&source, source_path_or_url,
+                                source_peg_revision, scratch_pool));
 
   SVN_ERR(mergeinfo_log(finding_merged, target, source,
                         receiver, receiver_baton,

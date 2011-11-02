@@ -71,21 +71,28 @@ svn_client_peg_dup(const svn_client_peg_t *peg,
   svn_client_peg_t *peg2 = apr_pmemdup(pool, peg, sizeof(*peg2));
 
   peg2->path_or_url = apr_pstrdup(pool, peg->path_or_url);
+  peg2->abspath_or_url = apr_pstrdup(pool, peg->abspath_or_url);
   return peg2;
 }
 
-svn_client_peg_t *
-svn_client_peg_create(const char *path_or_url,
+svn_error_t *
+svn_client_peg_create(svn_client_peg_t **peg_p,
+                      const char *path_or_url,
                       const svn_opt_revision_t *peg_revision,
                       apr_pool_t *pool)
 {
   svn_client_peg_t *peg = apr_palloc(pool, sizeof(*peg));
 
   peg->path_or_url = apr_pstrdup(pool, path_or_url);
+  if (svn_path_is_url(path_or_url))
+    peg->abspath_or_url = peg->path_or_url;
+  else
+    SVN_ERR(svn_dirent_get_absolute(&peg->abspath_or_url, path_or_url, pool));
   if (peg_revision)
     peg->peg_revision = *peg_revision;
   else
     peg->peg_revision.kind = svn_opt_revision_unspecified;
+  *peg_p = peg;
   return SVN_NO_ERROR;
 }
 
@@ -97,46 +104,36 @@ svn_client__peg_resolve(svn_client_target_t **target_p,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_client__target(target_p, peg->path_or_url, &peg->peg_revision,
-                             result_pool));
-  *session_p = NULL;
-  SVN_ERR(svn_client__resolve_target_location(*target_p, session_p,
-                                              ctx, result_pool));
+  const svn_opt_revision_t *revision = &peg->peg_revision;
+  svn_client_target_t *target;
+
+  if (session_p)
+    *session_p = NULL;
+
+  SVN_ERR(svn_client__target(&target, peg, result_pool));
+  SVN_ERR(svn_client__resolve_location(&target->repos_root_url,
+                                       &target->repos_uuid,
+                                       &target->repos_revnum,
+                                       &target->repos_relpath,
+                                       session_p,
+                                       peg->path_or_url,
+                                       &peg->peg_revision,
+                                       revision,
+                                       ctx, target->pool, scratch_pool));
+  *target_p = target;
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
 svn_client__target(svn_client_target_t **target_p,
-                   const char *path_or_url,
-                   const svn_opt_revision_t *peg_revision,
+                   const svn_client_peg_t *peg,
                    apr_pool_t *pool)
 {
-  svn_opt_revision_t unspecified_rev = { svn_opt_revision_unspecified, { 0 } };
   *target_p = apr_pcalloc(pool, sizeof(**target_p));
 
   (*target_p)->pool = pool;
-  (*target_p)->path_or_url = path_or_url;
-  if (svn_path_is_url(path_or_url))
-    (*target_p)->abspath_or_url = path_or_url;
-  else
-    svn_error_clear(svn_dirent_get_absolute(&(*target_p)->abspath_or_url,
-                                    path_or_url, pool));
-  (*target_p)->peg_revision = peg_revision ? *peg_revision : unspecified_rev;
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_client__parse_target(svn_client_target_t **target,
-                         const char *target_string,
-                         apr_pool_t *pool)
-{
-  svn_opt_revision_t peg_revision;
-  const char *path_or_url;
-
-  SVN_ERR(svn_opt_parse_path(&peg_revision, &path_or_url, target_string,
-                             pool));
-  SVN_ERR(svn_client__target(target, path_or_url, &peg_revision, pool));
+  (*target_p)->peg = svn_client_peg_dup(peg, pool);
   return SVN_NO_ERROR;
 }
 
@@ -192,28 +189,10 @@ svn_client__resolve_location(const char **repo_root_url_p,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client__resolve_target_location(svn_client_target_t *target,
-                                    svn_ra_session_t **ra_session_p,
-                                    svn_client_ctx_t *ctx,
-                                    apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_client__resolve_location(&target->repos_root_url,
-                                       &target->repos_uuid,
-                                       &target->repos_revnum,
-                                       &target->repos_relpath,
-                                       ra_session_p,
-                                       target->path_or_url,
-                                       &target->peg_revision,
-                                       &target->revision,
-                                       ctx, target->pool, scratch_pool));
-  return SVN_NO_ERROR;
-}
-
 /* Set *MARKER to the value of the branch root marker property of TARGET. */
 static svn_error_t *
 get_branch_root_marker(const char **marker,
-                       svn_client_target_t *target,
+                       svn_client_peg_t *target,
                        svn_client_ctx_t *ctx,
                        apr_pool_t *pool)
 {
@@ -221,7 +200,8 @@ get_branch_root_marker(const char **marker,
   const char *propname = SVN_PROP_BRANCH_ROOT;
   svn_string_t *propval;
 
-  SVN_ERR(svn_client_propget5(&props, propname, target, svn_depth_empty,
+  SVN_ERR(svn_client_propget5(&props, propname, target,
+                              &target->peg_revision, svn_depth_empty,
                               NULL, ctx, pool, pool));
   propval = apr_hash_get(props, target->abspath_or_url, APR_HASH_KEY_STRING);
   *marker = propval ? propval->data : NULL;
@@ -236,8 +216,8 @@ get_branch_root_marker(const char **marker,
 
 svn_error_t *
 svn_client__check_branch_root_marker(const char **marker,
-                                     svn_client_target_t *source,
-                                     svn_client_target_t *target,
+                                     const svn_client_peg_t *source,
+                                     const svn_client_peg_t *target,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool)
 {

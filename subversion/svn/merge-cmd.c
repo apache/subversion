@@ -117,16 +117,15 @@ svn_cl__merge(apr_getopt_t *os,
   if (targets->nelts < 1)
     {
       /* Infer the merge source automatically, assuming a sync merge. */
-      svn_client_target_t *source;
-      svn_client_target_t *target;
+      svn_client_peg_t *target_peg, *source_peg;
 
-      SVN_ERR(svn_client__target(&target, "", NULL, pool));
-      SVN_ERR(svn_cl__find_merge_source_branch(&source, target, ctx, pool));
-      SVN_ERR(svn_client__resolve_target_location(source, NULL, ctx, pool));
+      SVN_ERR(svn_client_peg_create(&target_peg, "", NULL, pool));
+      SVN_ERR(svn_cl__find_merge_source_branch(&source_peg, target_peg, ctx, pool));
+      /*SVN_ERR(svn_client__resolve_target_location_from_peg(&source, source_peg, NULL, ctx, pool));*/
       printf("Assuming source branch is copy-source of target branch: '%s'\n",
-             svn_cl__target_for_display(source, pool));
-      peg_revision1 = source->peg_revision;
-      sourcepath1 = source->path_or_url;
+             svn_cl__peg_for_display(source_peg, pool));
+      peg_revision1 = source_peg->peg_revision;
+      sourcepath1 = source_peg->path_or_url;
     }
   else  /* Parse at least one, and possible two, sources. */
     {

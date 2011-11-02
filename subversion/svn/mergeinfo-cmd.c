@@ -148,7 +148,8 @@ print_recorded_ranges(svn_client_target_t *target,
   int i;
 
   SVN_ERR(svn_client__get_source_target_mergeinfo(
-            &mergeinfo_cat, target, source, ctx, scratch_pool, scratch_pool));
+            &mergeinfo_cat, target->peg, source->peg,
+            ctx, scratch_pool, scratch_pool));
   mergeinfo_cat_sorted = svn_sort__hash(mergeinfo_cat,
                                         svn_sort_compare_items_as_paths,
                                         scratch_pool);
@@ -211,6 +212,8 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   apr_array_header_t *targets;
   svn_client_target_t *source;
   svn_client_target_t *target;
+  svn_client_peg_t *source_peg;
+  svn_client_peg_t *target_peg;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -223,40 +226,36 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   /* Locate the target branch: the second argument or this dir. */
   if (targets->nelts == 2)
     {
-      SVN_ERR(svn_client__parse_target(&target,
-                                       APR_ARRAY_IDX(targets, 1, const char *),
-                                       pool));
-      target->revision.kind = svn_opt_revision_unspecified;
+      SVN_ERR(svn_client__peg_parse(&target_peg,
+                                    APR_ARRAY_IDX(targets, 1, const char *),
+                                    pool));
     }
   else
     {
-      svn_opt_revision_t peg_revision = { svn_opt_revision_working, { 0 } };
-
-      SVN_ERR(svn_client__target(&target, "", &peg_revision, pool));
-      target->revision.kind = svn_opt_revision_working;
+      SVN_ERR(svn_client__peg_parse(&target_peg, "", pool));
     }
 
-  SVN_ERR(svn_client__resolve_target_location(target, NULL, ctx, pool));
+  SVN_ERR(svn_client__peg_resolve(&target, NULL, target_peg,
+                                  ctx, pool, pool));
 
   /* Locate the source branch: the first argument or automatic. */
   if (targets->nelts >= 1)
     {
-      SVN_ERR(svn_client__parse_target(&source,
-                                       APR_ARRAY_IDX(targets, 0, const char *),
-                                       pool));
-      source->revision.kind = svn_opt_revision_unspecified;
-
+      SVN_ERR(svn_client__peg_parse(&source_peg,
+                                    APR_ARRAY_IDX(targets, 0, const char *),
+                                    pool));
       /* If no peg-rev was attached to the source URL, assume HEAD. */
-      if (source->peg_revision.kind == svn_opt_revision_unspecified)
-        source->peg_revision.kind = svn_opt_revision_head;
+      if (source_peg->peg_revision.kind == svn_opt_revision_unspecified)
+        source_peg->peg_revision.kind = svn_opt_revision_head;
     }
   else
     {
       printf("Assuming source branch is copy-source of target branch.\n");
-      SVN_ERR(svn_cl__find_merge_source_branch(&source, target, ctx, pool));
+      SVN_ERR(svn_cl__find_merge_source_branch(&source_peg, target_peg, ctx, pool));
     }
-
-  SVN_ERR(svn_client__resolve_target_location(source, NULL, ctx, pool));
+  
+  SVN_ERR(svn_client__peg_resolve(&source, NULL, source_peg,
+                                  ctx, pool, pool));
 
   if (targets_are_same_branch(source, target, pool))
     {
@@ -276,8 +275,8 @@ svn_cl__mergeinfo(apr_getopt_t *os,
 
       SVN_ERR(svn_client_mergeinfo_log(
                 opt_state->show_revs == svn_cl__show_revs_merged,
-                target->abspath_or_url, &target->peg_revision,
-                source->abspath_or_url, &source->peg_revision,
+                target_peg->path_or_url, &target_peg->peg_revision,
+                source_peg->path_or_url, &source_peg->peg_revision,
                 print_log_rev, NULL /* baton */,
                 TRUE, depth, NULL, ctx, pool));
     }
@@ -287,7 +286,8 @@ svn_cl__mergeinfo(apr_getopt_t *os,
       const char *marker;
       struct print_log_rev_baton_t log_rev_baton;
 
-      SVN_ERR(svn_client__check_branch_root_marker(&marker, source, target,
+      SVN_ERR(svn_client__check_branch_root_marker(&marker,
+                                                   source_peg, target_peg,
                                                    ctx, pool));
       if (marker == NULL)
         {
@@ -305,12 +305,12 @@ svn_cl__mergeinfo(apr_getopt_t *os,
 
       /* If no peg-rev was attached to a URL target, then assume HEAD; if
          no peg-rev was attached to a non-URL target, then assume BASE. */
-      if (target->peg_revision.kind == svn_opt_revision_unspecified)
+      if (target_peg->peg_revision.kind == svn_opt_revision_unspecified)
         {
-          if (svn_path_is_url(target->path_or_url))
-            target->peg_revision.kind = svn_opt_revision_head;
+          if (svn_path_is_url(target_peg->path_or_url))
+            target_peg->peg_revision.kind = svn_opt_revision_head;
           else
-            target->peg_revision.kind = svn_opt_revision_base;
+            target_peg->peg_revision.kind = svn_opt_revision_base;
         }
 
       printf(_("Revision range that could be merged:\n"));
@@ -324,14 +324,14 @@ svn_cl__mergeinfo(apr_getopt_t *os,
       printf(_("Merged revisions:\n"));
       log_rev_baton.count = 0;
       SVN_ERR(svn_client_mergeinfo_log2(TRUE /* finding_merged */,
-                                        target, source,
+                                        target_peg, source_peg,
                                         print_merged_rev, &log_rev_baton,
                                         NULL, ctx, pool));
 
       printf(_("Eligible revisions:\n"));
       log_rev_baton.count = 0;
       SVN_ERR(svn_client_mergeinfo_log2(FALSE /* finding_merged */,
-                                        target, source,
+                                        target_peg, source_peg,
                                         print_merged_rev, &log_rev_baton,
                                         NULL, ctx, pool));
     }
