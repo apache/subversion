@@ -7324,9 +7324,7 @@ read_children_info(void *baton,
           child_item->info.moved_here = svn_sqlite__column_boolean(stmt, 20);
         }
 
-      err = svn_sqlite__step(&have_row, stmt);
-      if (err)
-        SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
   SVN_ERR(svn_sqlite__reset(stmt));
@@ -7380,9 +7378,7 @@ read_children_info(void *baton,
         apr_hash_set(conflicts, apr_pstrdup(result_pool, name),
                      APR_HASH_KEY_STRING, "");
 
-      err = svn_sqlite__step(&have_row, stmt);
-      if (err)
-        SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
   SVN_ERR(svn_sqlite__reset(stmt));
@@ -7617,9 +7613,7 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
       apr_hash_set(*nodes, apr_pstrdup(result_pool, name),
                    APR_HASH_KEY_STRING, child);
 
-      err = svn_sqlite__step(&have_row, stmt);
-      if (err)
-        SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
   SVN_ERR(svn_sqlite__reset(stmt));
