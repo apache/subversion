@@ -954,6 +954,10 @@ delete_cb(void *baton,
 
   SVN_ERR(ensure_root_opened(eb));
 
+  SVN_ERR(build(eb, ACTION_DELETE, relpath, svn_kind_unknown,
+                NULL, SVN_INVALID_REVNUM, NULL, NULL, SVN_INVALID_REVNUM,
+                scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
