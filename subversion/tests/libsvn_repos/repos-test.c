@@ -1348,15 +1348,15 @@ commit_authz_cb(svn_repos_authz_access_t required,
 
 
 
+enum action_t {
+  DELETE,
+  ADD_FILE,
+  ADD_DIR,
+  CHANGE_FILE_PROP
+};
 struct authz_path_action_t
 {
-  enum action_t {
-    DELETE,
-    ADD_FILE,
-    ADD_DIR,
-    CHANGE_FILE_PROP
-  } action;
-
+  enum action_t action;
   const char *path;
   svn_boolean_t authz_error_expected;
   const char *copyfrom_path;
