@@ -2312,6 +2312,11 @@ svn_wc__db_global_update(svn_wc__db_t *db,
    The modifications are mutually exclusive.  If NEW_REPOS_ROOT is non-NULL,
    set the repository root of the entry to NEW_REPOS_ROOT.
 
+   If LOCAL_ABSPATH is an incomplete directory then mark it complete
+   by setting the status to normal. (Removing incomplete is usually
+   done by the editor during close_directory, but if the editor driver
+   simply called close_edit it gets done here.)
+
    If LOCAL_ABSPATH is a directory, then, walk entries below LOCAL_ABSPATH
    according to DEPTH thusly:
 
@@ -2869,15 +2874,6 @@ svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
                                           const char *new_repos_relpath,
                                           svn_revnum_t new_rev,
                                           apr_pool_t *scratch_pool);
-
-/* Marks a directory update started with
-   svn_wc__db_temp_op_start_directory_update as completed, by removing
-   the incomplete status */
-svn_error_t *
-svn_wc__db_temp_op_end_directory_update(svn_wc__db_t *db,
-                                        const char *local_dir_abspath,
-                                        apr_pool_t *scratch_pool);
-
 
 /* Copy the base tree at LOCAL_ABSPATH into the working tree as copy,
    leaving any subtree additions and copies as-is.  This allows the
