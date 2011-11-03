@@ -323,7 +323,7 @@ fi
 [ -r "$MOD_AUTHZ_SVN" ] \
   || fail "authz_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
 
-export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_neon/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs"
+export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_neon/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs:$LD_LIBRARY_PATH"
 
 MASTER_REPOS="${MASTER_REPOS:-"$HTTPD_ROOT/master_repos"}"
 SLAVE_REPOS="${SLAVE_REPOS:-"$HTTPD_ROOT/slave_repos"}"
