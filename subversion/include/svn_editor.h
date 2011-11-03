@@ -123,6 +123,10 @@ extern "C" {
 
 /** An abstract object that edits a target tree.
  *
+ * @note Terms such as "must", "must not", "required", "shall", "shall not",
+ * "should", "should not", "recommended", "map", and "optional" in this
+ * document are to be interpreted as described in RFC 2119.
+ *
  * \n
  * <h3>Life-Cycle</h3>
  *
