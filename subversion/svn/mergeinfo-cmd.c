@@ -235,10 +235,30 @@ svn_cl__mergeinfo(apr_getopt_t *os,
       SVN_ERR(svn_client__peg_parse(&target_peg, "", pool));
     }
 
+  /* If no peg-rev was attached to a URL target, then assume HEAD; if
+     no peg-rev was attached to a non-URL target, then assume BASE. */
+  if (target_peg->peg_revision.kind == svn_opt_revision_unspecified)
+    {
+      if (svn_path_is_url(target_peg->path_or_url))
+        target_peg->peg_revision.kind = svn_opt_revision_head;
+      else
+        target_peg->peg_revision.kind = svn_opt_revision_base;
+    }
+
   SVN_ERR(svn_client__peg_resolve(&target, NULL, target_peg,
                                   ctx, pool, pool));
 
-  /* Locate the source branch: the first argument or automatic. */
+  /* Locate the source branch: the first argument or automatic.
+   *
+   * ### Better, perhaps, to always discover the "default" source branch,
+   * and then print a warning if a different default branch was specified.
+   *
+   * ### Better, perhaps, not to support automatically selecting a
+   * default source branch, because a more interesting and expected use
+   * for not specifying a source branch would be to show info about
+   * all merges that are currently sitting in the target (if it's a
+   * working copy).
+   */
   if (targets->nelts >= 1)
     {
       SVN_ERR(svn_client__peg_parse(&source_peg,
@@ -303,18 +323,8 @@ svn_cl__mergeinfo(apr_getopt_t *os,
       printf("Target branch: %s\n", svn_cl__target_for_display(target, pool));
       printf("\n");
 
-      /* If no peg-rev was attached to a URL target, then assume HEAD; if
-         no peg-rev was attached to a non-URL target, then assume BASE. */
-      if (target_peg->peg_revision.kind == svn_opt_revision_unspecified)
-        {
-          if (svn_path_is_url(target_peg->path_or_url))
-            target_peg->peg_revision.kind = svn_opt_revision_head;
-          else
-            target_peg->peg_revision.kind = svn_opt_revision_base;
-        }
-
-      printf(_("Revision range that could be merged:\n"));
-      printf(  "  origin-%ld\n", source->repos_revnum);
+      printf(_("Extent of source branch under consideration:\n"));
+      printf(  "  %s-%ld\n", "?" /* ### source_oldest_rev */, source->repos_revnum);
       printf("\n");
 
       printf(_("Revision range(s) recorded as merged:\n"));
