@@ -65,6 +65,13 @@ Candidate changes:
    Votes:
      +1: rhuijben, pburba
 
+ * r1197281
+   Fix issue 4048, wcng assert on update with 1.0.x server.
+   Justification:
+     Our client-server compatibility rules require this to work.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
