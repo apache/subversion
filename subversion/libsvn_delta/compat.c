@@ -1012,6 +1012,18 @@ drive(const struct operation *operation,
       child = svn__apr_hash_index_val(hi);
       path = svn__apr_hash_index_key(hi);
 
+      if (child->operation == OP_OPEN || child->operation == OP_PROPSET)
+        {
+          if (child->kind == svn_kind_dir)
+            SVN_ERR(editor->open_directory(path, operation->baton,
+                                           SVN_INVALID_REVNUM,
+                                           iterpool, &child->baton));
+          else
+            SVN_ERR(editor->open_file(path, operation->baton,
+                                      SVN_INVALID_REVNUM,
+                                      iterpool, &child->baton));
+        }
+
       if (child->operation == OP_ADD)
         {
           if (child->kind == svn_kind_dir)
@@ -1040,6 +1052,11 @@ drive(const struct operation *operation,
           SVN_ERR(svn_txdelta_send_stream(contents, handler, handler_baton,
                                           NULL, iterpool));
           SVN_ERR(svn_stream_close(contents));
+        }
+
+      if (file_baton)
+        {
+          SVN_ERR(editor->close_file(file_baton, NULL, iterpool));
         }
 
       /*SVN_DBG(("child: '%s'; operation: %d\n", path, child->operation));*/
