@@ -1349,10 +1349,10 @@ commit_authz_cb(svn_repos_authz_access_t required,
 
 
 enum action_t {
-  DELETE,
-  ADD_FILE,
-  ADD_DIR,
-  CHANGE_FILE_PROP
+  A_DELETE,
+  A_ADD_FILE,
+  A_ADD_DIR,
+  A_CHANGE_FILE_PROP
 };
 struct authz_path_action_t
 {
@@ -1436,7 +1436,7 @@ test_path_authz(svn_repos_t *repos,
   /* Fetch the appropriate baton for our action.  This may involve opening
      intermediate batons, but we only care about the final one for the
      cooresponding action. */
-  if (path_action->action == CHANGE_FILE_PROP)
+  if (path_action->action == A_CHANGE_FILE_PROP)
     SVN_ERR(get_file_baton(&file_baton, path_action->path, editor, root_baton,
                            scratch_pool));
   else
@@ -1446,24 +1446,24 @@ test_path_authz(svn_repos_t *repos,
   /* Test the appropriate action. */
   switch (path_action->action)
     {
-      case DELETE:
+      case A_DELETE:
         err = editor->delete_entry(path_action->path, SVN_INVALID_REVNUM,
                                    dir_baton, scratch_pool);
         break;
 
-      case CHANGE_FILE_PROP:
+      case A_CHANGE_FILE_PROP:
         err = editor->change_file_prop(file_baton, "svn:test",
                                        svn_string_create("test", scratch_pool),
                                        scratch_pool);
         break;
 
-      case ADD_FILE:
+      case A_ADD_FILE:
         err = editor->add_file(path_action->path, dir_baton,
                                path_action->copyfrom_path, youngest_rev,
                                scratch_pool, &out_baton);
         break;
 
-      case ADD_DIR:
+      case A_ADD_DIR:
         err = editor->add_directory(path_action->path, dir_baton,
                                     path_action->copyfrom_path, youngest_rev,
                                     scratch_pool, &out_baton);
@@ -1507,20 +1507,20 @@ commit_editor_authz(const svn_test_opts_t *opts,
   const char *authz_contents;
   int i;
   struct authz_path_action_t path_actions[] = {
-      { DELETE,             "/iota",      TRUE },
-      { CHANGE_FILE_PROP,   "/iota",      TRUE },
-      { ADD_FILE,           "/alpha",     TRUE },
-      { ADD_FILE,           "/alpha",     TRUE,   "file://test/A/B/lambda" },
-      { ADD_DIR,            "/I",         TRUE },
-      { ADD_DIR,            "/J",         TRUE,   "file://test/A/D" },
-      { ADD_FILE,           "/A/alpha",   TRUE },
-      { ADD_FILE,           "/A/B/theta", FALSE },
-      { DELETE,             "/A/mu",      FALSE },
-      { ADD_DIR,            "/A/E",       FALSE },
-      { ADD_DIR,            "/A/J",       FALSE,  "file://test/A/D" },
-      { DELETE,             "A/D/G",      TRUE },
-      { DELETE,             "A/D/H",      FALSE },
-      { CHANGE_FILE_PROP,   "A/D/gamma",  FALSE }
+      { A_DELETE,             "/iota",      TRUE },
+      { A_CHANGE_FILE_PROP,   "/iota",      TRUE },
+      { A_ADD_FILE,           "/alpha",     TRUE },
+      { A_ADD_FILE,           "/alpha",     TRUE,   "file://test/A/B/lambda" },
+      { A_ADD_DIR,            "/I",         TRUE },
+      { A_ADD_DIR,            "/J",         TRUE,   "file://test/A/D" },
+      { A_ADD_FILE,           "/A/alpha",   TRUE },
+      { A_ADD_FILE,           "/A/B/theta", FALSE },
+      { A_DELETE,             "/A/mu",      FALSE },
+      { A_ADD_DIR,            "/A/E",       FALSE },
+      { A_ADD_DIR,            "/A/J",       FALSE,  "file://test/A/D" },
+      { A_DELETE,             "A/D/G",      TRUE },
+      { A_DELETE,             "A/D/H",      FALSE },
+      { A_CHANGE_FILE_PROP,   "A/D/gamma",  FALSE }
     };
 
   /* The Test Plan
