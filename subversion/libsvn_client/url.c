@@ -192,7 +192,7 @@ svn_client__resolve_location(const char **repo_root_url_p,
 /* Set *MARKER to the value of the branch root marker property of TARGET. */
 static svn_error_t *
 get_branch_root_marker(const char **marker,
-                       svn_client_peg_t *target,
+                       const svn_client_peg_t *target,
                        svn_client_ctx_t *ctx,
                        apr_pool_t *pool)
 {

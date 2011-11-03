@@ -3746,8 +3746,8 @@ typedef svn_error_t *
  */
 svn_error_t *
 svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
-                          svn_client_peg_t *target_peg,
-                          svn_client_peg_t *source_peg,
+                          const svn_client_peg_t *target_peg,
+                          const svn_client_peg_t *source_peg,
                           svn_mergeinfo_receiver_t receiver,
                           void *receiver_baton,
                           const apr_array_header_t *revprops,
@@ -4701,7 +4701,7 @@ svn_client_revprop_set(const char *propname,
 svn_error_t *
 svn_client_propget5(apr_hash_t **props,
                     const char *propname,
-                    svn_client_peg_t *target_peg,
+                    const svn_client_peg_t *target_peg,
                     const svn_opt_revision_t *revision,
                     svn_depth_t depth,
                     const apr_array_header_t *changelists,
@@ -4846,7 +4846,7 @@ svn_client_revprop_get(const char *propname,
  * @since New in 1.8.
  */
 svn_error_t *
-svn_client_proplist4(svn_client_peg_t *target,
+svn_client_proplist4(const svn_client_peg_t *target,
                      svn_depth_t depth,
                      const apr_array_header_t *changelists,
                      svn_proplist_receiver_t receiver,

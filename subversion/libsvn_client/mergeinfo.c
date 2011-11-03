@@ -1802,8 +1802,8 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo_p,
 /* */
 static svn_error_t *
 mergeinfo_log(svn_boolean_t finding_merged,
-              svn_client_peg_t *target_peg,
-              svn_client_peg_t *source_peg,
+              const svn_client_peg_t *target_peg,
+              const svn_client_peg_t *source_peg,
               svn_log_entry_receiver_t log_receiver,
               void *log_receiver_baton,
               svn_boolean_t discover_changed_paths,
@@ -2214,8 +2214,8 @@ mergeinfo_log_receiver(void *baton,
 
 svn_error_t *
 svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
-                          svn_client_peg_t *target_peg,
-                          svn_client_peg_t *source_peg,
+                          const svn_client_peg_t *target_peg,
+                          const svn_client_peg_t *source_peg,
                           svn_mergeinfo_receiver_t receiver,
                           void *receiver_baton,
                           const apr_array_header_t *revprops,

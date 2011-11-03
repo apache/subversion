@@ -225,7 +225,7 @@ svn_error_t *
 svn_client__ra_session_from_peg(svn_ra_session_t **ra_session_p,
                                 svn_revnum_t *rev_p,
                                 const char **url_p,
-                                svn_client_peg_t *peg,
+                                const svn_client_peg_t *peg,
                                 const svn_opt_revision_t *revision,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *pool);

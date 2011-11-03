@@ -801,7 +801,7 @@ get_prop_from_wc(apr_hash_t *props,
 svn_error_t *
 svn_client_propget5(apr_hash_t **props,
                     const char *propname,
-                    svn_client_peg_t *target_peg,
+                    const svn_client_peg_t *target_peg,
                     const svn_opt_revision_t *revision,
                     svn_depth_t depth,
                     const apr_array_header_t *changelists,
