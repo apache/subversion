@@ -201,6 +201,58 @@ print_recorded_ranges(svn_client_target_t *target,
   return SVN_NO_ERROR;
 }
 
+/* */
+static svn_error_t *
+mergeinfo_summary(
+                  svn_client_target_t *source,
+                  svn_client_target_t *target,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  const char *marker;
+  struct print_log_rev_baton_t log_rev_baton;
+
+  SVN_ERR(svn_client__check_branch_root_marker(&marker,
+                                               source->peg, target->peg,
+                                               ctx, pool));
+  if (marker == NULL)
+    {
+      printf("warning: Source and target are not marked as branches.\n");
+    }
+  else
+    {
+      printf("Branch marker: '%s' (found on both source and target)\n",
+             marker);
+    }
+
+  printf("Source branch: %s\n", svn_cl__target_for_display(source, pool));
+  printf("Target branch: %s\n", svn_cl__target_for_display(target, pool));
+  printf("\n");
+
+  printf(_("Extent of source branch under consideration:\n"));
+  printf(  "  %s-%ld\n", "?" /* ### source_oldest_rev */, source->repos_revnum);
+  printf("\n");
+
+  printf(_("Revision range(s) recorded as merged:\n"));
+  SVN_ERR(print_recorded_ranges(target, source, ctx, pool));
+  printf("\n");
+
+  printf(_("Merged revisions:\n"));
+  log_rev_baton.count = 0;
+  SVN_ERR(svn_client_mergeinfo_log2(TRUE /* finding_merged */,
+                                    target->peg, source->peg,
+                                    print_merged_rev, &log_rev_baton,
+                                    NULL, ctx, pool));
+
+  printf(_("Eligible revisions:\n"));
+  log_rev_baton.count = 0;
+  SVN_ERR(svn_client_mergeinfo_log2(FALSE /* finding_merged */,
+                                    target->peg, source->peg,
+                                    print_merged_rev, &log_rev_baton,
+                                    NULL, ctx, pool));
+  return SVN_NO_ERROR;
+}
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__mergeinfo(apr_getopt_t *os,
@@ -303,47 +355,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   else
     {
       /* Summary mode */
-      const char *marker;
-      struct print_log_rev_baton_t log_rev_baton;
-
-      SVN_ERR(svn_client__check_branch_root_marker(&marker,
-                                                   source_peg, target_peg,
-                                                   ctx, pool));
-      if (marker == NULL)
-        {
-          printf("warning: Source and target are not marked as branches.\n");
-        }
-      else
-        {
-          printf("Branch marker: '%s' (found on both source and target)\n",
-                 marker);
-        }
-
-      printf("Source branch: %s\n", svn_cl__target_for_display(source, pool));
-      printf("Target branch: %s\n", svn_cl__target_for_display(target, pool));
-      printf("\n");
-
-      printf(_("Extent of source branch under consideration:\n"));
-      printf(  "  %s-%ld\n", "?" /* ### source_oldest_rev */, source->repos_revnum);
-      printf("\n");
-
-      printf(_("Revision range(s) recorded as merged:\n"));
-      SVN_ERR(print_recorded_ranges(target, source, ctx, pool));
-      printf("\n");
-
-      printf(_("Merged revisions:\n"));
-      log_rev_baton.count = 0;
-      SVN_ERR(svn_client_mergeinfo_log2(TRUE /* finding_merged */,
-                                        target_peg, source_peg,
-                                        print_merged_rev, &log_rev_baton,
-                                        NULL, ctx, pool));
-
-      printf(_("Eligible revisions:\n"));
-      log_rev_baton.count = 0;
-      SVN_ERR(svn_client_mergeinfo_log2(FALSE /* finding_merged */,
-                                        target_peg, source_peg,
-                                        print_merged_rev, &log_rev_baton,
-                                        NULL, ctx, pool));
+      SVN_ERR(mergeinfo_summary(source, target, ctx, pool));
     }
 
   return SVN_NO_ERROR;
