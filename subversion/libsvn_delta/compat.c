@@ -27,6 +27,7 @@
 #include "svn_sorts.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
+#include "svn_hash.h"
 #include "svn_props.h"
 #include "svn_pools.h"
 
@@ -619,8 +620,9 @@ struct operation {
   const char *copyfrom_url;       /* to copy, valid for add and replace */
   const char *src_file;  /* for put, the source file for contents */
   apr_hash_t *children;  /* const char *path -> struct operation * */
-  apr_hash_t *props;     /* const char *prop_name ->
+  apr_hash_t *prop_mods; /* const char *prop_name ->
                             const svn_string_t *prop_value */
+  apr_array_header_t *prop_dels; /* const char *prop_name deletions */
   void *baton;           /* as returned by the commit editor */
 };
 
@@ -632,12 +634,27 @@ struct editor_baton
   svn_delta_fetch_kind_func_t fetch_kind_func;
   void *fetch_kind_baton;
 
+  svn_delta_fetch_props_func_t fetch_props_func;
+  void *fetch_props_baton;
+
   struct operation root;
   svn_boolean_t root_opened;
 
   apr_hash_t *paths;
   apr_pool_t *edit_pool;
 };
+
+/* Calculate the diff between the old props and the new ones.
+ * This implements svn_hash_diff_func_t. */
+static svn_error_t *
+props_diff_func(const void *key,
+                apr_ssize_t klen,
+                enum svn_hash_diff_key_status status,
+                void *baton)
+{
+  return SVN_NO_ERROR;
+}
+
 
 /* Find the operation associated with PATH, which is a single-path
    component representing a child of the path represented by
@@ -657,7 +674,8 @@ get_operation(const char *path,
       child->operation = OP_OPEN;
       child->copyfrom_revision = SVN_INVALID_REVNUM;
       child->kind = svn_kind_dir;
-      child->props = NULL;
+      child->prop_mods = apr_hash_make(result_pool);
+      child->prop_dels = apr_array_make(result_pool, 1, sizeof(const char *));
       apr_hash_set(operation->children, apr_pstrdup(result_pool, path),
                    APR_HASH_KEY_STRING, child);
     }
@@ -715,8 +733,15 @@ build(struct editor_baton *eb,
   /* Handle property changes. */
   if (props)
     {
+      apr_hash_t *current_props;
+
       SVN_ERR(eb->fetch_kind_func(&operation->kind, eb->fetch_kind_baton,
                                   relpath, scratch_pool));
+      SVN_ERR(eb->fetch_props_func(&current_props, eb->fetch_props_baton,
+                                   relpath, eb->edit_pool, scratch_pool));
+
+      SVN_ERR(svn_hash_diff(props, current_props, props_diff_func, operation,
+                            scratch_pool));
 
       /* If we're not adding this thing ourselves, check for existence.  */
       if (! ((operation->operation == OP_ADD) ||
@@ -726,7 +751,6 @@ build(struct editor_baton *eb,
                    && (operation->operation == OP_OPEN))
             operation->operation = OP_PROPSET;
         }
-      operation->props = svn_prop_hash_dup(props, eb->edit_pool);
       if (!operation->copyfrom_revision)
         operation->copyfrom_revision = rev;
       return SVN_NO_ERROR;
@@ -994,6 +1018,54 @@ move_cb(void *baton,
 }
 
 static svn_error_t *
+change_props(const svn_delta_editor_t *editor,
+             void *baton,
+             struct operation *child,
+             apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  if (child->prop_dels)
+    {
+      int i;
+      for (i = 0; i < child->prop_dels->nelts; i++)
+        {
+          const char *prop_name;
+
+          svn_pool_clear(iterpool);
+          prop_name = APR_ARRAY_IDX(child->prop_dels, i, const char *);
+          if (child->kind == svn_node_dir)
+            SVN_ERR(editor->change_dir_prop(baton, prop_name,
+                                            NULL, iterpool));
+          else
+            SVN_ERR(editor->change_file_prop(baton, prop_name,
+                                             NULL, iterpool));
+        }
+    }
+
+  if (apr_hash_count(child->prop_mods))
+    {
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first(scratch_pool, child->prop_mods);
+           hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *val;
+
+          svn_pool_clear(iterpool);
+          apr_hash_this(hi, &key, NULL, &val);
+          if (child->kind == svn_node_dir)
+            SVN_ERR(editor->change_dir_prop(baton, key, val, iterpool));
+          else
+            SVN_ERR(editor->change_file_prop(baton, key, val, iterpool));
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 drive(const struct operation *operation,
       const svn_delta_editor_t *editor,
       apr_pool_t *scratch_pool)
@@ -1054,14 +1126,23 @@ drive(const struct operation *operation,
           SVN_ERR(svn_stream_close(contents));
         }
 
+      /* Only worry about properties and closing the file baton if we've
+         previously opened it. */
       if (file_baton)
         {
+          if (child->kind == svn_kind_file)
+            SVN_ERR(change_props(editor, file_baton, child, iterpool));
           SVN_ERR(editor->close_file(file_baton, NULL, iterpool));
         }
 
-      /*SVN_DBG(("child: '%s'; operation: %d\n", path, child->operation));*/
+      /* We *always* open the child directory, so drive the child, change any
+         props, and then close the directory. */
       if (child->kind == svn_kind_dir)
-        SVN_ERR(drive(child, editor, iterpool));
+        {
+          SVN_ERR(drive(child, editor, iterpool));
+          SVN_ERR(change_props(editor, child->baton, child, iterpool));
+          SVN_ERR(editor->close_directory(child->baton, iterpool));
+        }
     }
 
   return SVN_NO_ERROR;
@@ -1121,6 +1202,8 @@ editor_from_delta(svn_editor_t **editor_p,
                   void *cancel_baton,
                   svn_delta_fetch_kind_func_t fetch_kind_func,
                   void *fetch_kind_baton,
+                  svn_delta_fetch_props_func_t fetch_props_func,
+                  void *fetch_props_baton,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
@@ -1148,11 +1231,14 @@ editor_from_delta(svn_editor_t **editor_p,
 
   eb->fetch_kind_func = fetch_kind_func;
   eb->fetch_kind_baton = fetch_kind_baton;
+  eb->fetch_props_func = fetch_props_func;
+  eb->fetch_props_baton = fetch_props_baton;
 
   eb->root.children = apr_hash_make(result_pool);
   eb->root.kind = svn_kind_dir;
   eb->root.operation = OP_OPEN;
-  eb->root.props = NULL;
+  eb->root.prop_mods = apr_hash_make(result_pool);
+  eb->root.prop_dels = apr_array_make(result_pool, 1, sizeof(const char *));
   eb->root.copyfrom_revision = SVN_INVALID_REVNUM;
 
   eb->root_opened = FALSE;
@@ -1204,6 +1290,8 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
   SVN_ERR(editor_from_delta(&editor, deditor_in, dedit_baton_in,
                             NULL, NULL, shim_callbacks->fetch_kind_func,
                             shim_callbacks->fetch_kind_baton,
+                            shim_callbacks->fetch_props_func,
+                            shim_callbacks->fetch_props_baton,
                             result_pool, scratch_pool));
   SVN_ERR(delta_from_editor(deditor_out, dedit_baton_out, editor,
                             shim_callbacks->fetch_props_func,
