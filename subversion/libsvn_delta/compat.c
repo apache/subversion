@@ -1087,12 +1087,7 @@ drive(const struct operation *operation,
       path = svn__apr_hash_index_key(hi);
 
       if (path[0] != '/')
-        {
-          char *tmp = apr_pcalloc(iterpool, strlen(path));
-          tmp[0] = '/';
-          strcpy(tmp+1, path);
-          path = tmp;
-        }
+        path = apr_pstrcat(iterpool, "/", path, NULL);
 
       if (child->operation == OP_OPEN || child->operation == OP_PROPSET)
         {
