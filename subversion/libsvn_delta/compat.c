@@ -644,17 +644,6 @@ struct editor_baton
   apr_pool_t *edit_pool;
 };
 
-/* Calculate the diff between the old props and the new ones.
- * This implements svn_hash_diff_func_t. */
-static svn_error_t *
-props_diff_func(const void *key,
-                apr_ssize_t klen,
-                enum svn_hash_diff_key_status status,
-                void *baton)
-{
-  return SVN_NO_ERROR;
-}
-
 
 /* Find the operation associated with PATH, which is a single-path
    component representing a child of the path represented by
@@ -734,14 +723,28 @@ build(struct editor_baton *eb,
   if (props)
     {
       apr_hash_t *current_props;
+      apr_array_header_t *propdiffs;
 
       SVN_ERR(eb->fetch_kind_func(&operation->kind, eb->fetch_kind_baton,
                                   relpath, scratch_pool));
       SVN_ERR(eb->fetch_props_func(&current_props, eb->fetch_props_baton,
-                                   relpath, eb->edit_pool, scratch_pool));
+                                   relpath, scratch_pool, scratch_pool));
 
-      SVN_ERR(svn_hash_diff(props, current_props, props_diff_func, operation,
-                            scratch_pool));
+      /* Use the edit pool, since most of the results will need to be
+         persisted. */
+      SVN_ERR(svn_prop_diffs(&propdiffs, props, current_props, eb->edit_pool));
+
+      for (i = 0; i < propdiffs->nelts; i++)
+        {
+          /* Note: the array returned by svn_prop_diffs() is an array of
+             actual structures, not pointers to them. */
+          svn_prop_t *prop = &APR_ARRAY_IDX(propdiffs, i, svn_prop_t);
+          if (!prop->value)
+            APR_ARRAY_PUSH(operation->prop_dels, const char *) = prop->name;
+          else
+            apr_hash_set(operation->prop_mods, prop->name, APR_HASH_KEY_STRING,
+                         prop->value);
+        }
 
       /* If we're not adding this thing ourselves, check for existence.  */
       if (! ((operation->operation == OP_ADD) ||
@@ -1034,7 +1037,7 @@ change_props(const svn_delta_editor_t *editor,
 
           svn_pool_clear(iterpool);
           prop_name = APR_ARRAY_IDX(child->prop_dels, i, const char *);
-          if (child->kind == svn_node_dir)
+          if (child->kind == svn_kind_dir)
             SVN_ERR(editor->change_dir_prop(baton, prop_name,
                                             NULL, iterpool));
           else
@@ -1049,15 +1052,14 @@ change_props(const svn_delta_editor_t *editor,
       for (hi = apr_hash_first(scratch_pool, child->prop_mods);
            hi; hi = apr_hash_next(hi))
         {
-          const void *key;
-          void *val;
+          const char *name = svn__apr_hash_index_key(hi);
+          svn_string_t *val = svn__apr_hash_index_val(hi);
 
           svn_pool_clear(iterpool);
-          apr_hash_this(hi, &key, NULL, &val);
-          if (child->kind == svn_node_dir)
-            SVN_ERR(editor->change_dir_prop(baton, key, val, iterpool));
+          if (child->kind == svn_kind_dir)
+            SVN_ERR(editor->change_dir_prop(baton, name, val, iterpool));
           else
-            SVN_ERR(editor->change_file_prop(baton, key, val, iterpool));
+            SVN_ERR(editor->change_file_prop(baton, name, val, iterpool));
         }
     }
 
@@ -1084,6 +1086,14 @@ drive(const struct operation *operation,
       child = svn__apr_hash_index_val(hi);
       path = svn__apr_hash_index_key(hi);
 
+      if (path[0] != '/')
+        {
+          char *tmp = apr_pcalloc(iterpool, strlen(path));
+          tmp[0] = '/';
+          strcpy(tmp+1, path);
+          path = tmp;
+        }
+
       if (child->operation == OP_OPEN || child->operation == OP_PROPSET)
         {
           if (child->kind == svn_kind_dir)
@@ -1093,7 +1103,7 @@ drive(const struct operation *operation,
           else
             SVN_ERR(editor->open_file(path, operation->baton,
                                       SVN_INVALID_REVNUM,
-                                      iterpool, &child->baton));
+                                      iterpool, &file_baton));
         }
 
       if (child->operation == OP_ADD)
