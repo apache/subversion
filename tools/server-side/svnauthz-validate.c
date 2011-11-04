@@ -31,6 +31,7 @@
 #include "svn_pools.h"
 #include "svn_repos.h"
 #include "svn_cmdline.h"
+#include "private/svn_fspath.h"
 
 int
 main(int argc, const char **argv)
@@ -40,10 +41,12 @@ main(int argc, const char **argv)
   svn_authz_t *authz;
   const char *authz_file;
 
-  if (argc <= 1)
+  if (argc != 2 && argc != 4 && argc != 5)
     {
-      printf("Usage:  %s PATH \n\n", argv[0]);
-      printf("Loads the authz file at PATH and validates its syntax. \n"
+      printf("Usage:  %s FILE [USER PATH [REPOS_NAME]]\n\n", argv[0]);
+      printf("Loads the authz file at FILE and validates its syntax.\n"
+             "Optionally reports the access available to USER for PATH in\n"
+             "repository REPOS_NAME.\n"
              "Returns:\n"
              "    0   when syntax is OK.\n"
              "    1   when syntax is invalid.\n"
@@ -61,6 +64,30 @@ main(int argc, const char **argv)
 
   /* Read the access file and validate it. */
   err = svn_repos_authz_read(&authz, authz_file, TRUE, pool);
+
+  if (!err && (argc == 4 || argc == 5))
+    {
+      const char *user = argv[2], *path = argv[3];
+      const char *repos = argc == 5 ? argv[4] : "";
+      svn_boolean_t read_access, write_access;
+
+      path = svn_fspath__canonicalize(path, pool);
+
+      err = svn_repos_authz_check_access(authz, repos, path, user,
+                                         svn_authz_write, &write_access,
+                                         pool);
+      if (!write_access && !err)
+        err = svn_repos_authz_check_access(authz, repos, path, user,
+                                           svn_authz_read, &read_access,
+                                           pool);
+      if (!err)
+        printf("user '%s' has %s access to '%s'%s%s\n",
+               user,
+               write_access ? "rw" : read_access ? "r" : "no",
+               path,
+               repos[0] ? "in repository " : "",
+               repos);
+    }
 
   svn_pool_destroy(pool);
 
