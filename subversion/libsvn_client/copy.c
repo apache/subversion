@@ -795,7 +795,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       apr_hash_t *mergeinfo;
-      svn_opt_revision_t *src_rev;
 
       /* Are the source and destination URLs at or under REPOS_ROOT? */
       if (! (svn_uri__is_ancestor(repos_root, pair->src_abspath_or_url)
@@ -816,7 +815,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       /* Run the history function to get the source's URL in the
          operational revision. */
       SVN_ERR(svn_ra_reparent(ra_session, pair->src_abspath_or_url, pool));
-      SVN_ERR(svn_client__repos_locations(&pair->src_abspath_or_url, &src_rev,
+      SVN_ERR(svn_client__repos_locations(&pair->src_abspath_or_url, NULL,
                                           NULL, NULL,
                                           ra_session,
                                           pair->src_abspath_or_url,
@@ -1826,11 +1825,10 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       const char *src;
-      svn_opt_revision_t *new_rev;
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_client__repos_locations(&src, &new_rev, NULL, NULL,
+      SVN_ERR(svn_client__repos_locations(&src, NULL, NULL, NULL,
                                           NULL,
                                           pair->src_abspath_or_url,
                                           &pair->src_peg_revision,
