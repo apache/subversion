@@ -31,7 +31,6 @@
 #include "svn_pools.h"
 #include "svn_repos.h"
 #include "svn_cmdline.h"
-#include "private/svn_fspath.h"
 
 int
 main(int argc, const char **argv)
@@ -71,7 +70,8 @@ main(int argc, const char **argv)
       const char *repos = argc == 5 ? argv[4] : "";
       svn_boolean_t read_access, write_access;
 
-      path = svn_fspath__canonicalize(path, pool);
+      if (path[0] != '/')
+        path = apr_pstrcat(pool, "/", path, NULL);
 
       err = svn_repos_authz_check_access(authz, repos, path, user,
                                          svn_authz_write, &write_access,
