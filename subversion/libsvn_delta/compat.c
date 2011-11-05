@@ -127,16 +127,20 @@ struct ev2_file_baton
   const char *path;
 };
 
-enum action
+enum action_code_t
 {
+  ACTION_MOVE,
+  ACTION_MKDIR,
+  ACTION_COPY,
+  ACTION_PROPSET,
+  ACTION_PUT,
   ACTION_ADD,
-  ACTION_DELETE,
-  ACTION_SET_PROP
+  ACTION_DELETE
 };
 
 struct path_action
 {
-  enum action action;
+  enum action_code_t action;
   void *args;
 };
 
@@ -149,7 +153,7 @@ struct prop_args
 static svn_error_t *
 add_action(struct ev2_edit_baton *eb,
            const char *path,
-           enum action action,
+           enum action_code_t action,
            void *args)
 {
   struct path_action *p_action;
@@ -195,7 +199,7 @@ process_actions(void *edit_baton,
 
       switch (action->action)
         {
-          case ACTION_SET_PROP:
+          case ACTION_PROPSET:
             {
               const struct prop_args *p_args = action->args;
 
@@ -395,7 +399,7 @@ ev2_change_dir_prop(void *dir_baton,
   p_args->name = apr_pstrdup(db->eb->edit_pool, name);
   p_args->value = value ? svn_string_dup(value, db->eb->edit_pool) : NULL;
 
-  SVN_ERR(add_action(db->eb, db->path, ACTION_SET_PROP, p_args));
+  SVN_ERR(add_action(db->eb, db->path, ACTION_PROPSET, p_args));
 
   return SVN_NO_ERROR;
 }
@@ -483,7 +487,7 @@ ev2_change_file_prop(void *file_baton,
   p_args->name = apr_pstrdup(fb->eb->edit_pool, name);
   p_args->value = value ? svn_string_dup(value, fb->eb->edit_pool) : NULL;
 
-  SVN_ERR(add_action(fb->eb, fb->path, ACTION_SET_PROP, p_args));
+  SVN_ERR(add_action(fb->eb, fb->path, ACTION_PROPSET, p_args));
 
   return SVN_NO_ERROR;
 }
@@ -596,15 +600,6 @@ delta_from_editor(const svn_delta_editor_t **deditor,
 
 
 
-typedef enum action_code_t {
-  ACTION_MV,
-  ACTION_MKDIR,
-  ACTION_CP,
-  ACTION_PROPSET,
-  ACTION_PUT,
-  ACTION_RM
-} action_code_t;
-
 struct operation {
   enum {
     OP_OPEN,
@@ -678,9 +673,9 @@ get_operation(const char *path,
       ACTION          URL    REV      SRC-FILE  PROPNAME
       ------------    -----  -------  --------  --------
       ACTION_MKDIR    NULL   invalid  NULL      NULL
-      ACTION_CP       valid  valid    NULL      NULL
+      ACTION_COPY     valid  valid    NULL      NULL
       ACTION_PUT      NULL   invalid  valid     NULL
-      ACTION_RM       NULL   invalid  NULL      NULL
+      ACTION_DELETE   NULL   invalid  NULL      NULL
       ACTION_PROPSET  valid  invalid  NULL      valid
 
    Node type information is obtained for any copy source (to determine
@@ -689,7 +684,7 @@ get_operation(const char *path,
    return an error on non-existent nodes). */
 static svn_error_t *
 build(struct editor_baton *eb,
-      action_code_t action,
+      enum action_code_t action,
       const char *relpath,
       svn_kind_t kind,
       const char *url,
@@ -759,11 +754,11 @@ build(struct editor_baton *eb,
       return SVN_NO_ERROR;
     }
 
-  if (action == ACTION_RM)
+  if (action == ACTION_DELETE)
     operation->operation = OP_DELETE;
 
   /* Handle copy operations (which can be adds or replacements). */
-  else if (action == ACTION_CP)
+  else if (action == ACTION_COPY)
     {
       operation->operation =
         operation->operation == OP_DELETE ? OP_REPLACE : OP_ADD;
@@ -981,7 +976,7 @@ delete_cb(void *baton,
 
   SVN_ERR(ensure_root_opened(eb));
 
-  SVN_ERR(build(eb, ACTION_RM, relpath, svn_kind_unknown,
+  SVN_ERR(build(eb, ACTION_DELETE, relpath, svn_kind_unknown,
                 NULL, SVN_INVALID_REVNUM, NULL, NULL, SVN_INVALID_REVNUM,
                 scratch_pool));
 
