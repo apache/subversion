@@ -928,7 +928,6 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
               for (j = 0; j < rangelist->nelts; j++)
                 {
                   svn_error_t *err2;
-                  svn_opt_revision_t *start_revision;
                   const char *start_url;
                   svn_opt_revision_t peg_rev, rev1_opt;
                   svn_merge_range_t *range =
@@ -949,10 +948,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
 
                   /* Check if PATH@BASE_REVISION exists at
                      RANGE->START on the same line of history. */
-                  err2 = svn_client__repos_locations(&start_url,
-                                                     &start_revision,
-                                                     NULL,
-                                                     NULL,
+                  err2 = svn_client__repos_locations(&start_url, NULL,
+                                                     NULL, NULL,
                                                      ra_session,
                                                      target_url,
                                                      &peg_rev,
@@ -4008,13 +4005,13 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
          from our own future return a helpful error. */
       svn_error_t *err;
       const char *start_url;
-      svn_opt_revision_t requested, pegrev, *start_revision;
+      svn_opt_revision_t requested, pegrev;
       requested.kind = svn_opt_revision_number;
       requested.value.number = child_base_revision;
       pegrev.kind = svn_opt_revision_number;
       pegrev.value.number = revision1;
 
-      err = svn_client__repos_locations(&start_url, &start_revision,
+      err = svn_client__repos_locations(&start_url, NULL,
                                         NULL, NULL, ra_session, url1,
                                         &pegrev, &requested,
                                         NULL, ctx, scratch_pool);
@@ -6498,13 +6495,13 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
   if (peg_revnum < youngest_requested)
     {
       const char *start_url;
-      svn_opt_revision_t requested, pegrev, *start_revision;
+      svn_opt_revision_t requested, pegrev;
       requested.kind = svn_opt_revision_number;
       requested.value.number = youngest_requested;
       pegrev.kind = svn_opt_revision_number;
       pegrev.value.number = peg_revnum;
 
-      SVN_ERR(svn_client__repos_locations(&start_url, &start_revision,
+      SVN_ERR(svn_client__repos_locations(&start_url, NULL,
                                           NULL, NULL,
                                           ra_session, source_url,
                                           &pegrev, &requested,
@@ -10566,7 +10563,6 @@ calculate_left_hand_side(const char **url_left,
          youngest_merged_rev, from TARGET_ABSPATH to the source.  Set
          *URL_LEFT and *REV_LEFT to cover the youngest part of this range. */
       svn_opt_revision_t peg_revision, youngest_rev;
-      svn_opt_revision_t *start_revision;
       const char *youngest_url;
 
       peg_revision.kind = svn_opt_revision_number;
@@ -10578,7 +10574,7 @@ calculate_left_hand_side(const char **url_left,
       *rev_left = youngest_rev.value.number;
 
       /* Get the URL of the target_url@youngest_merged_rev. */
-      SVN_ERR(svn_client__repos_locations(&youngest_url, &start_revision,
+      SVN_ERR(svn_client__repos_locations(&youngest_url, NULL,
                                           NULL, NULL, target_ra_session,
                                           target_url, &peg_revision,
                                           &youngest_rev, NULL,

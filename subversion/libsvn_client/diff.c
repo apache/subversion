@@ -1497,10 +1497,8 @@ diff_prepare_repos_repos(const char **url1,
      actual URLs will be. */
   if (peg_revision->kind != svn_opt_revision_unspecified)
     {
-      svn_opt_revision_t *start_ignore, *end_ignore;
-
-      SVN_ERR(svn_client__repos_locations(url1, &start_ignore,
-                                          url2, &end_ignore,
+      SVN_ERR(svn_client__repos_locations(url1, NULL,
+                                          url2, NULL,
                                           *ra_session,
                                           path2,
                                           peg_revision,
@@ -1835,9 +1833,7 @@ diff_repos_wc(const char *path1,
      actual URLs will be. */
   if (peg_revision->kind != svn_opt_revision_unspecified)
     {
-      svn_opt_revision_t *start_ignore;
-
-      SVN_ERR(svn_client__repos_locations(&url1, &start_ignore, NULL, NULL,
+      SVN_ERR(svn_client__repos_locations(&url1, NULL, NULL, NULL,
                                           NULL,
                                           path1,
                                           peg_revision,
