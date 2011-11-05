@@ -884,10 +884,10 @@ svn_dirent_local_style(const char *dirent, apr_pool_t *pool)
 }
 
 const char *
-svn_relpath__internal_style(const char *dirent,
-                           apr_pool_t *pool)
+svn_relpath__internal_style(const char *relpath,
+                            apr_pool_t *pool)
 {
-  return svn_relpath_canonicalize(internal_style(dirent, pool), pool);
+  return svn_relpath_canonicalize(internal_style(relpath, pool), pool);
 }
 
 
