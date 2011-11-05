@@ -1084,6 +1084,13 @@ drive(const struct operation *operation,
       if (path[0] != '/')
         path = apr_pstrcat(iterpool, "/", path, NULL);
 
+      /* Deletes are simple -- just delete the thing. */
+      if (child->operation == OP_DELETE)
+        {
+          SVN_ERR(editor->delete_entry(path, SVN_INVALID_REVNUM,
+                                       operation->baton, iterpool));
+        }
+
       if (child->operation == OP_OPEN || child->operation == OP_PROPSET)
         {
           if (child->kind == svn_kind_dir)
