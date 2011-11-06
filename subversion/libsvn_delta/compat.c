@@ -185,6 +185,10 @@ process_actions(void *edit_baton,
 {
   struct ev2_edit_baton *eb = edit_baton;
   apr_hash_t *props = NULL;
+  svn_boolean_t need_add = FALSE;
+  apr_array_header_t *children;
+  svn_stream_t *contents;
+  svn_kind_t kind;
   int i;
 
   if (*path == '/')
@@ -232,20 +236,18 @@ process_actions(void *edit_baton,
 
           case ACTION_ADD:
             {
-              svn_kind_t *kind = action->args;
+              kind = *((svn_kind_t *) action->args);
+              need_add = TRUE;
 
-              if (*kind == svn_kind_dir)
+              if (kind == svn_kind_dir)
                 {
-                  apr_array_header_t *children = apr_array_make(
-                                    scratch_pool, 1, sizeof(const char *));
-                  SVN_ERR(svn_editor_add_directory(eb->editor, path, children,
-                                                   NULL, SVN_INVALID_REVNUM));
+                  children = apr_array_make(scratch_pool, 1,
+                                            sizeof(const char *));
                 }
               else
                 {
-                  svn_stream_t *contents = svn_stream_empty(scratch_pool);
-                  SVN_ERR(svn_editor_add_file(eb->editor, path, NULL, contents,
-                                              NULL, SVN_INVALID_REVNUM));
+                  /* ### Someday, we'll need the real contents here. */
+                  contents = svn_stream_empty(scratch_pool);
                 }
               break;
             }
@@ -258,12 +260,28 @@ process_actions(void *edit_baton,
   /* We've now got a wholistic view of what has happened to this node,
    * so we can call our own editor APIs on it. */
 
-  if (props)
+  if (need_add)
     {
-      /* We fetched and modified the props in some way. Apply 'em now that
-         we have the new set.  */
-      SVN_ERR(svn_editor_set_props(eb->editor, path, eb->target_revision,
-                                   props, TRUE));
+      if (kind == svn_kind_dir)
+        {
+          SVN_ERR(svn_editor_add_directory(eb->editor, path, children,
+                                           props, SVN_INVALID_REVNUM));
+        }
+      else
+        {
+          SVN_ERR(svn_editor_add_file(eb->editor, path, NULL, contents,
+                                      props, SVN_INVALID_REVNUM));
+        }
+    }
+  else
+    {
+      if (props)
+        {
+          /* We fetched and modified the props in some way. Apply 'em now that
+             we have the new set.  */
+          SVN_ERR(svn_editor_set_props(eb->editor, path, eb->target_revision,
+                                       props, TRUE));
+        }
     }
 
   return SVN_NO_ERROR;
