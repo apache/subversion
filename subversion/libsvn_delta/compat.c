@@ -106,6 +106,9 @@ struct ev2_edit_baton
   svn_revnum_t target_revision;
   apr_pool_t *edit_pool;
 
+  svn_boolean_t *found_abs_paths; /* Did we strip an incoming '/' from the
+                                     paths?  */
+
   void *root_baton;
 
   start_edit_func_t start_edit;
@@ -192,7 +195,10 @@ process_actions(void *edit_baton,
   int i;
 
   if (*path == '/')
-    path++;
+    {
+      path++;
+      *eb->found_abs_paths = TRUE;
+    }
 
   /* Go through all of our actions, populating various datastructures
    * dependent on them. */
@@ -571,6 +577,7 @@ static svn_error_t *
 delta_from_editor(const svn_delta_editor_t **deditor,
                   void **dedit_baton,
                   svn_editor_t *editor,
+                  svn_boolean_t *found_abs_paths,
                   svn_delta_fetch_props_func_t fetch_props_func,
                   void *fetch_props_baton,
                   start_edit_func_t start_edit,
@@ -602,6 +609,8 @@ delta_from_editor(const svn_delta_editor_t **deditor,
   eb->paths = apr_hash_make(pool);
   eb->target_revision = SVN_INVALID_REVNUM;
   eb->edit_pool = pool;
+  eb->found_abs_paths = found_abs_paths;
+
   eb->fetch_props_func = fetch_props_func;
   eb->fetch_props_baton = fetch_props_baton;
 
@@ -652,6 +661,7 @@ struct editor_baton
 
   struct operation root;
   svn_boolean_t root_opened;
+  svn_boolean_t *make_abs_paths;
 
   apr_hash_t *paths;
   apr_pool_t *edit_pool;
@@ -1083,6 +1093,7 @@ change_props(const svn_delta_editor_t *editor,
 static svn_error_t *
 drive(const struct operation *operation,
       const svn_delta_editor_t *editor,
+      svn_boolean_t *make_abs_paths,
       apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -1099,7 +1110,7 @@ drive(const struct operation *operation,
       child = svn__apr_hash_index_val(hi);
       path = svn__apr_hash_index_key(hi);
 
-      if (path[0] != '/')
+      if (path[0] != '/' && *make_abs_paths)
         path = apr_pstrcat(iterpool, "/", path, NULL);
 
       /* Deletes are simple -- just delete the thing. */
@@ -1164,7 +1175,7 @@ drive(const struct operation *operation,
          props, and then close the directory. */
       if (child->kind == svn_kind_dir)
         {
-          SVN_ERR(drive(child, editor, iterpool));
+          SVN_ERR(drive(child, editor, make_abs_paths, iterpool));
           SVN_ERR(change_props(editor, child->baton, child, iterpool));
           SVN_ERR(editor->close_directory(child->baton, iterpool));
         }
@@ -1182,7 +1193,7 @@ complete_cb(void *baton,
   svn_error_t *err;
 
   /* Drive the tree we've created. */
-  err = drive(&eb->root, eb->deditor, scratch_pool);
+  err = drive(&eb->root, eb->deditor, eb->make_abs_paths, scratch_pool);
   if (!err)
      err = eb->deditor->close_edit(eb->dedit_baton, scratch_pool);
   if (err)
@@ -1204,7 +1215,7 @@ abort_cb(void *baton,
      point. */
 
   /* Drive the tree we've created. */
-  err = drive(&eb->root, eb->deditor, scratch_pool);
+  err = drive(&eb->root, eb->deditor, eb->make_abs_paths, scratch_pool);
 
   err2 = eb->deditor->abort_edit(eb->dedit_baton, scratch_pool);
 
@@ -1223,6 +1234,7 @@ static svn_error_t *
 editor_from_delta(svn_editor_t **editor_p,
                   const svn_delta_editor_t *deditor,
                   void *dedit_baton,
+                  svn_boolean_t *send_abs_paths,
                   svn_cancel_func_t cancel_func,
                   void *cancel_baton,
                   svn_delta_fetch_kind_func_t fetch_kind_func,
@@ -1267,6 +1279,7 @@ editor_from_delta(svn_editor_t **editor_p,
   eb->root.copyfrom_revision = SVN_INVALID_REVNUM;
 
   eb->root_opened = FALSE;
+  eb->make_abs_paths = send_abs_paths;
 
   SVN_ERR(svn_editor_create(&editor, eb, cancel_func, cancel_baton,
                             result_pool, scratch_pool));
@@ -1309,16 +1322,24 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
   svn_editor_t *editor;
   struct start_edit_baton *seb = apr_palloc(result_pool, sizeof(*seb));
 
+  /* The reason this is a pointer is that we don't know the appropriate
+     value until we start receiving paths.  So process_actions() sets the
+     flag, which drive() later consumes. */
+  svn_boolean_t *found_abs_paths = apr_palloc(result_pool,
+                                              sizeof(*found_abs_paths));
+
   seb->deditor = deditor_in;
   seb->dedit_baton = dedit_baton_in;
 
   SVN_ERR(editor_from_delta(&editor, deditor_in, dedit_baton_in,
-                            NULL, NULL, shim_callbacks->fetch_kind_func,
+                            found_abs_paths, NULL, NULL,
+                            shim_callbacks->fetch_kind_func,
                             shim_callbacks->fetch_kind_baton,
                             shim_callbacks->fetch_props_func,
                             shim_callbacks->fetch_props_baton,
                             result_pool, scratch_pool));
   SVN_ERR(delta_from_editor(deditor_out, dedit_baton_out, editor,
+                            found_abs_paths,
                             shim_callbacks->fetch_props_func,
                             shim_callbacks->fetch_props_baton,
                             start_edit_func, seb,
