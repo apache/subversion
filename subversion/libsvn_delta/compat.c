@@ -1173,7 +1173,10 @@ drive(const struct operation *operation,
 
       /* We *always* open the child directory, so drive the child, change any
          props, and then close the directory. */
-      if (child->kind == svn_kind_dir)
+      if (child->kind == svn_kind_dir
+                   && (child->operation == OP_OPEN
+                    || child->operation == OP_PROPSET
+                    || child->operation == OP_ADD))
         {
           SVN_ERR(drive(child, editor, make_abs_paths, iterpool));
           SVN_ERR(change_props(editor, child->baton, child, iterpool));
