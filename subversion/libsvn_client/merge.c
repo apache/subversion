@@ -3042,22 +3042,14 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
   svn_revnum_t older_rev = is_rollback ? revision2 : revision1;
   apr_array_header_t *segments;
   const char *rel_source_path;
-  const char *session_url;
   svn_error_t *err;
 
   SVN_ERR_ASSERT(parent->remaining_ranges);
 
   /* We want to know about PRIMARY_URL@peg_rev, but we need PRIMARY_URL's
      path relative to RA_SESSION's URL. */
-  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, scratch_pool));
-  SVN_ERR(svn_client__path_relative_to_root(&rel_source_path,
-                                            ctx->wc_ctx,
-                                            primary_url,
-                                            session_url,
-                                            FALSE,
-                                            ra_session,
-                                            scratch_pool,
-                                            scratch_pool));
+  SVN_ERR(svn_ra_get_path_relative_to_session(ra_session, &rel_source_path,
+                                              primary_url, scratch_pool));
   err = svn_client__repos_location_segments(&segments, ra_session,
                                             rel_source_path, peg_rev,
                                             younger_rev, older_rev, ctx,
