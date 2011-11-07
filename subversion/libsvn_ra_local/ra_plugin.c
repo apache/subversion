@@ -220,21 +220,21 @@ reporter_link_path(void *reporter_baton,
                    apr_pool_t *pool)
 {
   reporter_baton_t *rbaton = reporter_baton;
-  const char *fs_path = NULL;
   const char *repos_url = rbaton->sess->repos_url;
+  const char *relpath = svn_uri_skip_ancestor(repos_url, url, pool);
+  const char *fs_path;
 
-  if (!svn_uri__is_ancestor(repos_url, url))
+  if (!relpath)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              _("'%s'\n"
                                "is not the same repository as\n"
                                "'%s'"), url, rbaton->sess->repos_url);
 
-  /* Skip the repos_url, but keep the last '/' to create an fspath */
-  fs_path = svn_uri_skip_ancestor(repos_url, url, pool);
-  if (fs_path[0] == '\0')
+  /* Convert the relpath to an fspath */
+  if (relpath[0] == '\0')
     fs_path = "/";
   else
-    fs_path = apr_pstrcat(pool, "/", fs_path, (char *)NULL);
+    fs_path = apr_pstrcat(pool, "/", relpath, (char *)NULL);
 
   return svn_repos_link_path3(rbaton->report_baton, path, fs_path, revision,
                               depth, start_empty, lock_token, pool);
@@ -541,12 +541,10 @@ svn_ra_local__reparent(svn_ra_session_t *session,
                        apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  const char *relpath = "";
+  const char *relpath = svn_uri_skip_ancestor(sess->repos_url, url, pool);
 
   /* If the new URL isn't the same as our repository root URL, then
      let's ensure that it's some child of it. */
-  if (strcmp(url, sess->repos_url) != 0)
-    relpath = svn_uri__is_child(sess->repos_url, url, pool);
   if (! relpath)
     return svn_error_createf
       (SVN_ERR_RA_ILLEGAL_URL, NULL,

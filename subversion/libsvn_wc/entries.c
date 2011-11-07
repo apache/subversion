@@ -1720,16 +1720,10 @@ write_entry(struct write_baton **entry_node,
     {
       if (entry->copyfrom_url)
         {
-          const char *relpath;
-
           working_node->repos_id = repos_id;
-          relpath = svn_uri__is_child(this_dir->repos,
-                                      entry->copyfrom_url,
-                                      result_pool);
-          if (relpath == NULL)
-            working_node->repos_relpath = "";
-          else
-            working_node->repos_relpath = relpath;
+          working_node->repos_relpath = svn_uri_skip_ancestor(
+                                          this_dir->repos, entry->copyfrom_url,
+                                          result_pool);
           working_node->revision = entry->copyfrom_rev;
           working_node->op_depth
             = svn_wc__db_op_depth_for_upgrade(local_relpath);
@@ -1987,17 +1981,16 @@ write_entry(struct write_baton **entry_node,
 
           if (entry->url != NULL)
             {
-              const char *relpath = svn_uri__is_child(this_dir->repos,
-                                                      entry->url,
-                                                      result_pool);
-              base_node->repos_relpath = relpath ? relpath : "";
+              base_node->repos_relpath = svn_uri_skip_ancestor(
+                                           this_dir->repos, entry->url,
+                                           result_pool);
             }
           else
             {
-              const char *relpath = svn_uri__is_child(this_dir->repos,
-                                                      this_dir->url,
-                                                      scratch_pool);
-              if (relpath == NULL)
+              const char *relpath = svn_uri_skip_ancestor(this_dir->repos,
+                                                          this_dir->url,
+                                                          scratch_pool);
+              if (relpath == NULL || *relpath == '\0')
                 base_node->repos_relpath = entry->name;
               else
                 base_node->repos_relpath =

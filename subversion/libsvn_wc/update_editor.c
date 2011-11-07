@@ -5559,14 +5559,14 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                               dir_abspath,
                                               pool, pool));
 
-      if (!svn_uri__is_ancestor(original_root_url, copyfrom_url))
+      original_repos_relpath =
+        svn_uri_skip_ancestor(original_root_url, copyfrom_url, pool);
+
+      if (!original_repos_relpath)
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                  _("Copyfrom-url '%s' has different repository"
                                    " root than '%s'"),
                                  copyfrom_url, original_root_url);
-
-      original_repos_relpath =
-        svn_uri_skip_ancestor(original_root_url, copyfrom_url, pool);
     }
   else
     {

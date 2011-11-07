@@ -591,17 +591,6 @@ svn_dirent_get_absolute(const char **pabsolute,
                         const char *relative,
                         apr_pool_t *result_pool);
 
-/** Similar to svn_uri_skip_ancestor(), except that if @a child_uri is
- * the same as @a parent_uri, it is not considered a child, so the result
- * is @c NULL; an empty string is never returned.
- *
- * Allocate the result in @a result_pool.
- */
-const char *
-svn_uri__is_child(const char *parent_uri,
-                  const char *child_uri,
-                  apr_pool_t *result_pool);
-
 /** Similar to svn_dirent_skip_ancestor(), except that if @a child_dirent is
  * the same as @a parent_dirent, it is not considered a child, so the result
  * is @c NULL; an empty string is never returned.

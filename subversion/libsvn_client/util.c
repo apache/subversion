@@ -105,14 +105,13 @@ svn_client__path_relative_to_root(const char **rel_path,
      /* Merge handling passes a root that is not the repos root */
   else if (repos_root != NULL)
     {
-      if (!svn_uri__is_ancestor(repos_root, abspath_or_url))
+      repos_relpath = svn_uri_skip_ancestor(repos_root, abspath_or_url,
+                                            result_pool);
+      if (!repos_relpath)
         return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
                                  _("URL '%s' is not a child of repository "
                                    "root URL '%s'"),
                                  abspath_or_url, repos_root);
-
-      repos_relpath = svn_uri_skip_ancestor(repos_root, abspath_or_url,
-                                            result_pool);
     }
   else
     {
