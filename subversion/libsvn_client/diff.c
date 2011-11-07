@@ -72,7 +72,7 @@ static const char under_string[] =
 
 /* A helper function for display_prop_diffs.  Output the differences between
    the mergeinfo stored in ORIG_MERGEINFO_VAL and NEW_MERGEINFO_VAL in a
-   human-readable form to FILE, using ENCODING.  Use POOL for temporary
+   human-readable form to OUTSTREAM, using ENCODING.  Use POOL for temporary
    allocations. */
 static svn_error_t *
 display_mergeinfo_diff(const char *old_mergeinfo_val,
@@ -509,8 +509,8 @@ print_git_diff_header(svn_stream_t *os,
 }
 
 /* A helper func that writes out verbal descriptions of property diffs
-   to FILE.   Of course, OUTSTREAM will probably be whatever was
-   passed to svn_client_diff5, which is probably stdout.
+   to OUTSTREAM.   Of course, OUTSTREAM will probably be whatever was
+   passed to svn_client_diff6(), which is probably stdout.
 
    ### FIXME needs proper docstring
 
@@ -741,7 +741,7 @@ struct diff_cmd_baton {
   const char *orig_path_2;
 
   /* These are the numeric representations of the revisions passed to
-     svn_client_diff5, either may be SVN_INVALID_REVNUM.  We need these
+     svn_client_diff6(), either may be SVN_INVALID_REVNUM.  We need these
      because some of the svn_wc_diff_callbacks4_t don't get revision
      arguments.
 
@@ -1552,8 +1552,8 @@ diff_prepare_repos_repos(const char **url1,
 
 /* A Theoretical Note From Ben, regarding do_diff().
 
-   This function is really svn_client_diff5().  If you read the public
-   API description for svn_client_diff5(), it sounds quite Grand.  It
+   This function is really svn_client_diff6().  If you read the public
+   API description for svn_client_diff6(), it sounds quite Grand.  It
    sounds really generalized and abstract and beautiful: that it will
    diff any two paths, be they working-copy paths or URLs, at any two
    revisions.
@@ -1573,7 +1573,7 @@ diff_prepare_repos_repos(const char **url1,
    pigeonholed into one of these three use-cases, we currently bail
    with a friendly apology.
 
-   Perhaps someday a brave soul will truly make svn_client_diff5
+   Perhaps someday a brave soul will truly make svn_client_diff6()
    perfectly general.  For now, we live with the 90% case.  Certainly,
    the commandline client only calls this function in legal ways.
    When there are other users of svn_client.h, maybe this will become
@@ -1586,7 +1586,7 @@ static svn_error_t *
 unsupported_diff_error(svn_error_t *child_err)
 {
   return svn_error_create(SVN_ERR_INCORRECT_PARAMS, child_err,
-                          _("Sorry, svn_client_diff5 was called in a way "
+                          _("Sorry, svn_client_diff6 was called in a way "
                             "that is not yet supported"));
 }
 
@@ -1596,7 +1596,7 @@ unsupported_diff_error(svn_error_t *child_err)
    PATH1 and PATH2 are both working copy paths.  REVISION1 and
    REVISION2 are their respective revisions.
 
-   All other options are the same as those passed to svn_client_diff5(). */
+   All other options are the same as those passed to svn_client_diff6(). */
 static svn_error_t *
 diff_wc_wc(const char *path1,
            const svn_opt_revision_t *revision1,
@@ -1678,7 +1678,7 @@ diff_wc_wc(const char *path1,
    and the actual two paths compared are determined by following copy
    history from PATH2.
 
-   All other options are the same as those passed to svn_client_diff5(). */
+   All other options are the same as those passed to svn_client_diff6(). */
 static svn_error_t *
 diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
                  struct diff_cmd_baton *callback_baton,
@@ -1772,7 +1772,7 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
    revision, and the actual repository path to be compared is
    determined by following copy history.
 
-   All other options are the same as those passed to svn_client_diff5(). */
+   All other options are the same as those passed to svn_client_diff6(). */
 static svn_error_t *
 diff_repos_wc(const char *path1,
               const svn_opt_revision_t *revision1,
@@ -1925,7 +1925,7 @@ diff_repos_wc(const char *path1,
 }
 
 
-/* This is basically just the guts of svn_client_diff[_peg]5(). */
+/* This is basically just the guts of svn_client_diff[_peg]6(). */
 static svn_error_t *
 do_diff(const svn_wc_diff_callbacks4_t *callbacks,
         struct diff_cmd_baton *callback_baton,
@@ -1995,7 +1995,7 @@ do_diff(const svn_wc_diff_callbacks4_t *callbacks,
    PATH1 and PATH2 are both working copy paths.  REVISION1 and
    REVISION2 are their respective revisions.
 
-   All other options are the same as those passed to svn_client_diff5(). */
+   All other options are the same as those passed to svn_client_diff6(). */
 static svn_error_t *
 diff_summarize_wc_wc(svn_client_diff_summarize_func_t summarize_func,
                      void *summarize_baton,
