@@ -250,7 +250,7 @@ svn_client__ensure_ra_session_url(const char **old_session_url,
                                   apr_pool_t *pool);
 
 /* Return the path of ABSPATH_OR_URL relative to the repository root
-   (REPOS_ROOT) in REL_PATH (URI-decoded), both allocated in RESULT_POOL.
+   (REPOS_ROOT) in REL_PATH (URI-decoded), allocated in RESULT_POOL.
    If INCLUDE_LEADING_SLASH is set, the returned result will have a leading
    slash; otherwise, it will not.
 
