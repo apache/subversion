@@ -648,9 +648,7 @@ schema-xsd: $(SCHEMAS_XSD)
 $(SCHEMAS_RNG) $(SCHEMAS_DTD) $(SCHEMAS_XSD): $(SCHEMA_DIR)/common.rnc
 
 schema-clean:
-	if test -d $(SCHEMA_DIR); then \
-	    (cd $(SCHEMA_DIR) && rm -f *.rng *.dtd *.xsd); \
-	fi
+	(cd $(SCHEMA_DIR) && rm -f *.rng *.dtd *.xsd)
 
 #
 # Implicit rules for creating outputs from input files
@@ -750,7 +748,7 @@ $(SWIG_PL_DIR)/native/Makefile: $(SWIG_PL_DIR)/native/Makefile.PL
 READLINK_PY=$(PYTHON) -c 'import sys,os; print(os.path.realpath(sys.argv[1]))'
 READLINK_PL=$(PERL) -e 'use Cwd; print Cwd::realpath(shift)'
 
-swig-pl_DEPS = mkdir-init autogen-swig-pl libsvn_swig_perl \
+swig-pl_DEPS = autogen-swig-pl libsvn_swig_perl \
   $(SWIG_PL_DIR)/native/Makefile
 swig-pl: $(swig-pl_DEPS)
 	if test "`$(READLINK_PL) $(SWIG_PL_DIR)`" != "`$(READLINK_PL) $(SWIG_PL_SRC_DIR)`"; then \
@@ -774,10 +772,11 @@ clean-swig-pl:
 	if test -z "$(RELEASE_MODE)"; then \
 	  $(EXTRACLEAN_SWIG_PL); \
 	fi
-	if [ -d "$(SWIG_PL_DIR)/libsvn_swig_perl" ]; then \
-	  cd "$(SWIG_PL_DIR)/libsvn_swig_perl"; \
+	for d in $(SWIG_PL_DIR)/libsvn_swig_perl; \
+	do \
+	  cd $$d; \
 	  rm -rf *.lo *.la *.o .libs; \
-	fi
+	done
 	if [ -f "$(SWIG_PL_DIR)/native/Makefile" ]; then \
 	  cd $(SWIG_PL_DIR)/native; $(MAKE) clean; \
 	fi
@@ -785,7 +784,7 @@ clean-swig-pl:
 extraclean-swig-pl: clean-swig-pl
 	$(EXTRACLEAN_SWIG_PL)
 
-$(SWIG_PY_DIR)/libsvn: mkdir-init
+$(SWIG_PY_DIR)/libsvn:
 	mkdir $(SWIG_PY_DIR)/libsvn
 
 copy-swig-py: autogen-swig-py $(SWIG_PY_DIR)/libsvn
@@ -809,14 +808,9 @@ clean-swig-py:
 	fi
 	for d in $(SWIG_PY_DIR) $(SWIG_PY_DIR)/libsvn_swig_py; \
 	do \
-	  if test -d $$d; then \
-	    cd $$d && rm -rf *.lo *.la *.o *.pyc .libs; \
-	  fi; \
+	  cd $$d && rm -rf *.lo *.la *.o *.pyc .libs; \
 	done
-	find $(SWIG_PY_SRC_DIR) -name "*.pyc" -exec rm {} ';'
-	if test -d $(SWIG_PY_DIR); then \
-	  find $(SWIG_PY_DIR) -name "*.pyc" -exec rm {} ';'; \
-	fi
+	find $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) -name "*.pyc" -exec rm {} ';'
 
 extraclean-swig-py: clean-swig-py
 	$(EXTRACLEAN_SWIG_PY)
@@ -838,10 +832,8 @@ clean-swig-rb:
 	fi
 	for d in $(SWIG_RB_DIR) $(SWIG_RB_DIR)/libsvn_swig_ruby; \
 	do \
-	  if test -d $$d; then \
-	    cd $$d; \
-	    rm -rf *.lo *.la *.o .libs; \
-	  fi; \
+	  cd $$d; \
+	  rm -rf *.lo *.la *.o .libs; \
 	done
 
 extraclean-swig-rb: clean-swig-rb
