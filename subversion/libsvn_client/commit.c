@@ -901,12 +901,11 @@ collect_lock_tokens(apr_hash_t **result,
     {
       const char *url = svn__apr_hash_index_key(hi);
       const char *token = svn__apr_hash_index_val(hi);
+      const char *relpath = svn_uri_skip_ancestor(base_url, url, pool);
 
-      if (svn_uri__is_ancestor(base_url, url))
+      if (relpath)
         {
-          url = svn_uri_skip_ancestor(base_url, url, pool);
-
-          apr_hash_set(*result, url, APR_HASH_KEY_STRING, token);
+          apr_hash_set(*result, relpath, APR_HASH_KEY_STRING, token);
         }
     }
 
