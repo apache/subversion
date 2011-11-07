@@ -804,18 +804,11 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
            _("Source and destination URLs appear not to point to the "
              "same repository."));
 
-      /* Resolve revision keywords and such into real revision number,
-         passing NULL for the path (to ensure error if trying to get a
-         revision based on the working copy). */
-      SVN_ERR(svn_client__get_revision_number(&pair->src_revnum, &youngest,
-                                              ctx->wc_ctx, NULL,
-                                              ra_session,
-                                              &pair->src_op_revision, pool));
-
-      /* Run the history function to get the source's URL in the
+      /* Run the history function to get the source's URL and revnum in the
          operational revision. */
       SVN_ERR(svn_ra_reparent(ra_session, pair->src_abspath_or_url, pool));
-      SVN_ERR(svn_client__repos_locations(&pair->src_abspath_or_url, NULL,
+      SVN_ERR(svn_client__repos_locations(&pair->src_abspath_or_url,
+                                          &pair->src_revnum,
                                           NULL, NULL,
                                           ra_session,
                                           pair->src_abspath_or_url,
