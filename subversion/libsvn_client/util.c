@@ -102,7 +102,6 @@ svn_client__path_relative_to_root(const char **rel_path,
 
       SVN_ERR_ASSERT(repos_relpath != NULL);
     }
-     /* Merge handling passes a root that is not the repos root */
   else if (repos_root != NULL)
     {
       repos_relpath = svn_uri_skip_ancestor(repos_root, abspath_or_url,
