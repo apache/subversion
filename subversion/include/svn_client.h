@@ -2747,7 +2747,7 @@ svn_client_blame(const char *path_or_url,
 /**
  * Produce diff output which describes the delta between
  * @a path1/@a revision1 and @a path2/@a revision2.  Print the output
- * of the diff to @a outfile, and any errors to @a errfile.  @a path1
+ * of the diff to @a outstream, and any errors to @a errstream.  @a path1
  * and @a path2 can be either working-copy paths or URLs.
  *
  * If @a relative_to_dir is not @c NULL, the @a original_path and
@@ -2978,12 +2978,12 @@ svn_client_diff(const apr_array_header_t *diff_options,
  * be either a working-copy path or URL.
  *
  * If @a peg_revision is #svn_opt_revision_unspecified, behave
- * identically to svn_client_diff5(), using @a path for both of that
+ * identically to svn_client_diff6(), using @a path for both of that
  * function's @a path1 and @a path2 arguments.
  *
- * All other options are handled identically to svn_client_diff5().
+ * All other options are handled identically to svn_client_diff6().
  *
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_client_diff_peg6(const apr_array_header_t *diff_options,
@@ -3141,7 +3141,7 @@ svn_client_diff_peg(const apr_array_header_t *diff_options,
  * Calls @a summarize_func with @a summarize_baton for each difference
  * with a #svn_client_diff_summarize_t structure describing the difference.
  *
- * See svn_client_diff5() for a description of the other parameters.
+ * See svn_client_diff6() for a description of the other parameters.
  *
  * @since New in 1.5.
  */
