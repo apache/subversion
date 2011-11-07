@@ -105,6 +105,7 @@ svn_error_t *svn_client__get_copy_source(const char *path_or_url,
    specify the point(s) of interest (typically the revisions referred
    to as the "operative range" for a given operation) along that history.
 
+   START_REVISION and/or END_REVISION may be NULL if not wanted.
    END may be NULL or of kind svn_opt_revision_unspecified (in either case
    END_URL and END_REVISION are not touched by the function);
    START and REVISION may not.
@@ -131,9 +132,9 @@ svn_error_t *svn_client__get_copy_source(const char *path_or_url,
    Use POOL for all allocations.  */
 svn_error_t *
 svn_client__repos_locations(const char **start_url,
-                            svn_opt_revision_t **start_revision,
+                            svn_revnum_t *start_revision,
                             const char **end_url,
-                            svn_opt_revision_t **end_revision,
+                            svn_revnum_t *end_revision,
                             svn_ra_session_t *ra_session,
                             const char *path,
                             const svn_opt_revision_t *revision,
@@ -396,6 +397,19 @@ svn_error_t * svn_client__wc_delete(const char *path,
                                     void *notify_baton,
                                     svn_client_ctx_t *ctx,
                                     apr_pool_t *pool);
+
+
+/* Like svn_client__wc_delete(), but deletes mulitple TARGETS efficiently. */
+svn_error_t *
+svn_client__wc_delete_many(const apr_array_header_t *targets,
+                           svn_boolean_t force,
+                           svn_boolean_t dry_run,
+                           svn_boolean_t keep_local,
+                           svn_wc_notify_func2_t notify_func,
+                           void *notify_baton,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool);
+
 
 /* Make PATH and add it to the working copy, optionally making all the
    intermediate parent directories if MAKE_PARENTS is TRUE. */

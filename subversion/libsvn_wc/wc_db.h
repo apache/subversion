@@ -1407,6 +1407,32 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 
+/* Mark all LOCAL_ABSPATH in the TARGETS array, and all of their children,
+ * for deletion.
+ *
+ * This function is more efficient than svn_wc__db_op_delete() because
+ * only one sqlite transaction is used for all targets.
+ * It currently lacks support for moves (though this could be changed,
+ * at which point svn_wc__db_op_delete() becomes redundant).
+ *
+ * If NOTIFY_FUNC is not NULL, then it will be called (with NOTIFY_BATON)
+ * for each node deleted. While this processing occurs, if CANCEL_FUNC is
+ * not NULL, then it will be called (with CANCEL_BATON) to detect cancellation
+ * during the processing.
+ *
+ * Note: the notification (and cancellation) occur outside of a SQLite
+ * transaction.
+ */
+svn_error_t *
+svn_wc__db_op_delete_many(svn_wc__db_t *db,
+                          apr_array_header_t *targets,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *scratch_pool);
+
+
 /* ### mark PATH as (possibly) modified. "svn edit" ... right API here? */
 svn_error_t *
 svn_wc__db_op_modified(svn_wc__db_t *db,
@@ -2286,6 +2312,11 @@ svn_wc__db_global_update(svn_wc__db_t *db,
    The modifications are mutually exclusive.  If NEW_REPOS_ROOT is non-NULL,
    set the repository root of the entry to NEW_REPOS_ROOT.
 
+   If LOCAL_ABSPATH is an incomplete directory then mark it complete
+   by setting the status to normal. (Removing incomplete is usually
+   done by the editor during close_directory, but if the editor driver
+   simply called close_edit it gets done here.)
+
    If LOCAL_ABSPATH is a directory, then, walk entries below LOCAL_ABSPATH
    according to DEPTH thusly:
 
@@ -2843,15 +2874,6 @@ svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
                                           const char *new_repos_relpath,
                                           svn_revnum_t new_rev,
                                           apr_pool_t *scratch_pool);
-
-/* Marks a directory update started with
-   svn_wc__db_temp_op_start_directory_update as completed, by removing
-   the incomplete status */
-svn_error_t *
-svn_wc__db_temp_op_end_directory_update(svn_wc__db_t *db,
-                                        const char *local_dir_abspath,
-                                        apr_pool_t *scratch_pool);
-
 
 /* Copy the base tree at LOCAL_ABSPATH into the working tree as copy,
    leaving any subtree additions and copies as-is.  This allows the

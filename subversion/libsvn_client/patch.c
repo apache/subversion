@@ -811,12 +811,19 @@ write_file(void *baton, const char *buf, apr_size_t len,
  * with the fewest path components, the shortest basename, and the shortest
  * total file name length (in that order). In case of a tie, return the new
  * filename. This heuristic is also used by Larry Wall's UNIX patch (except
- * that it prompts for a filename in case of a tie). */
+ * that it prompts for a filename in case of a tie).
+ * Additionally, for compatibility with git, if one of the filenames
+ * is "/dev/null", use the other filename. */
 static const char *
 choose_target_filename(const svn_patch_t *patch)
 {
   apr_size_t old;
   apr_size_t new;
+
+  if (strcmp(patch->old_filename, "/dev/null") == 0)
+    return patch->new_filename;
+  if (strcmp(patch->new_filename, "/dev/null") == 0)
+    return patch->old_filename;
 
   old = svn_path_component_count(patch->old_filename);
   new = svn_path_component_count(patch->new_filename);

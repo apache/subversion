@@ -2865,9 +2865,10 @@ svn_client_blame(const char *path_or_url,
 
 /**
  * Produce diff output which describes the delta between
- * @a path1/@a revision1 and @a path2/@a revision2.  Print the output
- * of the diff to @a outfile, and any errors to @a errfile.  @a path1
- * and @a path2 can be either working-copy paths or URLs.
+ * @a path_or_url1/@a revision1 and @a path_or_url2/@a revision2.  Print
+ * the output of the diff to @a outstream, and any errors to @a
+ * errstream.  @a path_or_url1 and @a path_or_url2 can be either
+ * working-copy paths or URLs.
  *
  * If @a relative_to_dir is not @c NULL, the @a original_path and
  * @a modified_path will have the @a relative_to_dir stripped from the
@@ -2880,9 +2881,10 @@ svn_client_blame(const char *path_or_url,
  * If either @a revision1 or @a revision2 has an `unspecified' or
  * unrecognized `kind', return #SVN_ERR_CLIENT_BAD_REVISION.
  *
- * @a path1 and @a path2 must both represent the same node kind -- that
- * is, if @a path1 is a directory, @a path2 must also be, and if @a path1
- * is a file, @a path2 must also be.
+ * @a path_or_url1 and @a path_or_url2 must both represent the same node
+ * kind -- that is, if @a path_or_url1 is a directory, @a path_or_url2
+ * must also be, and if @a path_or_url1 is a file, @a path_or_url2 must
+ * also be.
  *
  * If @a depth is #svn_depth_infinity, diff fully recursively.
  * Else if it is #svn_depth_immediates, diff the named paths and
@@ -2948,9 +2950,9 @@ svn_client_blame(const char *path_or_url,
  */
 svn_error_t *
 svn_client_diff6(const apr_array_header_t *diff_options,
-                 const char *path1,
+                 const char *path_or_url1,
                  const svn_opt_revision_t *revision1,
-                 const char *path2,
+                 const char *path_or_url2,
                  const svn_opt_revision_t *revision2,
                  const char *relative_to_dir,
                  svn_depth_t depth,
@@ -3091,22 +3093,22 @@ svn_client_diff(const apr_array_header_t *diff_options,
                 apr_pool_t *pool);
 
 /**
- * Produce diff output which describes the delta between the
- * filesystem object @a path in peg revision @a peg_revision, as it
- * changed between @a start_revision and @a end_revision.  @a path can
+ * Produce diff output which describes the delta between the filesystem
+ * object @a path_or_url in peg revision @a peg_revision, as it changed
+ * between @a start_revision and @a end_revision.  @a path_or_url can
  * be either a working-copy path or URL.
  *
  * If @a peg_revision is #svn_opt_revision_unspecified, behave
- * identically to svn_client_diff5(), using @a path for both of that
- * function's @a path1 and @a path2 arguments.
+ * identically to svn_client_diff6(), using @a path_or_url for both of that
+ * function's @a path_or_url1 and @a path_or_url2 arguments.
  *
- * All other options are handled identically to svn_client_diff5().
+ * All other options are handled identically to svn_client_diff6().
  *
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_client_diff_peg6(const apr_array_header_t *diff_options,
-                     const char *path,
+                     const char *path_or_url,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *start_revision,
                      const svn_opt_revision_t *end_revision,
@@ -3250,8 +3252,9 @@ svn_client_diff_peg(const apr_array_header_t *diff_options,
 
 /**
  * Produce a diff summary which lists the changed items between
- * @a path1/@a revision1 and @a path2/@a revision2 without creating text
- * deltas. @a path1 and @a path2 can be either working-copy paths or URLs.
+ * @a path_or_url1/@a revision1 and @a path_or_url2/@a revision2 without
+ * creating text deltas. @a path_or_url1 and @a path_or_url2 can be
+ * either working-copy paths or URLs.
  *
  * The function may report false positives if @a ignore_ancestry is false,
  * since a file might have been modified between two revisions, but still
@@ -3260,14 +3263,14 @@ svn_client_diff_peg(const apr_array_header_t *diff_options,
  * Calls @a summarize_func with @a summarize_baton for each difference
  * with a #svn_client_diff_summarize_t structure describing the difference.
  *
- * See svn_client_diff5() for a description of the other parameters.
+ * See svn_client_diff6() for a description of the other parameters.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_diff_summarize2(const char *path1,
+svn_client_diff_summarize2(const char *path_or_url1,
                            const svn_opt_revision_t *revision1,
-                           const char *path2,
+                           const char *path_or_url2,
                            const svn_opt_revision_t *revision2,
                            svn_depth_t depth,
                            svn_boolean_t ignore_ancestry,
@@ -3302,13 +3305,13 @@ svn_client_diff_summarize(const char *path1,
 
 /**
  * Produce a diff summary which lists the changed items between the
- * filesystem object @a path in peg revision @a peg_revision, as it
- * changed between @a start_revision and @a end_revision. @a path can
+ * filesystem object @a path_or_url in peg revision @a peg_revision, as it
+ * changed between @a start_revision and @a end_revision. @a path_or_url can
  * be either a working-copy path or URL.
  *
  * If @a peg_revision is #svn_opt_revision_unspecified, behave
- * identically to svn_client_diff_summarize2(), using @a path for both
- * of that function's @a path1 and @a path2 arguments.
+ * identically to svn_client_diff_summarize2(), using @a path_or_url for
+ * both of that function's @a path_or_url1 and @a path_or_url2 arguments.
  *
  * The function may report false positives if @a ignore_ancestry is false,
  * as described in the documentation for svn_client_diff_summarize2().
@@ -3321,7 +3324,7 @@ svn_client_diff_summarize(const char *path1,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_diff_summarize_peg2(const char *path,
+svn_client_diff_summarize_peg2(const char *path_or_url,
                                const svn_opt_revision_t *peg_revision,
                                const svn_opt_revision_t *start_revision,
                                const svn_opt_revision_t *end_revision,

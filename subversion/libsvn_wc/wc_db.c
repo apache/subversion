@@ -6226,10 +6226,10 @@ struct op_delete_baton_t {
 };
 
 static svn_error_t *
-op_delete_txn(void *baton,
-              svn_wc__db_wcroot_t *wcroot,
-              const char *local_relpath,
-              apr_pool_t *scratch_pool)
+delete_node(void *baton,
+            svn_wc__db_wcroot_t *wcroot,
+            const char *local_relpath,
+            apr_pool_t *scratch_pool)
 {
   struct op_delete_baton_t *b = baton;
   svn_wc__db_status_t status;
@@ -6239,8 +6239,6 @@ op_delete_txn(void *baton,
   apr_int64_t select_depth; /* Depth of what is to be deleted */
   svn_boolean_t refetch_depth = FALSE;
   svn_kind_t kind;
-
-  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, STMT_CREATE_DELETE_LIST));
 
   SVN_ERR(read_info(&status,
                     &kind, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -6503,6 +6501,51 @@ op_delete_txn(void *baton,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+op_delete_txn(void *baton,
+              svn_wc__db_wcroot_t *wcroot,
+              const char *local_relpath,
+              apr_pool_t *scratch_pool)
+{
+
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, STMT_CREATE_DELETE_LIST));
+  SVN_ERR(delete_node(baton, wcroot, local_relpath, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+
+struct op_delete_many_baton_t {
+  apr_array_header_t *rel_targets;
+} op_delete_many_baton_t;
+
+static svn_error_t *
+op_delete_many_txn(void *baton,
+                   svn_wc__db_wcroot_t *wcroot,
+                   const char *local_relpath,
+                   apr_pool_t *scratch_pool)
+{
+  struct op_delete_many_baton_t *odmb = baton;
+  int i;
+  apr_pool_t *iterpool;
+
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, STMT_CREATE_DELETE_LIST));
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < odmb->rel_targets->nelts; i++)
+    {
+      const char *target_relpath = APR_ARRAY_IDX(odmb->rel_targets, i,
+                                                 const char *);
+      struct op_delete_baton_t odb;
+      
+      svn_pool_clear(iterpool);
+      odb.delete_depth = relpath_depth(target_relpath);
+      odb.moved_to_relpath = NULL;
+      SVN_ERR(delete_node(&odb, wcroot, target_relpath, iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 
 static svn_error_t *
 do_delete_notify(void *baton,
@@ -6529,9 +6572,6 @@ do_delete_notify(void *baton,
 
       svn_pool_clear(iterpool);
 
-      if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
-
       notify_relpath = svn_sqlite__column_text(stmt, 0, NULL);
       notify_abspath = svn_dirent_join(wcroot->abspath,
                                        notify_relpath,
@@ -6547,7 +6587,15 @@ do_delete_notify(void *baton,
     }
   svn_pool_destroy(iterpool);
 
-  return svn_error_trace(svn_sqlite__reset(stmt));
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* We only allow cancellation after notification for all deleted nodes
+   * has happened. The nodes are already deleted so we should notify for
+   * all of them. */
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -6605,6 +6653,67 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
      notifications necessary, and then clean out our temporary tables.  */
   return svn_error_trace(with_finalization(wcroot, local_relpath,
                                            op_delete_txn, &odb,
+                                           do_delete_notify, NULL,
+                                           cancel_func, cancel_baton,
+                                           notify_func, notify_baton,
+                                           STMT_FINALIZE_DELETE,
+                                           scratch_pool));
+}
+
+
+svn_error_t *
+svn_wc__db_op_delete_many(svn_wc__db_t *db,
+                          apr_array_header_t *targets,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  struct op_delete_many_baton_t odmb;
+  int i;
+  apr_pool_t *iterpool;
+
+  odmb.rel_targets = apr_array_make(scratch_pool, targets->nelts,
+                                    sizeof(const char *));
+  iterpool = svn_pool_create(scratch_pool);
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db,
+                                                APR_ARRAY_IDX(targets, 0,
+                                                              const char *),
+                                                scratch_pool, iterpool));
+  VERIFY_USABLE_WCROOT(wcroot);
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *local_abspath = APR_ARRAY_IDX(targets, i, const char*);
+      svn_wc__db_wcroot_t *target_wcroot;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&target_wcroot,
+                                                    &local_relpath, db,
+                                                    APR_ARRAY_IDX(targets, i,
+                                                                  const char *),
+                                                    scratch_pool, iterpool));
+      VERIFY_USABLE_WCROOT(target_wcroot);
+      SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+      /* Assert that all targets are within the same working copy. */
+      SVN_ERR_ASSERT(wcroot->wc_id == target_wcroot->wc_id);
+
+      APR_ARRAY_PUSH(odmb.rel_targets, const char *) = local_relpath;
+      SVN_ERR(flush_entries(target_wcroot, local_abspath, svn_depth_infinity,
+                            iterpool));
+
+    }
+  svn_pool_destroy(iterpool);
+  
+  /* Perform the deletion operation (transactionally), perform any
+     notifications necessary, and then clean out our temporary tables.  */
+  return svn_error_trace(with_finalization(wcroot, wcroot->abspath,
+                                           op_delete_many_txn, &odmb,
                                            do_delete_notify, NULL,
                                            cancel_func, cancel_baton,
                                            notify_func, notify_baton,
@@ -7215,9 +7324,7 @@ read_children_info(void *baton,
           child_item->info.moved_here = svn_sqlite__column_boolean(stmt, 20);
         }
 
-      err = svn_sqlite__step(&have_row, stmt);
-      if (err)
-        SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
   SVN_ERR(svn_sqlite__reset(stmt));
@@ -7271,9 +7378,7 @@ read_children_info(void *baton,
         apr_hash_set(conflicts, apr_pstrdup(result_pool, name),
                      APR_HASH_KEY_STRING, "");
 
-      err = svn_sqlite__step(&have_row, stmt);
-      if (err)
-        SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
   SVN_ERR(svn_sqlite__reset(stmt));
@@ -7508,9 +7613,7 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
       apr_hash_set(*nodes, apr_pstrdup(result_pool, name),
                    APR_HASH_KEY_STRING, child);
 
-      err = svn_sqlite__step(&have_row, stmt);
-      if (err)
-        SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
   SVN_ERR(svn_sqlite__reset(stmt));
@@ -9032,6 +9135,17 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
                                             new_repos_relpath,
                                             new_repos_id,
                                             scratch_pool));
+
+  if (db_kind == svn_kind_dir && status == svn_wc__db_status_incomplete)
+    {
+      svn_sqlite__stmt_t *stmt;
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_UPDATE_NODE_BASE_PRESENCE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "ist", wcroot->wc_id, local_relpath,
+                                presence_map, svn_wc__db_status_normal));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
 
   /* Early out */
   if (depth <= svn_depth_empty
@@ -11612,55 +11726,6 @@ svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
 
   return SVN_NO_ERROR;
 }
-
-/* Lock helper for svn_wc__db_temp_op_end_directory_update */
-static svn_error_t *
-end_directory_update(void *baton,
-                     svn_wc__db_wcroot_t *wcroot,
-                     const char *local_relpath,
-                     apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  svn_wc__db_status_t base_status;
-
-  SVN_ERR(base_get_info(&base_status, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                        NULL, NULL, NULL, NULL, NULL, NULL,
-                        wcroot, local_relpath, scratch_pool, scratch_pool));
-
-  SVN_ERR_ASSERT(base_status == svn_wc__db_status_incomplete);
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_UPDATE_NODE_BASE_PRESENCE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "ist", wcroot->wc_id, local_relpath,
-                            presence_map, svn_wc__db_status_normal));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__db_temp_op_end_directory_update(svn_wc__db_t *db,
-                                        const char *local_dir_abspath,
-                                        apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_dir_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, end_directory_update,
-                              NULL, scratch_pool));
-
-  SVN_ERR(flush_entries(wcroot, local_dir_abspath, svn_depth_empty,
-                        scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 
 struct start_directory_update_baton_t
 {

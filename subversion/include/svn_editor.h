@@ -123,6 +123,11 @@ extern "C" {
 
 /** An abstract object that edits a target tree.
  *
+ * @note The term "follow" means at any later time in the editor drive.
+ * Terms such as "must", "must not", "required", "shall", "shall not",
+ * "should", "should not", "recommended", "may", and "optional" in this
+ * document are to be interpreted as described in RFC 2119.
+ *
  * \n
  * <h3>Life-Cycle</h3>
  *
@@ -236,8 +241,9 @@ extern "C" {
  *   destination of a copy (where these new, copied nodes are subject to
  *   the Once Rule).
  *
- * - The ancestor of an added or modified node may not be deleted. The
- *   ancestor may not be moved (instead: perform the move, *then* the edits).
+ * - The ancestor of an added, copied-here, moved-here or modified node may
+ *   not be deleted. The ancestor may not be moved (instead: perform the
+ *   move, *then* the edits).
  *
  * - svn_editor_delete() must not be used to replace a path -- i.e.
  *   svn_editor_delete() must not be followed by an svn_editor_add_*() on
@@ -336,11 +342,7 @@ extern "C" {
  * context.
  *
  *
- * @todo ### TODO anything missing? -- allow text and prop change to follow
- * a move or copy. -- set_text() vs. apply_text_delta()? -- If a
- * set_props/set_text/set_target/copy/move/delete in a merge source is
- * applied to a different branch, which side will REVISION arguments reflect
- * and is there still a problem?
+ * @todo ### TODO anything missing?
  *
  * @since New in 1.8.
  */
@@ -699,17 +701,8 @@ svn_editor_setcb_many(svn_editor_t *editor,
  * Create a new directory at @a relpath. The immediate parent of @a relpath
  * is expected to exist.
  *
- * Set the properties of the new directory to @a props, which is an
- * apr_hash_t holding key-value pairs. Each key is a const char* of a
- * property name, each value is a const svn_string_t*. If no properties are
- * being set on the new directory, @a props must be NULL.
- *
- * If this add is expected to replace a previously existing file or
- * directory at @a relpath, the revision number of the node to be replaced
- * must be given in @a replaces_rev. Otherwise, @a replaces_rev must be
- * SVN_INVALID_REVNUM.  Note: it is not allowed to call a "delete" followed
- * by an "add" on the same path. Instead, an "add" with @a replaces_rev set
- * accordingly MUST be used.
+ * For descriptions of @a props and @a replaces_rev, see
+ * svn_editor_add_file().
  *
  * A complete listing of the immediate children of @a relpath that will be
  * added subsequently is given in @a children. @a children is an array of
@@ -737,7 +730,7 @@ svn_editor_add_directory(svn_editor_t *editor,
  * property name, each value is a const svn_string_t*. If no properties are
  * being set on the new file, @a props must be NULL.
  *
- * If this add is expected to replace a previously existing file or
+ * If this add is expected to replace a previously existing file, symlink or
  * directory at @a relpath, the revision number of the node to be replaced
  * must be given in @a replaces_rev. Otherwise, @a replaces_rev must be
  * SVN_INVALID_REVNUM.  Note: it is not allowed to call a "delete" followed
@@ -778,6 +771,7 @@ svn_editor_add_symlink(svn_editor_t *editor,
  * Create an "absent" node of kind @a kind at @a relpath. The immediate
  * parent of @a relpath is expected to exist.
  * ### TODO @todo explain "absent".
+ * ### JAF: What are the allowed values of 'kind'?
  *
  * For a description of @a replaces_rev, see svn_editor_add_file().
  *
@@ -799,6 +793,8 @@ svn_editor_add_absent(svn_editor_t *editor,
  * ###
  * ### what about "entry props"? will these still be handled via
  * ### the general prop function?
+ *
+ * For a description of @a props, see svn_editor_add_file().
  *
  * @a complete must be FALSE if and only if
  * - @a relpath is a file and an svn_editor_set_text() call will follow on

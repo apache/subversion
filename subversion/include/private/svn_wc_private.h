@@ -354,13 +354,14 @@ svn_wc__node_get_children(const apr_array_header_t **children,
 
 
 /**
- * Fetch the repository root information for a given @a local_abspath into
- * @a *repos_root_url and @a repos_uuid. Use @a wc_ctx to access the working copy
+ * Fetch the repository root information for the working version
+ * of the node at @a local_abspath into @a *repos_root_url
+ * and @a *repos_uuid. Use @a wc_ctx to access the working copy
  * for @a local_abspath, @a scratch_pool for all temporary allocations,
  * @a result_pool for result allocations. Note: the result may be NULL if the
  * given node has no repository root associated with it (e.g. locally added).
  *
- * Either input value may be NULL, indicating no interest.
+ * Either output argument may be NULL, indicating no interest.
  */
 svn_error_t *
 svn_wc__node_get_repos_info(const char **repos_root_url,
@@ -1131,6 +1132,22 @@ svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
                         svn_wc_notify_func2_t notify_func,
                         void *notify_baton,
                         apr_pool_t *scratch_pool);
+
+
+/* Alternative version of svn_wc_delete4().
+ * It can delete multiple TARGETS more efficiently (within a single sqlite
+ * transaction per working copy), but lacks support for moves. */
+svn_error_t *
+svn_wc__delete_many(svn_wc_context_t *wc_ctx,
+                    const apr_array_header_t *targets,
+                    svn_boolean_t keep_local,
+                    svn_boolean_t delete_unversioned_target,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    svn_wc_notify_func2_t notify_func,
+                    void *notify_baton,
+                    apr_pool_t *scratch_pool);
+
 
 /* If the node at LOCAL_ABSPATH was moved away set *MOVED_TO_ABSPATH to
  * the absolute path of the copied move-target node, and *COPY_OP_ROOT_ABSPATH

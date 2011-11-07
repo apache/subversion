@@ -1193,21 +1193,18 @@ DROP TABLE IF EXISTS delete_list;
 CREATE TEMPORARY TABLE delete_list (
 /* ### we should put the wc_id in here in case a delete spans multiple
    ### working copies. queries, etc will need to be adjusted.  */
-   local_relpath TEXT PRIMARY KEY NOT NULL
+   local_relpath TEXT PRIMARY KEY NOT NULL UNIQUE
    )
 
 /* This matches the selection in STMT_INSERT_DELETE_FROM_NODE_RECURSIVE */
 -- STMT_INSERT_DELETE_LIST
 INSERT INTO delete_list(local_relpath)
-SELECT local_relpath FROM nodes n
+SELECT local_relpath FROM nodes_current
 WHERE wc_id = ?1
   AND (local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth >= ?3
   AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'absent')
-  AND op_depth = (SELECT MAX(op_depth) FROM nodes s
-                  WHERE s.wc_id = n.wc_id 
-                    AND s.local_relpath = n.local_relpath)
 
 -- STMT_SELECT_DELETE_LIST
 SELECT local_relpath FROM delete_list

@@ -429,7 +429,6 @@ resolve_rev_and_url(svn_revnum_t *rev_p,
 {
   svn_opt_revision_t peg_rev = *peg_revision;
   svn_opt_revision_t start_rev = *revision;
-  svn_opt_revision_t *good_rev;
   const char *url;
   svn_revnum_t rev;
 
@@ -440,15 +439,10 @@ resolve_rev_and_url(svn_revnum_t *rev_p,
 
   /* Run the history function to get the object's (possibly
      different) url in REVISION. */
-  SVN_ERR(svn_client__repos_locations(&url, &good_rev, NULL, NULL,
+  SVN_ERR(svn_client__repos_locations(&url, &rev, NULL, NULL,
                                       ra_session, path_or_url, &peg_rev,
                                       &start_rev, NULL, ctx, pool));
 
-  /* Resolve good_rev into a real revnum. */
-  if (good_rev->kind == svn_opt_revision_unspecified)
-    good_rev->kind = svn_opt_revision_head;
-  SVN_ERR(svn_client__get_revision_number(&rev, NULL, ctx->wc_ctx, url,
-                                          ra_session, good_rev, pool));
   if (rev_p)
     *rev_p = rev;
   if (url_p)
@@ -601,9 +595,9 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
 
 svn_error_t *
 svn_client__repos_locations(const char **start_url,
-                            svn_opt_revision_t **start_revision,
+                            svn_revnum_t *start_revision,
                             const char **end_url,
-                            svn_opt_revision_t **end_revision,
+                            svn_revnum_t *end_revision,
                             svn_ra_session_t *ra_session,
                             const char *path,
                             const svn_opt_revision_t *revision,
@@ -723,14 +717,13 @@ svn_client__repos_locations(const char **start_url,
                                             ra_session, end, pool));
 
   /* Set the output revision variables. */
-  *start_revision = apr_pcalloc(pool, sizeof(**start_revision));
-  (*start_revision)->kind = svn_opt_revision_number;
-  (*start_revision)->value.number = start_revnum;
-  if (end->kind != svn_opt_revision_unspecified)
+  if (start_revision)
     {
-      *end_revision = apr_pcalloc(pool, sizeof(**end_revision));
-      (*end_revision)->kind = svn_opt_revision_number;
-      (*end_revision)->value.number = end_revnum;
+      *start_revision = start_revnum;
+    }
+  if (end_revision && end->kind != svn_opt_revision_unspecified)
+    {
+      *end_revision = end_revnum;
     }
 
   if (start_revnum == peg_revnum && end_revnum == peg_revnum)
