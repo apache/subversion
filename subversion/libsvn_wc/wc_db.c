@@ -3059,6 +3059,64 @@ svn_wc__db_external_read(svn_wc__db_status_t *status,
 }
 
 svn_error_t *
+svn_wc__db_committable_externals_below(apr_array_header_t **externals,
+                                       svn_wc__db_t *db,
+                                       const char *local_abspath,
+                                       svn_boolean_t immediates_only,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  svn_sqlite__stmt_t *stmt;
+  const char *local_relpath;
+  svn_boolean_t have_row;
+  svn_wc__committable_external_info_t *info;
+  svn_kind_t db_kind;
+  apr_array_header_t *result = NULL;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_COMMITTABLE_EXTERNALS_BELOW));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id, local_relpath,
+                            (apr_int64_t)(immediates_only ? 1 : 0)));
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row)
+    result = apr_array_make(result_pool, 0,
+                            sizeof(svn_wc__committable_external_info_t *));
+
+  while (have_row)
+    {
+      info = apr_palloc(result_pool, sizeof(*info));
+
+      local_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      info->local_abspath = svn_dirent_join(wcroot->abspath, local_relpath,
+                                            result_pool);
+
+      db_kind = svn_sqlite__column_token(stmt, 1, kind_map);
+      SVN_ERR_ASSERT(db_kind == svn_kind_file || db_kind == svn_kind_dir);
+      info->kind = db_kind;
+
+      info->repos_relpath = svn_sqlite__column_text(stmt, 3, result_pool);
+      info->repos_root_url = svn_sqlite__column_text(stmt, 4, result_pool);
+
+      APR_ARRAY_PUSH(result, svn_wc__committable_external_info_t *) = info;
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  *externals = result;
+  return svn_error_trace(svn_sqlite__reset(stmt));
+}
+
+svn_error_t *
 svn_wc__db_externals_defined_below(apr_hash_t **externals,
                                    svn_wc__db_t *db,
                                    const char *local_abspath,

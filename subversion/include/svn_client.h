@@ -1954,6 +1954,22 @@ svn_client_import(svn_client_commit_info_t **commit_info_p,
  * #TRUE, changes to descendants are only committed if they are itself
  * included via @a depth and targets.
  *
+ * If @a include_file_externals and/or @a include_dir_externals are #TRUE,
+ * also commit all file and/or dir externals (respectively) that are reached
+ * by recursion, with these exceptions: Never recurse to externals
+ * - that have a fixed revision or
+ * - that come from a different repository root URL (dir externals).
+ * These flags affect only recursion; externals that directly appear in @a
+ * targets are always included in the commit.
+ *
+ * ### TODO: currently, file externals hidden inside an unversioned dir are
+ *     skipped deliberately, because we can't commit those yet.
+ *     See STMT_SELECT_COMMITTABLE_EXTERNALS_BELOW.
+ *
+ * ### TODO: With @c depth_immediates, this function acts as if
+ *     @a include_dir_externals was passed #FALSE, but caller expects
+ *     immediate child dir externals to be included @c depth_empty.
+ *
  * When @a commit_as_operations is #TRUE it is possible to delete a node and
  * all its descendants by selecting just the root of the deletion. If it is
  * set to #FALSE this will raise an error.
@@ -1967,6 +1983,26 @@ svn_client_import(svn_client_commit_info_t **commit_info_p,
  *
  * Use @a pool for any temporary allocations.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_commit6(const apr_array_header_t *targets,
+                   svn_depth_t depth,
+                   svn_boolean_t keep_locks,
+                   svn_boolean_t keep_changelists,
+                   svn_boolean_t commit_as_operations,
+                   svn_boolean_t include_file_externals,
+                   svn_boolean_t include_dir_externals,
+                   const apr_array_header_t *changelists,
+                   const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_commit6(), but passes @a include_file_externals as
+ * TRUE and @a include_dir_externals as FALSE.
  * @since New in 1.7.
  */
 svn_error_t *

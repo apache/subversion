@@ -131,6 +131,55 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
+/** See svn_wc__committable_externals_below(). */
+typedef struct svn_wc__committable_external_info_t {
+
+  /* The local absolute path where the external should be checked out. */
+  const char *local_abspath;
+
+  /* The relpath part of the source URL the external should be checked out
+   * from. */
+  const char *repos_relpath;
+
+  /* The root URL part of the source URL the external should be checked out
+   * from. */
+  const char *repos_root_url;
+
+  /* Set to either svn_kind_file or svn_kind_dir. */
+  svn_kind_t kind;
+
+} svn_wc__committable_external_info_t;
+
+/* Add svn_wc__committable_external_info_t* items to *EXTERNALS, describing
+ * 'committable' externals checked out below LOCAL_ABSPATH. Recursively find
+ * all nested externals (externals defined inside externals).
+ *
+ * In this context, a 'committable' external belongs to the same repository as
+ * LOCAL_ABSPATH, is not revision-pegged and is currently checked out in the
+ * WC. (Local modifications are not tested for.)
+ *
+ * *EXTERNALS must be initialized either to NULL or to a pointer created with
+ * apr_array_make(..., sizeof(svn_wc__committable_external_info_t *)). If
+ * *EXTERNALS is initialized to NULL, an array will be allocated from
+ * RESULT_POOL as necessary. If no committable externals are found,
+ * *EXTERNALS is left unchanged.
+ *
+ * DEPTH limits the recursion below LOCAL_ABSPATH.
+ *
+ * This function will not find externals defined in some parent WC above
+ * LOCAL_ABSPATH's WC-root.
+ *
+ * ###TODO: Add a WRI_ABSPATH (wc root indicator) separate from LOCAL_ABSPATH,
+ * to allow searching any wc-root for externals under LOCAL_ABSPATH, not only
+ * LOCAL_ABSPATH's most immediate wc-root. */
+svn_error_t *
+svn_wc__committable_externals_below(apr_array_header_t **externals,
+                                    svn_wc_context_t *wc_ctx,
+                                    const char *local_abspath,
+                                    svn_depth_t depth,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
+
 /* Gets a mapping from const char * local abspaths of externals to the const
    char * local abspath of where they are defined for all externals defined
    at or below LOCAL_ABSPATH.
