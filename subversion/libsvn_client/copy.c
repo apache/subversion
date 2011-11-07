@@ -1828,7 +1828,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_client__repos_locations(&src, NULL, NULL, NULL,
+      SVN_ERR(svn_client__repos_locations(&src, &pair->src_revnum, NULL, NULL,
                                           NULL,
                                           pair->src_abspath_or_url,
                                           &pair->src_peg_revision,
@@ -1854,18 +1854,6 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, top_src_url,
                                                NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
-
-  /* Pass null for the path, to ensure error if trying to get a
-     revision based on the working copy.  */
-  for (i = 0; i < copy_pairs->nelts; i++)
-    {
-      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
-                                                    svn_client__copy_pair_t *);
-
-      SVN_ERR(svn_client__get_revision_number(&pair->src_revnum, NULL,
-                                              ctx->wc_ctx, NULL, ra_session,
-                                              &pair->src_op_revision, pool));
-    }
 
   /* Get the correct src path for the peg revision used, and verify that we
      aren't overwriting an existing path. */
