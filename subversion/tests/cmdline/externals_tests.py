@@ -2123,6 +2123,7 @@ def include_externals(sbox):
   wc_dir = sbox.wc_dir
 
   A_D_H = os.path.join(wc_dir, 'A', 'D', 'H')
+  X = os.path.join(wc_dir, 'X')
   X_Y = os.path.join(wc_dir, 'X', 'Y')
   Xpegged = os.path.join(wc_dir, 'Xpegged')
   Z = os.path.join(wc_dir, 'Z')
@@ -2145,7 +2146,7 @@ def include_externals(sbox):
   # svn mkdir --parents Xpegged X/Y
   expected_stdout = verify.UnorderedOutput([
     'A         ' + Xpegged + '\n',
-    'A         ' + wc_dir + '/X\n',
+    'A         ' + X + '\n',
     'A         ' + X_Y + '\n',
   ])
 
