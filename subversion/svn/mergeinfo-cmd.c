@@ -204,8 +204,6 @@ print_recorded_ranges(svn_client_target_t *target,
         {
           apr_hash_index_t *hi;
 
-          printf("  to target path '%s':\n",
-                 tgt_relpath[0] ? tgt_relpath : ".");
           for (hi = apr_hash_first(scratch_pool, mergeinfo);
                hi; hi = apr_hash_next(hi))
             {
@@ -224,14 +222,15 @@ print_recorded_ranges(svn_client_target_t *target,
               src_relpath = path_relative_to_branch(src_path, ranges,
                                                     source_segments,
                                                     scratch_pool);
+              if (strcmp(src_relpath, tgt_relpath) != 0)
+                printf("  '%s' ->\n",
+                       src_relpath[0] ? src_relpath : ".");
+              printf("  '%s'\n",
+                     tgt_relpath[0] ? tgt_relpath : ".");
+
               printf("    %s", ranges_string);
               if (ranges->nelts >= 4)
                 printf(" (%d ranges)", ranges->nelts);
-              if (strcmp(src_relpath, tgt_relpath) != 0)
-                printf(" from source path\n"
-                       "                 '%s'", src_relpath);
-              else
-                printf(" from same relative path");
               printf("\n");
             }
         }
