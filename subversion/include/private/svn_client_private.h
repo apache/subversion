@@ -94,15 +94,39 @@ svn_client__check_branch_root_marker(const char **marker,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
 
-/* Set *MERGEINFO to describe the merges into TARGET from (paths in the
- * history of) SOURCE_BRANCH. */
+/* Set *MERGEINFO to describe the merges into TARGET from paths in
+ * SOURCE_LOCATIONS which is an array of (svn_location_segment_t *)
+ * elements describing the history of the source branch over the
+ * revision range of interest. */
 svn_error_t *
-svn_client__get_source_target_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_cat,
-                                        const svn_client_peg_t *target,
-                                        const svn_client_peg_t *source_branch,
-                                        svn_client_ctx_t *ctx,
-                                        apr_pool_t *result_pool,
-                                        apr_pool_t *scratch_pool);
+svn_client__get_branch_to_branch_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_cat,
+                                           const svn_client_peg_t *target,
+                                           apr_array_header_t *source_locations,
+                                           svn_client_ctx_t *ctx,
+                                           apr_pool_t *result_pool,
+                                           apr_pool_t *scratch_pool);
+
+/* Set *SEGMENTS to an array of svn_location_segment_t * objects, each
+   representing a reposition location segment for the history of TARGET
+   between OLD_REVISION and YOUNG_REVISION, ordered from oldest segment
+   to youngest.  *SEGMENTS may be empty but it will never be NULL.
+
+   YOUNG_REVISION must not be NULL.  If OLD_REVISION is NULL it means the
+   beginning of TARGET's history.  See svn_ra_get_location_segments() for
+   the rules governing START_REVISION and END_REVISION in relation to the
+   target's peg revision.
+
+   This is similar to svn_client__repos_location_segments(), but takes
+   high-level (pegged) target and revision number parameters.
+   */
+svn_error_t *
+svn_client__get_location_segments(apr_array_header_t **segments,
+                                  const svn_client_peg_t *target,
+                                  const svn_opt_revision_t *young_revision,
+                                  const svn_opt_revision_t *old_revision,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

@@ -113,24 +113,52 @@ targets_are_same_branch(svn_client_target_t *source,
   return (strcmp(source->repos_relpath, target->repos_relpath) == 0);
 }
 
-/* */
+/* Return the path, relative to the source branch root, where SRC_FSPATH
+ * existed (or could have existed) over the revision ranges SRC_RANGES.
+ * SRC_ROOT_SEGMENTS is the location history of the source branch root.
+ *
+ * ### Assume this line of mergeinfo (SRC_PATH:SRC_RANGES) all occurs
+ * within a single history segment, which is almost certain in practice
+ * but not necessarily true.
+ */
 static const char *
-path_relative_to_branch(const char *src_path,
-                        apr_array_header_t *src_ranges,
-                        svn_client_target_t *source,
-                        /*source_segments*/
+path_relative_to_branch(const char *src_fspath,
+                        const apr_array_header_t *src_ranges,
+                        const apr_array_header_t *src_root_segments,
                         apr_pool_t *scratch_pool)
 {
-  const char *src_relpath;
+  const svn_merge_range_t *first_range
+    = APR_ARRAY_IDX(src_ranges, 0, svn_merge_range_t *);
+  const char *src_relpath = NULL;
+  int i;
 
-  /* ### incomplete: should consider source_location_segments and ranges */
-  SVN_ERR_ASSERT_NO_RETURN(src_path[0] == '/');
-  src_relpath = svn_relpath_skip_ancestor(source->repos_relpath, src_path + 1);
+  SVN_ERR_ASSERT_NO_RETURN(src_fspath[0] == '/');
+
+  for (i = 0; i < src_root_segments->nelts; i++)
+    {
+      const svn_location_segment_t *seg
+        = APR_ARRAY_IDX(src_root_segments, i, svn_location_segment_t *);
+      if (first_range->start + 1 >= seg->range_start
+          && first_range->start + 1 <= seg->range_end)
+        {
+          if (seg->path)
+            {
+              src_relpath = svn_relpath_skip_ancestor(seg->path, src_fspath + 1);
+            }
+          else
+            {
+              printf("    warning: mergeinfo '%s:%ld-...' refers to a gap in the source branch's history\n",
+                     src_fspath, first_range->start + 1);
+              src_relpath = src_fspath;
+            }
+          break;
+        }
+    }
   if (src_relpath == NULL)
     {
-      printf("warning: source path '%s' was not in the source branch\n",
-             src_path);
-      src_relpath = src_path;
+      printf("    warning: mergeinfo '%s:%ld-...' is not in the source branch's history\n",
+             src_fspath, first_range->start + 1);
+      src_relpath = src_fspath;
     }
   return src_relpath;
 }
@@ -143,12 +171,22 @@ print_recorded_ranges(svn_client_target_t *target,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *scratch_pool)
 {
+  apr_array_header_t *source_segments;
   svn_mergeinfo_catalog_t mergeinfo_cat;
   apr_array_header_t *mergeinfo_cat_sorted;
   int i;
 
-  SVN_ERR(svn_client__get_source_target_mergeinfo(
-            &mergeinfo_cat, target->peg, source->peg,
+  /* Find the source location-segments. */
+  /* ### This needs to stop where it meets 'target' at their common
+   * ancestor, as we don't want to report mergeinfo that refers to a
+   * period before the branch was branched. Perhaps such mergeinfo
+   * should never exist, but in practice it sometimes does. */
+  SVN_ERR(svn_client__get_location_segments(&source_segments, source->peg,
+                                            &source->peg->peg_revision, NULL,
+                                            ctx, scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_client__get_branch_to_branch_mergeinfo(
+            &mergeinfo_cat, target->peg, source_segments,
             ctx, scratch_pool, scratch_pool));
   mergeinfo_cat_sorted = svn_sort__hash(mergeinfo_cat,
                                         svn_sort_compare_items_as_paths,
@@ -183,8 +221,8 @@ print_recorded_ranges(svn_client_target_t *target,
                * maps to more than one src_relpath because of the source
                * branch root having moved during this range and yet the source
                * node continuing to have the same path? */
-              src_relpath = path_relative_to_branch(src_path, ranges, source,
-                                                    /*source_segments*/
+              src_relpath = path_relative_to_branch(src_path, ranges,
+                                                    source_segments,
                                                     scratch_pool);
               printf("    %s", ranges_string);
               if (ranges->nelts >= 4)

@@ -40,6 +40,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_client_private.h"
 
 
 /* This is the baton that we pass svn_ra_open3(), and is associated with
@@ -589,6 +590,33 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
                                        pool));
   qsort((*segments)->elts, (*segments)->nelts,
         (*segments)->elt_size, compare_segments);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__get_location_segments(apr_array_header_t **segments,
+                                  const svn_client_peg_t *target,
+                                  const svn_opt_revision_t *young_revision,
+                                  const svn_opt_revision_t *old_revision,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_ra_session_t *ra_session;
+  const char *young_url, *old_url = NULL;
+  svn_revnum_t rev, young_rev, old_rev = SVN_INVALID_REVNUM;
+
+  SVN_ERR(svn_client__ra_session_from_peg(&ra_session, &rev, NULL,
+                                          target, &target->peg_revision,
+                                          ctx, scratch_pool));
+  SVN_ERR(svn_client__repos_locations(&young_url, &young_rev,
+                                      &old_url, &old_rev,
+                                      ra_session, "", &target->peg_revision,
+                                      young_revision, old_revision,
+                                      ctx, scratch_pool));
+  SVN_ERR(svn_client__repos_location_segments(segments, ra_session, "", rev,
+                                              young_rev, old_rev,
+                                              ctx, result_pool));
   return SVN_NO_ERROR;
 }
 

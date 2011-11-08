@@ -733,33 +733,34 @@ filter_mergeinfo(svn_mergeinfo_t mergeinfo_out,
 {
   apr_hash_index_t *hi;
 
-  SVN_DBG(("filter_mergeinfo(in[%d], %8ld-%-8ld %s)\n",
+  /* SVN_DBG(("filter_mergeinfo(in[%d], %8ld-%-8ld %s)\n",
           apr_hash_count(mergeinfo_in),
-          segment->range_start, segment->range_end, segment->path));
+          segment->range_start, segment->range_end, segment->path)); */
   for (hi = apr_hash_first(scratch_pool, mergeinfo_in); hi; hi = apr_hash_next(hi))
     {
       const char *src_path = svn__apr_hash_index_key(hi);
       apr_array_header_t *ranges = svn__apr_hash_index_val(hi);
 
-      /* ### This needs to check the revision ranges. It presently just
-       *     assumes any matching path is OK. */
       SVN_ERR_ASSERT(src_path[0] == '/');
-      if (svn_relpath_skip_ancestor(segment->path, src_path + 1))
+      if (segment->path != NULL
+          && svn_relpath_skip_ancestor(segment->path, src_path + 1))
         {
           apr_array_header_t *rangelist_out;
-          {
+
+          /* {
             svn_string_t *ranges_string;
             SVN_ERR(svn_rangelist_to_string(&ranges_string, ranges, scratch_pool));
             SVN_DBG(("  %s[%d]: %s\n", src_path, ranges->nelts, ranges_string->data));
-          }
+          } */
           SVN_ERR(svn_client__rangelist_intersect_range(&rangelist_out, ranges,
                                                         segment->range_start,
                                                         segment->range_end,
                                                         FALSE /* consider_inheritance */,
                                                         result_pool, scratch_pool));
 
-          apr_hash_set(mergeinfo_out, src_path, APR_HASH_KEY_STRING,
-                       rangelist_out);
+          if (rangelist_out->nelts > 0)
+            apr_hash_set(mergeinfo_out, src_path, APR_HASH_KEY_STRING,
+                         rangelist_out);
         }
     }
 
@@ -795,6 +796,8 @@ filter_mergeinfo_catalog(svn_mergeinfo_catalog_t mergeinfo_cat,
                                    result_pool, scratch_pool));
         }
 
+      if (apr_hash_count(mergeinfo_out) == 0)
+        mergeinfo_out = NULL;
       apr_hash_set(mergeinfo_cat, path, APR_HASH_KEY_STRING, mergeinfo_out);
     }
 
@@ -802,30 +805,13 @@ filter_mergeinfo_catalog(svn_mergeinfo_catalog_t mergeinfo_cat,
 }
 
 svn_error_t *
-svn_client__get_source_target_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_cat,
-                                        const svn_client_peg_t *target,
-                                        const svn_client_peg_t *source_branch,
-                                        svn_client_ctx_t *ctx,
-                                        apr_pool_t *result_pool,
-                                        apr_pool_t *scratch_pool)
+svn_client__get_branch_to_branch_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_cat,
+                                           const svn_client_peg_t *target,
+                                           apr_array_header_t *source_locations,
+                                           svn_client_ctx_t *ctx,
+                                           apr_pool_t *result_pool,
+                                           apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *source_locations;
-
-  /* Find the source location-segments. */
-  {
-    svn_ra_session_t *ra_session;
-    svn_revnum_t rev;
-
-    SVN_ERR(svn_client__ra_session_from_peg(&ra_session, &rev, NULL,
-                                               source_branch,
-                                               &source_branch->peg_revision,
-                                               ctx, scratch_pool));
-    SVN_ERR(svn_client__repos_location_segments(&source_locations, ra_session,
-                                                "", rev, rev,
-                                                SVN_INVALID_REVNUM,
-                                                ctx, scratch_pool));
-  }
-
   /* Find the target mergeinfo */
   SVN_ERR(svn_client_get_mergeinfo_catalog(mergeinfo_cat,
                                            target->path_or_url,
