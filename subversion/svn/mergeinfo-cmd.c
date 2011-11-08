@@ -166,28 +166,15 @@ path_relative_to_branch(const char *src_fspath,
 /* Pretty-print the mergeinfo recorded on TARGET that pertains to merges
  * from SOURCE. */
 static svn_error_t *
-print_recorded_ranges(svn_client_target_t *target,
-                      svn_client_target_t *source,
-                      svn_client_ctx_t *ctx,
-                      apr_pool_t *scratch_pool)
+print_recorded_ranges2(svn_client_target_t *target,
+                       svn_mergeinfo_catalog_t mergeinfo_cat,
+                       apr_array_header_t *source_segments,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *source_segments;
-  svn_mergeinfo_catalog_t mergeinfo_cat;
   apr_array_header_t *mergeinfo_cat_sorted;
   int i;
 
-  /* Find the source location-segments. */
-  /* ### This needs to stop where it meets 'target' at their common
-   * ancestor, as we don't want to report mergeinfo that refers to a
-   * period before the branch was branched. Perhaps such mergeinfo
-   * should never exist, but in practice it sometimes does. */
-  SVN_ERR(svn_client__get_location_segments(&source_segments, source->peg,
-                                            &source->peg->peg_revision, NULL,
-                                            ctx, scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_client__get_branch_to_branch_mergeinfo(
-            &mergeinfo_cat, target->peg, source_segments,
-            ctx, scratch_pool, scratch_pool));
   mergeinfo_cat_sorted = svn_sort__hash(mergeinfo_cat,
                                         svn_sort_compare_items_as_paths,
                                         scratch_pool);
@@ -235,6 +222,35 @@ print_recorded_ranges(svn_client_target_t *target,
             }
         }
     }
+  return SVN_NO_ERROR;
+}
+
+/* Pretty-print the mergeinfo recorded on TARGET that pertains to merges
+ * from SOURCE. */
+static svn_error_t *
+print_recorded_ranges(svn_client_target_t *target,
+                      svn_client_target_t *source,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *source_segments;
+  svn_mergeinfo_catalog_t mergeinfo_cat;
+
+  /* Find the source location-segments. */
+  /* ### This needs to stop where it meets 'target' at their common
+   * ancestor, as we don't want to report mergeinfo that refers to a
+   * period before the branch was branched. Perhaps such mergeinfo
+   * should never exist, but in practice it sometimes does. */
+  SVN_ERR(svn_client__get_location_segments(&source_segments, source->peg,
+                                            &source->peg->peg_revision, NULL,
+                                            ctx, scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_client__get_branch_to_branch_mergeinfo(
+            &mergeinfo_cat, target->peg, source_segments,
+            ctx, scratch_pool, scratch_pool));
+
+  SVN_ERR(print_recorded_ranges2(target, mergeinfo_cat, source_segments,
+                                 ctx, scratch_pool));
   return SVN_NO_ERROR;
 }
 
