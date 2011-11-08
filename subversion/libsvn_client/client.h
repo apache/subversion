@@ -250,14 +250,12 @@ svn_client__ensure_ra_session_url(const char **old_session_url,
                                   apr_pool_t *pool);
 
 /* Return the path of ABSPATH_OR_URL relative to the repository root
-   (REPOS_ROOT) in REL_PATH (URI-decoded), allocated in RESULT_POOL.
+   in REL_PATH (URI-decoded), allocated in RESULT_POOL.
    If INCLUDE_LEADING_SLASH is set, the returned result will have a leading
    slash; otherwise, it will not.
 
-   The remaining parameters are used to procure the repository root.
-   Either REPOS_ROOT or RA_SESSION -- but not both -- may be NULL.
-   REPOS_ROOT should be passed when available as an optimization (in
-   that order of preference).
+   REPOS_ROOT and RA_SESSION may be NULL if ABSPATH_OR_URL is a WC path,
+   otherwise at least one of them must be non-null.
 
    CAUTION:  While having a leading slash on a so-called relative path
    might work out well for functionality that interacts with

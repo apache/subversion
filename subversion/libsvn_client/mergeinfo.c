@@ -331,7 +331,7 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
   SVN_ERR(svn_client__path_relative_to_root(&target_repos_rel_path,
                                             ctx->wc_ctx,
                                             local_abspath,
-                                            repos_root, FALSE,
+                                            NULL, FALSE,
                                             NULL, scratch_pool,
                                             scratch_pool));
 
@@ -382,7 +382,7 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
 
           SVN_ERR(svn_client__path_relative_to_root(&key_path, ctx->wc_ctx,
                                                     key_path,
-                                                    repos_root, FALSE,
+                                                    NULL, FALSE,
                                                     NULL, result_pool,
                                                     scratch_pool));
           SVN_ERR(svn_mergeinfo_parse(&subtree_mergeinfo, propval->data,
