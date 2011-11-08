@@ -817,6 +817,8 @@ svn_client__get_branch_to_branch_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_ca
                                            target->path_or_url,
                                            &target->peg_revision,
                                            ctx, result_pool, scratch_pool));
+  if (*mergeinfo_cat == NULL)
+    *mergeinfo_cat = apr_hash_make(result_pool);
 
   /* Filter, keeping only the merges from SOURCE_BRANCH location segments. */
   SVN_ERR(filter_mergeinfo_catalog(*mergeinfo_cat, source_locations,

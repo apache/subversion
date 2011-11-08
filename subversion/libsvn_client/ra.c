@@ -611,7 +611,8 @@ svn_client__get_location_segments(apr_array_header_t **segments,
                                           ctx, scratch_pool));
   SVN_ERR(svn_client__repos_locations(&young_url, &young_rev,
                                       &old_url, &old_rev,
-                                      ra_session, "", &target->peg_revision,
+                                      ra_session, target->abspath_or_url,
+                                      &target->peg_revision,
                                       young_revision, old_revision,
                                       ctx, scratch_pool));
   SVN_ERR(svn_client__repos_location_segments(segments, ra_session, "", rev,
