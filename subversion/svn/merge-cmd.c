@@ -299,7 +299,21 @@ svn_cl__merge(apr_getopt_t *os,
                                   "with --reintegrate"));
     }
 
-  if (! two_sources_specified) /* TODO: Switch order of if */
+  if (opt_state->dry_run)
+    printf(_("This is a dry-run merge: the working copy will not be changed.\n"));
+
+  if (opt_state->reintegrate)
+    {
+      printf(_("Reintegrate merge\n"));
+      printf(_("  from '%s' into '%s'\n"),
+             sourcepath1, targetpath);
+      err = svn_client_merge_reintegrate(sourcepath1,
+                                         &peg_revision1,
+                                         targetpath,
+                                         opt_state->dry_run,
+                                         options, ctx, pool);
+    }
+  else if (! two_sources_specified)
     {
       /* If we don't have at least one valid revision range, pick a
          good one that spans the entire set of revisions on our
@@ -308,45 +322,34 @@ svn_cl__merge(apr_getopt_t *os,
           && (first_range_end.kind == svn_opt_revision_unspecified))
         {
           svn_opt_revision_range_t *range = apr_pcalloc(pool, sizeof(*range));
+
           ranges_to_merge = apr_array_make(pool, 1, sizeof(range));
           range->start.kind = svn_opt_revision_number;
           range->start.value.number = 1;
           range->end = peg_revision1;
           APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = range;
-        }
 
-      if (opt_state->reintegrate)
-        {
-          printf(opt_state->dry_run ? _("Reintegrate dry-run merge\n")
-                                    : _("Reintegrate merge\n"));
-          printf(_("  from '%s' into '%s'\n"),
-                 sourcepath1, targetpath);
-          err = svn_client_merge_reintegrate(sourcepath1,
-                                             &peg_revision1,
-                                             targetpath,
-                                             opt_state->dry_run,
-                                             options, ctx, pool);
+          printf(_("Sync merge\n"));
         }
       else
         {
-          printf(opt_state->dry_run ? _("Sync or cherry-pick dry-run merge\n")
-                                    : _("Sync or cherry-pick merge\n"));
-          printf(_("  from '%s' to '%s'\n"),
-                 sourcepath1, targetpath);
-          err = svn_client_merge_peg4(sourcepath1,
-                                      ranges_to_merge,
-                                      &peg_revision1,
-                                      targetpath,
-                                      opt_state->depth,
-                                      opt_state->ignore_ancestry,
-                                      opt_state->force,
-                                      opt_state->record_only,
-                                      opt_state->dry_run,
-                                      opt_state->allow_mixed_rev,
-                                      options,
-                                      ctx,
-                                      pool);
+          printf(_("Cherry-pick merge\n"));
         }
+      printf(_("  from '%s' to '%s'\n"),
+             sourcepath1, targetpath);
+      err = svn_client_merge_peg4(sourcepath1,
+                                  ranges_to_merge,
+                                  &peg_revision1,
+                                  targetpath,
+                                  opt_state->depth,
+                                  opt_state->ignore_ancestry,
+                                  opt_state->force,
+                                  opt_state->record_only,
+                                  opt_state->dry_run,
+                                  opt_state->allow_mixed_rev,
+                                  options,
+                                  ctx,
+                                  pool);
     }
   else
     {
@@ -354,8 +357,7 @@ svn_cl__merge(apr_getopt_t *os,
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("Merge sources must both be "
                                   "either paths or URLs"));
-      printf(opt_state->dry_run ? _("Two-URL dry-run merge\n")
-                                : _("Two-URL merge\n"));
+      printf(_("Two-URL merge\n"));
       printf(_("  from diff between '%s' and '%s' into '%s'\n"),
              sourcepath1, sourcepath2, targetpath);
       err = svn_client_merge4(sourcepath1,
