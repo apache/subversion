@@ -5484,6 +5484,21 @@ typedef svn_error_t *(*svn_wc_dirents_func_t)(void *baton,
                                               apr_pool_t *scratch_pool);
 
 
+typedef struct svn_wc_repos_move_info_t {
+  const char *moved_from_repos_relpath;
+  const char *moved_to_repos_relpath;
+  svn_revnum_t revision;
+} svn_wc_repos_move_info_t;
+
+/* ### TODO docco
+ * @since New in 1.8. */
+typedef svn_error_t *(*svn_wc_get_repos_moves_func_t)(void *baton,
+                                                      apr_hash_t **moves,
+                                                      svn_revnum_t start,
+                                                      svn_revnum_t end,
+                                                      apr_pool_t *result_pool,
+                                                      apr_pool_t *scratch_pool);
+
 /**
  * Set @a *editor and @a *edit_baton to an editor and baton for updating a
  * working copy.
@@ -5557,8 +5572,44 @@ typedef svn_error_t *(*svn_wc_dirents_func_t)(void *baton,
  * callback, when asked to perform a depth restricted update. It will do this
  * before returning the editor to allow using the primary ra session for this.
  *
- * @since New in 1.7.
+ * If @a repos_moves_func is not NULL, the update editor may invoke
+ * this callback to obtain move information about server-side moves which
+ * happened in a specified revision range.
+ *
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_wc_get_update_editor5(const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          svn_revnum_t *target_revision,
+                          svn_wc_context_t *wc_ctx,
+                          const char *anchor_abspath,
+                          const char *target_basename,
+                          svn_boolean_t use_commit_times,
+                          svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
+                          svn_boolean_t allow_unver_obstructions,
+                          svn_boolean_t adds_as_modification,
+                          svn_boolean_t server_performs_filtering,
+                          svn_boolean_t clean_checkout,
+                          const char *diff3_cmd,
+                          const apr_array_header_t *preserved_exts,
+                          svn_wc_dirents_func_t fetch_dirents_func,
+                          void *fetch_dirents_baton,
+                          svn_wc_conflict_resolver_func2_t conflict_func,
+                          void *conflict_baton,
+                          svn_wc_external_update_t external_func,
+                          void *external_baton,
+                          svn_wc_get_repos_moves_func_t repos_moves_func,
+                          void *repos_moves_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+/* Line svn_wc_get_update_editor5, but without the @a get_move_info callback. */
 svn_error_t *
 svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           void **edit_baton,

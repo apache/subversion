@@ -250,6 +250,10 @@ struct edit_baton
   /* Absolute path of the working copy root or NULL if not initialized yet */
   const char *wcroot_abspath;
 
+  svn_wc_get_repos_moves_func_t repos_moves_func;
+  void *repos_moves_baton;
+  apr_hash_t *repos_moves;
+
   apr_pool_t *pool;
 };
 
@@ -1758,6 +1762,49 @@ node_already_conflicted(svn_boolean_t *conflicted,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+get_repos_moves(struct edit_baton *eb, apr_pool_t *scratch_pool)
+{
+  svn_revnum_t local_min_rev;
+  svn_revnum_t local_max_rev;
+  svn_revnum_t start;
+  svn_revnum_t end;
+
+  if (eb->repos_moves || eb->repos_moves_func == NULL)
+    return SVN_NO_ERROR;
+
+  /* Determine the min/max revisions of the working copy. */
+  SVN_ERR(svn_wc__db_min_max_revisions(&local_min_rev, &local_max_rev,
+                                       eb->db, eb->anchor_abspath, FALSE,
+                                       scratch_pool));
+ 
+  /* Determine the range of revisions we'll have to scan for moves. */
+  if (*eb->target_revision == SVN_INVALID_REVNUM ||
+      *eb->target_revision > local_max_rev)
+    {
+      /* We're updating to HEAD or some other revision newer than
+       * the local max. */
+      start = local_min_rev; 
+      end = *eb->target_revision;
+    }
+  else if (*eb->target_revision < local_min_rev)
+    {
+      /* We're updating down to a revision older than the local max. */
+      start = *eb->target_revision;
+      end = local_max_rev;
+    }
+  else if (*eb->target_revision >= local_min_rev &&
+           *eb->target_revision <= local_max_rev)
+    {
+      /* We're updating to a revision within the local min:max. */
+      start = local_min_rev;
+      end = local_max_rev;
+    }
+
+  SVN_ERR(eb->repos_moves_func(eb->repos_moves_baton, &eb->repos_moves,
+                               start, end, eb->pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
 
 /* An svn_delta_editor_t function. */
 static svn_error_t *
@@ -1792,6 +1839,8 @@ delete_entry(const char *path,
 
   SVN_ERR(path_join_under_root(&local_abspath, pb->local_abspath, base,
                                scratch_pool));
+
+  SVN_ERR(get_repos_moves(eb, scratch_pool));
 
   deleting_target =  (strcmp(local_abspath, eb->target_abspath) == 0);
 
@@ -4794,6 +4843,8 @@ make_editor(svn_revnum_t *target_revision,
             void *conflict_baton,
             svn_wc_external_update_t external_func,
             void *external_baton,
+            svn_wc_get_repos_moves_func_t repos_moves_func,
+            void *repos_moves_baton,
             const char *diff3_cmd,
             const apr_array_header_t *preserved_exts,
             const svn_delta_editor_t **editor,
@@ -4872,6 +4923,9 @@ make_editor(svn_revnum_t *target_revision,
   eb->skipped_trees            = apr_hash_make(edit_pool);
   eb->dir_dirents              = apr_hash_make(edit_pool);
   eb->ext_patterns             = preserved_exts;
+  eb->repos_moves_func         = repos_moves_func;
+  eb->repos_moves_baton        = repos_moves_baton;
+  eb->repos_moves              = NULL;
 
   apr_pool_cleanup_register(edit_pool, eb, cleanup_edit_baton,
                             cleanup_edit_baton_child);
@@ -5047,7 +5101,7 @@ make_editor(svn_revnum_t *target_revision,
 
 
 svn_error_t *
-svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
+svn_wc_get_update_editor5(const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_revnum_t *target_revision,
                           svn_wc_context_t *wc_ctx,
@@ -5068,6 +5122,8 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           void *conflict_baton,
                           svn_wc_external_update_t external_func,
                           void *external_baton,
+                          svn_wc_get_repos_moves_func_t repos_moves_func,
+                          void *repos_moves_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           svn_wc_notify_func2_t notify_func,
@@ -5085,6 +5141,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                      fetch_dirents_func, fetch_dirents_baton,
                      conflict_func, conflict_baton,
                      external_func, external_baton,
+                     repos_moves_func, repos_moves_baton,
                      diff3_cmd, preserved_exts, editor, edit_baton,
                      result_pool, scratch_pool);
 }
@@ -5131,6 +5188,7 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                      fetch_dirents_func, fetch_dirents_baton,
                      conflict_func, conflict_baton,
                      external_func, external_baton,
+                     NULL, NULL,
                      diff3_cmd, preserved_exts,
                      editor, edit_baton,
                      result_pool, scratch_pool);
