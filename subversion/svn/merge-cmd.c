@@ -291,7 +291,15 @@ svn_cl__merge(apr_getopt_t *os,
                                   "with --reintegrate"));
     }
 
-  if (! two_sources_specified) /* TODO: Switch order of if */
+  if (opt_state->reintegrate)
+    {
+      err = svn_client_merge_reintegrate(sourcepath1,
+                                         &peg_revision1,
+                                         targetpath,
+                                         opt_state->dry_run,
+                                         options, ctx, pool);
+    }
+  else if (! two_sources_specified)
     {
       /* If we don't have at least one valid revision range, pick a
          good one that spans the entire set of revisions on our
@@ -307,26 +315,19 @@ svn_cl__merge(apr_getopt_t *os,
           APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = range;
         }
 
-      if (opt_state->reintegrate)
-        err = svn_client_merge_reintegrate(sourcepath1,
-                                           &peg_revision1,
-                                           targetpath,
-                                           opt_state->dry_run,
-                                           options, ctx, pool);
-      else
-        err = svn_client_merge_peg4(sourcepath1,
-                                    ranges_to_merge,
-                                    &peg_revision1,
-                                    targetpath,
-                                    opt_state->depth,
-                                    opt_state->ignore_ancestry,
-                                    opt_state->force,
-                                    opt_state->record_only,
-                                    opt_state->dry_run,
-                                    opt_state->allow_mixed_rev,
-                                    options,
-                                    ctx,
-                                    pool);
+      err = svn_client_merge_peg4(sourcepath1,
+                                  ranges_to_merge,
+                                  &peg_revision1,
+                                  targetpath,
+                                  opt_state->depth,
+                                  opt_state->ignore_ancestry,
+                                  opt_state->force,
+                                  opt_state->record_only,
+                                  opt_state->dry_run,
+                                  opt_state->allow_mixed_rev,
+                                  options,
+                                  ctx,
+                                  pool);
     }
   else
     {
