@@ -65,13 +65,14 @@ Candidate changes:
    Votes:
      +1: rhuijben, pburba
 
- * r1197281
+ * r1199876
    Fix issue 4048, wcng assert on update with 1.0.x server.
    Justification:
      Our client-server compatibility rules require this to work.
    Votes:
      +1: philip
-     -0: rhuijben (I agree with marking the root complete.
+     -0: rhuijben (1197281, no longer nominated)
+                  (I agree with marking the root complete.
                    The recursive un-incomplete marking is never necessary as
                    the crawling of the directory reports the directories as
                    incomplete. The server must then report all children that
