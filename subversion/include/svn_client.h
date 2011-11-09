@@ -3443,10 +3443,10 @@ svn_client_merge(const char *source1,
  * pristine, unswitched working copy -- in other words, it must
  * reflect a single revision tree, the "target".  The mergeinfo on @a
  * source must reflect that all of the target has been merged into it.
- * Then this behaves like a merge with svn_client_merge3() from the
+ * Then this behaves like a merge with svn_client_merge4() from the
  * target's URL to the source.
  *
- * All other options are handled identically to svn_client_merge3().
+ * All other options are handled identically to svn_client_merge4().
  * The depth of the merge is always #svn_depth_infinity.
  *
  * @since New in 1.5.
