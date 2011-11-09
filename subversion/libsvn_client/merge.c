@@ -8308,7 +8308,7 @@ remove_noop_subtree_ranges(const char *url1,
    paths and the values are the new mergeinfos for each.  Allocate additions
    to RESULT_CATALOG in pool which RESULT_CATALOG was created in.
 
-   Handle DEPTH as documented for svn_client_merge3().
+   Handle DEPTH as documented for svn_client_merge4().
 
    If ABORT_ON_CONFLICTS is TRUE raise an SVN_ERR_WC_FOUND_CONFLICT error
    if any merge conflicts occur.
