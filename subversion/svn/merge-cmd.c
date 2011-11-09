@@ -39,6 +39,36 @@
 
 /*** Code. ***/
 
+/* A message to print after reintegration */
+const char *keep_alive_message = N_(
+  "To continue using the source branch after this reintegration, note the\n"
+  "new revision number REV created by the commit and perform the following\n"
+  "command in a working copy of that branch:\n"
+  "\n"
+  "  svn merge --record-only --change REV ^/%s .\n"
+  "\n"
+  "See \"Keeping a Reintegrated Branch Alive\" in the Svn Book here:\n"
+  "<http://svnbook.red-bean.com/en/1.6/svn-book.html#svn.branchmerge.advanced.reintegratetwice>\n"
+);
+
+/* Set *REPOS_RELPATH to the repository path of WC_PATH relative to the
+ * repository root. */
+static svn_error_t *
+get_repos_relpath(const char **repos_relpath,
+                  const char *wc_path,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  const char *wc_abspath, *url, *repos_url;
+
+  SVN_ERR(svn_dirent_get_absolute(&wc_abspath, wc_path, pool));
+  SVN_ERR(svn_client_url_from_path2(&url, wc_abspath,
+                                    ctx, pool, pool));
+  SVN_ERR(svn_client_get_repos_root(&repos_url, NULL, wc_abspath,
+                                    ctx, pool, pool));
+  *repos_relpath = svn_uri_skip_ancestor(repos_url, url, pool);
+  return SVN_NO_ERROR;
+}
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
@@ -312,6 +342,14 @@ svn_cl__merge(apr_getopt_t *os,
                                          targetpath,
                                          opt_state->dry_run,
                                          options, ctx, pool);
+      
+      /* Tell the user how to keep the source branch alive. */
+      {
+        const char *tgt_repos_relpath;
+
+        SVN_ERR(get_repos_relpath(&tgt_repos_relpath, targetpath, ctx, pool));
+        printf(_(keep_alive_message), tgt_repos_relpath);
+      }
     }
   else if (! two_sources_specified)
     {
