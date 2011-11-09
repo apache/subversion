@@ -9194,17 +9194,6 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
                                             new_repos_id,
                                             scratch_pool));
 
-  if (db_kind == svn_kind_dir && status == svn_wc__db_status_incomplete)
-    {
-      svn_sqlite__stmt_t *stmt;
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_UPDATE_NODE_BASE_PRESENCE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "ist", wcroot->wc_id, local_relpath,
-                                presence_map, svn_wc__db_status_normal));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
-
   /* Early out */
   if (depth <= svn_depth_empty
       || db_kind != svn_kind_dir
@@ -11784,6 +11773,55 @@ svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
 
   return SVN_NO_ERROR;
 }
+
+/* Lock helper for svn_wc__db_temp_op_end_directory_update */
+static svn_error_t *
+end_directory_update(void *baton,
+                     svn_wc__db_wcroot_t *wcroot,
+                     const char *local_relpath,
+                     apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_wc__db_status_t base_status;
+
+  SVN_ERR(base_get_info(&base_status, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                        NULL, NULL, NULL, NULL, NULL, NULL,
+                        wcroot, local_relpath, scratch_pool, scratch_pool));
+
+  SVN_ERR_ASSERT(base_status == svn_wc__db_status_incomplete);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_UPDATE_NODE_BASE_PRESENCE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "ist", wcroot->wc_id, local_relpath,
+                            presence_map, svn_wc__db_status_normal));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_temp_op_end_directory_update(svn_wc__db_t *db,
+                                        const char *local_dir_abspath,
+                                        apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_dir_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, end_directory_update,
+                              NULL, scratch_pool));
+
+  SVN_ERR(flush_entries(wcroot, local_dir_abspath, svn_depth_empty,
+                        scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 struct start_directory_update_baton_t
 {
