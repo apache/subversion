@@ -3581,6 +3581,8 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
 
 
 /**
+ * Get the mergeinfo for a single target node (ignoring any subtrees).
+ *
  * Set @a *mergeinfo to a hash mapping <tt>const char *</tt> merge
  * source URLs to <tt>apr_array_header_t *</tt> rangelists (arrays of
  * <tt>svn_merge_range_t *</tt> ranges) describing the ranges which
@@ -3610,6 +3612,9 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 
 
 /**
+ * Describe the revisions that either have or have not been merged from
+ * one source branch (or subtree) into another.
+ *
  * If @a finding_merged is TRUE, then drive log entry callbacks
  * @a receiver / @a receiver_baton with the revisions merged from
  * @a source_path_or_url (as of @a source_peg_revision) into
