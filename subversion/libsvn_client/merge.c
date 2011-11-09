@@ -293,6 +293,13 @@ typedef struct merge_cmd_baton_t {
 
 /*** Utilities ***/
 
+/* Repository root and UUID for a repository. */
+typedef struct url_uuid_t
+{
+  const char *url;
+  const char *uuid;
+} url_uuid_t;
+
 /* Return SVN_ERR_UNSUPPORTED_FEATURE if URL is not inside the repository
    of LOCAL_ABSPATH.  Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
@@ -310,6 +317,42 @@ check_repos_match(merge_cmd_baton_t *merge_b,
 
   return SVN_NO_ERROR;
 }
+
+/* Return TRUE iff the repository identified by REPOS_ROOT1 is the same as
+ * that identified by REPOS_ROOT2.  If STRICT_URLS is true, the URLs must
+ * match (and the UUIDs, just to be sure), otherwise just the UUIDs must
+ * match and the URLs can differ (a common case is http versus https). */
+static svn_boolean_t
+is_same_repos(const url_uuid_t *repos_root1,
+              const url_uuid_t *repos_root2,
+              svn_boolean_t strict_urls)
+{
+  if (strict_urls)
+    return (strcmp(repos_root1->url, repos_root2->url) == 0
+            && strcmp(repos_root1->uuid, repos_root2->uuid) == 0);
+  else
+    return (strcmp(repos_root1->uuid, repos_root2->uuid) == 0);
+}
+
+/* If the repository identified by REPOS_ROOT1 is not the same as that
+ * identified by REPOS_ROOT2, throw a SVN_ERR_CLIENT_UNRELATED_RESOURCES
+ * error mentioning PATH1 and PATH2. For STRICT_URLS, see is_same_repos().
+ */
+static svn_error_t *
+check_same_repos(const url_uuid_t *repos_root1,
+                 const char *path1,
+                 const url_uuid_t *repos_root2,
+                 const char *path2,
+                 svn_boolean_t strict_urls,
+                 apr_pool_t *scratch_pool)
+{
+  if (! is_same_repos(repos_root1, repos_root2, strict_urls))
+    return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
+                             _("'%s' must be from the same repository as "
+                               "'%s'"), path1, path2);
+  return SVN_NO_ERROR;
+}
+
 /* Return true iff we're in dry-run mode and WCPATH would have been
    deleted by now if we weren't in dry-run mode.
    Used to avoid spurious notifications (e.g. conflicts) from a merge
@@ -9037,8 +9080,8 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
                                        const char *URL2,
                                        svn_revnum_t rev2,
                                        svn_revnum_t yc_rev,
-                                       const char *source_repos_root,
-                                       const char *wc_repos_root,
+                                       url_uuid_t *source_repos_root,
+                                       url_uuid_t *wc_repos_root,
                                        svn_depth_t depth,
                                        svn_boolean_t ignore_ancestry,
                                        svn_boolean_t force,
@@ -9063,20 +9106,8 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
 
-  if (strcmp(wc_repos_root, source_repos_root) != 0)
-    {
-      const char *source_repos_uuid;
-      const char *wc_repos_uuid;
-
-      SVN_ERR(svn_ra_get_uuid2(URL1_ra_session, &source_repos_uuid,
-                               subpool));
-      SVN_ERR(svn_client_get_repos_root(NULL /* root_url */, &wc_repos_uuid,
-                                        target_abspath,
-                                        ctx, subpool, subpool));
-      same_repos = (strcmp(wc_repos_uuid, source_repos_uuid) == 0);
-    }
-  else
-    same_repos = TRUE;
+  same_repos = is_same_repos(source_repos_root, wc_repos_root,
+                             TRUE /* strict_urls */);
 
   peg_revision.kind = svn_opt_revision_number;
 
@@ -9090,7 +9121,7 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
   APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *) = range;
   peg_revision.value.number = rev1;
   SVN_ERR(normalize_merge_sources(&remove_sources, URL1, URL1,
-                                  source_repos_root, &peg_revision,
+                                  source_repos_root->url, &peg_revision,
                                   ranges, URL1_ra_session, ctx, scratch_pool,
                                   subpool));
 
@@ -9104,7 +9135,7 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
   APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *) = range;
   peg_revision.value.number = rev2;
   SVN_ERR(normalize_merge_sources(&add_sources, URL2, URL2,
-                                  source_repos_root, &peg_revision,
+                                  source_repos_root->url, &peg_revision,
                                   ranges, URL2_ra_session, ctx,
                                   scratch_pool, subpool));
 
@@ -9325,8 +9356,7 @@ merge_locked(const char *source1,
   const char *URL1, *URL2;
   svn_revnum_t rev1, rev2;
   svn_boolean_t related = FALSE, ancestral = FALSE;
-  const char *wc_repos_root, *source_repos_root;
-  const char *wc_repos_uuid, *source_repos_uuid1, *source_repos_uuid2;
+  url_uuid_t wc_repos_root, source_repos_root, source_repos_root2;
   svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
   svn_ra_session_t *ra_session1, *ra_session2;
   apr_array_header_t *merge_sources;
@@ -9399,7 +9429,7 @@ merge_locked(const char *source1,
                                              scratch_pool));
 
   /* Determine the working copy target's repository root URL. */
-  SVN_ERR(svn_client_get_repos_root(&wc_repos_root, &wc_repos_uuid,
+  SVN_ERR(svn_client_get_repos_root(&wc_repos_root.url, &wc_repos_root.uuid,
                                     target_abspath,
                                     ctx, scratch_pool, scratch_pool));
 
@@ -9420,23 +9450,27 @@ merge_locked(const char *source1,
                                           NULL, ra_session2, revision2,
                                           sesspool));
 
-  SVN_ERR(svn_ra_get_uuid2(ra_session1, &source_repos_uuid1, scratch_pool));
-  SVN_ERR(svn_ra_get_uuid2(ra_session2, &source_repos_uuid2, scratch_pool));
+  SVN_ERR(svn_ra_get_repos_root2(ra_session1, &source_repos_root.url,
+                                 sesspool));
+  SVN_ERR(svn_ra_get_uuid2(ra_session1, &source_repos_root.uuid,
+                           scratch_pool));
+  SVN_ERR(svn_ra_get_repos_root2(ra_session2, &source_repos_root2.url,
+                                 sesspool));
+  SVN_ERR(svn_ra_get_uuid2(ra_session2, &source_repos_root2.uuid,
+                           scratch_pool));
 
   /* We can't do a diff between different repositories. */
-  if (strcmp(source_repos_uuid1, source_repos_uuid2) != 0)
-    return svn_error_createf(SVN_ERR_RA_UUID_MISMATCH, NULL,
-                             _("'%s' isn't in the same repository as '%s'"),
-                             URL1, URL2);
-
-  /* Get the repository root URL from one of our sessions. */
-  SVN_ERR(svn_ra_get_repos_root2(ra_session1, &source_repos_root, sesspool));
+  /* ### We should also insist that the root URLs of the two sources match,
+   *     as we are only carrying around a single source-repos-root from now
+   *     on, and URL calculations will go wrong if they differ.
+   *     Alternatively, teach the code to cope with differing root URLs. */
+  SVN_ERR(check_same_repos(&source_repos_root, URL1,
+                           &source_repos_root2, URL2,
+                           FALSE /* strict_urls */, scratch_pool));
 
   /* Do our working copy and sources come from the same repository? */
-  if (strcmp(wc_repos_root, source_repos_root) != 0)
-    same_repos = (strcmp(wc_repos_uuid, source_repos_uuid1) == 0);
-  else
-    same_repos = TRUE;
+  same_repos = is_same_repos(&wc_repos_root, &source_repos_root,
+                             TRUE /* strict_urls */);
 
   /* Unless we're ignoring ancestry, see if the two sources are related.  */
   if (! ignore_ancestry)
@@ -9473,7 +9507,7 @@ merge_locked(const char *source1,
       related = TRUE;
 
       /* Make YC_PATH into a full URL. */
-      yc_path = svn_path_url_add_component2(source_repos_root, yc_path,
+      yc_path = svn_path_url_add_component2(source_repos_root.url, yc_path,
                                             scratch_pool);
 
       /* If the common ancestor matches the right side of our merge,
@@ -9491,7 +9525,7 @@ merge_locked(const char *source1,
           APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *) = range;
           peg_revision.value.number = rev1;
           SVN_ERR(normalize_merge_sources(&merge_sources, URL1, URL1,
-                                          source_repos_root, &peg_revision,
+                                          source_repos_root.url, &peg_revision,
                                           ranges, ra_session1, ctx,
                                           scratch_pool, scratch_pool));
         }
@@ -9510,7 +9544,7 @@ merge_locked(const char *source1,
           APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *) = range;
           peg_revision.value.number = rev2;
           SVN_ERR(normalize_merge_sources(&merge_sources, URL2, URL2,
-                                          source_repos_root, &peg_revision,
+                                          source_repos_root.url, &peg_revision,
                                           ranges, ra_session2, ctx,
                                           scratch_pool, scratch_pool));
         }
@@ -9524,8 +9558,8 @@ merge_locked(const char *source1,
                                                        URL1, rev1,
                                                        URL2, rev2,
                                                        yc_rev,
-                                                       source_repos_root,
-                                                       wc_repos_root,
+                                                       &source_repos_root,
+                                                       &wc_repos_root,
                                                        depth,
                                                        ignore_ancestry, force,
                                                        record_only, dry_run,
@@ -10568,7 +10602,7 @@ merge_reintegrate_locked(const char *source,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *scratch_pool)
 {
-  const char *wc_repos_root, *source_repos_root;
+  url_uuid_t wc_repos_root, source_repos_root;
   svn_opt_revision_t working_revision;
   svn_ra_session_t *target_ra_session;
   svn_ra_session_t *source_ra_session;
@@ -10605,22 +10639,22 @@ merge_reintegrate_locked(const char *source,
                              svn_dirent_local_style(source, scratch_pool));
 
   /* Determine the working copy target's repository root URL. */
-  SVN_ERR(svn_client_get_repos_root(&wc_repos_root, NULL, target_abspath,
+  SVN_ERR(svn_client_get_repos_root(&wc_repos_root.url, &wc_repos_root.uuid,
+                                    target_abspath,
                                     ctx, scratch_pool, scratch_pool));
 
   /* Determine the source's repository root URL. */
-  SVN_ERR(svn_client_get_repos_root(&source_repos_root, NULL, url2,
+  SVN_ERR(svn_client_get_repos_root(&source_repos_root.url,
+                                    &source_repos_root.uuid, url2,
                                     ctx, scratch_pool, scratch_pool));
 
   /* source_repos_root and wc_repos_root are required to be the same,
      as mergeinfo doesn't come into play for cross-repository merging. */
-  if (strcmp(source_repos_root, wc_repos_root) != 0)
-    return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
-                             _("'%s' must be from the same repository as "
-                               "'%s'"), svn_dirent_local_style(source,
-                                                               scratch_pool),
-                             svn_dirent_local_style(target_abspath,
-                                                    scratch_pool));
+  SVN_ERR(check_same_repos(&source_repos_root,
+                           svn_dirent_local_style(source, scratch_pool),
+                           &wc_repos_root,
+                           svn_dirent_local_style(target_abspath, scratch_pool),
+                           TRUE /* strict_urls */, scratch_pool));
 
   /* A reintegrate merge requires the merge target to reflect a subtree
    * of the repository as found at a single revision. */
@@ -10636,7 +10670,7 @@ merge_reintegrate_locked(const char *source,
      (with regard to the WC). */
   rev1 = target_base_rev;
 
-  source_repos_rel_path = svn_uri_skip_ancestor(wc_repos_root, url2,
+  source_repos_rel_path = svn_uri_skip_ancestor(wc_repos_root.url, url2,
                                                 scratch_pool);
   SVN_ERR(svn_client__path_relative_to_root(&target_repos_rel_path,
                                             ctx->wc_ctx, target_abspath,
@@ -10677,7 +10711,7 @@ merge_reintegrate_locked(const char *source,
                                    subtrees_with_mergeinfo,
                                    rev1,
                                    source_repos_rel_path,
-                                   source_repos_root,
+                                   source_repos_root.url,
                                    rev2,
                                    source_ra_session,
                                    target_ra_session,
@@ -10751,12 +10785,12 @@ merge_reintegrate_locked(const char *source,
      ### related" in this source file).  We can merge to trunk without
      ### implementing this. */
   err = merge_cousins_and_supplement_mergeinfo(target_abspath,
-                                               target_ra_session,
-                                               source_ra_session,
+                                               target_ra_session,  /* ### */
+                                               source_ra_session,  /* wrong */
                                                url1, rev1, url2, rev2,
                                                yc_ancestor_rev,
-                                               source_repos_root,
-                                               wc_repos_root,
+                                               &source_repos_root, /*   way */
+                                               &wc_repos_root,     /* round? */
                                                svn_depth_infinity,
                                                FALSE, FALSE, FALSE, dry_run,
                                                merge_options, &use_sleep,
@@ -10847,8 +10881,7 @@ merge_peg_locked(const char *source,
 {
   const char *URL;
   apr_array_header_t *merge_sources;
-  const char *wc_repos_root, *source_repos_root;
-  const char *wc_repos_uuid, *source_repos_uuid;
+  url_uuid_t wc_repos_root, source_repos_root;
   svn_ra_session_t *ra_session;
   apr_pool_t *sesspool;
   svn_boolean_t use_sleep = FALSE;
@@ -10886,7 +10919,7 @@ merge_peg_locked(const char *source,
                                              scratch_pool));
 
   /* Determine the working copy target's repository root URL. */
-  SVN_ERR(svn_client_get_repos_root(&wc_repos_root, &wc_repos_uuid,
+  SVN_ERR(svn_client_get_repos_root(&wc_repos_root.url, &wc_repos_root.uuid,
                                     target_abspath,
                                     ctx, scratch_pool, scratch_pool));
 
@@ -10895,20 +10928,19 @@ merge_peg_locked(const char *source,
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
                                                NULL, FALSE, TRUE,
                                                ctx, sesspool));
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_repos_root, scratch_pool));
-  SVN_ERR(svn_ra_get_uuid2(ra_session, &source_repos_uuid, scratch_pool));
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_repos_root.url,
+                                 scratch_pool));
+  SVN_ERR(svn_ra_get_uuid2(ra_session, &source_repos_root.uuid, scratch_pool));
 
   /* Normalize our merge sources. */
   SVN_ERR(normalize_merge_sources(&merge_sources, source, URL,
-                                  source_repos_root, peg_revision,
+                                  source_repos_root.url, peg_revision,
                                   ranges_to_merge, ra_session, ctx,
                                   scratch_pool, scratch_pool));
 
   /* Check for same_repos. */
-  if (strcmp(wc_repos_root, source_repos_root) != 0)
-    same_repos = (strcmp(wc_repos_uuid, source_repos_uuid) == 0);
-  else
-    same_repos = TRUE;
+  same_repos = is_same_repos(&wc_repos_root, &source_repos_root,
+                             TRUE /* strict_urls */);
 
   /* We're done with our little RA session. */
   svn_pool_destroy(sesspool);
