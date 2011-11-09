@@ -71,6 +71,13 @@ Candidate changes:
      Our client-server compatibility rules require this to work.
    Votes:
      +1: philip
+     -0: rhuijben (I agree with marking the root complete.
+                   The recursive un-incomplete marking is never necessary as
+                   the crawling of the directory reports the directories as
+                   incomplete. The server must then report all children that
+                   aren't reported explicitly during crawling. Not touching
+                   a pre-existing incomplete directory during update is an
+                   editor driver bug)
 
  * r1197998
    Make 'svn patch' ignore "/dev/null" targets.
