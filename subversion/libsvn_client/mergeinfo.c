@@ -38,6 +38,7 @@
 #include "svn_client.h"
 #include "svn_hash.h"
 
+#include "private/svn_opt_private.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
@@ -1525,7 +1526,6 @@ logs_for_mergeinfo_rangelist(const char *source_url,
   svn_merge_range_t *oldest_range, *youngest_range;
   apr_array_header_t *revision_ranges;
   svn_opt_revision_t oldest_rev, youngest_rev;
-  svn_opt_revision_range_t *range;
   struct filter_log_entry_baton_t fleb;
 
   if (! rangelist->nelts)
@@ -1574,10 +1574,8 @@ logs_for_mergeinfo_rangelist(const char *source_url,
   /* Drive the log. */
   revision_ranges = apr_array_make(scratch_pool, 1,
                                    sizeof(svn_opt_revision_range_t *));
-  range = apr_pcalloc(scratch_pool, sizeof(*range));
-  range->end = youngest_rev;
-  range->start = oldest_rev;
-  APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *) = range;
+  APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *)
+    = svn_opt__revision_range_create(&youngest_rev, &oldest_rev, scratch_pool);
   SVN_ERR(svn_client_log5(target, &youngest_rev, revision_ranges,
                           0, discover_changed_paths, FALSE, FALSE, revprops,
                           filter_log_entry_with_rangelist, &fleb, ctx,

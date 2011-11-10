@@ -54,6 +54,7 @@
 #include "svn_version.h"
 #include "cl.h"
 
+#include "private/svn_opt_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_cmdline_private.h"
 
@@ -1628,7 +1629,6 @@ main(int argc, const char *argv[])
             {
               char *end;
               svn_revnum_t changeno, changeno_end;
-              svn_opt_revision_range_t *range;
               const char *change_str =
                 APR_ARRAY_IDX(change_revs, i, const char *);
               const char *s = change_str;
@@ -1700,15 +1700,11 @@ main(int argc, const char *argv[])
                   changeno_end = changeno - 1;
                 }
 
-              range = apr_palloc(pool, sizeof(*range));
-              range->start.value.number = changeno;
-              range->end.value.number = changeno_end;
-
               opt_state.used_change_arg = TRUE;
-              range->start.kind = svn_opt_revision_number;
-              range->end.kind = svn_opt_revision_number;
               APR_ARRAY_PUSH(opt_state.revision_ranges,
-                             svn_opt_revision_range_t *) = range;
+                             svn_opt_revision_range_t *)
+                = svn_opt__revision_range_from_revnums(changeno, changeno_end,
+                                                       pool);
             }
         }
         break;
