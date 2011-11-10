@@ -143,6 +143,22 @@ svn_client__repos_locations(const char **start_url,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
+/* Trace a line of history of a particular versioned resource back to a
+ * specific revision.
+ *
+ * Set *OP_URL to the URL that the object PEG_URL@PEG_REVNUM had in
+ * revision OP_REVNUM.
+ * RA_SESSION is required. */
+svn_error_t *
+svn_client__repos_location(const char **start_url,
+                           svn_ra_session_t *ra_session,
+                           const char *peg_url,
+                           svn_revnum_t peg_revnum,
+                           svn_revnum_t op_revnum,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
 
 /* Set *SEGMENTS to an array of svn_location_segment_t * objects, each
    representing a reposition location segment for the history of PATH
