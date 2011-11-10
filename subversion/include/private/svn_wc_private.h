@@ -407,8 +407,9 @@ svn_wc__node_get_children(const apr_array_header_t **children,
  * of the node at @a local_abspath into @a *repos_root_url
  * and @a *repos_uuid. Use @a wc_ctx to access the working copy
  * for @a local_abspath, @a scratch_pool for all temporary allocations,
- * @a result_pool for result allocations. Note: the result may be NULL if the
- * given node has no repository root associated with it (e.g. locally added).
+ * @a result_pool for result allocations. Note: the results will be NULL if
+ * the node does not exist or is not under version control. If the node is
+ * locally added, return the repository root it will have if committed.
  *
  * Either output argument may be NULL, indicating no interest.
  */

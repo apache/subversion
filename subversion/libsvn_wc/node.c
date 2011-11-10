@@ -214,6 +214,8 @@ svn_wc__internal_get_repos_info(const char **repos_root_url,
                                        db, local_abspath,
                                        result_pool, scratch_pool));
 
+  SVN_ERR_ASSERT(repos_root_url == NULL || *repos_root_url != NULL);
+  SVN_ERR_ASSERT(repos_uuid == NULL || *repos_uuid != NULL);
   return SVN_NO_ERROR;
 }
 
