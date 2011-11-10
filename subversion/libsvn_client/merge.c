@@ -52,6 +52,7 @@
 #include "client.h"
 #include "mergeinfo.h"
 
+#include "private/svn_opt_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_fspath.h"
@@ -9059,7 +9060,6 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
                                        svn_client_ctx_t *ctx,
                                        apr_pool_t *scratch_pool)
 {
-  svn_opt_revision_range_t *range;
   apr_array_header_t *remove_sources, *add_sources, *ranges;
   svn_opt_revision_t peg_revision;
   svn_boolean_t same_repos;
@@ -9078,28 +9078,20 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
 
   peg_revision.kind = svn_opt_revision_number;
 
-  range = apr_pcalloc(scratch_pool, sizeof(*range));
-  range->start.kind = svn_opt_revision_number;
-  range->start.value.number = rev1;
-  range->end.kind = svn_opt_revision_number;
-  range->end.value.number = yc_rev;
   ranges = apr_array_make(scratch_pool, 2,
                           sizeof(svn_opt_revision_range_t *));
-  APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *) = range;
+  APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *)
+    = svn_opt__revision_range_from_revnums(rev1, yc_rev, scratch_pool);
   peg_revision.value.number = rev1;
   SVN_ERR(normalize_merge_sources(&remove_sources, URL1, URL1,
                                   source_repos_root->url, &peg_revision,
                                   ranges, URL1_ra_session, ctx, scratch_pool,
                                   subpool));
 
-  range = apr_pcalloc(scratch_pool, sizeof(*range));
-  range->start.kind = svn_opt_revision_number;
-  range->start.value.number = yc_rev;
-  range->end.kind = svn_opt_revision_number;
-  range->end.value.number = rev2;
   ranges = apr_array_make(scratch_pool, 2,
                           sizeof(svn_opt_revision_range_t *));
-  APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *) = range;
+  APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *)
+    = svn_opt__revision_range_from_revnums(yc_rev, rev2, scratch_pool);
   peg_revision.value.number = rev2;
   SVN_ERR(normalize_merge_sources(&add_sources, URL2, URL2,
                                   source_repos_root->url, &peg_revision,
@@ -9466,7 +9458,6 @@ merge_locked(const char *source1,
   if (yc_path && SVN_IS_VALID_REVNUM(yc_rev))
     {
       apr_array_header_t *ranges;
-      svn_opt_revision_range_t *range;
       svn_opt_revision_t peg_revision;
       peg_revision.kind = svn_opt_revision_number;
 
@@ -9482,14 +9473,10 @@ merge_locked(const char *source1,
       if ((strcmp(yc_path, URL2) == 0) && (yc_rev == rev2))
         {
           ancestral = TRUE;
-          range = apr_pcalloc(scratch_pool, sizeof(*range));
-          range->start.kind = svn_opt_revision_number;
-          range->start.value.number = rev1;
-          range->end.kind = svn_opt_revision_number;
-          range->end.value.number = yc_rev;
           ranges = apr_array_make(scratch_pool,
                                   2, sizeof(svn_opt_revision_range_t *));
-          APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *) = range;
+          APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *)
+            = svn_opt__revision_range_from_revnums(rev1, yc_rev, scratch_pool);
           peg_revision.value.number = rev1;
           SVN_ERR(normalize_merge_sources(&merge_sources, URL1, URL1,
                                           source_repos_root.url, &peg_revision,
@@ -9501,14 +9488,10 @@ merge_locked(const char *source1,
       else if ((strcmp(yc_path, URL1) == 0) && (yc_rev == rev1))
         {
           ancestral = TRUE;
-          range = apr_pcalloc(scratch_pool, sizeof(*range));
-          range->start.kind = svn_opt_revision_number;
-          range->start.value.number = yc_rev;
-          range->end.kind = svn_opt_revision_number;
-          range->end.value.number = rev2;
           ranges = apr_array_make(scratch_pool,
                                   2, sizeof(svn_opt_revision_range_t *));
-          APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *) = range;
+          APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *)
+            = svn_opt__revision_range_from_revnums(yc_rev, rev2, scratch_pool);
           peg_revision.value.number = rev2;
           SVN_ERR(normalize_merge_sources(&merge_sources, URL2, URL2,
                                           source_repos_root.url, &peg_revision,
