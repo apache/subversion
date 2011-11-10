@@ -10584,13 +10584,6 @@ calculate_left_hand_side(const char **url_left,
   return SVN_NO_ERROR;
 }
 
-/* */
-static svn_error_t *
-svn_client_determine_reintegrate_merge(void)
-{
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *
 merge_reintegrate_locked(const char *source,
                          const svn_opt_revision_t *peg_revision,
