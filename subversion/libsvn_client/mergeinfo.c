@@ -1000,12 +1000,10 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
   const char *url;
   svn_boolean_t use_url = svn_path_is_url(path_or_url);
   svn_revnum_t peg_rev;
-  svn_opt_revision_t opt_rev;
-  opt_rev.kind = svn_opt_revision_unspecified;
 
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &peg_rev, &url,
                                            path_or_url, NULL, peg_revision,
-                                           &opt_rev, ctx, scratch_pool));
+                                           peg_revision, ctx, scratch_pool));
 
   /* If PATH_OR_URL is as working copy path determine if we will need to
      contact the repository for the requested PEG_REVISION. */

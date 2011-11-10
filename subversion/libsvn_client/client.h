@@ -214,8 +214,9 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
    and should only be used if PATH_OR_URL is a url
      ### else NULL? what's it for?
 
-   If PEG_REVISION's kind is svn_opt_revision_unspecified, it is
-   interpreted as "head" for a URL or "working" for a working-copy path.
+   If PEG_REVISION->kind is 'unspecified', the peg revision is 'head'
+   for a URL or 'working' for a WC path.  If REVISION->kind is
+   'unspecified', the operative revision is the peg revision.
 
    Store the resulting ra_session in *RA_SESSION_P.  Store the actual
    revision number of the object in *REV_P, and the final resulting

@@ -10565,7 +10565,6 @@ merge_reintegrate_locked(const char *source,
   const char *url1, *url2;
   svn_revnum_t rev1, rev2;
   svn_mergeinfo_t unmerged_to_source_mergeinfo_catalog;
-  svn_mergeinfo_t final_unmerged_catalog;
   svn_mergeinfo_t merged_to_source_mergeinfo_catalog;
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
@@ -10573,7 +10572,6 @@ merge_reintegrate_locked(const char *source,
   const char *target_url;
   svn_revnum_t target_base_rev;
   svn_node_kind_t kind;
-  svn_opt_revision_t no_rev;
 
   /* Make sure the target is really there. */
   SVN_ERR(svn_io_check_path(target_abspath, &kind, scratch_pool));
@@ -10645,9 +10643,9 @@ merge_reintegrate_locked(const char *source,
                               NULL, ctx, scratch_pool, scratch_pool));
 
   /* Open two RA sessions, one to our source and one to our target. */
-  no_rev.kind = svn_opt_revision_unspecified;
   SVN_ERR(svn_client__ra_session_from_path(&source_ra_session, &rev2, &url2,
-                                           url2, NULL, peg_revision, &no_rev,
+                                           url2, NULL, peg_revision,
+                                           peg_revision,
                                            ctx, scratch_pool));
   SVN_ERR(svn_wc__node_get_url(&target_url, ctx->wc_ctx, target_abspath,
                                scratch_pool, scratch_pool));
@@ -10698,7 +10696,7 @@ merge_reintegrate_locked(const char *source,
       /* Have we actually merged anything to the source from the
          target?  If so, make sure we've merged a contiguous
          prefix. */
-      final_unmerged_catalog = apr_hash_make(scratch_pool);
+      svn_mergeinfo_t final_unmerged_catalog = apr_hash_make(scratch_pool);
 
       SVN_ERR(find_unsynced_ranges(source_repos_rel_path,
                                    yc_ancestor_path,
