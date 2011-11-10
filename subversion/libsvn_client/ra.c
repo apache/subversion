@@ -406,8 +406,9 @@ path_or_url_local_style(const char *path_or_url,
    PEG_REVISION and REVISION, and return @c
    SVN_ERR_CLIENT_UNRELATED_RESOURCES if it is not the same node.
 
-   If PEG_REVISION's kind is svn_opt_revision_unspecified, interpret it
-   as "head" for a URL or "working" for a working-copy path.
+   If PEG_REVISION->kind is 'unspecified', the peg revision is 'head'
+   for a URL or 'working' for a WC path.  If REVISION->kind is
+   'unspecified', the operative revision is the peg revision.
 
    Store the actual revision number of the object in *REV_P, and the
    final resulting URL in *URL_P. REV_P and/or URL_P may be NULL if not
