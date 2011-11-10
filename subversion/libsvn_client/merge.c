@@ -6445,45 +6445,36 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
 
   for (i = 0; i < ranges_to_merge->nelts; i++)
     {
-      svn_revnum_t range_start_rev, range_end_rev;
-      svn_opt_revision_t *range_start =
-        &((APR_ARRAY_IDX(ranges_to_merge, i,
-                         svn_opt_revision_range_t *))->start);
-      svn_opt_revision_t *range_end =
-        &((APR_ARRAY_IDX(ranges_to_merge, i,
-                         svn_opt_revision_range_t *))->end);
+      svn_opt_revision_range_t *range
+        = APR_ARRAY_IDX(ranges_to_merge, i, svn_opt_revision_range_t *);
+      svn_merge_range_t mrange;
 
       svn_pool_clear(iterpool);
 
       /* Resolve revisions to real numbers, validating as we go. */
-      if ((range_start->kind == svn_opt_revision_unspecified)
-          || (range_end->kind == svn_opt_revision_unspecified))
+      if ((range->start.kind == svn_opt_revision_unspecified)
+          || (range->end.kind == svn_opt_revision_unspecified))
         return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                                 _("Not all required revisions are specified"));
 
-      SVN_ERR(svn_client__get_revision_number(&range_start_rev, &youngest_rev,
+      SVN_ERR(svn_client__get_revision_number(&mrange.start, &youngest_rev,
                                               ctx->wc_ctx,
                                               source_abspath_or_url,
-                                              ra_session, range_start,
+                                              ra_session, &range->start,
                                               iterpool));
-      SVN_ERR(svn_client__get_revision_number(&range_end_rev, &youngest_rev,
+      SVN_ERR(svn_client__get_revision_number(&mrange.end, &youngest_rev,
                                               ctx->wc_ctx,
                                               source_abspath_or_url,
-                                              ra_session, range_end,
+                                              ra_session, &range->end,
                                               iterpool));
 
       /* If this isn't a no-op range... */
-      if (range_start_rev != range_end_rev)
+      if (mrange.start != mrange.end)
         {
-          /* ...then create an svn_merge_range_t object for it. */
-          svn_merge_range_t *range = apr_pcalloc(scratch_pool,
-                                                 sizeof(*range));
-          range->start = range_start_rev;
-          range->end = range_end_rev;
-          range->inheritable = TRUE;
-
-          /* Add our merge range to our list thereof. */
-          APR_ARRAY_PUSH(merge_range_ts, svn_merge_range_t *) = range;
+          /* ...then add it to the list. */
+          mrange.inheritable = TRUE;
+          APR_ARRAY_PUSH(merge_range_ts, svn_merge_range_t *)
+            = svn_merge_range_dup(&mrange, scratch_pool);
         }
     }
 
@@ -10590,6 +10581,13 @@ calculate_left_hand_side(const char **url_left,
     }
 
   svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+/* */
+static svn_error_t *
+svn_client_determine_reintegrate_merge(void)
+{
   return SVN_NO_ERROR;
 }
 
