@@ -3672,6 +3672,61 @@ def patch_reversed_add_with_props2(sbox):
                                        0, # dry-run
                                        '--reverse-diff') 
 
+def patch_dev_null(sbox):
+  "patch with /dev/null filenames"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+
+  # Git (and maybe other tools) use '/dev/null' as the old path for
+  # newly added files, and as the new path for deleted files.
+  # The path selection algorithm in 'svn patch' must detect this and
+  # avoid using '/dev/null' as a patch target.
+  unidiff_patch = [
+    "Index: new\n",
+    "===================================================================\n",
+    "--- /dev/null\n",
+    "+++ new	(revision 0)\n",
+    "@@ -0,0 +1 @@\n",
+    "+new\n",
+    "\n",
+    "Index: A/B/E/beta\n",
+    "===================================================================\n",
+    "--- A/B/E/beta	(revision 1)\n",
+    "+++ /dev/null\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'beta'.\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  new_contents = "new\n"
+  expected_output = [
+    'A         %s\n' % os.path.join(wc_dir, 'new'),
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'new' : Item(contents=new_contents)})
+  expected_disk.remove('A/B/E/beta')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({'new' : Item(status='A ', wc_rev=0)})
+  expected_status.tweak('A/B/E/beta', status='D ')
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
 ########################################################################
 #Run the tests
 
@@ -3710,6 +3765,7 @@ test_list = [ None,
               patch_deletes_prop,
               patch_reversed_add_with_props,
               patch_reversed_add_with_props2,
+              patch_dev_null,
             ]
 
 if __name__ == '__main__':
