@@ -175,8 +175,8 @@ svn_cl__commit(apr_getopt_t *os,
                            opt_state->include_externals, /* dir externals */
                            opt_state->changelists,
                            opt_state->revprop_table,
-                           ! opt_state->quiet
-                                ? svn_cl__print_commit_info : NULL,
+                           (opt_state->quiet
+                            ? NULL : svn_cl__print_commit_info),
                            NULL,
                            ctx,
                            pool);
