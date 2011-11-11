@@ -6371,10 +6371,13 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
   svn_revnum_t trim_revision = SVN_INVALID_REVNUM;
   apr_array_header_t *segments;
   int i;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   /* Initialize our return variable. */
   *merge_sources_p = apr_array_make(result_pool, 1, sizeof(merge_source_t *));
+
+  /* No ranges to merge?  No problem. */
+  if (merge_range_ts->nelts == 0)
+    return SVN_NO_ERROR;
 
   /* Find the extremes of the revisions across our set of ranges. */
   for (i = 0; i < merge_range_ts->nelts; i++)
@@ -6406,7 +6409,7 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
       SVN_ERR(svn_client__repos_location(&start_url,
                                          ra_session, source_url, peg_revnum,
                                          youngest_requested,
-                                         ctx, iterpool, iterpool));
+                                         ctx, scratch_pool, scratch_pool));
       peg_revnum = youngest_requested;
     }
 
@@ -6463,7 +6466,7 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
 
               segment_url = svn_path_url_add_component2(source_root_url,
                                                         segment2->path,
-                                                        iterpool);
+                                                        scratch_pool);
               SVN_ERR(svn_client__get_copy_source(segment_url,
                                                   &range_start_rev,
                                                   &copyfrom_path,
@@ -6529,7 +6532,6 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
         }
     }
 
-  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -6633,17 +6635,11 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
         }
     }
 
-  /* No ranges to merge?  No problem. */
-  if (merge_range_ts->nelts == 0)
-    {
-      svn_pool_destroy(iterpool);
-      return SVN_NO_ERROR;
-    }
-
   SVN_ERR(normalize_merge_sources_internal(
             merge_sources_p, source_url, source_root_url, peg_revnum,
             merge_range_ts, ra_session, ctx, result_pool, scratch_pool));
 
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
