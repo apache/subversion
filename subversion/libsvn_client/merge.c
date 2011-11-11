@@ -1975,9 +1975,7 @@ files_same_p(svn_boolean_t *same,
     {
       svn_stream_t *mine_stream;
       svn_stream_t *older_stream;
-      svn_opt_revision_t working_rev;
-
-      working_rev.kind = svn_opt_revision_working;
+      svn_opt_revision_t working_rev = { svn_opt_revision_working, { 0 } };
 
       /* Compare the file content, translating 'mine' to 'normal' form. */
       SVN_ERR(svn_client__get_normalized_stream(&mine_stream, wc_ctx,
@@ -5696,9 +5694,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   apr_hash_t *shallow_subtrees;
   apr_hash_t *missing_subtrees;
   struct pre_merge_status_baton_t pre_merge_status_baton;
-  svn_opt_revision_t working_revision;
-
-  working_revision.kind = svn_opt_revision_working;
+  svn_opt_revision_t working_revision = { svn_opt_revision_working, { 0 } };
 
   /* Case 1: Subtrees with explicit mergeinfo. */
   SVN_ERR(svn_client_propget4(&subtrees_with_mergeinfo, SVN_PROP_MERGEINFO,
@@ -9023,6 +9019,20 @@ do_merge(apr_hash_t **modified_subtrees,
   return SVN_NO_ERROR;
 }
 
+/* Return an array containing a single (svn_opt_revision_range_t *)
+ * range START:END, allocated in POOL. */
+static apr_array_header_t *
+make_single_range_array(svn_revnum_t start, svn_revnum_t end,
+                        apr_pool_t *pool)
+{
+  apr_array_header_t *ranges
+    = apr_array_make(pool, 1, sizeof(svn_opt_revision_range_t *));
+
+  APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *)
+    = svn_opt__revision_range_from_revnums(start, end, pool);
+  return ranges;
+}
+
 /* Perform a two-URL merge between URLs which are related, but neither
    is a direct ancestor of the other.  This first does a real two-URL
    merge (unless this is record-only), followed by record-only merges
@@ -9061,7 +9071,7 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
                                        apr_pool_t *scratch_pool)
 {
   apr_array_header_t *remove_sources, *add_sources, *ranges;
-  svn_opt_revision_t peg_revision;
+  svn_opt_revision_t peg_revision = {svn_opt_revision_number, { 0 } };
   svn_boolean_t same_repos;
   apr_hash_t *modified_subtrees = NULL;
 
@@ -9076,22 +9086,14 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
   same_repos = is_same_repos(source_repos_root, wc_repos_root,
                              TRUE /* strict_urls */);
 
-  peg_revision.kind = svn_opt_revision_number;
-
-  ranges = apr_array_make(scratch_pool, 2,
-                          sizeof(svn_opt_revision_range_t *));
-  APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *)
-    = svn_opt__revision_range_from_revnums(rev1, yc_rev, scratch_pool);
+  ranges = make_single_range_array(rev1, yc_rev, scratch_pool);
   peg_revision.value.number = rev1;
   SVN_ERR(normalize_merge_sources(&remove_sources, URL1, URL1,
                                   source_repos_root->url, &peg_revision,
                                   ranges, URL1_ra_session, ctx, scratch_pool,
                                   subpool));
 
-  ranges = apr_array_make(scratch_pool, 2,
-                          sizeof(svn_opt_revision_range_t *));
-  APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *)
-    = svn_opt__revision_range_from_revnums(yc_rev, rev2, scratch_pool);
+  ranges = make_single_range_array(yc_rev, rev2, scratch_pool);
   peg_revision.value.number = rev2;
   SVN_ERR(normalize_merge_sources(&add_sources, URL2, URL2,
                                   source_repos_root->url, &peg_revision,
@@ -9458,8 +9460,7 @@ merge_locked(const char *source1,
   if (yc_path && SVN_IS_VALID_REVNUM(yc_rev))
     {
       apr_array_header_t *ranges;
-      svn_opt_revision_t peg_revision;
-      peg_revision.kind = svn_opt_revision_number;
+      svn_opt_revision_t peg_revision = {svn_opt_revision_number, { 0 } };
 
       /* Note that our merge sources are related. */
       related = TRUE;
@@ -9473,10 +9474,7 @@ merge_locked(const char *source1,
       if ((strcmp(yc_path, URL2) == 0) && (yc_rev == rev2))
         {
           ancestral = TRUE;
-          ranges = apr_array_make(scratch_pool,
-                                  2, sizeof(svn_opt_revision_range_t *));
-          APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *)
-            = svn_opt__revision_range_from_revnums(rev1, yc_rev, scratch_pool);
+          ranges = make_single_range_array(rev1, yc_rev, scratch_pool);
           peg_revision.value.number = rev1;
           SVN_ERR(normalize_merge_sources(&merge_sources, URL1, URL1,
                                           source_repos_root.url, &peg_revision,
@@ -9488,10 +9486,7 @@ merge_locked(const char *source1,
       else if ((strcmp(yc_path, URL1) == 0) && (yc_rev == rev1))
         {
           ancestral = TRUE;
-          ranges = apr_array_make(scratch_pool,
-                                  2, sizeof(svn_opt_revision_range_t *));
-          APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *)
-            = svn_opt__revision_range_from_revnums(yc_rev, rev2, scratch_pool);
+          ranges = make_single_range_array(yc_rev, rev2, scratch_pool);
           peg_revision.value.number = rev2;
           SVN_ERR(normalize_merge_sources(&merge_sources, URL2, URL2,
                                           source_repos_root.url, &peg_revision,
