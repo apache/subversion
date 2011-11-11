@@ -94,6 +94,13 @@ Candidate changes:
    Votes:
      +1: philip, danielsh
 
+ * r1201002
+   Fix unitialised memory read in client diff code.
+   Justification:
+     Undefined behaviour.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
