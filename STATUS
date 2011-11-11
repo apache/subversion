@@ -88,6 +88,20 @@ Candidate changes:
    Votes:
      +1: stsp, danielsh
 
+ * r1199950
+   Fix issue 4049, SEGV on patch that  skips and deletes.
+   Justification:
+     Client SEGV on user input.
+   Votes:
+     +1: philip
+
+ * r1200837
+   Omit "Committed revision N." message when --quiet is given.
+   Justification:
+     Regression from 1.6.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
