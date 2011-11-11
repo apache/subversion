@@ -6351,118 +6351,30 @@ combine_range_with_segments(apr_array_header_t **merge_source_ts_p,
   return SVN_NO_ERROR;
 }
 
-/* Set *MERGE_SOURCES_P to an array of merge_source_t * objects, each
-   holding the paths and revisions needed to fully describe a range of
-   requested merges; order the objects from oldest to youngest.
-
-   Determine the requested merges by examining SOURCE (and its
-   associated URL, SOURCE_URL) and PEG_REVISION (which specifies the
-   line of history from which merges will be pulled) and
-   RANGES_TO_MERGE (a list of svn_opt_revision_range_t's which provide
-   revision ranges).  Note that SOURCE may itself be either a working
-   copy path or a URL; in the latter case, SOURCE_URL is probably
-   identical to SOURCE.
-
-   If PEG_REVISION is unspecified, treat that it as HEAD.
-
-   SOURCE_ROOT_URL is the root URL of the source repository.
-
-   Use RA_SESSION -- whose session URL matches SOURCE_URL -- to answer
-   historical questions.
-
-   CTX is a client context baton.
-
-   SCRATCH_POOL is used for all temporary allocations.  MERGE_SOURCES_P and
-   its contents are allocated in RESULT_POOL.
-
-   See `MERGEINFO MERGE SOURCE NORMALIZATION' for more on the
-   background of this function.
-*/
+/* Similar to normalize_merge_sources() but:
+ * no SOURCE (path-or-URL) argument;
+ * MERGE_RANGE_TS (array of svn_merge_range_t *) instead of RANGES;
+ * PEG_REVNUM instead of PEG_REVISION. */
 static svn_error_t *
-normalize_merge_sources(apr_array_header_t **merge_sources_p,
-                        const char *source,
+normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
                         const char *source_url,
                         const char *source_root_url,
-                        const svn_opt_revision_t *peg_revision,
-                        const apr_array_header_t *ranges_to_merge,
+                        svn_revnum_t peg_revnum,
+                        const apr_array_header_t *merge_range_ts,
                         svn_ra_session_t *ra_session,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
-  svn_revnum_t peg_revnum;
   svn_revnum_t oldest_requested = SVN_INVALID_REVNUM;
   svn_revnum_t youngest_requested = SVN_INVALID_REVNUM;
   svn_revnum_t trim_revision = SVN_INVALID_REVNUM;
-  apr_array_header_t *merge_range_ts, *segments;
-  const char *source_abspath_or_url;
+  apr_array_header_t *segments;
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-  if(!svn_path_is_url(source))
-    SVN_ERR(svn_dirent_get_absolute(&source_abspath_or_url, source,
-                                    scratch_pool));
-  else
-    source_abspath_or_url = source;
-
   /* Initialize our return variable. */
   *merge_sources_p = apr_array_make(result_pool, 1, sizeof(merge_source_t *));
-
-  /* Resolve our PEG_REVISION to a real number. */
-  SVN_ERR(svn_client__get_revision_number(&peg_revnum, &youngest_rev,
-                                          ctx->wc_ctx,
-                                          source_abspath_or_url,
-                                          ra_session, peg_revision,
-                                          iterpool));
-  if (! SVN_IS_VALID_REVNUM(peg_revnum))
-    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
-
-  /* Create a list to hold svn_merge_range_t's. */
-  merge_range_ts = apr_array_make(scratch_pool, ranges_to_merge->nelts,
-                                  sizeof(svn_merge_range_t *));
-
-  for (i = 0; i < ranges_to_merge->nelts; i++)
-    {
-      svn_opt_revision_range_t *range
-        = APR_ARRAY_IDX(ranges_to_merge, i, svn_opt_revision_range_t *);
-      svn_merge_range_t mrange;
-
-      svn_pool_clear(iterpool);
-
-      /* Resolve revisions to real numbers, validating as we go. */
-      if ((range->start.kind == svn_opt_revision_unspecified)
-          || (range->end.kind == svn_opt_revision_unspecified))
-        return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
-                                _("Not all required revisions are specified"));
-
-      SVN_ERR(svn_client__get_revision_number(&mrange.start, &youngest_rev,
-                                              ctx->wc_ctx,
-                                              source_abspath_or_url,
-                                              ra_session, &range->start,
-                                              iterpool));
-      SVN_ERR(svn_client__get_revision_number(&mrange.end, &youngest_rev,
-                                              ctx->wc_ctx,
-                                              source_abspath_or_url,
-                                              ra_session, &range->end,
-                                              iterpool));
-
-      /* If this isn't a no-op range... */
-      if (mrange.start != mrange.end)
-        {
-          /* ...then add it to the list. */
-          mrange.inheritable = TRUE;
-          APR_ARRAY_PUSH(merge_range_ts, svn_merge_range_t *)
-            = svn_merge_range_dup(&mrange, scratch_pool);
-        }
-    }
-
-  /* No ranges to merge?  No problem. */
-  if (merge_range_ts->nelts == 0)
-    {
-      svn_pool_destroy(iterpool);
-      return SVN_NO_ERROR;
-    }
 
   /* Find the extremes of the revisions across our set of ranges. */
   for (i = 0; i < merge_range_ts->nelts; i++)
@@ -6618,6 +6530,120 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
     }
 
   svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+/* Set *MERGE_SOURCES_P to an array of merge_source_t * objects, each
+   holding the paths and revisions needed to fully describe a range of
+   requested merges; order the objects from oldest to youngest.
+
+   Determine the requested merges by examining SOURCE (and its
+   associated URL, SOURCE_URL) and PEG_REVISION (which specifies the
+   line of history from which merges will be pulled) and
+   RANGES_TO_MERGE (a list of svn_opt_revision_range_t's which provide
+   revision ranges).  Note that SOURCE may itself be either a working
+   copy path or a URL; in the latter case, SOURCE_URL is probably
+   identical to SOURCE.
+
+   If PEG_REVISION is unspecified, treat that it as HEAD.
+
+   SOURCE_ROOT_URL is the root URL of the source repository.
+
+   Use RA_SESSION -- whose session URL matches SOURCE_URL -- to answer
+   historical questions.
+
+   CTX is a client context baton.
+
+   SCRATCH_POOL is used for all temporary allocations.  MERGE_SOURCES_P and
+   its contents are allocated in RESULT_POOL.
+
+   See `MERGEINFO MERGE SOURCE NORMALIZATION' for more on the
+   background of this function.
+*/
+static svn_error_t *
+normalize_merge_sources(apr_array_header_t **merge_sources_p,
+                        const char *source,
+                        const char *source_url,
+                        const char *source_root_url,
+                        const svn_opt_revision_t *peg_revision,
+                        const apr_array_header_t *ranges_to_merge,
+                        svn_ra_session_t *ra_session,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  const char *source_abspath_or_url;
+  svn_revnum_t peg_revnum;
+  svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
+  apr_array_header_t *merge_range_ts;
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  if(!svn_path_is_url(source))
+    SVN_ERR(svn_dirent_get_absolute(&source_abspath_or_url, source,
+                                    scratch_pool));
+  else
+    source_abspath_or_url = source;
+
+  /* Resolve our PEG_REVISION to a real number. */
+  SVN_ERR(svn_client__get_revision_number(&peg_revnum, &youngest_rev,
+                                          ctx->wc_ctx,
+                                          source_abspath_or_url,
+                                          ra_session, peg_revision,
+                                          iterpool));
+  if (! SVN_IS_VALID_REVNUM(peg_revnum))
+    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
+
+  /* Create a list to hold svn_merge_range_t's. */
+  merge_range_ts = apr_array_make(scratch_pool, ranges_to_merge->nelts,
+                                  sizeof(svn_merge_range_t *));
+
+  for (i = 0; i < ranges_to_merge->nelts; i++)
+    {
+      svn_opt_revision_range_t *range
+        = APR_ARRAY_IDX(ranges_to_merge, i, svn_opt_revision_range_t *);
+      svn_merge_range_t mrange;
+
+      svn_pool_clear(iterpool);
+
+      /* Resolve revisions to real numbers, validating as we go. */
+      if ((range->start.kind == svn_opt_revision_unspecified)
+          || (range->end.kind == svn_opt_revision_unspecified))
+        return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                                _("Not all required revisions are specified"));
+
+      SVN_ERR(svn_client__get_revision_number(&mrange.start, &youngest_rev,
+                                              ctx->wc_ctx,
+                                              source_abspath_or_url,
+                                              ra_session, &range->start,
+                                              iterpool));
+      SVN_ERR(svn_client__get_revision_number(&mrange.end, &youngest_rev,
+                                              ctx->wc_ctx,
+                                              source_abspath_or_url,
+                                              ra_session, &range->end,
+                                              iterpool));
+
+      /* If this isn't a no-op range... */
+      if (mrange.start != mrange.end)
+        {
+          /* ...then add it to the list. */
+          mrange.inheritable = TRUE;
+          APR_ARRAY_PUSH(merge_range_ts, svn_merge_range_t *)
+            = svn_merge_range_dup(&mrange, scratch_pool);
+        }
+    }
+
+  /* No ranges to merge?  No problem. */
+  if (merge_range_ts->nelts == 0)
+    {
+      svn_pool_destroy(iterpool);
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(normalize_merge_sources_internal(
+            merge_sources_p, source_url, source_root_url, peg_revnum,
+            merge_range_ts, ra_session, ctx, result_pool, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -9019,17 +9045,20 @@ do_merge(apr_hash_t **modified_subtrees,
   return SVN_NO_ERROR;
 }
 
-/* Return an array containing a single (svn_opt_revision_range_t *)
+/* Return an array containing a single (svn_merge_range_t *)
  * range START:END, allocated in POOL. */
 static apr_array_header_t *
-make_single_range_array(svn_revnum_t start, svn_revnum_t end,
-                        apr_pool_t *pool)
+make_single_mrange_array(svn_revnum_t start, svn_revnum_t end,
+                         apr_pool_t *pool)
 {
   apr_array_header_t *ranges
-    = apr_array_make(pool, 1, sizeof(svn_opt_revision_range_t *));
+    = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
+  svn_merge_range_t *range = apr_palloc(pool, sizeof(*range));
 
-  APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *)
-    = svn_opt__revision_range_from_revnums(start, end, pool);
+  range->start = start;
+  range->end = end;
+  range->inheritable = TRUE;
+  APR_ARRAY_PUSH(ranges, svn_merge_range_t *) = range;
   return ranges;
 }
 
@@ -9070,8 +9099,7 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
                                        svn_client_ctx_t *ctx,
                                        apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *remove_sources, *add_sources, *ranges;
-  svn_opt_revision_t peg_revision = {svn_opt_revision_number, { 0 } };
+  apr_array_header_t *remove_sources, *add_sources;
   svn_boolean_t same_repos;
   apr_hash_t *modified_subtrees = NULL;
 
@@ -9086,19 +9114,15 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
   same_repos = is_same_repos(source_repos_root, wc_repos_root,
                              TRUE /* strict_urls */);
 
-  ranges = make_single_range_array(rev1, yc_rev, scratch_pool);
-  peg_revision.value.number = rev1;
-  SVN_ERR(normalize_merge_sources(&remove_sources, URL1, URL1,
-                                  source_repos_root->url, &peg_revision,
-                                  ranges, URL1_ra_session, ctx, scratch_pool,
-                                  subpool));
+  SVN_ERR(normalize_merge_sources_internal(
+            &remove_sources, URL1, source_repos_root->url, rev1,
+            make_single_mrange_array(rev1, yc_rev, scratch_pool),
+            URL1_ra_session, ctx, scratch_pool, subpool));
 
-  ranges = make_single_range_array(yc_rev, rev2, scratch_pool);
-  peg_revision.value.number = rev2;
-  SVN_ERR(normalize_merge_sources(&add_sources, URL2, URL2,
-                                  source_repos_root->url, &peg_revision,
-                                  ranges, URL2_ra_session, ctx,
-                                  scratch_pool, subpool));
+  SVN_ERR(normalize_merge_sources_internal(
+            &add_sources, URL2, source_repos_root->url, rev2,
+            make_single_mrange_array(yc_rev, rev2, scratch_pool),
+            URL2_ra_session, ctx, scratch_pool, subpool));
 
   /* If this isn't a record-only merge, we'll first do a stupid
      point-to-point merge... */
@@ -9459,9 +9483,6 @@ merge_locked(const char *source1,
   */
   if (yc_path && SVN_IS_VALID_REVNUM(yc_rev))
     {
-      apr_array_header_t *ranges;
-      svn_opt_revision_t peg_revision = {svn_opt_revision_number, { 0 } };
-
       /* Note that our merge sources are related. */
       related = TRUE;
 
@@ -9474,24 +9495,20 @@ merge_locked(const char *source1,
       if ((strcmp(yc_path, URL2) == 0) && (yc_rev == rev2))
         {
           ancestral = TRUE;
-          ranges = make_single_range_array(rev1, yc_rev, scratch_pool);
-          peg_revision.value.number = rev1;
-          SVN_ERR(normalize_merge_sources(&merge_sources, URL1, URL1,
-                                          source_repos_root.url, &peg_revision,
-                                          ranges, ra_session1, ctx,
-                                          scratch_pool, scratch_pool));
+          SVN_ERR(normalize_merge_sources_internal(
+                    &merge_sources, URL1, source_repos_root.url, rev1,
+                    make_single_mrange_array(rev1, yc_rev, scratch_pool),
+                    ra_session1, ctx, scratch_pool, scratch_pool));
         }
       /* If the common ancestor matches the left side of our merge,
          then we only need to merge the right side. */
       else if ((strcmp(yc_path, URL1) == 0) && (yc_rev == rev1))
         {
           ancestral = TRUE;
-          ranges = make_single_range_array(yc_rev, rev2, scratch_pool);
-          peg_revision.value.number = rev2;
-          SVN_ERR(normalize_merge_sources(&merge_sources, URL2, URL2,
-                                          source_repos_root.url, &peg_revision,
-                                          ranges, ra_session2, ctx,
-                                          scratch_pool, scratch_pool));
+          SVN_ERR(normalize_merge_sources_internal(
+                    &merge_sources, URL2, source_repos_root.url, rev2,
+                    make_single_mrange_array(yc_rev, rev2, scratch_pool),
+                    ra_session2, ctx, scratch_pool, scratch_pool));
         }
       /* And otherwise, we need to do both: reverse merge the left
          side, and merge the right. */
