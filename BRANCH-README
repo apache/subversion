@@ -1,0 +1,2 @@
+This branch exists to explore ways of detecting server-side renames
+by having the client scan the revision log.
