@@ -43,7 +43,7 @@
  */
 typedef enum loc_state_e {
   REPORT,
-  LOCATION,
+  LOCATION
 } loc_state_e;
 
 typedef struct loc_state_list_t {

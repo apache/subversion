@@ -251,7 +251,7 @@ svn_test__stream_to_string(svn_stringbuf_t **string,
                    of priorities today, though. */
 
   apr_size_t len;
-  svn_stringbuf_t *str = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *str = svn_stringbuf_create_empty(pool);
 
   do
     {
@@ -442,7 +442,7 @@ svn_test__validate_tree(svn_fs_root_t *root,
             {
               /* If we don't have a corrupt entries string, make one. */
               if (! corrupt_entries)
-                corrupt_entries = svn_stringbuf_create("", subpool);
+                corrupt_entries = svn_stringbuf_create_empty(subpool);
 
               /* Append this entry name to the list of corrupt entries. */
               svn_stringbuf_appendcstr(corrupt_entries, "   ");
@@ -458,7 +458,7 @@ svn_test__validate_tree(svn_fs_root_t *root,
         {
           /* If we don't have a missing entries string, make one. */
           if (! missing_entries)
-            missing_entries = svn_stringbuf_create("", subpool);
+            missing_entries = svn_stringbuf_create_empty(subpool);
 
           /* Append this entry name to the list of missing entries. */
           svn_stringbuf_appendcstr(missing_entries, "   ");
@@ -481,7 +481,7 @@ svn_test__validate_tree(svn_fs_root_t *root,
 
       /* If we don't have an extra entries string, make one. */
       if (! extra_entries)
-        extra_entries = svn_stringbuf_create("", subpool);
+        extra_entries = svn_stringbuf_create_empty(subpool);
 
       /* Append this entry name to the list of missing entries. */
       svn_stringbuf_appendcstr(extra_entries, "   ");

@@ -488,13 +488,10 @@ range_to_string(const svn_merge_range_t *range,
    revisionlist -> (revisionelement)(COMMA revisionelement)*
    revisionrange -> REVISION "-" REVISION("*")
    revisionelement -> revisionrange | REVISION("*")
-
-   PATHNAME is the path this revisionlist is mapped to.  It is
-   used only for producing a more descriptive error message.
 */
 static svn_error_t *
 parse_rangelist(const char **input, const char *end,
-                apr_array_header_t *rangelist, const char *pathname,
+                apr_array_header_t *rangelist,
                 apr_pool_t *pool)
 {
   const char *curr = *input;
@@ -507,9 +504,7 @@ parse_rangelist(const char **input, const char *end,
     {
       /* Empty range list. */
       *input = curr;
-      return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
-                               _("Mergeinfo for '%s' maps to an "
-                                 "empty revision range"), pathname);
+      return SVN_NO_ERROR;
     }
 
   while (curr < end && *curr != '\n')
@@ -603,6 +598,18 @@ parse_rangelist(const char **input, const char *end,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_rangelist__parse(apr_array_header_t **rangelist,
+                     const char *str,
+                     apr_pool_t *result_pool)
+{
+  const char *s = str;
+
+  *rangelist = apr_array_make(result_pool, 1, sizeof(svn_merge_range_t *));
+  SVN_ERR(parse_rangelist(&s, s + strlen(s), *rangelist, result_pool));
+  return SVN_NO_ERROR;
+}
+
 /* revisionline -> PATHNAME COLON revisionlist */
 static svn_error_t *
 parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
@@ -621,8 +628,12 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
 
   *input = *input + 1;
 
-  SVN_ERR(parse_rangelist(input, end, rangelist, pathname, scratch_pool));
+  SVN_ERR(parse_rangelist(input, end, rangelist, scratch_pool));
 
+  if (rangelist->nelts == 0)
+      return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+                               _("Mergeinfo for '%s' maps to an "
+                                 "empty revision range"), pathname);
   if (*input != end && *(*input) != '\n')
     return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
                              _("Could not find end of line in range list line "
@@ -1842,7 +1853,7 @@ svn_rangelist_to_string(svn_string_t **output,
                         const apr_array_header_t *rangelist,
                         apr_pool_t *pool)
 {
-  svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *buf = svn_stringbuf_create_empty(pool);
 
   if (rangelist->nelts > 0)
     {
@@ -1879,7 +1890,7 @@ mergeinfo_to_stringbuf(svn_stringbuf_t **output,
                        const char *prefix,
                        apr_pool_t *pool)
 {
-  *output = svn_stringbuf_create("", pool);
+  *output = svn_stringbuf_create_empty(pool);
 
   if (apr_hash_count(input) > 0)
     {
@@ -1912,16 +1923,10 @@ svn_error_t *
 svn_mergeinfo_to_string(svn_string_t **output, svn_mergeinfo_t input,
                         apr_pool_t *pool)
 {
-  if (apr_hash_count(input) > 0)
-    {
-      svn_stringbuf_t *mergeinfo_buf;
-      SVN_ERR(mergeinfo_to_stringbuf(&mergeinfo_buf, input, NULL, pool));
-      *output = svn_stringbuf__morph_into_string(mergeinfo_buf);
-    }
-  else
-    {
-      *output = svn_string_create("", pool);
-    }
+  svn_stringbuf_t *mergeinfo_buf;
+
+  SVN_ERR(mergeinfo_to_stringbuf(&mergeinfo_buf, input, NULL, pool));
+  *output = svn_stringbuf__morph_into_string(mergeinfo_buf);
   return SVN_NO_ERROR;
 }
 
@@ -2120,7 +2125,7 @@ svn_mergeinfo__remove_prefix_from_catalog(svn_mergeinfo_catalog_t *out_catalog,
       apr_ssize_t padding = 0;
 
       SVN_ERR_ASSERT(klen >= prefix_len);
-      SVN_ERR_ASSERT(svn_fspath__is_ancestor(prefix_path, original_path));
+      SVN_ERR_ASSERT(svn_fspath__skip_ancestor(prefix_path, original_path));
 
       /* If the ORIGINAL_PATH doesn't match the PREFIX_PATH exactly
          and we're not simply removing a single leading slash (such as
@@ -2167,6 +2172,36 @@ svn_mergeinfo__add_prefix_to_catalog(svn_mergeinfo_catalog_t *out_catalog,
 }
 
 svn_error_t *
+svn_mergeinfo__relpaths_to_urls(apr_hash_t **out_mergeinfo,
+                                svn_mergeinfo_t mergeinfo,
+                                const char *repos_root_url,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
+{
+  *out_mergeinfo = NULL;
+  if (mergeinfo)
+    {
+      apr_hash_index_t *hi;
+      apr_hash_t *full_path_mergeinfo = apr_hash_make(result_pool);
+
+      for (hi = apr_hash_first(scratch_pool, mergeinfo);
+           hi; hi = apr_hash_next(hi))
+        {
+          const char *key = svn__apr_hash_index_key(hi);
+          void *val = svn__apr_hash_index_val(hi);
+
+          apr_hash_set(full_path_mergeinfo,
+                       svn_path_url_add_component2(repos_root_url, key + 1,
+                                                   result_pool),
+                       APR_HASH_KEY_STRING, val);
+        }
+      *out_mergeinfo = full_path_mergeinfo;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_mergeinfo__add_suffix_to_mergeinfo(svn_mergeinfo_t *out_mergeinfo,
                                        svn_mergeinfo_t mergeinfo,
                                        const char *suffix_relpath,
@@ -2183,13 +2218,13 @@ svn_mergeinfo__add_suffix_to_mergeinfo(svn_mergeinfo_t *out_mergeinfo,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
+      const char *fspath = svn__apr_hash_index_key(hi);
       apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
 
       apr_hash_set(*out_mergeinfo,
-                   svn_dirent_join(path, suffix_relpath, result_pool),
+                   svn_fspath__join(fspath, suffix_relpath, result_pool),
                    APR_HASH_KEY_STRING,
-                   svn_rangelist_dup(rangelist, result_pool));
+                   rangelist);
     }
 
   return SVN_NO_ERROR;
@@ -2248,7 +2283,7 @@ svn_mergeinfo__catalog_to_formatted_string(svn_string_t **output,
       apr_array_header_t *sorted_catalog =
         svn_sort__hash(catalog, svn_sort_compare_items_as_paths, pool);
 
-      output_buf = svn_stringbuf_create("", pool);
+      output_buf = svn_stringbuf_create_empty(pool);
       for (i = 0; i < sorted_catalog->nelts; i++)
         {
           svn_sort__item_t elt =
@@ -2321,7 +2356,7 @@ svn_mergeinfo__to_formatted_string(svn_string_t **output,
 #endif
 
   *output = output_buf ? svn_stringbuf__morph_into_string(output_buf)
-                       : svn_string_create("", pool);
+                       : svn_string_create_empty(pool);
   return SVN_NO_ERROR;
 }
 

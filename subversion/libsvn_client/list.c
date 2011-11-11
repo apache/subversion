@@ -32,6 +32,7 @@
 #include "client.h"
 
 #include "private/svn_fspath.h"
+#include "private/svn_ra_private.h"
 #include "svn_private_config.h"
 
 /* Get the directory entries of DIR at REV (relative to the root of
@@ -91,7 +92,7 @@ get_dir_contents(apr_uint32_t dirent_fields,
     {
       svn_sort__item_t *item = &APR_ARRAY_IDX(array, i, svn_sort__item_t);
       const char *path;
-      svn_dirent_t *the_ent = apr_hash_get(tmpdirents, item->key, item->klen);
+      svn_dirent_t *the_ent = item->value;
       svn_lock_t *lock;
 
       svn_pool_clear(iterpool);
@@ -239,7 +240,6 @@ svn_client_list2(const char *path_or_url,
   svn_revnum_t rev;
   svn_dirent_t *dirent;
   const char *url;
-  const char *repos_root;
   const char *fs_path;
   svn_error_t *err;
   apr_hash_t *locks;
@@ -254,11 +254,8 @@ svn_client_list2(const char *path_or_url,
                                            peg_revision,
                                            revision, ctx, pool));
 
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
-
-  SVN_ERR(svn_client__path_relative_to_root(&fs_path, ctx->wc_ctx, url,
-                                            repos_root, TRUE, ra_session,
-                                            pool, pool));
+  SVN_ERR(svn_ra__get_fspath_relative_to_root(ra_session, &fs_path, url,
+                                              pool));
 
   SVN_ERR(ra_stat_compatible(ra_session, rev, &dirent, dirent_fields,
                              ctx, pool));

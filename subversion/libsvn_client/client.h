@@ -105,6 +105,7 @@ svn_error_t *svn_client__get_copy_source(const char *path_or_url,
    specify the point(s) of interest (typically the revisions referred
    to as the "operative range" for a given operation) along that history.
 
+   START_REVISION and/or END_REVISION may be NULL if not wanted.
    END may be NULL or of kind svn_opt_revision_unspecified (in either case
    END_URL and END_REVISION are not touched by the function);
    START and REVISION may not.
@@ -131,9 +132,9 @@ svn_error_t *svn_client__get_copy_source(const char *path_or_url,
    Use POOL for all allocations.  */
 svn_error_t *
 svn_client__repos_locations(const char **start_url,
-                            svn_opt_revision_t **start_revision,
+                            svn_revnum_t *start_revision,
                             const char **end_url,
-                            svn_opt_revision_t **end_revision,
+                            svn_revnum_t *end_revision,
                             svn_ra_session_t *ra_session,
                             const char *path,
                             const svn_opt_revision_t *revision,
@@ -141,6 +142,22 @@ svn_client__repos_locations(const char **start_url,
                             const svn_opt_revision_t *end,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
+
+/* Trace a line of history of a particular versioned resource back to a
+ * specific revision.
+ *
+ * Set *OP_URL to the URL that the object PEG_URL@PEG_REVNUM had in
+ * revision OP_REVNUM.
+ * RA_SESSION is required. */
+svn_error_t *
+svn_client__repos_location(const char **start_url,
+                           svn_ra_session_t *ra_session,
+                           const char *peg_url,
+                           svn_revnum_t peg_revnum,
+                           svn_revnum_t op_revnum,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 
 /* Set *SEGMENTS to an array of svn_location_segment_t * objects, each
@@ -197,8 +214,9 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
    and should only be used if PATH_OR_URL is a url
      ### else NULL? what's it for?
 
-   If PEG_REVISION's kind is svn_opt_revision_unspecified, it is
-   interpreted as "head" for a URL or "working" for a working-copy path.
+   If PEG_REVISION->kind is 'unspecified', the peg revision is 'head'
+   for a URL or 'working' for a WC path.  If REVISION->kind is
+   'unspecified', the operative revision is the peg revision.
 
    Store the resulting ra_session in *RA_SESSION_P.  Store the actual
    revision number of the object in *REV_P, and the final resulting
@@ -249,14 +267,12 @@ svn_client__ensure_ra_session_url(const char **old_session_url,
                                   apr_pool_t *pool);
 
 /* Return the path of ABSPATH_OR_URL relative to the repository root
-   (REPOS_ROOT) in REL_PATH (URI-decoded), both allocated in RESULT_POOL.
+   in REL_PATH (URI-decoded), allocated in RESULT_POOL.
    If INCLUDE_LEADING_SLASH is set, the returned result will have a leading
    slash; otherwise, it will not.
 
-   The remaining parameters are used to procure the repository root.
-   Either REPOS_ROOT or RA_SESSION -- but not both -- may be NULL.
-   REPOS_ROOT should be passed when available as an optimization (in
-   that order of preference).
+   REPOS_ROOT and RA_SESSION may be NULL if ABSPATH_OR_URL is a WC path,
+   otherwise at least one of them must be non-null.
 
    CAUTION:  While having a leading slash on a so-called relative path
    might work out well for functionality that interacts with
@@ -385,6 +401,19 @@ svn_error_t * svn_client__wc_delete(const char *path,
                                     void *notify_baton,
                                     svn_client_ctx_t *ctx,
                                     apr_pool_t *pool);
+
+
+/* Like svn_client__wc_delete(), but deletes mulitple TARGETS efficiently. */
+svn_error_t *
+svn_client__wc_delete_many(const apr_array_header_t *targets,
+                           svn_boolean_t force,
+                           svn_boolean_t dry_run,
+                           svn_boolean_t keep_local,
+                           svn_wc_notify_func2_t notify_func,
+                           void *notify_baton,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool);
+
 
 /* Make PATH and add it to the working copy, optionally making all the
    intermediate parent directories if MAKE_PARENTS is TRUE. */

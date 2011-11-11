@@ -175,7 +175,7 @@ three_way_merge(const char *filename1,
   SVN_ERR(svn_diff_mem_string_diff3(&diff,
                                     original, modified, latest, options, pool));
 
-  actual = svn_stringbuf_create("", pool);
+  actual = svn_stringbuf_create_empty(pool);
   ostream = svn_stream_from_stringbuf(actual, pool);
 
   SVN_ERR(svn_diff_mem_string_output_merge2
@@ -265,7 +265,7 @@ two_way_diff(const char *filename1,
 
   SVN_ERR(svn_diff_mem_string_diff(&diff, original, modified, options, pool));
 
-  actual = svn_stringbuf_create("", pool);
+  actual = svn_stringbuf_create_empty(pool);
   ostream = svn_stream_from_stringbuf(actual, pool);
 
   SVN_ERR(svn_diff_mem_string_output_unified(ostream, diff,

@@ -633,22 +633,20 @@ static apr_hash_t *get_child_tokens(apr_hash_t *lock_tokens,
 {
   apr_hash_index_t *hi;
   apr_hash_t *tokens = apr_hash_make(pool);
-  apr_pool_t *subpool = svn_pool_create(pool);
 
   for (hi = apr_hash_first(pool, lock_tokens); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       apr_ssize_t klen;
       void *val;
+      const char *child_relpath;
 
-      svn_pool_clear(subpool);
       apr_hash_this(hi, &key, &klen, &val);
-
-      if (svn_relpath__is_child(dir, key, subpool))
+      child_relpath = svn_relpath_skip_ancestor(dir, key);
+      if (child_relpath && *child_relpath)
         apr_hash_set(tokens, key, klen, val);
     }
 
-  svn_pool_destroy(subpool);
   return tokens;
 }
 
@@ -1572,6 +1570,8 @@ svn_error_t * svn_ra_neon__get_commit_editor(svn_ra_session_t *session,
   svn_delta_editor_t *commit_editor;
   commit_ctx_t *cc;
   apr_hash_index_t *hi;
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                                svn_delta_shim_callbacks_default(pool);
 
   /* Build the main commit editor's baton. */
   cc = apr_pcalloc(pool, sizeof(*cc));
@@ -1622,7 +1622,7 @@ svn_error_t * svn_ra_neon__get_commit_editor(svn_ra_session_t *session,
   *edit_baton = cc;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   NULL, NULL, NULL, NULL, pool, pool));
+                                   shim_callbacks, pool, pool));
 
   return SVN_NO_ERROR;
 }

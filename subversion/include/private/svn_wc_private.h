@@ -131,6 +131,55 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
+/** See svn_wc__committable_externals_below(). */
+typedef struct svn_wc__committable_external_info_t {
+
+  /* The local absolute path where the external should be checked out. */
+  const char *local_abspath;
+
+  /* The relpath part of the source URL the external should be checked out
+   * from. */
+  const char *repos_relpath;
+
+  /* The root URL part of the source URL the external should be checked out
+   * from. */
+  const char *repos_root_url;
+
+  /* Set to either svn_kind_file or svn_kind_dir. */
+  svn_kind_t kind;
+
+} svn_wc__committable_external_info_t;
+
+/* Add svn_wc__committable_external_info_t* items to *EXTERNALS, describing
+ * 'committable' externals checked out below LOCAL_ABSPATH. Recursively find
+ * all nested externals (externals defined inside externals).
+ *
+ * In this context, a 'committable' external belongs to the same repository as
+ * LOCAL_ABSPATH, is not revision-pegged and is currently checked out in the
+ * WC. (Local modifications are not tested for.)
+ *
+ * *EXTERNALS must be initialized either to NULL or to a pointer created with
+ * apr_array_make(..., sizeof(svn_wc__committable_external_info_t *)). If
+ * *EXTERNALS is initialized to NULL, an array will be allocated from
+ * RESULT_POOL as necessary. If no committable externals are found,
+ * *EXTERNALS is left unchanged.
+ *
+ * DEPTH limits the recursion below LOCAL_ABSPATH.
+ *
+ * This function will not find externals defined in some parent WC above
+ * LOCAL_ABSPATH's WC-root.
+ *
+ * ###TODO: Add a WRI_ABSPATH (wc root indicator) separate from LOCAL_ABSPATH,
+ * to allow searching any wc-root for externals under LOCAL_ABSPATH, not only
+ * LOCAL_ABSPATH's most immediate wc-root. */
+svn_error_t *
+svn_wc__committable_externals_below(apr_array_header_t **externals,
+                                    svn_wc_context_t *wc_ctx,
+                                    const char *local_abspath,
+                                    svn_depth_t depth,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
+
 /* Gets a mapping from const char * local abspaths of externals to the const
    char * local abspath of where they are defined for all externals defined
    at or below LOCAL_ABSPATH.
@@ -354,13 +403,15 @@ svn_wc__node_get_children(const apr_array_header_t **children,
 
 
 /**
- * Fetch the repository root information for a given @a local_abspath into
- * @a *repos_root_url and @a repos_uuid. Use @a wc_ctx to access the working copy
+ * Fetch the repository root information for the working version
+ * of the node at @a local_abspath into @a *repos_root_url
+ * and @a *repos_uuid. Use @a wc_ctx to access the working copy
  * for @a local_abspath, @a scratch_pool for all temporary allocations,
- * @a result_pool for result allocations. Note: the result may be NULL if the
- * given node has no repository root associated with it (e.g. locally added).
+ * @a result_pool for result allocations. Note: the results will be NULL if
+ * the node does not exist or is not under version control. If the node is
+ * locally added, return the repository root it will have if committed.
  *
- * Either input value may be NULL, indicating no interest.
+ * Either output argument may be NULL, indicating no interest.
  */
 svn_error_t *
 svn_wc__node_get_repos_info(const char **repos_root_url,
@@ -1131,6 +1182,22 @@ svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
                         svn_wc_notify_func2_t notify_func,
                         void *notify_baton,
                         apr_pool_t *scratch_pool);
+
+
+/* Alternative version of svn_wc_delete4().
+ * It can delete multiple TARGETS more efficiently (within a single sqlite
+ * transaction per working copy), but lacks support for moves. */
+svn_error_t *
+svn_wc__delete_many(svn_wc_context_t *wc_ctx,
+                    const apr_array_header_t *targets,
+                    svn_boolean_t keep_local,
+                    svn_boolean_t delete_unversioned_target,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    svn_wc_notify_func2_t notify_func,
+                    void *notify_baton,
+                    apr_pool_t *scratch_pool);
+
 
 /* If the node at LOCAL_ABSPATH was moved away set *MOVED_TO_ABSPATH to
  * the absolute path of the copied move-target node, and *COPY_OP_ROOT_ABSPATH

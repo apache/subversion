@@ -2905,29 +2905,32 @@ set_revision_proplist(svn_fs_t *fs,
                       apr_hash_t *proplist,
                       apr_pool_t *pool)
 {
-  const char *final_path;
-  const char *tmp_path;
-  const char *perms_reference;
-  svn_stream_t *stream;
-
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  final_path = path_revprops(fs, rev, pool);
+  /* if (1); null condition for easier merging to revprop-packing */
+    {
+      const char *final_path = path_revprops(fs, rev, pool);
+      const char *tmp_path;
+      const char *perms_reference;
+      svn_stream_t *stream;
 
-  /* ### do we have a directory sitting around already? we really shouldn't
-     ### have to get the dirname here. */
-  SVN_ERR(svn_stream_open_unique(&stream, &tmp_path,
-                                 svn_dirent_dirname(final_path, pool),
-                                 svn_io_file_del_none, pool, pool));
-  SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, pool));
-  SVN_ERR(svn_stream_close(stream));
+      /* ### do we have a directory sitting around already? we really shouldn't
+         ### have to get the dirname here. */
+      SVN_ERR(svn_stream_open_unique(&stream, &tmp_path,
+                                     svn_dirent_dirname(final_path, pool),
+                                     svn_io_file_del_none, pool, pool));
+      SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, pool));
+      SVN_ERR(svn_stream_close(stream));
 
-  /* We use the rev file of this revision as the perms reference,
-     because when setting revprops for the first time, the revprop
-     file won't exist and therefore can't serve as its own reference.
-     (Whereas the rev file should already exist at this point.) */
-  SVN_ERR(svn_fs_fs__path_rev_absolute(&perms_reference, fs, rev, pool));
-  SVN_ERR(move_into_place(tmp_path, final_path, perms_reference, pool));
+      /* We use the rev file of this revision as the perms reference,
+         because when setting revprops for the first time, the revprop
+         file won't exist and therefore can't serve as its own reference.
+         (Whereas the rev file should already exist at this point.) */
+      SVN_ERR(svn_fs_fs__path_rev_absolute(&perms_reference, fs, rev, pool));
+      SVN_ERR(move_into_place(tmp_path, final_path, perms_reference, pool));
+
+      return SVN_NO_ERROR;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2942,7 +2945,7 @@ revision_proplist(apr_hash_t **proplist_p,
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  if (1)
+  /* if (1); null condition for easier merging to revprop-packing */
     {
       apr_file_t *revprop_file = NULL;
       svn_error_t *err = SVN_NO_ERROR;
@@ -6384,7 +6387,7 @@ commit_body(void *baton, apr_pool_t *pool)
      fails because the shard already existed for some reason. */
   if (ffd->max_files_per_dir && new_rev % ffd->max_files_per_dir == 0)
     {
-      if (1)
+      /* if (1); null condition for easier merging to revprop-packing */
         {
           const char *new_dir = path_rev_shard(cb->fs, new_rev, pool);
           svn_error_t *err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
@@ -7040,7 +7043,7 @@ recover_body(void *baton, apr_pool_t *pool)
                             &youngest_revprops_kind, pool));
   if (youngest_revprops_kind == svn_node_none)
     {
-      if (1)
+      /* if (1); null condition for easier merging to revprop-packing */
         {
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                    _("Revision %ld has a revs file but no "

@@ -2821,6 +2821,63 @@ def add_multiple_targets(sbox):
                                      'status', wc_dir)
 
 
+def quiet_commits(sbox):
+  "commits with --quiet"
+
+  sbox.build()
+
+  svntest.main.file_append(sbox.ospath('A/mu'), 'xxx')
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'commit', sbox.wc_dir,
+                                     '--message', 'commit', '--quiet')
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'mkdir', sbox.repo_url + '/X',
+                                     '--message', 'mkdir URL', '--quiet')
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'import', sbox.ospath('A/mu'),
+                                     sbox.repo_url + '/f',
+                                     '--message', 'import', '--quiet')
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'rm', sbox.repo_url + '/f',
+                                     '--message', 'rm URL', '--quiet')
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'copy', sbox.repo_url + '/X',
+                                     sbox.repo_url + '/Y',
+                                     '--message', 'cp URL URL', '--quiet')
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'move', sbox.repo_url + '/Y',
+                                     sbox.repo_url + '/Z',
+                                     '--message', 'mv URL URL', '--quiet')
+
+  # Not fully testing each command, just that they all commit and
+  # produce no output.
+  expected_output = wc.State(sbox.wc_dir, {
+    'X' : Item(status='A '),
+    'Z' : Item(status='A '),
+    })
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 7)
+  expected_status.add({
+      'X'   : Item(status='  ', wc_rev=7),
+      'Z'   : Item(status='  ', wc_rev=7),
+      })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu',
+                      contents=expected_disk.desc['A/mu'].contents
+                      + 'xxx')
+  expected_disk.add({
+    'X' : Item(),
+    'Z' : Item()
+    })
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
 
 ########################################################################
 # Run the tests
@@ -2885,6 +2942,7 @@ test_list = [ None,
               ls_url_special_characters,
               ls_multiple_and_non_existent_targets,
               add_multiple_targets,
+              quiet_commits,
              ]
 
 if __name__ == '__main__':

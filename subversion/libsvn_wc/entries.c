@@ -1672,6 +1672,13 @@ write_entry(struct write_baton **entry_node,
 
       case svn_wc_schedule_add:
         working_node = MAYBE_ALLOC(working_node, result_pool);
+        if (entry->deleted)
+          {
+            if (parent_node->base)
+              base_node = MAYBE_ALLOC(base_node, result_pool);
+            else
+              below_working_node = MAYBE_ALLOC(below_working_node, result_pool);
+          }
         break;
 
       case svn_wc_schedule_delete:
@@ -1695,9 +1702,12 @@ write_entry(struct write_baton **entry_node,
      BASE node to indicate the not-present node.  */
   if (entry->deleted)
     {
-      SVN_ERR_ASSERT(base_node && !working_node && !below_working_node);
+      SVN_ERR_ASSERT(base_node || below_working_node);
       SVN_ERR_ASSERT(!entry->incomplete);
-      base_node->presence = svn_wc__db_status_not_present;
+      if (base_node)
+        base_node->presence = svn_wc__db_status_not_present;
+      else
+        below_working_node->presence = svn_wc__db_status_not_present;
     }
   else if (entry->absent)
     {
@@ -1710,16 +1720,10 @@ write_entry(struct write_baton **entry_node,
     {
       if (entry->copyfrom_url)
         {
-          const char *relpath;
-
           working_node->repos_id = repos_id;
-          relpath = svn_uri__is_child(this_dir->repos,
-                                      entry->copyfrom_url,
-                                      result_pool);
-          if (relpath == NULL)
-            working_node->repos_relpath = "";
-          else
-            working_node->repos_relpath = relpath;
+          working_node->repos_relpath = svn_uri_skip_ancestor(
+                                          this_dir->repos, entry->copyfrom_url,
+                                          result_pool);
           working_node->revision = entry->copyfrom_rev;
           working_node->op_depth
             = svn_wc__db_op_depth_for_upgrade(local_relpath);
@@ -1977,17 +1981,16 @@ write_entry(struct write_baton **entry_node,
 
           if (entry->url != NULL)
             {
-              const char *relpath = svn_uri__is_child(this_dir->repos,
-                                                      entry->url,
-                                                      result_pool);
-              base_node->repos_relpath = relpath ? relpath : "";
+              base_node->repos_relpath = svn_uri_skip_ancestor(
+                                           this_dir->repos, entry->url,
+                                           result_pool);
             }
           else
             {
-              const char *relpath = svn_uri__is_child(this_dir->repos,
-                                                      this_dir->url,
-                                                      scratch_pool);
-              if (relpath == NULL)
+              const char *relpath = svn_uri_skip_ancestor(this_dir->repos,
+                                                          this_dir->url,
+                                                          scratch_pool);
+              if (relpath == NULL || *relpath == '\0')
                 base_node->repos_relpath = entry->name;
               else
                 base_node->repos_relpath =

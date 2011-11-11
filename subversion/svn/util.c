@@ -326,7 +326,7 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       SVN_ERR(svn_subst_translate_cstring2(contents->data, &translated,
                                            APR_EOL_STR, FALSE,
                                            NULL, FALSE, pool));
-      translated_contents = svn_string_create("", pool);
+      translated_contents = svn_string_create_empty(pool);
       if (encoding)
         SVN_ERR(svn_utf_cstring_from_utf8_ex2(&translated_contents->data,
                                               translated, encoding, pool));
@@ -737,7 +737,7 @@ svn_cl__get_log_message(const char **log_msg,
       int i;
       svn_stringbuf_t *tmp_message = svn_stringbuf_dup(default_msg, pool);
       svn_error_t *err = SVN_NO_ERROR;
-      svn_string_t *msg_string = svn_string_create("", pool);
+      svn_string_t *msg_string = svn_string_create_empty(pool);
 
       for (i = 0; i < commit_items->nelts; i++)
         {
@@ -876,7 +876,7 @@ svn_cl__get_log_message(const char **log_msg,
                 {
                   SVN_ERR(svn_io_remove_file2(lmb->tmpfile_left, FALSE, pool));
                   *tmp_file = lmb->tmpfile_left = NULL;
-                  message = svn_stringbuf_create("", pool);
+                  message = svn_stringbuf_create_empty(pool);
                 }
 
               /* If the user chooses anything else, the loop will
@@ -1058,7 +1058,7 @@ svn_error_t *
 svn_cl__xml_print_header(const char *tagname,
                          apr_pool_t *pool)
 {
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
 
   /* <?xml version="1.0" encoding="UTF-8"?> */
   svn_xml_make_header2(&sb, "UTF-8", pool);
@@ -1074,7 +1074,7 @@ svn_error_t *
 svn_cl__xml_print_footer(const char *tagname,
                          apr_pool_t *pool)
 {
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
 
   /* "</TAGNAME>" */
   svn_xml_make_close_tag(&sb, pool, tagname);
@@ -1303,7 +1303,7 @@ svn_cl__indent_string(const char *str,
                       const char *indent,
                       apr_pool_t *pool)
 {
-  svn_stringbuf_t *out = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *out = svn_stringbuf_create_empty(pool);
   const char *line;
 
   while ((line = next_line(&str, pool)))
@@ -1358,10 +1358,14 @@ svn_cl__eat_peg_revisions(apr_array_header_t **true_targets_p,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
-      const char *true_target;
+      const char *true_target, *peg;
 
-      SVN_ERR(svn_opt__split_arg_at_peg_revision(&true_target, NULL,
+      SVN_ERR(svn_opt__split_arg_at_peg_revision(&true_target, &peg,
                                                  target, pool));
+      if (peg[0] && peg[1])
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("'%s': a peg revision is not allowed here"),
+                                 target);
       APR_ARRAY_PUSH(true_targets, const char *) = true_target;
     }
 

@@ -38,6 +38,7 @@
 #include "svn_client.h"
 #include "svn_hash.h"
 
+#include "private/svn_opt_private.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
@@ -139,35 +140,6 @@ svn_client__record_wc_mergeinfo(const char *local_abspath,
 /*-----------------------------------------------------------------------*/
 
 /*** Retrieving mergeinfo. ***/
-
-svn_error_t *
-svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
-                                          const char *rel_path,
-                                          svn_mergeinfo_t mergeinfo,
-                                          apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-  const char *path;
-  apr_array_header_t *copied_rangelist;
-
-  SVN_ERR_ASSERT(adjusted_mergeinfo);
-  SVN_ERR_ASSERT(mergeinfo);
-
-  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
-    {
-      const char *merge_source = svn__apr_hash_index_key(hi);
-      apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
-
-      /* Copy inherited mergeinfo into our output hash, adjusting the
-         merge source as appropriate. */
-      path = svn_fspath__join(merge_source, rel_path, pool);
-      copied_rangelist = svn_rangelist_dup(rangelist, pool);
-      apr_hash_set(adjusted_mergeinfo, path, APR_HASH_KEY_STRING,
-                   copied_rangelist);
-    }
-  return SVN_NO_ERROR;
-}
-
 
 svn_error_t *
 svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
@@ -296,11 +268,11 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
       if (wc_mergeinfo)
         {
           *inherited = TRUE;
-          *mergeinfo = apr_hash_make(result_pool);
-          SVN_ERR(svn_client__adjust_mergeinfo_source_paths(*mergeinfo,
-                                                            walk_relpath,
-                                                            wc_mergeinfo,
-                                                            result_pool));
+          SVN_ERR(svn_mergeinfo__add_suffix_to_mergeinfo(mergeinfo,
+                                                         wc_mergeinfo,
+                                                         walk_relpath,
+                                                         result_pool,
+                                                         scratch_pool));
         }
       else
         {
@@ -360,7 +332,7 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
   SVN_ERR(svn_client__path_relative_to_root(&target_repos_rel_path,
                                             ctx->wc_ctx,
                                             local_abspath,
-                                            repos_root, FALSE,
+                                            NULL, FALSE,
                                             NULL, scratch_pool,
                                             scratch_pool));
 
@@ -411,7 +383,7 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
 
           SVN_ERR(svn_client__path_relative_to_root(&key_path, ctx->wc_ctx,
                                                     key_path,
-                                                    repos_root, FALSE,
+                                                    NULL, FALSE,
                                                     NULL, result_pool,
                                                     scratch_pool));
           SVN_ERR(svn_mergeinfo_parse(&subtree_mergeinfo, propval->data,
@@ -432,8 +404,8 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
 }
 
 svn_error_t *
-svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
-                                svn_mergeinfo_t *target_mergeinfo,
+svn_client__get_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
+                                svn_ra_session_t *ra_session,
                                 const char *rel_path,
                                 svn_revnum_t rev,
                                 svn_mergeinfo_inheritance_t inherit,
@@ -490,6 +462,7 @@ svn_client__get_repos_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
         {
           svn_error_clear(err);
           *mergeinfo_cat = NULL;
+          return SVN_NO_ERROR;
         }
       else
         return svn_error_trace(err);
@@ -501,38 +474,21 @@ svn_client__get_repos_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
     }
   else
     {
-      const char *repos_root;
+      const char *session_relpath;
       const char *session_url;
 
-      SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, scratch_pool));
       SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, scratch_pool));
+      SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &session_relpath,
+                                               session_url, scratch_pool));
 
-      if (strcmp(repos_root, session_url) == 0)
-        {
-          *mergeinfo_cat = repos_mergeinfo_cat;
-        }
+      if (session_relpath[0] == '\0')
+        *mergeinfo_cat = repos_mergeinfo_cat;
       else
-        {
-          apr_hash_index_t *hi;
-          svn_mergeinfo_catalog_t rekeyed_mergeinfo_cat =
-            apr_hash_make(result_pool);
-
-          for (hi = apr_hash_first(scratch_pool, repos_mergeinfo_cat);
-               hi;
-               hi = apr_hash_next(hi))
-            {
-              const char *path =
-                svn_path_url_add_component2(session_url,
-                                            svn__apr_hash_index_key(hi),
-                                            scratch_pool);
-              SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &path,
-                                                       path,
-                                                       result_pool));
-              apr_hash_set(rekeyed_mergeinfo_cat, path, APR_HASH_KEY_STRING,
-                           svn__apr_hash_index_val(hi));
-            }
-          *mergeinfo_cat = rekeyed_mergeinfo_cat;
-        }
+        SVN_ERR(svn_mergeinfo__add_prefix_to_catalog(mergeinfo_cat,
+                                                     repos_mergeinfo_cat,
+                                                     session_relpath,
+                                                     result_pool,
+                                                     scratch_pool));
     }
   return SVN_NO_ERROR;
 }
@@ -828,13 +784,11 @@ should_elide_mergeinfo(svn_boolean_t *elides,
       svn_mergeinfo_t path_tweaked_parent_mergeinfo;
       apr_pool_t *subpool = svn_pool_create(pool);
 
-      path_tweaked_parent_mergeinfo = apr_hash_make(subpool);
-
       /* If we need to adjust the paths in PARENT_MERGEINFO do it now. */
       if (path_suffix)
-        SVN_ERR(svn_client__adjust_mergeinfo_source_paths(
-          path_tweaked_parent_mergeinfo,
-          path_suffix, parent_mergeinfo, subpool));
+        SVN_ERR(svn_mergeinfo__add_suffix_to_mergeinfo(
+                  &path_tweaked_parent_mergeinfo, parent_mergeinfo,
+                  path_suffix, subpool, subpool));
       else
         path_tweaked_parent_mergeinfo = parent_mergeinfo;
 
@@ -1047,12 +1001,10 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
   const char *url;
   svn_boolean_t use_url = svn_path_is_url(path_or_url);
   svn_revnum_t peg_rev;
-  svn_opt_revision_t opt_rev;
-  opt_rev.kind = svn_opt_revision_unspecified;
 
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &peg_rev, &url,
                                            path_or_url, NULL, peg_revision,
-                                           &opt_rev, ctx, scratch_pool));
+                                           peg_revision, ctx, scratch_pool));
 
   /* If PATH_OR_URL is as working copy path determine if we will need to
      contact the repository for the requested PEG_REVISION. */
@@ -1224,6 +1176,8 @@ svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
   struct elide_mergeinfo_catalog_cb_baton cb = { 0 };
   void *eb;
   int i;
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                                     svn_delta_shim_callbacks_default(pool);
 
   cb.elidable_paths = elidable_paths;
   cb.mergeinfo_catalog = mergeinfo_catalog;
@@ -1234,8 +1188,7 @@ svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
 
   eb = mergeinfo_catalog;
   SVN_ERR(svn_editor__insert_shims((const svn_delta_editor_t **)&editor, &eb,
-                                   editor, eb, NULL, NULL, NULL, NULL,
-                                   pool, pool));
+                                   editor, eb, shim_callbacks, pool, pool));
 
   /* Walk over the paths, and build up a list of elidable ones. */
   SVN_ERR(svn_hash_keys(&paths, mergeinfo_catalog, pool));
@@ -1265,8 +1218,8 @@ svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
    each path.
 
    Return a pointer to the mergeinfo value of the nearest path-wise ancestor
-   of ABS_REPOS_PATH in DEPTH_FIRST_CATALOG_INDEX.  A path is considered its
-   own ancestor, so if a key exactly matches ABS_REPOS_PATH, return that
+   of FSPATH in DEPTH_FIRST_CATALOG_INDEX.  A path is considered its
+   own ancestor, so if a key exactly matches FSPATH, return that
    key's mergeinfo and set *ANCESTOR_IS_SELF to true (set it to false in all
    other cases).
 
@@ -1275,7 +1228,7 @@ svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
 static svn_mergeinfo_t
 find_nearest_ancestor(const apr_array_header_t *depth_first_catalog_index,
                       svn_boolean_t *ancestor_is_self,
-                      const char *abs_repos_path)
+                      const char *fspath)
 {
   int ancestor_index = -1;
 
@@ -1289,12 +1242,12 @@ find_nearest_ancestor(const apr_array_header_t *depth_first_catalog_index,
         {
           svn_sort__item_t item = APR_ARRAY_IDX(depth_first_catalog_index, i,
                                                 svn_sort__item_t);
-          if (svn_fspath__is_ancestor(item.key, abs_repos_path))
+          if (svn_fspath__skip_ancestor(item.key, fspath))
             {
               ancestor_index = i;
 
-              /* There's no nearer ancestor than ABS_REPOS_PATH itself. */
-              if (strcmp(item.key, abs_repos_path) == 0)
+              /* There's no nearer ancestor than FSPATH itself. */
+              if (strcmp(item.key, fspath) == 0)
                 {
                   *ancestor_is_self = TRUE;
                   break;
@@ -1322,12 +1275,12 @@ struct filter_log_entry_baton_t
 
   /* Unsorted array of repository relative paths representing the merge
      sources.  There will be more than one source  */
-  const apr_array_header_t *merge_source_paths;
+  const apr_array_header_t *merge_source_fspaths;
 
   /* The repository-absolute path we are calling svn_client_log5() on. */
-  const char *abs_repos_target_path;
+  const char *target_fspath;
 
-  /* Mergeinfo catalog for the tree rooted at ABS_REPOS_TARGET_PATH.
+  /* Mergeinfo catalog for the tree rooted at TARGET_FSPATH.
      The path keys must be repository-absolute. */
   svn_mergeinfo_catalog_t target_mergeinfo_catalog;
 
@@ -1353,16 +1306,16 @@ struct filter_log_entry_baton_t
 
    Call the wrapped log receiver BATON->log_receiver (with
    BATON->log_receiver_baton) if:
-   
+
    BATON->FILTERING_MERGED is FALSE and the changes represented by LOG_ENTRY
-   have been fully merged from BATON->MERGE_SOURCE_PATHS to the WC target
+   have been fully merged from BATON->merge_source_fspaths to the WC target
    based on the mergeinfo for the WC contained in BATON->TARGET_MERGEINFO_CATALOG.
 
    Or
 
    BATON->FILTERING_MERGED is TRUE and the changes represented by LOG_ENTRY
    have not been merged, or only partially merged, from
-   BATON->MERGE_SOURCE_PATHS to the WC target based on the mergeinfo for the
+   BATON->merge_source_fspaths to the WC target based on the mergeinfo for the
    WC contained in BATON->TARGET_MERGEINFO_CATALOG. */
 static svn_error_t *
 filter_log_entry_with_rangelist(void *baton,
@@ -1421,25 +1374,25 @@ filter_log_entry_with_rangelist(void *baton,
         {
           const char *path = svn__apr_hash_index_key(hi);
           svn_log_changed_path2_t *change = svn__apr_hash_index_val(hi);
-          const char *target_path_affected;
+          const char *target_fspath_affected;
           svn_mergeinfo_t nearest_ancestor_mergeinfo;
           apr_hash_index_t *hi2;
           svn_boolean_t found_this_revision = FALSE;
           const char *merge_source_rel_target;
-          const char *merge_source_path;
+          const char *merge_source_fspath;
           svn_boolean_t ancestor_is_self;
 
           svn_pool_clear(iterpool);
 
           /* Check that PATH is a subtree of at least one of the
              merge sources.  If not then ignore this path.  */
-          for (i = 0; i < fleb->merge_source_paths->nelts; i++)
+          for (i = 0; i < fleb->merge_source_fspaths->nelts; i++)
             {
-              merge_source_path = APR_ARRAY_IDX(fleb->merge_source_paths,
-                                                i, const char *);
+              merge_source_fspath = APR_ARRAY_IDX(fleb->merge_source_fspaths,
+                                                  i, const char *);
 
               merge_source_rel_target
-                = svn_fspath__skip_ancestor(merge_source_path, path);
+                = svn_fspath__skip_ancestor(merge_source_fspath, path);
               if (merge_source_rel_target)
                 {
                   /* If MERGE_SOURCE was itself deleted, replaced, or added
@@ -1447,24 +1400,24 @@ filter_log_entry_with_rangelist(void *baton,
                      can't merge a addition or deletion of yourself. */
                   if (merge_source_rel_target[0] == '\0'
                       && (change->action != 'M'))
-                    i = fleb->merge_source_paths->nelts;
+                    i = fleb->merge_source_fspaths->nelts;
                   break;
                 }
             }
           /* If we examined every merge source path and PATH is a child of
              none of them then we can ignore this PATH. */
-          if (i == fleb->merge_source_paths->nelts)
+          if (i == fleb->merge_source_fspaths->nelts)
             continue;
 
           /* Calculate the target path which PATH would affect if merged. */
-          target_path_affected = svn_fspath__join(fleb->abs_repos_target_path,
-                                                  merge_source_rel_target,
-                                                  iterpool);
+          target_fspath_affected = svn_fspath__join(fleb->target_fspath,
+                                                    merge_source_rel_target,
+                                                    iterpool);
 
           nearest_ancestor_mergeinfo =
             find_nearest_ancestor(fleb->depth_first_catalog_index,
                                   &ancestor_is_self,
-                                  target_path_affected);
+                                  target_fspath_affected);
 
           /* Issue #3791: A path should never have explicit mergeinfo
              describing its own addition (that's self-referential).  Nor will
@@ -1504,11 +1457,11 @@ filter_log_entry_with_rangelist(void *baton,
 
                   /* Does the mergeinfo for PATH reflect if
                      LOG_ENTRY->REVISION was previously merged
-                     from MERGE_SOURCE_PATH? */
-                  if (svn_fspath__is_ancestor(merge_source_path,
-                                              mergeinfo_path))
+                     from MERGE_SOURCE_FSPATH? */
+                  if (svn_fspath__skip_ancestor(merge_source_fspath,
+                                                mergeinfo_path))
                     {
-                      /* Something was merged from MERGE_SOURCE_PATH, does
+                      /* Something was merged from MERGE_SOURCE_FSPATH, does
                          it include LOG_ENTRY->REVISION? */
                       SVN_ERR(svn_rangelist_intersect(&intersection,
                                                       rangelist,
@@ -1557,11 +1510,11 @@ filter_log_entry_with_rangelist(void *baton,
 
 static svn_error_t *
 logs_for_mergeinfo_rangelist(const char *source_url,
-                             const apr_array_header_t *merge_source_paths,
+                             const apr_array_header_t *merge_source_fspaths,
                              svn_boolean_t filtering_merged,
                              const apr_array_header_t *rangelist,
                              svn_mergeinfo_t target_mergeinfo_catalog,
-                             const char *abs_repos_target_path,
+                             const char *target_fspath,
                              svn_boolean_t discover_changed_paths,
                              const apr_array_header_t *revprops,
                              svn_log_entry_receiver_t log_receiver,
@@ -1573,7 +1526,6 @@ logs_for_mergeinfo_rangelist(const char *source_url,
   svn_merge_range_t *oldest_range, *youngest_range;
   apr_array_header_t *revision_ranges;
   svn_opt_revision_t oldest_rev, youngest_rev;
-  svn_opt_revision_range_t *range;
   struct filter_log_entry_baton_t fleb;
 
   if (! rangelist->nelts)
@@ -1601,35 +1553,19 @@ logs_for_mergeinfo_rangelist(const char *source_url,
 
   /* FILTER_LOG_ENTRY_BATON_T->TARGET_MERGEINFO_CATALOG's keys are required
      to be repository-absolute. */
-  if (apr_hash_count(target_mergeinfo_catalog))
-    {
-      apr_hash_index_t *hi;
-      svn_mergeinfo_catalog_t rekeyed_catalog = apr_hash_make(scratch_pool);
-
-      for (hi = apr_hash_first(scratch_pool, target_mergeinfo_catalog);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          const char *path = svn__apr_hash_index_key(hi);
-
-          if (!svn_dirent_is_absolute(path))
-            apr_hash_set(rekeyed_catalog,
-                         svn_dirent_join("/", path, scratch_pool),
-                         APR_HASH_KEY_STRING,
-                         svn__apr_hash_index_val(hi));
-        }
-      target_mergeinfo_catalog = rekeyed_catalog;
-    }
+  SVN_ERR(svn_mergeinfo__add_prefix_to_catalog(&target_mergeinfo_catalog,
+                                               target_mergeinfo_catalog, "/",
+                                               scratch_pool, scratch_pool));
 
   /* Build the log filtering callback baton. */
   fleb.filtering_merged = filtering_merged;
-  fleb.merge_source_paths = merge_source_paths;
+  fleb.merge_source_fspaths = merge_source_fspaths;
   fleb.target_mergeinfo_catalog = target_mergeinfo_catalog;
   fleb.depth_first_catalog_index =
     svn_sort__hash(target_mergeinfo_catalog,
                    svn_sort_compare_items_as_paths,
                    scratch_pool);
-  fleb.abs_repos_target_path = abs_repos_target_path;
+  fleb.target_fspath = target_fspath;
   fleb.rangelist = rangelist;
   fleb.log_receiver = log_receiver;
   fleb.log_receiver_baton = log_receiver_baton;
@@ -1638,10 +1574,8 @@ logs_for_mergeinfo_rangelist(const char *source_url,
   /* Drive the log. */
   revision_ranges = apr_array_make(scratch_pool, 1,
                                    sizeof(svn_opt_revision_range_t *));
-  range = apr_pcalloc(scratch_pool, sizeof(*range));
-  range->end = youngest_rev;
-  range->start = oldest_rev;
-  APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *) = range;
+  APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *)
+    = svn_opt__revision_range_create(&oldest_rev, &youngest_rev, scratch_pool);
   SVN_ERR(svn_client_log5(target, &youngest_rev, revision_ranges,
                           0, discover_changed_paths, FALSE, FALSE, revprops,
                           filter_log_entry_with_rangelist, &fleb, ctx,
@@ -1664,7 +1598,6 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo_p,
                                 apr_pool_t *pool)
 {
   const char *repos_root;
-  apr_hash_t *full_path_mergeinfo;
   svn_mergeinfo_catalog_t mergeinfo_cat;
   svn_mergeinfo_t mergeinfo;
 
@@ -1690,26 +1623,8 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo_p,
       mergeinfo = NULL;
     }
 
-  /* Copy the MERGEINFO hash items into another hash, but change
-     the relative paths into full URLs. */
-  *mergeinfo_p = NULL;
-  if (mergeinfo)
-    {
-      apr_hash_index_t *hi;
-
-      full_path_mergeinfo = apr_hash_make(pool);
-      for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
-        {
-          const char *key = svn__apr_hash_index_key(hi);
-          void *val = svn__apr_hash_index_val(hi);
-
-          apr_hash_set(full_path_mergeinfo,
-                       svn_path_url_add_component2(repos_root, key + 1, pool),
-                       APR_HASH_KEY_STRING, val);
-        }
-      *mergeinfo_p = full_path_mergeinfo;
-    }
-
+  SVN_ERR(svn_mergeinfo__relpaths_to_urls(mergeinfo_p, mergeinfo,
+                                          repos_root, pool, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1743,7 +1658,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
   svn_mergeinfo_t target_history;
   apr_array_header_t *master_noninheritable_rangelist;
   apr_array_header_t *master_inheritable_rangelist;
-  apr_array_header_t *merge_source_paths =
+  apr_array_header_t *merge_source_fspaths =
     apr_array_make(scratch_pool, 1, sizeof(const char *));
   apr_hash_index_t *hi_catalog;
   apr_hash_index_t *hi;
@@ -1774,7 +1689,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                             ctx->wc_ctx,
                                             target_path_or_url,
                                             repos_root,
-                                            FALSE, NULL,
+                                            FALSE /* leading_slash */, NULL,
                                             scratch_pool,
                                             scratch_pool));
 
@@ -1803,7 +1718,6 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
   /* Open RA sessions to the repository for the source and target.
    * ### TODO: As the source and target must be in the same repository, we
    * should share a single session, tracking the two URLs separately. */
-
   if (!finding_merged)
     {
       svn_revnum_t target_peg_revnum;
@@ -1813,7 +1727,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                                target_path_or_url, NULL,
                                                target_peg_revision,
                                                target_peg_revision,
-                                               ctx, scratch_pool));
+                                               ctx, sesspool));
 
       SVN_ERR(svn_client__get_history_as_mergeinfo(&target_history, NULL,
                                                    target_peg_revnum,
@@ -1822,7 +1736,6 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                                    target_session, ctx,
                                                    scratch_pool));
     }
-
   {
     svn_revnum_t source_peg_revnum;
 
@@ -1831,7 +1744,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                              source_path_or_url, NULL,
                                              source_peg_revision,
                                              source_peg_revision,
-                                             ctx, scratch_pool));
+                                             ctx, sesspool));
 
     SVN_ERR(svn_client__get_history_as_mergeinfo(&source_history, NULL,
                                                  source_peg_revnum,
@@ -1840,7 +1753,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                                  source_session, ctx,
                                                  scratch_pool));
   }
-
+  /* Close the source and target sessions. */
   svn_pool_destroy(sesspool);
 
   /* Separate the explicit or inherited mergeinfo on TARGET_PATH_OR_URL, and possibly
@@ -1960,8 +1873,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
           SVN_ERR(svn_rangelist__merge_many(subtree_merged_rangelist,
                                             merged, scratch_pool, iterpool));
 
-          apr_hash_set(inheritable_subtree_merges,
-                       apr_pstrdup(scratch_pool, subtree_path),
+          apr_hash_set(inheritable_subtree_merges, subtree_path,
                        APR_HASH_KEY_STRING, subtree_merged_rangelist);
         }
       else
@@ -1969,8 +1881,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
           /* Map SUBTREE_PATH to an empty rangelist if there was nothing
              fully merged. e.g. Only empty or non-inheritable mergienfo
              on the subtree or mergeinfo unrelated to the source. */
-          apr_hash_set(inheritable_subtree_merges,
-                       apr_pstrdup(scratch_pool, subtree_path),
+          apr_hash_set(inheritable_subtree_merges, subtree_path,
                        APR_HASH_KEY_STRING,
                        apr_array_make(scratch_pool, 0,
                        sizeof(svn_merge_range_t *)));
@@ -2062,10 +1973,10 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
   else
     {
       /* Determine the correct (youngest) target for 'svn log'. */
-      svn_merge_range_t *youngest_range = svn_merge_range_dup(
-        APR_ARRAY_IDX(master_inheritable_rangelist,
-        master_inheritable_rangelist->nelts - 1,
-        svn_merge_range_t *), scratch_pool);
+      svn_merge_range_t *youngest_range
+        = APR_ARRAY_IDX(master_inheritable_rangelist,
+                        master_inheritable_rangelist->nelts - 1,
+                        svn_merge_range_t *);
       apr_array_header_t *youngest_rangelist =
         svn_rangelist__initialize(youngest_range->end - 1,
                                   youngest_range->end,
@@ -2080,17 +1991,17 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
           apr_array_header_t *subtree_merged_rangelist =
             svn__apr_hash_index_val(hi);
           apr_array_header_t *intersecting_rangelist;
+
           svn_pool_clear(iterpool);
           SVN_ERR(svn_rangelist_intersect(&intersecting_rangelist,
                                           youngest_rangelist,
                                           subtree_merged_rangelist,
                                           FALSE, iterpool));
 
-          APR_ARRAY_PUSH(merge_source_paths, const char *) =
-            apr_pstrdup(scratch_pool, key);
+          APR_ARRAY_PUSH(merge_source_fspaths, const char *) = key;
 
           if (intersecting_rangelist->nelts)
-            log_target = apr_pstrdup(scratch_pool, key);
+            log_target = key;
         }
     }
 
@@ -2102,13 +2013,12 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
   log_target = svn_path_url_add_component2(repos_root, log_target + 1,
                                            scratch_pool);
 
-  SVN_ERR(logs_for_mergeinfo_rangelist(log_target, merge_source_paths,
+  SVN_ERR(logs_for_mergeinfo_rangelist(log_target, merge_source_fspaths,
                                        finding_merged,
                                        master_inheritable_rangelist,
                                        target_mergeinfo_cat,
-                                       svn_dirent_join("/",
-                                                       target_repos_rel,
-                                                       scratch_pool),
+                                       svn_fspath__join("/", target_repos_rel,
+                                                        scratch_pool),
                                        discover_changed_paths,
                                        revprops,
                                        log_receiver, log_receiver_baton,

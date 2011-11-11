@@ -121,7 +121,7 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
       const char *old_session_url = NULL;
       SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
                                                 ra_session, src_url, pool));
-      SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
+      SVN_ERR(svn_client__get_repos_mergeinfo(&src_mergeinfo, ra_session,
                                               "", src_revnum,
                                               svn_mergeinfo_inherited,
                                               TRUE, pool));
@@ -795,7 +795,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       apr_hash_t *mergeinfo;
-      svn_opt_revision_t *src_rev;
 
       /* Are the source and destination URLs at or under REPOS_ROOT? */
       if (! (svn_uri__is_ancestor(repos_root, pair->src_abspath_or_url)
@@ -805,18 +804,11 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
            _("Source and destination URLs appear not to point to the "
              "same repository."));
 
-      /* Resolve revision keywords and such into real revision number,
-         passing NULL for the path (to ensure error if trying to get a
-         revision based on the working copy). */
-      SVN_ERR(svn_client__get_revision_number(&pair->src_revnum, &youngest,
-                                              ctx->wc_ctx, NULL,
-                                              ra_session,
-                                              &pair->src_op_revision, pool));
-
-      /* Run the history function to get the source's URL in the
+      /* Run the history function to get the source's URL and revnum in the
          operational revision. */
       SVN_ERR(svn_ra_reparent(ra_session, pair->src_abspath_or_url, pool));
-      SVN_ERR(svn_client__repos_locations(&pair->src_abspath_or_url, &src_rev,
+      SVN_ERR(svn_client__repos_locations(&pair->src_abspath_or_url,
+                                          &pair->src_revnum,
                                           NULL, NULL,
                                           ra_session,
                                           pair->src_abspath_or_url,
@@ -897,8 +889,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
      directories of the destination that don't yet exist.  */
   if (make_parents)
     {
-      const char *dir;
-
       new_dirs = apr_array_make(pool, 0, sizeof(const char *));
 
       /* If this is a move, TOP_URL is at least the common ancestor of
@@ -921,17 +911,17 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
 
                 svn copy --parents URL/src URL/dst
 
-             where src exists and dst does not.  The svn_uri_dirname()
-             call above will produce a string equivalent to TOP_URL,
-             which means svn_uri_is_child() will return NULL.  In this
-             case, do not try to add dst to the NEW_DIRS list since it
+             where src exists and dst does not.  If the dirname of the
+             destination path is equal to TOP_URL,
+             do not try to add dst to the NEW_DIRS list since it
              will be added to the commit items array later in this
              function. */
-          dir = svn_uri__is_child(
-                  top_url,
-                  svn_uri_dirname(first_pair->dst_abspath_or_url, pool),
-                  pool);
-          if (dir)
+          const char *dir = svn_uri_skip_ancestor(
+                              top_url,
+                              svn_uri_dirname(first_pair->dst_abspath_or_url,
+                                              pool),
+                              pool);
+          if (dir && *dir)
             SVN_ERR(find_absent_parents1(ra_session, dir, new_dirs, pool));
         }
       /* If, however, this is *not* a move, TOP_URL only points to the
@@ -950,8 +940,9 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
           for (i = 0; i < new_urls->nelts; i++)
             {
               const char *new_url = APR_ARRAY_IDX(new_urls, i, const char *);
-              dir = svn_uri__is_child(top_url, new_url, pool);
-              APR_ARRAY_PUSH(new_dirs, const char *) = dir ? dir : "";
+              const char *dir = svn_uri_skip_ancestor(top_url, new_url, pool);
+
+              APR_ARRAY_PUSH(new_dirs, const char *) = dir;
             }
         }
     }
@@ -967,10 +958,12 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                                     svn_client__copy_pair_t *);
       path_driver_info_t *info = APR_ARRAY_IDX(path_infos, i,
                                                path_driver_info_t *);
+      const char *relpath = svn_uri_skip_ancestor(pair->dst_abspath_or_url,
+                                                  pair->src_abspath_or_url,
+                                                  pool);
 
       if ((strcmp(pair->dst_abspath_or_url, repos_root) != 0)
-          && (svn_uri__is_child(pair->dst_abspath_or_url,
-                                pair->src_abspath_or_url, pool) != NULL))
+          && (relpath != NULL && *relpath != '\0'))
         {
           info->resurrection = TRUE;
           top_url = svn_uri_dirname(top_url, pool);
@@ -1021,9 +1014,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
 
       /* Figure out the basename that will result from this operation,
          and ensure that we aren't trying to overwrite existing paths.  */
-      dst_rel = svn_uri__is_child(top_url, pair->dst_abspath_or_url, pool);
-      if (! dst_rel)
-        dst_rel = "";
+      dst_rel = svn_uri_skip_ancestor(top_url, pair->dst_abspath_or_url, pool);
       SVN_ERR(svn_ra_check_path(ra_session, dst_rel, youngest,
                                 &dst_kind, pool));
       if (dst_kind != svn_node_none)
@@ -1277,9 +1268,8 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
         APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
 
       svn_pool_clear(iterpool);
-      dst_rel = svn_uri__is_child(top_dst_url,
-                                  pair->dst_abspath_or_url,
-                                  iterpool);
+      dst_rel = svn_uri_skip_ancestor(top_dst_url, pair->dst_abspath_or_url,
+                                      iterpool);
       SVN_ERR(svn_ra_check_path(ra_session, dst_rel, SVN_INVALID_REVNUM,
                                 &dst_kind, iterpool));
       if (dst_kind != svn_node_none)
@@ -1826,11 +1816,10 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       const char *src;
-      svn_opt_revision_t *new_rev;
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_client__repos_locations(&src, &new_rev, NULL, NULL,
+      SVN_ERR(svn_client__repos_locations(&src, &pair->src_revnum, NULL, NULL,
                                           NULL,
                                           pair->src_abspath_or_url,
                                           &pair->src_peg_revision,
@@ -1856,18 +1845,6 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, top_src_url,
                                                NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
-
-  /* Pass null for the path, to ensure error if trying to get a
-     revision based on the working copy.  */
-  for (i = 0; i < copy_pairs->nelts; i++)
-    {
-      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
-                                                    svn_client__copy_pair_t *);
-
-      SVN_ERR(svn_client__get_revision_number(&pair->src_revnum, NULL,
-                                              ctx->wc_ctx, NULL, ra_session,
-                                              &pair->src_op_revision, pool));
-    }
 
   /* Get the correct src path for the peg revision used, and verify that we
      aren't overwriting an existing path. */

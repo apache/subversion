@@ -61,7 +61,7 @@ typedef enum log_state_e {
   REPLACED_PATH,
   DELETED_PATH,
   MODIFIED_PATH,
-  SUBTRACTIVE_MERGE,
+  SUBTRACTIVE_MERGE
 } log_state_e;
 
 typedef struct log_info_t {

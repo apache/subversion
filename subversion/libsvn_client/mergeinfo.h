@@ -166,10 +166,12 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
 
    If there is no mergeinfo available for REL_PATH, or if the server
    doesn't support a mergeinfo capability and SQUELCH_INCAPABLE is
-   TRUE, set *TARGET_MERGEINFO to NULL. */
+   TRUE, set *TARGET_MERGEINFO to NULL. If the server doesn't support
+   a mergeinfo capability and SQUELCH_INCAPABLE is FALSE, return an
+   SVN_ERR_UNSUPPORTED_FEATURE error. */
 svn_error_t *
-svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
-                                svn_mergeinfo_t *target_mergeinfo,
+svn_client__get_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
+                                svn_ra_session_t *ra_session,
                                 const char *rel_path,
                                 svn_revnum_t rev,
                                 svn_mergeinfo_inheritance_t inherit,
@@ -354,17 +356,6 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
 svn_error_t *
 svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
                                     apr_pool_t *pool);
-
-/* For each source path : rangelist pair in MERGEINFO, append REL_PATH to
-   the source path and add the new source path : rangelist pair to
-   ADJUSTED_MERGEINFO.  The new source path and rangelist are both deep
-   copies allocated in POOL.  Neither ADJUSTED_MERGEINFO
-   nor MERGEINFO should be NULL. */
-svn_error_t *
-svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
-                                          const char *rel_path,
-                                          svn_mergeinfo_t mergeinfo,
-                                          apr_pool_t *pool);
 
 /* Set *MERGEINFO_CHANGES to TRUE if LOCAL_ABSPATH has locally modified
    mergeinfo, set *MERGEINFO_CHANGES to FALSE otherwise. */

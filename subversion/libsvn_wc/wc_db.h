@@ -1133,6 +1133,37 @@ svn_wc__db_external_read(svn_wc__db_status_t *status,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+/* Return in *EXTERNALS a list of svn_wc__committable_external_info_t *
+ * containing info on externals defined to be checked out below LOCAL_ABSPATH,
+ * returning only those externals that are not fixed to a specific revision.
+ *
+ * If IMMEDIATES_ONLY is TRUE, only those externals defined to be checked out
+ * as immediate children of LOCAL_ABSPATH are returned (this is useful for
+ * treating user requested depth < infinity).
+ *
+ * If there are no externals to be returned, set *EXTERNALS to NULL. Otherwise
+ * set *EXTERNALS to an APR array newly cleated in RESULT_POOL.
+ *
+ * NOTE: This only returns the externals known by the immediate WC root for
+ * LOCAL_ABSPATH; i.e.:
+ * - If there is a further parent WC "above" the immediate WC root, and if
+ *   that parent WC defines externals to live somewhere within this WC, these
+ *   externals will appear to be foreign/unversioned and won't be picked up.
+ * - Likewise, only the topmost level of externals nestings (externals
+ *   defined within a checked out external dir) is picked up by this function.
+ *   (For recursion, see svn_wc__committable_externals_below().)
+ *
+ * ###TODO: Add a WRI_ABSPATH (wc root indicator) separate from LOCAL_ABSPATH,
+ * to allow searching any wc-root for externals under LOCAL_ABSPATH, not only
+ * LOCAL_ABSPATH's most immediate wc-root. */
+svn_error_t *
+svn_wc__db_committable_externals_below(apr_array_header_t **externals,
+                                       svn_wc__db_t *db,
+                                       const char *local_abspath,
+                                       svn_boolean_t immediates_only,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool);
+
 /* Gets a mapping from const char * local abspaths of externals to the const
    char * local abspath of where they are defined for all externals defined
    at or below LOCAL_ABSPATH.
@@ -1405,6 +1436,32 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      apr_pool_t *scratch_pool);
+
+
+/* Mark all LOCAL_ABSPATH in the TARGETS array, and all of their children,
+ * for deletion.
+ *
+ * This function is more efficient than svn_wc__db_op_delete() because
+ * only one sqlite transaction is used for all targets.
+ * It currently lacks support for moves (though this could be changed,
+ * at which point svn_wc__db_op_delete() becomes redundant).
+ *
+ * If NOTIFY_FUNC is not NULL, then it will be called (with NOTIFY_BATON)
+ * for each node deleted. While this processing occurs, if CANCEL_FUNC is
+ * not NULL, then it will be called (with CANCEL_BATON) to detect cancellation
+ * during the processing.
+ *
+ * Note: the notification (and cancellation) occur outside of a SQLite
+ * transaction.
+ */
+svn_error_t *
+svn_wc__db_op_delete_many(svn_wc__db_t *db,
+                          apr_array_header_t *targets,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *scratch_pool);
 
 
 /* ### mark PATH as (possibly) modified. "svn edit" ... right API here? */

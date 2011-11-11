@@ -609,8 +609,8 @@ close_file(void *file_baton,
     const svn_checksum_t *original_checksum = NULL;
 
     svn_boolean_t added = !SVN_IS_VALID_REVNUM(eb->original_revision);
-    const char *repos_relpath = svn_uri__is_child(eb->repos_root_url,
-                                                  eb->url, pool);
+    const char *repos_relpath = svn_uri_skip_ancestor(eb->repos_root_url,
+                                                      eb->url, pool);
 
     if (! added)
       {
@@ -901,8 +901,8 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
   eb->diff3cmd = diff3_cmd;
 
   eb->record_ancestor_abspath = apr_pstrdup(edit_pool,record_ancestor_abspath);
-  eb->recorded_repos_relpath = svn_uri__is_child(repos_root_url, recorded_url,
-                                                 edit_pool);
+  eb->recorded_repos_relpath = svn_uri_skip_ancestor(repos_root_url, recorded_url,
+                                                     edit_pool);
 
   eb->changed_rev = SVN_INVALID_REVNUM;
 
@@ -1111,6 +1111,110 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
   if (defining_url && *defining_url)
     *defining_url = svn_path_url_add_component2(repos_root_url, *defining_url,
                                                 result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Return TRUE in *IS_ROLLED_OUT iff a node exists at XINFO->LOCAL_ABSPATH and
+ * if that node's origin corresponds with XINFO->REPOS_ROOT_URL and
+ * XINFO->REPOS_RELPATH.  All allocations are made in SCRATCH_POOL. */
+static svn_error_t *
+is_external_rolled_out(svn_boolean_t *is_rolled_out,
+                       svn_wc_context_t *wc_ctx,
+                       svn_wc__committable_external_info_t *xinfo,
+                       apr_pool_t *scratch_pool)
+{
+  const char *x_repos_relpath;
+  const char *x_repos_root_url;
+  svn_error_t *err;
+
+  *is_rolled_out = FALSE;
+
+  err = svn_wc__node_get_origin(NULL, NULL,
+                                &x_repos_relpath,
+                                &x_repos_root_url,
+                                NULL,
+                                wc_ctx, xinfo->local_abspath,
+                                FALSE, /* scan_deleted */
+                                scratch_pool, scratch_pool);
+
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
+      SVN_ERR(err);
+    }
+
+  *is_rolled_out = (strcmp(xinfo->repos_root_url, x_repos_root_url) == 0 &&
+                    strcmp(xinfo->repos_relpath, x_repos_relpath) == 0);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__committable_externals_below(apr_array_header_t **externals,
+                                    svn_wc_context_t *wc_ctx,
+                                    const char *local_abspath,
+                                    svn_depth_t depth,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *orig_externals;
+  int i;
+  apr_pool_t *iterpool;
+
+  /* For svn_depth_files, this also fetches dirs. They are filtered later. */
+  SVN_ERR(svn_wc__db_committable_externals_below(&orig_externals,
+                                                 wc_ctx->db,
+                                                 local_abspath,
+                                                 depth != svn_depth_infinity,
+                                                 result_pool, scratch_pool));
+  
+  if (orig_externals == NULL)
+    return SVN_NO_ERROR;
+
+  iterpool = svn_pool_create(scratch_pool);
+
+  for (i = 0; i < orig_externals->nelts; i++)
+    {
+      svn_boolean_t is_rolled_out;
+
+      svn_wc__committable_external_info_t *xinfo =
+        APR_ARRAY_IDX(orig_externals, i,
+                      svn_wc__committable_external_info_t *);
+
+      /* Discard dirs for svn_depth_files (s.a.). */
+      if (depth == svn_depth_files
+          && xinfo->kind == svn_kind_dir)
+        continue;
+
+      svn_pool_clear(iterpool);
+
+      /* Discard those externals that are not currently checked out. */
+      SVN_ERR(is_external_rolled_out(&is_rolled_out, wc_ctx, xinfo,
+                                     iterpool));
+      if (! is_rolled_out)
+        continue;
+
+      if (*externals == NULL)
+        *externals = apr_array_make(
+                               result_pool, 0,
+                               sizeof(svn_wc__committable_external_info_t *));
+
+      APR_ARRAY_PUSH(*externals,
+                     svn_wc__committable_external_info_t *) = xinfo;
+
+      if (depth != svn_depth_infinity)
+        continue;
+
+      /* Are there any nested externals? */
+      SVN_ERR(svn_wc__committable_externals_below(externals, wc_ctx,
+                                                  xinfo->local_abspath,
+                                                  svn_depth_infinity,
+                                                  result_pool, iterpool));
+    }
 
   return SVN_NO_ERROR;
 }

@@ -601,6 +601,22 @@ svn_error_t *svn_ra_get_path_relative_to_root(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_ra__get_fspath_relative_to_root(svn_ra_session_t *ra_session,
+                                    const char **fspath,
+                                    const char *url,
+                                    apr_pool_t *pool)
+{
+  const char *relpath;
+
+  SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &relpath, url, pool));
+  if (*relpath)
+    *fspath = apr_pstrcat(pool, "/", relpath, (char *)NULL);
+  else
+    *fspath = "/";
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_ra_get_latest_revnum(svn_ra_session_t *session,
                                       svn_revnum_t *latest_revnum,
                                       apr_pool_t *pool)
@@ -1285,7 +1301,7 @@ svn_ra_print_ra_libraries(svn_stringbuf_t **descriptions,
                           void *ra_baton,
                           apr_pool_t *pool)
 {
-  *descriptions = svn_stringbuf_create("", pool);
+  *descriptions = svn_stringbuf_create_empty(pool);
   return svn_ra_print_modules(*descriptions, pool);
 }
 

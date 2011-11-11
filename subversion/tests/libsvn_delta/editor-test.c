@@ -32,6 +32,14 @@
 
 #include "../svn_test_fs.h"
 
+/* This is kind of unorthodox, but since we're doing some fairly deep testing
+   of the various delta editor/Ev2 compat pieces, we need to just include the
+   compat code directly here.
+   
+   These tests are not static, and may evolve as the implementation of the
+   various shims does. */
+#include "../../libsvn_delta/compat.c"
+
 #define SET_STR(ps, s) ((ps)->data = (s), (ps)->len = strlen(s))
 
 /* We use svn_repos APIs in some of these tests simply for convenience. */
@@ -77,7 +85,7 @@ add_symlink_noop_cb(void *baton,
 static svn_error_t *
 add_absent_noop_cb(void *baton,
                    const char *relpath,
-                   svn_node_kind_t kind,
+                   svn_kind_t kind,
                    svn_revnum_t replaces_rev,
                    apr_pool_t *scratch_pool)
 {
@@ -259,6 +267,7 @@ editor_from_delta_editor_test(const svn_test_opts_t *opts,
       void *dedit_baton;
       const svn_delta_editor_t *deditor;
       svn_editor_t *editor;
+      svn_boolean_t make_abs_paths = TRUE;
 
       svn_pool_clear(iterpool);
 
@@ -266,8 +275,9 @@ editor_from_delta_editor_test(const svn_test_opts_t *opts,
 
       /* Construct our editor, and from it a delta editor. */
       SVN_ERR(get_noop_editor(&editor, NULL, NULL, NULL, iterpool, iterpool));
-      SVN_ERR(svn_delta_from_editor(&deditor, &dedit_baton, editor,
-                                    NULL, NULL, iterpool));
+      SVN_ERR(delta_from_editor(&deditor, &dedit_baton, editor,
+                                &make_abs_paths,
+                                NULL, NULL, NULL, NULL, iterpool));
 
       SVN_ERR(svn_repos_replay2(revision_root, "", SVN_INVALID_REVNUM, TRUE,
                                 deditor, dedit_baton, NULL, NULL, iterpool));

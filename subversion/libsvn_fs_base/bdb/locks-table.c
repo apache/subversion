@@ -274,7 +274,7 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
              same set of results.  So just see if CHILD_PATH is an
              immediate child of PATH.  If not, we don't care about
              this item.   */
-          const char *rel_path = svn_fspath__is_child(path, child_path, subpool);
+          const char *rel_path = svn_fspath__skip_ancestor(path, child_path);
           if (!rel_path || (svn_path_component_count(rel_path) != 1))
             goto loop_it;
         }

@@ -2803,6 +2803,28 @@ def commit_multiple_nested_deletes(sbox):
 
   svntest.main.run_svn(None, 'ci', A, A_B, '-m', 'Q')
 
+@Issue(4042)
+def commit_incomplete(sbox):
+  "commit an incomplete dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('pname', 'pval', 'A/B')
+  svntest.actions.set_incomplete(sbox.ospath('A/B'), 1)
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/B' : Item(verb='Sending'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B',  status='! ', wc_rev=2)
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+  
 
 ########################################################################
 # Run the tests
@@ -2871,6 +2893,7 @@ test_list = [ None,
               tree_conflicts_block_commit,
               tree_conflicts_resolved,
               commit_multiple_nested_deletes,
+              commit_incomplete,
              ]
 
 if __name__ == '__main__':

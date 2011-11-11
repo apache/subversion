@@ -2032,7 +2032,6 @@ def log_on_nonexistent_path_and_valid_rev(sbox):
 # Test for issue #4022 'svn log -g interprets change in inherited mergeinfo
 # due to move as a merge'.
 @Issue(4022)
-@XFail()
 def merge_sensitive_log_copied_path_inherited_mergeinfo(sbox):
   "log -g on copied path with inherited mergeinfo"
 
@@ -2060,8 +2059,8 @@ def merge_sensitive_log_copied_path_inherited_mergeinfo(sbox):
   svntest.main.run_svn(None, 'ci', '-m', 'Move file', wc_dir)
 
   # 'svn log -g --stop-on-copy ^/A/C/gamma' hould return *only* r5
-  # Currently this test fails because the change in gamma's inherited
-  # mergeinfo between r4 and r5, due to the move, is understood as a merge:
+  # Previously this test failed because the change in gamma's inherited
+  # mergeinfo between r4 and r5, due to the move, was understood as a merge:
   #
   #   >svn log -v -g --stop-on-copy ^^/A/C/gamma
   #   ------------------------------------------------------------------------

@@ -325,14 +325,14 @@ svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
               /* KEY is the path. */
               const void *hashkey;
               apr_ssize_t klen;
+              const char *child_relpath;
+
               apr_hash_this(hi, &hashkey, &klen, NULL);
 
-              /* If we come across our own path, ignore it. */
-              if (strcmp(change->path, hashkey) == 0)
-                continue;
-
-              /* If we come across a child of our path, remove it. */
-              if (svn_fspath__is_child(change->path, hashkey, subpool))
+              /* If we come across our own path, ignore it.
+                 If we come across a child of our path, remove it. */
+              child_relpath = svn_fspath__skip_ancestor(change->path, hashkey);
+              if (child_relpath && *child_relpath)
                 apr_hash_set(changes, hashkey, klen, NULL);
             }
         }

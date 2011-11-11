@@ -44,6 +44,7 @@
 #include "client.h"
 #include "mergeinfo.h"
 
+#include "private/svn_opt_private.h"
 #include "private/svn_wc_private.h"
 #include "svn_private_config.h"
 
@@ -1362,16 +1363,11 @@ svn_client_log4(const apr_array_header_t *targets,
                 apr_pool_t *pool)
 {
   apr_array_header_t *revision_ranges;
-  svn_opt_revision_range_t *range;
-
-  range = apr_palloc(pool, sizeof(svn_opt_revision_range_t));
-  range->start = *start;
-  range->end = *end;
 
   revision_ranges = apr_array_make(pool, 1,
                                    sizeof(svn_opt_revision_range_t *));
-
-  APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *) = range;
+  APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *)
+    = svn_opt__revision_range_create(start, end, pool);
 
   return svn_client_log5(targets, peg_revision, revision_ranges, limit,
                          discover_changed_paths, strict_node_history,
@@ -1577,13 +1573,11 @@ svn_client_merge_peg2(const char *source,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
-  svn_opt_revision_range_t range;
   apr_array_header_t *ranges_to_merge =
     apr_array_make(pool, 1, sizeof(svn_opt_revision_range_t *));
 
-  range.start = *revision1;
-  range.end = *revision2;
-  APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = &range;
+  APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *)
+    = svn_opt__revision_range_create(revision1, revision2, pool);
   return svn_client_merge_peg3(source, ranges_to_merge,
                                peg_revision,
                                target_wcpath,

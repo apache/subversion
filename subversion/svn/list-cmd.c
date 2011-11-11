@@ -156,7 +156,7 @@ print_dirent_xml(void *baton,
   if (pb->ctx->cancel_func)
     SVN_ERR(pb->ctx->cancel_func(pb->ctx->cancel_baton));
 
-  sb = svn_stringbuf_create("", pool);
+  sb = svn_stringbuf_create_empty(pool);
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
                         "kind", svn_cl__node_kind_str_xml(dirent->kind),
@@ -276,7 +276,7 @@ svn_cl__list(apr_getopt_t *os,
 
       if (opt_state->xml)
         {
-          svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+          svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
           svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "list",
                                 "path", truepath[0] == '\0' ? "." : truepath,
                                 NULL);
@@ -308,7 +308,7 @@ svn_cl__list(apr_getopt_t *os,
 
       if (opt_state->xml)
         {
-          svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+          svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
           svn_xml_make_close_tag(&sb, pool, "list");
           SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
         }

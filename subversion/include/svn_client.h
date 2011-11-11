@@ -1954,6 +1954,22 @@ svn_client_import(svn_client_commit_info_t **commit_info_p,
  * #TRUE, changes to descendants are only committed if they are itself
  * included via @a depth and targets.
  *
+ * If @a include_file_externals and/or @a include_dir_externals are #TRUE,
+ * also commit all file and/or dir externals (respectively) that are reached
+ * by recursion, with these exceptions: Never recurse to externals
+ * - that have a fixed revision or
+ * - that come from a different repository root URL (dir externals).
+ * These flags affect only recursion; externals that directly appear in @a
+ * targets are always included in the commit.
+ *
+ * ### TODO: currently, file externals hidden inside an unversioned dir are
+ *     skipped deliberately, because we can't commit those yet.
+ *     See STMT_SELECT_COMMITTABLE_EXTERNALS_BELOW.
+ *
+ * ### TODO: With @c depth_immediates, this function acts as if
+ *     @a include_dir_externals was passed #FALSE, but caller expects
+ *     immediate child dir externals to be included @c depth_empty.
+ *
  * When @a commit_as_operations is #TRUE it is possible to delete a node and
  * all its descendants by selecting just the root of the deletion. If it is
  * set to #FALSE this will raise an error.
@@ -1967,6 +1983,26 @@ svn_client_import(svn_client_commit_info_t **commit_info_p,
  *
  * Use @a pool for any temporary allocations.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_commit6(const apr_array_header_t *targets,
+                   svn_depth_t depth,
+                   svn_boolean_t keep_locks,
+                   svn_boolean_t keep_changelists,
+                   svn_boolean_t commit_as_operations,
+                   svn_boolean_t include_file_externals,
+                   svn_boolean_t include_dir_externals,
+                   const apr_array_header_t *changelists,
+                   const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_commit6(), but passes @a include_file_externals as
+ * TRUE and @a include_dir_externals as FALSE.
  * @since New in 1.7.
  */
 svn_error_t *
@@ -2746,9 +2782,10 @@ svn_client_blame(const char *path_or_url,
 
 /**
  * Produce diff output which describes the delta between
- * @a path1/@a revision1 and @a path2/@a revision2.  Print the output
- * of the diff to @a outfile, and any errors to @a errfile.  @a path1
- * and @a path2 can be either working-copy paths or URLs.
+ * @a path_or_url1/@a revision1 and @a path_or_url2/@a revision2.  Print
+ * the output of the diff to @a outstream, and any errors to @a
+ * errstream.  @a path_or_url1 and @a path_or_url2 can be either
+ * working-copy paths or URLs.
  *
  * If @a relative_to_dir is not @c NULL, the @a original_path and
  * @a modified_path will have the @a relative_to_dir stripped from the
@@ -2761,9 +2798,10 @@ svn_client_blame(const char *path_or_url,
  * If either @a revision1 or @a revision2 has an `unspecified' or
  * unrecognized `kind', return #SVN_ERR_CLIENT_BAD_REVISION.
  *
- * @a path1 and @a path2 must both represent the same node kind -- that
- * is, if @a path1 is a directory, @a path2 must also be, and if @a path1
- * is a file, @a path2 must also be.
+ * @a path_or_url1 and @a path_or_url2 must both represent the same node
+ * kind -- that is, if @a path_or_url1 is a directory, @a path_or_url2
+ * must also be, and if @a path_or_url1 is a file, @a path_or_url2 must
+ * also be.
  *
  * If @a depth is #svn_depth_infinity, diff fully recursively.
  * Else if it is #svn_depth_immediates, diff the named paths and
@@ -2829,9 +2867,9 @@ svn_client_blame(const char *path_or_url,
  */
 svn_error_t *
 svn_client_diff6(const apr_array_header_t *diff_options,
-                 const char *path1,
+                 const char *path_or_url1,
                  const svn_opt_revision_t *revision1,
-                 const char *path2,
+                 const char *path_or_url2,
                  const svn_opt_revision_t *revision2,
                  const char *relative_to_dir,
                  svn_depth_t depth,
@@ -2972,22 +3010,22 @@ svn_client_diff(const apr_array_header_t *diff_options,
                 apr_pool_t *pool);
 
 /**
- * Produce diff output which describes the delta between the
- * filesystem object @a path in peg revision @a peg_revision, as it
- * changed between @a start_revision and @a end_revision.  @a path can
+ * Produce diff output which describes the delta between the filesystem
+ * object @a path_or_url in peg revision @a peg_revision, as it changed
+ * between @a start_revision and @a end_revision.  @a path_or_url can
  * be either a working-copy path or URL.
  *
  * If @a peg_revision is #svn_opt_revision_unspecified, behave
- * identically to svn_client_diff5(), using @a path for both of that
- * function's @a path1 and @a path2 arguments.
+ * identically to svn_client_diff6(), using @a path_or_url for both of that
+ * function's @a path_or_url1 and @a path_or_url2 arguments.
  *
- * All other options are handled identically to svn_client_diff5().
+ * All other options are handled identically to svn_client_diff6().
  *
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_client_diff_peg6(const apr_array_header_t *diff_options,
-                     const char *path,
+                     const char *path_or_url,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *start_revision,
                      const svn_opt_revision_t *end_revision,
@@ -3131,8 +3169,9 @@ svn_client_diff_peg(const apr_array_header_t *diff_options,
 
 /**
  * Produce a diff summary which lists the changed items between
- * @a path1/@a revision1 and @a path2/@a revision2 without creating text
- * deltas. @a path1 and @a path2 can be either working-copy paths or URLs.
+ * @a path_or_url1/@a revision1 and @a path_or_url2/@a revision2 without
+ * creating text deltas. @a path_or_url1 and @a path_or_url2 can be
+ * either working-copy paths or URLs.
  *
  * The function may report false positives if @a ignore_ancestry is false,
  * since a file might have been modified between two revisions, but still
@@ -3141,14 +3180,14 @@ svn_client_diff_peg(const apr_array_header_t *diff_options,
  * Calls @a summarize_func with @a summarize_baton for each difference
  * with a #svn_client_diff_summarize_t structure describing the difference.
  *
- * See svn_client_diff5() for a description of the other parameters.
+ * See svn_client_diff6() for a description of the other parameters.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_diff_summarize2(const char *path1,
+svn_client_diff_summarize2(const char *path_or_url1,
                            const svn_opt_revision_t *revision1,
-                           const char *path2,
+                           const char *path_or_url2,
                            const svn_opt_revision_t *revision2,
                            svn_depth_t depth,
                            svn_boolean_t ignore_ancestry,
@@ -3183,13 +3222,13 @@ svn_client_diff_summarize(const char *path1,
 
 /**
  * Produce a diff summary which lists the changed items between the
- * filesystem object @a path in peg revision @a peg_revision, as it
- * changed between @a start_revision and @a end_revision. @a path can
+ * filesystem object @a path_or_url in peg revision @a peg_revision, as it
+ * changed between @a start_revision and @a end_revision. @a path_or_url can
  * be either a working-copy path or URL.
  *
  * If @a peg_revision is #svn_opt_revision_unspecified, behave
- * identically to svn_client_diff_summarize2(), using @a path for both
- * of that function's @a path1 and @a path2 arguments.
+ * identically to svn_client_diff_summarize2(), using @a path_or_url for
+ * both of that function's @a path_or_url1 and @a path_or_url2 arguments.
  *
  * The function may report false positives if @a ignore_ancestry is false,
  * as described in the documentation for svn_client_diff_summarize2().
@@ -3202,7 +3241,7 @@ svn_client_diff_summarize(const char *path1,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_diff_summarize_peg2(const char *path,
+svn_client_diff_summarize_peg2(const char *path_or_url,
                                const svn_opt_revision_t *peg_revision,
                                const svn_opt_revision_t *start_revision,
                                const svn_opt_revision_t *end_revision,
@@ -3404,10 +3443,10 @@ svn_client_merge(const char *source1,
  * pristine, unswitched working copy -- in other words, it must
  * reflect a single revision tree, the "target".  The mergeinfo on @a
  * source must reflect that all of the target has been merged into it.
- * Then this behaves like a merge with svn_client_merge3() from the
+ * Then this behaves like a merge with svn_client_merge4() from the
  * target's URL to the source.
  *
- * All other options are handled identically to svn_client_merge3().
+ * All other options are handled identically to svn_client_merge4().
  * The depth of the merge is always #svn_depth_infinity.
  *
  * @since New in 1.5.
@@ -3542,6 +3581,8 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
 
 
 /**
+ * Get the mergeinfo for a single target node (ignoring any subtrees).
+ *
  * Set @a *mergeinfo to a hash mapping <tt>const char *</tt> merge
  * source URLs to <tt>apr_array_header_t *</tt> rangelists (arrays of
  * <tt>svn_merge_range_t *</tt> ranges) describing the ranges which
@@ -3571,6 +3612,9 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 
 
 /**
+ * Describe the revisions that either have or have not been merged from
+ * one source branch (or subtree) into another.
+ *
  * If @a finding_merged is TRUE, then drive log entry callbacks
  * @a receiver / @a receiver_baton with the revisions merged from
  * @a source_path_or_url (as of @a source_peg_revision) into

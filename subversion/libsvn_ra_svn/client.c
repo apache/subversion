@@ -2340,7 +2340,7 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
         }
       else if ((depth == svn_depth_files) || (depth == svn_depth_immediates))
         {
-          const char *relpath = svn_fspath__is_child(abs_path, lock->path, pool);
+          const char *relpath = svn_fspath__skip_ancestor(abs_path, lock->path);
           if (relpath && (svn_path_component_count(relpath) == 1))
             apr_hash_set(*locks, lock->path, APR_HASH_KEY_STRING, lock);
         }

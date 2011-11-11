@@ -145,8 +145,8 @@ push_dir_info(svn_ra_session_t *ra_session,
 
       path = svn_relpath_join(dir, name, subpool);
       URL = svn_path_url_add_component2(session_URL, name, subpool);
-      fs_path = svn_fspath__canonicalize(svn_uri__is_child(repos_root, URL,
-                                                           subpool), subpool);
+      fs_path = svn_fspath__canonicalize(
+                  svn_uri_skip_ancestor(repos_root, URL, subpool), subpool);
 
       lock = apr_hash_get(locks, fs_path, APR_HASH_KEY_STRING);
 
@@ -187,14 +187,13 @@ same_resource_in_head(svn_boolean_t *same_p,
 {
   svn_error_t *err;
   svn_opt_revision_t start_rev, peg_rev;
-  svn_opt_revision_t *ignored_rev;
   const char *head_url;
 
   start_rev.kind = svn_opt_revision_head;
   peg_rev.kind = svn_opt_revision_number;
   peg_rev.value.number = rev;
 
-  err = svn_client__repos_locations(&head_url, &ignored_rev, NULL, NULL,
+  err = svn_client__repos_locations(&head_url, NULL, NULL, NULL,
                                     ra_session,
                                     url, &peg_rev,
                                     &start_rev, NULL,
