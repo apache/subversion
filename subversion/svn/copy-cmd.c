@@ -136,7 +136,8 @@ svn_cl__copy(apr_getopt_t *os,
   err = svn_client_copy6(sources, dst_path, TRUE,
                          opt_state->parents, opt_state->ignore_externals,
                          opt_state->revprop_table,
-                         svn_cl__print_commit_info, NULL,
+                         (opt_state->quiet ? NULL : svn_cl__print_commit_info),
+                         NULL,
                          ctx, pool);
 
   if (ctx->log_msg_func3)
