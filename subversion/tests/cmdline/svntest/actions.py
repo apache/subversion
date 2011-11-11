@@ -1258,7 +1258,7 @@ def run_and_verify_mergeinfo(error_re_string = None,
     verify.verify_outputs(None, None, err, None, expected_err)
     return
 
-  out = sorted([_f for _f in [x.rstrip()[1:] for x in out] if _f])
+  out = [_f for _f in [x.rstrip()[1:] for x in out] if _f]
   expected_output.sort()
   extra_out = []
   if out != expected_output:
