@@ -33,6 +33,7 @@
 #include "svn_private_config.h"
 #include "svn_hash.h"
 #include "private/svn_debug.h"
+#include "private/svn_file_handle_cache.h"
 
 /* Return a memcache in *MEMCACHE_P for FS if it's configured to use
    memcached, or NULL otherwise.  Also, sets *FAIL_STOP to a boolean
@@ -212,27 +213,14 @@ init_callbacks(svn_cache__t *cache,
                                              fs,
                                              pool));
 
+      /* Schedule file handle cache cleanup after finishing the request. */
+      apr_pool_cleanup_register(pool,
+                                svn_file_handle_cache__get_global_cache(),
+                                close_unused_file_handles,
+                                apr_pool_cleanup_null);
     }
 
   return SVN_NO_ERROR;
-}
-
-/* Access the process-global (singleton) open file handle cache. The first
- * call will automatically allocate the cache using the current cache config.
- * Even for file handle limit of 0, a cache object will be returned.
- */
-static svn_file_handle_cache_t *
-get_global_file_handle_cache(void)
-{
-  static svn_file_handle_cache_t *cache = NULL;
-
-  if (!cache)
-    svn_file_handle_cache__create_cache(&cache,
-                                        cache_settings.file_handle_count,
-                                        !cache_settings.single_threaded,
-                                        svn_pool_create(NULL));
-
-  return cache;
 }
 
 /* Sets *CACHE_P to cache instance based on provided options.
@@ -274,9 +262,9 @@ create_cache(svn_cache__t **cache_p,
                   items_per_page, FALSE, prefix, pool));
       }
     else
-    {
-      *cache_p = NULL;
-    }
+      {
+        *cache_p = NULL;
+      }
 
     return SVN_NO_ERROR;
 }
@@ -305,12 +293,6 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                       pool));
 
   membuffer = svn_cache__get_global_membuffer_cache();
-
-  /* Schedule file handle cache cleanup after finishing the request. */
-  apr_pool_cleanup_register(pool,
-                            svn_fs__get_global_file_handle_cache(),
-                            close_unused_file_handles,
-                            apr_pool_cleanup_null);
 
   /* Make the caches for non-packed and packed revision roots.  For the
    * vastmajority of commands, this is only going to contain a few entries
@@ -426,7 +408,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   SVN_ERR(init_callbacks(ffd->node_revision_cache, fs, no_handler, pool));
 
   /* initialize file handle cache as configured */
-  ffd->file_handle_cache = get_global_file_handle_cache();
+  ffd->file_handle_cache = svn_file_handle_cache__get_global_cache();
 
   return SVN_NO_ERROR;
 }

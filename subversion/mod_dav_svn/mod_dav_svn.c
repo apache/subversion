@@ -491,7 +491,7 @@ SVNInMemoryCacheSize_cmd(cmd_parms *cmd, void *config, const char *arg1)
 static const char *
 SVNMaxOpenFileHandles_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
-  svn_fs_cache_config_t settings = *svn_fs_get_cache_config();
+  svn_cache_config_t settings = *svn_cache_config_get();
 
   apr_uint64_t value = parse_number(arg1);
   if (value == (apr_uint64_t)(-1))
@@ -499,7 +499,7 @@ SVNMaxOpenFileHandles_cmd(cmd_parms *cmd, void *config, const char *arg1)
 
   settings.file_handle_count = (apr_size_t)value;
 
-  svn_fs_set_cache_config(&settings);
+  svn_cache_config_set(&settings);
 
   return NULL;
 }

@@ -24,7 +24,21 @@
  * @brief File handle cache API
  */
 
+#ifndef SVN_FILE_HANDLE_CACHE_H
+#define SVN_FILE_HANDLE_CACHE_H
+
 #include "svn_io.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+
+
+/**
+ * @defgroup svn_file_handle_cache Caching of open file handles
+ * @{
+ */
 
 /**
  * An opaque structure representing a cache for open file handles.
@@ -128,3 +142,19 @@ svn_file_handle_cache__create_cache(svn_file_handle_cache_t **cache,
                                     svn_boolean_t thread_safe,
                                     apr_pool_t *pool);
 
+/**
+ * Access the process-global (singleton) open file handle cache. The first
+ * call will automatically allocate the cache using the current cache config.
+ * Even for file handle limit of 0, a cache object will be returned.
+ */
+svn_file_handle_cache_t *
+svn_file_handle_cache__get_global_cache(void);
+
+/** @} */
+
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_FILE_HANDLE_CACHE_H */

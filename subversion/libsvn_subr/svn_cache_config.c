@@ -24,6 +24,7 @@
 
 #include "svn_cache_config.h"
 #include "private/svn_cache.h"
+#include "private/svn_file_handle_cache.h"
 
 #include "svn_pools.h"
 
@@ -158,6 +159,76 @@ svn_cache__get_global_membuffer_cache(void)
 
   return cache;
 }
+
+/* Access the process-global (singleton) open file handle cache. The first
+ * call will automatically allocate the cache using the current cache config.
+ * Even for file handle limit of 0, a cache object will be returned.
+ */
+svn_file_handle_cache_t *
+svn_file_handle_cache__get_global_cache(void)
+{
+  static svn_file_handle_cache_t * volatile cache = NULL;
+
+  if (!cache)
+    {
+      svn_error_t *err;
+
+      svn_file_handle_cache_t *old_cache = NULL;
+      svn_file_handle_cache_t *new_cache = NULL;
+
+      /* auto-allocate cache */
+      apr_allocator_t *allocator = NULL;
+      apr_pool_t *pool = NULL;
+
+      if (apr_allocator_create(&allocator))
+        return NULL;
+
+      /* APR files are relatively large objects. Make sure we return
+       * memory back to OS after a spike in allocation.
+       */
+      apr_allocator_max_free_set(allocator, 
+                                 SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
+
+      /* ordinary root pool for using that allocator
+       */
+      pool = svn_pool_create_ex(NULL, allocator);
+      apr_allocator_owner_set(allocator, pool);
+
+      /* now, create the new cache object
+       */
+      err = svn_file_handle_cache__create_cache(
+          &new_cache,
+          svn_cache_config_get()->file_handle_count,
+          !svn_cache_config_get()->single_threaded,
+          pool);
+
+      /* Some error occured. An new and therefore empty cache is a
+       * a relatively small object, so memory usage is not an issue
+       * right now. Moreover, we rely on the cache being available
+       * (even if the capacity was zero).
+       */
+      if (err)
+        {
+          /* Not much we can do here other than bail out ...
+           */
+          SVN_ERR_MALFUNCTION_NO_RETURN();
+        }
+
+      /* Handle race condition: if we are the first to create a
+       * cache object, make it our global singleton. Otherwise,
+       * discard the new cache and keep the existing one.
+       *
+       * Cast is necessary because of APR bug:
+       * https://issues.apache.org/bugzilla/show_bug.cgi?id=50731
+       */
+      old_cache = apr_atomic_casptr((volatile void **)&cache, new_cache, NULL);
+      if (old_cache != NULL)
+        apr_pool_destroy(pool);
+    }
+
+  return cache;
+}
+
 
 void
 svn_cache_config_set(const svn_cache_config_t *settings)

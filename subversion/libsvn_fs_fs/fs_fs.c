@@ -1813,7 +1813,6 @@ open_pack_or_rev_file(svn_file_handle_cache__handle_t **file,
   svn_error_t *err;
   const char *path;
   svn_boolean_t retry = FALSE;
-  fs_fs_data_t *ffd = fs->fsap_data;
 
   do
     {
@@ -3320,12 +3319,8 @@ get_window_key(struct rep_state *rs, apr_off_t offset, apr_pool_t *pool)
   const char *name_last;
 
   /* the rev file name containing the txdelta window.
-   * If this fails we are in serious trouble anyways.
-   * And if nobody else detects the problems, the file content checksum
-   * comparison _will_ find them.
    */
-  if (apr_file_name_get(&name, rs->file))
-    return "";
+  name = svn_file_handle_cache__get_name(rs->file);
 
   /* Handle packed files as well by scanning backwards until we find the
    * revision or pack number. */
@@ -3393,7 +3388,7 @@ get_cached_window(svn_txdelta_window_t **window_p,
           rs->off = cached_window->end_offset;
 
           /* manipulate the rev file as if we just read from it */
-          SVN_ERR(svn_io_file_seek(rs->file, APR_SET, &rs->off, pool));
+          SVN_ERR(svn_io_file_seek(rs->apr_file, APR_SET, &rs->off, pool));
         }
     }
 
