@@ -10539,7 +10539,7 @@ merge_reintegrate_locked(const char *source,
                          apr_pool_t *scratch_pool)
 {
   url_uuid_t wc_repos_root, source_repos_root;
-  svn_opt_revision_t working_revision;
+  svn_opt_revision_t working_revision = { svn_opt_revision_working, { 0 } };
   svn_ra_session_t *target_ra_session;
   svn_ra_session_t *source_ra_session;
   const char *source_repos_rel_path, *target_repos_rel_path;
@@ -10618,8 +10618,7 @@ merge_reintegrate_locked(const char *source,
                              _("Neither the reintegrate source nor target "
                                "can be the root of the repository"));
 
-  /* Find all the subtree's in TARGET_WCPATH that have explicit mergeinfo. */
-  working_revision.kind = svn_opt_revision_working;
+  /* Find all the subtrees in TARGET_WCPATH that have explicit mergeinfo. */
   SVN_ERR(svn_client_propget4(&subtrees_with_mergeinfo, SVN_PROP_MERGEINFO,
                               target_abspath, &working_revision,
                               &working_revision, NULL, svn_depth_infinity,
