@@ -95,7 +95,7 @@ Candidate changes:
      +1: philip, danielsh
 
  * r1201002
-   Fix unitialised memory read in client diff code.
+   Fix occasional unitialised memory read in client diff code.
    Justification:
      Undefined behaviour.
    Votes:
