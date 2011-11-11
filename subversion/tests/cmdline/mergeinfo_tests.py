@@ -683,6 +683,7 @@ def natural_history_is_not_eligible_nor_merged(sbox):
 # A test for issue 4050 "'svn mergeinfo' always considers non-inheritable
 # ranges as partially merged".
 @Issue(4050)
+@XFail()
 @SkipUnless(server_has_mergeinfo)
 def noninheritabled_mergeinfo_not_always_eligible(sbox):
   "noninheritabled mergeinfo not always eligible"
