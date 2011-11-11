@@ -130,12 +130,19 @@
   :type 'boolean
   :group 'dsvn)
 
+;; start-file-process and process-file are needed for tramp but only appeared
+;; in Emacs 23 and 22 respectively.
+(setq svn-start-file-process
+  (if (fboundp 'start-file-process) 'start-file-process 'start-process))
+(setq svn-process-file
+  (if (fboundp 'process-file) 'process-file 'call-process))
+
 (defun svn-call-process (program buffer &rest args)
   "Run svn and wait for it to finish.
 Argument PROGRAM is the svn binary to run.
 Argument BUFFER is the buffer in which to insert output.
 Optional argument ARGS are the arguments to svn."
-  (let ((proc (apply 'start-process "svn" buffer program args)))
+  (let ((proc (apply svn-start-file-process "svn" buffer program args)))
     (set-process-coding-system proc 'utf-8)
     (set-process-filter proc 'svn-output-filter)
     (while (eq (process-status proc) 'run)
@@ -161,7 +168,7 @@ Return non-NIL if there was any output."
       (setq buffer-read-only t)
       (let ((cmd `(,svn-program ,subcommand ,@args))
             proc)
-        (setq proc (apply 'start-process "svn" buf cmd))
+        (setq proc (apply svn-start-file-process "svn" buf cmd))
         (set-process-coding-system proc 'utf-8)
         (set-process-filter proc 'svn-output-filter)
         (while (eq (process-status proc) 'run)
@@ -184,7 +191,7 @@ Returns the buffer that holds the output from 'svn'."
     (with-current-buffer buf
       (erase-buffer)
       (setq default-directory dir))
-    (apply 'call-process svn-program nil buf nil (symbol-name command) args)
+    (apply svn-process-file svn-program nil buf nil (symbol-name command) args)
     buf))
 
 (defun svn-run-for-stdout (command args)
@@ -192,7 +199,7 @@ Returns the buffer that holds the output from 'svn'."
 Argument COMMAND is the svn subcommand to run.
 Optional argument ARGS is a list of arguments."
   (let ((output-buffer (generate-new-buffer "*svn-stdout*")))
-    (apply 'call-process svn-program nil (list output-buffer nil) nil
+    (apply svn-process-file svn-program nil (list output-buffer nil) nil
 	   (symbol-name command) args)
     (let ((stdout (with-current-buffer output-buffer (buffer-string))))
       (kill-buffer output-buffer)
@@ -255,7 +262,7 @@ buffer to describe what is going on."
             args (cons "-v" args)))
     (unless (memq command svn-noninteractive-blacklist)
       (setq args (cons "--non-interactive" args)))
-    (setq proc (apply 'start-process "svn" (current-buffer)
+    (setq proc (apply svn-start-file-process "svn" (current-buffer)
                       svn-program command-s args))
     (if (fboundp filter-func)
         (set-process-filter proc filter-func)
