@@ -219,7 +219,7 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
 
   Scope:     libsvn_subr
   Purpose:   See SVN_SQLITE_MIN_VERSION_NUMBER.  The two must be overridden
-	     (or not overridden) together; defining one but leaving the other
+             (or not overridden) together; defining one but leaving the other
              at its default will cause undefined behaviour.
   Range:     SQLite versions, as string literals
   Default:   SQLITE_VERSION
