@@ -2825,6 +2825,36 @@ def commit_incomplete(sbox):
                                         None,
                                         wc_dir)
   
+#----------------------------------------------------------------------
+# Reported here:
+#   Message-ID: <4EBF0FC9.300@gmail.com>
+#   Date: Sun, 13 Nov 2011 13:31:05 +1300
+#   From: Fergus Slorach <sugref@gmail.com>
+#   Subject: svn commit --targets behaviour change in 1.7?
+@XFail()
+def commit_add_subadd(sbox):
+  "committing add with explicit subadd targets"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  targets_file = sbox.ospath('targets') # ### better tempdir?
+  targets_file = os.path.abspath(targets_file)
+
+  # prepare targets file
+  targets = "A/D A/D/H A/D/H/chi A/D/H/omega A/D/H/psi".split()
+  open(targets_file, 'w').write("\n".join(targets))
+
+  # r2: rm A/D
+  sbox.simple_rm('A/D')
+  sbox.simple_commit(message='rm')
+
+  # r3: revert r2, with specific invocation
+  os.chdir(wc_dir)
+  svntest.main.run_svn(None, 'up')
+  svntest.main.run_svn(None, 'merge', '-c', '-2', './')
+  svntest.main.run_svn(None, 'commit', '--targets', targets_file, '-mm')
+
 
 ########################################################################
 # Run the tests
@@ -2894,6 +2924,7 @@ test_list = [ None,
               tree_conflicts_resolved,
               commit_multiple_nested_deletes,
               commit_incomplete,
+              commit_add_subadd,
              ]
 
 if __name__ == '__main__':
