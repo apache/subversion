@@ -2838,21 +2838,25 @@ def commit_add_subadd(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
+  A_path = os.path.join(wc_dir, 'A')
+  A2_path = os.path.join(wc_dir, 'A2')
+
   targets_file = sbox.ospath('targets') # ### better tempdir?
   targets_file = os.path.abspath(targets_file)
 
   # prepare targets file
-  targets = "A/D A/D/H A/D/H/chi A/D/H/omega A/D/H/psi".split()
+  targets = "A2/D A2/D/H A2/D/H/chi A2/D/H/omega A2/D/H/psi".split()
   open(targets_file, 'w').write("\n".join(targets))
 
-  # r2: rm A/D
-  sbox.simple_rm('A/D')
-  sbox.simple_commit(message='rm')
+  # r2: add some stuff, with specific invocation
+  import shutil
+  shutil.copytree(A_path, A2_path)
 
-  # r3: revert r2, with specific invocation
+  # hack to copy A to A2, without creating .svn dirs when running against 1.6
+  svntest.main.run_svn(None, 'cp', A_path, A2_path)
+  svntest.main.run_svn(None, 'revert', '-R', A2_path)
+
   os.chdir(wc_dir)
-  svntest.main.run_svn(None, 'up')
-  svntest.main.run_svn(None, 'merge', '-c', '-2', './')
   svntest.main.run_svn(None, 'commit', '--targets', targets_file, '-mm')
 
 
