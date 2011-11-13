@@ -606,12 +606,12 @@ static volatile svn_atomic_t sqlite_init_state = 0;
 static svn_error_t *
 init_sqlite(void *baton, apr_pool_t *pool)
 {
-  if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER)
+  if (sqlite3_libversion_number() < SVN_SQLITE_MIN_VERSION_NUMBER)
     {
       return svn_error_createf(
                     SVN_ERR_SQLITE_ERROR, NULL,
                     _("SQLite compiled for %s, but running with %s"),
-                    SQLITE_VERSION, sqlite3_libversion());
+                    SVN_SQLITE_MIN_VERSION, sqlite3_libversion());
     }
 
 #if APR_HAS_THREADS
