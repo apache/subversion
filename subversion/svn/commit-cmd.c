@@ -166,15 +166,17 @@ svn_cl__commit(apr_getopt_t *os,
     }
 
   /* Commit. */
-  err = svn_client_commit5(targets,
+  err = svn_client_commit6(targets,
                            opt_state->depth,
                            no_unlock,
                            opt_state->keep_changelists,
                            TRUE /* commit_as_operations */,
+                           opt_state->include_externals, /* file externals */
+                           opt_state->include_externals, /* dir externals */
                            opt_state->changelists,
                            opt_state->revprop_table,
-                           ! opt_state->quiet
-                                ? svn_cl__print_commit_info : NULL,
+                           (opt_state->quiet
+                            ? NULL : svn_cl__print_commit_info),
                            NULL,
                            ctx,
                            pool);

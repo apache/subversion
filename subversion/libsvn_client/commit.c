@@ -901,12 +901,11 @@ collect_lock_tokens(apr_hash_t **result,
     {
       const char *url = svn__apr_hash_index_key(hi);
       const char *token = svn__apr_hash_index_val(hi);
+      const char *relpath = svn_uri_skip_ancestor(base_url, url, pool);
 
-      if (svn_uri__is_ancestor(base_url, url))
+      if (relpath)
         {
-          url = svn_uri_skip_ancestor(base_url, url, pool);
-
-          apr_hash_set(*result, url, APR_HASH_KEY_STRING, token);
+          apr_hash_set(*result, relpath, APR_HASH_KEY_STRING, token);
         }
     }
 
@@ -1168,12 +1167,113 @@ check_url_kind(void *baton,
                                   kind, scratch_pool));
 }
 
+/* Recurse into every target in REL_TARGETS, finding committable externals
+ * nested within. Append these to REL_TARGETS itself. The paths in REL_TARGETS
+ * are assumed to be / will be created relative to BASE_ABSPATH. The remaining
+ * arguments correspond to those of svn_client_commit6(). */
+static svn_error_t*
+append_externals_as_explicit_targets(apr_array_header_t *rel_targets,
+                                     const char *base_abspath,
+                                     svn_boolean_t include_file_externals,
+                                     svn_boolean_t include_dir_externals,
+                                     svn_depth_t depth,
+                                     svn_client_ctx_t *ctx,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool)
+{
+  int rel_targets_nelts_fixed;
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  /* Easy part of applying DEPTH to externals. */
+  if (depth == svn_depth_empty)
+     {
+       /* Don't recurse. */
+       return SVN_NO_ERROR;
+     }
+   else if (depth != svn_depth_infinity)
+     {
+       include_dir_externals = FALSE;
+       /* We slip in dir externals as explicit targets. When we do that,
+       * depth_immediates should become depth_empty for dir externals targets.
+       * But adding the dir external to the list of targets makes it get
+       * handled with depth_immediates itself, and thus will also include the
+       * immediate children of the dir external. So do dir externals only with
+       * depth_infinity or not at all.
+       * ### TODO: Maybe rework this (and svn_client_commit6()) into separate
+       * ### target lists, "duplicating" REL_TARGETS: one for the user's
+       * ### targets and one for the overlayed externals targets, and pass an
+       * ### appropriate depth for the externals targets in a separate call to
+       * ### svn_client__harvest_committables(). The only gain is correct
+       * ### handling of this very specific case: during 'svn commit
+       * ### --depth=immediates --include-externals', commit dir externals
+       * ### (only immediate children of a target) with depth_empty instead of
+       * ### not at all. No other effect. So not doing that for now. */
+     }
+
+  if (! (include_file_externals || include_dir_externals))
+    return SVN_NO_ERROR;
+
+  /* Iterate *and* grow REL_TARGETS at the same time. */
+  rel_targets_nelts_fixed = rel_targets->nelts;
+
+  for (i = 0; i < rel_targets_nelts_fixed; i++)
+    {
+      int j;
+      const char *target;
+      apr_array_header_t *externals = NULL;
+
+      svn_pool_clear(iterpool);
+
+      target = svn_dirent_join(base_abspath,
+                               APR_ARRAY_IDX(rel_targets, i, const char *),
+                               iterpool);
+
+      /* ### TODO: Possible optimization: No need to do this for file targets.
+       * ### But what's cheaper, stat'ing the file system or querying the db?
+       * ### --> future. */
+
+      SVN_ERR(svn_wc__committable_externals_below(&externals, ctx->wc_ctx,
+                                                  target, depth,
+                                                  iterpool, iterpool));
+
+      if (externals != NULL)
+        {
+          const char *rel_target;
+
+          for (j = 0; j < externals->nelts; j++)
+            {
+              svn_wc__committable_external_info_t *xinfo =
+                         APR_ARRAY_IDX(externals, j,
+                                       svn_wc__committable_external_info_t *);
+
+              if ((xinfo->kind == svn_kind_file && ! include_file_externals)
+                  || (xinfo->kind == svn_kind_dir && ! include_dir_externals))
+                continue;
+
+              rel_target = svn_dirent_skip_ancestor(base_abspath,
+                                                    xinfo->local_abspath);
+              
+              SVN_ERR_ASSERT(rel_target != NULL && *rel_target != '\0');
+
+              APR_ARRAY_PUSH(rel_targets, const char *) =
+                                         apr_pstrdup(result_pool, rel_target);
+            }
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
-svn_client_commit5(const apr_array_header_t *targets,
+svn_client_commit6(const apr_array_header_t *targets,
                    svn_depth_t depth,
                    svn_boolean_t keep_locks,
                    svn_boolean_t keep_changelists,
                    svn_boolean_t commit_as_operations,
+                   svn_boolean_t include_file_externals,
+                   svn_boolean_t include_dir_externals,
                    const apr_array_header_t *changelists,
                    const apr_hash_t *revprop_table,
                    svn_commit_callback2_t commit_callback,
@@ -1232,6 +1332,12 @@ svn_client_commit5(const apr_array_header_t *targets,
      single path. */
   if (rel_targets->nelts == 0)
     APR_ARRAY_PUSH(rel_targets, const char *) = "";
+
+  SVN_ERR(append_externals_as_explicit_targets(rel_targets, base_abspath,
+                                               include_file_externals,
+                                               include_dir_externals,
+                                               depth, ctx,
+                                               pool, pool));
 
   SVN_ERR(determine_lock_targets(&lock_targets, ctx->wc_ctx, base_abspath,
                                  rel_targets, pool, iterpool));
@@ -1603,3 +1709,25 @@ svn_client_commit5(const apr_array_header_t *targets,
   return svn_error_trace(reconcile_errors(cmt_err, unlock_err, bump_err,
                                           pool));
 }
+
+svn_error_t *
+svn_client_commit5(const apr_array_header_t *targets,
+                   svn_depth_t depth,
+                   svn_boolean_t keep_locks,
+                   svn_boolean_t keep_changelists,
+                   svn_boolean_t commit_as_operations,
+                   const apr_array_header_t *changelists,
+                   const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client_commit6(targets, depth, keep_locks, keep_changelists,
+                            commit_as_operations,
+                            TRUE,  /* include_file_externals */
+                            FALSE, /* include_dir_externals */
+                            changelists, revprop_table, commit_callback,
+                            commit_baton, ctx, pool);
+}
+

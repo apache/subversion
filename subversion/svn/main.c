@@ -54,6 +54,7 @@
 #include "svn_version.h"
 #include "cl.h"
 
+#include "private/svn_opt_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_cmdline_private.h"
 
@@ -123,7 +124,8 @@ typedef enum svn_cl__longopt_t {
   opt_diff,
   opt_internal_diff,
   opt_use_git_diff_format,
-  opt_allow_mixed_revisions
+  opt_allow_mixed_revisions,
+  opt_include_externals,
 } svn_cl__longopt_t;
 
 
@@ -345,6 +347,12 @@ const apr_getopt_option_t svn_cl__options[] =
                        "Use of this option is not recommended!\n"
                        "                             "
                        "Please run 'svn update' instead.")},
+  {"include-externals", opt_include_externals, 0,
+                       N_("Also commit file and dir externals reached by\n"
+                       "                             "
+                       "recursion. This does not include externals with a\n"
+                       "                             "
+                       "fixed revision. (See the svn:externals property)")},
 
   /* Long-opt Aliases
    *
@@ -463,7 +471,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
        "  If any targets are (or contain) locked items, those will be\n"
        "  unlocked after a successful commit.\n"),
     {'q', 'N', opt_depth, opt_targets, opt_no_unlock, SVN_CL__LOG_MSG_OPTIONS,
-     opt_changelist, opt_keep_changelists} },
+     opt_changelist, opt_keep_changelists, opt_include_externals} },
 
   { "copy", svn_cl__copy, {"cp"}, N_
     ("Duplicate something in working copy or repository, remembering\n"
@@ -1622,7 +1630,6 @@ main(int argc, const char *argv[])
             {
               char *end;
               svn_revnum_t changeno, changeno_end;
-              svn_opt_revision_range_t *range;
               const char *change_str =
                 APR_ARRAY_IDX(change_revs, i, const char *);
               const char *s = change_str;
@@ -1694,15 +1701,11 @@ main(int argc, const char *argv[])
                   changeno_end = changeno - 1;
                 }
 
-              range = apr_palloc(pool, sizeof(*range));
-              range->start.value.number = changeno;
-              range->end.value.number = changeno_end;
-
               opt_state.used_change_arg = TRUE;
-              range->start.kind = svn_opt_revision_number;
-              range->end.kind = svn_opt_revision_number;
               APR_ARRAY_PUSH(opt_state.revision_ranges,
-                             svn_opt_revision_range_t *) = range;
+                             svn_opt_revision_range_t *)
+                = svn_opt__revision_range_from_revnums(changeno, changeno_end,
+                                                       pool);
             }
         }
         break;
@@ -2048,6 +2051,9 @@ main(int argc, const char *argv[])
         break;
       case opt_allow_mixed_revisions:
         opt_state.allow_mixed_rev = TRUE;
+        break;
+      case opt_include_externals:
+        opt_state.include_externals = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

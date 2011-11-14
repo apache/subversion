@@ -11,6 +11,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
   - Minor new features and improvements:
     * new 'svnadmin load --revision' load filtering support (issue #3734)
+    * new 'commit --include-externals' option (related to issues #1167, #3563)
 
   - Client-side bugfixes:
     *
@@ -295,10 +296,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.17
     * fix 'log -g' excessive duplicate output (issue #3650)
     * fix svnsync copyfrom handling bug with BDB (r1036429)
     * server-side validation of svn:mergeinfo syntax during commit (issue #3895)
-    * fix remotely triggerable mod_dav_svn DoS
+    * fix remotely triggerable mod_dav_svn DoS (r1130303)
             See CVE-2011-1783, and descriptive advisory at
             http://subversion.apache.org/security/CVE-2011-1783-advisory.txt
-    * fix potential leak of authz-protected file contents
+    * fix potential leak of authz-protected file contents (r1130303)
             See CVE-2011-1921, and descriptive advisory at
             http://subversion.apache.org/security/CVE-2011-1921-advisory.txt
 

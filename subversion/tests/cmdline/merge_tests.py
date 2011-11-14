@@ -17111,6 +17111,153 @@ def record_only_merge_adds_new_subtree_mergeinfo(sbox):
                                        None, None, None, None,
                                        None, 1, False)
 
+#----------------------------------------------------------------------
+# Setup helper for issue #4056 and issue #4057 tests.
+def noninheritable_mergeinfo_test_set_up(sbox):
+  '''Starting with standard greek tree, copy 'A' to 'branch' in r2 and
+  then made a file edit to A/B/lambda in r3.
+  Return (expected_output, expected_mergeinfo_output, expected_elision_output,
+          expected_status, expected_disk, expected_skip) for a merge of
+  r3 from ^/A/B to branch/B.'''
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  lambda_path   = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  B_branch_path = os.path.join(wc_dir, 'branch', 'B')
+
+  # r2 - Branch ^/A to ^/branch.
+  svntest.main.run_svn(None, 'copy', sbox.repo_url + '/A',
+                       sbox.repo_url + '/branch', '-m', 'make a branch')
+
+  # r3 - Make an edit to A/B/lambda.
+  svntest.main.file_write(lambda_path, "trunk edit.\n")
+  svntest.main.run_svn(None, 'commit', '-m', 'file edit', wc_dir)
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  expected_output = wc.State(B_branch_path, {
+    'lambda' : Item(status='U '),
+    })
+  expected_mergeinfo_output = wc.State(B_branch_path, {
+    ''       : Item(status=' U'),
+    'lambda' : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(B_branch_path, {
+    })
+  expected_status = wc.State(B_branch_path, {
+    ''        : Item(status=' M'),
+    'lambda'  : Item(status='M '),
+    'E'       : Item(status='  '),
+    'E/alpha' : Item(status='  '),
+    'E/beta'  : Item(status='  '),
+    'F'       : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev='3')
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A/B:3'}),
+    'lambda'  : Item("trunk edit.\n"),
+    'E'       : Item(),
+    'E/alpha' : Item("This is the file 'alpha'.\n"),
+    'E/beta'  : Item("This is the file 'beta'.\n"),
+    'F'       : Item(),
+    })
+  expected_skip = wc.State(B_branch_path, {})
+
+  return expected_output, expected_mergeinfo_output, expected_elision_output, \
+    expected_status, expected_disk, expected_skip
+
+
+#----------------------------------------------------------------------
+# Test for issue #4056 "don't record non-inheritable mergeinfo if missing
+# subtrees are not touched by the full-depth diff".
+@Issue(4056)
+@XFail()
+@SkipUnless(server_has_mergeinfo)
+def unnecessary_noninheritable_mergeinfo_missing_subtrees(sbox):
+  "missing subtrees untouched by infinite depth merge"
+
+  B_branch_path = os.path.join(sbox.wc_dir, 'branch', 'B')
+
+  # Setup a simple branch to which 
+  expected_output, expected_mergeinfo_output, expected_elision_output, \
+    expected_status, expected_disk, expected_skip = \
+    noninheritable_mergeinfo_test_set_up(sbox)
+
+  # Create a shallow merge target; set depth of branch/B to files.
+  svntest.main.run_svn(None, 'up', '--set-depth=files', B_branch_path)
+  expected_status.remove('E', 'E/alpha', 'E/beta', 'F')
+  expected_disk.remove('E', 'E/alpha', 'E/beta', 'F')
+
+  # Merge r3 from ^/A/B to branch/B
+  #
+  # Currently this fails because merge isn't smart enough to
+  # realize that despite the shallow merge target, the diff can
+  # only affect branch/B/lambda, which is still present, so there
+  # is no need to record non-inheritable mergeinfo on the target
+  # or any subtree mergeinfo whatsoever:
+  #
+  #   >svn pg svn:mergeinfo -vR
+  #   Properties on 'branch\B':
+  #     svn:mergeinfo
+  #       /A/B:3* <-- Should be inheritable
+  #   Properties on 'branch\B\lambda':
+  #     svn:mergeinfo
+  #       /A/B/lambda:3 <-- Not neccessary
+  svntest.actions.run_and_verify_merge(B_branch_path,
+                                       '2', '3',
+                                       sbox.repo_url + '/A/B', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, 1, 1,
+                                       B_branch_path)
+
+#----------------------------------------------------------------------
+# Test for issue #4057 "don't record non-inheritable mergeinfo in shallow
+# merge if entire diff is within requested depth".
+@Issue(4057)
+@XFail()
+@SkipUnless(server_has_mergeinfo)
+def unnecessary_noninheritable_mergeinfo_shallow_merge(sbox):
+  "shallow merge reaches all neccessary subtrees"
+
+  B_branch_path = os.path.join(sbox.wc_dir, 'branch', 'B')
+
+  # Setup a simple branch to which 
+  expected_output, expected_mergeinfo_output, expected_elision_output, \
+    expected_status, expected_disk, expected_skip = \
+    noninheritable_mergeinfo_test_set_up(sbox)
+
+  # Merge r3 from ^/A/B to branch/B at operational depth=files
+  #
+  # Currently this fails because merge isn't smart enough to
+  # realize that despite being a shallow merge, the diff can
+  # only affect branch/B/lambda, which is within the specified
+  # depth, so there is no need to record non-inheritable mergeinfo
+  # or subtree mergeinfo:
+  #
+  #   >svn pg svn:mergeinfo -vR
+  #   Properties on 'branch\B':
+  #     svn:mergeinfo
+  #       /A/B:3* <-- Should be inheritable
+  #   Properties on 'branch\B\lambda':
+  #     svn:mergeinfo
+  #       /A/B/lambda:3 <-- Not neccessary
+  expected_skip = wc.State(B_branch_path, {})
+  svntest.actions.run_and_verify_merge(B_branch_path, '2', '3',
+                                       sbox.repo_url + '/A/B', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, 1, 1,
+                                       '--depth', 'files', B_branch_path)
+
 ########################################################################
 # Run the tests
 
@@ -17239,6 +17386,8 @@ test_list = [ None,
               reverse_merge_adds_subtree,
               merged_deletion_causes_tree_conflict,
               record_only_merge_adds_new_subtree_mergeinfo,
+              unnecessary_noninheritable_mergeinfo_missing_subtrees,
+              unnecessary_noninheritable_mergeinfo_shallow_merge,
              ]
 
 if __name__ == '__main__':

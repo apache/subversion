@@ -129,6 +129,26 @@ const char *
 svn_opt__revision_to_string(const svn_opt_revision_t *revision,
                             apr_pool_t *result_pool);
 
+/**
+ * Create a revision range structure from two revisions.  Return a new range
+ * allocated in @a result_pool with the start and end initialized to
+ * (deep copies of) @a *start_revision and @a *end_revision.
+ */
+svn_opt_revision_range_t *
+svn_opt__revision_range_create(const svn_opt_revision_t *start_revision,
+                               const svn_opt_revision_t *end_revision,
+                               apr_pool_t *result_pool);
+
+/**
+ * Create a revision range structure from two revnums.  Return a new range
+ * allocated in @a result_pool with the start and end kinds initialized to
+ * #svn_opt_revision_number and values @a start_revnum and @a end_revnum.
+ */
+svn_opt_revision_range_t *
+svn_opt__revision_range_from_revnums(svn_revnum_t start_revnum,
+                                     svn_revnum_t end_revnum,
+                                     apr_pool_t *result_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

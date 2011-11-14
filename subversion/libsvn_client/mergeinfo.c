@@ -38,6 +38,7 @@
 #include "svn_client.h"
 #include "svn_hash.h"
 
+#include "private/svn_opt_private.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
@@ -360,7 +361,7 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
   SVN_ERR(svn_client__path_relative_to_root(&target_repos_rel_path,
                                             ctx->wc_ctx,
                                             local_abspath,
-                                            repos_root, FALSE,
+                                            NULL, FALSE,
                                             NULL, scratch_pool,
                                             scratch_pool));
 
@@ -411,7 +412,7 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
 
           SVN_ERR(svn_client__path_relative_to_root(&key_path, ctx->wc_ctx,
                                                     key_path,
-                                                    repos_root, FALSE,
+                                                    NULL, FALSE,
                                                     NULL, result_pool,
                                                     scratch_pool));
           SVN_ERR(svn_mergeinfo_parse(&subtree_mergeinfo, propval->data,
@@ -1136,12 +1137,10 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
   const char *url;
   svn_boolean_t use_url = svn_path_is_url(path_or_url);
   svn_revnum_t peg_rev;
-  svn_opt_revision_t opt_rev;
-  opt_rev.kind = svn_opt_revision_unspecified;
 
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &peg_rev, &url,
                                            path_or_url, NULL, peg_revision,
-                                           &opt_rev, ctx, scratch_pool));
+                                           peg_revision, ctx, scratch_pool));
 
   /* If PATH_OR_URL is as working copy path determine if we will need to
      contact the repository for the requested PEG_REVISION. */
@@ -1663,7 +1662,6 @@ logs_for_mergeinfo_rangelist(const char *source_url,
   svn_merge_range_t *oldest_range, *youngest_range;
   apr_array_header_t *revision_ranges;
   svn_opt_revision_t oldest_rev, youngest_rev;
-  svn_opt_revision_range_t *range;
   struct filter_log_entry_baton_t fleb;
 
   if (! rangelist->nelts)
@@ -1712,10 +1710,8 @@ logs_for_mergeinfo_rangelist(const char *source_url,
   /* Drive the log. */
   revision_ranges = apr_array_make(scratch_pool, 1,
                                    sizeof(svn_opt_revision_range_t *));
-  range = apr_pcalloc(scratch_pool, sizeof(*range));
-  range->end = youngest_rev;
-  range->start = oldest_rev;
-  APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *) = range;
+  APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *)
+    = svn_opt__revision_range_create(&oldest_rev, &youngest_rev, scratch_pool);
   SVN_ERR(svn_client_log5(target, &youngest_rev, revision_ranges,
                           0, discover_changed_paths, FALSE, FALSE, revprops,
                           filter_log_entry_with_rangelist, &fleb, ctx,

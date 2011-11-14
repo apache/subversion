@@ -1403,23 +1403,6 @@ svn_dirent_is_child(const char *parent_dirent,
 }
 
 const char *
-svn_uri__is_child(const char *parent_uri,
-                  const char *child_uri,
-                  apr_pool_t *pool)
-{
-  const char *relpath;
-
-  assert(pool); /* hysterical raisins. */
-  assert(svn_uri_is_canonical(parent_uri, NULL));
-  assert(svn_uri_is_canonical(child_uri, NULL));
-
-  relpath = is_child(type_uri, parent_uri, child_uri, pool);
-  if (relpath)
-    relpath = svn_path_uri_decode(relpath, pool);
-  return relpath;
-}
-
-const char *
 svn_dirent_skip_ancestor(const char *parent_dirent,
                          const char *child_dirent)
 {

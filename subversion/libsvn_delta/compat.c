@@ -153,6 +153,12 @@ struct prop_args
   const svn_string_t *value;
 };
 
+struct copy_args
+{
+  const char *copyfrom_path;
+  svn_revnum_t copyfrom_rev;
+};
+
 static svn_error_t *
 add_action(struct ev2_edit_baton *eb,
            const char *path,
@@ -255,6 +261,16 @@ process_actions(void *edit_baton,
                   /* ### Someday, we'll need the real contents here. */
                   contents = svn_stream_empty(scratch_pool);
                 }
+              break;
+            }
+
+          case ACTION_COPY:
+            {
+              struct copy_args *c_args = action->args;
+
+              SVN_ERR(svn_editor_copy(eb->editor, c_args->copyfrom_path,
+                                      c_args->copyfrom_rev, path,
+                                      SVN_INVALID_REVNUM));
               break;
             }
 
@@ -381,15 +397,28 @@ ev2_add_directory(const char *path,
 {
   struct ev2_dir_baton *pb = parent_baton;
   struct ev2_dir_baton *cb = apr_palloc(result_pool, sizeof(*cb));
-  svn_kind_t *kind;
-
-  kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
-  *kind = svn_kind_dir;
-  SVN_ERR(add_action(pb->eb, path, ACTION_ADD, kind));
 
   cb->eb = pb->eb;
   cb->path = apr_pstrdup(result_pool, path);
   *child_baton = cb;
+
+  if (!copyfrom_path)
+    {
+      /* A simple add. */
+      svn_kind_t *kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
+
+      *kind = svn_kind_dir;
+      SVN_ERR(add_action(pb->eb, path, ACTION_ADD, kind));
+    }
+  else
+    {
+      /* A copy */
+      struct copy_args *args = apr_palloc(pb->eb->edit_pool, sizeof(*args));
+
+      args->copyfrom_path = apr_pstrdup(pb->eb->edit_pool, copyfrom_path);
+      args->copyfrom_rev = copyfrom_revision;
+      SVN_ERR(add_action(pb->eb, path, ACTION_COPY, args));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -454,15 +483,28 @@ ev2_add_file(const char *path,
 {
   struct ev2_file_baton *fb = apr_palloc(result_pool, sizeof(*fb));
   struct ev2_dir_baton *pb = parent_baton;
-  svn_kind_t *kind;
 
   fb->eb = pb->eb;
   fb->path = apr_pstrdup(result_pool, path);
   *file_baton = fb;
 
-  kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
-  *kind = svn_kind_file;
-  SVN_ERR(add_action(pb->eb, path, ACTION_ADD, kind));
+  if (!copyfrom_path)
+    {
+      /* A simple add. */
+      svn_kind_t *kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
+
+      *kind = svn_kind_file;
+      SVN_ERR(add_action(pb->eb, path, ACTION_ADD, kind));
+    }
+  else
+    {
+      /* A copy */
+      struct copy_args *args = apr_palloc(pb->eb->edit_pool, sizeof(*args));
+
+      args->copyfrom_path = apr_pstrdup(pb->eb->edit_pool, copyfrom_path);
+      args->copyfrom_rev = copyfrom_revision;
+      SVN_ERR(add_action(pb->eb, path, ACTION_COPY, args));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1023,6 +1065,10 @@ copy_cb(void *baton,
   struct editor_baton *eb = baton;
 
   SVN_ERR(ensure_root_opened(eb));
+
+  SVN_ERR(build(eb, ACTION_COPY, dst_relpath, svn_kind_unknown,
+                src_relpath, src_revision, NULL, NULL, SVN_INVALID_REVNUM,
+                scratch_pool));
 
   return SVN_NO_ERROR;
 }

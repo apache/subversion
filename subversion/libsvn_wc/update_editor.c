@@ -4614,6 +4614,17 @@ close_edit(void *edit_baton,
   struct edit_baton *eb = edit_baton;
   apr_pool_t *scratch_pool = eb->pool;
 
+  /* The editor didn't even open the root; we have to take care of
+     some cleanup stuffs. */
+  if (! eb->root_opened
+      && *eb->target_basename == '\0')
+    {
+      /* We need to "un-incomplete" the root directory. */
+      SVN_ERR(svn_wc__db_temp_op_end_directory_update(eb->db,
+                                                      eb->anchor_abspath,
+                                                      scratch_pool));
+    }
+
   /* By definition, anybody "driving" this editor for update or switch
      purposes at a *minimum* must have called set_target_revision() at
      the outset, and close_edit() at the end -- even if it turned out
@@ -5559,14 +5570,14 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                               dir_abspath,
                                               pool, pool));
 
-      if (!svn_uri__is_ancestor(original_root_url, copyfrom_url))
+      original_repos_relpath =
+        svn_uri_skip_ancestor(original_root_url, copyfrom_url, pool);
+
+      if (!original_repos_relpath)
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                  _("Copyfrom-url '%s' has different repository"
                                    " root than '%s'"),
                                  copyfrom_url, original_root_url);
-
-      original_repos_relpath =
-        svn_uri_skip_ancestor(original_root_url, copyfrom_url, pool);
     }
   else
     {

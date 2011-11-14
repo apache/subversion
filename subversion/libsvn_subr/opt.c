@@ -644,6 +644,32 @@ svn_opt__revision_to_string(const svn_opt_revision_t *revision,
     }
 }
 
+svn_opt_revision_range_t *
+svn_opt__revision_range_create(const svn_opt_revision_t *start_revision,
+                               const svn_opt_revision_t *end_revision,
+                               apr_pool_t *result_pool)
+{
+  svn_opt_revision_range_t *range = apr_palloc(result_pool, sizeof(*range));
+
+  range->start = *start_revision;
+  range->end = *end_revision;
+  return range;
+}
+
+svn_opt_revision_range_t *
+svn_opt__revision_range_from_revnums(svn_revnum_t start_revnum,
+                                     svn_revnum_t end_revnum,
+                                     apr_pool_t *result_pool)
+{
+  svn_opt_revision_range_t *range = apr_palloc(result_pool, sizeof(*range));
+
+  range->start.kind = svn_opt_revision_number;
+  range->start.value.number = start_revnum;
+  range->end.kind = svn_opt_revision_number;
+  range->end.value.number = end_revnum;
+  return range;
+}
+
 
 
 /*** Parsing arguments. ***/

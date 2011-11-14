@@ -237,7 +237,7 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
       for (hi = apr_hash_first(pool, sessions); hi; hi = apr_hash_next(hi))
         {
           repos_root = svn__apr_hash_index_key(hi);
-          repos_relpath = svn_uri__is_child(repos_root, uri, pool);
+          repos_relpath = svn_uri_skip_ancestor(repos_root, uri, pool);
 
           if (repos_relpath)
             {
@@ -264,7 +264,7 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
           SVN_ERR(svn_ra_reparent(ra_session, repos_root, pool));
 
           apr_hash_set(sessions, repos_root, APR_HASH_KEY_STRING, ra_session);
-          repos_relpath = svn_uri__is_child(repos_root, uri, pool);
+          repos_relpath = svn_uri_skip_ancestor(repos_root, uri, pool);
 
           relpaths_list = apr_array_make(pool, 1, sizeof(const char *));
           apr_hash_set(relpaths, repos_root, APR_HASH_KEY_STRING,
@@ -368,30 +368,6 @@ svn_client__wc_delete_many(const apr_array_header_t *targets,
   return SVN_NO_ERROR;
 }
 
-/* Callback baton for delete_with_write_lock_baton. */
-struct delete_with_write_lock_baton
-{
-  const apr_array_header_t *targets;
-  svn_boolean_t force;
-  svn_boolean_t keep_local;
-  svn_client_ctx_t *ctx;
-};
-
-/* Implements svn_wc__with_write_lock_func_t. */
-static svn_error_t *
-delete_with_write_lock_func(void *baton,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
-{
-  struct delete_with_write_lock_baton *args = baton;
-
-  return svn_client__wc_delete_many(args->targets, args->force,
-                                    FALSE, args->keep_local,
-                                    args->ctx->notify_func2,
-                                    args->ctx->notify_baton2,
-                                    args->ctx, scratch_pool);
-}
-
 svn_error_t *
 svn_client_delete4(const apr_array_header_t *paths,
                    svn_boolean_t force,
@@ -417,8 +393,6 @@ svn_client_delete4(const apr_array_header_t *paths,
     }
   else
     {
-      struct delete_with_write_lock_baton dwwlb;
-      const char *wcroot_abspath;
       const char *local_abspath;
       apr_hash_t *wcroots;
       apr_hash_index_t *hi;
@@ -432,6 +406,7 @@ svn_client_delete4(const apr_array_header_t *paths,
       iterpool = svn_pool_create(pool);
       for (i = 0; i < paths->nelts; i++)
         {
+          const char *wcroot_abspath;
           apr_array_header_t *targets;
 
           svn_pool_clear(iterpool);
@@ -474,17 +449,17 @@ svn_client_delete4(const apr_array_header_t *paths,
       /* Delete the targets from each working copy in turn. */
       for (hi = apr_hash_first(pool, wcroots); hi; hi = apr_hash_next(hi))
         {
+          const char *wcroot_abspath = svn__apr_hash_index_key(hi);
+          const apr_array_header_t *targets = svn__apr_hash_index_val(hi);
+
           svn_pool_clear(iterpool);
 
-          wcroot_abspath = svn__apr_hash_index_key(hi);
-          dwwlb.targets = svn__apr_hash_index_val(hi);
-          dwwlb.force = force;
-          dwwlb.keep_local = keep_local;
-          dwwlb.ctx = ctx;
-          SVN_ERR(svn_wc__call_with_write_lock(delete_with_write_lock_func,
-                                               &dwwlb, ctx->wc_ctx,
-                                               wcroot_abspath, TRUE,
-                                               iterpool, iterpool));
+          SVN_WC__CALL_WITH_WRITE_LOCK(
+            svn_client__wc_delete_many(targets, force, FALSE, keep_local,
+                                       ctx->notify_func2, ctx->notify_baton2,
+                                       ctx, iterpool),
+            ctx->wc_ctx, wcroot_abspath, TRUE /* lock_anchor */,
+            iterpool);
         }
       svn_pool_destroy(iterpool);
     }

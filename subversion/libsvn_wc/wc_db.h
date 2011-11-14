@@ -1133,6 +1133,37 @@ svn_wc__db_external_read(svn_wc__db_status_t *status,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+/* Return in *EXTERNALS a list of svn_wc__committable_external_info_t *
+ * containing info on externals defined to be checked out below LOCAL_ABSPATH,
+ * returning only those externals that are not fixed to a specific revision.
+ *
+ * If IMMEDIATES_ONLY is TRUE, only those externals defined to be checked out
+ * as immediate children of LOCAL_ABSPATH are returned (this is useful for
+ * treating user requested depth < infinity).
+ *
+ * If there are no externals to be returned, set *EXTERNALS to NULL. Otherwise
+ * set *EXTERNALS to an APR array newly cleated in RESULT_POOL.
+ *
+ * NOTE: This only returns the externals known by the immediate WC root for
+ * LOCAL_ABSPATH; i.e.:
+ * - If there is a further parent WC "above" the immediate WC root, and if
+ *   that parent WC defines externals to live somewhere within this WC, these
+ *   externals will appear to be foreign/unversioned and won't be picked up.
+ * - Likewise, only the topmost level of externals nestings (externals
+ *   defined within a checked out external dir) is picked up by this function.
+ *   (For recursion, see svn_wc__committable_externals_below().)
+ *
+ * ###TODO: Add a WRI_ABSPATH (wc root indicator) separate from LOCAL_ABSPATH,
+ * to allow searching any wc-root for externals under LOCAL_ABSPATH, not only
+ * LOCAL_ABSPATH's most immediate wc-root. */
+svn_error_t *
+svn_wc__db_committable_externals_below(apr_array_header_t **externals,
+                                       svn_wc__db_t *db,
+                                       const char *local_abspath,
+                                       svn_boolean_t immediates_only,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool);
+
 /* Gets a mapping from const char * local abspaths of externals to the const
    char * local abspath of where they are defined for all externals defined
    at or below LOCAL_ABSPATH.
@@ -2312,11 +2343,6 @@ svn_wc__db_global_update(svn_wc__db_t *db,
    The modifications are mutually exclusive.  If NEW_REPOS_ROOT is non-NULL,
    set the repository root of the entry to NEW_REPOS_ROOT.
 
-   If LOCAL_ABSPATH is an incomplete directory then mark it complete
-   by setting the status to normal. (Removing incomplete is usually
-   done by the editor during close_directory, but if the editor driver
-   simply called close_edit it gets done here.)
-
    If LOCAL_ABSPATH is a directory, then, walk entries below LOCAL_ABSPATH
    according to DEPTH thusly:
 
@@ -2874,6 +2900,15 @@ svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
                                           const char *new_repos_relpath,
                                           svn_revnum_t new_rev,
                                           apr_pool_t *scratch_pool);
+
+/* Marks a directory update started with
+   svn_wc__db_temp_op_start_directory_update as completed, by removing
+   the incomplete status */
+svn_error_t *
+svn_wc__db_temp_op_end_directory_update(svn_wc__db_t *db,
+                                        const char *local_dir_abspath,
+                                        apr_pool_t *scratch_pool);
+
 
 /* Copy the base tree at LOCAL_ABSPATH into the working tree as copy,
    leaving any subtree additions and copies as-is.  This allows the
