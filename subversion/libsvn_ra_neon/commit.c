@@ -87,7 +87,7 @@ typedef struct commit_ctx_t
   apr_hash_t *revprop_table;
 
   /* A hash mapping svn_string_t * paths (those which are valid as
-     target in the MERGE response) to svn_node_kind_t kinds. */
+     target in the MERGE response) to (void*)svn_recurse_kind. */
   apr_hash_t *valid_targets;
 
   /* The (potential) author of this commit. */
