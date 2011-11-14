@@ -2831,6 +2831,7 @@ def commit_incomplete(sbox):
 #   Date: Sun, 13 Nov 2011 13:31:05 +1300
 #   From: Fergus Slorach <sugref@gmail.com>
 #   Subject: svn commit --targets behaviour change in 1.7?
+@Issue(4059)
 @XFail()
 def commit_add_subadd(sbox):
   "committing add with explicit subadd targets"
