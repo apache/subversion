@@ -9570,37 +9570,6 @@ merge_locked(const char *source1,
   return SVN_NO_ERROR;
 }
 
-struct merge_baton_t {
-  const char *source1;
-  const svn_opt_revision_t *revision1;
-  const char *source2;
-  const svn_opt_revision_t *revision2;
-  const char *target_abspath;
-  svn_depth_t depth;
-  svn_boolean_t ignore_ancestry;
-  svn_boolean_t force;
-  svn_boolean_t record_only;
-  svn_boolean_t dry_run;
-  svn_boolean_t allow_mixed_rev;
-  const apr_array_header_t *merge_options;
-  svn_client_ctx_t *ctx;
-};
-
-/* Implements svn_wc__with_write_lock_func_t. */
-static svn_error_t *
-merge_cb(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
-{
-  struct merge_baton_t *b = baton;
-
-  SVN_ERR(merge_locked(b->source1, b->revision1, b->source2, b->revision2,
-                       b->target_abspath, b->depth, b->ignore_ancestry,
-                       b->force, b->record_only, b->dry_run,
-                       b->allow_mixed_rev, b->merge_options, b->ctx,
-                       scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 /* Set *TARGET_ABSPATH to the absolute path of, and *LOCK_ABSPATH to
  the absolute path to lock for, TARGET_WCPATH. */
 static svn_error_t *
@@ -9640,31 +9609,22 @@ svn_client_merge4(const char *source1,
                   apr_pool_t *pool)
 {
   const char *target_abspath, *lock_abspath;
-  struct merge_baton_t merge_baton;
 
   SVN_ERR(get_target_and_lock_abspath(&target_abspath, &lock_abspath,
                                       target_wcpath, ctx, pool));
 
-  merge_baton.source1 = source1;
-  merge_baton.revision1 = revision1;
-  merge_baton.source2 = source2;
-  merge_baton.revision2 = revision2;
-  merge_baton.target_abspath = target_abspath;
-  merge_baton.depth = depth;
-  merge_baton.ignore_ancestry = ignore_ancestry;
-  merge_baton.force = force;
-  merge_baton.record_only = record_only;
-  merge_baton.dry_run = dry_run;
-  merge_baton.allow_mixed_rev = allow_mixed_rev;
-  merge_baton.merge_options = merge_options;
-  merge_baton.ctx = ctx;
-
   if (!dry_run)
-    SVN_ERR(svn_wc__call_with_write_lock(merge_cb, &merge_baton,
-                                         ctx->wc_ctx, lock_abspath, FALSE,
-                                         pool, pool));
+    SVN_WC__CALL_WITH_WRITE_LOCK(
+      merge_locked(source1, revision1, source2, revision2,
+                   target_abspath, depth, ignore_ancestry,
+                   force, record_only, dry_run,
+                   allow_mixed_rev, merge_options, ctx, pool),
+      ctx->wc_ctx, lock_abspath, FALSE /* lock_anchor */, pool);
   else
-    SVN_ERR(merge_cb(&merge_baton, pool, pool));
+    SVN_ERR(merge_locked(source1, revision1, source2, revision2,
+                   target_abspath, depth, ignore_ancestry,
+                   force, record_only, dry_run,
+                   allow_mixed_rev, merge_options, ctx, pool));
 
   return SVN_NO_ERROR;
 }
@@ -10746,31 +10706,6 @@ merge_reintegrate_locked(const char *source,
   return SVN_NO_ERROR;
 }
 
-struct merge_reintegrate_baton_t {
-  const char *source;
-  const svn_opt_revision_t *peg_revision;
-  const char *target_abspath;
-  svn_boolean_t dry_run;
-  const apr_array_header_t *merge_options;
-  svn_client_ctx_t *ctx;
-};
-
-/* Implements svn_wc__with_write_lock_func_t. */
-static svn_error_t *
-merge_reintegrate_cb(void *baton,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
-{
-  struct merge_reintegrate_baton_t *b = baton;
-
-  SVN_ERR(merge_reintegrate_locked(b->source, b->peg_revision,
-                                   b->target_abspath, b->dry_run,
-                                   b->merge_options, b->ctx,
-                                   scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_client_merge_reintegrate(const char *source,
                              const svn_opt_revision_t *peg_revision,
@@ -10781,25 +10716,18 @@ svn_client_merge_reintegrate(const char *source,
                              apr_pool_t *pool)
 {
   const char *target_abspath, *lock_abspath;
-  struct merge_reintegrate_baton_t merge_reintegrate_baton;
 
   SVN_ERR(get_target_and_lock_abspath(&target_abspath, &lock_abspath,
                                       target_wcpath, ctx, pool));
 
-  merge_reintegrate_baton.source = source;
-  merge_reintegrate_baton.peg_revision = peg_revision;
-  merge_reintegrate_baton.target_abspath = target_abspath;
-  merge_reintegrate_baton.dry_run = dry_run;
-  merge_reintegrate_baton.merge_options = merge_options;
-  merge_reintegrate_baton.ctx = ctx;
-
   if (!dry_run)
-    SVN_ERR(svn_wc__call_with_write_lock(merge_reintegrate_cb,
-                                         &merge_reintegrate_baton,
-                                         ctx->wc_ctx, lock_abspath, FALSE,
-                                         pool, pool));
+    SVN_WC__CALL_WITH_WRITE_LOCK(
+      merge_reintegrate_locked(source, peg_revision, target_abspath,
+                               dry_run, merge_options, ctx, pool),
+      ctx->wc_ctx, lock_abspath, FALSE /* lock_anchor */, pool);
   else
-    SVN_ERR(merge_reintegrate_cb(&merge_reintegrate_baton, pool, pool));
+    SVN_ERR(merge_reintegrate_locked(source, peg_revision, target_abspath,
+                                     dry_run, merge_options, ctx, pool));
 
   return SVN_NO_ERROR;
 }
@@ -10902,36 +10830,6 @@ merge_peg_locked(const char *source,
   return SVN_NO_ERROR;
 }
 
-struct merge_peg_baton_t {
-  const char *source;
-  const apr_array_header_t *ranges_to_merge;
-  const svn_opt_revision_t *peg_revision;
-  const char *target_abspath;
-  svn_depth_t depth;
-  svn_boolean_t ignore_ancestry;
-  svn_boolean_t force;
-  svn_boolean_t record_only;
-  svn_boolean_t dry_run;
-  svn_boolean_t allow_mixed_rev;
-  const apr_array_header_t *merge_options;
-  svn_client_ctx_t *ctx;
-};
-
-/* Implements svn_wc__with_write_lock_func_t. */
-static svn_error_t *
-merge_peg_cb(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
-{
-  struct merge_peg_baton_t *b = baton;
-
-  SVN_ERR(merge_peg_locked(b->source, b->ranges_to_merge, b->peg_revision,
-                           b->target_abspath, b->depth, b->ignore_ancestry,
-                           b->force, b->record_only, b->dry_run,
-                           b->allow_mixed_rev, b->merge_options, b->ctx,
-                           scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_client_merge_peg4(const char *source,
                       const apr_array_header_t *ranges_to_merge,
@@ -10948,7 +10846,6 @@ svn_client_merge_peg4(const char *source,
                       apr_pool_t *pool)
 {
   const char *target_abspath, *lock_abspath;
-  struct merge_peg_baton_t merge_peg_baton;
 
   /* No ranges to merge?  No problem. */
   if (ranges_to_merge->nelts == 0)
@@ -10957,25 +10854,18 @@ svn_client_merge_peg4(const char *source,
   SVN_ERR(get_target_and_lock_abspath(&target_abspath, &lock_abspath,
                                       target_wcpath, ctx, pool));
 
-  merge_peg_baton.source = source;
-  merge_peg_baton.ranges_to_merge = ranges_to_merge;
-  merge_peg_baton.peg_revision = peg_revision;
-  merge_peg_baton.target_abspath = target_abspath;
-  merge_peg_baton.depth = depth;
-  merge_peg_baton.ignore_ancestry = ignore_ancestry;
-  merge_peg_baton.force = force;
-  merge_peg_baton.record_only = record_only;
-  merge_peg_baton.dry_run = dry_run;
-  merge_peg_baton.allow_mixed_rev = allow_mixed_rev;
-  merge_peg_baton.merge_options = merge_options;
-  merge_peg_baton.ctx = ctx;
-
   if (!dry_run)
-    SVN_ERR(svn_wc__call_with_write_lock(merge_peg_cb, &merge_peg_baton,
-                                         ctx->wc_ctx, lock_abspath, FALSE,
-                                         pool, pool));
+    SVN_WC__CALL_WITH_WRITE_LOCK(
+      merge_peg_locked(source, ranges_to_merge, peg_revision,
+                       target_abspath, depth, ignore_ancestry,
+                       force, record_only, dry_run,
+                       allow_mixed_rev, merge_options, ctx, pool),
+      ctx->wc_ctx, lock_abspath, FALSE /* lock_anchor */, pool);
   else
-    SVN_ERR(merge_peg_cb(&merge_peg_baton, pool, pool));
+    SVN_ERR(merge_peg_locked(source, ranges_to_merge, peg_revision,
+                       target_abspath, depth, ignore_ancestry,
+                       force, record_only, dry_run,
+                       allow_mixed_rev, merge_options, ctx, pool));
 
   return SVN_NO_ERROR;
 }

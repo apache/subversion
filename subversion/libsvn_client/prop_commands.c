@@ -248,37 +248,6 @@ propset_on_url(const char *propname,
   return editor->close_edit(edit_baton, pool);
 }
 
-/* Baton for set_props_cb */
-struct set_props_baton
-{
-  svn_client_ctx_t *ctx;
-  const char *local_abspath;
-  svn_depth_t depth;
-  svn_node_kind_t kind;
-  const char *propname;
-  const svn_string_t *propval;
-  svn_boolean_t skip_checks;
-  const apr_array_header_t *changelist_filter;
-};
-
-/* Working copy lock callback for svn_client_propset4 */
-static svn_error_t *
-set_props_cb(void *baton,
-             apr_pool_t *result_pool,
-             apr_pool_t *scratch_pool)
-{
-  struct set_props_baton *bt = baton;
-
-  SVN_ERR(svn_wc_prop_set4(bt->ctx->wc_ctx, bt->local_abspath, bt->propname,
-                           bt->propval, bt->depth, bt->skip_checks,
-                           bt->changelist_filter,
-                           bt->ctx->cancel_func, bt->ctx->cancel_baton,
-                           bt->ctx->notify_func2, bt->ctx->notify_baton2,
-                           scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 /* Check that PROPNAME is a valid name for a versioned property.  Return an
  * error if it is not valid, specifically if it is:
  *   - the name of a standard Subversion rev-prop; or
@@ -342,7 +311,6 @@ svn_client_propset_local(const char *propname,
       svn_node_kind_t kind;
       const char *target_abspath;
       svn_error_t *err;
-      struct set_props_baton baton;
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
       svn_pool_clear(iterpool);
@@ -374,18 +342,12 @@ svn_client_propset_local(const char *propname,
       else
         SVN_ERR(err);
 
-      baton.ctx = ctx;
-      baton.local_abspath = target_abspath;
-      baton.depth = depth;
-      baton.kind = kind;
-      baton.propname = propname;
-      baton.propval = propval;
-      baton.skip_checks = skip_checks;
-      baton.changelist_filter = changelists;
-
-      SVN_ERR(svn_wc__call_with_write_lock(set_props_cb, &baton,
-                                           ctx->wc_ctx, target_abspath,
-                                           FALSE, iterpool, iterpool));
+      SVN_WC__CALL_WITH_WRITE_LOCK(
+        svn_wc_prop_set4(ctx->wc_ctx, target_abspath, propname,
+                         propval, depth, skip_checks, changelists,
+                         ctx->cancel_func, ctx->cancel_baton,
+                         ctx->notify_func2, ctx->notify_baton2, iterpool),
+        ctx->wc_ctx, target_abspath, FALSE /* lock_anchor */, iterpool);
     }
   svn_pool_destroy(iterpool);
 
