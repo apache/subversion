@@ -799,6 +799,35 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
+/** Evaluate the expression @a expr while holding a write lock on
+ * @a local_abspath.
+ *
+ * @a expr must yield an (svn_error_t *) error code.  If the error code
+ * is not #SVN_NO_ERROR, cause the function using this macro to return
+ * the error to its caller.
+ *
+ * If @a lock_anchor is TRUE, determine if @a local_abspath has an anchor
+ * that should be locked instead.
+ *
+ * Use @a wc_ctx for working copy access.
+ *
+ * The lock is guaranteed to be released after evaluating @a expr.
+ */
+#define SVN_WC__CALL_WITH_WRITE_LOCK(expr, wc_ctx, local_abspath,             \
+                                     lock_anchor, scratch_pool)               \
+  do {                                                                        \
+    svn_error_t *svn_wc__err1, *svn_wc__err2;                                 \
+    const char *svn_wc__lock_root_abspath;                                    \
+    SVN_ERR(svn_wc__acquire_write_lock(&svn_wc__lock_root_abspath, wc_ctx,    \
+                                       local_abspath, lock_anchor,            \
+                                       scratch_pool, scratch_pool));          \
+    svn_wc__err1 = svn_error_trace(expr);                                     \
+    svn_wc__err2 = svn_wc__release_write_lock(                                \
+                     wc_ctx, svn_wc__lock_root_abspath, scratch_pool);        \
+    SVN_ERR(svn_error_compose_create(svn_wc__err1, svn_wc__err2));            \
+  } while (0)
+
+
 /**
  * Calculates the schedule and copied status of a node as that would
  * have been stored in an svn_wc_entry_t instance.
