@@ -7249,9 +7249,10 @@ path_is_subtree(const char *local_abspath,
   return FALSE;
 }
 
-/* Return true if LOCAL_ABDPATH is equal to or a subtree of any of the paths
-   in NOTIFY_B->MERGED_PATHS, NOTIFY_B->SKIPPED_PATHS, NOTIFY_B->ADDED_PATHS,
-   or NOTIFY_B->CONFLICTED_PATHS.  Return false otherwise. */
+/* Return true if LOCAL_ABSPATH is equal to, or is a subtree of, any of the
+   paths in NOTIFY_B->MERGED_PATHS, NOTIFY_B->SKIPPED_PATHS,
+   NOTIFY_B->ADDED_PATHS, or NOTIFY_B->CONFLICTED_PATHS.  Return false
+   otherwise. */
 static svn_boolean_t
 subtree_touched_by_merge(const char *local_abspath,
                          notification_receiver_baton_t *notify_b,
