@@ -1428,6 +1428,46 @@ check_paths(svn_boolean_t *is_repos1,
   return SVN_NO_ERROR;
 }
 
+/* Raise an error if the diff target URL does not exist at REVISION.
+ * If REVISION does not equal OTHER_REVISION, mention both revisions in
+ * the error message. Use RA_SESSION to contact the repository.
+ * Use POOL for temporary allocations. */
+static svn_error_t *
+check_diff_target_exists(const char *url,
+                         svn_revnum_t revision,
+                         svn_revnum_t other_revision,
+                         svn_ra_session_t *ra_session,
+                         apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  const char *session_url;
+
+  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
+
+  if (strcmp(url, session_url) != 0)
+    SVN_ERR(svn_ra_reparent(ra_session, url, pool));
+
+  SVN_ERR(svn_ra_check_path(ra_session, "", revision, &kind, pool));
+  if (kind == svn_node_none)
+    {
+      if (revision == other_revision)
+        return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                                 _("Diff target '%s' was not found in the "
+                                   "repository at revision '%ld'"),
+                                 url, revision);
+      else
+        return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                                 _("Diff target '%s' was not found in the "
+                                   "repository at revision '%ld' or '%ld'"),
+                                 url, revision, other_revision);
+     }
+
+  if (strcmp(url, session_url) != 0)
+    SVN_ERR(svn_ra_reparent(ra_session, session_url, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /** Prepare a repos repos diff between PATH1 and PATH2@PEG_REVISION,
  * in the revision range REVISION1:REVISION2.
  * Return URLs and peg revisions in *URL1, *REV1 and in *URL2, *REV2.
@@ -1495,18 +1535,34 @@ diff_prepare_repos_repos(const char **url1,
   if (peg_revision->kind != svn_opt_revision_unspecified)
     {
       svn_opt_revision_t *start_ignore, *end_ignore;
+      svn_error_t *err;
 
-      SVN_ERR(svn_client__repos_locations(url1, &start_ignore,
-                                          url2, &end_ignore,
-                                          *ra_session,
-                                          path2,
-                                          peg_revision,
-                                          revision1,
-                                          revision2,
-                                          ctx, pool));
-      /* Reparent the session, since *URL2 might have changed as a result
-         the above call. */
-      SVN_ERR(svn_ra_reparent(*ra_session, *url2, pool));
+      err = svn_client__repos_locations(url1, &start_ignore,
+                                        url2, &end_ignore,
+                                        *ra_session,
+                                        path2,
+                                        peg_revision,
+                                        revision1,
+                                        revision2,
+                                        ctx, pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
+            {
+              /* Don't give up just yet. A missing path might translate
+               * into an addition in the diff. Below, we verify that each
+               * URL exists on at least one side of the diff. */
+              svn_error_clear(err);
+            }
+          else
+            return svn_error_trace(err);
+        }
+      else
+        {
+          /* Reparent the session, since *URL2 might have changed as a result
+             the above call. */
+          SVN_ERR(svn_ra_reparent(*ra_session, *url2, pool));
+        }
     }
 
   /* Resolve revision and get path kind for the second target. */
@@ -1514,11 +1570,6 @@ diff_prepare_repos_repos(const char **url1,
            (path2 == *url2) ? NULL : path2_abspath,
            *ra_session, revision2, pool));
   SVN_ERR(svn_ra_check_path(*ra_session, "", *rev2, &kind2, pool));
-  if (kind2 == svn_node_none)
-    return svn_error_createf
-      (SVN_ERR_FS_NOT_FOUND, NULL,
-       _("'%s' was not found in the repository at revision %ld"),
-       *url2, *rev2);
 
   /* Do the same for the first target. */
   SVN_ERR(svn_ra_reparent(*ra_session, *url1, pool));
@@ -1526,18 +1577,84 @@ diff_prepare_repos_repos(const char **url1,
            (strcmp(path1, *url1) == 0) ? NULL : path1_abspath,
            *ra_session, revision1, pool));
   SVN_ERR(svn_ra_check_path(*ra_session, "", *rev1, &kind1, pool));
-  if (kind1 == svn_node_none)
-    return svn_error_createf
-      (SVN_ERR_FS_NOT_FOUND, NULL,
-       _("'%s' was not found in the repository at revision %ld"),
-       *url1, *rev1);
+
+  /* Either both URLs must exist at their respective revisions,
+   * or one of them may be missing from one side of the diff. */
+  if (kind1 == svn_node_none && kind2 == svn_node_none)
+    {
+      if (strcmp(*url1, *url2) == 0)
+        return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                                 _("Diff target '%s' was not found in the "
+                                   "repository at revisions '%ld' and '%ld'"),
+                                 *url1, *rev1, *rev2);
+      else
+        return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                                 _("Diff targets '%s and '%s' were not found "
+                                   "in the repository at revisions '%ld' and "
+                                   "'%ld'"),
+                                 *url1, *url2, *rev1, *rev2);
+    }
+  else if (kind1 == svn_node_none)
+    SVN_ERR(check_diff_target_exists(*url1, *rev2, *rev1, *ra_session, pool));
+  else if (kind2 == svn_node_none)
+    SVN_ERR(check_diff_target_exists(*url2, *rev1, *rev2, *ra_session, pool));
 
   /* Choose useful anchors and targets for our two URLs. */
   *anchor1 = *url1;
   *anchor2 = *url2;
   *target1 = "";
   *target2 = "";
-  if ((kind1 == svn_node_file) || (kind2 == svn_node_file))
+  if ((kind1 == svn_node_none) || (kind2 == svn_node_none))
+    {
+      svn_node_kind_t kind;
+      const char *repos_root;
+      const char *new_anchor;
+      svn_revnum_t rev;
+
+      /* The diff target does not exist on one side of the diff.
+       * This can happen if the target was added or deleted within the
+       * revision range being diffed.
+       * However, we don't know how deep within a added/deleted subtree the
+       * diff target is. Find a common parent that exists on both sides of
+       * the diff and use it as anchor for the diff operation.
+       *
+       * ### This can fail due to authz restrictions (like in issue #3242).
+       * ### But it is the only option we have right now to try to get
+       * ### a usable diff in this situation. */
+
+      SVN_ERR(svn_ra_get_repos_root2(*ra_session, &repos_root, pool));
+
+      /* Since we already know that one of the URLs does exist,
+       * look for an existing parent of the URL which doesn't exist. */
+      new_anchor = (kind1 == svn_node_none ? *anchor1 : *anchor2);
+      rev = (kind1 == svn_node_none ? *rev1 : *rev2);
+      do
+        {
+          if (strcmp(new_anchor, repos_root) != 0)
+            {
+              new_anchor = svn_path_uri_decode(svn_uri_dirname(new_anchor,
+                                                               pool),
+                                               pool);
+              if (*base_path)
+                *base_path = svn_dirent_dirname(*base_path, pool);
+            }
+
+          SVN_ERR(svn_ra_reparent(*ra_session, new_anchor, pool));
+          SVN_ERR(svn_ra_check_path(*ra_session, "", rev, &kind, pool));
+
+        }
+      while (kind != svn_node_dir);
+      *anchor1 = *anchor2 = new_anchor;
+      /* Diff targets must be relative to the new anchor. */
+      *target1 = svn_uri_skip_ancestor(new_anchor, *url1, pool);
+      *target2 = svn_uri_skip_ancestor(new_anchor, *url2, pool);
+      SVN_ERR_ASSERT(*target1 && *target2);
+      if (kind1 == svn_node_none)
+        kind1 = svn_node_dir;
+      else
+        kind2 = svn_node_dir;
+    }
+  else if ((kind1 == svn_node_file) || (kind2 == svn_node_file))
     {
       svn_uri_split(anchor1, target1, *url1, pool);
       svn_uri_split(anchor2, target2, *url2, pool);
