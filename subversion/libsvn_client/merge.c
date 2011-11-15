@@ -4384,7 +4384,6 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
           && merge_b->implicit_src_gap)
         {
           int j;
-          svn_revnum_t start, end;
           svn_boolean_t proper_subset = FALSE;
           svn_boolean_t overlaps_or_adjoins = FALSE;
 
@@ -4395,21 +4394,21 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
 
           for (j = 0; j < child->remaining_ranges->nelts; j++)
             {
-              start = (APR_ARRAY_IDX(child->remaining_ranges, j,
-                                     svn_merge_range_t *))->start;
-              end = (APR_ARRAY_IDX(child->remaining_ranges, j,
-                                   svn_merge_range_t *))->end;
-              if ((start <= gap_start && gap_end < end)
-                  || (start < gap_start && gap_end <= end))
+              svn_merge_range_t *range
+                = APR_ARRAY_IDX(child->remaining_ranges, j, svn_merge_range_t *);
+
+              if ((range->start <= gap_start && gap_end < range->end)
+                  || (range->start < gap_start && gap_end <= range->end))
                 {
                   proper_subset = TRUE;
                   break;
                 }
-              else if ((gap_start == start) && (end == gap_end))
+              else if ((gap_start == range->start) && (range->end == gap_end))
                 {
                   break;
                 }
-              else if (gap_start <= end && start <= gap_end)  /* intersect */
+              else if (gap_start <= range->end && range->start <= gap_end)
+                /* intersect */
                 {
                   overlaps_or_adjoins = TRUE;
                   break;
@@ -6254,7 +6253,7 @@ compare_merge_source_ts(const void *a,
    youngest. */
 static svn_error_t *
 combine_range_with_segments(apr_array_header_t **merge_source_ts_p,
-                            svn_merge_range_t *range,
+                            const svn_merge_range_t *range,
                             const apr_array_header_t *segments,
                             const char *source_root_url,
                             apr_pool_t *pool)
