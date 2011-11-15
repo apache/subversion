@@ -470,8 +470,9 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
          too many for the \r. */
       svn_boolean_t ended_at_nonmatching_newline = FALSE;
       for (i = 0; i < file_len; i++)
-        ended_at_nonmatching_newline = ended_at_nonmatching_newline
-                                       || *file[i].curp == '\n';
+        if (file[i].curp < file[i].endp)
+          ended_at_nonmatching_newline = ended_at_nonmatching_newline
+                                         || *file[i].curp == '\n';
       if (ended_at_nonmatching_newline)
         {
           lines--;
