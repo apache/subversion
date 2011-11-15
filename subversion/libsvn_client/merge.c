@@ -9075,16 +9075,11 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
      point-to-point merge... */
   if (! record_only)
     {
-      merge_source_t *faux_source;
+      merge_source_t faux_source = { URL1, rev1, URL2, rev2 };
       apr_array_header_t *faux_sources =
         apr_array_make(scratch_pool, 1, sizeof(merge_source_t *));
       modified_subtrees = apr_hash_make(scratch_pool);
-      faux_source = apr_pcalloc(scratch_pool, sizeof(*faux_source));
-      faux_source->url1 = URL1;
-      faux_source->url2 = URL2;
-      faux_source->rev1 = rev1;
-      faux_source->rev2 = rev2;
-      APR_ARRAY_PUSH(faux_sources, merge_source_t *) = faux_source;
+      APR_ARRAY_PUSH(faux_sources, merge_source_t *) = &faux_source;
       SVN_ERR(do_merge(&modified_subtrees, NULL, faux_sources, target_abspath,
                        FALSE, TRUE, same_repos,
                        ignore_ancestry, force, dry_run, FALSE, NULL, TRUE,
@@ -9292,7 +9287,6 @@ merge_locked(const char *source1,
   svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
   svn_ra_session_t *ra_session1, *ra_session2;
   apr_array_header_t *merge_sources;
-  merge_source_t *merge_source;
   svn_error_t *err;
   svn_boolean_t use_sleep = FALSE;
   const char *yc_path = NULL;
@@ -9494,13 +9488,9 @@ merge_locked(const char *source1,
   else
     {
       /* Build a single-item merge_source_t array. */
+      merge_source_t merge_source = { URL1, rev1, URL2, rev2 };
       merge_sources = apr_array_make(scratch_pool, 1, sizeof(merge_source_t *));
-      merge_source = apr_pcalloc(scratch_pool, sizeof(*merge_source));
-      merge_source->url1 = URL1;
-      merge_source->url2 = URL2;
-      merge_source->rev1 = rev1;
-      merge_source->rev2 = rev2;
-      APR_ARRAY_PUSH(merge_sources, merge_source_t *) = merge_source;
+      APR_ARRAY_PUSH(merge_sources, merge_source_t *) = &merge_source;
     }
 
   /* Close our temporary RA sessions. */
