@@ -9488,9 +9488,14 @@ merge_locked(const char *source1,
   else
     {
       /* Build a single-item merge_source_t array. */
-      merge_source_t merge_source = { URL1, rev1, URL2, rev2 };
+      merge_source_t *merge_source;
       merge_sources = apr_array_make(scratch_pool, 1, sizeof(merge_source_t *));
-      APR_ARRAY_PUSH(merge_sources, merge_source_t *) = &merge_source;
+      merge_source = apr_pcalloc(scratch_pool, sizeof(*merge_source));
+      merge_source->url1 = URL1;
+      merge_source->url2 = URL2;
+      merge_source->rev1 = rev1;
+      merge_source->rev2 = rev2;
+      APR_ARRAY_PUSH(merge_sources, merge_source_t *) = merge_source;
     }
 
   /* Close our temporary RA sessions. */
