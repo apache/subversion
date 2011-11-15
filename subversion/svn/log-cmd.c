@@ -281,7 +281,6 @@ log_entry_receiver(void *baton,
       apr_array_header_t *diff_options;
       svn_opt_revision_t start_revision;
       svn_opt_revision_t end_revision;
-      svn_error_t *err;
 
       SVN_ERR(svn_stream_for_stdout(&outstream, pool));
       SVN_ERR(svn_stream_for_stderr(&errstream, pool));
