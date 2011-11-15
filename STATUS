@@ -39,7 +39,7 @@ Candidate changes:
  * r1187695
    Have mod_dav_svn ignore non-Subversion POST requests.
    Justification:
-     mod_dav_svn does not play well with others.
+     mod_dav_svn does not play well with others, a regression from 1.6.
    Votes:
      +1: philip, rhuijben
 
@@ -111,6 +111,13 @@ Candidate changes:
      ^/subversion/branches/1.7.x-r1201824
    Votes:
      +1: stsp
+
+ * r1202135
+   Fix issue 4060, spurious authz denied when svnserve root is a repository.
+   Justification:
+     Regression from 1.6.
+   Votes:
+     +1: philip
 
 Veto-blocked changes:
 =====================
