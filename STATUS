@@ -125,10 +125,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1200837
-   Omit "Committed revision N." message when --quiet is given.
-   Justification:
-     Regression from 1.6.
-   Votes:
-     +1: philip, danielsh, rhuijben
