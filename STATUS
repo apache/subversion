@@ -91,16 +91,6 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
- * r1202135, r1202187
-   Fix issue 4060, spurious authz denied when svnserve root is a repository.
-   Justification:
-     Regression from 1.6.
-   Notes:
-     r1202135 is fix, r1202187 is regression test
-   Votes:
-     +1: philip, rhuijben
-     +1: stsp (r1202135)
-
 Veto-blocked changes:
 =====================
 
@@ -125,3 +115,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1202135, r1202187
+   Fix issue 4060, spurious authz denied when svnserve root is a repository.
+   Justification:
+     Regression from 1.6.
+   Notes:
+     r1202135 is fix, r1202187 is regression test
+   Votes:
+     +1: philip, rhuijben, stsp
