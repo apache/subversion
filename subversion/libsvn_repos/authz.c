@@ -768,6 +768,9 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
 {
   const char *current_path;
 
+  if (!repos_name)
+    repos_name = "";
+
   /* If PATH is NULL, check if the user has *any* access. */
   if (!path)
     {
