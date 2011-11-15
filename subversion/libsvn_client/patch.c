@@ -2708,6 +2708,7 @@ delete_empty_dirs(apr_array_header_t *targets_info, svn_client_ctx_t *ctx,
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
       target_info = APR_ARRAY_IDX(targets_info, i, patch_target_info_t *);
+
       parent = svn_dirent_dirname(target_info->local_abspath, iterpool);
 
       if (apr_hash_get(non_empty_dirs, parent, APR_HASH_KEY_STRING))
@@ -2893,11 +2894,12 @@ apply_patches(void *baton,
               target_info->local_abspath = apr_pstrdup(scratch_pool,
                                                        target->local_abspath);
               target_info->deleted = target->deleted;
-              APR_ARRAY_PUSH(targets_info,
-                             patch_target_info_t *) = target_info;
 
               if (! target->skipped)
                 {
+                  APR_ARRAY_PUSH(targets_info,
+                                 patch_target_info_t *) = target_info;
+
                   if (target->has_text_changes
                       || target->added
                       || target->deleted)

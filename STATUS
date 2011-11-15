@@ -126,13 +126,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1199950
-   Fix issue 4049, SEGV on patch that skips and deletes.
-   Justification:
-     Client SEGV on user input.
-   Votes:
-     +1: philip, stsp, rhuijben
-
  * r1200837
    Omit "Committed revision N." message when --quiet is given.
    Justification:
