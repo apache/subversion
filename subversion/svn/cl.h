@@ -393,9 +393,14 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
 
    Increment *TEXT_CONFLICTS, *PROP_CONFLICTS, or *TREE_CONFLICTS if
    a conflict was encountered.
-   */
+
+   Use CWD_ABSPATH -- the absolute path of the current working
+   directory -- to shorten PATH into something relative to that
+   directory as necessary.
+*/
 svn_error_t *
-svn_cl__print_status(const char *path,
+svn_cl__print_status(const char *cwd_abspath,
+                     const char *path,
                      const svn_client_status_t *status,
                      svn_boolean_t detailed,
                      svn_boolean_t show_last_committed,
@@ -409,9 +414,15 @@ svn_cl__print_status(const char *path,
 
 
 /* Print STATUS for PATH in XML to stdout.  Use POOL for temporary
-   allocations. */
+   allocations.
+
+   Use CWD_ABSPATH -- the absolute path of the current working
+   directory -- to shorten PATH into something relative to that
+   directory as necessary.
+ */
 svn_error_t *
-svn_cl__print_status_xml(const char *path,
+svn_cl__print_status_xml(const char *cwd_abspath,
+                         const char *path,
                          const svn_client_status_t *status,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool);
