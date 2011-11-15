@@ -247,7 +247,9 @@ dav_svn__merge_response(ap_filter_t *output,
       post_commit_err_elem = apr_psprintf(pool,
                                           "<S:post-commit-err>%s"
                                           "</S:post-commit-err>",
-                                          post_commit_err);
+                                          apr_xml_quote_string(pool,
+                                                               post_commit_err,
+                                                               0));
     }
   else
     {
