@@ -116,16 +116,6 @@ Candidate changes:
    Votes:
      +1: stsp, philip
 
- * r893478
-   Make the stderr output of the post-commit hook XML-safe.
-   Justification:
-     Prevents obscure error messages after commit, such as:
-       svn: MERGE of '/svn/repos/trunk': 200 OK (http://localhost:8081)
-     This happens if the client cannot parse the XML response to
-     the MERGE request.
-   Votes:
-     +1: stsp 
-
 Veto-blocked changes:
 =====================
 
@@ -270,3 +260,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r893478
+   Make the stderr output of the post-commit hook XML-safe.
+   Justification:
+     Prevents obscure error messages after commit, such as:
+       svn: MERGE of '/svn/repos/trunk': 200 OK (http://localhost:8081)
+     This happens if the client cannot parse the XML response to
+     the MERGE request.
+   Votes:
+     +1: stsp, danielsh, cmpilato
