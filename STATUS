@@ -71,36 +71,14 @@ Candidate changes:
    Justification:
      Our client-server compatibility rules require this to work.
    Votes:
-     +1: philip
-     -0: rhuijben (1197281, no longer nominated)
-                  (I agree with marking the root complete.
-                   The recursive un-incomplete marking is never necessary as
-                   the crawling of the directory reports the directories as
-                   incomplete. The server must then report all children that
-                   aren't reported explicitly during crawling. Not touching
-                   a pre-existing incomplete directory during update is an
-                   editor driver bug)
-
- * r1199950
-   Fix issue 4049, SEGV on patch that  skips and deletes.
-   Justification:
-     Client SEGV on user input.
-   Votes:
-     +1: philip, stsp
-
- * r1200837
-   Omit "Committed revision N." message when --quiet is given.
-   Justification:
-     Regression from 1.6.
-   Votes:
-     +1: philip, danielsh
+     +1: philip, rhuijben
 
  * r1201002
    Fix occasional unitialised memory read in client diff code.
    Justification:
      Undefined behaviour.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
  * r1201824
    Fix issue #2873.
@@ -111,7 +89,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1201824
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r1202135, r1202187
    Fix issue 4060, spurious authz denied when svnserve root is a repository.
@@ -120,7 +98,7 @@ Candidate changes:
    Notes:
      r1202135 is fix, r1202187 is regression test
    Votes:
-     +1: philip
+     +1: philip, rhuijben
      +1: stsp (r1202135)
 
 Veto-blocked changes:
@@ -147,3 +125,17 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1199950
+   Fix issue 4049, SEGV on patch that skips and deletes.
+   Justification:
+     Client SEGV on user input.
+   Votes:
+     +1: philip, stsp, rhuijben
+
+ * r1200837
+   Omit "Committed revision N." message when --quiet is given.
+   Justification:
+     Regression from 1.6.
+   Votes:
+     +1: philip, danielsh, rhuijben
