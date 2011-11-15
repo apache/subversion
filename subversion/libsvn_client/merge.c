@@ -6099,20 +6099,19 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
 
 /* Implements the svn_log_entry_receiver_t interface.
  *
- * BATON is an 'apr_array_header_t *'.  Copy LOG_ENTRY->revision (in
- * BATON's pool, not POOL) and push the copy onto BATON.  Thus, a
+ * BATON is an 'apr_array_header_t *' array of 'svn_revnum_t'.
+ * Push a copy of LOG_ENTRY->revision onto BATON.  Thus, a
  * series of invocations of this callback accumulates the
  * corresponding set of revisions into BATON.
  */
 static svn_error_t *
 log_changed_revs(void *baton,
-                  svn_log_entry_t *log_entry,
-                  apr_pool_t *pool)
+                 svn_log_entry_t *log_entry,
+                 apr_pool_t *pool)
 {
   apr_array_header_t *revs = baton;
-  svn_revnum_t *revision = apr_palloc(revs->pool, sizeof(*revision));
-  *revision = log_entry->revision;
-  APR_ARRAY_PUSH(revs, svn_revnum_t *) = revision;
+
+  APR_ARRAY_PUSH(revs, svn_revnum_t) = log_entry->revision;
   return SVN_NO_ERROR;
 }
 
@@ -6139,7 +6138,7 @@ remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
   svn_revnum_t oldest_rev = SVN_INVALID_REVNUM;
   svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
   apr_array_header_t *changed_revs =
-    apr_array_make(pool, ranges->nelts, sizeof(svn_revnum_t *));
+    apr_array_make(pool, ranges->nelts, sizeof(svn_revnum_t));
   apr_array_header_t *operative_ranges =
     apr_array_make(ranges->pool, ranges->nelts, ranges->elt_size);
   apr_array_header_t *log_targets =
@@ -6169,15 +6168,12 @@ remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
   /* Are there *any* changes? */
   if (changed_revs->nelts)
     {
-      svn_revnum_t oldest_changed_rev, youngest_changed_rev;
-
       /* Our list of changed revisions should be in youngest-to-oldest
          order. */
-      youngest_changed_rev = *(APR_ARRAY_IDX(changed_revs,
-                                             0, svn_revnum_t *));
-      oldest_changed_rev = *(APR_ARRAY_IDX(changed_revs,
-                                           changed_revs->nelts - 1,
-                                           svn_revnum_t *));
+      svn_revnum_t youngest_changed_rev
+        = APR_ARRAY_IDX(changed_revs, 0, svn_revnum_t);
+      svn_revnum_t oldest_changed_rev
+        = APR_ARRAY_IDX(changed_revs, changed_revs->nelts - 1, svn_revnum_t);
 
       /* Now, copy from RANGES to *OPERATIVE_RANGES, filtering out ranges
          that aren't operative (by virtue of not having any revisions
@@ -6200,9 +6196,9 @@ remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
              inside our current range. */
           for (j = 0; j < changed_revs->nelts; j++)
             {
-              svn_revnum_t *changed_rev =
-                APR_ARRAY_IDX(changed_revs, j, svn_revnum_t *);
-              if ((*changed_rev >= range_min) && (*changed_rev <= range_max))
+              svn_revnum_t changed_rev
+                = APR_ARRAY_IDX(changed_revs, j, svn_revnum_t);
+              if ((changed_rev >= range_min) && (changed_rev <= range_max))
                 {
                   APR_ARRAY_PUSH(operative_ranges, svn_merge_range_t *) =
                     range;
