@@ -2991,6 +2991,9 @@ svn_repos_authz_read(svn_authz_t **authz_p,
  * to TRUE if at least one path is accessible with the @a
  * required_access.
  *
+ * For compatibility with 1.6, and earlier, @a repos_name can be NULL
+ * in which case it is equivalent to a @a repos_name of "".
+ *
  * @since New in 1.3.
  */
 svn_error_t *
