@@ -17140,7 +17140,6 @@ def noninheritable_mergeinfo_test_set_up(sbox):
     })
   expected_mergeinfo_output = wc.State(B_branch_path, {
     ''       : Item(status=' U'),
-    'lambda' : Item(status=' U'),
     })
   expected_elision_output = wc.State(B_branch_path, {
     })

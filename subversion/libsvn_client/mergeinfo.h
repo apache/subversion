@@ -86,6 +86,13 @@ svn_client__merge_path_t *
 svn_client__merge_path_dup(const svn_client__merge_path_t *old,
                            apr_pool_t *pool);
 
+/* Create a new merge path structure, allocated in POOL.  Initialize the
+ * 'abspath' member to a deep copy of ABSPATH and all other fields to zero
+ * bytes. */
+svn_client__merge_path_t *
+svn_client__merge_path_create(const char *abspath,
+                              apr_pool_t *pool);
+
 
 
 /*** Functions ***/

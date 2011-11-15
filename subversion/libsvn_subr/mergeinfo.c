@@ -2558,25 +2558,6 @@ svn_mergeinfo__is_noninheritable(svn_mergeinfo_t mergeinfo,
   return FALSE;
 }
 
-svn_error_t *
-svn_mergeinfo__string_has_noninheritable(svn_boolean_t *is_noninheritable,
-                                         const char *mergeinfo_str,
-                                         apr_pool_t *scratch_pool)
-{
-  *is_noninheritable = FALSE;
-
-  if (mergeinfo_str)
-    {
-      svn_mergeinfo_t mergeinfo;
-
-      SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_str, scratch_pool));
-      *is_noninheritable = svn_mergeinfo__is_noninheritable(mergeinfo,
-                                                            scratch_pool);
-    }
-
-  return SVN_NO_ERROR;
-}
-
 apr_array_header_t *
 svn_rangelist__initialize(svn_revnum_t start,
                           svn_revnum_t end,

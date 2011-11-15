@@ -388,17 +388,6 @@ svn_client_open_ra_session(svn_ra_session_t **session,
 
 
 
-/* Convert a path or URL for display: if it is a local path, convert it to
- * the local path style; if it is a URL, return it unchanged. */
-static const char *
-path_or_url_local_style(const char *path_or_url,
-                        apr_pool_t *pool)
-{
-  if (svn_path_is_url(path_or_url))
-    return path_or_url;
-  return svn_dirent_local_style(path_or_url, pool);
-}
-
 /* Given PATH_OR_URL, which contains either a working copy path or an
    absolute URL, a peg revision PEG_REVISION, and a desired revision
    REVISION, find the path at which that object exists in REVISION,

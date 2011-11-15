@@ -281,7 +281,6 @@ log_entry_receiver(void *baton,
       apr_array_header_t *diff_options;
       svn_opt_revision_t start_revision;
       svn_opt_revision_t end_revision;
-      svn_error_t *err;
 
       SVN_ERR(svn_stream_for_stdout(&outstream, pool));
       SVN_ERR(svn_stream_for_stderr(&errstream, pool));
@@ -299,82 +298,23 @@ log_entry_receiver(void *baton,
       end_revision.value.number = log_entry->revision;
 
       SVN_ERR(svn_cmdline_printf(pool, _("\n")));
-      err = svn_client_diff6(diff_options,
-                             lb->target_url,
-                             &start_revision,
-                             lb->target_url,
-                             &end_revision,
-                             NULL,
-                             lb->depth,
-                             FALSE, /* ignore ancestry */
-                             TRUE, /* no diff deleted */
-                             FALSE, /* show copies as adds */
-                             FALSE, /* ignore content type */
-                             FALSE, /* use git diff format */
-                             svn_cmdline_output_encoding(pool),
-                             outstream,
-                             errstream,
-                             NULL,
-                             lb->ctx, pool);
-      if (err)
-        {
-          /* We get a "path not found" error in case the revision created
-           * lb->target_url. Try to show a diff from the parent instead. */
-          if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
-            {
-              const char *parent;
-              apr_pool_t *iterpool;
-
-              svn_error_clear(err);
-
-              parent = svn_uri_dirname(lb->target_url, pool);
-              iterpool = svn_pool_create(pool);
-              while (strcmp(parent, lb->target_url) != 0)
-                {
-                  svn_pool_clear(iterpool);
-                  err = svn_client_diff6(diff_options,
-                                         parent,
-                                         &start_revision,
-                                         parent,
-                                         &end_revision,
-                                         NULL,
-                                         lb->depth,
-                                         FALSE, /* ignore ancestry */
-                                         TRUE, /* no diff deleted */
-                                         FALSE, /* show copies as adds */
-                                         FALSE, /* ignore content type */
-                                         FALSE, /* use git diff format */
-                                         svn_cmdline_output_encoding(iterpool),
-                                         outstream,
-                                         errstream,
-                                         NULL,
-                                         lb->ctx, iterpool);
-                  if (err == SVN_NO_ERROR)
-                    break;
-                  else
-                    {
-                      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
-                        {
-                          svn_error_clear(err);
-                          parent = svn_uri_dirname(parent, pool);
-                          continue;
-                        }
-                      if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL ||
-                          err->apr_err == SVN_ERR_AUTHZ_UNREADABLE ||
-                          err->apr_err == SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED)
-                        {
-                          svn_error_clear(err);
-                          break;
-                        }
-                      return svn_error_trace(err);
-                    }
-                }
-              svn_pool_destroy(iterpool);
-            }
-          else
-            return svn_error_trace(err);
-        }
-
+      SVN_ERR(svn_client_diff6(diff_options,
+                               lb->target_url,
+                               &start_revision,
+                               lb->target_url,
+                               &end_revision,
+                               NULL,
+                               lb->depth,
+                               FALSE, /* ignore ancestry */
+                               TRUE, /* no diff deleted */
+                               FALSE, /* show copies as adds */
+                               FALSE, /* ignore content type */
+                               FALSE, /* use git diff format */
+                               svn_cmdline_output_encoding(pool),
+                               outstream,
+                               errstream,
+                               NULL,
+                               lb->ctx, pool));
       SVN_ERR(svn_cmdline_printf(pool, _("\n")));
     }
 

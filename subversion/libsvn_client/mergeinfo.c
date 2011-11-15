@@ -69,6 +69,16 @@ svn_client__merge_path_dup(const svn_client__merge_path_t *old,
   return new;
 }
 
+svn_client__merge_path_t *
+svn_client__merge_path_create(const char *abspath,
+                              apr_pool_t *pool)
+{
+  svn_client__merge_path_t *result = apr_pcalloc(pool, sizeof(*result));
+
+  result->abspath = apr_pstrdup(pool, abspath);
+  return result;
+}
+
 svn_error_t *
 svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
                             svn_wc_context_t *wc_ctx,
