@@ -7858,7 +7858,6 @@ record_mergeinfo_for_added_subtrees(
           svn_client__merge_path_t *target_merge_path =
             APR_ARRAY_IDX(notify_b->children_with_mergeinfo, 0,
                           svn_client__merge_path_t *);
-          svn_merge_range_t *rng;
           svn_node_kind_t added_path_kind;
           svn_mergeinfo_t merge_mergeinfo;
           svn_mergeinfo_t adds_history_as_mergeinfo;
@@ -7873,15 +7872,12 @@ record_mergeinfo_for_added_subtrees(
 
           /* Calculate the naive mergeinfo describing the merge. */
           merge_mergeinfo = apr_hash_make(iterpool);
-          rangelist = apr_array_make(iterpool, 1, sizeof(svn_merge_range_t *));
-          rng = svn_merge_range_dup(merged_range, iterpool);
-          if (added_path_kind == svn_node_file)
-            rng->inheritable = TRUE;
-          else
-            rng->inheritable =
-              (!(depth == svn_depth_infinity
-                 || depth == svn_depth_immediates));
-          APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = rng;
+          rangelist = svn_rangelist__initialize(
+                        merged_range->start, merged_range->end,
+                        ((added_path_kind == svn_node_file)
+                         || (!(depth == svn_depth_infinity
+                               || depth == svn_depth_immediates))),
+                        iterpool);
 
           /* Create the new mergeinfo path for
              added_path's mergeinfo. */
@@ -9041,23 +9037,6 @@ do_merge(apr_hash_t **modified_subtrees,
   return SVN_NO_ERROR;
 }
 
-/* Return an array containing a single (svn_merge_range_t *)
- * range START:END, allocated in POOL. */
-static apr_array_header_t *
-make_single_mrange_array(svn_revnum_t start, svn_revnum_t end,
-                         apr_pool_t *pool)
-{
-  apr_array_header_t *ranges
-    = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
-  svn_merge_range_t *range = apr_palloc(pool, sizeof(*range));
-
-  range->start = start;
-  range->end = end;
-  range->inheritable = TRUE;
-  APR_ARRAY_PUSH(ranges, svn_merge_range_t *) = range;
-  return ranges;
-}
-
 /* Perform a two-URL merge between URLs which are related, but neither
    is a direct ancestor of the other.  This first does a real two-URL
    merge (unless this is record-only), followed by record-only merges
@@ -9112,12 +9091,12 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
 
   SVN_ERR(normalize_merge_sources_internal(
             &remove_sources, URL1, source_repos_root->url, rev1,
-            make_single_mrange_array(rev1, yc_rev, scratch_pool),
+            svn_rangelist__initialize(rev1, yc_rev, TRUE, scratch_pool),
             URL1_ra_session, ctx, scratch_pool, subpool));
 
   SVN_ERR(normalize_merge_sources_internal(
             &add_sources, URL2, source_repos_root->url, rev2,
-            make_single_mrange_array(yc_rev, rev2, scratch_pool),
+            svn_rangelist__initialize(yc_rev, rev2, TRUE, scratch_pool),
             URL2_ra_session, ctx, scratch_pool, subpool));
 
   /* If this isn't a record-only merge, we'll first do a stupid
@@ -9493,7 +9472,7 @@ merge_locked(const char *source1,
           ancestral = TRUE;
           SVN_ERR(normalize_merge_sources_internal(
                     &merge_sources, URL1, source_repos_root.url, rev1,
-                    make_single_mrange_array(rev1, yc_rev, scratch_pool),
+                    svn_rangelist__initialize(rev1, yc_rev, TRUE, scratch_pool),
                     ra_session1, ctx, scratch_pool, scratch_pool));
         }
       /* If the common ancestor matches the left side of our merge,
@@ -9503,7 +9482,7 @@ merge_locked(const char *source1,
           ancestral = TRUE;
           SVN_ERR(normalize_merge_sources_internal(
                     &merge_sources, URL2, source_repos_root.url, rev2,
-                    make_single_mrange_array(yc_rev, rev2, scratch_pool),
+                    svn_rangelist__initialize(yc_rev, rev2, TRUE, scratch_pool),
                     ra_session2, ctx, scratch_pool, scratch_pool));
         }
       /* And otherwise, we need to do both: reverse merge the left
