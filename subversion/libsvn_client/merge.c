@@ -5675,7 +5675,7 @@ pre_merge_status_cb(void *baton,
 static svn_error_t *
 get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                     merge_cmd_baton_t *merge_cmd_baton,
-                    const char* merge_src_canon_path,
+                    const char *merge_src_canon_path,
                     const char *url1,
                     const char *url2,
                     svn_revnum_t revision1,
@@ -5686,7 +5686,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                     apr_pool_t *scratch_pool)
 {
   int i;
-  apr_pool_t *iterpool = NULL;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_t *subtrees_with_mergeinfo;
   apr_hash_t *server_excluded_subtrees;
   apr_hash_t *switched_subtrees;
@@ -5707,15 +5707,11 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
     {
       apr_hash_index_t *hi;
 
-      if (!iterpool)
-          iterpool = svn_pool_create(scratch_pool);
-
       for (hi = apr_hash_first(scratch_pool, subtrees_with_mergeinfo);
            hi;
            hi = apr_hash_next(hi))
         {
           svn_error_t *err;
-          svn_mergeinfo_t child_pre_merge_mergeinfo;
           const char *wc_path = svn__apr_hash_index_key(hi);
           svn_string_t *mergeinfo_string = svn__apr_hash_index_val(hi);
           svn_client__merge_path_t *mergeinfo_child =
@@ -5723,7 +5719,9 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
 
           svn_pool_clear(iterpool);
           mergeinfo_child->abspath = apr_pstrdup(result_pool, wc_path);
-          err = svn_mergeinfo_parse(&child_pre_merge_mergeinfo,
+
+          /* Stash this child's pre-existing mergeinfo. */
+          err = svn_mergeinfo_parse(&mergeinfo_child->pre_merge_mergeinfo,
                                     mergeinfo_string->data, result_pool);
           if (err)
             {
@@ -5737,13 +5735,11 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                 }
               return svn_error_trace(err);
             }
-          /* Stash this child's pre-existing mergeinfo. */
-          mergeinfo_child->pre_merge_mergeinfo = child_pre_merge_mergeinfo;
 
           /* Note if this child has non-inheritable mergeinfo */
-          SVN_ERR(svn_mergeinfo__string_has_noninheritable(
-            &(mergeinfo_child->has_noninheritable), mergeinfo_string->data,
-            iterpool));
+          mergeinfo_child->has_noninheritable
+            = svn_mergeinfo__is_noninheritable(
+                mergeinfo_child->pre_merge_mergeinfo, iterpool);
 
           insert_child_to_merge(children_with_mergeinfo, mergeinfo_child,
                                 result_pool);
@@ -5788,8 +5784,6 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
         svn_stringbuf_create(_("Merge tracking not allowed with missing "
                                "subtrees; try restoring these items "
                                "first:\n"), scratch_pool);
-
-      iterpool = svn_pool_create(scratch_pool);
 
       for (hi = apr_hash_first(scratch_pool, missing_subtrees);
            hi;
@@ -5947,9 +5941,6 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
         &immediate_children, merge_cmd_baton->ctx->wc_ctx,
         merge_cmd_baton->target_abspath, FALSE, scratch_pool, scratch_pool));
 
-      if (!iterpool)
-        iterpool = svn_pool_create(scratch_pool);
-
       for (j = 0; j < immediate_children->nelts; j++)
         {
           const char *immediate_child_abspath =
@@ -5991,7 +5982,6 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   if (depth <= svn_depth_empty)
     return SVN_NO_ERROR;
 
-  iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < children_with_mergeinfo->nelts; i++)
     {
       svn_client__merge_path_t *child =
