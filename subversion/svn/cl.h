@@ -564,14 +564,10 @@ svn_cl__merge_file_externally(const char *base_path,
 
 /* Set *NOTIFY_FUNC_P and *NOTIFY_BATON_P to a notifier/baton for all
  * operations, allocated in POOL.
- *
- * If don't want a summary line at the end of notifications, set
- * SUPPRESS_FINAL_LINE.
  */
 svn_error_t *
 svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
                      void **notify_baton_p,
-                     svn_boolean_t suppress_final_line,
                      apr_pool_t *pool);
 
 /* Make the notifier for use with BATON print the appropriate summary

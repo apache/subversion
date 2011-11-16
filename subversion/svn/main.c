@@ -2522,8 +2522,7 @@ main(int argc, const char *argv[])
   if (((subcommand->cmd_func != svn_cl__status) && !opt_state.quiet)
         || ((subcommand->cmd_func == svn_cl__status) && !opt_state.xml))
     {
-      err = svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, pool);
+      err = svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, pool);
       if (err)
         return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
