@@ -1009,7 +1009,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
     case svn_wc_notify_moves_scan_log_done:
       err = svn_cmdline_printf(pool, _("%sScanning revision log for moves "
                                        "within r%ld:r%ld (%ld%%)%s"),
-                               "", n->moves_scan_log_start_rev,
+                               "\r", n->moves_scan_log_start_rev,
                                n->moves_scan_log_end_rev, (long int)100, "\n");
       if (err)
         goto print_error;
