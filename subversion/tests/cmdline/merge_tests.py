@@ -49,7 +49,8 @@ from svntest.actions import make_conflict_marker_text
 from svntest.actions import inject_conflict_into_expected_state
 
 def expected_merge_output(rev_ranges, additional_lines=None, foreign=False,
-                          elides=False, two_url=False):
+                          elides=False, two_url=False, target=None,
+                          text_conflicts=0, prop_conflicts=0, tree_conflicts=0):
   """Generate an (inefficient) regex representing the expected merge
   output and mergeinfo notifications from REV_RANGES and ADDITIONAL_LINES.
 
@@ -65,7 +66,13 @@ def expected_merge_output(rev_ranges, additional_lines=None, foreign=False,
 
   If ELIDES is true, add to the regex an expression representing elision
   notification.  If TWO_URL is true, tweak the regex to expect the
-  appropriate mergeinfo notification for a 3-way merge."""
+  appropriate mergeinfo notification for a 3-way merge.
+
+  TARGET is the local path to the target, as it should appear in
+  notifications; if None, it is not checked.
+
+  TEXT_CONFLICTS, PROP_CONFLICTS and TREE_CONFLICTS specify the number of
+  each kind of conflict to expect."""
 
   if rev_ranges is None:
     lines = [svntest.main.merge_notify_line(None, None, False, foreign)]
@@ -78,8 +85,8 @@ def expected_merge_output(rev_ranges, additional_lines=None, foreign=False,
       else:
         end_rev = None
       lines += [svntest.main.merge_notify_line(start_rev, end_rev,
-                                               True, foreign)]
-      lines += [svntest.main.mergeinfo_notify_line(start_rev, end_rev)]
+                                               True, foreign, target)]
+      lines += [svntest.main.mergeinfo_notify_line(start_rev, end_rev, target)]
 
   if (elides):
     lines += ["--- Eliding mergeinfo from .*\n"]
@@ -103,6 +110,16 @@ def expected_merge_output(rev_ranges, additional_lines=None, foreign=False,
     if sys.platform == 'win32' and additional_lines != None:
       additional_lines = additional_lines.replace("\\", "\\\\")
     lines.append(str(additional_lines))
+
+  if text_conflicts or prop_conflicts or tree_conflicts:
+    lines.append("Summary of conflicts:\n")
+    if text_conflicts:
+      lines.append("  Text conflicts: %d\n" % text_conflicts)
+    if prop_conflicts:
+      lines.append("  Property conflicts: %d\n" % prop_conflicts)
+    if tree_conflicts:
+      lines.append("  Tree conflicts: %d\n" % tree_conflicts)
+
   return "|".join(lines)
 
 def check_mergeinfo_recursively(root_path, subpaths_mergeinfo):
@@ -12544,15 +12561,10 @@ def svn_merge(rev_range, source, target, lines=None,
     rev_arg = '-r' + str(rev_range[0] - 1) + ':' + str(rev_range[1])
   if lines is None:
     lines = ["(A |D |[UG] | [UG]|[UG][UG])   " + target + ".*\n"]
-  if text_conflicts or prop_conflicts or tree_conflicts:
-    lines.append("Summary of conflicts:\n")
-    if text_conflicts:
-      lines.append("  Text conflicts: %d\n" % text_conflicts)
-    if prop_conflicts:
-      lines.append("  Property conflicts: %d\n" % prop_conflicts)
-    if tree_conflicts:
-      lines.append("  Tree conflicts: %d\n" % tree_conflicts)
-  exp_out = expected_merge_output([mi_rev_range], lines)
+  exp_out = expected_merge_output([mi_rev_range], lines, target=target,
+                                  text_conflicts=text_conflicts,
+                                  prop_conflicts=prop_conflicts,
+                                  tree_conflicts=tree_conflicts)
   svntest.actions.run_and_verify_svn(None, exp_out, [],
                                      'merge', rev_arg, source, target, *args)
 
@@ -16694,11 +16706,9 @@ def foreign_repos_prop_conflict(sbox):
 
   # Now, merge the propchange to the *second* working copy.
   expected_output = [' C   %s\n' % (os.path.join(other_wc_dir,
-                                                 "A", "D", "G")),
-                     'Summary of conflicts:\n',
-                     '  Property conflicts: 1\n',
-                     ]
-  expected_output = expected_merge_output([[3]], expected_output, True)
+                                                 "A", "D", "G"))]
+  expected_output = expected_merge_output([[3]], expected_output, True,
+                                          prop_conflicts=1)
   svntest.actions.run_and_verify_svn(None,
                                      expected_output,
                                      [], 'merge', '-c3',
