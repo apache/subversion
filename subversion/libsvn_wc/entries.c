@@ -1476,8 +1476,20 @@ insert_node(svn_sqlite__db_t *sdb,
                                   svn_node_kind_to_word(node->kind)));
 
   if (node->kind == svn_node_file)
-    SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, node->checksum,
-                                      scratch_pool));
+    {
+      if (!node->checksum
+          && node->op_depth == 0
+          && node->presence != svn_wc__db_status_not_present
+          && node->presence != svn_wc__db_status_excluded
+          && node->presence != svn_wc__db_status_server_excluded)
+        return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                                 _("The file '%s' has no checksum"),
+                                 svn_dirent_local_style(node->local_relpath,
+                                                        scratch_pool));
+
+      SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, node->checksum,
+                                        scratch_pool));
+    }
 
   if (node->properties) /* ### Never set, props done later */
     SVN_ERR(svn_sqlite__bind_properties(stmt, 15, node->properties,
