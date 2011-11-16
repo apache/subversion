@@ -84,6 +84,13 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
+ * r1202630
+   Catch base files with no checksum.
+   Justification:
+      Prevents corrupt wc, will help track down the issue 4062 upgrades.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
