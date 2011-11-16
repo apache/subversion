@@ -99,14 +99,6 @@ Candidate changes:
      +1: philip
      =0: danielsh (disagrees with the choice of implementation. see list)
 
- * r1202807
-   Avoid a potential segfault during merges.
-   Justification:
-      TSVN users have run into this segfault in the wild, see
-      http://svn.haxx.se/dev/archive-2011-11/0261.shtml
-   Votes:
-     +1: pburba, steveking
-
 Veto-blocked changes:
 =====================
 
@@ -131,3 +123,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1202807
+   Avoid a potential segfault during merges.
+   Justification:
+      TSVN users have run into this segfault in the wild, see
+      http://svn.haxx.se/dev/archive-2011-11/0261.shtml
+   Votes:
+     +1: pburba, steveking, stsp
