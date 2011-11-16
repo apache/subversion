@@ -115,10 +115,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1201002
-   Fix occasional unitialised memory read in client diff code.
-   Justification:
-     Undefined behaviour.
-   Votes:
-     +1: philip, rhuijben, stsp
