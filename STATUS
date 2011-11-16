@@ -91,6 +91,13 @@ Candidate changes:
    Votes:
      +1: philip, stsp
 
+ * r1202783
+   Log root cause, rather than generic error, when opening rep-cache.db fails.
+   Justification:
+      Makes the real cause visible to the server admin.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
