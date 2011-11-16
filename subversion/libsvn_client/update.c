@@ -161,6 +161,11 @@ is_empty_wc(svn_boolean_t *clean_checkout,
 }
 
 struct scan_moves_log_receiver_baton {
+  const char *anchor_abspath;
+  svn_client_ctx_t *ctx;
+  svn_revnum_t start;
+  svn_revnum_t end;
+
   /* The moved nodes hash to be populated.
    * Maps moved-from path to an array of repos_move_info_t. */
   apr_hash_t *moves;
@@ -178,6 +183,19 @@ scan_moves_log_receiver(void *baton,
   struct scan_moves_log_receiver_baton *b = baton;
   apr_pool_t *result_pool = apr_hash_pool_get(b->moves);
   int i;
+
+  if (b->ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(b->anchor_abspath,
+                                    svn_wc_notify_moves_scan_log_in_progress,
+                                    scratch_pool);
+      notify->moves_scan_log_start_rev = b->start;
+      notify->moves_scan_log_end_rev = b->end;
+      notify->moves_scan_log_current_rev = log_entry->revision;
+      b->ctx->notify_func2(b->ctx->notify_baton2, notify, scratch_pool);
+    }
 
   /* Scan for copied and deleted nodes in this revision. */
   for (hi = apr_hash_first(scratch_pool, log_entry->changed_paths2);
@@ -277,6 +295,12 @@ scan_moves_log_receiver(void *baton,
   return SVN_NO_ERROR;
 }
 
+struct get_repos_moves_baton {
+  const char *anchor_abspath;
+  svn_client_ctx_t *ctx;
+  svn_ra_session_t *ra_session;
+} get_repos_moves_baton;
+
 /* Implements svn_wc_get_repos_moves_func_t */
 static svn_error_t *
 get_repos_moves(void *baton,
@@ -286,14 +310,43 @@ get_repos_moves(void *baton,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
-  svn_ra_session_t *ra_session = baton;
+  struct get_repos_moves_baton *b = baton;
   struct scan_moves_log_receiver_baton lrb;
+  svn_wc_notify_t *notify;
 
+  lrb.anchor_abspath = b->anchor_abspath;
+  lrb.ctx = b->ctx;
   lrb.moves = apr_hash_make(result_pool);
-  SVN_ERR(svn_ra_get_log2(ra_session, NULL, start, end, 0, TRUE, FALSE, FALSE,
-                          apr_array_make(scratch_pool, 0,
-                                         sizeof(const char *)),
+  lrb.start = start;
+  lrb.end = end;
+
+  if (b->ctx->notify_func2)
+    {
+      notify = svn_wc_create_notify(b->anchor_abspath,
+                                    svn_wc_notify_moves_scan_log_start,
+                                    scratch_pool);
+      notify->moves_scan_log_start_rev = start;
+      notify->moves_scan_log_end_rev = end;
+      notify->moves_scan_log_current_rev = start;
+      b->ctx->notify_func2(b->ctx->notify_baton2, notify, scratch_pool);
+    }
+
+  SVN_ERR(svn_ra_get_log2(b->ra_session, NULL, start, end, 0, TRUE, FALSE,
+                          FALSE, apr_array_make(scratch_pool, 0,
+                                                sizeof(const char *)),
                           scan_moves_log_receiver, &lrb, scratch_pool));
+
+  if (b->ctx->notify_func2)
+    {
+      notify = svn_wc_create_notify(b->anchor_abspath,
+                                    svn_wc_notify_moves_scan_log_done,
+                                    scratch_pool);
+      notify->moves_scan_log_start_rev = start;
+      notify->moves_scan_log_end_rev = end;
+      notify->moves_scan_log_current_rev = end;
+      b->ctx->notify_func2(b->ctx->notify_baton2, notify, scratch_pool);
+    }
+
 #ifdef SVN_DEBUG
   {
     apr_hash_index_t *hi;
@@ -375,6 +428,7 @@ update_internal(svn_revnum_t *result_rev,
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
+  struct get_repos_moves_baton grmb;
 
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
@@ -532,6 +586,10 @@ update_internal(svn_revnum_t *result_rev,
   dfb.target_revision = revnum;
   dfb.anchor_url = anchor_url;
 
+  grmb.ctx = ctx;
+  grmb.ra_session = ra_session;
+  grmb.anchor_abspath = anchor_abspath;
+
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
   SVN_ERR(svn_wc_get_update_editor5(&update_editor, &update_edit_baton,
@@ -545,7 +603,7 @@ update_internal(svn_revnum_t *result_rev,
                                     svn_client__dirent_fetcher, &dfb,
                                     ctx->conflict_func2, ctx->conflict_baton2,
                                     NULL, NULL,
-                                    get_repos_moves, ra_session,
+                                    get_repos_moves, &grmb,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     pool, pool));

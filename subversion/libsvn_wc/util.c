@@ -90,6 +90,9 @@ svn_wc_create_notify(const char *path,
   ret->lock_state = svn_wc_notify_lock_state_unknown;
   ret->revision = SVN_INVALID_REVNUM;
   ret->old_revision = SVN_INVALID_REVNUM;
+  ret->moves_scan_log_start_rev = SVN_INVALID_REVNUM;
+  ret->moves_scan_log_end_rev = SVN_INVALID_REVNUM;
+  ret->moves_scan_log_current_rev = SVN_INVALID_REVNUM;
 
   return ret;
 }

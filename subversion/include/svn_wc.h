@@ -1219,7 +1219,19 @@ typedef enum svn_wc_notify_action_t
 
   /** The operation skipped the path because it was conflicted.
    * @since New in 1.7. */
-  svn_wc_notify_skip_conflicted
+  svn_wc_notify_skip_conflicted,
+
+  /** Starting to scan the revision log for server-side moves.
+   * @since New in 1.8. */
+  svn_wc_notify_moves_scan_log_start,
+
+  /** Progress update while scanning the revision log for server-side moves.
+   * @since New in 1.8. */
+  svn_wc_notify_moves_scan_log_in_progress,
+
+  /** Scanning the revision log for server-side moves finished.
+   * @since New in 1.8. */
+  svn_wc_notify_moves_scan_log_done
 
 } svn_wc_notify_action_t;
 
@@ -1402,6 +1414,15 @@ typedef struct svn_wc_notify_t {
   /** The fuzz factor the hunk was applied with.
    * @since New in 1.7 */
   svn_linenum_t hunk_fuzz;
+
+  /** The revision range being scanned for server-side moves.
+   * @since New in 1.8 */
+  svn_revnum_t moves_scan_log_start_rev;
+  svn_revnum_t moves_scan_log_end_rev;
+
+  /** The revision currently being scanned for server-side moves.
+   * @since New in 1.8 */
+  svn_revnum_t moves_scan_log_current_rev;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify

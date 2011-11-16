@@ -983,6 +983,38 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         goto print_error;
       break;
 
+    case svn_wc_notify_moves_scan_log_start:
+      err = svn_cmdline_printf(pool, _("%sScanning revision log for moves "
+                                       "within r%ld:r%ld (%ld%%)%s"),
+                               "", n->moves_scan_log_start_rev,
+                               n->moves_scan_log_end_rev, (long int)0, "");
+      if (err)
+        goto print_error;
+      break;
+
+    case svn_wc_notify_moves_scan_log_in_progress:
+      err = svn_cmdline_printf(pool, _("%sScanning revision log for moves "
+                                       "within r%ld:r%ld (%ld%%)%s"),
+                               "\r", n->moves_scan_log_start_rev,
+                               n->moves_scan_log_end_rev,
+                               ((n->moves_scan_log_current_rev -
+                                 n->moves_scan_log_start_rev) * 100) /
+                                 (n->moves_scan_log_end_rev -
+                                  n->moves_scan_log_start_rev),
+                               "");
+      if (err)
+        goto print_error;
+      break;
+
+    case svn_wc_notify_moves_scan_log_done:
+      err = svn_cmdline_printf(pool, _("%sScanning revision log for moves "
+                                       "within r%ld:r%ld (%ld%%)%s"),
+                               "", n->moves_scan_log_start_rev,
+                               n->moves_scan_log_end_rev, (long int)100, "\n");
+      if (err)
+        goto print_error;
+      break;
+
     default:
       break;
     }
