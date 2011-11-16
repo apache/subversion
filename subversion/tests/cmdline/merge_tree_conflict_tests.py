@@ -685,20 +685,14 @@ def del_differing_file(sbox):
   pi = os.path.join(dir_D, 'G2', 'pi')
   # Should complain and "skip" it.
   svn_merge(s_rev_tau, source, target, [
-      "--- Merging r2 into '%s':\n" % dir_G2,
-      "   C %s\n" % tau,
-      "--- Recording mergeinfo for merge of r2 into '%s':\n" % (dir_G2),
-      " U   %s\n" % (dir_G2),
-      "Summary of conflicts:\n",
-      "  Tree conflicts: 1\n"])
+      "   C %s\n" % tau,       # merge
+      " U   %s\n" % (dir_G2),  # mergeinfo
+      ], tree_conflicts=1)
 
   svn_merge(s_rev_pi, source, target, [
-      "--- Merging r3 into '%s':\n" % dir_G2,
-      "   C %s\n" % pi,
-      "--- Recording mergeinfo for merge of r3 into '%s':\n" % (dir_G2),
-      " G   %s\n" % (dir_G2),
-      "Summary of conflicts:\n",
-      "  Tree conflicts: 1\n"])
+      "   C %s\n" % pi,        # merge
+      " G   %s\n" % (dir_G2),  # mergeinfo
+      ], tree_conflicts=1)
 
 
   # Copy a file, modify it, commit, and merge a deletion to it.
@@ -716,20 +710,14 @@ def del_differing_file(sbox):
 
   # Should complain and "skip" it.
   svn_merge(s_rev_tau, source, target, [
-      "--- Merging r2 into '%s':\n" % dir_G3,
-      "   C %s\n" % tau,
-      "--- Recording mergeinfo for merge of r2 into '%s':\n" % (dir_G3),
-      " U   %s\n" % (dir_G3),
-      "Summary of conflicts:\n",
-      "  Tree conflicts: 1\n"])
+      "   C %s\n" % tau,       # merge
+      " U   %s\n" % (dir_G3),  # mergeinfo
+      ], tree_conflicts=1)
 
   svn_merge(s_rev_pi, source, target, [
-      "--- Merging r3 into '%s':\n" % dir_G3,
-      "   C %s\n" % pi,
-      "--- Recording mergeinfo for merge of r3 into '%s':\n" % (dir_G3),
-      " G   %s\n" % (dir_G3),
-      "Summary of conflicts:\n",
-      "  Tree conflicts: 1\n"])
+      "   C %s\n" % pi,        # merge
+      " G   %s\n" % (dir_G3),  # mergeinfo
+      ], tree_conflicts=1)
 
   os.chdir(saved_cwd)
 

@@ -51,13 +51,21 @@ from svntest.actions import inject_conflict_into_expected_state
 def expected_merge_output(rev_ranges, additional_lines=None, foreign=False,
                           elides=False, two_url=False):
   """Generate an (inefficient) regex representing the expected merge
-  output and mergeinfo notifications from REV_RANGES (a list of 'range' lists
-  of the form [start, end] or [single_rev] --> [single_rev - 1, single_rev]),
-  and ADDITIONAL_LINES (a list of strings).  If REV_RANGES is None then only
-  the standard notification for a 3-way merge is expected.  If ELIDES is true
-  add to the regex an expression representing elision notification.  If TWO_URL
-  us true tweak the regex to expect the appropriate mergeinfo notification
-  for a 3-way merge."""
+  output and mergeinfo notifications from REV_RANGES and ADDITIONAL_LINES.
+
+  REV_RANGES is a list of revision ranges for which mergeinfo is being
+  recorded.  Each range is of the form [start, end] (where both START and
+  END are inclusive, unlike in '-rX:Y') or the form [single_rev] (which is
+  like '-c SINGLE_REV').  If REV_RANGES is None then only the standard
+  notification for a 3-way merge is expected.
+
+  ADDITIONAL_LINES is a list of regular expression strings to match the
+  other lines of output.
+
+  If ELIDES is true, add to the regex an expression representing elision
+  notification.  If TWO_URL is true, tweak the regex to expect the
+  appropriate mergeinfo notification for a 3-way merge."""
+
   if rev_ranges is None:
     lines = [svntest.main.merge_notify_line(None, None, False, foreign)]
   else:
@@ -12509,24 +12517,44 @@ def svn_copy(s_rev, path1, path2):
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', '--parents',
                                      '-r', s_rev, path1, path2)
 
-def svn_merge(rev_spec, source, target, exp_out=None, *args):
-  """Merge a single change from path 'source' to path 'target'.
-  SRC_CHANGE_NUM is either a number (to cherry-pick that specific change)
-  or a command-line option revision range string such as '-r10:20'.
-  *ARGS are additional arguments passed to svn merge."""
+def svn_merge(rev_range, source, target, lines=None,
+              text_conflicts=0, prop_conflicts=0, tree_conflicts=0, args=[]):
+  """Merge a single change from path SOURCE to path TARGET and verify the
+  output and that there is no error.  (The changes made are not verified.)
+
+  REV_RANGE is either a number (to cherry-pick that specific change) or a
+  two-element list [X,Y] to pick the revision range '-r(X-1):Y'.
+
+  LINES is a list of regular expressions to match other lines of output; if
+  LINES is 'None' then match all normal (non-conflicting) merges.
+
+  TEXT_CONFLICTS, PROP_CONFLICTS and TREE_CONFLICTS specify the number of
+  each kind of conflict to expect.
+
+  ARGS are additional arguments passed to svn merge."""
+
   source = local_path(source)
   target = local_path(target)
-  if isinstance(rev_spec, int):
-    rev_spec = '-c' + str(rev_spec)
-  if exp_out is None:
+  if isinstance(rev_range, int):
+    mi_rev_range = [rev_range]
+    rev_arg = '-c' + str(rev_range)
+  else:
+    mi_rev_range = rev_range
+    rev_arg = '-r' + str(rev_range[0] - 1) + ':' + str(rev_range[1])
+  if lines is None:
     target_re = re.escape(target)
-    exp_1 = "--- Merging r.* into '" + target_re + ".*':"
-    exp_2 = "(A |D |[UG] | [UG]|[UG][UG])   " + target_re + ".*"
-    exp_3 = "--- Recording mergeinfo for merge of r.* into '" + \
-            target_re + ".*':"
-    exp_out = svntest.verify.RegexOutput(exp_1 + "|" + exp_2 + "|" + exp_3)
+    lines = ["(A |D |[UG] | [UG]|[UG][UG])   " + target_re + ".*"]
+  if text_conflicts or prop_conflicts or tree_conflicts:
+    lines.append("Summary of conflicts:\n")
+    if text_conflicts:
+      lines.append("  Text conflicts: %d\n" % text_conflicts)
+    if prop_conflicts:
+      lines.append("  Property conflicts: %d\n" % prop_conflicts)
+    if tree_conflicts:
+      lines.append("  Tree conflicts: %d\n" % tree_conflicts)
+  exp_out = expected_merge_output([mi_rev_range], lines)
   svntest.actions.run_and_verify_svn(None, exp_out, [],
-                                     'merge', rev_spec, source, target, *args)
+                                     'merge', rev_arg, source, target, *args)
 
 #----------------------------------------------------------------------
 # Tests for merging the deletion of a node, where the node to be deleted
@@ -12558,7 +12586,7 @@ def del_identical_file(sbox):
   svn_copy(s_rev_mod, source, target)
   sbox.simple_commit(target)
   # Should be deleted quietly.
-  svn_merge(s_rev_del, source, target, '--- Merging|D |--- Recording| U')
+  svn_merge(s_rev_del, source, target, ['D ', ' U'])
 
   # Make a differing copy, locally modify it so it's the same,
   # and merge a deletion to it.
@@ -12567,7 +12595,7 @@ def del_identical_file(sbox):
   sbox.simple_commit(target)
   svn_modfile(target+"/tau")
   # Should be deleted quietly.
-  svn_merge(s_rev_del, source, target, '--- Merging|D |--- Recording| U')
+  svn_merge(s_rev_del, source, target, ['D ', ' U'])
 
   os.chdir(saved_cwd)
 
@@ -12594,10 +12622,9 @@ def del_sched_add_hist_file(sbox):
   svn_copy(s_rev_orig, source, target)
   sbox.simple_commit(target)
   s_rev = 3
-  svn_merge(s_rev_add, source, target, '--- Merging|A |--- Recording| U')
+  svn_merge(s_rev_add, source, target, ['A ', ' U'])
   # Should be deleted quietly.
-  svn_merge(-s_rev_add, source, target,
-            '--- Reverse-merging|D |--- Recording| U| G|--- Eliding')
+  svn_merge(-s_rev_add, source, target, ['D ', ' U', ' G', '--- Eliding'])
 
   os.chdir(saved_cwd)
 
@@ -13052,15 +13079,10 @@ def merge_two_edits_to_same_prop(sbox):
   rev4 = initial_rev + 4
 
   # Merge the two changes together to source.
-  svn_merge('-r'+str(rev3-1)+':'+str(rev4), A_COPY_path, A_path, [
-      "--- Merging r9 through r10 into '%s':\n" % A_path,
+  svn_merge([rev3, rev4], A_COPY_path, A_path, [
       " C   %s\n" % mu_path,
-      "--- Recording mergeinfo for merge of r9 through r10 into '%s':\n" \
-      % A_path,
       " U   A\n",
-      "Summary of conflicts:\n",
-      "  Property conflicts: 1\n"],
-      '--allow-mixed-revisions')
+      ], prop_conflicts=1, args=['--allow-mixed-revisions'])
 
   # Revert changes to source wc, to test next scenario of #3250
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -13068,21 +13090,13 @@ def merge_two_edits_to_same_prop(sbox):
 
   # Merge the first change, then the second, to source.
   svn_merge(rev3, A_COPY_path, A_path, [
-      "--- Merging r9 into '%s':\n" % A_path,
       " C   %s\n" % mu_path,
-      "--- Recording mergeinfo for merge of r9 into '%s':\n" % A_path,
       " U   A\n",
-      "Summary of conflicts:\n",
-      "  Property conflicts: 1\n"],
-      '--allow-mixed-revisions')
+      ], prop_conflicts=1, args=['--allow-mixed-revisions'])
   svn_merge(rev4, A_COPY_path, A_path, [
-      "--- Merging r10 into '%s':\n" % A_path,
       " C   %s\n" % mu_path,
-      "--- Recording mergeinfo for merge of r10 into '%s':\n" % A_path,
       " G   A\n",
-      "Summary of conflicts:\n",
-      "  Property conflicts: 1\n"],
-      '--allow-mixed-revisions')
+      ], prop_conflicts=1, args=['--allow-mixed-revisions'])
 
   os.chdir(was_cwd)
 
@@ -13131,8 +13145,8 @@ def merge_an_eol_unification_and_set_svn_eol_style(sbox):
   sbox.simple_commit('A_COPY')
 
   # Merge the two changes together to the target branch.
-  svn_merge('-r'+str(rev1)+':'+str(rev3), 'A', 'A_COPY', None,
-            '--allow-mixed-revisions')
+  svn_merge([rev2, rev3], 'A', 'A_COPY',
+            args=['--allow-mixed-revisions'])
 
   # That merge should succeed.
   # Surprise: setting svn:eol-style='LF' instead of 'native' doesn't fail.
