@@ -1501,6 +1501,7 @@ main(int argc, const char *argv[])
   svn_config_t *cfg_config;
   svn_boolean_t descend = TRUE;
   svn_boolean_t interactive_conflicts = FALSE;
+  svn_boolean_t use_notifier = TRUE;
   apr_hash_t *changelists;
 
   /* Initialize the app. */
@@ -2518,9 +2519,19 @@ main(int argc, const char *argv[])
      subcommands will populate the ctx->log_msg_baton3. */
   ctx->log_msg_func3 = svn_cl__get_log_message;
 
-  /* Set up the notifier. */
-  if (((subcommand->cmd_func != svn_cl__status) && !opt_state.quiet)
-        || ((subcommand->cmd_func == svn_cl__status) && !opt_state.xml))
+  /* Set up the notifier.
+
+     In general, we use it any time we aren't in --quiet mode.  'svn
+     status' is unique, though, in that we don't want it in --quiet mode
+     unless we're also in --verbose mode.  When in --xml mode,
+     though, we never want it.  */
+  if (opt_state.quiet)
+    use_notifier = FALSE;
+  if ((subcommand->cmd_func == svn_cl__status) && opt_state.verbose)
+    use_notifier = TRUE;
+  if (opt_state.xml)
+    use_notifier = FALSE;
+  if (use_notifier)
     {
       err = svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, pool);
       if (err)
