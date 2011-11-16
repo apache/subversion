@@ -594,76 +594,76 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_update_completed:
       {
-            if (SVN_IS_VALID_REVNUM(n->revision))
+        if (SVN_IS_VALID_REVNUM(n->revision))
+          {
+            if (nb->is_export)
               {
-                if (nb->is_export)
-                  {
-                    if ((err = svn_cmdline_printf
-                         (pool, nb->in_external
-                          ? _("Exported external at revision %ld.\n")
-                          : _("Exported revision %ld.\n"),
-                          n->revision)))
-                      goto print_error;
-                  }
-                else if (nb->is_checkout)
-                  {
-                    if ((err = svn_cmdline_printf
-                         (pool, nb->in_external
-                          ? _("Checked out external at revision %ld.\n")
-                          : _("Checked out revision %ld.\n"),
-                          n->revision)))
-                      goto print_error;
-                  }
-                else
-                  {
-                    if (nb->received_some_change)
-                      {
-                        nb->received_some_change = FALSE;
-                        if ((err = svn_cmdline_printf
-                             (pool, nb->in_external
-                              ? _("Updated external to revision %ld.\n")
-                              : _("Updated to revision %ld.\n"),
-                              n->revision)))
-                          goto print_error;
-                      }
-                    else
-                      {
-                        if ((err = svn_cmdline_printf
-                             (pool, nb->in_external
-                              ? _("External at revision %ld.\n")
-                              : _("At revision %ld.\n"),
-                              n->revision)))
-                          goto print_error;
-                      }
-                  }
+                if ((err = svn_cmdline_printf
+                     (pool, nb->in_external
+                      ? _("Exported external at revision %ld.\n")
+                      : _("Exported revision %ld.\n"),
+                      n->revision)))
+                  goto print_error;
               }
-            else  /* no revision */
+            else if (nb->is_checkout)
               {
-                if (nb->is_export)
+                if ((err = svn_cmdline_printf
+                     (pool, nb->in_external
+                      ? _("Checked out external at revision %ld.\n")
+                      : _("Checked out revision %ld.\n"),
+                      n->revision)))
+                  goto print_error;
+              }
+            else
+              {
+                if (nb->received_some_change)
                   {
+                    nb->received_some_change = FALSE;
                     if ((err = svn_cmdline_printf
                          (pool, nb->in_external
-                          ? _("External export complete.\n")
-                          : _("Export complete.\n"))))
-                      goto print_error;
-                  }
-                else if (nb->is_checkout)
-                  {
-                    if ((err = svn_cmdline_printf
-                         (pool, nb->in_external
-                          ? _("External checkout complete.\n")
-                          : _("Checkout complete.\n"))))
+                          ? _("Updated external to revision %ld.\n")
+                          : _("Updated to revision %ld.\n"),
+                          n->revision)))
                       goto print_error;
                   }
                 else
                   {
                     if ((err = svn_cmdline_printf
                          (pool, nb->in_external
-                          ? _("External update complete.\n")
-                          : _("Update complete.\n"))))
+                          ? _("External at revision %ld.\n")
+                          : _("At revision %ld.\n"),
+                          n->revision)))
                       goto print_error;
                   }
               }
+          }
+        else  /* no revision */
+          {
+            if (nb->is_export)
+              {
+                if ((err = svn_cmdline_printf
+                     (pool, nb->in_external
+                      ? _("External export complete.\n")
+                      : _("Export complete.\n"))))
+                  goto print_error;
+              }
+            else if (nb->is_checkout)
+              {
+                if ((err = svn_cmdline_printf
+                     (pool, nb->in_external
+                      ? _("External checkout complete.\n")
+                      : _("Checkout complete.\n"))))
+                  goto print_error;
+              }
+            else
+              {
+                if ((err = svn_cmdline_printf
+                     (pool, nb->in_external
+                      ? _("External update complete.\n")
+                      : _("Update complete.\n"))))
+                  goto print_error;
+              }
+          }
       }
 
       if (nb->in_external)
