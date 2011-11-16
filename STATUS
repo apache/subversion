@@ -97,6 +97,7 @@ Candidate changes:
       Makes the real cause visible to the server admin.
    Votes:
      +1: philip
+     =0: danielsh (disagrees with the choice of implementation. see list)
 
  * r1202807
    Avoid a potential segfault during merges.
