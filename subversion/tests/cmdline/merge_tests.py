@@ -59,8 +59,9 @@ def expected_merge_output(rev_ranges, additional_lines=None, foreign=False,
   like '-c SINGLE_REV').  If REV_RANGES is None then only the standard
   notification for a 3-way merge is expected.
 
-  ADDITIONAL_LINES is a list of regular expression strings to match the
-  other lines of output.
+  ADDITIONAL_LINES is a list of strings to match the other lines of output;
+  these are basically regular expressions except that backslashes will be
+  escaped herein.
 
   If ELIDES is true, add to the regex an expression representing elision
   notification.  If TWO_URL is true, tweak the regex to expect the
@@ -12542,8 +12543,7 @@ def svn_merge(rev_range, source, target, lines=None,
     mi_rev_range = rev_range
     rev_arg = '-r' + str(rev_range[0] - 1) + ':' + str(rev_range[1])
   if lines is None:
-    target_re = re.escape(target)
-    lines = ["(A |D |[UG] | [UG]|[UG][UG])   " + target_re + ".*"]
+    lines = ["(A |D |[UG] | [UG]|[UG][UG])   " + target + ".*\n"]
   if text_conflicts or prop_conflicts or tree_conflicts:
     lines.append("Summary of conflicts:\n")
     if text_conflicts:
