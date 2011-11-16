@@ -528,6 +528,7 @@ svn_error_t *
 svn_cl__print_status(const char *cwd_abspath,
                      const char *path,
                      const svn_client_status_t *status,
+                     svn_boolean_t suppress_externals_placeholders,
                      svn_boolean_t detailed,
                      svn_boolean_t show_last_committed,
                      svn_boolean_t skip_unrecognized,
@@ -545,6 +546,10 @@ svn_cl__print_status(const char *cwd_abspath,
                || status->node_status == svn_wc_status_external))
       || (status->node_status == svn_wc_status_none
           && status->repos_node_status == svn_wc_status_none))
+    return SVN_NO_ERROR;
+
+  if (suppress_externals_placeholders
+      && status->node_status == svn_wc_status_external)
     return SVN_NO_ERROR;
 
   return print_status(cwd_abspath, svn_dirent_local_style(path, pool),

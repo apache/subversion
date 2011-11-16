@@ -382,6 +382,9 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
 /* Print STATUS for PATH to stdout for human consumption.  Prints in
    abbreviated format by default, or DETAILED format if flag is set.
 
+   When SUPPRESS_EXTERNALS_PLACEHOLDERS is set, avoid printing
+   externals placeholder lines ("X lines").
+
    When DETAILED is set, use SHOW_LAST_COMMITTED to toggle display of
    the last-committed-revision and last-committed-author.
 
@@ -402,6 +405,7 @@ svn_error_t *
 svn_cl__print_status(const char *cwd_abspath,
                      const char *path,
                      const svn_client_status_t *status,
+                     svn_boolean_t suppress_externals_placeholders,
                      svn_boolean_t detailed,
                      svn_boolean_t show_last_committed,
                      svn_boolean_t skip_unrecognized,
@@ -564,14 +568,10 @@ svn_cl__merge_file_externally(const char *base_path,
 
 /* Set *NOTIFY_FUNC_P and *NOTIFY_BATON_P to a notifier/baton for all
  * operations, allocated in POOL.
- *
- * If don't want a summary line at the end of notifications, set
- * SUPPRESS_FINAL_LINE.
  */
 svn_error_t *
 svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
                      void **notify_baton_p,
-                     svn_boolean_t suppress_final_line,
                      apr_pool_t *pool);
 
 /* Make the notifier for use with BATON print the appropriate summary

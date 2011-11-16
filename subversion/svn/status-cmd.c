@@ -51,6 +51,7 @@ struct status_baton
   /* These fields all correspond to the ones in the
      svn_cl__print_status() interface. */
   const char *cwd_abspath;
+  svn_boolean_t suppress_externals_placeholders;
   svn_boolean_t detailed;
   svn_boolean_t show_last_committed;
   svn_boolean_t skip_unrecognized;
@@ -154,6 +155,7 @@ print_status_normal_or_xml(void *baton,
                                     sb->ctx, pool);
   else
     return svn_cl__print_status(sb->cwd_abspath, path, status,
+                                sb->suppress_externals_placeholders,
                                 sb->detailed,
                                 sb->show_last_committed,
                                 sb->skip_unrecognized,
@@ -302,6 +304,8 @@ svn_cl__status(apr_getopt_t *os,
     }
 
   SVN_ERR(svn_dirent_get_absolute(&(sb.cwd_abspath), "", scratch_pool));
+  sb.suppress_externals_placeholders = (opt_state->quiet
+                                        && (! opt_state->verbose));
   sb.detailed = (opt_state->verbose || opt_state->update);
   sb.show_last_committed = opt_state->verbose;
   sb.skip_unrecognized = opt_state->quiet;
