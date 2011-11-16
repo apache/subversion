@@ -98,6 +98,14 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1202807
+   Avoid a potential segfault during merges.
+   Justification:
+      TSVN users have run into this segfault in the wild, see
+      http://svn.haxx.se/dev/archive-2011-11/0261.shtml
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
