@@ -197,6 +197,9 @@ scan_moves_log_receiver(void *baton,
       b->ctx->notify_func2(b->ctx->notify_baton2, notify, scratch_pool);
     }
 
+  if (log_entry->changed_paths2 == NULL)
+    return SVN_NO_ERROR;
+
   /* Scan for copied and deleted nodes in this revision. */
   for (hi = apr_hash_first(scratch_pool, log_entry->changed_paths2);
        hi; hi = apr_hash_next(hi))
