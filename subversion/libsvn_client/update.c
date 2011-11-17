@@ -165,6 +165,7 @@ struct scan_moves_log_receiver_baton {
   svn_client_ctx_t *ctx;
   svn_revnum_t start;
   svn_revnum_t end;
+  svn_ra_session_t *ra_session;
 
   /* The moved nodes hash to be populated.
    * Maps moved-from path to an array of repos_move_info_t. */
@@ -177,12 +178,15 @@ scan_moves_log_receiver(void *baton,
                         apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
-  apr_hash_t *copied_paths = apr_hash_make(scratch_pool); /* copyfrom->copyto */
-  apr_array_header_t *deleted_paths = apr_array_make(scratch_pool, 0,
-                                                     sizeof(const char *));
+  apr_hash_t *copies;
+  apr_array_header_t *deleted_paths;
   struct scan_moves_log_receiver_baton *b = baton;
   apr_pool_t *result_pool = apr_hash_pool_get(b->moves);
+  apr_pool_t *iterpool;
   int i;
+  const char *session_url;
+  const char *repos_root_url;
+  apr_array_header_t *location_revisions;
 
   if (b->ctx->notify_func2)
     {
@@ -200,6 +204,9 @@ scan_moves_log_receiver(void *baton,
   if (log_entry->changed_paths2 == NULL)
     return SVN_NO_ERROR;
 
+  copies = apr_hash_make(scratch_pool);
+  deleted_paths = apr_array_make(scratch_pool, 0, sizeof(const char *));
+
   /* Scan for copied and deleted nodes in this revision. */
   for (hi = apr_hash_first(scratch_pool, log_entry->changed_paths2);
        hi; hi = apr_hash_next(hi))
@@ -209,21 +216,23 @@ scan_moves_log_receiver(void *baton,
 
       if (data->action == 'A' && data->copyfrom_path)
         {
-          if (apr_hash_get(copied_paths, data->copyfrom_path,
-                           APR_HASH_KEY_STRING))
+          svn_log_changed_path2_t *copy;
+          
+          if (apr_hash_get(copies, data->copyfrom_path, APR_HASH_KEY_STRING))
             {
               /* The same copyfrom path appears multiple times. In this
                * limited and simplified client-side heuristic, this means
-               * that the node was not moved.
-               * Mark this entry as invalid by setting the value to "".
+               * that the node was not moved. Mark this copy as such by
+               * setting the copyfrom_path to "".
                * ### Extend this check to ignore copies crossing branch-roots?
                */
-              apr_hash_set(copied_paths, data->copyfrom_path,
-                           APR_HASH_KEY_STRING, "");
+              copy = svn_log_changed_path2_create(scratch_pool);
+              copy->copyfrom_path = "";
             }
           else
-            apr_hash_set(copied_paths, data->copyfrom_path,
-                         APR_HASH_KEY_STRING, path);
+            copy = data;
+
+          apr_hash_set(copies, data->copyfrom_path, APR_HASH_KEY_STRING, copy);
         }
       else if (data->action == 'D')
         APR_ARRAY_PUSH(deleted_paths, const char *) = path;
@@ -232,68 +241,146 @@ scan_moves_log_receiver(void *baton,
   /* If a node was deleted at one location and copied from the deleted
    * location to a new location within the same revision, put the node
    * on the moved-nodes list. */
+  SVN_ERR(svn_ra_get_session_url(b->ra_session, &session_url, scratch_pool));
+  SVN_ERR(svn_ra_get_repos_root2(b->ra_session, &repos_root_url, scratch_pool));
+  location_revisions = apr_array_make(scratch_pool, 1, sizeof(svn_revnum_t));
+  iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < deleted_paths->nelts; i++)
     {
-      const char *deleted_path = APR_ARRAY_IDX(deleted_paths, i, const char *);
-      const char *copied_path = apr_hash_get(copied_paths, deleted_path,
-                                             APR_HASH_KEY_STRING);
-      if (copied_path && copied_path[0] != '\0')
+      apr_hash_index_t *hi2;
+      svn_boolean_t first_move = TRUE;
+      apr_hash_t *locations;
+      const char *old_url;
+      const char *old_location;
+      const char *deleted_path;
+      const char *relpath;
+      svn_log_changed_path2_t *copy;
+      svn_ra_session_t *ra_session2;
+      
+      deleted_path = APR_ARRAY_IDX(deleted_paths, i, const char *);
+      copy = apr_hash_get(copies, deleted_path, APR_HASH_KEY_STRING);
+      if (copy == NULL)
+        continue;
+
+      /* Check if this copy was marked as uninteresting above by
+       * settingrthe copyfrom-path to "". */
+      if (copy->copyfrom_path[0] == '\0')
+        continue;
+
+      svn_pool_clear(iterpool);
+
+      /* We found a single deleted node which matches the copyfrom
+       * path of single a copied node. Verify that the deleted node
+       * is an ancestor of the copied node. Tracing back history of
+       * the deleted node from revision log_entry->revision-1 to the
+       * copyfrom-revision we must end up at the copyfrom-path. */
+      apr_array_clear(location_revisions);
+      APR_ARRAY_PUSH(location_revisions, svn_revnum_t) = copy->copyfrom_rev;
+      old_url = svn_uri_canonicalize(apr_pstrcat(iterpool,
+                                                 repos_root_url,
+                                                 deleted_path, NULL),
+                                     iterpool);
+      relpath = svn_uri_skip_ancestor(session_url, old_url, iterpool);
+      SVN_ERR(svn_client__open_ra_session_internal(&ra_session2, NULL,
+                                                   session_url, NULL,
+                                                   NULL, FALSE, TRUE,
+                                                   b->ctx, iterpool));
+      if (relpath)
         {
-          apr_hash_index_t *hi2;
-          svn_boolean_t first_move = TRUE;
+          SVN_ERR(svn_ra_get_locations(ra_session2, &locations, relpath,
+                                       log_entry->revision - 1,
+                                       location_revisions,
+                                       iterpool));
+        }
+      else
+        {
+          svn_error_t *err;
 
-          /* We found a single deleted node which matches the copyfrom
-           * of single a copied node. This is a non-ambiguous move.
-           * In case we previously found one or more moves of the same node,
-           * add this move to the list of move events for this node. */
-          for (hi2 = apr_hash_first(scratch_pool, b->moves);
-               hi2; hi2 = apr_hash_next(hi2))
+          /* The deleted path is outside of the baton's RA session URL.
+           * Try to open the new RA session to the repository root. */
+          SVN_ERR(svn_ra_reparent(ra_session2, repos_root_url, iterpool));
+          relpath = svn_uri_skip_ancestor(repos_root_url, old_url, iterpool);
+          if (relpath == NULL)
+            continue;
+          err = svn_ra_get_locations(ra_session2, &locations, relpath,
+                                     log_entry->revision - 1,
+                                     location_revisions,
+                                     iterpool);
+          if (err)
             {
-              apr_array_header_t *moves = svn__apr_hash_index_val(hi2);
-              svn_wc_repos_move_info_t *info;
-
-              info = APR_ARRAY_IDX(moves, moves->nelts - 1,
-                                   svn_wc_repos_move_info_t *);
-              /* ### really check for node identify */
-              if (strcmp(info->moved_to_repos_relpath, deleted_path))
+              if (err->apr_err == SVN_ERR_RA_NOT_AUTHORIZED ||
+                  err->apr_err == SVN_ERR_RA_DAV_FORBIDDEN)
                 {
-                  svn_wc_repos_move_info_t *new_info;
+                  svn_error_clear(err);
+                  continue;
 
-                  new_info = apr_palloc(result_pool, sizeof(*new_info));
-                  new_info->moved_from_repos_relpath = apr_pstrdup(
-                                                         result_pool,
-                                                         deleted_path);
-                  new_info->moved_to_repos_relpath = apr_pstrdup(
-                                                       result_pool,
-                                                       copied_path);
-                  new_info->revision = log_entry->revision;
-                  APR_ARRAY_PUSH(moves, svn_wc_repos_move_info_t *) = new_info;
-
-                  first_move = FALSE;
                 }
-            }
-
-          /* If we haven't seen this node being moved before, create
-           * a new list of move events for it. */
-          if (first_move)
-            {
-              apr_array_header_t *moves;
-              svn_wc_repos_move_info_t *new_info;
-              
-              moves = apr_array_make(result_pool,  1,
-                                     sizeof(svn_wc_repos_move_info_t *));
-              new_info = apr_palloc(result_pool, sizeof(*new_info));
-              new_info->moved_from_repos_relpath = apr_pstrdup(result_pool,
-                                                               deleted_path);
-              new_info->moved_to_repos_relpath = apr_pstrdup(result_pool,
-                                                             copied_path);
-              new_info->revision = log_entry->revision;
-              APR_ARRAY_PUSH(moves, svn_wc_repos_move_info_t *) = new_info;
-              apr_hash_set(b->moves, apr_pstrdup(result_pool, deleted_path),
-                           APR_HASH_KEY_STRING, moves);
+              else
+                return svn_error_trace(err);
             }
         }
+
+      old_location = apr_hash_get(locations, &copy->copyfrom_rev,
+                                  sizeof(svn_revnum_t));
+      if (!old_location || strcmp(old_location, copy->copyfrom_path) != 0)
+       continue;
+
+      /* ### TODO:
+       * If the node was not copied from the most recent last-changed
+       * revision of the deleted node, this is not a move but a
+       * "copy from the past + delete". */
+
+      /* In case we previously found one or more moves of the same node,
+       * add this move to the list of move events for this node. */
+      for (hi2 = apr_hash_first(iterpool, b->moves);
+           hi2; hi2 = apr_hash_next(hi2))
+        {
+          apr_array_header_t *moves = svn__apr_hash_index_val(hi2);
+          svn_wc_repos_move_info_t *info;
+
+          info = APR_ARRAY_IDX(moves, moves->nelts - 1,
+                               svn_wc_repos_move_info_t *);
+          if (strcmp(info->moved_to_repos_relpath, deleted_path) == 0)
+            {
+              svn_wc_repos_move_info_t *new_info;
+
+              new_info = apr_palloc(result_pool, sizeof(*new_info));
+              new_info->moved_from_repos_relpath = apr_pstrdup(
+                                                     result_pool,
+                                                     deleted_path);
+              new_info->moved_to_repos_relpath = apr_pstrdup(
+                                                   result_pool,
+                                                   copy->copyfrom_path);
+              new_info->revision = log_entry->revision;
+              APR_ARRAY_PUSH(moves, svn_wc_repos_move_info_t *) = new_info;
+
+              first_move = FALSE;
+              break;
+            }
+        }
+
+      /* If we haven't seen this node being moved before, create
+       * a new list of move events for it. */
+      if (first_move)
+        {
+          apr_array_header_t *moves;
+          svn_wc_repos_move_info_t *new_info;
+          
+          moves = apr_array_make(result_pool,  1,
+                                 sizeof(svn_wc_repos_move_info_t *));
+          new_info = apr_palloc(result_pool, sizeof(*new_info));
+          new_info->moved_from_repos_relpath = apr_pstrdup(result_pool,
+                                                           deleted_path);
+          new_info->moved_to_repos_relpath = apr_pstrdup(
+                                               result_pool,
+                                               copy->copyfrom_path);
+          new_info->revision = log_entry->revision;
+          APR_ARRAY_PUSH(moves, svn_wc_repos_move_info_t *) = new_info;
+          apr_hash_set(b->moves, apr_pstrdup(result_pool, deleted_path),
+                       APR_HASH_KEY_STRING, moves);
+        }
     }
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -322,6 +409,7 @@ get_repos_moves(void *baton,
   lrb.moves = apr_hash_make(result_pool);
   lrb.start = start;
   lrb.end = end;
+  lrb.ra_session = b->ra_session;
 
   if (b->ctx->notify_func2)
     {
