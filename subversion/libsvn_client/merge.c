@@ -1202,8 +1202,9 @@ merge_props_changed(svn_wc_notify_state_t *state,
                                                     scratch_pool,
                                                     scratch_pool));
 
-                  if (apr_hash_get(pristine_props, SVN_PROP_MERGEINFO,
-                                   APR_HASH_KEY_STRING))
+                  if (pristine_props
+                      && apr_hash_get(pristine_props, SVN_PROP_MERGEINFO,
+                                      APR_HASH_KEY_STRING))
                     has_pristine_mergeinfo = TRUE;
 
                   if (!has_pristine_mergeinfo && prop->value)

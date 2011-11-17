@@ -681,18 +681,15 @@ def del_differing_file(sbox):
                                      'newprop', 'v', target+"/pi")
 
   dir_D = os.path.join('A','D')
-  dir_G2 = os.path.join(dir_D, 'G2')
   tau = os.path.join(dir_D,'G2','tau')
   pi = os.path.join(dir_D, 'G2', 'pi')
   # Should complain and "skip" it.
   svn_merge(s_rev_tau, source, target, [
       "   C %s\n" % tau,       # merge
-      " U   %s\n" % (dir_G2),  # mergeinfo
       ], tree_conflicts=1)
 
   svn_merge(s_rev_pi, source, target, [
       "   C %s\n" % pi,        # merge
-      " G   %s\n" % (dir_G2),  # mergeinfo
       ], tree_conflicts=1)
 
 
@@ -705,19 +702,16 @@ def del_differing_file(sbox):
   sbox.simple_commit(target)
 
 
-  dir_G3 = os.path.join(dir_D, 'G3')
   tau = os.path.join(dir_D,'G3','tau')
   pi = os.path.join(dir_D, 'G3', 'pi')
 
   # Should complain and "skip" it.
   svn_merge(s_rev_tau, source, target, [
-      "   C %s\n" % tau,       # merge
-      " U   %s\n" % (dir_G3),  # mergeinfo
+      "   C %s\n" % tau,
       ], tree_conflicts=1)
 
   svn_merge(s_rev_pi, source, target, [
-      "   C %s\n" % pi,        # merge
-      " G   %s\n" % (dir_G3),  # mergeinfo
+      "   C %s\n" % pi,
       ], tree_conflicts=1)
 
   os.chdir(saved_cwd)
