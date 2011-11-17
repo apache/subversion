@@ -99,11 +99,15 @@ typedef svn_error_t *(*start_edit_func_t)(
     apr_pool_t *result_pool,
     void **root_baton);
 
+typedef svn_error_t *(*target_revision_func_t)(
+    void *baton,
+    svn_revnum_t target_revision,
+    apr_pool_t *scratch_pool);
+
 struct ev2_edit_baton
 {
   svn_editor_t *editor;
   apr_hash_t *paths;
-  svn_revnum_t target_revision;
   apr_pool_t *edit_pool;
 
   svn_boolean_t *found_abs_paths; /* Did we strip an incoming '/' from the
@@ -116,6 +120,9 @@ struct ev2_edit_baton
 
   svn_delta_fetch_props_func_t fetch_props_func;
   void *fetch_props_baton;
+
+  target_revision_func_t target_revision_func;
+  void *target_revision_baton;
 };
 
 struct ev2_dir_baton
@@ -301,7 +308,7 @@ process_actions(void *edit_baton,
         {
           /* We fetched and modified the props in some way. Apply 'em now that
              we have the new set.  */
-          SVN_ERR(svn_editor_set_props(eb->editor, path, eb->target_revision,
+          SVN_ERR(svn_editor_set_props(eb->editor, path, SVN_INVALID_REVNUM,
                                        props, TRUE));
         }
     }
@@ -347,7 +354,8 @@ ev2_set_target_revision(void *edit_baton,
 {
   struct ev2_edit_baton *eb = edit_baton;
 
-  eb->target_revision = target_revision;
+  SVN_ERR(eb->target_revision_func(eb->target_revision_baton, target_revision,
+                                   scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -616,6 +624,19 @@ start_edit_func(void *baton,
 }
 
 static svn_error_t *
+target_revision_func(void *baton,
+                     svn_revnum_t target_revision,
+                     apr_pool_t *scratch_pool)
+{
+  struct start_edit_baton *seb = baton;
+
+  SVN_ERR(seb->deditor->set_target_revision(seb->dedit_baton, target_revision,
+                                            scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 delta_from_editor(const svn_delta_editor_t **deditor,
                   void **dedit_baton,
                   svn_editor_t *editor,
@@ -624,6 +645,8 @@ delta_from_editor(const svn_delta_editor_t **deditor,
                   void *fetch_props_baton,
                   start_edit_func_t start_edit,
                   void *start_edit_baton,
+                  target_revision_func_t target_revision,
+                  void *target_revision_baton,
                   apr_pool_t *pool)
 {
   /* Static 'cause we don't want it to be on the stack. */
@@ -649,7 +672,6 @@ delta_from_editor(const svn_delta_editor_t **deditor,
 
   eb->editor = editor;
   eb->paths = apr_hash_make(pool);
-  eb->target_revision = SVN_INVALID_REVNUM;
   eb->edit_pool = pool;
   eb->found_abs_paths = found_abs_paths;
 
@@ -658,6 +680,9 @@ delta_from_editor(const svn_delta_editor_t **deditor,
 
   eb->start_edit = start_edit;
   eb->start_edit_baton = start_edit_baton;
+
+  eb->target_revision_func = target_revision;
+  eb->target_revision_baton = target_revision_baton;
 
   *dedit_baton = eb;
   *deditor = &delta_editor;
@@ -1392,6 +1417,7 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
                             shim_callbacks->fetch_props_func,
                             shim_callbacks->fetch_props_baton,
                             start_edit_func, seb,
+                            target_revision_func, seb,
                             result_pool));
 
 #endif
