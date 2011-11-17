@@ -68,8 +68,10 @@ def no_mergeinfo(sbox):
   "'mergeinfo' on a URL that lacks mergeinfo"
 
   sbox.build(create_wc=False)
-  svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           [], sbox.repo_url, sbox.repo_url)
+  svntest.actions.run_and_verify_mergeinfo(
+                    adjust_error_for_server_version(
+                      "Source and target are the same .*"),
+                    [], sbox.repo_url, sbox.repo_url)
 
 def mergeinfo(sbox):
   "'mergeinfo' on a path with mergeinfo"

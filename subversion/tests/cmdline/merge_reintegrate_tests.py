@@ -1195,7 +1195,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   # ourselves, but as the 'actual_stdout' argument, that way each line of
   # error must match the regex.
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, [], svntest.verify.AnyOutput,
+    None, None, svntest.verify.AnyOutput,
     'merge', '--reintegrate', sbox.repo_url + '/A_COPY', A_path)
 
   svntest.verify.verify_outputs("Reintegrate failed but not "

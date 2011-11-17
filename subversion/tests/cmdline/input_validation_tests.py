@@ -52,7 +52,7 @@ def run_and_verify_svn_in_wc(sbox, expected_stderr, *varargs):
   old_dir = os.getcwd()
   try:
     os.chdir(wc_dir)
-    svntest.actions.run_and_verify_svn(None, [], expected_stderr,
+    svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                        *varargs)
   finally:
     os.chdir(old_dir)

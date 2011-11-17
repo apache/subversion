@@ -74,10 +74,11 @@ def expected_merge_output(rev_ranges, additional_lines=None, foreign=False,
   TEXT_CONFLICTS, PROP_CONFLICTS and TREE_CONFLICTS specify the number of
   each kind of conflict to expect."""
 
+  lines = ['(Sync|Reintegrate|Cherry-pick|Two-URL) merge\n',
+           '  from .*\n']
   if rev_ranges is None:
-    lines = [svntest.main.merge_notify_line(None, None, False, foreign)]
+    lines += [svntest.main.merge_notify_line(None, None, False, foreign)]
   else:
-    lines = []
     for rng in rev_ranges:
       start_rev = rng[0]
       if len(rng) > 1:
@@ -763,7 +764,9 @@ def simple_property_merges(sbox):
   alpha_path = os.path.join(wc_dir, 'B', 'E', 'alpha')
 
   # Cannot use run_and_verify_merge with a file target
-  svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-r', '3:4',
+  expected_output = svntest.actions.expected_noop_merge_output()
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '-r', '3:4',
                                      alpha_url, alpha_path)
 
   exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
@@ -4785,7 +4788,8 @@ def mergeinfo_inheritance(sbox):
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
   ### TODO: We can use run_and_verify_merge() here now.
-  svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-c5',
+  expected_output = svntest.actions.expected_noop_merge_output()
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'merge', '-c5',
                                      sbox.repo_url + '/A/B/E/beta',
                                      beta_COPY_path)
 
@@ -11167,7 +11171,7 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
 
   expected_skip = wc.State(H_COPY_path, { })
   #Cherry pick r2 prior to cherry harvest.
-  svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-c2',
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c2',
                                      sbox.repo_url + '/A/D/H',
                                      H_COPY_path)
 
@@ -16233,7 +16237,7 @@ def merge_with_os_deleted_subtrees(sbox):
             "|(.*A_COPY" + re_sep + "C\n)"                                 + \
             "|(.*A_COPY" + re_sep + "D" + re_sep + "H" + re_sep + "psi\n)"
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    "Missing subtrees should raise error", [], svntest.verify.AnyOutput,
+    "Missing subtrees should raise error", None, svntest.verify.AnyOutput,
     'merge', sbox.repo_url + '/A', A_COPY_path)
   svntest.verify.verify_outputs("Merge failed but not in the way expected",
                                 err, None, err_re + missing, None,
@@ -16245,7 +16249,7 @@ def merge_with_os_deleted_subtrees(sbox):
   missing = "|(.*A_COPY" + re_sep + "mu\n)" + \
             "|(.*A_COPY" + re_sep + "C\n)"
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    "Missing subtrees should raise error", [], svntest.verify.AnyOutput,
+    "Missing subtrees should raise error", None, svntest.verify.AnyOutput,
     'merge', sbox.repo_url + '/A', A_COPY_path, '--depth=immediates')
   svntest.verify.verify_outputs("Merge failed but not in the way expected",
                                 err, None, err_re + missing, None, True)
@@ -16255,7 +16259,7 @@ def merge_with_os_deleted_subtrees(sbox):
   # as missing.
   missing = "|(.*A_COPY" + re_sep + "mu\n)"
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    "Missing subtrees should raise error", [], svntest.verify.AnyOutput,
+    "Missing subtrees should raise error", None, svntest.verify.AnyOutput,
     'merge', sbox.repo_url + '/A', A_COPY_path, '--depth=files')
   svntest.verify.verify_outputs("Merge failed but not in the way expected",
                                 err, None, err_re + missing, None, True)

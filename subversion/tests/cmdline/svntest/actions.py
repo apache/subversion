@@ -407,6 +407,11 @@ def expected_noop_update_output(rev):
                                      % (rev),
                                      "no-op update")
 
+def expected_noop_merge_output():
+  """Return an ExpectedOutput object describing what we'd expect to
+  see from a merge-tracking merge where nothing needs to be merged."""
+  return verify.RegexOutput("(Sync|Cherry-pick) merge|  from .*")
+
 ######################################################################
 # Subversion Actions
 #
@@ -1033,6 +1038,8 @@ def run_and_verify_merge(dir, rev1, rev2, url1, url2,
       print("Dry-run merge altered working copy")
       print("=============================================================")
       raise
+    if out_dry[0].startswith('This is a dry-run merge'):
+      out_dry[0:1] = []
 
 
   # Update and make a tree of the output.
@@ -1065,7 +1072,8 @@ def run_and_verify_merge(dir, rev1, rev2, url1, url2,
     elif line.startswith('--- Merging')          or \
          line.startswith('--- Reverse-merging')  or \
          line.startswith('Summary of conflicts') or \
-         line.startswith('Skipped missing target'):
+         line.startswith('Skipped missing target') or \
+         line.startswith('To continue using'):
       mergeinfo_notifications = False
       elision_notifications = False
 
@@ -1088,12 +1096,12 @@ def run_and_verify_merge(dir, rev1, rev2, url1, url2,
     out_dry_copy.sort()
     if out_copy != out_dry_copy:
       print("=============================================================")
-      print("Merge outputs differ")
+      print("Merge output differs in dry-run mode")
       print("The dry-run merge output:")
       for x in out_dry:
         sys.stdout.write(x)
-      print("The full merge output:")
-      for x in out:
+      print("The full merge output (relevant parts):")
+      for x in merge_diff_out:
         sys.stdout.write(x)
       print("=============================================================")
       raise main.SVNUnmatchedError
@@ -1248,6 +1256,16 @@ def run_and_verify_mergeinfo(error_re_string = None,
   output is encountered."""
 
   mergeinfo_command = ["mergeinfo"]
+
+  # Default to '--show-revs=eligible' mode, making the new default
+  # mode inaccessible, for now.
+  for arg in list(args):
+    if arg.startswith('--show-revs'):
+      break;
+  else:
+    args = list(args)
+    args.append('--show-revs=merged')
+
   mergeinfo_command.extend(args)
   exit_code, out, err = main.run_svn(error_re_string, *mergeinfo_command)
 
