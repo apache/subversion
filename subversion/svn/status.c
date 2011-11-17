@@ -548,9 +548,14 @@ svn_cl__print_status(const char *cwd_abspath,
           && status->repos_node_status == svn_wc_status_none))
     return SVN_NO_ERROR;
 
-  if (suppress_externals_placeholders
-      && status->node_status == svn_wc_status_external)
-    return SVN_NO_ERROR;
+  if (suppress_externals_placeholders)
+    {
+      if (status->node_status == svn_wc_status_external)
+        return SVN_NO_ERROR;
+      if ((status->node_status == svn_wc_status_normal)
+          && (status->file_external))
+        return SVN_NO_ERROR;
+    }
 
   return print_status(cwd_abspath, svn_dirent_local_style(path, pool),
                       detailed, show_last_committed, repos_locks, status,
