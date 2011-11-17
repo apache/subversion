@@ -49,15 +49,31 @@ from svntest.actions import make_conflict_marker_text
 from svntest.actions import inject_conflict_into_expected_state
 
 def expected_merge_output(rev_ranges, additional_lines=None, foreign=False,
-                          elides=False, two_url=False):
+                          elides=False, two_url=False, target=None,
+                          text_conflicts=0, prop_conflicts=0, tree_conflicts=0):
   """Generate an (inefficient) regex representing the expected merge
-  output and mergeinfo notifications from REV_RANGES (a list of 'range' lists
-  of the form [start, end] or [single_rev] --> [single_rev - 1, single_rev]),
-  and ADDITIONAL_LINES (a list of strings).  If REV_RANGES is None then only
-  the standard notification for a 3-way merge is expected.  If ELIDES is true
-  add to the regex an expression representing elision notification.  If TWO_URL
-  us true tweak the regex to expect the appropriate mergeinfo notification
-  for a 3-way merge."""
+  output and mergeinfo notifications from REV_RANGES and ADDITIONAL_LINES.
+
+  REV_RANGES is a list of revision ranges for which mergeinfo is being
+  recorded.  Each range is of the form [start, end] (where both START and
+  END are inclusive, unlike in '-rX:Y') or the form [single_rev] (which is
+  like '-c SINGLE_REV').  If REV_RANGES is None then only the standard
+  notification for a 3-way merge is expected.
+
+  ADDITIONAL_LINES is a list of strings to match the other lines of output;
+  these are basically regular expressions except that backslashes will be
+  escaped herein.
+
+  If ELIDES is true, add to the regex an expression representing elision
+  notification.  If TWO_URL is true, tweak the regex to expect the
+  appropriate mergeinfo notification for a 3-way merge.
+
+  TARGET is the local path to the target, as it should appear in
+  notifications; if None, it is not checked.
+
+  TEXT_CONFLICTS, PROP_CONFLICTS and TREE_CONFLICTS specify the number of
+  each kind of conflict to expect."""
+
   if rev_ranges is None:
     lines = [svntest.main.merge_notify_line(None, None, False, foreign)]
   else:
@@ -69,8 +85,8 @@ def expected_merge_output(rev_ranges, additional_lines=None, foreign=False,
       else:
         end_rev = None
       lines += [svntest.main.merge_notify_line(start_rev, end_rev,
-                                               True, foreign)]
-      lines += [svntest.main.mergeinfo_notify_line(start_rev, end_rev)]
+                                               True, foreign, target)]
+      lines += [svntest.main.mergeinfo_notify_line(start_rev, end_rev, target)]
 
   if (elides):
     lines += ["--- Eliding mergeinfo from .*\n"]
@@ -94,6 +110,16 @@ def expected_merge_output(rev_ranges, additional_lines=None, foreign=False,
     if sys.platform == 'win32' and additional_lines != None:
       additional_lines = additional_lines.replace("\\", "\\\\")
     lines.append(str(additional_lines))
+
+  if text_conflicts or prop_conflicts or tree_conflicts:
+    lines.append("Summary of conflicts:\n")
+    if text_conflicts:
+      lines.append("  Text conflicts: %d\n" % text_conflicts)
+    if prop_conflicts:
+      lines.append("  Property conflicts: %d\n" % prop_conflicts)
+    if tree_conflicts:
+      lines.append("  Tree conflicts: %d\n" % tree_conflicts)
+
   return "|".join(lines)
 
 def check_mergeinfo_recursively(root_path, subpaths_mergeinfo):
@@ -12509,24 +12535,38 @@ def svn_copy(s_rev, path1, path2):
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', '--parents',
                                      '-r', s_rev, path1, path2)
 
-def svn_merge(rev_spec, source, target, exp_out=None, *args):
-  """Merge a single change from path 'source' to path 'target'.
-  SRC_CHANGE_NUM is either a number (to cherry-pick that specific change)
-  or a command-line option revision range string such as '-r10:20'.
-  *ARGS are additional arguments passed to svn merge."""
+def svn_merge(rev_range, source, target, lines=None,
+              text_conflicts=0, prop_conflicts=0, tree_conflicts=0, args=[]):
+  """Merge a single change from path SOURCE to path TARGET and verify the
+  output and that there is no error.  (The changes made are not verified.)
+
+  REV_RANGE is either a number (to cherry-pick that specific change) or a
+  two-element list [X,Y] to pick the revision range '-r(X-1):Y'.
+
+  LINES is a list of regular expressions to match other lines of output; if
+  LINES is 'None' then match all normal (non-conflicting) merges.
+
+  TEXT_CONFLICTS, PROP_CONFLICTS and TREE_CONFLICTS specify the number of
+  each kind of conflict to expect.
+
+  ARGS are additional arguments passed to svn merge."""
+
   source = local_path(source)
   target = local_path(target)
-  if isinstance(rev_spec, int):
-    rev_spec = '-c' + str(rev_spec)
-  if exp_out is None:
-    target_re = re.escape(target)
-    exp_1 = "--- Merging r.* into '" + target_re + ".*':"
-    exp_2 = "(A |D |[UG] | [UG]|[UG][UG])   " + target_re + ".*"
-    exp_3 = "--- Recording mergeinfo for merge of r.* into '" + \
-            target_re + ".*':"
-    exp_out = svntest.verify.RegexOutput(exp_1 + "|" + exp_2 + "|" + exp_3)
+  if isinstance(rev_range, int):
+    mi_rev_range = [rev_range]
+    rev_arg = '-c' + str(rev_range)
+  else:
+    mi_rev_range = rev_range
+    rev_arg = '-r' + str(rev_range[0] - 1) + ':' + str(rev_range[1])
+  if lines is None:
+    lines = ["(A |D |[UG] | [UG]|[UG][UG])   " + target + ".*\n"]
+  exp_out = expected_merge_output([mi_rev_range], lines, target=target,
+                                  text_conflicts=text_conflicts,
+                                  prop_conflicts=prop_conflicts,
+                                  tree_conflicts=tree_conflicts)
   svntest.actions.run_and_verify_svn(None, exp_out, [],
-                                     'merge', rev_spec, source, target, *args)
+                                     'merge', rev_arg, source, target, *args)
 
 #----------------------------------------------------------------------
 # Tests for merging the deletion of a node, where the node to be deleted
@@ -12558,7 +12598,7 @@ def del_identical_file(sbox):
   svn_copy(s_rev_mod, source, target)
   sbox.simple_commit(target)
   # Should be deleted quietly.
-  svn_merge(s_rev_del, source, target, '--- Merging|D |--- Recording| U')
+  svn_merge(s_rev_del, source, target, ['D ', ' U'])
 
   # Make a differing copy, locally modify it so it's the same,
   # and merge a deletion to it.
@@ -12567,7 +12607,7 @@ def del_identical_file(sbox):
   sbox.simple_commit(target)
   svn_modfile(target+"/tau")
   # Should be deleted quietly.
-  svn_merge(s_rev_del, source, target, '--- Merging|D |--- Recording| U')
+  svn_merge(s_rev_del, source, target, ['D ', ' U'])
 
   os.chdir(saved_cwd)
 
@@ -12594,10 +12634,9 @@ def del_sched_add_hist_file(sbox):
   svn_copy(s_rev_orig, source, target)
   sbox.simple_commit(target)
   s_rev = 3
-  svn_merge(s_rev_add, source, target, '--- Merging|A |--- Recording| U')
+  svn_merge(s_rev_add, source, target, ['A ', ' U'])
   # Should be deleted quietly.
-  svn_merge(-s_rev_add, source, target,
-            '--- Reverse-merging|D |--- Recording| U| G|--- Eliding')
+  svn_merge(-s_rev_add, source, target, ['D ', ' U', ' G', '--- Eliding'])
 
   os.chdir(saved_cwd)
 
@@ -13052,15 +13091,10 @@ def merge_two_edits_to_same_prop(sbox):
   rev4 = initial_rev + 4
 
   # Merge the two changes together to source.
-  svn_merge('-r'+str(rev3-1)+':'+str(rev4), A_COPY_path, A_path, [
-      "--- Merging r9 through r10 into '%s':\n" % A_path,
+  svn_merge([rev3, rev4], A_COPY_path, A_path, [
       " C   %s\n" % mu_path,
-      "--- Recording mergeinfo for merge of r9 through r10 into '%s':\n" \
-      % A_path,
       " U   A\n",
-      "Summary of conflicts:\n",
-      "  Property conflicts: 1\n"],
-      '--allow-mixed-revisions')
+      ], prop_conflicts=1, args=['--allow-mixed-revisions'])
 
   # Revert changes to source wc, to test next scenario of #3250
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -13068,21 +13102,13 @@ def merge_two_edits_to_same_prop(sbox):
 
   # Merge the first change, then the second, to source.
   svn_merge(rev3, A_COPY_path, A_path, [
-      "--- Merging r9 into '%s':\n" % A_path,
       " C   %s\n" % mu_path,
-      "--- Recording mergeinfo for merge of r9 into '%s':\n" % A_path,
       " U   A\n",
-      "Summary of conflicts:\n",
-      "  Property conflicts: 1\n"],
-      '--allow-mixed-revisions')
+      ], prop_conflicts=1, args=['--allow-mixed-revisions'])
   svn_merge(rev4, A_COPY_path, A_path, [
-      "--- Merging r10 into '%s':\n" % A_path,
       " C   %s\n" % mu_path,
-      "--- Recording mergeinfo for merge of r10 into '%s':\n" % A_path,
       " G   A\n",
-      "Summary of conflicts:\n",
-      "  Property conflicts: 1\n"],
-      '--allow-mixed-revisions')
+      ], prop_conflicts=1, args=['--allow-mixed-revisions'])
 
   os.chdir(was_cwd)
 
@@ -13131,8 +13157,8 @@ def merge_an_eol_unification_and_set_svn_eol_style(sbox):
   sbox.simple_commit('A_COPY')
 
   # Merge the two changes together to the target branch.
-  svn_merge('-r'+str(rev1)+':'+str(rev3), 'A', 'A_COPY', None,
-            '--allow-mixed-revisions')
+  svn_merge([rev2, rev3], 'A', 'A_COPY',
+            args=['--allow-mixed-revisions'])
 
   # That merge should succeed.
   # Surprise: setting svn:eol-style='LF' instead of 'native' doesn't fail.
@@ -16680,11 +16706,9 @@ def foreign_repos_prop_conflict(sbox):
 
   # Now, merge the propchange to the *second* working copy.
   expected_output = [' C   %s\n' % (os.path.join(other_wc_dir,
-                                                 "A", "D", "G")),
-                     'Summary of conflicts:\n',
-                     '  Property conflicts: 1\n',
-                     ]
-  expected_output = expected_merge_output([[3]], expected_output, True)
+                                                 "A", "D", "G"))]
+  expected_output = expected_merge_output([[3]], expected_output, True,
+                                          prop_conflicts=1)
   svntest.actions.run_and_verify_svn(None,
                                      expected_output,
                                      [], 'merge', '-c3',
@@ -17111,6 +17135,152 @@ def record_only_merge_adds_new_subtree_mergeinfo(sbox):
                                        None, None, None, None,
                                        None, 1, False)
 
+#----------------------------------------------------------------------
+# Setup helper for issue #4056 and issue #4057 tests.
+def noninheritable_mergeinfo_test_set_up(sbox):
+  '''Starting with standard greek tree, copy 'A' to 'branch' in r2 and
+  then made a file edit to A/B/lambda in r3.
+  Return (expected_output, expected_mergeinfo_output, expected_elision_output,
+          expected_status, expected_disk, expected_skip) for a merge of
+  r3 from ^/A/B to branch/B.'''
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  lambda_path   = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  B_branch_path = os.path.join(wc_dir, 'branch', 'B')
+
+  # r2 - Branch ^/A to ^/branch.
+  svntest.main.run_svn(None, 'copy', sbox.repo_url + '/A',
+                       sbox.repo_url + '/branch', '-m', 'make a branch')
+
+  # r3 - Make an edit to A/B/lambda.
+  svntest.main.file_write(lambda_path, "trunk edit.\n")
+  svntest.main.run_svn(None, 'commit', '-m', 'file edit', wc_dir)
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  expected_output = wc.State(B_branch_path, {
+    'lambda' : Item(status='U '),
+    })
+  expected_mergeinfo_output = wc.State(B_branch_path, {
+    ''       : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(B_branch_path, {
+    })
+  expected_status = wc.State(B_branch_path, {
+    ''        : Item(status=' M'),
+    'lambda'  : Item(status='M '),
+    'E'       : Item(status='  '),
+    'E/alpha' : Item(status='  '),
+    'E/beta'  : Item(status='  '),
+    'F'       : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev='3')
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A/B:3'}),
+    'lambda'  : Item("trunk edit.\n"),
+    'E'       : Item(),
+    'E/alpha' : Item("This is the file 'alpha'.\n"),
+    'E/beta'  : Item("This is the file 'beta'.\n"),
+    'F'       : Item(),
+    })
+  expected_skip = wc.State(B_branch_path, {})
+
+  return expected_output, expected_mergeinfo_output, expected_elision_output, \
+    expected_status, expected_disk, expected_skip
+
+
+#----------------------------------------------------------------------
+# Test for issue #4056 "don't record non-inheritable mergeinfo if missing
+# subtrees are not touched by the full-depth diff".
+@Issue(4056)
+@XFail()
+@SkipUnless(server_has_mergeinfo)
+def unnecessary_noninheritable_mergeinfo_missing_subtrees(sbox):
+  "missing subtrees untouched by infinite depth merge"
+
+  B_branch_path = os.path.join(sbox.wc_dir, 'branch', 'B')
+
+  # Setup a simple branch to which 
+  expected_output, expected_mergeinfo_output, expected_elision_output, \
+    expected_status, expected_disk, expected_skip = \
+    noninheritable_mergeinfo_test_set_up(sbox)
+
+  # Create a shallow merge target; set depth of branch/B to files.
+  svntest.main.run_svn(None, 'up', '--set-depth=files', B_branch_path)
+  expected_status.remove('E', 'E/alpha', 'E/beta', 'F')
+  expected_disk.remove('E', 'E/alpha', 'E/beta', 'F')
+
+  # Merge r3 from ^/A/B to branch/B
+  #
+  # Currently this fails because merge isn't smart enough to
+  # realize that despite the shallow merge target, the diff can
+  # only affect branch/B/lambda, which is still present, so there
+  # is no need to record non-inheritable mergeinfo on the target
+  # or any subtree mergeinfo whatsoever:
+  #
+  #   >svn pg svn:mergeinfo -vR
+  #   Properties on 'branch\B':
+  #     svn:mergeinfo
+  #       /A/B:3* <-- Should be inheritable
+  #   Properties on 'branch\B\lambda':
+  #     svn:mergeinfo
+  #       /A/B/lambda:3 <-- Not neccessary
+  svntest.actions.run_and_verify_merge(B_branch_path,
+                                       '2', '3',
+                                       sbox.repo_url + '/A/B', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, 1, 1,
+                                       B_branch_path)
+
+#----------------------------------------------------------------------
+# Test for issue #4057 "don't record non-inheritable mergeinfo in shallow
+# merge if entire diff is within requested depth".
+@Issue(4057)
+@XFail()
+@SkipUnless(server_has_mergeinfo)
+def unnecessary_noninheritable_mergeinfo_shallow_merge(sbox):
+  "shallow merge reaches all neccessary subtrees"
+
+  B_branch_path = os.path.join(sbox.wc_dir, 'branch', 'B')
+
+  # Setup a simple branch to which 
+  expected_output, expected_mergeinfo_output, expected_elision_output, \
+    expected_status, expected_disk, expected_skip = \
+    noninheritable_mergeinfo_test_set_up(sbox)
+
+  # Merge r3 from ^/A/B to branch/B at operational depth=files
+  #
+  # Currently this fails because merge isn't smart enough to
+  # realize that despite being a shallow merge, the diff can
+  # only affect branch/B/lambda, which is within the specified
+  # depth, so there is no need to record non-inheritable mergeinfo
+  # or subtree mergeinfo:
+  #
+  #   >svn pg svn:mergeinfo -vR
+  #   Properties on 'branch\B':
+  #     svn:mergeinfo
+  #       /A/B:3* <-- Should be inheritable
+  #   Properties on 'branch\B\lambda':
+  #     svn:mergeinfo
+  #       /A/B/lambda:3 <-- Not neccessary
+  expected_skip = wc.State(B_branch_path, {})
+  svntest.actions.run_and_verify_merge(B_branch_path, '2', '3',
+                                       sbox.repo_url + '/A/B', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, 1, 1,
+                                       '--depth', 'files', B_branch_path)
+
 ########################################################################
 # Run the tests
 
@@ -17239,6 +17409,8 @@ test_list = [ None,
               reverse_merge_adds_subtree,
               merged_deletion_causes_tree_conflict,
               record_only_merge_adds_new_subtree_mergeinfo,
+              unnecessary_noninheritable_mergeinfo_missing_subtrees,
+              unnecessary_noninheritable_mergeinfo_shallow_merge,
              ]
 
 if __name__ == '__main__':

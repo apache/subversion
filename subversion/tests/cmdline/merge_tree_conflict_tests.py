@@ -46,6 +46,7 @@ from svntest.main import server_has_mergeinfo
 from merge_tests import set_up_branch
 from merge_tests import svn_copy
 from merge_tests import svn_merge
+from merge_tests import expected_merge_output
 
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
@@ -685,20 +686,14 @@ def del_differing_file(sbox):
   pi = os.path.join(dir_D, 'G2', 'pi')
   # Should complain and "skip" it.
   svn_merge(s_rev_tau, source, target, [
-      "--- Merging r2 into '%s':\n" % dir_G2,
-      "   C %s\n" % tau,
-      "--- Recording mergeinfo for merge of r2 into '%s':\n" % (dir_G2),
-      " U   %s\n" % (dir_G2),
-      "Summary of conflicts:\n",
-      "  Tree conflicts: 1\n"])
+      "   C %s\n" % tau,       # merge
+      " U   %s\n" % (dir_G2),  # mergeinfo
+      ], tree_conflicts=1)
 
   svn_merge(s_rev_pi, source, target, [
-      "--- Merging r3 into '%s':\n" % dir_G2,
-      "   C %s\n" % pi,
-      "--- Recording mergeinfo for merge of r3 into '%s':\n" % (dir_G2),
-      " G   %s\n" % (dir_G2),
-      "Summary of conflicts:\n",
-      "  Tree conflicts: 1\n"])
+      "   C %s\n" % pi,        # merge
+      " G   %s\n" % (dir_G2),  # mergeinfo
+      ], tree_conflicts=1)
 
 
   # Copy a file, modify it, commit, and merge a deletion to it.
@@ -716,20 +711,14 @@ def del_differing_file(sbox):
 
   # Should complain and "skip" it.
   svn_merge(s_rev_tau, source, target, [
-      "--- Merging r2 into '%s':\n" % dir_G3,
-      "   C %s\n" % tau,
-      "--- Recording mergeinfo for merge of r2 into '%s':\n" % (dir_G3),
-      " U   %s\n" % (dir_G3),
-      "Summary of conflicts:\n",
-      "  Tree conflicts: 1\n"])
+      "   C %s\n" % tau,       # merge
+      " U   %s\n" % (dir_G3),  # mergeinfo
+      ], tree_conflicts=1)
 
   svn_merge(s_rev_pi, source, target, [
-      "--- Merging r3 into '%s':\n" % dir_G3,
-      "   C %s\n" % pi,
-      "--- Recording mergeinfo for merge of r3 into '%s':\n" % (dir_G3),
-      " G   %s\n" % (dir_G3),
-      "Summary of conflicts:\n",
-      "  Tree conflicts: 1\n"])
+      "   C %s\n" % pi,        # merge
+      " G   %s\n" % (dir_G3),  # mergeinfo
+      ], tree_conflicts=1)
 
   os.chdir(saved_cwd)
 
@@ -1738,18 +1727,15 @@ def merge_replace_causes_tree_conflict(sbox):
     'propname', 'propval', A_D_H)
 
   # svn merge $URL/A $URL/branch A
-  expected_stdout = verify.UnorderedOutput([
-    "--- Merging differences between repository URLs into '" + A + "':\n",
+  expected_stdout = expected_merge_output(None, [
+    # merge
     '   C ' + A_B_E + '\n',
     '   C ' + A_mu + '\n',
     '   C ' + A_D_G_pi + '\n',
     '   C ' + A_D_H + '\n',
-    "--- Recording mergeinfo for merge between repository URLs into '" \
-    + A + "':\n",
+    # mergeinfo
     ' U   ' + A + '\n',
-    'Summary of conflicts:\n',
-    '  Tree conflicts: 4\n',
-  ])
+  ], target=A, two_url=True, tree_conflicts=4)
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
     url_A, url_branch, A)
@@ -1829,15 +1815,10 @@ def merge_replace_causes_tree_conflict2(sbox):
 
   ### A file-with-file replacement onto a deleted file.
   # svn merge $URL/A/mu $URL/branch/mu A/mu
-  expected_stdout = verify.UnorderedOutput([
-    "--- Merging differences between repository URLs into '" + A + "':\n",
-    '   C ' + A_mu + '\n',
-    "--- Recording mergeinfo for merge between repository URLs into '" +
-      A + "':\n",
-    " U   " + A + "\n",
-    'Summary of conflicts:\n',
-    '  Tree conflicts: 1\n',
-  ])
+  expected_stdout = expected_merge_output(None, [
+    '   C ' + A_mu + '\n',  # merge
+    " U   " + A + "\n",     # mergeinfo
+  ], target=A, two_url=True, tree_conflicts=1)
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
     url_A, url_branch, A, '--depth=files')
@@ -1853,15 +1834,10 @@ def merge_replace_causes_tree_conflict2(sbox):
 
   ### A dir-with-dir replacement onto a deleted directory.
   # svn merge $URL/A/B $URL/branch/B A/B
-  expected_stdout = verify.UnorderedOutput([
-    "--- Merging differences between repository URLs into '" + A_B + "':\n",
-    '   C ' + A_B_E + '\n',
-    "--- Recording mergeinfo for merge between repository URLs into '" +
-      A_B + "':\n",
-    " U   " + A_B + "\n",
-    'Summary of conflicts:\n',
-    '  Tree conflicts: 1\n',
-  ])
+  expected_stdout = expected_merge_output(None, [
+    '   C ' + A_B_E + '\n',   # merge
+    " U   " + A_B + "\n",     # mergeinfo
+  ], target=A_B, two_url=True, tree_conflicts=1)
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
     url_A_B, url_branch_B, A_B)
@@ -1877,16 +1853,11 @@ def merge_replace_causes_tree_conflict2(sbox):
 
   ### A dir-with-file replacement onto a deleted directory.
   # svn merge --depth=immediates $URL/A/D $URL/branch/D A/D
-  expected_stdout = verify.UnorderedOutput([
-    "--- Merging differences between repository URLs into '" + A_D + "':\n",
-    '   C ' + A_D_H + '\n',
-    "--- Recording mergeinfo for merge between repository URLs into '" +
-      A_D + "':\n",
-    " U   " + A_D + "\n",
+  expected_stdout = expected_merge_output(None, [
+    '   C ' + A_D_H + '\n',   # merge
+    " U   " + A_D + "\n",     # mergeinfo
     " U   " + A_D_G + "\n",
-    'Summary of conflicts:\n',
-    '  Tree conflicts: 1\n',
-  ])
+  ], target=A_D, two_url=True, tree_conflicts=1)
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
     '--depth=immediates', url_A_D, url_branch_D, A_D)
@@ -1902,20 +1873,9 @@ def merge_replace_causes_tree_conflict2(sbox):
 
   ### A file-with-dir replacement onto a deleted file.
   # svn merge $URL/A/D/G $URL/branch/D/G A/D/G
-  expected_stdout = verify.UnorderedOutput([
-    "--- Merging differences between repository URLs into '" + A_D_G +
-    "':\n",
-    '   C ' + A_D_G_pi + '\n',
-    "--- Recording mergeinfo for merge between repository URLs into '" +
-      A_D_G + "':\n",
-    "--- Eliding mergeinfo from '" + A_D_G_pi + "':\n",
-    " U   " + A_D_G_pi + "\n",
-    "--- Eliding mergeinfo from '" + A_D_G_pi + "':\n",
-    " U   " + A_D_G_pi + "\n",
-    " G   " + A_D_G + "\n",
-    'Summary of conflicts:\n',
-    '  Tree conflicts: 1\n',
-  ])
+  expected_stdout = expected_merge_output(None, [
+    '   C ' + A_D_G_pi + '\n',  # merge
+  ], target=A_D_G, elides=[A_D_G_pi, A_D_G], two_url=True, tree_conflicts=1)
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
     url_A_D_G, url_branch_D_G, A_D_G)
@@ -1975,15 +1935,10 @@ def merge_replace_on_del_fails(sbox):
 
   # Sync merge ^/A to branch
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  expected_stdout = verify.UnorderedOutput([
-    "--- Merging r2 through r4 into '" + branch_path + "':\n",
-    '   C ' + C_branch_path + '\n',
-    "--- Recording mergeinfo for merge of r2 through r4 into '" \
-    + branch_path + "':\n",
-    ' U   ' + branch_path + '\n',
-    'Summary of conflicts:\n',
-    '  Tree conflicts: 1\n',
-    ])
+  expected_stdout = expected_merge_output([[2,4]], [
+    '   C ' + C_branch_path + '\n',  # merge
+    ' U   ' + branch_path + '\n',    # mergeinfo
+  ], target=branch_path, tree_conflicts=1)
   # This currently fails with:
   #
   #   >svn merge ^/A branch

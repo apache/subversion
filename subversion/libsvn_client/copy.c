@@ -240,47 +240,41 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
 }
 
 
-struct do_wc_to_wc_copies_with_write_lock_baton {
-  const apr_array_header_t *copy_pairs;
-  svn_client_ctx_t *ctx;
-  const char *dst_parent;
-};
-
 /* The guts of do_wc_to_wc_copies */
 static svn_error_t *
-do_wc_to_wc_copies_with_write_lock(void *baton,
-                                   apr_pool_t *result_pool,
+do_wc_to_wc_copies_with_write_lock(const apr_array_header_t *copy_pairs,
+                                   const char *dst_parent,
+                                   svn_client_ctx_t *ctx,
                                    apr_pool_t *scratch_pool)
 {
-  struct do_wc_to_wc_copies_with_write_lock_baton *b = baton;
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_error_t *err = SVN_NO_ERROR;
 
-  for (i = 0; i < b->copy_pairs->nelts; i++)
+  for (i = 0; i < copy_pairs->nelts; i++)
     {
       const char *dst_abspath;
-      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(b->copy_pairs, i,
+      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       svn_pool_clear(iterpool);
 
       /* Check for cancellation */
-      if (b->ctx->cancel_func)
-        SVN_ERR(b->ctx->cancel_func(b->ctx->cancel_baton));
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
       /* Perform the copy */
       dst_abspath = svn_dirent_join(pair->dst_parent_abspath, pair->base_name,
                                     iterpool);
-      err = svn_wc_copy3(b->ctx->wc_ctx, pair->src_abspath_or_url, dst_abspath,
+      err = svn_wc_copy3(ctx->wc_ctx, pair->src_abspath_or_url, dst_abspath,
                          FALSE /* metadata_only */,
-                         b->ctx->cancel_func, b->ctx->cancel_baton,
-                         b->ctx->notify_func2, b->ctx->notify_baton2, iterpool);
+                         ctx->cancel_func, ctx->cancel_baton,
+                         ctx->notify_func2, ctx->notify_baton2, iterpool);
       if (err)
         break;
     }
   svn_pool_destroy(iterpool);
 
-  svn_io_sleep_for_timestamps(b->dst_parent, scratch_pool);
+  svn_io_sleep_for_timestamps(dst_parent, scratch_pool);
   SVN_ERR(err);
   return SVN_NO_ERROR;
 }
@@ -293,7 +287,6 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
                    apr_pool_t *pool)
 {
   const char *dst_parent, *dst_parent_abspath;
-  struct do_wc_to_wc_copies_with_write_lock_baton baton;
 
   SVN_ERR(get_copy_pair_ancestors(copy_pairs, NULL, &dst_parent, NULL, pool));
   if (copy_pairs->nelts == 1)
@@ -301,40 +294,31 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
 
   SVN_ERR(svn_dirent_get_absolute(&dst_parent_abspath, dst_parent, pool));
 
-  baton.copy_pairs = copy_pairs;
-  baton.ctx = ctx;
-  baton.dst_parent = dst_parent;
-  SVN_ERR(svn_wc__call_with_write_lock(do_wc_to_wc_copies_with_write_lock,
-                                       &baton, ctx->wc_ctx, dst_parent_abspath,
-                                       FALSE, pool, pool));
+  SVN_WC__CALL_WITH_WRITE_LOCK(
+    do_wc_to_wc_copies_with_write_lock(copy_pairs, dst_parent, ctx, pool),
+    ctx->wc_ctx, dst_parent_abspath, FALSE, pool);
 
   return SVN_NO_ERROR;
 }
 
-struct do_wc_to_wc_moves_with_locks_baton {
-  svn_client_ctx_t *ctx;
-  svn_client__copy_pair_t *pair;
-  const char *dst_parent_abspath;
-  svn_boolean_t lock_src;
-  svn_boolean_t lock_dst;
-};
-
 /* The locked bit of do_wc_to_wc_moves. */
 static svn_error_t *
-do_wc_to_wc_moves_with_locks2(void *baton,
-                              apr_pool_t *result_pool,
+do_wc_to_wc_moves_with_locks2(svn_client__copy_pair_t *pair,
+                              const char *dst_parent_abspath,
+                              svn_boolean_t lock_src,
+                              svn_boolean_t lock_dst,
+                              svn_client_ctx_t *ctx,
                               apr_pool_t *scratch_pool)
 {
-  struct do_wc_to_wc_moves_with_locks_baton *b = baton;
   const char *dst_abspath;
 
-  dst_abspath = svn_dirent_join(b->dst_parent_abspath, b->pair->base_name,
+  dst_abspath = svn_dirent_join(dst_parent_abspath, pair->base_name,
                                 scratch_pool);
 
-  SVN_ERR(svn_wc_move(b->ctx->wc_ctx, b->pair->src_abspath_or_url,
+  SVN_ERR(svn_wc_move(ctx->wc_ctx, pair->src_abspath_or_url,
                      dst_abspath, FALSE /* metadata_only */,
-                     b->ctx->cancel_func, b->ctx->cancel_baton,
-                     b->ctx->notify_func2, b->ctx->notify_baton2,
+                     ctx->cancel_func, ctx->cancel_baton,
+                     ctx->notify_func2, ctx->notify_baton2,
                      scratch_pool));
 
   return SVN_NO_ERROR;
@@ -342,18 +326,21 @@ do_wc_to_wc_moves_with_locks2(void *baton,
 
 /* Wrapper to add an optional second lock */
 static svn_error_t *
-do_wc_to_wc_moves_with_locks1(void *baton,
-                              apr_pool_t *result_pool,
+do_wc_to_wc_moves_with_locks1(svn_client__copy_pair_t *pair,
+                              const char *dst_parent_abspath,
+                              svn_boolean_t lock_src,
+                              svn_boolean_t lock_dst,
+                              svn_client_ctx_t *ctx,
                               apr_pool_t *scratch_pool)
 {
-  struct do_wc_to_wc_moves_with_locks_baton *b = baton;
-
-  if (b->lock_dst)
-    SVN_ERR(svn_wc__call_with_write_lock(do_wc_to_wc_moves_with_locks2, b,
-                                         b->ctx->wc_ctx, b->dst_parent_abspath,
-                                         FALSE, result_pool, scratch_pool));
+  if (lock_dst)
+    SVN_WC__CALL_WITH_WRITE_LOCK(
+      do_wc_to_wc_moves_with_locks2(pair, dst_parent_abspath, lock_src,
+                                    lock_dst, ctx, scratch_pool),
+      ctx->wc_ctx, dst_parent_abspath, FALSE, scratch_pool);
   else
-    SVN_ERR(do_wc_to_wc_moves_with_locks2(b, result_pool, scratch_pool));
+    SVN_ERR(do_wc_to_wc_moves_with_locks2(pair, dst_parent_abspath, lock_src,
+                                          lock_dst, ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -373,7 +360,7 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
   for (i = 0; i < copy_pairs->nelts; i++)
     {
       const char *src_parent_abspath;
-      struct do_wc_to_wc_moves_with_locks_baton baton;
+      svn_boolean_t lock_src, lock_dst;
 
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
@@ -397,32 +384,31 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
           || svn_dirent_is_child(src_parent_abspath, pair->dst_parent_abspath,
                                  iterpool))
         {
-          baton.lock_src = TRUE;
-          baton.lock_dst = FALSE;
+          lock_src = TRUE;
+          lock_dst = FALSE;
         }
       else if (svn_dirent_is_child(pair->dst_parent_abspath, src_parent_abspath,
                                    iterpool))
         {
-          baton.lock_src = FALSE;
-          baton.lock_dst = TRUE;
+          lock_src = FALSE;
+          lock_dst = TRUE;
         }
       else
         {
-          baton.lock_src = TRUE;
-          baton.lock_dst = TRUE;
+          lock_src = TRUE;
+          lock_dst = TRUE;
         }
 
       /* Perform the copy and then the delete. */
-      baton.ctx = ctx;
-      baton.pair = pair;
-      baton.dst_parent_abspath = pair->dst_parent_abspath;
-      if (baton.lock_src)
-        SVN_ERR(svn_wc__call_with_write_lock(do_wc_to_wc_moves_with_locks1,
-                                             &baton,
-                                             ctx->wc_ctx, src_parent_abspath,
-                                             FALSE, iterpool, iterpool));
+      if (lock_src)
+        SVN_WC__CALL_WITH_WRITE_LOCK(
+          do_wc_to_wc_moves_with_locks1(pair, pair->dst_parent_abspath,
+                                        lock_src, lock_dst, ctx, iterpool),
+          ctx->wc_ctx, src_parent_abspath,
+          FALSE, iterpool);
       else
-        SVN_ERR(do_wc_to_wc_moves_with_locks1(&baton, iterpool, iterpool));
+        SVN_ERR(do_wc_to_wc_moves_with_locks1(pair, pair->dst_parent_abspath,
+                                              lock_src, lock_dst, ctx, iterpool));
 
     }
   svn_pool_destroy(iterpool);
@@ -1773,29 +1759,6 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
   return SVN_NO_ERROR;
 }
 
-struct repos_to_wc_copy_baton {
-  const apr_array_header_t *copy_pairs;
-  const char *top_dst_path;
-  svn_boolean_t ignore_externals;
-  svn_ra_session_t *ra_session;
-  svn_client_ctx_t *ctx;
-};
-
-/* Implements svn_wc__with_write_lock_func_t. */
-static svn_error_t *
-repos_to_wc_copy_cb(void *baton,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
-{
-  struct repos_to_wc_copy_baton *b = baton;
-
-  SVN_ERR(repos_to_wc_copy_locked(b->copy_pairs, b->top_dst_path,
-                                  b->ignore_externals, b->ra_session,
-                                  b->ctx, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *
 repos_to_wc_copy(const apr_array_header_t *copy_pairs,
                  svn_boolean_t make_parents,
@@ -1807,7 +1770,6 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
   const char *top_src_url, *top_dst_path;
   apr_pool_t *iterpool = svn_pool_create(pool);
   const char *lock_abspath;
-  struct repos_to_wc_copy_baton baton;
   int i;
 
   /* Get the real path for the source, based upon its peg revision. */
@@ -1907,15 +1869,10 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
     }
   svn_pool_destroy(iterpool);
 
-  baton.copy_pairs = copy_pairs;
-  baton.top_dst_path = top_dst_path;
-  baton.ignore_externals = ignore_externals;
-  baton.ra_session = ra_session;
-  baton.ctx = ctx;
-
-  SVN_ERR(svn_wc__call_with_write_lock(repos_to_wc_copy_cb, &baton,
-                                       ctx->wc_ctx, lock_abspath,
-                                       FALSE, pool, pool));
+  SVN_WC__CALL_WITH_WRITE_LOCK(
+    repos_to_wc_copy_locked(copy_pairs, top_dst_path, ignore_externals,
+                            ra_session, ctx, pool),
+    ctx->wc_ctx, lock_abspath, FALSE, pool);
   return SVN_NO_ERROR;
 }
 

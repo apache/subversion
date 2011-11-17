@@ -679,6 +679,52 @@ def natural_history_is_not_eligible_nor_merged(sbox):
     ['3','4','5','6','7','9'], sbox.repo_url + '/A',
     A_COPY_path, '--show-revs', 'merged', '-R')
 
+#----------------------------------------------------------------------
+# A test for issue 4050 "'svn mergeinfo' always considers non-inheritable
+# ranges as partially merged".
+@Issue(4050)
+@XFail()
+@SkipUnless(server_has_mergeinfo)
+def noninheritabled_mergeinfo_not_always_eligible(sbox):
+  "noninheritabled mergeinfo not always eligible"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path      = os.path.join(wc_dir, 'A')
+  branch_path = os.path.join(wc_dir, 'branch')
+  
+  # r2 - Branch ^/A to ^/branch.
+  svntest.main.run_svn(None, 'copy', sbox.repo_url + '/A',
+                       sbox.repo_url + '/branch', '-m', 'make a branch')
+  
+  # r3 - Make prop edit to A.
+  svntest.main.run_svn(None, 'ps', 'prop', 'val', A_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'file edit', wc_dir)
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # r4 - Merge r3 from ^/A to branch at depth=empty.
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A', branch_path,
+                                     '-c3', '--depth=empty')
+  svntest.main.run_svn(None, 'commit', '-m', 'shallow merge', wc_dir)
+
+  # Now check that r3 is reported as fully merged from ^/A to ^/branch
+  # and does not show up all when asking for eligible revs.
+  #
+  # Currently this fails because r3 shows up as partially merged, even
+  # though it is fully merged to ^/branch.
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['3'], sbox.repo_url + '/A', sbox.repo_url + '/branch',
+    '--show-revs', 'merged', '-R')
+  # Likewise r3 shows up as partially eligible when asking about
+  # for --show-revs=eligible.
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    [], sbox.repo_url + '/A', sbox.repo_url + '/branch',
+    '--show-revs', 'eligible', '-R')
+
 ########################################################################
 # Run the tests
 
@@ -695,6 +741,7 @@ test_list = [ None,
               mergeinfo_on_pegged_wc_path,
               wc_target_inherits_mergeinfo_from_repos,
               natural_history_is_not_eligible_nor_merged,
+              noninheritabled_mergeinfo_not_always_eligible,
              ]
 
 if __name__ == '__main__':

@@ -1263,30 +1263,20 @@ def diff_targets(sbox):
                                                             update_path,
                                                             add_path)
 
-  regex = 'svn: E195012: Unable to find repository location for \'.*\''
-  for line in err_output:
-    if re.match(regex, line):
-      break
-  else:
+  if check_update_a_file(diff_output) or check_add_a_file(diff_output):
     raise svntest.Failure
 
   exit_code, diff_output, err_output = svntest.main.run_svn(1,
                                                             'diff', '-r1:2',
                                                             add_path)
-  for line in err_output:
-    if re.match(regex, line):
-      break
-  else:
+
+  if not check_update_a_file(diff_output) or check_add_a_file(diff_output):
     raise svntest.Failure
 
   exit_code, diff_output, err_output = svntest.main.run_svn(
     1, 'diff', '-r1:2', '--old', parent_path, 'alpha', 'theta')
 
-  regex = 'svn: E160013: \'.*\' was not found in the repository'
-  for line in err_output:
-    if re.match(regex, line):
-      break
-  else:
+  if check_update_a_file(diff_output) or check_add_a_file(diff_output):
     raise svntest.Failure
 
   exit_code, diff_output, err_output = svntest.main.run_svn(

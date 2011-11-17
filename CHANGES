@@ -4,7 +4,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
  User-visible changes:
   - General:
-    *
+    * remove extraneous externals output from 'svn status -q' (issue #1935)
 
   - Major new features:
     *
