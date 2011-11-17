@@ -12535,7 +12535,7 @@ def svn_copy(s_rev, path1, path2):
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', '--parents',
                                      '-r', s_rev, path1, path2)
 
-def svn_merge(rev_range, source, target, lines=None,
+def svn_merge(rev_range, source, target, lines=None, elides=[],
               text_conflicts=0, prop_conflicts=0, tree_conflicts=0, args=[]):
   """Merge a single change from path SOURCE to path TARGET and verify the
   output and that there is no error.  (The changes made are not verified.)
@@ -12546,6 +12546,8 @@ def svn_merge(rev_range, source, target, lines=None,
   LINES is a list of regular expressions to match other lines of output; if
   LINES is 'None' then match all normal (non-conflicting) merges.
 
+  ELIDES is a list of paths on which mergeinfo elision should be reported.
+
   TEXT_CONFLICTS, PROP_CONFLICTS and TREE_CONFLICTS specify the number of
   each kind of conflict to expect.
 
@@ -12553,6 +12555,7 @@ def svn_merge(rev_range, source, target, lines=None,
 
   source = local_path(source)
   target = local_path(target)
+  elides = [local_path(p) for p in elides]
   if isinstance(rev_range, int):
     mi_rev_range = [rev_range]
     rev_arg = '-c' + str(rev_range)
@@ -12561,7 +12564,12 @@ def svn_merge(rev_range, source, target, lines=None,
     rev_arg = '-r' + str(rev_range[0] - 1) + ':' + str(rev_range[1])
   if lines is None:
     lines = ["(A |D |[UG] | [UG]|[UG][UG])   " + target + ".*\n"]
+  else:
+    # Expect mergeinfo on the target; caller must supply matches for any
+    # subtree mergeinfo paths.
+    lines.append(" [UG]   " + target + "\n")
   exp_out = expected_merge_output([mi_rev_range], lines, target=target,
+                                  elides=elides,
                                   text_conflicts=text_conflicts,
                                   prop_conflicts=prop_conflicts,
                                   tree_conflicts=tree_conflicts)
@@ -12598,7 +12606,8 @@ def del_identical_file(sbox):
   svn_copy(s_rev_mod, source, target)
   sbox.simple_commit(target)
   # Should be deleted quietly.
-  svn_merge(s_rev_del, source, target, ['D ', ' U'])
+  svn_merge(s_rev_del, source, target,
+            ['D    %s\n' % local_path('A/D/G2/tau')])
 
   # Make a differing copy, locally modify it so it's the same,
   # and merge a deletion to it.
@@ -12607,7 +12616,8 @@ def del_identical_file(sbox):
   sbox.simple_commit(target)
   svn_modfile(target+"/tau")
   # Should be deleted quietly.
-  svn_merge(s_rev_del, source, target, ['D ', ' U'])
+  svn_merge(s_rev_del, source, target,
+            ['D    %s\n' % local_path('A/D/G3/tau')])
 
   os.chdir(saved_cwd)
 
@@ -12634,9 +12644,11 @@ def del_sched_add_hist_file(sbox):
   svn_copy(s_rev_orig, source, target)
   sbox.simple_commit(target)
   s_rev = 3
-  svn_merge(s_rev_add, source, target, ['A ', ' U'])
+  svn_merge(s_rev_add, source, target,
+            ['A    %s\n' % local_path('A/D/G2/file')])
   # Should be deleted quietly.
-  svn_merge(-s_rev_add, source, target, ['D ', ' U', ' G', '--- Eliding'])
+  svn_merge(-s_rev_add, source, target,
+            ['D    %s\n' % local_path('A/D/G2/file')], elides=['A/D/G2'])
 
   os.chdir(saved_cwd)
 
@@ -13093,7 +13105,6 @@ def merge_two_edits_to_same_prop(sbox):
   # Merge the two changes together to source.
   svn_merge([rev3, rev4], A_COPY_path, A_path, [
       " C   %s\n" % mu_path,
-      " U   A\n",
       ], prop_conflicts=1, args=['--allow-mixed-revisions'])
 
   # Revert changes to source wc, to test next scenario of #3250
@@ -13103,11 +13114,9 @@ def merge_two_edits_to_same_prop(sbox):
   # Merge the first change, then the second, to source.
   svn_merge(rev3, A_COPY_path, A_path, [
       " C   %s\n" % mu_path,
-      " U   A\n",
       ], prop_conflicts=1, args=['--allow-mixed-revisions'])
   svn_merge(rev4, A_COPY_path, A_path, [
       " C   %s\n" % mu_path,
-      " G   A\n",
       ], prop_conflicts=1, args=['--allow-mixed-revisions'])
 
   os.chdir(was_cwd)
