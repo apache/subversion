@@ -3429,18 +3429,15 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
   /* First, we get the real mergeinfo. */
   if (recorded_mergeinfo)
     {
-      svn_boolean_t inherited_mergeinfo;
       svn_boolean_t inherited_from_repos;
 
       SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(recorded_mergeinfo,
-                                                    &inherited_mergeinfo,
+                                                    inherited,
                                                     &inherited_from_repos,
                                                     FALSE,
                                                     inherit, ra_session,
                                                     target_abspath,
                                                     ctx, result_pool));
-      if (inherited)
-        *inherited = inherited_mergeinfo;
     }
 
   if (implicit_mergeinfo)
@@ -4581,8 +4578,7 @@ update_wc_mergeinfo(svn_mergeinfo_catalog_t result_catalog,
          mergeinfo that path inherits. */
       if (mergeinfo == NULL && ranges->nelts == 0)
         {
-          svn_boolean_t inherited;
-          SVN_ERR(svn_client__get_wc_mergeinfo(&mergeinfo, &inherited,
+          SVN_ERR(svn_client__get_wc_mergeinfo(&mergeinfo, NULL,
                                                svn_mergeinfo_nearest_ancestor,
                                                local_abspath, NULL, NULL,
                                                FALSE, ctx, iterpool, iterpool));
@@ -6029,11 +6025,10 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                   if (!merge_cmd_baton->dry_run
                       && merge_cmd_baton->same_repos)
                     {
-                      svn_boolean_t inherited;
                       svn_mergeinfo_t mergeinfo;
 
                       SVN_ERR(svn_client__get_wc_mergeinfo(
-                        &mergeinfo, &inherited,
+                        &mergeinfo, NULL,
                         svn_mergeinfo_nearest_ancestor,
                         child_of_noninheritable->abspath,
                         merge_cmd_baton->target_abspath, NULL, FALSE,
@@ -7059,7 +7054,6 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
       const char *path_url;
       svn_mergeinfo_t path_inherited_mergeinfo;
       svn_mergeinfo_t path_explicit_mergeinfo;
-      svn_boolean_t inherited;
       svn_client__merge_path_t *new_child;
 
       apr_pool_clear(iterpool);
@@ -7068,8 +7062,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
                                    pool, pool));
 
       /* Get the path's new explicit mergeinfo... */
-      SVN_ERR(svn_client__get_wc_mergeinfo(&path_explicit_mergeinfo,
-                                           &inherited,
+      SVN_ERR(svn_client__get_wc_mergeinfo(&path_explicit_mergeinfo, NULL,
                                            svn_mergeinfo_explicit,
                                            abspath_with_new_mergeinfo,
                                            NULL, NULL, FALSE,
@@ -7089,7 +7082,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
              the merge. */
           SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(
             &path_inherited_mergeinfo,
-            &inherited, NULL,
+            NULL, NULL,
             FALSE,
             svn_mergeinfo_nearest_ancestor, /* We only want inherited MI */
             merge_b->ra_session2,
@@ -7767,13 +7760,12 @@ record_mergeinfo_for_added_subtrees(
       const char *dir_abspath;
       svn_mergeinfo_t parent_mergeinfo;
       svn_mergeinfo_t added_path_mergeinfo;
-      svn_boolean_t inherited; /* used multiple times, but ignored */
 
       apr_pool_clear(iterpool);
       dir_abspath = svn_dirent_dirname(added_abspath, iterpool);
 
       /* Grab the added path's explicit mergeinfo. */
-      SVN_ERR(svn_client__get_wc_mergeinfo(&added_path_mergeinfo, &inherited,
+      SVN_ERR(svn_client__get_wc_mergeinfo(&added_path_mergeinfo, NULL,
                                            svn_mergeinfo_explicit,
                                            added_abspath, NULL, NULL, FALSE,
                                            merge_b->ctx, iterpool, iterpool));
@@ -7781,7 +7773,7 @@ record_mergeinfo_for_added_subtrees(
       /* If the added path doesn't have explicit mergeinfo, does its immediate
          parent have non-inheritable mergeinfo? */
       if (!added_path_mergeinfo)
-        SVN_ERR(svn_client__get_wc_mergeinfo(&parent_mergeinfo, &inherited,
+        SVN_ERR(svn_client__get_wc_mergeinfo(&parent_mergeinfo, NULL,
                                              svn_mergeinfo_explicit,
                                              dir_abspath, NULL, NULL, FALSE,
                                              merge_b->ctx,
