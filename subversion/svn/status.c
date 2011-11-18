@@ -548,12 +548,27 @@ svn_cl__print_status(const char *cwd_abspath,
           && status->repos_node_status == svn_wc_status_none))
     return SVN_NO_ERROR;
 
+  /* If we're trying not to print boring "X  /path/to/external"
+     lines..." */
   if (suppress_externals_placeholders)
     {
-      if (status->node_status == svn_wc_status_external)
+      /* ... skip regular externals unmodified in the repository. */
+      if ((status->node_status == svn_wc_status_external)
+          && (status->repos_node_status == svn_wc_status_none))
         return SVN_NO_ERROR;
-      if ((status->node_status == svn_wc_status_normal)
-          && (status->file_external))
+
+      /* ... skip file externals that aren't modified locally or
+         remotely, changelisted, or locked (in either sense of the
+         word). */
+      if ((status->file_external)
+          && (status->repos_node_status == svn_wc_status_none)
+          && ((status->node_status == svn_wc_status_normal)
+              || (status->node_status == svn_wc_status_none))
+          && ((status->prop_status == svn_wc_status_normal)
+              || (status->prop_status == svn_wc_status_none))
+          && (! status->changelist)
+          && (! status->lock)
+          && (! status->wc_is_locked))
         return SVN_NO_ERROR;
     }
 
