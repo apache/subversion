@@ -8486,8 +8486,10 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
               svn_revnum_t next_end_rev;
               const char *real_url1 = url1, *real_url2 = url2;
               const char *old_sess1_url = NULL, *old_sess2_url = NULL;
-              svn_merge_range_t *first_target_range = APR_ARRAY_IDX(
-                target_merge_path->remaining_ranges, 0, svn_merge_range_t *);
+              svn_merge_range_t *first_target_range
+                = (target_merge_path->remaining_ranges->nelts == 0 ? NULL
+                   : APR_ARRAY_IDX(target_merge_path->remaining_ranges, 0,
+                                   svn_merge_range_t *));
 
               /* Issue #3324: Stop editor abuse!  Don't call
                  drive_merge_report_editor() in such a way that we request an
