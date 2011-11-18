@@ -5977,7 +5977,11 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
          so it has explicit mergeinfo that reflects only CHILD's
          inheritable mergeinfo. */
 
-      if (child->has_noninheritable)
+      /* If depth is immediates or files then don't add new children if
+         CHILD is a subtree of the merge target; those children are below
+         the operational depth of the merge. */
+      if (child->has_noninheritable
+          && (i == 0 || depth == svn_depth_infinity))
         {
           const apr_array_header_t *children;
           int j;
