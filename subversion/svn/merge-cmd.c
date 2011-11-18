@@ -34,6 +34,8 @@
 #include "svn_types.h"
 #include "cl.h"
 
+#include "private/svn_client_private.h"
+#include "private/svn_wc_private.h"
 #include "svn_private_config.h"
 
 
@@ -67,6 +69,101 @@ get_repos_relpath(const char **repos_relpath,
   SVN_ERR(svn_client_get_repos_root(&repos_url, NULL, wc_abspath,
                                     ctx, pool, pool));
   *repos_relpath = svn_uri_skip_ancestor(repos_url, url, pool);
+  return SVN_NO_ERROR;
+}
+
+/* Set *TARGET_ABSPATH to the absolute path of, and *LOCK_ABSPATH to
+ the absolute path to lock for, TARGET_WCPATH. */
+static svn_error_t *
+get_target_and_lock_abspath(const char **target_abspath,
+                            const char **lock_abspath,
+                            const char *target_wcpath,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind;
+  SVN_ERR(svn_dirent_get_absolute(target_abspath, target_wcpath,
+                                  scratch_pool));
+  SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, *target_abspath, FALSE,
+                           scratch_pool));
+  if (kind == svn_node_dir)
+    *lock_abspath = *target_abspath;
+  else
+    *lock_abspath = svn_dirent_dirname(*target_abspath, scratch_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* */
+static svn_error_t *
+merge_reintegrate_locked(const char *source,
+                         const svn_opt_revision_t *peg_revision,
+                         const char *target_wc_abspath,
+                         svn_boolean_t dry_run,
+                         svn_boolean_t quiet,
+                         const apr_array_header_t *merge_options,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool)
+{
+  svn_ra_session_t *source_ra_session;
+  svn_ra_session_t *target_ra_session;
+  const char *url1, *url2;
+  svn_revnum_t rev1, rev2;
+  svn_revnum_t yc_ancestor_rev;
+
+  SVN_ERR(svn_client_find_reintegrate_merge(
+            &source_ra_session, &target_ra_session,
+            &url1, &rev1, &url2, &rev2, &yc_ancestor_rev,
+            source, peg_revision, target_wc_abspath,
+            ctx, scratch_pool, scratch_pool));
+
+  {
+    const char *repos_root_url, *relpath1, *relpath2;
+
+    SVN_ERR(svn_client_get_repos_root(&repos_root_url, NULL, source,
+                                      ctx, scratch_pool, scratch_pool));
+    relpath1 = svn_uri_skip_ancestor(repos_root_url, url1, scratch_pool);
+    relpath2 = svn_uri_skip_ancestor(repos_root_url, url2, scratch_pool);
+
+    if (! quiet)
+      printf(_("The reintegrate merge will be equivalent to:\n"
+               "  svn merge ^/%s@%ld ^/%s@%ld\n"),
+             relpath1, rev1, relpath2, rev2);
+  }
+
+  SVN_ERR(svn_client_do_reintegrate_merge(
+            source_ra_session, target_ra_session,
+            url1, rev1, url2, rev2, yc_ancestor_rev,
+            target_wc_abspath,
+            dry_run, merge_options, ctx, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* */
+static svn_error_t *
+merge_reintegrate(const char *source,
+                  const svn_opt_revision_t *peg_revision,
+                  const char *target_wcpath,
+                  svn_boolean_t dry_run,
+                  svn_boolean_t quiet,
+                  const apr_array_header_t *merge_options,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  const char *target_wc_abspath, *lock_abspath;
+
+  SVN_ERR(get_target_and_lock_abspath(&target_wc_abspath, &lock_abspath,
+                                      target_wcpath, ctx, pool));
+
+  if (!dry_run)
+    SVN_WC__CALL_WITH_WRITE_LOCK(
+      merge_reintegrate_locked(source, peg_revision, target_wc_abspath,
+                               dry_run, quiet, merge_options, ctx, pool),
+      ctx->wc_ctx, lock_abspath, FALSE /* lock_anchor */, pool);
+  else
+    SVN_ERR(merge_reintegrate_locked(source, peg_revision, target_wc_abspath,
+                                     dry_run, quiet, merge_options, ctx, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -152,8 +249,9 @@ svn_cl__merge(apr_getopt_t *os,
       SVN_ERR(svn_client_peg_create(&target_peg, "", NULL, pool));
       SVN_ERR(svn_cl__find_merge_source_branch(&source_peg, target_peg, ctx, pool));
       /*SVN_ERR(svn_client__resolve_target_location_from_peg(&source, source_peg, NULL, ctx, pool));*/
-      printf("Assuming source branch is copy-source of target branch: '%s'\n",
-             svn_cl__peg_for_display(source_peg, pool));
+      if (! opt_state->quiet)
+        printf(_("Assuming source branch is copy-source of target branch: '%s'\n"),
+                 svn_cl__peg_for_display(source_peg, pool));
       peg_revision1 = source_peg->peg_revision;
       sourcepath1 = source_peg->path_or_url;
     }
@@ -329,19 +427,18 @@ svn_cl__merge(apr_getopt_t *os,
                                   "with --reintegrate"));
     }
 
-  if (opt_state->dry_run)
+  if (opt_state->dry_run && ! opt_state->quiet)
     printf(_("This is a dry-run merge: the working copy will not be changed.\n"));
 
   if (opt_state->reintegrate)
     {
-      printf(_("Reintegrate merge\n"));
-      printf(_("  from '%s' into '%s'\n"),
-             sourcepath1, targetpath);
-      err = svn_client_merge_reintegrate(sourcepath1,
-                                         &peg_revision1,
-                                         targetpath,
-                                         opt_state->dry_run,
-                                         options, ctx, pool);
+      if (! opt_state->quiet)
+        printf(_("Reintegrate merge\n"
+                 "  from '%s' into '%s'\n"),
+               sourcepath1, targetpath);
+      err = merge_reintegrate(sourcepath1, &peg_revision1, targetpath,
+                              opt_state->dry_run, opt_state->quiet,
+                              options, ctx, pool);
 
       /* Tell the user how to keep the source branch alive. */
       if (! err)
@@ -368,14 +465,19 @@ svn_cl__merge(apr_getopt_t *os,
           range->end = peg_revision1;
           APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = range;
 
-          printf(_("Sync merge\n"));
+          if (! opt_state->quiet)
+            printf(_("Sync merge\n"
+                     "  from '%s' to '%s'\n"),
+                   sourcepath1, targetpath);
         }
       else
         {
-          printf(_("Cherry-pick merge\n"));
+          if (! opt_state->quiet)
+            printf(_("Cherry-pick merge\n"
+                     "  from '%s' to '%s'\n"),
+                   sourcepath1, targetpath);
         }
-      printf(_("  from '%s' to '%s'\n"),
-             sourcepath1, targetpath);
+
       err = svn_client_merge_peg4(sourcepath1,
                                   ranges_to_merge,
                                   &peg_revision1,
@@ -396,9 +498,10 @@ svn_cl__merge(apr_getopt_t *os,
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("Merge sources must both be "
                                   "either paths or URLs"));
-      printf(_("Two-URL merge\n"));
-      printf(_("  from diff between '%s' and '%s' into '%s'\n"),
-             sourcepath1, sourcepath2, targetpath);
+      if (! opt_state->quiet)
+        printf(_("Two-URL merge\n"
+                 "  from diff between '%s' and '%s' into '%s'\n"),
+               sourcepath1, sourcepath2, targetpath);
       err = svn_client_merge4(sourcepath1,
                               &first_range_start,
                               sourcepath2,

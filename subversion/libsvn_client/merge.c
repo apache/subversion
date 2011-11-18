@@ -57,6 +57,7 @@
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_fspath.h"
 #include "private/svn_ra_private.h"
+#include "private/svn_client_private.h"
 
 #include "svn_private_config.h"
 
@@ -10407,14 +10408,22 @@ calculate_left_hand_side(const char **url_left,
   return SVN_NO_ERROR;
 }
 
+/* */
 static svn_error_t *
-merge_reintegrate_locked(const char *source,
-                         const svn_opt_revision_t *peg_revision,
-                         const char *target_abspath,
-                         svn_boolean_t dry_run,
-                         const apr_array_header_t *merge_options,
-                         svn_client_ctx_t *ctx,
-                         apr_pool_t *scratch_pool)
+find_reintegrate_merge(svn_ra_session_t **source_ra_session_p,
+                       svn_ra_session_t **target_ra_session_p,
+                       const char **url1_p,
+                       svn_revnum_t *rev1_p,
+                       const char **url2_p,
+                       svn_revnum_t *rev2_p,
+                       svn_revnum_t *yc_ancestor_rev_p,
+                       /* inputs */
+                       const char *source,
+                       const svn_opt_revision_t *peg_revision,
+                       const char *target_abspath,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   url_uuid_t wc_repos_root, source_repos_root;
   svn_opt_revision_t working_revision = { svn_opt_revision_working, { 0 } };
@@ -10427,8 +10436,6 @@ merge_reintegrate_locked(const char *source,
   svn_revnum_t rev1, rev2;
   svn_mergeinfo_t unmerged_to_source_mergeinfo_catalog;
   svn_mergeinfo_t merged_to_source_mergeinfo_catalog;
-  svn_boolean_t use_sleep = FALSE;
-  svn_error_t *err;
   apr_hash_t *subtrees_with_mergeinfo;
   const char *target_url;
   svn_revnum_t target_base_rev;
@@ -10453,12 +10460,12 @@ merge_reintegrate_locked(const char *source,
   /* Determine the working copy target's repository root URL. */
   SVN_ERR(svn_client_get_repos_root(&wc_repos_root.url, &wc_repos_root.uuid,
                                     target_abspath,
-                                    ctx, scratch_pool, scratch_pool));
+                                    ctx, result_pool, scratch_pool));
 
   /* Determine the source's repository root URL. */
   SVN_ERR(svn_client_get_repos_root(&source_repos_root.url,
                                     &source_repos_root.uuid, url2,
-                                    ctx, scratch_pool, scratch_pool));
+                                    ctx, result_pool, scratch_pool));
 
   /* source_repos_root and wc_repos_root are required to be the same,
      as mergeinfo doesn't come into play for cross-repository merging. */
@@ -10506,13 +10513,13 @@ merge_reintegrate_locked(const char *source,
   SVN_ERR(svn_client__ra_session_from_path(&source_ra_session, &rev2, &url2,
                                            url2, NULL, peg_revision,
                                            peg_revision,
-                                           ctx, scratch_pool));
+                                           ctx, result_pool));
   SVN_ERR(svn_wc__node_get_url(&target_url, ctx->wc_ctx, target_abspath,
                                scratch_pool, scratch_pool));
   SVN_ERR(svn_client__open_ra_session_internal(&target_ra_session, NULL,
                                                target_url,
                                                NULL, NULL, FALSE, FALSE,
-                                               ctx, scratch_pool));
+                                               ctx, result_pool));
 
   SVN_ERR(calculate_left_hand_side(&url1, &rev1,
                                    &merged_to_source_mergeinfo_catalog,
@@ -10527,7 +10534,7 @@ merge_reintegrate_locked(const char *source,
                                    source_ra_session,
                                    target_ra_session,
                                    ctx,
-                                   scratch_pool, scratch_pool));
+                                   result_pool, scratch_pool));
 
   /* Did calculate_left_hand_side() decide that there was no merge to
      be performed here?  */
@@ -10589,12 +10596,76 @@ merge_reintegrate_locked(const char *source,
 
   /* Left side: trunk@youngest-trunk-rev-merged-to-branch-at-specified-peg-rev
    * Right side: branch@specified-peg-revision */
-  {
-    printf(_("The reintegrate merge will be equivalent to:\n"
-             "  merge ^/%s@%ld ^/%s@%ld\n"),
-           svn_uri_skip_ancestor(source_repos_root.url, url1, scratch_pool), rev1,
-           svn_uri_skip_ancestor(source_repos_root.url, url2, scratch_pool), rev2);
-  }
+  *source_ra_session_p = source_ra_session;
+  *target_ra_session_p = target_ra_session;
+  *url1_p = url1;
+  *rev1_p = rev1;
+  *url2_p = url2;
+  *rev2_p = rev2;
+  *yc_ancestor_rev_p = yc_ancestor_rev;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_find_reintegrate_merge(svn_ra_session_t **source_ra_session_p,
+                                  svn_ra_session_t **target_ra_session_p,
+                                  const char **url1_p,
+                                  svn_revnum_t *rev1_p,
+                                  const char **url2_p,
+                                  svn_revnum_t *rev2_p,
+                                  svn_revnum_t *yc_ancestor_rev_p,
+                                  /* inputs */
+                                  const char *source,
+                                  const svn_opt_revision_t *peg_revision,
+                                  const char *target_abspath,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  /* ### We don't need to write to the WC at this stage. We want to
+   * read a consistent state, and afterwards the caller will want
+   * svn_client_do_reintegrate_merge() to write into the same state,
+   * so maybe the caller should take out a write lock around both calls,
+   * and we should not take out a lock here.  Maybe we should have a way
+   * to request a "read lock" that allows reading only. */
+  SVN_ERR(find_reintegrate_merge(
+              source_ra_session_p, target_ra_session_p,
+              url1_p, rev1_p, url2_p, rev2_p,
+              yc_ancestor_rev_p,
+              source, peg_revision, target_abspath,
+              ctx, result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* */
+static svn_error_t *
+do_reintegrate_merge(svn_ra_session_t *source_ra_session,
+                     svn_ra_session_t *target_ra_session,
+                     const char *url1,
+                     svn_revnum_t rev1,
+                     const char *url2,
+                     svn_revnum_t rev2,
+                     svn_revnum_t yc_ancestor_rev,
+                     const char *target_abspath,
+                     svn_boolean_t dry_run,
+                     const apr_array_header_t *merge_options,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *scratch_pool)
+{
+  url_uuid_t source_repos_root, wc_repos_root;
+  svn_boolean_t use_sleep = FALSE;
+  svn_error_t *err;
+
+  /* Determine the working copy target's repository root URL. */
+  SVN_ERR(svn_client_get_repos_root(&wc_repos_root.url, &wc_repos_root.uuid,
+                                    target_abspath,
+                                    ctx, scratch_pool, scratch_pool));
+
+  /* Determine the source's repository root URL. */
+  SVN_ERR(svn_client_get_repos_root(&source_repos_root.url,
+                                    &source_repos_root.uuid, url2,
+                                    ctx, scratch_pool, scratch_pool));
 
   /* Do the real merge! */
   /* ### TODO(reint): Make sure that one isn't the same line ancestor
@@ -10619,6 +10690,59 @@ merge_reintegrate_locked(const char *source,
   if (err)
     return svn_error_trace(err);
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_do_reintegrate_merge(svn_ra_session_t *source_ra_session,
+                                svn_ra_session_t *target_ra_session,
+                                const char *url1,
+                                svn_revnum_t rev1,
+                                const char *url2,
+                                svn_revnum_t rev2,
+                                svn_revnum_t yc_ancestor_rev,
+                                const char *target_wc_abspath,
+                                svn_boolean_t dry_run,
+                                const apr_array_header_t *merge_options,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *scratch_pool)
+{
+  SVN_ERR(do_reintegrate_merge(
+              source_ra_session, target_ra_session,
+              url1, rev1, url2, rev2, yc_ancestor_rev,
+              target_wc_abspath, dry_run, merge_options,
+              ctx, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* */
+static svn_error_t *
+merge_reintegrate_locked(const char *source,
+                         const svn_opt_revision_t *peg_revision,
+                         const char *target_abspath,
+                         svn_boolean_t dry_run,
+                         const apr_array_header_t *merge_options,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool)
+{
+  svn_ra_session_t *source_ra_session;
+  svn_ra_session_t *target_ra_session;
+  const char *url1, *url2;
+  svn_revnum_t rev1, rev2;
+  svn_revnum_t yc_ancestor_rev;
+
+  SVN_ERR(find_reintegrate_merge(
+            &source_ra_session, &target_ra_session,
+            &url1, &rev1, &url2, &rev2, &yc_ancestor_rev,
+            source, peg_revision, target_abspath,
+            ctx, scratch_pool, scratch_pool));
+
+  SVN_ERR(do_reintegrate_merge(
+            source_ra_session, target_ra_session,
+            url1, rev1, url2, rev2, yc_ancestor_rev,
+            target_abspath,
+            dry_run, merge_options, ctx, scratch_pool));
   return SVN_NO_ERROR;
 }
 
