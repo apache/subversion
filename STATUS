@@ -86,7 +86,7 @@ Candidate changes:
    Justification:
      Regression from 1.6 unless v2 protocol is disabled.
    Votes:
-     +1: philip (r1203546, r1203651 only)
+     +1: philip
      +1: rhuijben (r1203546 only)
      +1: stsp (a regress test would be nice to have)
 
