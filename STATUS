@@ -81,13 +81,6 @@ Candidate changes:
      =0: danielsh, rhuijben (disagrees with the choice of implementation.
                              see list)
 
- * r1203546
-   Fix nested Locations when using v2 protocol.
-   Justification:
-     Regression from 1.6 unless v2 protocol is disabled.
-   Votes:
-     +1: philip, rhuijben
-
 Veto-blocked changes:
 =====================
 
@@ -131,3 +124,11 @@ Approved changes:
       Prevents corrupt wc, will help track down the issue 4062 upgrades.
    Votes:
      +1: philip, stsp, rhuijben
+
+ * r1203546
+   Fix nested Locations when using v2 protocol.
+   Justification:
+     Regression from 1.6 unless v2 protocol is disabled.
+   Votes:
+     +1: philip, rhuijben
+     +1: stsp (a regress test would be nice to have in trunk)
