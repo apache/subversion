@@ -222,7 +222,7 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
                  "mod_dav_svn: nested Location '%s' hinders access to '%s' "
                  "in SVNPath Location '%s'",
                  child->root_dir,
-                 svn_fspath__skip_ancestor(parent->root_dir, child->root_dir),
+                 svn_urlpath__skip_ancestor(parent->root_dir, child->root_dir),
                  parent->root_dir);
 
   return newconf;
