@@ -218,15 +218,11 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->root_dir = INHERIT_VALUE(parent, child, root_dir);
 
   if (parent->fs_path)
-    {
-      /* Nesting inside SVNPath is ambiguous so prevent access. */
-      newconf->fs_path = newconf->fs_parent_path = NULL;
-
-      ap_log_error(APLOG_MARK, APLOG_ERR, 0, NULL,
-                   "mod_dav_svn: invalid nested Location '%s' inside "
-                   "SVNPath Location '%s'",
-                   child->root_dir, parent->root_dir);
-    }
+    ap_log_error(APLOG_MARK, APLOG_WARNING, 0, NULL,
+                 "mod_dav_svn: nested Location '%s' hinders access to '%s' "
+                 "in SVNPath Location '%s'",
+                 child->root_dir, svn_dirent_basename(child->root_dir, p),
+                 parent->root_dir);
 
   return newconf;
 }
