@@ -7399,15 +7399,8 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
 
   /* Regardless of what subtrees in MERGE_B->TARGET_ABSPATH might be missing
      could this merge have been operative? */
-  if ((notify_b->merged_abspaths
-       && apr_hash_count(notify_b->merged_abspaths))
-      || (notify_b->skipped_abspaths
-          && apr_hash_count(notify_b->skipped_abspaths))
-      || (notify_b->added_abspaths
-          && apr_hash_count(notify_b->added_abspaths))
-      || (notify_b->tree_conflicted_abspaths
-          && apr_hash_count(notify_b->tree_conflicted_abspaths)))
-    operative_merge = TRUE;
+  operative_merge = subtree_touched_by_merge(merge_b->target_abspath,
+                                             notify_b, iterpool);
 
   /* If this couldn't be an operative merge then don't bother with
      the added complexity (and user confusion) of non-inheritable ranges.
