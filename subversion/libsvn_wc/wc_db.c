@@ -832,6 +832,15 @@ insert_base_node(void *baton,
 
   if (pibb->kind == svn_wc__db_kind_file)
     {
+      if (!pibb->checksum
+          && pibb->status != svn_wc__db_status_not_present
+          && pibb->status != svn_wc__db_status_excluded
+          && pibb->status != svn_wc__db_status_server_excluded)
+        return svn_error_createf(SVN_ERR_WC_CORRUPT, svn_sqlite__reset(stmt),
+                                 _("The file '%s' has no checksum."),
+                                 path_for_error_message(wcroot, local_relpath,
+                                                        scratch_pool));
+
       SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, pibb->checksum,
                                         scratch_pool));
 
