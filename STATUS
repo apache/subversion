@@ -24,18 +24,6 @@ Candidate changes:
      -0: stsp (we can backport these when we need to)
      -0: gstein
 
- * r1186944, r1186981, r1186983, r1187676
-   Fix an assertion failure when a symlink is updated.
-   Justification:
-     Regression in 1.7.0.
-   Notes:
-     r1186944 is the actual fix, including a new test
-     r1186981 fixes spurious failures of the new test
-     r1186983 whitespace to avoid conflict
-     r1187676 is a cosmetic follow-up tweak
-   Votes:
-     +1: stsp, philip
-
  * r1187695
    Have mod_dav_svn ignore non-Subversion POST requests.
    Justification:
@@ -84,20 +72,14 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
- * r1202630
-   Catch base files with no checksum.
-   Justification:
-      Prevents corrupt wc, will help track down the issue 4062 upgrades.
-   Votes:
-     +1: philip, stsp
-
  * r1202783
    Log root cause, rather than generic error, when opening rep-cache.db fails.
    Justification:
       Makes the real cause visible to the server admin.
    Votes:
      +1: philip
-     =0: danielsh (disagrees with the choice of implementation. see list)
+     =0: danielsh, rhuijben (disagrees with the choice of implementation.
+                             see list)
 
  * r1203546
    Fix nested Locations when using v2 protocol.
@@ -130,3 +112,22 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1186944, r1186981, r1186983, r1187676
+   Fix an assertion failure when a symlink is updated.
+   Justification:
+     Regression in 1.7.0.
+   Notes:
+     r1186944 is the actual fix, including a new test
+     r1186981 fixes spurious failures of the new test
+     r1186983 whitespace to avoid conflict
+     r1187676 is a cosmetic follow-up tweak
+   Votes:
+     +1: stsp, philip, rhuijben
+
+ * r1202630
+   Catch base files with no checksum.
+   Justification:
+      Prevents corrupt wc, will help track down the issue 4062 upgrades.
+   Votes:
+     +1: philip, stsp, rhuijben
