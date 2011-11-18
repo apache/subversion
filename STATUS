@@ -99,6 +99,13 @@ Candidate changes:
      +1: philip
      =0: danielsh (disagrees with the choice of implementation. see list)
 
+ * r1203546
+   Fix nested Locations when using v2 protocol.
+   Justification:
+     Regression from 1.6 unless v2 protocol is disabled.
+   Votes:
+     +1: philip, rhuijben
+
 Veto-blocked changes:
 =====================
 
