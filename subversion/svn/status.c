@@ -554,7 +554,8 @@ svn_cl__print_status(const char *cwd_abspath,
     {
       /* ... skip regular externals unmodified in the repository. */
       if ((status->node_status == svn_wc_status_external)
-          && (status->repos_node_status == svn_wc_status_none))
+          && (status->repos_node_status == svn_wc_status_none)
+          && (! status->conflicted))
         return SVN_NO_ERROR;
 
       /* ... skip file externals that aren't modified locally or
@@ -568,7 +569,8 @@ svn_cl__print_status(const char *cwd_abspath,
               || (status->prop_status == svn_wc_status_none))
           && (! status->changelist)
           && (! status->lock)
-          && (! status->wc_is_locked))
+          && (! status->wc_is_locked)
+          && (! status->conflicted))
         return SVN_NO_ERROR;
     }
 
