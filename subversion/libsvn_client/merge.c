@@ -5204,29 +5204,15 @@ slice_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
               || (!is_rollback && (range->start < end_rev)
                   && (range->end > end_rev)))
             {
-              int j;
               svn_merge_range_t *split_range1, *split_range2;
-              apr_array_header_t *orig_remaining_ranges =
-                                                     child->remaining_ranges;
+
               split_range1 = svn_merge_range_dup(range, pool);
               split_range2 = svn_merge_range_dup(range, pool);
               split_range1->end = end_rev;
               split_range2->start = end_rev;
-              child->remaining_ranges =
-                     apr_array_make(pool, (child->remaining_ranges->nelts + 1),
-                                    sizeof(svn_merge_range_t *));
-              APR_ARRAY_PUSH(child->remaining_ranges,
-                             svn_merge_range_t *) = split_range1;
-              APR_ARRAY_PUSH(child->remaining_ranges,
-                             svn_merge_range_t *) = split_range2;
-              for (j = 1; j < orig_remaining_ranges->nelts; j++)
-                {
-                  svn_merge_range_t *orig_range =
-                                     APR_ARRAY_IDX(orig_remaining_ranges, j,
-                                                   svn_merge_range_t *);
-                  APR_ARRAY_PUSH(child->remaining_ranges,
-                                 svn_merge_range_t *) = orig_range;
-                }
+              APR_ARRAY_IDX(child->remaining_ranges, 0,
+                            svn_merge_range_t *) = split_range1;
+              svn_sort__array_insert(&split_range2, child->remaining_ranges, 1);
             }
         }
     }
@@ -5242,9 +5228,11 @@ slice_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
    new remaining_ranges array in POOL.
 
    ### TODO: We should have remaining_ranges in reverse order to avoid
-   ### recreating and reallocationg the remaining_ranges every time we want
+   ### recreating and reallocating the remaining_ranges every time we want
    ### to remove the first range.  If the ranges were reversed we could simply
-   ### pop the last element in the array. */
+   ### pop the last element in the array.  Alternatively we might be able to
+   ### make svn_sort__array_delete() efficient: it could increment 'elts'
+   ### (and decrement 'nelts' and 'nalloc') instead of moving elements. */
 static void
 remove_first_range_from_remaining_ranges(svn_revnum_t revision,
                                          apr_array_header_t
@@ -5266,22 +5254,7 @@ remove_first_range_from_remaining_ranges(svn_revnum_t revision,
             APR_ARRAY_IDX(child->remaining_ranges, 0, svn_merge_range_t *);
           if (first_range->end == revision)
             {
-              apr_array_header_t *orig_remaining_ranges =
-                child->remaining_ranges;
-              int j;
-
-              child->remaining_ranges =
-                apr_array_make(pool, (child->remaining_ranges->nelts - 1),
-                               sizeof(svn_merge_range_t *));
-              for (j = 1; j < orig_remaining_ranges->nelts; j++)
-                {
-                  svn_merge_range_t *range =
-                    APR_ARRAY_IDX(orig_remaining_ranges,
-                                  j,
-                                  svn_merge_range_t *);
-                  APR_ARRAY_PUSH(child->remaining_ranges,
-                                 svn_merge_range_t *) = range;
-                }
+              svn_sort__array_delete(child->remaining_ranges, 0, 1);
             }
         }
     }
@@ -6459,12 +6432,7 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
                   new_segment->range_start = copyfrom_rev;
                   new_segment->range_end = copyfrom_rev;
                   segment->range_start = copyfrom_rev + 1;
-                  APR_ARRAY_PUSH(segments, svn_location_segment_t *) = NULL;
-                  memmove(segments->elts + segments->elt_size,
-                          segments->elts,
-                          segments->elt_size * (segments->nelts - 1));
-                  APR_ARRAY_IDX(segments, 0, svn_location_segment_t *) =
-                    new_segment;
+                  svn_sort__array_insert(&new_segment, segments, 0);
                 }
             }
         }
@@ -6477,7 +6445,6 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
       svn_merge_range_t *range =
         APR_ARRAY_IDX(merge_range_ts, i, svn_merge_range_t *);
       apr_array_header_t *merge_sources;
-      int j;
 
       if (SVN_IS_VALID_REVNUM(trim_revision))
         {
@@ -6499,11 +6466,7 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
       SVN_ERR(combine_range_with_segments(&merge_sources, range,
                                           segments, source_root_url,
                                           result_pool));
-      for (j = 0; j < merge_sources->nelts; j++)
-        {
-          APR_ARRAY_PUSH(*merge_sources_p, merge_source_t *) =
-            APR_ARRAY_IDX(merge_sources, j, merge_source_t *);
-        }
+      apr_array_cat(*merge_sources_p, merge_sources);
     }
 
   return SVN_NO_ERROR;
