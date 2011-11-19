@@ -5363,7 +5363,13 @@ get_child_with_mergeinfo(const apr_array_header_t *children_with_mergeinfo,
 /* Insert a deep copy of INSERT_ELEMENT into the CHILDREN_WITH_MERGEINFO
    array at its correct position.  Allocate the new storage in POOL.
    CHILDREN_WITH_MERGEINFO is a depth first sorted array of
-   (svn_client__merge_path_t *). */
+   (svn_client__merge_path_t *).
+
+   ### Most callers don't need this to deep-copy the new element.
+   ### It may be more efficient for some callers to insert a bunch of items
+       out of order and then sort afterwards. (One caller is doing a qsort
+       after calling this anyway.)
+ */
 static void
 insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
                       const svn_client__merge_path_t *insert_element,
