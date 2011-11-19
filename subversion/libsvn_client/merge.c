@@ -5587,6 +5587,71 @@ pre_merge_status_cb(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Find all the subtrees in the working copy tree rooted at TARGET_ABSPATH
+ * that have explicit mergeinfo.
+ * Set *SUBTREES_WITH_MERGEINFO to a hash mapping (const char *) absolute
+ * WC path to (svn_mergeinfo_t *) mergeinfo.
+ *
+ * ### Is this function equivalent to:
+ *
+ *   svn_client__get_wc_mergeinfo_catalog(
+ *     subtrees_with_mergeinfo, inherited=NULL, include_descendants=TRUE,
+ *     svn_mergeinfo_explicit, target_abspath, limit_path=NULL,
+ *     walked_path=NULL, ignore_invalid_mergeinfo=FALSE, ...)
+ *
+ *   except for the catalog keys being abspaths instead of repo-relpaths?
+ */
+static svn_error_t *
+get_wc_explicit_mergeinfo_catalog(apr_hash_t **subtrees_with_mergeinfo,
+                                  const char *target_abspath,
+                                  svn_depth_t depth,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_opt_revision_t working_revision = { svn_opt_revision_working, { 0 } };
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_client_propget4(subtrees_with_mergeinfo, SVN_PROP_MERGEINFO,
+                              target_abspath, &working_revision,
+                              &working_revision, NULL, depth, NULL,
+                              ctx, result_pool, scratch_pool));
+
+  /* Convert property values to svn_mergeinfo_t. */
+  for (hi = apr_hash_first(scratch_pool, *subtrees_with_mergeinfo);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *wc_path = svn__apr_hash_index_key(hi);
+      svn_string_t *mergeinfo_string = svn__apr_hash_index_val(hi);
+      svn_mergeinfo_t mergeinfo;
+      svn_error_t *err;
+
+      svn_pool_clear(iterpool);
+
+      err = svn_mergeinfo_parse(&mergeinfo, mergeinfo_string->data,
+                                result_pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+            {
+              err = svn_error_createf(
+                SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING, err,
+                _("Invalid mergeinfo detected on '%s', "
+                  "mergetracking not possible"),
+                svn_dirent_local_style(wc_path, scratch_pool));
+            }
+          return svn_error_trace(err);
+        }
+      apr_hash_set(*subtrees_with_mergeinfo, wc_path, APR_HASH_KEY_STRING,
+                   mergeinfo);
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Helper for do_directory_merge() when performing merge-tracking aware
    merges.
 
@@ -5660,16 +5725,12 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   apr_hash_t *shallow_subtrees;
   apr_hash_t *missing_subtrees;
   struct pre_merge_status_baton_t pre_merge_status_baton;
-  svn_opt_revision_t working_revision = { svn_opt_revision_working, { 0 } };
 
   /* Case 1: Subtrees with explicit mergeinfo. */
-  SVN_ERR(svn_client_propget4(&subtrees_with_mergeinfo, SVN_PROP_MERGEINFO,
-                              merge_cmd_baton->target_abspath,
-                              &working_revision,
-                              &working_revision, NULL, depth, NULL,
-                              merge_cmd_baton->ctx, scratch_pool,
-                              scratch_pool));
-
+  SVN_ERR(get_wc_explicit_mergeinfo_catalog(&subtrees_with_mergeinfo,
+                                            merge_cmd_baton->target_abspath,
+                                            depth, merge_cmd_baton->ctx,
+                                            result_pool, scratch_pool));
   if (subtrees_with_mergeinfo)
     {
       apr_hash_index_t *hi;
@@ -5678,29 +5739,15 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
            hi;
            hi = apr_hash_next(hi))
         {
-          svn_error_t *err;
           const char *wc_path = svn__apr_hash_index_key(hi);
-          svn_string_t *mergeinfo_string = svn__apr_hash_index_val(hi);
+          svn_mergeinfo_t mergeinfo = svn__apr_hash_index_val(hi);
           svn_client__merge_path_t *mergeinfo_child =
             svn_client__merge_path_create(wc_path, result_pool);
 
           svn_pool_clear(iterpool);
 
           /* Stash this child's pre-existing mergeinfo. */
-          err = svn_mergeinfo_parse(&mergeinfo_child->pre_merge_mergeinfo,
-                                    mergeinfo_string->data, result_pool);
-          if (err)
-            {
-              if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
-                {
-                  err = svn_error_createf(
-                    SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING, err,
-                    _("Invalid mergeinfo detected on '%s', "
-                      "mergetracking not possible"),
-                    svn_dirent_local_style(wc_path, scratch_pool));
-                }
-              return svn_error_trace(err);
-            }
+          mergeinfo_child->pre_merge_mergeinfo = mergeinfo;
 
           /* Note if this child has non-inheritable mergeinfo */
           mergeinfo_child->has_noninheritable
@@ -6075,6 +6122,32 @@ log_changed_revs(void *baton,
 }
 
 
+/* Set *MIN_REV_P to the oldest and *MAX_REV_P to the youngest start or end
+ * revision occurring in RANGELIST, or to SVN_INVALID_REVNUM if RANGELIST
+ * is empty. */
+static void
+merge_range_find_extremes(svn_revnum_t *min_rev_p,
+                          svn_revnum_t *max_rev_p,
+                          const apr_array_header_t *rangelist)
+{
+  int i;
+
+  *min_rev_p = SVN_INVALID_REVNUM;
+  *max_rev_p = SVN_INVALID_REVNUM;
+  for (i = 0; i < rangelist->nelts; i++)
+    {
+      svn_merge_range_t *range
+        = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
+      svn_revnum_t range_min = MIN(range->start, range->end);
+      svn_revnum_t range_max = MAX(range->start, range->end);
+
+      if ((! SVN_IS_VALID_REVNUM(*min_rev_p)) || (range_min < *min_rev_p))
+        *min_rev_p = range_min;
+      if ((! SVN_IS_VALID_REVNUM(*max_rev_p)) || (range_max > *max_rev_p))
+        *max_rev_p = range_max;
+    }
+}
+
 /* Set *OPERATIVE_RANGES_P to an array of svn_merge_range_t * merge
    range objects copied wholesale from RANGES which have the property
    that in some revision within that range the object identified by
@@ -6094,8 +6167,7 @@ remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
                          apr_pool_t *pool)
 {
   int i;
-  svn_revnum_t oldest_rev = SVN_INVALID_REVNUM;
-  svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
+  svn_revnum_t oldest_rev, youngest_rev;
   apr_array_header_t *changed_revs =
     apr_array_make(pool, ranges->nelts, sizeof(svn_revnum_t));
   apr_array_header_t *operative_ranges =
@@ -6105,17 +6177,9 @@ remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
   APR_ARRAY_PUSH(log_targets, const char *) = "";
 
   /* Find the revision extremes of the RANGES we have. */
-  for (i = 0; i < ranges->nelts; i++)
-    {
-      svn_merge_range_t *r = APR_ARRAY_IDX(ranges, i, svn_merge_range_t *);
-      svn_revnum_t max_rev = MAX(r->start, r->end);
-      svn_revnum_t min_rev = MIN(r->start, r->end) + 1;
-
-      if ((! SVN_IS_VALID_REVNUM(youngest_rev)) || (max_rev > youngest_rev))
-        youngest_rev = max_rev;
-      if ((! SVN_IS_VALID_REVNUM(oldest_rev)) || (min_rev < oldest_rev))
-        oldest_rev = min_rev;
-    }
+  merge_range_find_extremes(&oldest_rev, &youngest_rev, ranges);
+  if (SVN_IS_VALID_REVNUM(oldest_rev))
+    oldest_rev++;  /* make it inclusive */
 
   /* Get logs across those ranges, recording which revisions hold
      changes to our object's history. */
@@ -6309,8 +6373,7 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
-  svn_revnum_t oldest_requested = SVN_INVALID_REVNUM;
-  svn_revnum_t youngest_requested = SVN_INVALID_REVNUM;
+  svn_revnum_t oldest_requested, youngest_requested;
   svn_revnum_t trim_revision = SVN_INVALID_REVNUM;
   const char *source_root_url;
   apr_array_header_t *segments;
@@ -6324,22 +6387,8 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
     return SVN_NO_ERROR;
 
   /* Find the extremes of the revisions across our set of ranges. */
-  for (i = 0; i < merge_range_ts->nelts; i++)
-    {
-      svn_merge_range_t *range =
-        APR_ARRAY_IDX(merge_range_ts, i, svn_merge_range_t *);
-      svn_revnum_t minrev = MIN(range->start, range->end);
-      svn_revnum_t maxrev = MAX(range->start, range->end);
-
-      /* Keep a running tally of the oldest and youngest requested
-         revisions. */
-      if ((! SVN_IS_VALID_REVNUM(oldest_requested))
-          || (minrev < oldest_requested))
-        oldest_requested = minrev;
-      if ((! SVN_IS_VALID_REVNUM(youngest_requested))
-          || (maxrev > youngest_requested))
-        youngest_requested = maxrev;
-    }
+  merge_range_find_extremes(&oldest_requested, &youngest_requested,
+                            merge_range_ts);
 
   /* ### FIXME:  Our underlying APIs can't yet handle the case where
      the peg revision isn't the youngest of the three revisions.  So
@@ -10172,8 +10221,9 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
    reintegrate source relative to the root of the repository.
 
    SUBTREES_WITH_MERGEINFO is a hash of (const char *) absolute paths mapped
-   to (svn_string_t *) mergeinfo values for each working copy path with
-   explicit mergeinfo in TARGET_ABSPATH.
+   to (svn_mergeinfo_t *) mergeinfo values for each working copy path with
+   explicit mergeinfo in TARGET_ABSPATH.  Actually we only need to know the
+   paths, not the mergeinfo.
 
    TARGET_REV is the working revision the entire WC tree rooted at
    TARGET_REPOS_REL_PATH is at.  SOURCE_REV is the peg revision of the
@@ -10235,7 +10285,7 @@ calculate_left_hand_side(const char **url_left,
   if (!apr_hash_get(subtrees_with_mergeinfo, target_abspath,
                     APR_HASH_KEY_STRING))
     apr_hash_set(subtrees_with_mergeinfo, target_abspath,
-                 APR_HASH_KEY_STRING, svn_string_create_empty(result_pool));
+                 APR_HASH_KEY_STRING, apr_hash_make(result_pool));
 
   /* Get the history (segments) for TARGET_ABSPATH and any of its subtrees
      with explicit mergeinfo. */
@@ -10244,30 +10294,10 @@ calculate_left_hand_side(const char **url_left,
        hi = apr_hash_next(hi))
     {
       const char *absolute_path = svn__apr_hash_index_key(hi);
-      svn_string_t *mergeinfo_string = svn__apr_hash_index_val(hi);
       const char *path_rel_to_session;
       const char *path_rel_to_root;
-      svn_mergeinfo_t subtree_mergeinfo;
-      svn_error_t *err;
 
       svn_pool_clear(iterpool);
-
-      /* Issue #3896: If invalid mergeinfo in the reintegrate target
-         prevents us from proceeding, then raise the best error possible. */
-      err = svn_mergeinfo_parse(&subtree_mergeinfo, mergeinfo_string->data,
-                                iterpool);
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
-            {
-              err = svn_error_createf(
-                SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING, err,
-                _("Invalid mergeinfo detected on '%s', "
-                  "reintegrate merge not possible"),
-                svn_dirent_local_style(absolute_path, scratch_pool));
-            }
-          return svn_error_trace(err);
-        }
 
       /* Convert the absolute path with mergeinfo on it to a path relative
          to the session root. */
@@ -10395,7 +10425,6 @@ merge_reintegrate_locked(const char *source,
                          apr_pool_t *scratch_pool)
 {
   url_uuid_t wc_repos_root, source_repos_root;
-  svn_opt_revision_t working_revision = { svn_opt_revision_working, { 0 } };
   svn_ra_session_t *target_ra_session;
   svn_ra_session_t *source_ra_session;
   const char *source_repos_rel_path, *target_repos_rel_path;
@@ -10475,10 +10504,14 @@ merge_reintegrate_locked(const char *source,
                                "can be the root of the repository"));
 
   /* Find all the subtrees in TARGET_WCPATH that have explicit mergeinfo. */
-  SVN_ERR(svn_client_propget4(&subtrees_with_mergeinfo, SVN_PROP_MERGEINFO,
-                              target_abspath, &working_revision,
-                              &working_revision, NULL, svn_depth_infinity,
-                              NULL, ctx, scratch_pool, scratch_pool));
+  err = get_wc_explicit_mergeinfo_catalog(&subtrees_with_mergeinfo,
+                                          target_abspath, svn_depth_infinity,
+                                          ctx, scratch_pool, scratch_pool);
+  /* Issue #3896: If invalid mergeinfo in the reintegrate target
+     prevents us from proceeding, then raise the best error possible. */
+  if (err && err->apr_err == SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING)
+    err = svn_error_quick_wrap(err, _("Reintegrate merge not possible"));
+  SVN_ERR(err);
 
   /* Open two RA sessions, one to our source and one to our target. */
   SVN_ERR(svn_client__ra_session_from_path(&source_ra_session, &rev2, &url2,
