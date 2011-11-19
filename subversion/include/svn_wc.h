@@ -5505,10 +5505,26 @@ typedef svn_error_t *(*svn_wc_dirents_func_t)(void *baton,
                                               apr_pool_t *scratch_pool);
 
 
+/** Describes a server-side move (really a copy+delete within the same
+ * revision) which has been identified by scanning the revision log.
+ * @since New in 1.8. */
 typedef struct svn_wc_repos_move_info_t {
+  /* The repository relpath the node was moved from. */
   const char *moved_from_repos_relpath;
+
+  /* The repository relpath the node was moved to. */
   const char *moved_to_repos_relpath;
+ 
+  /* The revision in which the move happened. */
   svn_revnum_t revision;
+
+  /* The copyfrom revision of the moved-to path. */
+  svn_revnum_t copyfrom_rev;
+
+  /* Pointers to previous or subsequent moves of the same node
+   * within interesting history. */
+  struct svn_wc_repos_move_info_t *prev;
+  struct svn_wc_repos_move_info_t *next;
 } svn_wc_repos_move_info_t;
 
 /* ### TODO docco
