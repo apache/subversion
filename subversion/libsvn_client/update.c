@@ -498,9 +498,10 @@ get_repos_moves(void *baton,
             
             move_info = APR_ARRAY_IDX(moves_in_rev, i,
                                       svn_wc_repos_move_info_t *);
-            SVN_DBG(("found server-side move in r%ld: '%s' -> '%s'\n",
+            SVN_DBG(("found server-side move in r%ld: '%s@%ld' -> '%s'\n",
                      move_info->revision,
                      move_info->moved_from_repos_relpath,
+                     move_info->copyfrom_rev,
                      move_info->moved_to_repos_relpath));
           }
       }
