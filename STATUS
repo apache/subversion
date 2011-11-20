@@ -90,6 +90,16 @@ Candidate changes:
      +1: rhuijben (r1203546 only)
      +1: stsp (a regress test would be nice to have)
 
+  * r1204167
+    Fix issue #4046, "UTF-8 files containing only a byte order mark are
+    added as binary".
+    Justification:
+      Empty UTF-8 files are commonly created with a BOM on Windows.
+      Fix has been requested by several users, see
+      http://svn.haxx.se/dev/archive-2011-10/0331.shtml
+    Votes:
+      +1: stsp
+
 Veto-blocked changes:
 =====================
 
