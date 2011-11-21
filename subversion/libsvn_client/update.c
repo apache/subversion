@@ -168,8 +168,34 @@ struct scan_moves_log_receiver_baton {
   svn_ra_session_t *ra_session;
 
   /* The moved nodes hash to be populated.
-   * Maps a revision number to an array of repos_move_info_t describing
-   * moves which happened in the revision. */
+   * Maps a revision number to an array of svn_wc_repos_move_info_t
+   * objects describing moves which happened in the revision.
+   *
+   * Given a sequence of moves which happened in given revisions, such as:
+   *   rA: mv x->z
+   *   rA: mv a->b
+   *   rB: mv b->c
+   *   rC: mv c->d
+   * we map each revision number to all moves which happened in the
+   * revision, which looks as follows: 
+   *   rA : [(rA, x->z), (rA, a->b)]
+   *   rB : [(rB, b->c)]
+   *   rC : [(rC, c->d)]
+   * This allows an update to find relevant moves based on the base
+   * revision of a node (during updates the base revision of each node
+   * in the working copy is arbitrary so we might not know the nodes 'a'
+   * and 'x' under these names).
+   * Additionally, all moves pertaining to the same node are chained into a
+   * doubly-linked list via 'next' and 'prev' pointers (see definition of
+   * svn_wc_repos_move_info_t).
+   * This way, an update can look up all moves relevant to a node, forwards
+   * or backwards in history, once it has located a relevant move in the chain.
+   * This can be visualized as follows:
+   *   rA : [(rA, x->z, prev=>NULL, next=>NULL),
+   *         (rA, a->b, prev=>NULL, next=>(rB, b->c))]
+   *   rB : [(rB, b->c), prev=>(rA, a->b), next=>(rC, c->d)]
+   *   rC : [(rC, c->d), prev=>(rB, c->d), next=>NULL]
+   */
   apr_hash_t *moves;
 
   /* Temporary map of move-target paths to repos_move_info_t.
