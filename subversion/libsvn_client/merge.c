@@ -6722,11 +6722,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
               merge_cmd_baton_t *merge_b,
               apr_pool_t *scratch_pool)
 {
-  apr_hash_t *props1, *props2;
-  const char *tmpfile1, *tmpfile2;
-  const char *mimetype1, *mimetype2;
-  svn_string_t *pval;
-  apr_array_header_t *propchanges, *remaining_ranges;
+  apr_array_header_t *remaining_ranges;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
   svn_boolean_t tree_conflicted = FALSE;
@@ -6846,15 +6842,16 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
 
       for (i = 0; i < ranges_to_merge->nelts; i++)
         {
+          svn_merge_range_t *r = APR_ARRAY_IDX(ranges_to_merge, i,
+                                               svn_merge_range_t *);
           svn_wc_notify_t *n;
           svn_boolean_t header_sent = FALSE;
           svn_ra_session_t *ra_session1, *ra_session2;
-
-          /* When using this merge range, account for the exclusivity of
-             its low value (which is indicated by this operation being a
-             merge vs. revert). */
-          svn_merge_range_t *r = APR_ARRAY_IDX(ranges_to_merge, i,
-                                               svn_merge_range_t *);
+          const char *tmpfile1, *tmpfile2;
+          apr_hash_t *props1, *props2;
+          svn_string_t *pval;
+          const char *mimetype1, *mimetype2;
+          apr_array_header_t *propchanges;
 
           svn_pool_clear(iterpool);
 
@@ -6917,33 +6914,27 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
               SVN_ERR(merge_file_deleted(&text_state,
                                          &tree_conflicted,
                                          target_relpath,
-                                         tmpfile1,
-                                         tmpfile2,
+                                         tmpfile1, tmpfile2,
                                          mimetype1, mimetype2,
                                          props1,
-                                         merge_b,
-                                         iterpool));
+                                         merge_b, iterpool));
               single_file_merge_notify(notify_b, target_relpath,
                                        tree_conflicted
                                          ? svn_wc_notify_tree_conflict
                                          : svn_wc_notify_update_delete,
-                                       text_state,
-                                       svn_wc_notify_state_unknown,
+                                       text_state, svn_wc_notify_state_unknown,
                                        n, &header_sent, iterpool);
 
               /* ...plus add... */
               SVN_ERR(merge_file_added(&text_state, &prop_state,
                                        &tree_conflicted,
                                        target_relpath,
-                                       tmpfile1,
-                                       tmpfile2,
-                                       r->start,
-                                       r->end,
+                                       tmpfile1, tmpfile2,
+                                       r->start, r->end,
                                        mimetype1, mimetype2,
                                        NULL, SVN_INVALID_REVNUM,
                                        propchanges, props1,
-                                       merge_b,
-                                       iterpool));
+                                       merge_b, iterpool));
               single_file_merge_notify(notify_b, target_relpath,
                                        tree_conflicted
                                          ? svn_wc_notify_tree_conflict
@@ -6957,14 +6948,11 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
               SVN_ERR(merge_file_changed(&text_state, &prop_state,
                                          &tree_conflicted,
                                          target_relpath,
-                                         tmpfile1,
-                                         tmpfile2,
-                                         r->start,
-                                         r->end,
+                                         tmpfile1, tmpfile2,
+                                         r->start, r->end,
                                          mimetype1, mimetype2,
                                          propchanges, props1,
-                                         merge_b,
-                                         iterpool));
+                                         merge_b, iterpool));
               single_file_merge_notify(notify_b, target_relpath,
                                        tree_conflicted
                                          ? svn_wc_notify_tree_conflict
