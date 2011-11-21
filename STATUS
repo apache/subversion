@@ -52,14 +52,12 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
- * r1202783
-   Log root cause, rather than generic error, when opening rep-cache.db fails.
+ * r1204610, r1204673
+   Log error chain, rather than generic error, when opening rep-cache.db fails.
    Justification:
-      Makes the real cause visible to the server admin.
+      Makes the real cause visible to the apache admin.
    Votes:
      +1: philip
-     =0: danielsh, rhuijben (disagrees with the choice of implementation.
-                             see list)
 
 Veto-blocked changes:
 =====================
