@@ -86,13 +86,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1187695
-   Have mod_dav_svn ignore non-Subversion POST requests.
-   Justification:
-     mod_dav_svn does not play well with others, a regression from 1.6.
-   Votes:
-     +1: philip, rhuijben, hwright
-
  * r1204478
    Avoid using pool memory after it has been freed in client merge code.
    Justification:
