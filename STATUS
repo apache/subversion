@@ -81,15 +81,6 @@ Candidate changes:
      =0: danielsh, rhuijben (disagrees with the choice of implementation.
                              see list)
 
- * r1203546, r1203651, 1203653
-   Fix nested Locations when using v2 protocol.
-   Justification:
-     Regression from 1.6 unless v2 protocol is disabled.
-   Votes:
-     +1: philip
-     +1: rhuijben (r1203546 only)
-     +1: stsp (a regress test would be nice to have)
-
   * r1204167
     Fix issue #4046, "UTF-8 files containing only a byte order mark are
     added as binary".
@@ -98,14 +89,14 @@ Candidate changes:
       Fix has been requested by several users, see
       http://svn.haxx.se/dev/archive-2011-10/0331.shtml
     Votes:
-      +1: stsp
+      +1: stsp, rhuijben
 
  * r1204478
    Avoid using pool memory after it has been freed in client merge code.
    Justification:
      Undefined behaviour.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
 Veto-blocked changes:
 =====================
@@ -131,3 +122,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1203546, r1203651, r1203653
+   Fix nested Locations when using v2 protocol.
+   Justification:
+     Regression from 1.6 unless v2 protocol is disabled.
+   Votes:
+     +1: philip, rhuijben
+     +1: stsp (a regress test would be nice to have)
