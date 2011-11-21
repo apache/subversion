@@ -85,10 +85,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1199876
-   Fix issue 4048, wcng assert on update with 1.0.x server.
-   Justification:
-     Our client-server compatibility rules require this to work.
-   Votes:
-     +1: philip, rhuijben, hwright
