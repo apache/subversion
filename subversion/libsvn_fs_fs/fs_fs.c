@@ -5600,7 +5600,7 @@ rep_write_contents_close(void *baton)
           /* Something's wrong with the rep-sharing index.  We can continue
              without rep-sharing, but warn.
            */
-          (b->fs->warning)(b->fs->warning_baton, svn_error_root_cause(err));
+          (b->fs->warning)(b->fs->warning_baton, err);
           svn_error_clear(err);
           old_rep = NULL;
         }
