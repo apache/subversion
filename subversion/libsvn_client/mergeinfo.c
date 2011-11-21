@@ -147,6 +147,49 @@ svn_client__record_wc_mergeinfo(const char *local_abspath,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_client__record_wc_mergeinfo_catalog(apr_hash_t *result_catalog,
+                                        svn_client_ctx_t *ctx,
+                                        apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  if (apr_hash_count(result_catalog))
+    {
+      int i;
+      apr_array_header_t *sorted_cat =
+        svn_sort__hash(result_catalog, svn_sort_compare_items_as_paths,
+                       scratch_pool);
+      for (i = 0; i < sorted_cat->nelts; i++)
+        {
+          svn_sort__item_t elt = APR_ARRAY_IDX(sorted_cat, i,
+                                               svn_sort__item_t);
+          svn_error_t *err;
+
+          svn_pool_clear(iterpool);
+          err = svn_client__record_wc_mergeinfo(elt.key, elt.value, TRUE,
+                                                ctx, iterpool);
+
+          if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+            {
+              /* PATH isn't just missing, it's not even versioned as far
+                 as this working copy knows.  But it was included in
+                 MERGES, which means that the server knows about it.
+                 Likely we don't have access to the source due to authz
+                 restrictions.  For now just clear the error and
+                 continue... */
+              svn_error_clear(err);
+            }
+          else
+            {
+              SVN_ERR(err);
+            }
+        }
+    }
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 /*-----------------------------------------------------------------------*/
 
 /*** Retrieving mergeinfo. ***/

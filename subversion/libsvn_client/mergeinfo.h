@@ -321,6 +321,13 @@ svn_client__record_wc_mergeinfo(const char *local_abspath,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *scratch_pool);
 
+/* Write mergeinfo into the WC.  RESULT_CATALOG maps (const char *) WC paths
+ * to (svn_mergeinfo_t) mergeinfo. */
+svn_error_t *
+svn_client__record_wc_mergeinfo_catalog(apr_hash_t *result_catalog,
+                                        svn_client_ctx_t *ctx,
+                                        apr_pool_t *scratch_pool);
+
 /* Elide any svn:mergeinfo set on TARGET_WCPATH to its nearest working
    copy (or possibly repository) ancestor with equivalent mergeinfo.
 
