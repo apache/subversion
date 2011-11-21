@@ -49,14 +49,14 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.2
    * avoid potential segfault during merges (r1202807)
    * fix an assertion failure when a symlink is updated (r1186944, -81, -83)
    * more working copy corruption protection (r1202603)
-   * fix nested Locations when using v2 protocol (r1203546, -651, -653)
+   * fix nested <Location>s when using v2 protocol (r1203546, -651, -653)
    * make mod_dav_svn ignore non-Subversion POST requests (r1187695)
    * avoid reading freed memory (r1204478)
    * recognize empty (only byte order mark) UTF-8 files as text (issue #4046)
    * improve behavior when operating against a 1.0.x server (r1199876)
 
   Developer-visible changes:
-   * allow JavaHL equivalent of 'st -u' to function properly (r1189190, -395)
+   * JavaHL: allow 'status -u' to function properly (r1189190, -395)
    * don't put '\r' characters in our generate sql headers (r1189580)
    * properly define WIN64 on Windows x64 builds (r1188609)
    * better adherence to C89 in enum definitions (r1189665)
