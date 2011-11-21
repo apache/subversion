@@ -1462,6 +1462,9 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
   SVN_ERR_ASSERT(!older_abspath || svn_dirent_is_absolute(older_abspath));
   SVN_ERR_ASSERT(!yours_abspath || svn_dirent_is_absolute(yours_abspath));
 
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
+
   /* Check for an obstructed or missing node on disk. */
   {
     svn_wc_notify_state_t obstr_state;
@@ -1691,6 +1694,9 @@ merge_file_added(svn_wc_notify_state_t *content_state,
   apr_hash_t *file_props;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(mine_abspath));
+
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
 
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
@@ -2015,6 +2021,9 @@ merge_file_deleted(svn_wc_notify_state_t *state,
   const char *mine_abspath = svn_dirent_join(merge_b->target_abspath,
                                              mine_relpath, scratch_pool);
   svn_node_kind_t kind;
+
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
 
   if (merge_b->dry_run)
     {
@@ -6726,9 +6735,6 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
               apr_pool_t *scratch_pool)
 {
   apr_array_header_t *remaining_ranges;
-  svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
-  svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
-  svn_boolean_t tree_conflicted = FALSE;
   svn_client_ctx_t *ctx = merge_b->ctx;
   const char *mergeinfo_path;
   svn_merge_range_t range;
@@ -6855,6 +6861,8 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
           svn_string_t *pval;
           const char *mimetype1, *mimetype2;
           apr_array_header_t *propchanges;
+          svn_wc_notify_state_t prop_state, text_state;
+          svn_boolean_t tree_conflicted = TRUE;
 
           svn_pool_clear(iterpool);
 
