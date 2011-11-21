@@ -149,7 +149,7 @@ extern "C" {
  * The bump to 29 renamed the pristine files from '<SHA1>' to '<SHA1>.svn-base'
  * and introduced the EXTERNALS store. Bumped in r1129286.
  *
- * == 1.7.x shipped with format ???
+ * == 1.7.x shipped with format 29
  *
  * Please document any further format changes here.
  */
@@ -350,10 +350,8 @@ svn_wc__prop_array_to_hash(const apr_array_header_t *props,
  *
  * If EXACT_COMPARISON is FALSE, translate LOCAL_ABSPATH's EOL
  * style and keywords to repository-normal form according to its properties,
- * and compare the result with the text base.  If COMPARE_TEXTBASES is
- * TRUE, translate the text base's EOL style and keywords to working-copy
- * form according to LOCAL_ABSPATH's properties, and compare the
- * result with LOCAL_ABSPATH.  Usually, EXACT_COMPARISON should be FALSE.
+ * and compare the result with the text base.
+ * Usually, EXACT_COMPARISON should be FALSE.
  *
  * If LOCAL_ABSPATH does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
@@ -680,7 +678,7 @@ svn_wc__wipe_postupgrade(const char *dir_abspath,
  */
 svn_error_t *
 svn_wc__check_wc_root(svn_boolean_t *wc_root,
-                      svn_wc__db_kind_t *kind,
+                      svn_kind_t *kind,
                       svn_boolean_t *switched,
                       svn_wc__db_t *db,
                       const char *local_abspath,

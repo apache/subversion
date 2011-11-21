@@ -112,6 +112,8 @@ svn_cl__proplist(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
+  apr_array_header_t *errors = apr_array_make(scratch_pool, 0,
+                                              sizeof(apr_status_t));
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -168,7 +170,6 @@ svn_cl__proplist(apr_getopt_t *os,
       int i;
       apr_pool_t *iterpool;
       svn_proplist_receiver_t pl_receiver;
-      svn_boolean_t had_errors = FALSE;
 
       if (opt_state->xml)
         {
@@ -190,7 +191,6 @@ svn_cl__proplist(apr_getopt_t *os,
           proplist_baton_t pl_baton;
           const char *truepath;
           svn_opt_revision_t peg_revision;
-          svn_boolean_t success;
 
           svn_pool_clear(iterpool);
           SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
@@ -209,13 +209,10 @@ svn_cl__proplist(apr_getopt_t *os,
                                         opt_state->changelists,
                                         pl_receiver, &pl_baton,
                                         ctx, iterpool),
-                   &success, opt_state->quiet,
+                   errors, opt_state->quiet,
                    SVN_ERR_UNVERSIONED_RESOURCE,
                    SVN_ERR_ENTRY_NOT_FOUND,
                    SVN_NO_ERROR));
-
-          if (!success)
-            had_errors = TRUE;
         }
       svn_pool_destroy(iterpool);
 
@@ -223,10 +220,29 @@ svn_cl__proplist(apr_getopt_t *os,
         SVN_ERR(svn_cl__xml_print_footer("properties", scratch_pool));
 
       /* Error out *after* we closed the XML element */
-      if (had_errors)
-        return svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                _("Could not display info for all targets "
-                                  "because some targets don't exist"));
+      if (errors->nelts > 0)
+        {
+          svn_error_t *err;
+          
+          err = svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL, NULL);
+          for (i = 0; i < errors->nelts; i++)
+            {
+              apr_status_t status = APR_ARRAY_IDX(errors, i, apr_status_t);
+              
+              if (status == SVN_ERR_ENTRY_NOT_FOUND)
+                err = svn_error_quick_wrap(err,
+                                           _("Could not display properties "
+                                             "of all targets because some "
+                                             "targets don't exist"));
+              else if (status == SVN_ERR_UNVERSIONED_RESOURCE)
+                err = svn_error_quick_wrap(err,
+                                           _("Could not display properties "
+                                             "of all targets because some "
+                                             "targets are not versioned"));
+            }
+
+          return svn_error_trace(err);
+        }
     }
 
   return SVN_NO_ERROR;

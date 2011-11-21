@@ -5404,6 +5404,212 @@ def update_to_HEAD_plus_1(sbox):
                                         None, None,
                                         None, None, None, wc_dir, '-r', '2')
 
+def update_moved_dir_leaf_del(sbox):
+  "update locally moved dir with leaf del"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.run_svn(False, 'rm', '-m', 'remove /A/B/E/alpha',
+                       sbox.repo_url + "/A/B/E/alpha")
+  sbox.simple_move("A/B/E", "A/B/E2")
+
+  # since alpha isn't locally modified, the incoming delete should auto-merge
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E2/alpha' : Item(status='D '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
+  expected_disk.add({
+    'A/B/E2'           : Item(),
+    'A/B/E2/beta'      : Item(contents="This is the file 'beta'.\n"),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2/beta'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E2/alpha'      : Item(status='D ', copied='+', wc_rev='-'),
+  })
+  expected_status.remove('A/B/E/alpha')
+  expected_status.tweak('A/B/E', 'A/B/E/beta', status='D ')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1)
+
+def update_moved_dir_edited_leaf_del(sbox):
+  "update locally moved dir with edited leaf del"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.run_svn(False, 'rm', '-m', 'remove /A/B/E/alpha',
+                       sbox.repo_url + "/A/B/E/alpha")
+  sbox.simple_move("A/B/E", "A/B/E2")
+  svntest.main.file_write(sbox.ospath('A/B/E2/alpha'),
+                          "This is a changed 'alpha'.\n")
+
+  # since alpha was modified post-move, the incoming delete should conflict
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha'       : Item(status='  ', treeconflict='C'),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
+  expected_disk.add({
+    'A/B/E2'           : Item(),
+    'A/B/E2/alpha'     : Item(contents="This is a changed 'alpha'.\n"),
+    'A/B/E2/beta'      : Item(contents="This is the file 'beta'.\n"),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/B/E', 'A/B/E/beta', status='D ')
+  expected_status.remove('A/B/E/alpha')
+  expected_status.add({
+    'A/B/E/alpha'       : Item(status='! ', treeconflict='C'),
+    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2/beta'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E2/alpha'      : Item(status='M ', copied='+', wc_rev='-'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1)
+
+def update_moved_dir_file_add(sbox):
+  "update locally moved dir with incoming file"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  foo_path = "A/B/E/foo"
+  foo_content = "This is the file 'foo'.\n"
+
+  svntest.main.file_write(sbox.ospath(foo_path), foo_content, 'wb')
+  sbox.simple_add(foo_path)
+  sbox.simple_commit()
+  # update to go back in time, before the last commit
+  svntest.main.run_svn(False, 'update', '-r', '1', wc_dir)
+  sbox.simple_move("A/B/E", "A/B/E2")
+
+  # the incoming file should auto-merge
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E2/foo' : Item(status='A '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
+  expected_disk.add({
+    'A/B/E2'           : Item(),
+    'A/B/E2/alpha'     : Item(contents="This is the file 'alpha'.\n"),
+    'A/B/E2/beta'      : Item(contents="This is the file 'beta'.\n"),
+    'A/B/E2/foo'       : Item(contents=foo_content),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.add({
+    'A/B/E/foo'         : Item(status='D ', wc_rev='2'),
+    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2/beta'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E2/alpha'      : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E2/foo'        : Item(status='A ', copied='+', wc_rev='-'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1)
+
+def update_moved_dir_dir_add(sbox):
+  "update locally moved dir with incoming dir"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  foo_path = "A/B/E/foo"
+  bar_path = "A/B/E/foo/bar"
+  bar_content = "This is the file 'bar'.\n"
+
+  sbox.simple_mkdir(foo_path)
+  svntest.main.file_write(sbox.ospath(bar_path), bar_content, 'wb')
+  sbox.simple_add(bar_path)
+  sbox.simple_commit()
+  # update to go back in time, before the last commit
+  svntest.main.run_svn(False, 'update', '-r', '1', wc_dir)
+  sbox.simple_move("A/B/E", "A/B/E2")
+
+  # the incoming file should auto-merge
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E2/foo'      : Item(status='A '),
+    'A/B/E2/foo/bar'  : Item(status='A '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
+  expected_disk.add({
+    'A/B/E2'           : Item(),
+    'A/B/E2/alpha'     : Item(contents="This is the file 'alpha'.\n"),
+    'A/B/E2/beta'      : Item(contents="This is the file 'beta'.\n"),
+    'A/B/E2/foo'       : Item(),
+    'A/B/E2/foo/bar'   : Item(contents=bar_content),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.add({
+    'A/B/E/foo'         : Item(status='D ', wc_rev='2'),
+    'A/B/E/foo/bar'     : Item(status='D ', wc_rev='2'),
+    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2/beta'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E2/alpha'      : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E2/foo'        : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2/foo/bar'    : Item(status='A ', copied='+', wc_rev='-'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1)
+
+@XFail()
+@Issue(4037)
+def update_moved_dir_file_move(sbox):
+  "update locally moved dir with incoming file move"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_move("A/B/E/alpha", "A/B/F/alpha")
+  sbox.simple_commit()
+  # update to go back in time, before the previous commit
+  svntest.main.run_svn(False, 'update', '-r', '1', wc_dir)
+  sbox.simple_move("A/B/E", "A/B/E2")
+
+  # The incoming move should auto-merge such that A/B/F/alpha appears
+  # as moved to A/B/E2/alpha -- this strategy prefers the local user's
+  # change as the solution to the conflict.
+  # ### Ideally, the user should be offered a set of alternative solutions.
+  # ### E.g. the user might prefer if A/B/E2/alpha disappeared and A/B/E/alpha
+  # ### appeared as moved to A/B/F/alpha. But the --accept option does not yet
+  # ### support tree conflicts.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E2/alpha' : Item(status='A '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
+  expected_disk.add({
+    'A/B/E2'           : Item(),
+    'A/B/E2/alpha'     : Item(contents="This is the file 'alpha'.\n"),
+    'A/B/E2/beta'      : Item(contents="This is the file 'beta'.\n"),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.add({
+    'A/B/F/alpha'       : Item(status='D '),
+    'A/B/E2'            : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2/alpha'      : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2/beta'       : Item(status='  ', copied='+', wc_rev='-'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1)
 
 #######################################################################
 # Run the tests
@@ -5471,6 +5677,11 @@ test_list = [ None,
               revive_children_of_copy,
               skip_access_denied,
               update_to_HEAD_plus_1,
+              update_moved_dir_leaf_del,
+              update_moved_dir_edited_leaf_del,
+              update_moved_dir_file_add,
+              update_moved_dir_dir_add,
+              update_moved_dir_file_move,
              ]
 
 if __name__ == '__main__':

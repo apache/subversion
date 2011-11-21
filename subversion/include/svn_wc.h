@@ -781,7 +781,7 @@ svn_wc_traversed_depths(apr_hash_t **depths,
  * canonicalized.
  *
  * In order to avoid backwards compatibility problems clients should use
- * svn_wc_external_item_create() to allocate and initialize this structure
+ * svn_wc_external_item2_create() to allocate and initialize this structure
  * instead of doing so themselves.
  *
  * @since New in 1.5.
@@ -822,8 +822,20 @@ typedef struct svn_wc_external_item2_t
  * The current implementation never returns error, but callers should
  * still check for error, for compatibility with future versions.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_wc_external_item2_create(svn_wc_external_item2_t **item,
+                             apr_pool_t *pool);
+
+/* Same as svn_wc_external_item2_create() except the pointer to the new
+ * empty item is 'const' which is stupid since the next thing you need to do
+ * is fill in its fields.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_external_item_create(const svn_wc_external_item2_t **item,
                             apr_pool_t *pool);
@@ -1207,7 +1219,7 @@ typedef enum svn_wc_notify_action_t
 
   /** The operation skipped the path because it was conflicted.
    * @since New in 1.7. */
-  svn_wc_notify_skip_conflicted,
+  svn_wc_notify_skip_conflicted
 
 } svn_wc_notify_action_t;
 
@@ -1271,7 +1283,7 @@ typedef enum svn_wc_notify_lock_state_t
  * @c kind, @c content_state, @c prop_state and @c lock_state are from
  * after @c action, not before.
  *
- * @note If @c action is #svn_wc_notify_update (### what?), then @c path has
+ * @note If @c action is #svn_wc_notify_update_completed, then @c path has
  * already been installed, so it is legitimate for an implementation of
  * #svn_wc_notify_func2_t to examine @c path in the working copy.
  *
@@ -1295,7 +1307,7 @@ typedef struct svn_wc_notify_t {
 
   /** Path, either absolute or relative to the current working directory
    * (i.e., not relative to an anchor).  @c path is "." or another valid path
-   * value for compatibility reasons when the real target is an url that
+   * value for compatibility reasons when the real target is a url that
    * is available in @c url. */
   const char *path;
 
@@ -1551,7 +1563,13 @@ typedef enum svn_wc_conflict_reason_t
   /** Object is already added or schedule-add. @since New in 1.6. */
   svn_wc_conflict_reason_added,
   /** Object is already replaced. @since New in 1.7. */
-  svn_wc_conflict_reason_replaced
+  svn_wc_conflict_reason_replaced,
+  /** Object is moved away. @since New in 1.8. */
+  svn_wc_conflict_reason_moved_away,
+  /** Object is moved away and was edited post-move. @since New in 1.8. */
+  svn_wc_conflict_reason_moved_away_and_edited,
+  /** Object is moved here. @since New in 1.8. */
+  svn_wc_conflict_reason_moved_here
 
 } svn_wc_conflict_reason_t;
 
@@ -2056,7 +2074,7 @@ svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
  *
  * The values #svn_wc_conflict_choose_mine_conflict and
  * #svn_wc_conflict_choose_theirs_conflict are not legal for conflicts
- * in binary files or properties.
+ * in binary files or binary properties.
  *
  * Implementations of this callback are free to present the conflict
  * using any user interface.  This may include simple contextual
@@ -3039,12 +3057,25 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
  */
 typedef struct svn_wc_info_t
 {
-  /* ### Do we still need schedule? */
+  /** The schedule of this item 
+   * ### Do we still need schedule? */
   svn_wc_schedule_t schedule;
+
+  /** If copied, the URL from which the copy was made, else @c NULL. */
   const char *copyfrom_url;
+
+  /** If copied, the revision from which the copy was made,
+   * else #SVN_INVALID_REVNUM. */
   svn_revnum_t copyfrom_rev;
+
+  /** The checksum of the node, if it is a file. */
   const svn_checksum_t *checksum;
+
+  /** A changelist the item is in, @c NULL if this node is not in a
+   * changelist. */
   const char *changelist;
+
+  /** The depth of the item, see #svn_depth_t */
   svn_depth_t depth;
 
   /**
@@ -3618,17 +3649,41 @@ typedef struct svn_wc_status3_t
   /** @} */
 
   /** Set to the local absolute path that this node was moved from, if this
-   * file or directory has been moved here locally. */
+   * file or directory has been moved here locally and is the root of that
+   * move. Otherwise set to NULL.
+   *
+   * This will be NULL for moved-here nodes that are just part of a subtree
+   * that was moved along (and are not themselves a root of a different move
+   * operation).
+   * 
+   * @since New in 1.8. */
   const char *moved_from_abspath;
 
   /** Set to the local absolute path that this node was moved to, if this file
-   * or directory has been moved away locally. */
+   * or directory has been moved away locally and corresponds to the root
+   * of the destination side of the move. Otherwise set to NULL.
+   *
+   * Note: Saying just "root" here could be misleading. For example:
+   *   svn mv A AA;
+   *   svn mv AA/B BB;
+   * creates a situation where A/B is moved-to BB, but one could argue that
+   * the move source's root actually was AA/B. Note that, as far as the
+   * working copy is concerned, above case is exactly identical to:
+   *   svn mv A/B BB;
+   *   svn mv A AA;
+   * In both situations, @a moved_to_abspath would be set for nodes A (moved
+   * to AA) and A/B (moved to BB), only.
+   *
+   * This will be NULL for moved-away nodes that were just part of a subtree
+   * that was moved along (and are not themselves a root of a different move
+   * operation).
+   *
+   * @since New in 1.8. */
   const char *moved_to_abspath;
 
-  /* If this file or directory has been moved away locally, set this to the
-   * local absolute path that was the root of the move-away, i.e. to the
-   * op-root of the delete-half of the move operation. */
-  const char *moved_to_op_root_abspath;
+  /* TRUE iff the item is a file brought in by an svn:externals definition.
+   * @since New in 1.8. */
+  svn_boolean_t file_external;
 
   /* NOTE! Please update svn_wc_dup_status3() when adding new fields here. */
 } svn_wc_status3_t;
@@ -6510,7 +6565,8 @@ typedef enum svn_wc_merge_outcome_t
  * control, then set @a *merge_outcome to #svn_wc_merge_no_merge and
  * return success without merging anything.  (The reasoning is that if
  * the file is not versioned, then it is probably unrelated to the
- * changes being considered, so they should not be merged into it.)
+ * changes being considered, so they should not be merged into it.
+ * Furtheremore, merging into an unversioned file is a lossy operation.)
  *
  * @a dry_run determines whether the working copy is modified.  When it
  * is @c FALSE the merge will cause @a target_abspath to be modified, when
@@ -6957,7 +7013,7 @@ typedef svn_error_t *(*svn_wc_relocation_validator3_t)(void *baton,
  * the @a root argument.
  *
  * If @a root is TRUE, then the implementation should make sure that @a url
- * is the repository root.  Else, it can be an URL inside the repository.
+ * is the repository root.  Else, it can be a URL inside the repository.
  *
  * @deprecated Provided for backwards compatibility with the 1.4 API.
  */

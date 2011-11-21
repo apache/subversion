@@ -574,19 +574,13 @@ svn_error_t *svn_ra_get_path_relative_to_session(svn_ra_session_t *session,
                                                  apr_pool_t *pool)
 {
   const char *sess_url;
+
   SVN_ERR(session->vtable->get_session_url(session, &sess_url, pool));
-  if (strcmp(sess_url, url) == 0)
-    {
-      *rel_path = "";
-    }
-  else
-    {
-      *rel_path = svn_uri__is_child(sess_url, url, pool);
-      if (! *rel_path)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("'%s' isn't a child of session URL '%s'"),
-                                 url, sess_url);
-    }
+  *rel_path = svn_uri_skip_ancestor(sess_url, url, pool);
+  if (! *rel_path)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("'%s' isn't a child of session URL '%s'"),
+                             url, sess_url);
   return SVN_NO_ERROR;
 }
 
@@ -596,21 +590,30 @@ svn_error_t *svn_ra_get_path_relative_to_root(svn_ra_session_t *session,
                                               apr_pool_t *pool)
 {
   const char *root_url;
-  SVN_ERR(session->vtable->get_repos_root(session, &root_url, pool));
-  if (strcmp(root_url, url) == 0)
-    {
-      *rel_path = "";
-    }
-  else
-    {
-      *rel_path = svn_uri__is_child(root_url, url, pool);
-      if (! *rel_path)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("'%s' isn't a child of repository root "
-                                   "URL '%s'"),
-                                 url, root_url);
-    }
 
+  SVN_ERR(session->vtable->get_repos_root(session, &root_url, pool));
+  *rel_path = svn_uri_skip_ancestor(root_url, url, pool);
+  if (! *rel_path)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("'%s' isn't a child of repository root "
+                               "URL '%s'"),
+                             url, root_url);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra__get_fspath_relative_to_root(svn_ra_session_t *ra_session,
+                                    const char **fspath,
+                                    const char *url,
+                                    apr_pool_t *pool)
+{
+  const char *relpath;
+
+  SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &relpath, url, pool));
+  if (*relpath)
+    *fspath = apr_pstrcat(pool, "/", relpath, (char *)NULL);
+  else
+    *fspath = "/";
   return SVN_NO_ERROR;
 }
 
@@ -770,14 +773,13 @@ svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
                                   path, revision, dirent_fields, pool);
 }
 
-svn_error_t *svn_ra_get_mergeinfo2(svn_ra_session_t *session,
-                                   svn_mergeinfo_catalog_t *catalog,
-                                   const apr_array_header_t *paths,
-                                   svn_revnum_t revision,
-                                   svn_mergeinfo_inheritance_t inherit,
-                                   svn_boolean_t validate_inherited_mergeinfo,
-                                   svn_boolean_t include_descendants,
-                                   apr_pool_t *pool)
+svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
+                                  svn_mergeinfo_catalog_t *catalog,
+                                  const apr_array_header_t *paths,
+                                  svn_revnum_t revision,
+                                  svn_mergeinfo_inheritance_t inherit,
+                                  svn_boolean_t include_descendants,
+                                  apr_pool_t *pool)
 {
   svn_error_t *err;
   int i;
@@ -799,7 +801,6 @@ svn_error_t *svn_ra_get_mergeinfo2(svn_ra_session_t *session,
 
   return session->vtable->get_mergeinfo(session, catalog, paths,
                                         revision, inherit,
-                                        validate_inherited_mergeinfo,
                                         include_descendants, pool);
 }
 
@@ -875,8 +876,6 @@ svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
                              void *diff_baton,
                              apr_pool_t *pool)
 {
-  SVN_ERR_ASSERT(svn_path_is_empty(diff_target)
-                 || svn_path_is_single_path_component(diff_target));
   return session->vtable->do_diff(session,
                                   reporter, report_baton,
                                   revision, diff_target,
@@ -1300,7 +1299,7 @@ svn_ra_print_ra_libraries(svn_stringbuf_t **descriptions,
                           void *ra_baton,
                           apr_pool_t *pool)
 {
-  *descriptions = svn_stringbuf_create("", pool);
+  *descriptions = svn_stringbuf_create_empty(pool);
   return svn_ra_print_modules(*descriptions, pool);
 }
 

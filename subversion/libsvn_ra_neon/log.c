@@ -365,7 +365,7 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
 
   int i;
   svn_ra_neon__session_t *ras = session->priv;
-  svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *request_body = svn_stringbuf_create_empty(pool);
   svn_boolean_t want_custom_revprops;
   struct log_baton lb;
   const char *bc_url;
@@ -491,7 +491,7 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
   lb.count = 0;
   lb.nest_level = 0;
   lb.limit_compat_bailout = FALSE;
-  lb.cdata = svn_stringbuf_create("", pool);
+  lb.cdata = svn_stringbuf_create_empty(pool);
   lb.log_entry = svn_log_entry_create(pool);
   lb.want_cdata = NULL;
   reset_log_item(&lb);

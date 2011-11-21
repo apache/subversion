@@ -257,13 +257,11 @@ getlocks_end_element(void *userdata, int state,
       else if ((baton->requested_depth == svn_depth_files) ||
                (baton->requested_depth == svn_depth_immediates))
         {
-          const char *rel_uri = svn_fspath__is_child(baton->path,
-                                                     baton->current_lock->path,
-                                                     baton->scratchpool);
+          const char *rel_uri = svn_fspath__skip_ancestor(
+                                  baton->path, baton->current_lock->path);
           if (rel_uri && (svn_path_component_count(rel_uri) == 1))
             apr_hash_set(baton->lock_hash, baton->current_lock->path,
                          APR_HASH_KEY_STRING, baton->current_lock);
-          svn_pool_clear(baton->scratchpool);
         }
       break;
 
@@ -389,7 +387,7 @@ svn_ra_neon__get_locks(svn_ra_session_t *session,
   baton.scratchpool = svn_pool_create(pool);
   baton.current_lock = NULL;
   baton.encoding = NULL;
-  baton.cdata_accum = svn_stringbuf_create("", pool);
+  baton.cdata_accum = svn_stringbuf_create_empty(pool);
 
   body = apr_psprintf(pool,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"

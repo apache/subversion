@@ -22,6 +22,7 @@
  */
 
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 
 #include "svn_types.h"
@@ -395,7 +396,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
       *eof = TRUE;
       if (eol)
         *eol = NULL;
-      *stringbuf = svn_stringbuf_create("", result_pool);
+      *stringbuf = svn_stringbuf_create_empty(result_pool);
       return SVN_NO_ERROR;
     }
 
@@ -489,7 +490,7 @@ svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
       *eof = TRUE;
       if (eol)
         *eol = NULL;
-      *stringbuf = svn_stringbuf_create("", result_pool);
+      *stringbuf = svn_stringbuf_create_empty(result_pool);
       return SVN_NO_ERROR;
     }
 
@@ -965,8 +966,8 @@ git_start(enum parse_state *new_state, char *line, svn_patch_t *patch,
 
   while (TRUE)
     {
-      int len_old;
-      int len_new;
+      ptrdiff_t len_old;
+      ptrdiff_t len_new;
 
       new_path_marker = strstr(new_path_start, " b/");
 

@@ -43,7 +43,7 @@ typedef enum prop_state_e {
   NONE = 0,
   RESPONSE,
   PROP,
-  PROPVAL,
+  PROPVAL
 } prop_state_e;
 
 typedef struct prop_info_t {

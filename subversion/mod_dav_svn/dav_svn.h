@@ -808,7 +808,8 @@ enum dav_svn__build_what {
   DAV_SVN__BUILD_URI_BC,         /* a Baseline Collection */
   DAV_SVN__BUILD_URI_PUBLIC,     /* the "public" VCR */
   DAV_SVN__BUILD_URI_VERSION,    /* a Version Resource */
-  DAV_SVN__BUILD_URI_VCC         /* a Version Controlled Configuration */
+  DAV_SVN__BUILD_URI_VCC,        /* a Version Controlled Configuration */
+  DAV_SVN__BUILD_URI_REVROOT     /* HTTPv2: Revision Root resource */
 };
 
 const char *

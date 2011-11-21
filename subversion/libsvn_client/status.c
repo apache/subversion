@@ -85,12 +85,23 @@ tweak_status(void *baton,
   /* If the status item has an entry, but doesn't belong to one of the
      changelists our caller is interested in, we filter out this status
      transmission.  */
-  if (sb->changelist_hash
-      && (! status->changelist
-          || ! apr_hash_get(sb->changelist_hash, status->changelist,
-                            APR_HASH_KEY_STRING)))
+  /* ### duplicated in ../libsvn_wc/diff_local.c */
+  if (sb->changelist_hash)
     {
-      return SVN_NO_ERROR;
+      if (status->changelist)
+        {
+          /* Skip unless the caller requested this changelist. */
+          if (! apr_hash_get(sb->changelist_hash, status->changelist,
+                             APR_HASH_KEY_STRING))
+            return SVN_NO_ERROR;
+        }
+      else
+        {
+          /* Skip unless the caller requested changelist-lacking items. */
+          if (! apr_hash_get(sb->changelist_hash, "",
+                             APR_HASH_KEY_STRING))
+            return SVN_NO_ERROR;
+        }
     }
 
   /* If we know that the target was deleted in HEAD of the repository,
@@ -419,7 +430,7 @@ svn_client_status5(svn_revnum_t *result_rev,
                                                       pool));
             }
 
-          if (depth_as_sticky)
+          if (depth_as_sticky || !server_supports_depth)
             status_depth = depth;
           else
             status_depth = svn_depth_unknown; /* Use depth from WC */
@@ -570,10 +581,6 @@ svn_client_status_dup(const svn_client_status_t *status,
   if (status->moved_to_abspath)
     st->moved_to_abspath = apr_pstrdup(result_pool, status->moved_to_abspath);
 
-  if (status->moved_to_op_root_abspath)
-    st->moved_to_op_root_abspath =
-      apr_pstrdup(result_pool, status->moved_to_op_root_abspath);
-
   return st;
 }
 
@@ -613,27 +620,12 @@ svn_client__create_status(svn_client_status_t **cst,
   (*cst)->repos_relpath = status->repos_relpath;
 
   (*cst)->switched = status->switched;
-  (*cst)->file_external = FALSE;
 
-  if (/* Old style file-externals */
-      (status->versioned
-       && status->switched
-       && status->kind == svn_node_file))
+  (*cst)->file_external = status->file_external;
+  if (status->file_external)
     {
-      svn_node_kind_t external_kind;
-
-      SVN_ERR(svn_wc__read_external_info(&external_kind, NULL, NULL, NULL,
-                                         NULL, wc_ctx,
-                                         local_abspath /* wri_abspath */,
-                                         local_abspath, TRUE,
-                                         scratch_pool, scratch_pool));
-
-      if (external_kind == svn_node_file)
-        {
-          (*cst)->file_external = TRUE;
-          (*cst)->switched = FALSE;
-          (*cst)->node_status = (*cst)->text_status;
-        }
+      (*cst)->switched = FALSE;
+      (*cst)->node_status = (*cst)->text_status;
     }
 
   (*cst)->lock = status->lock;
@@ -680,7 +672,6 @@ svn_client__create_status(svn_client_status_t **cst,
 
   (*cst)->moved_from_abspath = status->moved_from_abspath;
   (*cst)->moved_to_abspath = status->moved_to_abspath;
-  (*cst)->moved_to_op_root_abspath = status->moved_to_op_root_abspath;
 
   return SVN_NO_ERROR;
 }

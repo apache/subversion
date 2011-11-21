@@ -2028,6 +2028,71 @@ def log_on_nonexistent_path_and_valid_rev(sbox):
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'log', '-q', bad_path_default_rev)
 
+#----------------------------------------------------------------------
+# Test for issue #4022 'svn log -g interprets change in inherited mergeinfo
+# due to move as a merge'.
+@Issue(4022)
+def merge_sensitive_log_copied_path_inherited_mergeinfo(sbox):
+  "log -g on copied path with inherited mergeinfo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox, branch_only=True)
+
+  A_path          = os.path.join(wc_dir, 'A')
+  gamma_COPY_path = os.path.join(wc_dir, 'A_COPY', 'D', 'gamma')
+  old_gamma_path  = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  new_gamma_path  = os.path.join(wc_dir, 'A', 'C', 'gamma')
+
+  # r3 - Modify a file (A_COPY/D/gamma) on the branch
+  svntest.main.file_write(gamma_COPY_path, "Branch edit.\n")
+  svntest.main.run_svn(None, 'ci', '-m', 'Branch edit', wc_dir)
+
+  # r4 - Reintegrate A_COPY to A
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge', '--reintegrate',
+                       sbox.repo_url + '/A_COPY', A_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'Reintegrate A_COPY to A', wc_dir)
+
+  # r5 - Move file modified by reintegrate (A/D/gamma to A/C/gamma).
+  svntest.main.run_svn(None, 'move', old_gamma_path, new_gamma_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'Move file', wc_dir)
+
+  # 'svn log -g --stop-on-copy ^/A/C/gamma' hould return *only* r5
+  # Previously this test failed because the change in gamma's inherited
+  # mergeinfo between r4 and r5, due to the move, was understood as a merge:
+  #
+  #   >svn log -v -g --stop-on-copy ^^/A/C/gamma
+  #   ------------------------------------------------------------------------
+  #   r5 | jrandom | 2011-10-11 14:37:57 -0700 (Tue, 11 Oct 2011) | 1 line  #
+  #   Changed paths:
+  #      A /A/C/gamma (from /A/D/gamma:4)
+  #      D /A/D/gamma
+  #
+  #   Move file
+  #   ------------------------------------------------------------------------
+  #   r3 | jrandom | 2011-10-11 14:37:56 -0700 (Tue, 11 Oct 2011) | 1 line
+  #   Changed paths:
+  #      M /A_COPY/D/gamma
+  #   Reverse merged via: r5
+  #
+  #   Branch edit
+  #   ------------------------------------------------------------------------
+  #   r2 | jrandom | 2011-10-11 14:37:56 -0700 (Tue, 11 Oct 2011) | 1 line
+  #   Changed paths:
+  #      A /A_COPY (from /A:1)
+  #   Reverse merged via: r5
+  #
+  #   log msg
+  #   ------------------------------------------------------------------------
+  expected_merges = {5  : []}
+  svntest.main.run_svn(None, 'up', wc_dir)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-g', '--stop-on-copy',
+    sbox.repo_url + '/A/C/gamma')
+  log_chain = parse_log_output(out)
+  check_merge_results(log_chain, expected_merges)
+
 ########################################################################
 # Run the tests
 
@@ -2067,6 +2132,7 @@ test_list = [ None,
               merge_sensitive_log_ignores_cyclic_merges,
               log_with_unrelated_peg_and_operative_revs,
               log_on_nonexistent_path_and_valid_rev,
+              merge_sensitive_log_copied_path_inherited_mergeinfo,
              ]
 
 if __name__ == '__main__':

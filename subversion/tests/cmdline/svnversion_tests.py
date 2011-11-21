@@ -147,7 +147,8 @@ def svnversion_test(sbox):
   X_path = os.path.join(wc_dir, 'Q', 'X')
   svntest.actions.run_and_verify_svnversion("Nonexistent file or directory",
                                             X_path, repo_url,
-                                            None, [ "'%s' doesn't exist\n" % X_path ])
+                                            None, [ "'%s' doesn't exist\n"
+                                                   % os.path.abspath(X_path) ])
 
   # Perform a sparse checkout of under the existing WC, and confirm that
   # svnversion detects it as a "partial" WC.
@@ -287,9 +288,8 @@ def svnversion_with_structural_changes(sbox):
   svntest.actions.run_and_verify_svnversion("Deleted file",
                                             sbox.ospath('iota'),
                                             repo_url + '/iota',
+                                            ["1M\n"],
                                             [],
-                                            [ "'%s' doesn't exist\n" % \
-                                              sbox.ospath('iota')],
                                             )
   svntest.actions.run_and_verify_svnversion("Deleted file", wc_dir, repo_url,
                                             [ "1:2M\n" ], [])

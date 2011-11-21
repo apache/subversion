@@ -114,8 +114,8 @@ check_root_url_of_target(const char **root_url,
   if (!svn_path_is_url(truepath))
     SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, pool));
 
-  err =  svn_client__get_repos_root(&tmp_root_url, truepath,
-                                    ctx, pool, pool);
+  err = svn_client_get_repos_root(&tmp_root_url, NULL, truepath,
+                                  ctx, pool, pool);
 
   if (err)
     {
@@ -125,7 +125,7 @@ check_root_url_of_target(const char **root_url,
        *
        * If the target itself is a URL to a repository that does not exist,
        * that's fine, too. The callers will deal with this argument in an
-       * appropriate manter if it does not make any sense.
+       * appropriate manner if it does not make any sense.
        *
        * Also tolerate locally added targets ("bad revision" error).
        */
@@ -142,7 +142,7 @@ check_root_url_of_target(const char **root_url,
         return svn_error_trace(err);
      }
 
-   if (*root_url != NULL)
+   if (*root_url && tmp_root_url)
      {
        if (strcmp(*root_url, tmp_root_url) != 0)
          return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -347,7 +347,11 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
        */
       if (root_url == NULL)
         {
-          err = svn_client_root_url_from_path(&root_url, "", ctx, pool);
+          const char *current_abspath;
+
+          SVN_ERR(svn_dirent_get_absolute(&current_abspath, "", pool));
+          err = svn_client_get_repos_root(&root_url, NULL /* uuid */,
+                                          current_abspath, ctx, pool, pool);
           if (err || root_url == NULL)
             return svn_error_create(SVN_ERR_WC_NOT_WORKING_COPY, err,
                                     _("Resolving '^/': no repository root "

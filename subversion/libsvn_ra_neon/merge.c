@@ -259,7 +259,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
     }
 
   /* a collection or regular resource */
-  if (! svn_urlpath__is_ancestor(mc->base_href, mc->href->data))
+  if (! svn_urlpath__skip_ancestor(mc->base_href, mc->href->data))
     {
       /* ### need something better than APR_EGENERAL */
       return svn_error_createf(APR_EGENERAL, NULL,
@@ -269,9 +269,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
     }
 
   /* given HREF of the form: BASE "/" RELATIVE, extract the relative portion */
-  relative = svn_urlpath__is_child(mc->base_href, mc->href->data, NULL);
-  if (! relative) /* the paths are equal */
-    relative = "";
+  relative = svn_urlpath__skip_ancestor(mc->base_href, mc->href->data);
 
   /* bump the resource */
   relative = svn_path_uri_decode(relative, pool);
@@ -704,9 +702,9 @@ svn_error_t * svn_ra_neon__merge_activity(svn_revnum_t *new_rev,
   merge_ctx_t mc = { 0 };
   const char *body;
   apr_hash_t *extra_headers = NULL;
-  svn_stringbuf_t *lockbuf = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *lockbuf = svn_stringbuf_create_empty(pool);
 
-  mc.cdata = svn_stringbuf_create("", pool);
+  mc.cdata = svn_stringbuf_create_empty(pool);
   mc.pool = pool;
   mc.scratchpool = svn_pool_create(pool);
   mc.base_href = repos_url;

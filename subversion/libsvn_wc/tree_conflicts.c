@@ -76,6 +76,9 @@ const svn_token_map_t svn_wc__conflict_reason_map[] =
   { "added",       svn_wc_conflict_reason_added },
   { "replaced",    svn_wc_conflict_reason_replaced },
   { "unversioned", svn_wc_conflict_reason_unversioned },
+  { "moved-away", svn_wc_conflict_reason_moved_away },
+  { "moved-away-and-edited", svn_wc_conflict_reason_moved_away_and_edited },
+  { "moved-here", svn_wc_conflict_reason_moved_here },
   { NULL }
 };
 
@@ -363,7 +366,7 @@ svn_wc__serialize_conflict(svn_skel_t **skel,
 
   /* Victim path (escaping separator chars). */
   victim_basename = svn_dirent_basename(conflict->local_abspath, result_pool);
-  SVN_ERR_ASSERT(strlen(victim_basename) > 0);
+  SVN_ERR_ASSERT(victim_basename[0]);
   svn_skel__prepend(svn_skel__str_atom(victim_basename, result_pool), c_skel);
 
   svn_skel__prepend(svn_skel__str_atom("conflict", result_pool), c_skel);

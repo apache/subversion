@@ -402,13 +402,19 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
    If COMMIT_RELPATH is not NULL, treat not-added nodes as if it is destined to
    be added as COMMIT_RELPATH, and add 'deleted' entries to COMMITTABLES as
    items to delete in the copy destination.  COPY_MODE_ROOT should be set TRUE
-   for the first call for which COPY_MODE is TRUE, i.e. not for for the
+   for the first call for which COPY_MODE is TRUE, i.e. not for the
    recursive calls, and FALSE otherwise.
 
    If CHANGELISTS is non-NULL, it is a hash whose keys are const char *
    changelist names used as a restrictive filter
    when harvesting committables; that is, don't add a path to
    COMMITTABLES unless it's a member of one of those changelists.
+
+   IS_EXPLICIT_TARGET should always be passed as TRUE, except when
+   harvest_committables() calls itself in recursion. This provides a way to
+   tell whether LOCAL_ABSPATH was an original target or whether it was reached
+   by recursing deeper into a dir target. (This is used to skip all file
+   externals that aren't explicit commit targets.)
 
    If CANCEL_FUNC is non-null, call it with CANCEL_BATON to see
    if the user has cancelled the operation.
@@ -428,6 +434,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
                      apr_hash_t *changelists,
                      svn_boolean_t skip_files,
                      svn_boolean_t skip_dirs,
+                     svn_boolean_t is_explicit_target,
                      svn_client__check_url_kind_t check_url_func,
                      void *check_url_baton,
                      svn_cancel_func_t cancel_func,
@@ -543,12 +550,26 @@ harvest_committables(svn_wc_context_t *wc_ctx,
          svn_dirent_local_style(local_abspath, scratch_pool));
     }
 
-  if (copy_mode
-      && is_update_root
-      && db_kind == svn_node_file)
+  /* Handle file externals.
+   * (IS_UPDATE_ROOT is more generally defined, but at the moment this
+   * condition matches only file externals.)
+   *
+   * Don't copy files that svn:externals brought into the WC. So in copy_mode,
+   * even explicit targets are skipped.
+   *
+   * Exclude file externals from recursion. Hande file externals only when
+   * passed as explicit target. Note that svn_client_commit6() passes all
+   * committable externals in as explicit targets iff they count.
+   *
+   * Also note that dir externals will never be reached recursively by this
+   * function, since svn_wc__node_get_children_of_working_node() (used below
+   * to recurse) does not return switched subdirs. */
+  if (is_update_root
+      && db_kind == svn_node_file
+      && (copy_mode
+          || ! is_explicit_target))
     {
-      if (copy_mode)
-        return SVN_NO_ERROR;
+      return SVN_NO_ERROR;
     }
 
   /* If NODE is in our changelist, then examine it for conflicts. We
@@ -841,6 +862,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
                                        changelists,
                                        (depth < svn_depth_files),
                                        (depth < svn_depth_immediates),
+                                       FALSE, /* IS_EXPLICIT_TARGET */
                                        check_url_func, check_url_baton,
                                        cancel_func, cancel_baton,
                                        notify_func, notify_baton,
@@ -1125,6 +1147,7 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
                                    FALSE /* COPY_MODE_ROOT */,
                                    depth, just_locked, changelist_hash,
                                    FALSE, FALSE,
+                                   TRUE /* IS_EXPLICIT_TARGET */,
                                    check_url_func, check_url_baton,
                                    ctx->cancel_func, ctx->cancel_baton,
                                    ctx->notify_func2, ctx->notify_baton2,
@@ -1218,6 +1241,7 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
                                FALSE,  /* JUST_LOCKED */
                                NULL,
                                FALSE, FALSE, /* skip files, dirs */
+                               TRUE, /* IS_EXPLICIT_TARGET (don't care) */
                                btn->check_url_func,
                                btn->check_url_baton,
                                btn->ctx->cancel_func,
@@ -1341,14 +1365,9 @@ svn_client__condense_commit_items(const char **base_url,
     {
       svn_client_commit_item3_t *this_item
         = APR_ARRAY_IDX(ci, i, svn_client_commit_item3_t *);
-      size_t url_len = strlen(this_item->url);
-      size_t base_url_len = strlen(*base_url);
 
-      if (url_len > base_url_len)
-        this_item->session_relpath = svn_uri__is_child(*base_url,
-                                                       this_item->url, pool);
-      else
-        this_item->session_relpath = "";
+      this_item->session_relpath = svn_uri_skip_ancestor(*base_url,
+                                                         this_item->url, pool);
     }
 #ifdef SVN_CLIENT_COMMIT_DEBUG
   /* ### TEMPORARY CODE ### */

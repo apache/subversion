@@ -1179,15 +1179,13 @@ optbool_to_tristate(apr_uint64_t v)
 
 /* If REVISION is SVN_INVALID_REVNUM, no value is sent to the
    server, which defaults to youngest. */
-static svn_error_t *ra_svn_get_mergeinfo(
-  svn_ra_session_t *session,
-  svn_mergeinfo_catalog_t *catalog,
-  const apr_array_header_t *paths,
-  svn_revnum_t revision,
-  svn_mergeinfo_inheritance_t inherit,
-  svn_boolean_t validate_inherited_mergeinfo,
-  svn_boolean_t include_descendants,
-  apr_pool_t *pool)
+static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
+                                         svn_mergeinfo_catalog_t *catalog,
+                                         const apr_array_header_t *paths,
+                                         svn_revnum_t revision,
+                                         svn_mergeinfo_inheritance_t inherit,
+                                         svn_boolean_t include_descendants,
+                                         apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
@@ -1202,10 +1200,9 @@ static svn_error_t *ra_svn_get_mergeinfo(
       path = APR_ARRAY_IDX(paths, i, const char *);
       SVN_ERR(svn_ra_svn_write_cstring(conn, pool, path));
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)wbb)", revision,
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)wb)", revision,
                                  svn_inheritance_to_word(inherit),
-                                 include_descendants,
-                                 validate_inherited_mergeinfo));
+                                 include_descendants));
 
   SVN_ERR(handle_auth_request(sess_baton, pool));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l", &mergeinfo_tuple));
@@ -2279,19 +2276,12 @@ static svn_error_t *path_relative_to_root(svn_ra_session_t *session,
   const char *root_url;
 
   SVN_ERR(ra_svn_get_repos_root(session, &root_url, pool));
-  if (strcmp(root_url, url) == 0)
-    {
-      *rel_path = "";
-    }
-  else
-    {
-      *rel_path = svn_uri__is_child(root_url, url, pool);
-      if (! *rel_path)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("'%s' isn't a child of repository root "
-                                   "URL '%s'"),
-                                 url, root_url);
-    }
+  *rel_path = svn_uri_skip_ancestor(root_url, url, pool);
+  if (! *rel_path)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("'%s' isn't a child of repository root "
+                               "URL '%s'"),
+                             url, root_url);
   return SVN_NO_ERROR;
 }
 
@@ -2350,7 +2340,7 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
         }
       else if ((depth == svn_depth_files) || (depth == svn_depth_immediates))
         {
-          const char *relpath = svn_fspath__is_child(abs_path, lock->path, pool);
+          const char *relpath = svn_fspath__skip_ancestor(abs_path, lock->path);
           if (relpath && (svn_path_component_count(relpath) == 1))
             apr_hash_set(*locks, lock->path, APR_HASH_KEY_STRING, lock);
         }
@@ -2466,10 +2456,6 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
     *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_DEPTH);
   else if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
     *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_MERGEINFO);
-  else if (strcmp(capability,
-                  SVN_RA_SVN_CAP_VALIDATE_INHERITED_MERGEINFO) == 0)
-    *has = svn_ra_svn_has_capability(
-      sess->conn, SVN_RA_SVN_CAP_VALIDATE_INHERITED_MERGEINFO);
   else if (strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0)
     *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_LOG_REVPROPS);
   else if (strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0)

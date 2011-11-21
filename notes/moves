@@ -1,20 +1,20 @@
 
- =========================================================================
- This file sketches ideas about how we could improve move support in wc-ng
- =========================================================================
+ =======================
+ Moves in Subversion 1.8
+ =======================
 
 This file purposefully talks about 'moves' rather than 'renames'.
 This isn't about true renames as requested in issue #898.
-Rather, these ideas keep the add+delete concept while trying to make
-moves behave more in a way that one would expect if true renames were
-implemented, as requested in issue #3631.
+Rather, we keep the add+delete concept while trying to make moves behave
+more in a way that one would expect if true renames were implemented,
+as requested in issue #3631. See also the umbrella issue #3630.
 
-These ideas only cover local (client-side) moves in the working copy.
-They attempt to reuse as much existing code as possible, so new
-functionality will be implemented as part of existing copy/delete
-code paths unless doing so is not feasible.
+So far the changes only cover local (client-side) moves in the working copy.
+We reuse as much existing code as possible, so new functionality is
+implemented as part of existing copy/delete code paths unless doing
+so is not feasible.
 
-One significant change from how copies work is that moves will be tracked
+One significant change from how copies work is that moves are tracked
 both ways, i.e. one can locate the add-half of a move if given the
 delete-half, and locate the delete-half if given the add-half.
 
@@ -30,17 +30,17 @@ The goals are:
     when talking to the server.
 
 
-
 Notes regarding specific layers of Subversion follow below.
 
 
 == wc.db ==
 
-There already exist columns in the NODES table we use to differentiate
+The following columns in the NODES table are used to differentiate
 moves from copies:
 
   /* Boolean value, specifying if this node was moved here (rather than just
-     copied). The source of the move is specified in copyfrom_*.  */
+     copied). The source of the move is implied by a different node with
+     a moved_to column pointing at this node. */
   moved_here  INTEGER,
 
   /* If the underlying node was moved away (rather than just deleted), this
@@ -48,30 +48,39 @@ moves from copies:
      This is set only on the root of a move, and is NULL for all children.
 
      Note that moved_to never refers to *this* node. It always refers
-     to the "underlying" node, whether that is BASE or a child node
-     implied from a parent's move/copy.  */
+     to the "underlying" node in the BASE tree. A non-NULL moved_to column
+     is only valid in rows where op_depth == 0. */
   moved_to  TEXT,
 
-These will be used as described in their docstrings.
+Some new queries were added which use these columns:
+
+  STMT_SELECT_MOVED_FROM_RELPATH
+  STMT_UPDATE_MOVED_TO_RELPATH
+  STMT_CLEAR_MOVED_TO_RELPATH
+  STMT_CLEAR_MOVED_TO_RELPATH_RECURSIVE
+  STMT_SELECT_MOVED_HERE_CHILDREN
+
+More queries might be needed (TBD).
 
 
 == libsvn_wc ==
 
-Various wc_db and svn_wc interfaces will be extended for moves.
-New interfaces will be modeled after (and share code with) their
-existing copy or delete equivalents as much as possible.
-See r1146119 for an example of how existing code will be reused.
-
-Some existing interfaces will be extended, e.g. the _scan_addition()
-and _scan_deletion() interfaces will be extended to differentiate
+In the internal wc_db API, the _scan_addition() and _scan_deletion()
+interfaces were extended to make use of new DB queries to differentiate
 moved nodes from copied, added, and deleted nodes.
 
-### gstein: note that scan_addition() already returns status_moved_here,
-###   and scan_deletion() returns a MOVED_TO_ABSPATH. these functions
-###   should already do what you're asking (with bitrot and "untested"
-###   caveats since I first implemented them).
+Two functions were built on top of the wc_db API and added to the
+private libsvn_wc API:
+  svn_wc__node_was_moved_away() provides, for a given local_abspath:
+    - the moved_to abspath within the working copy
+    - the abspath of the op-root of the copy operation that created
+      the node at the moved_to abspath
+  svn_wc__node_was_moved_here() provides, for a given local_abspath:
+    - the moved_from abspath within the working copy
+    - the abspath of the op-root of the delete operation that deleted
+      the node at the moved_from abspath
 
-There might be some public API changes (TBD).
+More API changes might be needed (TBD).
 
 We might require a working copy upgrade when going from 1.7 to 1.8,
 and only allow new move functionality to be used with 1.8 working copies.
@@ -79,40 +88,51 @@ and only allow new move functionality to be used with 1.8 working copies.
 
 == libsvn_client ==
 
-This layer already uses existing svn_wc move APIs. For those callers
-APIs changes will hopefully be fairly transparent, apart from changes
-that enhance behaviour of move operations.
+This layer already uses 1.7 and earlier svn_wc move APIs. For callers
+of such APIs, changes will hopefully be fairly transparent apart from
+changes that enhance behaviour of move operations.
 
-Some code that is expected to change behaviour:
+Interfaces which have changed behaviour:
 
- - commit: Commit will refuse to commit anything if only one half of
-    a move appears in the commit target list, or if only one half of
-    a move is picked up by recursion.
+ svn_client_commit: Commit will refuse to commit anything if only one
+   half of a move appears in the commit target list, or if only one half of
+   a move is picked up by recursion.
 
- - revert: Revert will by default revert both nodes involved in a move,
-    independent of which half of the move is mentioned in the revert
-    target list. If only one half of a move is picked up by recursion,
-    revert will refuse to revert anything.
-    If the delete-half has been replaced by another node after
-    it has been deleted, revert will require both the add and delete
-    half to appear in the revert target list or be picked up by recursion
-    (i.e. the node replacing the delete-half has to be reverted explicitly
-     or via recursion).
+ svn_client_revert: The behaviour of this API is not changed, but it
+   is worth noting how it behaves for moves:
+   - If both halves of a move are among the revert targets (either by
+     virtue of being listed explicitly, or by being picked up during
+     recursion), the entire move is reverted.
+   - If only one half of a move is among the revert targets, the other
+     half will be transformed into a normal copy or delete.
+     See http://svn.haxx.se/dev/archive-2011-08/0239.shtml for rationale.
 
- - status: Status will provide information about both halfs of a move,
-    in a way that allows the user to tell that both halfs belong to
-    the same move operation.
+ - svn_client_status: Status provides the moved-to abspath for a moved-away
+     nodes, and the moved-from abspath for a moved-here node.
+     Note that, mostly due to performance reasons, only information about
+     roots of moves is provided. Children of moved nodes aren't marked as such.
 
- - update/merge: Update and Merge will use move information to auto-resolve
-    the "local move vs. incoming edit" tree conflict scenario.
+ - svn_client_info: Like status, except that it also provides move
+     information about children of moved nodes.
 
- - diff: Diff will use move information to generate 'rename from' headers
-    when the --git option is used.
+ - svn_client_patch: Patch uses move information to apply changes to files
+     which have been moved locally.
 
- - patch: Patch will use move information to apply changes to files
-    which have been moved locally.
+ - svn_client_update/svn_client_merge: Update and Merge use move
+    information to auto-resolve the "local move vs. incoming edit"
+    tree conflict scenario.
 
-Several public APIs may be bumped as their behaviour changes.
+Interfaces which have not changed behaviour yet but might change in 1.8.0:
+
+ - svn_client_update/svn_client_merge: Update and Merge might use move
+    information to auto-resolve some additional tree conflict scenarios.
+
+ - diff: Diff might use move information to generate 'rename from' headers
+    when the --git option is used. (A related problem is making diff use
+    correct copyfrom in repos-repos diffs, which is not trivial.)
+
+Several public APIs may still be bumped as their behaviour changes.
+
 For backwards compatibility, APIs released prior to 1.8 will continue
 to treat moves just like 1.7 and earlier releases did. (However, see
 also the note on working copy upgrades above, which might affect to
@@ -121,15 +141,15 @@ what degree the APIs need to stay compatible.)
 
 == svn ==
 
-The svn client will present moves similar to but distinct from copy
-operations. E.g. it might show moves like this:
+The svn client presents moves similar to but distinct from copy operations. 
+
+svn status shows move roots:
 
 $ svn status
 A  +    foo
-   > moved from 'bar'
+        > moved from 'bar'
 D       bar
-   > moved to 'foo'
+        > moved to 'foo'
 $
 
-(If the above is done, we should also show copyfrom for normal copies
-this way, but as "copied from '%s'")
+svn info shows additional Moved-To: and Moved-From: lines for any moved node.

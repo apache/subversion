@@ -42,6 +42,7 @@ Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 
 from merge_tests import set_up_branch
+from merge_tests import expected_merge_output
 
 # 'svn resolve --accept [ base | mine-full | theirs-full ]' was segfaulting
 # on 1.6.x.  Prior to this test, the bug was only caught by the Ruby binding
@@ -69,12 +70,10 @@ def automatic_conflict_resolution(sbox):
                                        'revert', '--recursive', A_COPY_path)
     svntest.actions.run_and_verify_svn(
       None,
-      "(--- Merging r3 into .*A_COPY':\n)|"
-      "(C    .*psi\n)|"
-      "(--- Recording mergeinfo for merge of r3 into .*A_COPY':\n)|"
-      "( U   .*A_COPY\n)|"
-      "(Summary of conflicts:\n)|"
-      "(  Text conflicts: 1\n)",
+      expected_merge_output([[3]], [
+        "C    %s\n" % psi_COPY_path,
+        " U   %s\n" % A_COPY_path],
+        target=A_COPY_path, text_conflicts=1),
       [], 'merge', '-c3', '--allow-mixed-revisions',
       sbox.repo_url + '/A',
       A_COPY_path)
@@ -196,7 +195,7 @@ def prop_conflict_resolution(sbox):
     # Update, postponing all conflict resolution.
     svntest.actions.run_and_verify_svn(None, None, [], 'up',
                                        '--accept=postpone', wc_dir)
-    svntest.actions.run_and_verify_resolve([iota_path, mu_path, gamma_path], '-R',
+    svntest.actions.run_and_verify_resolve([iota_path, mu_path], '-R',
                                            '--accept', resolve_accept, wc_dir)
     svntest.actions.run_and_verify_svn(
       'svn revolve -R --accept=' + resolve_accept + ' of prop conflict '

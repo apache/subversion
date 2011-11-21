@@ -298,6 +298,10 @@ else
 THREADS_FLAG=--disable-threads
 endif
 
+ifdef POOL_DEBUG
+POOL_DEBUG_FLAG=--enable-pool-debug=all
+endif
+
 # configure apr
 $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved
 	cp $(APR_SRCDIR)/build/apr_hints.m4 \
@@ -311,7 +315,8 @@ $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved
 		$(APR_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--enable-maintainer-mode \
-		$(THREADS_FLAG)
+		$(THREADS_FLAG) \
+		$(POOL_DEBUG_FLAG)
 	touch $@
 
 # compile apr
@@ -1032,7 +1037,10 @@ $(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST)
 	chmod +x $(PYTHON_SRCDIR)/setup.py
 	# Fixes shared library linking on OpenBSD
 	# http://bugs.python.org/issue12560
+	# Also fix compilation error on OpenBSD 5.0 and later (undefined
+	# reference to 'lstat' -- already fixed in hg.python.org/cpython).
 	sed -e '4930s#NetBSD\*|#NetBSD*|OpenBSD*|#' \
+	 	-e 's#OpenBSD/4\.\[789\]#OpenBSD/*#' \
 		< $(PYTHON_SRCDIR)/configure \
 		> $(PYTHON_SRCDIR)/configure.patched
 	mv $(PYTHON_SRCDIR)/configure.patched $(PYTHON_SRCDIR)/configure
@@ -1223,7 +1231,17 @@ $(SVN_OBJDIR)/.installed: $(SVN_OBJDIR)/.compiled
 		&& make install
 	touch $@
 
-$(SVN_OBJDIR)/.bindings-compiled: $(SVN_OBJDIR)/.installed
+# SWIG 1.x and 2.x are not compatible. If SWIG 2.x is used to generated .swg
+# files and 1.x is used to build the bindings, the Python bindings fail to
+# load with errors such as "undefined symbol 'SWIG_Python_str_AsChar'".
+# So clean any pre-generated .swg files to make sure everything is done
+# by the same version of SWIG.
+$(SVN_OBJDIR)/.pre-generated-swig-cleaned:
+	-cd $(svn_builddir) \
+		&& make extraclean-swig
+	touch $@
+
+$(SVN_OBJDIR)/.bindings-compiled: $(SVN_OBJDIR)/.installed $(SVN_OBJDIR)/.pre-generated-swig-cleaned
 	cd $(svn_builddir) \
 		&& env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 			make swig-py
@@ -1504,3 +1522,9 @@ ifeq ($(ENABLE_JAVA_BINDINGS),yes)
 endif
 	@echo ""
 	@echo "Signatures:"
+	@echo
+	@echo "subversion-$(TAG).tar.gz"
+	@echo "`cat subversion-$(TAG).tar.gz.asc`" 
+	@echo
+	@echo "subversion-$(TAG).tar.bz2"
+	@echo "`cat subversion-$(TAG).tar.bz2.asc`" 

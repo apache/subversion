@@ -154,7 +154,7 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
-     * Lists the directory entries of an url on the server.
+     * Lists the directory entries of a url on the server.
      * @param url       the url to list
      * @param revision  the revision to list
      * @param recurse   recurse into subdirectories
@@ -167,7 +167,7 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
-     * Lists the directory entries of an url on the server.
+     * Lists the directory entries of a url on the server.
      * @param url       the url to list
      * @param revision  the revision to list
      * @param pegRevision the revision to interpret url
@@ -182,7 +182,7 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
-     * Lists the directory entries of an url on the server.
+     * Lists the directory entries of a url on the server.
      * @param url             the url to list
      * @param revision        the revision to list
      * @param pegRevision     the revision to interpret url
@@ -707,7 +707,7 @@ public interface SVNClientInterface
      *
      * @param srcPath   source path or url
      * @param destPath  destination path or url
-     * @param message   commit message if destPath is an url
+     * @param message   commit message if destPath is a url
      * @param revision  source revision
      * @throws ClientException
      * @deprecated Use {@link #copy(CopySource[], String, String, boolean,
@@ -754,7 +754,7 @@ public interface SVNClientInterface
      *
      * @param srcPath   source path or url
      * @param destPath  destination path or url
-     * @param message   commit message if destPath is an url
+     * @param message   commit message if destPath is a url
      * @param force     even with local modifications.
      * @throws ClientException
      * @deprecated Use {@link #move(String[], String, String, boolean, boolean,

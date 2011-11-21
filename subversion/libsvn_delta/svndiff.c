@@ -182,9 +182,9 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 {
   struct encoder_baton *eb = baton;
   apr_pool_t *pool = svn_pool_create(eb->pool);
-  svn_stringbuf_t *instructions = svn_stringbuf_create("", pool);
-  svn_stringbuf_t *i1 = svn_stringbuf_create("", pool);
-  svn_stringbuf_t *header = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *instructions = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_t *i1 = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_t *header = svn_stringbuf_create_empty(pool);
   const svn_string_t *newdata;
   unsigned char ibuf[MAX_INSTRUCTION_LEN], *ip;
   const svn_txdelta_op_t *op;
@@ -254,8 +254,8 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   append_encoded_int(header, instructions->len);
   if (eb->version == 1)
     {
-      svn_stringbuf_t *temp = svn_stringbuf_create("", pool);
-      svn_string_t *tempstr = svn_string_create("", pool);
+      svn_stringbuf_t *temp = svn_stringbuf_create_empty(pool);
+      svn_string_t *tempstr = svn_string_create_empty(pool);
       SVN_ERR(zlib_encode(window->new_data->data, window->new_data->len,
                           temp, eb->compression_level));
       tempstr->data = temp->data;
@@ -431,20 +431,24 @@ decode_size(apr_size_t *val,
   return NULL;
 }
 
-/* Decode the possibly-zlib compressed string that is in IN, into OUT.
-   We expect an integer is prepended to IN that specifies the original
-   size, and that if encoded size == original size, that the remaining
-   data is not compressed.  */
+/* Decode the possibly-zlib compressed string of length INLEN that is in
+   IN, into OUT.  We expect an integer is prepended to IN that specifies
+   the original size, and that if encoded size == original size, that the
+   remaining data is not compressed.
+   In that case, we will simply return pointer into IN as data pointer for
+   OUT.  The caller is expected not to modify the contents of OUT.
+   An error is returned if the decoded length exceeds the given LIMIT.
+ */
 static svn_error_t *
-zlib_decode(svn_stringbuf_t *in, svn_stringbuf_t *out, apr_size_t limit)
+zlib_decode(const unsigned char *in, apr_size_t inLen, svn_stringbuf_t *out,
+            apr_size_t limit)
 {
   apr_size_t len;
-  char *oldplace = in->data;
+  const unsigned char *oldplace = in;
 
   /* First thing in the string is the original length.  */
-  in->data = (char *)decode_size(&len, (unsigned char *)in->data,
-                                 (unsigned char *)in->data+in->len);
-  if (in->data == NULL)
+  in = decode_size(&len, in, in + inLen);
+  if (in == NULL)
     return svn_error_create(SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA, NULL,
                             _("Decompression of svndiff data failed: no size"));
   if (len > limit)
@@ -453,33 +457,36 @@ zlib_decode(svn_stringbuf_t *in, svn_stringbuf_t *out, apr_size_t limit)
                               "size too large"));
   /* We need to subtract the size of the encoded original length off the
    *      still remaining input length.  */
-  in->len -= (in->data - oldplace);
-  if (in->len == len)
+  inLen -= (in - oldplace);
+  if (inLen == len)
     {
-      svn_stringbuf_appendstr(out, in);
+      /* "in" is no longer used but the memory remains allocated for
+       * at least as long as "out" will be used by the caller.
+       */
+      out->data = (char *)in;
+      out->len = len;
+      out->blocksize = len; /* sic! */
+
       return SVN_NO_ERROR;
     }
   else
     {
-      unsigned long zliblen;
+      unsigned long zlen = len;
 
       svn_stringbuf_ensure(out, len);
-
-      zliblen = len;
-      if (uncompress  ((unsigned char *)out->data, &zliblen,
-                       (const unsigned char *)in->data, in->len) != Z_OK)
+      if (uncompress((unsigned char *)out->data, &zlen, in, inLen) != Z_OK)
         return svn_error_create(SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA,
                                 NULL,
                                 _("Decompression of svndiff data failed"));
 
       /* Zlib should not produce something that has a different size than the
          original length we stored. */
-      if (zliblen != len)
+      if (zlen != len)
         return svn_error_create(SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA,
                                 NULL,
                                 _("Size of uncompressed data "
                                   "does not match stored original length"));
-      out->len = zliblen;
+      out->len = zlen;
     }
   return SVN_NO_ERROR;
 }
@@ -627,16 +634,15 @@ decode_window(svn_txdelta_window_t *window, svn_filesize_t sview_offset,
 
   if (version == 1)
     {
-      svn_stringbuf_t *instin, *ndin;
-      svn_stringbuf_t *instout, *ndout;
+      svn_stringbuf_t *instout = svn_stringbuf_create_empty(pool);
+      svn_stringbuf_t *ndout = svn_stringbuf_create_empty(pool);
 
-      instin = svn_stringbuf_ncreate((const char *)data, insend - data, pool);
-      instout = svn_stringbuf_create("", pool);
-      SVN_ERR(zlib_decode(instin, instout, MAX_INSTRUCTION_SECTION_LEN));
-
-      ndin = svn_stringbuf_ncreate((const char *)insend, newlen, pool);
-      ndout = svn_stringbuf_create("", pool);
-      SVN_ERR(zlib_decode(ndin, ndout, SVN_DELTA_WINDOW_SIZE));
+      /* these may in fact simply return references to insend */
+      
+      SVN_ERR(zlib_decode(insend, newlen, ndout,
+                          SVN_DELTA_WINDOW_SIZE));
+      SVN_ERR(zlib_decode(data, insend - data, instout,
+                          MAX_INSTRUCTION_SECTION_LEN));
 
       newlen = ndout->len;
       data = (unsigned char *)instout->data;
@@ -846,7 +852,7 @@ svn_txdelta_parse_svndiff(svn_txdelta_window_handler_t handler,
   db->consumer_baton = handler_baton;
   db->pool = subpool;
   db->subpool = svn_pool_create(subpool);
-  db->buffer = svn_stringbuf_create("", db->subpool);
+  db->buffer = svn_stringbuf_create_empty(db->subpool);
   db->last_sview_offset = 0;
   db->last_sview_len = 0;
   db->header_bytes = 0;

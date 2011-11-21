@@ -386,9 +386,9 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
                                            pool);
   ctx.line = 1;
   ctx.have_ungotten_char = FALSE;
-  ctx.section = svn_stringbuf_create("", pool);
-  ctx.option = svn_stringbuf_create("", pool);
-  ctx.value = svn_stringbuf_create("", pool);
+  ctx.section = svn_stringbuf_create_empty(pool);
+  ctx.option = svn_stringbuf_create_empty(pool);
+  ctx.value = svn_stringbuf_create_empty(pool);
 
   do
     {
@@ -1071,6 +1071,11 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### Set interactive-conflicts to 'no' to disable interactive"       NL
         "### conflict resolution prompting.  It defaults to 'yes'."          NL
         "# interactive-conflicts = no"                                       NL
+        "### Set memory-cache-size to define the size of the memory cache"   NL
+        "### used by the client when accessing a FSFS repository via"        NL
+        "### ra_local (the file:// scheme). The value represents the number" NL
+        "### of MB used by the cache."                                       NL
+        "# memory-cache-size = 16"                                           NL
         ""                                                                   NL
         "### Section for configuring automatic properties."                  NL
         "[auto-props]"                                                       NL

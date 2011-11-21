@@ -590,7 +590,7 @@ svn_repos__prev_location(svn_revnum_t *appeared_rev,
                          apr_pool_t *pool)
 {
   svn_fs_root_t *root, *copy_root;
-  const char *copy_path, *copy_src_path, *remainder = "";
+  const char *copy_path, *copy_src_path, *remainder;
   svn_revnum_t copy_src_rev;
 
   /* Initialize return variables. */
@@ -623,8 +623,7 @@ svn_repos__prev_location(svn_revnum_t *appeared_rev,
   */
   SVN_ERR(svn_fs_copied_from(&copy_src_rev, &copy_src_path,
                              copy_root, copy_path, pool));
-  if (! strcmp(copy_path, path) == 0)
-    remainder = svn_fspath__is_child(copy_path, path, pool);
+  remainder = svn_fspath__skip_ancestor(copy_path, path);
   if (prev_path)
     *prev_path = svn_fspath__join(copy_src_path, remainder, pool);
   if (appeared_rev)
@@ -983,31 +982,27 @@ get_path_mergeinfo(apr_hash_t **mergeinfo,
                    svn_fs_t *fs,
                    const char *path,
                    svn_revnum_t revnum,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
 {
   svn_mergeinfo_catalog_t tmp_catalog;
   svn_fs_root_t *root;
-  apr_pool_t *subpool = svn_pool_create(pool);
-  apr_array_header_t *paths = apr_array_make(subpool, 1,
+  apr_array_header_t *paths = apr_array_make(scratch_pool, 1,
                                              sizeof(const char *));
 
   APR_ARRAY_PUSH(paths, const char *) = path;
 
-  SVN_ERR(svn_fs_revision_root(&root, fs, revnum, subpool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, revnum, scratch_pool));
   /* We do not need to call svn_repos_fs_get_mergeinfo() (which performs authz)
      because we will filter out unreadable revisions in
      find_interesting_revision(), above */
   SVN_ERR(svn_fs_get_mergeinfo2(&tmp_catalog, root, paths,
-                                svn_mergeinfo_inherited, FALSE, FALSE,
-                                subpool));
+                                svn_mergeinfo_inherited, FALSE, TRUE,
+                                result_pool, scratch_pool));
 
   *mergeinfo = apr_hash_get(tmp_catalog, path, APR_HASH_KEY_STRING);
-  if (*mergeinfo)
-    *mergeinfo = svn_mergeinfo_dup(*mergeinfo, pool);
-  else
-    *mergeinfo = apr_hash_make(pool);
-
-  svn_pool_destroy(subpool);
+  if (!*mergeinfo)
+    *mergeinfo = apr_hash_make(result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1044,9 +1039,9 @@ static svn_error_t *
 get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
                      svn_repos_t *repos,
                      struct path_revision *old_path_rev,
-                     apr_pool_t *pool)
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
-  apr_pool_t *subpool = svn_pool_create(pool);
   apr_hash_t *curr_mergeinfo, *prev_mergeinfo, *deleted, *changed;
   svn_error_t *err;
   svn_fs_root_t *root;
@@ -1056,8 +1051,8 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
   /* Getting/parsing/diffing svn:mergeinfo is expensive, so only do it
      if there is a property change. */
   SVN_ERR(svn_fs_revision_root(&root, repos->fs, old_path_rev->revnum,
-                               subpool));
-  SVN_ERR(svn_fs_paths_changed2(&changed_paths, root, subpool));
+                               scratch_pool));
+  SVN_ERR(svn_fs_paths_changed2(&changed_paths, root, scratch_pool));
   while (1)
     {
       svn_fs_path_change2_t *changed_path = apr_hash_get(changed_paths,
@@ -1067,17 +1062,17 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
         break;
       if (svn_fspath__is_root(path, strlen(path)))
         {
-          svn_pool_destroy(subpool);
           *merged_mergeinfo = NULL;
           return SVN_NO_ERROR;
         }
-      path = svn_fspath__dirname(path, subpool);
+      path = svn_fspath__dirname(path, scratch_pool);
     }
 
   /* First, find the mergeinfo difference for old_path_rev->revnum, and
      old_path_rev->revnum - 1. */
   err = get_path_mergeinfo(&curr_mergeinfo, repos->fs, old_path_rev->path,
-                           old_path_rev->revnum, subpool);
+                           old_path_rev->revnum, scratch_pool,
+                           scratch_pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
@@ -1086,7 +1081,6 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
              best we can do is ignore it and act is if there are
              no mergeinfo differences. */
           svn_error_clear(err);
-          svn_pool_destroy(subpool);
           *merged_mergeinfo = NULL;
           return SVN_NO_ERROR;
         }
@@ -1097,14 +1091,14 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
     }
 
   err = get_path_mergeinfo(&prev_mergeinfo, repos->fs, old_path_rev->path,
-                           old_path_rev->revnum - 1, subpool);
+                           old_path_rev->revnum - 1, scratch_pool,
+                           scratch_pool);
   if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND
               || err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR))
     {
       /* If the path doesn't exist in the previous revision or it does exist
          but has invalid mergeinfo (Issue #3896), assume no merges. */
       svn_error_clear(err);
-      svn_pool_destroy(subpool);
       *merged_mergeinfo = NULL;
       return SVN_NO_ERROR;
     }
@@ -1112,17 +1106,16 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
     SVN_ERR(err);
 
   /* Then calculate and merge the differences. */
-  SVN_ERR(svn_mergeinfo_diff(&deleted, &changed, prev_mergeinfo, curr_mergeinfo,
-                             FALSE, subpool));
-  SVN_ERR(svn_mergeinfo_merge(changed, deleted, subpool));
+  SVN_ERR(svn_mergeinfo_diff2(&deleted, &changed, prev_mergeinfo,
+                              curr_mergeinfo, FALSE, result_pool,
+                              scratch_pool));
+  SVN_ERR(svn_mergeinfo_merge2(changed, deleted, result_pool, scratch_pool));
 
   /* Store the result. */
   if (apr_hash_count(changed))
-    *merged_mergeinfo = svn_mergeinfo_dup(changed, pool);
+    *merged_mergeinfo = changed;
   else
     *merged_mergeinfo = NULL;
-
-  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
@@ -1206,7 +1199,7 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
 
       if (include_merged_revisions)
         SVN_ERR(get_merged_mergeinfo(&path_rev->merged_mergeinfo, repos,
-                                     path_rev, result_pool));
+                                     path_rev, result_pool, iterpool));
       else
         path_rev->merged_mergeinfo = NULL;
 

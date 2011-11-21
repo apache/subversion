@@ -55,7 +55,7 @@ typedef enum lock_state_e {
   DEPTH,
   TIMEOUT,
   LOCK_TOKEN,
-  COMMENT,
+  COMMENT
 } lock_state_e;
 
 typedef struct lock_prop_info_t {
@@ -580,6 +580,8 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
 
   subpool = svn_pool_create(pool);
 
+  /* ### TODO for issue 2263: Send all the locks over the wire at once.  This
+     loop is just a temporary shim. */
   for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
     {
       svn_ra_serf__handler_t *handler;
@@ -683,6 +685,8 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
 
   subpool = svn_pool_create(pool);
 
+  /* ### TODO for issue 2263: Send all the locks over the wire at once.  This
+     loop is just a temporary shim. */
   for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
     {
       svn_ra_serf__handler_t *handler;

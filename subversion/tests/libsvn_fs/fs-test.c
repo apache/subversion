@@ -658,6 +658,7 @@ revision_props(const svn_test_opts_t *opts,
 
   /* Copy a property's value into a new property. */
   SVN_ERR(svn_fs_revision_prop(&value, fs, 0, "color", pool));
+  SVN_TEST_ASSERT(value);
 
   s1.data = value->data;
   s1.len = value->len;
@@ -694,6 +695,7 @@ revision_props(const svn_test_opts_t *opts,
   /* Obtain a list of all current properties, and make sure it matches
      the expected values. */
   SVN_ERR(svn_fs_revision_proplist(&proplist, fs, 0, pool));
+  SVN_TEST_ASSERT(proplist);
   {
     svn_string_t *prop_value;
 
@@ -4799,6 +4801,102 @@ node_origin_rev(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+
+/* Helper: call svn_fs_history_location() and check the results. */
+static svn_error_t *
+check_history_location(const char *expected_path,
+                       svn_revnum_t expected_revision,
+                       svn_fs_history_t *history,
+                       apr_pool_t *pool)
+{
+  const char *actual_path;
+  svn_revnum_t actual_revision;
+
+  SVN_ERR(svn_fs_history_location(&actual_path, &actual_revision,
+                                  history, pool));
+
+  /* Validate the location against our expectations. */
+  if (actual_revision != expected_revision
+      || (actual_path && expected_path && strcmp(actual_path, expected_path))
+      || (actual_path != NULL) != (expected_path != NULL))
+    {
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                               "svn_fs_history_location() failed:\n"
+                               "  expected '%s@%ld'\n"
+                               "     found '%s@%ld",
+                               expected_path ? expected_path : "(null)",
+                               expected_revision,
+                               actual_path ? actual_path : "(null)",
+                               actual_revision);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Test svn_fs_history_*(). */
+static svn_error_t *
+node_history(const svn_test_opts_t *opts,
+             apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t after_rev;
+
+  /* Prepare a txn to receive the greek tree. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-node-history",
+                              opts, pool));
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+
+  /* Create and verify the greek tree. */
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+
+  /* Make some changes, following copy_test() above. */
+
+  /* r2: copy pi to pi2, with textmods. */
+  {
+    svn_fs_root_t *rev_root;
+
+    SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool));
+    SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, pool));
+    SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+    SVN_ERR(svn_fs_copy(rev_root, "A/D/G/pi",
+                        txn_root, "A/D/H/pi2",
+                        pool));
+    SVN_ERR(svn_test__set_file_contents
+            (txn_root, "A/D/H/pi2", "This is the file 'pi2'.\n", pool));
+    SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+  }
+
+  /* Go back in history: pi2@r2 -> pi@r1 */
+  {
+    svn_fs_history_t *history;
+    svn_fs_root_t *rev_root;
+
+    SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool));
+
+    /* Fetch a history object, and walk it until its start. */
+
+    SVN_ERR(svn_fs_node_history(&history, rev_root, "A/D/H/pi2", pool));
+    SVN_ERR(check_history_location("/A/D/H/pi2", 2, history, pool));
+
+    SVN_ERR(svn_fs_history_prev(&history, history, TRUE, pool));
+    SVN_ERR(check_history_location("/A/D/H/pi2", 2, history, pool));
+
+    SVN_ERR(svn_fs_history_prev(&history, history, TRUE, pool));
+    SVN_ERR(check_history_location("/A/D/G/pi", 1, history, pool));
+
+    SVN_ERR(svn_fs_history_prev(&history, history, TRUE, pool));
+    SVN_TEST_ASSERT(history == NULL);
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -4878,5 +4976,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs_node_origin_rev"),
     SVN_TEST_OPTS_PASS(small_file_integrity,
                        "create and modify small file"),
+    SVN_TEST_OPTS_PASS(node_history,
+                       "test svn_fs_node_history"),
     SVN_TEST_NULL
   };

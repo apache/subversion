@@ -533,11 +533,16 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
       || text_status == svn_wc_status_conflicted)
     text_status = status->text_status;
 
+  enum svn_wc_status_kind repos_text_status = status->repos_node_status;
+
+  if (repos_text_status == svn_wc_status_modified
+      || repos_text_status == svn_wc_status_conflicted)
+    repos_text_status = status->repos_text_status;
+
   jboolean jIsConflicted = (status->conflicted == 1) ? JNI_TRUE : JNI_FALSE;
   jobject jTextType = EnumMapper::mapStatusKind(text_status);
   jobject jPropType = EnumMapper::mapStatusKind(status->prop_status);
-  jobject jRepositoryTextType = EnumMapper::mapStatusKind(
-                                                  status->repos_text_status);
+  jobject jRepositoryTextType = EnumMapper::mapStatusKind(repos_text_status);
   jobject jRepositoryPropType = EnumMapper::mapStatusKind(
                                                   status->repos_prop_status);
   jboolean jIsCopied = (status->copied == 1) ? JNI_TRUE: JNI_FALSE;
@@ -871,7 +876,8 @@ CreateJ::CommitInfo(const svn_commit_info_t *commit_info)
   if (midCT == 0)
     {
       midCT = env->GetMethodID(clazz, "<init>",
-                               "(JLjava/lang/String;Ljava/lang/String;)V");
+                               "(JLjava/lang/String;Ljava/lang/String;"
+                               "Ljava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
         POP_AND_RETURN_NULL;
     }
@@ -886,8 +892,18 @@ CreateJ::CommitInfo(const svn_commit_info_t *commit_info)
 
   jlong jRevision = commit_info->revision;
 
+  jstring jPostCommitError = JNIUtil::makeJString(
+                                            commit_info->post_commit_err);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jstring jReposRoot = JNIUtil::makeJString(commit_info->repos_root);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
   // call the Java method
-  jobject jInfo = env->NewObject(clazz, midCT, jRevision, jDate, jAuthor);
+  jobject jInfo = env->NewObject(clazz, midCT, jRevision, jDate, jAuthor,
+                                 jPostCommitError, jReposRoot);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 

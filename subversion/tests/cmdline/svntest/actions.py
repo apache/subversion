@@ -1258,7 +1258,7 @@ def run_and_verify_mergeinfo(error_re_string = None,
     verify.verify_outputs(None, None, err, None, expected_err)
     return
 
-  out = sorted([_f for _f in [x.rstrip()[1:] for x in out] if _f])
+  out = [_f for _f in [x.rstrip()[1:] for x in out] if _f]
   expected_output.sort()
   extra_out = []
   if out != expected_output:
@@ -1398,8 +1398,9 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
     status_tree = status_tree.old_tree()
 
   # Commit.
+  if '-m' not in args and '-F' not in args:
+    args = list(args) + ['-m', 'log msg']
   exit_code, output, errput = main.run_svn(error_re_string, 'ci',
-                                           '-m', 'log msg',
                                            *args)
 
   if error_re_string:
@@ -1746,6 +1747,11 @@ def lock_admin_dir(wc_dir, recursive=False):
   db, root_path, relpath = wc.open_wc_db(wc_dir)
 
   svntest.main.run_wc_lock_tester(recursive, wc_dir)
+
+def set_incomplete(wc_dir, revision):
+  "Make wc_dir incomplete at revision"
+
+  svntest.main.run_wc_incomplete_tester(wc_dir, revision)
 
 def get_wc_uuid(wc_dir):
   "Return the UUID of the working copy at WC_DIR."

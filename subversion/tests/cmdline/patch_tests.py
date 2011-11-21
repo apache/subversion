@@ -3615,6 +3615,381 @@ def patch_moved_away(sbox):
                                        1, # check-props
                                        1) # dry-run
 
+@XFail()
+@Issue(3991)
+def patch_lacking_trailing_eol(sbox):
+  "patch file lacking trailing eol"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # Prepare
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # Apply patch
+  unidiff_patch = [
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    # TODO: -1 +1
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'iota'.\n",
+    "+Some more bytes", # No trailing \n on this line!
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  gamma_contents = "It is the file 'gamma'.\n"
+  iota_contents = "This is the file 'iota'.\n"
+  new_contents = "new\n"
+
+  expected_output = [
+    'U         %s\n' % os.path.join(wc_dir, 'iota'),
+    'svn: W[0-9]+: .*', # warning about appending a newline to iota's last line
+  ]
+
+  # Expect a newline to be appended
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents=iota_contents+"Some more bytes\n")
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status='M ')
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
+@Issue(4003)
+def patch_deletes_prop(sbox):
+  "patch deletes prop, directly and via reversed add"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  svntest.main.run_svn(None, 'propset', 'propname', 'propvalue',
+                       iota_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Apply patch
+  unidiff_patch = [
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Deleted: propname\n",
+    "## -1 +0,0 ##\n",
+    "-propvalue\n",
+    ]
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  # Expect the original state of the working copy in r1, exception
+  # that iota is at r2 now.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status=' M')
+  expected_status.tweak('iota', wc_rev=2)
+  expected_skip = wc.State('', { })
+  expected_output = [
+    ' U        %s\n' % os.path.join(wc_dir, 'iota'),
+  ]
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       0) # dry-run
+
+  # Revert any local mods, then try to reverse-apply a patch which
+  # *adds* the property.
+  svntest.main.run_svn(None, 'revert', iota_path)
+
+  # Apply patch 
+  unidiff_patch = [
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Added: propname\n",
+    "## -0,0 +1 ##\n",
+    "+propvalue\n",
+    ]
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1, # dry-run
+                                       '--reverse-diff') 
+
+@Issue(4004)
+def patch_reversed_add_with_props(sbox):
+  "reverse patch new file+props atop uncommitted"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  patch_file_path = make_patch_path(sbox)
+
+  # Add a new file which also has props set on it.
+  newfile_path = os.path.join(wc_dir, 'newfile')
+  newfile_contents = ["This is the file 'newfile'.\n"]
+  svntest.main.file_write(newfile_path, ''.join(newfile_contents))
+  svntest.main.run_svn(None, 'add', newfile_path)
+  svntest.main.run_svn(None, 'propset', 'propname', 'propvalue',
+                       newfile_path)
+
+  # Generate a patch file from our current diff (rooted at the working
+  # copy root).
+  cwd = os.getcwd()
+  try:
+    os.chdir(wc_dir)
+    exit_code, diff_output, err_output = svntest.main.run_svn(None, 'diff')
+  finally:
+    os.chdir(cwd)
+  svntest.main.file_write(patch_file_path, ''.join(diff_output))
+
+  # Okay, now commit up.
+  expected_output = svntest.wc.State(wc_dir, {
+    'newfile' : Item(verb='Adding'),
+    })
+
+  # Now, we'll try to reverse-apply the very diff we just created.  We
+  # expect the original state of the working copy in r1.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_skip = wc.State('', { })
+  expected_output = [
+    'D         %s\n' % newfile_path,
+  ]
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1, # dry-run
+                                       '--reverse-diff') 
+
+@Issue(4004)
+def patch_reversed_add_with_props2(sbox):
+  "reverse patch new file+props"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  patch_file_path = make_patch_path(sbox)
+
+  # Add a new file which also has props set on it.
+  newfile_path = os.path.join(wc_dir, 'newfile')
+  newfile_contents = ["This is the file 'newfile'.\n"]
+  svntest.main.file_write(newfile_path, ''.join(newfile_contents))
+  svntest.main.run_svn(None, 'add', newfile_path)
+  svntest.main.run_svn(None, 'propset', 'propname', 'propvalue',
+                       newfile_path)
+
+  # Generate a patch file from our current diff (rooted at the working
+  # copy root).
+  cwd = os.getcwd()
+  try:
+    os.chdir(wc_dir)
+    exit_code, diff_output, err_output = svntest.main.run_svn(None, 'diff')
+  finally:
+    os.chdir(cwd)
+  svntest.main.file_write(patch_file_path, ''.join(diff_output))
+
+  # Okay, now commit up.
+  expected_output = svntest.wc.State(wc_dir, {
+    'newfile' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({'newfile' : Item(wc_rev=2, status='  ')})
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Now, we'll try to reverse-apply the very diff we just created.  We
+  # expect the original state of the working copy in r1 plus 'newfile'
+  # scheduled for deletion.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({'newfile' : Item(status='D ', wc_rev=2)})
+  expected_skip = wc.State('', { })
+  expected_output = [
+    'D         %s\n' % newfile_path,
+  ]
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1, # dry-run
+                                       '--reverse-diff') 
+
+def patch_dev_null(sbox):
+  "patch with /dev/null filenames"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+
+  # Git (and maybe other tools) use '/dev/null' as the old path for
+  # newly added files, and as the new path for deleted files.
+  # The path selection algorithm in 'svn patch' must detect this and
+  # avoid using '/dev/null' as a patch target.
+  unidiff_patch = [
+    "Index: new\n",
+    "===================================================================\n",
+    "--- /dev/null\n",
+    "+++ new	(revision 0)\n",
+    "@@ -0,0 +1 @@\n",
+    "+new\n",
+    "\n",
+    "Index: A/B/E/beta\n",
+    "===================================================================\n",
+    "--- A/B/E/beta	(revision 1)\n",
+    "+++ /dev/null\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'beta'.\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  new_contents = "new\n"
+  expected_output = [
+    'A         %s\n' % os.path.join(wc_dir, 'new'),
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'new' : Item(contents=new_contents)})
+  expected_disk.remove('A/B/E/beta')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({'new' : Item(status='A ', wc_rev=0)})
+  expected_status.tweak('A/B/E/beta', status='D ')
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
+@Issue(4049)
+def patch_delete_and_skip(sbox):
+  "patch that deletes and skips"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+
+  os.chdir(wc_dir)
+
+  # We need to use abspaths to trigger the segmentation fault.
+  abs = os.path.abspath('.')
+  if sys.platform == 'win32':
+      abs = abs.replace("\\", "/")
+
+  outside_wc = os.path.join(os.pardir, 'X')
+  if sys.platform == 'win32':
+      outside_wc = outside_wc.replace("\\", "/")
+
+  unidiff_patch = [
+    "Index: %s/A/B/E/alpha\n" % abs,
+    "===================================================================\n",
+    "--- %s/A/B/E/alpha\t(revision 1)\n" % abs,
+    "+++ %s/A/B/E/alpha\t(working copy)\n" % abs,
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'alpha'.\n",
+    "Index: %s/A/B/E/beta\n" % abs,
+    "===================================================================\n",
+    "--- %s/A/B/E/beta\t(revision 1)\n" % abs,
+    "+++ %s/A/B/E/beta\t(working copy)\n" % abs,
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'beta'.\n",
+    "Index: %s/A/B/E/out-of-reach\n" % abs,
+    "===================================================================\n",
+    "--- %s/iota\t(revision 1)\n" % outside_wc,
+    "+++ %s/iota\t(working copy)\n" % outside_wc,
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Added: propname\n",
+    "## -0,0 +1 ##\n",
+    "+propvalue\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  skipped_path = os.path.join(os.pardir, 'X', 'iota')
+  expected_output = [
+    'D         %s\n' % os.path.join('A', 'B', 'E', 'alpha'),
+    'D         %s\n' % os.path.join('A', 'B', 'E', 'beta'),
+    'Skipped missing target: \'%s\'\n' % skipped_path,
+    'D         %s\n' % os.path.join('A', 'B', 'E'),
+    'Summary of conflicts:\n',
+    '  Skipped paths: 1\n'
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha')
+  expected_disk.remove('A/B/E/beta')
+  expected_disk.remove('A/B/E')
+
+  expected_status = svntest.actions.get_virginal_state('.', 1)
+  expected_status.tweak('A/B/E', status='D ')
+  expected_status.tweak('A/B/E/alpha', status='D ')
+  expected_status.tweak('A/B/E/beta', status='D ')
+
+  expected_skip = wc.State('', {skipped_path: Item()})
+
+  svntest.actions.run_and_verify_patch('.', os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
 
 ########################################################################
 #Run the tests
@@ -3652,6 +4027,12 @@ test_list = [ None,
               patch_set_prop_no_eol,
               patch_add_symlink,
               patch_moved_away,
+              patch_lacking_trailing_eol,
+              patch_deletes_prop,
+              patch_reversed_add_with_props,
+              patch_reversed_add_with_props2,
+              patch_dev_null,
+              patch_delete_and_skip,
             ]
 
 if __name__ == '__main__':

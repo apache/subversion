@@ -183,7 +183,7 @@ copy_pristine_text_if_necessary(svn_wc__db_t *db,
    versioned file itself.
 
    This also works for versioned symlinks that are stored in the db as
-   svn_wc__db_kind_file with svn:special set. */
+   svn_kind_file with svn:special set. */
 static svn_error_t *
 copy_versioned_file(svn_wc__db_t *db,
                     const char *src_abspath,
@@ -410,7 +410,7 @@ copy_versioned_dir(svn_wc__db_t *db,
     {
       const char *child_name, *child_src_abspath, *child_dst_abspath;
       svn_wc__db_status_t child_status;
-      svn_wc__db_kind_t child_kind;
+      svn_kind_t child_kind;
       svn_boolean_t op_root;
       svn_boolean_t conflicted;
       const svn_checksum_t *checksum;
@@ -441,19 +441,19 @@ copy_versioned_dir(svn_wc__db_t *db,
           || child_status == svn_wc__db_status_added)
         {
           /* We have more work to do than just changing the DB */
-          if (child_kind == svn_wc__db_kind_file)
+          if (child_kind == svn_kind_file)
             {
               svn_boolean_t skip = FALSE;
 
               /* We should skip this node if this child is a file external
-                 (issue #3589) */
+                 (issues #3589, #4000) */
               if (child_status == svn_wc__db_status_normal)
                 {
                   SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL,
                                                    NULL, NULL, NULL, NULL,
                                                    NULL, NULL, NULL, NULL,
                                                    NULL, NULL, &skip,
-                                                   db, src_abspath,
+                                                   db, child_src_abspath,
                                                    scratch_pool,
                                                    scratch_pool));
                 }
@@ -470,7 +470,7 @@ copy_versioned_dir(svn_wc__db_t *db,
                                             NULL, NULL,
                                             iterpool));
             }
-          else if (child_kind == svn_wc__db_kind_dir)
+          else if (child_kind == svn_kind_dir)
             SVN_ERR(copy_versioned_dir(db,
                                        child_src_abspath, child_dst_abspath,
                                        dst_op_root_abspath, tmpdir_abspath,
@@ -495,6 +495,15 @@ copy_versioned_dir(svn_wc__db_t *db,
 
           /* Don't recurse on children while all we do is creating not-present
              children */
+        }
+      else if (child_status == svn_wc__db_status_incomplete)
+        {
+          /* Should go ahead and copy incomplete to incomplete? Try to
+             copy as much as possible, or give up early? */
+          return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                                   _("Cannot handle status of '%s'"),
+                                   svn_dirent_local_style(src_abspath,
+                                                          iterpool));
         }
       else
         {
@@ -589,7 +598,7 @@ copy_or_move(svn_wc_context_t *wc_ctx,
              apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
-  svn_wc__db_kind_t src_db_kind;
+  svn_kind_t src_db_kind;
   const char *dstdir_abspath;
   svn_boolean_t conflicted;
   const svn_checksum_t *checksum;
@@ -770,8 +779,8 @@ copy_or_move(svn_wc_context_t *wc_ctx,
                                          dst_abspath,
                                          scratch_pool, scratch_pool));
 
-  if (src_db_kind == svn_wc__db_kind_file
-      || src_db_kind == svn_wc__db_kind_symlink)
+  if (src_db_kind == svn_kind_file
+      || src_db_kind == svn_kind_symlink)
     {
       SVN_ERR(copy_versioned_file(db, src_abspath, dst_abspath, dst_abspath,
                                   tmpdir_abspath, checksum,
@@ -948,7 +957,7 @@ remove_all_conflict_markers(svn_wc__db_t *db,
                             svn_dirent_join(wc_dir_abspath, name, iterpool),
                             iterpool));
         }
-      if (info->kind == svn_wc__db_kind_dir)
+      if (info->kind == svn_kind_dir)
         {
           svn_pool_clear(iterpool);
           SVN_ERR(remove_all_conflict_markers(
@@ -990,7 +999,7 @@ svn_wc_move(svn_wc_context_t *wc_ctx,
     SVN_ERR(svn_io_file_rename(src_abspath, dst_abspath, scratch_pool));
 
   {
-    svn_wc__db_kind_t kind;
+    svn_kind_t kind;
     svn_boolean_t conflicted;
 
     SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
@@ -1001,7 +1010,7 @@ svn_wc_move(svn_wc_context_t *wc_ctx,
                                  db, src_abspath,
                                  scratch_pool, scratch_pool));
 
-    if (kind == svn_wc__db_kind_dir)
+    if (kind == svn_kind_dir)
       SVN_ERR(remove_all_conflict_markers(db, src_abspath, dst_abspath,
                                           scratch_pool));
 

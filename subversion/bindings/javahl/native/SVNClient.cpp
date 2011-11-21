@@ -898,7 +898,9 @@ void SVNClient::propertySetLocal(Targets &targets, const char *name,
                                          ctx, subPool.getPool()), );
 }
 
-void SVNClient::propertySetRemote(const char *path, const char *name,
+void SVNClient::propertySetRemote(const char *path, long base_rev,
+                                  const char *name,
+                                  CommitMessage *message,
                                   JNIByteArray &value, bool force,
                                   RevpropTable &revprops,
                                   CommitCallback *callback)
@@ -916,12 +918,12 @@ void SVNClient::propertySetRemote(const char *path, const char *name,
     Path intPath(path, subPool);
     SVN_JNI_ERR(intPath.error_occured(), );
 
-    svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
+    svn_client_ctx_t *ctx = context.getContext(message, subPool);
     if (ctx == NULL)
         return;
 
     SVN_JNI_ERR(svn_client_propset_remote(name, val, intPath.c_str(),
-                                          force, SVN_INVALID_REVNUM,
+                                          force, base_rev,
                                           revprops.hash(subPool),
                                           CommitCallback::callback, callback,
                                           ctx, subPool.getPool()), );
@@ -930,12 +932,11 @@ void SVNClient::propertySetRemote(const char *path, const char *name,
 void SVNClient::diff(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
                      Revision *pegRevision, const char *relativeToDir,
-                     const char *outfileName, svn_depth_t depth,
+                     OutputStream &outputStream, svn_depth_t depth,
                      StringArray &changelists,
                      bool ignoreAncestry, bool noDiffDelete, bool force,
                      bool showCopiesAsAdds)
 {
-    svn_error_t *err;
     SVN::Pool subPool(pool);
     const char *c_relToDir = relativeToDir ?
       svn_dirent_canonicalize(relativeToDir, subPool.getPool()) :
@@ -946,7 +947,6 @@ void SVNClient::diff(const char *target1, Revision &revision1,
     if (pegRevision == NULL)
         SVN_JNI_NULL_PTR_EX(target2, "target2", );
 
-    SVN_JNI_NULL_PTR_EX(outfileName, "outfileName", );
     svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
     if (ctx == NULL)
         return;
@@ -954,26 +954,13 @@ void SVNClient::diff(const char *target1, Revision &revision1,
     Path path1(target1, subPool);
     SVN_JNI_ERR(path1.error_occured(), );
 
-    apr_file_t *outfile = NULL;
-    apr_status_t rv =
-        apr_file_open(&outfile,
-                      svn_dirent_internal_style(outfileName,
-                                                subPool.getPool()),
-                      APR_CREATE|APR_WRITE|APR_TRUNCATE , APR_OS_DEFAULT,
-                      subPool.getPool());
-    if (rv != APR_SUCCESS)
-    {
-        SVN_JNI_ERR(svn_error_createf(rv, NULL, _("Cannot open file '%s'"),
-                                      outfileName), );
-    }
-
     // We don't use any options to diff.
     apr_array_header_t *diffOptions = apr_array_make(subPool.getPool(),
                                                      0, sizeof(char *));
 
     if (pegRevision)
     {
-        err = svn_client_diff_peg5(diffOptions,
+        SVN_JNI_ERR(svn_client_diff_peg6(diffOptions,
                                    path1.c_str(),
                                    pegRevision->revision(),
                                    revision1.revision(),
@@ -986,26 +973,20 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                    force,
                                    FALSE,
                                    SVN_APR_LOCALE_CHARSET,
-                                   outfile,
+                                   outputStream.getStream(subPool),
                                    NULL /* error file */,
                                    changelists.array(subPool),
                                    ctx,
-                                   subPool.getPool());
+                                   subPool.getPool()),
+                    );
     }
     else
     {
         // "Regular" diff (without a peg revision).
         Path path2(target2, subPool);
-        err = path2.error_occured();
-        if (err)
-        {
-            if (outfile)
-                goto cleanup;
+        SVN_JNI_ERR(path2.error_occured(), );
 
-            SVN_JNI_ERR(err, );
-        }
-
-        err = svn_client_diff5(diffOptions,
+        SVN_JNI_ERR(svn_client_diff6(diffOptions,
                                path1.c_str(),
                                revision1.revision(),
                                path2.c_str(),
@@ -1018,47 +999,36 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                force,
                                FALSE,
                                SVN_APR_LOCALE_CHARSET,
-                               outfile,
-                               NULL /* error file */,
+                               outputStream.getStream(subPool),
+                               NULL /* error stream */,
                                changelists.array(subPool),
                                ctx,
-                               subPool.getPool());
+                               subPool.getPool()),
+                    );
     }
-
-cleanup:
-    rv = apr_file_close(outfile);
-    if (rv != APR_SUCCESS)
-    {
-        svn_error_clear(err);
-
-        SVN_JNI_ERR(svn_error_createf(rv, NULL, _("Cannot close file '%s'"),
-                                      outfileName), );
-    }
-
-    SVN_JNI_ERR(err, );
 }
 
 void SVNClient::diff(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
-                     const char *relativeToDir, const char *outfileName,
+                     const char *relativeToDir, OutputStream &outputStream,
                      svn_depth_t depth, StringArray &changelists,
                      bool ignoreAncestry, bool noDiffDelete, bool force,
                      bool showCopiesAsAdds)
 {
     diff(target1, revision1, target2, revision2, NULL, relativeToDir,
-         outfileName, depth, changelists, ignoreAncestry, noDiffDelete, force,
+         outputStream, depth, changelists, ignoreAncestry, noDiffDelete, force,
          showCopiesAsAdds);
 }
 
 void SVNClient::diff(const char *target, Revision &pegRevision,
                      Revision &startRevision, Revision &endRevision,
-                     const char *relativeToDir, const char *outfileName,
+                     const char *relativeToDir, OutputStream &outputStream,
                      svn_depth_t depth, StringArray &changelists,
                      bool ignoreAncestry, bool noDiffDelete, bool force,
                      bool showCopiesAsAdds)
 {
     diff(target, startRevision, NULL, endRevision, &pegRevision,
-         relativeToDir, outfileName, depth, changelists,
+         relativeToDir, outputStream, depth, changelists,
          ignoreAncestry, noDiffDelete, force, showCopiesAsAdds);
 }
 

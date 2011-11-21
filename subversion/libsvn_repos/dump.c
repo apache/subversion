@@ -385,7 +385,7 @@ dump_node(struct edit_baton *eb,
                      pool,
                      _("Referencing data in revision %ld,"
                        " which is older than the oldest"
-                       " dumped revision (%ld).  Loading this dump"
+                       " dumped revision (r%ld).  Loading this dump"
                        " into an empty repository"
                        " will fail."),
                      cmp_rev, eb->oldest_dumped_rev);
@@ -489,7 +489,7 @@ dump_node(struct edit_baton *eb,
                   notify->warning_str = apr_psprintf(
                     pool,
                     _("Mergeinfo referencing revision(s) prior "
-                      "to the oldest dumped revision (%ld). "
+                      "to the oldest dumped revision (r%ld). "
                       "Loading this dump may result in invalid "
                       "mergeinfo."),
                     eb->oldest_dumped_rev);
@@ -870,6 +870,8 @@ get_dump_editor(const svn_delta_editor_t **editor,
      root baton. */
   struct edit_baton *eb = apr_pcalloc(pool, sizeof(*eb));
   svn_delta_editor_t *dump_editor = svn_delta_default_editor(pool);
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                                svn_delta_shim_callbacks_default(pool);
 
   /* Set up the edit baton. */
   eb->stream = stream;
@@ -895,6 +897,9 @@ get_dump_editor(const svn_delta_editor_t **editor,
 
   *edit_baton = eb;
   *editor = dump_editor;
+
+  SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                   shim_callbacks, pool, pool));
 
   return SVN_NO_ERROR;
 }

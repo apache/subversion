@@ -1335,7 +1335,7 @@ def unlock_wrong_token(sbox):
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      file_path)
 
-  # Steal the lock as the same author, but using an URL to keep the old token
+  # Steal the lock as the same author, but using a URL to keep the old token
   # in the WC.
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                     "--force", file_url)

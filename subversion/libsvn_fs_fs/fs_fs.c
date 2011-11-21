@@ -147,6 +147,9 @@ read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
 static svn_error_t *
 update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool);
 
+static svn_error_t *
+get_youngest(svn_revnum_t *youngest_p, const char *fs_path, apr_pool_t *pool);
+
 /* Pathname helper functions */
 
 /* Return TRUE is REV is packed in FS, FALSE otherwise. */
@@ -509,26 +512,13 @@ with_txnlist_lock(svn_fs_t *fs,
                   const void *baton,
                   apr_pool_t *pool)
 {
-  svn_error_t *err;
-#if APR_HAS_THREADS
   fs_fs_data_t *ffd = fs->fsap_data;
   fs_fs_shared_data_t *ffsd = ffd->shared;
-  apr_status_t apr_err;
 
-  apr_err = apr_thread_mutex_lock(ffsd->txn_list_lock);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, _("Can't grab FSFS txn list mutex"));
-#endif
+  SVN_MUTEX__WITH_LOCK(ffsd->txn_list_lock,
+                       body(fs, baton, pool));
 
-  err = body(fs, baton, pool);
-
-#if APR_HAS_THREADS
-  apr_err = apr_thread_mutex_unlock(ffsd->txn_list_lock);
-  if (apr_err && !err)
-    return svn_error_wrap_apr(apr_err, _("Can't ungrab FSFS txn list mutex"));
-#endif
-
-  return svn_error_trace(err);
+  return SVN_NO_ERROR;
 }
 
 
@@ -558,54 +548,27 @@ get_lock_on_filesystem(const char *lock_filename,
    BATON and that subpool, destroy the subpool (releasing the write
    lock) and return what BODY returned. */
 static svn_error_t *
-with_some_lock(svn_fs_t *fs,
-               svn_error_t *(*body)(void *baton,
-                                    apr_pool_t *pool),
-               void *baton,
-               const char *lock_filename,
-#if SVN_FS_FS__USE_LOCK_MUTEX
-               apr_thread_mutex_t *lock_mutex,
-#endif
-               apr_pool_t *pool)
+with_some_lock_file(svn_fs_t *fs,
+                    svn_error_t *(*body)(void *baton,
+                                         apr_pool_t *pool),
+                    void *baton,
+                    const char *lock_filename,
+                    apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
-  svn_error_t *err;
-
-#if SVN_FS_FS__USE_LOCK_MUTEX
-  apr_status_t status;
-
-  /* POSIX fcntl locks are per-process, so we need to serialize locks
-     within the process. */
-  status = apr_thread_mutex_lock(lock_mutex);
-  if (status)
-    return svn_error_wrap_apr(status,
-                              _("Can't grab FSFS mutex for '%s'"),
-                              lock_filename);
-#endif
-
-  err = get_lock_on_filesystem(lock_filename, subpool);
+  svn_error_t *err = get_lock_on_filesystem(lock_filename, subpool);
 
   if (!err)
     {
       fs_fs_data_t *ffd = fs->fsap_data;
       if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
         SVN_ERR(update_min_unpacked_rev(fs, pool));
-#if 0 /* Might be a good idea? */
       SVN_ERR(get_youngest(&ffd->youngest_rev_cache, fs->path,
                            pool));
-#endif
       err = body(baton, subpool);
     }
 
   svn_pool_destroy(subpool);
-
-#if SVN_FS_FS__USE_LOCK_MUTEX
-  status = apr_thread_mutex_unlock(lock_mutex);
-  if (status && !err)
-    return svn_error_wrap_apr(status,
-                              _("Can't ungrab FSFS mutex for '%s'"),
-                              lock_filename);
-#endif
 
   return svn_error_trace(err);
 }
@@ -617,18 +580,15 @@ svn_fs_fs__with_write_lock(svn_fs_t *fs,
                            void *baton,
                            apr_pool_t *pool)
 {
-#if SVN_FS_FS__USE_LOCK_MUTEX
   fs_fs_data_t *ffd = fs->fsap_data;
   fs_fs_shared_data_t *ffsd = ffd->shared;
-  apr_thread_mutex_t *mutex = ffsd->fs_write_lock;
-#endif
 
-  return with_some_lock(fs, body, baton,
-                        path_lock(fs, pool),
-#if SVN_FS_FS__USE_LOCK_MUTEX
-                        mutex,
-#endif
-                        pool);
+  SVN_MUTEX__WITH_LOCK(ffsd->fs_write_lock,
+                       with_some_lock_file(fs, body, baton,
+                                           path_lock(fs, pool),
+                                           pool));
+
+  return SVN_NO_ERROR;
 }
 
 /* Run BODY (with BATON and POOL) while the txn-current file
@@ -640,18 +600,15 @@ with_txn_current_lock(svn_fs_t *fs,
                       void *baton,
                       apr_pool_t *pool)
 {
-#if SVN_FS_FS__USE_LOCK_MUTEX
   fs_fs_data_t *ffd = fs->fsap_data;
   fs_fs_shared_data_t *ffsd = ffd->shared;
-  apr_thread_mutex_t *mutex = ffsd->txn_current_lock;
-#endif
 
-  return with_some_lock(fs, body, baton,
-                        path_txn_current_lock(fs, pool),
-#if SVN_FS_FS__USE_LOCK_MUTEX
-                        mutex,
-#endif
-                        pool);
+  SVN_MUTEX__WITH_LOCK(ffsd->txn_current_lock,
+                       with_some_lock_file(fs, body, baton,
+                                           path_txn_current_lock(fs, pool),
+                                           pool));
+
+  return SVN_NO_ERROR;
 }
 
 /* A structure used by unlock_proto_rev() and unlock_proto_rev_body(),
@@ -1196,9 +1153,6 @@ update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
                                path_min_unpacked_rev(fs, pool),
                                pool);
 }
-
-static svn_error_t *
-get_youngest(svn_revnum_t *youngest_p, const char *fs_path, apr_pool_t *pool);
 
 svn_error_t *
 svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
@@ -2436,33 +2390,40 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
    that represents the location of representation REP.  If
    MUTABLE_REP_TRUNCATED is given, the rep is for props or dir contents,
    and only a "-1" revision number will be given for a mutable rep.
+   If MAY_BE_CORRUPT is true, guard for NULL when constructing the string.
    Perform the allocation from POOL.  */
 static const char *
 representation_string(representation_t *rep,
                       int format,
                       svn_boolean_t mutable_rep_truncated,
+                      svn_boolean_t may_be_corrupt,
                       apr_pool_t *pool)
 {
   if (rep->txn_id && mutable_rep_truncated)
     return "-1";
+
+#define DISPLAY_MAYBE_NULL_CHECKSUM(checksum)          \
+  ((may_be_corrupt == FALSE || (checksum) != NULL)     \
+   ? svn_checksum_to_cstring_display((checksum), pool) \
+   : "(null)")
 
   if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT || rep->sha1_checksum == NULL)
     return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
                         " %" SVN_FILESIZE_T_FMT " %s",
                         rep->revision, rep->offset, rep->size,
                         rep->expanded_size,
-                        svn_checksum_to_cstring_display(rep->md5_checksum,
-                                                        pool));
+                        DISPLAY_MAYBE_NULL_CHECKSUM(rep->md5_checksum));
 
   return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
                       " %" SVN_FILESIZE_T_FMT " %s %s %s",
                       rep->revision, rep->offset, rep->size,
                       rep->expanded_size,
-                      svn_checksum_to_cstring_display(rep->md5_checksum,
-                                                      pool),
-                      svn_checksum_to_cstring_display(rep->sha1_checksum,
-                                                      pool),
+                      DISPLAY_MAYBE_NULL_CHECKSUM(rep->md5_checksum),
+                      DISPLAY_MAYBE_NULL_CHECKSUM(rep->sha1_checksum),
                       rep->uniquifier);
+
+#undef DISPLAY_MAYBE_NULL_CHECKSUM
+
 }
 
 
@@ -2495,12 +2456,13 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
                                                     format,
                                                     (noderev->kind
                                                      == svn_node_dir),
+                                                    FALSE,
                                                     pool)));
 
   if (noderev->prop_rep)
     SVN_ERR(svn_stream_printf(outfile, pool, HEADER_PROPS ": %s\n",
                               representation_string(noderev->prop_rep, format,
-                                                    TRUE, pool)));
+                                                    TRUE, FALSE, pool)));
 
   SVN_ERR(svn_stream_printf(outfile, pool, HEADER_CPATH ": %s\n",
                             noderev->created_path));
@@ -2945,7 +2907,7 @@ set_revision_proplist(svn_fs_t *fs,
 {
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  if (1)
+  /* if (1); null condition for easier merging to revprop-packing */
     {
       const char *final_path = path_revprops(fs, rev, pool);
       const char *tmp_path;
@@ -2983,7 +2945,7 @@ revision_proplist(apr_hash_t **proplist_p,
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  if (1)
+  /* if (1); null condition for easier merging to revprop-packing */
     {
       apr_file_t *revprop_file = NULL;
       svn_error_t *err = SVN_NO_ERROR;
@@ -3136,7 +3098,7 @@ create_rep_state(struct rep_state **rep_state,
                                "Corrupt representation '%s'",
                                rep 
                                ? representation_string(rep, ffd->format, TRUE,
-                                                       pool)
+                                                       TRUE, pool)
                                : "(null)");
     }
   /* ### Call representation_string() ? */
@@ -5638,7 +5600,7 @@ rep_write_contents_close(void *baton)
           /* Something's wrong with the rep-sharing index.  We can continue
              without rep-sharing, but warn.
            */
-          (b->fs->warning)(b->fs->warning_baton, err);
+          (b->fs->warning)(b->fs->warning_baton, svn_error_root_cause(err));
           svn_error_clear(err);
           old_rep = NULL;
         }
@@ -5874,6 +5836,62 @@ write_hash_rep(svn_filesize_t *size,
   return svn_stream_printf(whb->stream, pool, "ENDREP\n");
 }
 
+/* Sanity check ROOT_NODEREV, a candidate for being the root node-revision
+   of (not yet committed) revision REV in FS.  Use POOL for temporary
+   allocations.
+ */
+static svn_error_t *
+validate_root_noderev(svn_fs_t *fs,
+                      node_revision_t *root_noderev,
+                      svn_revnum_t rev,
+                      apr_pool_t *pool)
+{
+  svn_revnum_t head_revnum = rev-1;
+  int head_predecessor_count;
+
+  SVN_ERR_ASSERT(rev > 0);
+
+  /* Compute HEAD_PREDECESSOR_COUNT. */
+  {
+    svn_fs_root_t *head_revision;
+    const svn_fs_id_t *head_root_id;
+    node_revision_t *head_root_noderev;
+
+    /* Get /@HEAD's noderev. */
+    SVN_ERR(svn_fs_fs__revision_root(&head_revision, fs, head_revnum, pool));
+    SVN_ERR(svn_fs_fs__node_id(&head_root_id, head_revision, "/", pool));
+    SVN_ERR(svn_fs_fs__get_node_revision(&head_root_noderev, fs, head_root_id,
+                                         pool));
+
+    head_predecessor_count = head_root_noderev->predecessor_count;
+  }
+
+  /* Check that the root noderev's predecessor count equals REV.
+
+     This kind of corruption was seen on svn.apache.org (both on
+     the root noderev and on other fspaths' noderevs); see
+       http://mid.gmane.org/20111002202833.GA12373@daniel3.local
+
+     Normally (rev == root_noderev->predecessor_count), but here we
+     use a more roundabout check that should only trigger on new instances
+     of the corruption, rather then trigger on each and every new commit
+     to a repository that has triggered the bug somewhere in its root
+     noderev's history.
+   */
+  if (root_noderev->predecessor_count != -1
+      && (root_noderev->predecessor_count - head_predecessor_count)
+         != (rev - head_revnum))
+    {
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               _("predecessor count for "
+                                 "the root node-revision is wrong: "
+                                 "found %d, committing r%ld"),
+                                 root_noderev->predecessor_count, rev);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Copy a node-revision specified by id ID in fileystem FS from a
    transaction into the proto-rev-file FILE.  Set *NEW_ID_P to a
    pointer to the new node-id which will be allocated in POOL.
@@ -5891,6 +5909,10 @@ write_hash_rep(svn_filesize_t *size,
    If REPS_TO_CACHE is not NULL, append to it a copy (allocated in
    REPS_POOL) of each data rep that is new in this revision.
 
+   AT_ROOT is true if the node revision being written is the root
+   node-revision.  It is only controls additional sanity checking
+   logic.
+
    Temporary allocations are also from POOL. */
 static svn_error_t *
 write_final_rev(const svn_fs_id_t **new_id_p,
@@ -5903,6 +5925,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                 apr_off_t initial_offset,
                 apr_array_header_t *reps_to_cache,
                 apr_pool_t *reps_pool,
+                svn_boolean_t at_root,
                 apr_pool_t *pool)
 {
   node_revision_t *noderev;
@@ -5939,7 +5962,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           svn_pool_clear(subpool);
           SVN_ERR(write_final_rev(&new_id, file, rev, fs, dirent->id,
                                   start_node_id, start_copy_id, initial_offset,
-                                  reps_to_cache, reps_pool,
+                                  reps_to_cache, reps_pool, FALSE,
                                   subpool));
           if (new_id && (svn_fs_fs__id_rev(new_id) == rev))
             dirent->id = svn_fs_fs__id_copy(new_id, pool);
@@ -6037,6 +6060,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   noderev->id = new_id;
 
   /* Write out our new node-revision. */
+  if (at_root)
+    SVN_ERR(validate_root_noderev(fs, noderev, rev, pool));
   SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_aprfile2(file, TRUE, pool),
                                    noderev, ffd->format,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
@@ -6316,7 +6341,7 @@ commit_body(void *baton, apr_pool_t *pool)
   root_id = svn_fs_fs__id_txn_create("0", "0", cb->txn->id, pool);
   SVN_ERR(write_final_rev(&new_root_id, proto_file, new_rev, cb->fs, root_id,
                           start_node_id, start_copy_id, initial_offset,
-                          cb->reps_to_cache, cb->reps_pool,
+                          cb->reps_to_cache, cb->reps_pool, TRUE,
                           pool));
 
   /* Write the changed-path information. */
@@ -6362,7 +6387,7 @@ commit_body(void *baton, apr_pool_t *pool)
      fails because the shard already existed for some reason. */
   if (ffd->max_files_per_dir && new_rev % ffd->max_files_per_dir == 0)
     {
-      if (1)
+      /* if (1); null condition for easier merging to revprop-packing */
         {
           const char *new_dir = path_rev_shard(cb->fs, new_rev, pool);
           svn_error_t *err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
@@ -6501,10 +6526,11 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
 
   SVN_ERR(svn_fs_fs__with_write_lock(fs, commit_body, &cb, pool));
 
+  /* At this point, *NEW_REV_P has been set, so errors below won't affect
+     the success of the commit.  (See svn_fs_commit_txn().)  */
+
   if (ffd->rep_sharing_allowed)
     {
-      /* At this point, *NEW_REV_P has been set, so errors here won't affect
-         the success of the commit.  (See svn_fs_commit_txn().)  */
       SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
       SVN_ERR(svn_sqlite__with_transaction(ffd->rep_cache_db,
                                            commit_sqlite_txn_callback,
@@ -7017,7 +7043,7 @@ recover_body(void *baton, apr_pool_t *pool)
                             &youngest_revprops_kind, pool));
   if (youngest_revprops_kind == svn_node_none)
     {
-      if (1)
+      /* if (1); null condition for easier merging to revprop-packing */
         {
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                    _("Revision %ld has a revs file but no "
@@ -7410,7 +7436,6 @@ struct change_rev_prop_baton {
 /* The work-horse for svn_fs_fs__change_rev_prop, called with the FS
    write lock.  This implements the svn_fs_fs__with_write_lock()
    'body' callback type.  BATON is a 'struct change_rev_prop_baton *'. */
-
 static svn_error_t *
 change_rev_prop_body(void *baton, apr_pool_t *pool)
 {

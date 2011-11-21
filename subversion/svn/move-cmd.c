@@ -86,7 +86,8 @@ svn_cl__move(apr_getopt_t *os,
 
   err = svn_client_move6(targets, dst_path,
                          TRUE, opt_state->parents, opt_state->revprop_table,
-                         svn_cl__print_commit_info, NULL, ctx, pool);
+                         (opt_state->quiet ? NULL : svn_cl__print_commit_info),
+                         NULL, ctx, pool);
 
   if (err)
     err = svn_cl__may_need_force(err);

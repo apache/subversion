@@ -32,12 +32,14 @@
 #include "svn_mergeinfo.h"
 #include "svn_path.h"
 #include "svn_version.h"
+#include "svn_cache_config.h"
 
 #include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_repos_private.h"
 #include "private/svn_fspath.h"
+#include "private/svn_atomic.h"
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
@@ -129,6 +131,35 @@ get_username(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+/* Implements an svn_atomic__init_once callback.  Sets the FSFS memory
+   cache size. */
+static svn_error_t *
+cache_init(void *baton, apr_pool_t *pool)
+{
+  apr_hash_t *config_hash = baton;
+  svn_config_t *config = NULL;
+  const char *memory_cache_size_str;
+
+  if (config_hash)
+    config = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_CONFIG,
+                          APR_HASH_KEY_STRING);
+  svn_config_get(config, &memory_cache_size_str, SVN_CONFIG_SECTION_MISCELLANY,
+                 SVN_CONFIG_OPTION_MEMORY_CACHE_SIZE, NULL);
+  if (memory_cache_size_str)
+    {
+      apr_uint64_t memory_cache_size;
+      svn_cache_config_t settings = *svn_cache_config_get();
+
+      SVN_ERR(svn_error_quick_wrap(svn_cstring_atoui64(&memory_cache_size,
+                                                       memory_cache_size_str),
+                                   _("memory-cache-size invalid")));
+      settings.cache_size = 1024 * 1024 * memory_cache_size; 
+      svn_cache_config_set(&settings);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /*----------------------------------------------------------------*/
 
 /*** The reporter vtable needed by do_update() and friends ***/
@@ -189,21 +220,21 @@ reporter_link_path(void *reporter_baton,
                    apr_pool_t *pool)
 {
   reporter_baton_t *rbaton = reporter_baton;
-  const char *fs_path = NULL;
   const char *repos_url = rbaton->sess->repos_url;
+  const char *relpath = svn_uri_skip_ancestor(repos_url, url, pool);
+  const char *fs_path;
 
-  if (!svn_uri__is_ancestor(repos_url, url))
+  if (!relpath)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              _("'%s'\n"
                                "is not the same repository as\n"
                                "'%s'"), url, rbaton->sess->repos_url);
 
-  /* Skip the repos_url, but keep the last '/' to create an fspath */
-  fs_path = svn_uri_skip_ancestor(repos_url, url, pool);
-  if (fs_path[0] == '\0')
+  /* Convert the relpath to an fspath */
+  if (relpath[0] == '\0')
     fs_path = "/";
   else
-    fs_path = apr_pstrcat(pool, "/", fs_path, (char *)NULL);
+    fs_path = apr_pstrcat(pool, "/", relpath, (char *)NULL);
 
   return svn_repos_link_path3(rbaton->report_baton, path, fs_path, revision,
                               depth, start_empty, lock_token, pool);
@@ -460,6 +491,12 @@ svn_ra_local__open(svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sess;
   const char *fs_path;
+  static volatile svn_atomic_t cache_init_state = 0;
+
+  /* Initialise the FSFS memory cache size.  We can only do this once
+     so one CONFIG will win the race and all others will be ignored
+     silently.  */
+  SVN_ERR(svn_atomic__init_once(&cache_init_state, cache_init, config, pool));
 
   /* We don't support redirections in ra-local. */
   if (corrected_url)
@@ -504,12 +541,10 @@ svn_ra_local__reparent(svn_ra_session_t *session,
                        apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  const char *relpath = "";
+  const char *relpath = svn_uri_skip_ancestor(sess->repos_url, url, pool);
 
   /* If the new URL isn't the same as our repository root URL, then
      let's ensure that it's some child of it. */
-  if (strcmp(url, sess->repos_url) != 0)
-    relpath = svn_uri__is_child(sess->repos_url, url, pool);
   if (! relpath)
     return svn_error_createf
       (SVN_ERR_RA_ILLEGAL_URL, NULL,
@@ -705,7 +740,6 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
                             const apr_array_header_t *paths,
                             svn_revnum_t revision,
                             svn_mergeinfo_inheritance_t inherit,
-                            svn_boolean_t validate_inherited_mergeinfo,
                             svn_boolean_t include_descendants,
                             apr_pool_t *pool)
 {
@@ -722,11 +756,9 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
         svn_fspath__join(sess->fs_path->data, relative_path, pool);
     }
 
-  SVN_ERR(svn_repos_fs_get_mergeinfo2(&tmp_catalog, sess->repos, abs_paths,
-                                      revision, inherit,
-                                      validate_inherited_mergeinfo,
-                                      include_descendants,
-                                      NULL, NULL, pool));
+  SVN_ERR(svn_repos_fs_get_mergeinfo(&tmp_catalog, sess->repos, abs_paths,
+                                     revision, inherit, include_descendants,
+                                     NULL, NULL, pool));
   if (apr_hash_count(tmp_catalog) > 0)
     SVN_ERR(svn_mergeinfo__remove_prefix_from_catalog(catalog,
                                                       tmp_catalog,
@@ -1434,9 +1466,7 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
     {
       *has = TRUE;
     }
-  else if ((strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
-           || (strcmp(capability,
-                      SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO) == 0))
+  else if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
     {
       /* With mergeinfo, the code's capabilities may not reflect the
          repository's, so inquire further. */

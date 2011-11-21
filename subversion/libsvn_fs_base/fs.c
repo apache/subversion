@@ -496,7 +496,6 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__get_lock,
   svn_fs_base__get_locks,
   base_bdb_set_errcall,
-  svn_fs_base__validate_mergeinfo,
 };
 
 /* Where the format number is stored. */
@@ -880,7 +879,6 @@ base_verify(svn_fs_t *fs, const char *path,
             apr_pool_t *pool,
             apr_pool_t *common_pool)
 {
-  /* ### Any boilerplate needed here? */
   /* Verifying is currently a no op for BDB. */
   return SVN_NO_ERROR;
 }

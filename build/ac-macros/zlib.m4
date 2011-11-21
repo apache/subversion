@@ -31,7 +31,11 @@ AC_DEFUN(SVN_LIB_Z,
                                   [zlib compression library]),
   [
     if test "$withval" = "yes" ; then
-      AC_MSG_ERROR([--with-zlib requires an argument.])
+      AC_CHECK_HEADER(zlib.h, [
+        AC_CHECK_LIB(z, inflate, [zlib_found="builtin"])
+      ])
+    elif test "$withval" = "no" ; then
+      AC_MSG_ERROR([cannot compile without zlib.])
     else
       AC_MSG_NOTICE([zlib library configuration])
       zlib_prefix=$withval
@@ -39,7 +43,7 @@ AC_DEFUN(SVN_LIB_Z,
       CPPFLAGS="$CPPFLAGS -I$zlib_prefix/include"
       AC_CHECK_HEADERS(zlib.h,[
         save_ldflags="$LDFLAGS"
-        LDFLAGS="-L$zlib_prefix/lib"
+        LDFLAGS="$LDFLAGS -L$zlib_prefix/lib"
         AC_CHECK_LIB(z, inflate, [zlib_found="yes"])
         LDFLAGS="$save_ldflags"
       ])

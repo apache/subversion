@@ -614,8 +614,7 @@ ensure_repos_info(svn_wc_entry_t *entry,
       for (hi = apr_hash_first(scratch_pool, repos_cache);
            hi; hi = apr_hash_next(hi))
         {
-          if (svn_uri__is_child(svn__apr_hash_index_key(hi), entry->url,
-                                scratch_pool))
+          if (svn_uri__is_ancestor(svn__apr_hash_index_key(hi), entry->url))
             {
               if (!entry->repos)
                 entry->repos = svn__apr_hash_index_key(hi);
@@ -1404,6 +1403,7 @@ upgrade_to_wcng(void **dir_baton,
   svn_wc_entry_t *this_dir;
   const char *old_wcroot_abspath, *dir_relpath;
   apr_hash_t *text_bases_info;
+  svn_error_t *err;
 
   /* Don't try to mess with the WC if there are old log files left. */
 
@@ -1475,11 +1475,18 @@ upgrade_to_wcng(void **dir_baton,
                              data->sdb, scratch_pool, scratch_pool));
 
   /***** ENTRIES - WRITE *****/
-  SVN_ERR(svn_wc__write_upgraded_entries(dir_baton, parent_baton, db, data->sdb,
-                                         data->repos_id, data->wc_id,
-                                         dir_abspath, data->root_abspath,
-                                         entries, text_bases_info,
-                                         result_pool, scratch_pool));
+  err = svn_wc__write_upgraded_entries(dir_baton, parent_baton, db, data->sdb,
+                                       data->repos_id, data->wc_id,
+                                       dir_abspath, data->root_abspath,
+                                       entries, text_bases_info,
+                                       result_pool, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_CORRUPT)
+    return svn_error_quick_wrap(err,
+                                _("This working copy is corrupt and "
+                                  "cannot be upgraded. Please check out "
+                                  "a new working copy."));
+  else
+    SVN_ERR(err);
 
   /***** WC PROPS *****/
   /* If we don't know precisely where the wcprops are, ignore them.  */
@@ -1914,12 +1921,12 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                              scratch_pool));
   SVN_ERR(svn_wc__ensure_directory(root_adm_abspath, scratch_pool));
 
-  /* Create an empty sqlite database for this directory. */
+  /* Create an empty sqlite database for this directory and store it in DB. */
   SVN_ERR(svn_wc__db_upgrade_begin(&data.sdb,
                                    &data.repos_id, &data.wc_id,
-                                   data.root_abspath,
+                                   db, data.root_abspath,
                                    this_dir->repos, this_dir->uuid,
-                                   scratch_pool, scratch_pool));
+                                   scratch_pool));
 
   /* Migrate the entries over to the new database.
    ### We need to think about atomicity here.
@@ -1964,7 +1971,6 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__db_wq_add(db, data.root_abspath, work_items, scratch_pool));
 
   SVN_ERR(svn_wc__db_wclock_release(db, data.root_abspath, scratch_pool));
-  SVN_ERR(svn_sqlite__close(data.sdb));
   SVN_ERR(svn_wc__db_close(db));
 
   /* Renaming the db file is what makes the pre-wcng into a wcng */
@@ -1986,3 +1992,44 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__upgrade_add_external_info(svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  svn_node_kind_t kind,
+                                  const char *def_local_abspath,
+                                  const char *repos_relpath,
+                                  const char *repos_root_url,
+                                  const char *repos_uuid,
+                                  svn_revnum_t def_peg_revision,
+                                  svn_revnum_t def_revision,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_kind_t db_kind;
+  switch (kind)
+    {
+      case svn_node_dir:
+        db_kind = svn_kind_dir;
+        break;
+
+      case svn_node_file:
+        db_kind = svn_kind_file;
+        break;
+
+      case svn_node_unknown:
+        db_kind = svn_kind_unknown;
+        break;
+
+      default:
+        SVN_ERR_MALFUNCTION();
+    }
+
+  SVN_ERR(svn_wc__db_upgrade_insert_external(wc_ctx->db, local_abspath,
+                                             db_kind,
+                                             svn_dirent_dirname(local_abspath,
+                                                                scratch_pool),
+                                             def_local_abspath, repos_relpath,
+                                             repos_root_url, repos_uuid,
+                                             def_peg_revision, def_revision,
+                                             scratch_pool));
+  return SVN_NO_ERROR;
+}

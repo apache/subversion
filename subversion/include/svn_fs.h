@@ -1501,10 +1501,14 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  * @a inherit indicates whether to retrieve explicit,
  * explicit-or-inherited, or only inherited mergeinfo.
  *
- * If the mergeinfo for any path is inherited and
- * @a validate_inherited_mergeinfo is TRUE, then the mergeinfo for
- * that path in @a *catalog will only contain merge source
- * path-revisions that actually exist in repository.
+ * If @a adjust_inherited_mergeinfo is TRUE, then any inherited
+ * mergeinfo returned in @a *catalog is normalized to represent the
+ * inherited mergeinfo on the path doing the inheriting.  If
+ * @a adjust_inherited_mergeinfo is FALSE, then any inherited
+ * mergeinfo is the raw explicit mergeinfo from the nearest parent
+ * of the path with explicit mergeinfo, unadjusted for the path-wise
+ * difference between the path and its parent.  This may include
+ * non-inheritable mergeinfo.
  *
  * If @a include_descendants is TRUE, then additionally return the
  * mergeinfo for any descendant of any element of @a paths which has
@@ -1513,24 +1517,26 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  * paths; descendants of the elements in @a paths which get their
  * mergeinfo via inheritance are not included in @a *catalog.)
  *
- * Do any necessary temporary allocation in @a pool.
+ * Allocate @a *catalog in result_pool.  Do any necessary temporary
+ * allocations in @a scratch_pool.
  *
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
                       svn_fs_root_t *root,
                       const apr_array_header_t *paths,
                       svn_mergeinfo_inheritance_t inherit,
-                      svn_boolean_t validate_inherited_mergeinfo,
                       svn_boolean_t include_descendants,
-                      apr_pool_t *pool);
+                      svn_boolean_t adjust_inherited_mergeinfo,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
 
 /**
- * Similar to svn_fs_get_mergeinfo2(), but with
- * @a validate_inherited_mergeinfo always passed as FALSE.
+ * Same as svn_fs_get_mergeinfo2(), but with @a adjust_inherited_mergeinfo
+ * set always set to TRUE and only one pool.
  *
- * @deprecated Provided for backward compatibility with the 1.6 API.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -1540,25 +1546,6 @@ svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                      svn_mergeinfo_inheritance_t inherit,
                      svn_boolean_t include_descendants,
                      apr_pool_t *pool);
-
-/**
- * Set @a *validated_mergeinfo equal to deep copy of @a mergeinfo, less
- * any mergeinfo that describes path-revs that do not exist in @a fs.
- * If @a mergeinfo is empty then @a *validated_mergeinfo is set to an empty
- * mergeinfo hash.  If @a mergeinfo is NULL then @a *validated_mergeinfo is
- * set to NULL.
- *
- * @a *validated_mergeinfo is allocated in @a result_pool.  All temporary
- * allocations are performed in @a scratch_pool.
- *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_fs_validate_mergeinfo(svn_mergeinfo_t *validated_mergeinfo,
-                          svn_fs_t *fs,
-                          svn_mergeinfo_t mergeinfo,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
 
 /** Merge changes between two nodes into a third node.
  *

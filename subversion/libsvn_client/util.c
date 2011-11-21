@@ -102,17 +102,15 @@ svn_client__path_relative_to_root(const char **rel_path,
 
       SVN_ERR_ASSERT(repos_relpath != NULL);
     }
-     /* Merge handling passes a root that is not the repos root */
   else if (repos_root != NULL)
     {
-      if (!svn_uri__is_ancestor(repos_root, abspath_or_url))
+      repos_relpath = svn_uri_skip_ancestor(repos_root, abspath_or_url,
+                                            result_pool);
+      if (!repos_relpath)
         return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
                                  _("URL '%s' is not a child of repository "
                                    "root URL '%s'"),
                                  abspath_or_url, repos_root);
-
-      repos_relpath = svn_uri_skip_ancestor(repos_root, abspath_or_url,
-                                            result_pool);
     }
   else
     {
@@ -144,18 +142,19 @@ svn_client__path_relative_to_root(const char **rel_path,
 }
 
 svn_error_t *
-svn_client__get_repos_root(const char **repos_root,
-                           const char *abspath_or_url,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
+svn_client_get_repos_root(const char **repos_root,
+                          const char **repos_uuid,
+                          const char *abspath_or_url,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   svn_ra_session_t *ra_session;
 
   /* If PATH_OR_URL is a local path we can fetch the repos root locally. */
   if (!svn_path_is_url(abspath_or_url))
     {
-      SVN_ERR(svn_wc__node_get_repos_info(repos_root, NULL,
+      SVN_ERR(svn_wc__node_get_repos_info(repos_root, repos_uuid,
                                           ctx->wc_ctx, abspath_or_url,
                                           result_pool, scratch_pool));
 
@@ -168,7 +167,10 @@ svn_client__get_repos_root(const char **repos_root,
                                                NULL, NULL, FALSE, TRUE,
                                                ctx, scratch_pool));
 
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, result_pool));
+  if (repos_root)
+    SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, result_pool));
+  if (repos_uuid)
+    SVN_ERR(svn_ra_get_uuid2(ra_session, repos_uuid, result_pool));
 
   return SVN_NO_ERROR;
 }

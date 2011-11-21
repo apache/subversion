@@ -70,7 +70,6 @@ public class SVNClient implements SVNClientInterface
      */
     protected void finalize()
     {
-        aSVNClient.finalize();
     }
 
     /**
@@ -325,10 +324,20 @@ public class SVNClient implements SVNClientInterface
         implements org.apache.subversion.javahl.callback.UserPasswordCallback
     {
         PromptUserPassword oldPrompt;
+        PromptUserPassword2 oldPrompt2;
+        PromptUserPassword3 oldPrompt3;
 
         PromptUser1Wrapper(PromptUserPassword prompt)
         {
             oldPrompt = prompt;
+
+            /* This mirrors the insanity that was going on in the C++ layer
+               prior to 1.7.  Don't ask, just pray it works. */
+            if (prompt instanceof PromptUserPassword2)
+              oldPrompt2 = (PromptUserPassword2) prompt;
+
+            if (prompt instanceof PromptUserPassword3)
+              oldPrompt3 = (PromptUserPassword3) prompt;
         }
 
         public String getPassword()
@@ -360,7 +369,10 @@ public class SVNClient implements SVNClientInterface
 
         public int askTrustSSLServer(String info, boolean allowPermanently)
         {
-            return askTrustSSLServer(info, allowPermanently);
+            if (oldPrompt2 != null)
+                return oldPrompt2.askTrustSSLServer(info, allowPermanently);
+            else
+                return 0;
         }
 
         public boolean userAllowedSave()
@@ -371,12 +383,19 @@ public class SVNClient implements SVNClientInterface
         public String askQuestion(String realm, String question,
                                   boolean showAnswer, boolean maySave)
         {
-            return askQuestion(realm, question, showAnswer);
+            if (oldPrompt3 != null)
+                return oldPrompt3.askQuestion(realm, question, showAnswer,
+                                              maySave);
+            else
+                return askQuestion(realm, question, showAnswer);
         }
 
         public boolean prompt(String realm, String username, boolean maySave)
         {
-            return prompt(realm, username);
+            if (oldPrompt3 != null)
+                return oldPrompt3.prompt(realm, username, maySave);
+            else
+                return prompt(realm, username);
         }
     }
 
@@ -1878,8 +1897,12 @@ public class SVNClient implements SVNClientInterface
         {
             if (Path.isURL(path))
             {
-                aSVNClient.propertySetRemote(path, name,
+                Info2[] infos = info2(path, Revision.HEAD, Revision.HEAD,
+                                      false);
+
+                aSVNClient.propertySetRemote(path, infos[0].getRev(), name,
                                        value == null ? null : value.getBytes(),
+                                       cachedHandler,
                                        force, revpropTable, null);
             }
             else

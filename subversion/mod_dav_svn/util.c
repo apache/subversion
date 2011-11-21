@@ -264,6 +264,11 @@ dav_svn__build_uri(const dav_svn_repos *repos,
                           href1, root_path, special_uri,
                           revision, path_uri, href2);
 
+    case DAV_SVN__BUILD_URI_REVROOT:
+      return apr_psprintf(pool, "%s%s/%s/rvr/%ld%s%s",
+                          href1, root_path, special_uri,
+                          revision, path_uri, href2);
+
     case DAV_SVN__BUILD_URI_VCC:
       return apr_psprintf(pool, "%s%s/%s/vcc/" DAV_SVN__DEFAULT_VCC_NAME "%s",
                           href1, root_path, special_uri, href2);
@@ -704,7 +709,7 @@ request_body_to_string(svn_string_t **request_str,
     }
   else
     {
-      buf = svn_stringbuf_create("", pool);
+      buf = svn_stringbuf_create_empty(pool);
     }
 
   brigade = apr_brigade_create(r->pool, r->connection->bucket_alloc);
@@ -760,7 +765,7 @@ request_body_to_string(svn_string_t **request_str,
   apr_brigade_destroy(brigade);
 
   /* Make an svn_string_t from our svn_stringbuf_t. */
-  *request_str = svn_string_create("", pool);
+  *request_str = svn_string_create_empty(pool);
   (*request_str)->data = buf->data;
   (*request_str)->len = buf->len;
   return OK;

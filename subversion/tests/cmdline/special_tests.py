@@ -800,6 +800,110 @@ def merge_foreign_symlink(sbox):
   #     'A/zeta' : Item(status='A ', wc_rev='-', props={'svn:special': '*'}),
   #     })
 
+#----------------------------------------------------------------------
+# See also symlink_to_wc_svnversion().
+@Issue(2557,3987)
+@SkipUnless(svntest.main.is_posix_os)
+def symlink_to_wc_basic(sbox):
+  "operate on symlink to wc"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  # Create a symlink
+  symlink_path = sbox.add_wc_path('2')
+  assert not os.path.islink(symlink_path)
+  os.symlink(os.path.basename(wc_dir), symlink_path) ### implementation detail
+  symlink_basename = os.path.basename(symlink_path)
+
+  # Some basic tests
+  wc_uuid = svntest.actions.get_wc_uuid(wc_dir)
+  expected_info = [{
+      'Path' : re.escape(os.path.join(symlink_path)),
+      'Working Copy Root Path' : re.escape(os.path.abspath(symlink_path)),
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : wc_uuid,
+      'Revision' : '1',
+      'Node Kind' : 'directory',
+      'Schedule' : 'normal',
+  }, {
+      'Name' : 'iota',
+      'Path' : re.escape(os.path.join(symlink_path, 'iota')),
+      'Working Copy Root Path' : re.escape(os.path.abspath(symlink_path)),
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : wc_uuid,
+      'Revision' : '1',
+      'Node Kind' : 'file',
+      'Schedule' : 'normal',
+  }]
+  svntest.actions.run_and_verify_info(expected_info,
+                                      symlink_path, symlink_path + '/iota')
+
+#----------------------------------------------------------------------
+# Similar to #2557/#3987; see symlink_to_wc_basic().
+@Issue(2557,3987)
+@SkipUnless(svntest.main.is_posix_os)
+def symlink_to_wc_svnversion(sbox):
+  "svnversion on symlink to wc"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  # Create a symlink
+  symlink_path = sbox.add_wc_path('2')
+  assert not os.path.islink(symlink_path)
+  os.symlink(os.path.basename(wc_dir), symlink_path) ### implementation detail
+  symlink_basename = os.path.basename(symlink_path)
+
+  # Some basic tests
+  svntest.actions.run_and_verify_svnversion("Unmodified symlink to wc",
+                                            symlink_path, sbox.repo_url,
+                                            [ "1\n" ], [])
+
+# Regression in 1.7.0: Update fails to change a symlink
+@SkipUnless(svntest.main.is_posix_os)
+def update_symlink(sbox):
+  "update a symlink"
+
+  svntest.actions.do_sleep_for_timestamps()
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  mu_path = sbox.ospath('A/mu')
+  iota_path = sbox.ospath('iota')
+  symlink_path = sbox.ospath('symlink')
+
+  # create a symlink to /A/mu
+  os.symlink("A/mu", symlink_path)
+  sbox.simple_add('symlink')
+  sbox.simple_commit()
+
+  # change the symlink to /iota
+  os.remove(symlink_path)
+  os.symlink("iota", symlink_path)
+  sbox.simple_commit()
+
+  # update back to r2
+  svntest.main.run_svn(False, 'update', '-r', '2', wc_dir)
+
+  # now update to head; 1.7.0 throws an assertion here
+  expected_output = svntest.wc.State(wc_dir, {
+    'symlink'          : Item(status='U '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'symlink': Item(contents="This is the file 'iota'.\n",
+                                     props={'svn:special' : '*'})})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'symlink'           : Item(status='  ', wc_rev='3'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1)
+
 ########################################################################
 # Run the tests
 
@@ -824,6 +928,9 @@ test_list = [ None,
               unrelated_changed_special_status,
               symlink_destination_change,
               merge_foreign_symlink,
+              symlink_to_wc_basic,
+              symlink_to_wc_svnversion,
+              update_symlink,
              ]
 
 if __name__ == '__main__':

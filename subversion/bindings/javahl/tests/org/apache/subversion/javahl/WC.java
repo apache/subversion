@@ -519,6 +519,9 @@ public class WC
                                         + item.myPath + "' don't match:",
                                         item.reposLastCmtAuthor,
                                         status.getReposLastCmtAuthor());
+                    Assert.assertNotNull("URL for path " + item.myPath
+                                         + " should not be null", 
+                                         status.getUrl());
                 }
             }
             item.touched = true;

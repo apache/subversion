@@ -271,7 +271,7 @@ new_revision_record(void **revision_baton,
   rb->has_props = FALSE;
   rb->had_dropped_nodes = FALSE;
   rb->writing_begun = FALSE;
-  rb->header = svn_stringbuf_create("", pool);
+  rb->header = svn_stringbuf_create_empty(pool);
   rb->props = apr_hash_make(pool);
 
   header_stream = svn_stream_from_stringbuf(rb->header, pool);
@@ -322,7 +322,7 @@ output_revision(struct revision_baton_t *rb)
   char buf[SVN_KEYLINE_MAXLEN];
   apr_hash_index_t *hi;
   apr_pool_t *hash_pool = apr_hash_pool_get(rb->props);
-  svn_stringbuf_t *props = svn_stringbuf_create("", hash_pool);
+  svn_stringbuf_t *props = svn_stringbuf_create_empty(hash_pool);
   apr_pool_t *subpool = svn_pool_create(hash_pool);
 
   rb->writing_begun = TRUE;
@@ -551,8 +551,8 @@ new_node_record(void **node_baton,
       nb->has_text = FALSE;
       nb->writing_begun = FALSE;
       nb->tcl = tcl ? svn__atoui64(tcl) : 0;
-      nb->header = svn_stringbuf_create("", pool);
-      nb->props = svn_stringbuf_create("", pool);
+      nb->header = svn_stringbuf_create_empty(pool);
+      nb->props = svn_stringbuf_create_empty(pool);
 
       /* Now we know for sure that we have a node that will not be
          skipped, flush the revision if it has not already been done. */
@@ -1105,26 +1105,26 @@ do_filter(apr_getopt_t *os,
           SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
                                       do_exclude
                                       ? opt_state->drop_empty_revs
-                                      ? _("Excluding (and dropping empty "
-                                          "revisions for) prefixes:\n")
-                                      : _("Excluding prefixes:\n")
+                                        ? _("Excluding (and dropping empty "
+                                            "revisions for) prefix patterns:\n")
+                                        : _("Excluding prefix patterns:\n")
                                       : opt_state->drop_empty_revs
-                                      ? _("Including (and dropping empty "
-                                          "revisions for) prefixes:\n")
-                                      : _("Including prefixes:\n")));
+                                        ? _("Including (and dropping empty "
+                                            "revisions for) prefix patterns:\n")
+                                        : _("Including prefix patterns:\n")));
         }
       else
         {
           SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
                                       do_exclude
                                       ? opt_state->drop_empty_revs
-                                      ? _("Excluding (and dropping empty "
-                                          "revisions for) prefix patterns:\n")
-                                      : _("Excluding prefix patterns:\n")
+                                        ? _("Excluding (and dropping empty "
+                                            "revisions for) prefixes:\n")
+                                        : _("Excluding prefixes:\n")
                                       : opt_state->drop_empty_revs
-                                      ? _("Including (and dropping empty "
-                                          "revisions for) prefix patterns:\n")
-                                      : _("Including prefix patterns:\n")));
+                                        ? _("Including (and dropping empty "
+                                            "revisions for) prefixes:\n")
+                                        : _("Including prefixes:\n")));
         }
 
       for (i = 0; i < opt_state->prefixes->nelts; i++)

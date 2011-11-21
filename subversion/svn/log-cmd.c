@@ -227,8 +227,7 @@ log_entry_receiver(void *baton,
           svn_sort__item_t *item = &(APR_ARRAY_IDX(sorted_paths, i,
                                                    svn_sort__item_t));
           const char *path = item->key;
-          svn_log_changed_path2_t *log_item
-            = apr_hash_get(log_entry->changed_paths2, item->key, item->klen);
+          svn_log_changed_path2_t *log_item = item->value;
           const char *copy_data = "";
 
           if (lb->ctx->cancel_func)
@@ -277,18 +276,14 @@ log_entry_receiver(void *baton,
   /* Print a diff if requested. */
   if (lb->show_diff)
     {
-      apr_file_t *outfile;
-      apr_file_t *errfile;
+      svn_stream_t *outstream;
+      svn_stream_t *errstream;
       apr_array_header_t *diff_options;
-      apr_status_t status;
       svn_opt_revision_t start_revision;
       svn_opt_revision_t end_revision;
-      svn_error_t *err;
 
-      if ((status = apr_file_open_stdout(&outfile, pool)))
-        return svn_error_wrap_apr(status, _("Can't open stdout"));
-      if ((status = apr_file_open_stderr(&errfile, pool)))
-        return svn_error_wrap_apr(status, _("Can't open stderr"));
+      SVN_ERR(svn_stream_for_stdout(&outstream, pool));
+      SVN_ERR(svn_stream_for_stderr(&errstream, pool));
 
       /* Fall back to "" to get options initialized either way. */
       if (lb->diff_extensions)
@@ -303,82 +298,23 @@ log_entry_receiver(void *baton,
       end_revision.value.number = log_entry->revision;
 
       SVN_ERR(svn_cmdline_printf(pool, _("\n")));
-      err = svn_client_diff5(diff_options,
-                             lb->target_url,
-                             &start_revision,
-                             lb->target_url,
-                             &end_revision,
-                             NULL,
-                             lb->depth,
-                             FALSE, /* ignore ancestry */
-                             TRUE, /* no diff deleted */
-                             FALSE, /* show copies as adds */
-                             FALSE, /* ignore content type */
-                             FALSE, /* use git diff format */
-                             svn_cmdline_output_encoding(pool),
-                             outfile,
-                             errfile,
-                             NULL,
-                             lb->ctx, pool);
-      if (err)
-        {
-          /* We get a "path not found" error in case the revision created
-           * lb->target_url. Try to show a diff from the parent instead. */
-          if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
-            {
-              const char *parent;
-              apr_pool_t *iterpool;
-
-              svn_error_clear(err);
-
-              parent = svn_uri_dirname(lb->target_url, pool);
-              iterpool = svn_pool_create(pool);
-              while (strcmp(parent, lb->target_url) != 0)
-                {
-                  svn_pool_clear(iterpool);
-                  err = svn_client_diff5(diff_options,
-                                         parent,
-                                         &start_revision,
-                                         parent,
-                                         &end_revision,
-                                         NULL,
-                                         lb->depth,
-                                         FALSE, /* ignore ancestry */
-                                         TRUE, /* no diff deleted */
-                                         FALSE, /* show copies as adds */
-                                         FALSE, /* ignore content type */
-                                         FALSE, /* use git diff format */
-                                         svn_cmdline_output_encoding(iterpool),
-                                         outfile,
-                                         errfile,
-                                         NULL,
-                                         lb->ctx, iterpool);
-                  if (err == SVN_NO_ERROR)
-                    break;
-                  else
-                    {
-                      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
-                        {
-                          svn_error_clear(err);
-                          parent = svn_uri_dirname(parent, pool);
-                          continue;
-                        }
-                      if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL ||
-                          err->apr_err == SVN_ERR_AUTHZ_UNREADABLE ||
-                          err->apr_err == SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED)
-                        {
-                          svn_error_clear(err);
-                          break;
-                        }
-                      return svn_error_trace(err);
-                    }
-                }
-              svn_pool_destroy(iterpool);
-            }
-          else
-            return svn_error_trace(err);
-        }
-
+      SVN_ERR(svn_client_diff6(diff_options,
+                               lb->target_url,
+                               &start_revision,
+                               lb->target_url,
+                               &end_revision,
+                               NULL,
+                               lb->depth,
+                               FALSE, /* ignore ancestry */
+                               TRUE, /* no diff deleted */
+                               FALSE, /* show copies as adds */
+                               FALSE, /* ignore content type */
+                               FALSE, /* use git diff format */
+                               svn_cmdline_output_encoding(pool),
+                               outstream,
+                               errstream,
+                               NULL,
+                               lb->ctx, pool));
       SVN_ERR(svn_cmdline_printf(pool, _("\n")));
     }
 
@@ -435,7 +371,7 @@ log_entry_receiver_xml(void *baton,
 {
   struct log_receiver_baton *lb = baton;
   /* Collate whole log message into sb before printing. */
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
   char *revstr;
   const char *author;
   const char *date;

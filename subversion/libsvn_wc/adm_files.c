@@ -196,7 +196,7 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
                                apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   const svn_checksum_t *checksum;
 
   SVN_ERR(svn_wc__db_read_pristine_info(&status, &kind, NULL, NULL, NULL, NULL,
@@ -205,7 +205,7 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
                                         scratch_pool, scratch_pool));
 
   /* Sanity */
-  if (kind != svn_wc__db_kind_file)
+  if (kind != svn_kind_file)
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("Can only get the pristine contents of files; "
                                "'%s' is not a file"),
@@ -249,7 +249,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                               apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   const svn_checksum_t *sha1_checksum;
 
   if (size)
@@ -261,7 +261,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                                         scratch_pool, scratch_pool));
 
   /* Sanity */
-  if (kind != svn_wc__db_kind_file)
+  if (kind != svn_kind_file)
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("Can only get the pristine contents of files; "
                                "'%s' is not a file"),
@@ -428,7 +428,8 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool)
 {
   int format;
-  const char *repos_relpath;
+  const char *repos_relpath = svn_uri_skip_ancestor(repos_root_url, url,
+                                                    scratch_pool);
   svn_wc__db_status_t status;
   const char *db_repos_relpath, *db_repos_root_url, *db_repos_uuid;
   svn_revnum_t db_revision;
@@ -437,14 +438,10 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   SVN_ERR_ASSERT(url != NULL);
   SVN_ERR_ASSERT(repos_root_url != NULL);
   SVN_ERR_ASSERT(repos_uuid != NULL);
-  SVN_ERR_ASSERT(svn_uri__is_ancestor(repos_root_url, url));
+  SVN_ERR_ASSERT(repos_relpath != NULL);
 
   SVN_ERR(svn_wc__internal_check_wc(&format, db, local_abspath, TRUE,
                                     scratch_pool));
-
-  repos_relpath = svn_uri__is_child(repos_root_url, url, scratch_pool);
-  if (repos_relpath == NULL)
-    repos_relpath = "";
 
   /* Early out: we know we're not dealing with an existing wc, so
      just create one. */
@@ -503,7 +500,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
       /* ### comparing URLs, should they be canonicalized first? */
       if (strcmp(db_repos_uuid, repos_uuid)
           || strcmp(db_repos_root_url, repos_root_url)
-          || !svn_relpath__is_ancestor(db_repos_relpath, repos_relpath))
+          || !svn_relpath_skip_ancestor(db_repos_relpath, repos_relpath))
         {
           const char *copyfrom_root_url, *copyfrom_repos_relpath;
 

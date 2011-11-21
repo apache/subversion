@@ -486,22 +486,9 @@ def reintegrate_with_rename(sbox):
     ""             : Item(status=' M', wc_rev=9),
   })
   k_expected_disk.tweak('', props={SVN_PROP_MERGEINFO : '/A_COPY:2-9'})
-
-  # Why do we expect mergeinfo of '/A_COPY/D/G/tauprime:2-9' on
-  # A/D/G/tauprime?  Because this --reintegrate merge is effectively a
-  # two URL merge of %URL%/A@9 %URL%/A_COPY@9 to 'A'.  Since %URL%/A@9 and
-  # %URL%/A_COPY@9 have a common ancestor in %URL%/A@1 we expect this 2-URL
-  # merge to record mergeinfo and a component of that mergeinfo describes
-  # the merge of %URL%/A_COPY@2 to %URL%/A_COPY@9.  We see that above on
-  # A.  But we also get it on A's subtrees with explicit mergeinfo, namely
-  # A/D/G/tauprime.  Now I know what you are thinking, "'A_COPY/D/G/tauprime'
-  # doesn't even exist until r9!", and you are quite right.  But this
-  # inheritance of bogus mergeinfo is a known problem, see
-  # http://subversion.tigris.org/issues/show_bug.cgi?id=3157#desc8,
-  # and is not what this test is about, so we won't fail because of it.
   k_expected_disk.add({
     'D/G/tauprime' : Item(props={SVN_PROP_MERGEINFO :
-                                 '/A/D/G/tau:2-7\n/A_COPY/D/G/tauprime:2-9'},
+                                 '/A/D/G/tau:2-7\n/A_COPY/D/G/tauprime:9'},
                           contents="This is the file 'tau'.\n")
     })
   expected_skip = wc.State(A_path, {})
@@ -1269,7 +1256,8 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                            'A    ' + gamma_moved_COPY_path + '\n',
                            'D    ' + gamma_COPY_path + '\n',
                            ' U   ' + A_COPY_path     + '\n',
-                           ' U   ' + D_COPY_path     + '\n',]),
+                           ' U   ' + D_COPY_path     + '\n',
+                           ' U   ' + gamma_moved_COPY_path + '\n']),
     [], 'merge', sbox.repo_url + '/A',  A_COPY_path)
   expected_output = wc.State(
     wc_dir,
@@ -1339,7 +1327,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
     ''              : Item(status=' U'),
     'mu'            : Item(status=' G'),
     'D'             : Item(status=' U'),
-    'D/gamma_moved' : Item(status=' G'),
+    'D/gamma_moved' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_path, {
     })
@@ -1383,22 +1371,9 @@ def reintegrate_with_subtree_mergeinfo(sbox):
     'D/G/pi'        : Item("This is the file 'pi'.\n"),
     'D/G/rho'       : Item("New content"),
     'D/G/tau'       : Item("This is the file 'tau'.\n"),
-    # Why do we expect mergeinfo of '/A_COPY/D/G/tauprime:2-9' on
-    # A/D/G/tauprime?  Because this --reintegrate merge is effectively a
-    # two URL merge of %URL%/A@9 %URL%/A_COPY@9 to 'A'.  Since %URL%/A@9 and
-    # %URL%/A_COPY@9 have a common ancestor in %URL%/A@1 we expect this 2-URL
-    # merge to record mergeinfo and a component of that mergeinfo describes
-    # the merge of %URL%/A_COPY@2 to %URL%/A_COPY@9.  We see that above on
-    # A.  But we also get it on A's subtrees with explicit mergeinfo, namely
-    # A/D/G/tauprime.  Now I know what you are thinking, "'A_COPY/D/G/tauprime'
-    # doesn't even exist until r9!", and you are quite right.  But this
-    # inheritance of bogus mergeinfo is a known problem, see
-    # http://subversion.tigris.org/issues/show_bug.cgi?id=3157#desc8,
-    # and is not what this test is about, so we won't fail because of it.
     'D/gamma_moved' : Item(
       "Even newer content", props={SVN_PROP_MERGEINFO :
-                                   '/A/D/gamma_moved:2-15\n'
-                                   '/A_COPY/D/gamma_moved:2-19\n'
+                                   '/A_COPY/D/gamma_moved:17-19\n'
                                    '/A_COPY_3/D/gamma:9'}),
     'D/H'           : Item(),
     'D/H/chi'       : Item("This is the file 'chi'.\n"),
@@ -2036,7 +2011,7 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
     'C'         : Item(),
     'C/nu'      : Item("Trunk work on nu.\n",
                        props={SVN_PROP_MERGEINFO :
-                              '/A_COPY/C/nu:16-18\n'
+                              '/A_COPY/C/nu:13,16-18\n'
                               '/A_COPY_2/C/nu:10'}), # <-- From cyclic
                                                      # merge in r11
     'D'         : Item(),
@@ -2226,7 +2201,6 @@ def two_URL_merge_removes_valid_mergeinfo_from_target(sbox):
 # Test for issue #3867 'reintegrate merges create mergeinfo for
 # non-existent paths'.
 @Issue(3867)
-@XFail()
 def reintegrate_creates_bogus_mergeinfo(sbox):
   "reintegrate creates bogus mergeinfo"
 
@@ -2255,11 +2229,11 @@ def reintegrate_creates_bogus_mergeinfo(sbox):
   svntest.main.run_svn(None, "cp", A_path_1, A_COPY_path)
   svntest.main.run_svn(None, "ci", "-m", "create a branch", wc_dir)
 
-  # Make a text edit on the branch pushing the repo to rev6
+  # Make a text edit on the branch pushing the repo to r5
   svntest.main.file_write(A_COPY_psi_path, "Branch edit.\n")
   svntest.main.run_svn(None, "ci", "-m", "branch edit", wc_dir)
 
-  # Sync the A_COPY with A in preparation for reintegrate
+  # Sync the A_COPY with A in preparation for reintegrate and commit as r6.
   svntest.main.run_svn(None, "up", wc_dir)
   svntest.main.run_svn(None, "merge", sbox.repo_url + "/A", A_COPY_path)
   svntest.main.run_svn(None, "ci", "-m", "sync A_COPY with A", wc_dir)
@@ -2268,11 +2242,7 @@ def reintegrate_creates_bogus_mergeinfo(sbox):
   svntest.main.run_svn(None, "up", wc_dir)
 
   # Reintegrate A_COPY to A.  The resulting merginfo on A should be
-  # /A_COPY:4-10
-  #
-  # Currently this test fails because the resulting mergeinfo is /A_COPY:2-6.
-  # But A_COPY didn't exist unitl r4, so /A_COPY:2-3 describes merge source
-  # path-revs which don't exist.
+  # /A_COPY:4-6
   expected_output = wc.State(A_path, {
     'D/H/psi' : Item(status='U '),
     })
@@ -2418,7 +2388,7 @@ def no_source_subtree_mergeinfo(sbox):
   expected_elision = wc.State(os.path.join(wc_dir, 'A', 'B'), {
       })
   expected_disk = wc.State('', {
-      ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B2:3-12'}),
+      ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B2:4-12'}),
       'E'       : Item(),
       'E/alpha' : Item("AAA\n" +
                        "BBB\n" +
@@ -2449,7 +2419,6 @@ def no_source_subtree_mergeinfo(sbox):
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
 @Issue(3961)
-@XFail()
 def reintegrate_replaced_source(sbox):
   "reintegrate a replaced source branch"
 
@@ -2541,9 +2510,6 @@ def reintegrate_replaced_source(sbox):
     })
   expected_status.tweak(wc_rev=12)
   expected_disk = wc.State('', {
-    # This test currently fails because the resulting mergeinfo is
-    # /A_COPY:2-12, even though the changes in A_COPY:9 are *not*
-    # present on A.
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A_COPY:2-8,10-12'}),
     'B'         : Item(),
     'mu'        : Item("Branch edit.\n"),

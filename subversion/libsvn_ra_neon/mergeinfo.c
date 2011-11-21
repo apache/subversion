@@ -163,12 +163,11 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                            const apr_array_header_t *paths,
                            svn_revnum_t revision,
                            svn_mergeinfo_inheritance_t inherit,
-                           svn_boolean_t validate_inherited_mergeinfo,
                            svn_boolean_t include_descendants,
                            apr_pool_t *pool)
 {
   svn_ra_neon__session_t *ras = session->priv;
-  svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *request_body = svn_stringbuf_create_empty(pool);
   struct mergeinfo_baton mb;
   const char *bc_url;
   const char *bc_relative;
@@ -194,14 +193,6 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                                         "<S:inherit>%s"
                                         "</S:inherit>",
                                         svn_inheritance_to_word(inherit)));
-
-  if (validate_inherited_mergeinfo)
-    {
-      /* Send it only if true; server will default to "no". */
-      svn_stringbuf_appendcstr(request_body,
-                               "<S:" SVN_DAV__VALIDATE_INHERITED ">yes"
-                               "</S:" SVN_DAV__VALIDATE_INHERITED ">");
-    }
 
   if (include_descendants)
     {
@@ -230,8 +221,8 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
   svn_stringbuf_appendcstr(request_body, minfo_report_tail);
 
   mb.pool = pool;
-  mb.curr_path = svn_stringbuf_create("", pool);
-  mb.curr_info = svn_stringbuf_create("", pool);
+  mb.curr_path = svn_stringbuf_create_empty(pool);
+  mb.curr_info = svn_stringbuf_create_empty(pool);
   mb.catalog = apr_hash_make(pool);
   mb.err = SVN_NO_ERROR;
 

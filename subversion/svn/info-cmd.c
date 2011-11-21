@@ -85,7 +85,7 @@ print_info_xml(void *baton,
                const svn_client_info2_t *info,
                apr_pool_t *pool)
 {
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
   const char *rev_str;
   const char *path_prefix = baton;
 
@@ -471,20 +471,26 @@ print_info(void *baton,
               switch (conflict->kind)
                 {
                   case svn_wc_conflict_kind_text:
-                    SVN_ERR(svn_cmdline_printf(pool,
-                              _("Conflict Previous Base File: %s\n"),
-                              svn_dirent_local_style(conflict->base_abspath,
-                                                     pool)));
+                    if (conflict->base_abspath)
+                      SVN_ERR(svn_cmdline_printf(pool,
+                                _("Conflict Previous Base File: %s\n"),
+                                svn_cl__local_style_skip_ancestor(
+                                        path_prefix, conflict->base_abspath,
+                                        pool)));
 
-                    SVN_ERR(svn_cmdline_printf(pool,
-                              _("Conflict Previous Working File: %s\n"),
-                              svn_dirent_local_style(conflict->my_abspath,
-                                                     pool)));
+                    if (conflict->my_abspath)
+                      SVN_ERR(svn_cmdline_printf(pool,
+                                _("Conflict Previous Working File: %s\n"),
+                                svn_cl__local_style_skip_ancestor(
+                                        path_prefix, conflict->my_abspath,
+                                        pool)));
 
-                    SVN_ERR(svn_cmdline_printf(pool,
-                              _("Conflict Current Base File: %s\n"),
-                              svn_dirent_local_style(conflict->their_abspath,
-                                                     pool)));
+                    if (conflict->their_abspath)
+                      SVN_ERR(svn_cmdline_printf(pool,
+                                _("Conflict Current Base File: %s\n"),
+                                svn_cl__local_style_skip_ancestor(
+                                        path_prefix, conflict->their_abspath,
+                                        pool)));
                   break;
 
                   case svn_wc_conflict_kind_property:

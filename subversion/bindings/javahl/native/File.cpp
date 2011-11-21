@@ -79,8 +79,13 @@ const char *File::getAbsPath()
 
       stringHolder = new JNIStringHolder(jabsolutePath);
 
+      /* We don't remove the local ref for jabsolutePath here, because
+         JNIStringHolder expects that ref to be valid for the life of
+         the object, which in this case is allocated on the stack.
+         
+         So we just "leak" the reference, and it will get cleaned up when
+         we eventually exit back to Java-land. */
       env->DeleteLocalRef(clazz);
-      env->DeleteLocalRef(jabsolutePath);
     }
 
   return static_cast<const char *>(*stringHolder);
