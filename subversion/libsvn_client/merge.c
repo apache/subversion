@@ -5110,76 +5110,48 @@ drive_merge_report_editor(const char *target_abspath,
 }
 
 /* Iterate over each svn_client__merge_path_t * element in
-   CHILDREN_WITH_MERGEINFO and find the most inclusive start revision
-   among those element's first remaining_ranges element.
+   CHILDREN_WITH_MERGEINFO and, if START_REV is true, find the most inclusive
+   start revision among those element's first remaining_ranges element.  If
+   START_REV is false, then look for the most inclusive end revision.
 
-   If IS_ROLLBACK is true the youngest revision is considered the "most
-   inclusive" otherwise the oldest revision is.
+   If IS_ROLLBACK is true the youngest start or end (as per START_REV)
+   revision is considered the "most inclusive" otherwise the oldest revision
+   is.
 
    If none of CHILDREN_WITH_MERGEINFO's elements have any remaining ranges
    return SVN_INVALID_REVNUM. */
 static svn_revnum_t
-get_most_inclusive_start_rev(const apr_array_header_t *children_with_mergeinfo,
-                             svn_boolean_t is_rollback)
+get_most_inclusive_rev(const apr_array_header_t *children_with_mergeinfo,
+                       svn_boolean_t is_rollback,
+                       svn_boolean_t start_rev)
 {
   int i;
-  svn_revnum_t start_rev = SVN_INVALID_REVNUM;
+  svn_revnum_t most_inclusive_rev = SVN_INVALID_REVNUM;
 
   for (i = 0; i < children_with_mergeinfo->nelts; i++)
     {
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
-      svn_merge_range_t *range;
 
       if ((! child) || child->absent)
         continue;
-      if (! child->remaining_ranges->nelts)
-        continue;
-      range = APR_ARRAY_IDX(child->remaining_ranges, 0, svn_merge_range_t *);
-      if ((i == 0) && (range->start == range->end))
-        continue;
-      if ((start_rev == SVN_INVALID_REVNUM)
-          || (is_rollback && (range->start > start_rev))
-          || ((! is_rollback) && (range->start < start_rev)))
-        start_rev = range->start;
-    }
-  return start_rev;
-}
-
-/* Iterate over each svn_client__merge_path_t * element in
-   CHILDREN_WITH_MERGEINFO and find the most inclusive end revision
-   among those element's first remaining_ranges element.
-
-   If IS_ROLLBACK is true the oldest revision is considered the "most
-   inclusive" otherwise the youngest revision is.
-
-   If none of CHILDREN_WITH_MERGEINFO's elements have any remaining ranges
-   return SVN_INVALID_REVNUM. */
-static svn_revnum_t
-get_most_inclusive_end_rev(const apr_array_header_t *children_with_mergeinfo,
-                           svn_boolean_t is_rollback)
-{
-  int i;
-  svn_revnum_t end_rev = SVN_INVALID_REVNUM;
-
-  for (i = 0; i < children_with_mergeinfo->nelts; i++)
-    {
-      svn_client__merge_path_t *child =
-        APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
-      if (!child || child->absent)
-        continue;
       if (child->remaining_ranges->nelts > 0)
         {
-          svn_merge_range_t *range = APR_ARRAY_IDX(child->remaining_ranges, 0,
-                                                   svn_merge_range_t *);
-          if ((end_rev == SVN_INVALID_REVNUM)
-              || (is_rollback && (range->end > end_rev))
-              || ((! is_rollback) && (range->end < end_rev)))
-            end_rev = range->end;
+          svn_merge_range_t *range =
+            APR_ARRAY_IDX(child->remaining_ranges, 0, svn_merge_range_t *);
+
+          /* Are we looking for the most inclusive start or end rev? */
+          svn_revnum_t rev = start_rev ? range->start : range->end;
+
+          if ((most_inclusive_rev == SVN_INVALID_REVNUM)
+              || (is_rollback && (rev > most_inclusive_rev))
+              || ((! is_rollback) && (rev < most_inclusive_rev)))
+            most_inclusive_rev = rev;
         }
     }
-  return end_rev;
+  return most_inclusive_rev;
 }
+
 
 /* If first item in each child of CHILDREN_WITH_MERGEINFO's
    remaining_ranges is inclusive of END_REV, Slice the first range in
@@ -8406,8 +8378,8 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
          We'll do this twice, right now for the start of the mergeinfo we will
          ultimately record to describe this merge and then later for the
          start of the actual editor drive. */
-      new_range_start = get_most_inclusive_start_rev(
-        notify_b->children_with_mergeinfo, is_rollback);
+      new_range_start = get_most_inclusive_rev(
+        notify_b->children_with_mergeinfo, is_rollback, TRUE);
       if (SVN_IS_VALID_REVNUM(new_range_start))
         range.start = new_range_start;
 
@@ -8429,18 +8401,18 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
          may have further refined the starting revision for our editor
          drive. */
       start_rev =
-        get_most_inclusive_start_rev(notify_b->children_with_mergeinfo,
-                                     is_rollback);
+        get_most_inclusive_rev(notify_b->children_with_mergeinfo,
+                               is_rollback, TRUE);
 
       /* Is there anything to merge? */
       if (SVN_IS_VALID_REVNUM(start_rev))
         {
-          /* Now examine NOTIFY_B->CHILDREN_WITH_MERGEINFO to find the youngest
+          /* Now examine NOTIFY_B->CHILDREN_WITH_MERGEINFO to find the oldest
              ending revision that actually needs to be merged (for reverse
-             merges this is the oldest starting revision). */
+             merges this is the youngest ending revision). */
            svn_revnum_t end_rev =
-             get_most_inclusive_end_rev(notify_b->children_with_mergeinfo,
-                                        is_rollback);
+             get_most_inclusive_rev(notify_b->children_with_mergeinfo,
+                                    is_rollback, FALSE);
 
           /* While END_REV is valid, do the following:
 
@@ -8583,8 +8555,8 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
               remove_first_range_from_remaining_ranges(
                 end_rev, notify_b->children_with_mergeinfo, scratch_pool);
               next_end_rev =
-                get_most_inclusive_end_rev(notify_b->children_with_mergeinfo,
-                                           is_rollback);
+                get_most_inclusive_rev(notify_b->children_with_mergeinfo,
+                                       is_rollback, FALSE);
               if ((next_end_rev != SVN_INVALID_REVNUM || abort_on_conflicts)
                   && is_path_conflicted_by_merge(merge_b))
                 {
@@ -8599,8 +8571,8 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
                   break;
                 }
               start_rev =
-                get_most_inclusive_start_rev(notify_b->children_with_mergeinfo,
-                                             is_rollback);
+                get_most_inclusive_rev(notify_b->children_with_mergeinfo,
+                                       is_rollback, TRUE);
               end_rev = next_end_rev;
             }
         }
