@@ -145,7 +145,8 @@ enum action_code_t
   ACTION_PROPSET,
   ACTION_PUT,
   ACTION_ADD,
-  ACTION_DELETE
+  ACTION_DELETE,
+  ACTION_ADD_ABSENT
 };
 
 struct path_action
@@ -278,6 +279,14 @@ process_actions(void *edit_baton,
               SVN_ERR(svn_editor_copy(eb->editor, c_args->copyfrom_path,
                                       c_args->copyfrom_rev, path,
                                       SVN_INVALID_REVNUM));
+              break;
+            }
+
+          case ACTION_ADD_ABSENT:
+            {
+              kind = *((svn_kind_t *) action->args);
+              SVN_ERR(svn_editor_add_absent(eb->editor, path, kind,
+                                            SVN_INVALID_REVNUM));
               break;
             }
 
@@ -478,6 +487,11 @@ ev2_absent_directory(const char *path,
                      apr_pool_t *scratch_pool)
 {
   struct ev2_dir_baton *pb = parent_baton;
+  svn_kind_t *kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
+  
+  *kind = svn_kind_dir;
+  SVN_ERR(add_action(pb->eb, path, ACTION_ADD_ABSENT, kind));
+
   return SVN_NO_ERROR;
 }
 
@@ -580,6 +594,11 @@ ev2_absent_file(const char *path,
                 apr_pool_t *scratch_pool)
 {
   struct ev2_dir_baton *pb = parent_baton;
+  svn_kind_t *kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
+  
+  *kind = svn_kind_file;
+  SVN_ERR(add_action(pb->eb, path, ACTION_ADD_ABSENT, kind));
+
   return SVN_NO_ERROR;
 }
 
