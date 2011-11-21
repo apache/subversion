@@ -719,6 +719,7 @@ struct operation {
     OP_DELETE,
     OP_ADD,
     OP_REPLACE,
+    OP_ADD_ABSENT,
     OP_PROPSET           /* only for files for which no other operation is
                             occuring; directories are OP_OPEN with non-empty
                             props */
@@ -871,6 +872,9 @@ build(struct editor_baton *eb,
   if (action == ACTION_DELETE)
     operation->operation = OP_DELETE;
 
+  else if (action == ACTION_ADD_ABSENT)
+    operation->operation = OP_ADD_ABSENT;
+
   /* Handle copy operations (which can be adds or replacements). */
   else if (action == ACTION_COPY)
     {
@@ -1011,6 +1015,10 @@ add_absent_cb(void *baton,
   struct editor_baton *eb = baton;
 
   SVN_ERR(ensure_root_opened(eb));
+
+  SVN_ERR(build(eb, ACTION_ADD_ABSENT, relpath, kind,
+                NULL, SVN_INVALID_REVNUM,
+                NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1234,6 +1242,15 @@ drive(const struct operation *operation,
                                      child->copyfrom_url,
                                      child->copyfrom_revision, iterpool,
                                      &file_baton));
+        }
+
+      if (child->operation == OP_ADD_ABSENT)
+        {
+          if (child->kind == svn_kind_dir)
+            SVN_ERR(editor->absent_directory(path, operation->baton,
+                                             iterpool));
+          else
+            SVN_ERR(editor->absent_file(path, operation->baton, iterpool));
         }
 
       if (child->src_file && file_baton)
