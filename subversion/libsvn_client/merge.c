@@ -555,6 +555,7 @@ tree_conflict(merge_cmd_baton_t *merge_b,
 
       if (merge_b->conflicted_paths == NULL)
         merge_b->conflicted_paths = apr_hash_make(merge_b->pool);
+      victim_abspath = apr_pstrdup(merge_b->pool, victim_abspath);
 
       apr_hash_set(merge_b->conflicted_paths, victim_abspath,
                    APR_HASH_KEY_STRING, victim_abspath);
@@ -596,6 +597,7 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
 
       if (merge_b->conflicted_paths == NULL)
         merge_b->conflicted_paths = apr_hash_make(merge_b->pool);
+      victim_abspath = apr_pstrdup(merge_b->pool, victim_abspath);
 
       apr_hash_set(merge_b->conflicted_paths, victim_abspath,
                    APR_HASH_KEY_STRING, victim_abspath);
@@ -626,6 +628,7 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
 
       if (merge_b->conflicted_paths == NULL)
         merge_b->conflicted_paths = apr_hash_make(merge_b->pool);
+      victim_abspath = apr_pstrdup(merge_b->pool, victim_abspath);
 
       apr_hash_set(merge_b->conflicted_paths, victim_abspath,
                    APR_HASH_KEY_STRING, victim_abspath);

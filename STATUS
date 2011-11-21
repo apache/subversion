@@ -86,13 +86,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1204478
-   Avoid using pool memory after it has been freed in client merge code.
-   Justification:
-     Undefined behaviour.
-   Votes:
-     +1: philip, rhuijben, hwright
-
   * r1204167
     Fix issue #4046, "UTF-8 files containing only a byte order mark are
     added as binary".
