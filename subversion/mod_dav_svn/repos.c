@@ -1170,7 +1170,11 @@ static void log_warning(void *baton, svn_error_t *err)
      ### of our functions ... ??
   */
 
-  ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "%s", err->message);
+  while (err)
+    {
+      ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "%s", err->message);
+      err = err->child;
+    }
 }
 
 
