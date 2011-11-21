@@ -24,13 +24,6 @@ Candidate changes:
      -0: stsp (we can backport these when we need to)
      -0: gstein
 
- * r1187695
-   Have mod_dav_svn ignore non-Subversion POST requests.
-   Justification:
-     mod_dav_svn does not play well with others, a regression from 1.6.
-   Votes:
-     +1: philip, rhuijben
-
  * r1188652, r1188677, r1188762
    Fix issue 4042, commit incomplete directory asserts.
    Justification:
@@ -47,19 +40,6 @@ Candidate changes:
      obstructing future updates which re-add the directory.
    Votes:
      +1: stsp, rhuijben
-
- * r1189261
-   Bump copyright year in Windows executables and DLLs to 2011 (from 2009).
-   Votes:
-     +1: rhuijben, pburba
-     +0: philip (looks sensible, but I'm not a Windows expert)
-
- * r1199876
-   Fix issue 4048, wcng assert on update with 1.0.x server.
-   Justification:
-     Our client-server compatibility rules require this to work.
-   Votes:
-     +1: philip, rhuijben
 
  * r1201824
    Fix issue #2873.
@@ -80,23 +60,6 @@ Candidate changes:
      +1: philip
      =0: danielsh, rhuijben (disagrees with the choice of implementation.
                              see list)
-
-  * r1204167
-    Fix issue #4046, "UTF-8 files containing only a byte order mark are
-    added as binary".
-    Justification:
-      Empty UTF-8 files are commonly created with a BOM on Windows.
-      Fix has been requested by several users, see
-      http://svn.haxx.se/dev/archive-2011-10/0331.shtml
-    Votes:
-      +1: stsp, rhuijben
-
- * r1204478
-   Avoid using pool memory after it has been freed in client merge code.
-   Justification:
-     Undefined behaviour.
-   Votes:
-     +1: philip, rhuijben
 
 Veto-blocked changes:
 =====================
@@ -122,3 +85,40 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1187695
+   Have mod_dav_svn ignore non-Subversion POST requests.
+   Justification:
+     mod_dav_svn does not play well with others, a regression from 1.6.
+   Votes:
+     +1: philip, rhuijben, hwright
+
+ * r1204478
+   Avoid using pool memory after it has been freed in client merge code.
+   Justification:
+     Undefined behaviour.
+   Votes:
+     +1: philip, rhuijben, hwright
+
+  * r1204167
+    Fix issue #4046, "UTF-8 files containing only a byte order mark are
+    added as binary".
+    Justification:
+      Empty UTF-8 files are commonly created with a BOM on Windows.
+      Fix has been requested by several users, see
+      http://svn.haxx.se/dev/archive-2011-10/0331.shtml
+    Votes:
+      +1: stsp, rhuijben, hwright
+
+ * r1189261
+   Bump copyright year in Windows executables and DLLs to 2011 (from 2009).
+   Votes:
+     +1: rhuijben, pburba, hwright
+     +0: philip (looks sensible, but I'm not a Windows expert)
+
+ * r1199876
+   Fix issue 4048, wcng assert on update with 1.0.x server.
+   Justification:
+     Our client-server compatibility rules require this to work.
+   Votes:
+     +1: philip, rhuijben, hwright
