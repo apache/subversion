@@ -86,12 +86,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1189261
-   Bump copyright year in Windows executables and DLLs to 2011 (from 2009).
-   Votes:
-     +1: rhuijben, pburba, hwright
-     +0: philip (looks sensible, but I'm not a Windows expert)
-
  * r1199876
    Fix issue 4048, wcng assert on update with 1.0.x server.
    Justification:
