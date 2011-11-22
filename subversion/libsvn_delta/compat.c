@@ -135,6 +135,7 @@ struct ev2_file_baton
 {
   struct ev2_edit_baton *eb;
   const char *path;
+  const char *delta_base;
 };
 
 enum action_code_t
@@ -146,7 +147,8 @@ enum action_code_t
   ACTION_PUT,
   ACTION_ADD,
   ACTION_DELETE,
-  ACTION_ADD_ABSENT
+  ACTION_ADD_ABSENT,
+  ACTION_SET_TEXT
 };
 
 struct path_action
@@ -204,7 +206,7 @@ process_actions(void *edit_baton,
   apr_hash_t *props = NULL;
   svn_boolean_t need_add = FALSE;
   apr_array_header_t *children;
-  svn_stream_t *contents;
+  svn_stream_t *contents = NULL;
   svn_kind_t kind;
   int i;
 
@@ -266,9 +268,18 @@ process_actions(void *edit_baton,
                 }
               else
                 {
-                  /* ### Someday, we'll need the real contents here. */
+                  /* The default is an empty file. */
                   contents = svn_stream_empty(scratch_pool);
                 }
+              break;
+            }
+
+          case ACTION_SET_TEXT:
+            {
+              const char *src_path = action->args;
+
+              SVN_ERR(svn_stream_open_readonly(&contents, src_path,
+                                               scratch_pool, scratch_pool));
               break;
             }
 
@@ -318,7 +329,14 @@ process_actions(void *edit_baton,
           /* We fetched and modified the props in some way. Apply 'em now that
              we have the new set.  */
           SVN_ERR(svn_editor_set_props(eb->editor, path, SVN_INVALID_REVNUM,
-                                       props, TRUE));
+                                       props, contents == NULL));
+        }
+
+      if (contents)
+        {
+          /* If we have an content for this node, set it now. */
+          SVN_ERR(svn_editor_set_text(eb->editor, path, SVN_INVALID_REVNUM,
+                                      NULL, contents));
         }
     }
 
@@ -508,6 +526,7 @@ ev2_add_file(const char *path,
 
   fb->eb = pb->eb;
   fb->path = apr_pstrdup(result_pool, path);
+  fb->delta_base = NULL;
   *file_baton = fb;
 
   if (!copyfrom_path)
@@ -543,6 +562,7 @@ ev2_open_file(const char *path,
 
   fb->eb = pb->eb;
   fb->path = apr_pstrdup(result_pool, path);
+  fb->delta_base = NULL;
 
   *file_baton = fb;
   return SVN_NO_ERROR;
@@ -557,9 +577,26 @@ ev2_apply_textdelta(void *file_baton,
                     void **handler_baton)
 {
   struct ev2_file_baton *fb = file_baton;
+  apr_pool_t *handler_pool = svn_pool_create(fb->eb->edit_pool);
+  const char *target_path;
+  svn_stream_t *source;
+  svn_stream_t *target;
+
+  if (! fb->delta_base)
+    source = svn_stream_empty(handler_pool);
+
+  SVN_ERR(svn_stream_open_unique(&target, &target_path, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 fb->eb->edit_pool, result_pool));
 
   *handler_baton = NULL;
   *handler = svn_delta_noop_window_handler;
+
+  SVN_ERR(svn_stream_close(target));
+  SVN_ERR(svn_stream_close(source));
+
+  SVN_ERR(add_action(fb->eb, fb->path, ACTION_SET_TEXT, (void *)target_path));
+
   return SVN_NO_ERROR;
 }
 
