@@ -835,8 +835,12 @@ build(struct editor_baton *eb,
       apr_hash_t *current_props;
       apr_array_header_t *propdiffs;
 
-      SVN_ERR(eb->fetch_kind_func(&operation->kind, eb->fetch_kind_baton,
-                                  relpath, scratch_pool));
+      if (kind == svn_kind_unknown)
+        SVN_ERR(eb->fetch_kind_func(&operation->kind, eb->fetch_kind_baton,
+                                    relpath, scratch_pool));
+      else
+        operation->kind = kind;
+
       SVN_ERR(eb->fetch_props_func(&current_props, eb->fetch_props_baton,
                                    relpath, scratch_pool, scratch_pool));
 
@@ -955,6 +959,11 @@ add_directory_cb(void *baton,
                 NULL, SVN_INVALID_REVNUM,
                 NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
 
+  if (props && apr_hash_count(props) > 0)
+    SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_dir,
+                  NULL, SVN_INVALID_REVNUM, props,
+                  NULL, SVN_INVALID_REVNUM, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -984,6 +993,11 @@ add_file_cb(void *baton,
   SVN_ERR(build(eb, ACTION_PUT, relpath, svn_kind_none,
                 NULL, SVN_INVALID_REVNUM,
                 NULL, tmp_filename, SVN_INVALID_REVNUM, scratch_pool));
+
+  if (props && apr_hash_count(props) > 0)
+    SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_file,
+                  NULL, SVN_INVALID_REVNUM, props,
+                  NULL, SVN_INVALID_REVNUM, scratch_pool));
 
   return SVN_NO_ERROR;
 }
