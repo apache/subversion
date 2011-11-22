@@ -1050,7 +1050,7 @@ set_props_cb(void *baton,
 
   SVN_ERR(ensure_root_opened(eb));
 
-  SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_none,
+  SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_unknown,
                 NULL, SVN_INVALID_REVNUM,
                 props, NULL, SVN_INVALID_REVNUM, scratch_pool));
 
