@@ -145,19 +145,22 @@ send_file_contents(const char *path,
       if (svn_subst_translation_required(eol_style, eol, keywords,
                                          FALSE, TRUE))
         {
-          svn_boolean_t repair = FALSE;
+          if (eol_style == svn_subst_eol_style_unknown)
+            return svn_error_createf(SVN_ERR_IO_UNKNOWN_EOL, NULL,
+                                    _("%s property on '%s' contains "
+                                      "unrecognized EOL-style '%s'"),
+                                    SVN_PROP_EOL_STYLE, path,
+                                    eol_style_val->data);
 
+          /* We're importing, so translate files with 'native' eol-style to
+           * repository-normal form, not to this platform's native EOL. */
           if (eol_style == svn_subst_eol_style_native)
             eol = SVN_SUBST_NATIVE_EOL_STR;
-          else if (eol_style == svn_subst_eol_style_fixed)
-            repair = TRUE;
-          else if (eol_style != svn_subst_eol_style_none)
-            return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
 
           /* Wrap the working copy stream with a filter to detranslate it. */
           contents = svn_subst_stream_translated(contents,
                                                  eol,
-                                                 repair,
+                                                 TRUE /* repair */,
                                                  keywords,
                                                  FALSE /* expand */,
                                                  pool);
