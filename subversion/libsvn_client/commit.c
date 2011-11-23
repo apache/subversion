@@ -825,7 +825,7 @@ svn_client_import4(const char *path,
                     ignore_unknown_node_types, ctx, subpool)))
     {
       svn_error_clear(editor->abort_edit(edit_baton, subpool));
-      return err;
+      return svn_error_trace(err);
     }
 
   svn_pool_destroy(subpool);
