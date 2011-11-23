@@ -1240,10 +1240,10 @@ change_props(const svn_delta_editor_t *editor,
 }
 
 static svn_error_t *
-drive(const struct operation *operation,
-      const svn_delta_editor_t *editor,
-      svn_boolean_t *make_abs_paths,
-      apr_pool_t *scratch_pool)
+drive_tree(const struct operation *operation,
+           const svn_delta_editor_t *editor,
+           svn_boolean_t *make_abs_paths,
+           apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_index_t *hi;
@@ -1336,7 +1336,7 @@ drive(const struct operation *operation,
                     || child->operation == OP_PROPSET
                     || child->operation == OP_ADD))
         {
-          SVN_ERR(drive(child, editor, make_abs_paths, iterpool));
+          SVN_ERR(drive_tree(child, editor, make_abs_paths, iterpool));
           SVN_ERR(change_props(editor, child->baton, child, iterpool));
           SVN_ERR(editor->close_directory(child->baton, iterpool));
         }
@@ -1354,7 +1354,7 @@ complete_cb(void *baton,
   svn_error_t *err;
 
   /* Drive the tree we've created. */
-  err = drive(&eb->root, eb->deditor, eb->make_abs_paths, scratch_pool);
+  err = drive_tree(&eb->root, eb->deditor, eb->make_abs_paths, scratch_pool);
   if (!err)
      err = eb->deditor->close_edit(eb->dedit_baton, scratch_pool);
   if (err)
@@ -1376,7 +1376,7 @@ abort_cb(void *baton,
      point. */
 
   /* Drive the tree we've created. */
-  err = drive(&eb->root, eb->deditor, eb->make_abs_paths, scratch_pool);
+  err = drive_tree(&eb->root, eb->deditor, eb->make_abs_paths, scratch_pool);
 
   err2 = eb->deditor->abort_edit(eb->dedit_baton, scratch_pool);
 
@@ -1485,7 +1485,7 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
 
   /* The reason this is a pointer is that we don't know the appropriate
      value until we start receiving paths.  So process_actions() sets the
-     flag, which drive() later consumes. */
+     flag, which drive_tree() later consumes. */
   svn_boolean_t *found_abs_paths = apr_palloc(result_pool,
                                               sizeof(*found_abs_paths));
 
