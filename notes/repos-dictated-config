@@ -4,9 +4,9 @@ Introduction
 ============
 Many software development shops of non-trivial size desire to have an enforce
 a uniform configuration environment among the various clients which commit
-to their repositories.  Although these shops my have the ability to control
+to their repositories.  Although these shops may have the ability to control
 the environment on the client machines (dictating software versions, etc),
-relying up on the client for setting various configuration parameters can
+relying upon the client for setting various configuration parameters can
 be time-consuming and problematic.
 
 Subversion already provides the means of enforcing much (but not all) of this

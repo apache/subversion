@@ -32,6 +32,37 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
   - Bindings:
     *
 
+
+Version 1.7.2
+(?? ??? 2011, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.2
+
+  User-visible changes:
+   * fix working copy corruption after interrupted update/switch (issue #4040)
+   * avoid segfaults against pre-1.5 servers (r1186928)
+   * improve configure error message if apr-util uses old or no bdb (r1186784)
+   * make 'svn patch' ignore '/dev/null' targets for compat with git (r1197998)
+   * fix 'svn patch' segfault on patch that skips and deletes files (r1199950)
+   * omit "Committed revision N." output from 'svn commit --quiet' (r1200837)
+   * fix authz denial when svnserve root is a repository (issue #4060)
+   * fix uninitialized memory read in client diff code (r1201002)
+   * avoid potential segfault during merges (r1202807)
+   * fix an assertion failure when a symlink is updated (r1186944, -81, -83)
+   * make working copy operations fail if nodes have no base checksum (r1202630)
+   * fix nested <Location>s when using v2 protocol (r1203546, -651, -653)
+   * make mod_dav_svn ignore non-Subversion POST requests (r1187695)
+   * avoid reading freed memory (r1204478)
+   * recognize empty (only byte order mark) UTF-8 files as text (issue #4046)
+   * improve behavior when operating against a 1.0.x server (r1199876)
+
+  Developer-visible changes:
+   * JavaHL: allow 'status -u' to function properly (r1189190, -395)
+   * don't put '\r' characters in our generate sql headers (r1189580)
+   * properly define WIN64 on Windows x64 builds (r1188609)
+   * better adherence to C89 in enum definitions (r1189665)
+   * bump copyright year in Windows DLLs (r1189261)
+
+
 Version 1.7.1
 (24 Oct 2011, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.1
