@@ -568,6 +568,29 @@ ev2_open_file(const char *path,
   return SVN_NO_ERROR;
 }
 
+struct handler_baton
+{
+  svn_txdelta_window_handler_t apply_handler;
+  void *apply_baton;
+
+  apr_pool_t *pool;
+};
+
+static svn_error_t *
+window_handler(svn_txdelta_window_t *window, void *baton)
+{
+  struct handler_baton *hb = baton;
+  svn_error_t *err;
+
+  err = hb->apply_handler(window, hb->apply_baton);
+  if (window != NULL && !err)
+    return SVN_NO_ERROR;
+
+  svn_pool_destroy(hb->pool);
+
+  return SVN_NO_ERROR;
+}
+
 
 static svn_error_t *
 ev2_apply_textdelta(void *file_baton,
@@ -578,6 +601,7 @@ ev2_apply_textdelta(void *file_baton,
 {
   struct ev2_file_baton *fb = file_baton;
   apr_pool_t *handler_pool = svn_pool_create(fb->eb->edit_pool);
+  struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
   const char *target_path;
   svn_stream_t *source;
   svn_stream_t *target;
@@ -589,11 +613,15 @@ ev2_apply_textdelta(void *file_baton,
                                  svn_io_file_del_on_pool_cleanup,
                                  fb->eb->edit_pool, result_pool));
 
-  *handler_baton = NULL;
-  *handler = svn_delta_noop_window_handler;
+  svn_txdelta_apply(source, target,
+                    NULL, NULL,
+                    handler_pool,
+                    &hb->apply_handler, &hb->apply_baton);
 
-  SVN_ERR(svn_stream_close(target));
-  SVN_ERR(svn_stream_close(source));
+  hb->pool = handler_pool;
+                    
+  *handler_baton = hb;
+  *handler = window_handler;
 
   SVN_ERR(add_action(fb->eb, fb->path, ACTION_SET_TEXT, (void *)target_path));
 
