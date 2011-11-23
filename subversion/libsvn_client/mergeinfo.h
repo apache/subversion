@@ -99,7 +99,8 @@ svn_client__merge_path_create(const char *abspath,
 
 /* Find explicit or inherited WC mergeinfo for LOCAL_ABSPATH, and return it
    in *MERGEINFO (NULL if no mergeinfo is set).  Set *INHERITED to
-   whether the mergeinfo was inherited (TRUE or FALSE).
+   whether the mergeinfo was inherited (TRUE or FALSE), if INHERITED is
+   non-null.
 
    This function will search for inherited mergeinfo in the parents of
    LOCAL_ABSPATH only if the base revision of LOCAL_ABSPATH falls within
@@ -233,7 +234,7 @@ svn_client__get_repos_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
 
    If TARGET_WCPATH inherited its mergeinfo from a working copy ancestor
    or if it was obtained from the repository, set *INHERITED to TRUE, set it
-   to FALSE otherwise. */
+   to FALSE otherwise, if INHERITED is non-null. */
 svn_error_t *
 svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                       svn_boolean_t *inherited,
@@ -319,6 +320,13 @@ svn_client__record_wc_mergeinfo(const char *local_abspath,
                                 svn_boolean_t do_notification,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *scratch_pool);
+
+/* Write mergeinfo into the WC.  RESULT_CATALOG maps (const char *) WC paths
+ * to (svn_mergeinfo_t) mergeinfo. */
+svn_error_t *
+svn_client__record_wc_mergeinfo_catalog(apr_hash_t *result_catalog,
+                                        svn_client_ctx_t *ctx,
+                                        apr_pool_t *scratch_pool);
 
 /* Elide any svn:mergeinfo set on TARGET_WCPATH to its nearest working
    copy (or possibly repository) ancestor with equivalent mergeinfo.

@@ -1161,7 +1161,8 @@ With prefix arg, prompt for REVISION."
     (?D . "Deleted")
     (?U . "Updated")
     (?G . "Merged")
-    (?C . "Conflict")))
+    (?C . "Conflict")
+    (?E . "Existed")))
 
 (defvar svn-merging nil)
 
@@ -1189,7 +1190,7 @@ With prefix arg, prompt for REVISION."
       (goto-char svn-output-marker)
       (while (not nomore)
         (cond ((looking-at
-                "\\([ ADUCG][ ADUCG][ B]\\)  \\(.*\\)\n")
+                "\\([ ADUCGE][ ADUCGE][ B]\\)  \\(.*\\)\n")
                (let* ((status (match-string 1))
                       (file-status (elt status 0))
                       (prop-status (elt status 1))
