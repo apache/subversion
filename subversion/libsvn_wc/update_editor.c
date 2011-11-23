@@ -36,6 +36,7 @@
 #include "svn_pools.h"
 #include "svn_delta.h"
 #include "svn_hash.h"
+#include "svn_sorts.h"
 #include "svn_string.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -1464,6 +1465,10 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                    src_left_version, src_right_version, result_pool);
   (*pconflict)->action = action;
   (*pconflict)->reason = reason;
+  
+  /* Until we have editor-v2 or some other way of sending moves from the
+   * server to the client, this must always be set. */
+  (*pconflict)->server_sends_moves_as_copy_plus_delete = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -1506,7 +1511,6 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                     svn_wc_conflict_action_t action,
                     svn_node_kind_t their_node_kind,
                     const char *their_relpath,
-                    const char *moved_to_abspath,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
@@ -1574,28 +1578,10 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
 
 
       case svn_wc__db_status_deleted:
-        if (!moved_to_abspath)
-          reason = svn_wc_conflict_reason_deleted;
-        else if (action == svn_wc_conflict_action_delete)
-          {
-            svn_boolean_t all_edits_are_deletes = FALSE;
-
-            /* The update wants to delete a node which was locally moved
-             * away. We allow this only if the node wasn't modified post-move.
-             * If the only post-move changes within a subtree are deletions,
-             * allow the update to delete the entire subtree. */
-            if (working_kind == svn_kind_dir)
-              SVN_ERR(node_has_local_mods(&modified, &all_edits_are_deletes,
-                                          TRUE, eb->db, moved_to_abspath,
-                                          eb->cancel_func, eb->cancel_baton,
-                                          scratch_pool));
-            else
-              SVN_ERR(svn_wc__internal_file_modified_p(&modified, eb->db,
-                                                       moved_to_abspath,
-                                                       FALSE, scratch_pool));
-            if (modified && !all_edits_are_deletes)
-              reason = svn_wc_conflict_reason_moved_away_and_edited;
-          }
+        /* Flag a delete vs. delete conflict for now.
+         * This might get auto-resolved once we've learned whether or
+         * not this incoming delete is really part of an incoming move. */
+        reason = svn_wc_conflict_reason_deleted;
         break;
 
       case svn_wc__db_status_incomplete:
@@ -1807,6 +1793,155 @@ get_repos_moves(struct edit_baton *eb, apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
+static int
+compare_revision_items_ascending(const svn_sort__item_t *a,
+                                 const svn_sort__item_t *b)
+{
+  svn_revnum_t a_rev = *((svn_revnum_t *)a->key);
+  svn_revnum_t b_rev = *((svn_revnum_t *)b->key);
+
+  if (a_rev == b_rev)
+    return 0;
+
+  return a_rev < b_rev ? -1 : 1;
+}
+
+static svn_error_t *
+find_applicable_move(svn_wc_repos_move_info_t **move,
+                     struct edit_baton *eb,
+                     const char *local_abspath,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  const char *repos_relpath;
+  svn_revnum_t base_revision;
+  apr_array_header_t *sorted;
+  svn_boolean_t update_into_past;
+  int i;
+
+  *move = NULL;
+
+  if (! eb->repos_moves || apr_hash_count(eb->repos_moves) == 0)
+    return SVN_NO_ERROR;
+    
+  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &base_revision,
+                                   &repos_relpath, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   eb->db, local_abspath,
+                                   scratch_pool, scratch_pool));
+
+  /* Sanity check: If the base revision already matches the target
+   * revision the update is a no-op so this node cannot be a tree
+   * conflict victim. ### Should not happen. */
+  if (base_revision == *eb->target_revision)
+    return SVN_NO_ERROR;
+  
+  update_into_past = (base_revision > *eb->target_revision);
+
+  /* Make sure moves are sorted by revisions in the right order. */
+  sorted = svn_sort__hash(eb->repos_moves,
+                          compare_revision_items_ascending,
+                          scratch_pool);
+
+  /* Try to find a server-side move that applies to this node. */
+  if (!update_into_past)
+    {
+      for (i = 0; i < sorted->nelts; i++)
+        {
+          int j;
+          svn_sort__item_t elt = APR_ARRAY_IDX(sorted, i,
+                                               svn_sort__item_t);
+          const svn_revnum_t *rev = elt.key;
+          apr_array_header_t *moves = elt.value;
+
+         /* When updating into the future, a move applies if it
+          * happened after the base rev of the node. */
+          if (*rev <= base_revision)
+            continue;
+
+          /* Generally, we have a chain of moves which happened in
+           * distinct revisions, such as:
+           *   rA: mv a->b
+           *   rB: mv b->c
+           *   rC: mv c->d
+           * and so on. Find the first applicable move in the chain. */
+          for (j = 0; j < moves->nelts; j++)
+            {
+              svn_wc_repos_move_info_t *this_move;
+
+              this_move = APR_ARRAY_IDX(moves, j,
+                                        svn_wc_repos_move_info_t *);
+              if (strcmp(this_move->moved_from_repos_relpath,
+                         repos_relpath) == 0)
+                {
+                  /* Move forward to the last applicable move in the chain,
+                   * collapsing the move chain (e.g. a->b->c->d) into the
+                   * move which is applied by the update (e.g. b->d). */
+                  while (this_move->next)
+                    {
+                      if (this_move->next->revision > *eb->target_revision)
+                        break;
+                      this_move = this_move->next;
+                    }
+
+                  *move = this_move;
+                  break;
+                }
+            }
+        }
+    }
+  else
+    {
+      /* If updating into the past all moves apply in reverse.
+       * ### TODO construct moves list usable for conflict callback */
+      for (i = sorted->nelts - 1; i >= 0; i--)
+        {
+          int j;
+          svn_sort__item_t elt = APR_ARRAY_IDX(sorted, i,
+                                               svn_sort__item_t);
+          const svn_revnum_t *rev = elt.key;
+          apr_array_header_t *moves = elt.value;
+
+         /* When updating into the past, a move applies if it
+          * happened before the base rev of the node. */
+          if (*rev >= base_revision)
+            continue;
+
+          /* Generally, we have a chain of reversed moves which happened
+           * in distinct revisions, such as:
+           *   rC: mv d->c (actually c->d for history in forward direction)
+           *   rB: mv c->b (actually b->c)
+           *   rA: mv b->a (actually a->b)
+           * and so on. Find the first applicable move in the chain. */
+          for (j = 0; j < moves->nelts; j++)
+            {
+              svn_wc_repos_move_info_t *this_move;
+
+              this_move = APR_ARRAY_IDX(moves, j,
+                                        svn_wc_repos_move_info_t *);
+              if (strcmp(this_move->moved_to_repos_relpath,
+                         repos_relpath) == 0)
+                {
+                  /* Move backwards to the last applicable move in the chain,
+                   * collapsing the move chain (e.g. d->c->b->a) into the
+                   * move which is applied by the update (e.g. d->b). */
+                  while (this_move->prev)
+                    {
+                      if (this_move->prev->revision < *eb->target_revision)
+                        break;
+                      this_move = this_move->prev;
+                    }
+                  *move = this_move;
+                  break;
+                }
+            }
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* An svn_delta_editor_t function. */
 static svn_error_t *
 delete_entry(const char *path,
@@ -1840,8 +1975,6 @@ delete_entry(const char *path,
 
   SVN_ERR(path_join_under_root(&local_abspath, pb->local_abspath, base,
                                scratch_pool));
-
-  SVN_ERR(get_repos_moves(eb, scratch_pool));
 
   deleting_target =  (strcmp(local_abspath, eb->target_abspath) == 0);
 
@@ -1940,8 +2073,83 @@ delete_entry(const char *path,
       SVN_ERR(check_tree_conflict(&tree_conflict, eb, local_abspath,
                                   status, kind, TRUE,
                                   svn_wc_conflict_action_delete, svn_node_none,
-                                  repos_relpath, moved_to_abspath,
-                                  pb->pool, scratch_pool));
+                                  repos_relpath, pb->pool, scratch_pool));
+    }
+
+  /* If this is an incoming delete vs. local delete/move conflict
+   * try the conflict callback to resolve the conflict. */
+  if (tree_conflict != NULL && eb->conflict_func &&
+      status == svn_wc__db_status_deleted)
+    {
+      svn_wc_conflict_result_t *result;
+
+      do
+        {
+          SVN_ERR(eb->conflict_func(&result, tree_conflict,
+                                    eb->conflict_baton,
+                                    scratch_pool, scratch_pool));
+          if (result == NULL)
+            return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+                                    NULL, _("Conflict callback violated API:"
+                                            " returned no results"));
+          if (result->choice == svn_wc_conflict_choose_scan_log_for_moves)
+            {
+              svn_wc_repos_move_info_t *move;
+
+              /* Scan revision log for server-side moves */
+              SVN_ERR(get_repos_moves(eb, scratch_pool));
+              
+              /* Find a server-side move which applies to the deleted node. */
+              if (apr_hash_count(eb->repos_moves) > 0)
+                {
+                  SVN_ERR(find_applicable_move(&move, eb, local_abspath,
+                                              scratch_pool, scratch_pool));
+                  tree_conflict->suggested_move = move;
+                }
+              continue;
+            }
+
+          if (result->choice == svn_wc_conflict_choose_incoming_move)
+            {
+              /* ### TODO */
+            }
+
+          if (result->choice == svn_wc_conflict_choose_new_local_move_target)
+            {
+              /* ### TODO */
+            }
+
+          if (moved_to_abspath &&
+              result->choice == svn_wc_conflict_choose_delete_is_delete)
+            {
+              svn_boolean_t all_edits_are_deletes = FALSE;
+              svn_boolean_t modified;
+
+              /* The update wants to delete a node which was locally moved
+               * away. We allow this only if the node wasn't modified post-move.
+               * If the only post-move changes within a subtree are deletions,
+               * allow the update to delete the entire subtree. */
+              if (kind == svn_kind_dir)
+                SVN_ERR(node_has_local_mods(&modified, &all_edits_are_deletes,
+                                            TRUE, eb->db, moved_to_abspath,
+                                            eb->cancel_func, eb->cancel_baton,
+                                            scratch_pool));
+              else
+                SVN_ERR(svn_wc__internal_file_modified_p(&modified, eb->db,
+                                                         moved_to_abspath,
+                                                         FALSE, scratch_pool));
+              if (modified && !all_edits_are_deletes)
+                tree_conflict->reason =
+                  svn_wc_conflict_reason_moved_away_and_edited;
+              else
+                tree_conflict = NULL; /* discard conflict */
+            }
+        }
+      while (tree_conflict &&
+             result->choice != svn_wc_conflict_choose_incoming_move &&
+             result->choice != svn_wc_conflict_choose_new_local_move_target &&
+             result->choice != svn_wc_conflict_choose_delete_is_delete &&
+             result->choice != svn_wc_conflict_choose_postpone);
     }
 
   if (tree_conflict != NULL)
@@ -2319,7 +2527,7 @@ add_directory(const char *path,
                                       status, wc_kind, FALSE,
                                       svn_wc_conflict_action_add,
                                       svn_node_dir, db->new_relpath,
-                                      NULL, pool, pool));
+                                      pool, pool));
         }
 
       if (tree_conflict == NULL)
@@ -2544,8 +2752,7 @@ open_directory(const char *path,
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, db->local_abspath,
                                 status, wc_kind, TRUE,
                                 svn_wc_conflict_action_edit, svn_node_dir,
-                                db->new_relpath, db->moved_to_abspath,
-                                db->pool, pool));
+                                db->new_relpath, db->pool, pool));
 
   /* Remember the roots of any locally deleted trees. */
   if (tree_conflict != NULL)
@@ -3415,7 +3622,7 @@ add_file(const char *path,
                                       fb->local_abspath,
                                       status, wc_kind, FALSE,
                                       svn_wc_conflict_action_add,
-                                      svn_node_file, fb->new_relpath, NULL,
+                                      svn_node_file, fb->new_relpath,
                                       scratch_pool, scratch_pool));
         }
 
@@ -3590,8 +3797,7 @@ open_file(const char *path,
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
                                 status, wc_kind, TRUE,
                                 svn_wc_conflict_action_edit, svn_node_file,
-                                fb->new_relpath, fb->moved_to_abspath,
-                                fb->pool, scratch_pool));
+                                fb->new_relpath, fb->pool, scratch_pool));
 
   /* Is this path the victim of a newly-discovered tree conflict? */
   if (tree_conflict != NULL)

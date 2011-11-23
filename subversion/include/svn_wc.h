@@ -1695,6 +1695,30 @@ svn_wc_conflict_version_t *
 svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
                             apr_pool_t *pool);
 
+
+/** Describes a server-side move (really a copy+delete within the same
+ * revision) which has been identified by scanning the revision log.
+ * @since New in 1.8. */
+typedef struct svn_wc_repos_move_info_t {
+  /* The repository relpath the node was moved from. */
+  const char *moved_from_repos_relpath;
+
+  /* The repository relpath the node was moved to. */
+  const char *moved_to_repos_relpath;
+ 
+  /* The revision in which the move happened. */
+  svn_revnum_t revision;
+
+  /* The copyfrom revision of the moved-to path. */
+  svn_revnum_t copyfrom_rev;
+
+  /* Pointers to previous or subsequent moves of the same node
+   * within interesting history. */
+  struct svn_wc_repos_move_info_t *prev;
+  struct svn_wc_repos_move_info_t *next;
+} svn_wc_repos_move_info_t;
+
+
 /** A struct that describes a conflict that has occurred in the
  * working copy.
  *
@@ -1793,6 +1817,24 @@ typedef struct svn_wc_conflict_description2_t
 
   /** Info on the "merge-right source" or "their" version of incoming change. */
   const svn_wc_conflict_version_t *src_right_version;
+
+  /** Whether the server expresses server-side moves as copy+delete.
+   * This is only set for tree conflicts. If TRUE, a tree conflict
+   * involving an incoming delete might actually be a tree conflict
+   * involving an incoming move. Conflict resolution callbacks can
+   * trigger a scan of the revision log for detailed information about
+   * moves.
+   * @see svn_wc_conflict_choice_t
+   * @since New in 1.8. */
+  svn_boolean_t server_sends_moves_as_copy_plus_delete;
+
+  /** A chain of one or more suggested moves in case the server sends moves
+   * as copy+delete and the revision log was scanned for server-side moves
+   * at the user's request.
+   * @see svn_wc_conflict_choice_t
+   * @see svn_wc_repos_move_info_t
+   * @since New in 1.8. */
+  svn_wc_repos_move_info_t *suggested_move;
 
   /* Remember to adjust svn_wc__conflict_description2_dup()
    * if you add new fields to this struct. */
@@ -2030,7 +2072,47 @@ typedef enum svn_wc_conflict_choice_t
   svn_wc_conflict_choose_mine_full,       /**< own version */
   svn_wc_conflict_choose_theirs_conflict, /**< incoming (for conflicted hunks) */
   svn_wc_conflict_choose_mine_conflict,   /**< own (for conflicted hunks) */
-  svn_wc_conflict_choose_merged           /**< merged version */
+  svn_wc_conflict_choose_merged,          /**< merged version */
+
+  /** Scan the log for moves. If the server sends server-side moves as
+   * delete+copy (@see svn_wc_conflict_description2_t), users can choose
+   * this option to scan the revision log for server-side moves during
+   * an 'incoming delete vs. local delete' tree conflict or an 'incoming
+   * add vs. local add' the conflict. The callback will then be invoked
+   * again with zero or more suggested server-side moves. The user can then
+   * decide to treat the incoming delete as a true delete, an incoming add
+   * as a tree add, or decide to treat it as part of an incoming move by
+   * picking an incoming move source/target. Conflict callback implementations
+   * may allow users to pick a move source/target even if the list of
+   * suggested server-side moves is empty.
+   * @since New in 1.8. */
+  svn_wc_conflict_choose_scan_log_for_moves,
+
+  /** The user has determined that an incoming delete event is not part
+   * of a server-side move, but really a delete event.
+   * @since New in 1.8. */
+  svn_wc_conflict_choose_delete_is_delete,
+
+  /** The user has determined that an incoming copy event is not part
+   * of a server-side move, but really a copy event. 
+   * @since New in 1.8. */
+  svn_wc_conflict_choose_copy_is_copy,
+
+  /** The user has chosen to map an incoming delete or copy to a
+   * server-side move. This move is described by svn_wc_conflict_result_t.
+   * This allows users to divert incoming moves to a different target
+   * location during "incoming move vs. local move" tree conflicts.
+   * @see svn_wc_conflict_result_t
+   * @since New in 1.8. */
+  svn_wc_conflict_choose_incoming_move,
+
+  /** The user has chosen a new target for a local move to resolve an
+   * "incoming move vs. local move" tree conflict. This allows users to
+   * make space at the target location of an incoming move during "incoming
+   * move vs. local move" tree conflicts.
+   * @see svn_wc_conflict_result_t
+   * @since New in 1.8. */
+  svn_wc_conflict_choose_new_local_move_target,
 
 } svn_wc_conflict_choice_t;
 
@@ -2061,6 +2143,25 @@ typedef struct svn_wc_conflict_result_t
       merged_file from the conflict description, if merged_file is
       NULL) in the user's working copy. */
   svn_boolean_t save_merged;
+
+  /** The server-side move a delete or copy event should be mapped to,
+   * in case the choice is svn_wc_conflict_choose_incoming_move.
+   * In this structure, the moved_from_repos_relpath and
+   * moved_to_repos_relpath fields must both be set.
+   * The revision fields may be @c SVN_INVALID_REVNUM in case they are
+   * unknown, and the prev/next pointers may both be NULL.
+   * The idea is to allow users to describe an arbitrary incoming move
+   * by naming the source and the target. If the user's chosen incoming
+   * move is not applicable, the conflict callback will be invoked again.
+   * @see svn_wc_conflict_choice_t
+   * @since New in 1.8. */
+  svn_wc_repos_move_info_t *incoming_move;
+
+  /** The absolute path of a new target of a local move in case the
+   * choice is svn_wc_conflict_choose_incoming_move_target.
+   * @see svn_wc_conflict_choice_t
+   * @since New in 1.8. */
+  const char *new_local_move_target;
 
 } svn_wc_conflict_result_t;
 
@@ -5504,28 +5605,6 @@ typedef svn_error_t *(*svn_wc_dirents_func_t)(void *baton,
                                               apr_pool_t *result_pool,
                                               apr_pool_t *scratch_pool);
 
-
-/** Describes a server-side move (really a copy+delete within the same
- * revision) which has been identified by scanning the revision log.
- * @since New in 1.8. */
-typedef struct svn_wc_repos_move_info_t {
-  /* The repository relpath the node was moved from. */
-  const char *moved_from_repos_relpath;
-
-  /* The repository relpath the node was moved to. */
-  const char *moved_to_repos_relpath;
- 
-  /* The revision in which the move happened. */
-  svn_revnum_t revision;
-
-  /* The copyfrom revision of the moved-to path. */
-  svn_revnum_t copyfrom_rev;
-
-  /* Pointers to previous or subsequent moves of the same node
-   * within interesting history. */
-  struct svn_wc_repos_move_info_t *prev;
-  struct svn_wc_repos_move_info_t *next;
-} svn_wc_repos_move_info_t;
 
 /* ### TODO docco
  * @since New in 1.8. */

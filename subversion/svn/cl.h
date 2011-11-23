@@ -347,10 +347,10 @@ svn_cl__conflict_baton_make(svn_cl__accept_t accept_which,
    Implements @c svn_wc_conflict_resolver_func_t. */
 svn_error_t *
 svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
-                         const svn_wc_conflict_description_t *desc,
+                         const svn_wc_conflict_description2_t *desc,
                          void *baton,
-                         apr_pool_t *pool);
-
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
 
 /*** Command-line output functions -- printing to the user. ***/
