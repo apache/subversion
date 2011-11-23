@@ -1254,6 +1254,8 @@ merge_props_changed(svn_wc_notify_state_t *state,
       else if (err)
         return svn_error_trace(err);
     }
+  else if (state)
+    *state = svn_wc_notify_state_unchanged;
 
   return SVN_NO_ERROR;
 }
