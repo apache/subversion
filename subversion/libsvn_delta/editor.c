@@ -605,7 +605,8 @@ svn_editor_complete(svn_editor_t *editor)
 
   err = editor->funcs.cb_complete(editor->baton, editor->scratch_pool);
 #ifdef ENABLE_ORDERING_CHECK
-  editor->finished = TRUE;
+  if (!err)
+    editor->finished = TRUE;
 #endif
   svn_pool_clear(editor->scratch_pool);
   return err;
