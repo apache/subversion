@@ -7175,22 +7175,21 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
   return SVN_NO_ERROR;
 }
 
-/* SUBTREES is one of the following notification_receiver_baton_t members:
-   merged_paths, skipped_paths, or added_paths.  Return true if any path in
-   SUBTRESS is equal to, or is a subtree of, LOCAL_ABSPATH.  Return false
-   otherwise.  If LOCAL_ABSPATH or SUBTREES are NULL return false. */
+/* Return true if any path in SUBTRESS is equal to, or is a subtree of,
+   LOCAL_ABSPATH.  Return false otherwise.  The keys of SUBTREES are
+   (const char *) absolute paths and its values are irrelevant.
+   If SUBTREES is NULL return false. */
 static svn_boolean_t
 path_is_subtree(const char *local_abspath,
                 apr_hash_t *subtrees,
                 apr_pool_t *pool)
 {
-  if (local_abspath && subtrees)
+  if (subtrees)
     {
       apr_hash_index_t *hi;
 
       for (hi = apr_hash_first(pool, subtrees);
-           hi;
-           hi = apr_hash_next(hi))
+           hi; hi = apr_hash_next(hi))
         {
           const char *path_touched_by_merge = svn__apr_hash_index_key(hi);
           if (svn_dirent_is_ancestor(local_abspath, path_touched_by_merge))
@@ -8676,8 +8675,9 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
    RECORD_MERGEINFO().
 
    If MODIFIED_SUBTREES is not NULL and SOURCES_ANCESTRAL or
-   REINTEGRATE_MERGE is true, then set *MODIFIED_SUBTREES to a hash
-   containing every path modified, skipped, added, or tree-conflicted
+   REINTEGRATE_MERGE is true, then replace *MODIFIED_SUBTREES with a new
+   hash containing all the paths that *MODIFIED_SUBTREES contained before,
+   and also every path modified, skipped, added, or tree-conflicted
    by the merge.  Keys and values of the hash are both (const char *)
    absolute paths.  The contents of the hash are allocated in RESULT_POOL.
 
@@ -8925,6 +8925,7 @@ do_merge(apr_hash_t **modified_subtrees,
                                      iterpool));
 
           /* Does the caller want to know what the merge has done? */
+          /* ### Why only if the target is a dir and not a file? */
           if (modified_subtrees)
             {
               if (notify_baton.merged_abspaths)
