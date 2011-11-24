@@ -1875,17 +1875,34 @@ find_applicable_move(svn_wc_repos_move_info_t **move,
               if (strcmp(this_move->moved_from_repos_relpath,
                          repos_relpath) == 0)
                 {
-                  /* Move forward to the last applicable move in the chain,
-                   * collapsing the move chain (e.g. a->b->c->d) into the
-                   * move which is applied by the update (e.g. b->d). */
+                  svn_wc_repos_move_info_t *m;
+
+                  /* Create a shallow copy of the move chain which contains
+                   * only elements of the chain which are applicable to
+                   * the node being updated.
+                   * A shallow copy is sufficient because data is allocated
+                   * in the global editor pool. */
+                  m = svn_wc_create_repos_move_info(
+                        this_move->moved_from_repos_relpath,
+                        this_move->moved_to_repos_relpath,
+                        this_move->revision,
+                        this_move->copyfrom_rev,
+                        NULL, NULL, result_pool);
+                  *move = m;
+                  /* Add any further applicable moves to the chain. */
                   while (this_move->next)
                     {
                       if (this_move->next->revision > *eb->target_revision)
                         break;
                       this_move = this_move->next;
+                      m = svn_wc_create_repos_move_info(
+                            this_move->moved_from_repos_relpath,
+                            this_move->moved_to_repos_relpath,
+                            this_move->revision,
+                            this_move->copyfrom_rev,
+                            m, NULL, result_pool);
                     }
 
-                  *move = this_move;
                   break;
                 }
             }
@@ -1904,8 +1921,8 @@ find_applicable_move(svn_wc_repos_move_info_t **move,
           apr_array_header_t *moves = elt.value;
 
          /* When updating into the past, a move applies if it
-          * happened before the base rev of the node. */
-          if (*rev >= base_revision)
+          * happened before or at the base rev of the node. */
+          if (*rev > base_revision)
             continue;
 
           /* Generally, we have a chain of reversed moves which happened
@@ -1923,16 +1940,42 @@ find_applicable_move(svn_wc_repos_move_info_t **move,
               if (strcmp(this_move->moved_to_repos_relpath,
                          repos_relpath) == 0)
                 {
-                  /* Move backwards to the last applicable move in the chain,
-                   * collapsing the move chain (e.g. d->c->b->a) into the
-                   * move which is applied by the update (e.g. d->b). */
+                  svn_wc_repos_move_info_t *m;
+
+                  /* Create a shallow copy of the move chain which contains
+                   * only elements of the chain which are applicable to
+                   * the node being updated.
+                   * A shallow copy is sufficient because data is allocated
+                   * in the global editor pool.
+                   *
+                   * The returned chain is reversed to the chain obtained
+                   * from the log because we're updating into the past,
+                   * i.e. the 'next' and 'prev' pointers are reversed.
+                   * For the same reason we must use the revision the move
+                   * happened in as the copyfrom revision, turning the
+                   * delete-half of a move into a fake copy from future
+                   * history. */
+                  m = svn_wc_create_repos_move_info(
+                        this_move->moved_to_repos_relpath,
+                        this_move->moved_from_repos_relpath,
+                        this_move->revision,
+                        this_move->revision,
+                        NULL, NULL, result_pool);
+                  *move = m;
+                  /* Add any further applicable moves to the chain. */
                   while (this_move->prev)
                     {
                       if (this_move->prev->revision < *eb->target_revision)
                         break;
                       this_move = this_move->prev;
+                      m = svn_wc_create_repos_move_info(
+                            this_move->moved_to_repos_relpath,
+                            this_move->moved_from_repos_relpath,
+                            this_move->revision,
+                            this_move->revision,
+                            m, NULL, result_pool);
                     }
-                  *move = this_move;
+
                   break;
                 }
             }
