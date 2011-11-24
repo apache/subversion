@@ -35,26 +35,29 @@
 #include "svn_pools.h"
 
 #include "cl.h"
+#include "tree-conflicts.h"
 
 #include "svn_private_config.h"
 
 
 
 
-svn_cl__conflict_baton_t *
-svn_cl__conflict_baton_make(svn_cl__accept_t accept_which,
+svn_error_t *
+svn_cl__conflict_baton_make(svn_cl__conflict_baton_t **b,
+                            svn_cl__accept_t accept_which,
                             apr_hash_t *config,
                             const char *editor_cmd,
                             svn_cmdline_prompt_baton_t *pb,
                             apr_pool_t *pool)
 {
-  svn_cl__conflict_baton_t *b = apr_palloc(pool, sizeof(*b));
-  b->accept_which = accept_which;
-  b->config = config;
-  b->editor_cmd = editor_cmd;
-  b->external_failed = FALSE;
-  b->pb = pb;
-  return b;
+  *b = apr_palloc(pool, sizeof(**b));
+  (*b)->accept_which = accept_which;
+  (*b)->config = config;
+  (*b)->editor_cmd = editor_cmd;
+  (*b)->external_failed = FALSE;
+  (*b)->pb = pb;
+  SVN_ERR(svn_dirent_get_absolute(&(*b)->path_prefix, "", pool));
+  return SVN_NO_ERROR;
 }
 
 svn_cl__accept_t
@@ -893,13 +896,21 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
       const char *prompt;
 
       if (!desc->suggested_moves)
-        SVN_ERR(svn_cmdline_fprintf(
-                     stderr, subpool,
-                     _("Tree conflict discovered when trying to delete\n'%s'\n"
-                       "Server is sending moves as copy+delete.\n"
-                       "Maybe this incoming delete is part of a move?\n"),
-                     svn_dirent_local_style(desc->local_abspath, subpool)));
+        {
+          const char *readable_desc;
 
+          SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
+                   &readable_desc, desc, scratch_pool));
+          SVN_ERR(svn_cmdline_fprintf(
+                       stderr, subpool,
+                       _("Tree conflict on '%s'\n   > %s\n"
+                         "Server is sending moves as copy+delete.\n"
+                         "Maybe this incoming delete is part of a move?\n"),
+                       svn_cl__local_style_skip_ancestor(b->path_prefix,
+                                                         desc->local_abspath,
+                                                         scratch_pool),
+                       readable_desc));
+        }
       prompt = _("Select: (p) postpone, (f) find-move,\n"
                  "        (a) ask-move, (d) is-delete, (h) help: ");
 
