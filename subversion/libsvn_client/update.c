@@ -505,31 +505,6 @@ get_repos_moves(void *baton,
       b->ctx->notify_func2(b->ctx->notify_baton2, notify, scratch_pool);
     }
 
-#ifdef SVN_DEBUG
-  {
-    apr_hash_index_t *hi;
-    for (hi = apr_hash_first(scratch_pool, lrb.moves);
-         hi; hi = apr_hash_next(hi))
-      {
-        apr_array_header_t *moves_in_rev = svn__apr_hash_index_val(hi);
-        int i;
-        
-        for (i = 0; i < moves_in_rev->nelts; i++)
-          {
-            svn_wc_repos_move_info_t *move_info;
-            
-            move_info = APR_ARRAY_IDX(moves_in_rev, i,
-                                      svn_wc_repos_move_info_t *);
-            SVN_DBG(("found server-side move in r%ld: '%s@%ld' -> '%s'\n",
-                     move_info->revision,
-                     move_info->moved_from_repos_relpath,
-                     move_info->copyfrom_rev,
-                     move_info->moved_to_repos_relpath));
-          }
-      }
-  }
-#endif
-
   if (moves)
     *moves = lrb.moves;
 
