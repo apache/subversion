@@ -8312,6 +8312,9 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
   honor_mergeinfo = HONOR_MERGEINFO(merge_b);
   record_mergeinfo = RECORD_MERGEINFO(merge_b);
 
+  /* Note that this is not a single-file merge. */
+  notify_b->is_single_file_merge = FALSE;
+
   /* Initialize NOTIFY_B->CHILDREN_WITH_MERGEINFO. See the comment
      'THE CHILDREN_WITH_MERGEINFO ARRAY' at the start of this file. */
   notify_b->children_with_mergeinfo =
