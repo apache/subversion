@@ -256,6 +256,53 @@ launch_resolver(svn_boolean_t *performed_edit,
 }
 
 
+static const char *
+format_move_chain_for_display(svn_wc_repos_move_info_t *first_move,
+                              apr_pool_t *result_pool)
+{
+  const char *s;
+  svn_wc_repos_move_info_t *last_move;
+
+  last_move = first_move;
+  while (last_move->next)
+    last_move = last_move->next;
+
+  if (last_move != first_move)
+    {
+      svn_wc_repos_move_info_t *this_move;
+
+      s = apr_psprintf(result_pool,
+                        _("Combined move:\n  %s@%ld -> %s\n"
+                       "Individual moves:\n"),
+                       first_move->moved_from_repos_relpath,
+                       first_move->copyfrom_rev,
+                       last_move->moved_to_repos_relpath);
+      
+      this_move = first_move;
+      do
+        {
+          s = apr_pstrcat(result_pool, s,
+                          apr_psprintf(
+                            result_pool, _("  [r%ld] %s@%ld -> %s\n"),
+                            this_move->revision,
+                            this_move->moved_from_repos_relpath,
+                            this_move->copyfrom_rev,
+                            this_move->moved_to_repos_relpath),
+                          (char *)NULL);
+          this_move = this_move->next;
+        }
+      while (this_move);
+    }
+  else
+    s = apr_psprintf(result_pool, _("  [r%ld] %s@%ld -> %s\n"),
+                     first_move->revision,
+                     first_move->moved_from_repos_relpath,
+                     first_move->copyfrom_rev,
+                     first_move->moved_to_repos_relpath);
+
+  return s;
+}
+
 static svn_error_t *
 pick_move(svn_wc_repos_move_info_t **move,
           apr_array_header_t *suggested_moves,
@@ -272,11 +319,9 @@ pick_move(svn_wc_repos_move_info_t **move,
     {
       this_move = APR_ARRAY_IDX(suggested_moves, 0,
                                 svn_wc_repos_move_info_t *);
-      SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
-                _("  [r%ld] %s@%ld -> %s\n"),
-                this_move->revision, this_move->moved_from_repos_relpath,
-                this_move->copyfrom_rev, this_move->moved_to_repos_relpath));
-      
+      SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n",
+                                  format_move_chain_for_display(this_move,
+                                                                scratch_pool)));
       *move = this_move;
       return SVN_NO_ERROR;
     }
@@ -284,15 +329,13 @@ pick_move(svn_wc_repos_move_info_t **move,
   prompt = _("Multiple moves found in revision log:\n");
   for (i = 0; i < suggested_moves->nelts; i++)
     {
+      this_move = APR_ARRAY_IDX(suggested_moves, i,
+                                 svn_wc_repos_move_info_t *);
       prompt = apr_pstrcat(scratch_pool, prompt,
-                  apr_psprintf(scratch_pool,
-                                _("  (%i) [r%ld] %s@%ld -> %s\n"),
-                                i, this_move->revision,
-                                this_move->moved_from_repos_relpath,
-                                this_move->copyfrom_rev,
-                                this_move->moved_to_repos_relpath),
+                  apr_psprintf(scratch_pool, _("  (%i) %s\n"), i,
+                               format_move_chain_for_display(this_move,
+                                                             scratch_pool)),
                   (char *)NULL);
-      this_move = this_move->next;
     }
 
   prompt = apr_pstrcat(scratch_pool, prompt,
