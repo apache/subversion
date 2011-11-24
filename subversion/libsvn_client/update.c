@@ -400,17 +400,13 @@ scan_moves_log_receiver(void *baton,
        * "copy from the past + delete". */
 
       /* Remember details of this move. */
-      new_move = apr_palloc(result_pool, sizeof(*new_move));
-      new_move->moved_from_repos_relpath = apr_pstrdup(
-                                             result_pool,
-                                             deleted_path);
-      new_move->moved_to_repos_relpath = apr_pstrdup(
-                                           result_pool,
-                                           copy->copyto_path);
-      new_move->revision = log_entry->revision;
-      new_move->copyfrom_rev = copy->copyfrom_rev;
-      new_move->prev = NULL;
-      new_move->next = NULL;
+      new_move = svn_wc_create_repos_move_info(apr_pstrdup(result_pool,
+                                                           deleted_path),
+                                               apr_pstrdup(result_pool,
+                                                           copy->copyto_path),
+                                               log_entry->revision,
+                                               copy->copyfrom_rev,
+                                               NULL, NULL, result_pool);
 
       /* Link together multiple moves of the same node. */
       prior_move = apr_hash_get(b->moves_by_target_path,

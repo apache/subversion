@@ -581,3 +581,25 @@ svn_wc__fetch_props_func(apr_hash_t **props,
 
   return SVN_NO_ERROR;
 }
+
+
+svn_wc_repos_move_info_t *
+svn_wc_create_repos_move_info(const char *moved_from_repos_relpath,
+                              const char *moved_to_repos_relpath,
+                              svn_revnum_t revision,
+                              svn_revnum_t copyfrom_rev,
+                              svn_wc_repos_move_info_t *prev,
+                              svn_wc_repos_move_info_t *next,
+                              apr_pool_t *result_pool)
+{
+  svn_wc_repos_move_info_t *move = apr_palloc(result_pool, sizeof(*move));
+
+  move->moved_from_repos_relpath = moved_from_repos_relpath;
+  move->moved_to_repos_relpath = moved_to_repos_relpath;
+  move->revision = revision;
+  move->copyfrom_rev = copyfrom_rev;
+  move->prev = prev;
+  move->next = next;
+
+  return move;
+}

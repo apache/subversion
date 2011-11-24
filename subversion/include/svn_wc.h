@@ -1716,7 +1716,24 @@ typedef struct svn_wc_repos_move_info_t {
    * within interesting history. */
   struct svn_wc_repos_move_info_t *prev;
   struct svn_wc_repos_move_info_t *next;
+
+  /* @note Fields may be added to the end of this structure in future
+   * versions.  Therefore, to preserve binary compatibility, users
+   * should not directly allocate structures of this type but should use
+   * svn_wc_create_repos_move_info(). */
 } svn_wc_repos_move_info_t;
+
+/** Create a svn_wc_repos_move_info_t structure.
+ * @see svn_wc_repos_move_info_t
+ * @since New in 1.8. */
+svn_wc_repos_move_info_t *
+svn_wc_create_repos_move_info(const char *moved_from_repos_relpath,
+                              const char *moved_to_repos_relpath,
+                              svn_revnum_t revision,
+                              svn_revnum_t copyfrom_rev,
+                              svn_wc_repos_move_info_t *prev,
+                              svn_wc_repos_move_info_t *next,
+                              apr_pool_t *result_pool);
 
 
 /** A struct that describes a conflict that has occurred in the
