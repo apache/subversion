@@ -1895,6 +1895,7 @@ find_applicable_moves(apr_array_header_t **moves,
                       if (this_move->next->revision > *eb->target_revision)
                         break;
                       this_move = this_move->next;
+                      m->next = this_move;
                       m = svn_wc_create_repos_move_info(
                             this_move->moved_from_repos_relpath,
                             this_move->moved_to_repos_relpath,
@@ -1949,8 +1950,10 @@ find_applicable_moves(apr_array_header_t **moves,
                    * in the global editor pool.
                    *
                    * The returned chain is reversed to the chain obtained
-                   * from the log because we're updating into the past,
-                   * i.e. the 'next' and 'prev' pointers are reversed.
+                   * from the log because we're updating into the past.
+                   * This allows conflict hanlding to always evaluate the
+                   * chain in the forward direction regardless of which way
+                   * in history the update is going.
                    * For the same reason we must use the revision the move
                    * happened in as the copyfrom revision, turning the
                    * delete-half of a move into a fake copy from future
@@ -1968,12 +1971,13 @@ find_applicable_moves(apr_array_header_t **moves,
                       if (this_move->prev->revision < *eb->target_revision)
                         break;
                       this_move = this_move->prev;
-                      m = svn_wc_create_repos_move_info(
-                            this_move->moved_to_repos_relpath,
-                            this_move->moved_from_repos_relpath,
-                            this_move->revision,
-                            this_move->revision,
-                            m, NULL, result_pool);
+                      m->next = svn_wc_create_repos_move_info(
+                                  this_move->moved_to_repos_relpath,
+                                  this_move->moved_from_repos_relpath,
+                                  this_move->revision,
+                                  this_move->revision,
+                                  m, NULL, result_pool);
+                      m = m->next;
                     }
 
                   break;
