@@ -273,11 +273,11 @@ pick_move(svn_wc_repos_move_info_t **move,
     {
       prompt = apr_pstrcat(scratch_pool, prompt,
                   apr_psprintf(scratch_pool,
-                                _("  (%i) %s@%ld -> %s@%ld\n"),
-                                i, this_move->moved_from_repos_relpath,
+                                _("  (%i) [r%ld] %s@%ld -> %s\n"),
+                                i, this_move->revision,
+                                this_move->moved_from_repos_relpath,
                                 this_move->copyfrom_rev,
-                                this_move->moved_to_repos_relpath,
-                                this_move->revision),
+                                this_move->moved_to_repos_relpath),
                   (char *)NULL);
       i++;
       this_move = this_move->next;
