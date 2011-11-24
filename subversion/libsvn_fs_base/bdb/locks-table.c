@@ -224,7 +224,12 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
     {
       SVN_ERR(get_lock(&lock, fs, path, lock_token, trail, pool));
       if (lock && get_locks_func)
-        SVN_ERR(get_locks_func(get_locks_baton, lock, pool));
+        {
+          SVN_ERR(get_locks_func(get_locks_baton, lock, pool));
+
+          /* Found a lock so PATH is a file and we can ignore depth */
+          return SVN_NO_ERROR;
+        }
     }
 
   /* If we're only looking at PATH itself (depth = empty), stop here. */
