@@ -2795,6 +2795,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
         notify_abspath = moved_to_abspath;
     }
 
+  /* Update the lists of merged, skipped, tree-conflicted and added paths. */
   if (notify_b->merge_b->sources_ancestral
       || notify_b->merge_b->reintegrate_merge)
     {
@@ -2856,6 +2857,9 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
           else
             {
               added_path_parent = svn_dirent_dirname(added_path, pool);
+              /* ### Bug. Testing whether its immediate parent is in the
+               * hash isn't enough: this is letting every other level of
+               * the added subtree hierarchy into the hash. */
               if (!apr_hash_get(notify_b->added_abspaths, added_path_parent,
                                 APR_HASH_KEY_STRING))
                 is_root_of_added_subtree = TRUE;
@@ -2904,6 +2908,8 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
               notify_b->cur_ancestor_index = new_nearest_ancestor_index;
               if (!child->absent && child->remaining_ranges->nelts > 0
                   && !(new_nearest_ancestor_index == 0
+                       /* ### Woah, 'remaining_ranges == 0'? It was already
+                        * assumed non-null earlier in this expression. Typo? */
                        && child->remaining_ranges == 0))
                 {
                   svn_wc_notify_t *notify_merge_begin;
