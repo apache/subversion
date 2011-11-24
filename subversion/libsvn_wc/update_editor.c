@@ -2145,12 +2145,9 @@ delete_entry(const char *path,
               SVN_ERR(get_repos_moves(eb, scratch_pool));
               
               /* Find a server-side move which applies to the deleted node. */
-              if (apr_hash_count(eb->repos_moves) > 0)
-                {
-                  SVN_ERR(find_applicable_moves(
-                            &tree_conflict->suggested_moves, eb,
-                            local_abspath, scratch_pool, scratch_pool));
-                }
+              SVN_ERR(find_applicable_moves(
+                        &tree_conflict->suggested_moves, eb,
+                        local_abspath, scratch_pool, scratch_pool));
               continue;
             }
 
