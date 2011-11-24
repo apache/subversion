@@ -918,30 +918,10 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
           if (strcmp(answer, "s") == 0)
             {
               if (desc->suggested_moves)
-                {
-                  svn_wc_repos_move_info_t *move;
+                continue;
 
-                  if (desc->suggested_moves->nelts == 0)
-                    {
-                      SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-                              _("No moves found in revision log.\n")));
-                      continue;
-                    }
-
-                  SVN_ERR(pick_move(&move, desc->suggested_moves, b->pb,
-                                    subpool));
-                  if (move)
-                    {
-                      (*result)->choice = svn_wc_conflict_choose_incoming_move;
-                      (*result)->incoming_move = move;
-                      break;
-                    }
-                }
-              else
-                {
-                  (*result)->choice = svn_wc_conflict_choose_scan_log_for_moves;
-                  break;
-                }
+              (*result)->choice = svn_wc_conflict_choose_scan_log_for_moves;
+              break;
             }
         }
     }
