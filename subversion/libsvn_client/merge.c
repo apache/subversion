@@ -5282,7 +5282,7 @@ single_file_merge_get_file(const char **filename,
    and set *HEADER_SENT to TRUE. */
 static APR_INLINE void
 single_file_merge_notify(notification_receiver_baton_t *notify_baton,
-                         const char *local_abspath,
+                         const char *target_relpath,
                          svn_wc_notify_action_t action,
                          svn_wc_notify_state_t text_state,
                          svn_wc_notify_state_t prop_state,
@@ -5290,7 +5290,7 @@ single_file_merge_notify(notification_receiver_baton_t *notify_baton,
                          svn_boolean_t *header_sent,
                          apr_pool_t *pool)
 {
-  svn_wc_notify_t *notify = svn_wc_create_notify(local_abspath, action, pool);
+  svn_wc_notify_t *notify = svn_wc_create_notify(target_relpath, action, pool);
   notify->kind = svn_node_file;
   notify->content_state = text_state;
   notify->prop_state = prop_state;
