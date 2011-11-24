@@ -1511,6 +1511,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                     svn_wc_conflict_action_t action,
                     svn_node_kind_t their_node_kind,
                     const char *their_relpath,
+                    const char *moved_to_abspath,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
@@ -1578,10 +1579,11 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
 
 
       case svn_wc__db_status_deleted:
-        /* Flag a delete vs. delete conflict for now.
+        /* Flag a incoming delete vs. local delete/moved-away conflict for now.
          * This might get auto-resolved once we've learned whether or
          * not this incoming delete is really part of an incoming move. */
-        reason = svn_wc_conflict_reason_deleted;
+        reason = moved_to_abspath ? svn_wc_conflict_reason_moved_away
+                                  : svn_wc_conflict_reason_deleted;
         break;
 
       case svn_wc__db_status_incomplete:
@@ -2120,7 +2122,8 @@ delete_entry(const char *path,
       SVN_ERR(check_tree_conflict(&tree_conflict, eb, local_abspath,
                                   status, kind, TRUE,
                                   svn_wc_conflict_action_delete, svn_node_none,
-                                  repos_relpath, pb->pool, scratch_pool));
+                                  repos_relpath, moved_to_abspath,
+                                  pb->pool, scratch_pool));
     }
 
   /* If this is an incoming delete vs. local delete/move conflict
@@ -2569,7 +2572,7 @@ add_directory(const char *path,
                                       status, wc_kind, FALSE,
                                       svn_wc_conflict_action_add,
                                       svn_node_dir, db->new_relpath,
-                                      pool, pool));
+                                      NULL, pool, pool));
         }
 
       if (tree_conflict == NULL)
@@ -2794,7 +2797,8 @@ open_directory(const char *path,
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, db->local_abspath,
                                 status, wc_kind, TRUE,
                                 svn_wc_conflict_action_edit, svn_node_dir,
-                                db->new_relpath, db->pool, pool));
+                                db->new_relpath, db->moved_to_abspath,
+                                db->pool, pool));
 
   /* Remember the roots of any locally deleted trees. */
   if (tree_conflict != NULL)
@@ -3664,7 +3668,7 @@ add_file(const char *path,
                                       fb->local_abspath,
                                       status, wc_kind, FALSE,
                                       svn_wc_conflict_action_add,
-                                      svn_node_file, fb->new_relpath,
+                                      svn_node_file, fb->new_relpath, NULL,
                                       scratch_pool, scratch_pool));
         }
 
@@ -3839,7 +3843,8 @@ open_file(const char *path,
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
                                 status, wc_kind, TRUE,
                                 svn_wc_conflict_action_edit, svn_node_file,
-                                fb->new_relpath, fb->pool, scratch_pool));
+                                fb->new_relpath, fb->moved_to_abspath,
+                                fb->pool, scratch_pool));
 
   /* Is this path the victim of a newly-discovered tree conflict? */
   if (tree_conflict != NULL)
