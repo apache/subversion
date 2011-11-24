@@ -900,7 +900,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                        "Maybe this incoming delete is part of a move?\n"),
                      svn_dirent_local_style(desc->local_abspath, subpool)));
 
-      prompt = _("Select: (p) postpone, (s) suggest-move,\n"
+      prompt = _("Select: (p) postpone, (f) find-move,\n"
                  "        (a) ask-move, (d) is-delete, (h) help: ");
 
       while (1)
@@ -912,7 +912,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
               if (desc->suggested_moves->nelts == 0)
                 {
                   SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-                          _("No moves found in revision log.\n")));
+                          _("No move found in revision log.\n")));
                 }
               else
                 {
@@ -935,7 +935,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
               _("  (p) postpone      - resolve the conflict later\n"
-                "  (s) suggest-move  - suggest moves found in revision log\n"
+                "  (f) find-move     - try to find move in revision log\n"
                 "  (a) ask-move      - specify server-side move yourself\n"
                 "  (d) is-delete     - treat incoming delete as delete\n"
                 "  (h) help          - show this help\n\n")));
@@ -958,7 +958,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
               break;
             }
 
-          if (strcmp(answer, "s") == 0)
+          if (strcmp(answer, "f") == 0)
             {
               if (desc->suggested_moves)
                 continue;
