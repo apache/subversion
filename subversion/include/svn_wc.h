@@ -1847,11 +1847,12 @@ typedef struct svn_wc_conflict_description2_t
 
   /** A chain of one or more suggested moves in case the server sends moves
    * as copy+delete and the revision log was scanned for server-side moves
-   * at the user's request.
+   * at the user's request. Elements of this array are pointers to
+   * svn_wc_repos_move_info_t structures.
    * @see svn_wc_conflict_choice_t
    * @see svn_wc_repos_move_info_t
    * @since New in 1.8. */
-  svn_wc_repos_move_info_t *suggested_move;
+  apr_array_header_t *suggested_moves;
 
   /* Remember to adjust svn_wc__conflict_description2_dup()
    * if you add new fields to this struct. */

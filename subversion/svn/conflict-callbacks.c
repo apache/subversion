@@ -258,18 +258,31 @@ launch_resolver(svn_boolean_t *performed_edit,
 
 static svn_error_t *
 pick_move(svn_wc_repos_move_info_t **move,
-          const svn_wc_conflict_description2_t *desc,
+          apr_array_header_t *suggested_moves,
           svn_cmdline_prompt_baton_t *pb,
           apr_pool_t *scratch_pool)
 {
   const char *prompt;
-  svn_wc_repos_move_info_t *this_move = desc->suggested_move;
+  svn_wc_repos_move_info_t *this_move;
   int i = 0;
   int m;
   apr_pool_t *iterpool;
 
-  prompt = _("Moves found in revision log:\n");
-  do
+  if (suggested_moves->nelts == 1)
+    {
+      this_move = APR_ARRAY_IDX(suggested_moves, 0,
+                                svn_wc_repos_move_info_t *);
+      SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+                _("  [r%ld] %s@%ld -> %s\n"),
+                this_move->revision, this_move->moved_from_repos_relpath,
+                this_move->copyfrom_rev, this_move->moved_to_repos_relpath));
+      
+      *move = this_move;
+      return SVN_NO_ERROR;
+    }
+
+  prompt = _("Multiple moves found in revision log:\n");
+  for (i = 0; i < suggested_moves->nelts; i++)
     {
       prompt = apr_pstrcat(scratch_pool, prompt,
                   apr_psprintf(scratch_pool,
@@ -279,10 +292,8 @@ pick_move(svn_wc_repos_move_info_t **move,
                                 this_move->copyfrom_rev,
                                 this_move->moved_to_repos_relpath),
                   (char *)NULL);
-      i++;
       this_move = this_move->next;
     }
-  while (this_move);
 
   prompt = apr_pstrcat(scratch_pool, prompt,
                        _("Enter number to choose incoming move or hit enter "
@@ -318,20 +329,14 @@ pick_move(svn_wc_repos_move_info_t **move,
             return svn_error_trace(err);
         }
 
-      if (m < 0 || m >= i)
+      if (m < 0 || m >= suggested_moves->nelts)
         {
           SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
                                       "Invalid choice (%i)\n", m));
           continue;
         }
 
-      *move = desc->suggested_move;
-      i = 0;
-      while (m < i && (*move)->next)
-        {
-          *move = (*move)->next;
-          m++;
-        }
+      *move = APR_ARRAY_IDX(suggested_moves, m, svn_wc_repos_move_info_t *);
     }
   svn_pool_destroy(iterpool);
 
@@ -844,7 +849,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
       const char *answer;
       const char *prompt;
 
-      if (!desc->suggested_move)
+      if (!desc->suggested_moves)
         SVN_ERR(svn_cmdline_fprintf(
                      stderr, subpool,
                      _("Tree conflict discovered when trying to delete\n'%s'\n"
@@ -859,16 +864,25 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
         {
           svn_pool_clear(subpool);
 
-          if (desc->suggested_move)
+          if (desc->suggested_moves)
             {
-              svn_wc_repos_move_info_t *move;
-
-              SVN_ERR(pick_move(&move, desc, b->pb, subpool));
-              if (move)
+              if (desc->suggested_moves->nelts == 0)
                 {
-                  (*result)->choice = svn_wc_conflict_choose_incoming_move;
-                  (*result)->incoming_move = move;
-                  break;
+                  SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                          _("No moves found in revision log.\n")));
+                }
+              else
+                {
+                  svn_wc_repos_move_info_t *move;
+
+                  SVN_ERR(pick_move(&move, desc->suggested_moves, b->pb,
+                                    subpool));
+                  if (move)
+                    {
+                      (*result)->choice = svn_wc_conflict_choose_incoming_move;
+                      (*result)->incoming_move = move;
+                      break;
+                    }
                 }
             }
 
@@ -903,8 +917,26 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 
           if (strcmp(answer, "s") == 0)
             {
-              if (desc->suggested_move)
-                continue;
+              if (desc->suggested_moves)
+                {
+                  svn_wc_repos_move_info_t *move;
+
+                  if (desc->suggested_moves->nelts == 0)
+                    {
+                      SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                              _("No moves found in revision log.\n")));
+                      continue;
+                    }
+
+                  SVN_ERR(pick_move(&move, desc->suggested_moves, b->pb,
+                                    subpool));
+                  if (move)
+                    {
+                      (*result)->choice = svn_wc_conflict_choose_incoming_move;
+                      (*result)->incoming_move = move;
+                      break;
+                    }
+                }
               else
                 {
                   (*result)->choice = svn_wc_conflict_choose_scan_log_for_moves;

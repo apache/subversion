@@ -1807,11 +1807,11 @@ compare_revision_items_ascending(const svn_sort__item_t *a,
 }
 
 static svn_error_t *
-find_applicable_move(svn_wc_repos_move_info_t **move,
-                     struct edit_baton *eb,
-                     const char *local_abspath,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
+find_applicable_moves(apr_array_header_t **moves,
+                      struct edit_baton *eb,
+                      const char *local_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
 {
   const char *repos_relpath;
   svn_revnum_t base_revision;
@@ -1819,7 +1819,7 @@ find_applicable_move(svn_wc_repos_move_info_t **move,
   svn_boolean_t update_into_past;
   int i;
 
-  *move = NULL;
+  *moves = apr_array_make(result_pool, 0, sizeof(svn_wc_repos_move_info_t *));
 
   if (! eb->repos_moves || apr_hash_count(eb->repos_moves) == 0)
     return SVN_NO_ERROR;
@@ -1853,7 +1853,7 @@ find_applicable_move(svn_wc_repos_move_info_t **move,
           svn_sort__item_t elt = APR_ARRAY_IDX(sorted, i,
                                                svn_sort__item_t);
           const svn_revnum_t *rev = elt.key;
-          apr_array_header_t *moves = elt.value;
+          apr_array_header_t *moves_in_rev = elt.value;
 
          /* When updating into the future, a move applies if it
           * happened after the base rev of the node. */
@@ -1866,11 +1866,11 @@ find_applicable_move(svn_wc_repos_move_info_t **move,
            *   rB: mv b->c
            *   rC: mv c->d
            * and so on. Find the first applicable move in the chain. */
-          for (j = 0; j < moves->nelts; j++)
+          for (j = 0; j < moves_in_rev->nelts; j++)
             {
               svn_wc_repos_move_info_t *this_move;
 
-              this_move = APR_ARRAY_IDX(moves, j,
+              this_move = APR_ARRAY_IDX(moves_in_rev, j,
                                         svn_wc_repos_move_info_t *);
               if (strcmp(this_move->moved_from_repos_relpath,
                          repos_relpath) == 0)
@@ -1888,7 +1888,7 @@ find_applicable_move(svn_wc_repos_move_info_t **move,
                         this_move->revision,
                         this_move->copyfrom_rev,
                         NULL, NULL, result_pool);
-                  *move = m;
+                  APR_ARRAY_PUSH(*moves, svn_wc_repos_move_info_t *) = m;
                   /* Add any further applicable moves to the chain. */
                   while (this_move->next)
                     {
@@ -1918,7 +1918,7 @@ find_applicable_move(svn_wc_repos_move_info_t **move,
           svn_sort__item_t elt = APR_ARRAY_IDX(sorted, i,
                                                svn_sort__item_t);
           const svn_revnum_t *rev = elt.key;
-          apr_array_header_t *moves = elt.value;
+          apr_array_header_t *moves_in_rev = elt.value;
 
          /* When updating into the past, a move applies if it
           * happened before or at the base rev of the node. */
@@ -1931,11 +1931,11 @@ find_applicable_move(svn_wc_repos_move_info_t **move,
            *   rB: mv c->b (actually b->c)
            *   rA: mv b->a (actually a->b)
            * and so on. Find the first applicable move in the chain. */
-          for (j = 0; j < moves->nelts; j++)
+          for (j = 0; j < moves_in_rev->nelts; j++)
             {
               svn_wc_repos_move_info_t *this_move;
 
-              this_move = APR_ARRAY_IDX(moves, j,
+              this_move = APR_ARRAY_IDX(moves_in_rev, j,
                                         svn_wc_repos_move_info_t *);
               if (strcmp(this_move->moved_to_repos_relpath,
                          repos_relpath) == 0)
@@ -1961,7 +1961,7 @@ find_applicable_move(svn_wc_repos_move_info_t **move,
                         this_move->revision,
                         this_move->revision,
                         NULL, NULL, result_pool);
-                  *move = m;
+                  APR_ARRAY_PUSH(*moves, svn_wc_repos_move_info_t *) = m;
                   /* Add any further applicable moves to the chain. */
                   while (this_move->prev)
                     {
@@ -2137,17 +2137,15 @@ delete_entry(const char *path,
                                             " returned no results"));
           if (result->choice == svn_wc_conflict_choose_scan_log_for_moves)
             {
-              svn_wc_repos_move_info_t *move;
-
               /* Scan revision log for server-side moves */
               SVN_ERR(get_repos_moves(eb, scratch_pool));
               
               /* Find a server-side move which applies to the deleted node. */
               if (apr_hash_count(eb->repos_moves) > 0)
                 {
-                  SVN_ERR(find_applicable_move(&move, eb, local_abspath,
-                                              scratch_pool, scratch_pool));
-                  tree_conflict->suggested_move = move;
+                  SVN_ERR(find_applicable_moves(
+                            &tree_conflict->suggested_moves, eb,
+                            local_abspath, scratch_pool, scratch_pool));
                 }
               continue;
             }
