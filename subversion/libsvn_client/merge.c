@@ -2642,9 +2642,6 @@ typedef struct notification_receiver_baton_t
   svn_wc_notify_func2_t wrapped_func;
   void *wrapped_baton;
 
-  /* The number of notifications received. */
-  apr_uint32_t nbr_notifications;
-
   /* The number of operative notifications received. */
   apr_uint32_t nbr_operative_notifications;
 
@@ -2870,11 +2867,11 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
         }
     }
 
+  /* Notify that a merge is beginning, if we haven't already done so.
+   * (A single-file merge is notified separately: see single_file_merge_notify().) */
   /* If our merge sources are ancestors of one another... */
   if (notify_b->merge_b->sources_ancestral)
     {
-      notify_b->nbr_notifications++;
-
       /* See if this is an operative directory merge. */
       if (!(notify_b->is_single_file_merge) && is_operative_notification)
         {
@@ -2908,8 +2905,8 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
               notify_b->cur_ancestor_index = new_nearest_ancestor_index;
               if (!child->absent && child->remaining_ranges->nelts > 0
                   && !(new_nearest_ancestor_index == 0
-                       /* ### Woah, 'remaining_ranges == 0'? It was already
-                        * assumed non-null earlier in this expression. Typo? */
+                       /* ### 'remaining_ranges == 0'? It was already assumed
+                        * non-null earlier in this expression. See r872890. */
                        && child->remaining_ranges == 0))
                 {
                   svn_wc_notify_t *notify_merge_begin;
@@ -4745,11 +4742,10 @@ record_skips(const char *mergeinfo_path,
                    apr_array_make(scratch_pool, 0,
                                   sizeof(svn_merge_range_t *)));
 
-      if (nbr_skips < notify_b->nbr_notifications)
-        /* ### Use RANGELIST as the mergeinfo for all children of
+      /* if (nbr_skips < notify_b->nbr_notifications)
+           ### Use RANGELIST as the mergeinfo for all children of
            ### this path which were not also explicitly
            ### skipped? */
-        ;
     }
   SVN_ERR(update_wc_mergeinfo(NULL, merge_b->target_abspath,
                               mergeinfo_path, merges,
@@ -5285,7 +5281,7 @@ single_file_merge_get_file(const char **filename,
    send the header notification before sending the state notification,
    and set *HEADER_SENT to TRUE. */
 static APR_INLINE void
-single_file_merge_notify(void *notify_baton,
+single_file_merge_notify(notification_receiver_baton_t *notify_baton,
                          const char *local_abspath,
                          svn_wc_notify_action_t action,
                          svn_wc_notify_state_t text_state,
@@ -8834,7 +8830,6 @@ do_merge(apr_hash_t **modified_subtrees,
   /* Build the notification receiver baton. */
   notify_baton.wrapped_func = ctx->notify_func2;
   notify_baton.wrapped_baton = ctx->notify_baton2;
-  notify_baton.nbr_notifications = 0;
   notify_baton.nbr_operative_notifications = 0;
 
   /* Do we already know the specific subtrees with mergeinfo we want
@@ -8847,7 +8842,6 @@ do_merge(apr_hash_t **modified_subtrees,
   notify_baton.skipped_abspaths = NULL;
   notify_baton.added_abspaths = NULL;
   notify_baton.tree_conflicted_abspaths = NULL;
-  notify_baton.is_single_file_merge = FALSE;
   notify_baton.children_with_mergeinfo = NULL;
   notify_baton.cur_ancestor_index = -1;
   notify_baton.merge_b = &merge_cmd_baton;
