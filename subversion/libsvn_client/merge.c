@@ -2727,6 +2727,7 @@ find_nearest_ancestor(const apr_array_header_t *children_with_mergeinfo,
 }
 
 
+/* Is the notification the result of a real operative merge? */
 #define IS_OPERATIVE_NOTIFICATION(notify)  \
                     (notify->content_state == svn_wc_notify_state_conflicted \
                      || notify->content_state == svn_wc_notify_state_merged  \
@@ -2743,7 +2744,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
                       apr_pool_t *pool)
 {
   notification_receiver_baton_t *notify_b = baton;
-  svn_boolean_t is_operative_notification = FALSE;
+  svn_boolean_t is_operative_notification = IS_OPERATIVE_NOTIFICATION(notify);
   const char *notify_abspath;
 
   /* Skip notifications if this is a --record-only merge that is adding
@@ -2755,11 +2756,9 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
           && notify->action != svn_wc_notify_merge_record_info_begin))
     return;
 
-  /* Is the notification the result of a real operative merge? */
-  if (IS_OPERATIVE_NOTIFICATION(notify))
+  if (is_operative_notification)
     {
       notify_b->nbr_operative_notifications++;
-      is_operative_notification = TRUE;
     }
 
   /* If the node was moved-away, use its new path in the notification. */
