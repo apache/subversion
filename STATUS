@@ -92,7 +92,7 @@ Candidate changes:
    Justification:
      Can you say DoS?
    Votes:
-     +1: cmpilato
+     +1: cmpilato, danielsh
 
  * r1205839, r1205848
    Fix reading beyond end of a (not null-terminated) string in BDB lock code.
