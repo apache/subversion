@@ -1254,6 +1254,8 @@ merge_props_changed(svn_wc_notify_state_t *state,
       else if (err)
         return svn_error_trace(err);
     }
+  else if (state)
+    *state = svn_wc_notify_state_unchanged;
 
   return SVN_NO_ERROR;
 }
@@ -2640,9 +2642,6 @@ typedef struct notification_receiver_baton_t
   svn_wc_notify_func2_t wrapped_func;
   void *wrapped_baton;
 
-  /* The number of notifications received. */
-  apr_uint32_t nbr_notifications;
-
   /* The number of operative notifications received. */
   apr_uint32_t nbr_operative_notifications;
 
@@ -2725,6 +2724,7 @@ find_nearest_ancestor(const apr_array_header_t *children_with_mergeinfo,
 }
 
 
+/* Is the notification the result of a real operative merge? */
 #define IS_OPERATIVE_NOTIFICATION(notify)  \
                     (notify->content_state == svn_wc_notify_state_conflicted \
                      || notify->content_state == svn_wc_notify_state_merged  \
@@ -2741,7 +2741,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
                       apr_pool_t *pool)
 {
   notification_receiver_baton_t *notify_b = baton;
-  svn_boolean_t is_operative_notification = FALSE;
+  svn_boolean_t is_operative_notification = IS_OPERATIVE_NOTIFICATION(notify);
   const char *notify_abspath;
 
   /* Skip notifications if this is a --record-only merge that is adding
@@ -2753,11 +2753,9 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
           && notify->action != svn_wc_notify_merge_record_info_begin))
     return;
 
-  /* Is the notification the result of a real operative merge? */
-  if (IS_OPERATIVE_NOTIFICATION(notify))
+  if (is_operative_notification)
     {
       notify_b->nbr_operative_notifications++;
-      is_operative_notification = TRUE;
     }
 
   /* If the node was moved-away, use its new path in the notification. */
@@ -2794,6 +2792,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
         notify_abspath = moved_to_abspath;
     }
 
+  /* Update the lists of merged, skipped, tree-conflicted and added paths. */
   if (notify_b->merge_b->sources_ancestral
       || notify_b->merge_b->reintegrate_merge)
     {
@@ -2855,6 +2854,9 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
           else
             {
               added_path_parent = svn_dirent_dirname(added_path, pool);
+              /* ### Bug. Testing whether its immediate parent is in the
+               * hash isn't enough: this is letting every other level of
+               * the added subtree hierarchy into the hash. */
               if (!apr_hash_get(notify_b->added_abspaths, added_path_parent,
                                 APR_HASH_KEY_STRING))
                 is_root_of_added_subtree = TRUE;
@@ -2865,11 +2867,11 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
         }
     }
 
+  /* Notify that a merge is beginning, if we haven't already done so.
+   * (A single-file merge is notified separately: see single_file_merge_notify().) */
   /* If our merge sources are ancestors of one another... */
   if (notify_b->merge_b->sources_ancestral)
     {
-      notify_b->nbr_notifications++;
-
       /* See if this is an operative directory merge. */
       if (!(notify_b->is_single_file_merge) && is_operative_notification)
         {
@@ -2903,6 +2905,8 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
               notify_b->cur_ancestor_index = new_nearest_ancestor_index;
               if (!child->absent && child->remaining_ranges->nelts > 0
                   && !(new_nearest_ancestor_index == 0
+                       /* ### 'remaining_ranges == 0'? It was already assumed
+                        * non-null earlier in this expression. See r872890. */
                        && child->remaining_ranges == 0))
                 {
                   svn_wc_notify_t *notify_merge_begin;
@@ -4738,11 +4742,10 @@ record_skips(const char *mergeinfo_path,
                    apr_array_make(scratch_pool, 0,
                                   sizeof(svn_merge_range_t *)));
 
-      if (nbr_skips < notify_b->nbr_notifications)
-        /* ### Use RANGELIST as the mergeinfo for all children of
+      /* if (nbr_skips < notify_b->nbr_notifications)
+           ### Use RANGELIST as the mergeinfo for all children of
            ### this path which were not also explicitly
            ### skipped? */
-        ;
     }
   SVN_ERR(update_wc_mergeinfo(NULL, merge_b->target_abspath,
                               mergeinfo_path, merges,
@@ -5278,7 +5281,7 @@ single_file_merge_get_file(const char **filename,
    send the header notification before sending the state notification,
    and set *HEADER_SENT to TRUE. */
 static APR_INLINE void
-single_file_merge_notify(void *notify_baton,
+single_file_merge_notify(notification_receiver_baton_t *notify_baton,
                          const char *local_abspath,
                          svn_wc_notify_action_t action,
                          svn_wc_notify_state_t text_state,
@@ -7173,22 +7176,21 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
   return SVN_NO_ERROR;
 }
 
-/* SUBTREES is one of the following notification_receiver_baton_t members:
-   merged_paths, skipped_paths, or added_paths.  Return true if any path in
-   SUBTRESS is equal to, or is a subtree of, LOCAL_ABSPATH.  Return false
-   otherwise.  If LOCAL_ABSPATH or SUBTREES are NULL return false. */
+/* Return true if any path in SUBTRESS is equal to, or is a subtree of,
+   LOCAL_ABSPATH.  Return false otherwise.  The keys of SUBTREES are
+   (const char *) absolute paths and its values are irrelevant.
+   If SUBTREES is NULL return false. */
 static svn_boolean_t
 path_is_subtree(const char *local_abspath,
                 apr_hash_t *subtrees,
                 apr_pool_t *pool)
 {
-  if (local_abspath && subtrees)
+  if (subtrees)
     {
       apr_hash_index_t *hi;
 
       for (hi = apr_hash_first(pool, subtrees);
-           hi;
-           hi = apr_hash_next(hi))
+           hi; hi = apr_hash_next(hi))
         {
           const char *path_touched_by_merge = svn__apr_hash_index_key(hi);
           if (svn_dirent_is_ancestor(local_abspath, path_touched_by_merge))
@@ -8310,6 +8312,9 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
   honor_mergeinfo = HONOR_MERGEINFO(merge_b);
   record_mergeinfo = RECORD_MERGEINFO(merge_b);
 
+  /* Note that this is not a single-file merge. */
+  notify_b->is_single_file_merge = FALSE;
+
   /* Initialize NOTIFY_B->CHILDREN_WITH_MERGEINFO. See the comment
      'THE CHILDREN_WITH_MERGEINFO ARRAY' at the start of this file. */
   notify_b->children_with_mergeinfo =
@@ -8674,8 +8679,9 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
    RECORD_MERGEINFO().
 
    If MODIFIED_SUBTREES is not NULL and SOURCES_ANCESTRAL or
-   REINTEGRATE_MERGE is true, then set *MODIFIED_SUBTREES to a hash
-   containing every path modified, skipped, added, or tree-conflicted
+   REINTEGRATE_MERGE is true, then replace *MODIFIED_SUBTREES with a new
+   hash containing all the paths that *MODIFIED_SUBTREES contained before,
+   and also every path modified, skipped, added, or tree-conflicted
    by the merge.  Keys and values of the hash are both (const char *)
    absolute paths.  The contents of the hash are allocated in RESULT_POOL.
 
@@ -8827,7 +8833,6 @@ do_merge(apr_hash_t **modified_subtrees,
   /* Build the notification receiver baton. */
   notify_baton.wrapped_func = ctx->notify_func2;
   notify_baton.wrapped_baton = ctx->notify_baton2;
-  notify_baton.nbr_notifications = 0;
   notify_baton.nbr_operative_notifications = 0;
 
   /* Do we already know the specific subtrees with mergeinfo we want
@@ -8840,7 +8845,6 @@ do_merge(apr_hash_t **modified_subtrees,
   notify_baton.skipped_abspaths = NULL;
   notify_baton.added_abspaths = NULL;
   notify_baton.tree_conflicted_abspaths = NULL;
-  notify_baton.is_single_file_merge = FALSE;
   notify_baton.children_with_mergeinfo = NULL;
   notify_baton.cur_ancestor_index = -1;
   notify_baton.merge_b = &merge_cmd_baton;
@@ -8923,6 +8927,7 @@ do_merge(apr_hash_t **modified_subtrees,
                                      iterpool));
 
           /* Does the caller want to know what the merge has done? */
+          /* ### Why only if the target is a dir and not a file? */
           if (modified_subtrees)
             {
               if (notify_baton.merged_abspaths)
