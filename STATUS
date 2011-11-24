@@ -93,6 +93,13 @@ Candidate changes:
      Can you say DoS?
    Votes:
      +1: cmpilato
+
+ * r1205839, r1205848
+   Fix reading beyond end of a (not null-terminated) string in BDB lock code.
+   Justification:
+     Undefined behaviour. http://svn.haxx.se/dev/archive-2011-11/0350.shtml
+   Votes:
+     +1: philip
    
 Veto-blocked changes:
 =====================
