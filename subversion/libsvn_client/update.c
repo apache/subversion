@@ -514,6 +514,21 @@ get_repos_moves(void *baton,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_client__get_repos_moves(apr_hash_t **moves,
+                            const char *anchor_abspath,
+                            svn_ra_session_t *ra_session,
+                            svn_revnum_t start,
+                            svn_revnum_t end,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  struct get_repos_moves_baton grmb = {anchor_abspath, ctx, ra_session};
+
+  return get_repos_moves(&grmb, moves, start, end, result_pool, scratch_pool);
+}
+
 /* This is a helper for svn_client__update_internal(), which see for
    an explanation of most of these parameters.  Some stuff that's
    unique is as follows:

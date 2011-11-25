@@ -597,6 +597,18 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
+/* A wrapper around get_repos_moves in update.c to allow a regression
+   test to call it. */
+svn_error_t *
+svn_client__get_repos_moves(apr_hash_t **moves,
+                            const char *anchor_abspath,
+                            svn_ra_session_t *ra_session,
+                            svn_revnum_t start,
+                            svn_revnum_t end,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
 /* ---------------------------------------------------------------- */
 
 /*** Editor for repository diff ***/
