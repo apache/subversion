@@ -261,6 +261,7 @@ launch_resolver(svn_boolean_t *performed_edit,
 
 static const char *
 format_move_chain_for_display(svn_wc_repos_move_info_t *first_move,
+                              const char *indent,
                               apr_pool_t *result_pool)
 {
   const char *s;
@@ -275,18 +276,19 @@ format_move_chain_for_display(svn_wc_repos_move_info_t *first_move,
       svn_wc_repos_move_info_t *this_move;
 
       s = apr_psprintf(result_pool,
-                        _("Combined move:\n  %s@%ld -> %s\n"
-                       "Individual moves:\n"),
-                       first_move->moved_from_repos_relpath,
+                        _("Combined move:\n%s  %s@%ld -> %s\n"
+                       "%sIndividual moves:\n"),
+                       indent, first_move->moved_from_repos_relpath,
                        first_move->copyfrom_rev,
-                       last_move->moved_to_repos_relpath);
+                       last_move->moved_to_repos_relpath, indent);
       
       this_move = first_move;
       do
         {
           s = apr_pstrcat(result_pool, s,
                           apr_psprintf(
-                            result_pool, _("  [r%ld] %s@%ld -> %s\n"),
+                            result_pool, _("%s  [r%ld] %s@%ld -> %s\n"),
+                            indent,
                             this_move->revision,
                             this_move->moved_from_repos_relpath,
                             this_move->copyfrom_rev,
@@ -323,21 +325,21 @@ pick_move(svn_wc_repos_move_info_t **move,
       this_move = APR_ARRAY_IDX(suggested_moves, 0,
                                 svn_wc_repos_move_info_t *);
       SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n",
-                                  format_move_chain_for_display(this_move,
+                                  format_move_chain_for_display(this_move, "",
                                                                 scratch_pool)));
       *move = this_move;
       return SVN_NO_ERROR;
     }
 
-  prompt = _("Multiple moves found in revision log:\n");
+  prompt = _("Multiple incoming move candidates found:\n");
   for (i = 0; i < suggested_moves->nelts; i++)
     {
       this_move = APR_ARRAY_IDX(suggested_moves, i,
                                  svn_wc_repos_move_info_t *);
       prompt = apr_pstrcat(scratch_pool, prompt,
-                  apr_psprintf(scratch_pool, _("  (%i) %s\n"), i,
-                               format_move_chain_for_display(this_move,
-                                                             scratch_pool)),
+                  apr_psprintf(scratch_pool, _("  (%i) %s"), i,
+                               format_move_chain_for_display(
+                                 this_move, "      ", scratch_pool)),
                   (char *)NULL);
     }
 
