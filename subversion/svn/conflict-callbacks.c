@@ -57,6 +57,7 @@ svn_cl__conflict_baton_make(svn_cl__conflict_baton_t **b,
   (*b)->external_failed = FALSE;
   (*b)->pb = pb;
   SVN_ERR(svn_dirent_get_absolute(&(*b)->path_prefix, "", pool));
+  (*b)->show_moves = FALSE;
   return SVN_NO_ERROR;
 }
 
@@ -920,8 +921,9 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
         {
           svn_pool_clear(subpool);
 
-          if (desc->suggested_moves)
+          if (desc->suggested_moves && b->show_moves)
             {
+              b->show_moves = FALSE;
               if (desc->suggested_moves->nelts == 0)
                 {
                   SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
@@ -973,9 +975,12 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 
           if (strcmp(answer, "f") == 0)
             {
+              b->show_moves = TRUE;
               if (desc->suggested_moves)
                 continue;
 
+              /* No suggested moves information yet, need to ask the library
+               * to scan the revision log for moves. */
               (*result)->choice = svn_wc_conflict_choose_scan_log_for_moves;
               break;
             }

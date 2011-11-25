@@ -330,6 +330,7 @@ typedef struct svn_cl__conflict_baton_t {
   svn_boolean_t external_failed;
   svn_cmdline_prompt_baton_t *pb;
   const char *path_prefix;
+  svn_boolean_t show_moves;
 } svn_cl__conflict_baton_t;
 
 /* Create and return a conflict baton in *B, allocated from POOL, with the
