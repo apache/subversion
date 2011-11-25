@@ -4678,11 +4678,11 @@ update_wc_mergeinfo(svn_mergeinfo_catalog_t result_catalog,
 
    Record override mergeinfo on any paths skipped during a merge.
 
-   Set empty mergeinfo on each path in NOTIFY_B->SKIPPED_ABSPATHS so the path
+   Set empty mergeinfo on each path in SKIPPED_ABSPATHS so the path
    does not incorrectly inherit mergeinfo that will later be describing
    the merge.
 
-   MERGEINFO_PATH, NOTIFY_B, and MERGE_B are all cascaded from
+   MERGEINFO_PATH and MERGE_B are cascaded from
    arguments of the same name in the caller.
 
    IS_ROLLBACK is true if the caller is recording a reverse merge and false
@@ -4692,14 +4692,14 @@ static svn_error_t *
 record_skips(const char *mergeinfo_path,
              const apr_array_header_t *rangelist,
              svn_boolean_t is_rollback,
-             notification_receiver_baton_t *notify_b,
+             apr_hash_t *skipped_abspaths,
              merge_cmd_baton_t *merge_b,
              apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
   apr_hash_t *merges;
-  apr_size_t nbr_skips = (notify_b->skipped_abspaths != NULL ?
-                          apr_hash_count(notify_b->skipped_abspaths) : 0);
+  apr_size_t nbr_skips = (skipped_abspaths != NULL ?
+                          apr_hash_count(skipped_abspaths) : 0);
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   if (nbr_skips == 0)
@@ -4708,7 +4708,7 @@ record_skips(const char *mergeinfo_path,
   merges = apr_hash_make(scratch_pool);
 
   /* Override the mergeinfo for child paths which weren't actually merged. */
-  for (hi = apr_hash_first(scratch_pool, notify_b->skipped_abspaths); hi;
+  for (hi = apr_hash_first(scratch_pool, skipped_abspaths); hi;
        hi = apr_hash_next(hi))
     {
       const char *skipped_abspath = svn__apr_hash_index_key(hi);
@@ -7402,7 +7402,7 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
 {
   int i;
   svn_boolean_t is_rollback = (merged_range->start > merged_range->end);
-  svn_boolean_t operative_merge = FALSE;
+  svn_boolean_t operative_merge;
   apr_hash_t *inoperative_immediate_children = NULL;
 
   /* Update the WC mergeinfo here to account for our new
@@ -7411,11 +7411,7 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
   /* We need a scratch pool for iterations below. */
   apr_pool_t *iterpool = svn_pool_create(pool);
 
-  svn_merge_range_t range;
-
-  range.start = merged_range->start;
-  range.end = merged_range->end;
-  range.inheritable = merged_range->inheritable;
+  svn_merge_range_t range = *merged_range;
 
   /* Regardless of what subtrees in MERGE_B->TARGET_ABSPATH might be missing
      could this merge have been operative? */
@@ -7551,9 +7547,9 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
              it.  The earlier call to record_skips will already have taken
              care of this. */
           if (i == 0)
-            SVN_ERR(record_skips(mergeinfo_fspath,
-                                 child_merge_rangelist,
-                                 is_rollback, notify_b, merge_b, iterpool));
+            SVN_ERR(record_skips(mergeinfo_fspath, child_merge_rangelist,
+                                 is_rollback, notify_b->skipped_abspaths,
+                                 merge_b, iterpool));
           else if (notify_b->skipped_abspaths
                    && apr_hash_get(notify_b->skipped_abspaths, child->abspath,
                                    APR_HASH_KEY_STRING))
