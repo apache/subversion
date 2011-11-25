@@ -2626,12 +2626,12 @@ main(int argc, const char *argv[])
       ctx->conflict_func = NULL;
       ctx->conflict_baton = NULL;
       ctx->conflict_func2 = svn_cl__conflict_handler;
-      SVN_ERR(svn_cl__conflict_baton_make(&ctx->conflict_baton2,
-                                          opt_state.accept_which,
-                                          ctx->config,
-                                          opt_state.editor_cmd,
-                                          pb,
-                                          pool));
+      SVN_INT_ERR(svn_cl__conflict_baton_make(&ctx->conflict_baton2,
+                                              opt_state.accept_which,
+                                              ctx->config,
+                                              opt_state.editor_cmd,
+                                              pb,
+                                              pool));
     }
 
   /* And now we finally run the subcommand. */
