@@ -1905,8 +1905,6 @@ find_applicable_moves(apr_array_header_t **moves,
                             this_move->copyfrom_rev,
                             m, NULL, result_pool);
                     }
-
-                  break;
                 }
             }
         }
