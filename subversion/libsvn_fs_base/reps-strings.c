@@ -489,8 +489,7 @@ rep_read_range(svn_fs_t *fs,
           /* Make a list of all the rep's we need to undeltify this range.
              We'll have to read them within this trail anyway, so we might
              as well do it once and up front. */
-          apr_array_header_t *reps =  /* ### what constant here? */
-            apr_array_make(pool, 666, sizeof(rep));
+          apr_array_header_t *reps = apr_array_make(pool, 30, sizeof(rep));
           do
             {
               const rep_delta_chunk_t *const first_chunk
