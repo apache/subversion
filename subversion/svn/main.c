@@ -307,7 +307,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "'edit', 'launch')\n"
                        "                             "
-                       "(shorthand: 'p', 'mc', 'tc', 'mf', 'tf', 'e', 'l')\n"
+                       "(shorthand: 'p', 'mc', 'tc', 'mf', 'tf', 'e', 'l')"
                        )},
   {"show-revs",     opt_show_revs, 1,
                     N_("specify which collection of revisions to display\n"
