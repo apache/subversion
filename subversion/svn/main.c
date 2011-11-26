@@ -301,11 +301,14 @@ const apr_getopt_option_t svn_cl__options[] =
   {"accept",        opt_accept, 1,
                     N_("specify automatic conflict resolution action\n"
                        "                             "
-                       "('postpone', 'base', 'mine-conflict',\n"
+                       "('postpone', 'working', 'base', 'mine-conflict',\n"
                        "                             "
                        "'theirs-conflict', 'mine-full', 'theirs-full',\n"
                        "                             "
-                       "'edit', 'launch')")},
+                       "'edit', 'launch')\n"
+                       "                             "
+                       "(shorthand: 'p', 'mc', 'tc', 'mf', 'tf', 'e', 'l')\n"
+                       )},
   {"show-revs",     opt_show_revs, 1,
                     N_("specify which collection of revisions to display\n"
                        "                             "
