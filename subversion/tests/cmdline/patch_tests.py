@@ -3614,7 +3614,6 @@ def patch_moved_away(sbox):
                                        1, # check-props
                                        1) # dry-run
 
-@XFail()
 @Issue(3991)
 def patch_lacking_trailing_eol(sbox):
   "patch file lacking trailing eol"
@@ -3649,12 +3648,11 @@ def patch_lacking_trailing_eol(sbox):
 
   expected_output = [
     'U         %s\n' % os.path.join(wc_dir, 'iota'),
-    'svn: W[0-9]+: .*', # warning about appending a newline to iota's last line
   ]
 
   # Expect a newline to be appended
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('iota', contents=iota_contents+"Some more bytes\n")
+  expected_disk.tweak('iota', contents=iota_contents + "Some more bytes")
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', status='M ')
