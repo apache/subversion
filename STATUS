@@ -108,6 +108,22 @@ Candidate changes:
    Votes:
      +1: danielsh
    
+ * r1166267, r1206576, r1206718, r1206719 
+   Fix issue #3814.
+   Justification:
+     svn patch is broken for property values not terminated with EOL.
+     Fix requested on users@:
+     http://svn.haxx.se/users/archive-2011-11/0513.shtml
+   Notes:
+    r1166267: Merged to prevent conflicts in diff_tests.py.
+    r1206576: Tweak 'svn diff' output for prop values not terminated with EOL.
+    r1206718: Fix issue #3814.
+    r1206719: Follow-up fix for JavaHL tests.
+   Branch:
+     ^/subversion/branches/1.7.x-issue3814.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
