@@ -166,11 +166,16 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
    If TOKEN is empty, or is already terminated by an EOL marker,
    return TOKEN unmodified. Else, return a new string consisting
    of the concatenation of TOKEN and the system's default EOL marker.
-   The new string is allocated from POOL. */
+   The new string is allocated from POOL.
+   If HAD_EOL is not NULL, indicate in *HAD_EOL if the token had a EOL. */
 static const svn_string_t *
-maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
+maybe_append_eol(const svn_string_t *token, svn_boolean_t *had_eol,
+                 apr_pool_t *pool)
 {
   const char *curp;
+
+  if (had_eol)
+    *had_eol = FALSE;
 
   if (token->len == 0)
     return token;
@@ -178,6 +183,8 @@ maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
   curp = token->data + token->len - 1;
   if (*curp == '\r')
     {
+      if (had_eol)
+        *had_eol = TRUE;
       return token;
     }
   else if (*curp != '\n')
@@ -186,6 +193,8 @@ maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
     }
   else
     {
+      if (had_eol)
+        *had_eol = TRUE;
       return token;
     }
 }
@@ -683,17 +692,18 @@ display_prop_diffs(const apr_array_header_t *propchanges,
         const svn_string_t *tmp;
         const svn_string_t *orig;
         const svn_string_t *val;
+        svn_boolean_t val_has_eol;
 
         /* The last character in a property is often not a newline.
-           Since the diff is not useful anyway for patching properties an
-           eol character is appended when needed to remove those pescious
-           ' \ No newline at end of file' lines. */
+           An eol character is appended to prevent the diff API to add a
+           ' \ No newline at end of file' line. We add 
+           ' \ No newline at end of property' manually if needed. */
         tmp = original_value ? original_value : svn_string_create("", pool);
-        orig = maybe_append_eol(tmp, pool);
+        orig = maybe_append_eol(tmp, NULL, pool);
 
         tmp = propchange->value ? propchange->value :
                                   svn_string_create("", pool);
-        val = maybe_append_eol(tmp, pool);
+        val = maybe_append_eol(tmp, &val_has_eol, pool);
 
         SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options, pool));
 
@@ -709,7 +719,12 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                                            svn_dirent_local_style(path, pool),
                                            encoding, orig, val, pool));
         SVN_ERR(svn_stream_close(os));
-
+        if (!val_has_eol)
+          {
+            const char *s = "\\ No newline at end of property" APR_EOL_STR;
+            apr_size_t len = strlen(s);
+            SVN_ERR(svn_stream_write(os, s, &len));
+          }
       }
     }
 
