@@ -631,12 +631,9 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
       SVN_ERR(readline(apr_file, &line, NULL, &eof, APR_SIZE_MAX,
                        iterpool, iterpool));
 
-      if (! eof)
-        {
-          /* Update line offset for next iteration. */
-          pos = 0;
-          SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, iterpool));
-        }
+      /* Update line offset for next iteration. */
+      pos = 0;
+      SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, iterpool));
 
       /* Lines starting with a backslash are comments, such as
        * "\ No newline at end of file". */
@@ -701,9 +698,17 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
             }
           else
             {
-              /* The start of the current line marks the first byte
-               * after the hunk text. */
-              end = last_line;
+              if (eof)
+                {
+                  /* The hunk ends at EOF. */
+                  end = pos;
+                }
+              else
+                {
+                  /* The start of the current line marks the first byte
+                   * after the hunk text. */
+                  end = last_line;
+                }
 
               break; /* Hunk was empty or has been read. */
             }

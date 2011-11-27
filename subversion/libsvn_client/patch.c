@@ -1677,7 +1677,7 @@ apply_hunk(patch_target_t *target, target_content_t *content,
                                                    &eol_str, &eof,
                                                    iterpool, iterpool));
       lines_read++;
-      if (! eof && lines_read > hi->fuzz &&
+      if (lines_read > hi->fuzz &&
           lines_read <= svn_diff_hunk_get_modified_length(hi->hunk) - hi->fuzz)
         {
           apr_size_t len;
