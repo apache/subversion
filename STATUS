@@ -129,7 +129,7 @@ Candidate changes:
  * r1158923, r1206718 (partly), r1206724
    Fix issue #3991.
    Justification:
-     svn patch is broken for patches not not terminated with EOL.
+     svn patch is broken for patches not terminated with EOL.
    Notes:
      r1158923: Adds a regression test.
      r1206718: Change to libsvn_client/patch.c is needed for issue #3991 fix.
