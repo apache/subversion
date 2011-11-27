@@ -126,7 +126,7 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1158923, r1206718 (partly), r1206724
+ * r1158923, r1206718 (partly), r1206724, r1150344, r1158929, r1158929, r1206741
    Fix issue #3991.
    Justification:
      svn patch is broken for patches not terminated with EOL.
@@ -134,6 +134,10 @@ Candidate changes:
      r1158923: Adds a regression test.
      r1206718: Change to libsvn_client/patch.c is needed for issue #3991 fix.
      r1206724: Fix issue #3991.
+     r1150344: Merged to avoid conflicts in diff parsing test.
+     r1158929: Adds a new diff parsing regression test.
+     r1206741: Fixes the test to make it PASS.
+
    Branch:
      ^/subversion/branches/1.7.x-issue3991
      This branch might conflict with the 1.7.x-issue3814 branch (see above).
