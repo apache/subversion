@@ -947,8 +947,6 @@ test_parse_unidiff_lacking_trailing_eol(apr_pool_t *pool)
                             "This is the file 'gamma'." NL,
                             pool));
 
-      /* Verify that the contents are as expected, with a NL appended.
-         TODO: test for notification about the NL silently appended */
       SVN_ERR(check_content(hunk, reverse,
                             "This is the file 'gamma'." NL
                             "some more bytes to 'gamma'",
