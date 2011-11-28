@@ -66,7 +66,7 @@ Candidate changes:
      This branch might conflict with the 1.7.x-issue3991 branch (see below).
      I will tweak this nomination if the other branch is reintegrated.
    Votes:
-     +1: stsp
+     +1: stsp, philip
 
  * r1158923, r1206718 (partly), r1206724, r1150344, r1158929, r1206741
    Fix issue #3991.
