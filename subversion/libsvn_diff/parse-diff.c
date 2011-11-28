@@ -589,11 +589,19 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
   svn_boolean_t eof, in_hunk, hunk_seen;
   apr_off_t pos, last_line;
   apr_off_t start, end;
+  apr_off_t original_end;
+  apr_off_t modified_end;
   svn_linenum_t original_lines;
   svn_linenum_t modified_lines;
   svn_linenum_t leading_context;
   svn_linenum_t trailing_context;
   svn_boolean_t changed_line_seen;
+  enum {
+    noise_line,
+    original_line,
+    modified_line,
+    context_line
+  } last_line_type;
   apr_pool_t *iterpool;
 
   *prop_operation = svn_diff_op_unchanged;
@@ -614,11 +622,16 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
   leading_context = 0;
   trailing_context = 0;
   changed_line_seen = FALSE;
+  original_end = 0;
+  modified_end = 0;
   *hunk = apr_pcalloc(result_pool, sizeof(**hunk));
 
   /* Get current seek position -- APR has no ftell() :( */
   pos = 0;
   SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, scratch_pool));
+
+  /* Start out assuming noise. */
+  last_line_type = noise_line;
 
   iterpool = svn_pool_create(scratch_pool);
   do
@@ -640,14 +653,15 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
       if (line->data[0] == '\\')
         {
           if (in_hunk &&
-              ((!is_property &&
+              ((!*is_property &&
                 strcmp(line->data, "\\ No newline at end of file") == 0) ||
-               (is_property &&
+               (*is_property &&
                 strcmp(line->data, "\\ No newline at end of property") == 0)))
             {
               char eolbuf[2];
               apr_size_t len;
               apr_off_t off;
+              apr_off_t hunk_text_end;
 
               /* Comment terminates the hunk text and says the hunk text
                * has no trailing EOL. Snip off trailing EOL which is part
@@ -658,14 +672,26 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
               SVN_ERR(svn_io_file_read_full2(apr_file, eolbuf, len, &len,
                                              &eof, iterpool));
               if (eolbuf[0] == '\r' && eolbuf[1] == '\n')
-                end = last_line - 2;
-              else if (eolbuf[1] == '\n')
-                end = last_line - 1;
-              else if (eolbuf[1] == '\r')
-                end = last_line - 1;
+                hunk_text_end = last_line - 2;
+              else if (eolbuf[1] == '\n' || eolbuf[1] == '\r')
+                hunk_text_end = last_line - 1;
               else
-                end = last_line;
-              break;
+                hunk_text_end = last_line;
+
+              if (last_line_type == original_line && original_end == 0)
+                original_end = hunk_text_end;
+              else if (last_line_type == modified_line && modified_end == 0)
+                modified_end = hunk_text_end;
+              else if (last_line_type == context_line)
+                {
+                  if (original_end == 0)
+                    original_end = hunk_text_end;
+                  if (modified_end == 0)
+                    modified_end = hunk_text_end;
+                  break;
+                }
+
+              SVN_ERR(svn_io_file_seek(apr_file, APR_SET, &pos, iterpool));
             }
 
           continue;
@@ -700,6 +726,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
                 trailing_context++;
               else
                 leading_context++;
+              last_line_type = context_line;
             }
           else if (original_lines > 0 && c == del)
             {
@@ -713,6 +740,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
                 trailing_context = 0;
 
               original_lines--;
+              last_line_type = original_line;
             }
           else if (modified_lines > 0 && c == add)
             {
@@ -726,6 +754,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
                 trailing_context = 0;
 
               modified_lines--;
+              last_line_type = modified_line;
             }
           else
             {
@@ -741,6 +770,10 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
                   end = last_line;
                 }
 
+              if (original_end == 0)
+                original_end = end;
+              if (modified_end == 0)
+                modified_end = end;
               break; /* Hunk was empty or has been read. */
             }
         }
@@ -820,10 +853,10 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
       (*hunk)->diff_text_range.end = end;
       (*hunk)->original_text_range.start = start;
       (*hunk)->original_text_range.current = start;
-      (*hunk)->original_text_range.end = end;
+      (*hunk)->original_text_range.end = original_end;
       (*hunk)->modified_text_range.start = start;
       (*hunk)->modified_text_range.current = start;
-      (*hunk)->modified_text_range.end = end;
+      (*hunk)->modified_text_range.end = modified_end;
     }
   else
     /* Something went wrong, just discard the result. */
