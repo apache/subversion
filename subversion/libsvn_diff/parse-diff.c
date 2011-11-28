@@ -641,9 +641,9 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
       if (line->data[0] == '\\')
         {
           if (in_hunk &&
-              ((!is_property &&
+              ((!*is_property &&
                 strcmp(line->data, "\\ No newline at end of file") == 0) ||
-               (is_property &&
+               (*is_property &&
                 strcmp(line->data, "\\ No newline at end of property") == 0)))
             {
               char eolbuf[2];
