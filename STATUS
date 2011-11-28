@@ -29,8 +29,7 @@ Candidate changes:
    Justification:
      Regression from 1.6.
    Votes:
-     +1: philip
-     +0: rhuijben (Patch appears ok. Will bump to +1 after further review)
+     +1: philip, rhuijben
 
  * r1205193
    Fix 'svn import' with svn:eol-style 'native' and inconsistent EOLs.
