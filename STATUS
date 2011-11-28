@@ -76,6 +76,13 @@ Candidate changes:
      +1: stsp
      +1: philip (r1166267, r1206576, r1206718, r1206719 only)
 
+ * r1207555
+   mod_dontdothat: contrib/ -> tools/ and relicense under ALv2.
+   Justification:
+     ?
+   Votes:
+     +1: stsp
+
 
 Veto-blocked changes:
 =====================
