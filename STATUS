@@ -43,13 +43,6 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r1205839, r1205848
-   Fix reading beyond end of a (not null-terminated) string in BDB lock code.
-   Justification:
-     Undefined behaviour. http://svn.haxx.se/dev/archive-2011-11/0350.shtml
-   Votes:
-     +1: philip, cmpilato
-   
  * r1150344, r1158923, r1158929, r1166267, r1206576, r1206718, r1206719,
    r1206724, r1206741
    Fix issues #3814 and #3991.
@@ -108,3 +101,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1205839, r1205848
+   Fix reading beyond end of a (not null-terminated) string in BDB lock code.
+   Justification:
+     Undefined behaviour. http://svn.haxx.se/dev/archive-2011-11/0350.shtml
+   Votes:
+     +1: philip, cmpilato, pburba
