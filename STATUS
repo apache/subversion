@@ -126,13 +126,6 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-     
- * r1204610, r1204673
-   Log error chain, rather than generic error, when opening rep-cache.db fails.
-   Justification:
-      Makes the real cause visible to the apache admin.
-   Votes:
-     +1: philip, danielsh, rhuijben
 
  * r1205726
    Plug a memory leak in the fs-base deltification logic which has

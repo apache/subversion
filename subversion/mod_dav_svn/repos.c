@@ -1161,6 +1161,7 @@ create_private_resource(const dav_resource *base,
 static void log_warning(void *baton, svn_error_t *err)
 {
   request_rec *r = baton;
+  const char *continuation = "";
 
   /* ### hmm. the FS is cleaned up at request cleanup time. "r" might
      ### not really be valid. we should probably put the FS into a
@@ -1170,7 +1171,15 @@ static void log_warning(void *baton, svn_error_t *err)
      ### of our functions ... ??
   */
 
-  ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "%s", err->message);
+  /* Not showing file/line so no point in tracing */
+  err = svn_error_purge_tracing(err);
+  while (err)
+    {
+      ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "%s%s",
+                    continuation, err->message);
+      continuation = "-";
+      err = err->child;
+    }
 }
 
 
