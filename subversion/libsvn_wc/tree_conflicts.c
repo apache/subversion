@@ -63,6 +63,7 @@ const svn_token_map_t svn_wc__conflict_action_map[] =
   { "deleted",  svn_wc_conflict_action_delete },
   { "added",    svn_wc_conflict_action_add },
   { "replaced", svn_wc_conflict_action_replace },
+  { "moved-away", svn_wc_conflict_action_move_away },
   { NULL }
 };
 

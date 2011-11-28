@@ -39,6 +39,7 @@ static const svn_token_map_t map_conflict_action_human[] =
   { N_("delete"),       svn_wc_conflict_action_delete },
   { N_("add"),          svn_wc_conflict_action_add },
   { N_("replace"),      svn_wc_conflict_action_replace },
+  { N_("move away"),    svn_wc_conflict_action_move_away },
   { NULL,               0 }
 };
 
@@ -49,6 +50,7 @@ static const svn_token_map_t map_conflict_action_xml[] =
   { "delete",           svn_wc_conflict_action_delete },
   { "add",              svn_wc_conflict_action_add },
   { "replace",          svn_wc_conflict_action_replace },
+  { "move-away",        svn_wc_conflict_action_move_away },
   { NULL,               0 }
 };
 

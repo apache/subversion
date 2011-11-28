@@ -2139,6 +2139,7 @@ delete_entry(const char *path,
             return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                                     NULL, _("Conflict callback violated API:"
                                             " returned no results"));
+
           if (result->choice == svn_wc_conflict_choose_scan_log_for_moves)
             {
               /* Scan revision log for server-side moves */
@@ -2152,6 +2153,52 @@ delete_entry(const char *path,
             }
 
           if (result->choice == svn_wc_conflict_choose_incoming_move)
+            {
+              if (result->incoming_move == NULL)
+                return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+                                        NULL,
+                                        _("Conflict callback violated API: "
+                                          "returned no incoming move"));
+
+              if (tree_conflict->reason == svn_wc_conflict_reason_moved_away)
+                {
+                  const char *moved_to_repos_relpath;
+
+                  /* If the incoming move agrees with the local move, do not
+                   * flag a tree conflict. */
+                  SVN_ERR(svn_wc__db_scan_addition(NULL, NULL,
+                                                   &moved_to_repos_relpath,
+                                                   NULL, NULL, NULL, NULL, 
+                                                   NULL, NULL, NULL, NULL, 
+                                                   eb->db,
+                                                   moved_to_abspath,
+                                                   scratch_pool,
+                                                   scratch_pool));
+                  if (strcmp(result->incoming_move->moved_to_repos_relpath,
+                             moved_to_repos_relpath) == 0)
+                    {
+                      tree_conflict = NULL;
+                      break;
+                    }
+
+                  /* Incoming move vs. local move tree conflict. */
+                  tree_conflict->action = svn_wc_conflict_action_move_away;
+                  tree_conflict->incoming_move = result->incoming_move;
+                }
+              else if (tree_conflict->reason == svn_wc_conflict_reason_deleted)
+                {
+                  /* Incoming move vs. local delete tree conflict. */
+                  tree_conflict->action = svn_wc_conflict_action_move_away;
+                  tree_conflict->incoming_move = result->incoming_move;
+                }
+
+              /* Now that the precise nature of the conflict is known, invoke
+               * the conflict callback again to give the user a chance to
+               * resolve the conflict. */
+              continue;
+            }
+
+          if (result->choice == svn_wc_conflict_choose_new_incoming_move_target)
             {
               /* ### TODO */
             }

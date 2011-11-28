@@ -1560,8 +1560,10 @@ typedef enum svn_wc_conflict_action_t
   svn_wc_conflict_action_edit,    /**< attempting to change text or props */
   svn_wc_conflict_action_add,     /**< attempting to add object */
   svn_wc_conflict_action_delete,  /**< attempting to delete object */
-  svn_wc_conflict_action_replace  /**< attempting to replace object,
+  svn_wc_conflict_action_replace, /**< attempting to replace object,
                                        @since New in 1.7 */
+  svn_wc_conflict_action_move_away /**< attempting to move object away,
+                                        @since New in 1.8 */
 } svn_wc_conflict_action_t;
 
 
@@ -1854,6 +1856,11 @@ typedef struct svn_wc_conflict_description2_t
    * @since New in 1.8. */
   apr_array_header_t *suggested_moves;
 
+  /** The incoming move in case of an incoming move vs. local move tree
+   * conflict.
+   * @since New in 1.8. */
+  svn_wc_repos_move_info_t *incoming_move;
+
   /* Remember to adjust svn_wc__conflict_description2_dup()
    * if you add new fields to this struct. */
 } svn_wc_conflict_description2_t;
@@ -2117,12 +2124,21 @@ typedef enum svn_wc_conflict_choice_t
   svn_wc_conflict_choose_copy_is_copy,
 
   /** The user has chosen to map an incoming delete or copy to a
-   * server-side move. This move is described by svn_wc_conflict_result_t.
+   * server-side move. The incoming move is described by
+   * svn_wc_conflict_result_t and must not be NULL.
+   * This choice causes the conflict callback to be invoked again with a
+   * more specific conflict description.
+   * @see svn_wc_conflict_result_t
+   * @since New in 1.8. */
+  svn_wc_conflict_choose_incoming_move,
+
+  /** The user has chosen a new target for an incoming move to resolve an
+   * "incoming move vs. local move" tree conflict. 
    * This allows users to divert incoming moves to a different target
    * location during "incoming move vs. local move" tree conflicts.
    * @see svn_wc_conflict_result_t
    * @since New in 1.8. */
-  svn_wc_conflict_choose_incoming_move,
+  svn_wc_conflict_choose_new_incoming_move_target,
 
   /** The user has chosen a new target for a local move to resolve an
    * "incoming move vs. local move" tree conflict. This allows users to
@@ -2169,14 +2185,19 @@ typedef struct svn_wc_conflict_result_t
    * The revision fields may be @c SVN_INVALID_REVNUM in case they are
    * unknown, and the prev/next pointers may both be NULL.
    * The idea is to allow users to describe an arbitrary incoming move
-   * by naming the source and the target. If the user's chosen incoming
-   * move is not applicable, the conflict callback will be invoked again.
+   * by naming the source and the target.
    * @see svn_wc_conflict_choice_t
    * @since New in 1.8. */
   svn_wc_repos_move_info_t *incoming_move;
 
-  /** The absolute path of a new target of a local move in case the
-   * choice is svn_wc_conflict_choose_incoming_move_target.
+  /** The repos-relpath of a new target of a move in case the
+   * choice is svn_wc_conflict_choose_new_incoming_move_target.
+   * @see svn_wc_conflict_choice_t
+   * @since New in 1.8. */
+  const char *new_incoming_move_target;
+
+  /** The absolute path of a new target of a move in case the
+   * choice is svn_wc_conflict_choose_new_local_move_target.
    * @see svn_wc_conflict_choice_t
    * @since New in 1.8. */
   const char *new_local_move_target;
