@@ -101,13 +101,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1205839, r1205848
-   Fix reading beyond end of a (not null-terminated) string in BDB lock code.
-   Justification:
-     Undefined behaviour. http://svn.haxx.se/dev/archive-2011-11/0350.shtml
-   Votes:
-     +1: philip, cmpilato, pburba
-
  * r1188652, r1188677, r1188762
    Fix issue 4042, commit incomplete directory asserts.
    Justification:
