@@ -126,10 +126,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1206523, r1206533
-   Update --accept help text.
-   Justification:
-     Completeness.  Better late than never.
-   Votes:
-     +1: danielsh, philip, rhuijben
