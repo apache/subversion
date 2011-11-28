@@ -106,7 +106,7 @@ Candidate changes:
    Justification:
      Completeness.  Better late than never.
    Votes:
-     +1: danielsh
+     +1: danielsh, philip
    
  * r1166267, r1206576, r1206718, r1206719 
    Fix issue #3814.
