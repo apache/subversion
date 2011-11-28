@@ -32,17 +32,6 @@ Candidate changes:
      +1: philip
      +0: rhuijben (Patch appears ok. Will bump to +1 after further review)
 
- * r1201824
-   Fix issue #2873.
-   Justification:
-     svn diff -c N on a file added in revision N is broken.
-     Not a regression from 1.6.x but backporting this fix is easy
-     because it needs no public API changes.
-   Branch:
-     ^/subversion/branches/1.7.x-r1201824
-   Votes:
-     +1: stsp, rhuijben
-
  * r1204610, r1204673
    Log error chain, rather than generic error, when opening rep-cache.db fails.
    Justification:
@@ -161,3 +150,14 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1201824
+   Fix issue #2873.
+   Justification:
+     svn diff -c N on a file added in revision N is broken.
+     Not a regression from 1.6.x but backporting this fix is easy
+     because it needs no public API changes.
+   Branch:
+     ^/subversion/branches/1.7.x-r1201824
+   Votes:
+     +1: stsp, rhuijben, pburba
