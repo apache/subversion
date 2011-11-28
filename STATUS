@@ -161,12 +161,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1188774, 1197135
-   Fix issue #4044, "empty parents of externals not removed along with
-   externals on update".
-   Justification:
-     Currently empty unversioned directories are left behind, possibly
-     obstructing future updates which re-add the directory.
-   Votes:
-     +1: stsp, rhuijben, pburba
