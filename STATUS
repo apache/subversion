@@ -112,17 +112,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1205193
-   Fix 'svn import' with svn:eol-style 'native' and inconsistent EOLs.
-   Justification:
-     'svn import' with auto-props setting 'svn:eol-style' to 'native'
-     requires workarounds for files with inconsistent EOLs, while it
-     just works for fixed values like 'LF' or 'CRLF'. Mailing list discussion
-     at http://svn.haxx.se/dev/archive-2011-02/0767.shtml didn't find any
-     reason for this inconsistency. Also fixes up a poor error message.
-     Problem reported by user in #svn, see
-     http://colabti.org/irclogger/irclogger_log/svn?date=2011-11-22#l152 and
-     http://colabti.org/irclogger/irclogger_log/svn?date=2011-11-22#l203
-   Votes:
-     +1: stsp, cmpilato, pburba
