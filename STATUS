@@ -79,7 +79,6 @@ Candidate changes:
      r1150344: Merged to avoid conflicts in diff parsing test.
      r1158929: Adds a new diff parsing regression test.
      r1206741: Fixes the test to make it PASS.
-
    Branch:
      ^/subversion/branches/1.7.x-issue3991
      This branch might conflict with the 1.7.x-issue3814 branch (see above).
