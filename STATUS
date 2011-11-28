@@ -43,32 +43,6 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r1150344, r1158923, r1158929, r1166267, r1206576, r1206718, r1206719,
-   r1206724, r1206741
-   Fix issues #3814 and #3991.
-   Justification:
-     svn patch is broken for file content and property values not terminated
-     with EOL, and for patches not terminated with EOL.
-     Fixes requested on users@:
-     http://svn.haxx.se/users/archive-2011-11/0513.shtml
-     http://svn.haxx.se/users/archive-2011-11/0523.shtml
-   Notes:
-     r1150344: Merged to avoid conflicts in diff parsing test.
-     r1158923: Adds a cmdline regression test for issue #3991.
-     r1158929: Adds a new C diff parsing regression test for issue #3991.
-     r1166267: Merged to prevent conflicts in diff_tests.py.
-     r1206576: Tweak 'svn diff' output for prop values not terminated with EOL.
-     r1206718: Fix issue #3814.
-     r1206719: Follow-up fix for JavaHL tests.
-     r1206724: Fix issue #3991.
-     r1206741: Fixes the #3991 C diff parsing test to make it PASS.
-     r1206748: Remove an obsolete comment.
-   Branch:
-     ^/subversion/branches/1.7.x-svn-patch-eol-fixes
-   Votes:
-     +1: stsp
-     +1: philip (r1166267, r1206576, r1206718, r1206719 only)
-
  * r1207555
    mod_dontdothat: contrib/ -> tools/ and relicense under ALv2.
    Justification:
@@ -98,6 +72,38 @@ Veto-blocked changes:
          room for a future public API that really does full verification.)
          (without r1161164, r1161180)
      -1: danielsh (invasive, new feature)
+
+ * r1150344, r1158923, r1158929, r1166267, r1206576, r1206718, r1206719,
+   r1206724, r1206741
+   Fix issues #3814 and #3991.
+   Justification:
+     svn patch is broken for file content and property values not terminated
+     with EOL, and for patches not terminated with EOL.
+     Fixes requested on users@:
+     http://svn.haxx.se/users/archive-2011-11/0513.shtml
+     http://svn.haxx.se/users/archive-2011-11/0523.shtml
+   Notes:
+     r1150344: Merged to avoid conflicts in diff parsing test.
+     r1158923: Adds a cmdline regression test for issue #3991.
+     r1158929: Adds a new C diff parsing regression test for issue #3991.
+     r1166267: Merged to prevent conflicts in diff_tests.py.
+     r1206576: Tweak 'svn diff' output for prop values not terminated with EOL.
+     r1206718: Fix issue #3814.
+     r1206719: Follow-up fix for JavaHL tests.
+     r1206724: Fix issue #3991.
+     r1206741: Fixes the #3991 C diff parsing test to make it PASS.
+     r1206748: Remove an obsolete comment.
+   Branch:
+     ^/subversion/branches/1.7.x-svn-patch-eol-fixes
+   Votes:
+     +1: philip (r1166267, r1206576, r1206718, r1206719 only)
+     -1: stsp (Problem in implementation: It assumes comments like
+               '\ No newline at end of file' terminate the entire hunk text,
+               but in fact they terminate the original/modified versions of
+               the hunk text, see example patch file at
+               http://svn.haxx.se/users/archive-2011-11/0523.shtml
+               which has two '\ No newline at ...' comments)
+
 
 Approved changes:
 =================
