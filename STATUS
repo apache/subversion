@@ -32,13 +32,6 @@ Candidate changes:
      +1: philip
      +0: rhuijben (Patch appears ok. Will bump to +1 after further review)
 
- * r1204610, r1204673
-   Log error chain, rather than generic error, when opening rep-cache.db fails.
-   Justification:
-      Makes the real cause visible to the apache admin.
-   Votes:
-     +1: philip, danielsh
-
  * r1205193
    Fix 'svn import' with svn:eol-style 'native' and inconsistent EOLs.
    Justification:
@@ -65,28 +58,12 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r1205726
-   Plug a memory leak in the fs-base deltification logic which has
-   been observed to exhaust all the available memory on a server on a
-   real-world dataset.
-   Justification:
-     Can you say DoS?
-   Votes:
-     +1: cmpilato, danielsh
-
  * r1205839, r1205848
    Fix reading beyond end of a (not null-terminated) string in BDB lock code.
    Justification:
      Undefined behaviour. http://svn.haxx.se/dev/archive-2011-11/0350.shtml
    Votes:
      +1: philip
-   
- * r1206523, r1206533
-   Update --accept help text.
-   Justification:
-     Completeness.  Better late than never.
-   Votes:
-     +1: danielsh, philip
    
  * r1166267, r1206576, r1206718, r1206719 
    Fix issue #3814.
@@ -161,3 +138,27 @@ Approved changes:
      ^/subversion/branches/1.7.x-r1201824
    Votes:
      +1: stsp, rhuijben, pburba
+     
+ * r1204610, r1204673
+   Log error chain, rather than generic error, when opening rep-cache.db fails.
+   Justification:
+      Makes the real cause visible to the apache admin.
+   Votes:
+     +1: philip, danielsh, rhuijben
+
+ * r1205726
+   Plug a memory leak in the fs-base deltification logic which has
+   been observed to exhaust all the available memory on a server on a
+   real-world dataset.
+   Justification:
+     Can you say DoS?
+   Votes:
+     +1: cmpilato, danielsh, rhuijben
+
+ * r1206523, r1206533
+   Update --accept help text.
+   Justification:
+     Completeness.  Better late than never.
+   Votes:
+     +1: danielsh, philip
+   
