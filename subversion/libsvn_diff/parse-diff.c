@@ -631,17 +631,45 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
       SVN_ERR(readline(apr_file, &line, NULL, &eof, APR_SIZE_MAX,
                        iterpool, iterpool));
 
-      if (! eof)
-        {
-          /* Update line offset for next iteration. */
-          pos = 0;
-          SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, iterpool));
-        }
+      /* Update line offset for next iteration. */
+      pos = 0;
+      SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, iterpool));
 
       /* Lines starting with a backslash are comments, such as
        * "\ No newline at end of file". */
       if (line->data[0] == '\\')
-        continue;
+        {
+          if (in_hunk &&
+              ((!is_property &&
+                strcmp(line->data, "\\ No newline at end of file") == 0) ||
+               (is_property &&
+                strcmp(line->data, "\\ No newline at end of property") == 0)))
+            {
+              char eolbuf[2];
+              apr_size_t len;
+              apr_off_t off;
+
+              /* Comment terminates the hunk text and says the hunk text
+               * has no trailing EOL. Snip off trailing EOL which is part
+               * of the patch file but not part of the hunk text. */
+              off = last_line - 2;
+              SVN_ERR(svn_io_file_seek(apr_file, APR_SET, &off, iterpool));
+              len = sizeof(eolbuf);
+              SVN_ERR(svn_io_file_read_full2(apr_file, eolbuf, len, &len,
+                                             &eof, iterpool));
+              if (eolbuf[0] == '\r' && eolbuf[1] == '\n')
+                end = last_line - 2;
+              else if (eolbuf[1] == '\n')
+                end = last_line - 1;
+              else if (eolbuf[1] == '\r')
+                end = last_line - 1;
+              else
+                end = last_line;
+              break;
+            }
+
+          continue;
+        }
 
       if (in_hunk)
         {
@@ -701,9 +729,17 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
             }
           else
             {
-              /* The start of the current line marks the first byte
-               * after the hunk text. */
-              end = last_line;
+              if (eof)
+                {
+                  /* The hunk ends at EOF. */
+                  end = pos;
+                }
+              else
+                {
+                  /* The start of the current line marks the first byte
+                   * after the hunk text. */
+                  end = last_line;
+                }
 
               break; /* Hunk was empty or has been read. */
             }
