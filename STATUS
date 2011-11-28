@@ -127,15 +127,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1205726
-   Plug a memory leak in the fs-base deltification logic which has
-   been observed to exhaust all the available memory on a server on a
-   real-world dataset.
-   Justification:
-     Can you say DoS?
-   Votes:
-     +1: cmpilato, danielsh, rhuijben, philip
-
  * r1206523, r1206533
    Update --accept help text.
    Justification:
