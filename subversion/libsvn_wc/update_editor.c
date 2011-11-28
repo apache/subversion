@@ -1911,8 +1911,7 @@ find_applicable_moves(apr_array_header_t **moves,
     }
   else
     {
-      /* If updating into the past all moves apply in reverse.
-       * ### TODO construct moves list usable for conflict callback */
+      /* If updating into the past all moves apply in reverse. */
       for (i = sorted->nelts - 1; i >= 0; i--)
         {
           int j;
