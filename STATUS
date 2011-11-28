@@ -39,9 +39,12 @@ Candidate changes:
  * r1207555
    mod_dontdothat: contrib/ -> tools/ and relicense under ALv2.
    Justification:
-     ?
+     ASF infra is using this so we should maintain it.
+     Stuff in contrib/ isn't officially maintained.
    Votes:
-     +1: stsp
+     +0: stsp (I'm fine with moving this to tools in principle,
+               but I think we should use 'svn move' to move the
+               folder instead of delete/add as r1207555 does.)
 
  * r1150344, r1158923, r1158929, r1166267, r1206576, r1206718, r1206719,
    r1206724, r1206741, r1207656, r1207663
