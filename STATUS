@@ -24,14 +24,7 @@ Candidate changes:
      -0: stsp (we can backport these when we need to)
      -0: gstein
 
- * r1188652, r1188677, r1188762
-   Fix issue 4042, commit incomplete directory asserts.
-   Justification:
-     Regression from 1.6.
-   Votes:
-     +1: philip, rhuijben
-
- * r1201072, r1205188, r1205209     
+ * r1201072, r1205188, r1205209
    Fix issue #4050 "'svn mergeinfo' always considers non-inheritable ranges
    as partially merged".
    Justification:
@@ -114,3 +107,10 @@ Approved changes:
      Undefined behaviour. http://svn.haxx.se/dev/archive-2011-11/0350.shtml
    Votes:
      +1: philip, cmpilato, pburba
+
+ * r1188652, r1188677, r1188762
+   Fix issue 4042, commit incomplete directory asserts.
+   Justification:
+     Regression from 1.6.
+   Votes:
+     +1: philip, rhuijben, pburba
