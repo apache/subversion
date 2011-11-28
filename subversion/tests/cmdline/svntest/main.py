@@ -164,6 +164,7 @@ entriesdump_binary = os.path.abspath('entries-dump' + _exe)
 atomic_ra_revprop_change_binary = os.path.abspath('atomic-ra-revprop-change' + \
                                                   _exe)
 wc_lock_tester_binary = os.path.abspath('../libsvn_wc/wc-lock-tester' + _exe)
+wc_incomplete_tester_binary = os.path.abspath('../libsvn_wc/wc-incomplete-tester' + _exe)
 svnmucc_binary=os.path.abspath('../../../tools/client-side/svnmucc/svnmucc' + \
                                _exe)
 
@@ -682,6 +683,10 @@ def run_wc_lock_tester(recursive, path):
     option = "-1"
   return run_command(wc_lock_tester_binary, False, False, option, path)
 
+def run_wc_incomplete_tester(wc_dir, revision):
+  "Run the wc-incomplete tool, returning its exit code, stdout and stderr"
+  return run_command(wc_incomplete_tester_binary, False, False,
+                     wc_dir, revision)
 
 def youngest(repos_path):
   "run 'svnlook youngest' on REPOS_PATH, returns revision as int"

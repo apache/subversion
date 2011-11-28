@@ -1748,6 +1748,11 @@ def lock_admin_dir(wc_dir, recursive=False):
 
   svntest.main.run_wc_lock_tester(recursive, wc_dir)
 
+def set_incomplete(wc_dir, revision):
+  "Make wc_dir incomplete at revision"
+
+  svntest.main.run_wc_incomplete_tester(wc_dir, revision)
+
 def get_wc_uuid(wc_dir):
   "Return the UUID of the working copy at WC_DIR."
   return run_and_parse_info(wc_dir)[0]['Repository UUID']

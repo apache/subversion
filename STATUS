@@ -100,10 +100,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1188652, r1188677, r1188762
-   Fix issue 4042, commit incomplete directory asserts.
-   Justification:
-     Regression from 1.6.
-   Votes:
-     +1: philip, rhuijben, pburba
