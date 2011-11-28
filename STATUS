@@ -51,7 +51,7 @@ Candidate changes:
      +1: philip, cmpilato
    
  * r1150344, r1158923, r1158929, r1166267, r1206576, r1206718, r1206719,
-   r1206724,r1206741
+   r1206724, r1206741
    Fix issues #3814 and #3991.
    Justification:
      svn patch is broken for file content and property values not terminated
