@@ -12461,28 +12461,6 @@ is_sparse_checkout_internal(svn_boolean_t *is_sparse_checkout,
 }
 
 
-svn_error_t *
-svn_wc__db_is_sparse_checkout(svn_boolean_t *is_sparse_checkout,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
-                                                db, local_abspath,
-                                                scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  return svn_error_trace(is_sparse_checkout_internal(is_sparse_checkout,
-                                                     wcroot, local_relpath,
-                                                     scratch_pool));
-}
-
-
 /* Like svn_wc__db_has_switched_subtrees(),
  * but accepts a WCROOT/LOCAL_RELPATH pair. */
 static svn_error_t *
