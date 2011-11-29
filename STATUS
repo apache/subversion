@@ -48,7 +48,7 @@ Candidate changes:
      +1: rhuijben, stsp
 
  * r1150344, r1158923, r1158929, r1166267, r1206576, r1206718, r1206719,
-   r1206724, r1206741, r1207656, r1207663
+   r1206724, r1206741, r1207656, r1207663, r1207823
    Fix issues #3814, and #3991, and other EOL-handling problems in patch.
    Justification:
      svn patch is broken for file content and property values not terminated
@@ -69,6 +69,7 @@ Candidate changes:
      r1206748: Remove an obsolete comment.
      r1207656: Fix a pointer dereference bug from r1206718.
      r1207663: Fix handling of '\ No newline ...' comments within hunk text.
+     r1207823: Fixes spurious test failures.
    Branch:
      ^/subversion/branches/1.7.x-svn-patch-eol-fixes
    Votes:
