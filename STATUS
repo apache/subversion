@@ -73,8 +73,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-svn-patch-eol-fixes
    Votes:
-     +1: stsp
-     +1: philip (r1166267, r1206576, r1206718, r1206719 only)
+     +1: stsp, philip
 
 
 Veto-blocked changes:
