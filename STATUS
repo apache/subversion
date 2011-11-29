@@ -45,10 +45,7 @@ Candidate changes:
      r1207555: Perform the move (from r1207550) and relicense
      r1207808: Enable building mod_dontdothat from our standard make scripts.
    Votes:
-     +0: stsp (Without r1207808. I'm fine with moving this to tools in
-               principle, but I think we should use 'svn move' to move the
-               folder instead of delete/add as r1207555 does)
-     +1: rhuijben (@stsp: The folder was moved)
+     +1: rhuijben, stsp
 
  * r1150344, r1158923, r1158929, r1166267, r1206576, r1206718, r1206719,
    r1206724, r1206741, r1207656, r1207663
