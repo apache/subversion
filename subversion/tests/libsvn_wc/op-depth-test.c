@@ -3821,7 +3821,6 @@ nested_moves_child_first(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
-
   return SVN_NO_ERROR;
 }
 
@@ -3915,6 +3914,100 @@ nested_moves_child_last(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_in_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "move_in_replace", opts, pool));
+
+  SVN_ERR(wc_mkdir(&b, "A"));
+  SVN_ERR(wc_mkdir(&b, "A/B"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_update(&b, "", 1));
+  SVN_ERR(wc_copy(&b, "A", "A2"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",     "normal", 1, ""},
+      {0, "A",    "normal", 1, "A"},
+      {0, "A/B",  "normal", 1, "A/B"},
+      {1, "A2",   "normal", 1, "A"},
+      {1, "A2/B", "normal", 1, "A/B"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+  SVN_ERR(wc_move(&b, "A2/B", "A2/B2")); /* ### Moved-here gets recorded, but
+                                            not moved-to. */
+  {
+    nodes_row_t nodes[] = {
+      {0, "",      "normal",       1, ""},
+      {0, "A",     "normal",       1, "A"},
+      {0, "A/B",   "normal",       1, "A/B"},
+      {1, "A2",    "normal",       1, "A"},
+      {1, "A2/B",  "normal",       1, "A/B"},
+      {2, "A2/B",  "base-deleted", NO_COPY_FROM},
+      {2, "A2/B2", "normal",       1, "A/B"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+move_in_replace(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "move_in_replace", opts, pool));
+
+  SVN_ERR(wc_mkdir(&b, "A"));
+  SVN_ERR(wc_mkdir(&b, "A/B"));
+  SVN_ERR(wc_mkdir(&b, "X"));
+  SVN_ERR(wc_mkdir(&b, "X/B"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_update(&b, "", 1));
+  SVN_ERR(wc_delete(&b, "A"));
+  SVN_ERR(wc_copy(&b, "X", "A"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",    "normal", 1, ""},
+      {0, "A",   "normal", 1, "A"},
+      {0, "A/B", "normal", 1, "A/B"},
+      {0, "X",   "normal", 1, "X"},
+      {0, "X/B", "normal", 1, "X/B"},
+      {1, "A",   "normal", 1, "X"},
+      {1, "A/B", "normal", 1, "X/B"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+  SVN_ERR(wc_move(&b, "A/B", "A/B2")); /* ### Moved-to gets recorded on A/B
+                                          at op-depth=0, that's not the node
+                                          that got moved. */
+  {
+    nodes_row_t nodes[] = {
+      {0, "",     "normal",       1, ""},
+      {0, "A",    "normal",       1, "A"},
+      {0, "A/B",  "normal",       1, "A/B"},
+      {0, "X",    "normal",       1, "X"},
+      {0, "X/B",  "normal",       1, "X/B"},
+      {1, "A",    "normal",       1, "X"},
+      {1, "A/B",  "normal",       1, "X/B"},
+      {2, "A/B",  "base-deleted", NO_COPY_FROM},
+      {2, "A/B2", "normal",       1, "X/B", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -3988,5 +4081,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "nested_moves_child_first"),
     SVN_TEST_OPTS_XFAIL(nested_moves_child_last,
                        "nested_moves_child_last"),
+    SVN_TEST_OPTS_XFAIL(move_in_copy,
+                       "move_in_copy"),
+    SVN_TEST_OPTS_XFAIL(move_in_replace,
+                       "move_in_replace"),
     SVN_TEST_NULL
   };
