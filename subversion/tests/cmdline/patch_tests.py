@@ -3884,14 +3884,14 @@ def patch_target_no_eol_at_eof(sbox):
     "@@ -1,7 +1,7 @@\n",
     "-This is the file iota.\n"
     "\\ No newline at end of file\n",
-    "+It is the file 'iota'.\n",
+    "+It is really the file 'iota'.\n",
     "\\ No newline at end of file\n",
   ]
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   iota_contents = [
-    "It is the file 'iota'."
+    "It is really the file 'iota'."
   ]
   expected_output = [
     'U         %s\n' % os.path.join(wc_dir, 'iota'),
