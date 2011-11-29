@@ -12436,8 +12436,8 @@ svn_wc__db_min_max_revisions(svn_revnum_t *min_revision,
 }
 
 
-/* Like svn_wc__db_is_sparse_checkout,
- * but accepts a WCROOT/LOCAL_RELPATH pair. */
+/* Set *IS_SPARSE_CHECKOUT TRUE if LOCAL_RELPATH or any of the nodes
+ * within LOCAL_RELPATH is sparse, FALSE otherwise. */
 static svn_error_t *
 is_sparse_checkout_internal(svn_boolean_t *is_sparse_checkout,
                             svn_wc__db_wcroot_t *wcroot,
