@@ -75,6 +75,11 @@ Candidate changes:
    Votes:
      +1: stsp, philip
 
+ * r1207858
+   Replace an assertion that says that your working copy is broken with an
+   error message that supplies a bit more information what is broken.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
