@@ -76,11 +76,10 @@ Candidate changes:
      +1: stsp, philip
 
  * r1207858, r1207949
-   Replace an assertion that says that your working copy is broken with an
-   error message that supplies a bit more information what is broken.
+   Replace two assertions that say that your working copy is broken with
+   error messages that supply a bit more information about what is broken.
    Votes:
-     +1: rhuijben (r1207858 only)
-     +1: philip
+     +1: philip, rhuijben
 
 Veto-blocked changes:
 =====================
