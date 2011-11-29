@@ -3045,19 +3045,6 @@ svn_wc__db_min_max_revisions(svn_revnum_t *min_revision,
                              svn_boolean_t committed,
                              apr_pool_t *scratch_pool);
 
-/* Indicate in *IS_SPARSE_CHECKOUT whether any of the nodes within
- * LOCAL_ABSPATH is sparse, using DB.
- * Use SCRATCH_POOL for temporary allocations.
- *
- * This function provides a subset of the functionality of
- * svn_wc__db_revision_status() and is more efficient if the caller
- * doesn't need all information returned by svn_wc__db_revision_status(). */
-svn_error_t *
-svn_wc__db_is_sparse_checkout(svn_boolean_t *is_sparse_checkout,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *scratch_pool);
-
 /* Indicate in *IS_SWITCHED whether any node beneath LOCAL_ABSPATH
  * is switched, using DB. Use SCRATCH_POOL for temporary allocations.
  *
