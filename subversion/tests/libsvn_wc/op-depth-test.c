@@ -322,35 +322,50 @@ typedef struct nodes_row_t {
     svn_revnum_t repo_revnum;
     const char *repo_relpath;
     svn_boolean_t file_external;
+    const char *moved_to;
+    svn_boolean_t moved_here;
 } nodes_row_t;
 
 /* Macro for filling in the REPO_* fields of a non-base NODES_ROW_T
  * that has no copy-from info. */
 #define NO_COPY_FROM SVN_INVALID_REVNUM, NULL
+#define MOVED_HERE FALSE, NULL, TRUE
 
 /* Return a human-readable string representing ROW. */
 static const char *
 print_row(const nodes_row_t *row,
           apr_pool_t *result_pool)
 {
-  const char *file_external_str;
+  const char *file_external_str, *moved_here_str, *moved_to_str;
 
   if (row == NULL)
     return "(null)";
 
+  if (row->moved_to)
+    moved_to_str = apr_psprintf(result_pool, ", to %s", row->moved_to);
+  else
+    moved_to_str = "";
+
+  if (row->moved_here)
+    moved_here_str = ", here";
+  else
+    moved_here_str = "";
+      
   if (row->file_external)
     file_external_str = ", file-external";
   else
     file_external_str = "";
       
   if (row->repo_revnum == SVN_INVALID_REVNUM)
-    return apr_psprintf(result_pool, "%d, %s, %s%s",
+    return apr_psprintf(result_pool, "%d, %s, %s%s%s%s",
                         row->op_depth, row->local_relpath, row->presence,
+                        moved_here_str, moved_to_str,
                         file_external_str);
   else
-    return apr_psprintf(result_pool, "%d, %s, %s, from ^/%s@%d%s",
+    return apr_psprintf(result_pool, "%d, %s, %s, from ^/%s@%d%s%s%s",
                         row->op_depth, row->local_relpath, row->presence,
                         row->repo_relpath, (int)row->repo_revnum,
+                        moved_here_str, moved_to_str,
                         file_external_str);
 }
 
@@ -393,7 +408,12 @@ compare_nodes_rows(const void *key, apr_ssize_t klen,
   else if (expected->repo_revnum != found->repo_revnum
            || (strcmp_null(expected->repo_relpath, found->repo_relpath) != 0)
            || (strcmp_null(expected->presence, found->presence) != 0)
-           || (expected->file_external != found->file_external))
+           || (expected->file_external != found->file_external)
+           || (expected->moved_here != found->moved_here)
+           || (expected->moved_to && !found->moved_to)
+           || (!expected->moved_to && found->moved_to)
+           || (expected->moved_to
+               && strcmp(expected->moved_to, found->moved_to)))
     {
       b->errors = svn_error_createf(
                     SVN_ERR_TEST_FAILED, b->errors,
@@ -423,7 +443,7 @@ check_db_rows(svn_test__sandbox_t *b,
   svn_sqlite__stmt_t *stmt;
   static const char *const statements[] = {
     "SELECT op_depth, nodes.presence, nodes.local_relpath, revision,"
-    "       repos_path, file_external, def_local_relpath"
+    "       repos_path, file_external, def_local_relpath, moved_to, moved_here"
     " FROM nodes "
     " LEFT OUTER JOIN externals"
     "             ON nodes.local_relpath = externals.local_relpath"
@@ -460,6 +480,8 @@ check_db_rows(svn_test__sandbox_t *b,
         comparison_baton.errors
           = svn_error_createf(SVN_ERR_TEST_FAILED, comparison_baton.errors,
                               "incomplete {%s}", print_row(row, b->pool));
+      row->moved_to = svn_sqlite__column_text(stmt, 7, b->pool);
+      row->moved_here = svn_sqlite__column_boolean(stmt, 8);
 
       key = apr_psprintf(b->pool, "%d %s", row->op_depth, row->local_relpath);
       apr_hash_set(found_hash, key, APR_HASH_KEY_STRING, row);
@@ -1691,9 +1713,9 @@ test_wc_move(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0, "",           "normal",       1, "" },
       { 0, "A",          "normal",       1, "A" },
       { 0, "A/B",        "normal",       1, "A/B" },
-      { 0, "A/B/C",      "normal",       1, "A/B/C" },
+      { 0, "A/B/C",      "normal",       1, "A/B/C", FALSE, "A/B/C-move" },
       { 3, "A/B/C",      "base-deleted", NO_COPY_FROM },
-      { 3, "A/B/C-move", "normal",       1, "A/B/C" },
+      { 3, "A/B/C-move", "normal",       1, "A/B/C", MOVED_HERE },
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "", rows));
@@ -1704,14 +1726,14 @@ test_wc_move(const svn_test_opts_t *opts, apr_pool_t *pool)
     nodes_row_t rows[] = {
       { 0, "",                "normal",       1, "" },
       { 0, "A",               "normal",       1, "A" },
-      { 0, "A/B",             "normal",       1, "A/B" },
-      { 0, "A/B/C",           "normal",       1, "A/B/C" },
+      { 0, "A/B",             "normal",       1, "A/B", FALSE, "A/B-move" },
+      { 0, "A/B/C",           "normal",       1, "A/B/C", FALSE, "A/B-move/C-move" },
       { 2, "A/B",             "base-deleted", NO_COPY_FROM },
       { 2, "A/B/C",           "base-deleted", NO_COPY_FROM },
-      { 2, "A/B-move",        "normal",       1, "A/B" },
+      { 2, "A/B-move",        "normal",       1, "A/B", MOVED_HERE },
       { 2, "A/B-move/C",      "normal",       1, "A/B/C" },
       { 3, "A/B-move/C",      "base-deleted", NO_COPY_FROM },
-      { 3, "A/B-move/C-move", "normal",       1, "A/B/C" },
+      { 3, "A/B-move/C-move", "normal",       1, "A/B/C", MOVED_HERE },
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "", rows));
@@ -3146,7 +3168,9 @@ test_shadowed_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(wc_update(&b, "", 2));
   SVN_ERR(wc_copy(&b, "A", "A_tmp"));
   SVN_ERR(wc_update(&b, "", 1));
-  SVN_ERR(wc_move(&b, "A_tmp", "A"));
+  SVN_ERR(wc_move(&b, "A_tmp", "A")); /* ### XFAIL: sets moved-here on
+                                         A but A_tmp is removed and so
+                                         does not have moved-to. */
 
   SVN_ERR(wc_mkdir(&b, "K"));
   SVN_ERR(wc_mkdir(&b, "K/L"));
@@ -3766,7 +3790,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test_op_delete"),
     SVN_TEST_OPTS_PASS(test_child_replace_with_same_origin,
                        "test_child_replace_with_same"),
-    SVN_TEST_OPTS_PASS(test_shadowed_update,
+    SVN_TEST_OPTS_XFAIL(test_shadowed_update,
                        "test_shadowed_update"),
     SVN_TEST_OPTS_PASS(test_copy_of_deleted,
                        "test_copy_of_deleted (issue #3873)"),
