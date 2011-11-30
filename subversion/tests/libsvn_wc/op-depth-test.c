@@ -4008,6 +4008,67 @@ move_in_replace(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+copy_a_move(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "copy_a_move", opts, pool));
+
+  SVN_ERR(wc_mkdir(&b, "A"));
+  SVN_ERR(wc_mkdir(&b, "A/B"));
+  SVN_ERR(wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_update(&b, "", 1));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",      "normal", 1, ""},
+      {0, "A",     "normal", 1, "A"},
+      {0, "A/B",   "normal", 1, "A/B"},
+      {0, "A/B/C", "normal", 1, "A/B/C"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+  SVN_ERR(wc_move(&b, "A/B/C", "A/C2"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",      "normal",       1, ""},
+      {0, "A",     "normal",       1, "A"},
+      {0, "A/B",   "normal",       1, "A/B"},
+      {0, "A/B/C", "normal",       1, "A/B/C", FALSE, "A/C2"},
+      {2, "A/C2",  "normal",       1, "A/B/C", MOVED_HERE},
+      {3, "A/B/C", "base-deleted", NO_COPY_FROM},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+  /* Copying a move doesn't copy any moved-to/here artifacts, which
+     means that moving inside a copy is not the same as copying
+     something that contains a move?  Is this behaviour correct? */
+  SVN_ERR(wc_copy(&b, "A", "A2"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",       "normal",       1, ""},
+      {0, "A",      "normal",       1, "A"},
+      {0, "A/B",    "normal",       1, "A/B"},
+      {0, "A/B/C",  "normal",       1, "A/B/C", FALSE, "A/C2"},
+      {2, "A/C2",   "normal",       1, "A/B/C", MOVED_HERE},
+      {3, "A/B/C",  "base-deleted", NO_COPY_FROM},
+      {1, "A2",     "normal",       1, "A"},
+      {1, "A2/B",   "normal",       1, "A/B"},
+      {1, "A2/B/C", "normal",       1, "A/B/C"},
+      {2, "A2/C2",  "normal",       1, "A/B/C"},
+      {3, "A2/B/C", "base-deleted", NO_COPY_FROM},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -4085,5 +4146,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_in_copy"),
     SVN_TEST_OPTS_XFAIL(move_in_replace,
                        "move_in_replace"),
+    SVN_TEST_OPTS_PASS(copy_a_move,
+                       "copy_a_move"),
     SVN_TEST_NULL
   };
