@@ -7313,6 +7313,11 @@ log_find_operative_subtree_revs(void *baton,
   apr_hash_t *immediate_children = baton;
   apr_hash_index_t *hi, *hi2;
 
+  /* It's possible that authz restrictions on the merge source prevent us
+     from knowing about any of the changes for LOG_ENTRY->REVISION. */
+  if (!log_entry->changed_paths2)
+    return SVN_NO_ERROR;
+
   for (hi = apr_hash_first(pool, log_entry->changed_paths2);
        hi;
        hi = apr_hash_next(hi))
@@ -8014,6 +8019,11 @@ log_noop_revs(void *baton,
   SVN_ERR(rangelist_merge_revision(log_gap_baton->operative_ranges,
                                    revision,
                                    log_gap_baton->pool));
+
+  /* It's possible that authz restrictions on the merge source prevent us
+     from knowing about any of the changes for LOG_ENTRY->REVISION. */
+  if (!log_entry->changed_paths2)
+    return SVN_NO_ERROR;
 
   /* Examine each path affected by LOG_ENTRY->REVISION.  If the explicit or
      inherited mergeinfo for *all* of the corresponding paths under
@@ -9634,6 +9644,11 @@ log_find_operative_revs(void *baton,
   log_find_operative_baton_t *log_baton = baton;
   apr_hash_index_t *hi;
   svn_revnum_t revision;
+
+  /* It's possible that authz restrictions on the merge source prevent us
+     from knowing about any of the changes for LOG_ENTRY->REVISION. */
+  if (!log_entry->changed_paths2)
+    return SVN_NO_ERROR;
 
   revision = log_entry->revision;
 
