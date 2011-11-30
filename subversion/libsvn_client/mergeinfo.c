@@ -1123,143 +1123,74 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
 }
 
 /*** In-memory mergeinfo elision ***/
-
-/* TODO(reint): Document. */
-struct elide_mergeinfo_catalog_dir_baton {
-  const char *inherited_mergeinfo_path;
-  svn_mergeinfo_t mergeinfo_catalog;
-};
-
-/* The root doesn't have mergeinfo (unless it is actually one of the
-   paths passed to svn_delta_path_driver, in which case the callback
-   is called directly instead of this). */
-static svn_error_t *
-elide_mergeinfo_catalog_open_root(void *eb,
-                                  svn_revnum_t base_revision,
-                                  apr_pool_t *dir_pool,
-                                  void **root_baton)
-{
-  struct elide_mergeinfo_catalog_dir_baton *b = apr_pcalloc(dir_pool,
-                                                            sizeof(*b));
-  b->mergeinfo_catalog = eb;
-  *root_baton = b;
-  return SVN_NO_ERROR;
-}
-
-/* Make a directory baton for PATH.  It should have the same
-   inherited_mergeinfo_path as its parent... unless we just called
-   elide_mergeinfo_catalog_cb on its parent with its path. */
-static svn_error_t *
-elide_mergeinfo_catalog_open_directory(const char *path,
-                                       void *parent_baton,
-                                       svn_revnum_t base_revision,
-                                       apr_pool_t *dir_pool,
-                                       void **child_baton)
-{
-  struct elide_mergeinfo_catalog_dir_baton *b, *pb = parent_baton;
-
-  b = apr_pcalloc(dir_pool, sizeof(*b));
-  b->mergeinfo_catalog = pb->mergeinfo_catalog;
-
-  if (apr_hash_get(b->mergeinfo_catalog, path, APR_HASH_KEY_STRING))
-    b->inherited_mergeinfo_path = apr_pstrdup(dir_pool, path);
-  else
-    b->inherited_mergeinfo_path = pb->inherited_mergeinfo_path;
-
-  *child_baton = b;
-  return SVN_NO_ERROR;
-}
-
-/* TODO(reint): Document. */
-struct elide_mergeinfo_catalog_cb_baton {
-  apr_array_header_t *elidable_paths;
-  svn_mergeinfo_t mergeinfo_catalog;
-  apr_pool_t *result_pool;
-};
-
-/* Implements svn_delta_path_driver_cb_func_t. */
-static svn_error_t *
-elide_mergeinfo_catalog_cb(void **dir_baton,
-                           void *parent_baton,
-                           void *callback_baton,
-                           const char *path,
-                           apr_pool_t *pool)
-{
-  struct elide_mergeinfo_catalog_cb_baton *cb = callback_baton;
-  struct elide_mergeinfo_catalog_dir_baton *pb = parent_baton;
-  const char *path_suffix;
-  svn_boolean_t elides;
-
-  /* pb == NULL would imply that there was an *empty* path in the
-     paths given to the driver (which is different from "/"). */
-  SVN_ERR_ASSERT(pb != NULL);
-
-  /* We'll just act like everything is a file. */
-  *dir_baton = NULL;
-
-  /* Is there even any inherited mergeinfo to elide? */
-  /* (Note that svn_delta_path_driver will call open_directory before
-     the callback for the root (only).) */
-  if (!pb->inherited_mergeinfo_path
-      || strcmp(path, "/") == 0)
-    return SVN_NO_ERROR;
-
-  path_suffix = svn_dirent_is_child(pb->inherited_mergeinfo_path,
-                                    path, NULL);
-  SVN_ERR_ASSERT(path_suffix != NULL);
-
-  SVN_ERR(should_elide_mergeinfo(&elides,
-                                 apr_hash_get(cb->mergeinfo_catalog,
-                                              pb->inherited_mergeinfo_path,
-                                              APR_HASH_KEY_STRING),
-                                 apr_hash_get(cb->mergeinfo_catalog,
-                                              path,
-                                              APR_HASH_KEY_STRING),
-                                 path_suffix,
-                                 pool));
-
-  if (elides)
-    APR_ARRAY_PUSH(cb->elidable_paths, const char *) =
-      apr_pstrdup(cb->result_pool, path);
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_client__elide_mergeinfo_catalog(svn_mergeinfo_catalog_t mergeinfo_catalog,
                                     apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *paths;
+  apr_array_header_t *sorted_hash;
   apr_array_header_t *elidable_paths = apr_array_make(scratch_pool, 1,
                                                       sizeof(const char *));
-  svn_delta_editor_t *editor = svn_delta_default_editor(scratch_pool);
-  struct elide_mergeinfo_catalog_cb_baton cb = { 0 };
-  void *eb;
+  apr_array_header_t *dir_stack = apr_array_make(scratch_pool, 1,
+                                                 sizeof(const char *));
+  apr_pool_t *iterpool;
   int i;
-  svn_delta_shim_callbacks_t *shim_callbacks =
-    svn_delta_shim_callbacks_default(scratch_pool);
 
-  cb.elidable_paths = elidable_paths;
-  cb.mergeinfo_catalog = mergeinfo_catalog;
-  cb.result_pool = scratch_pool;
+  /* Here's the general algorithm:
+     Walk through the paths sorted in tree order.  For each path, pop
+     the dir_stack until it is either empty or the top item contains a parent
+     of the current path. Check to see if that mergeinfo is then elidable,
+     and build the list of elidable mergeinfo based upon that determination.
+     Finally, push the path of interest onto the stack, and continue. */
+  sorted_hash = svn_sort__hash(mergeinfo_catalog,
+                               svn_sort_compare_items_as_paths,
+                               scratch_pool);
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < sorted_hash->nelts; i++)
+    {
+      svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_hash, i,
+                                              svn_sort__item_t);
+      const char *path = item->key;
 
-  editor->open_root = elide_mergeinfo_catalog_open_root;
-  editor->open_directory = elide_mergeinfo_catalog_open_directory;
+      if (dir_stack->nelts > 0)
+        {
+          const char *top;
+          const char *path_suffix;
+          svn_boolean_t elides = FALSE;
+          
+          svn_pool_clear(iterpool);
 
-  eb = mergeinfo_catalog;
-  SVN_ERR(svn_editor__insert_shims((const svn_delta_editor_t **)&editor, &eb,
-                                   editor, eb, shim_callbacks,
-                                   scratch_pool, scratch_pool));
+          /* Pop off any paths which are not ancestors of PATH. */
+          do
+            {
+              top = APR_ARRAY_IDX(dir_stack, dir_stack->nelts - 1,
+                                          const char *);
+              path_suffix = svn_dirent_is_child(top, path, NULL);
 
-  /* Walk over the paths, and build up a list of elidable ones. */
-  SVN_ERR(svn_hash_keys(&paths, mergeinfo_catalog, scratch_pool));
-  SVN_ERR(svn_delta_path_driver(editor,
-                                eb,
-                                SVN_INVALID_REVNUM,
-                                paths,
-                                elide_mergeinfo_catalog_cb,
-                                &cb,
-                                scratch_pool));
+              if (!path_suffix)
+                apr_array_pop(dir_stack);
+            }
+          while (dir_stack->nelts > 0 && !path_suffix);
+
+          /* If we have a path suffix, it means we haven't popped the stack
+             clean. */
+          if (path_suffix)
+            {
+              SVN_ERR(should_elide_mergeinfo(&elides,
+                                         apr_hash_get(mergeinfo_catalog, top,
+                                                      APR_HASH_KEY_STRING),
+                                         apr_hash_get(mergeinfo_catalog, path,
+                                                      APR_HASH_KEY_STRING),
+                                         path_suffix,
+                                         iterpool));
+
+              if (elides)
+                APR_ARRAY_PUSH(elidable_paths, const char *) = path;
+            }
+        }
+
+      APR_ARRAY_PUSH(dir_stack, const char *) = path;
+    }
+  svn_pool_destroy(iterpool);
 
   /* Now remove the elidable paths from the catalog. */
   for (i = 0; i < elidable_paths->nelts; i++)
