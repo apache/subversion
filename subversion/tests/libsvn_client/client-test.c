@@ -102,26 +102,28 @@ test_elide_mergeinfo_catalog(apr_pool_t *pool)
        i < sizeof(elide_testcases) / sizeof(elide_testcases[0]);
        i++)
     {
-      apr_hash_t *catalog;
+      svn_mergeinfo_catalog_t mergeinfo_catalog;
       mergeinfo_catalog_item *item;
 
       svn_pool_clear(iterpool);
 
-      catalog = apr_hash_make(iterpool);
+      mergeinfo_catalog = apr_hash_make(iterpool);
       for (item = elide_testcases[i]; item->path; item++)
         {
-          apr_hash_t *mergeinfo;
+          svn_mergeinfo_t mergeinfo;
 
           SVN_ERR(svn_mergeinfo_parse(&mergeinfo, item->unparsed_mergeinfo,
                                       iterpool));
-          apr_hash_set(catalog, item->path, APR_HASH_KEY_STRING, mergeinfo);
+          apr_hash_set(mergeinfo_catalog, item->path, APR_HASH_KEY_STRING,
+                       mergeinfo);
         }
 
-      SVN_ERR(svn_client__elide_mergeinfo_catalog(catalog, iterpool));
+      SVN_ERR(svn_client__elide_mergeinfo_catalog(mergeinfo_catalog,
+                                                  iterpool));
 
       for (item = elide_testcases[i]; item->path; item++)
         {
-          apr_hash_t *mergeinfo = apr_hash_get(catalog, item->path,
+          apr_hash_t *mergeinfo = apr_hash_get(mergeinfo_catalog, item->path,
                                                APR_HASH_KEY_STRING);
           if (item->remains && !mergeinfo)
             return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
