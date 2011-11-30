@@ -819,7 +819,7 @@ should_elide_mergeinfo(svn_boolean_t *elides,
                        svn_mergeinfo_t parent_mergeinfo,
                        svn_mergeinfo_t child_mergeinfo,
                        const char *path_suffix,
-                       apr_pool_t *pool)
+                       apr_pool_t *scratch_pool)
 {
   /* Easy out: No child mergeinfo to elide. */
   if (child_mergeinfo == NULL)
@@ -844,20 +844,18 @@ should_elide_mergeinfo(svn_boolean_t *elides,
       /* Both CHILD_MERGEINFO and PARENT_MERGEINFO are non-NULL and
          non-empty. */
       svn_mergeinfo_t path_tweaked_parent_mergeinfo;
-      apr_pool_t *subpool = svn_pool_create(pool);
 
       /* If we need to adjust the paths in PARENT_MERGEINFO do it now. */
       if (path_suffix)
         SVN_ERR(svn_mergeinfo__add_suffix_to_mergeinfo(
                   &path_tweaked_parent_mergeinfo, parent_mergeinfo,
-                  path_suffix, subpool, subpool));
+                  path_suffix, scratch_pool, scratch_pool));
       else
         path_tweaked_parent_mergeinfo = parent_mergeinfo;
 
       SVN_ERR(svn_mergeinfo__equals(elides,
                                     path_tweaked_parent_mergeinfo,
-                                    child_mergeinfo, TRUE, subpool));
-      svn_pool_destroy(subpool);
+                                    child_mergeinfo, TRUE, scratch_pool));
     }
 
   return SVN_NO_ERROR;
