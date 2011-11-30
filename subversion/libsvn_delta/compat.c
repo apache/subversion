@@ -1384,7 +1384,13 @@ complete_cb(void *baton,
   /* Drive the tree we've created. */
   err = drive_tree(&eb->root, eb->deditor, eb->make_abs_paths, scratch_pool);
   if (!err)
-     err = eb->deditor->close_edit(eb->dedit_baton, scratch_pool);
+     {
+       err = eb->deditor->close_directory(eb->root.baton, scratch_pool);
+       err = svn_error_compose_create(err, eb->deditor->close_edit(
+                                                            eb->dedit_baton,
+                                                            scratch_pool));
+     }
+
   if (err)
     svn_error_clear(eb->deditor->abort_edit(eb->dedit_baton, scratch_pool));
 
