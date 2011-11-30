@@ -1226,7 +1226,7 @@ elide_mergeinfo_catalog_cb(void **dir_baton,
 }
 
 svn_error_t *
-svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
+svn_client__elide_mergeinfo_catalog(svn_mergeinfo_catalog_t mergeinfo_catalog,
                                     apr_pool_t *pool)
 {
   apr_array_header_t *paths;
