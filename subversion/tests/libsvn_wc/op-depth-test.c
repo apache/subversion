@@ -4185,6 +4185,96 @@ move_to_swap(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+revert_nested_move(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  nodes_row_t nodes_A_moved[] = {
+    {0, "",       "normal",       1, ""},
+    {0, "A",      "normal",       1, "A",     FALSE, "A2"},
+    {0, "A/B",    "normal",       1, "A/B"},
+    {0, "A/B/C",  "normal",       1, "A/B/C"},
+    {1, "A",      "base-deleted", NO_COPY_FROM},
+    {1, "A/B",    "base-deleted", NO_COPY_FROM},
+    {1, "A/B/C",  "base-deleted", NO_COPY_FROM},
+    {1, "A2",     "normal",       1, "A",     MOVED_HERE},
+    {1, "A2/B",   "normal",       1, "A/B",   MOVED_HERE},
+    {1, "A2/B/C", "normal",       1, "A/B/C", MOVED_HERE},
+    {0}
+  };
+  nodes_row_t nodes_AB_moved[] = {
+    {0, "",        "normal",       1, ""},
+    {0, "A",       "normal",       1, "A",     FALSE, "A2"},
+    {0, "A/B",     "normal",       1, "A/B",   FALSE, "A2/B2"},
+    {0, "A/B/C",   "normal",       1, "A/B/C"},
+    {1, "A",       "base-deleted", NO_COPY_FROM},
+    {1, "A/B",     "base-deleted", NO_COPY_FROM},
+    {1, "A/B/C",   "base-deleted", NO_COPY_FROM},
+    {1, "A2",      "normal",       1, "A",     MOVED_HERE},
+    {1, "A2/B",    "normal",       1, "A/B",   MOVED_HERE},
+    {1, "A2/B/C",  "normal",       1, "A/B/C", MOVED_HERE},
+    {2, "A2/B",    "base-deleted", NO_COPY_FROM},
+    {2, "A2/B/C",  "base-deleted", NO_COPY_FROM},
+    {2, "A2/B2",   "normal",       1, "A/B",   MOVED_HERE},
+    {2, "A2/B2/C", "normal",       1, "A/B/C", MOVED_HERE},
+    {0}
+  };
+  nodes_row_t nodes_ABC_moved[] = {
+    {0, "",         "normal",       1, ""},
+    {0, "A",        "normal",       1, "A",     FALSE, "A2"},
+    {0, "A/B",      "normal",       1, "A/B",   FALSE, "A2/B2"},
+    {0, "A/B/C",    "normal",       1, "A/B/C", FALSE, "A2/B2/C2"},
+    {1, "A",        "base-deleted", NO_COPY_FROM},
+    {1, "A/B",      "base-deleted", NO_COPY_FROM},
+    {1, "A/B/C",    "base-deleted", NO_COPY_FROM},
+    {1, "A2",       "normal",       1, "A",     MOVED_HERE},
+    {1, "A2/B",     "normal",       1, "A/B",   MOVED_HERE},
+    {1, "A2/B/C",   "normal",       1, "A/B/C", MOVED_HERE},
+    {2, "A2/B",     "base-deleted", NO_COPY_FROM},
+    {2, "A2/B/C",   "base-deleted", NO_COPY_FROM},
+    {2, "A2/B2",    "normal",       1, "A/B",   MOVED_HERE},
+    {2, "A2/B2/C",  "normal",       1, "A/B/C", MOVED_HERE},
+    {3, "A2/B2/C",  "base-deleted", NO_COPY_FROM},
+    {3, "A2/B2/C2", "normal",       1, "A/B/C", MOVED_HERE},
+    {0}
+  };
+
+  SVN_ERR(svn_test__sandbox_create(&b, "revert_nested_move", opts, pool));
+
+  SVN_ERR(wc_mkdir(&b, "A"));
+  SVN_ERR(wc_mkdir(&b, "A/B"));
+  SVN_ERR(wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_update(&b, "", 1));
+
+  SVN_ERR(wc_move(&b, "A", "A2"));
+  SVN_ERR(check_db_rows(&b, "", nodes_A_moved));
+
+  SVN_ERR(wc_move(&b, "A2/B", "A2/B2"));
+  SVN_ERR(check_db_rows(&b, "", nodes_AB_moved));
+
+  SVN_ERR(wc_move(&b, "A2/B2/C", "A2/B2/C2"));
+  SVN_ERR(check_db_rows(&b, "", nodes_ABC_moved));
+
+  SVN_ERR(wc_revert(&b, "A2/B", svn_depth_infinity));
+  SVN_ERR(wc_revert(&b, "A2/B2", svn_depth_infinity));
+  SVN_ERR(check_db_rows(&b, "", nodes_A_moved));
+
+  SVN_ERR(wc_move(&b, "A2/B", "A2/B2"));
+  SVN_ERR(wc_move(&b, "A2/B2/C", "A2/B2/C2"));
+  SVN_ERR(check_db_rows(&b, "", nodes_ABC_moved));
+
+  SVN_ERR(wc_revert(&b, "A2/B2/C", svn_depth_infinity));
+  SVN_ERR(wc_revert(&b, "A2/B2/C2", svn_depth_infinity));
+  SVN_ERR(check_db_rows(&b, "", nodes_AB_moved));
+
+  SVN_ERR(wc_revert(&b, "A2/B", svn_depth_infinity));
+  SVN_ERR(wc_revert(&b, "A2/B2", svn_depth_infinity));
+  SVN_ERR(check_db_rows(&b, "", nodes_A_moved));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -4266,5 +4356,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "copy_a_move"),
     SVN_TEST_OPTS_XFAIL(move_to_swap,
                        "move_to_swap"),
+    SVN_TEST_OPTS_PASS(revert_nested_move,
+                       "revert_nested_move"),
     SVN_TEST_NULL
   };
