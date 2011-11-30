@@ -1227,38 +1227,39 @@ elide_mergeinfo_catalog_cb(void **dir_baton,
 
 svn_error_t *
 svn_client__elide_mergeinfo_catalog(svn_mergeinfo_catalog_t mergeinfo_catalog,
-                                    apr_pool_t *pool)
+                                    apr_pool_t *scratch_pool)
 {
   apr_array_header_t *paths;
-  apr_array_header_t *elidable_paths = apr_array_make(pool, 1,
+  apr_array_header_t *elidable_paths = apr_array_make(scratch_pool, 1,
                                                       sizeof(const char *));
-  svn_delta_editor_t *editor = svn_delta_default_editor(pool);
+  svn_delta_editor_t *editor = svn_delta_default_editor(scratch_pool);
   struct elide_mergeinfo_catalog_cb_baton cb = { 0 };
   void *eb;
   int i;
   svn_delta_shim_callbacks_t *shim_callbacks =
-                                     svn_delta_shim_callbacks_default(pool);
+    svn_delta_shim_callbacks_default(scratch_pool);
 
   cb.elidable_paths = elidable_paths;
   cb.mergeinfo_catalog = mergeinfo_catalog;
-  cb.result_pool = pool;
+  cb.result_pool = scratch_pool;
 
   editor->open_root = elide_mergeinfo_catalog_open_root;
   editor->open_directory = elide_mergeinfo_catalog_open_directory;
 
   eb = mergeinfo_catalog;
   SVN_ERR(svn_editor__insert_shims((const svn_delta_editor_t **)&editor, &eb,
-                                   editor, eb, shim_callbacks, pool, pool));
+                                   editor, eb, shim_callbacks,
+                                   scratch_pool, scratch_pool));
 
   /* Walk over the paths, and build up a list of elidable ones. */
-  SVN_ERR(svn_hash_keys(&paths, mergeinfo_catalog, pool));
+  SVN_ERR(svn_hash_keys(&paths, mergeinfo_catalog, scratch_pool));
   SVN_ERR(svn_delta_path_driver(editor,
                                 eb,
                                 SVN_INVALID_REVNUM,
                                 paths,
                                 elide_mergeinfo_catalog_cb,
                                 &cb,
-                                pool));
+                                scratch_pool));
 
   /* Now remove the elidable paths from the catalog. */
   for (i = 0; i < elidable_paths->nelts; i++)
