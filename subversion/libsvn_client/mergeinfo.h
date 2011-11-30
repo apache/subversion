@@ -369,7 +369,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
 
 /* TODO(reint): Document. */
 svn_error_t *
-svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
+svn_client__elide_mergeinfo_catalog(svn_mergeinfo_catalog_t mergeinfo_catalog,
                                     apr_pool_t *pool);
 
 /* Set *MERGEINFO_CHANGES to TRUE if LOCAL_ABSPATH has locally modified
