@@ -4069,6 +4069,122 @@ copy_a_move(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_to_swap(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "move_to_swap", opts, pool));
+
+  SVN_ERR(wc_mkdir(&b, "A"));
+  SVN_ERR(wc_mkdir(&b, "A/B"));
+  SVN_ERR(wc_mkdir(&b, "X"));
+  SVN_ERR(wc_mkdir(&b, "X/Y"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_update(&b, "", 1));
+
+  SVN_ERR(wc_move(&b, "A/B", "X/B"));
+  SVN_ERR(wc_move(&b, "X/Y", "A/Y"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",    "normal",       1, ""},
+      {0, "A",   "normal",       1, "A"},
+      {0, "A/B", "normal",       1, "A/B", FALSE, "X/B"},
+      {0, "X",   "normal",       1, "X"},
+      {0, "X/Y", "normal",       1, "X/Y", FALSE, "A/Y"},
+      {2, "A/B", "base-deleted", NO_COPY_FROM},
+      {2, "A/Y", "normal",       1, "X/Y", MOVED_HERE},
+      {2, "X/Y", "base-deleted", NO_COPY_FROM},
+      {2, "X/B", "normal",       1, "A/B", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(wc_move(&b, "A", "A2"));
+  SVN_ERR(wc_move(&b, "X", "A"));
+  SVN_ERR(wc_move(&b, "A2", "X"));
+
+  /* Is this correct or should A/Y and X/B at op-depth=1 be marked
+     moved-here? */
+  {
+    nodes_row_t nodes[] = {
+      {0, "",    "normal",       1, ""},
+      {0, "A",   "normal",       1, "A",   FALSE, "X"},
+      {0, "A/B", "normal",       1, "A/B", FALSE, "A/B"},
+      {0, "X",   "normal",       1, "X",   FALSE, "A"},
+      {0, "X/Y", "normal",       1, "X/Y", FALSE, "X/Y"},
+      {1, "A",   "normal",       1, "X",   MOVED_HERE},
+      {1, "A/Y", "normal",       1, "X/Y"},                /* moved-here? */
+      {1, "A/B", "base-deleted", NO_COPY_FROM},
+      {1, "X",   "normal",       1, "A",   MOVED_HERE},
+      {1, "X/B", "normal",       1, "A/B"},                /* moved-here? */
+      {1, "X/Y", "base-deleted", NO_COPY_FROM},
+      {2, "A/Y", "base-deleted", NO_COPY_FROM},
+      {2, "X/B", "base-deleted", NO_COPY_FROM},
+      {2, "A/B", "normal",       1, "A/B", MOVED_HERE},
+      {2, "X/Y", "normal",       1, "X/Y", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Revert and try in different order */
+  SVN_ERR(wc_revert(&b, "", svn_depth_infinity));
+
+  SVN_ERR(wc_move(&b, "A", "A2"));
+  SVN_ERR(wc_move(&b, "X", "A"));
+  SVN_ERR(wc_move(&b, "A2", "X"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",    "normal",       1, ""},
+      {0, "A",   "normal",       1, "A",   FALSE, "X"},
+      {0, "A/B", "normal",       1, "A/B"},
+      {0, "X",   "normal",       1, "X",   FALSE, "A"},
+      {0, "X/Y", "normal",       1, "X/Y"},
+      {1, "A",   "normal",       1, "X",   MOVED_HERE},
+      {1, "A/Y", "normal",       1, "X/Y", MOVED_HERE},
+      {1, "A/B", "base-deleted", NO_COPY_FROM},
+      {1, "X",   "normal",       1, "A",   MOVED_HERE},
+      {1, "X/B", "normal",       1, "A/B", MOVED_HERE},
+      {1, "X/Y", "base-deleted", NO_COPY_FROM},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(wc_move(&b, "A/Y", "X/Y"));
+  SVN_ERR(wc_move(&b, "X/B", "A/B"));
+  
+  /* Currently XFAIL on because marked lines set moved-here.  Perhaps
+     this is correct and it should XFAIL on the earlier order?  */
+  {
+    nodes_row_t nodes[] = {
+      {0, "",    "normal",       1, ""},
+      {0, "A",   "normal",       1, "A",   FALSE, "X"},
+      {0, "A/B", "normal",       1, "A/B", FALSE, "A/B"},
+      {0, "X",   "normal",       1, "X",   FALSE, "A"},
+      {0, "X/Y", "normal",       1, "X/Y", FALSE, "X/Y"},
+      {1, "A",   "normal",       1, "X",   MOVED_HERE},
+      {1, "A/Y", "normal",       1, "X/Y"},                /* XFAIL */
+      {1, "A/B", "base-deleted", NO_COPY_FROM},
+      {1, "X",   "normal",       1, "A",   MOVED_HERE},
+      {1, "X/B", "normal",       1, "A/B"},                /* XFAIL */
+      {1, "X/Y", "base-deleted", NO_COPY_FROM},
+      {2, "A/Y", "base-deleted", NO_COPY_FROM},
+      {2, "X/B", "base-deleted", NO_COPY_FROM},
+      {2, "A/B", "normal",       1, "A/B", MOVED_HERE},
+      {2, "X/Y", "normal",       1, "X/Y", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -4148,5 +4264,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_in_replace"),
     SVN_TEST_OPTS_PASS(copy_a_move,
                        "copy_a_move"),
+    SVN_TEST_OPTS_XFAIL(move_to_swap,
+                       "move_to_swap"),
     SVN_TEST_NULL
   };
