@@ -730,6 +730,7 @@ struct svn_wc__shim_fetch_baton_t
 {
   svn_wc__db_t *db;
   const char *base_abspath;
+  svn_boolean_t fetch_base;
 };
 
 /* Using a BATON of struct shim_fetch_baton, return KIND for PATH. */
