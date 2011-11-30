@@ -8015,15 +8015,15 @@ log_noop_revs(void *baton,
 
   revision = log_entry->revision;
 
-  /* Unconditionally add LOG_ENTRY->REVISION to BATON->OPERATIVE_MERGES. */
-  SVN_ERR(rangelist_merge_revision(log_gap_baton->operative_ranges,
-                                   revision,
-                                   log_gap_baton->pool));
-
   /* It's possible that authz restrictions on the merge source prevent us
      from knowing about any of the changes for LOG_ENTRY->REVISION. */
   if (!log_entry->changed_paths2)
     return SVN_NO_ERROR;
+
+  /* Unconditionally add LOG_ENTRY->REVISION to BATON->OPERATIVE_MERGES. */
+  SVN_ERR(rangelist_merge_revision(log_gap_baton->operative_ranges,
+                                   revision,
+                                   log_gap_baton->pool));
 
   /* Examine each path affected by LOG_ENTRY->REVISION.  If the explicit or
      inherited mergeinfo for *all* of the corresponding paths under
