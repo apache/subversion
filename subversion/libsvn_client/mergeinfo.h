@@ -367,10 +367,18 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
-/* TODO(reint): Document. */
+/* Simplify a mergeinfo catalog, if possible, via elision.
+
+   For each path in MERGEINFO_CATALOG, check if the path's mergeinfo can
+   elide to the path's nearest path-wise parent in MERGEINFO_CATALOG.  If
+   so, remove that path from MERGEINFO_CATALOG.  Elidability is determined
+   as per svn_client__elide_mergeinfo except that elision to the repository
+   is not considered.
+
+   SCRATCH_POOL is used for temporary allocations. */
 svn_error_t *
 svn_client__elide_mergeinfo_catalog(svn_mergeinfo_catalog_t mergeinfo_catalog,
-                                    apr_pool_t *pool);
+                                    apr_pool_t *scratch_pool);
 
 /* Set *MERGEINFO_CHANGES to TRUE if LOCAL_ABSPATH has locally modified
    mergeinfo, set *MERGEINFO_CHANGES to FALSE otherwise. */
