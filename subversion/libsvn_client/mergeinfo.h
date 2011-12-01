@@ -40,7 +40,9 @@ typedef struct svn_client__merge_path_t
 {
   const char *abspath;               /* Absolute working copy path. */
   svn_boolean_t missing_child;       /* ABSPATH has an immediate child which
-                                        is missing. */
+                                        is missing, but is not switched. */
+  svn_boolean_t switched_child;      /* ABSPATH has an immediate child which
+                                        is switched. */
   svn_boolean_t switched;            /* ABSPATH is switched. */
   svn_boolean_t has_noninheritable;  /* ABSPATH has svn:mergeinfo set on it
                                         which includes non-inheritable
@@ -79,6 +81,13 @@ typedef struct svn_client__merge_path_t
                                            to the merge, and the operational
                                            depth of the merge is
                                            svn_depth_immediates. */
+  svn_boolean_t record_mergeinfo;       /* Mergeinfo needs to be recorded
+                                           on ABSPATH to describe the
+                                           merge. */
+  svn_boolean_t record_noninheritable;  /* Non-inheritable mergeinfo needs to
+                                           be recorded on ABSPATH to describe
+                                           the merge. Implies RECORD_MERGEINFO
+                                           is true. */
 } svn_client__merge_path_t;
 
 /* Return a deep copy of the merge-path structure OLD, allocated in POOL. */

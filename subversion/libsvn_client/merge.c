@@ -4528,9 +4528,9 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
 
 /* Helper for record_mergeinfo_for_dir_merge().
 
-   Adjust, in place, the inheritability of the ranges in RANGELIST to
-   describe a merge of RANGELIST into WC_WCPATH at depth DEPTH.  Set
-   *RANGELIST_INHERITANCE to the inheritability set.
+   Set *NON_INHERITABLE to TRUE if non-inheritable mergeinfo is needed to
+   describe a merge into LOCAL_ABSPATH at DEPTH.  Set *NON_INHERTIABLE to
+   FALSE otherwise.
 
    WC_PATH_IS_MERGE_TARGET is true if WC_PATH is the target of the merge,
    otherwise WC_PATH is a subtree.
@@ -4541,8 +4541,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
 
    Perform any temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
-calculate_merge_inheritance(apr_array_header_t *rangelist,
-                            svn_boolean_t *rangelist_inheritance,
+calculate_merge_inheritance(svn_boolean_t *non_inheritable,
                             const char *local_abspath,
                             svn_boolean_t wc_path_is_merge_target,
                             svn_boolean_t wc_path_has_missing_child,
@@ -4556,14 +4555,10 @@ calculate_merge_inheritance(apr_array_header_t *rangelist,
                            scratch_pool));
 
   /* Starting assumption. */
-  *rangelist_inheritance = TRUE;
+  *non_inheritable = FALSE;
 
-  if (path_kind == svn_node_file)
-    {
-      /* Files *never* have non-inheritable mergeinfo. */
-      svn_rangelist__set_inheritance(rangelist, TRUE);
-    }
-  else if (path_kind == svn_node_dir)
+  /* Only directories can have non-inheritable mergeinfo. */
+  if (path_kind == svn_node_dir)
     {
       if (wc_path_is_merge_target)
         {
@@ -4571,12 +4566,7 @@ calculate_merge_inheritance(apr_array_header_t *rangelist,
               || depth == svn_depth_files
               || depth == svn_depth_empty)
             {
-              svn_rangelist__set_inheritance(rangelist, FALSE);
-              *rangelist_inheritance = FALSE;
-            }
-          else /* depth == svn_depth_files || depth == svn_depth_empty */
-            {
-              svn_rangelist__set_inheritance(rangelist, TRUE);
+              *non_inheritable = TRUE;
             }
         }
       else /* WC_PATH is a directory subtree of the target. */
@@ -4584,12 +4574,7 @@ calculate_merge_inheritance(apr_array_header_t *rangelist,
           if (wc_path_has_missing_child
               || depth == svn_depth_immediates)
             {
-              svn_rangelist__set_inheritance(rangelist, FALSE);
-              *rangelist_inheritance = FALSE;
-            }
-          else /* depth == infinity */
-            {
-              svn_rangelist__set_inheritance(rangelist, TRUE);
+              *non_inheritable = TRUE;
             }
         }
     }
@@ -5481,13 +5466,15 @@ insert_parent_and_sibs_of_sw_absent_del_subtree(
   parent = get_child_with_mergeinfo(children_with_mergeinfo, parent_abspath);
   if (parent)
     {
-      parent->missing_child = TRUE;
+      parent->missing_child = child->absent;
+      parent->switched_child = child->switched;
     }
   else
     {
       /* Create a new element to insert into CHILDREN_WITH_MERGEINFO. */
       parent = svn_client__merge_path_create(parent_abspath, pool);
-      parent->missing_child = TRUE;
+      parent->missing_child = child->absent;
+      parent->switched_child = child->switched;
       /* Insert PARENT into CHILDREN_WITH_MERGEINFO. */
       insert_child_to_merge(children_with_mergeinfo, parent, pool);
       /* Increment for loop index so we don't process the inserted element. */
@@ -7426,6 +7413,202 @@ get_inoperative_immediate_children(apr_hash_t **immediate_children,
   return SVN_NO_ERROR;
 }
 
+/* Helper for record_mergeinfo_for_dir_merge(): Identify which elements of
+   NOTIFY_B->CHILDREN_WITH_MERGEINFO need new mergeinfo set to accurately
+   describe a merge, what inheritance type such new mergeinfo should have,
+   and what subtrees can be ignored altogether.
+
+   For each svn_client__merge_path_t CHILD in
+   NOTIFY_B->CHILDREN_WITH_MERGEINFO, set CHILD->RECORD_MERGEINFO and
+   CHILD->RECORD_NONINHERITABLE to true if the subtree needs mergeinfo
+   to describe the merge and if that mergeinfo should be non-inheritable
+   respectively.
+
+   If OPERATIVE_MERGE is true, then the merge being described is operative
+   as per subtree_touched_by_merge.  OPERATIVE_MERGE is false otherwise.
+
+   MERGED_RANGE, MERGEINFO_FSPATH, DEPTH, NOTIFY_B, and MERGE_B are all
+   cascaded from record_mergeinfo_for_dir_merge's arguments of the same
+   names.
+
+   SCRATCH_POOL is used for temporary allocations.
+*/
+static svn_error_t *
+flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
+                                const svn_merge_range_t *merged_range,
+                                const char *mergeinfo_fspath,
+                                svn_depth_t depth,
+                                notification_receiver_baton_t *notify_b,
+                                merge_cmd_baton_t *merge_b,
+                                apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  int i;
+  apr_hash_t *inoperative_immediate_children = NULL;
+
+  /* Find all issue #3642 children (i.e immediate child directories of the
+     merge target, with no pre-existing explicit mergeinfo, during a --depth
+     immediates merge).  Stash those that are inoperative at any depth in
+     INOPERATIVE_IMMEDIATE_CHILDREN. */
+  if (!merge_b->record_only
+      && merged_range->start <= merged_range->end
+      && depth == svn_depth_immediates)
+    SVN_ERR(get_inoperative_immediate_children(
+      &inoperative_immediate_children,
+      notify_b->children_with_mergeinfo,
+      mergeinfo_fspath, merged_range->start + 1, merged_range->end,
+      merge_b->target_abspath, merge_b->ra_session1,
+      scratch_pool, iterpool));
+
+  /* Issue #4056: Walk NOTIFY_B->CHILDREN_WITH_MERGEINFO reverse depth-first
+     order.  This way each child knows if it has operative missing/switched
+     children which necessitates non-inheritable mergeinfo. */
+  for (i = notify_b->children_with_mergeinfo->nelts - 1; i >= 0; i--)
+    {
+      svn_client__merge_path_t *child =
+                     APR_ARRAY_IDX(notify_b->children_with_mergeinfo, i,
+                                   svn_client__merge_path_t *);
+
+      /* Can't record mergeinfo on something that isn't here. */
+      if (child->absent)
+        continue;
+
+      /* Don't record mergeinfo on skipped paths. */
+      if (notify_b->skipped_abspaths
+          && apr_hash_get(notify_b->skipped_abspaths, child->abspath,
+                          APR_HASH_KEY_STRING))
+        continue;
+
+      /* ### ptb: Yes, we could combine the follwing into a single
+         ### conditional, but clarity would suffer (even more than
+         ### it does now). */
+      if (i == 0)
+        {
+          /* Always record mergeinfo on the merge target. */
+          child->record_mergeinfo = TRUE;
+        }
+      else if (merge_b->record_only && !merge_b->reintegrate_merge)
+        {
+          /* Always record mergeinfo for --record-only merges. */
+          child->record_mergeinfo = TRUE;
+        }
+      else if (child->immediate_child_dir
+               && !child->pre_merge_mergeinfo
+               && inoperative_immediate_children
+               && !apr_hash_get(inoperative_immediate_children,
+                               child->abspath,
+                               APR_HASH_KEY_STRING))
+        {
+          /* We must record mergeinfo on those issue #3642 children
+             that are operative at a greater depth. */
+          child->record_mergeinfo = TRUE;
+        }
+
+      if (operative_merge)
+        {
+          svn_boolean_t child_is_deleted;
+
+          svn_pool_clear(iterpool);
+
+          /* If CHILD is deleted we don't need to set mergeinfo on it. */
+          SVN_ERR(svn_wc__node_is_status_deleted(&child_is_deleted,
+                                                 merge_b->ctx->wc_ctx,
+                                                 child->abspath, iterpool));
+          if (!child_is_deleted
+              && subtree_touched_by_merge(child->abspath, notify_b,
+                                          iterpool))
+            {
+              /* This subtree was affected by the merge. */
+              child->record_mergeinfo = TRUE;
+
+              /* Were any CHILD's missing children skipped by the merge?
+                 If not, then CHILD's missing children don't need to be
+                 considered when recording mergeinfo describing the merge. */
+              if (!merge_b->reintegrate_merge
+                  && child->missing_child
+                  && !path_is_subtree(child->abspath,
+                                      notify_b->skipped_abspaths,
+                                      iterpool))
+                {
+                  child->missing_child = FALSE;
+                }
+
+              /* If CHILD has an immediate switched child or children and
+                 none of these were touched by the merge, then we don't need
+                 need to do any special handling of those switched subtrees
+                 (e.g. record non-inheritable mergeinfo) when recording
+                 mergeinfo desribing the merge. */
+              if (child->switched_child)
+                {
+                  int j;
+                  svn_boolean_t operative_switched_child = FALSE;
+
+                  for (j = i + 1;
+                       j < notify_b->children_with_mergeinfo->nelts;
+                       j++)
+                    {
+                      svn_client__merge_path_t *potential_child =
+                        APR_ARRAY_IDX(notify_b->children_with_mergeinfo, j,
+                                      svn_client__merge_path_t *);
+                      if (!svn_dirent_is_ancestor(child->abspath,
+                                                  potential_child->abspath))
+                        break;
+
+                      /* POTENTIAL_CHILD is a subtree of CHILD, but is it
+                         an immediate child? */
+                      if (strcmp(child->abspath,
+                                 svn_dirent_dirname(potential_child->abspath,
+                                                    iterpool)))
+                        continue;
+
+                      if (potential_child->switched
+                          && potential_child->record_mergeinfo)
+                        {
+                          operative_switched_child = TRUE;
+                          break;
+                        }
+                    }
+
+                  /* Can we treat CHILD as if it has no switched children? */
+                  if (!operative_switched_child)
+                    child->switched_child = FALSE;
+                }
+            }
+        }
+
+      if (child->record_mergeinfo)
+        {
+          SVN_ERR(calculate_merge_inheritance(&(child->record_noninheritable),
+                                              child->abspath,
+                                              i == 0,
+                                              (child->missing_child
+                                               || child->switched_child),
+                                              depth,
+                                              merge_b->ctx->wc_ctx,
+                                              iterpool));
+        }
+      else
+        {
+          /* If CHILD is in NOTIFY_B->CHILDREN_WITH_MERGEINFO simply
+             because it had no explicit mergeinfo of its own at the
+             start of the merge but is the child of of some path with
+             non-inheritable mergeinfo, then the explicit mergeinfo it
+             has *now* was set by get_mergeinfo_paths() -- see criteria
+             3 in that function's doc string.  So since CHILD->ABSPATH
+             was not touched by the merge we can remove the
+             mergeinfo. */
+          if (child->child_of_noninheritable)
+            SVN_ERR(svn_client__record_wc_mergeinfo(child->abspath,
+                                                    NULL, FALSE,
+                                                    merge_b->ctx,
+                                                    iterpool));
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 /* Helper for do_directory_merge().
 
    If RESULT_CATALOG is NULL then record mergeinfo describing a merge of
@@ -7457,7 +7640,6 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
   int i;
   svn_boolean_t is_rollback = (merged_range->start > merged_range->end);
   svn_boolean_t operative_merge;
-  apr_hash_t *inoperative_immediate_children = NULL;
 
   /* Update the WC mergeinfo here to account for our new
      merges, minus any unresolved conflicts and skips. */
@@ -7484,23 +7666,12 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
   remove_absent_children(merge_b->target_abspath,
                          notify_b->children_with_mergeinfo);
 
+  /* Determine which subtrees of interest need mergeinfo recorded... */
+  SVN_ERR(flag_subtrees_needing_mergeinfo(operative_merge, &range,
+                                          mergeinfo_fspath, depth, notify_b,
+                                          merge_b, iterpool));
 
-  /* Find all issue #3642 children (i.e immediate child directories of the
-     merge target, with no pre-existing explicit mergeinfo, during a --depth
-     immediates merge).  Stash those that are inoperative at any depth in
-     INOPERATIVE_IMMEDIATE_CHILDREN. */
-  if (!merge_b->record_only && range.start <= range.end
-      && depth == svn_depth_immediates)
-    SVN_ERR(get_inoperative_immediate_children(
-      &inoperative_immediate_children,
-      notify_b->children_with_mergeinfo,
-      mergeinfo_fspath, range.start + 1, range.end,
-      merge_b->target_abspath, merge_b->ra_session1,
-      pool, iterpool));
-
-  /* Record mergeinfo on any subtree affected by the merge or for
-     every subtree if this is a --record-only merge.  Always record
-     mergeinfo on the merge target CHILDREN_WITH_MERGEINFO[0]. */
+  /* ...and then record it. */
   for (i = 0; i < notify_b->children_with_mergeinfo->nelts; i++)
     {
       const char *child_repos_path;
@@ -7512,60 +7683,10 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
                                    svn_client__merge_path_t *);
       SVN_ERR_ASSERT(child);
 
-      /* Can't record mereginfo on something that isn't here. */
-      if (child->absent)
-        continue;
-
       svn_pool_clear(iterpool);
 
-      /* If CHILD is a subtree, this is not a record only merge, and
-         CHILD was not affected by the merge then we don't need to
-         record mergeinfo.  If this is a record only merge being done
-         as part of a reintegrate merge then we need to check if CHILD
-         was affected by the merge. */
-      if (i > 0 /* Always record mergeinfo on the merge target. */
-          && (!merge_b->record_only || merge_b->reintegrate_merge)
-          && (!child->immediate_child_dir || child->pre_merge_mergeinfo)
-          && (!operative_merge
-              || !subtree_touched_by_merge(child->abspath, notify_b,
-                                           iterpool)))
+      if (child->record_mergeinfo)
         {
-          /* If CHILD is in NOTIFY_B->CHILDREN_WITH_MERGEINFO simply
-             because it had no explicit mergeinfo of its own at the
-             start of the merge but is the child of of some path with
-             non-inheritable mergeinfo, then the explicit mergeinfo it
-             has *now* was set by get_mergeinfo_paths() -- see criteria
-             3 in that function's doc string.  So since CHILD->ABSPATH
-             was not touched by the merge we can remove the
-             mergeinfo. */
-          if (child->child_of_noninheritable)
-            {
-              SVN_ERR(svn_client__record_wc_mergeinfo(child->abspath,
-                                                      NULL, FALSE,
-                                                      merge_b->ctx,
-                                                      iterpool));
-            }
-        }
-      else /* Record mergeinfo on CHILD. */
-        {
-          svn_boolean_t child_is_deleted;
-          svn_boolean_t rangelist_inheritance;
-
-          /* If CHILD is deleted we don't need to set mergeinfo on it. */
-          SVN_ERR(svn_wc__node_is_status_deleted(&child_is_deleted,
-                                                 merge_b->ctx->wc_ctx,
-                                                 child->abspath, iterpool));
-          if (child_is_deleted)
-            continue;
-
-          /* We don't need to record mergeinfo on those issue #3642 children
-             that are inoperative at any depth. */
-          if (inoperative_immediate_children
-              && apr_hash_get(inoperative_immediate_children,
-                              child->abspath,
-                             APR_HASH_KEY_STRING))
-            continue;
-
           child_repos_path = svn_dirent_skip_ancestor(merge_b->target_abspath,
                                                       child->abspath);
           SVN_ERR_ASSERT(child_repos_path != NULL);
@@ -7582,35 +7703,21 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
             continue;
 
           if (!squelch_mergeinfo_notifications)
-            {
-              notify_mergeinfo_recording(child->abspath, merged_range,
-                                         merge_b->ctx, iterpool);
-            }
+            notify_mergeinfo_recording(child->abspath, merged_range,
+                                      merge_b->ctx, iterpool);
 
           /* If we are here we know we will be recording some mergeinfo, but
-             before we do set override mergeinfo on skipped paths so they
-             don't incorrectly inherit the mergeinfo we are about to set.
-             We only need to do this once.  If we are dealing with a subtree
-             (i.e. i != 0) that was skipped then don't record mergeinfo on
-             it.  The earlier call to record_skips will already have taken
-             care of this. */
+             before we do, set override mergeinfo on skipped paths so they
+             don't incorrectly inherit the mergeinfo we are about to set. */
           if (i == 0)
             SVN_ERR(record_skips(mergeinfo_fspath, child_merge_rangelist,
                                  is_rollback, notify_b->skipped_abspaths,
                                  merge_b, iterpool));
-          else if (notify_b->skipped_abspaths
-                   && apr_hash_get(notify_b->skipped_abspaths, child->abspath,
-                                   APR_HASH_KEY_STRING))
-            continue;
 
-          SVN_ERR(calculate_merge_inheritance(child_merge_rangelist,
-                                              &rangelist_inheritance,
-                                              child->abspath,
-                                              i == 0,
-                                              child->missing_child,
-                                              depth,
-                                              merge_b->ctx->wc_ctx,
-                                              iterpool));
+          /* We may need to record non-inheritable mergeinfo that applies
+             only to CHILD->ABSPATH. */
+          if (child->record_noninheritable)
+            svn_rangelist__set_inheritance(child_merge_rangelist, FALSE);
 
           /* If CHILD has inherited mergeinfo set it before
              recording the first merge range. */
@@ -7718,7 +7825,7 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
                                                   child_merge_rangelist,
                                                   child_merge_src_rangelist,
                                                   FALSE, iterpool));
-                  if (!rangelist_inheritance)
+                  if (child->record_noninheritable)
                     svn_rangelist__set_inheritance(child_merge_rangelist,
                                                    FALSE);
                 }
@@ -8400,7 +8507,8 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
      the target thanks to depth-first ordering. */
   target_merge_path = APR_ARRAY_IDX(notify_b->children_with_mergeinfo, 0,
                                     svn_client__merge_path_t *);
-  merge_b->target_missing_child = target_merge_path->missing_child;
+  merge_b->target_missing_child = (target_merge_path->missing_child
+                                   || target_merge_path->switched_child);
 
   /* If we are honoring mergeinfo, then for each item in
      NOTIFY_B->CHILDREN_WITH_MERGEINFO, we need to calculate what needs to be
