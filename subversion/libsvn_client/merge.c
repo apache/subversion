@@ -7626,6 +7626,8 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
 
    DEPTH, NOTIFY_B, MERGE_B, and SQUELCH_MERGEINFO_NOTIFICATIONS are all
    cascaded from do_directory_merge's arguments of the same names.
+
+   SCRATCH_POOL is used for temporary allocations.
 */
 static svn_error_t *
 record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
@@ -7635,7 +7637,7 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
                                svn_boolean_t squelch_mergeinfo_notifications,
                                notification_receiver_baton_t *notify_b,
                                merge_cmd_baton_t *merge_b,
-                               apr_pool_t *pool)
+                               apr_pool_t *scratch_pool)
 {
   int i;
   svn_boolean_t is_rollback = (merged_range->start > merged_range->end);
@@ -7645,7 +7647,7 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
      merges, minus any unresolved conflicts and skips. */
 
   /* We need a scratch pool for iterations below. */
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   svn_merge_range_t range = *merged_range;
 
