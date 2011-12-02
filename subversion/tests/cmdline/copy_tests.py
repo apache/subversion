@@ -5621,7 +5621,6 @@ def wc_wc_copy_incomplete(sbox):
                                         None,
                                         expected_status)
 
-@XFail()
 def three_nested_moves(sbox):
   "three nested moves"
 
