@@ -1129,6 +1129,10 @@ svn_repos_dump_fs3(svn_repos_t *repos,
                                     NULL, NULL, subpool));
         }
 
+      /* While our editor close_edit implementation is a no-op, we still
+         do this for completeness. */
+      SVN_ERR(dump_editor->close_edit(dump_edit_baton, subpool));
+
     loop_end:
       if (notify_func)
         {
