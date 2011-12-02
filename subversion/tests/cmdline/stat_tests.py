@@ -1924,6 +1924,27 @@ def wclock_status(sbox):
                                      'status', wc_dir)
 
 
+@Issue(4072)
+@XFail()
+def modified_modulo_translation(sbox):
+  "modified before translation, unmodified after"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # iota is a shell script.
+  sbox.simple_propset('svn:eol-style', 'LF', 'iota')
+  sbox.simple_commit()
+
+  # CRLF it.
+  open(sbox.ospath('iota'), 'wb').write("This is the file 'iota'.\r\n")
+
+  # Run status.  Expect some output.
+  # TODO: decide how such files should show in the output; whether they
+  #       always show, or only with some --flag; and adjust this accordingly.
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'status', wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -1965,6 +1986,7 @@ test_list = [ None,
               status_locked_deleted,
               wc_wc_copy_timestamp,
               wclock_status,
+              modified_modulo_translation,
              ]
 
 if __name__ == '__main__':
