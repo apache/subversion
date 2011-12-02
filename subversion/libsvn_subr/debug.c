@@ -91,7 +91,7 @@ svn_dbg__printf(const char *fmt, ...)
 
 
 void
-svn_dbg__print_propx(apr_hash_t *props,
+svn_dbg__print_props(apr_hash_t *props,
                      const char *header_fmt,
                      ...)
 {
@@ -108,6 +108,6 @@ svn_dbg__print_propx(apr_hash_t *props,
       const char *name = svn__apr_hash_index_key(hi);
       svn_string_t *val = svn__apr_hash_index_val(hi);
 
-      SVN_DBG((DBG_FLAG "    '%s' -> '%s'\n", name, val->data));
+      SVN_DBG(("    '%s' -> '%s'\n", name, val->data));
     }
 }
