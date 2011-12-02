@@ -758,6 +758,7 @@ delta_from_editor(const svn_delta_editor_t **deditor,
   eb->paths = apr_hash_make(pool);
   eb->edit_pool = pool;
   eb->found_abs_paths = found_abs_paths;
+  *eb->found_abs_paths = FALSE;
 
   eb->fetch_props_func = fetch_props_func;
   eb->fetch_props_baton = fetch_props_baton;
