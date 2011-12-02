@@ -29,6 +29,9 @@
 #include "svn_types.h"
 #include "svn_string.h"
 
+/* We only build this code if SVN_DEBUG is defined. */
+#ifdef SVN_DEBUG
+
 #include "private/svn_debug.h"
 
 
@@ -111,3 +114,5 @@ svn_dbg__print_props(apr_hash_t *props,
       SVN_DBG(("    '%s' -> '%s'\n", name, val->data));
     }
 }
+
+#endif
