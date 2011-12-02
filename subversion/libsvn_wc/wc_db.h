@@ -2564,7 +2564,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
 
    If the user moves-away B/W/D from the WORKING tree, then behavior is
    again dependent upon the origination of B/W. For a plain add, the nodes
-   simply move to the destination. For a copy, a deletion is made at B/W/D,
+   simply move to the destination; this means that B/W/D ceases to be a
+   node and so cannot be scanned. For a copy, a deletion is made at B/W/D,
    and a new copy (of a subtree of the original source) is made at the
    destination. For a move-here, a deletion is made, and a copy is made at
    the destination (we do not track multiple moves; the source is moved to
@@ -2573,13 +2574,6 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
    subtree first, then moving the source to B/W).
 
    There are three further considerations when resolving a deleted node:
-
-     If the BASE B/W/D was moved-away, then BASE_DEL_ABSPATH will specify
-     B/W/D as the root of the BASE deletion (not necessarily B/W as an
-     implicit delete caused by a replacement; only the closest ancestor is
-     reported). The other parameters will operate as normal, based on what
-     is happening in the WORKING tree. Also note that ancestors of B/W/D
-     may report additional, explicit moved-away status.
 
      If the BASE B/W/D was deleted explicitly *and* B/W is a replacement,
      then the explicit deletion is subsumed by the implicit deletion that
