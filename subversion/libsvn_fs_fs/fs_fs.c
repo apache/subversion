@@ -3999,7 +3999,8 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
                                   svn_fs_t *fs,
                                   node_revision_t *noderev,
                                   const char *name,
-                                  apr_pool_t *pool)
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
 {
   svn_boolean_t found = FALSE;
 
@@ -4008,7 +4009,7 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
   if (cache)
     {
       const char *unparsed_id =
-        svn_fs_fs__id_unparse(noderev->id, pool)->data;
+        svn_fs_fs__id_unparse(noderev->id, scratch_pool)->data;
 
       /* Cache lookup. */
       SVN_ERR(svn_cache__get_partial((void **)dirent,
@@ -4017,7 +4018,7 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
                                      unparsed_id,
                                      svn_fs_fs__extract_dir_entry,
                                      (void*)name,
-                                     pool));
+                                     result_pool));
     }
 
   /* fetch data from disk if we did not find it in the cache */
@@ -4027,29 +4028,22 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
       svn_fs_dirent_t *entry;
       svn_fs_dirent_t *entry_copy = NULL;
 
-      /* since we don't need the directory content later on, put it into
-         some sub-pool that will be reclaimed immedeately after exiting
-         this function successfully. Opon failure, it will live as long
-         as pool.
-       */
-      apr_pool_t *sub_pool = svn_pool_create(pool);
-
       /* read the dir from the file system. It will probably be put it
          into the cache for faster lookup in future calls. */
-      SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, noderev, sub_pool));
+      SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, noderev,
+                                          scratch_pool));
 
       /* find desired entry and return a copy in POOL, if found */
       entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
       if (entry != NULL)
         {
-          entry_copy = apr_palloc(pool, sizeof(*entry_copy));
-          entry_copy->name = apr_pstrdup(pool, entry->name);
-          entry_copy->id = svn_fs_fs__id_copy(entry->id, pool);
+          entry_copy = apr_palloc(result_pool, sizeof(*entry_copy));
+          entry_copy->name = apr_pstrdup(result_pool, entry->name);
+          entry_copy->id = svn_fs_fs__id_copy(entry->id, result_pool);
           entry_copy->kind = entry->kind;
         }
 
       *dirent = entry_copy;
-      apr_pool_destroy(sub_pool);
     }
 
   return SVN_NO_ERROR;
