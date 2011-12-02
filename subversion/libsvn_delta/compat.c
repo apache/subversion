@@ -1392,6 +1392,8 @@ complete_cb(void *baton,
   struct editor_baton *eb = baton;
   svn_error_t *err;
 
+  SVN_ERR(ensure_root_opened(eb));
+
   /* Drive the tree we've created. */
   err = drive_tree(&eb->root, eb->deditor, eb->make_abs_paths, scratch_pool);
   if (!err)
