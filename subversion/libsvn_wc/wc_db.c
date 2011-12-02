@@ -10225,12 +10225,6 @@ scan_deletion_txn(void *baton,
                   apr_pstrdup(sd_baton->result_pool, moved_to_relpath) : NULL;
             }
 
-          /* CURRENT_RELPATH is the op_root of the delete-half of the move,
-           * so it's the BASE_DEL_RELPATH. */
-          if (sd_baton->base_del_relpath)
-            *sd_baton->base_del_relpath =
-              apr_pstrdup(sd_baton->result_pool, current_relpath);
-
           if (sd_baton->moved_to_op_root_relpath)
             *sd_baton->moved_to_op_root_relpath = moved_to_op_root_relpath ?
               apr_pstrdup(sd_baton->result_pool, moved_to_op_root_relpath)
@@ -10238,7 +10232,8 @@ scan_deletion_txn(void *baton,
 
           /* If all other out parameters are irrelevant, stop scanning.
            * Happens to be only WORK_DEL_RELPATH. */
-          if (sd_baton->work_del_relpath == NULL)
+          if (sd_baton->work_del_relpath == NULL
+              && sd_baton->base_del_relpath == NULL)
             break;
 
           found_moved_to = TRUE;
@@ -12436,8 +12431,8 @@ svn_wc__db_min_max_revisions(svn_revnum_t *min_revision,
 }
 
 
-/* Like svn_wc__db_is_sparse_checkout,
- * but accepts a WCROOT/LOCAL_RELPATH pair. */
+/* Set *IS_SPARSE_CHECKOUT TRUE if LOCAL_RELPATH or any of the nodes
+ * within LOCAL_RELPATH is sparse, FALSE otherwise. */
 static svn_error_t *
 is_sparse_checkout_internal(svn_boolean_t *is_sparse_checkout,
                             svn_wc__db_wcroot_t *wcroot,
@@ -12458,28 +12453,6 @@ is_sparse_checkout_internal(svn_boolean_t *is_sparse_checkout,
   SVN_ERR(svn_sqlite__reset(stmt));
 
   return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__db_is_sparse_checkout(svn_boolean_t *is_sparse_checkout,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
-                                                db, local_abspath,
-                                                scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  return svn_error_trace(is_sparse_checkout_internal(is_sparse_checkout,
-                                                     wcroot, local_relpath,
-                                                     scratch_pool));
 }
 
 

@@ -567,8 +567,12 @@ svn_wc__fetch_props_func(apr_hash_t **props,
                                               scratch_pool);
   svn_error_t *err;
 
-  err = svn_wc__db_read_props(props, sfb->db, local_abspath,
-                              result_pool, scratch_pool);
+  if (sfb->fetch_base)
+    err = svn_wc__db_base_get_props(props, sfb->db, local_abspath, result_pool,
+                                    scratch_pool);
+  else
+    err = svn_wc__db_read_props(props, sfb->db, local_abspath,
+                                result_pool, scratch_pool);
 
   /* If the path doesn't exist, just return an empty set of props. */
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)

@@ -5340,6 +5340,7 @@ make_editor(svn_revnum_t *target_revision,
   sfb = apr_palloc(result_pool, sizeof(*sfb));
   sfb->db = db;
   sfb->base_abspath = eb->target_abspath;
+  sfb->fetch_base = TRUE;
 
   shim_callbacks->fetch_kind_func = svn_wc__fetch_kind_func;
   shim_callbacks->fetch_kind_baton = sfb;
