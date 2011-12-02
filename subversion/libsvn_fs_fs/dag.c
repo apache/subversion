@@ -449,7 +449,7 @@ svn_fs_fs__dag_dir_entry(svn_fs_dirent_t **dirent,
 
   /* Get a dirent hash for this directory. */
   return svn_fs_fs__rep_contents_dir_entry(dirent, node->fs,
-                                           noderev, name, pool);
+                                           noderev, name, pool, pool);
 }
 
 
