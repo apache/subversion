@@ -196,6 +196,6 @@ struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(test_moving_dirs, "test moving dirs"),
-    SVN_TEST_OPTS_XFAIL(test_nested_moves, "test nested moves"),
+    SVN_TEST_OPTS_PASS(test_nested_moves, "test nested moves"),
     SVN_TEST_NULL,
   };

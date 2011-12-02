@@ -321,19 +321,18 @@ scan_moves_log_receiver(void *baton,
       const char *path = svn__apr_hash_index_key(hi);
       svn_log_changed_path2_t *data = svn__apr_hash_index_val(hi);
 
-      if (path[0] == '/')
-        path++;
-
       if (data->action == 'A' && data->copyfrom_path)
         {
           struct copy_info *copy;
           apr_array_header_t *copies_with_same_source_path;
-          
+
+          SVN_ERR_ASSERT(path[0] == '/');
+
           if (data->copyfrom_path[0] == '/')
             data->copyfrom_path++;
 
           copy = apr_palloc(scratch_pool, sizeof(*copy));
-          copy->copyto_path = path;
+          copy->copyto_path = path + 1; /* Strip leading '/' */
           copy->copyfrom_path = data->copyfrom_path;
           copy->copyfrom_rev = data->copyfrom_rev;
           copies_with_same_source_path = apr_hash_get(copies,
@@ -351,7 +350,44 @@ scan_moves_log_receiver(void *baton,
                          struct copy_info *) = copy;
         }
       else if (data->action == 'D')
-        APR_ARRAY_PUSH(deleted_paths, const char *) = path;
+        {
+          const char *parent_path;
+
+          /* ### Is this true?  What does the API guarantee?  Is it
+             ### true that copyfrom_path is a relpath? */
+          SVN_ERR_ASSERT(path[0] == '/');
+
+          /* When a delete is within a copy the deleted path in the
+             changed_paths2 hash is the copied path, but for the purposes
+             of move detection we want the pre-copy path.
+
+             ### Not sure if this is the correct thing to do.  Yes, it
+             ### allows us to detect moves in copies/moves but will it
+             ### lead to false positives?  Does it matter that the
+             ### adjusted path may not have been committed?  Does it
+             ### matter that the adjusted path may be the same as
+             ### another committed path? */
+          parent_path = svn_dirent_dirname(path, scratch_pool);
+          while(strcmp(parent_path, "/"))
+            {
+              svn_log_changed_path2_t *data2
+                = apr_hash_get(log_entry->changed_paths2, parent_path,
+                               APR_HASH_KEY_STRING);
+
+              if (data2 && data2->action == 'A')
+                {
+                  const char *relpath = svn_dirent_skip_ancestor(parent_path,
+                                                                 path);
+                  path = svn_dirent_join_many(scratch_pool, "/",
+                                              data2->copyfrom_path, relpath,
+                                              NULL);
+                  break;
+                }
+              else
+                parent_path = svn_dirent_dirname(parent_path, scratch_pool);
+            }
+          APR_ARRAY_PUSH(deleted_paths, const char *) = path + 1;
+        }
     }
 
   /* If a node was deleted at one location and copied from the deleted
