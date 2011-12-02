@@ -186,7 +186,7 @@ test_nested_moves(const svn_test_opts_t *opts,
                                       pool, pool));
 
   SVN_ERR(verify_move(moves, 2, "A", "A2", 1));
-  SVN_ERR(verify_move(moves, 2, "A/B", "A2/B2", 1));       /* XFAIL here */
+  SVN_ERR(verify_move(moves, 2, "A/B", "A2/B2", 1));
   SVN_ERR(verify_move(moves, 2, "A/B/C", "A2/B2/C2", 1));
 
   return SVN_NO_ERROR;
