@@ -1945,6 +1945,10 @@ def modified_modulo_translation(sbox):
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
                                      'status', wc_dir)
 
+  # Expect the file to be renormalized (to LF) after a revert.
+  sbox.simple_revert('iota')
+  svntest.actions.run_and_verify_svn(None, [], [], 'status', wc_dir)
+
 ########################################################################
 # Run the tests
 
