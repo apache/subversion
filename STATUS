@@ -81,6 +81,13 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
+ * r1210195
+   Canonicalize svnserve.conf input.
+   Justification:
+     Server asserts after being upgraded.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
