@@ -379,8 +379,8 @@ svn_uri_split(const char **dirpath,
 
 /** Get the (URI-decoded) basename of the specified canonicalized @a
  * uri.  The basename is defined as the last component of the uri.  If
- * the @a uri is root then that is returned.  Otherwise, the returned
- * value will have no slashes in it.
+ * the @a uri is root, return "".  The returned value will have no
+ * slashes in it.
  *
  * Example: svn_uri_basename("http://server/foo/bar") -> "bar"
  *
