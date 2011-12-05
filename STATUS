@@ -88,6 +88,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1210147
+   Fix the 'svn log --diff' code so that it correctly shows a diff of a
+   target file (or directory) that was at a different path in the past.
+   Previously it would error out. A test is included.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
