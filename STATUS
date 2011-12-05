@@ -94,6 +94,8 @@ Candidate changes:
    Previously it would error out. A test is included.
    Votes:
      +1: julianfoad
+     +0: stsp (change is good, but this needs a backport branch because
+               svn_client_diff_peg6 is new in 1.8)
 
 Veto-blocked changes:
 =====================
