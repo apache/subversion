@@ -1354,7 +1354,9 @@ typedef struct svn_wc_notify_t {
    * In all other cases, it is @c NULL.  @since New in 1.5 */
   const char *changelist_name;
 
-  /** When @c action is #svn_wc_notify_merge_begin, and both the
+  /** When @c action is #svn_wc_notify_merge_begin or
+   * #svn_wc_notify_foreign_merge_begin or
+   * #svn_wc_notify_merge_record_info_begin, and both the
    * left and right sides of the merge are from the same URL.  In all
    * other cases, it is @c NULL.  @since New in 1.5 */
   svn_merge_range_t *merge_range;
