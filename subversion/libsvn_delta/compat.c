@@ -169,6 +169,12 @@ struct copy_args
   svn_revnum_t copyfrom_rev;
 };
 
+struct path_checksum_args
+{
+  const char *path;
+  svn_checksum_t *checksum;
+};
+
 static svn_error_t *
 add_action(struct ev2_edit_baton *eb,
            const char *path,
@@ -207,6 +213,7 @@ process_actions(void *edit_baton,
   svn_boolean_t need_add = FALSE;
   apr_array_header_t *children;
   svn_stream_t *contents = NULL;
+  svn_checksum_t *checksum = NULL;
   svn_kind_t kind;
   int i;
 
@@ -270,16 +277,19 @@ process_actions(void *edit_baton,
                 {
                   /* The default is an empty file. */
                   contents = svn_stream_empty(scratch_pool);
+                  checksum = svn_checksum_empty_checksum(svn_checksum_sha1,
+                                                         scratch_pool);
                 }
               break;
             }
 
           case ACTION_SET_TEXT:
             {
-              const char *src_path = action->args;
+              struct path_checksum_args *pca = action->args;
 
-              SVN_ERR(svn_stream_open_readonly(&contents, src_path,
+              SVN_ERR(svn_stream_open_readonly(&contents, pca->path,
                                                scratch_pool, scratch_pool));
+              checksum = pca->checksum;
               break;
             }
 
@@ -318,7 +328,7 @@ process_actions(void *edit_baton,
         }
       else
         {
-          SVN_ERR(svn_editor_add_file(eb->editor, path, NULL, contents,
+          SVN_ERR(svn_editor_add_file(eb->editor, path, checksum, contents,
                                       props, SVN_INVALID_REVNUM));
         }
     }
@@ -336,7 +346,7 @@ process_actions(void *edit_baton,
         {
           /* If we have an content for this node, set it now. */
           SVN_ERR(svn_editor_set_text(eb->editor, path, SVN_INVALID_REVNUM,
-                                      NULL, contents));
+                                      checksum, contents));
         }
     }
 
@@ -602,16 +612,22 @@ ev2_apply_textdelta(void *file_baton,
   struct ev2_file_baton *fb = file_baton;
   apr_pool_t *handler_pool = svn_pool_create(fb->eb->edit_pool);
   struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
-  const char *target_path;
   svn_stream_t *source;
   svn_stream_t *target;
+  struct path_checksum_args *pca = apr_pcalloc(fb->eb->edit_pool,
+                                               sizeof(*pca));
 
   if (! fb->delta_base)
     source = svn_stream_empty(handler_pool);
 
-  SVN_ERR(svn_stream_open_unique(&target, &target_path, NULL,
+  SVN_ERR(svn_stream_open_unique(&target, &pca->path, NULL,
                                  svn_io_file_del_on_pool_cleanup,
                                  fb->eb->edit_pool, result_pool));
+
+  /* Wrap our target with a checksum'ing stream. */
+  target = svn_stream_checksummed2(target, NULL, &pca->checksum,
+                                   svn_checksum_sha1, TRUE,
+                                   fb->eb->edit_pool);
 
   svn_txdelta_apply(source, target,
                     NULL, NULL,
@@ -623,7 +639,7 @@ ev2_apply_textdelta(void *file_baton,
   *handler_baton = hb;
   *handler = window_handler;
 
-  SVN_ERR(add_action(fb->eb, fb->path, ACTION_SET_TEXT, (void *)target_path));
+  SVN_ERR(add_action(fb->eb, fb->path, ACTION_SET_TEXT, pca));
 
   return SVN_NO_ERROR;
 }
