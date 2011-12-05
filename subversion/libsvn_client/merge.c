@@ -2675,9 +2675,9 @@ typedef struct notification_receiver_baton_t
      merge notification begin lines. */
   apr_array_header_t *children_with_mergeinfo;
 
-  /* The index in CHILDREN_WITH_MERGEINFO where we found the nearest ancestor
-     for merged path. Default value is '-1'.*/
-  int cur_ancestor_index;
+  /* The path in CHILDREN_WITH_MERGEINFO where we found the nearest ancestor
+     for merged path. Default value is null. */
+  const char *cur_ancestor_abspath;
 
   /* We use this to make a decision on merge begin line notifications. */
   merge_cmd_baton_t *merge_b;
@@ -2695,22 +2695,17 @@ typedef struct notification_receiver_baton_t
    then child->abspath must be a proper ancestor of PATH.
 
    CHILDREN_WITH_MERGEINFO is expected to be sorted in Depth first
-   order of path. Nearest ancestor's index from
-   CHILDREN_WITH_MERGEINFO is returned. */
-static int
+   order of path. */
+static svn_client__merge_path_t *
 find_nearest_ancestor(const apr_array_header_t *children_with_mergeinfo,
                       svn_boolean_t path_is_own_ancestor,
                       const char *path)
 {
   int i;
-  int ancestor_index = 0;
+  svn_client__merge_path_t *ancestor = NULL;
 
-  /* This if condition is not needed as this function should be used
-     from the context of same_url merge where CHILDREN_WITH_MERGEINFO
-     will not be NULL and of size atleast 1. We have this if condition
-     just to protect the wrong caller. */
-  if (!children_with_mergeinfo)
-    return 0;
+  SVN_ERR_ASSERT_NO_RETURN(children_with_mergeinfo != NULL);
+
   for (i = 0; i < children_with_mergeinfo->nelts; i++)
     {
       svn_client__merge_path_t *child =
@@ -2718,9 +2713,9 @@ find_nearest_ancestor(const apr_array_header_t *children_with_mergeinfo,
       if (svn_dirent_is_ancestor(child->abspath, path)
           && (path_is_own_ancestor
               || svn_path_compare_paths(child->abspath, path) != 0))
-        ancestor_index = i;
+        ancestor = child;
     }
-  return ancestor_index;
+  return ancestor;
 }
 
 
@@ -2975,24 +2970,17 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
                --- Merging rX into 'PARENT'
                D    PARENT/CHILD
           */
-          int new_nearest_ancestor_index =
-            find_nearest_ancestor(
-              notify_b->children_with_mergeinfo,
-              notify->action != svn_wc_notify_update_delete,
-              notify_abspath);
+          const svn_client__merge_path_t *child
+            = find_nearest_ancestor(
+                notify_b->children_with_mergeinfo,
+                notify->action != svn_wc_notify_update_delete,
+                notify_abspath);
 
-          if (new_nearest_ancestor_index != notify_b->cur_ancestor_index)
+          if (notify_b->cur_ancestor_abspath == NULL
+              || strcmp(child->abspath, notify_b->cur_ancestor_abspath) != 0)
             {
-              svn_client__merge_path_t *child =
-                APR_ARRAY_IDX(notify_b->children_with_mergeinfo,
-                              new_nearest_ancestor_index,
-                              svn_client__merge_path_t *);
-              notify_b->cur_ancestor_index = new_nearest_ancestor_index;
-              if (!child->absent && child->remaining_ranges->nelts > 0
-                  && !(new_nearest_ancestor_index == 0
-                       /* ### 'remaining_ranges == 0'? It was already assumed
-                        * non-null earlier in this expression. See r872890. */
-                       && child->remaining_ranges == 0))
+              notify_b->cur_ancestor_abspath = child->abspath;
+              if (!child->absent && child->remaining_ranges->nelts > 0)
                 {
                   notify_merge_begin(child->abspath,
                                      APR_ARRAY_IDX(child->remaining_ranges, 0,
@@ -3372,7 +3360,6 @@ fix_deleted_subtree_ranges(const char *url1,
         APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
       svn_client__merge_path_t *parent;
       apr_array_header_t *deleted_rangelist, *added_rangelist;
-      int parent_index;
 
       SVN_ERR_ASSERT(child);
       if (child->absent)
@@ -3381,10 +3368,8 @@ fix_deleted_subtree_ranges(const char *url1,
       svn_pool_clear(iterpool);
 
       /* Find CHILD's parent. */
-      parent_index = find_nearest_ancestor(children_with_mergeinfo,
-                                           FALSE, child->abspath);
-      parent = APR_ARRAY_IDX(children_with_mergeinfo, parent_index,
-                             svn_client__merge_path_t *);
+      parent = find_nearest_ancestor(children_with_mergeinfo,
+                                     FALSE, child->abspath);
 
       /* Since CHILD is a subtree then its parent must be in
          CHILDREN_WITH_MERGEINFO, see the global comment
@@ -4324,11 +4309,9 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
             {
               /* Issue #3443 - Subtrees of the merge target can inherit
                  their parent's implicit mergeinfo in most cases. */
-              int parent_index = find_nearest_ancestor(children_with_mergeinfo,
-                                                       FALSE, child->abspath);
               svn_client__merge_path_t *parent
-                = APR_ARRAY_IDX(children_with_mergeinfo, parent_index,
-                                svn_client__merge_path_t *);
+                = find_nearest_ancestor(children_with_mergeinfo,
+                                        FALSE, child->abspath);
               svn_boolean_t child_inherits_implicit;
 
               /* If CHILD is a subtree then its parent must be in
@@ -4422,10 +4405,8 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
       /* If CHILD isn't the merge target find its parent. */
       if (i > 0)
         {
-          int parent_index = find_nearest_ancestor(children_with_mergeinfo,
-                                                   FALSE, child->abspath);
-          parent = APR_ARRAY_IDX(children_with_mergeinfo, parent_index,
-                                 svn_client__merge_path_t *);
+          parent = find_nearest_ancestor(children_with_mergeinfo,
+                                         FALSE, child->abspath);
           /* If CHILD is a subtree then its parent must be in
              CHILDREN_WITH_MERGEINFO, see the global comment
              'THE CHILDREN_WITH_MERGEINFO ARRAY'. */
@@ -5067,11 +5048,10 @@ drive_merge_report_editor(const char *target_abspath,
         {
           svn_merge_range_t *range;
           const char *child_repos_path;
-          svn_client__merge_path_t *parent;
-          svn_client__merge_path_t *child =
+          const svn_client__merge_path_t *parent;
+          const svn_client__merge_path_t *child =
             APR_ARRAY_IDX(children_with_mergeinfo, i,
                           svn_client__merge_path_t *);
-          int parent_index;
 
           SVN_ERR_ASSERT(child);
           if (child->absent)
@@ -5080,10 +5060,8 @@ drive_merge_report_editor(const char *target_abspath,
           svn_pool_clear(iterpool);
 
           /* Find this child's nearest wc ancestor with mergeinfo. */
-          parent_index = find_nearest_ancestor(children_with_mergeinfo,
-                                               FALSE, child->abspath);
-          parent = APR_ARRAY_IDX(children_with_mergeinfo, parent_index,
-                                 svn_client__merge_path_t *);
+          parent = find_nearest_ancestor(children_with_mergeinfo,
+                                         FALSE, child->abspath);
 
           /* If a subtree needs the same range applied as its nearest parent
              with mergeinfo or neither the subtree nor this parent need
@@ -7174,12 +7152,9 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
                                      abspath_with_new_mergeinfo);
           if (!new_child)
             {
-              int parent_index =
-                find_nearest_ancestor(children_with_mergeinfo,
-                                      FALSE, abspath_with_new_mergeinfo);
-              svn_client__merge_path_t *parent =
-                APR_ARRAY_IDX(children_with_mergeinfo, parent_index,
-                              svn_client__merge_path_t *);
+              const svn_client__merge_path_t *parent
+                = find_nearest_ancestor(children_with_mergeinfo,
+                                        FALSE, abspath_with_new_mergeinfo);
               new_child
                 = svn_client__merge_path_create(abspath_with_new_mergeinfo,
                                                 pool);
@@ -8644,7 +8619,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
 
               slice_remaining_ranges(notify_b->children_with_mergeinfo,
                                      is_rollback, end_rev, scratch_pool);
-              notify_b->cur_ancestor_index = -1;
+              notify_b->cur_ancestor_abspath = NULL;
 
               /* URL1@REVISION1 is a real location; URL2@REVISION2 is a
                  real location -- that much we know (thanks to the merge
@@ -8746,10 +8721,10 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
     {
       if (!merge_b->record_only)
         {
-          /* Reset cur_ancestor_index to -1 so that subsequent cherry
+          /* Reset cur_ancestor_abspath to null so that subsequent cherry
              picked revision ranges will be notified upon subsequent
              operative merge. */
-          notify_b->cur_ancestor_index = -1;
+          notify_b->cur_ancestor_abspath = NULL;
 
           SVN_ERR(drive_merge_report_editor(merge_b->target_abspath,
                                             url1, revision1, url2, revision2,
@@ -9005,7 +8980,7 @@ do_merge(apr_hash_t **modified_subtrees,
   notify_baton.added_abspaths = NULL;
   notify_baton.tree_conflicted_abspaths = NULL;
   notify_baton.children_with_mergeinfo = NULL;
-  notify_baton.cur_ancestor_index = -1;
+  notify_baton.cur_ancestor_abspath = NULL;
   notify_baton.merge_b = &merge_cmd_baton;
   notify_baton.pool = result_pool;
 
