@@ -66,6 +66,7 @@ commit_moves(svn_test__sandbox_t *b,
   const char *src_relpath, *dst_relpath;
   apr_array_header_t *target = apr_array_make(b->pool, 1, sizeof(const char *));
   svn_client_commit_info_t *cci;
+  apr_array_header_t *extra = apr_array_make(b->pool, 1, sizeof(const char *));
 
   SVN_ERR(svn_client_update(&revnum, b->wc_abspath, &head, TRUE, ctx, b->pool));
 
@@ -85,6 +86,12 @@ commit_moves(svn_test__sandbox_t *b,
   va_end(va);
 
   APR_ARRAY_PUSH(target, const char *) = b->wc_abspath;
+
+  APR_ARRAY_PUSH(extra, const char *)
+    = svn_path_url_add_component2(b->repos_url, "extra", b->pool);
+
+  SVN_ERR(svn_client_mkdir(&cci, extra, ctx, b->pool));
+  SVN_ERR(svn_client_delete(&cci, extra, TRUE, ctx, b->pool));
 
   SVN_ERR(svn_client_commit(&cci, target, FALSE, ctx, b->pool));
 
@@ -149,16 +156,16 @@ test_moving_dirs(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_ra_create_callbacks(&racb, pool));
   SVN_ERR(svn_ra_open4(&ra, NULL, b.repos_url, NULL, racb, NULL, NULL, pool));
-  SVN_ERR(svn_client__get_repos_moves(&moves, b.wc_abspath, ra, 1, 7, ctx,
+  SVN_ERR(svn_client__get_repos_moves(&moves, b.wc_abspath, ra, 1, 17, ctx,
                                       pool, pool));
 
-  SVN_ERR(verify_move(moves, 3, "A/B", "A/B2", 2));
-  SVN_ERR(verify_move(moves, 4, "A/B2", "A/B3", 3));
-  SVN_ERR(verify_move(moves, 5, "A", "A2", 4));
-  SVN_ERR(verify_move(moves, 6, "A2/B3/C", "A2/B3/C2", 5));
-  SVN_ERR(verify_move(moves, 6, "X/Y/Z", "X/Y/Z2", 5));
-  SVN_ERR(verify_move(moves, 7, "A2/B3/C2", "X/Y/C3", 6));
-  SVN_ERR(verify_move(moves, 7, "X/Y/Z2", "A2/B3/Z3", 6));
+  SVN_ERR(verify_move(moves, 5, "A/B", "A/B2", 2));
+  SVN_ERR(verify_move(moves, 8, "A/B2", "A/B3", 5));
+  SVN_ERR(verify_move(moves, 11, "A", "A2", 8));
+  SVN_ERR(verify_move(moves, 14, "A2/B3/C", "A2/B3/C2", 11));
+  SVN_ERR(verify_move(moves, 14, "X/Y/Z", "X/Y/Z2", 11));
+  SVN_ERR(verify_move(moves, 17, "A2/B3/C2", "X/Y/C3", 14));
+  SVN_ERR(verify_move(moves, 17, "X/Y/Z2", "A2/B3/Z3", 14));
 
   return SVN_NO_ERROR;
 }
@@ -182,12 +189,20 @@ test_nested_moves(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_ra_create_callbacks(&racb, pool));
   SVN_ERR(svn_ra_open4(&ra, NULL, b.repos_url, NULL, racb, NULL, NULL, pool));
-  SVN_ERR(svn_client__get_repos_moves(&moves, b.wc_abspath, ra, 2, 2, ctx,
+  SVN_ERR(svn_client__get_repos_moves(&moves, b.wc_abspath, ra, 4, 4, ctx,
                                       pool, pool));
 
-  SVN_ERR(verify_move(moves, 2, "A", "A2", 1));
-  SVN_ERR(verify_move(moves, 2, "A/B", "A2/B2", 1));
-  SVN_ERR(verify_move(moves, 2, "A/B/C", "A2/B2/C2", 1));
+  SVN_ERR(verify_move(moves, 4, "A", "A2", 1));
+  SVN_ERR(verify_move(moves, 4, "A/B", "A2/B2", 1));
+  SVN_ERR(verify_move(moves, 4, "A/B/C", "A2/B2/C2", 1));
+
+  SVN_ERR(commit_moves(&b, ctx, "A2/B2/C2", "A2/C3", "A2/B2", "B3",
+                       (const char *)NULL));
+
+  SVN_ERR(svn_client__get_repos_moves(&moves, b.wc_abspath, ra, 7, 7, ctx,
+                                      pool, pool));
+  SVN_ERR(verify_move(moves, 7, "A2/B2/C2", "A2/C3", 4));
+  SVN_ERR(verify_move(moves, 7, "A2/B2", "B3", 4));
 
   return SVN_NO_ERROR;
 }
