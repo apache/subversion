@@ -10185,8 +10185,7 @@ scan_deletion_txn(void *baton,
               apr_pstrdup(sd_baton->result_pool, moved_to_op_root_relpath)
               : NULL;
 
-          /* If all other out parameters are irrelevant, stop scanning.
-           * Happens to be only WORK_DEL_RELPATH. */
+          /* If all other out parameters are irrelevant, stop scanning. */
           if (sd_baton->work_del_relpath == NULL
               && sd_baton->base_del_relpath == NULL)
             break;
