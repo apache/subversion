@@ -10163,9 +10163,6 @@ scan_deletion_txn(void *baton,
           else
             {
               const char *moved_child_relpath;
-              svn_wc__db_status_t moved_child_status;
-              svn_boolean_t found_child;
-              svn_error_t *err;
 
               /* The CURRENT_RELPATH is the op_root of the delete-half of
                * the move. LOCAL_RELPATH is a child that was moved along.
@@ -10178,48 +10175,6 @@ scan_deletion_txn(void *baton,
                                                   moved_child_relpath,
                                                   scratch_pool);
               
-              /* Figure out what happened to the child after it was moved
-               * along. Maybe the child was moved-away further, either by
-               * itself, or along with some intermediate parent node.
-               *
-               * If the child was deleted instead of moved-away,
-               * the resulting MOVED_TO_RELPATH is NULL. */
-              err = read_info(&moved_child_status, NULL, NULL, NULL, NULL,
-                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                              NULL, NULL, NULL, NULL, NULL, NULL, wcroot,
-                              moved_to_relpath, scratch_pool, scratch_pool);
-              if (err)
-                {
-                  if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-                    {
-                      /* Tolerate missing children. A likely cause is that
-                       * the moved-to information in BASE is incorrect.
-                       * Just treat this as a normal deletion. */
-                      svn_error_clear(err); 
-                      moved_to_relpath = NULL;
-                      moved_to_op_root_relpath = NULL;
-                      if (sd_baton->moved_to_relpath)
-                        *sd_baton->moved_to_relpath = NULL;
-                      found_child = FALSE;
-                    }
-                  else
-                    return svn_error_compose_create(err,
-                                                    svn_sqlite__reset(stmt));
-                }
-              else
-                found_child = TRUE;
-
-              if (found_child &&
-                  moved_child_status == svn_wc__db_status_deleted)
-                {
-                  err = scan_deletion(NULL, &moved_to_relpath, NULL,
-                                      NULL, wcroot, moved_to_relpath,
-                                      scratch_pool, scratch_pool);
-                  if (err)
-                   return svn_error_compose_create(err,
-                                                   svn_sqlite__reset(stmt));
-                }
               if (sd_baton->moved_to_relpath)
                 *sd_baton->moved_to_relpath = moved_to_relpath ? 
                   apr_pstrdup(sd_baton->result_pool, moved_to_relpath) : NULL;
