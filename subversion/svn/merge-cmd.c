@@ -41,6 +41,10 @@
 
 /*** Code. ***/
 
+#if defined(WIN32) || defined(__CYGWIN__) || defined(__OS2__)
+#define SVN_USE_DOS_PATHS
+#endif
+
 /* A message to print after reintegration */
 const char *keep_alive_message = N_(
   "To continue using the source branch after this reintegration, note the\n"
@@ -53,22 +57,42 @@ const char *keep_alive_message = N_(
   "<http://svnbook.red-bean.com/en/1.6/svn-book.html#svn.branchmerge.advanced.reintegratetwice>\n"
 );
 
-/* Set *REPOS_RELPATH to the repository path of WC_PATH relative to the
+/* Set *REPOS_RELPATH to the repository path of PATH_OR_URL relative to the
  * repository root. */
 static svn_error_t *
 get_repos_relpath(const char **repos_relpath,
-                  const char *wc_path,
+                  const char *path_or_url,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  const char *wc_abspath, *url, *repos_url;
+  const char *abspath_or_url, *url, *repos_url;
 
-  SVN_ERR(svn_dirent_get_absolute(&wc_abspath, wc_path, pool));
-  SVN_ERR(svn_client_url_from_path2(&url, wc_abspath,
+  if (svn_path_is_url(path_or_url))
+    abspath_or_url = path_or_url;
+  else
+    SVN_ERR(svn_dirent_get_absolute(&abspath_or_url, path_or_url, pool));
+  SVN_ERR(svn_client_url_from_path2(&url, abspath_or_url,
                                     ctx, pool, pool));
-  SVN_ERR(svn_client_get_repos_root(&repos_url, NULL, wc_abspath,
+  SVN_ERR(svn_client_get_repos_root(&repos_url, NULL, abspath_or_url,
                                     ctx, pool, pool));
   *repos_relpath = svn_uri_skip_ancestor(repos_url, url, pool);
+  return SVN_NO_ERROR;
+}
+
+/* Set *REPOS_RELPATH to the repository path of PATH_OR_URL relative to the
+ * repository root, with a "^/" (or "^^/" on Windows) prefix. */
+static svn_error_t *
+quoted_repos_relpath(const char **repos_relpath,
+                     const char *path_or_url,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  SVN_ERR(get_repos_relpath(repos_relpath, path_or_url, ctx, pool));
+#ifdef SVN_USE_DOS_PATHS
+  *repos_relpath = apr_psprintf(pool, "^^/%s", *repos_relpath);
+#else
+  *repos_relpath = apr_psprintf(pool, "^/%s", *repos_relpath);
+#endif
   return SVN_NO_ERROR;
 }
 
@@ -98,6 +122,7 @@ get_target_and_lock_abspath(const char **target_abspath,
 static svn_error_t *
 merge_reintegrate_locked(const char *source,
                          const svn_opt_revision_t *peg_revision,
+                         const char *target_wcpath,
                          const char *target_wc_abspath,
                          svn_boolean_t dry_run,
                          svn_boolean_t quiet,
@@ -117,19 +142,18 @@ merge_reintegrate_locked(const char *source,
             source, peg_revision, target_wc_abspath,
             ctx, scratch_pool, scratch_pool));
 
-  {
-    const char *repos_root_url, *relpath1, *relpath2;
+  if (! quiet)
+    {
+      const char *relpath1, *relpath2;
 
-    SVN_ERR(svn_client_get_repos_root(&repos_root_url, NULL, source,
-                                      ctx, scratch_pool, scratch_pool));
-    relpath1 = svn_uri_skip_ancestor(repos_root_url, url1, scratch_pool);
-    relpath2 = svn_uri_skip_ancestor(repos_root_url, url2, scratch_pool);
+      SVN_ERR(quoted_repos_relpath(&relpath1, url1, ctx, scratch_pool));
+      SVN_ERR(quoted_repos_relpath(&relpath2, url2, ctx, scratch_pool));
 
-    if (! quiet)
       printf(_("The reintegrate merge will be equivalent to:\n"
-               "  svn merge ^/%s@%ld ^/%s@%ld\n"),
-             relpath1, rev1, relpath2, rev2);
-  }
+               "  svn merge %s@%ld %s@%ld %s\n"),
+             relpath1, rev1, relpath2, rev2,
+             svn_path_local_style(target_wcpath, scratch_pool));
+    }
 
   SVN_ERR(svn_client_do_reintegrate_merge(
             source_ra_session, target_ra_session,
@@ -157,11 +181,13 @@ merge_reintegrate(const char *source,
 
   if (!dry_run)
     SVN_WC__CALL_WITH_WRITE_LOCK(
-      merge_reintegrate_locked(source, peg_revision, target_wc_abspath,
+      merge_reintegrate_locked(source, peg_revision,
+                               target_wcpath, target_wc_abspath,
                                dry_run, quiet, merge_options, ctx, pool),
       ctx->wc_ctx, lock_abspath, FALSE /* lock_anchor */, pool);
   else
-    SVN_ERR(merge_reintegrate_locked(source, peg_revision, target_wc_abspath,
+    SVN_ERR(merge_reintegrate_locked(source, peg_revision,
+                                     target_wcpath, target_wc_abspath,
                                      dry_run, quiet, merge_options, ctx, pool));
 
   return SVN_NO_ERROR;
@@ -182,6 +208,8 @@ svn_cl__merge(apr_getopt_t *os,
   svn_opt_revision_t first_range_start, first_range_end, peg_revision1,
     peg_revision2;
   apr_array_header_t *options, *ranges_to_merge = opt_state->revision_ranges;
+  const char *source1_repos_relpath, *source2_repos_relpath;
+  const char *target_repos_relpath;
 
   /* Merge doesn't support specifying a revision or revision range
      when using --reintegrate. */
@@ -398,6 +426,9 @@ svn_cl__merge(apr_getopt_t *os,
             }
         }
     }
+  SVN_ERR(quoted_repos_relpath(&source1_repos_relpath, sourcepath1, ctx, pool));
+  SVN_ERR(quoted_repos_relpath(&source2_repos_relpath, sourcepath2, ctx, pool));
+  SVN_ERR(quoted_repos_relpath(&target_repos_relpath, targetpath, ctx, pool));
 
   if (opt_state->extensions)
     options = svn_cstring_split(opt_state->extensions, " \t\n\r", TRUE, pool);
@@ -434,20 +465,15 @@ svn_cl__merge(apr_getopt_t *os,
     {
       if (! opt_state->quiet)
         printf(_("Reintegrate merge\n"
-                 "  from '%s' into '%s'\n"),
-               sourcepath1, targetpath);
+                 "  from '%s' into WC of '%s'\n"),
+             source1_repos_relpath, target_repos_relpath);
       err = merge_reintegrate(sourcepath1, &peg_revision1, targetpath,
                               opt_state->dry_run, opt_state->quiet,
                               options, ctx, pool);
 
       /* Tell the user how to keep the source branch alive. */
       if (! err)
-        {
-          const char *tgt_repos_relpath;
-
-          SVN_ERR(get_repos_relpath(&tgt_repos_relpath, targetpath, ctx, pool));
-          printf(_(keep_alive_message), tgt_repos_relpath);
-        }
+        printf(_(keep_alive_message), target_repos_relpath);
     }
   else if (! two_sources_specified)
     {
@@ -467,15 +493,15 @@ svn_cl__merge(apr_getopt_t *os,
 
           if (! opt_state->quiet)
             printf(_("Sync merge\n"
-                     "  from '%s' to '%s'\n"),
-                   sourcepath1, targetpath);
+                     "  from '%s' into WC of '%s'\n"),
+                   source1_repos_relpath, target_repos_relpath);
         }
       else
         {
           if (! opt_state->quiet)
             printf(_("Cherry-pick merge\n"
-                     "  from '%s' to '%s'\n"),
-                   sourcepath1, targetpath);
+                     "  from '%s' into WC of '%s'\n"),
+                   source1_repos_relpath, target_repos_relpath);
         }
 
       err = svn_client_merge_peg4(sourcepath1,
@@ -500,8 +526,9 @@ svn_cl__merge(apr_getopt_t *os,
                                   "either paths or URLs"));
       if (! opt_state->quiet)
         printf(_("Two-URL merge\n"
-                 "  from diff between '%s' and '%s' into '%s'\n"),
-               sourcepath1, sourcepath2, targetpath);
+                 "  from diff between '%s' and '%s' into WC of '%s'\n"),
+               source1_repos_relpath, source2_repos_relpath,
+               target_repos_relpath);
       err = svn_client_merge4(sourcepath1,
                               &first_range_start,
                               sourcepath2,
