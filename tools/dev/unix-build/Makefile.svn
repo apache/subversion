@@ -1352,7 +1352,8 @@ endif
 
 .PHONY: libpath
 libpath:
-	@echo export LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH
+	@echo export LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
+		"PYTHONPATH=$(SVN_PREFIX)/lib/svn-python"
 
 .PHONY: start-svnserve stop-svnserve start-httpd stop-httpd
 

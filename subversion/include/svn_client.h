@@ -3437,12 +3437,12 @@ svn_client_merge(const char *source1,
 
 
 /**
- * Perform a reintegration merge of @a source at @a peg_revision
+ * Perform a reintegration merge of @a source_path_or_url at @a source_peg_revision
  * into @a target_wcpath.
  * @a target_wcpath must be a single-revision, #svn_depth_infinity,
  * pristine, unswitched working copy -- in other words, it must
  * reflect a single revision tree, the "target".  The mergeinfo on @a
- * source must reflect that all of the target has been merged into it.
+ * source_path_or_url must reflect that all of the target has been merged into it.
  * Then this behaves like a merge with svn_client_merge4() from the
  * target's URL to the source.
  *
@@ -3452,8 +3452,8 @@ svn_client_merge(const char *source1,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_merge_reintegrate(const char *source,
-                             const svn_opt_revision_t *peg_revision,
+svn_client_merge_reintegrate(const char *source_path_or_url,
+                             const svn_opt_revision_t *source_peg_revision,
                              const char *target_wcpath,
                              svn_boolean_t dry_run,
                              const apr_array_header_t *merge_options,
@@ -3461,8 +3461,8 @@ svn_client_merge_reintegrate(const char *source,
                              apr_pool_t *pool);
 
 /**
- * Merge the changes between the filesystem object @a source in peg
- * revision @a peg_revision, as it changed between the ranges described
+ * Merge the changes between the filesystem object @a source_path_or_url in peg
+ * revision @a source_peg_revision, as it changed between the ranges described
  * in @a ranges_to_merge.
  *
  * @a ranges_to_merge is an array of <tt>svn_opt_revision_range_t
@@ -3478,9 +3478,9 @@ svn_client_merge_reintegrate(const char *source,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_client_merge_peg4(const char *source,
+svn_client_merge_peg4(const char *source_path_or_url,
                       const apr_array_header_t *ranges_to_merge,
-                      const svn_opt_revision_t *peg_revision,
+                      const svn_opt_revision_t *source_peg_revision,
                       const char *target_wcpath,
                       svn_depth_t depth,
                       svn_boolean_t ignore_ancestry,

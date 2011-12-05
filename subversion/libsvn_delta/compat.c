@@ -758,6 +758,7 @@ delta_from_editor(const svn_delta_editor_t **deditor,
   eb->paths = apr_hash_make(pool);
   eb->edit_pool = pool;
   eb->found_abs_paths = found_abs_paths;
+  *eb->found_abs_paths = FALSE;
 
   eb->fetch_props_func = fetch_props_func;
   eb->fetch_props_baton = fetch_props_baton;
@@ -1223,7 +1224,7 @@ move_cb(void *baton,
 static svn_error_t *
 change_props(const svn_delta_editor_t *editor,
              void *baton,
-             struct operation *child,
+             const struct operation *child,
              apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -1365,9 +1366,19 @@ drive_tree(const struct operation *operation,
                     || child->operation == OP_ADD))
         {
           SVN_ERR(drive_tree(child, editor, make_abs_paths, iterpool));
-          SVN_ERR(change_props(editor, child->baton, child, iterpool));
           SVN_ERR(editor->close_directory(child->baton, iterpool));
         }
+    }
+  svn_pool_destroy(iterpool);
+
+  /* Finally, for this node, if it's a directory, change any props before
+     returning (our caller will close the directory. */
+  if (operation->kind == svn_kind_dir
+                   && (operation->operation == OP_OPEN
+                    || operation->operation == OP_PROPSET
+                    || operation->operation == OP_ADD))
+    {
+      SVN_ERR(change_props(editor, operation->baton, operation, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1380,6 +1391,8 @@ complete_cb(void *baton,
 {
   struct editor_baton *eb = baton;
   svn_error_t *err;
+
+  SVN_ERR(ensure_root_opened(eb));
 
   /* Drive the tree we've created. */
   err = drive_tree(&eb->root, eb->deditor, eb->make_abs_paths, scratch_pool);

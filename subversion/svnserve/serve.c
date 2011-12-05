@@ -243,6 +243,7 @@ svn_error_t *load_configs(svn_config_t **cfg,
   *pwdb = NULL;
   if (pwdb_path)
     {
+      pwdb_path = svn_dirent_canonicalize(pwdb_path, pool);
       pwdb_path = svn_dirent_join(base, pwdb_path, pool);
 
       err = svn_config_read2(pwdb, pwdb_path, TRUE, FALSE, pool);
@@ -290,6 +291,7 @@ svn_error_t *load_configs(svn_config_t **cfg,
     {
       const char *case_force_val;
 
+      authzdb_path = svn_dirent_canonicalize(authzdb_path, pool);
       authzdb_path = svn_dirent_join(base, authzdb_path, pool);
       err = svn_repos_authz_read(authzdb, authzdb_path, TRUE, pool);
       if (err)

@@ -1220,6 +1220,7 @@ def diff_deleted_in_head(sbox):
 
 
 #----------------------------------------------------------------------
+@Issue(2873)
 def diff_targets(sbox):
   "select diff targets"
 
