@@ -28,6 +28,8 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 
+#include "private/svn_dep_compat.h"
+
 #include "wc.h"
 #include "wc_db.h"
 
@@ -71,8 +73,21 @@ svn_wc_context_create(svn_wc_context_t **wc_ctx,
                           TRUE, TRUE, ctx->state_pool, scratch_pool));
   ctx->close_db_on_destroy = TRUE;
 
+  /* We should be doing this cleanup prior to the subpools actually getting
+     cleaned up, because chances are that our various data structures and DB
+     handles live in those subpools, which we could be invalidating.
+     Unfortunately, the pre-cleanup handler is only available in APR >= 1.3.0,
+     but most of the platforms we're running on these days probably have that
+     installed anyway.
+
+     This problem manifests itself via segfault when running against an APR
+     compiled with pool lifetime debugging. */
+#if APR_VERSION_AT_LEAST(1, 3, 0)
+  apr_pool_pre_cleanup_register(result_pool, ctx, close_ctx_apr);
+#else
   apr_pool_cleanup_register(result_pool, ctx, close_ctx_apr,
                             apr_pool_cleanup_null);
+#endif
 
   *wc_ctx = ctx;
 
