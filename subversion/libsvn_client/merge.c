@@ -4518,7 +4518,9 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
 
    WC_PATH_HAS_MISSING_CHILD is true if WC_PATH is missing an immediate child
    because the child is switched or absent from the WC, or due to a sparse
-   checkout -- see get_mergeinfo_paths().
+   checkout (see get_mergeinfo_paths) or because DEPTH is shallow
+   (i.e. < svn_depth_infinity) and the merge would affect a child if
+   performed at a deeper depth.
 
    Perform any temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
@@ -4543,9 +4545,7 @@ calculate_merge_inheritance(svn_boolean_t *non_inheritable,
     {
       if (wc_path_is_merge_target)
         {
-          if (wc_path_has_missing_child
-              || depth == svn_depth_files
-              || depth == svn_depth_empty)
+          if (wc_path_has_missing_child)
             {
               *non_inheritable = TRUE;
             }
@@ -7266,6 +7266,23 @@ do_mergeinfo_unaware_dir_merge(const char *url1,
                                    merge_b, pool);
 }
 
+/* A svn_log_entry_receiver_t baton for log_find_operative_subtree_revs(). */
+typedef struct log_find_operative_subtree_baton_t
+{
+  /* Mapping of const char * absolute working copy paths to those
+     path's const char * repos absolute paths. */
+  apr_hash_t *operative_children;
+
+  /* As per the arguments of the same name to
+     get_operative_immediate_children(). */
+  const char *merge_source_fspath;
+  const char *merge_target_abspath;
+  svn_depth_t depth;
+
+  /* A pool to allocate additions to the hashes in. */
+  apr_pool_t *result_pool;
+} log_find_operative_subtree_baton_t;
+
 /* A svn_log_entry_receiver_t callback for
    get_inoperative_immediate_children(). */
 static svn_error_t *
@@ -7273,41 +7290,74 @@ log_find_operative_subtree_revs(void *baton,
                                 svn_log_entry_t *log_entry,
                                 apr_pool_t *pool)
 {
-  apr_hash_t *immediate_children = baton;
-  apr_hash_index_t *hi, *hi2;
+  log_find_operative_subtree_baton_t *log_baton = baton;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
 
   /* It's possible that authz restrictions on the merge source prevent us
      from knowing about any of the changes for LOG_ENTRY->REVISION. */
   if (!log_entry->changed_paths2)
     return SVN_NO_ERROR;
 
+  iterpool = svn_pool_create(pool);
+
   for (hi = apr_hash_first(pool, log_entry->changed_paths2);
        hi;
        hi = apr_hash_next(hi))
     {
       const char *path = svn__apr_hash_index_key(hi);
-      for (hi2 = apr_hash_first(pool, immediate_children);
-           hi2;
-           hi2 = apr_hash_next(hi2))
+      svn_log_changed_path2_t *change = svn__apr_hash_index_val(hi);
+
         {
-          const char *immediate_path = svn__apr_hash_index_val(hi2);
-          if (svn_dirent_is_ancestor(immediate_path, path))
+          const char *child;
+          const char *potential_child;
+          const char *rel_path =
+            svn_fspath__skip_ancestor(log_baton->merge_source_fspath, path);
+
+          /* Some affected paths might be the root of the merge source or
+             entirely otuside our subtree of interest. In either case they
+             are not operative *immediate* children. */
+          if (rel_path == NULL
+              || rel_path[0] == '\0')
+            continue;
+
+          svn_pool_clear(iterpool);
+
+          child = svn_relpath_dirname(rel_path, iterpool);
+          if (child[0] == '\0')
             {
-              apr_hash_set(immediate_children, svn__apr_hash_index_key(hi2),
-                           APR_HASH_KEY_STRING, NULL);
-              /* A path can't be the child of more than
-                 one immediate child of the merge target. */
-              break;
+              /* We only care about immediate directory children if
+                 DEPTH is svn_depth_files. */
+              if (log_baton->depth == svn_depth_files
+                  && change->node_kind == svn_node_file)
+                continue;
+              child = rel_path;
             }
-      }
+
+          potential_child = svn_dirent_join(log_baton->merge_target_abspath,
+                                            child, iterpool);
+
+          if (change->action == 'A'
+              || !apr_hash_get(log_baton->operative_children, potential_child,
+                               APR_HASH_KEY_STRING))
+            {
+              apr_hash_set(log_baton->operative_children,
+                           apr_pstrdup(log_baton->result_pool,
+                                       potential_child),
+                           APR_HASH_KEY_STRING,
+                           apr_pstrdup(log_baton->result_pool, path));
+            }
+        }
     }
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
-/* Issue #3642.
-
-   Find inoperative subtrees when record_mergeinfo_for_dir_merge() is
-   recording mergeinfo describing a merge at depth=immediates.
+/* Find operative subtrees if record_mergeinfo_for_dir_merge() were
+   recording mergeinfo describing a merge at svn_depth_infinity, rather
+   than at DEPTH (which is assumed to be shallow; if
+   DEPTH == svn_depth_infinity then this function does nothing beyond
+   setting *OPERATIVE_CHILDREN to an empty hash).
 
    CHILDREN_WITH_MERGEINFO is the standard array of subtrees that are
    interesting from a merge tracking perspective, see the global comment
@@ -7319,73 +7369,54 @@ log_find_operative_subtree_revs(void *baton,
 
    RA_SESSION points to MERGE_SOURCE_FSPATH.
 
-   Set *IMMEDIATE_CHILDREN to a hash (mapping const char * WC absolute
-   paths to const char * repos absolute paths) containing all the
-   subtrees which would be inoperative if MERGE_SOURCE_REPOS_PATH
-   -r(OLDEST_REV - 1):YOUNGEST_REV were merged to MERGE_TARGET_ABSPATH
-   at --depth infinity.  The keys of the hash point to copies of the ABSPATH
-   members of the svn_client__merge_path_t * in CHILDREN_WITH_MERGEINFO that
-   are inoperative.  The hash values are the key's corresponding repository
-   absolute merge source path.
+   Set *OPERATIVE_CHILDREN to a hash (mapping const char * absolute
+   working copy paths to those path's const char * repos absolute paths)
+   containing all the subtrees which would be inoperative if
+   MERGE_SOURCE_REPOS_PATH -r(OLDEST_REV - 1):YOUNGEST_REV were merged to
+   MERGE_TARGET_ABSPATH at svn_depth_infinity.
 
-   RESULT_POOL is used to allocate the contents of *IMMEDIATE_CHILDREN.
+   RESULT_POOL is used to allocate the contents of *OPERATIVE_CHILDREN.
    SCRATCH_POOL is used for temporary allocations. */
 static svn_error_t *
-get_inoperative_immediate_children(apr_hash_t **immediate_children,
-                                   apr_array_header_t *children_with_mergeinfo,
-                                   const char *merge_source_fspath,
-                                   svn_revnum_t oldest_rev,
-                                   svn_revnum_t youngest_rev,
-                                   const char *merge_target_abspath,
-                                   svn_ra_session_t *ra_session,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool)
+get_operative_immediate_children(apr_hash_t **operative_children,
+                                 apr_array_header_t *children_with_mergeinfo,
+                                 const char *merge_source_fspath,
+                                 svn_revnum_t oldest_rev,
+                                 svn_revnum_t youngest_rev,
+                                 const char *merge_target_abspath,
+                                 svn_depth_t depth,
+                                 svn_wc_context_t *wc_ctx,
+                                 svn_ra_session_t *ra_session,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
 {
-  int i;
-  apr_pool_t *iterpool;
+  apr_array_header_t *log_targets;
+  log_find_operative_subtree_baton_t log_baton;
 
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(oldest_rev));
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   SVN_ERR_ASSERT(oldest_rev <= youngest_rev);
 
-  *immediate_children = apr_hash_make(result_pool);
-  iterpool = svn_pool_create(scratch_pool);
+  *operative_children = apr_hash_make(result_pool);
 
-  /* Find all the children in CHILDREN_WITH_MERGEINFO with the
-     immediate_child_dir flag set and store them in *IMMEDIATE_CHILDREN. */
-  for (i = 0; i < children_with_mergeinfo->nelts; i++)
-    {
-      svn_client__merge_path_t *child =
-        APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
-
-      svn_pool_clear(iterpool);
-
-      if (child->immediate_child_dir)
-        apr_hash_set(*immediate_children,
-                     apr_pstrdup(result_pool, child->abspath),
-                     APR_HASH_KEY_STRING,
-                     svn_fspath__join(merge_source_fspath,
-                                      svn_dirent_is_child(merge_target_abspath,
-                                                          child->abspath,
-                                                          iterpool),
-                                      result_pool));
-    }
-
-  svn_pool_destroy(iterpool);
+  if (depth == svn_depth_infinity)
+    return SVN_NO_ERROR;
 
   /* Now remove any paths from *IMMEDIATE_CHILDREN that are inoperative when
      merging MERGE_SOURCE_REPOS_PATH -r(OLDEST_REV - 1):YOUNGEST_REV to
      MERGE_TARGET_ABSPATH at --depth infinity. */
-  if (apr_hash_count(*immediate_children))
-    {
-      apr_array_header_t *log_targets = apr_array_make(scratch_pool, 1,
-                                                       sizeof(const char *));
-      APR_ARRAY_PUSH(log_targets, const char *) = "";
-      SVN_ERR(svn_ra_get_log2(ra_session, log_targets, youngest_rev,
-                              oldest_rev, 0, TRUE, FALSE, FALSE,
-                              NULL, log_find_operative_subtree_revs,
-                              *immediate_children, scratch_pool));
-    }
+  log_baton.operative_children = *operative_children;
+  log_baton.merge_source_fspath = merge_source_fspath;
+  log_baton.merge_target_abspath = merge_target_abspath;
+  log_baton.depth = depth;
+  log_baton.result_pool = result_pool;
+  log_targets = apr_array_make(scratch_pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(log_targets, const char *) = "";
+  SVN_ERR(svn_ra_get_log2(ra_session, log_targets, youngest_rev,
+                          oldest_rev, 0, TRUE, FALSE, FALSE,
+                          NULL, log_find_operative_subtree_revs,
+                          &log_baton, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -7420,20 +7451,16 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
-  apr_hash_t *inoperative_immediate_children = NULL;
+  apr_hash_t *operative_immediate_children = NULL;
 
-  /* Find all issue #3642 children (i.e immediate child directories of the
-     merge target, with no pre-existing explicit mergeinfo, during a --depth
-     immediates merge).  Stash those that are inoperative at any depth in
-     INOPERATIVE_IMMEDIATE_CHILDREN. */
   if (!merge_b->record_only
       && merged_range->start <= merged_range->end
-      && depth == svn_depth_immediates)
-    SVN_ERR(get_inoperative_immediate_children(
-      &inoperative_immediate_children,
+      && (depth < svn_depth_infinity))
+    SVN_ERR(get_operative_immediate_children(
+      &operative_immediate_children,
       notify_b->children_with_mergeinfo,
       mergeinfo_fspath, merged_range->start + 1, merged_range->end,
-      merge_b->target_abspath, merge_b->ra_session1,
+      merge_b->target_abspath, depth, merge_b->ctx->wc_ctx, merge_b->ra_session1,
       scratch_pool, iterpool));
 
   /* Issue #4056: Walk NOTIFY_B->CHILDREN_WITH_MERGEINFO reverse depth-first
@@ -7455,7 +7482,7 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
                           APR_HASH_KEY_STRING))
         continue;
 
-      /* ### ptb: Yes, we could combine the follwing into a single
+      /* ### ptb: Yes, we could combine the following into a single
          ### conditional, but clarity would suffer (even more than
          ### it does now). */
       if (i == 0)
@@ -7470,8 +7497,8 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
         }
       else if (child->immediate_child_dir
                && !child->pre_merge_mergeinfo
-               && inoperative_immediate_children
-               && !apr_hash_get(inoperative_immediate_children,
+               && operative_immediate_children
+               && apr_hash_get(operative_immediate_children,
                                child->abspath,
                                APR_HASH_KEY_STRING))
         {
@@ -7554,11 +7581,23 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
 
       if (child->record_mergeinfo)
         {
+          svn_boolean_t missing_child =
+            child->missing_child || child->switched_child;
+
+          /* If, during a shallow merge, the merge target has immediate
+             children that would be affected by a deeper merge, then
+             consider the merge target as missing a child for the purposes
+             of recording non-inheritable mergeinfo. */
+          if (i == 0
+              && depth < svn_depth_immediates
+              && operative_immediate_children
+              && apr_hash_count(operative_immediate_children))
+            missing_child = TRUE;
+
           SVN_ERR(calculate_merge_inheritance(&(child->record_noninheritable),
                                               child->abspath,
                                               i == 0,
-                                              (child->missing_child
-                                               || child->switched_child),
+                                              missing_child,
                                               depth,
                                               merge_b->ctx->wc_ctx,
                                               iterpool));
