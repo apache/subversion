@@ -225,7 +225,7 @@ def change_external_expect_error(path, new_val, expected_err):
   but expect to get an error message that matches EXPECTED_ERR."""
 
   svntest.actions.set_prop('svn:externals', new_val, path,
-                           expected_err=expected_err)
+                           expected_re_string=expected_err)
 
 
 def probe_paths_exist(paths):
@@ -706,6 +706,9 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
   if not external_urls: external_urls = list(external_url_for.values())
   externals_value_8 = external_urls.pop() + " /foo \n"
   if not external_urls: external_urls = list(external_url_for.values())
+  if svntest.main.is_os_windows():
+    externals_value_9 = external_urls.pop() + " D:/foo\n"
+    if not external_urls: external_urls = list(external_url_for.values())
 
   set_externals_for_path_expect_error(B_path, externals_value_1)
   set_externals_for_path_expect_error(G_path, externals_value_2)
@@ -715,6 +718,8 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
   set_externals_for_path_expect_error(B_path, externals_value_6)
   set_externals_for_path_expect_error(G_path, externals_value_7)
   set_externals_for_path_expect_error(H_path, externals_value_8)
+  if svntest.main.is_os_windows():
+    set_externals_for_path_expect_error(B_path, externals_value_9)
 
 
 #----------------------------------------------------------------------

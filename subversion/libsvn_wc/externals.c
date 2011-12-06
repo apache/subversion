@@ -300,7 +300,8 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
 
       item->target_dir = svn_dirent_internal_style(item->target_dir, pool);
 
-      if (item->target_dir[0] == '\0' || item->target_dir[0] == '/'
+      if (item->target_dir[0] == '\0'
+          || svn_dirent_is_absolute(item->target_dir)
           || svn_path_is_backpath_present(item->target_dir))
         return svn_error_createf
           (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
