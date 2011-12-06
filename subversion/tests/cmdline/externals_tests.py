@@ -709,6 +709,10 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
   if svntest.main.is_os_windows():
     externals_value_9 = external_urls.pop() + " D:/foo\n"
     if not external_urls: external_urls = list(external_url_for.values())
+    externals_value_10 = external_urls.pop() + " D:\\foo\n"
+    if not external_urls: external_urls = list(external_url_for.values())
+    externals_value_11 = external_urls.pop() + " D:foo\n"
+    if not external_urls: external_urls = list(external_url_for.values())
 
   set_externals_for_path_expect_error(B_path, externals_value_1)
   set_externals_for_path_expect_error(G_path, externals_value_2)
@@ -720,6 +724,8 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
   set_externals_for_path_expect_error(H_path, externals_value_8)
   if svntest.main.is_os_windows():
     set_externals_for_path_expect_error(B_path, externals_value_9)
+    set_externals_for_path_expect_error(B_path, externals_value_10)
+    set_externals_for_path_expect_error(B_path, externals_value_11)
 
 
 #----------------------------------------------------------------------
