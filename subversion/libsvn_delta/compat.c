@@ -598,7 +598,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 
   svn_pool_destroy(hb->pool);
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 
