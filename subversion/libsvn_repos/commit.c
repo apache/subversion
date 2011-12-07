@@ -791,11 +791,20 @@ prop_fetch_func(apr_hash_t **props,
 {
   struct edit_baton *eb = baton;
   svn_fs_root_t *fs_root;
+  svn_error_t *err;
 
   SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs,
                                svn_fs_txn_base_revision(eb->txn),
                                scratch_pool));
-  SVN_ERR(svn_fs_node_proplist(props, fs_root, path, result_pool));
+  err = svn_fs_node_proplist(props, fs_root, path, result_pool);
+  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      *props = apr_hash_make(result_pool);
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_trace(err);
 
   return SVN_NO_ERROR;
 }
