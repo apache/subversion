@@ -99,6 +99,27 @@ commit_moves(svn_test__sandbox_t *b,
 }
 
 static svn_error_t *
+copy_local(svn_test__sandbox_t *b,
+           svn_client_ctx_t *ctx,
+           const char *src_relpath,
+           const char *dst_relpath)
+{
+  svn_revnum_t revnum;
+  svn_opt_revision_t head = { svn_opt_revision_head };
+  svn_client_commit_info_t *cci;
+  const char *src_abspath = svn_dirent_join(b->wc_abspath, src_relpath,
+                                            b->pool);
+  const char *dst_abspath = svn_dirent_join(b->wc_abspath, dst_relpath,
+                                            b->pool);
+
+  SVN_ERR(svn_client_update(&revnum, b->wc_abspath, &head, TRUE, ctx, b->pool));
+
+  SVN_ERR(svn_client_copy(&cci, src_abspath, &head, dst_abspath, ctx, b->pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 verify_move(apr_hash_t *moves,
             svn_revnum_t revnum,
             const char *moved_from,
@@ -207,10 +228,39 @@ test_nested_moves(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_out_of_copy(const svn_test_opts_t *opts,
+                 apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  svn_client_ctx_t *ctx;
+  svn_ra_callbacks2_t *racb;
+  svn_ra_session_t *ra;
+  apr_hash_t *moves;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "move_out_of_copy", opts, pool));
+  SVN_ERR(svn_client_create_context(&ctx, pool));
+
+  SVN_ERR(mkdir_urls(&b, ctx, "A", "A/B", "A/B/C", (const char *)NULL));
+  SVN_ERR(copy_local(&b, ctx, "A", "A2"));
+  SVN_ERR(commit_moves(&b, ctx, "A2/B/C", "C2", "A2/B", "B2",
+                       (const char *)NULL));
+
+  SVN_ERR(svn_ra_create_callbacks(&racb, pool));
+  SVN_ERR(svn_ra_open4(&ra, NULL, b.repos_url, NULL, racb, NULL, NULL, pool));
+  SVN_ERR(svn_client__get_repos_moves(&moves, b.wc_abspath, ra, 4, 4, ctx,
+                                      pool, pool));
+
+  SVN_ERR(verify_move(moves, 4, "A2/B", "B2", 1)); /* XFAIL */
+
+  return SVN_NO_ERROR;
+}
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(test_moving_dirs, "test moving dirs"),
     SVN_TEST_OPTS_PASS(test_nested_moves, "test nested moves"),
+    SVN_TEST_OPTS_XFAIL(move_out_of_copy, "test move out of copy"),
     SVN_TEST_NULL,
   };
