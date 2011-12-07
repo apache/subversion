@@ -123,6 +123,9 @@ struct ev2_edit_baton
 
   target_revision_func_t target_revision_func;
   void *target_revision_baton;
+
+  svn_delta_fetch_base_func_t fetch_base_func;
+  void *fetch_base_baton;
 };
 
 struct ev2_dir_baton
@@ -536,8 +539,11 @@ ev2_add_file(const char *path,
 
   fb->eb = pb->eb;
   fb->path = apr_pstrdup(result_pool, path);
-  fb->delta_base = NULL;
   *file_baton = fb;
+
+  SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
+                                  fb->eb->fetch_base_baton,
+                                  path, result_pool, result_pool));
 
   if (!copyfrom_path)
     {
@@ -572,7 +578,10 @@ ev2_open_file(const char *path,
 
   fb->eb = pb->eb;
   fb->path = apr_pstrdup(result_pool, path);
-  fb->delta_base = NULL;
+
+  SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
+                                  fb->eb->fetch_base_baton,
+                                  path, result_pool, result_pool));
 
   *file_baton = fb;
   return SVN_NO_ERROR;
@@ -598,7 +607,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 
   svn_pool_destroy(hb->pool);
 
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -619,6 +628,9 @@ ev2_apply_textdelta(void *file_baton,
 
   if (! fb->delta_base)
     source = svn_stream_empty(handler_pool);
+  else
+    SVN_ERR(svn_stream_open_readonly(&source, fb->delta_base, handler_pool,
+                                     result_pool));
 
   SVN_ERR(svn_stream_open_unique(&target, &pca->path, NULL,
                                  svn_io_file_del_on_pool_cleanup,
@@ -743,6 +755,8 @@ delta_from_editor(const svn_delta_editor_t **deditor,
                   svn_boolean_t *found_abs_paths,
                   svn_delta_fetch_props_func_t fetch_props_func,
                   void *fetch_props_baton,
+                  svn_delta_fetch_base_func_t fetch_base_func,
+                  void *fetch_base_baton,
                   start_edit_func_t start_edit,
                   void *start_edit_baton,
                   target_revision_func_t target_revision,
@@ -781,6 +795,9 @@ delta_from_editor(const svn_delta_editor_t **deditor,
 
   eb->start_edit = start_edit;
   eb->start_edit_baton = start_edit_baton;
+
+  eb->fetch_base_func = fetch_base_func;
+  eb->fetch_base_baton = fetch_base_baton;
 
   eb->target_revision_func = target_revision;
   eb->target_revision_baton = target_revision_baton;
@@ -1566,6 +1583,8 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
                             found_abs_paths,
                             shim_callbacks->fetch_props_func,
                             shim_callbacks->fetch_props_baton,
+                            shim_callbacks->fetch_base_func,
+                            shim_callbacks->fetch_base_baton,
                             start_edit_func, seb,
                             target_revision_func, seb,
                             result_pool));
