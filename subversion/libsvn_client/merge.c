@@ -4507,61 +4507,6 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
 
 /*** Other Helper Functions ***/
 
-/* Helper for record_mergeinfo_for_dir_merge().
-
-   Set *NON_INHERITABLE to TRUE if non-inheritable mergeinfo is needed to
-   describe a merge into LOCAL_ABSPATH at DEPTH.  Set *NON_INHERTIABLE to
-   FALSE otherwise.
-
-   WC_PATH_IS_MERGE_TARGET is true if WC_PATH is the target of the merge,
-   otherwise WC_PATH is a subtree.
-
-   WC_PATH_HAS_MISSING_CHILD is true if WC_PATH is missing an immediate child
-   because the child is switched or absent from the WC, or due to a sparse
-   checkout (see get_mergeinfo_paths) or because DEPTH is shallow
-   (i.e. < svn_depth_infinity) and the merge would affect a child if
-   performed at a deeper depth.
-
-   Perform any temporary allocations in SCRATCH_POOL. */
-static svn_error_t *
-calculate_merge_inheritance(svn_boolean_t *non_inheritable,
-                            const char *local_abspath,
-                            svn_boolean_t wc_path_is_merge_target,
-                            svn_boolean_t wc_path_has_missing_child,
-                            svn_depth_t depth,
-                            svn_wc_context_t *wc_ctx,
-                            apr_pool_t * scratch_pool)
-{
-  svn_node_kind_t path_kind;
-
-  SVN_ERR(svn_wc_read_kind(&path_kind, wc_ctx, local_abspath, FALSE,
-                           scratch_pool));
-
-  /* Starting assumption. */
-  *non_inheritable = FALSE;
-
-  /* Only directories can have non-inheritable mergeinfo. */
-  if (path_kind == svn_node_dir)
-    {
-      if (wc_path_is_merge_target)
-        {
-          if (wc_path_has_missing_child)
-            {
-              *non_inheritable = TRUE;
-            }
-        }
-      else /* WC_PATH is a directory subtree of the target. */
-        {
-          if (wc_path_has_missing_child
-              || depth == svn_depth_immediates)
-            {
-              *non_inheritable = TRUE;
-            }
-        }
-    }
-  return SVN_NO_ERROR;
-}
-
 /* Calculate the new mergeinfo for the target tree rooted at TARGET_ABSPATH
    based on MERGES (a mapping of absolute WC paths to rangelists representing
    a merge from the source SOURCE_FSPATH).
@@ -7331,6 +7276,14 @@ log_find_operative_subtree_revs(void *baton,
               if (log_baton->depth == svn_depth_files
                   && change->node_kind == svn_node_file)
                 continue;
+
+              /* If depth is svn_depth_immediates, then we only care
+                 about changes to proper subtrees of PATH.  If the change
+                 is to PATH itself then PATH is within the operational
+                 depth of the merge. */
+              if (log_baton->depth == svn_depth_immediates)
+                continue;
+
               child = rel_path;
             }
 
@@ -7353,7 +7306,8 @@ log_find_operative_subtree_revs(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Find operative subtrees if record_mergeinfo_for_dir_merge() were
+/* Find immediate subtrees of MERGE_TARGET_ABSPATH which would have
+   additional differences applied if record_mergeinfo_for_dir_merge() were
    recording mergeinfo describing a merge at svn_depth_infinity, rather
    than at DEPTH (which is assumed to be shallow; if
    DEPTH == svn_depth_infinity then this function does nothing beyond
@@ -7371,9 +7325,10 @@ log_find_operative_subtree_revs(void *baton,
 
    Set *OPERATIVE_CHILDREN to a hash (mapping const char * absolute
    working copy paths to those path's const char * repos absolute paths)
-   containing all the subtrees which would be inoperative if
-   MERGE_SOURCE_REPOS_PATH -r(OLDEST_REV - 1):YOUNGEST_REV were merged to
-   MERGE_TARGET_ABSPATH at svn_depth_infinity.
+   containing all the immediate subtrees of MERGE_TARGET_ABSPATH which would
+   have a different diff applied if MERGE_SOURCE_REPOS_PATH
+   -r(OLDEST_REV - 1):YOUNGEST_REV were merged to MERGE_TARGET_ABSPATH at
+   svn_depth_infinity rather than DEPTH.
 
    RESULT_POOL is used to allocate the contents of *OPERATIVE_CHILDREN.
    SCRATCH_POOL is used for temporary allocations. */
@@ -7581,26 +7536,57 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
 
       if (child->record_mergeinfo)
         {
-          svn_boolean_t missing_child =
-            child->missing_child || child->switched_child;
+          /* We need to record mergeinfo, but should that mergeinfo be
+             non-inheritable? */
+          svn_node_kind_t path_kind;
+          SVN_ERR(svn_wc_read_kind(&path_kind, merge_b->ctx->wc_ctx,
+                                   child->abspath, FALSE, iterpool));
 
-          /* If, during a shallow merge, the merge target has immediate
-             children that would be affected by a deeper merge, then
-             consider the merge target as missing a child for the purposes
-             of recording non-inheritable mergeinfo. */
-          if (i == 0
-              && depth < svn_depth_immediates
-              && operative_immediate_children
-              && apr_hash_count(operative_immediate_children))
-            missing_child = TRUE;
+          /* Only directories can have non-inheritable mergeinfo. */
+          if (path_kind == svn_node_dir)
+            {
+              /* There are two general cases where non-inheritable mergeinfo
+                 is required:
 
-          SVN_ERR(calculate_merge_inheritance(&(child->record_noninheritable),
-                                              child->abspath,
-                                              i == 0,
-                                              missing_child,
-                                              depth,
-                                              merge_b->ctx->wc_ctx,
-                                              iterpool));
+                 1) There merge target has missing subtrees (due to authz
+                    restrictions, switched subtrees, or a shallow working
+                    copy).
+
+                 2) The operational depth of the merge itself is shallow. */
+
+              /* We've already determined the first case. */
+              child->record_noninheritable =
+                child->missing_child || child->switched_child;
+
+              /* The second case requires a bit more work. */
+              if (i == 0)
+                {
+                  /* If CHILD is the root of the merge target and the
+                     operational depth is empty or files, then the mere
+                     existence of operative immediate children means we
+                     must record non-inheritable mergeinfo.
+                     
+                     ### What about svn_depth_immediates?  In that case
+                     ### the merge target needs only normal inheritable
+                     ### mergeinfo and the target's immediate children will
+                     ### get non-inheritable mergeinfo, assuming they
+                     ### need even that. */
+                  if (depth < svn_depth_immediates
+                      && operative_immediate_children
+                      && apr_hash_count(operative_immediate_children))
+                    child->record_noninheritable = TRUE;
+                }
+              else if (depth == svn_depth_immediates)
+                {
+                  /* An immediate directory child of the merge target, which
+                      was affected by a --depth=immediates merge, needs
+                      non-inheritable mergeinfo. */
+                  if (apr_hash_get(operative_immediate_children,
+                                   child->abspath,
+                                   APR_HASH_KEY_STRING))
+                    child->record_noninheritable = TRUE;
+                }
+            }
         }
       else
         {
