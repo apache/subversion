@@ -97,6 +97,13 @@ Candidate changes:
      +0: stsp (change is good, but this needs a backport branch because
                svn_client_diff_peg6 is new in 1.8)
 
+ * r1211483
+   Don't segfault on 'svn mkdir svn://localhost'
+   Justification:
+     Though shall not segfault.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
