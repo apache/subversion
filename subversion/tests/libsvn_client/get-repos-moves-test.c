@@ -251,7 +251,52 @@ move_out_of_copy(const svn_test_opts_t *opts,
   SVN_ERR(svn_client__get_repos_moves(&moves, b.wc_abspath, ra, 4, 4, ctx,
                                       pool, pool));
 
+  /* Changed paths in r4:
+   A /A2 (from /A:1)
+   D /A2/B
+   A /B2 (from /A/B:1)
+   D /B2/C
+   A /C2 (from /A/B/C:1)
+  
+   Not sure which, if any, moves should be detected. */
   SVN_ERR(verify_move(moves, 4, "A2/B", "B2", 1)); /* XFAIL */
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+move_within_copy(const svn_test_opts_t *opts,
+                 apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  svn_client_ctx_t *ctx;
+  svn_ra_callbacks2_t *racb;
+  svn_ra_session_t *ra;
+  apr_hash_t *moves;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "move_within_copy", opts, pool));
+  SVN_ERR(svn_client_create_context(&ctx, pool));
+
+  SVN_ERR(mkdir_urls(&b, ctx, "A", "A/B", "A/B/C", (const char *)NULL));
+  SVN_ERR(copy_local(&b, ctx, "A", "A2"));
+  SVN_ERR(commit_moves(&b, ctx, "A2/B/C", "A2/B/C2", "A2/B", "A2/B2",
+                       (const char *)NULL));
+
+  SVN_ERR(svn_ra_create_callbacks(&racb, pool));
+  SVN_ERR(svn_ra_open4(&ra, NULL, b.repos_url, NULL, racb, NULL, NULL, pool));
+  SVN_ERR(svn_client__get_repos_moves(&moves, b.wc_abspath, ra, 4, 4, ctx,
+                                      pool, pool));
+
+  /* Changed paths in r4:
+   A /A2 (from /A:1)
+   D /A2/B
+   A /A2/B2 (from /A/B:1)
+   D /A2/B2/C
+   A /A2/B2/C2 (from /A/B/C:1)
+  
+   Not sure which, if any, moves should be detected. */
+  SVN_ERR(verify_move(moves, 4, "A2/B/C", "A2/B2/C2", 1)); /* XFAIL */
+  SVN_ERR(verify_move(moves, 4, "A2/B", "A2/B2", 1));
 
   return SVN_NO_ERROR;
 }
@@ -262,5 +307,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_PASS(test_moving_dirs, "test moving dirs"),
     SVN_TEST_OPTS_PASS(test_nested_moves, "test nested moves"),
     SVN_TEST_OPTS_XFAIL(move_out_of_copy, "test move out of copy"),
+    SVN_TEST_OPTS_XFAIL(move_within_copy, "test move within copy"),
     SVN_TEST_NULL,
   };
