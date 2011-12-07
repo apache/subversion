@@ -815,6 +815,43 @@ kind_fetch_func(svn_kind_t *kind,
   return SVN_NO_ERROR;
 } 
 
+static svn_error_t *
+fetch_base_func(const char **filename,
+                void *baton,
+                const char *path,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  struct edit_baton *eb = baton;
+  svn_stream_t *contents;
+  svn_stream_t *file_stream;
+  const char *tmp_filename;
+  svn_fs_root_t *fs_root;
+  svn_error_t *err;
+
+  SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs,
+                               svn_fs_txn_base_revision(eb->txn),
+                               scratch_pool));
+
+  err = svn_fs_file_contents(&contents, fs_root, path, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      *filename = NULL;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_trace(err);
+  SVN_ERR(svn_stream_open_unique(&file_stream, &tmp_filename, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream_copy3(contents, file_stream, NULL, NULL, scratch_pool));
+
+  *filename = apr_pstrdup(result_pool, tmp_filename);
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /*** Public interfaces. ***/
@@ -893,6 +930,8 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   shim_callbacks->fetch_props_baton = eb;
   shim_callbacks->fetch_kind_func = kind_fetch_func;
   shim_callbacks->fetch_kind_baton = eb;
+  shim_callbacks->fetch_base_func = fetch_base_func;
+  shim_callbacks->fetch_base_baton = eb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                    shim_callbacks, pool, pool));

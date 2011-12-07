@@ -4715,6 +4715,47 @@ close_edit(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+fetch_base_func(const char **filename,
+                void *baton,
+                const char *path,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  struct edit_baton *eb = baton;
+  svn_stream_t *contents;
+  svn_stream_t *file_stream;
+  const char *tmp_filename;
+  const svn_checksum_t *checksum;
+  svn_error_t *err;
+  const char *local_abspath = svn_dirent_join(eb->target_abspath, path,
+                                              scratch_pool);
+
+  err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, &checksum,
+                                 NULL, NULL, NULL, NULL, eb->db,
+                                 local_abspath, scratch_pool, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      *filename = NULL;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_trace(err);
+  SVN_ERR(svn_wc__db_pristine_read(&contents, NULL, eb->db, local_abspath,
+                                   checksum, scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_stream_open_unique(&file_stream, &tmp_filename, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream_copy3(contents, file_stream, NULL, NULL, scratch_pool));
+
+  *filename = apr_pstrdup(result_pool, tmp_filename);
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /*** Returning editors. ***/
@@ -4995,6 +5036,8 @@ make_editor(svn_revnum_t *target_revision,
   shim_callbacks->fetch_kind_baton = sfb;
   shim_callbacks->fetch_props_func = svn_wc__fetch_props_func;
   shim_callbacks->fetch_props_baton = sfb;
+  shim_callbacks->fetch_base_func = fetch_base_func;
+  shim_callbacks->fetch_base_baton = eb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                    shim_callbacks, result_pool, scratch_pool));
