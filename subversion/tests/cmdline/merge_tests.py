@@ -17241,7 +17241,6 @@ def unnecessary_noninheritable_mergeinfo_missing_subtrees(sbox):
 # Test for issue #4057 "don't record non-inheritable mergeinfo in shallow
 # merge if entire diff is within requested depth".
 @Issue(4057)
-@XFail()
 @SkipUnless(server_has_mergeinfo)
 def unnecessary_noninheritable_mergeinfo_shallow_merge(sbox):
   "shallow merge reaches all neccessary subtrees"
@@ -17296,11 +17295,10 @@ def unnecessary_noninheritable_mergeinfo_shallow_merge(sbox):
 
   # Merge r4 from ^/A/B to branch/B at operational depth=immediates
   #
-  # Despite the recent fixes to issue #4057, this still fails because
-  # the mergetracking logic doesn't realize that despite being a shallow
-  # merge, the diff can only affect branch/B/E, which is within the specified
-  # depth, so there is no need to record non-inheritable mergeinfo
-  # or subtree mergeinfo:
+  # Previously this failed because the mergetracking logic didn't realize
+  # that despite being a shallow merge, the diff only affected branch/B/E,
+  # which was within the specified depth, so there was no need to record
+  # non-inheritable mergeinfo or subtree mergeinfo:
   #
   #   >svn pg svn:mergeinfo -vR
   #   Properties on 'branch\B':
