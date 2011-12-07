@@ -157,9 +157,10 @@ Valid options:
   --ignore-ancestry        : ignore ancestry when calculating merges
   --force                  : force operation to run
   --accept ARG             : specify automatic conflict resolution action
-                             ('postpone', 'base', 'mine-conflict',
+                             ('postpone', 'working', 'base', 'mine-conflict',
                              'theirs-conflict', 'mine-full', 'theirs-full',
                              'edit', 'launch')
+                             (shorthand: 'p', 'mc', 'tc', 'mf', 'tf', 'e', 'l')
 
 Global options:
   --username ARG           : specify a username ARG

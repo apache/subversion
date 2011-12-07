@@ -123,6 +123,9 @@ struct ev2_edit_baton
 
   target_revision_func_t target_revision_func;
   void *target_revision_baton;
+
+  svn_delta_fetch_base_func_t fetch_base_func;
+  void *fetch_base_baton;
 };
 
 struct ev2_dir_baton
@@ -169,6 +172,12 @@ struct copy_args
   svn_revnum_t copyfrom_rev;
 };
 
+struct path_checksum_args
+{
+  const char *path;
+  svn_checksum_t *checksum;
+};
+
 static svn_error_t *
 add_action(struct ev2_edit_baton *eb,
            const char *path,
@@ -207,6 +216,7 @@ process_actions(void *edit_baton,
   svn_boolean_t need_add = FALSE;
   apr_array_header_t *children;
   svn_stream_t *contents = NULL;
+  svn_checksum_t *checksum = NULL;
   svn_kind_t kind;
   int i;
 
@@ -270,16 +280,19 @@ process_actions(void *edit_baton,
                 {
                   /* The default is an empty file. */
                   contents = svn_stream_empty(scratch_pool);
+                  checksum = svn_checksum_empty_checksum(svn_checksum_sha1,
+                                                         scratch_pool);
                 }
               break;
             }
 
           case ACTION_SET_TEXT:
             {
-              const char *src_path = action->args;
+              struct path_checksum_args *pca = action->args;
 
-              SVN_ERR(svn_stream_open_readonly(&contents, src_path,
+              SVN_ERR(svn_stream_open_readonly(&contents, pca->path,
                                                scratch_pool, scratch_pool));
+              checksum = pca->checksum;
               break;
             }
 
@@ -318,7 +331,7 @@ process_actions(void *edit_baton,
         }
       else
         {
-          SVN_ERR(svn_editor_add_file(eb->editor, path, NULL, contents,
+          SVN_ERR(svn_editor_add_file(eb->editor, path, checksum, contents,
                                       props, SVN_INVALID_REVNUM));
         }
     }
@@ -336,7 +349,7 @@ process_actions(void *edit_baton,
         {
           /* If we have an content for this node, set it now. */
           SVN_ERR(svn_editor_set_text(eb->editor, path, SVN_INVALID_REVNUM,
-                                      NULL, contents));
+                                      checksum, contents));
         }
     }
 
@@ -526,8 +539,11 @@ ev2_add_file(const char *path,
 
   fb->eb = pb->eb;
   fb->path = apr_pstrdup(result_pool, path);
-  fb->delta_base = NULL;
   *file_baton = fb;
+
+  SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
+                                  fb->eb->fetch_base_baton,
+                                  path, result_pool, result_pool));
 
   if (!copyfrom_path)
     {
@@ -562,7 +578,10 @@ ev2_open_file(const char *path,
 
   fb->eb = pb->eb;
   fb->path = apr_pstrdup(result_pool, path);
-  fb->delta_base = NULL;
+
+  SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
+                                  fb->eb->fetch_base_baton,
+                                  path, result_pool, result_pool));
 
   *file_baton = fb;
   return SVN_NO_ERROR;
@@ -588,7 +607,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 
   svn_pool_destroy(hb->pool);
 
-  return SVN_NO_ERROR;
+  return svn_error_trace(err);
 }
 
 
@@ -602,16 +621,25 @@ ev2_apply_textdelta(void *file_baton,
   struct ev2_file_baton *fb = file_baton;
   apr_pool_t *handler_pool = svn_pool_create(fb->eb->edit_pool);
   struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
-  const char *target_path;
   svn_stream_t *source;
   svn_stream_t *target;
+  struct path_checksum_args *pca = apr_pcalloc(fb->eb->edit_pool,
+                                               sizeof(*pca));
 
   if (! fb->delta_base)
     source = svn_stream_empty(handler_pool);
+  else
+    SVN_ERR(svn_stream_open_readonly(&source, fb->delta_base, handler_pool,
+                                     result_pool));
 
-  SVN_ERR(svn_stream_open_unique(&target, &target_path, NULL,
+  SVN_ERR(svn_stream_open_unique(&target, &pca->path, NULL,
                                  svn_io_file_del_on_pool_cleanup,
                                  fb->eb->edit_pool, result_pool));
+
+  /* Wrap our target with a checksum'ing stream. */
+  target = svn_stream_checksummed2(target, NULL, &pca->checksum,
+                                   svn_checksum_sha1, TRUE,
+                                   fb->eb->edit_pool);
 
   svn_txdelta_apply(source, target,
                     NULL, NULL,
@@ -623,7 +651,7 @@ ev2_apply_textdelta(void *file_baton,
   *handler_baton = hb;
   *handler = window_handler;
 
-  SVN_ERR(add_action(fb->eb, fb->path, ACTION_SET_TEXT, (void *)target_path));
+  SVN_ERR(add_action(fb->eb, fb->path, ACTION_SET_TEXT, pca));
 
   return SVN_NO_ERROR;
 }
@@ -727,6 +755,8 @@ delta_from_editor(const svn_delta_editor_t **deditor,
                   svn_boolean_t *found_abs_paths,
                   svn_delta_fetch_props_func_t fetch_props_func,
                   void *fetch_props_baton,
+                  svn_delta_fetch_base_func_t fetch_base_func,
+                  void *fetch_base_baton,
                   start_edit_func_t start_edit,
                   void *start_edit_baton,
                   target_revision_func_t target_revision,
@@ -758,12 +788,16 @@ delta_from_editor(const svn_delta_editor_t **deditor,
   eb->paths = apr_hash_make(pool);
   eb->edit_pool = pool;
   eb->found_abs_paths = found_abs_paths;
+  *eb->found_abs_paths = FALSE;
 
   eb->fetch_props_func = fetch_props_func;
   eb->fetch_props_baton = fetch_props_baton;
 
   eb->start_edit = start_edit;
   eb->start_edit_baton = start_edit_baton;
+
+  eb->fetch_base_func = fetch_base_func;
+  eb->fetch_base_baton = fetch_base_baton;
 
   eb->target_revision_func = target_revision;
   eb->target_revision_baton = target_revision_baton;
@@ -1223,7 +1257,7 @@ move_cb(void *baton,
 static svn_error_t *
 change_props(const svn_delta_editor_t *editor,
              void *baton,
-             struct operation *child,
+             const struct operation *child,
              apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -1365,9 +1399,19 @@ drive_tree(const struct operation *operation,
                     || child->operation == OP_ADD))
         {
           SVN_ERR(drive_tree(child, editor, make_abs_paths, iterpool));
-          SVN_ERR(change_props(editor, child->baton, child, iterpool));
           SVN_ERR(editor->close_directory(child->baton, iterpool));
         }
+    }
+  svn_pool_destroy(iterpool);
+
+  /* Finally, for this node, if it's a directory, change any props before
+     returning (our caller will close the directory. */
+  if (operation->kind == svn_kind_dir
+                   && (operation->operation == OP_OPEN
+                    || operation->operation == OP_PROPSET
+                    || operation->operation == OP_ADD))
+    {
+      SVN_ERR(change_props(editor, operation->baton, operation, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1381,10 +1425,18 @@ complete_cb(void *baton,
   struct editor_baton *eb = baton;
   svn_error_t *err;
 
+  SVN_ERR(ensure_root_opened(eb));
+
   /* Drive the tree we've created. */
   err = drive_tree(&eb->root, eb->deditor, eb->make_abs_paths, scratch_pool);
   if (!err)
-     err = eb->deditor->close_edit(eb->dedit_baton, scratch_pool);
+     {
+       err = eb->deditor->close_directory(eb->root.baton, scratch_pool);
+       err = svn_error_compose_create(err, eb->deditor->close_edit(
+                                                            eb->dedit_baton,
+                                                            scratch_pool));
+     }
+
   if (err)
     svn_error_clear(eb->deditor->abort_edit(eb->dedit_baton, scratch_pool));
 
@@ -1531,6 +1583,8 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
                             found_abs_paths,
                             shim_callbacks->fetch_props_func,
                             shim_callbacks->fetch_props_baton,
+                            shim_callbacks->fetch_base_func,
+                            shim_callbacks->fetch_base_baton,
                             start_edit_func, seb,
                             target_revision_func, seb,
                             result_pool));

@@ -1295,25 +1295,17 @@ svn_uri_basename(const char *uri, apr_pool_t *pool)
 {
   apr_size_t len = strlen(uri);
   apr_size_t start;
-  const char *base_name;
 
   assert(svn_uri_is_canonical(uri, NULL));
 
   if (svn_uri_is_root(uri, len))
     return "";
-  else
-    {
-      start = len;
-      while (start > 0 && uri[start - 1] != '/')
-        --start;
-    }
 
-  if (pool)
-    base_name = apr_pstrmemdup(pool, uri + start, len - start);
-  else
-    base_name = uri + start;
+  start = len;
+  while (start > 0 && uri[start - 1] != '/')
+    --start;
 
-  return svn_path_uri_decode(base_name, pool);
+  return svn_path_uri_decode(uri + start, pool);
 }
 
 void

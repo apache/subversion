@@ -34,7 +34,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
 
 Version 1.7.2
-(?? ??? 2011, from /branches/1.7.x)
+(02 Dec 2011, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.2
 
   User-visible changes:
@@ -52,8 +52,14 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.2
    * fix nested <Location>s when using v2 protocol (r1203546, -651, -653)
    * make mod_dav_svn ignore non-Subversion POST requests (r1187695)
    * avoid reading freed memory (r1204478)
-   * recognize empty (only byte order mark) UTF-8 files as text (issue #4046)
-   * improve behavior when operating against a 1.0.x server (r1199876)
+   * recognize empty (only byte order mark) UTF-8 files as text (issue #4064)
+   * fix 1.7 client regression when operating against a 1.0.x server (r1199876)
+   * remove empty parent dirs of removed externals on update (issue #4044)
+   * make 'svn diff -c N' work for files added in rN (issue #2873)
+   * plug a memory leak in the bdb backend (r1205726)
+   * fix 'svn import' with native eol-style and inconsistent EOLs (r1205193)
+   * fix reading beyond the end of a string in bdb backend (r1205839, -48)
+   * don't assert when committing an incomplete directory (issue #4042)
 
   Developer-visible changes:
    * JavaHL: allow 'status -u' to function properly (r1189190, -395)
@@ -61,6 +67,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.2
    * properly define WIN64 on Windows x64 builds (r1188609)
    * better adherence to C89 in enum definitions (r1189665)
    * bump copyright year in Windows DLLs (r1189261)
+   * log a better error when opening rep-cache.db fails (r1204610, -73)
 
 
 Version 1.7.1

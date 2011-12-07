@@ -1406,8 +1406,9 @@ svn_ra_do_diff(svn_ra_session_t *session,
  *
  * If @a discover_changed_paths, then each call to @a receiver passes a
  * <tt>const apr_hash_t *</tt> for the receiver's @a changed_paths argument;
- * the hash's keys are all the paths committed in that revision.
- * Otherwise, each call to receiver passes NULL for @a changed_paths.
+ * the hash's keys are all the paths committed in that revision, the hash's
+ * values are <tt>const svn_log_changed_path2_t *</tt> for each committed
+ * path. Otherwise, each call to receiver passes NULL for @a changed_paths.
  *
  * If @a strict_node_history is set, copy history will not be traversed
  * (if any exists) when harvesting the revision logs for each path.

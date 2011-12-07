@@ -2093,6 +2093,45 @@ def merge_sensitive_log_copied_path_inherited_mergeinfo(sbox):
   log_chain = parse_log_output(out)
   check_merge_results(log_chain, expected_merges)
 
+#----------------------------------------------------------------------
+def log_diff(sbox):
+  "'svn log --diff'"
+
+  guarantee_repos_and_wc(sbox)
+
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '--diff')
+  os.chdir(was_cwd)
+
+  for line in output:
+    if line.startswith('Index:'):
+      break
+  else:
+    raise SVNLogParseError("no diffs found in log output")
+
+  # After a copy, a log of the copy destination used to fail because the
+  # diff tried to use the head-revision URL with the old revision numbers
+  # without using the correct peg revision.
+
+  sbox.simple_copy('A', 'A2')
+  sbox.simple_commit()
+
+  os.chdir(sbox.wc_dir)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '--diff',
+                                                              '-r10:8', 'A2')
+  os.chdir(was_cwd)
+
+  for line in output:
+    if line.startswith('Index:'):
+      break
+  else:
+    raise SVNLogParseError("no diffs found in log output")
+
+
 ########################################################################
 # Run the tests
 
@@ -2133,6 +2172,7 @@ test_list = [ None,
               log_with_unrelated_peg_and_operative_revs,
               log_on_nonexistent_path_and_valid_rev,
               merge_sensitive_log_copied_path_inherited_mergeinfo,
+              log_diff,
              ]
 
 if __name__ == '__main__':

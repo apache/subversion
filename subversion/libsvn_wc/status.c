@@ -2549,11 +2549,14 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
   sfb = apr_palloc(result_pool, sizeof(*sfb));
   sfb->db = wc_ctx->db;
   sfb->base_abspath = eb->target_abspath;
+  sfb->fetch_base = FALSE;
 
   shim_callbacks->fetch_kind_func = svn_wc__fetch_kind_func;
   shim_callbacks->fetch_kind_baton = sfb;
   shim_callbacks->fetch_props_func = svn_wc__fetch_props_func;
   shim_callbacks->fetch_props_baton = sfb;
+  shim_callbacks->fetch_base_func = svn_wc__fetch_base_func;
+  shim_callbacks->fetch_base_baton = sfb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                    shim_callbacks,
