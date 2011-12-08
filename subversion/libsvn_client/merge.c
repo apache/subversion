@@ -7197,6 +7197,7 @@ typedef struct log_find_operative_subtree_baton_t
   const char *merge_source_fspath;
   const char *merge_target_abspath;
   svn_depth_t depth;
+  svn_wc_context_t *wc_ctx;
 
   /* A pool to allocate additions to the hashes in. */
   apr_pool_t *result_pool;
@@ -7245,10 +7246,39 @@ log_find_operative_subtree_revs(void *baton,
           child = svn_relpath_dirname(rel_path, iterpool);
           if (child[0] == '\0')
             {
+              /* The svn_log_changed_path2_t.node_kind members in
+                 LOG_ENTRY->CHANGED_PATHS2 may be set to
+                 svn_node_unknown, see svn_log_changed_path2_t and
+                 svn_fs_paths_changed2.  In that case we check the
+                 type of the corresponding subtree in the merge
+                 target. */
+              svn_node_kind_t node_kind;
+
+              if (change->node_kind == svn_node_unknown)
+                {
+                  const char *wc_child_abspath =
+                    svn_dirent_join(log_baton->merge_target_abspath,
+                                    rel_path, iterpool);
+
+                  /* ### ptb - svn_wc_read_kind is very tolerant when we ask
+                     ### it about unversioned, non-existent, and missing WC
+                     ### paths, simply setting *NODE_KIND svn_kind_none in
+                     ### those cases.  Is there any legitimate error we
+                     ### might enocunter during a merge where we'd want
+                     ### to clear the error and continue? */
+                  SVN_ERR(svn_wc_read_kind(&node_kind, log_baton->wc_ctx,
+                                           wc_child_abspath, FALSE,
+                                           iterpool));
+                }
+              else
+                {
+                  node_kind = change->node_kind;
+                }
+
               /* We only care about immediate directory children if
                  DEPTH is svn_depth_files. */
               if (log_baton->depth == svn_depth_files
-                  && change->node_kind == svn_node_file)
+                  && node_kind != svn_node_dir)
                 continue;
 
               /* If depth is svn_depth_immediates, then we only care
@@ -7338,6 +7368,7 @@ get_operative_immediate_children(apr_hash_t **operative_children,
   log_baton.merge_source_fspath = merge_source_fspath;
   log_baton.merge_target_abspath = merge_target_abspath;
   log_baton.depth = depth;
+  log_baton.wc_ctx = wc_ctx;
   log_baton.result_pool = result_pool;
   log_targets = apr_array_make(scratch_pool, 1, sizeof(const char *));
   APR_ARRAY_PUSH(log_targets, const char *) = "";
