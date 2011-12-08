@@ -17242,7 +17242,7 @@ def unnecessary_noninheritable_mergeinfo_missing_subtrees(sbox):
 @Issue(4057)
 @SkipUnless(server_has_mergeinfo)
 def unnecessary_noninheritable_mergeinfo_shallow_merge(sbox):
-  "shallow merge reaches all neccessary subtrees"
+  "shallow merge reaches all necessary subtrees"
 
   B_branch_path = os.path.join(sbox.wc_dir, 'branch', 'B')
   E_path        = os.path.join(sbox.wc_dir, 'A', 'B', 'E')
@@ -17266,7 +17266,7 @@ def unnecessary_noninheritable_mergeinfo_shallow_merge(sbox):
   #       /A/B:3* <-- Should be inheritable
   #   Properties on 'branch\B\lambda':
   #     svn:mergeinfo
-  #       /A/B/lambda:3 <-- Not neccessary
+  #       /A/B/lambda:3 <-- Not necessary
   expected_skip = wc.State(B_branch_path, {})
   svntest.actions.run_and_verify_merge(B_branch_path, '2', '3',
                                        sbox.repo_url + '/A/B', None,
@@ -17305,7 +17305,7 @@ def unnecessary_noninheritable_mergeinfo_shallow_merge(sbox):
   #       /A/B:4* <-- Should be inheritable
   #   Properties on 'branch\B\E':
   #     svn:mergeinfo
-  #       /A/B/E:4 <-- Not neccessary 
+  #       /A/B/E:4 <-- Not necessary 
   expected_output = wc.State(B_branch_path, {
     'E' : Item(status=' U'),
     })
