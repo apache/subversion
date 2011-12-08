@@ -86,7 +86,7 @@ Candidate changes:
    Justification:
      Server asserts after being upgraded.
    Votes:
-     +1: danielsh
+     +1: danielsh, philip
 
  * r1210147
    Fix the 'svn log --diff' code so that it correctly shows a diff of a
@@ -102,7 +102,7 @@ Candidate changes:
    Justification:
      Thou shall not segfault.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1211859, r1211885
    Fix issue 4074, SEGV on "svn rm ROOT_URL"
