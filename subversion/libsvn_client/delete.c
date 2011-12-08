@@ -272,11 +272,11 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
           APR_ARRAY_PUSH(relpaths_list, const char *) = repos_relpath;
         }
 
-      /* Check we identified a non-root relpath.  Return an FS error
-         similar to the one further down. */
+      /* Check we identified a non-root relpath.  Return an RA error
+         code for 1.6 compatibility. */
       if (!repos_relpath || !*repos_relpath)
-        return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                                 "URL '%s' not within a repository root", uri);
+        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                 "URL '%s' not within a repository", uri);
 
       /* Now, test to see if the thing actually exists. */
       SVN_ERR(svn_ra_check_path(ra_session, repos_relpath, SVN_INVALID_REVNUM,

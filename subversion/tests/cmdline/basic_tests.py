@@ -1192,7 +1192,7 @@ def basic_delete(sbox):
                                      iota_URL)
 
   # Issue 4074, deleting a root url SEGV.
-  expected_error = 'svn: E160013: .*not within a repository root'
+  expected_error = 'svn: E170000: .*not within a repository'
   svntest.actions.run_and_verify_svn(None, [], expected_error,
                                      'rm', sbox.repo_url,
                                      '--message', 'delete root')
