@@ -16913,7 +16913,6 @@ def reverse_merge_adds_subtree(sbox):
   # ..\..\..\subversion\libsvn_subr\kitchensink.c:57: (apr_err=200022)
   # svn: E200022: Negative revision number found parsing '-7'
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_output = wc.State(A_COPY_path, {
     'D/H/chi' : Item(status='A '),
     })
