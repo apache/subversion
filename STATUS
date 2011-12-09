@@ -111,6 +111,19 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben, steveking
 
+
+ * r1154121, r1195480, r1208840, r1209631, r1209654, r1212476, r1212482,
+   r1212484
+   Update and clarify the merge help text.
+   Justification:
+     Merge usage questions are very frequently asked questions in #svn IRC and
+     on the users@ list. We should improve the documentation whenever we can
+     and point people to it.
+   Notes:
+     Merge with --accept=theirs-conflict
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
