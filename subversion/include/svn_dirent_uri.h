@@ -760,7 +760,7 @@ svn_uri_condense_targets(const char **pcommon,
  *
  * Allocate the result in @a result_pool.
  *
- * Note: Use of this function is strongly encouraged. Do not roll your own.
+ * @note Use of this function is strongly encouraged. Do not roll your own.
  * (http://cve.mitre.org/cgi-bin/cvename.cgi?name=2007-3846)
  *
  * @since New in 1.7.

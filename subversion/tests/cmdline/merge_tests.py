@@ -7276,7 +7276,7 @@ def merge_with_depth_files(sbox):
 #
 # Test issue #3407 'Shallow merges incorrectly set mergeinfo on children'.
 @SkipUnless(server_has_mergeinfo)
-@Issues(2976,3392,3407)
+@Issues(2976,3392,3407,4057)
 def merge_away_subtrees_noninheritable_ranges(sbox):
   "subtrees can lose non-inheritable ranges"
 
@@ -7595,8 +7595,9 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
-  # Merge r8 from A/D/H to A_COPY_D/H at depth empty, creating non-inheritable
-  # mergeinfo on the target.  Commit this merge as r13.
+  # Merge r8 from A/D/H to A_COPY_D/H at depth empty.  Since r8 affects only
+  # A_COPY/D/H itself, the resulting mergeinfo is inheritabled.  Commit this
+  # merge as r13.
   expected_output = wc.State(H_COPY_2_path, {
     ''    : Item(status=' U'),
     })
@@ -7612,7 +7613,7 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
     'chi'   : Item(status='  ', wc_rev=12),
     })
   expected_disk = wc.State('', {
-    ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:8*',
+    ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:8',
                           "prop:name" : "propval"}),
     'psi'   : Item("This is the file 'psi'.\n"),
     'omega' : Item("This is the file 'omega'.\n"),
@@ -16845,7 +16846,7 @@ def merge_adds_subtree_with_mergeinfo(sbox):
 
 #----------------------------------------------------------------------
 # A test for issue #3978 'reverse merge which adds subtree fails'.
-@Issue(3978)
+@Issue(3978,4057)
 @SkipUnless(server_has_mergeinfo)
 def reverse_merge_adds_subtree(sbox):
   "reverse merge adds subtree"
@@ -16872,6 +16873,9 @@ def reverse_merge_adds_subtree(sbox):
                                      'Cherry-pick r7 from A to A_COPY', wc_dir)
 
   # r9 - File depth sync merge from A/D/H to A_COPY/D/H/
+  # This shallow merge does not create non-inheritable mergeinfo because of
+  # the issue #4057 fix; all subtrees affected by the diff are present, so
+  # non-inheritable mergeinfo is not required.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'merge',
                                      sbox.repo_url + '/A/D/H',
@@ -16908,7 +16912,6 @@ def reverse_merge_adds_subtree(sbox):
   # ..\..\..\subversion\libsvn_subr\mergeinfo.c:504: (apr_err=200022)
   # ..\..\..\subversion\libsvn_subr\kitchensink.c:57: (apr_err=200022)
   # svn: E200022: Negative revision number found parsing '-7'
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_output = wc.State(A_COPY_path, {
     'D/H/chi' : Item(status='A '),
@@ -16958,12 +16961,10 @@ def reverse_merge_adds_subtree(sbox):
     'D/G/rho'   : Item("This is the file 'rho'.\n"),
     'D/G/tau'   : Item("This is the file 'tau'.\n"),
     'D/gamma'   : Item("This is the file 'gamma'.\n"),
-    'D/H'       : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:2-6*,8*'}),
+    'D/H'       : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:2-6,8'}),
     'D/H/chi'   : Item("This is the file 'chi'.\n"),
-    'D/H/psi'   : Item("New content",
-                       props={SVN_PROP_MERGEINFO : '/A/D/H/psi:2-8'}),
-    'D/H/omega' : Item("New content",
-                       props={SVN_PROP_MERGEINFO : '/A/D/H/omega:2-8'}),
+    'D/H/psi'   : Item("New content"),
+    'D/H/omega' : Item("New content"),
     })
   expected_skip = wc.State('.', { })
   svntest.actions.run_and_verify_merge(A_COPY_path, 7, 6,
@@ -17239,12 +17240,12 @@ def unnecessary_noninheritable_mergeinfo_missing_subtrees(sbox):
 # Test for issue #4057 "don't record non-inheritable mergeinfo in shallow
 # merge if entire diff is within requested depth".
 @Issue(4057)
-@XFail()
 @SkipUnless(server_has_mergeinfo)
 def unnecessary_noninheritable_mergeinfo_shallow_merge(sbox):
-  "shallow merge reaches all neccessary subtrees"
+  "shallow merge reaches all necessary subtrees"
 
   B_branch_path = os.path.join(sbox.wc_dir, 'branch', 'B')
+  E_path        = os.path.join(sbox.wc_dir, 'A', 'B', 'E')
 
   # Setup a simple branch to which 
   expected_output, expected_mergeinfo_output, expected_elision_output, \
@@ -17253,7 +17254,7 @@ def unnecessary_noninheritable_mergeinfo_shallow_merge(sbox):
 
   # Merge r3 from ^/A/B to branch/B at operational depth=files
   #
-  # Currently this fails because merge isn't smart enough to
+  # Previously this failed because merge wasn't smart enough to
   # realize that despite being a shallow merge, the diff can
   # only affect branch/B/lambda, which is within the specified
   # depth, so there is no need to record non-inheritable mergeinfo
@@ -17265,7 +17266,7 @@ def unnecessary_noninheritable_mergeinfo_shallow_merge(sbox):
   #       /A/B:3* <-- Should be inheritable
   #   Properties on 'branch\B\lambda':
   #     svn:mergeinfo
-  #       /A/B/lambda:3 <-- Not neccessary
+  #       /A/B/lambda:3 <-- Not necessary
   expected_skip = wc.State(B_branch_path, {})
   svntest.actions.run_and_verify_merge(B_branch_path, '2', '3',
                                        sbox.repo_url + '/A/B', None,
@@ -17277,6 +17278,71 @@ def unnecessary_noninheritable_mergeinfo_shallow_merge(sbox):
                                        expected_skip,
                                        None, None, None, None, None, 1, 1,
                                        '--depth', 'files', B_branch_path)
+
+  # Revert the merge and then make a prop change to A/B/E in r4.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', '--recursive', sbox.wc_dir)
+  svntest.actions.run_and_verify_svn(None,
+                                     ["property 'prop:name' set on '" +
+                                      E_path + "'\n"], [], 'ps',
+                                     'prop:name', 'propval', E_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'A new property on a dir',
+                                     sbox.wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', sbox.wc_dir)
+
+  # Merge r4 from ^/A/B to branch/B at operational depth=immediates
+  #
+  # Previously this failed because the mergetracking logic didn't realize
+  # that despite being a shallow merge, the diff only affected branch/B/E,
+  # which was within the specified depth, so there was no need to record
+  # non-inheritable mergeinfo or subtree mergeinfo:
+  #
+  #   >svn pg svn:mergeinfo -vR
+  #   Properties on 'branch\B':
+  #     svn:mergeinfo
+  #       /A/B:4* <-- Should be inheritable
+  #   Properties on 'branch\B\E':
+  #     svn:mergeinfo
+  #       /A/B/E:4 <-- Not necessary 
+  expected_output = wc.State(B_branch_path, {
+    'E' : Item(status=' U'),
+    })
+  expected_mergeinfo_output = wc.State(B_branch_path, {
+    ''  : Item(status=' U'),
+    'E' : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(B_branch_path, {
+    'E' : Item(status=' U'),
+    })
+  expected_status = wc.State(B_branch_path, {
+    ''        : Item(status=' M'),
+    'lambda'  : Item(status='  '),
+    'E'       : Item(status=' M'),
+    'E/alpha' : Item(status='  '),
+    'E/beta'  : Item(status='  '),
+    'F'       : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev='4')
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A/B:4'}),
+    'lambda'  : Item("This is the file 'lambda'.\n"),
+    'E'       : Item(props={'prop:name' : 'propval'}),
+    'E/alpha' : Item("This is the file 'alpha'.\n"),
+    'E/beta'  : Item("This is the file 'beta'.\n"),
+    'F'       : Item(),
+    })
+  svntest.actions.run_and_verify_merge(B_branch_path, '3', '4',
+                                       sbox.repo_url + '/A/B', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, 1, 1,
+                                       '--depth', 'immediates', B_branch_path)
 
 ########################################################################
 # Run the tests

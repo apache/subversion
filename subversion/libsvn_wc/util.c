@@ -587,6 +587,48 @@ svn_wc__fetch_props_func(apr_hash_t **props,
 }
 
 
+svn_error_t *
+svn_wc__fetch_base_func(const char **filename,
+                        void *baton,
+                        const char *path,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  struct svn_wc__shim_fetch_baton_t *sfb = baton;
+  svn_stream_t *contents;
+  svn_stream_t *file_stream;
+  const char *tmp_filename;
+  const svn_checksum_t *checksum;
+  svn_error_t *err;
+  const char *local_abspath = svn_dirent_join(sfb->base_abspath, path,
+                                              scratch_pool);
+
+  err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, &checksum,
+                                 NULL, NULL, NULL, NULL, sfb->db,
+                                 local_abspath, scratch_pool, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      *filename = NULL;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_trace(err);
+  SVN_ERR(svn_wc__db_pristine_read(&contents, NULL, sfb->db, local_abspath,
+                                   checksum, scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_stream_open_unique(&file_stream, &tmp_filename, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream_copy3(contents, file_stream, NULL, NULL, scratch_pool));
+
+  *filename = apr_pstrdup(result_pool, tmp_filename);
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_wc_repos_move_info_t *
 svn_wc_create_repos_move_info(const char *moved_from_repos_relpath,
                               const char *moved_to_repos_relpath,

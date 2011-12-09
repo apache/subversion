@@ -260,20 +260,35 @@ find "$DISTPATH" -name config.nice -print | xargs rm -f
 # on end-user's systems, when they should just be compiled by the
 # Release Manager and left at that.
 
-ver_major=`echo $VERSION | cut -d '.' -f 1`
-ver_minor=`echo $VERSION | cut -d '.' -f 2`
-ver_patch=`echo $VERSION | cut -d '.' -f 3`
+if [ "$VERSION" = nightly ]; then
+  # ### FIXME Gross hack.
+  #
+  # release.py sets Version().base = 'nightly'; which causes this to
+  # be called as 'dist.sh -v nightly', rather than 'dist.sh -v 1.8.0';
+  # which causes the sed below to write '#define SVN_VER_MAJOR nightly'
+  # into subversion/include/svn_version.h; which chokes build/getversion.py,
+  # called by build/generator/gen_base.py during './autogen.sh --release'.
+  #
+  # Setting this to ampersand should fool sed and peace the kingdom.
+  ver_major="&"
+  ver_minor="&"
+  ver_patch="&"
+else
+  ver_major=`echo $VERSION | cut -d '.' -f 1`
+  ver_minor=`echo $VERSION | cut -d '.' -f 2`
+  ver_patch=`echo $VERSION | cut -d '.' -f 3`
+fi
 
 vsn_file="$DISTPATH/subversion/include/svn_version.h"
 
 if [ "$VERSION" != "trunk" ]; then
   sed \
-   -e "/#define *SVN_VER_MAJOR/s/[0-9]\\+/$ver_major/" \
-   -e "/#define *SVN_VER_MINOR/s/[0-9]\\+/$ver_minor/" \
-   -e "/#define *SVN_VER_PATCH/s/[0-9]\\+/$ver_patch/" \
+   -e "/#define *SVN_VER_MAJOR/s/[0-9][0-9]*/$ver_major/" \
+   -e "/#define *SVN_VER_MINOR/s/[0-9][0-9]*/$ver_minor/" \
+   -e "/#define *SVN_VER_PATCH/s/[0-9][0-9]*/$ver_patch/" \
    -e "/#define *SVN_VER_TAG/s/\".*\"/\" ($VER_TAG)\"/" \
    -e "/#define *SVN_VER_NUMTAG/s/\".*\"/\"$VER_NUMTAG\"/" \
-   -e "/#define *SVN_VER_REVISION/s/[0-9]\\+/$REVISION/" \
+   -e "/#define *SVN_VER_REVISION/s/[0-9][0-9]*/$REVISION/" \
     < "$vsn_file" > "$vsn_file.tmp"
 else
   # Don't munge the version number if we are creating a nightly trunk tarball

@@ -1111,6 +1111,20 @@ typedef svn_error_t *(*svn_delta_fetch_kind_func_t)(
   apr_pool_t *scratch_pool
   );
 
+/** Callback to fetch the FILENAME of a file to use as the delta base for
+ * PATH.  The file should last at least as long as RESULT_POOL.  If the base
+ * stream is empty, return NULL through FILENAME.
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *(*svn_delta_fetch_base_func_t)(
+  const char **filename,
+  void *baton,
+  const char *path,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool
+  );
+
 /** Collection of callbacks used for the shim code.  To enable this struct
  * to grow, always use svn_delta_shim_callbacks_default()
  * to allocate new instances of it.
@@ -1123,6 +1137,8 @@ typedef struct svn_delta_shim_callbacks_t
   void *fetch_props_baton;
   svn_delta_fetch_kind_func_t fetch_kind_func;
   void *fetch_kind_baton;
+  svn_delta_fetch_base_func_t fetch_base_func;
+  void *fetch_base_baton;
 } svn_delta_shim_callbacks_t;
 
 /** Return a collection of default shim functions in @a result_pool.

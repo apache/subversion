@@ -4275,6 +4275,125 @@ revert_nested_move(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_on_move(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "move_on_move", opts, pool));
+
+  SVN_ERR(wc_mkdir(&b, "A"));
+  SVN_ERR(wc_mkdir(&b, "A/B"));
+  SVN_ERR(wc_mkdir(&b, "X"));
+  SVN_ERR(wc_mkdir(&b, "X/B"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_update(&b, "", 1));
+
+  SVN_ERR(wc_move(&b, "A/B", "B2"));
+  SVN_ERR(wc_delete(&b, "A"));
+  SVN_ERR(wc_copy(&b, "X", "A"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       1, ""},
+      {0, "A",        "normal",       1, "A"},
+      {0, "A/B",      "normal",       1, "A/B", FALSE, "B2"},
+      {0, "X",        "normal",       1, "X"},
+      {0, "X/B",      "normal",       1, "X/B"},
+      {1, "B2",       "normal",       1, "A/B", MOVED_HERE},
+      {1, "A",        "normal",       1, "X"},
+      {1, "A/B",      "normal",       1, "X/B"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* A/B to B2 is already recorded in A/B but the copy has given us
+     another A/B that we can move.  A second move overwites the first
+     move stored in A/B even though it's a different node being moved,
+     and that breaks the recording of the move to B2. */
+  SVN_ERR(wc_move(&b, "A/B", "B3"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       1, ""},
+      {0, "A",        "normal",       1, "A"},
+      {0, "A/B",      "normal",       1, "A/B",   FALSE, "B2"}, /* XFAIL */
+      {0, "X",        "normal",       1, "X"},
+      {0, "X/B",      "normal",       1, "X/B"},
+      {1, "B2",       "normal",       1, "A/B",   MOVED_HERE},
+      {1, "B3",       "normal",       1, "X/B",   MOVED_HERE},
+      {1, "A",        "normal",       1, "X"},
+      {1, "A/B",      "normal",       1, "X/B"},         /* moved_to=B3? */
+      {2, "A/B",      "base-deleted", NO_COPY_FROM},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+move_on_move2(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "move_on_move2", opts, pool));
+
+  SVN_ERR(wc_mkdir(&b, "A"));
+  SVN_ERR(wc_mkdir(&b, "A/B"));
+  SVN_ERR(wc_mkdir(&b, "X"));
+  SVN_ERR(wc_mkdir(&b, "X/B"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_update(&b, "", 1));
+
+  SVN_ERR(wc_move(&b, "A", "A2"));
+  SVN_ERR(wc_delete(&b, "A"));
+  SVN_ERR(wc_copy(&b, "X", "A"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       1, ""},
+      {0, "A",        "normal",       1, "A",   FALSE, "A2"},
+      {0, "A/B",      "normal",       1, "A/B"},
+      {0, "X",        "normal",       1, "X"},
+      {0, "X/B",      "normal",       1, "X/B"},
+      {1, "A2",       "normal",       1, "A",   MOVED_HERE},
+      {1, "A2/B",     "normal",       1, "A/B", MOVED_HERE},
+      {1, "A",        "normal",       1, "X"},
+      {1, "A/B",      "normal",       1, "X/B"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* A/B is already moved to A2/B but there is no explicit moved_to,
+     we derive it from A.  The copy has given us another A/B that we
+     can move doing so stores explicit moved_to in A/B that breaks the
+     recording of the first move to A2/B. */
+  SVN_ERR(wc_move(&b, "A/B", "B3"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       1, ""},
+      {0, "A",        "normal",       1, "A",   FALSE, "A2"},
+      {0, "A/B",      "normal",       1, "A/B"},               /* XFAIL */
+      {0, "X",        "normal",       1, "X"},
+      {0, "X/B",      "normal",       1, "X/B"},
+      {1, "A2",       "normal",       1, "A",   MOVED_HERE},
+      {1, "A2/B",     "normal",       1, "A/B", MOVED_HERE},
+      {1, "B3",       "normal",       1, "X/B", MOVED_HERE},
+      {1, "A",        "normal",       1, "X"},
+      {1, "A/B",      "normal",       1, "X/B"},           /* moved_to=B3? */
+      {2, "A/B",      "base-deleted", NO_COPY_FROM},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -4358,5 +4477,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_to_swap"),
     SVN_TEST_OPTS_PASS(revert_nested_move,
                        "revert_nested_move"),
+    SVN_TEST_OPTS_XFAIL(move_on_move,
+                       "move_on_move"),
+    SVN_TEST_OPTS_XFAIL(move_on_move2,
+                       "move_on_move2"),
     SVN_TEST_NULL
   };

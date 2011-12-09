@@ -748,6 +748,13 @@ svn_wc__fetch_props_func(apr_hash_t **props,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+/* Using a BATON of struct shim_fetch_baton, return a delta base for PATH. */
+svn_error_t *
+svn_wc__fetch_base_func(const char **filename,
+                        void *baton,
+                        const char *path,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }
