@@ -666,7 +666,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log bar.c@42\n"
      "    svn log http://www.example.com/repo/project/foo.c\n"
      "    svn log http://www.example.com/repo/project foo.c bar.c\n"
-     "    svn log http://www.example.com/repo/project@50 foo.c bar.c\n"),
+     "    svn log http://www.example.com/repo/project@50 foo.c bar.c\n"
+     "\n"
+     "    This command shows the log entry for the revision the branch\n"
+     "    ^/branches/foo was created in:\n"
+     "      svn log --stop-on-copy --limit 1 -r0:HEAD ^/branches/foo\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
      opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
      opt_depth, opt_diff, opt_diff_cmd, opt_internal_diff, 'x'},
