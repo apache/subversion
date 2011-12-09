@@ -5641,7 +5641,7 @@ get_wc_explicit_mergeinfo_catalog(apr_hash_t **subtrees_with_mergeinfo,
    depth-first ordering it is guaranteed to be the first element in
    *CHILDREN_WITH_MERGEINFO.
 
-   MERGE_COMMAND_BATON is cascaded from the argument of the same name in
+   MERGE_CMD_BATON is cascaded from the argument of the same name in
    do_directory_merge().
 */
 static svn_error_t *
