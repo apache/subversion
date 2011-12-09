@@ -6635,8 +6635,8 @@ filter_natural_history_from_mergeinfo(apr_array_header_t **filtered_rangelist,
    and the value is the new mergeinfo for that path.  Allocate additions
    to RESULT_CATALOG in pool which RESULT_CATALOG was created in.
 
-   Note: MERGE_B->RA_SESSION1 must be associated with URL1 and
-   MERGE_B->RA_SESSION2 with URL2.
+   Note: MERGE_B->RA_SESSION1 must be associated with SOURCE->url1 and
+   MERGE_B->RA_SESSION2 with SOURCE->url2.
 */
 static svn_error_t *
 do_file_merge(svn_mergeinfo_catalog_t result_catalog,
@@ -6717,7 +6717,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
 
       /* Calculate remaining merges unless this is a record only merge.
          In that case the remaining range is the whole range described
-         by REVISION1:REVISION2. */
+         by SOURCE->rev1:rev2. */
       if (!merge_b->record_only)
         {
           SVN_ERR(calculate_remaining_ranges(NULL, merge_target,
@@ -6731,7 +6731,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
         }
     }
 
-  /* The simple cases where our remaining range is REVISION1:REVISION2. */
+  /* The simple cases where our remaining range is SOURCE->rev1:rev2. */
   if (!honor_mergeinfo || merge_b->record_only)
     {
       remaining_ranges = apr_array_make(scratch_pool, 1, sizeof(&range));
@@ -6792,9 +6792,9 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
           if (honor_mergeinfo && strcmp(source->url1, source->url2) != 0)
             {
               if (!is_rollback && r->start != source->rev1)
-                ra_session1 = ra_session2; /* Use URL2's RA session. */
+                ra_session1 = ra_session2; /* Use SOURCE->url2's RA session. */
               else if (is_rollback && r->end != source->rev2)
-                ra_session2 = ra_session1; /* Use URL1's RA session. */
+                ra_session2 = ra_session1; /* Use SOURCE->url1's RA session. */
             }
 
           /* While we currently don't allow it, in theory we could be
@@ -8221,9 +8221,8 @@ log_noop_revs(void *baton,
 
 /* Helper for do_directory_merge().
 
-   SOURCE and MERGE_B are
-   cascaded from the arguments of the same name in do_directory_merge().
-   RA_SESSION is the session for URL2@REVISION2.
+   SOURCE and MERGE_B are cascaded from the arguments of the same name in
+   do_directory_merge().  RA_SESSION is the session for SOURCE->url2@rev2.
 
    Find all the ranges required by subtrees in
    CHILDREN_WITH_MERGEINFO that are *not* required by
