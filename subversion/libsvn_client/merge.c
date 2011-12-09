@@ -5641,24 +5641,12 @@ get_wc_explicit_mergeinfo_catalog(apr_hash_t **subtrees_with_mergeinfo,
    depth-first ordering it is guaranteed to be the first element in
    *CHILDREN_WITH_MERGEINFO.
 
-   MERGE_COMMAND_BATON, URL1, URL2, REVISION1, and REVISION2 are
-   cascaded from the arguments of the same name in do_directory_merge().
-
-   RA_SESSION is the session for the younger of URL1@REVISION1 and
-   URL2@REVISION2.
-
-   MERGE_SRC_CANON_PATH is the path of of the younger of URL1@REVISION1 and
-   URL2@REVISION2, relative to RA_SESSION's repos root (with a leading '/').
+   MERGE_COMMAND_BATON is cascaded from the argument of the same name in
+   do_directory_merge().
 */
 static svn_error_t *
 get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                     merge_cmd_baton_t *merge_cmd_baton,
-                    const char *merge_src_canon_path,
-                    const char *url1,
-                    const char *url2,
-                    svn_revnum_t revision1,
-                    svn_revnum_t revision2,
-                    svn_ra_session_t *ra_session,
                     svn_depth_t depth,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
@@ -8500,9 +8488,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
                                               primary_url, scratch_pool));
 
   SVN_ERR(get_mergeinfo_paths(notify_b->children_with_mergeinfo, merge_b,
-                              mergeinfo_path,
-                              source->url1, source->url2, source->rev1, source->rev2,
-                              ra_session, depth, scratch_pool, scratch_pool));
+                              depth, scratch_pool, scratch_pool));
 
   /* The first item from the NOTIFY_B->CHILDREN_WITH_MERGEINFO is always
      the target thanks to depth-first ordering. */
