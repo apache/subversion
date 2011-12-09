@@ -947,14 +947,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "\n"
 "         svn diff ^/trunk@500 ^/bar@HEAD\n"
 "\n"
-"     Note that a 2-URL merge can also merge from foreign repositories.\n"
-"     While SOURCE1 and SOURCE2 must both come from the same repository,\n"
-"     TARGET_WCPATH may come from a different repository than the sources.\n"
-"     However, there are some caveats. Most notably, copies made in the\n"
-"     merge source will be transformed into plain additions in the merge\n"
-"     target. Also, merge-tracking is not supported when foreign\n"
-"     repositories are involved.\n"
-"\n"
 "\n"
 "  The following applies to all types of merges:\n"
 "\n"
@@ -999,7 +991,17 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "  reintegrate merges.\n"
 "\n"
 "  The --ignore-ancestry option prevents merge tracking and thus ignores\n"
-"  mergeinfo, neither considering it nor recording it.\n"),
+"  mergeinfo, neither considering it nor recording it.\n"
+"\n"
+"    - Merging from foreign repositories -\n"
+"\n"
+"  Subversion does support merging from foreign repositories.\n"
+"  While all merge source URLs must point to the same repository, the merge\n"
+"  target working copy may come from a different repository than the source.\n"
+"  However, there are some caveats. Most notably, copies made in the\n"
+"  merge source will be transformed into plain additions in the merge\n"
+"  target. Also, merge-tracking is not supported for merges from foreign\n"
+"  repositories.\n"),
     {'r', 'c', 'N', opt_depth, 'q', opt_force, opt_dry_run, opt_merge_cmd,
      opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate,
      opt_allow_mixed_revisions} },
