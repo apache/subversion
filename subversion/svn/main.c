@@ -915,7 +915,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "     merge is necessary.\n"
 "\n"
 "     The 'bar' branch has been synced with trunk up to revision 500.\n"
-"     (If this revision number is not known it can be located using the\n"
+"     (If this revision number is not known, it can be located using the\n"
 "     'svn log' and/or 'svn mergeinfo' commands.)\n"
 "     The difference between trunk@500 and bar@HEAD contains the complete\n"
 "     set of changes related to feature 'bar', and no other changes. These\n"
