@@ -9211,7 +9211,7 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
   return SVN_NO_ERROR;
 }
 
-/* Perform checks to determine whether of the working copy at TARGET_ABSPATH
+/* Perform checks to determine whether the working copy at TARGET_ABSPATH
  * can safely be used as a merge target. Checks are performed according to
  * the ALLOW_MIXED_REV, ALLOW_LOCAL_MODS, and ALLOW_SWITCHED_SUBTREES
  * parameters. If any checks fail, raise SVN_ERR_CLIENT_NOT_READY_TO_MERGE.
@@ -9228,9 +9228,21 @@ ensure_wc_is_suitable_merge_target(const char *target_abspath,
                                    svn_boolean_t allow_switched_subtrees,
                                    apr_pool_t *scratch_pool)
 {
-  /* Avoid the following checks if we don't need them. */
-  if (allow_mixed_rev && allow_local_mods && allow_switched_subtrees)
-    return SVN_NO_ERROR;
+  svn_node_kind_t target_kind;
+
+  /* Check the target exists. */
+  SVN_ERR(svn_io_check_path(target_abspath, &target_kind, scratch_pool));
+  if (target_kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("Path '%s' does not exist"),
+                             svn_dirent_local_style(target_abspath,
+                                                    scratch_pool));
+  SVN_ERR(svn_wc_read_kind(&target_kind, ctx->wc_ctx, target_abspath, FALSE,
+                           scratch_pool));
+  if (target_kind != svn_node_dir && target_kind != svn_node_file)
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("Merge target '%s' does not exist in the "
+                               "working copy"), target_abspath);
 
   /* Perform the mixed-revision check first because it's the cheapest one. */
   if (! allow_mixed_rev)
@@ -9348,28 +9360,11 @@ merge_locked(const char *source1,
   svn_revnum_t yc_rev = SVN_INVALID_REVNUM;
   apr_pool_t *sesspool;
   svn_boolean_t same_repos;
-  svn_node_kind_t target_kind;
-
-  /* Make sure the target is really there. */
-  SVN_ERR(svn_io_check_path(target_abspath, &target_kind, scratch_pool));
-  if (target_kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("Path '%s' does not exist"),
-                             svn_dirent_local_style(target_abspath,
-                                                    scratch_pool));
 
   /* ### FIXME: This function really ought to do a history check on
      the left and right sides of the merge source, and -- if one is an
      ancestor of the other -- just call svn_client_merge_peg3() with
      the appropriate args. */
-
-  /* Check the target exists. */
-  SVN_ERR(svn_wc_read_kind(&target_kind, ctx->wc_ctx, target_abspath, FALSE,
-                           scratch_pool));
-  if (target_kind != svn_node_dir && target_kind != svn_node_file)
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("Merge target '%s' does not exist in the "
-                               "working copy"), target_abspath);
 
   /* Do not allow merges into mixed-revision working copies. */
   SVN_ERR(ensure_wc_is_suitable_merge_target(target_abspath, ctx,
@@ -10477,15 +10472,6 @@ merge_reintegrate_locked(const char *source_path_or_url,
   apr_hash_t *subtrees_with_mergeinfo;
   const char *target_url;
   svn_revnum_t target_base_rev;
-  svn_node_kind_t kind;
-
-  /* Make sure the target is really there. */
-  SVN_ERR(svn_io_check_path(target_abspath, &kind, scratch_pool));
-  if (kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("Path '%s' does not exist"),
-                             svn_dirent_local_style(target_abspath,
-                                                    scratch_pool));
 
   /* Make sure we're dealing with a real URL. */
   SVN_ERR(svn_client_url_from_path2(&source.url2, source_path_or_url, ctx,
@@ -10723,23 +10709,8 @@ merge_peg_locked(const char *source_path_or_url,
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
   svn_boolean_t same_repos;
-  svn_node_kind_t target_kind;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
-
-  /* Make sure the target is really there. */
-  SVN_ERR(svn_io_check_path(target_abspath, &target_kind, scratch_pool));
-  if (target_kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("Path '%s' does not exist"),
-                             svn_dirent_local_style(target_abspath,
-                                                    scratch_pool));
-  SVN_ERR(svn_wc_read_kind(&target_kind, ctx->wc_ctx, target_abspath, FALSE,
-                           scratch_pool));
-  if (target_kind != svn_node_dir && target_kind != svn_node_file)
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("Merge target '%s' does not exist in the "
-                               "working copy"), target_abspath);
 
   SVN_ERR(ensure_wc_is_suitable_merge_target(target_abspath, ctx,
                                              allow_mixed_rev, TRUE, TRUE,
