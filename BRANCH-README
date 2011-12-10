@@ -36,6 +36,8 @@ TODO:
     Subject: FSFS successor ID design draft
     Message-ID: <20110826111432.GA8819@ted.stsp.name>
 
+* ensure concurrent writers are not starved
+
 
 Suggested:
 
