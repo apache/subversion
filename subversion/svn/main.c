@@ -2691,6 +2691,15 @@ main(int argc, const char *argv[])
                                      _("Please see the 'svn upgrade' command"));
         }
 
+      /* Tell the user about 'svn cleanup' if any error on the stack
+         was about locked working copies. */
+      if (svn_error_find_cause(err, SVN_ERR_WC_LOCKED))
+        {
+          err = svn_error_quick_wrap(
+                  err, _("Run 'svn cleanup' to remove locks "
+                         "(type 'svn help cleanup' for details)"));
+        }
+
       /* Issue #3014:
        * Don't print anything on broken pipes. The pipe was likely
        * closed by the process at the other end. We expect that
@@ -2700,14 +2709,6 @@ main(int argc, const char *argv[])
        * ### SVN_ERR_IO_PIPE_WRITE_ERROR. See svn_cmdline_fputs(). */
       if (err->apr_err != SVN_ERR_IO_PIPE_WRITE_ERROR)
         svn_handle_error2(err, stderr, FALSE, "svn: ");
-
-      /* Tell the user about 'svn cleanup' if any error on the stack
-         was about locked working copies. */
-      if (svn_error_find_cause(err, SVN_ERR_WC_LOCKED))
-        svn_error_clear(svn_cmdline_fputs(_("svn: run 'svn cleanup' to "
-                                            "remove locks (type 'svn help "
-                                            "cleanup' for details)\n"),
-                                          stderr, pool));
 
       svn_error_clear(err);
       svn_pool_destroy(pool);
