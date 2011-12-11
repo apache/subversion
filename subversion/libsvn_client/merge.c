@@ -9438,7 +9438,7 @@ merge_locked(const char *source1,
     {
       /* Make YC_RELPATH into a full URL. */
       const char *yc_url = svn_path_url_add_component2(source_repos_root.url,
-                                                       yc_url, scratch_pool);
+                                                       yc_relpath, scratch_pool);
 
       /* Note that our merge sources are related. */
       related = TRUE;
