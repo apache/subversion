@@ -185,7 +185,7 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
                                     apr_pool_t *pool);
 
 
-/* Set *ANCESTOR_PATH and *ANCESTOR_REVISION to the youngest common
+/* Set *ANCESTOR_RELPATH and *ANCESTOR_REVISION to the youngest common
    ancestor path (a path relative to the root of the repository) and
    revision, respectively, of the two locations identified as
    PATH_OR_URL1@REV1 and PATH_OR_URL2@REV2.  Use the authentication
@@ -193,7 +193,7 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
    This function assumes that PATH_OR_URL1@REV1 and PATH_OR_URL2@REV2
    both refer to the same repository.  Use POOL for all allocations. */
 svn_error_t *
-svn_client__get_youngest_common_ancestor(const char **ancestor_path,
+svn_client__get_youngest_common_ancestor(const char **ancestor_relpath,
                                          svn_revnum_t *ancestor_revision,
                                          const char *path_or_url1,
                                          svn_revnum_t rev1,

@@ -9356,7 +9356,7 @@ merge_locked(const char *source1,
   apr_array_header_t *merge_sources;
   svn_error_t *err;
   svn_boolean_t use_sleep = FALSE;
-  const char *yc_path = NULL;
+  const char *yc_relpath = NULL;
   svn_revnum_t yc_rev = SVN_INVALID_REVNUM;
   apr_pool_t *sesspool;
   svn_boolean_t same_repos;
@@ -9412,7 +9412,7 @@ merge_locked(const char *source1,
 
   /* Unless we're ignoring ancestry, see if the two sources are related.  */
   if (! ignore_ancestry)
-    SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_path, &yc_rev,
+    SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_relpath, &yc_rev,
                                                      source.url1, source.rev1,
                                                      source.url2, source.rev2,
                                                      ctx, scratch_pool));
@@ -9434,18 +9434,18 @@ merge_locked(const char *source1,
                       merge recording, then record-only two merges:
                       from A to C, and from C to B
   */
-  if (yc_path && SVN_IS_VALID_REVNUM(yc_rev))
+  if (yc_relpath && SVN_IS_VALID_REVNUM(yc_rev))
     {
+      /* Make YC_RELPATH into a full URL. */
+      const char *yc_url = svn_path_url_add_component2(source_repos_root.url,
+                                                       yc_url, scratch_pool);
+
       /* Note that our merge sources are related. */
       related = TRUE;
 
-      /* Make YC_PATH into a full URL. */
-      yc_path = svn_path_url_add_component2(source_repos_root.url, yc_path,
-                                            scratch_pool);
-
       /* If the common ancestor matches the right side of our merge,
          then we only need to reverse-merge the left side. */
-      if ((strcmp(yc_path, source.url2) == 0) && (yc_rev == source.rev2))
+      if ((strcmp(yc_url, source.url2) == 0) && (yc_rev == source.rev2))
         {
           ancestral = TRUE;
           SVN_ERR(normalize_merge_sources_internal(
@@ -9455,7 +9455,7 @@ merge_locked(const char *source1,
         }
       /* If the common ancestor matches the left side of our merge,
          then we only need to merge the right side. */
-      else if ((strcmp(yc_path, source.url1) == 0) && (yc_rev == source.rev1))
+      else if ((strcmp(yc_url, source.url1) == 0) && (yc_rev == source.rev1))
         {
           ancestral = TRUE;
           SVN_ERR(normalize_merge_sources_internal(
@@ -10303,7 +10303,7 @@ calculate_left_hand_side(const char **url_left,
   apr_hash_t *segments_hash = apr_hash_make(scratch_pool);
   svn_boolean_t never_synced;
   svn_revnum_t youngest_merged_rev;
-  const char *yc_ancestor_path;
+  const char *yc_ancestor_relpath;
   svn_revnum_t yc_ancestor_rev;
   const char *source_url;
   const char *target_url;
@@ -10362,12 +10362,12 @@ calculate_left_hand_side(const char **url_left,
   target_url = svn_path_url_add_component2(source_repos_root,
                                            target_repos_rel_path,
                                            iterpool);
-  SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_path,
+  SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_relpath,
                                                    &yc_ancestor_rev,
                                                    source_url, source_rev,
                                                    target_url, target_rev,
                                                    ctx, iterpool));
-  if (!(yc_ancestor_path && SVN_IS_VALID_REVNUM(yc_ancestor_rev)))
+  if (!(yc_ancestor_relpath && SVN_IS_VALID_REVNUM(yc_ancestor_rev)))
     return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                              _("'%s@%ld' must be ancestrally related to "
                                "'%s@%ld'"), source_url, source_rev,
@@ -10430,7 +10430,7 @@ calculate_left_hand_side(const char **url_left,
     {
       /* We never merged to the source.  Just return the branch point. */
       *url_left = svn_path_url_add_component2(source_repos_root,
-                                              yc_ancestor_path, result_pool);
+                                              yc_ancestor_relpath, result_pool);
       *rev_left = yc_ancestor_rev;
     }
   else
@@ -10462,7 +10462,7 @@ merge_reintegrate_locked(const char *source_path_or_url,
   svn_ra_session_t *target_ra_session;
   svn_ra_session_t *source_ra_session;
   const char *source_repos_rel_path, *target_repos_rel_path;
-  const char *yc_ancestor_path;
+  const char *yc_ancestor_relpath;
   svn_revnum_t yc_ancestor_rev;
   merge_source_t source;
   svn_mergeinfo_t unmerged_to_source_mergeinfo_catalog;
@@ -10577,13 +10577,13 @@ merge_reintegrate_locked(const char *source_path_or_url,
   if (strcmp(source.url1, target_url))
     SVN_ERR(svn_ra_reparent(target_ra_session, source.url1, scratch_pool));
 
-  SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_path,
+  SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_relpath,
                                                    &yc_ancestor_rev,
                                                    source.url2, source.rev2,
                                                    source.url1, source.rev1,
                                                    ctx, scratch_pool));
 
-  if (!(yc_ancestor_path && SVN_IS_VALID_REVNUM(yc_ancestor_rev)))
+  if (!(yc_ancestor_relpath && SVN_IS_VALID_REVNUM(yc_ancestor_rev)))
     return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                              _("'%s@%ld' must be ancestrally related to "
                                "'%s@%ld'"),
@@ -10598,7 +10598,7 @@ merge_reintegrate_locked(const char *source_path_or_url,
       svn_mergeinfo_t final_unmerged_catalog = apr_hash_make(scratch_pool);
 
       SVN_ERR(find_unsynced_ranges(source_repos_rel_path,
-                                   yc_ancestor_path,
+                                   yc_ancestor_relpath,
                                    unmerged_to_source_mergeinfo_catalog,
                                    merged_to_source_mergeinfo_catalog,
                                    final_unmerged_catalog,
