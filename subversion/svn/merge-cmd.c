@@ -39,6 +39,44 @@
 
 /*** Code. ***/
 
+/* Do a reintegrate merge from SOURCE_PATH_OR_URL@SOURCE_PEG_REVISION into
+ * TARGET_WCPATH.  Do it with a WC write lock unless DRY_RUN is true. */
+static svn_error_t *
+merge_reintegrate(const char *source_path_or_url,
+                  const svn_opt_revision_t *source_peg_revision,
+                  const char *target_wcpath,
+                  svn_boolean_t dry_run,
+                  const apr_array_header_t *merge_options,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *scratch_pool)
+{
+  const char *url1, *url2;
+  svn_revnum_t rev1, rev2;
+
+  SVN_ERR(svn_client_find_reintegrate_merge(
+            &url1, &rev1, &url2, &rev2,
+            source_path_or_url, source_peg_revision, target_wcpath,
+            ctx, scratch_pool, scratch_pool));
+
+  if (url1)
+    {
+      svn_opt_revision_t revision1 = { svn_opt_revision_number, { rev1 } };
+      svn_opt_revision_t revision2 = { svn_opt_revision_number, { rev2 } };
+
+      /* Do the merge.  Set 'allow_mixed_rev' to true, not because we want
+       * to allow a mixed-rev WC but simply to bypass the check, as it was
+       * already checked in svn_client_find_reintegrate_merge(). */
+      SVN_ERR(svn_client_merge4(url1, &revision1, url2, &revision2,
+                                target_wcpath, svn_depth_infinity,
+                                FALSE /* ignore_ancestry */,
+                                FALSE /* force */,
+                                FALSE /* record_only */,
+                                dry_run, TRUE /* allow_mixed_rev */,
+                                merge_options, ctx, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
@@ -303,11 +341,8 @@ svn_cl__merge(apr_getopt_t *os,
 
   if (opt_state->reintegrate)
     {
-      err = svn_client_merge_reintegrate(sourcepath1,
-                                         &peg_revision1,
-                                         targetpath,
-                                         opt_state->dry_run,
-                                         options, ctx, pool);
+      err = merge_reintegrate(sourcepath1, &peg_revision1, targetpath,
+                              opt_state->dry_run, options, ctx, pool);
     }
   else if (! two_sources_specified)
     {
