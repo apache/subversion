@@ -52,3 +52,8 @@ SELECT hash, revision, offset, size, expanded_size
 FROM rep_cache
 
 
+-- STMT_DEL_REPS_YOUNGER_THAN_REV
+DELETE FROM rep_cache
+WHERE revision >= ?1
+
+
