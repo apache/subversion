@@ -984,12 +984,17 @@ svn_wc_move(svn_wc_context_t *wc_ctx,
             apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
+
   SVN_ERR(copy_or_move(wc_ctx, src_abspath, dst_abspath,
                        TRUE /* metadata_only */,
                        TRUE /* is_move */,
                        cancel_func, cancel_baton,
                        notify_func, notify_baton,
                        scratch_pool));
+
+  /* An iterrupt at this point will leave the new copy marked as
+     moved-here but the source has not yet been deleted or marked as
+     moved-to. */
 
   /* Should we be using a workqueue for this move?  It's not clear.
      What should happen if the copy above is interrupted?  The user
