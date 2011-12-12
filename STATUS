@@ -88,14 +88,19 @@ Candidate changes:
    Votes:
      +1: danielsh, philip
 
- * r1210147
+ * r1210147, r1202132, r1202333
    Fix the 'svn log --diff' code so that it correctly shows a diff of a
    target file (or directory) that was at a different path in the past.
    Previously it would error out. A test is included.
+   Branch:
+     ^/subversion/branches/1.7.x-r1210147
+   Notes:
+    r1210147 is the actual fix.
+    r1202132 and r1202333 were merged for conflict resolution. These revisions
+    depend on the issue #2873 fix which has been backported in 1.7.2
    Votes:
-     +1: julianfoad
-     +0: stsp (change is good, but this needs a backport branch because
-               svn_client_diff_peg6 is new in 1.8)
+     +1: stsp
+     +1: julianfoad (r1210147 only)
 
  * r1211483
    Don't segfault on 'svn mkdir svn://localhost'
