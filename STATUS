@@ -124,6 +124,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1213331
+   Prune younger-than-youngest revisions from rep-cache.db.
+   Justification:
+     If this case actually materializes, this patch fixes a lurking filesystem
+     corruption.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
