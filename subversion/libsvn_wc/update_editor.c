@@ -2130,7 +2130,7 @@ delete_entry(const char *path,
     {
       svn_wc_conflict_result_t *result;
 
-      do
+      while (1)
         {
           SVN_ERR(eb->conflict_func(&result, tree_conflict,
                                     eb->conflict_baton,
@@ -2139,6 +2139,9 @@ delete_entry(const char *path,
             return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                                     NULL, _("Conflict callback violated API:"
                                             " returned no results"));
+
+          if (result->choice == svn_wc_conflict_choose_postpone)
+            break;
 
           if (result->choice == svn_wc_conflict_choose_scan_log_for_moves)
             {
@@ -2149,6 +2152,12 @@ delete_entry(const char *path,
               SVN_ERR(find_applicable_moves(
                         &tree_conflict->suggested_moves, eb,
                         local_abspath, scratch_pool, scratch_pool));
+
+              if (tree_conflict->suggested_moves->nelts > 0)
+                {
+                  /* Assume an incoming move vs. local delete/move conflict. */
+                  tree_conflict->action = svn_wc_conflict_action_move_away;
+                }
               continue;
             }
 
@@ -2183,13 +2192,13 @@ delete_entry(const char *path,
 
                   /* Incoming move vs. local move tree conflict. */
                   tree_conflict->action = svn_wc_conflict_action_move_away;
-                  tree_conflict->incoming_move = result->incoming_move;
+                  break;
                 }
               else if (tree_conflict->reason == svn_wc_conflict_reason_deleted)
                 {
                   /* Incoming move vs. local delete tree conflict. */
                   tree_conflict->action = svn_wc_conflict_action_move_away;
-                  tree_conflict->incoming_move = result->incoming_move;
+                  break;
                 }
 
               /* Now that the precise nature of the conflict is known, invoke
@@ -2201,11 +2210,13 @@ delete_entry(const char *path,
           if (result->choice == svn_wc_conflict_choose_new_incoming_move_target)
             {
               /* ### TODO */
+              break;
             }
 
           if (result->choice == svn_wc_conflict_choose_new_local_move_target)
             {
               /* ### TODO */
+              break;
             }
 
           if (moved_to_abspath &&
@@ -2232,13 +2243,21 @@ delete_entry(const char *path,
                   svn_wc_conflict_reason_moved_away_and_edited;
               else
                 tree_conflict = NULL; /* discard conflict */
+              break;
+            }
+
+          if (result->choice == svn_wc_conflict_choose_mine_conflict)
+            {
+              /* ### TODO */
+              break;
+            }
+
+          if (result->choice == svn_wc_conflict_choose_theirs_conflict)
+            {
+              /* ### TODO */
+              break;
             }
         }
-      while (tree_conflict &&
-             result->choice != svn_wc_conflict_choose_incoming_move &&
-             result->choice != svn_wc_conflict_choose_new_local_move_target &&
-             result->choice != svn_wc_conflict_choose_delete_is_delete &&
-             result->choice != svn_wc_conflict_choose_postpone);
     }
 
   if (tree_conflict != NULL)

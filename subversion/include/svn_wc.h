@@ -1858,11 +1858,6 @@ typedef struct svn_wc_conflict_description2_t
    * @since New in 1.8. */
   apr_array_header_t *suggested_moves;
 
-  /** The incoming move in case of an incoming move vs. local move tree
-   * conflict.
-   * @since New in 1.8. */
-  svn_wc_repos_move_info_t *incoming_move;
-
   /* Remember to adjust svn_wc__conflict_description2_dup()
    * if you add new fields to this struct. */
 } svn_wc_conflict_description2_t;

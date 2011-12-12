@@ -987,6 +987,104 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
         }
     }
 
+  else if (desc->kind == svn_wc_conflict_kind_tree &&
+           desc->action == svn_wc_conflict_action_move_away)
+    {
+      const char *answer;
+      const char *prompt;
+      const char *readable_desc;
+      const char *help_text;
+      svn_wc_repos_move_info_t *move;
+
+      SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
+               &readable_desc, desc, scratch_pool));
+      SVN_ERR(svn_cmdline_fprintf(
+                   stderr, subpool,
+                   _("Tree conflict on '%s'\n   > %s\n"),
+                   /* ### TODO: show the local move, too */
+                   svn_cl__local_style_skip_ancestor(b->path_prefix,
+                                                     desc->local_abspath,
+                                                     scratch_pool),
+                   readable_desc));
+
+      if (desc->server_sends_moves_as_copy_plus_delete)
+        SVN_ERR(pick_move(&move, desc->suggested_moves, b->pb,
+                          subpool));
+      else
+        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                 _("This client only supports servers which "
+                                   "send moves as copy+delete, but the server "
+                                   "does not send moves as copy+delete"));
+
+      prompt = _("Select: (p) postpone, (mc) mine-conflict,\n"
+                 "        (tc) theirs-conflict, (ci) change-incoming,\n"
+                 "        (cl) change-local, (h) help: ");
+      if (desc->reason == svn_wc_conflict_reason_moved_away ||
+          desc->reason == svn_wc_conflict_reason_moved_here)
+        help_text = 
+          _("  (p)  postpone        - resolve the conflict later\n"
+            "  (mc) mine-conflict   - use incoming move\n"
+            "  (tc) theirs-conflict - use local move\n"
+            "  (ci) change-incoming - change incoming move target\n"
+            "  (cl) change-local    - change local move target\n"
+            "  (h)  help            - show this help\n\n");
+      else if (desc->reason == svn_wc_conflict_reason_deleted)
+        help_text = 
+          _("  (p)  postpone        - resolve the conflict later\n"
+            "  (mc) mine-conflict   - delete the item\n"
+            "  (tc) theirs-conflict - move the item\n"
+            "  (h)  help            - show this help\n\n");
+
+      while (1)
+        {
+          svn_pool_clear(subpool);
+
+          SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb, subpool));
+
+          if (strcmp(answer, "h") == 0 || strcmp(answer, "?") == 0)
+            {
+              SVN_ERR(svn_cmdline_fprintf(stderr, subpool, "%s", help_text));
+              continue;
+            }
+          if (strcmp(answer, "p") == 0 || strcmp(answer, ":-P") == 0)
+            {
+              (*result)->choice = svn_wc_conflict_choose_postpone;
+              break;
+            }
+          if (strcmp(answer, "mc") == 0 || strcmp(answer, "X-)") == 0)
+            {
+              (*result)->choice = svn_wc_conflict_choose_mine_conflict;
+              break;
+            }
+          if (strcmp(answer, "ci") == 0)
+            {
+              /* ### TODO: Needs a user-friendly UI. Tab-completion? */
+              prompt = _("Please type the new incoming move target path: ");
+              SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb,
+                                               subpool));
+              (*result)->new_incoming_move_target = answer;
+              (*result)->choice =
+                svn_wc_conflict_choose_new_incoming_move_target;
+              break;
+            }
+          if (strcmp(answer, "tc") == 0 || strcmp(answer, "X-(") == 0)
+            {
+              (*result)->choice = svn_wc_conflict_choose_theirs_conflict;
+              break;
+            }
+          if (strcmp(answer, "cl") == 0)
+            {
+              /* ### TODO: Needs a user-friendly UI. Tab-completion? */
+              prompt = _("Please type the new local move target path: ");
+              SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb,
+                                               subpool));
+              (*result)->new_local_move_target = answer;
+              (*result)->choice = svn_wc_conflict_choose_new_local_move_target;
+              break;
+            }
+        }
+    }
+
   else /* other types of conflicts -- do nothing about them. */
     {
       (*result)->choice = svn_wc_conflict_choose_postpone;
