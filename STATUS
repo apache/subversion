@@ -133,19 +133,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1213331, r1213681, r1213690, r1213711, r1213716
-   Make 'svnadmin recover' prune too new revisions from rep-cache.db.
-   Justification:
-     If this case actually materializes, this patch fixes a lurking filesystem
-     corruption.
-   Notes:
-    r1213331 is the fix.
-    r1213681 is a follow-up which prevents an invalid assertion.
-    r1213690 is a minor simplification.
-    r1213711 is a minor simplification.
-    r1213716 fixes recover in case the rep-cache is disabled in fsfs.conf
-   Branch:
-     ^/subversion/branches/1.7.x-r1213331
-   Votes:
-     +1: danielsh, stsp, philip
