@@ -101,7 +101,7 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1213331, r1213681
+ * r1213331, r1213681, r1213690
    Make 'svnadmin recover' prune too new revisions from rep-cache.db.
    Justification:
      If this case actually materializes, this patch fixes a lurking filesystem
@@ -109,11 +109,20 @@ Candidate changes:
    Notes:
     r1213331 is the fix.
     r1213681 is a follow-up which prevents an invalid assertion.
+    r1213690 is a minor simplification
    Branch:
      ^/subversion/branches/1.7.x-r1213331
    Votes:
      +1: danielsh (r1213331 only)
-     +1: stsp
+     +1: stsp, philip
+
+ * r1213673
+   Make svnmucc act on values obtained from --config-dir.
+   Justification:
+     Can cause the testsuite to hang waiting for user input, could even
+     cause passwords to be stored when not wanted.
+   Votes:
+     +1: philip
 
 Veto-blocked changes:
 =====================
