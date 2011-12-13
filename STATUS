@@ -134,13 +134,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1211859, r1211885
-   Fix issue 4074, SEGV on "svn rm ROOT_URL"
-   Justification:
-     It's a SEGV.
-   Votes:
-     +1: philip, rhuijben, steveking
-
  * r1207858, r1207949
    Replace two assertions that say that your working copy is broken with
    error messages that supply a bit more information about what is broken.

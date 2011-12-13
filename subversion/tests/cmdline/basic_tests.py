@@ -999,6 +999,7 @@ def verify_dir_deleted(path):
 
   return 1
 
+@Issue(687,4074)
 def basic_delete(sbox):
   "basic delete command"
 
@@ -1189,6 +1190,12 @@ def basic_delete(sbox):
                                      ["\n", "Committed revision 2.\n"], [],
                                      'rm', '-m', 'delete iota URL',
                                      iota_URL)
+
+  # Issue 4074, deleting a root url SEGV.
+  expected_error = 'svn: E170000: .*not within a repository'
+  svntest.actions.run_and_verify_svn(None, [], expected_error,
+                                     'rm', sbox.repo_url,
+                                     '--message', 'delete root')
 
 #----------------------------------------------------------------------
 
