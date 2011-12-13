@@ -101,13 +101,17 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1213331
-   Prune younger-than-youngest revisions from rep-cache.db.
+ * r1213331, r1213681
+   Make 'svnadmin recover' prune too new revisions from rep-cache.db.
    Justification:
      If this case actually materializes, this patch fixes a lurking filesystem
      corruption.
+   Notes:
+    r1213331 is the fix.
+    r1213681 is a follow-up which prevents an invalid assertion.
    Votes:
-     +1: danielsh
+     +1: danielsh (r1213331 only)
+     +1: stsp
 
 Veto-blocked changes:
 =====================
