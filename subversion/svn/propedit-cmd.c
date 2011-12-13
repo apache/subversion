@@ -39,8 +39,6 @@
 #include "svn_props.h"
 #include "cl.h"
 
-#include "private/svn_wc_private.h"
-
 #include "svn_private_config.h"
 
 
