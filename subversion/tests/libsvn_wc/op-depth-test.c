@@ -4429,6 +4429,43 @@ move_on_move2(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_added(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "move_added", opts, pool));
+
+  SVN_ERR(wc_mkdir(&b, "A"));
+  SVN_ERR(wc_mkdir(&b, "A/B"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_update(&b, "", 1));
+
+  SVN_ERR(wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(wc_move(&b, "A", "A2"));
+  SVN_ERR(wc_mkdir(&b, "A2/B/C2"));
+
+  /* Both A2/B/C and A2/B/C2 are simple adds inside the move.  It
+     doesn't seem right for A2/B/C to be marked moved_here. */
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       1, ""},
+      {0, "A",        "normal",       1, "A",   FALSE, "A2"},
+      {0, "A/B",      "normal",       1, "A/B"},
+      {1, "A",        "base-deleted", NO_COPY_FROM},
+      {1, "A/B",      "base-deleted", NO_COPY_FROM},
+      {1, "A2",       "normal",       1, "A",   MOVED_HERE},
+      {1, "A2/B",     "normal",       1, "A/B", MOVED_HERE},
+      {3, "A2/B/C",   "normal",       NO_COPY_FROM},          /* XFAIL */
+      {3, "A2/B/C2",  "normal",       NO_COPY_FROM},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* ---------------------------------------------------------------------- */
@@ -4517,5 +4554,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_on_move"),
     SVN_TEST_OPTS_XFAIL(move_on_move2,
                        "move_on_move2"),
+    SVN_TEST_OPTS_XFAIL(move_added,
+                       "move_added"),
     SVN_TEST_NULL
   };
