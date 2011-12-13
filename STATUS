@@ -109,14 +109,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
- * r1211859, r1211885
-   Fix issue 4074, SEGV on "svn rm ROOT_URL"
-   Justification:
-     It's a SEGV.
-   Votes:
-     +1: philip, rhuijben, steveking
-
-
  * r1154121, r1195480, r1208840, r1209631, r1209654, r1212476, r1212482,
    r1212484
    Update and clarify the merge help text.
@@ -161,3 +153,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1211859, r1211885
+   Fix issue 4074, SEGV on "svn rm ROOT_URL"
+   Justification:
+     It's a SEGV.
+   Votes:
+     +1: philip, rhuijben, steveking
