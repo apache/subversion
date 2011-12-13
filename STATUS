@@ -87,7 +87,9 @@ Candidate changes:
     depend on the issue #2873 fix which has been backported in 1.7.2
    Votes:
      +1: stsp
-     +1: julianfoad (r1210147 only)
+     -0: julianfoad (Functionally fine, but the test doesn't fail when the
+           code patch is removed. The unpatched log command throws an error
+           on trunk, but outputs invalid results on the branch.)
 
  * r1154121, r1195480, r1208840, r1209631, r1209654, r1212476, r1212482,
    r1212484
