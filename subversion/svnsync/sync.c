@@ -33,9 +33,6 @@
 #include "svn_subst.h"
 #include "svn_string.h"
 
-#include "private/svn_opt_private.h"
-#include "private/svn_cmdline_private.h"
-
 #include "sync.h"
 
 #include "svn_private_config.h"
