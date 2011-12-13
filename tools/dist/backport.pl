@@ -68,12 +68,12 @@ sub merge {
 
   if ($entry{branch}) {
     # NOTE: This doesn't escape the branch into the pattern.
-    $pattern = sprintf '^ [*] %s branch\|Branch:\n *%s', $entry{branch}, $entry{branch};
+    $pattern = sprintf '\V\(%s branch\|branches\/%s\|Branch:\n *%s\)', $entry{branch}, $entry{branch}, $entry{branch};
     $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
     print $logmsg_fh "Reintergrate the $entry{header}:";
     print $logmsg_fh "";
   } elsif (@{$entry{revisions}}) {
-    $pattern = 'r' . $entry{revisions}->[0];
+    $pattern = '^ [*] \V' . 'r' . $entry{revisions}->[0];
     $mergeargs = join " ", (map { "-c$_" } @{$entry{revisions}}), '^/subversion/trunk';
     if (@{$entry{revisions}} > 1) {
       print $logmsg_fh "Merge the $entry{header} from trunk:";
@@ -88,7 +88,6 @@ sub merge {
   print $logmsg_fh $_ for @{$entry{entry}};
   close $logmsg_fh or die "Can't close $logmsg_filename: $!";
 
-  $pattern = '\V'.$pattern;
   my $script = <<"EOF";
 #!/bin/sh
 set -e
@@ -96,7 +95,7 @@ $SVN diff > $backupfile
 $SVN revert -R .
 $SVN up
 $SVN merge $mergeargs
-$VIM -e -s -n -N -i NONE -u NONE -c '/^ [*] $pattern/normal! dap' -c wq $STATUS
+$VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
 if $WET_RUN; then
   $SVN commit -F $logmsg_filename
 else
@@ -109,8 +108,7 @@ EOF
   $script .= <<"EOF" if $entry{branch};
 reinteg_rev=\`$SVN info $STATUS | sed -ne 's/Last Changed Rev: //p'\`
 if $WET_RUN; then
-  $SVN rm $BRANCHES/$entry{branch}\
-          -m "Remove the '$entry{branch}' branch, reintegrated in r\$reinteg_rev."
+  $SVN rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, reintegrated in r\$reinteg_rev."
 else
   echo "Removing reintegrated '$entry{branch}' branch"
 fi
