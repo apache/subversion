@@ -350,6 +350,5 @@ svn_fs_fs__del_rep_reference(svn_fs_t *fs,
   SVN_ERR(svn_sqlite__bindf(stmt, "r", youngest));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  SVN_ERR(svn_sqlite__reset(stmt));
   return SVN_NO_ERROR;
 }
