@@ -134,12 +134,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1207858, r1207949
-   Replace two assertions that say that your working copy is broken with
-   error messages that supply a bit more information about what is broken.
-   Votes:
-     +1: philip, rhuijben, stsp
-
  * r1210195
    Canonicalize svnserve.conf input.
    Justification:
