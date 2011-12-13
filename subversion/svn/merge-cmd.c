@@ -34,7 +34,6 @@
 #include "svn_types.h"
 #include "cl.h"
 
-#include "private/svn_wc_private.h"
 #include "svn_private_config.h"
 
 
@@ -95,39 +94,16 @@ quoted_repos_relpath(const char **repos_relpath,
   return SVN_NO_ERROR;
 }
 
-/* Set *TARGET_ABSPATH to the absolute path of, and *LOCK_ABSPATH to
- the absolute path to lock for, TARGET_WCPATH. */
-static svn_error_t *
-get_target_and_lock_abspath(const char **target_abspath,
-                            const char **lock_abspath,
-                            const char *target_wcpath,
-                            svn_client_ctx_t *ctx,
-                            apr_pool_t *scratch_pool)
-{
-  svn_node_kind_t kind;
-  SVN_ERR(svn_dirent_get_absolute(target_abspath, target_wcpath,
-                                  scratch_pool));
-  SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, *target_abspath, FALSE,
-                           scratch_pool));
-  if (kind == svn_node_dir)
-    *lock_abspath = *target_abspath;
-  else
-    *lock_abspath = svn_dirent_dirname(*target_abspath, scratch_pool);
-
-  return SVN_NO_ERROR;
-}
-
 /* */
 static svn_error_t *
-merge_reintegrate_locked(const char *source_path_or_url,
-                         const svn_opt_revision_t *source_peg_revision,
-                         const char *target_wcpath,
-                         const char *target_wc_abspath,
-                         svn_boolean_t dry_run,
-                         svn_boolean_t quiet,
-                         const apr_array_header_t *merge_options,
-                         svn_client_ctx_t *ctx,
-                         apr_pool_t *scratch_pool)
+merge_reintegrate(const char *source_path_or_url,
+                  const svn_opt_revision_t *source_peg_revision,
+                  const char *target_wcpath,
+                  svn_boolean_t dry_run,
+                  svn_boolean_t quiet,
+                  const apr_array_header_t *merge_options,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *scratch_pool)
 {
   const char *url1, *url2;
   svn_revnum_t rev1, rev2;
@@ -166,36 +142,6 @@ merge_reintegrate_locked(const char *source_path_or_url,
                                 dry_run, TRUE /* allow_mixed_rev */,
                                 merge_options, ctx, scratch_pool));
     }
-
-  return SVN_NO_ERROR;
-}
-
-/* */
-static svn_error_t *
-merge_reintegrate(const char *source,
-                  const svn_opt_revision_t *peg_revision,
-                  const char *target_wcpath,
-                  svn_boolean_t dry_run,
-                  svn_boolean_t quiet,
-                  const apr_array_header_t *merge_options,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
-{
-  const char *target_wc_abspath, *lock_abspath;
-
-  SVN_ERR(get_target_and_lock_abspath(&target_wc_abspath, &lock_abspath,
-                                      target_wcpath, ctx, pool));
-
-  if (!dry_run)
-    SVN_WC__CALL_WITH_WRITE_LOCK(
-      merge_reintegrate_locked(source, peg_revision,
-                               target_wcpath, target_wc_abspath,
-                               dry_run, quiet, merge_options, ctx, pool),
-      ctx->wc_ctx, lock_abspath, FALSE /* lock_anchor */, pool);
-  else
-    SVN_ERR(merge_reintegrate_locked(source, peg_revision,
-                                     target_wcpath, target_wc_abspath,
-                                     dry_run, quiet, merge_options, ctx, pool));
 
   return SVN_NO_ERROR;
 }
