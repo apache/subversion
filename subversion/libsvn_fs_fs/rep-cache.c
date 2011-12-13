@@ -218,3 +218,27 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
 
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_fs_fs__del_rep_reference(svn_fs_t *fs,
+                             svn_revnum_t youngest,
+                             apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR_ASSERT(ffd->rep_sharing_allowed);
+  if (! ffd->rep_cache_db)
+    SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db,
+                                    STMT_DEL_REPS_YOUNGER_THAN_REV));
+  SVN_ERR(svn_sqlite__bindf(stmt, "r", youngest+1));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  /* ignore HAVE_ROW */
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+  return SVN_NO_ERROR;
+}
