@@ -203,11 +203,13 @@ sub main {
   usage, exit 0 if @ARGV;
   usage, exit 1 unless -r $STATUS;
 
+  my $sawapproved;
   @ARGV = $STATUS;
   while (<>) {
     my @lines = split /\n/;
 
     # Section header?
+    next unless $sawapproved ||= /^Approved changes/;
     print "\n\n=== $lines[0]" and next if $lines[0] =~ /^[A-Z].*:$/i;
 
     # Backport entry?
