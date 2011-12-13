@@ -128,38 +128,6 @@ svn_client__get_location_segments(apr_array_header_t **segments,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
-/* */
-svn_error_t *
-svn_client_find_reintegrate_merge(svn_ra_session_t **source_ra_session_p,
-                                  svn_ra_session_t **target_ra_session_p,
-                                  const char **url1_p,
-                                  svn_revnum_t *rev1_p,
-                                  const char **url2_p,
-                                  svn_revnum_t *rev2_p,
-                                  svn_revnum_t *yc_ancestor_rev_p,
-                                  /* inputs */
-                                  const char *source,
-                                  const svn_opt_revision_t *peg_revision,
-                                  const char *target_abspath,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool);
-
-/* */
-svn_error_t *
-svn_client_do_reintegrate_merge(svn_ra_session_t *source_ra_session,
-                                svn_ra_session_t *target_ra_session,
-                                const char *url1,
-                                svn_revnum_t rev1,
-                                const char *url2,
-                                svn_revnum_t rev2,
-                                svn_revnum_t yc_ancestor_rev,
-                                const char *target_wcpath,
-                                svn_boolean_t dry_run,
-                                const apr_array_header_t *merge_options,
-                                svn_client_ctx_t *ctx,
-                                apr_pool_t *scratch_pool);
-
 
 #ifdef __cplusplus
 }

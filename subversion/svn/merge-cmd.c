@@ -34,7 +34,6 @@
 #include "svn_types.h"
 #include "cl.h"
 
-#include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
 #include "svn_private_config.h"
 
@@ -120,8 +119,8 @@ get_target_and_lock_abspath(const char **target_abspath,
 
 /* */
 static svn_error_t *
-merge_reintegrate_locked(const char *source,
-                         const svn_opt_revision_t *peg_revision,
+merge_reintegrate_locked(const char *source_path_or_url,
+                         const svn_opt_revision_t *source_peg_revision,
                          const char *target_wcpath,
                          const char *target_wc_abspath,
                          svn_boolean_t dry_run,
@@ -130,16 +129,12 @@ merge_reintegrate_locked(const char *source,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *scratch_pool)
 {
-  svn_ra_session_t *source_ra_session;
-  svn_ra_session_t *target_ra_session;
   const char *url1, *url2;
   svn_revnum_t rev1, rev2;
-  svn_revnum_t yc_ancestor_rev;
 
   SVN_ERR(svn_client_find_reintegrate_merge(
-            &source_ra_session, &target_ra_session,
-            &url1, &rev1, &url2, &rev2, &yc_ancestor_rev,
-            source, peg_revision, target_wc_abspath,
+            &url1, &rev1, &url2, &rev2,
+            source_path_or_url, source_peg_revision, target_wcpath,
             ctx, scratch_pool, scratch_pool));
 
   if (! quiet)
@@ -155,11 +150,23 @@ merge_reintegrate_locked(const char *source,
              svn_path_local_style(target_wcpath, scratch_pool));
     }
 
-  SVN_ERR(svn_client_do_reintegrate_merge(
-            source_ra_session, target_ra_session,
-            url1, rev1, url2, rev2, yc_ancestor_rev,
-            target_wc_abspath,
-            dry_run, merge_options, ctx, scratch_pool));
+  if (url1)
+    {
+      svn_opt_revision_t revision1 = { svn_opt_revision_number, { rev1 } };
+      svn_opt_revision_t revision2 = { svn_opt_revision_number, { rev2 } };
+
+      /* Do the merge.  Set 'allow_mixed_rev' to true, not because we want
+       * to allow a mixed-rev WC but simply to bypass the check, as it was
+       * already checked in svn_client_find_reintegrate_merge(). */
+      SVN_ERR(svn_client_merge4(url1, &revision1, url2, &revision2,
+                                target_wcpath, svn_depth_infinity,
+                                FALSE /* ignore_ancestry */,
+                                FALSE /* force */,
+                                FALSE /* record_only */,
+                                dry_run, TRUE /* allow_mixed_rev */,
+                                merge_options, ctx, scratch_pool));
+    }
+
   return SVN_NO_ERROR;
 }
 
