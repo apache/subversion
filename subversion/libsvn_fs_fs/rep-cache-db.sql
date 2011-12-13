@@ -48,4 +48,4 @@ VALUES (?1, ?2, ?3, ?4, ?5)
 
 -- STMT_DEL_REPS_YOUNGER_THAN_REV
 DELETE FROM rep_cache
-WHERE revision >= ?1
+WHERE revision > ?1
