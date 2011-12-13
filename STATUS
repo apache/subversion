@@ -75,19 +75,6 @@ Candidate changes:
    Votes:
      +1: stsp, philip
 
- * r1207858, r1207949
-   Replace two assertions that say that your working copy is broken with
-   error messages that supply a bit more information about what is broken.
-   Votes:
-     +1: philip, rhuijben
-
- * r1210195
-   Canonicalize svnserve.conf input.
-   Justification:
-     Server asserts after being upgraded.
-   Votes:
-     +1: danielsh, philip
-
  * r1210147, r1202132, r1202333
    Fix the 'svn log --diff' code so that it correctly shows a diff of a
    target file (or directory) that was at a different path in the past.
@@ -101,13 +88,6 @@ Candidate changes:
    Votes:
      +1: stsp
      +1: julianfoad (r1210147 only)
-
- * r1211483
-   Don't segfault on 'svn mkdir svn://localhost'
-   Justification:
-     Thou shall not segfault.
-   Votes:
-     +1: rhuijben, philip
 
  * r1154121, r1195480, r1208840, r1209631, r1209654, r1212476, r1212482,
    r1212484
@@ -160,3 +140,23 @@ Approved changes:
      It's a SEGV.
    Votes:
      +1: philip, rhuijben, steveking
+
+ * r1207858, r1207949
+   Replace two assertions that say that your working copy is broken with
+   error messages that supply a bit more information about what is broken.
+   Votes:
+     +1: philip, rhuijben, stsp
+
+ * r1210195
+   Canonicalize svnserve.conf input.
+   Justification:
+     Server asserts after being upgraded.
+   Votes:
+     +1: danielsh, philip, stsp
+
+ * r1211483
+   Don't segfault on 'svn mkdir svn://localhost'
+   Justification:
+     Thou shall not segfault.
+   Votes:
+     +1: rhuijben, philip, stsp
