@@ -1238,6 +1238,7 @@ svn_error_t *
 svn_wc__db_op_copy_shadowed_layer(svn_wc__db_t *db,
                                   const char *src_abspath,
                                   const char *dst_abspath,
+                                  svn_boolean_t is_move,
                                   apr_pool_t *scratch_pool);
 
 
