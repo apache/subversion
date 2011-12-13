@@ -109,6 +109,7 @@ create_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                     const char *username,
                     const char *password,
                     const char *config_dir,
+                    svn_config_t *cfg_config,
                     svn_boolean_t non_interactive,
                     svn_boolean_t no_auth_cache,
                     apr_pool_t *pool)
@@ -119,7 +120,8 @@ create_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                                         non_interactive,
                                         username, password, config_dir,
                                         no_auth_cache,
-                                        FALSE, NULL, NULL, NULL, pool));
+                                        FALSE /* trust_server_certs */,
+                                        cfg_config, NULL, NULL, pool));
 
   (*callbacks)->open_tmp_file = open_tmp_file;
 
@@ -629,13 +631,17 @@ execute(const apr_array_header_t *actions,
   struct operation root;
   svn_error_t *err;
   apr_hash_t *config;
+  svn_config_t *cfg_config;
   int i;
 
   SVN_ERR(svn_config_get_config(&config, config_dir, pool));
   SVN_ERR(svn_cmdline__apply_config_options(config, config_options,
                                             "svnmucc: ", "--config-option"));
+  cfg_config = apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
+                            APR_HASH_KEY_STRING);
   SVN_ERR(create_ra_callbacks(&ra_callbacks, username, password, config_dir,
-                              non_interactive, no_auth_cache, pool));
+                              cfg_config, non_interactive, no_auth_cache,
+                              pool));
   SVN_ERR(svn_ra_open4(&session, NULL, anchor, NULL, ra_callbacks,
                        NULL, config, pool));
 
