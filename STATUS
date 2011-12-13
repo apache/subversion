@@ -109,6 +109,8 @@ Candidate changes:
    Notes:
     r1213331 is the fix.
     r1213681 is a follow-up which prevents an invalid assertion.
+   Branch:
+     ^/subversion/branches/1.7.x-r1213331
    Votes:
      +1: danielsh (r1213331 only)
      +1: stsp
