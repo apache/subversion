@@ -114,8 +114,8 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1213331
    Votes:
-     +1: danielsh
-     +1 (without r1213711): stsp, philip
+     +1: danielsh, stsp
+     +1 (without r1213711): philip
 
  * r1213716
    Make 'svnadmin recover' prune the rep-cache also when it's disabled 
