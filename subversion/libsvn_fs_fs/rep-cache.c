@@ -341,7 +341,7 @@ svn_fs_fs__del_rep_reference(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR_ASSERT(ffd->rep_sharing_allowed);
+  SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT);
   if (! ffd->rep_cache_db)
     SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
 
