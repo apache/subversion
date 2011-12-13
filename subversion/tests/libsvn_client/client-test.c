@@ -28,6 +28,7 @@
 #include <limits.h>
 #include "svn_mergeinfo.h"
 #include "../../libsvn_client/mergeinfo.h"
+#include "../../libsvn_client/client.h"
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_repos.h"
@@ -650,6 +651,71 @@ test_16k_add(const svn_test_opts_t *opts,
 }
 #endif
 
+static svn_error_t *
+test_youngest_common_ancestor(const svn_test_opts_t *opts,
+                              apr_pool_t *pool)
+{
+  const char *repos_url;
+  svn_client_ctx_t *ctx;
+  svn_opt_revision_t head_rev = { svn_opt_revision_head, { 0 } };
+  svn_opt_revision_t zero_rev = { svn_opt_revision_number, { 0 } };
+  svn_client_copy_source_t source;
+  apr_array_header_t *sources;
+  const char *dest;
+  const char *yc_ancestor_relpath;
+  svn_revnum_t yc_ancestor_rev;
+
+  /* Create a filesytem and repository containing the Greek tree. */
+  SVN_ERR(create_greek_repos(&repos_url, "test-youngest-common-ancestor", opts, pool));
+
+  svn_client_create_context(&ctx, pool);
+
+  /* Copy a file into dir 'A', keeping its own basename. */
+  sources = apr_array_make(pool, 1, sizeof(svn_client_copy_source_t *));
+  source.path = svn_path_url_add_component2(repos_url, "iota", pool);
+  source.peg_revision = &head_rev;
+  source.revision = &head_rev;
+  APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = &source;
+  dest = svn_path_url_add_component2(repos_url, "A", pool);
+  SVN_ERR(svn_client_copy6(sources, dest, TRUE /* copy_as_child */,
+                           FALSE /* make_parents */,
+                           FALSE /* ignore_externals */,
+                           NULL, NULL, NULL, ctx, pool));
+
+  /* Test: YCA(iota@2, A/iota@2) is iota@1. */
+  SVN_ERR(svn_client__get_youngest_common_ancestor(
+            &yc_ancestor_relpath, &yc_ancestor_rev,
+            svn_path_url_add_component2(repos_url, "iota", pool), 2,
+            svn_path_url_add_component2(repos_url, "A/iota", pool), 2,
+            ctx, pool));
+  SVN_TEST_STRING_ASSERT(yc_ancestor_relpath, "iota");
+  SVN_TEST_ASSERT(yc_ancestor_rev == 1);
+
+  /* Copy the root directory (at revision 0) into A as 'ROOT'. */
+  sources = apr_array_make(pool, 1, sizeof(svn_client_copy_source_t *));
+  source.path = repos_url;
+  source.peg_revision = &zero_rev;
+  source.revision = &zero_rev;
+  APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = &source;
+  dest = svn_path_url_add_component2(repos_url, "A/ROOT", pool);
+  SVN_ERR(svn_client_copy6(sources, dest, FALSE /* copy_as_child */,
+                           FALSE /* make_parents */,
+                           FALSE /* ignore_externals */,
+                           NULL, NULL, NULL, ctx, pool));
+
+  /* Test: YCA(''@0, A/ROOT@3) is ''@0 (handled as a special case). */
+  SVN_ERR(svn_client__get_youngest_common_ancestor(
+            &yc_ancestor_relpath, &yc_ancestor_rev,
+            svn_path_url_add_component2(repos_url, "", pool), 0,
+            svn_path_url_add_component2(repos_url, "A/ROOT", pool), 3,
+            ctx, pool));
+  SVN_TEST_STRING_ASSERT(yc_ancestor_relpath, "");
+  SVN_TEST_ASSERT(yc_ancestor_rev == 0);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* ========================================================================== */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -665,5 +731,6 @@ struct svn_test_descriptor_t test_funcs[] =
 #ifdef TEST16K_ADD
     SVN_TEST_OPTS_PASS(test_16k_add, "test adding 16k files"),
 #endif
+    SVN_TEST_OPTS_PASS(test_youngest_common_ancestor, "test youngest_common_ancestor"),
     SVN_TEST_NULL
   };

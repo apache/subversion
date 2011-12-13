@@ -1482,11 +1482,12 @@ filter_log_entry_with_rangelist(void *baton,
 
   /* If the paths changed by LOG_ENTRY->REVISION are provided we can determine
      if LOG_ENTRY->REVISION, while only partially represented in
-     BATON->RANGELIST, is in fact completely applied to all affected paths. */
+     BATON->RANGELIST, is in fact completely applied to all affected paths.
+     ### And ... what if it is, or if it isn't? What do we do with the answer?
+         And how do we cope if the changed paths are not provided? */
   if ((log_entry->non_inheritable || !fleb->filtering_merged)
       && log_entry->changed_paths2)
     {
-      int i;
       apr_hash_index_t *hi;
       svn_boolean_t all_subtrees_have_this_rev = TRUE;
       apr_array_header_t *this_rev_rangelist =
@@ -1498,11 +1499,11 @@ filter_log_entry_with_rangelist(void *baton,
            hi;
            hi = apr_hash_next(hi))
         {
+          int i;
           const char *path = svn__apr_hash_index_key(hi);
           svn_log_changed_path2_t *change = svn__apr_hash_index_val(hi);
           const char *target_fspath_affected;
           svn_mergeinfo_t nearest_ancestor_mergeinfo;
-          apr_hash_index_t *hi2;
           svn_boolean_t found_this_revision = FALSE;
           const char *merge_source_rel_target;
           const char *merge_source_fspath;
@@ -1574,6 +1575,8 @@ filter_log_entry_with_rangelist(void *baton,
 
           if (nearest_ancestor_mergeinfo)
             {
+              apr_hash_index_t *hi2;
+
               for (hi2 = apr_hash_first(iterpool, nearest_ancestor_mergeinfo);
                    hi2;
                    hi2 = apr_hash_next(hi2))

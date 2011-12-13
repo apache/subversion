@@ -666,7 +666,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log bar.c@42\n"
      "    svn log http://www.example.com/repo/project/foo.c\n"
      "    svn log http://www.example.com/repo/project foo.c bar.c\n"
-     "    svn log http://www.example.com/repo/project@50 foo.c bar.c\n"),
+     "    svn log http://www.example.com/repo/project@50 foo.c bar.c\n"
+     "\n"
+     "    This command shows the log entry for the revision the branch\n"
+     "    ^/branches/foo was created in:\n"
+     "      svn log --stop-on-copy --limit 1 -r0:HEAD ^/branches/foo\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
      opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
      opt_depth, opt_diff, opt_diff_cmd, opt_internal_diff, 'x'},
@@ -910,8 +914,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "     directly related -- one is not a direct copy of the other. A 2-URL\n"
 "     merge is necessary.\n"
 "\n"
-"     The 'bar' branch has been synced with trunk up to revision 500. So the\n"
-"     difference between trunk@500 and bar@HEAD contains the complete\n"
+"     The 'bar' branch has been synced with trunk up to revision 500.\n"
+"     (If this revision number is not known, it can be located using the\n"
+"     'svn log' and/or 'svn mergeinfo' commands.)\n"
+"     The difference between trunk@500 and bar@HEAD contains the complete\n"
 "     set of changes related to feature 'bar', and no other changes. These\n"
 "     changes are applied to the 'foo' branch.\n"
 "\n"
@@ -940,14 +946,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "     luxury of a clean working copy to merge to. In this case:\n"
 "\n"
 "         svn diff ^/trunk@500 ^/bar@HEAD\n"
-"\n"
-"     Note that a 2-URL merge can also merge from foreign repositories.\n"
-"     While SOURCE1 and SOURCE2 must both come from the same repository,\n"
-"     TARGET_WCPATH may come from a different repository than the sources.\n"
-"     However, there are some caveats. Most notably, copies made in the\n"
-"     merge source will be transformed into plain additions in the merge\n"
-"     target. Also, merge-tracking is not supported when foreign\n"
-"     repositories are involved.\n"
 "\n"
 "\n"
 "  The following applies to all types of merges:\n"
@@ -993,7 +991,17 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "  reintegrate merges.\n"
 "\n"
 "  The --ignore-ancestry option prevents merge tracking and thus ignores\n"
-"  mergeinfo, neither considering it nor recording it.\n"),
+"  mergeinfo, neither considering it nor recording it.\n"
+"\n"
+"    - Merging from foreign repositories -\n"
+"\n"
+"  Subversion does support merging from foreign repositories.\n"
+"  While all merge source URLs must point to the same repository, the merge\n"
+"  target working copy may come from a different repository than the source.\n"
+"  However, there are some caveats. Most notably, copies made in the\n"
+"  merge source will be transformed into plain additions in the merge\n"
+"  target. Also, merge-tracking is not supported for merges from foreign\n"
+"  repositories.\n"),
     {'r', 'c', 'N', opt_depth, 'q', opt_force, opt_dry_run, opt_merge_cmd,
      opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate,
      opt_allow_mixed_revisions} },
@@ -2684,6 +2692,15 @@ main(int argc, const char *argv[])
                                      _("Please see the 'svn upgrade' command"));
         }
 
+      /* Tell the user about 'svn cleanup' if any error on the stack
+         was about locked working copies. */
+      if (svn_error_find_cause(err, SVN_ERR_WC_LOCKED))
+        {
+          err = svn_error_quick_wrap(
+                  err, _("Run 'svn cleanup' to remove locks "
+                         "(type 'svn help cleanup' for details)"));
+        }
+
       /* Issue #3014:
        * Don't print anything on broken pipes. The pipe was likely
        * closed by the process at the other end. We expect that
@@ -2693,14 +2710,6 @@ main(int argc, const char *argv[])
        * ### SVN_ERR_IO_PIPE_WRITE_ERROR. See svn_cmdline_fputs(). */
       if (err->apr_err != SVN_ERR_IO_PIPE_WRITE_ERROR)
         svn_handle_error2(err, stderr, FALSE, "svn: ");
-
-      /* Tell the user about 'svn cleanup' if any error on the stack
-         was about locked working copies. */
-      if (svn_error_find_cause(err, SVN_ERR_WC_LOCKED))
-        svn_error_clear(svn_cmdline_fputs(_("svn: run 'svn cleanup' to "
-                                            "remove locks (type 'svn help "
-                                            "cleanup' for details)\n"),
-                                          stderr, pool));
 
       svn_error_clear(err);
       svn_pool_destroy(pool);

@@ -845,7 +845,7 @@ svn_client__repos_locations(const char **start_url,
 
 
 svn_error_t *
-svn_client__get_youngest_common_ancestor(const char **ancestor_path,
+svn_client__get_youngest_common_ancestor(const char **ancestor_relpath,
                                          svn_revnum_t *ancestor_revision,
                                          const char *path_or_url1,
                                          svn_revnum_t rev1,
@@ -859,7 +859,7 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
   apr_hash_t *history1, *history2;
   apr_hash_index_t *hi;
   svn_revnum_t yc_revision = SVN_INVALID_REVNUM;
-  const char *yc_path = NULL;
+  const char *yc_relpath = NULL;
   svn_opt_revision_t revision1, revision2;
   svn_boolean_t has_rev_zero_history1;
   svn_boolean_t has_rev_zero_history2;
@@ -923,7 +923,7 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
                   || (yc_range->end > yc_revision))
                 {
                   yc_revision = yc_range->end;
-                  yc_path = path + 1;
+                  yc_relpath = path + 1;
                 }
             }
         }
@@ -931,13 +931,13 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
 
   /* It's possible that PATH_OR_URL1 and PATH_OR_URL2's only common
      history is revision 0. */
-  if (!yc_path && has_rev_zero_history1 && has_rev_zero_history2)
+  if (!yc_relpath && has_rev_zero_history1 && has_rev_zero_history2)
     {
-      yc_path = "/";
+      yc_relpath = "";
       yc_revision = 0;
     }
 
-  *ancestor_path = yc_path;
+  *ancestor_relpath = yc_relpath;
   *ancestor_revision = yc_revision;
   return SVN_NO_ERROR;
 }
