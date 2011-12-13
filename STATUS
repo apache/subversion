@@ -134,13 +134,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1211483
-   Don't segfault on 'svn mkdir svn://localhost'
-   Justification:
-     Thou shall not segfault.
-   Votes:
-     +1: rhuijben, philip, stsp
-
  * r1213331, r1213681, r1213690, r1213711, r1213716
    Make 'svnadmin recover' prune too new revisions from rep-cache.db.
    Justification:
