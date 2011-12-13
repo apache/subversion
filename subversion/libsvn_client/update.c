@@ -210,6 +210,13 @@ struct copy_info {
 } copy_info;
 
 
+/* Set *RELATED to true if the deleted node at repository relpath
+ * DELETED_PATH@DELETED_REV is ancestrally related to the node at
+ * repository relpath COPYFROM_PATH@COPYFROM_REV, else set it to false.
+ *
+ * ### JAF:  In practice this attempts to trace back, starting from
+ *       DELETED_PATH@(DELETED_REV-1).  What if that does not exist?
+ */
 static svn_error_t *
 check_ancestry(svn_boolean_t *related,
                const char *session_url,
