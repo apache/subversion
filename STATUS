@@ -134,13 +134,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1210195
-   Canonicalize svnserve.conf input.
-   Justification:
-     Server asserts after being upgraded.
-   Votes:
-     +1: danielsh, philip, stsp
-
  * r1211483
    Don't segfault on 'svn mkdir svn://localhost'
    Justification:
