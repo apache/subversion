@@ -3957,7 +3957,7 @@ move_in_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
 
-  SVN_ERR(svn_test__sandbox_create(&b, "move_in_replace", opts, pool));
+  SVN_ERR(svn_test__sandbox_create(&b, "move_in_copy", opts, pool));
 
   SVN_ERR(wc_mkdir(&b, "A"));
   SVN_ERR(wc_mkdir(&b, "A/B"));
