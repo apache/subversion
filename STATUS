@@ -101,7 +101,7 @@ Candidate changes:
    Notes:
      Merge with --accept=theirs-conflict
    Votes:
-     +1: stsp
+     +1: stsp, philip
 
  * r1213673
    Make svnmucc act on values obtained from --config-dir.
