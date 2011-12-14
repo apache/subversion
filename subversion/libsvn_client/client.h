@@ -186,18 +186,20 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
 
 
 /* Set *ANCESTOR_RELPATH and *ANCESTOR_REVISION to the youngest common
-   ancestor path (a path relative to the root of the repository) and
-   revision, respectively, of the two locations identified as
-   PATH_OR_URL1@REV1 and PATH_OR_URL2@REV2.  Use the authentication
-   baton cached in CTX to authenticate against the repository.
-   This function assumes that PATH_OR_URL1@REV1 and PATH_OR_URL2@REV2
-   both refer to the same repository.  Use POOL for all allocations. */
+   ancestor path (a path relative to the root of the repository, with
+   no leading '/') and revision, respectively, of the two locations
+   identified as URL1@REV1 and URL2@REV2.  Set *ANCESTOR_RELPATH to
+   NULL and *ANCESTOR_REVISION to SVN_INVALID_REVNUM if they have no
+   common ancestor.  Use the authentication baton cached in CTX to
+   authenticate against the repository.  This function assumes that
+   URL1@REV1 and URL2@REV2 both refer to the same repository.  Use
+   POOL for all allocations. */
 svn_error_t *
 svn_client__get_youngest_common_ancestor(const char **ancestor_relpath,
                                          svn_revnum_t *ancestor_revision,
-                                         const char *path_or_url1,
+                                         const char *url1,
                                          svn_revnum_t rev1,
-                                         const char *path_or_url2,
+                                         const char *url2,
                                          svn_revnum_t rev2,
                                          svn_client_ctx_t *ctx,
                                          apr_pool_t *pool);
