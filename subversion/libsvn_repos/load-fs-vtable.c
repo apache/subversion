@@ -787,6 +787,10 @@ delete_node_property(void *baton,
   struct node_baton *nb = baton;
   struct revision_baton *rb = nb->rb;
 
+  /* If we're skipping this revision, we're done here. */
+  if (rb->skipped)
+    return SVN_NO_ERROR;
+
   return change_node_prop(rb->txn_root, nb->path, name, NULL,
                           rb->pb->validate_props, nb->pool);
 }
