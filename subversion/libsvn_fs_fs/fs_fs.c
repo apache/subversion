@@ -8265,7 +8265,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  /* Now, copy pairs of non-packed evisions and revprop files.
+  /* Now, copy pairs of non-packed revisions and revprop files.
    * If necessary, update 'current' after copying all files from a shard. */
   SVN_ERR_ASSERT(rev == src_min_unpacked_rev);
   revprop_src_subdir = svn_dirent_join(src_fs->path, PATH_REVPROPS_DIR, pool);
@@ -8345,8 +8345,8 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  /* We assume that all revisions were copied now, and didn't exit the above
-   * loop early. 'rev' was last incremented during exit of the loop. */
+  /* We assume that all revisions were copied now, i.e. we didn't exit the
+   * above loop early. 'rev' was last incremented during exit of the loop. */
   SVN_ERR_ASSERT(rev == src_youngest + 1);
 
   /* All revisions were copied. Update 'current'. */
