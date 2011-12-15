@@ -78,6 +78,25 @@ merge_reintegrate(const char *source_path_or_url,
   return SVN_NO_ERROR;
 }
 
+/* Throw an error if PATH_OR_URL is a path and REVISION isn't a repository
+ * revision. */
+static svn_error_t *
+ensure_wc_path_has_repo_revision(const char *path_or_url,
+                                 const svn_opt_revision_t *revision,
+                                 apr_pool_t *scratch_pool)
+{
+  if (revision->kind != svn_opt_revision_number
+      && revision->kind != svn_opt_revision_date
+      && revision->kind != svn_opt_revision_head
+      && ! svn_path_is_url(path_or_url))
+    return svn_error_createf(
+      SVN_ERR_CLIENT_BAD_REVISION, NULL,
+      _("Invalid merge source '%s'; a working copy path can only be "
+        "used with a repository revision (a number, a date, or head)"),
+      svn_dirent_local_style(path_or_url, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__merge(apr_getopt_t *os,
@@ -243,26 +262,13 @@ svn_cl__merge(apr_getopt_t *os,
 
       /* Catch 'svn merge wc_path1 wc_path2 [target]' without explicit
          revisions--since it ignores local modifications it may not do what
-         the user expects.  Forcing the user to specify a repository
+         the user expects.  That is, it doesn't read from the WC itself, it
+         reads from the WC's URL.  Forcing the user to specify a repository
          revision should avoid any confusion. */
-      if (first_range_start.kind != svn_opt_revision_number
-          && first_range_start.kind != svn_opt_revision_date
-          && first_range_start.kind != svn_opt_revision_head
-          && ! svn_path_is_url(sourcepath1))
-        return svn_error_createf(
-          SVN_ERR_CLIENT_BAD_REVISION, NULL,
-          _("Invalid merge source '%s'; a working copy path can only be "
-            "used with a repository revision (a number, a date, or head)"),
-          svn_dirent_local_style(sourcepath1, pool));
-      if (first_range_end.kind != svn_opt_revision_number
-          && first_range_end.kind != svn_opt_revision_date
-          && first_range_end.kind != svn_opt_revision_head
-          && ! svn_path_is_url(sourcepath2))
-        return svn_error_createf(
-          SVN_ERR_CLIENT_BAD_REVISION, NULL,
-          _("Invalid merge source '%s'; a working copy path can only be "
-            "used with a repository revision (a number, a date, or head)"),
-          svn_dirent_local_style(sourcepath2, pool));
+      SVN_ERR(ensure_wc_path_has_repo_revision(sourcepath1, &first_range_start,
+                                               pool));
+      SVN_ERR(ensure_wc_path_has_repo_revision(sourcepath2, &first_range_end,
+                                               pool));
 
       /* Default peg revisions to each URL's youngest revision. */
       if (first_range_start.kind == svn_opt_revision_unspecified)
