@@ -538,6 +538,7 @@ svn_repos_hotcopy2(const char *src_path,
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_hotcopy(const char *src_path,
                   const char *dst_path,
