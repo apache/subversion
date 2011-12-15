@@ -8226,6 +8226,8 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   /* First, copy packed shards. */
   for (rev = 0; rev < src_min_unpacked_rev; rev += max_files_per_dir)
     {
+      svn_error_t *err;
+
       svn_pool_clear(iterpool);
 
       if (cancel_func)
@@ -8247,6 +8249,18 @@ hotcopy_body(void *baton, apr_pool_t *pool)
       if (incremental)
         SVN_ERR(hotcopy_remove_rev_files(dst_fs, rev, rev + max_files_per_dir,
                                          max_files_per_dir, iterpool));
+
+      /* Now that all revisions have moved into the pack, the original
+       * rev dir can be removed. */
+      err = svn_io_remove_dir2(path_rev_shard(dst_fs, rev, iterpool),
+                               TRUE, cancel_func, cancel_baton, iterpool);
+      if (err)
+        {
+          if (APR_STATUS_IS_ENOTEMPTY(err->apr_err))
+            svn_error_clear(err);
+          else
+            return svn_error_trace(err);
+        }
     }
 
   if (cancel_func)
