@@ -333,6 +333,7 @@ svn_fs_hotcopy2(const char *src_path,
  * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.1.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_hotcopy(const char *src_path,
                const char *dest_path,
