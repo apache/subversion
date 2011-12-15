@@ -197,7 +197,7 @@ switch_internal(svn_revnum_t *result_rev,
      ### okay? */
   if (! ignore_ancestry)
     {
-      const char *target_url, *yc_relpath;
+      const char *target_url, *yc_url;
       svn_revnum_t target_rev, yc_rev;
 
       SVN_ERR(svn_wc__node_get_url(&target_url, ctx->wc_ctx, local_abspath,
@@ -206,11 +206,11 @@ switch_internal(svn_revnum_t *result_rev,
                                         local_abspath, pool));
       /* ### It would be nice if this function could reuse the existing
              ra session instead of opening two for its own use. */
-      SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_relpath, &yc_rev,
+      SVN_ERR(svn_client__get_youngest_common_ancestor(NULL, &yc_url, &yc_rev,
                                                        switch_rev_url, revnum,
                                                        target_url, target_rev,
                                                        ctx, pool));
-      if (! (yc_relpath && SVN_IS_VALID_REVNUM(yc_rev)))
+      if (! (yc_url && SVN_IS_VALID_REVNUM(yc_rev)))
         return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
                                  _("'%s' shares no common ancestry with '%s'"),
                                  switch_url, local_abspath);
