@@ -334,7 +334,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    ("usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n\n"
     "Makes a hot copy of a repository.\n"
     "If --incremental is passed, data which already exists at the destination\n"
-    "is not copied again (for FSFS repositories only).\n"),
+    "is not copied again.  Incremental mode is implemented for FSFS repositories.\n"),
    {svnadmin__clean_logs, svnadmin__incremental} },
 
   {"list-dblogs", subcommand_list_dblogs, {0}, N_
