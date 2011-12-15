@@ -7839,21 +7839,9 @@ hotcopy_copy_shard_file(const char *src_subdir,
         }
     }
 
-  if (rev == 0)
-    {
-      /* Revision zero is special. It might already exist in the destination
-       * even if the destination is otherwise empty, because it is created
-       * during hotcopy initialisation. In this case it will differ from
-       * revision zero in the source (because of creation time).
-       * So always copy it. */
-      SVN_ERR(svn_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
+  SVN_ERR(hotcopy_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
                                    apr_psprintf(scratch_pool, "%ld", rev),
                                    scratch_pool));
-    }
-  else
-    SVN_ERR(hotcopy_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
-                                     apr_psprintf(scratch_pool, "%ld", rev),
-                                     scratch_pool));
   return SVN_NO_ERROR;
 }
 
