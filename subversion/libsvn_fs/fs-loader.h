@@ -93,8 +93,11 @@ typedef struct fs_library_vtable_t
                             apr_pool_t *pool,
                             apr_pool_t *common_pool);
   svn_error_t *(*delete_fs)(const char *path, apr_pool_t *pool);
-  svn_error_t *(*hotcopy)(const char *src_path, const char *dest_path,
-                          svn_boolean_t clean, apr_pool_t *pool);
+  svn_error_t *(*hotcopy)(svn_fs_t *src_fs, svn_fs_t *dst_fs,
+                          const char *src_path, const char *dst_path,
+                          svn_boolean_t clean, svn_boolean_t incremental,
+                          svn_cancel_func_t cancel_func, void *cancel_baton,
+                          apr_pool_t *pool);
   const char *(*get_description)(void);
   svn_error_t *(*recover)(svn_fs_t *fs,
                           svn_cancel_func_t cancel_func, void *cancel_baton,

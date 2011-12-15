@@ -1510,6 +1510,36 @@ def load_ranges(sbox):
   svntest.verify.compare_and_display_lines("Dump files", "DUMP",
                                            expected_dump, new_dumpdata)
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def hotcopy_incremental(sbox):
+  "'svnadmin hotcopy --incremental PATH .'"
+  sbox.build()
+
+  backup_dir, backup_url = sbox.add_repo_path('backup')
+  os.mkdir(backup_dir)
+  cwd = os.getcwd()
+
+  for i in [1, 2, 3]:
+    os.chdir(backup_dir)
+    svntest.actions.run_and_verify_svnadmin(
+      None, None, [],
+      "hotcopy", "--incremental", os.path.join(cwd, sbox.repo_dir), '.')
+
+    os.chdir(cwd)
+
+    exit_code, origout, origerr = svntest.main.run_svnadmin("dump",
+                                                            sbox.repo_dir,
+                                                            '--quiet')
+    exit_code, backout, backerr = svntest.main.run_svnadmin("dump",
+                                                            backup_dir,
+                                                            '--quiet')
+    if origerr or backerr or origout != backout:
+      raise svntest.Failure
+
+    if i < 3:
+      sbox.simple_mkdir("newdir-%i" % i)
+      sbox.simple_commit()
+
 ########################################################################
 # Run the tests
 
@@ -1541,6 +1571,7 @@ test_list = [ None,
               verify_non_utf8_paths,
               test_lslocks_and_rmlocks,
               load_ranges,
+              hotcopy_incremental,
              ]
 
 if __name__ == '__main__':

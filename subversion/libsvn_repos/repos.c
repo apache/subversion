@@ -1699,6 +1699,9 @@ svn_error_t *svn_repos_db_logfiles(apr_array_header_t **logfiles,
 struct hotcopy_ctx_t {
   const char *dest;     /* target location to construct */
   size_t src_len; /* len of the source path*/
+  svn_boolean_t incremental;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
 };
 
 /** Called by (svn_io_dir_walk2).
@@ -1718,6 +1721,9 @@ static svn_error_t *hotcopy_structure(void *baton,
   const struct hotcopy_ctx_t *ctx = ((struct hotcopy_ctx_t *) baton);
   const char *sub_path;
   const char *target;
+
+  if (ctx->cancel_func)
+    SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
   if (strlen(path) == ctx->src_len)
     {
@@ -1748,7 +1754,17 @@ static svn_error_t *hotcopy_structure(void *baton,
   target = svn_dirent_join(ctx->dest, sub_path, pool);
 
   if (finfo->filetype == APR_DIR)
-    return create_repos_dir(target, pool);
+    {
+      svn_error_t *err;
+
+      err = create_repos_dir(target, pool);
+      if (ctx->incremental && err && err->apr_err == SVN_ERR_DIR_NOT_EMPTY)
+        {
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+        }
+      return svn_error_trace(err);
+    }
   else if (finfo->filetype == APR_REG)
     return svn_io_copy_file(path, target, TRUE, pool);
   else if (finfo->filetype == APR_LNK)
@@ -1777,17 +1793,29 @@ lock_db_logs_file(svn_repos_t *repos,
 
 /* Make a copy of a repository with hot backup of fs. */
 svn_error_t *
-svn_repos_hotcopy(const char *src_path,
-                  const char *dst_path,
-                  svn_boolean_t clean_logs,
-                  apr_pool_t *pool)
+svn_repos_hotcopy2(const char *src_path,
+                   const char *dst_path,
+                   svn_boolean_t clean_logs,
+                   svn_boolean_t incremental,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
 {
   svn_repos_t *src_repos;
   svn_repos_t *dst_repos;
   struct hotcopy_ctx_t hotcopy_context;
+  svn_error_t *err;
+  const char *src_abspath;
+  const char *dst_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&src_abspath, src_path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&dst_abspath, dst_path, pool));
+  if (strcmp(src_abspath, dst_abspath) == 0)
+    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             _("Hotcopy source and destination are equal"));
 
   /* Try to open original repository */
-  SVN_ERR(get_repos(&src_repos, src_path,
+  SVN_ERR(get_repos(&src_repos, src_abspath,
                     FALSE, FALSE,
                     FALSE,    /* don't try to open the db yet. */
                     NULL,
@@ -1804,9 +1832,12 @@ svn_repos_hotcopy(const char *src_path,
   /* Copy the repository to a new path, with exception of
      specially handled directories */
 
-  hotcopy_context.dest = dst_path;
-  hotcopy_context.src_len = strlen(src_path);
-  SVN_ERR(svn_io_dir_walk2(src_path,
+  hotcopy_context.dest = dst_abspath;
+  hotcopy_context.src_len = strlen(src_abspath);
+  hotcopy_context.incremental = incremental;
+  hotcopy_context.cancel_func = cancel_func;
+  hotcopy_context.cancel_baton = cancel_baton;
+  SVN_ERR(svn_io_dir_walk2(src_abspath,
                            0,
                            hotcopy_structure,
                            &hotcopy_context,
@@ -1815,25 +1846,50 @@ svn_repos_hotcopy(const char *src_path,
   /* Prepare dst_repos object so that we may create locks,
      so that we may open repository */
 
-  dst_repos = create_svn_repos_t(dst_path, pool);
+  dst_repos = create_svn_repos_t(dst_abspath, pool);
   dst_repos->fs_type = src_repos->fs_type;
   dst_repos->format = src_repos->format;
 
-  SVN_ERR(create_locks(dst_repos, pool));
+  err = create_locks(dst_repos, pool);
+  if (err)
+    {
+      if (incremental && err->apr_err == SVN_ERR_DIR_NOT_EMPTY)
+        svn_error_clear(err);
+      else
+        return svn_error_trace(err);
+    }
 
-  SVN_ERR(svn_io_dir_make_sgid(dst_repos->db_path, APR_OS_DEFAULT, pool));
+  err = svn_io_dir_make_sgid(dst_repos->db_path, APR_OS_DEFAULT, pool);
+  if (err)
+    {
+      if (incremental && APR_STATUS_IS_EEXIST(err->apr_err))
+        svn_error_clear(err);
+      else
+        return svn_error_trace(err);
+    }
 
   /* Exclusively lock the new repository.
      No one should be accessing it at the moment */
   SVN_ERR(lock_repos(dst_repos, TRUE, FALSE, pool));
 
-  SVN_ERR(svn_fs_hotcopy(src_repos->db_path, dst_repos->db_path,
-                         clean_logs, pool));
+  SVN_ERR(svn_fs_hotcopy2(src_repos->db_path, dst_repos->db_path,
+                          clean_logs, incremental,
+                          cancel_func, cancel_baton, pool));
 
   /* Destination repository is ready.  Stamp it with a format number. */
   return svn_io_write_version_file
           (svn_dirent_join(dst_repos->path, SVN_REPOS__FORMAT, pool),
            dst_repos->format, pool);
+}
+
+svn_error_t *
+svn_repos_hotcopy(const char *src_path,
+                  const char *dst_path,
+                  svn_boolean_t clean_logs,
+                  apr_pool_t *pool)
+{
+  return svn_error_trace(svn_repos_hotcopy2(src_path, dst_path, clean_logs,
+                                            FALSE, NULL, NULL, pool));
 }
 
 /* Return the library version number. */

@@ -516,6 +516,27 @@ svn_repos_fs(svn_repos_t *repos);
  * source filesystem as part of the copy operation; currently, this
  * means deleting copied, unused logfiles for a Berkeley DB source
  * repository.
+ *
+ * If @a incremental is TRUE, make an effort to not re-copy information
+ * already present in the destination. If incremental hotcopy is not
+ * implemented by the filesystem backend, raise SVN_ERR_UNSUPPORTED_FEATURE.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_repos_hotcopy2(const char *src_path,
+                   const char *dst_path,
+                   svn_boolean_t clean_logs,
+                   svn_boolean_t incremental,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool);
+
+/** 
+ * Like svn_repos_hotcopy2(), but without the @a incremental parameter
+ * and without cancellation support.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 svn_error_t *
 svn_repos_hotcopy(const char *src_path,
