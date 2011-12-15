@@ -1694,31 +1694,32 @@ svn_error_t *svn_repos_db_logfiles(apr_array_header_t **logfiles,
   return SVN_NO_ERROR;
 }
 
-/** Hot copy structure copy context.
- */
+/* Baton for hotcopy_structure(). */
 struct hotcopy_ctx_t {
   const char *dest;     /* target location to construct */
   size_t src_len; /* len of the source path*/
+
+  /* As in svn_repos_hotcopy2() */
   svn_boolean_t incremental;
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
 };
 
-/** Called by (svn_io_dir_walk2).
- * Copies the repository structure with exception of @c SVN_REPOS__DB_DIR,
- * @c SVN_REPOS__LOCK_DIR and @c SVN_REPOS__FORMAT.
- * Those directories and files are handled separetly.
- * @a baton is a pointer to (struct hotcopy_ctx_t) specifying
- * destination path to copy to and the length of the source path.
+/* Copy the repository structure of PATH to BATON->DEST, with exception of
+ * @c SVN_REPOS__DB_DIR, @c SVN_REPOS__LOCK_DIR and @c SVN_REPOS__FORMAT;
+ * those directories and files are handled separately.
  *
- * @copydoc svn_io_dir_walk2()
+ * BATON is a (struct hotcopy_ctx_t *).  BATON->SRC_LEN is the length
+ * of PATH.
+ *
+ * Implements svn_io_walk_func_t.
  */
 static svn_error_t *hotcopy_structure(void *baton,
                                       const char *path,
                                       const apr_finfo_t *finfo,
                                       apr_pool_t *pool)
 {
-  const struct hotcopy_ctx_t *ctx = ((struct hotcopy_ctx_t *) baton);
+  const struct hotcopy_ctx_t *ctx = baton;
   const char *sub_path;
   const char *target;
 
