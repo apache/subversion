@@ -7728,14 +7728,10 @@ hotcopy_io_copy_dir_recursively(const char *src,
                              svn_dirent_local_style(dst_parent, pool));
 
   SVN_ERR(svn_io_check_path(dst_path, &kind, subpool));
-  if (kind != svn_node_none)
-    return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
-                             _("Destination '%s' already exists"),
-                             svn_dirent_local_style(dst_path, pool));
 
   /* Create the new directory. */
   /* ### TODO: copy permissions (needs apr_file_attrs_get()) */
-  SVN_ERR(svn_io_dir_make(dst_path, APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_make_dir_recursively(dst_path, pool));
 
   /* Loop over the dirents in SRC.  ('.' and '..' are auto-excluded) */
   SVN_ERR(svn_io_dir_open(&this_dir, src, subpool));
@@ -7753,22 +7749,22 @@ hotcopy_io_copy_dir_recursively(const char *src,
         }
       else
         {
-          const char *src_target, *entryname_utf8;
+          const char *entryname_utf8;
 
           if (cancel_func)
             SVN_ERR(cancel_func(cancel_baton));
 
           SVN_ERR(entry_name_to_utf8(&entryname_utf8, this_entry.name,
                                      src, subpool));
-          src_target = svn_dirent_join(src, entryname_utf8, subpool);
-
           if (this_entry.filetype == APR_REG) /* regular file */
             {
-              SVN_ERR(hotcopy_io_dir_file_copy(src_target, dst_path,
-                                               entryname_utf8, subpool));
+              SVN_ERR(hotcopy_io_dir_file_copy(src, dst_path, entryname_utf8,
+                                               subpool));
             }
           else if (this_entry.filetype == APR_LNK) /* symlink */
             {
+              const char *src_target = svn_dirent_join(src, entryname_utf8,
+                                                       subpool);
               const char *dst_target = svn_dirent_join(dst_path,
                                                        entryname_utf8,
                                                        subpool);
@@ -7777,12 +7773,15 @@ hotcopy_io_copy_dir_recursively(const char *src,
             }
           else if (this_entry.filetype == APR_DIR) /* recurse */
             {
+              const char *src_target;
+              
               /* Prevent infinite recursion by filtering off our
                  newly created destination path. */
               if (strcmp(src, dst_parent) == 0
                   && strcmp(entryname_utf8, dst_basename) == 0)
                 continue;
 
+              src_target = svn_dirent_join(src, entryname_utf8, subpool);
               SVN_ERR(hotcopy_io_copy_dir_recursively(src_target,
                                                       dst_path,
                                                       entryname_utf8,
@@ -7985,10 +7984,10 @@ hotcopy_remove_rev_files(svn_fs_t *dst_fs,
       svn_pool_clear(iterpool);
 
       /* If necessary, update paths for shard. */
-      if (rev % max_files_per_dir == 0)
+      if (rev != start_rev && rev % max_files_per_dir == 0)
         {
           shard = apr_psprintf(iterpool, "%ld", rev / max_files_per_dir);
-          dst_subdir_shard = svn_dirent_join(dst_subdir, shard, iterpool);
+          dst_subdir_shard = svn_dirent_join(dst_subdir, shard, scratch_pool);
         }
 
       rev_path = svn_dirent_join(dst_subdir_shard,
