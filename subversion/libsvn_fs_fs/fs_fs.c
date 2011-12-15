@@ -7871,7 +7871,7 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
   src_subdir = svn_dirent_join(src_fs->path, PATH_REVS_DIR, scratch_pool);
   dst_subdir = svn_dirent_join(dst_fs->path, PATH_REVS_DIR, scratch_pool);
   shard_rev = rev / max_files_per_dir;
-  packed_shard = apr_psprintf(iterpool, "%ld.pack", shard_rev);
+  packed_shard = apr_psprintf(scratch_pool, "%ld.pack", shard_rev);
   src_subdir_packed_shard = svn_dirent_join(src_subdir, packed_shard,
                                             scratch_pool);
   SVN_ERR(hotcopy_io_copy_dir_recursively(src_subdir_packed_shard,
@@ -7974,7 +7974,7 @@ hotcopy_remove_rev_files(svn_fs_t *dst_fs,
   dst_subdir = svn_dirent_join(dst_fs->path, PATH_REVS_DIR, scratch_pool);
 
   /* Pre-compute paths for initial shard. */
-  shard = apr_psprintf(iterpool, "%ld", start_rev / max_files_per_dir);
+  shard = apr_psprintf(scratch_pool, "%ld", start_rev / max_files_per_dir);
   dst_subdir_shard = svn_dirent_join(dst_subdir, shard, scratch_pool);
 
   iterpool = svn_pool_create(scratch_pool);
