@@ -801,6 +801,7 @@ svn_client__repos_locations(const char **start_url,
 
 svn_error_t *
 svn_client__get_youngest_common_ancestor(const char **ancestor_relpath,
+                                         const char **ancestor_url,
                                          svn_revnum_t *ancestor_revision,
                                          const char *url1,
                                          svn_revnum_t rev1,
@@ -811,6 +812,7 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_relpath,
 {
   apr_pool_t *sesspool = svn_pool_create(pool);
   svn_ra_session_t *session;
+  const char *repos_root_url;
   apr_hash_t *history1, *history2;
   apr_hash_index_t *hi;
   svn_revnum_t yc_revision = SVN_INVALID_REVNUM;
@@ -820,6 +822,7 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_relpath,
 
   /* Open an RA session for the two locations. */
   SVN_ERR(svn_client_open_ra_session(&session, url1, ctx, sesspool));
+  SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, pool));
 
   /* We're going to cheat and use history-as-mergeinfo because it
      saves us a bunch of annoying custom data comparisons and such. */
@@ -878,7 +881,13 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_relpath,
       yc_revision = 0;
     }
 
-  *ancestor_relpath = yc_relpath;
-  *ancestor_revision = yc_revision;
+  if (ancestor_relpath)
+    *ancestor_relpath = yc_relpath;
+  if (ancestor_url)
+    *ancestor_url
+      = yc_relpath ? svn_path_url_add_component2(repos_root_url, yc_relpath,
+                                                 pool) : NULL;
+  if (ancestor_revision)
+    *ancestor_revision = yc_revision;
   return SVN_NO_ERROR;
 }

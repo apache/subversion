@@ -9356,7 +9356,7 @@ merge_locked(const char *source1,
   apr_array_header_t *merge_sources;
   svn_error_t *err;
   svn_boolean_t use_sleep = FALSE;
-  const char *yc_relpath = NULL;
+  const char *yc_url = NULL;
   svn_revnum_t yc_rev = SVN_INVALID_REVNUM;
   apr_pool_t *sesspool;
   svn_boolean_t same_repos;
@@ -9412,7 +9412,7 @@ merge_locked(const char *source1,
 
   /* Unless we're ignoring ancestry, see if the two sources are related.  */
   if (! ignore_ancestry)
-    SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_relpath, &yc_rev,
+    SVN_ERR(svn_client__get_youngest_common_ancestor(NULL, &yc_url, &yc_rev,
                                                      source.url1, source.rev1,
                                                      source.url2, source.rev2,
                                                      ctx, scratch_pool));
@@ -9434,12 +9434,8 @@ merge_locked(const char *source1,
                       merge recording, then record-only two merges:
                       from A to C, and from C to B
   */
-  if (yc_relpath && SVN_IS_VALID_REVNUM(yc_rev))
+  if (yc_url && SVN_IS_VALID_REVNUM(yc_rev))
     {
-      /* Make YC_RELPATH into a full URL. */
-      const char *yc_url = svn_path_url_add_component2(source_repos_root.url,
-                                                       yc_relpath, scratch_pool);
-
       /* Note that our merge sources are related. */
       related = TRUE;
 
@@ -10303,7 +10299,7 @@ calculate_left_hand_side(const char **url_left,
   apr_hash_t *segments_hash = apr_hash_make(scratch_pool);
   svn_boolean_t never_synced;
   svn_revnum_t youngest_merged_rev;
-  const char *yc_ancestor_relpath;
+  const char *yc_ancestor_url;
   svn_revnum_t yc_ancestor_rev;
   const char *source_url;
   const char *target_url;
@@ -10362,12 +10358,12 @@ calculate_left_hand_side(const char **url_left,
   target_url = svn_path_url_add_component2(source_repos_root,
                                            target_repos_rel_path,
                                            iterpool);
-  SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_relpath,
+  SVN_ERR(svn_client__get_youngest_common_ancestor(NULL, &yc_ancestor_url,
                                                    &yc_ancestor_rev,
                                                    source_url, source_rev,
                                                    target_url, target_rev,
                                                    ctx, iterpool));
-  if (!(yc_ancestor_relpath && SVN_IS_VALID_REVNUM(yc_ancestor_rev)))
+  if (!(yc_ancestor_url && SVN_IS_VALID_REVNUM(yc_ancestor_rev)))
     return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                              _("'%s@%ld' must be ancestrally related to "
                                "'%s@%ld'"), source_url, source_rev,
@@ -10429,8 +10425,7 @@ calculate_left_hand_side(const char **url_left,
   if (never_synced)
     {
       /* We never merged to the source.  Just return the branch point. */
-      *url_left = svn_path_url_add_component2(source_repos_root,
-                                              yc_ancestor_relpath, result_pool);
+      *url_left = apr_pstrdup(result_pool, yc_ancestor_url);
       *rev_left = yc_ancestor_rev;
     }
   else
@@ -10590,7 +10585,7 @@ find_reintegrate_merge(svn_ra_session_t **target_ra_session_p,
   if (strcmp(source.url1, target_url))
     SVN_ERR(svn_ra_reparent(target_ra_session, source.url1, scratch_pool));
 
-  SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_relpath,
+  SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_relpath, NULL,
                                                    &yc_ancestor_rev,
                                                    source.url2, source.rev2,
                                                    source.url1, source.rev1,
