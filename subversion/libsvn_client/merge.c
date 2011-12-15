@@ -794,7 +794,7 @@ omit_mergeinfo_changes(apr_array_header_t **trimmed_propchanges,
 /* Helper for merge_props_changed().
 
    *PROPS is an array of svn_prop_t structures representing regular properties
-   to be added to the working copy LOCAL_ABSPATH.
+   to be added to the working copy TARGET_ABSPATH.
 
    HONOR_MERGEINFO determines whether mergeinfo will be honored by this
    function (when applicable).
@@ -803,14 +803,14 @@ omit_mergeinfo_changes(apr_array_header_t **trimmed_propchanges,
    REINTEGRATE_MERGE is FALSE do nothing.  Otherwise, if
    SAME_REPOS is false, then filter out all mergeinfo
    property additions (Issue #3383) from *PROPS.  If SAME_REPOS is
-   true then filter out mergeinfo property additions to LOCAL_ABSPATH when
-   those additions refer to the same line of history as LOCAL_ABSPATH as
+   true then filter out mergeinfo property additions to TARGET_ABSPATH when
+   those additions refer to the same line of history as TARGET_ABSPATH as
    described below.
 
    If mergeinfo is being honored and SAME_REPOS is true
    then examine the added mergeinfo, looking at each range (or single rev)
    of each source path.  If a source_path/range refers to the same line of
-   history as LOCAL_ABSPATH (pegged at its base revision), then filter out
+   history as TARGET_ABSPATH (pegged at its base revision), then filter out
    that range.  If the entire rangelist for a given path is filtered then
    filter out the path as well.
 
@@ -819,9 +819,9 @@ omit_mergeinfo_changes(apr_array_header_t **trimmed_propchanges,
 
    If any filtering occurs, set outgoing *PROPS to a shallow copy (allocated
    in POOL) of incoming *PROPS minus the filtered mergeinfo. */
-static svn_error_t*
+static svn_error_t *
 filter_self_referential_mergeinfo(apr_array_header_t **props,
-                                  const char *local_abspath,
+                                  const char *target_abspath,
                                   svn_boolean_t honor_mergeinfo,
                                   svn_boolean_t same_repos,
                                   svn_boolean_t reintegrate_merge,
@@ -833,7 +833,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   int i;
   apr_pool_t *iterpool;
   svn_boolean_t is_added;
-  svn_revnum_t base_revision;
+  const char *target_base_url;
+  svn_revnum_t target_base_rev;
 
   /* Issue #3383: We don't want mergeinfo from a foreign repos.
 
@@ -857,12 +858,14 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
 
   /* If this is a merge from the same repository and PATH itself has been
      added there is no need to filter. */
-  SVN_ERR(svn_wc__node_is_added(&is_added, ctx->wc_ctx, local_abspath, pool));
+  SVN_ERR(svn_wc__node_is_added(&is_added, ctx->wc_ctx, target_abspath, pool));
   if (is_added)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__node_get_base_rev(&base_revision, ctx->wc_ctx,
-                                    local_abspath, pool));
+  SVN_ERR(svn_client_url_from_path2(&target_base_url, target_abspath,
+                                    ctx, pool, pool));
+  SVN_ERR(svn_wc__node_get_base_rev(&target_base_rev, ctx->wc_ctx,
+                                    target_abspath, pool));
 
   adjusted_props = apr_array_make(pool, (*props)->nelts, sizeof(svn_prop_t));
   iterpool = svn_pool_create(pool);
@@ -873,7 +876,6 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
       svn_mergeinfo_t mergeinfo, younger_mergeinfo;
       svn_mergeinfo_t filtered_mergeinfo = NULL;
       svn_mergeinfo_t filtered_younger_mergeinfo = NULL;
-      const char *target_url;
       const char *old_url = NULL;
       svn_error_t *err;
 
@@ -890,11 +892,9 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
       /* Non-empty mergeinfo; filter self-referential mergeinfo out. */
       /* Temporarily reparent our RA session to the merge
          target's URL. */
-      SVN_ERR(svn_client_url_from_path2(&target_url, local_abspath,
-                                        ctx, iterpool, iterpool));
       SVN_ERR(svn_client__ensure_ra_session_url(&old_url,
                                                 ra_session,
-                                                target_url, iterpool));
+                                                target_base_url, iterpool));
 
       /* Parse the incoming mergeinfo to allow easier manipulation. */
       err = svn_mergeinfo_parse(&mergeinfo, prop->value->data, iterpool);
@@ -947,7 +947,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
          the cost of a roundtrip communication with the repository. */
       SVN_ERR(split_mergeinfo_on_revision(&younger_mergeinfo,
                                           &mergeinfo,
-                                          base_revision,
+                                          target_base_rev,
                                           iterpool));
 
       /* Filter self-referential mergeinfo from younger_mergeinfo. */
@@ -989,7 +989,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                      RANGE->START on the same line of history.
                      (start+1 because RANGE->start is not inclusive.) */
                   err2 = svn_client__repos_location(&start_url, ra_session,
-                                                    target_url, base_revision,
+                                                    target_base_url, target_base_rev,
                                                     range->start + 1,
                                                     ctx, iterpool, iterpool);
                   if (err2)
@@ -1066,7 +1066,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
 
           SVN_ERR(svn_client__get_history_as_mergeinfo(
             &implicit_mergeinfo, NULL,
-            base_revision, base_revision, SVN_INVALID_REVNUM,
+            target_base_rev, target_base_rev, SVN_INVALID_REVNUM,
             ra_session,
             ctx,
             iterpool));
