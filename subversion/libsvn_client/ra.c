@@ -40,6 +40,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_client_private.h"
 
 
 /* This is the baton that we pass svn_ra_open3(), and is associated with
@@ -403,6 +404,10 @@ svn_client_open_ra_session(svn_ra_session_t **session,
    final resulting URL in *URL_P. REV_P and/or URL_P may be NULL if not
    wanted.
 
+   RA_SESSION should be an open RA session pointing at the URL of
+   PATH_OR_URL, or NULL, in which case this function will open its own
+   temporary session.
+
    Use authentication baton cached in CTX to authenticate against the
    repository.
 
@@ -422,9 +427,10 @@ resolve_rev_and_url(svn_revnum_t *rev_p,
   const char *url;
   svn_revnum_t rev;
 
+  /* Default revisions: peg -> working or head; operative -> peg. */
   SVN_ERR(svn_opt_resolve_revisions(&peg_rev, &start_rev,
                                     svn_path_is_url(path_or_url),
-                                    TRUE,
+                                    TRUE /* notice_local_mods */,
                                     pool));
 
   /* Run the history function to get the object's (possibly
