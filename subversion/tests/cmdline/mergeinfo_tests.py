@@ -68,8 +68,11 @@ def no_mergeinfo(sbox):
   "'mergeinfo' on a URL that lacks mergeinfo"
 
   sbox.build(create_wc=False)
+  sbox.simple_repo_copy('A', 'A2')
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           [], sbox.repo_url, sbox.repo_url)
+                                           [],
+                                           sbox.repo_url + '/A',
+                                           sbox.repo_url + '/A2')
 
 def mergeinfo(sbox):
   "'mergeinfo' on a path with mergeinfo"
@@ -77,41 +80,65 @@ def mergeinfo(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
+  # make a branch 'A2'
+  sbox.simple_repo_copy('A', 'A2')  # r2
+  # make a change in branch 'A'
+  sbox.simple_mkdir('A/newdir')
+  sbox.simple_commit()  # r3
+  sbox.simple_update()
+
   # Dummy up some mergeinfo.
-  svntest.actions.run_and_verify_svn(None, None, [], 'ps', SVN_PROP_MERGEINFO,
-                                     '/:1', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps', SVN_PROP_MERGEINFO, '/A:3',
+                                     sbox.ospath('A2'))
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           ['1'], sbox.repo_url, wc_dir)
+                                           ['3'],
+                                           sbox.repo_url + '/A',
+                                           sbox.ospath('A2'))
 
 @SkipUnless(server_has_mergeinfo)
 def explicit_mergeinfo_source(sbox):
   "'mergeinfo' with source selection"
 
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
-  H2_path = os.path.join(wc_dir, 'A', 'D', 'H2')
-  B_url = sbox.repo_url + '/A/B'
-  B_path = os.path.join(wc_dir, 'A', 'B')
-  G_url = sbox.repo_url + '/A/D/G'
-  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
-  H2_url = sbox.repo_url + '/A/D/H2'
+  # The idea is the target has mergeinfo pertaining to two or more different
+  # source branches and we're asking about just one of them.
 
-  # Make a copy, and dummy up some mergeinfo.
-  mergeinfo = '/A/B:1\n/A/D/G:1\n'
-  svntest.actions.set_prop(SVN_PROP_MERGEINFO, mergeinfo, H_path)
-  svntest.main.run_svn(None, "cp", H_path, H2_path)
-  svntest.main.run_svn(None, "ci", "-m", "r2", wc_dir)
+  sbox.build()
+
+  def url(relpath):
+    return sbox.repo_url + '/' + relpath
+  def path(relpath):
+    return sbox.ospath(relpath)
+
+  B = 'A/B'
+
+  # make some branches
+  B2 = 'A/B2'
+  B3 = 'A/B3'
+  sbox.simple_repo_copy(B, B2)  # r2
+  sbox.simple_repo_copy(B, B3)  # r3
+  sbox.simple_update()
+
+  # make changes in the branches
+  sbox.simple_mkdir('A/B2/newdir')
+  sbox.simple_commit()  # r4
+  sbox.simple_mkdir('A/B3/newdir')
+  sbox.simple_commit()  # r5
+
+  # Put dummy mergeinfo on branch root
+  mergeinfo = '/A/B2:2-5\n/A/B3:2-5\n'
+  sbox.simple_propset(SVN_PROP_MERGEINFO, mergeinfo, B)
+  sbox.simple_commit()
 
   # Check using each of our recorded merge sources (as paths and URLs).
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           ['1'], B_url, H_path)
+                                           ['2', '4'], url(B2), path(B))
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           ['1'], B_path, H_path)
+                                           ['2', '4'], path(B2), path(B))
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           ['1'], G_url, H_path)
+                                           ['3', '5'], url(B3), path(B))
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           ['1'], G_path, H_path)
+                                           ['3', '5'], path(B3), path(B))
 
 @SkipUnless(server_has_mergeinfo)
 def mergeinfo_non_source(sbox):
