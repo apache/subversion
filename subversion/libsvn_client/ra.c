@@ -897,3 +897,36 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_relpath,
     *ancestor_revision = yc_revision;
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_client__youngest_common_ancestor(const char **ancestor_url,
+                                     svn_revnum_t *ancestor_rev,
+                                     const char *path_or_url1,
+                                     const svn_opt_revision_t *revision1,
+                                     const char *path_or_url2,
+                                     const svn_opt_revision_t *revision2,
+                                     svn_client_ctx_t *ctx,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool)
+{
+  apr_pool_t *sesspool = svn_pool_create(scratch_pool);
+  svn_ra_session_t *session;
+  const char *url1, *url2;
+  svn_revnum_t rev1, rev2;
+
+  /* Resolve the two locations */
+  SVN_ERR(svn_client__ra_session_from_path(&session, &rev1, &url1,
+                                           path_or_url1, NULL,
+                                           revision1, revision1,
+                                           ctx, sesspool));
+  SVN_ERR(resolve_rev_and_url(&rev2, &url2, session,
+                              path_or_url2, revision2, revision2,
+                              ctx, scratch_pool));
+
+  SVN_ERR(svn_client__get_youngest_common_ancestor(
+            NULL, ancestor_url, ancestor_rev,
+            url1, rev1, url2, rev2, ctx, result_pool));
+
+  svn_pool_destroy(sesspool);
+  return SVN_NO_ERROR;
+}
