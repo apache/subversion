@@ -112,6 +112,7 @@ svn_cl__merge(apr_getopt_t *os,
   svn_opt_revision_t first_range_start, first_range_end, peg_revision1,
     peg_revision2;
   apr_array_header_t *options, *ranges_to_merge = opt_state->revision_ranges;
+  svn_opt_revision_t unspecified = { svn_opt_revision_unspecified, { 0 } };
 
   /* Merge doesn't support specifying a revision or revision range
      when using --reintegrate. */
@@ -347,6 +348,11 @@ svn_cl__merge(apr_getopt_t *os,
 
   if (opt_state->reintegrate)
     {
+      SVN_ERR_W(svn_cl__check_related_source_and_target(
+                  sourcepath1, &peg_revision1, targetpath, &unspecified,
+                  ctx, pool),
+                _("Source and target must be different but related branches"));
+
       err = merge_reintegrate(sourcepath1, &peg_revision1, targetpath,
                               opt_state->dry_run, options, ctx, pool);
     }
@@ -364,6 +370,12 @@ svn_cl__merge(apr_getopt_t *os,
           range->start.value.number = 1;
           range->end = peg_revision1;
           APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = range;
+
+          /* This must be a 'sync' merge so check branch relationship. */
+          SVN_ERR_W(svn_cl__check_related_source_and_target(
+                      sourcepath1, &peg_revision1, targetpath, &unspecified,
+                      ctx, pool),
+                _("Source and target must be different but related branches"));
         }
 
       err = svn_client_merge_peg4(sourcepath1,

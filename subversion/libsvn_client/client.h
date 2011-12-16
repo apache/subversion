@@ -199,6 +199,8 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
 
    Use the authentication baton cached in CTX to authenticate against
    the repository.  Use POOL for all allocations.
+
+   See also svn_client__youngest_common_ancestor().
 */
 svn_error_t *
 svn_client__get_youngest_common_ancestor(const char **ancestor_relpath,
