@@ -193,6 +193,7 @@ test_membuffer_cache_basic(apr_pool_t *pool)
                                             deserialize_revnum,
                                             APR_HASH_KEY_STRING,
                                             "cache:",
+                                            FALSE,
                                             pool));
 
   return basic_cache_test(cache, FALSE, pool);
