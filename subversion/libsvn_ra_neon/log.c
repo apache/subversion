@@ -404,23 +404,17 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
 
   if (discover_changed_paths)
     {
-      svn_stringbuf_appendcstr(request_body,
-                               apr_psprintf(pool,
-                                            "<S:discover-changed-paths/>"));
+      svn_stringbuf_appendcstr(request_body, "<S:discover-changed-paths/>");
     }
 
   if (strict_node_history)
     {
-      svn_stringbuf_appendcstr(request_body,
-                               apr_psprintf(pool,
-                                            "<S:strict-node-history/>"));
+      svn_stringbuf_appendcstr(request_body, "<S:strict-node-history/>");
     }
 
   if (include_merged_revisions)
     {
-      svn_stringbuf_appendcstr(request_body,
-                               apr_psprintf(pool,
-                                            "<S:include-merged-revisions/>"));
+      svn_stringbuf_appendcstr(request_body, "<S:include-merged-revisions/>");
     }
 
   if (revprops)
@@ -449,9 +443,7 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
     }
   else
     {
-      svn_stringbuf_appendcstr(request_body,
-                               apr_psprintf(pool,
-                                            "<S:all-revprops/>"));
+      svn_stringbuf_appendcstr(request_body, "<S:all-revprops/>");
       lb.want_author = lb.want_date = lb.want_message = TRUE;
       want_custom_revprops = TRUE;
     }
