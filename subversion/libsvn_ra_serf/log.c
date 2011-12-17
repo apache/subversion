@@ -118,7 +118,8 @@ typedef struct log_context_t {
 static log_info_t *
 push_state(svn_ra_serf__xml_parser_t *parser,
            log_context_t *log_ctx,
-           log_state_e state)
+           log_state_e state,
+           const char **attrs)
 {
   svn_ra_serf__xml_push_state(parser, state);
 
@@ -155,6 +156,10 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       || state == REVPROP)
     {
       log_info_t *info = parser->state->private;
+
+      info->tmp_encoding = svn_xml_get_attr_value("encoding", attrs);
+      if (info->tmp_encoding)
+        info->tmp_encoding = apr_pstrdup(info->pool, info->tmp_encoding);
 
       if (!info->log_entry->revprops)
         {
@@ -196,12 +201,12 @@ start_log(svn_ra_serf__xml_parser_t *parser,
   if (state == NONE &&
       strcmp(name.name, "log-report") == 0)
     {
-      push_state(parser, log_ctx, REPORT);
+      push_state(parser, log_ctx, REPORT, attrs);
     }
   else if (state == REPORT &&
            strcmp(name.name, "log-item") == 0)
     {
-      push_state(parser, log_ctx, ITEM);
+      push_state(parser, log_ctx, ITEM, attrs);
     }
   else if (state == ITEM)
     {
@@ -209,59 +214,43 @@ start_log(svn_ra_serf__xml_parser_t *parser,
 
       if (strcmp(name.name, SVN_DAV__VERSION_NAME) == 0)
         {
-          push_state(parser, log_ctx, VERSION);
+          push_state(parser, log_ctx, VERSION, attrs);
         }
       else if (strcmp(name.name, "creator-displayname") == 0)
         {
-          const char *tmp_encoding =
-            svn_xml_get_attr_value("encoding", attrs);
-          info = push_state(parser, log_ctx, CREATOR);
-          if (tmp_encoding)
-            info->tmp_encoding = apr_pstrdup(info->pool, tmp_encoding);
+          info = push_state(parser, log_ctx, CREATOR, attrs);
         }
       else if (strcmp(name.name, "date") == 0)
         {
-          const char *tmp_encoding =
-            svn_xml_get_attr_value("encoding", attrs);
-          info = push_state(parser, log_ctx, DATE);
-          if (tmp_encoding)
-            info->tmp_encoding = apr_pstrdup(info->pool, tmp_encoding);
+          info = push_state(parser, log_ctx, DATE, attrs);
         }
       else if (strcmp(name.name, "comment") == 0)
         {
-          const char *tmp_encoding =
-            svn_xml_get_attr_value("encoding", attrs);
-          info = push_state(parser, log_ctx, COMMENT);
-          if (tmp_encoding)
-            info->tmp_encoding = apr_pstrdup(info->pool, tmp_encoding);
+          info = push_state(parser, log_ctx, COMMENT, attrs);
         }
       else if (strcmp(name.name, "revprop") == 0)
         {
           const char *revprop_name =
             svn_xml_get_attr_value("name", attrs);
-          const char *tmp_encoding =
-            svn_xml_get_attr_value("encoding", attrs);
           if (revprop_name == NULL)
             return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                                      _("Missing name attr in revprop element"));
-          info = push_state(parser, log_ctx, REVPROP);
+          info = push_state(parser, log_ctx, REVPROP, attrs);
           info->revprop_name = apr_pstrdup(info->pool, revprop_name);
-          if (tmp_encoding)
-            info->tmp_encoding = apr_pstrdup(info->pool, tmp_encoding);
         }
       else if (strcmp(name.name, "has-children") == 0)
         {
-          push_state(parser, log_ctx, HAS_CHILDREN);
+          push_state(parser, log_ctx, HAS_CHILDREN, attrs);
         }
       else if (strcmp(name.name, "subtractive-merge") == 0)
         {
-          push_state(parser, log_ctx, SUBTRACTIVE_MERGE);
+          push_state(parser, log_ctx, SUBTRACTIVE_MERGE, attrs);
         }
       else if (strcmp(name.name, "added-path") == 0)
         {
           const char *copy_path, *copy_rev_str;
 
-          info = push_state(parser, log_ctx, ADDED_PATH);
+          info = push_state(parser, log_ctx, ADDED_PATH, attrs);
           info->tmp_path->action = 'A';
 
           copy_path = svn_xml_get_attr_value("copyfrom-path", attrs);
@@ -285,7 +274,7 @@ start_log(svn_ra_serf__xml_parser_t *parser,
         {
           const char *copy_path, *copy_rev_str;
 
-          info = push_state(parser, log_ctx, REPLACED_PATH);
+          info = push_state(parser, log_ctx, REPLACED_PATH, attrs);
           info->tmp_path->action = 'R';
 
           copy_path = svn_xml_get_attr_value("copyfrom-path", attrs);
@@ -307,14 +296,14 @@ start_log(svn_ra_serf__xml_parser_t *parser,
         }
       else if (strcmp(name.name, "deleted-path") == 0)
         {
-          info = push_state(parser, log_ctx, DELETED_PATH);
+          info = push_state(parser, log_ctx, DELETED_PATH, attrs);
           info->tmp_path->action = 'D';
 
           SVN_ERR(read_changed_path_attributes(info->tmp_path, attrs));
         }
       else if (strcmp(name.name, "modified-path") == 0)
         {
-          info = push_state(parser, log_ctx, MODIFIED_PATH);
+          info = push_state(parser, log_ctx, MODIFIED_PATH, attrs);
           info->tmp_path->action = 'M';
 
           SVN_ERR(read_changed_path_attributes(info->tmp_path, attrs));
