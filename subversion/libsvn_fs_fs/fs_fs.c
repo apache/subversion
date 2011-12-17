@@ -2932,7 +2932,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
                                 DEFAULT_FILE_COOKIE, pool));
   apr_rev_file = svn_file_handle_cache__get_apr_handle(revision_file);
 
-  /* it will moved here anyways */
+  /* here, it will get moved anyways */
   SVN_ERR(get_root_changes_offset(&root_offset, NULL, apr_rev_file, fs, rev,
                                   pool));
 
@@ -4685,7 +4685,7 @@ svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
                                 DEFAULT_FILE_COOKIE, pool));
   apr_revision_file = svn_file_handle_cache__get_apr_handle(revision_file);
 
-  /* it will moved here anyways */
+  /* here, it will get moved anyways */
   SVN_ERR(get_root_changes_offset(NULL, &changes_offset, apr_revision_file, 
                                   fs, rev, pool));
 
