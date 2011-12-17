@@ -730,43 +730,6 @@ svn_file_handle_cache__open(svn_file_handle_cache__handle_t **f,
   return unlock_cache(cache, err ? err : open_entry(f, cache, entry, pool));
 }
 
-/* Efficiently check whether the file handle cache CACHE holds an open
- * handle to the file named FNAME. This is basically an efficient way to
- * check that a file exists. However, a FALSE result does not mean that
- * the respective file does not exist.
- */
-svn_boolean_t
-svn_file_handle_cache__has_file(svn_file_handle_cache_t *cache, 
-                                const char *fname)
-{
-  svn_boolean_t result = FALSE;
-
-  if (cache != NULL)
-    {
-      /* lock the cache and look for a used cache entry, i.e. an open
-       * APR level file handle. Only if the latter exists, we know for
-       * sure the file exists. Default to "FALSE" otherwise.
-       */
-      svn_error_t *err = lock_cache(cache);
-      if (!err)
-        result = find_first(cache, fname) ? TRUE : FALSE;
-
-      /* unlock the cache and return "file not cached" upon any error
-       * since this is the safe default. 
-       */
-      if (!err)
-        err = unlock_cache(cache, err);
-
-      if (err)
-        {
-          svn_error_clear(err);
-          result = FALSE;
-        }
-    }
-
-  return result;
-}
-
 /* Return the APR level file handle underlying the cache file handle F.
  * Returns NULL, if f is NULL, has already been closed or otherwise
  * invalidated.

@@ -74,16 +74,6 @@ svn_file_handle_cache__open(svn_file_handle_cache__handle_t **f,
                             apr_pool_t *pool);
 
 /**
- * Efficiently check whether the file handle cache @a cache holds an open 
- * handle to the file named @a fname. This is basically an efficient way
- * to check that a file exists. However, a @c FALSE result does not mean
- * that the respective file does not exist.
- */
-svn_boolean_t
-svn_file_handle_cache__has_file(svn_file_handle_cache_t *cache,
-                                const char *fname);
-
-/**
  * Return the APR level file handle underlying the cache file handle @a f.
  * Returns NULL, if @a f is NULL, has already been closed or otherwise
  * invalidated.
