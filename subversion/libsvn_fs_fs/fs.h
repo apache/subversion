@@ -227,10 +227,6 @@ typedef struct fs_fs_data_t
      that the transition from non-packed to packed is irreversable. */
   svn_cache__t *rev_root_id_cache;
 
-  /* Similar to @ref rev_root_id_cache but all IDs are guaranteed
-     to belong to packed revisions. */
-  svn_cache__t *packed_rev_root_id_cache;
-
   /* DAG node cache for immutable nodes */
   svn_cache__t *rev_node_cache;
 
