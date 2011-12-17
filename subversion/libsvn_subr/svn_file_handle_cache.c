@@ -23,9 +23,8 @@
 
 #include <assert.h>
 
-#include <apr_thread_mutex.h>
-
 #include "private/svn_file_handle_cache.h"
+#include "private/svn_mutex.h"
 #include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_io.h"
@@ -186,12 +185,10 @@ struct svn_file_handle_cache_t
    * by following the cache_entry_t.sibling_link list. */
   apr_hash_t *first_by_name;
 
-#if APR_HAS_THREADS
   /* A lock for intra-process synchronization to the cache, or NULL if
    * the cache's creator doesn't feel the cache needs to be
    * thread-safe. */
-  apr_thread_mutex_t *mutex;
-#endif
+  svn_mutex__t *mutex;
 };
 
 /* Internal structure behind the opaque "cached file handle" returned to
@@ -209,42 +206,6 @@ struct svn_file_handle_cache__handle_t
   /* the handle-specific information */
   cache_entry_t *entry;
 };
-
-/* If applicable, locks CACHE's mutex. 
- */
-static svn_error_t *
-lock_cache(svn_file_handle_cache_t *cache)
-{
-#if APR_HAS_THREADS
-  apr_status_t status;
-  if (! cache->mutex)
-    return SVN_NO_ERROR;
-
-  status = apr_thread_mutex_lock(cache->mutex);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't lock cache mutex"));
-#endif
-
-  return SVN_NO_ERROR;
-}
-
-/* If applicable, unlocks CACHE's mutex, then returns ERR. 
- */
-static svn_error_t *
-unlock_cache(svn_file_handle_cache_t *cache, svn_error_t *err)
-{
-#if APR_HAS_THREADS
-  apr_status_t status;
-  if (! cache->mutex)
-    return err;
-
-  status = apr_thread_mutex_unlock(cache->mutex);
-  if (status && !err)
-    return svn_error_wrap_apr(status, _("Can't unlock cache mutex"));
-#endif
-
-  return err;
-}
 
 /* Initialize LIST as empty.
  */
@@ -559,7 +520,7 @@ open_entry(svn_file_handle_cache__handle_t **f,
            cache_entry_t *entry,
            apr_pool_t *pool)
 {
-  /* any entry can be handed out to the application only once at any time */
+  /* any entry can be handed out to the application only once */
   assert(!entry->open_handle);
 
   /* the entry will no longer be idle */
@@ -646,15 +607,16 @@ pointer_is_closer(const cache_entry_t *entry,
  * if OFFSET is -1, i.e. if the file pointer position of the handle returned
  * is undefined.
  */
-svn_error_t *
-svn_file_handle_cache__open(svn_file_handle_cache__handle_t **f,
-                            svn_file_handle_cache_t *cache,
-                            const char *fname,
-                            apr_int32_t flag,
-                            apr_fileperms_t perm,
-                            apr_off_t offset,
-                            int cookie,
-                            apr_pool_t *pool)
+static svn_error_t *
+svn_file_handle_cache__open_internal
+   (svn_file_handle_cache__handle_t **f,
+    svn_file_handle_cache_t *cache,
+    const char *fname,
+    apr_int32_t flag,
+    apr_fileperms_t perm,
+    apr_off_t offset,
+    int cookie,
+    apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   cache_entry_t *entry;
@@ -662,9 +624,6 @@ svn_file_handle_cache__open(svn_file_handle_cache__handle_t **f,
   cache_entry_t *near_entry = NULL;
   cache_entry_t *cookie_entry = NULL;
   cache_entry_t *entry_found = NULL;
-
-  /* begin cache access */
-  SVN_ERR(lock_cache(cache));
 
   /* look through all idle entries for this filename and find suitable ones */
   for (entry = find_first(cache, fname); entry; entry = next_entry)
@@ -724,10 +683,36 @@ svn_file_handle_cache__open(svn_file_handle_cache__handle_t **f,
 
   assert(err || entry->file);
 
-  /* pass the cached file handle to the application (if there was no previous
-   * error) and finish the cache access.
+  /* pass the cached file handle to the application 
+   * (if there was no previous error).
    */
-  return unlock_cache(cache, err ? err : open_entry(f, cache, entry, pool));
+  return err ? err : open_entry(f, cache, entry, pool);
+}
+
+/* Same as svn_file_handle_cache__open_internal but using the mutex to
+ * serialize accesss to the internal data.
+ */
+svn_error_t *
+svn_file_handle_cache__open(svn_file_handle_cache__handle_t **f,
+                            svn_file_handle_cache_t *cache,
+                            const char *fname,
+                            apr_int32_t flag,
+                            apr_fileperms_t perm,
+                            apr_off_t offset,
+                            int cookie,
+                            apr_pool_t *pool)
+{
+  SVN_MUTEX__WITH_LOCK(cache->mutex,
+                       svn_file_handle_cache__open_internal(f,
+                                                            cache,
+                                                            fname,
+                                                            flag,
+                                                            perm,
+                                                            offset,
+                                                            cookie,
+                                                            pool));
+
+  return SVN_NO_ERROR;
 }
 
 /* Return the APR level file handle underlying the cache file handle F.
@@ -750,13 +735,38 @@ svn_file_handle_cache__get_name(svn_file_handle_cache__handle_t *f)
   return (f && f->entry) ? f->entry->name : NULL;
 }
 
+/* Return the ENTRY to the CACHE. Depending on the number of open handles,
+ * the underlying handle may actually get closed.
+ */
+static svn_error_t *
+svn_file_handle_cache__close_internal(svn_file_handle_cache_t *cache,
+                                      cache_entry_t *entry)
+{
+  /* mark cache entry as idle.
+   * It must actually manage the handle we are about to close.
+   */
+  entry->open_handle = NULL;
+  append_to_list(&cache->idle_entries, &entry->idle_link);
+
+  /* remember the current file pointer so we can prefer this entry for
+   * accesses in the vicinity of this position. 
+   */
+  entry->position = 0;
+  SVN_ERR(svn_io_file_seek(entry->file,
+                           APR_CUR,
+                           &entry->position,
+                           entry->pool));
+
+  /* if all went well so far, reduce the number of cached file handles */
+  return auto_close_oldest(cache);
+}
+
 /* Return the cached file handle F to the cache. Depending on the number
  * of open handles, the underlying handle may actually get closed.
  */
 svn_error_t *
 svn_file_handle_cache__close(svn_file_handle_cache__handle_t *f)
 {
-  svn_error_t *err = SVN_NO_ERROR;
   svn_file_handle_cache_t *cache = f ? f->cache : NULL;
   cache_entry_t *entry = f ? f->entry : NULL;
 
@@ -768,53 +778,28 @@ svn_file_handle_cache__close(svn_file_handle_cache__handle_t *f)
   f->cache = NULL;
   f->entry = NULL;
 
-  /* begin actual cache access */
-  SVN_ERR(lock_cache(cache));
+  /* now, mark the entry as again available */
+  SVN_MUTEX__WITH_LOCK(cache->mutex,
+                       svn_file_handle_cache__close_internal(cache, 
+                                                             entry));
 
-  /* mark cache entry as idle.
-   * It must actually manage the handle we are about to close.
-   */
-  assert(entry->open_handle == f);
-  entry->open_handle = NULL;
-
-  append_to_list(&cache->idle_entries, &entry->idle_link);
-
-  /* remember the current file pointer so we can prefer this entry for
-   * accesses in the vicinity of this position. 
-   */
-  entry->position = 0;
-  err = svn_io_file_seek(entry->file,
-                         APR_CUR,
-                         &entry->position,
-                         entry->pool);
-
-  /* if all went well so far, reduce the number of cached file handles */
-  if (!err)
-    err = auto_close_oldest(cache);
-
-  /* end actual cache access */
-  return unlock_cache(cache, err);
+  return SVN_NO_ERROR;
 }
 
 /* Close all file handles currently not held by the application.
  */
-svn_error_t *
-svn_file_handle_cache__flush(svn_file_handle_cache_t *cache)
+static svn_error_t *
+svn_file_handle_cache__flush_internal(svn_file_handle_cache_t *cache)
 {
-  svn_error_t *err = SVN_NO_ERROR;
-
-  /* begin cache access */
-  SVN_ERR(lock_cache(cache));
-
   /* close all idle file handles */
-  while (cache->idle_entries.count && !err)
-    err = close_oldest_idle(cache);
+  while (cache->idle_entries.count)
+    SVN_ERR(close_oldest_idle(cache));
 
   /* if the application does not hold any cached file handles, we can
    * discard all cache structures and re-allocate them to reduce the 
    * memory footprint.
    */
-  if (!err && !cache->used_entries.count)
+  if (!cache->used_entries.count)
     {
       /* release all cache data structures, in particular the ever-growing
        * hash and the unused cache entries with all their sub-pools.
@@ -826,8 +811,18 @@ svn_file_handle_cache__flush(svn_file_handle_cache_t *cache)
       init_list(&cache->unused_entries);
     }
 
-  /* end cache access */
-  return unlock_cache(cache, err);
+  return SVN_NO_ERROR;
+}
+
+/* Same as svn_file_handle_cache__flush_internal but using the mutex to
+ * serialize accesss to the internal data.
+ */
+svn_error_t *
+svn_file_handle_cache__flush(svn_file_handle_cache_t *cache)
+{
+  SVN_MUTEX__WITH_LOCK(cache->mutex, 
+                       svn_file_handle_cache__flush_internal(cache));
+  return SVN_NO_ERROR;
 }
 
 /* Creates a new file handle cache in CACHE. Up to MAX_HANDLES file handles
@@ -859,23 +854,7 @@ svn_file_handle_cache__create_cache(svn_file_handle_cache_t **cache,
 
   new_cache->first_by_name = apr_hash_make(new_cache->pool);
 
-#if APR_HAS_THREADS
-  new_cache->mutex = NULL;
-
-  /* synchronization support may or may not be needed or available */
-  if (thread_safe)
-    {
-      apr_status_t status = apr_thread_mutex_create(&(new_cache->mutex),
-                                                    APR_THREAD_MUTEX_DEFAULT,
-                                                    pool);
-      if (status)
-        return svn_error_wrap_apr(status,
-                                  _("Can't create cache mutex"));
-    }
-#else
-  if (thread_safe)
-    return svn_error_wrap_apr(APR_ENOTIMPL, _("APR doesn't support threads"));
-#endif
+  svn_mutex__init(&new_cache->mutex, thread_safe, pool);
 
   /* done */
   *cache = new_cache;
