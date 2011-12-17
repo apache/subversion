@@ -165,20 +165,27 @@ log_start_element(int *elem, void *baton, int parent,
     case ELEM_comment:
       lb->want_cdata = lb->cdata;
       svn_stringbuf_setempty(lb->cdata);
+      lb->cdata_encoding = NULL;
+          
+      /* Some tags might contain encoded CDATA. */
+      if ((elm->id == ELEM_comment) ||
+          (elm->id == ELEM_creator_displayname) ||
+          (elm->id == ELEM_log_date) ||
+          (elm->id == ELEM_rev_prop))
+        {
+          lb->cdata_encoding = svn_xml_get_attr_value("encoding", atts);
+          if (lb->cdata_encoding)
+            lb->cdata_encoding = apr_pstrdup(lb->subpool, lb->cdata_encoding);
+        }
 
-      lb->cdata_encoding = svn_xml_get_attr_value("encoding", atts);
-      if (lb->cdata_encoding)
-        lb->cdata_encoding = apr_pstrdup(lb->subpool, lb->cdata_encoding);
-
+      /* revprop tags have names. */
       if (elm->id == ELEM_revprop)
         {
-          lb->revprop_name = apr_pstrdup(lb->subpool,
-                                         svn_xml_get_attr_value("name",
-                                                                atts));
+          const char *revprop_name = svn_xml_get_attr_value("name", atts);
           if (lb->revprop_name == NULL)
             return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                                      _("Missing name attr in revprop element"));
-
+          lb->revprop_name = apr_pstrdup(lb->subpool, revprop_name);
         }
       break;
     case ELEM_has_children:
@@ -246,12 +253,11 @@ log_start_element(int *elem, void *baton, int parent,
 
 /*
  * Set *DECODED_CDATA to a copy of current CDATA being tracked in LB,
- * decoded as necessary, and allocated from POOL.
+ * decoded as necessary, and allocated from LB->subpool.
  */
 static svn_error_t *
 maybe_decode_log_cdata(const svn_string_t **decoded_cdata,
-                       struct log_baton *lb,
-                       apr_pool_t *pool)
+                       struct log_baton *lb)
 {
   if (lb->cdata_encoding)
     {
@@ -264,11 +270,11 @@ maybe_decode_log_cdata(const svn_string_t **decoded_cdata,
       if (strcmp(lb->cdata_encoding, "base64") != 0)
         return svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
 
-      *decoded_cdata = svn_base64_decode_string(&in, pool);
+      *decoded_cdata = svn_base64_decode_string(&in, lb->subpool);
     }
   else
     {
-      *decoded_cdata = svn_string_create_from_buf(lb->cdata, pool);
+      *decoded_cdata = svn_string_create_from_buf(lb->cdata, lb->subpool);
     }
 
   return SVN_NO_ERROR;
@@ -287,7 +293,7 @@ log_end_element(void *baton, int state,
   const svn_string_t *decoded_cdata;
 
   if (lb->want_cdata)
-    SVN_ERR(maybe_decode_log_cdata(&decoded_cdata, lb, lb->subpool));
+    SVN_ERR(maybe_decode_log_cdata(&decoded_cdata, lb));
 
   switch (state)
     {
