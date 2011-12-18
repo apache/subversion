@@ -620,6 +620,7 @@ int main(int argc, const char *argv[])
 
         case 'F':
           params.open_file_count = apr_strtoi64(arg, NULL, 0);
+          break;
 
 #ifdef WIN32
         case SVNSERVE_OPT_SERVICE:
