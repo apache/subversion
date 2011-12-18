@@ -882,7 +882,8 @@ svn_file_handle_cache__flush(svn_file_handle_cache_t *cache,
                              const char *file_name)
 {
   SVN_MUTEX__WITH_LOCK(cache->mutex, 
-                       svn_file_handle_cache__flush_internal(cache));
+                       svn_file_handle_cache__flush_internal(cache,
+                                                             file_name));
   return SVN_NO_ERROR;
 }
 
