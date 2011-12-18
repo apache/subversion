@@ -25,6 +25,7 @@
 
 #include "private/svn_file_handle_cache.h"
 #include "private/svn_mutex.h"
+#include "private/svn_atomic.h"
 #include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_io.h"
@@ -64,9 +65,9 @@
  * without the application being aware of it, no distinction is being made
  * between read-after-write, write-after-read or others.
  *
- * For similar reasons, an application may want to close all idle handles
- * explicitly, i.e. without opening new ones. svn_file_handle_cache__flush
- * is the function to call in that case.
+ * It is the application's task to inform the cache that some write has
+ * occured and the respective file handles shall be removed from the cache.
+ * svn_file_handle_cache__flush is the function to call in that case.
  */
 
 /* Size of the APR per-file data buffer. We don't rely on this value to
@@ -75,6 +76,9 @@
  * As long as we support APR 0.9, we can't change that value.
  */
 #define FILE_BUFFER_SIZE 0x1000
+
+/* Aggregated open file handle count over all cache instances. */
+static volatile svn_atomic_t global_handle_count = 0;
 
 /* forward-declarations */
 typedef struct cache_entry_t cache_entry_t;
@@ -402,6 +406,7 @@ internal_file_open(cache_entry_t **result,
    */
   append_to_list(&cache->used_entries, &entry->global_link);
   append_to_list(&cache->idle_entries, &entry->idle_link);
+  svn_atomic_inc(&global_handle_count);
 
   /* link with other entries for the same file in the index, or add it
    * to the index if no entry for this file name exists so far */
@@ -464,6 +469,7 @@ internal_close_file(svn_file_handle_cache_t *cache, cache_entry_t *entry)
   /* remove entry from the idle and global list */
   remove_from_list(&cache->idle_entries, &entry->idle_link);
   remove_from_list(&cache->used_entries, &entry->global_link);
+  svn_atomic_dec(&global_handle_count);
 
   /* actually close the file handle. */
   if (entry->file)
@@ -559,7 +565,7 @@ close_oldest_idle(svn_file_handle_cache_t *cache)
 static svn_error_t *
 auto_close_oldest(svn_file_handle_cache_t *cache)
 {
-  return cache->used_entries.count > cache->max_used_count
+  return svn_atomic_read(&global_handle_count) > cache->max_used_count
     ? close_oldest_idle(cache)
     : SVN_NO_ERROR;
 }
@@ -887,6 +893,23 @@ svn_file_handle_cache__flush(svn_file_handle_cache_t *cache,
   return SVN_NO_ERROR;
 }
 
+/* Close all remaining cached file handles.
+ */
+static apr_status_t
+close_all_handles(void *cache_void)
+{
+  svn_file_handle_cache_t *cache = cache_void;
+
+  /* There is no apr_atomic_sub and *_add requires an unsigned value.
+   * Thus, we can't use apr_atomic_add portably to mimic *_sub.
+   */
+  size_t i;
+  for (i = cache->used_entries.count; i > 0; --i)
+    svn_atomic_dec(&global_handle_count);
+
+  return APR_SUCCESS;
+}
+
 /* Creates a new file handle cache in CACHE. Up to MAX_HANDLES file handles
  * will be kept open. All cache-internal memory allocations during the caches'
  * lifetime will be done from POOL.
@@ -918,6 +941,12 @@ svn_file_handle_cache__create_cache(svn_file_handle_cache_t **cache,
 
   svn_mutex__init(&new_cache->mutex, thread_safe, pool);
 
+  /* ensure we update global_handle_count correctly. */
+  apr_pool_cleanup_register(pool,
+                            new_cache,
+                            close_all_handles,
+                            apr_pool_cleanup_null);
+  
   /* done */
   *cache = new_cache;
   return SVN_NO_ERROR;
