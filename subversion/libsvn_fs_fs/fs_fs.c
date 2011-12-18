@@ -2409,7 +2409,7 @@ read_rep_line(struct rep_args **rep_args_p,
    temporary variables from POOL. */
 static svn_error_t *
 get_fs_id_at_offset(svn_fs_id_t **id_p,
-                    apr_file_t *rev_file,
+                    svn_file_handle_cache__handle_t *rev_file,
                     svn_fs_t *fs,
                     svn_revnum_t rev,
                     apr_off_t offset,
@@ -2419,10 +2419,12 @@ get_fs_id_at_offset(svn_fs_id_t **id_p,
   apr_hash_t *headers;
   const char *node_id_str;
 
-  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
+  SVN_ERR(svn_io_file_seek(svn_file_handle_cache__get_apr_handle(rev_file), 
+                           APR_SET, &offset, pool));
 
   SVN_ERR(read_header_block(&headers,
-                            svn_stream_from_aprfile2(rev_file, TRUE, pool),
+                            svn_stream__from_cached_file_handle(rev_file, 
+                                                                TRUE, pool),
                             pool));
 
   /* In error messages, the offset is relative to the pack file,
@@ -2473,7 +2475,7 @@ get_fs_id_at_offset(svn_fs_id_t **id_p,
 static svn_error_t *
 get_root_changes_offset(apr_off_t *root_offset,
                         apr_off_t *changes_offset,
-                        apr_file_t *rev_file,
+                        svn_file_handle_cache__handle_t *rev_file,
                         svn_fs_t *fs,
                         svn_revnum_t rev,
                         apr_pool_t *pool)
@@ -2486,6 +2488,7 @@ get_root_changes_offset(apr_off_t *root_offset,
   const char *str;
   apr_size_t len;
   apr_seek_where_t seek_relative;
+  apr_file_t *apr_file = svn_file_handle_cache__get_apr_handle(rev_file);
 
   /* Determine where to seek to in the file.
 
@@ -2515,14 +2518,14 @@ get_root_changes_offset(apr_off_t *root_offset,
 
   /* We will assume that the last line containing the two offsets
      will never be longer than 64 characters. */
-  SVN_ERR(svn_io_file_seek(rev_file, seek_relative, &offset, pool));
+  SVN_ERR(svn_io_file_seek(apr_file, seek_relative, &offset, pool));
 
   offset -= sizeof(buf);
-  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
+  SVN_ERR(svn_io_file_seek(apr_file, APR_SET, &offset, pool));
 
   /* Read in this last block, from which we will identify the last line. */
   len = sizeof(buf);
-  SVN_ERR(svn_io_file_read(rev_file, buf, &len, pool));
+  SVN_ERR(svn_io_file_read(apr_file, buf, &len, pool));
 
   /* This cast should be safe since the maximum amount read, 64, will
      never be bigger than the size of an int. */
@@ -2664,7 +2667,6 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_file_handle_cache__handle_t *revision_file;
-  apr_file_t *apr_rev_file;
   apr_off_t root_offset;
   svn_fs_id_t *root_id = NULL;
   svn_boolean_t is_cached;
@@ -2678,13 +2680,12 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
 
   /* we don't care about the file pointer position */
   SVN_ERR(open_pack_or_rev_file(&revision_file, fs, rev, -1,pool));
-  apr_rev_file = svn_file_handle_cache__get_apr_handle(revision_file);
 
   /* here, it will get moved anyways */
-  SVN_ERR(get_root_changes_offset(&root_offset, NULL, apr_rev_file, fs, rev,
+  SVN_ERR(get_root_changes_offset(&root_offset, NULL, revision_file, fs, rev,
                                   pool));
 
-  SVN_ERR(get_fs_id_at_offset(&root_id, apr_rev_file, fs, rev, root_offset, 
+  SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, fs, rev, root_offset, 
                               pool));
 
   SVN_ERR(svn_file_handle_cache__close(revision_file));
@@ -4427,7 +4428,7 @@ svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
   apr_revision_file = svn_file_handle_cache__get_apr_handle(revision_file);
 
   /* here, it will get moved anyways */
-  SVN_ERR(get_root_changes_offset(NULL, &changes_offset, apr_revision_file, 
+  SVN_ERR(get_root_changes_offset(NULL, &changes_offset, revision_file, 
                                   fs, rev, pool));
 
   SVN_ERR(svn_io_file_seek(apr_revision_file, APR_SET, &changes_offset, pool));
@@ -6605,7 +6606,8 @@ read_handler_recover(void *baton, char *buffer, apr_size_t *len)
    Perform temporary allocation in POOL. */
 static svn_error_t *
 recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
-                     apr_file_t *rev_file, apr_off_t offset,
+                     svn_file_handle_cache__handle_t *rev_file, 
+                     apr_off_t offset,
                      char *max_node_id, char *max_copy_id,
                      apr_pool_t *pool)
 {
@@ -6618,10 +6620,13 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
+  apr_file_t *apr_rev_file = svn_file_handle_cache__get_apr_handle(rev_file);
 
-  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
-  SVN_ERR(read_header_block(&headers, svn_stream_from_aprfile2(rev_file, TRUE,
-                                                               pool),
+  SVN_ERR(svn_io_file_seek(apr_rev_file, APR_SET, &offset, pool));
+  SVN_ERR(read_header_block(&headers, 
+                            svn_stream__from_cached_file_handle(rev_file, 
+                                                                TRUE,
+                                                                pool),
                             pool));
 
   /* Check that this is a directory.  It should be. */
@@ -6646,8 +6651,8 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
   /* We could use get_dir_contents(), but this is much cheaper.  It does
      rely on directory entries being stored as PLAIN reps, though. */
   offset = data_rep->offset;
-  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
-  SVN_ERR(read_rep_line(&ra, rev_file, pool));
+  SVN_ERR(svn_io_file_seek(apr_rev_file, APR_SET, &offset, pool));
+  SVN_ERR(read_rep_line(&ra, apr_rev_file, pool));
   if (ra->is_delta)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Recovery encountered a deltified directory "
@@ -6655,7 +6660,7 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
 
   /* Now create a stream that's allowed to read only as much data as is
      stored in the representation. */
-  baton.file = rev_file;
+  baton.file = apr_rev_file;
   baton.pool = pool;
   baton.remaining = data_rep->expanded_size;
   stream = svn_stream_create(&baton, pool);
@@ -6819,7 +6824,6 @@ recover_body(void *baton, apr_pool_t *pool)
       for (rev = 0; rev <= max_rev; rev++)
         {
           svn_file_handle_cache__handle_t *rev_file;
-          apr_file_t *apr_rev_file;
           apr_off_t root_offset;
 
           svn_pool_clear(iterpool);
@@ -6829,13 +6833,12 @@ recover_body(void *baton, apr_pool_t *pool)
 
           /* Any file pointer position will do ... */
           SVN_ERR(open_pack_or_rev_file(&rev_file, fs, rev, -1, iterpool));
-          apr_rev_file = svn_file_handle_cache__get_apr_handle(rev_file);
 
           /* ... because it gets set here explicitly */
           SVN_ERR(get_root_changes_offset(&root_offset, NULL, 
-                                          apr_rev_file, fs, rev,
+                                          rev_file, fs, rev,
                                           iterpool));
-          SVN_ERR(recover_find_max_ids(fs, rev, apr_rev_file, root_offset,
+          SVN_ERR(recover_find_max_ids(fs, rev, rev_file, root_offset,
                                        max_node_id, max_copy_id, iterpool));
           SVN_ERR(svn_file_handle_cache__close(rev_file));
         }
@@ -7979,19 +7982,19 @@ hotcopy_update_current(svn_revnum_t *dst_youngest,
   if (dst_ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
     {
       apr_off_t root_offset;
-      apr_file_t *rev_file;
+      svn_file_handle_cache__handle_t *rev_file;
 
       if (dst_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
         SVN_ERR(update_min_unpacked_rev(dst_fs, scratch_pool));
 
-      SVN_ERR(open_pack_or_rev_file(&rev_file, dst_fs, new_youngest,
+      SVN_ERR(open_pack_or_rev_file(&rev_file, dst_fs, new_youngest, -1,
                                     scratch_pool));
       SVN_ERR(get_root_changes_offset(&root_offset, NULL, rev_file,
                                       dst_fs, new_youngest, scratch_pool));
       SVN_ERR(recover_find_max_ids(dst_fs, new_youngest, rev_file,
                                    root_offset, next_node_id, next_copy_id,
                                    scratch_pool));
-      SVN_ERR(svn_io_file_close(rev_file, scratch_pool));
+      SVN_ERR(svn_file_handle_cache__close(rev_file));
     }
 
   /* Update 'current'. */
