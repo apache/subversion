@@ -70,6 +70,13 @@
  * is the function to call in that case.
  */
 
+/* Size of the APR per-file data buffer. We don't rely on this value to
+ * be accurate but will only use it as a tuning parameter.
+ *
+ * As long as we support APR 0.9, we can't change that value.
+ */
+#define FILE_BUFFER_SIZE 0x1000
+
 /* forward-declarations */
 typedef struct cache_entry_t cache_entry_t;
 typedef struct entry_link_t entry_link_t;
@@ -571,6 +578,9 @@ pointer_is_closer(const cache_entry_t *entry,
                   apr_off_t offset,
                   const cache_entry_t *closest_entry)
 {
+  apr_off_t old_delta;
+  apr_off_t new_delta;
+  
   /* if the offset is unspecified, no entry will be considered a good
    * match based on the file pointer's current position.
    */
@@ -579,8 +589,8 @@ pointer_is_closer(const cache_entry_t *entry,
 
   /* we also ignore entries who are no close enough to fit into the
    * read buffer. */
-  if ((entry->position - 0x1000 > offset) ||
-      (entry->position + 0x1000 < offset))
+  if ((entry->position - FILE_BUFFER_SIZE > offset) ||
+      (entry->position + FILE_BUFFER_SIZE < offset))
     return FALSE;
 
   /* this is the closest match if we don't have a match, yet, at all */
@@ -588,13 +598,14 @@ pointer_is_closer(const cache_entry_t *entry,
     return TRUE;
 
   /* is it a better match? */
-  if ((offset < closest_entry->position ? offset - closest_entry->position
-                                        : closest_entry->position - offset) >
-      (offset < entry->position ? offset - entry->position
-                                : entry->position - offset))
-    return TRUE;
+  old_delta = offset > closest_entry->position 
+            ? offset - closest_entry->position
+            : closest_entry->position - offset;
+  new_delta = offset > entry->position 
+            ? offset - entry->position
+            : entry->position - offset;
 
-  return FALSE;
+  return old_delta > new_delta ? TRUE : FALSE;
 }
 
 /* Get an open file handle in F, for the file named FNAME with the open
