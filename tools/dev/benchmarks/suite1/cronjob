@@ -58,7 +58,7 @@ if [ "$?" -ne "0" ]; then
   echo "$subject"
 else
 
-  rev="$(svn info /home/neels/pat/trunk/src | grep Revision)"
+  rev="$(/home/neels/pat/stable/prefix/bin/svn info /home/neels/pat/trunk/src | grep Revision)"
   if [ -z "$rev" ]; then
     subject="Working copy problem."
     echo "$subject" > "$results"

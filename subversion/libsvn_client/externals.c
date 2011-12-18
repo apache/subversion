@@ -606,6 +606,7 @@ handle_external_item_change(const struct external_change_baton_t *eb,
   svn_ra_session_t *ra_session;
   svn_client__ra_session_from_path_results ra_cache = { 0 };
   const char *new_url;
+  svn_node_kind_t kind;
 
   ra_cache.kind = svn_node_unknown;
 
@@ -624,43 +625,38 @@ handle_external_item_change(const struct external_change_baton_t *eb,
                                                 parent_dir_url,
                                                 scratch_pool, scratch_pool));
 
-  /* If the external is being checked out, exported or updated,
-     determine if the external is a file or directory. */
-  if (new_item)
-    {
-      svn_node_kind_t kind;
+  /* Determine if the external is a file or directory. */
+  /* Get the RA connection. */
+  SVN_ERR(svn_client__ra_session_from_path(&ra_session,
+                                           &ra_cache.ra_revnum,
+                                           &ra_cache.ra_session_url,
+                                           new_url, NULL,
+                                           &(new_item->peg_revision),
+                                           &(new_item->revision), eb->ctx,
+                                           scratch_pool));
 
-      /* Get the RA connection. */
-      SVN_ERR(svn_client__ra_session_from_path(&ra_session,
-                                               &ra_cache.ra_revnum,
-                                               &ra_cache.ra_session_url,
-                                               new_url, NULL,
-                                               &(new_item->peg_revision),
-                                               &(new_item->revision), eb->ctx,
-                                               scratch_pool));
+  SVN_ERR(svn_ra_get_uuid2(ra_session, &ra_cache.repos_uuid,
+                           scratch_pool));
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &ra_cache.repos_root_url,
+                                 scratch_pool));
+  SVN_ERR(svn_ra_check_path(ra_session, "", ra_cache.ra_revnum, &kind,
+                            scratch_pool));
 
-      SVN_ERR(svn_ra_get_uuid2(ra_session, &ra_cache.repos_uuid,
-                               scratch_pool));
-      SVN_ERR(svn_ra_get_repos_root2(ra_session, &ra_cache.repos_root_url,
-                                     scratch_pool));
-      SVN_ERR(svn_ra_check_path(ra_session, "", ra_cache.ra_revnum, &kind,
-                                scratch_pool));
+  if (svn_node_none == kind)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("URL '%s' at revision %ld doesn't exist"),
+                             ra_cache.ra_session_url,
+                             ra_cache.ra_revnum);
 
-      if (svn_node_none == kind)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("URL '%s' at revision %ld doesn't exist"),
-                                 ra_cache.ra_session_url,
-                                 ra_cache.ra_revnum);
+  if (svn_node_dir != kind && svn_node_file != kind)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("URL '%s' at revision %ld is not a file "
+                               "or a directory"),
+                             ra_cache.ra_session_url,
+                             ra_cache.ra_revnum);
 
-      if (svn_node_dir != kind && svn_node_file != kind)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("URL '%s' at revision %ld is not a file "
-                                   "or a directory"),
-                                 ra_cache.ra_session_url,
-                                 ra_cache.ra_revnum);
+  ra_cache.kind = kind;
 
-      ra_cache.kind = kind;
-    }
 
   /* Not protecting against recursive externals.  Detecting them in
      the global case is hard, and it should be pretty obvious to a
@@ -679,87 +675,44 @@ handle_external_item_change(const struct external_change_baton_t *eb,
 
   if (! old_defining_abspath)
     {
-      /* This branch is only used during a checkout or an export. */
-
-      switch (ra_cache.kind)
-        {
-        case svn_node_dir:
-          /* The target dir might have multiple components.  Guarantee
-             the path leading down to the last component. */
-          SVN_ERR(svn_io_make_dir_recursively(svn_dirent_dirname(local_abspath,
-                                                                 scratch_pool),
-                                              scratch_pool));
-
-          SVN_ERR(switch_dir_external(
-                   local_abspath, new_url,
-                   &(new_item->peg_revision), &(new_item->revision),
-                   parent_dir_abspath, eb->timestamp_sleep, eb->ctx,
-                   scratch_pool));
-          break;
-        case svn_node_file:
-          if (strcmp(eb->repos_root_url, ra_cache.repos_root_url))
-            return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                      _("Unsupported external: "
-                        "url of file external '%s' is not in repository '%s'"),
-                      new_url, eb->repos_root_url);
-          SVN_ERR(switch_file_external(local_abspath,
-                                       new_url,
-                                       &new_item->peg_revision,
-                                       &new_item->revision,
-                                       parent_dir_abspath,
-                                       ra_session,
-                                       ra_cache.ra_session_url,
-                                       ra_cache.ra_revnum,
-                                       ra_cache.repos_root_url,
-                                       eb->timestamp_sleep, eb->ctx,
-                                       scratch_pool));
-          break;
-        default:
-          SVN_ERR_MALFUNCTION();
-          break;
-        }
+      /* The target dir might have multiple components.  Guarantee the path
+         leading down to the last component. */
+      SVN_ERR(svn_io_make_dir_recursively(svn_dirent_dirname(local_abspath,
+                                                             scratch_pool),
+                                          scratch_pool));
     }
-  else
-    {
-      /* This branch handles a definition change or simple update. */
 
-      /* Either the URL changed, or the exact same item is present in
-         both hashes, and caller wants to update such unchanged items.
-         In the latter case, the call below will try to make sure that
-         the external really is a WC pointing to the correct
-         URL/revision. */
-      switch (ra_cache.kind)
-        {
-        case svn_node_dir:
-          SVN_ERR(switch_dir_external(local_abspath, new_url,
-                                      &(new_item->peg_revision),
-                                      &(new_item->revision),
-                                      parent_dir_abspath,
-                                      eb->timestamp_sleep, eb->ctx,
-                                      scratch_pool));
-          break;
-        case svn_node_file:
-          if (strcmp(eb->repos_root_url, ra_cache.repos_root_url))
-            return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                      _("Unsupported external: "
-                        "url of file external '%s' is not in repository '%s'"),
-                      new_url, eb->repos_root_url);
-          SVN_ERR(switch_file_external(local_abspath,
-                                       new_url,
-                                       &new_item->peg_revision,
-                                       &new_item->revision,
-                                       parent_dir_abspath,
-                                       ra_session,
-                                       ra_cache.ra_session_url,
-                                       ra_cache.ra_revnum,
-                                       ra_cache.repos_root_url,
-                                       eb->timestamp_sleep, eb->ctx,
-                                       scratch_pool));
-          break;
-        default:
-          SVN_ERR_MALFUNCTION();
-          break;
-        }
+  switch (ra_cache.kind)
+    {
+      case svn_node_dir:
+        SVN_ERR(switch_dir_external(local_abspath, new_url,
+                                    &(new_item->peg_revision),
+                                    &(new_item->revision),
+                                    parent_dir_abspath,
+                                    eb->timestamp_sleep, eb->ctx,
+                                    scratch_pool));
+        break;
+      case svn_node_file:
+        if (strcmp(eb->repos_root_url, ra_cache.repos_root_url))
+          return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                    _("Unsupported external: "
+                      "url of file external '%s' is not in repository '%s'"),
+                    new_url, eb->repos_root_url);
+        SVN_ERR(switch_file_external(local_abspath,
+                                     new_url,
+                                     &new_item->peg_revision,
+                                     &new_item->revision,
+                                     parent_dir_abspath,
+                                     ra_session,
+                                     ra_cache.ra_session_url,
+                                     ra_cache.ra_revnum,
+                                     ra_cache.repos_root_url,
+                                     eb->timestamp_sleep, eb->ctx,
+                                     scratch_pool));
+        break;
+      default:
+        SVN_ERR_MALFUNCTION();
+        break;
     }
 
   return SVN_NO_ERROR;
@@ -943,7 +896,7 @@ svn_client__handle_externals(apr_hash_t *externals_new,
     {
       const char *item_abspath = svn__apr_hash_index_key(hi);
       const char *defining_abspath = svn__apr_hash_index_val(hi);
-      svn_wc_status3_t *defining_status;
+      const char *parent_abspath;
 
       svn_pool_clear(iterpool);
 
@@ -953,19 +906,29 @@ svn_client__handle_externals(apr_hash_t *externals_new,
                                                        item_abspath, iterpool),
                           iterpool));
 
-      /* Is DEFINING_ABSPATH now an unversioned directory we can remove? */
-      SVN_ERR(svn_wc_status3(&defining_status, ctx->wc_ctx, defining_abspath,
-                             iterpool, iterpool));
-      if (defining_status->node_status == svn_wc_status_unversioned)
-        {
-          svn_error_t *err;
+      /* Are there any unversioned directories between the removed
+       * external and the DEFINING_ABSPATH which we can remove? */
+      parent_abspath = item_abspath;
+      do {
+        svn_wc_status3_t *parent_status;
 
-          err = svn_io_dir_remove_nonrecursive(defining_abspath, iterpool);
-          if (err && APR_STATUS_IS_ENOTEMPTY(err->apr_err))
-            svn_error_clear(err);
-          else
-            SVN_ERR(err);
-        }
+        parent_abspath = svn_dirent_dirname(parent_abspath, iterpool);
+        SVN_ERR(svn_wc_status3(&parent_status, ctx->wc_ctx, parent_abspath,
+                               iterpool, iterpool));
+        if (parent_status->node_status == svn_wc_status_unversioned)
+          {
+            svn_error_t *err;
+
+            err = svn_io_dir_remove_nonrecursive(parent_abspath, iterpool);
+            if (err && APR_STATUS_IS_ENOTEMPTY(err->apr_err))
+              {
+                svn_error_clear(err);
+                break;
+              }
+            else
+              SVN_ERR(err);
+          }
+      } while (strcmp(parent_abspath, defining_abspath) != 0);
     }
 
 

@@ -1258,7 +1258,7 @@ def run_and_verify_mergeinfo(error_re_string = None,
     verify.verify_outputs(None, None, err, None, expected_err)
     return
 
-  out = sorted([_f for _f in [x.rstrip()[1:] for x in out] if _f])
+  out = [_f for _f in [x.rstrip()[1:] for x in out] if _f]
   expected_output.sort()
   extra_out = []
   if out != expected_output:
@@ -1823,7 +1823,7 @@ def create_failing_post_commit_hook(repo_dir):
 # set_prop can be used for properties with NULL characters which are not
 # handled correctly when passed to subprocess.Popen() and values like "*"
 # which are not handled correctly on Windows.
-def set_prop(name, value, path, expected_err=None):
+def set_prop(name, value, path, expected_re_string=None):
   """Set a property with specified value"""
   if value and (value[0] == '-' or '\x00' in value or sys.platform == 'win32'):
     from tempfile import mkstemp
@@ -1833,10 +1833,17 @@ def set_prop(name, value, path, expected_err=None):
     value_file.write(value)
     value_file.flush()
     value_file.close()
-    main.run_svn(expected_err, 'propset', '-F', value_file_path, name, path)
+    exit_code, out, err = main.run_svn(expected_re_string, 'propset',
+                                       '-F', value_file_path, name, path)
     os.remove(value_file_path)
   else:
-    main.run_svn(expected_err, 'propset', name, value, path)
+    exit_code, out, err = main.run_svn(expected_re_string, 'propset',
+                                       name, value, path)
+  if expected_re_string:
+    if not expected_re_string.startswith(".*"):
+      expected_re_string = ".*(" + expected_re_string + ")"
+    expected_err = verify.RegexOutput(expected_re_string, match_all=False)
+    verify.verify_outputs(None, None, err, None, expected_err)
 
 def check_prop(name, path, exp_out, revprop=None):
   """Verify that property NAME on PATH has a value of EXP_OUT.

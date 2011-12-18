@@ -724,6 +724,38 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                            apr_pool_t *scratch_pool);
 
 
+/* Couple of random helpers for the Ev2 shims.
+   ### These will eventually be obsoleted and removed. */
+struct svn_wc__shim_fetch_baton_t
+{
+  svn_wc__db_t *db;
+  const char *base_abspath;
+  svn_boolean_t fetch_base;
+};
+
+/* Using a BATON of struct shim_fetch_baton, return KIND for PATH. */
+svn_error_t *
+svn_wc__fetch_kind_func(svn_kind_t *kind,
+                        void *baton,
+                        const char *path,
+                        apr_pool_t *scratch_pool);
+
+/* Using a BATON of struct shim_fetch_baton, return PROPS for PATH. */
+svn_error_t *
+svn_wc__fetch_props_func(apr_hash_t **props,
+                         void *baton,
+                         const char *path,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+/* Using a BATON of struct shim_fetch_baton, return a delta base for PATH. */
+svn_error_t *
+svn_wc__fetch_base_func(const char **filename,
+                        void *baton,
+                        const char *path,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

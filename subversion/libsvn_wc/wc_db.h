@@ -1133,6 +1133,37 @@ svn_wc__db_external_read(svn_wc__db_status_t *status,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+/* Return in *EXTERNALS a list of svn_wc__committable_external_info_t *
+ * containing info on externals defined to be checked out below LOCAL_ABSPATH,
+ * returning only those externals that are not fixed to a specific revision.
+ *
+ * If IMMEDIATES_ONLY is TRUE, only those externals defined to be checked out
+ * as immediate children of LOCAL_ABSPATH are returned (this is useful for
+ * treating user requested depth < infinity).
+ *
+ * If there are no externals to be returned, set *EXTERNALS to NULL. Otherwise
+ * set *EXTERNALS to an APR array newly cleated in RESULT_POOL.
+ *
+ * NOTE: This only returns the externals known by the immediate WC root for
+ * LOCAL_ABSPATH; i.e.:
+ * - If there is a further parent WC "above" the immediate WC root, and if
+ *   that parent WC defines externals to live somewhere within this WC, these
+ *   externals will appear to be foreign/unversioned and won't be picked up.
+ * - Likewise, only the topmost level of externals nestings (externals
+ *   defined within a checked out external dir) is picked up by this function.
+ *   (For recursion, see svn_wc__committable_externals_below().)
+ *
+ * ###TODO: Add a WRI_ABSPATH (wc root indicator) separate from LOCAL_ABSPATH,
+ * to allow searching any wc-root for externals under LOCAL_ABSPATH, not only
+ * LOCAL_ABSPATH's most immediate wc-root. */
+svn_error_t *
+svn_wc__db_committable_externals_below(apr_array_header_t **externals,
+                                       svn_wc__db_t *db,
+                                       const char *local_abspath,
+                                       svn_boolean_t immediates_only,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool);
+
 /* Gets a mapping from const char * local abspaths of externals to the const
    char * local abspath of where they are defined for all externals defined
    at or below LOCAL_ABSPATH.
@@ -1207,6 +1238,7 @@ svn_error_t *
 svn_wc__db_op_copy_shadowed_layer(svn_wc__db_t *db,
                                   const char *src_abspath,
                                   const char *dst_abspath,
+                                  svn_boolean_t is_move,
                                   apr_pool_t *scratch_pool);
 
 
@@ -1405,6 +1437,32 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      apr_pool_t *scratch_pool);
+
+
+/* Mark all LOCAL_ABSPATH in the TARGETS array, and all of their children,
+ * for deletion.
+ *
+ * This function is more efficient than svn_wc__db_op_delete() because
+ * only one sqlite transaction is used for all targets.
+ * It currently lacks support for moves (though this could be changed,
+ * at which point svn_wc__db_op_delete() becomes redundant).
+ *
+ * If NOTIFY_FUNC is not NULL, then it will be called (with NOTIFY_BATON)
+ * for each node deleted. While this processing occurs, if CANCEL_FUNC is
+ * not NULL, then it will be called (with CANCEL_BATON) to detect cancellation
+ * during the processing.
+ *
+ * Note: the notification (and cancellation) occur outside of a SQLite
+ * transaction.
+ */
+svn_error_t *
+svn_wc__db_op_delete_many(svn_wc__db_t *db,
+                          apr_array_header_t *targets,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *scratch_pool);
 
 
 /* ### mark PATH as (possibly) modified. "svn edit" ... right API here? */
@@ -2507,7 +2565,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
 
    If the user moves-away B/W/D from the WORKING tree, then behavior is
    again dependent upon the origination of B/W. For a plain add, the nodes
-   simply move to the destination. For a copy, a deletion is made at B/W/D,
+   simply move to the destination; this means that B/W/D ceases to be a
+   node and so cannot be scanned. For a copy, a deletion is made at B/W/D,
    and a new copy (of a subtree of the original source) is made at the
    destination. For a move-here, a deletion is made, and a copy is made at
    the destination (we do not track multiple moves; the source is moved to
@@ -2516,13 +2575,6 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
    subtree first, then moving the source to B/W).
 
    There are three further considerations when resolving a deleted node:
-
-     If the BASE B/W/D was moved-away, then BASE_DEL_ABSPATH will specify
-     B/W/D as the root of the BASE deletion (not necessarily B/W as an
-     implicit delete caused by a replacement; only the closest ancestor is
-     reported). The other parameters will operate as normal, based on what
-     is happening in the WORKING tree. Also note that ancestors of B/W/D
-     may report additional, explicit moved-away status.
 
      If the BASE B/W/D was deleted explicitly *and* B/W is a replacement,
      then the explicit deletion is subsumed by the implicit deletion that
@@ -2987,19 +3039,6 @@ svn_wc__db_min_max_revisions(svn_revnum_t *min_revision,
                              const char *local_abspath,
                              svn_boolean_t committed,
                              apr_pool_t *scratch_pool);
-
-/* Indicate in *IS_SPARSE_CHECKOUT whether any of the nodes within
- * LOCAL_ABSPATH is sparse, using DB.
- * Use SCRATCH_POOL for temporary allocations.
- *
- * This function provides a subset of the functionality of
- * svn_wc__db_revision_status() and is more efficient if the caller
- * doesn't need all information returned by svn_wc__db_revision_status(). */
-svn_error_t *
-svn_wc__db_is_sparse_checkout(svn_boolean_t *is_sparse_checkout,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *scratch_pool);
 
 /* Indicate in *IS_SWITCHED whether any node beneath LOCAL_ABSPATH
  * is switched, using DB. Use SCRATCH_POOL for temporary allocations.

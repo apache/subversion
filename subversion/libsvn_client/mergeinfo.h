@@ -40,7 +40,9 @@ typedef struct svn_client__merge_path_t
 {
   const char *abspath;               /* Absolute working copy path. */
   svn_boolean_t missing_child;       /* ABSPATH has an immediate child which
-                                        is missing. */
+                                        is missing, but is not switched. */
+  svn_boolean_t switched_child;      /* ABSPATH has an immediate child which
+                                        is switched. */
   svn_boolean_t switched;            /* ABSPATH is switched. */
   svn_boolean_t has_noninheritable;  /* ABSPATH has svn:mergeinfo set on it
                                         which includes non-inheritable
@@ -79,6 +81,13 @@ typedef struct svn_client__merge_path_t
                                            to the merge, and the operational
                                            depth of the merge is
                                            svn_depth_immediates. */
+  svn_boolean_t record_mergeinfo;       /* Mergeinfo needs to be recorded
+                                           on ABSPATH to describe the
+                                           merge. */
+  svn_boolean_t record_noninheritable;  /* Non-inheritable mergeinfo needs to
+                                           be recorded on ABSPATH to describe
+                                           the merge. Implies RECORD_MERGEINFO
+                                           is true. */
 } svn_client__merge_path_t;
 
 /* Return a deep copy of the merge-path structure OLD, allocated in POOL. */
@@ -86,13 +95,21 @@ svn_client__merge_path_t *
 svn_client__merge_path_dup(const svn_client__merge_path_t *old,
                            apr_pool_t *pool);
 
+/* Create a new merge path structure, allocated in POOL.  Initialize the
+ * 'abspath' member to a deep copy of ABSPATH and all other fields to zero
+ * bytes. */
+svn_client__merge_path_t *
+svn_client__merge_path_create(const char *abspath,
+                              apr_pool_t *pool);
+
 
 
 /*** Functions ***/
 
 /* Find explicit or inherited WC mergeinfo for LOCAL_ABSPATH, and return it
    in *MERGEINFO (NULL if no mergeinfo is set).  Set *INHERITED to
-   whether the mergeinfo was inherited (TRUE or FALSE).
+   whether the mergeinfo was inherited (TRUE or FALSE), if INHERITED is
+   non-null.
 
    This function will search for inherited mergeinfo in the parents of
    LOCAL_ABSPATH only if the base revision of LOCAL_ABSPATH falls within
@@ -226,7 +243,7 @@ svn_client__get_repos_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
 
    If TARGET_WCPATH inherited its mergeinfo from a working copy ancestor
    or if it was obtained from the repository, set *INHERITED to TRUE, set it
-   to FALSE otherwise. */
+   to FALSE otherwise, if INHERITED is non-null. */
 svn_error_t *
 svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                       svn_boolean_t *inherited,
@@ -313,6 +330,13 @@ svn_client__record_wc_mergeinfo(const char *local_abspath,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *scratch_pool);
 
+/* Write mergeinfo into the WC.  RESULT_CATALOG maps (const char *) WC paths
+ * to (svn_mergeinfo_t) mergeinfo. */
+svn_error_t *
+svn_client__record_wc_mergeinfo_catalog(apr_hash_t *result_catalog,
+                                        svn_client_ctx_t *ctx,
+                                        apr_pool_t *scratch_pool);
+
 /* Elide any svn:mergeinfo set on TARGET_WCPATH to its nearest working
    copy (or possibly repository) ancestor with equivalent mergeinfo.
 
@@ -352,10 +376,18 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
-/* TODO(reint): Document. */
+/* Simplify a mergeinfo catalog, if possible, via elision.
+
+   For each path in MERGEINFO_CATALOG, check if the path's mergeinfo can
+   elide to the path's nearest path-wise parent in MERGEINFO_CATALOG.  If
+   so, remove that path from MERGEINFO_CATALOG.  Elidability is determined
+   as per svn_client__elide_mergeinfo except that elision to the repository
+   is not considered.
+
+   SCRATCH_POOL is used for temporary allocations. */
 svn_error_t *
-svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
-                                    apr_pool_t *pool);
+svn_client__elide_mergeinfo_catalog(svn_mergeinfo_catalog_t mergeinfo_catalog,
+                                    apr_pool_t *scratch_pool);
 
 /* Set *MERGEINFO_CHANGES to TRUE if LOCAL_ABSPATH has locally modified
    mergeinfo, set *MERGEINFO_CHANGES to FALSE otherwise. */

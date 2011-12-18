@@ -998,51 +998,60 @@ def use_editor(func):
   os.environ['SVNTEST_EDITOR_FUNC'] = func
   os.environ['SVN_TEST_PYTHON'] = sys.executable
 
-def mergeinfo_notify_line(revstart, revend):
+def mergeinfo_notify_line(revstart, revend, target=None):
   """Return an expected output line that describes the beginning of a
   mergeinfo recording notification on revisions REVSTART through REVEND."""
+  if target:
+    target_re = re.escape(target)
+  else:
+    target_re = ".+"
   if (revend is None):
     if (revstart < 0):
       revstart = abs(revstart)
-      return "--- Recording mergeinfo for reverse merge of r%ld .*:\n" \
-             % (revstart)
+      return "--- Recording mergeinfo for reverse merge of r%ld into '%s':\n" \
+             % (revstart, target_re)
     else:
-      return "--- Recording mergeinfo for merge of r%ld .*:\n" % (revstart)
+      return "--- Recording mergeinfo for merge of r%ld into '%s':\n" \
+             % (revstart, target_re)
   elif (revstart < revend):
-    return "--- Recording mergeinfo for merge of r%ld through r%ld .*:\n" \
-           % (revstart, revend)
+    return "--- Recording mergeinfo for merge of r%ld through r%ld into '%s':\n" \
+           % (revstart, revend, target_re)
   else:
     return "--- Recording mergeinfo for reverse merge of r%ld through " \
-           "r%ld .*:\n" % (revstart, revend)
+           "r%ld into '%s':\n" % (revstart, revend, target_re)
 
 def merge_notify_line(revstart=None, revend=None, same_URL=True,
-                      foreign=False):
+                      foreign=False, target=None):
   """Return an expected output line that describes the beginning of a
   merge operation on revisions REVSTART through REVEND.  Omit both
   REVSTART and REVEND for the case where the left and right sides of
   the merge are from different URLs."""
   from_foreign_phrase = foreign and "\(from foreign repository\) " or ""
+  if target:
+    target_re = re.escape(target)
+  else:
+    target_re = ".+"
   if not same_URL:
-    return "--- Merging differences between %srepository URLs into '.+':\n" \
-           % (foreign and "foreign " or "")
+    return "--- Merging differences between %srepository URLs into '%s':\n" \
+           % (foreign and "foreign " or "", target_re)
   if revend is None:
     if revstart is None:
       # The left and right sides of the merge are from different URLs.
-      return "--- Merging differences between %srepository URLs into '.+':\n" \
-             % (foreign and "foreign " or "")
+      return "--- Merging differences between %srepository URLs into '%s':\n" \
+             % (foreign and "foreign " or "", target_re)
     elif revstart < 0:
-      return "--- Reverse-merging %sr%ld into '.+':\n" \
-             % (from_foreign_phrase, abs(revstart))
+      return "--- Reverse-merging %sr%ld into '%s':\n" \
+             % (from_foreign_phrase, abs(revstart), target_re)
     else:
-      return "--- Merging %sr%ld into '.+':\n" \
-             % (from_foreign_phrase, revstart)
+      return "--- Merging %sr%ld into '%s':\n" \
+             % (from_foreign_phrase, revstart, target_re)
   else:
     if revstart > revend:
-      return "--- Reverse-merging %sr%ld through r%ld into '.+':\n" \
-             % (from_foreign_phrase, revstart, revend)
+      return "--- Reverse-merging %sr%ld through r%ld into '%s':\n" \
+             % (from_foreign_phrase, revstart, revend, target_re)
     else:
-      return "--- Merging %sr%ld through r%ld into '.+':\n" \
-             % (from_foreign_phrase, revstart, revend)
+      return "--- Merging %sr%ld through r%ld into '%s':\n" \
+             % (from_foreign_phrase, revstart, revend, target_re)
 
 
 def make_log_msg():

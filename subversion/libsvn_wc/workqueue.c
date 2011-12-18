@@ -668,9 +668,24 @@ run_file_install(svn_wc__db_t *db,
                                       local_relpath,
                                       scratch_pool, scratch_pool));
     }
+  else if (! checksum)
+    {
+      /* This error replaces a previous assertion. Reporting an error from here
+         leaves the workingqueue operation in place, so the working copy is
+         still broken!
+
+         But when we report this error the user at least knows what node has
+         this specific problem, so maybe we can find out why users see this
+         error */
+      return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+                               _("Can't install '%s' from pristine store, "
+                                 "because no checksum is recorded for this "
+                                 "file"),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
+    }
   else
     {
-      SVN_ERR_ASSERT(checksum != NULL);
       SVN_ERR(svn_wc__db_pristine_get_future_path(&source_abspath,
                                                   wcroot_abspath,
                                                   checksum,

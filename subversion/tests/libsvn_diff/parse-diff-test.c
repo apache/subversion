@@ -314,7 +314,8 @@ check_content(svn_diff_hunk_t *hunk, svn_boolean_t original,
     SVN_TEST_STRING_ASSERT(exp_buf->data, hunk_buf->data);
   }
 
-  SVN_TEST_ASSERT(hunk_buf->len == 0);
+  if (!hunk_eof)
+    SVN_TEST_ASSERT(hunk_buf->len == 0);
 
   return SVN_NO_ERROR;
 }
@@ -946,11 +947,9 @@ test_parse_unidiff_lacking_trailing_eol(apr_pool_t *pool)
                             "This is the file 'gamma'." NL,
                             pool));
 
-      /* Verify that the contents are as expected, with a NL appended.
-         TODO: test for notification about the NL silently appended */
       SVN_ERR(check_content(hunk, reverse,
                             "This is the file 'gamma'." NL
-                            "some more bytes to 'gamma'" NL,
+                            "some more bytes to 'gamma'",
                             pool));
 
       reverse = !reverse;
@@ -981,7 +980,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test property diffs with odd symbols"),
     SVN_TEST_PASS2(test_git_diffs_with_spaces_diff,
                    "test git diffs with spaces in paths"),
-    SVN_TEST_XFAIL2(test_parse_unidiff_lacking_trailing_eol,
+    SVN_TEST_PASS2(test_parse_unidiff_lacking_trailing_eol,
                    "test parsing unidiffs lacking trailing eol"),
     SVN_TEST_NULL
   };

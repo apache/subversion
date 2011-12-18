@@ -219,7 +219,7 @@ create_cache(svn_cache__t **cache_p,
       {
         SVN_ERR(svn_cache__create_membuffer_cache(
                   cache_p, membuffer, serializer, deserializer,
-                  klen, prefix, pool));
+                  klen, prefix, FALSE, pool));
       }
     else if (pages)
       {

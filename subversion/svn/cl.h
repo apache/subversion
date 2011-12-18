@@ -230,6 +230,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t internal_diff;    /* override diff_cmd in config file */
   svn_boolean_t use_git_diff_format; /* Use git's extended diff format */
   svn_boolean_t allow_mixed_rev; /* Allow operation on mixed-revision WC */
+  svn_boolean_t include_externals; /* Recurses (in)to file & dir externals */
 } svn_cl__opt_state_t;
 
 
@@ -381,6 +382,9 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
 /* Print STATUS for PATH to stdout for human consumption.  Prints in
    abbreviated format by default, or DETAILED format if flag is set.
 
+   When SUPPRESS_EXTERNALS_PLACEHOLDERS is set, avoid printing
+   externals placeholder lines ("X lines").
+
    When DETAILED is set, use SHOW_LAST_COMMITTED to toggle display of
    the last-committed-revision and last-committed-author.
 
@@ -392,10 +396,16 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
 
    Increment *TEXT_CONFLICTS, *PROP_CONFLICTS, or *TREE_CONFLICTS if
    a conflict was encountered.
-   */
+
+   Use CWD_ABSPATH -- the absolute path of the current working
+   directory -- to shorten PATH into something relative to that
+   directory as necessary.
+*/
 svn_error_t *
-svn_cl__print_status(const char *path,
+svn_cl__print_status(const char *cwd_abspath,
+                     const char *path,
                      const svn_client_status_t *status,
+                     svn_boolean_t suppress_externals_placeholders,
                      svn_boolean_t detailed,
                      svn_boolean_t show_last_committed,
                      svn_boolean_t skip_unrecognized,
@@ -408,9 +418,15 @@ svn_cl__print_status(const char *path,
 
 
 /* Print STATUS for PATH in XML to stdout.  Use POOL for temporary
-   allocations. */
+   allocations.
+
+   Use CWD_ABSPATH -- the absolute path of the current working
+   directory -- to shorten PATH into something relative to that
+   directory as necessary.
+ */
 svn_error_t *
-svn_cl__print_status_xml(const char *path,
+svn_cl__print_status_xml(const char *cwd_abspath,
+                         const char *path,
                          const svn_client_status_t *status,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool);
@@ -552,14 +568,10 @@ svn_cl__merge_file_externally(const char *base_path,
 
 /* Set *NOTIFY_FUNC_P and *NOTIFY_BATON_P to a notifier/baton for all
  * operations, allocated in POOL.
- *
- * If don't want a summary line at the end of notifications, set
- * SUPPRESS_FINAL_LINE.
  */
 svn_error_t *
 svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
                      void **notify_baton_p,
-                     svn_boolean_t suppress_final_line,
                      apr_pool_t *pool);
 
 /* Make the notifier for use with BATON print the appropriate summary
@@ -766,41 +778,18 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
                          const char *wc_repos_root_URL,
                          apr_pool_t *pool);
 
-/* Return, in @a *true_targets_p, a copy of @a targets with peg revision
- * specifiers snipped off the end of each element.
- *
- * ### JAF TODO: This function is not good because it does not allow the
- * ### caller to detect if an invalid peg revision was specified.
- * ###
- * ### Callers should never have a need to silently *discard* all peg
- * ### revisions, even if they are doing this *after* saving any peg
- * ### revisions that might be of interest on certain arguments: I don't
- * ### think it can ever be correct to silently ignore a peg revision that
- * ### is specified, whether it makes semantic sense or not.
- * ###
- * ### Instead, callers should parse all the arguments and silently
- * ### ignore an *empty* peg revision part (just an "@", which can be
- * ### used to escape an earlier "@" in the argument) on any argument,
- * ### even an argument on which a peg revision does not make sense,
- * ### but should not silently ignore a non-empty peg when it does not
- * ### make sense.
- * ###
- * ### Something like:
- * ###   For each (URL-like?) argument that doesn't accept a peg rev:
- * ###     Parse into peg-rev and true-path parts;
- * ###     If (peg rev != unspecified)
- * ###       Error("This arg doesn't accept a peg rev.").
- * ###     Use the true-path part.
+/* Return, in @a *true_targets_p, a shallow copy of @a targets with any
+ * empty peg revision specifier snipped off the end of each element.  If any
+ * target has a non-empty peg revision specifier, throw an error.  The user
+ * may have specified a peg revision where it doesn't make sense to do so,
+ * or may have forgotten to escape an '@' character in a filename.
  *
  * This function is useful for subcommands for which peg revisions
- * do not make any sense. Such subcommands still need to allow peg
- * revisions to be specified on the command line so that users of
+ * do not make any sense. Such subcommands still need to allow an empty
+ * peg revision to be specified on the command line so that users of
  * the command line client can consistently escape '@' characters
  * in filenames by appending an '@' character, regardless of the
  * subcommand being used.
- *
- * If a peg revision is present but cannot be parsed, an error is thrown.
- * The user has likely forgotten to escape an '@' character in a filename.
  *
  * It is safe to pass the address of @a targets as @a true_targets_p.
  *
@@ -832,6 +821,23 @@ const char *
 svn_cl__local_style_skip_ancestor(const char *parent_path,
                                   const char *path,
                                   apr_pool_t *pool);
+
+/* Check that PATH_OR_URL1@REVISION1 is related to PATH_OR_URL2@REVISION2.
+ * Raise an error if not.
+ *
+ * ### Ideally we would also check that they are on different lines of
+ * history.  That is easy in common cases, but to give a correct answer in
+ * general we need to know the operative revision(s) as well.  For example,
+ * when one location is the branch point from which the other branch was
+ * copied.
+ */
+svn_error_t *
+svn_cl__check_related_source_and_target(const char *path_or_url1,
+                                        const svn_opt_revision_t *revision1,
+                                        const char *path_or_url2,
+                                        const svn_opt_revision_t *revision2,
+                                        svn_client_ctx_t *ctx,
+                                        apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

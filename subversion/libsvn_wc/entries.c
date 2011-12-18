@@ -1476,8 +1476,20 @@ insert_node(svn_sqlite__db_t *sdb,
                                   svn_node_kind_to_word(node->kind)));
 
   if (node->kind == svn_node_file)
-    SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, node->checksum,
-                                      scratch_pool));
+    {
+      if (!node->checksum
+          && node->op_depth == 0
+          && node->presence != svn_wc__db_status_not_present
+          && node->presence != svn_wc__db_status_excluded
+          && node->presence != svn_wc__db_status_server_excluded)
+        return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                                 _("The file '%s' has no checksum"),
+                                 svn_dirent_local_style(node->local_relpath,
+                                                        scratch_pool));
+
+      SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, node->checksum,
+                                        scratch_pool));
+    }
 
   if (node->properties) /* ### Never set, props done later */
     SVN_ERR(svn_sqlite__bind_properties(stmt, 15, node->properties,
@@ -1720,16 +1732,10 @@ write_entry(struct write_baton **entry_node,
     {
       if (entry->copyfrom_url)
         {
-          const char *relpath;
-
           working_node->repos_id = repos_id;
-          relpath = svn_uri__is_child(this_dir->repos,
-                                      entry->copyfrom_url,
-                                      result_pool);
-          if (relpath == NULL)
-            working_node->repos_relpath = "";
-          else
-            working_node->repos_relpath = relpath;
+          working_node->repos_relpath = svn_uri_skip_ancestor(
+                                          this_dir->repos, entry->copyfrom_url,
+                                          result_pool);
           working_node->revision = entry->copyfrom_rev;
           working_node->op_depth
             = svn_wc__db_op_depth_for_upgrade(local_relpath);
@@ -1987,17 +1993,16 @@ write_entry(struct write_baton **entry_node,
 
           if (entry->url != NULL)
             {
-              const char *relpath = svn_uri__is_child(this_dir->repos,
-                                                      entry->url,
-                                                      result_pool);
-              base_node->repos_relpath = relpath ? relpath : "";
+              base_node->repos_relpath = svn_uri_skip_ancestor(
+                                           this_dir->repos, entry->url,
+                                           result_pool);
             }
           else
             {
-              const char *relpath = svn_uri__is_child(this_dir->repos,
-                                                      this_dir->url,
-                                                      scratch_pool);
-              if (relpath == NULL)
+              const char *relpath = svn_uri_skip_ancestor(this_dir->repos,
+                                                          this_dir->url,
+                                                          scratch_pool);
+              if (relpath == NULL || *relpath == '\0')
                 base_node->repos_relpath = entry->name;
               else
                 base_node->repos_relpath =

@@ -225,7 +225,15 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
 
   SVN_ERR_ASSERT(contents != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
-  SVN_ERR_ASSERT(sha1_checksum != NULL);
+
+  /* Some 1.6-to-1.7 wc upgrades created rows without checksums and
+     updating such a row passes NULL here. */
+  if (!sha1_checksum)
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                             _("Can't read '%s' from pristine store "
+                               "because no checksum supplied"),
+                             svn_dirent_local_style(wri_abspath, scratch_pool));
+
   SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,

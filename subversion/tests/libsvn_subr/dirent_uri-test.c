@@ -1838,56 +1838,6 @@ test_dirent_is_child(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_uri_is_child(apr_pool_t *pool)
-{
-  int i, j;
-
-  static const char * const paths[] = {
-    "http://foo/bar",
-    "http://foo/bar%20bell",
-    "http://foo/baz",
-    "http://foo",
-    "http://f",
-    "file://foo/bar",
-    "file://foo/bar/baz%20bol",
-    };
-
-  static const char * const
-    remainders[COUNT_OF(paths)][COUNT_OF(paths)] = {
-    { 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0 },
-    { "bar", "bar bell", "baz", 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, "baz bol" },
-    { 0, 0, 0, 0, 0, 0, 0 },
-  };
-
-  for (i = 0; i < COUNT_OF(paths); i++)
-    {
-      for (j = 0; j < COUNT_OF(paths); j++)
-        {
-          const char *remainder;
-
-          remainder = svn_uri__is_child(paths[i], paths[j], pool);
-
-          if (((remainder) && (! remainders[i][j]))
-              || ((! remainder) && (remainders[i][j]))
-              || (remainder && strcmp(remainder, remainders[i][j])))
-            return svn_error_createf
-              (SVN_ERR_TEST_FAILED, NULL,
-               "svn_uri_is_child (%s, %s) [%d,%d] "
-               "returned '%s' instead of '%s'",
-               paths[i], paths[j], i, j,
-               remainder ? remainder : "(null)",
-               remainders[i][j] ? remainders[i][j] : "(null)" );
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 test_dirent_get_absolute(apr_pool_t *pool)
 {
   int i;
@@ -2762,8 +2712,6 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_uri_get_longest_ancestor"),
     SVN_TEST_PASS2(test_dirent_is_child,
                    "test svn_dirent_is_child"),
-    SVN_TEST_PASS2(test_uri_is_child,
-                   "test svn_uri_is_child"),
     SVN_TEST_PASS2(test_dirent_is_ancestor,
                    "test svn_dirent_is_ancestor"),
     SVN_TEST_PASS2(test_uri_is_ancestor,

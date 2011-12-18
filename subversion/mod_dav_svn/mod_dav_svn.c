@@ -215,8 +215,15 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->list_parentpath = INHERIT_VALUE(parent, child, list_parentpath);
   newconf->txdelta_cache = INHERIT_VALUE(parent, child, txdelta_cache);
   newconf->fulltext_cache = INHERIT_VALUE(parent, child, fulltext_cache);
-  /* Prefer our parent's value over our new one - hence the swap. */
-  newconf->root_dir = INHERIT_VALUE(child, parent, root_dir);
+  newconf->root_dir = INHERIT_VALUE(parent, child, root_dir);
+
+  if (parent->fs_path)
+    ap_log_error(APLOG_MARK, APLOG_WARNING, 0, NULL,
+                 "mod_dav_svn: nested Location '%s' hinders access to '%s' "
+                 "in SVNPath Location '%s'",
+                 child->root_dir,
+                 svn_urlpath__skip_ancestor(parent->root_dir, child->root_dir),
+                 parent->root_dir);
 
   return newconf;
 }

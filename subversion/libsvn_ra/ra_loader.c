@@ -601,6 +601,22 @@ svn_error_t *svn_ra_get_path_relative_to_root(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_ra__get_fspath_relative_to_root(svn_ra_session_t *ra_session,
+                                    const char **fspath,
+                                    const char *url,
+                                    apr_pool_t *pool)
+{
+  const char *relpath;
+
+  SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &relpath, url, pool));
+  if (*relpath)
+    *fspath = apr_pstrcat(pool, "/", relpath, (char *)NULL);
+  else
+    *fspath = "/";
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_ra_get_latest_revnum(svn_ra_session_t *session,
                                       svn_revnum_t *latest_revnum,
                                       apr_pool_t *pool)
@@ -860,8 +876,6 @@ svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
                              void *diff_baton,
                              apr_pool_t *pool)
 {
-  SVN_ERR_ASSERT(svn_path_is_empty(diff_target)
-                 || svn_path_is_single_path_component(diff_target));
   return session->vtable->do_diff(session,
                                   reporter, report_baton,
                                   revision, diff_target,

@@ -428,7 +428,8 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool)
 {
   int format;
-  const char *repos_relpath;
+  const char *repos_relpath = svn_uri_skip_ancestor(repos_root_url, url,
+                                                    scratch_pool);
   svn_wc__db_status_t status;
   const char *db_repos_relpath, *db_repos_root_url, *db_repos_uuid;
   svn_revnum_t db_revision;
@@ -437,14 +438,10 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   SVN_ERR_ASSERT(url != NULL);
   SVN_ERR_ASSERT(repos_root_url != NULL);
   SVN_ERR_ASSERT(repos_uuid != NULL);
-  SVN_ERR_ASSERT(svn_uri__is_ancestor(repos_root_url, url));
+  SVN_ERR_ASSERT(repos_relpath != NULL);
 
   SVN_ERR(svn_wc__internal_check_wc(&format, db, local_abspath, TRUE,
                                     scratch_pool));
-
-  repos_relpath = svn_uri__is_child(repos_root_url, url, scratch_pool);
-  if (repos_relpath == NULL)
-    repos_relpath = "";
 
   /* Early out: we know we're not dealing with an existing wc, so
      just create one. */

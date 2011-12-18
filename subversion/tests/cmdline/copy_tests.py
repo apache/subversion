@@ -3444,11 +3444,12 @@ def copy_peg_rev_url(sbox):
                                      wc_dir)
 
   # Copy using a peg rev
-  # Add peg rev '@HEAD' to sigma_url when copying which tests for issue #3651.
+  # Add an empty peg specifier ('@') to sigma_url when copying, to test for
+  # issue #3651 "svn copy does not eat peg revision within copy target path".
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp',
                                      iota_url + '@HEAD', '-r', '1',
-                                     sigma_url + '@HEAD', '-m', 'rev 3')
+                                     sigma_url + '@', '-m', 'rev 3')
 
   # Validate the copy destination's mergeinfo (we expect none).
   svntest.actions.run_and_verify_svn(None, [], [],
@@ -5620,6 +5621,47 @@ def wc_wc_copy_incomplete(sbox):
                                         None,
                                         expected_status)
 
+def three_nested_moves(sbox):
+  "three nested moves"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     sbox.ospath('A/B'),
+                                     sbox.ospath('A/B2'))
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     sbox.ospath('A/B2/E'),
+                                     sbox.ospath('A/B2/E2'))
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     sbox.ospath('A/B2/E2/alpha'),
+                                     sbox.ospath('A/B2/E2/alpha2'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+      'A/B2'           : Item(status='  ', wc_rev=2),
+      'A/B2/E2'        : Item(status='  ', wc_rev=2),
+      'A/B2/E2/alpha2' : Item(status='  ', wc_rev=2),
+      'A/B2/E2/beta'   : Item(status='  ', wc_rev=2),
+      'A/B2/F'         : Item(status='  ', wc_rev=2),
+      'A/B2/lambda'    : Item(status='  ', wc_rev=2),
+      })
+  expected_status.remove('A/B', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
+                         'A/B/F', 'A/B/lambda')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B'            : Item(verb='Deleting'),
+    'A/B2'           : Item(verb='Adding'),
+    'A/B2/E'         : Item(verb='Deleting'),
+    'A/B2/E2'        : Item(verb='Adding'),
+    'A/B2/E2/alpha'  : Item(verb='Deleting'),
+    'A/B2/E2/alpha2' : Item(verb='Adding'),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -5733,6 +5775,7 @@ test_list = [ None,
               commit_copied_half_of_move,
               commit_deleted_half_of_move,
               wc_wc_copy_incomplete,
+              three_nested_moves,
              ]
 
 if __name__ == '__main__':
