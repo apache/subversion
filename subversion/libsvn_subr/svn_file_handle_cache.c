@@ -608,6 +608,29 @@ pointer_is_closer(const cache_entry_t *entry,
   return old_delta > new_delta ? TRUE : FALSE;
 }
 
+/* Set file pointer of ENTRY->file to OFFSET. As an optimization, make sure
+ * that a few hundred bytes before that OFFSET are also pre-fetched as SVN
+ * tends to read data "backwards".
+ */
+static svn_error_t *
+aligned_seek(cache_entry_t *entry, apr_off_t offset)
+{
+  char dummy;
+
+  /* (try to) access a position aligned to 1KB. Since we align most files
+   * like this, repeated accesses will use the same alignment. As a result,
+   * "close-by" access will lie within the same pre-fetched block */
+  apr_off_t aligned_offset = offset & (-(FILE_BUFFER_SIZE / 4));
+  
+  /* do the seek and force data to be prefetched. Ignore the results as
+   * this is merely meant to help APR make the right decissions later on. */
+  apr_file_seek(entry->file, APR_SET, &aligned_offset);
+  apr_file_getc(&dummy, entry->file);
+  
+  /* the actual seek that was requested */
+  return svn_io_file_seek(entry->file, APR_SET, &offset, entry->pool);
+}
+
 /* Get an open file handle in F, for the file named FNAME with the open
  * flag(s) in FLAG and permissions in PERM. These parameters are the same
  * as in svn_io_file_open(). The file pointer will be moved to the specified
@@ -676,28 +699,27 @@ svn_file_handle_cache__open_internal
 
       /* move the file pointer to the desired position */
       if (offset != -1)
-        err = svn_io_file_seek(entry->file, APR_SET, &offset, entry->pool);
+        SVN_ERR(aligned_seek(entry, offset));
     }
   else
     {
       /* we need a new entry. Make room for it */
-      err = auto_close_oldest(cache);
+      SVN_ERR(auto_close_oldest(cache));
 
       /* create a suitable idle entry */
-      if (!err)
-        err = internal_file_open(&entry, cache, fname, flag, perm, cookie);
+      SVN_ERR(internal_file_open(&entry, cache, fname));
 
       /* move the file pointer to the desired position */
-      if (!err && offset > 0)
-        err = svn_io_file_seek(entry->file, APR_SET, &offset, entry->pool);
+      if (offset > 0)
+        SVN_ERR(aligned_seek(entry, offset));
     }
 
-  assert(err || entry->file);
+  assert(entry->file);
 
   /* pass the cached file handle to the application 
    * (if there was no previous error).
    */
-  return err ? err : open_entry(f, cache, entry, pool);
+  return open_entry(f, cache, entry, pool);
 }
 
 /* Same as svn_file_handle_cache__open_internal but using the mutex to
