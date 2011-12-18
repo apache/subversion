@@ -755,7 +755,7 @@ read_handler_apr(void *baton, char *buffer, apr_size_t *len)
       err = svn_io_file_getc(buffer, btn->file, btn->pool);
       if (err)
         {
-        *len = 0;
+          *len = 0;
           if (APR_STATUS_IS_EOF(err->apr_err))
             {
               svn_error_clear(err);
