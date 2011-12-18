@@ -611,15 +611,24 @@ with_txn_current_lock(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* A frequently used utility method: close all cached, idle file handles.
- * Call this at the end of write transactions to ensure that successive
- * reads will see the new file content.
+/* A frequently used utility method: the given FILE using POOL. Also
+ * remove all entries for the respective file name from the file handle
+ * cache in FS.
  */
 static svn_error_t *
-sync_file_handle_cache(svn_fs_t *fs)
+sync_file_handle_cache_and_close(svn_fs_t *fs,
+                                 apr_file_t *file,
+                                 apr_pool_t *pool)
 {
+  const char *file_name = "";
   fs_fs_data_t *ffd = fs->fsap_data;
-  return svn_file_handle_cache__flush(ffd->file_handle_cache);
+  
+  apr_status_t apr_err = apr_file_name_get(&file_name, file);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't get file name"));
+  
+  SVN_ERR(svn_io_file_close(file, pool));
+  return svn_file_handle_cache__flush(ffd->file_handle_cache, file_name);
 }
 
 /* A structure used by unlock_proto_rev() and unlock_proto_rev_body(),
@@ -2541,10 +2550,8 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
                                    pool));
 
-  SVN_ERR(svn_io_file_close(noderev_file, pool));
-
   /* we wrote to the db -> sync file contents */
-  return sync_file_handle_cache(fs);
+  return sync_file_handle_cache_and_close(fs, noderev_file, pool);
 }
 
 
@@ -5039,10 +5046,9 @@ write_next_ids(svn_fs_t *fs,
   SVN_ERR(svn_stream_printf(out_stream, pool, "%s %s\n", node_id, copy_id));
 
   SVN_ERR(svn_stream_close(out_stream));
-  SVN_ERR(svn_io_file_close(file, pool));
 
   /* we wrote to the db -> sync file contents */
-  return sync_file_handle_cache(fs);
+  return sync_file_handle_cache_and_close(fs, file, pool);
 }
 
 /* Find out what the next unique node-id and copy-id are for
@@ -5280,10 +5286,8 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
                                 strlen(name), name));
     }
 
-  SVN_ERR(svn_io_file_close(file, pool));
-
   /* we wrote to the db -> sync file contents */
-  return sync_file_handle_cache(fs);
+  return sync_file_handle_cache_and_close(fs, file, pool);
 }
 
 /* Write a single change entry, path PATH, change CHANGE, and copyfrom
@@ -5384,10 +5388,8 @@ svn_fs_fs__add_change(svn_fs_t *fs,
 
   SVN_ERR(write_change_entry(file, path, change, TRUE, pool));
 
-  SVN_ERR(svn_io_file_close(file, pool));
-
   /* we wrote to the db -> sync file contents */
-  return sync_file_handle_cache(fs);
+  return sync_file_handle_cache_and_close(fs, file, pool);
 }
 
 /* This baton is used by the representation writing streams.  It keeps
@@ -5667,12 +5669,12 @@ rep_write_contents_close(void *baton)
   SVN_ERR(svn_fs_fs__put_node_revision(b->fs, b->noderev->id, b->noderev, FALSE,
                                        b->pool));
 
-  SVN_ERR(svn_io_file_close(b->file, b->pool));
+  SVN_ERR(sync_file_handle_cache_and_close(b->fs, b->file, b->pool));
   SVN_ERR(unlock_proto_rev(b->fs, rep->txn_id, b->lockcookie, b->pool));
   svn_pool_destroy(b->pool);
 
   /* we wrote to the db -> sync file contents */
-  return sync_file_handle_cache(b->fs);
+  return SVN_NO_ERROR;
 }
 
 /* Store a writable stream in *CONTENTS_P that will receive all data
@@ -5764,7 +5766,7 @@ svn_fs_fs__set_proplist(svn_fs_t *fs,
                            | APR_BUFFERED, APR_OS_DEFAULT, pool));
   out = svn_stream_from_aprfile2(file, TRUE, pool);
   SVN_ERR(svn_hash_write2(proplist, out, SVN_HASH_TERMINATOR, pool));
-  SVN_ERR(svn_io_file_close(file, pool));
+  SVN_ERR(sync_file_handle_cache_and_close(fs, file, pool));
 
   /* Mark the node-rev's prop rep as mutable, if not already done. */
   if (!noderev->prop_rep || !noderev->prop_rep->txn_id)
@@ -5775,7 +5777,7 @@ svn_fs_fs__set_proplist(svn_fs_t *fs,
     }
 
   /* we wrote to the db -> sync file contents */
-  return sync_file_handle_cache(fs);
+  return SVN_NO_ERROR;
 }
 
 /* Read the 'current' file for filesystem FS and store the next
@@ -6394,10 +6396,9 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_io_file_write_full(proto_file, buf, strlen(buf), NULL,
                                  pool));
   SVN_ERR(svn_io_file_flush_to_disk(proto_file, pool));
-  SVN_ERR(svn_io_file_close(proto_file, pool));
 
   /* we wrote to the db -> sync file contents */
-  SVN_ERR(sync_file_handle_cache(cb->fs));
+  SVN_ERR(sync_file_handle_cache_and_close(cb->fs, proto_file, pool));
 
   /* We don't unlock the prototype revision file immediately to avoid a
      race with another caller writing to the prototype revision file

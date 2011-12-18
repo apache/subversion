@@ -426,9 +426,16 @@ internal_file_open(cache_entry_t **result,
 static svn_error_t *
 internal_close_file(svn_file_handle_cache_t *cache, cache_entry_t *entry)
 {
-  /* any cached file handle held by the application must have either
-   * been returned or invalidated before, i.e. this entry must be "idle" */
-  assert(! entry->open_handle);
+  /* If the application still used this file, disconnect it from the cache.
+   */
+  if (entry->open_handle)
+    {
+      entry->open_handle->cache = NULL;
+      entry->open_handle->entry = NULL;
+      
+      entry->open_handle = NULL;
+      entry->file = NULL;
+    }
 
   /* remove entry from the index (if it is in there) and the
    * list of entries for the same file name
@@ -459,7 +466,9 @@ internal_close_file(svn_file_handle_cache_t *cache, cache_entry_t *entry)
   remove_from_list(&cache->used_entries, &entry->global_link);
 
   /* actually close the file handle. */
-  SVN_ERR(svn_io_file_close(entry->file, entry->pool));
+  if (entry->file)
+    SVN_ERR(svn_io_file_close(entry->file, entry->pool));
+  
   entry->file = NULL;
   entry->name = NULL;
   svn_pool_clear(entry->pool);
@@ -837,29 +846,29 @@ svn_file_handle_cache__close(svn_file_handle_cache__handle_t *f)
   return SVN_NO_ERROR;
 }
 
-/* Close all file handles currently not held by the application.
+/* Close all cached file handles pertaining to FILE_NAME.
  */
 static svn_error_t *
-svn_file_handle_cache__flush_internal(svn_file_handle_cache_t *cache)
+svn_file_handle_cache__flush_internal(svn_file_handle_cache_t *cache, 
+                                      const char *file_name)
 {
-  /* close all idle file handles */
-  while (cache->idle_entries.count)
-    SVN_ERR(close_oldest_idle(cache));
-
-  /* if the application does not hold any cached file handles, we can
-   * discard all cache structures and re-allocate them to reduce the 
-   * memory footprint.
-   */
-  if (!cache->used_entries.count)
+  cache_entry_t *next;
+  cache_entry_t *entry = find_first(cache, file_name);
+  
+  if (entry)
     {
-      /* release all cache data structures, in particular the ever-growing
-       * hash and the unused cache entries with all their sub-pools.
-       */
-      svn_pool_clear(cache->pool);
+      while (get_previous_entry(&entry->sibling_link))
+        entry = get_previous_entry(&entry->sibling_link);
 
-      /* re-init global structures */
-      cache->first_by_name = apr_hash_make(cache->pool);
-      init_list(&cache->unused_entries);
+      for (next = get_next_entry (&entry->sibling_link); entry; entry = next)
+        {
+          next = get_next_entry (&entry->sibling_link); 
+
+          /* Handles still held by the application will simply be
+           * disconnected from the cache but the underlying file
+           * will not be closed.*/
+          SVN_ERR(internal_close_file(cache, entry));
+        }
     }
 
   return SVN_NO_ERROR;
@@ -869,7 +878,8 @@ svn_file_handle_cache__flush_internal(svn_file_handle_cache_t *cache)
  * serialize accesss to the internal data.
  */
 svn_error_t *
-svn_file_handle_cache__flush(svn_file_handle_cache_t *cache)
+svn_file_handle_cache__flush(svn_file_handle_cache_t *cache,
+                             const char *file_name)
 {
   SVN_MUTEX__WITH_LOCK(cache->mutex, 
                        svn_file_handle_cache__flush_internal(cache));

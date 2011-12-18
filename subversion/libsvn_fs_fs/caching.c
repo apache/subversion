@@ -93,34 +93,6 @@ warn_on_cache_errors(svn_error_t *err,
   return SVN_NO_ERROR;
 }
 
-static apr_status_t
-close_unused_file_handles(void *cache_void)
-{
-  svn_file_handle_cache_t *cache = cache_void;
-  apr_status_t result = APR_SUCCESS;
-
-  /* Close all file handles that are not in use anymore. So, as long as
-   * no requests to a given repository are being processed, we may change
-   * the file content and / or structure. However, content that has been
-   * cached *above* the APR layer (e.g. fulltext caches) will *not* be
-   * changed and may become inconsistent with the disk content.
-   *
-   * This will cause concurrent threads to perform somewhat slower because
-   * they might have put those handles to good use a few moments later.
-   * They now have to actually re-open the respective files.
-   */
-  svn_error_t *err = svn_file_handle_cache__flush(cache);
-
-  /* process error returns */
-  if (err)
-  {
-    result = err->apr_err;
-    svn_error_clear(err);
-  }
-
-  return result;
-}
-
 #ifdef SVN_DEBUG_CACHE_DUMP_STATS
 /* Baton to be used for the dump_cache_statistics() pool cleanup function, */
 struct dump_cache_baton_t
@@ -212,12 +184,6 @@ init_callbacks(svn_cache__t *cache,
                                              warn_on_cache_errors,
                                              fs,
                                              pool));
-
-      /* Schedule file handle cache cleanup after finishing the request. */
-      apr_pool_cleanup_register(pool,
-                                svn_file_handle_cache__get_global_cache(),
-                                close_unused_file_handles,
-                                apr_pool_cleanup_null);
     }
 
   return SVN_NO_ERROR;
@@ -408,7 +374,11 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   SVN_ERR(init_callbacks(ffd->node_revision_cache, fs, no_handler, pool));
 
   /* initialize file handle cache as configured */
-  ffd->file_handle_cache = svn_file_handle_cache__get_global_cache();
+  SVN_ERR(svn_file_handle_cache__create_cache
+             (&ffd->file_handle_cache,
+              svn_cache_config_get()->file_handle_count,
+              FALSE,
+              fs->pool));
 
   return SVN_NO_ERROR;
 }

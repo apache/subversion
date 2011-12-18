@@ -104,10 +104,13 @@ svn_error_t *
 svn_file_handle_cache__close(svn_file_handle_cache__handle_t *f);
 
 /**
- * Close all file handles currently not held by the application.
+ * Close all file handles pertaining to the given FILE_NAME currently not
+ * held by the application and disconnect those held by the application
+ * from CACHE.
  */
 svn_error_t *
-svn_file_handle_cache__flush(svn_file_handle_cache_t *cache);
+svn_file_handle_cache__flush(svn_file_handle_cache_t *cache, 
+                             const char *file_name);
 
 /**
  * Creates a new file handle cache in @a cache. Up to @a max_handles
@@ -122,14 +125,6 @@ svn_file_handle_cache__create_cache(svn_file_handle_cache_t **cache,
                                     size_t max_handles,
                                     svn_boolean_t thread_safe,
                                     apr_pool_t *pool);
-
-/**
- * Access the process-global (singleton) open file handle cache. The first
- * call will automatically allocate the cache using the current cache config.
- * Even for file handle limit of 0, a cache object will be returned.
- */
-svn_file_handle_cache_t *
-svn_file_handle_cache__get_global_cache(void);
 
 /** @} */
 
