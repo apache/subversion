@@ -55,8 +55,7 @@
  * the current file pointer gets (optionally) compared with the location
  * of the next access. If a cached file is found that may already have the
  * desired data in its buffer, that handle will be returned instead of a
- * random one. When the position of the next file access is not known,
- * a cookie may be used to discern files in a similar way.
+ * random one.
  *
  * For read-after-write scenarios, it is imperative to flush the APR file
  * buffer before attempting to read that file. Therefore, all idle handles
@@ -117,7 +116,8 @@ struct entry_list_t
  * so we can reuse the memory by clearing the pool.
  *
  * The cache entry is linked in three lists:
- * - the global list of either used or unused entry (having no file handle)
+ * - the global list of either used or unused entries
+ *   (unused ones are those having no APR file handle)
  * - list of sibblings, i.e. file handles to the same file
  * - global LRU list of idle file handles, i.e. those that are currently
  *   not used by the application
@@ -139,15 +139,6 @@ struct cache_entry_t
 
   /* the file name. NULL for unused entries */
   const char *name;
-
-  /* file open flag(s). Valid only for used entries. */
-  apr_int32_t flag;
-
-  /* granted file permissions. Valid only for used entries. */
-  apr_fileperms_t perm;
-
-  /* granted file permissions. Valid only for used entries. */
-  int cookie;
 
   /* position of the file pointer. Valid only for idle entries. */
   apr_off_t position;
@@ -356,17 +347,13 @@ auto_close_cached_handle(void *entry_void)
   return APR_SUCCESS;
 }
 
-/* Create a new APR-level file handle with the specified file NAME, FLAG
- * and permissions PERM. A COOKIE will be attached to it. The corresponding
- * cache item will be returned in RESULT.
+/* Create a new APR-level file handle with the specified file NAME in CACHE.
+ * The corresponding cache entry will be returned in RESULT.
  */
 static svn_error_t *
 internal_file_open(cache_entry_t **result,
                    svn_file_handle_cache_t *cache,
-                   const char *name,
-                   apr_int32_t flag,
-                   apr_fileperms_t perm,
-                   int cookie)
+                   const char *name)
 {
   cache_entry_t *entry;
   cache_entry_t *sibling;
@@ -395,7 +382,8 @@ internal_file_open(cache_entry_t **result,
     }
 
   /* (try to) open the requested file */
-  SVN_ERR(svn_io_file_open(&entry->file, name, flag, perm, entry->pool));
+  SVN_ERR(svn_io_file_open(&entry->file, name, APR_READ | APR_BUFFERED, 
+                           APR_OS_DEFAULT, entry->pool));
   assert(entry->file);
 
   /* make sure we auto-close cached file handles held by the application
@@ -406,9 +394,6 @@ internal_file_open(cache_entry_t **result,
                             apr_pool_cleanup_null);
 
   /* set file info */
-  entry->flag = flag;
-  entry->perm = perm;
-  entry->cookie = cookie;
   entry->name = apr_pstrdup(entry->pool, name);
   entry->position = 0;
 
@@ -608,6 +593,14 @@ pointer_is_closer(const cache_entry_t *entry,
   return old_delta > new_delta ? TRUE : FALSE;
 }
 
+/* Returns true if LHS and RHS refer to the same file.
+ */
+static svn_boolean_t
+are_siblings(const cache_entry_t *lhs, const cache_entry_t *rhs)
+{
+  return (lhs == rhs) || !strcmp(lhs->name, rhs->name);
+}
+
 /* Set file pointer of ENTRY->file to OFFSET. As an optimization, make sure
  * that a few hundred bytes before that OFFSET are also pre-fetched as SVN
  * tends to read data "backwards".
@@ -635,63 +628,94 @@ aligned_seek(cache_entry_t *entry, apr_off_t offset)
  * flag(s) in FLAG and permissions in PERM. These parameters are the same
  * as in svn_io_file_open(). The file pointer will be moved to the specified
  * OFFSET, if it is different from -1.
- *
- * If the COOKIE is not -1, only those file handles will be considerd a match
- * that have been opened with that cookie before. This is particularly useful
- * if OFFSET is -1, i.e. if the file pointer position of the handle returned
- * is undefined.
  */
 static svn_error_t *
 svn_file_handle_cache__open_internal
    (svn_file_handle_cache__handle_t **f,
     svn_file_handle_cache_t *cache,
     const char *fname,
-    apr_int32_t flag,
-    apr_fileperms_t perm,
     apr_off_t offset,
-    int cookie,
     apr_pool_t *pool)
 {
-  svn_error_t *err = SVN_NO_ERROR;
   cache_entry_t *entry;
-  cache_entry_t *next_entry;
+  cache_entry_t *first_entry;
   cache_entry_t *near_entry = NULL;
-  cache_entry_t *cookie_entry = NULL;
+  cache_entry_t *any_entry = NULL;
+  cache_entry_t *last_entry = NULL;
   cache_entry_t *entry_found = NULL;
+ 
+  int idle_entry_count = 0;
 
   /* look through all idle entries for this filename and find suitable ones */
-  for (entry = find_first(cache, fname); entry; entry = next_entry)
+  first_entry = find_first(cache, fname);
+  for ( entry = first_entry
+      ; entry
+      ; entry = get_next_entry (&entry->sibling_link))
     {
-      next_entry = get_next_entry (&entry->sibling_link);
+      last_entry = entry;
+      assert(entry->file != NULL);
+      
       if (! entry->open_handle)
         {
-          /* The entry is idle. Is it suitable? */
-          if (entry->flag == flag && entry->perm == perm)
-            {
-              /* we can use this entry, if the cookie matches */
-              if (entry->cookie == cookie && cookie != -1)
-                {
-                  cookie_entry = entry;
+          idle_entry_count++;
+          
+          if (! any_entry)
+            any_entry = entry;
 
-                  /* is it a particularly close match? */
-                  if (pointer_is_closer(entry, offset, near_entry))
-                    near_entry = entry;
-                }
-            }
-          else
-            {
-              /* the old file handle has been opened with different flags,
-               * e.g. this is "read" after "write" or vice versa. Therefore,
-               * close the underlying APR handle.
-               */
-              internal_close_file(cache, entry);
-            }
+          /* is it a particularly close match? */
+          if (pointer_is_closer(entry, offset, near_entry))
+            near_entry = entry;
         }
     }
 
-  /* the best match we found */
-  entry_found = near_entry ? near_entry : cookie_entry;
+  /* select the most suitable idle file handle */
+  if (near_entry)
+    {
+      /* best option: a file whose buffer propably already contains
+       * the data that we are looking for. */
+      entry_found = near_entry;
+    }
+  else if (any_entry)
+    {
+      /* Re-using an open file is also a good idea.
+       * 
+       * However, it may be better to open packed files a few more times
+       * since later we are likely to read data later close to the current
+       * location. Keep the number open handles / file reasonably low.
+       */      
+      if (   (idle_entry_count >= 4) 
+          || (   (cache->unused_entries.count == 0)
+              /* auto-closing a suitable file doesn't make sense */
+              && (are_siblings(cache->idle_entries.first->item, any_entry))))
+        {
+          /* Ensure that any_entry will be the last one to be re-used in
+           * successive calls: put it at the end of the siblings list for
+           * this file name.
+           */
+          if (last_entry != any_entry)
+            {
+              if (any_entry == first_entry)
+                { 
+                  first_entry = get_next_entry(&any_entry->sibling_link);
+                  assert(first_entry->file != NULL);
+                  apr_hash_set(cache->first_by_name,
+                               any_entry->name,
+                               APR_HASH_KEY_STRING,
+                               NULL);
+                  apr_hash_set(cache->first_by_name,
+                               first_entry->name,
+                               APR_HASH_KEY_STRING,
+                               first_entry);
+                }
+                
+              unlink_link(&any_entry->sibling_link);
+              link_link(&any_entry->sibling_link, &last_entry->sibling_link);
+            }
 
+           entry_found = any_entry;
+        }
+    }
+    
   if (entry_found)
     {
       /* we can use an idle entry */
@@ -729,20 +753,14 @@ svn_error_t *
 svn_file_handle_cache__open(svn_file_handle_cache__handle_t **f,
                             svn_file_handle_cache_t *cache,
                             const char *fname,
-                            apr_int32_t flag,
-                            apr_fileperms_t perm,
                             apr_off_t offset,
-                            int cookie,
                             apr_pool_t *pool)
 {
   SVN_MUTEX__WITH_LOCK(cache->mutex,
                        svn_file_handle_cache__open_internal(f,
                                                             cache,
                                                             fname,
-                                                            flag,
-                                                            perm,
                                                             offset,
-                                                            cookie,
                                                             pool));
 
   return SVN_NO_ERROR;

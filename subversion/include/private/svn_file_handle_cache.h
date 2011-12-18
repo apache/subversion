@@ -53,24 +53,15 @@ typedef
 struct svn_file_handle_cache__handle_t svn_file_handle_cache__handle_t;
 
 /**
- * Get an open file handle in @a f, for the file named @a fname with the
- * open flag(s) in @a flag and permissions in @a perm. These parameters
- * are the same as in @ref svn_io_file_open. The file pointer will be
- * moved to the specified @a offset, if it is different from -1.
- *
- * If there are one or more unused matching open file handles, those with
- * the specified @a cookie will be preferred. This is particularly useful
- * if @a offset is -1, i.e. if the file pointer position of the handle
- * returned is undefined.
+ * Get an open buffered read file handle in @a f, for the file named
+ * @a fname. The file pointer will be moved to the specified @a offset,
+ * if it is different from -1.
  */
 svn_error_t *
 svn_file_handle_cache__open(svn_file_handle_cache__handle_t **f,
                             svn_file_handle_cache_t *cache,
                             const char *fname,
-                            apr_int32_t flag,
-                            apr_fileperms_t perm,
                             apr_off_t offset,
-                            int cookie,
                             apr_pool_t *pool);
 
 /**

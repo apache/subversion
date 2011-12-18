@@ -114,17 +114,6 @@
 #define REP_PLAIN          "PLAIN"
 #define REP_DELTA          "DELTA"
 
-/* Cookies used to classify cached file handle usage */
-/* Used whenever no other specific region of the rev file is being read. */
-#define DEFAULT_FILE_COOKIE 0
-
-/* Used when reading representation data.
- * Since this is often interleaved with other reads, use a separate 
- * cookie (hence a separate file handle) for the reps.  That way, rep
- * access can often be satisfied from the APR read buffer.  The same
- * applies to the meta data because it is not rep data. */
-#define REP_FILE_COOKIE     1
-
 /* Notes:
 
 To avoid opening and closing the rev-files all the time, it would
@@ -1792,8 +1781,7 @@ ensure_revision_exists(svn_fs_t *fs,
    been packed, *FILE will be set to the packed file; otherwise, set *FILE
    to the revision file for REV.  Return SVN_ERR_FS_NO_SUCH_REVISION if the
    file doesn't exist.  Move the file pointer of OFFSET, if the latter is
-   not -1.  Prefer cached file handles that share the same COOKIE (again,
-   if not -1).
+   not -1.
 
    TODO: Consider returning an indication of whether this is a packed rev
          file, so the caller need not rely on is_packed_rev() which in turn
@@ -1806,7 +1794,6 @@ open_pack_or_rev_file(svn_file_handle_cache__handle_t **file,
                       svn_fs_t *fs,
                       svn_revnum_t rev,
                       apr_off_t offset,
-                      int cookie,
                       apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -1823,10 +1810,7 @@ open_pack_or_rev_file(svn_file_handle_cache__handle_t **file,
         err = svn_file_handle_cache__open(file,
                                           ffd->file_handle_cache,
                                           path,
-                                          APR_READ | APR_BUFFERED,
-                                          APR_OS_DEFAULT,
                                           offset,
-                                          cookie,
                                           pool);
 
       if (err && APR_STATUS_IS_ENOENT(err->apr_err)
@@ -1934,7 +1918,6 @@ open_and_seek_revision(svn_file_handle_cache__handle_t **file,
                        svn_fs_t *fs,
                        svn_revnum_t rev,
                        apr_off_t offset,
-                       int cookie,
                        apr_pool_t *pool)
 {
   /* none of the following requires the file handle */
@@ -1948,7 +1931,7 @@ open_and_seek_revision(svn_file_handle_cache__handle_t **file,
     }
 
   /* So, open the revision file and position the pointer here in one go. */
-  return open_pack_or_rev_file(file, fs, rev, offset, cookie, pool);
+  return open_pack_or_rev_file(file, fs, rev, offset, pool);
 }
 
 /* Open the representation for a node-revision in transaction TXN_ID
@@ -1962,7 +1945,6 @@ open_and_seek_transaction(svn_file_handle_cache__handle_t **file,
                           svn_fs_t *fs,
                           const char *txn_id,
                           representation_t *rep,
-                          int cookie,
                           apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -1971,10 +1953,7 @@ open_and_seek_transaction(svn_file_handle_cache__handle_t **file,
   return svn_file_handle_cache__open(file,
                                      ffd->file_handle_cache,
                                      path_txn_proto_rev(fs, txn_id, pool),
-                                     APR_READ | APR_BUFFERED, 
-                                     APR_OS_DEFAULT, 
                                      rep->offset,
-                                     cookie,
                                      pool);
 }
 
@@ -1992,10 +1971,9 @@ open_and_seek_representation(svn_file_handle_cache__handle_t **file_p,
    * buffer effectiveness. */
   if (! rep->txn_id)
     return open_and_seek_revision(file_p, fs, rep->revision, rep->offset,
-                                  REP_FILE_COOKIE, pool);
+                                  pool);
   else
-    return open_and_seek_transaction(file_p, fs, rep->txn_id, rep, 
-                                     REP_FILE_COOKIE, pool);
+    return open_and_seek_transaction(file_p, fs, rep->txn_id, rep, pool);
 }
 
 /* Parse the description of a representation from STRING and store it
@@ -2218,10 +2196,7 @@ get_node_revision_body(node_revision_t **noderev_p,
       err = svn_file_handle_cache__open(&revision_file,
                                         ffd->file_handle_cache,
                                         path_txn_node_rev(fs, id, pool),
-                                        APR_READ | APR_BUFFERED,
-                                        APR_OS_DEFAULT,
                                         0,
-                                        DEFAULT_FILE_COOKIE,
                                         pool);
     }
   else
@@ -2230,7 +2205,6 @@ get_node_revision_body(node_revision_t **noderev_p,
       err = open_and_seek_revision(&revision_file, fs,
                                    svn_fs_fs__id_rev(id),
                                    svn_fs_fs__id_offset(id),
-                                   DEFAULT_FILE_COOKIE,
                                    pool);
     }
 
@@ -2928,8 +2902,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
     return SVN_NO_ERROR;
 
   /* we don't care about the file pointer position */
-  SVN_ERR(open_pack_or_rev_file(&revision_file, fs, rev, -1,
-                                DEFAULT_FILE_COOKIE, pool));
+  SVN_ERR(open_pack_or_rev_file(&revision_file, fs, rev, -1,pool));
   apr_rev_file = svn_file_handle_cache__get_apr_handle(revision_file);
 
   /* here, it will get moved anyways */
@@ -4681,8 +4654,7 @@ svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
   /* we don't care about the file pointer position */
-  SVN_ERR(open_pack_or_rev_file(&revision_file, fs, rev, -1, 
-                                DEFAULT_FILE_COOKIE, pool));
+  SVN_ERR(open_pack_or_rev_file(&revision_file, fs, rev, -1, pool));
   apr_revision_file = svn_file_handle_cache__get_apr_handle(revision_file);
 
   /* here, it will get moved anyways */
@@ -6778,8 +6750,7 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
 
       /* We don't care about the file pointer position as long as the file 
          itself exists. */
-      err = open_pack_or_rev_file(&file, fs, right, -1, 
-                                  DEFAULT_FILE_COOKIE, iterpool);
+      err = open_pack_or_rev_file(&file, fs, right, -1, iterpool);
       svn_pool_clear(iterpool);
 
       if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
@@ -6804,8 +6775,7 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
       svn_file_handle_cache__handle_t *file;
 
       /* Again, ignore the file pointer position. */
-      err = open_pack_or_rev_file(&file, fs, probe, -1, 
-                                  DEFAULT_FILE_COOKIE, iterpool);
+      err = open_pack_or_rev_file(&file, fs, probe, -1, iterpool);
       svn_pool_clear(iterpool);
 
       if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
@@ -7095,8 +7065,7 @@ recover_body(void *baton, apr_pool_t *pool)
             SVN_ERR(b->cancel_func(b->cancel_baton));
 
           /* Any file pointer position will do ... */
-          SVN_ERR(open_pack_or_rev_file(&rev_file, fs, rev, -1,
-                                        DEFAULT_FILE_COOKIE, iterpool));
+          SVN_ERR(open_pack_or_rev_file(&rev_file, fs, rev, -1, iterpool));
           apr_rev_file = svn_file_handle_cache__get_apr_handle(rev_file);
 
           /* ... because it gets set here explicitly */
