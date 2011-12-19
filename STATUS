@@ -124,7 +124,11 @@ Candidate changes:
      systems (by reverting to a prior release).  Therefore, cmpilato
      can't think of a good reason not to backport the change.
    Notes:
-     A backport branch (coming soon!) is required for a clean merge.
+     r1215260 - mod_dav_svn support for this issue
+     r1215288 - libsvn_ra_neon support for this issue
+     r1215374 - followup to r1215288
+     r1215375 - libsvn_ra_serf support for this issue
+     r1215379 - followup to r1215375
    Votes:
      +1: cmpilato
 
