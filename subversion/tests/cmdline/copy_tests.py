@@ -4657,7 +4657,7 @@ def changed_dir_data_should_match_checkout(sbox):
   rv, verify_out2, err = main.run_svn (None, 'status', '-v')
   os.chdir(was_cwd)
 
-  # The order of the staus output is not absolutely defined, but
+  # The order of the status output is not absolutely defined, but
   # otherwise should match
   svntest.verify.verify_outputs(None,
                                 sorted(verify_out2), None,
