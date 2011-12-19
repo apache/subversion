@@ -819,6 +819,11 @@ mkdir_urls(const apr_array_header_t *urls,
       const char *bname;
       svn_uri_split(&common, &bname, common, pool);
       APR_ARRAY_PUSH(targets, const char *) = bname;
+
+      if (*bname == '\0')
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("There is no valid uri above '%s'"),
+                                 common);
     }
   else
     {
@@ -841,6 +846,12 @@ mkdir_urls(const apr_array_header_t *urls,
           const char *bname;
 
           svn_uri_split(&common, &bname, common, pool);
+
+          if (*bname == '\0')
+             return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                      _("There is no valid uri above '%s'"),
+                                      common);
+
           for (i = 0; i < targets->nelts; i++)
             {
               const char *path = APR_ARRAY_IDX(targets, i, const char *);
