@@ -280,16 +280,28 @@ fs_pack(svn_fs_t *fs,
 
 
 /* This implements the fs_library_vtable_t.hotcopy() API.  Copy a
-   possibly live Subversion filesystem from SRC_PATH to DEST_PATH.
+   possibly live Subversion filesystem SRC_FS from SRC_PATH to a
+   DST_FS at DEST_PATH. If INCREMENTAL is TRUE, make an effort not to
+   re-copy data which already exists in DST_FS.
    The CLEAN_LOGS argument is ignored and included for Subversion
    1.0.x compatibility.  Perform all temporary allocations in POOL. */
 static svn_error_t *
-fs_hotcopy(const char *src_path,
-           const char *dest_path,
+fs_hotcopy(svn_fs_t *src_fs,
+           svn_fs_t *dst_fs,
+           const char *src_path,
+           const char *dst_path,
            svn_boolean_t clean_logs,
+           svn_boolean_t incremental,
+           svn_cancel_func_t cancel_func,
+           void *cancel_baton,
            apr_pool_t *pool)
 {
-  return svn_fs_py__hotcopy(src_path, dest_path, pool);
+  SVN_ERR(initialize_fs_struct(src_fs));
+  SVN_ERR(fs_serialized_init(src_fs, pool, pool));
+  SVN_ERR(initialize_fs_struct(dst_fs));
+  SVN_ERR(fs_serialized_init(dst_fs, pool, pool));
+  return svn_fs_py__hotcopy(src_fs, dst_fs, src_path, dst_path,
+                            incremental, cancel_func, cancel_baton, pool);
 }
 
 

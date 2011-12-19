@@ -205,7 +205,7 @@ write_digest_file(apr_hash_t *children,
     }
   if (apr_hash_count(children))
     {
-      svn_stringbuf_t *children_list = svn_stringbuf_create("", pool);
+      svn_stringbuf_t *children_list = svn_stringbuf_create_empty(pool);
       for (hi = apr_hash_first(pool, children); hi; hi = apr_hash_next(hi))
         {
           svn_stringbuf_appendbytes(children_list,
@@ -1036,7 +1036,7 @@ get_locks_filter_func(void *baton,
   else if ((b->requested_depth == svn_depth_files) ||
            (b->requested_depth == svn_depth_immediates))
     {
-      const char *rel_uri = svn_fspath__is_child(b->path, lock->path, pool);
+      const char *rel_uri = svn_fspath__skip_ancestor(b->path, lock->path);
       if (rel_uri && (svn_path_component_count(rel_uri) == 1))
         SVN_ERR(b->get_locks_func(b->get_locks_baton, lock, pool));
     }

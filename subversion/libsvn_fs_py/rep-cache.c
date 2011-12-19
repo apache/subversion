@@ -335,3 +335,26 @@ svn_fs_py__set_rep_reference(svn_fs_t *fs,
 
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_fs_fs__del_rep_reference(svn_fs_t *fs,
+                             svn_revnum_t youngest,
+                             apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_sqlite__stmt_t *stmt;
+  int format;
+
+  SVN_ERR(svn_fs_py__get_int_attr(&format, ffd->p_fs, "format"));
+  SVN_ERR_ASSERT(format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT);
+  if (! ffd->rep_cache_db)
+    SVN_ERR(svn_fs_py__open_rep_cache(fs, pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db,
+                                    STMT_DEL_REPS_YOUNGER_THAN_REV));
+  SVN_ERR(svn_sqlite__bindf(stmt, "r", youngest));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
