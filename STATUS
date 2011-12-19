@@ -103,7 +103,7 @@ Candidate changes:
    Votes:
      +1: stsp, philip
 
- * r1215260, r1215374, r1215375, r1215379
+ * r1215260, r1215288, r1215374, r1215375, r1215379
    Fix issue #4082 ("'svn log --with-all-revprops' over ra-dav
    intolerant of XML-unsafe property values").
    Justification:
