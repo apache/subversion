@@ -7315,6 +7315,10 @@ hotcopy_incremental_check_preconditions(svn_fs_t *src_fs,
   fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
   int dst_format;
   int src_format;
+  int src_max_files_per_dir;
+  int dst_max_files_per_dir;
+  const char *src_uuid;
+  const char *dst_uuid;
 
   SVN_ERR(svn_fs_py__get_int_attr(&dst_format, dst_ffd->p_fs, "format"));
   SVN_ERR(svn_fs_py__get_int_attr(&src_format, src_ffd->p_fs, "format"));
@@ -7327,16 +7331,24 @@ hotcopy_incremental_check_preconditions(svn_fs_t *src_fs,
         "both repositories to the same format"),
       src_format, dst_format);
 
+  SVN_ERR(svn_fs_py__get_string_attr(&dst_uuid, dst_ffd->p_fs, "uuid", pool));
+  SVN_ERR(svn_fs_py__get_string_attr(&src_uuid, src_ffd->p_fs, "uuid", pool));
+
   /* Make sure the UUID of source and destination match up.
    * We don't want to copy over a different repository. */
-  if (strcmp(src_ffd->uuid, dst_ffd->uuid) != 0)
+  if (strcmp(src_uuid, dst_uuid) != 0)
     return svn_error_create(SVN_ERR_RA_UUID_MISMATCH, NULL,
                             _("The UUID of the hotcopy source does "
                               "not match the UUID of the hotcopy "
                               "destination"));
 
+  SVN_ERR(svn_fs_py__get_int_attr(&dst_max_files_per_dir, dst_ffd->p_fs,
+                                  "max_files_per_dir"));
+  SVN_ERR(svn_fs_py__get_int_attr(&src_max_files_per_dir, src_ffd->p_fs,
+                                  "max_files_per_dir"));
+
   /* Also require same shard size. */
-  if (src_ffd->max_files_per_dir != dst_ffd->max_files_per_dir)
+  if (src_max_files_per_dir != dst_max_files_per_dir)
     return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                             _("The sharding layout configuration "
                               "of the hotcopy source does not match "
@@ -7381,7 +7393,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   fs_fs_data_t *src_ffd = src_fs->fsap_data;
   svn_fs_t *dst_fs = hbb->dst_fs;
   fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
-  int max_files_per_dir = src_ffd->max_files_per_dir;
+  int max_files_per_dir;
   svn_boolean_t incremental = hbb->incremental;
   svn_cancel_func_t cancel_func = hbb->cancel_func;
   void* cancel_baton = hbb->cancel_baton;
@@ -7401,6 +7413,8 @@ hotcopy_body(void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_fs_py__get_int_attr(&src_format, src_ffd->p_fs, "format"));
   SVN_ERR(svn_fs_py__get_int_attr(&dst_format, dst_ffd->p_fs, "format"));
+  SVN_ERR(svn_fs_py__get_int_attr(&max_files_per_dir, src_ffd->p_fs,
+                                  "max_files_per_dir"));
 
   /* Try to copy the config.
    *
