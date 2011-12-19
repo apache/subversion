@@ -278,6 +278,9 @@ f_moves = [
 
 d_dels = [
   ( create_d, ['dD'] ),
+]
+
+d_moves = [
   ( create_d, ['dM'] ),
 ]
 
@@ -604,12 +607,12 @@ def up_sw_dir_mod_onto_del(sbox):
 def up_sw_dir_del_onto_mod(sbox):
   "up/sw dir: del/rpl/mv onto modify"
   # WC state: any (D necessarily exists; children may have any state)
-  test_tc_up_sw(sbox, d_dels + d_rpls, d_mods)
+  test_tc_up_sw(sbox, d_dels + d_moves + d_rpls, d_mods)
 
 def up_sw_dir_del_onto_del(sbox):
   "up/sw dir: del/rpl/mv onto del/rpl/mv"
   # WC state: any (D necessarily exists; children may have any state)
-  test_tc_up_sw(sbox, d_dels + d_rpls, d_dels + d_rpls)
+  test_tc_up_sw(sbox, d_dels + d_moves + d_rpls, d_dels + d_rpls)
 
 # This is currently set as XFail over ra_dav because it hits
 # issue #3314 'DAV can overwrite directories during copy'
@@ -690,8 +693,8 @@ def merge_file_add_onto_not_none(sbox):
 def merge_dir_mod_onto_not_dir(sbox):
   "merge dir: modify onto not-dir"
   sbox2 = sbox.clone_dependent()
-  test_tc_merge(sbox, d_mods, br_scen = d_dels + d_rpl_f)
-  test_tc_merge(sbox2, d_mods, wc_scen = d_dels)
+  test_tc_merge(sbox, d_mods, br_scen = d_dels + d_moves + d_rpl_f)
+  test_tc_merge(sbox2, d_mods, wc_scen = d_dels + d_moves)
 
 # Test for issue #3150 'tree conflicts with directories as victims'.
 @XFail()
@@ -699,14 +702,14 @@ def merge_dir_mod_onto_not_dir(sbox):
 def merge_dir_del_onto_not_same(sbox):
   "merge dir: del/rpl/mv onto not-same"
   sbox2 = sbox.clone_dependent()
-  test_tc_merge(sbox, d_dels + d_rpls, br_scen = d_mods)
-  test_tc_merge(sbox2, d_dels + d_rpls, wc_scen = d_mods)
+  test_tc_merge(sbox, d_dels + d_moves + d_rpls, br_scen = d_mods)
+  test_tc_merge(sbox2, d_dels + d_moves + d_rpls, wc_scen = d_mods)
 
 def merge_dir_del_onto_not_dir(sbox):
   "merge dir: del/rpl/mv onto not-dir"
   sbox2 = sbox.clone_dependent()
-  test_tc_merge(sbox, d_dels + d_rpls, br_scen = d_dels + d_rpl_f)
-  test_tc_merge(sbox2, d_dels + d_rpls, wc_scen = d_dels)
+  test_tc_merge(sbox, d_dels + d_moves + d_rpls, br_scen = d_dels + d_moves + d_rpl_f)
+  test_tc_merge(sbox2, d_dels + d_moves + d_rpls, wc_scen = d_dels + d_moves)
 
 def merge_dir_add_onto_not_none(sbox):
   "merge dir: add onto not-none"

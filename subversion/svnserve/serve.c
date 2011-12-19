@@ -243,6 +243,7 @@ svn_error_t *load_configs(svn_config_t **cfg,
   *pwdb = NULL;
   if (pwdb_path)
     {
+      pwdb_path = svn_dirent_canonicalize(pwdb_path, pool);
       pwdb_path = svn_dirent_join(base, pwdb_path, pool);
 
       err = svn_config_read2(pwdb, pwdb_path, TRUE, FALSE, pool);
@@ -290,6 +291,7 @@ svn_error_t *load_configs(svn_config_t **cfg,
     {
       const char *case_force_val;
 
+      authzdb_path = svn_dirent_canonicalize(authzdb_path, pool);
       authzdb_path = svn_dirent_join(base, authzdb_path, pool);
       err = svn_repos_authz_read(authzdb, authzdb_path, TRUE, pool);
       if (err)
@@ -3072,7 +3074,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   apr_array_header_t *caplist, *cap_words;
   server_baton_t b;
   fs_warning_baton_t warn_baton;
-  svn_stringbuf_t *cap_log = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *cap_log = svn_stringbuf_create_empty(pool);
 
   b.tunnel = params->tunnel;
   b.tunnel_user = get_tunnel_user(params, pool);

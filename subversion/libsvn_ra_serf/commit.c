@@ -527,9 +527,8 @@ checkout_file(file_context_t *file)
           file->checkout->activity_url = file->commit->activity_url;
           file->checkout->resource_url =
             svn_path_url_add_component2(parent_dir->checkout->resource_url,
-                                        svn_relpath__is_child(parent_dir->relpath,
-                                                              file->relpath,
-                                                              file->pool),
+                                        svn_relpath_skip_ancestor(
+                                          parent_dir->relpath, file->relpath),
                                         file->pool);
           return SVN_NO_ERROR;
         }
@@ -1800,7 +1799,7 @@ change_dir_prop(void *dir_baton,
     }
   else
     {
-      value = svn_string_create("", dir->pool);
+      value = svn_string_create_empty(dir->pool);
       svn_ra_serf__set_prop(dir->removed_props, proppatch_target,
                             ns, name, value, dir->pool);
     }
@@ -2048,7 +2047,7 @@ change_file_prop(void *file_baton,
     }
   else
     {
-      value = svn_string_create("", file->pool);
+      value = svn_string_create_empty(file->pool);
 
       svn_ra_serf__set_prop(file->removed_props, file->url,
                             ns, name, value, file->pool);
@@ -2320,6 +2319,8 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   svn_delta_editor_t *editor;
   commit_context_t *ctx;
   apr_hash_index_t *hi;
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                                    svn_delta_shim_callbacks_default(pool);
 
   ctx = apr_pcalloc(pool, sizeof(*ctx));
 
@@ -2367,8 +2368,7 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   *edit_baton = ctx;
 
   SVN_ERR(svn_editor__insert_shims(ret_editor, edit_baton, *ret_editor,
-                                   *edit_baton, NULL, NULL, NULL, NULL,
-                                   pool, pool));
+                                   *edit_baton, shim_callbacks, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2462,7 +2462,7 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
     }
   else if (old_value_p)
     {
-      svn_string_t *dummy_value = svn_string_create("", proppatch_ctx->pool);
+      svn_string_t *dummy_value = svn_string_create_empty(proppatch_ctx->pool);
 
       svn_ra_serf__set_prop(proppatch_ctx->previous_removed_props,
                             proppatch_ctx->path,
@@ -2476,7 +2476,7 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
     }
   else
     {
-      value = svn_string_create("", proppatch_ctx->pool);
+      value = svn_string_create_empty(proppatch_ctx->pool);
 
       svn_ra_serf__set_prop(proppatch_ctx->removed_props, proppatch_ctx->path,
                             ns, name, value, proppatch_ctx->pool);

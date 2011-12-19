@@ -208,7 +208,7 @@ static const apr_getopt_option_t options_table[] =
      N_("specify revision number ARG (or X:Y range)")},
 
     {"incremental",   svnadmin__incremental, 0,
-     N_("dump incrementally")},
+     N_("dump or hotcopy incrementally")},
 
     {"deltas",        svnadmin__deltas, 0,
      N_("use deltas in dump output")},
@@ -332,8 +332,10 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
 
   {"hotcopy", subcommand_hotcopy, {0}, N_
    ("usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n\n"
-    "Makes a hot copy of a repository.\n"),
-   {svnadmin__clean_logs} },
+    "Makes a hot copy of a repository.\n"
+    "If --incremental is passed, data which already exists at the destination\n"
+    "is not copied again.  Incremental mode is implemented for FSFS repositories.\n"),
+   {svnadmin__clean_logs, svnadmin__incremental} },
 
   {"list-dblogs", subcommand_list_dblogs, {0}, N_
    ("usage: svnadmin list-dblogs REPOS_PATH\n\n"
@@ -352,8 +354,10 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "Read a 'dumpfile'-formatted stream from stdin, committing\n"
     "new revisions into the repository's filesystem.  If the repository\n"
     "was previously empty, its UUID will, by default, be changed to the\n"
-    "one specified in the stream.  Progress feedback is sent to stdout.\n"),
-   {'q', svnadmin__ignore_uuid, svnadmin__force_uuid,
+    "one specified in the stream.  Progress feedback is sent to stdout.\n"
+    "If --revision is specified, limit the loaded revisions to only those\n"
+    "in the dump stream whose revision numbers match the specified range.\n"),
+   {'q', 'r', svnadmin__ignore_uuid, svnadmin__force_uuid,
     svnadmin__use_pre_commit_hook, svnadmin__use_post_commit_hook,
     svnadmin__parent_dir, svnadmin__bypass_prop_validation, 'M'} },
 
@@ -790,6 +794,12 @@ repos_notify_handler(void *baton,
                                 notify->old_revision));
       return;
 
+    case svn_repos_notify_load_skipped_rev:
+      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                _("<<< Skipped original revision %ld\n"),
+                                notify->old_revision));
+      return;
+
     case svn_repos_notify_load_normalized_mergeinfo:
       svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
                                 _(" removing '\\r' from %s ..."),
@@ -947,6 +957,32 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 }
 
 
+/* Set *REVNUM to the revision number of a numeric REV, or to
+   SVN_INVALID_REVNUM if REV is unspecified. */
+static svn_error_t *
+optrev_to_revnum(svn_revnum_t *revnum, const svn_opt_revision_t *opt_rev)
+{
+  if (opt_rev->kind == svn_opt_revision_number)
+    {
+      *revnum = opt_rev->value.number;
+      if (! SVN_IS_VALID_REVNUM(*revnum))
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("Invalid revision number (%ld) specified"),
+                                 *revnum);
+    }
+  else if (opt_rev->kind == svn_opt_revision_unspecified)
+    {
+      *revnum = SVN_INVALID_REVNUM;
+    }
+  else
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("Non-numeric revision specified"));
+    }
+  return SVN_NO_ERROR;
+}
+
+
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
 subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
@@ -954,10 +990,33 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_error_t *err;
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
+  svn_revnum_t lower = SVN_INVALID_REVNUM, upper = SVN_INVALID_REVNUM;
   svn_stream_t *stdin_stream, *stdout_stream = NULL;
 
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
+
+  /* Find the revision numbers at which to start and end.  We only
+     support a limited set of revision kinds: number and unspecified. */
+  SVN_ERR(optrev_to_revnum(&lower, &opt_state->start_revision));
+  SVN_ERR(optrev_to_revnum(&upper, &opt_state->end_revision));
+
+  /* Fill in implied revisions if necessary. */
+  if ((upper == SVN_INVALID_REVNUM) && (lower != SVN_INVALID_REVNUM))
+    {
+      upper = lower;
+    }
+  else if ((upper != SVN_INVALID_REVNUM) && (lower == SVN_INVALID_REVNUM))
+    {
+      lower = upper;
+    }
+  
+  /* Ensure correct range ordering. */
+  if (lower > upper)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("First revision cannot be higher than second"));
+    }
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
 
@@ -968,7 +1027,7 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (! opt_state->quiet)
     stdout_stream = recode_stream_create(stdout, pool);
 
-  err = svn_repos_load_fs3(repos, stdin_stream,
+  err = svn_repos_load_fs4(repos, stdin_stream, lower, upper,
                            opt_state->uuid_action, opt_state->parent_dir,
                            opt_state->use_pre_commit_hook,
                            opt_state->use_post_commit_hook,
@@ -1197,7 +1256,7 @@ set_revprop(const char *prop_name, const char *filename,
             struct svnadmin_opt_state *opt_state, apr_pool_t *pool)
 {
   svn_repos_t *repos;
-  svn_string_t *prop_value = svn_string_create("", pool);
+  svn_string_t *prop_value = svn_string_create_empty(pool);
   svn_stringbuf_t *file_contents;
 
   SVN_ERR(svn_stringbuf_from_file2(&file_contents, filename, pool));
@@ -1374,8 +1433,9 @@ subcommand_hotcopy(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   new_repos_path = APR_ARRAY_IDX(targets, 0, const char *);
   SVN_ERR(target_arg_to_dirent(&new_repos_path, new_repos_path, pool));
 
-  return svn_repos_hotcopy(opt_state->repository_path, new_repos_path,
-                           opt_state->clean_logs, pool);
+  return svn_repos_hotcopy2(opt_state->repository_path, new_repos_path,
+                            opt_state->clean_logs, opt_state->incremental,
+                            check_cancel, NULL, pool);
 }
 
 

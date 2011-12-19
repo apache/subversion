@@ -1160,6 +1160,8 @@ svn_client_export5(svn_revnum_t *result_rev,
           void *report_baton;
           svn_delta_editor_t *editor = svn_delta_default_editor(pool);
           svn_boolean_t use_sleep = FALSE;
+          svn_delta_shim_callbacks_t *shim_callbacks =
+                                    svn_delta_shim_callbacks_default(pool);
 
           editor->set_target_revision = set_target_revision;
           editor->open_root = open_root;
@@ -1180,8 +1182,7 @@ svn_client_export5(svn_revnum_t *result_rev,
 
           SVN_ERR(svn_editor__insert_shims(&export_editor, &edit_baton,
                                            export_editor, edit_baton,
-                                           NULL, NULL, NULL, NULL,
-                                           pool, pool));
+                                           shim_callbacks, pool, pool));
 
           /* Manufacture a basic 'report' to the update reporter. */
           SVN_ERR(svn_ra_do_update2(ra_session,

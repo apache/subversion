@@ -435,6 +435,7 @@ copy_versioned_dir(svn_wc__db_t *db,
         SVN_ERR(svn_wc__db_op_copy_shadowed_layer(db,
                                                   child_src_abspath,
                                                   child_dst_abspath,
+                                                  is_move,
                                                   scratch_pool));
 
       if (child_status == svn_wc__db_status_normal
@@ -495,6 +496,15 @@ copy_versioned_dir(svn_wc__db_t *db,
 
           /* Don't recurse on children while all we do is creating not-present
              children */
+        }
+      else if (child_status == svn_wc__db_status_incomplete)
+        {
+          /* Should go ahead and copy incomplete to incomplete? Try to
+             copy as much as possible, or give up early? */
+          return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                                   _("Cannot handle status of '%s'"),
+                                   svn_dirent_local_style(src_abspath,
+                                                          iterpool));
         }
       else
         {
@@ -975,12 +985,17 @@ svn_wc_move(svn_wc_context_t *wc_ctx,
             apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
+
   SVN_ERR(copy_or_move(wc_ctx, src_abspath, dst_abspath,
                        TRUE /* metadata_only */,
                        TRUE /* is_move */,
                        cancel_func, cancel_baton,
                        notify_func, notify_baton,
                        scratch_pool));
+
+  /* An iterrupt at this point will leave the new copy marked as
+     moved-here but the source has not yet been deleted or marked as
+     moved-to. */
 
   /* Should we be using a workqueue for this move?  It's not clear.
      What should happen if the copy above is interrupted?  The user

@@ -2980,6 +2980,13 @@ svn_io_is_binary_data(const void *data, apr_size_t len)
 {
   const unsigned char *buf = data;
 
+  if (len == 3 && buf[0] == 0xEF && buf[1] == 0xBB && buf[2] == 0xBF)
+    {
+      /* This is an empty UTF-8 file which only contains the UTF-8 BOM.
+       * Treat it as plain text. */
+      return FALSE;
+    }
+
   /* Right now, this function is going to be really stupid.  It's
      going to examine the block of data, and make sure that 15%
      of the bytes are such that their value is in the ranges 0x07-0x0D

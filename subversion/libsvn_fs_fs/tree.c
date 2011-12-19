@@ -870,11 +870,11 @@ add_change(svn_fs_t *fs,
 
 /* Get the id of a node referenced by path PATH in ROOT.  Return the
    id in *ID_P allocated in POOL. */
-static svn_error_t *
-fs_node_id(const svn_fs_id_t **id_p,
-           svn_fs_root_t *root,
-           const char *path,
-           apr_pool_t *pool)
+svn_error_t *
+svn_fs_fs__node_id(const svn_fs_id_t **id_p,
+                   svn_fs_root_t *root,
+                   const char *path,
+                   apr_pool_t *pool)
 {
   if ((! root->is_txn_root)
       && (path[0] == '\0' || ((path[0] == '/') && (path[1] == '\0'))))
@@ -939,7 +939,7 @@ node_kind(svn_node_kind_t *kind_p,
   dag_node_t *node;
 
   /* Get the node id. */
-  SVN_ERR(fs_node_id(&node_id, root, path, pool));
+  SVN_ERR(svn_fs_fs__node_id(&node_id, root, path, pool));
 
   /* Use the node id to get the real kind. */
   SVN_ERR(svn_fs_fs__dag_get_node(&node, root->fs, node_id, pool));
@@ -1648,7 +1648,7 @@ svn_fs_fs__commit_txn(const char **conflict_p,
    */
 
   svn_error_t *err = SVN_NO_ERROR;
-  svn_stringbuf_t *conflict = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *conflict = svn_stringbuf_create_empty(pool);
   svn_fs_t *fs = txn->fs;
 
   /* Limit memory usage when the repository has a high commit rate and
@@ -1756,7 +1756,7 @@ fs_merge(const char **conflict_p,
   dag_node_t *source, *ancestor;
   svn_fs_txn_t *txn;
   svn_error_t *err;
-  svn_stringbuf_t *conflict = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *conflict = svn_stringbuf_create_empty(pool);
 
   if (! target_root->is_txn_root)
     return SVN_FS__NOT_TXN(target_root);
@@ -2455,7 +2455,7 @@ apply_textdelta(void *baton, apr_pool_t *pool)
 
   /* Make a writable "string" stream which writes data to
      tb->target_string. */
-  tb->target_string = svn_stringbuf_create("", tb->pool);
+  tb->target_string = svn_stringbuf_create_empty(tb->pool);
   tb->string_stream = svn_stream_create(tb, tb->pool);
   svn_stream_set_write(tb->string_stream, write_to_string);
 
@@ -2925,7 +2925,7 @@ prev_location(const char **prev_path,
               const char *path,
               apr_pool_t *pool)
 {
-  const char *copy_path, *copy_src_path, *remainder_path = "";
+  const char *copy_path, *copy_src_path, *remainder_path;
   svn_fs_root_t *copy_root;
   svn_revnum_t copy_src_rev;
 
@@ -2954,8 +2954,7 @@ prev_location(const char **prev_path,
   */
   SVN_ERR(fs_copied_from(&copy_src_rev, &copy_src_path,
                          copy_root, copy_path, pool));
-  if (strcmp(copy_path, path) != 0)
-    remainder_path = svn_relpath__is_child(copy_path, path, pool);
+  remainder_path = svn_relpath_skip_ancestor(copy_path, path);
   *prev_path = svn_fspath__join(copy_src_path, remainder_path, pool);
   *prev_rev = copy_src_rev;
   return SVN_NO_ERROR;
@@ -2975,7 +2974,7 @@ fs_node_origin_rev(svn_revnum_t *revision,
   path = svn_fs__canonicalize_abspath(path, pool);
 
   /* Check the cache first. */
-  SVN_ERR(fs_node_id(&given_noderev_id, root, path, pool));
+  SVN_ERR(svn_fs_fs__node_id(&given_noderev_id, root, path, pool));
   node_id = svn_fs_fs__id_node_id(given_noderev_id);
 
   /* Is it a brand new uncommitted node? */
@@ -3047,7 +3046,7 @@ fs_node_origin_rev(svn_revnum_t *revision,
       }
 
     /* Walk the predecessor links back to origin. */
-    SVN_ERR(fs_node_id(&pred_id, curroot, lastpath->data, predidpool));
+    SVN_ERR(svn_fs_fs__node_id(&pred_id, curroot, lastpath->data, predidpool));
     do
       {
         svn_pool_clear(subpool);
@@ -3202,10 +3201,7 @@ history_prev(void *baton, apr_pool_t *pool)
          the copy source.  Finally, if our current path doesn't meet
          one of these other criteria ... ### for now just fallback to
          the old copy hunt algorithm. */
-      if (strcmp(path, copy_dst) == 0)
-        remainder_path = "";
-      else
-        remainder_path = svn_relpath__is_child(copy_dst, path, pool);
+      remainder_path = svn_fspath__skip_ancestor(copy_dst, path);
 
       if (remainder_path)
         {
@@ -3463,6 +3459,7 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
                        svn_fs_root_t *rev_root,
                        const char *path,
                        svn_mergeinfo_inheritance_t inherit,
+                       svn_boolean_t adjust_inherited_mergeinfo,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
@@ -3549,7 +3546,7 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
      can return the mergeinfo results directly.  Otherwise, we're
      inheriting the mergeinfo, so we need to a) remove non-inheritable
      ranges and b) telescope the merged-from paths. */
-  if (nearest_ancestor != parent_path)
+  if (adjust_inherited_mergeinfo && (nearest_ancestor != parent_path))
     {
       svn_mergeinfo_t tmp_mergeinfo;
 
@@ -3604,10 +3601,12 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
                          const apr_array_header_t *paths,
                          svn_mergeinfo_inheritance_t inherit,
                          svn_boolean_t include_descendants,
-                         apr_pool_t *pool)
+                         svn_boolean_t adjust_inherited_mergeinfo,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
-  svn_mergeinfo_catalog_t result_catalog = apr_hash_make(pool);
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_mergeinfo_catalog_t result_catalog = apr_hash_make(result_pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
 
   for (i = 0; i < paths->nelts; i++)
@@ -3619,7 +3618,8 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
       svn_pool_clear(iterpool);
 
       err = get_mergeinfo_for_path(&path_mergeinfo, root, path,
-                                   inherit, pool, iterpool);
+                                   inherit, adjust_inherited_mergeinfo,
+                                   result_pool, iterpool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
@@ -3638,8 +3638,8 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
         apr_hash_set(result_catalog, path, APR_HASH_KEY_STRING,
                      path_mergeinfo);
       if (include_descendants)
-        SVN_ERR(add_descendant_mergeinfo(result_catalog, root, path, pool,
-                                         iterpool));
+        SVN_ERR(add_descendant_mergeinfo(result_catalog, root, path,
+                                         result_pool, scratch_pool));
     }
   svn_pool_destroy(iterpool);
 
@@ -3655,7 +3655,9 @@ fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                  const apr_array_header_t *paths,
                  svn_mergeinfo_inheritance_t inherit,
                  svn_boolean_t include_descendants,
-                 apr_pool_t *pool)
+                 svn_boolean_t adjust_inherited_mergeinfo,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = root->fs->fsap_data;
 
@@ -3674,7 +3676,9 @@ fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
   /* Retrieve a path -> mergeinfo hash mapping. */
   return get_mergeinfos_for_paths(root, catalog, paths,
                                   inherit,
-                                  include_descendants, pool);
+                                  include_descendants,
+                                  adjust_inherited_mergeinfo,
+                                  result_pool, scratch_pool);
 }
 
 
@@ -3683,7 +3687,7 @@ static root_vtable_t root_vtable = {
   fs_paths_changed,
   svn_fs_fs__check_path,
   fs_node_history,
-  fs_node_id,
+  svn_fs_fs__node_id,
   svn_fs_fs__node_created_rev,
   fs_node_origin_rev,
   fs_node_created_path,

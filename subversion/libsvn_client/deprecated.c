@@ -39,10 +39,12 @@
 #include "svn_props.h"
 #include "svn_utf.h"
 #include "svn_string.h"
+#include "svn_pools.h"
 
 #include "client.h"
 #include "mergeinfo.h"
 
+#include "private/svn_opt_private.h"
 #include "private/svn_wc_private.h"
 #include "svn_private_config.h"
 
@@ -1361,16 +1363,11 @@ svn_client_log4(const apr_array_header_t *targets,
                 apr_pool_t *pool)
 {
   apr_array_header_t *revision_ranges;
-  svn_opt_revision_range_t *range;
-
-  range = apr_palloc(pool, sizeof(svn_opt_revision_range_t));
-  range->start = *start;
-  range->end = *end;
 
   revision_ranges = apr_array_make(pool, 1,
                                    sizeof(svn_opt_revision_range_t *));
-
-  APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *) = range;
+  APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *)
+    = svn_opt__revision_range_create(start, end, pool);
 
   return svn_client_log5(targets, peg_revision, revision_ranges, limit,
                          discover_changed_paths, strict_node_history,
@@ -1576,13 +1573,11 @@ svn_client_merge_peg2(const char *source,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
-  svn_opt_revision_range_t range;
   apr_array_header_t *ranges_to_merge =
     apr_array_make(pool, 1, sizeof(svn_opt_revision_range_t *));
 
-  range.start = *revision1;
-  range.end = *revision2;
-  APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = &range;
+  APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *)
+    = svn_opt__revision_range_create(revision1, revision2, pool);
   return svn_client_merge_peg3(source, ranges_to_merge,
                                peg_revision,
                                target_wcpath,
@@ -2464,6 +2459,41 @@ svn_client_revert(const apr_array_header_t *paths,
 
 /*** From ra.c ***/
 svn_error_t *
+svn_client_uuid_from_url(const char **uuid,
+                         const char *url,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *pool)
+{
+  svn_ra_session_t *ra_session;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  /* use subpool to create a temporary RA session */
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, url,
+                                               NULL, /* no base dir */
+                                               NULL, FALSE, TRUE,
+                                               ctx, subpool));
+
+  SVN_ERR(svn_ra_get_uuid2(ra_session, uuid, pool));
+
+  /* destroy the RA session */
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_uuid_from_path2(const char **uuid,
+                           const char *local_abspath,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+    svn_wc__node_get_repos_info(NULL, uuid, ctx->wc_ctx, local_abspath,
+                                result_pool, scratch_pool));
+}
+
+svn_error_t *
 svn_client_uuid_from_path(const char **uuid,
                           const char *path,
                           svn_wc_adm_access_t *adm_access,
@@ -2478,6 +2508,20 @@ svn_client_uuid_from_path(const char **uuid,
 }
 
 /*** From url.c ***/
+svn_error_t *
+svn_client_root_url_from_path(const char **url,
+                              const char *path_or_url,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *pool)
+{
+  if (!svn_path_is_url(path_or_url))
+    SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url, pool));
+
+  return svn_error_trace(
+           svn_client_get_repos_root(url, NULL, path_or_url,
+                                     ctx, pool, pool));
+}
+
 svn_error_t *
 svn_client_url_from_path(const char **url,
                          const char *path_or_url,

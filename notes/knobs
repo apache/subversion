@@ -44,6 +44,8 @@ SVN_MERGE__ALLOW_ALL_FORWARD_MERGES_FROM_SELF
 SVN_USE_WIN32_CRASHHANDLER
 SVN_DAV_SEND_VTXN_NAME
 SVN_DISABLE_PREFIX_SUFFIX_SCANNING
+SVN_SQLITE_MIN_VERSION_NUMBER
+SVN_SQLITE_MIN_VERSION
 
 2.3 Debugging Support
 
@@ -204,6 +206,24 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Range:     definedness
   Default:   not defined
   Suggested: not defined
+
+4.8 SVN_SQLITE_MIN_VERSION_NUMBER
+
+  Scope:     libsvn_subr
+  Purpose:   The minimum SQLite version to have run-time support for.
+  Range:     SQLite version numbers, as packed integers
+  Default:   SQLITE_VERSION_NUMBER (i.e., the compile-time-sqlite version)
+  Suggested: not defined (to use default)
+
+4.9 SVN_SQLITE_MIN_VERSION
+
+  Scope:     libsvn_subr
+  Purpose:   See SVN_SQLITE_MIN_VERSION_NUMBER.  The two must be overridden
+             (or not overridden) together; defining one but leaving the other
+             at its default will cause undefined behaviour.
+  Range:     SQLite versions, as string literals
+  Default:   SQLITE_VERSION
+  Suggested: not defined (to use default)
 
 
 5 Defines controling debug support

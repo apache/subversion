@@ -1478,6 +1478,68 @@ def test_lslocks_and_rmlocks(sbox):
     "Unexpected output while running 'svnadmin rmlocks'.",
     output, [], expected_output, None)
 
+#----------------------------------------------------------------------
+@Issue(3734)
+def load_ranges(sbox):
+  "'svnadmin load --revision X:Y'"
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3734. ##
+  test_create(sbox)
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svnadmin_tests_data',
+                                   'skeleton_repos.dump')
+  dumplines = open(dumpfile_location).readlines()
+  dumpdata = "".join(dumplines)
+
+  # Load our dumpfile, 2 revisions at a time, verifying that we have
+  # the correct youngest revision after each load.
+  load_and_verify_dumpstream(sbox, [], [], None, dumpdata, '-r0:2')
+  svntest.actions.run_and_verify_svnlook("Unexpected output", ['2\n'],
+                                         None, 'youngest', sbox.repo_dir)
+  load_and_verify_dumpstream(sbox, [], [], None, dumpdata, '-r3:4')
+  svntest.actions.run_and_verify_svnlook("Unexpected output", ['4\n'],
+                                         None, 'youngest', sbox.repo_dir)
+  load_and_verify_dumpstream(sbox, [], [], None, dumpdata, '-r5:6')
+  svntest.actions.run_and_verify_svnlook("Unexpected output", ['6\n'],
+                                         None, 'youngest', sbox.repo_dir)
+
+  # There are ordering differences in the property blocks.
+  expected_dump = UnorderedOutput(dumplines)
+  new_dumpdata = svntest.actions.run_and_verify_dump(sbox.repo_dir)
+  svntest.verify.compare_and_display_lines("Dump files", "DUMP",
+                                           expected_dump, new_dumpdata)
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def hotcopy_incremental(sbox):
+  "'svnadmin hotcopy --incremental PATH .'"
+  sbox.build()
+
+  backup_dir, backup_url = sbox.add_repo_path('backup')
+  os.mkdir(backup_dir)
+  cwd = os.getcwd()
+
+  for i in [1, 2, 3]:
+    os.chdir(backup_dir)
+    svntest.actions.run_and_verify_svnadmin(
+      None, None, [],
+      "hotcopy", "--incremental", os.path.join(cwd, sbox.repo_dir), '.')
+
+    os.chdir(cwd)
+
+    exit_code, origout, origerr = svntest.main.run_svnadmin("dump",
+                                                            sbox.repo_dir,
+                                                            '--quiet')
+    exit_code, backout, backerr = svntest.main.run_svnadmin("dump",
+                                                            backup_dir,
+                                                            '--quiet')
+    if origerr or backerr or origout != backout:
+      raise svntest.Failure
+
+    if i < 3:
+      sbox.simple_mkdir("newdir-%i" % i)
+      sbox.simple_commit()
+
 ########################################################################
 # Run the tests
 
@@ -1508,6 +1570,8 @@ test_list = [ None,
               load_bad_props,
               verify_non_utf8_paths,
               test_lslocks_and_rmlocks,
+              load_ranges,
+              hotcopy_incremental,
              ]
 
 if __name__ == '__main__':

@@ -145,7 +145,7 @@ get_path_kind(svn_node_kind_t *kind,
 }
 
 
-/* */
+/* Return an error if the work queue in SDB is non-empty. */
 static svn_error_t *
 verify_no_work(svn_sqlite__db_t *sdb)
 {

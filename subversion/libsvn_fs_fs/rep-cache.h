@@ -79,6 +79,13 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                              svn_boolean_t reject_dup,
                              apr_pool_t *pool);
 
+/* Delete from the cache all reps corresponding to revisions younger
+   than YOUNGEST. */
+svn_error_t *
+svn_fs_fs__del_rep_reference(svn_fs_t *fs,
+                             svn_revnum_t youngest,
+                             apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

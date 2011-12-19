@@ -2455,7 +2455,10 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
   struct edit_baton *eb;
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(result_pool);
   void *inner_baton;
+  struct svn_wc__shim_fetch_baton_t *sfb;
   const svn_delta_editor_t *inner_editor;
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                                svn_delta_shim_callbacks_default(result_pool);
 
   /* Construct an edit baton. */
   eb = apr_pcalloc(result_pool, sizeof(*eb));
@@ -2543,8 +2546,20 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
   if (set_locks_baton)
     *set_locks_baton = eb;
 
+  sfb = apr_palloc(result_pool, sizeof(*sfb));
+  sfb->db = wc_ctx->db;
+  sfb->base_abspath = eb->target_abspath;
+  sfb->fetch_base = FALSE;
+
+  shim_callbacks->fetch_kind_func = svn_wc__fetch_kind_func;
+  shim_callbacks->fetch_kind_baton = sfb;
+  shim_callbacks->fetch_props_func = svn_wc__fetch_props_func;
+  shim_callbacks->fetch_props_baton = sfb;
+  shim_callbacks->fetch_base_func = svn_wc__fetch_base_func;
+  shim_callbacks->fetch_base_baton = sfb;
+
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   NULL, NULL, NULL, NULL,
+                                   shim_callbacks,
                                    result_pool, scratch_pool));
 
   return SVN_NO_ERROR;

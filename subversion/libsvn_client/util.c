@@ -102,17 +102,15 @@ svn_client__path_relative_to_root(const char **rel_path,
 
       SVN_ERR_ASSERT(repos_relpath != NULL);
     }
-     /* Merge handling passes a root that is not the repos root */
   else if (repos_root != NULL)
     {
-      if (!svn_uri__is_ancestor(repos_root, abspath_or_url))
+      repos_relpath = svn_uri_skip_ancestor(repos_root, abspath_or_url,
+                                            result_pool);
+      if (!repos_relpath)
         return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
                                  _("URL '%s' is not a child of repository "
                                    "root URL '%s'"),
                                  abspath_or_url, repos_root);
-
-      repos_relpath = svn_uri_skip_ancestor(repos_root, abspath_or_url,
-                                            result_pool);
     }
   else
     {
@@ -144,12 +142,12 @@ svn_client__path_relative_to_root(const char **rel_path,
 }
 
 svn_error_t *
-svn_client__get_repos_root(const char **repos_root,
-                           const char **repos_uuid,
-                           const char *abspath_or_url,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
+svn_client_get_repos_root(const char **repos_root,
+                          const char **repos_uuid,
+                          const char *abspath_or_url,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   svn_ra_session_t *ra_session;
 

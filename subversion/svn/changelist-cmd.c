@@ -45,7 +45,7 @@ svn_cl__changelist(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   svn_depth_t depth = opt_state->depth;
-  svn_boolean_t success = TRUE;
+  apr_array_header_t *errors = apr_array_make(pool, 0, sizeof(apr_status_t));
 
   /* If we're not removing changelists, then our first argument should
      be the name of a changelist. */
@@ -103,7 +103,7 @@ svn_cl__changelist(apr_getopt_t *os,
                svn_client_add_to_changelist(targets, changelist_name,
                                             depth, opt_state->changelists,
                                             ctx, pool),
-               &success, opt_state->quiet,
+               errors, opt_state->quiet,
                SVN_ERR_UNVERSIONED_RESOURCE,
                SVN_ERR_WC_PATH_NOT_FOUND,
                SVN_NO_ERROR));
@@ -114,16 +114,36 @@ svn_cl__changelist(apr_getopt_t *os,
                svn_client_remove_from_changelists(targets, depth,
                                                   opt_state->changelists,
                                                   ctx, pool),
-               &success, opt_state->quiet,
+               errors, opt_state->quiet,
                SVN_ERR_UNVERSIONED_RESOURCE,
                SVN_ERR_WC_PATH_NOT_FOUND,
                SVN_NO_ERROR));
     }
 
-  if (!success)
-    return svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
-                            _("Could not display info for all targets because "
-                              "some targets don't exist"));
-  else
-    return SVN_NO_ERROR;
+  if (errors->nelts > 0)
+    {
+      int i;
+      svn_error_t *err;
+
+      err = svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL, NULL);
+      for (i = 0; i < errors->nelts; i++)
+        {
+          apr_status_t status = APR_ARRAY_IDX(errors, i, apr_status_t);
+
+          if (status == SVN_ERR_WC_PATH_NOT_FOUND)
+            err = svn_error_quick_wrap(err,
+                                       _("Could not set changelists on "
+                                         "all targets because some targets "
+                                         "don't exist"));
+          else if (status == SVN_ERR_UNVERSIONED_RESOURCE)
+            err = svn_error_quick_wrap(err,
+                                       _("Could not set changelists on "
+                                         "all targets because some targets "
+                                         "are not versioned"));
+        }
+
+      return svn_error_trace(err);
+    }
+
+  return SVN_NO_ERROR;
 }

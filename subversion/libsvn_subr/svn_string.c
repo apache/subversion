@@ -28,7 +28,6 @@
 #include <apr.h>
 
 #include <string.h>      /* for memcpy(), memcmp(), strlen() */
-#include <apr_lib.h>     /* for apr_isspace() */
 #include <apr_fnmatch.h>
 #include "svn_string.h"  /* loads "svn_types.h" and <apr_pools.h> */
 #include "svn_ctype.h"
@@ -132,6 +131,19 @@ create_string(const char *data, apr_size_t size,
 
   return new_string;
 }
+
+static char empty_buffer[1] = {0};
+  
+svn_string_t *
+svn_string_create_empty(apr_pool_t *pool)
+{
+  svn_string_t *new_string = apr_palloc(pool, sizeof(*new_string));
+  new_string->data = empty_buffer;
+  new_string->len = 0;
+
+  return new_string;
+}
+
 
 svn_string_t *
 svn_string_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
@@ -283,6 +295,17 @@ create_stringbuf(char *data, apr_size_t size, apr_size_t blocksize,
   new_string->pool = pool;
 
   return new_string;
+}
+
+svn_stringbuf_t *
+svn_stringbuf_create_empty(apr_pool_t *pool)
+{
+  /* All instances share the same zero-length buffer.
+   * Some algorithms, however, assume that they may write
+   * the terminating zero. So, empty_buffer must be writable 
+   * (a simple (char *)"" will cause SEGFAULTs). */
+
+  return create_stringbuf(empty_buffer, 0, 0, pool);
 }
 
 svn_stringbuf_t *
@@ -724,7 +747,7 @@ svn_cstring_join(const apr_array_header_t *strings,
                  const char *separator,
                  apr_pool_t *pool)
 {
-  svn_stringbuf_t *new_str = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *new_str = svn_stringbuf_create_empty(pool);
   size_t sep_len = strlen(separator);
   int i;
 

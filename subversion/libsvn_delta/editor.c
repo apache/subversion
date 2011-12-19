@@ -354,7 +354,7 @@ svn_editor_add_symlink(svn_editor_t *editor,
 svn_error_t *
 svn_editor_add_absent(svn_editor_t *editor,
                       const char *relpath,
-                      svn_node_kind_t kind,
+                      svn_kind_t kind,
                       svn_revnum_t replaces_rev)
 {
   svn_error_t *err;
@@ -605,7 +605,8 @@ svn_editor_complete(svn_editor_t *editor)
 
   err = editor->funcs.cb_complete(editor->baton, editor->scratch_pool);
 #ifdef ENABLE_ORDERING_CHECK
-  editor->finished = TRUE;
+  if (!err)
+    editor->finished = TRUE;
 #endif
   svn_pool_clear(editor->scratch_pool);
   return err;

@@ -44,6 +44,18 @@ void
 svn_rangelist__set_inheritance(apr_array_header_t *rangelist,
                                svn_boolean_t inheritable);
 
+/* Parse a rangelist from the string STR. Set *RANGELIST to the result,
+ * allocated in RESULT_POOL. Return an error if the rangelist is not
+ * well-formed (for example, if it contains invalid characters or if
+ * R1 >= R2 in a "R1-R2" range element).
+ *
+ * Unlike svn_mergeinfo_parse(), this does not sort the ranges into order
+ * or combine adjacent and overlapping ranges. */
+svn_error_t *
+svn_rangelist__parse(apr_array_header_t **rangelist,
+                     const char *str,
+                     apr_pool_t *result_pool);
+
 /* Set inheritability of all rangelists in MERGEINFO to INHERITABLE.
    If MERGEINFO is NULL do nothing.  If a rangelist in MERGEINFO is
    NULL leave it alone. */
@@ -112,11 +124,25 @@ svn_mergeinfo__add_prefix_to_catalog(svn_mergeinfo_catalog_t *out_catalog,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
 
-/* Set *OUT_MERGEINFO to a deep copy of MERGEINFO with the relpath
+/* Set *OUT_MERGEINFO to a shallow copy of MERGEINFO with each source path
+   converted to a (URI-encoded) URL based on REPOS_ROOT_URL. *OUT_MERGEINFO
+   is declared as 'apr_hash_t *' because its key do not obey the rules of
+   'svn_mergeinfo_t'.
+
+   Allocate *OUT_MERGEINFO and the new keys in RESULT_POOL.  Use
+   SCRATCH_POOL for any temporary allocations. */
+svn_error_t *
+svn_mergeinfo__relpaths_to_urls(apr_hash_t **out_mergeinfo,
+                                svn_mergeinfo_t mergeinfo,
+                                const char *repos_root_url,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
+
+/* Set *OUT_MERGEINFO to a shallow copy of MERGEINFO with the relpath
    SUFFIX_RELPATH added to the end of each key path.
 
-   Allocate *OUT_MERGEINFO in RESULT_POOL.  Use SCRATCH_POOL for any
-   temporary allocations. */
+   Allocate *OUT_MERGEINFO and the new keys in RESULT_POOL.  Use
+   SCRATCH_POOL for any temporary allocations. */
 svn_error_t *
 svn_mergeinfo__add_suffix_to_mergeinfo(svn_mergeinfo_t *out_mergeinfo,
                                        svn_mergeinfo_t mergeinfo,
@@ -208,15 +234,6 @@ svn_boolean_t
 svn_mergeinfo__is_noninheritable(svn_mergeinfo_t mergeinfo,
                                  apr_pool_t *scratch_pool);
 
-/* If MERGEINFO_STR is a string representation of non-inheritable mergeinfo
-   set *IS_NONINHERITABLE to TRUE, set it to FALSE otherwise.  MERGEINFO_STR
-   may be NULL or empty.  If MERGEINFO_STR cannot be parsed return
-   SVN_ERR_MERGEINFO_PARSE_ERROR. */
-svn_error_t *
-svn_mergeinfo__string_has_noninheritable(svn_boolean_t *is_noninheritable,
-                                         const char *mergeinfo_str,
-                                         apr_pool_t *scratch_pool);
-
 /* Return a rangelist with one svn_merge_range_t * element defined by START,
    END, and INHERITABLE.  The rangelist and its contents are allocated in
    RESULT_POOL. */
@@ -254,8 +271,8 @@ svn_mergeinfo__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
 
 /* Merge every rangelist in MERGEINFO into the given MERGED_RANGELIST,
  * ignoring the source paths of MERGEINFO. MERGED_RANGELIST may
- * initially be empty. New elements added to @a rangelist are allocated in
- * @a result_pool. See svn_rangelist_merge2() for details of inheritability
+ * initially be empty. New elements added to RANGELIST are allocated in
+ * RESULT_POOL. See svn_rangelist_merge2() for details of inheritability
  * etc. */
 svn_error_t *
 svn_rangelist__merge_many(apr_array_header_t *merged_rangelist,

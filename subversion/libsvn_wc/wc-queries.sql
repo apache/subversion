@@ -956,6 +956,40 @@ SELECT presence, kind, def_local_relpath, repos_id,
 FROM externals WHERE wc_id = ?1 AND local_relpath = ?2
 LIMIT 1
 
+/* Select all committable externals, i.e. only unpegged ones on the same
+ * repository as the target path ?2, that are defined by WC ?1 to
+ * live below the target path. It does not matter which ancestor has the
+ * svn:externals definition, only the local path at which the external is
+ * supposed to be checked out is queried.
+ * Arguments:
+ *  ?1: wc_id.
+ *  ?2: the target path, local relpath inside ?1.
+ *  ?3: boolean, if 1 return immediate children of ?2 only.
+ *
+ * ### NOTE: This statement deliberately removes file externals that live
+ * inside an unversioned dir, because commit still breaks on those.
+ * Once that's been fixed, the conditions below "--->8---" become obsolete. */
+-- STMT_SELECT_COMMITTABLE_EXTERNALS_BELOW
+SELECT local_relpath, kind, repos_id, def_repos_relpath, repository.root
+FROM externals
+LEFT OUTER JOIN repository ON repository.id = externals.repos_id
+WHERE wc_id = ?1
+  AND def_revision IS NULL
+  AND repos_id = (SELECT repos_id FROM nodes
+                  WHERE nodes.local_relpath = ?2)
+  AND ( ((NOT ?3)
+         AND (?2 = ''
+              /* Want only the cildren of e.local_relpath;
+               * externals can't have a local_relpath = ''. */
+              OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2)))
+        OR
+        ((?3)
+         AND parent_relpath = ?2) )
+  /* ------>8----- */
+  AND (EXISTS (SELECT 1 FROM nodes
+               WHERE nodes.wc_id = externals.wc_id
+               AND nodes.local_relpath = externals.parent_relpath))
+
 -- STMT_SELECT_EXTERNALS_DEFINED
 SELECT local_relpath, def_local_relpath
 FROM externals
@@ -1193,21 +1227,18 @@ DROP TABLE IF EXISTS delete_list;
 CREATE TEMPORARY TABLE delete_list (
 /* ### we should put the wc_id in here in case a delete spans multiple
    ### working copies. queries, etc will need to be adjusted.  */
-   local_relpath TEXT PRIMARY KEY NOT NULL
+   local_relpath TEXT PRIMARY KEY NOT NULL UNIQUE
    )
 
 /* This matches the selection in STMT_INSERT_DELETE_FROM_NODE_RECURSIVE */
 -- STMT_INSERT_DELETE_LIST
 INSERT INTO delete_list(local_relpath)
-SELECT local_relpath FROM nodes n
+SELECT local_relpath FROM nodes_current
 WHERE wc_id = ?1
   AND (local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth >= ?3
   AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'absent')
-  AND op_depth = (SELECT MAX(op_depth) FROM nodes s
-                  WHERE s.wc_id = n.wc_id 
-                    AND s.local_relpath = n.local_relpath)
 
 -- STMT_SELECT_DELETE_LIST
 SELECT local_relpath FROM delete_list

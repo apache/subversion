@@ -283,7 +283,6 @@ svn_client_log5(const apr_array_header_t *targets,
   svn_boolean_t has_log_revprops;
   const char *actual_url;
   apr_array_header_t *condensed_targets;
-  svn_revnum_t ignored_revnum;
   svn_opt_revision_t session_opt_rev;
   const char *ra_target;
   pre_15_receiver_baton_t rb = {0};
@@ -300,8 +299,7 @@ svn_client_log5(const apr_array_header_t *targets,
 
   /* Make a copy of PEG_REVISION, we may need to change it to a
      default value. */
-  peg_rev.kind = peg_revision->kind;
-  peg_rev.value = peg_revision->value;
+  peg_rev = *peg_revision;
 
   /* Use the passed URL, if there is one.  */
   url_or_path = APR_ARRAY_IDX(targets, 0, const char *);
@@ -427,7 +425,7 @@ svn_client_log5(const apr_array_header_t *targets,
                                 _("When specifying working copy paths, only "
                                   "one target may be given"));
 
-      /* An unspecified PEG_REVISION for a working copy path defautls
+      /* An unspecified PEG_REVISION for a working copy path defaults
          to svn_opt_revision_working. */
       if (peg_rev.kind == svn_opt_revision_unspecified)
           peg_rev.kind = svn_opt_revision_working;
@@ -485,8 +483,8 @@ svn_client_log5(const apr_array_header_t *targets,
     else
       ra_target = url_or_path;
 
-    SVN_ERR(svn_client__ra_session_from_path(&ra_session, &ignored_revnum,
-                                             &actual_url, ra_target, NULL,
+    SVN_ERR(svn_client__ra_session_from_path(&ra_session, NULL, &actual_url,
+                                             ra_target, NULL,
                                              &peg_rev, &session_opt_rev,
                                              ctx, pool));
 

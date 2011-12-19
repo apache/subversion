@@ -106,7 +106,7 @@ AC_DEFUN(SVN_SQLITE_PKG_CONFIG,
       sqlite_version=`$PKG_CONFIG $SQLITE_PKGNAME --modversion --silence-errors`
 
       if test -n "$sqlite_version"; then
-        SVN_SQLITE_VERNUM_PARSE
+        SVN_SQLITE_VERNUM_PARSE([$sqlite_version], [sqlite_ver_num])
 
         if test "$sqlite_ver_num" -ge "$sqlite_min_ver_num"; then
           AC_MSG_RESULT([$sqlite_version])
@@ -198,20 +198,22 @@ SQLITE_VERSION_OKAY
   fi
 ])
 
-dnl SVN_SQLITE_VERNUM_PARSE()
+dnl SVN_SQLITE_VERNUM_PARSE(version_string, result_var)
 dnl
-dnl Parse a x.y[.z] version string sqlite_version into a number sqlite_ver_num.
+dnl Parse a x.y[.z] version string version_string into a number result_var.
 AC_DEFUN(SVN_SQLITE_VERNUM_PARSE,
 [
-  sqlite_major=`expr $sqlite_version : '\([[0-9]]*\)'`
-  sqlite_minor=`expr $sqlite_version : '[[0-9]]*\.\([[0-9]]*\)'`
-  sqlite_micro=`expr $sqlite_version : '[[0-9]]*\.[[0-9]]*\.\([[0-9]]*\)'`
-  if test -z "$sqlite_micro"; then
-    sqlite_micro=0
+  version_string="$1"
+  
+  major=`expr $version_string : '\([[0-9]]*\)'`
+  minor=`expr $version_string : '[[0-9]]*\.\([[0-9]]*\)'`
+  micro=`expr $version_string : '[[0-9]]*\.[[0-9]]*\.\([[0-9]]*\)'`
+  if test -z "$micro"; then
+    micro=0
   fi
-  sqlite_ver_num=`expr $sqlite_major \* 1000000 \
-                    \+ $sqlite_minor \* 1000 \
-                    \+ $sqlite_micro`
+  $2=`expr $major \* 1000000 \
+        \+ $minor \* 1000 \
+        \+ $micro`
 ])
 
 dnl SVN_SQLITE_MIN_VERNUM_PARSE()
@@ -220,12 +222,7 @@ dnl Parse a x.y.z version string SQLITE_MINIMUM_VER into a number
 dnl sqlite_min_ver_num.
 AC_DEFUN(SVN_SQLITE_MIN_VERNUM_PARSE,
 [
-  sqlite_min_major=`expr $SQLITE_MINIMUM_VER : '\([[0-9]]*\)'`
-  sqlite_min_minor=`expr $SQLITE_MINIMUM_VER : '[[0-9]]*\.\([[0-9]]*\)'`
-  sqlite_min_micro=`expr $SQLITE_MINIMUM_VER : '[[0-9]]*\.[[0-9]]*\.\([[0-9]]*\)'`
-  sqlite_min_ver_num=`expr $sqlite_min_major \* 1000000 \
-                        \+ $sqlite_min_minor \* 1000 \
-                        \+ $sqlite_min_micro`
+  SVN_SQLITE_VERNUM_PARSE([$SQLITE_MINIMUM_VER], [sqlite_min_ver_num])
 ])
 
 dnl SVN_DOWNLOAD_SQLITE()

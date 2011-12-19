@@ -172,6 +172,18 @@ SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER}.
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
 
+AC_ARG_ENABLE(sqlite-compatibility-version,
+  AS_HELP_STRING([--enable-sqlite-compatibility-version=X.Y.Z],
+                 [Allow binary to run against SQLite as old as ARG]),
+  [sqlite_compat_ver=$enableval],[sqlite_compat_ver=no])
+
+if test -n "$sqlite_compat_ver" && test "$sqlite_compat_ver" != no; then
+  SVN_SQLITE_VERNUM_PARSE([$sqlite_compat_ver],
+                          [sqlite_compat_ver_num])
+  CFLAGS="-DSVN_SQLITE_MIN_VERSION='\"$sqlite_compat_ver\"' $CFLAGS"
+  CFLAGS="-DSVN_SQLITE_MIN_VERSION_NUMBER=$sqlite_compat_ver_num $CFLAGS"
+fi
+
 dnl Set up a number of directories ---------------------
 
 dnl Create SVN_BINDIR for proper substitution

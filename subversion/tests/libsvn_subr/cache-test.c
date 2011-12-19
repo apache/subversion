@@ -135,7 +135,7 @@ test_inprocess_cache_basic(apr_pool_t *pool)
                                       APR_HASH_KEY_STRING,
                                       1,
                                       1,
-                                      APR_HAS_THREADS,
+                                      TRUE,
                                       "",
                                       pool));
 
@@ -182,16 +182,9 @@ test_membuffer_cache_basic(apr_pool_t *pool)
 {
   svn_cache__t *cache;
   svn_membuffer_t *membuffer;
-  svn_boolean_t thread_safe;
-
-#if APR_HAS_THREADS
-  thread_safe = TRUE;
-#else
-  thread_safe = FALSE;
-#endif
 
   SVN_ERR(svn_cache__membuffer_cache_create(&membuffer, 10*1024, 1,
-                                            thread_safe, pool));
+                                            TRUE, pool));
 
   /* Create a cache with just one entry. */
   SVN_ERR(svn_cache__create_membuffer_cache(&cache,
@@ -200,6 +193,7 @@ test_membuffer_cache_basic(apr_pool_t *pool)
                                             deserialize_revnum,
                                             APR_HASH_KEY_STRING,
                                             "cache:",
+                                            FALSE,
                                             pool));
 
   return basic_cache_test(cache, FALSE, pool);

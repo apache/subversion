@@ -57,6 +57,16 @@ def make_diff_header(path, old_tag, new_tag):
     "+++ " + path_as_shown + "\t(" + new_tag + ")\n",
     ]
 
+def make_no_diff_deleted_header(path, old_tag, new_tag):
+  """Generate the expected diff header for a deleted file PATH when in
+  'no-diff-deleted' mode. (In that mode, no further details appear after the
+  header.) Return the header as an array of newline-terminated strings."""
+  path_as_shown = path.replace('\\', '/')
+  return [
+    "Index: " + path_as_shown + " (deleted)\n",
+    "===================================================================\n",
+    ]
+
 def make_git_diff_header(target_path, repos_relpath,
                          old_tag, new_tag, add=False, src_label=None,
                          dst_label=None, delete=False, text_changes=True,
@@ -146,15 +156,20 @@ def make_diff_prop_header(path):
     "___________________________________________________________________\n"
   ]
 
+def make_diff_prop_val(plus_minus, pval):
+  "Return diff for prop value PVAL, with leading PLUS_MINUS (+ or -)."
+  if len(pval) > 0 and pval[-1] != '\n':
+    return [plus_minus + pval + "\n","\\ No newline at end of property\n"]
+  return [plus_minus + pval]
+  
 def make_diff_prop_deleted(pname, pval):
   """Return a property diff for deletion of property PNAME, old value PVAL.
      PVAL is a single string with no embedded newlines.  Return the result
      as a list of newline-terminated strings."""
   return [
     "Deleted: " + pname + "\n",
-    "## -1 +0,0 ##\n",
-    "-" + pval + "\n"
-  ]
+    "## -1 +0,0 ##\n"
+  ] + make_diff_prop_val("-", pval)
 
 def make_diff_prop_added(pname, pval):
   """Return a property diff for addition of property PNAME, new value PVAL.
@@ -163,8 +178,7 @@ def make_diff_prop_added(pname, pval):
   return [
     "Added: " + pname + "\n",
     "## -0,0 +1 ##\n",
-    "+" + pval + "\n"
-  ]
+  ] + make_diff_prop_val("+", pval)
 
 def make_diff_prop_modified(pname, pval1, pval2):
   """Return a property diff for modification of property PNAME, old value
@@ -173,9 +187,7 @@ def make_diff_prop_modified(pname, pval1, pval2):
   return [
     "Modified: " + pname + "\n",
     "## -1 +1 ##\n",
-    "-" + pval1 + "\n",
-    "+" + pval2 + "\n"
-  ]
+  ] + make_diff_prop_val("-", pval1) + make_diff_prop_val("+", pval2)
 
 ######################################################################
 # Diff output checker
@@ -1218,6 +1230,7 @@ def diff_deleted_in_head(sbox):
 
 
 #----------------------------------------------------------------------
+@Issue(2873)
 def diff_targets(sbox):
   "select diff targets"
 
@@ -1263,30 +1276,20 @@ def diff_targets(sbox):
                                                             update_path,
                                                             add_path)
 
-  regex = 'svn: E195012: Unable to find repository location for \'.*\''
-  for line in err_output:
-    if re.match(regex, line):
-      break
-  else:
+  if check_update_a_file(diff_output) or check_add_a_file(diff_output):
     raise svntest.Failure
 
   exit_code, diff_output, err_output = svntest.main.run_svn(1,
                                                             'diff', '-r1:2',
                                                             add_path)
-  for line in err_output:
-    if re.match(regex, line):
-      break
-  else:
+
+  if not check_update_a_file(diff_output) or check_add_a_file(diff_output):
     raise svntest.Failure
 
   exit_code, diff_output, err_output = svntest.main.run_svn(
     1, 'diff', '-r1:2', '--old', parent_path, 'alpha', 'theta')
 
-  regex = 'svn: E160013: \'.*\' was not found in the repository'
-  for line in err_output:
-    if re.match(regex, line):
-      break
-  else:
+  if check_update_a_file(diff_output) or check_add_a_file(diff_output):
     raise svntest.Failure
 
   exit_code, diff_output, err_output = svntest.main.run_svn(
@@ -2863,18 +2866,18 @@ def diff_with_depth(sbox):
   A_header = make_diff_header('A', "revision 1", "working copy")
   B_header = make_diff_header(B_path, "revision 1", "working copy")
 
-  expected_empty = svntest.verify.UnorderedOutput(dot_header + diff[:6])
-  expected_files = svntest.verify.UnorderedOutput(dot_header + diff[:6]
-                                                  + iota_header + diff[7:12])
-  expected_immediates = svntest.verify.UnorderedOutput(dot_header + diff[:6]
+  expected_empty = svntest.verify.UnorderedOutput(dot_header + diff[:7])
+  expected_files = svntest.verify.UnorderedOutput(dot_header + diff[:7]
+                                                  + iota_header + diff[8:14])
+  expected_immediates = svntest.verify.UnorderedOutput(dot_header + diff[:7]
                                                        + iota_header
-                                                       + diff[7:12]
-                                                       +  A_header + diff[8:18])
-  expected_infinity = svntest.verify.UnorderedOutput(dot_header + diff[:6]
+                                                       + diff[8:14]
+                                                       + A_header + diff[15:21])
+  expected_infinity = svntest.verify.UnorderedOutput(dot_header + diff[:7]
                                                        + iota_header
-                                                       + diff[7:12]
-                                                       +  A_header + diff[8:18]
-                                                       + B_header + diff[12:])
+                                                       + diff[8:14]
+                                                       + A_header + diff[15:21]
+                                                       + B_header + diff[22:])
 
   os.chdir(sbox.wc_dir)
 
@@ -2910,18 +2913,18 @@ def diff_with_depth(sbox):
   A_header = make_diff_header('A', "revision 1", "revision 2")
   B_header = make_diff_header(B_path, "revision 1", "revision 2")
 
-  expected_empty = svntest.verify.UnorderedOutput(dot_header + diff[:6])
-  expected_files = svntest.verify.UnorderedOutput(dot_header + diff[:6]
-                                                  + iota_header + diff[7:12])
-  expected_immediates = svntest.verify.UnorderedOutput(dot_header + diff[:6]
+  expected_empty = svntest.verify.UnorderedOutput(dot_header + diff[:7])
+  expected_files = svntest.verify.UnorderedOutput(dot_header + diff[:7]
+                                                  + iota_header + diff[8:14])
+  expected_immediates = svntest.verify.UnorderedOutput(dot_header + diff[:7]
                                                        + iota_header
-                                                       + diff[7:12]
-                                                       +  A_header + diff[8:18])
+                                                       + diff[8:14]
+                                                       + A_header + diff[15:21])
   expected_infinity = svntest.verify.UnorderedOutput(dot_header + diff[:6]
                                                        + iota_header
-                                                       + diff[7:12]
-                                                       +  A_header + diff[8:18]
-                                                       + B_header + diff[12:])
+                                                       + diff[8:14]
+                                                       + A_header + diff[15:21]
+                                                       + B_header + diff[22:])
 
   # Test repos-repos diff.
   svntest.actions.run_and_verify_svn(None, expected_empty, [],
@@ -2954,10 +2957,10 @@ def diff_with_depth(sbox):
     make_diff_prop_header(".") + \
     make_diff_prop_modified("foo1", "bar1", "baz1")
 
-  expected_empty = svntest.verify.UnorderedOutput(diff_wc_repos[43:])
-  expected_files = svntest.verify.UnorderedOutput(diff_wc_repos[29:])
-  expected_immediates = svntest.verify.UnorderedOutput(diff_wc_repos[11:22]
-                                                       +diff_wc_repos[29:])
+  expected_empty = svntest.verify.UnorderedOutput(diff_wc_repos[49:])
+  expected_files = svntest.verify.UnorderedOutput(diff_wc_repos[33:])
+  expected_immediates = svntest.verify.UnorderedOutput(diff_wc_repos[13:26]
+                                                       +diff_wc_repos[33:])
   expected_infinity = svntest.verify.UnorderedOutput(diff_wc_repos[:])
 
   svntest.actions.run_and_verify_svn(None, None, [],

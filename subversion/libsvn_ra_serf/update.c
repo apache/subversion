@@ -68,7 +68,7 @@ typedef enum report_state_e {
     ADD_FILE,
     PROP,
     IGNORE_PROP_NAME,
-    NEED_PROP_NAME,
+    NEED_PROP_NAME
 } report_state_e;
 
 

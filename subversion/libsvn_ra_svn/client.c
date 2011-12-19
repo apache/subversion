@@ -1166,15 +1166,12 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
 static svn_tristate_t
 optbool_to_tristate(apr_uint64_t v)
 {
-  switch (v)
-  {
-    case TRUE:
-      return svn_tristate_true;
-    case FALSE:
-      return svn_tristate_false;
-    default: /* Contains SVN_RA_SVN_UNSPECIFIED_NUMBER */
-      return svn_tristate_unknown;
-  }
+  if (v == TRUE)
+    return svn_tristate_true;
+  if (v == FALSE)
+    return svn_tristate_false;
+
+  return svn_tristate_unknown; /* Contains SVN_RA_SVN_UNSPECIFIED_NUMBER */
 }
 
 /* If REVISION is SVN_INVALID_REVNUM, no value is sent to the
@@ -2340,7 +2337,7 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
         }
       else if ((depth == svn_depth_files) || (depth == svn_depth_immediates))
         {
-          const char *relpath = svn_fspath__is_child(abs_path, lock->path, pool);
+          const char *relpath = svn_fspath__skip_ancestor(abs_path, lock->path);
           if (relpath && (svn_path_component_count(relpath) == 1))
             apr_hash_set(*locks, lock->path, APR_HASH_KEY_STRING, lock);
         }

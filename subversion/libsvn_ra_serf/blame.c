@@ -54,7 +54,7 @@ typedef enum blame_state_e {
   SET_PROP,
   REMOVE_PROP,
   MERGED_REVISION,
-  TXDELTA,
+  TXDELTA
 } blame_state_e;
 
 typedef struct blame_info_t {
@@ -151,7 +151,7 @@ create_propval(blame_info_t *info)
 
   if (!info->prop_attr)
     {
-      return svn_string_create("", info->pool);
+      return svn_string_create_empty(info->pool);
     }
   else
     {

@@ -420,9 +420,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
         }
       else
         {
-          const char *childname = svn_relpath__is_child(dir_repos_relpath,
-                                                        ths->repos_relpath,
-                                                        NULL);
+          const char *childname
+            = svn_relpath_skip_ancestor(dir_repos_relpath, ths->repos_relpath);
 
           if (childname == NULL || strcmp(childname, child) != 0)
             {
@@ -562,7 +561,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                    || (dir_depth == svn_depth_immediates
                        && ths->depth != svn_depth_empty)
                    || (ths->depth < svn_depth_infinity
-                       && depth == svn_depth_infinity))
+                       && SVN_DEPTH_IS_RECURSIVE(depth)))
             {
               /* ... or perhaps just a differing revision, lock token,
                  incomplete subdir, the mere presence of the directory

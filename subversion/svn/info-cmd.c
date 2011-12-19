@@ -85,7 +85,7 @@ print_info_xml(void *baton,
                const svn_client_info2_t *info,
                apr_pool_t *pool)
 {
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
   const char *rev_str;
   const char *path_prefix = baton;
 

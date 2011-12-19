@@ -614,8 +614,7 @@ ensure_repos_info(svn_wc_entry_t *entry,
       for (hi = apr_hash_first(scratch_pool, repos_cache);
            hi; hi = apr_hash_next(hi))
         {
-          if (svn_uri__is_child(svn__apr_hash_index_key(hi), entry->url,
-                                scratch_pool))
+          if (svn_uri__is_ancestor(svn__apr_hash_index_key(hi), entry->url))
             {
               if (!entry->repos)
                 entry->repos = svn__apr_hash_index_key(hi);
@@ -1404,6 +1403,7 @@ upgrade_to_wcng(void **dir_baton,
   svn_wc_entry_t *this_dir;
   const char *old_wcroot_abspath, *dir_relpath;
   apr_hash_t *text_bases_info;
+  svn_error_t *err;
 
   /* Don't try to mess with the WC if there are old log files left. */
 
@@ -1475,11 +1475,18 @@ upgrade_to_wcng(void **dir_baton,
                              data->sdb, scratch_pool, scratch_pool));
 
   /***** ENTRIES - WRITE *****/
-  SVN_ERR(svn_wc__write_upgraded_entries(dir_baton, parent_baton, db, data->sdb,
-                                         data->repos_id, data->wc_id,
-                                         dir_abspath, data->root_abspath,
-                                         entries, text_bases_info,
-                                         result_pool, scratch_pool));
+  err = svn_wc__write_upgraded_entries(dir_baton, parent_baton, db, data->sdb,
+                                       data->repos_id, data->wc_id,
+                                       dir_abspath, data->root_abspath,
+                                       entries, text_bases_info,
+                                       result_pool, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_CORRUPT)
+    return svn_error_quick_wrap(err,
+                                _("This working copy is corrupt and "
+                                  "cannot be upgraded. Please check out "
+                                  "a new working copy."));
+  else
+    SVN_ERR(err);
 
   /***** WC PROPS *****/
   /* If we don't know precisely where the wcprops are, ignore them.  */

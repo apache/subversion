@@ -606,12 +606,12 @@ static volatile svn_atomic_t sqlite_init_state = 0;
 static svn_error_t *
 init_sqlite(void *baton, apr_pool_t *pool)
 {
-  if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER)
+  if (sqlite3_libversion_number() < SVN_SQLITE_MIN_VERSION_NUMBER)
     {
       return svn_error_createf(
                     SVN_ERR_SQLITE_ERROR, NULL,
                     _("SQLite compiled for %s, but running with %s"),
-                    SQLITE_VERSION, sqlite3_libversion());
+                    SVN_SQLITE_MIN_VERSION, sqlite3_libversion());
     }
 
 #if APR_HAS_THREADS
@@ -666,13 +666,6 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
 #ifdef SQLITE_OPEN_NOMUTEX
     flags |= SQLITE_OPEN_NOMUTEX;
 #endif
-
-    /* SQLite 3.5 allows sharing cache instances, even in a multithreaded
-       environment. This allows sharing cached data when we open a database
-       more than once.
-
-       OS X 10.7 doesn't support sqlite3_enable_shared_cache. */
-    flags |= SQLITE_OPEN_SHAREDCACHE;
 
     /* Open the database. Note that a handle is returned, even when an error
        occurs (except for out-of-memory); thus, we can safely use it to
