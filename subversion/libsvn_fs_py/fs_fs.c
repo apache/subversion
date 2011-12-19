@@ -6361,7 +6361,7 @@ recover_body(void *baton, apr_pool_t *pool)
 
   /* Prune younger-than-(newfound-youngest) revisions from the rep cache. */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
-    SVN_ERR(svn_fs_fs__del_rep_reference(fs, max_rev, pool));
+    SVN_ERR(svn_fs_py__del_rep_reference(fs, max_rev, pool));
 
   /* Now store the discovered youngest revision, and the next IDs if
      relevant, in a new 'current' file. */
@@ -7688,7 +7688,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
       if (kind == svn_node_file)
         {
           SVN_ERR(svn_sqlite__hotcopy(src_subdir, dst_subdir, pool));
-          SVN_ERR(svn_fs_fs__del_rep_reference(dst_fs, dst_youngest, pool));
+          SVN_ERR(svn_fs_py__del_rep_reference(dst_fs, dst_youngest, pool));
         }
     }
 

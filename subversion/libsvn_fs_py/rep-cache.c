@@ -338,7 +338,7 @@ svn_fs_py__set_rep_reference(svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs_fs__del_rep_reference(svn_fs_t *fs,
+svn_fs_py__del_rep_reference(svn_fs_t *fs,
                              svn_revnum_t youngest,
                              apr_pool_t *pool)
 {
