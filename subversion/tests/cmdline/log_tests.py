@@ -34,6 +34,7 @@ from svntest import wc
 from svntest.main import server_has_mergeinfo
 from svntest.main import SVN_PROP_MERGEINFO
 from merge_tests import set_up_branch
+from diff_tests import make_diff_header, make_no_diff_deleted_header
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -424,7 +425,7 @@ class SVNLogParseError(Exception):
   pass
 
 
-def parse_log_output(log_lines):
+def parse_log_output(log_lines, with_diffs=False):
   """Return a log chain derived from LOG_LINES.
   A log chain is a list of hashes; each hash represents one log
   message, in the order it appears in LOG_LINES (the first log
@@ -438,6 +439,7 @@ def parse_log_output(log_lines):
      'date'     ===>  string
      'msg'      ===>  string  (the log message itself)
      'lines'    ===>  number  (so that it may be checked against rev)
+
   If LOG_LINES contains changed-path information, then the hash
   also contains
 
@@ -451,7 +453,11 @@ def parse_log_output(log_lines):
 
      'reverse_merges'   ===> list of reverse-merging revisions that resulted
   in this log being part of the list of messages.
-     """
+
+  If LOG_LINES contains diffs and WITH_DIFFS=True, then the hash also contains
+
+     'diff_lines'  ===> list of strings  (diffs)
+  """
 
   # Here's some log output to look at while writing this function:
 
@@ -566,6 +572,20 @@ def parse_log_output(log_lines):
       for line in log_lines[0:lines]:
         msg += line
       del log_lines[0:lines]
+
+      # Maybe accumulate a diff.
+      # If there is a diff, there is a blank line before and after it.
+      if with_diffs and len(log_lines) >= 2 and log_lines[0] == '\n':
+        log_lines.pop(0)
+        diff_lines = []
+        while len(log_lines) and log_lines[0] != msg_separator:
+          diff_lines.append(log_lines.pop(0))
+        if diff_lines[-1] == '\n':
+          diff_lines.pop()
+        else:
+          raise SVNLogParseError("no blank line after diff in log")
+        this_item['diff_lines'] = diff_lines
+
     elif this_line == msg_separator:
       if this_item:
         this_item['msg'] = msg
@@ -2060,11 +2080,25 @@ def log_diff(sbox):
                                                               '-r10:8', 'A2')
   os.chdir(was_cwd)
 
-  for line in output:
-    if line.startswith('Index:'):
-      break
-  else:
-    raise SVNLogParseError("no diffs found in log output")
+  r9diff = make_no_diff_deleted_header('A2/B/E/alpha', 8, 9) \
+           + make_diff_header('A2/B/E/beta', 'revision 8', 'revision 9') \
+           + [ "@@ -1 +1,2 @@\n",
+               " This is the file 'beta'.\n",
+               "+9\n",
+               "\ No newline at end of file\n",
+             ]
+  r8diff = make_diff_header('A2/D/G/rho', 'revision 0', 'revision 8') \
+           + [ "@@ -0,0 +1 @@\n",
+               "+8\n",
+               "\ No newline at end of file\n",
+             ]
+  log_chain = parse_log_output(output, with_diffs=True)
+  if len(log_chain) != 3:
+    raise SVNLogParseError("%d logs found, 3 expected" % len(log_chain))
+  svntest.verify.compare_and_display_lines(None, "diff for r9",
+                                           r9diff, log_chain[1]['diff_lines'])
+  svntest.verify.compare_and_display_lines(None, "diff for r8",
+                                           r8diff, log_chain[2]['diff_lines'])
 
 
 ########################################################################
