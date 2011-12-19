@@ -103,20 +103,12 @@ Candidate changes:
    Votes:
      +1: stsp, philip
 
- * r1213673
-   Make svnmucc act on values obtained from --config-dir.
-   Justification:
-     Can cause the testsuite to hang waiting for user input, could even
-     cause passwords to be stored when not wanted.
-   Votes:
-     +1: philip, danielsh
-
  * r1220742, r1220750
    Fix spurious testsuite FAIL
    Justification:
      We don't expect users to ignore tests that FAIL.
    Votes:
-     +1: philip
+     +1: philip. rhuijben
 
 Veto-blocked changes:
 =====================
@@ -142,3 +134,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1213673
+   Make svnmucc act on values obtained from --config-dir.
+   Justification:
+     Can cause the testsuite to hang waiting for user input, could even
+     cause passwords to be stored when not wanted.
+   Votes:
+     +1: philip, danielsh, rhuijben
