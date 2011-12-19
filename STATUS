@@ -75,21 +75,28 @@ Candidate changes:
    Votes:
      +1: stsp, philip
 
- * r1210147, r1202132, r1202333
+ * r1220783
+   Fix mis-ordered text output of 'svn log --diff' on Windows.
+   Justification:
+     Badness within 'svn', fixed within 'svn'. Needed for r1210147 group.
+   Votes:
+     +1: julianfoad
+
+ * r1210147, r1202132, r1202333, r1220740
    Fix the 'svn log --diff' code so that it correctly shows a diff of a
    target file (or directory) that was at a different path in the past.
    Previously it would error out. A test is included.
    Branch:
      ^/subversion/branches/1.7.x-r1210147
    Notes:
+    Depends on the r1220783 bug fix, otherwise the test will fail on Windows.
     r1210147 is the actual fix.
     r1202132 and r1202333 were merged for conflict resolution. These revisions
     depend on the issue #2873 fix which has been backported in 1.7.2
+    r1220740 expands the test so that it would fail without r1210147 applied.
    Votes:
-     +1: stsp
-     -0: julianfoad (Functionally fine, but the test doesn't fail when the
-           code patch is removed. The unpatched log command throws an error
-           on trunk, but outputs invalid results on the branch.)
+     +1: stsp (without r1220740)
+     +1: julianfoad
 
  * r1154121, r1195480, r1208840, r1209631, r1209654, r1212476, r1212482,
    r1212484
