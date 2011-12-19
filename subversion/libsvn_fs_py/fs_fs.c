@@ -7196,10 +7196,13 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
   /* If necessary, update the min-unpacked rev file in the hotcopy. */
   if (*dst_min_unpacked_rev < shard_rev + max_files_per_dir)
     {
+      fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
+
       *dst_min_unpacked_rev = shard_rev + max_files_per_dir;
-      SVN_ERR(write_revnum_file(dst_fs->path, PATH_MIN_UNPACKED_REV,
-                                *dst_min_unpacked_rev,
-                                scratch_pool));
+      SVN_ERR(svn_fs_py__call_method(NULL, dst_ffd->p_fs,
+                                     "_write_revnum_file",
+                                     PATH_MIN_UNPACKED_REV,
+                                     *dst_min_unpacked_rev));
     }
 
   return SVN_NO_ERROR;
