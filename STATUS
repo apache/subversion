@@ -111,7 +111,7 @@ Candidate changes:
    Votes:
      +1: philip, danielsh
 
- * r1220742
+ * r1220742, r1220750
    Fix spurious testsuite FAIL
    Justification:
      We don't expect users to ignore tests that FAIL.
