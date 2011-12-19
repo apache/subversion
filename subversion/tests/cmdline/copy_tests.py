@@ -4654,8 +4654,14 @@ def changed_dir_data_should_match_checkout(sbox):
 
   os.chdir(was_cwd)
   os.chdir(wc_dir)
-  svntest.actions.run_and_verify_svn(None, verify_out, [], 'status', '-v')
+  rv, verify_out2, err = main.run_svn (None, 'status', '-v')
   os.chdir(was_cwd)
+
+  # The order of the staus output is not absolutely defined, but
+  # otherwise should match
+  svntest.verify.verify_outputs(None,
+                                sorted(verify_out2), None,
+                                sorted(verify_out), None)
 
 def move_added_nodes(sbox):
   """move added nodes"""
