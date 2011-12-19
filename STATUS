@@ -133,7 +133,7 @@ Candidate changes:
    Justification:
      We don't expect users to ignore tests that FAIL.
    Votes:
-     +1: philip. rhuijben
+     +1: philip, rhuijben
 
 Veto-blocked changes:
 =====================
