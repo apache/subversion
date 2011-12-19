@@ -6360,7 +6360,7 @@ recover_body(void *baton, apr_pool_t *pool)
     }
 
   /* Prune younger-than-(newfound-youngest) revisions from the rep cache. */
-  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+  if (format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     SVN_ERR(svn_fs_py__del_rep_reference(fs, max_rev, pool));
 
   /* Now store the discovered youngest revision, and the next IDs if
@@ -7217,17 +7217,20 @@ hotcopy_update_current(svn_revnum_t *dst_youngest,
   char next_node_id[MAX_KEY_SIZE] = "0";
   char next_copy_id[MAX_KEY_SIZE] = "0";
   fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
+  int dst_format;
 
   if (*dst_youngest >= new_youngest)
     return SVN_NO_ERROR;
 
+  SVN_ERR(svn_fs_py__get_int_attr(&dst_format, dst_ffd->p_fs, "format"));
+
   /* If necessary, get new current next_node and next_copy IDs. */
-  if (dst_ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+  if (dst_format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
     {
       apr_off_t root_offset;
       apr_file_t *rev_file;
 
-      if (dst_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
+      if (dst_format >= SVN_FS_FS__MIN_PACKED_FORMAT)
         SVN_ERR(update_min_unpacked_rev(dst_fs, scratch_pool));
 
       SVN_ERR(open_pack_or_rev_file(&rev_file, dst_fs, new_youngest,
@@ -7310,14 +7313,19 @@ hotcopy_incremental_check_preconditions(svn_fs_t *src_fs,
 {
   fs_fs_data_t *src_ffd = src_fs->fsap_data;
   fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
+  int dst_format;
+  int src_format;
+
+  SVN_ERR(svn_fs_py__get_int_attr(&dst_format, dst_ffd->p_fs, "format"));
+  SVN_ERR(svn_fs_py__get_int_attr(&src_format, src_ffd->p_fs, "format"));
 
   /* We only support incremental hotcopy between the same format. */
-  if (src_ffd->format != dst_ffd->format)
+  if (src_format != dst_format)
     return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
       _("The FSFS format (%d) of the hotcopy source does not match the "
         "FSFS format (%d) of the hotcopy destination; please upgrade "
         "both repositories to the same format"),
-      src_ffd->format, dst_ffd->format);
+      src_format, dst_format);
 
   /* Make sure the UUID of source and destination match up.
    * We don't want to copy over a different repository. */
@@ -7388,6 +7396,11 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   const char *revprop_dst_subdir;
   apr_pool_t *iterpool;
   svn_node_kind_t kind;
+  int src_format;
+  int dst_format;
+
+  SVN_ERR(svn_fs_py__get_int_attr(&src_format, src_ffd->p_fs, "format"));
+  SVN_ERR(svn_fs_py__get_int_attr(&dst_format, dst_ffd->p_fs, "format"));
 
   /* Try to copy the config.
    *
@@ -7395,7 +7408,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
    * ### because higher layers will abort the hotcopy if we throw
    * ### an error from this function, and that renders the hotcopy
    * ### unusable anyway. */
-  if (src_ffd->format >= SVN_FS_FS__MIN_CONFIG_FILE)
+  if (src_format >= SVN_FS_FS__MIN_CONFIG_FILE)
     {
       svn_error_t *err;
 
@@ -7473,7 +7486,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
     SVN_ERR(cancel_func(cancel_baton));
 
   /* Copy the min unpacked rev, and read its value. */
-  if (src_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
+  if (src_format >= SVN_FS_FS__MIN_PACKED_FORMAT)
     {
       const char *min_unpacked_rev_path;
 
@@ -7586,7 +7599,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
       if (err)
         {
           if (APR_STATUS_IS_ENOENT(err->apr_err) &&
-              src_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
+              src_format >= SVN_FS_FS__MIN_PACKED_FORMAT)
             {
               svn_error_clear(err);
 
@@ -7678,7 +7691,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
    *     Writers are still locked out at this point.
    */
 
-  if (dst_ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+  if (dst_format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     {
       /* Copy the rep cache and then remove entries for revisions
        * younger than the destination's youngest revision. */
@@ -7693,13 +7706,13 @@ hotcopy_body(void *baton, apr_pool_t *pool)
     }
 
   /* Copy the txn-current file. */
-  if (dst_ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
+  if (dst_format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     SVN_ERR(svn_io_dir_file_copy(src_fs->path, dst_fs->path,
                                  PATH_TXN_CURRENT, pool));
 
   /* Hotcopied FS is complete. Stamp it with a format file. */
   SVN_ERR(write_format(svn_dirent_join(dst_fs->path, PATH_FORMAT, pool),
-                       dst_ffd->format, max_files_per_dir, TRUE, pool));
+                       dst_format, max_files_per_dir, TRUE, pool));
 
   return SVN_NO_ERROR;
 }
