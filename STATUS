@@ -175,5 +175,11 @@ Veto-blocked changes:
          (without r1161164, r1161180)
      -1: danielsh (invasive, new feature)
 
+ * r1221463
+   Allow leading "r" in ?p= query string arguments.
+   Justification:
+     Same as for allowing '-r r42' in svn(1).
+   Votes:
+
 Approved changes:
 =================
