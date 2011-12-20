@@ -2435,7 +2435,7 @@ def reintegrate_replaced_source(sbox):
   # Using cherrypick merges, simulate a series of sync merges from A to
   # A_COPY with a replace of A_COPY along the way.
   #
-  # r6 - Merge r3 from A to A_COPY
+  # r7 - Merge r3 from A to A_COPY
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path,
                        '-c3')
