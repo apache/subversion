@@ -1816,6 +1816,8 @@ parse_querystring(request_rec *r, const char *query,
 
   if (prevstr)
     {
+      while (*prevstr == 'r')
+        prevstr++;
       peg_rev = SVN_STR_TO_REV(prevstr);
       if (!SVN_IS_VALID_REVNUM(peg_rev))
         return dav_svn__new_error(pool, HTTP_BAD_REQUEST, 0,
@@ -1833,6 +1835,8 @@ parse_querystring(request_rec *r, const char *query,
   wrevstr = apr_table_get(pairs, "r");
   if (wrevstr)
     {
+      while (*wrevstr == 'r')
+        wrevstr++;
       working_rev = SVN_STR_TO_REV(wrevstr);
       if (!SVN_IS_VALID_REVNUM(working_rev))
         return dav_svn__new_error(pool, HTTP_BAD_REQUEST, 0,
