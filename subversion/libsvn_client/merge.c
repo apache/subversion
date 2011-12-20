@@ -9498,14 +9498,14 @@ merge_locked(const char *source1,
       APR_ARRAY_PUSH(merge_sources, merge_source_t *) = &source;
     }
 
-  /* Close our temporary RA sessions. */
-  svn_pool_destroy(sesspool);
-
   err = do_merge(NULL, NULL, merge_sources, target_abspath,
                  ancestral, related, same_repos,
                  ignore_ancestry, force, dry_run,
                  record_only, NULL, FALSE, FALSE, depth, merge_options,
                  &use_sleep, ctx, scratch_pool, scratch_pool);
+
+  /* Close our temporary RA sessions. */
+  svn_pool_destroy(sesspool);
 
   if (use_sleep)
     svn_io_sleep_for_timestamps(target_abspath, scratch_pool);
