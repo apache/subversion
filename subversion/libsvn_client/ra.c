@@ -605,9 +605,9 @@ repos_locations(const char **start_url,
       && (end_revnum == peg_revnum || end_revnum == SVN_INVALID_REVNUM))
     {
       if (start_url)
-        *start_url = url;
+        *start_url = apr_pstrdup(result_pool, url);
       if (end_url)
-        *end_url = url;
+        *end_url = apr_pstrdup(result_pool, url);
       return SVN_NO_ERROR;
     }
 
