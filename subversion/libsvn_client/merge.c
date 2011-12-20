@@ -4110,9 +4110,9 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
 
 /* Helper for populate_remaining_ranges().
 
-   SOURCE, RA_SESSION, MERGE_SRC_CANON_PATH,
+   SOURCE, RA_SESSION, MERGE_SRC_FSPATH,
    and MERGE_B are all cascaded from the arguments of the same name in
-   populate_remaining_ranges().  MERGE_SRC_CANON_PATH is the absolute
+   populate_remaining_ranges().  MERGE_SRC_FSPATH is the absolute
    repository path of SOURCE->url2.
 
    Note: The following comments assume a forward merge, i.e. SOURCE->rev1
@@ -4136,7 +4136,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
 static svn_error_t *
 find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
                                   svn_revnum_t *gap_end,
-                                  const char *merge_src_canon_path,
+                                  const char *merge_src_fspath,
                                   const merge_source_t *source,
                                   svn_ra_session_t *ra_session,
                                   merge_cmd_baton_t *merge_b,
@@ -4157,7 +4157,7 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
                                                merge_b->ctx, scratch_pool));
 
   rangelist = apr_hash_get(implicit_src_mergeinfo,
-                           merge_src_canon_path,
+                           merge_src_fspath,
                            APR_HASH_KEY_STRING);
 
   if (!rangelist) /* ### Can we ever not find a rangelist? */
@@ -4253,7 +4253,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                           const merge_source_t *source,
                           svn_boolean_t honor_mergeinfo,
                           svn_ra_session_t *ra_session,
-                          const char *parent_merge_src_canon_path,
+                          const char *parent_merge_src_fspath,
                           merge_cmd_baton_t *merge_b,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
@@ -4335,7 +4335,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
      we will adjust CHILD->REMAINING_RANGES such that we don't describe
      non-existent paths to the editor. */
   SVN_ERR(find_gaps_in_merge_source_history(&gap_start, &gap_end,
-                                            parent_merge_src_canon_path,
+                                            parent_merge_src_fspath,
                                             source,
                                             ra_session, merge_b,
                                             iterpool));
