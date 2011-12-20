@@ -2651,6 +2651,26 @@ def include_immediate_dir_externals(sbox):
     None, '--include-externals', '--depth=immediates', X)
 
 
+@Issue(4085)
+@XFail()
+def shadowing(sbox):
+  "external shadows an existing dir"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  # Setup external: /A/B/F as 'C' child of /A
+  externals_prop = "^/A/B/F C\n"
+
+  raised = False
+  try:
+    change_external(sbox.ospath('A'), externals_prop, commit=False)
+  except:
+    raised = True
+  if not raised:
+    raise svntest.Failure("Creating conflicting child 'C' of 'A' didn't error")
+
+
 ########################################################################
 # Run the tests
 
@@ -2694,6 +2714,7 @@ test_list = [ None,
               copy_file_externals,
               include_externals,
               include_immediate_dir_externals,
+              shadowing,
              ]
 
 if __name__ == '__main__':
