@@ -950,6 +950,14 @@ dav_svn__final_flush_or_error(request_rec *r, apr_bucket_brigade *bb,
                               ap_filter_t *output, dav_error *preferred_err,
                               apr_pool_t *pool);
 
+/* Log a DAV error response.
+ *
+ * NOTE: Copied from mod_dav's dav_log_err which is not public.
+ */
+void dav_svn__log_err(request_rec *r,
+                      dav_error *err,
+                      int level);
+
 /* Send a "standardized" DAV error response based on the ERR's
  * namespace and tag.
  *
