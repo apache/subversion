@@ -9523,17 +9523,17 @@ get_target_and_lock_abspath(const char **target_abspath,
                             const char **lock_abspath,
                             const char *target_wcpath,
                             svn_client_ctx_t *ctx,
-                            apr_pool_t *scratch_pool)
+                            apr_pool_t *result_pool)
 {
   svn_node_kind_t kind;
   SVN_ERR(svn_dirent_get_absolute(target_abspath, target_wcpath,
-                                  scratch_pool));
+                                  result_pool));
   SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, *target_abspath, FALSE,
-                           scratch_pool));
+                           result_pool));
   if (kind == svn_node_dir)
     *lock_abspath = *target_abspath;
   else
-    *lock_abspath = svn_dirent_dirname(*target_abspath, scratch_pool);
+    *lock_abspath = svn_dirent_dirname(*target_abspath, result_pool);
 
   return SVN_NO_ERROR;
 }
