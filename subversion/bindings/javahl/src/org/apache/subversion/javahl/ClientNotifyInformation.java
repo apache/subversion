@@ -541,7 +541,10 @@ public class ClientNotifyInformation extends EventObject
         failed_locked ("failed by lock"),
 
         /** Operation failed because the operation was forbidden */
-        failed_forbidden_by_server ("failed forbidden by server");
+        failed_forbidden_by_server ("failed forbidden by server"),
+
+        /** Operation skipped the path because it was conflicted */
+        skip_conflicted ("skipped conflicted path");
 
         /**
          * The description of the action.
