@@ -3244,8 +3244,8 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                                      resource->pool, resource->pool);
           if (serr != NULL)
             return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                        "couldn't fetch dirents of SVNParentPath",
-                                        resource->pool);
+                                        "couldn't fetch dirents of "
+                                        "SVNParentPath", resource->pool);
 
           /* convert an io dirent hash to an fs dirent hash. */
           entries = apr_hash_make(resource->pool);
