@@ -274,18 +274,21 @@ typedef struct merge_cmd_baton_t {
 } merge_cmd_baton_t;
 
 
-/* If the merge source server is is capable of merge tracking, the left-side
+/* Return TRUE iff we should be taking account of mergeinfo in deciding what
+   changes to merge, for the merge described by MERGE_B.  Specifically, that
+   is if the merge source server is capable of merge tracking, the left-side
    merge source is an ancestor of the right-side (or vice-versa), the merge
    source repository is the same repository as the MERGE_B->TARGET_ABSPATH, and
-   ancestry is being considered then return TRUE.  */
+   ancestry is being considered.  */
 #define HONOR_MERGEINFO(merge_b) ((merge_b)->mergeinfo_capable      \
                                   && (merge_b)->sources_ancestral   \
                                   && (merge_b)->same_repos          \
                                   && (! (merge_b)->ignore_ancestry))
 
 
-/* If HONOR_MERGEINFO is TRUE and the merge is not a dry run
-   then return TRUE.  */
+/* Return TRUE iff we should be recording mergeinfo for the merge described
+   by MERGE_B.  Specifically, that is if we are honoring mergeinfo and the
+   merge is not a dry run.  */
 #define RECORD_MERGEINFO(merge_b) (HONOR_MERGEINFO(merge_b) \
                                    && !(merge_b)->dry_run)
 
@@ -4233,7 +4236,8 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
    to be sorted in depth first order and each child must be processed in
    that order.  The inheritability of all calculated ranges is TRUE.
 
-   If HONOR_MERGEINFO is set, this function will actually try to be
+   If mergeinfo is being honored (based on MERGE_B -- see HONOR_MERGEINFO()
+   for how this is determined), this function will actually try to be
    intelligent about populating remaining_ranges list.  Otherwise, it
    will claim that each child has a single remaining range, from
    SOURCE->rev1, to SOURCE->rev2.
@@ -4251,7 +4255,6 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
 static svn_error_t *
 populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                           const merge_source_t *source,
-                          svn_boolean_t honor_mergeinfo,
                           svn_ra_session_t *ra_session,
                           const char *parent_merge_src_fspath,
                           merge_cmd_baton_t *merge_b,
@@ -4265,7 +4268,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
   /* If we aren't honoring mergeinfo or this is a --record-only merge,
      we'll make quick work of this by simply adding dummy SOURCE->rev1:rev2
      ranges for all children. */
-  if (! honor_mergeinfo || merge_b->record_only)
+  if (! HONOR_MERGEINFO(merge_b) || merge_b->record_only)
     {
       for (i = 0; i < children_with_mergeinfo->nelts; i++)
         {
@@ -4800,8 +4803,8 @@ remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
    Set up the diff editor report to merge the SOURCE diff
    into TARGET_ABSPATH and drive it.
 
-   If mergeinfo is not being honored based on MERGE_B, see the doc string for
-   HONOR_MERGEINFO() for how this is determined, then ignore
+   If mergeinfo is not being honored (based on MERGE_B -- see the doc
+   string for HONOR_MERGEINFO() for how this is determined), then ignore
    CHILDREN_WITH_MERGEINFO and merge the SOURCE diff to TARGET_ABSPATH.
 
    If mergeinfo is being honored then perform a history-aware merge,
@@ -4872,11 +4875,9 @@ drive_merge_report_editor(const char *target_abspath,
   void *diff_edit_baton;
   void *report_baton;
   svn_revnum_t target_start;
-  svn_boolean_t honor_mergeinfo;
+  svn_boolean_t honor_mergeinfo = HONOR_MERGEINFO(merge_b);
   const char *old_sess2_url;
   svn_boolean_t is_rollback = source->rev1 > source->rev2;
-
-  honor_mergeinfo = HONOR_MERGEINFO(merge_b);
 
   /* Start with a safe default starting revision for the editor and the
      merge target. */
@@ -6644,14 +6645,11 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
   svn_boolean_t is_rollback = (source->rev1 > source->rev2);
   const char *primary_url = is_rollback ? source->url1 : source->url2;
   const char *target_url;
-  svn_boolean_t honor_mergeinfo, record_mergeinfo;
+  svn_boolean_t honor_mergeinfo = HONOR_MERGEINFO(merge_b);
   svn_client__merge_path_t *merge_target = NULL;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
-
-  honor_mergeinfo = HONOR_MERGEINFO(merge_b);
-  record_mergeinfo = RECORD_MERGEINFO(merge_b);
 
   /* Note that this is a single-file merge. */
   notify_b->is_single_file_merge = TRUE;
@@ -6882,7 +6880,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
      REMAINING_RANGES here instead of the possibly-pared-down
      RANGES_TO_MERGE because we want to record all the requested
      merge ranges, include the noop ones.  */
-  if (record_mergeinfo && remaining_ranges->nelts)
+  if (RECORD_MERGEINFO(merge_b) && remaining_ranges->nelts)
     {
       apr_array_header_t *filtered_rangelist;
 
@@ -8436,11 +8434,8 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
   svn_boolean_t is_rollback = (source->rev1 > source->rev2);
   const char *primary_url = is_rollback ? source->url1 : source->url2;
   const char *mergeinfo_path;
-  svn_boolean_t honor_mergeinfo, record_mergeinfo;
   svn_boolean_t same_urls = (strcmp(source->url1, source->url2) == 0);
-
-  honor_mergeinfo = HONOR_MERGEINFO(merge_b);
-  record_mergeinfo = RECORD_MERGEINFO(merge_b);
+  svn_boolean_t honor_mergeinfo = HONOR_MERGEINFO(merge_b);
 
   /* Note that this is not a single-file merge. */
   notify_b->is_single_file_merge = FALSE;
@@ -8488,7 +8483,6 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
      to merge across the whole tree.  */
   SVN_ERR(populate_remaining_ranges(notify_b->children_with_mergeinfo,
                                     source,
-                                    honor_mergeinfo,
                                     ra_session, mergeinfo_path,
                                     merge_b, scratch_pool, scratch_pool));
 
@@ -8735,7 +8729,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
     }
 
   /* Record mergeinfo where appropriate.*/
-  if (record_mergeinfo)
+  if (RECORD_MERGEINFO(merge_b))
     {
       err = record_mergeinfo_for_dir_merge(result_catalog,
                                            &range,
