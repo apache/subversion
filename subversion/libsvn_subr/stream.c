@@ -971,32 +971,32 @@ zerr_to_svn_error(int zerr, const char *function, z_stream *stream)
     {
     case Z_STREAM_ERROR:
       status = SVN_ERR_STREAM_MALFORMED_DATA;
-      message = "stream error";
+      message = _("stream error");
       break;
 
     case Z_MEM_ERROR:
       status = APR_ENOMEM;
-      message = "out of memory";
+      message = _("out of memory");
       break;
 
     case Z_BUF_ERROR:
       status = APR_ENOMEM;
-      message = "buffer error";
+      message = _("buffer error");
       break;
 
     case Z_VERSION_ERROR:
       status = SVN_ERR_STREAM_UNRECOGNIZED_DATA;
-      message = "version error";
+      message = _("version error");
       break;
 
     case Z_DATA_ERROR:
       status = SVN_ERR_STREAM_MALFORMED_DATA;
-      message = "corrupted data";
+      message = _("corrupt data");
       break;
 
     default:
       status = SVN_ERR_STREAM_UNRECOGNIZED_DATA;
-      message = "error";
+      message = _("unknown error");
       break;
     }
 
