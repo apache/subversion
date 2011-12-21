@@ -3244,7 +3244,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                                      resource->pool, resource->pool);
           if (serr != NULL)
             return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                        "couldn't fetch dirents of "
+                                        "could not fetch dirents of "
                                         "SVNParentPath", resource->pool);
 
           /* convert an io dirent hash to an fs dirent hash. */
@@ -3263,18 +3263,21 @@ deliver(const dav_resource *resource, ap_filter_t *output)
               if (dirent->kind == svn_node_file && dirent->special)
                 {
                   svn_node_kind_t resolved_kind;
-                  const char *name = key;
+                  const char *link_path = 
+                    svn_dirent_join(fs_parent_path, key, resource->pool);
 
-                  serr = svn_io_check_resolved_path(name, &resolved_kind,
+                  serr = svn_io_check_resolved_path(link_path, &resolved_kind,
                                                     resource->pool);
-                  if (serr != NULL)
+                  if (serr)
                     return dav_svn__convert_err(serr,
                                                 HTTP_INTERNAL_SERVER_ERROR,
-                                                "couldn't fetch dirents "
-                                                "of SVNParentPath",
+                                                "could not resolve symlink "
+                                                "dirent of SVNParentPath",
                                                 resource->pool);
                   if (resolved_kind != svn_node_dir)
                     continue;
+                  
+                  dirent->kind = svn_node_dir;
                 }
               else if (dirent->kind != svn_node_dir)
                 continue;
