@@ -153,6 +153,19 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1221463
+   Allow leading "r" in ?p= query string arguments.
+   Justification:
+     Same as for allowing '-r r42' in svn(1).
+   Votes:
+
+ * r1221780
+   Fix SVNParentPath listings for parent paths which contain symlinks.
+   This was supposed to have been fixed by r1132782, but that solution
+   had problems of its own.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
@@ -174,12 +187,6 @@ Veto-blocked changes:
          room for a future public API that really does full verification.)
          (without r1161164, r1161180)
      -1: danielsh (invasive, new feature)
-
- * r1221463
-   Allow leading "r" in ?p= query string arguments.
-   Justification:
-     Same as for allowing '-r r42' in svn(1).
-   Votes:
 
 Approved changes:
 =================
