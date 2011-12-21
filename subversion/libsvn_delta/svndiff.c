@@ -127,6 +127,58 @@ append_encoded_int(svn_stringbuf_t *header, svn_filesize_t val)
   svn_stringbuf_appendbytes(header, (const char *)buf, p - buf);
 }
 
+/* Converts a zlib error to an svn_error_t. zerr is the error code,
+   function is the function name, message is an optional extra part
+   of the error message (may be NULL). */
+static svn_error_t *
+zerr_to_svn_error(int zerr, const char *function, const char *message)
+{
+  apr_status_t status;
+  const char *zmsg;
+
+  if (zerr == Z_OK)
+    return SVN_NO_ERROR;
+
+  switch (zerr)
+    {
+    case Z_STREAM_ERROR:
+      status = SVN_ERR_STREAM_MALFORMED_DATA;
+      zmsg = _("stream error");
+      break;
+
+    case Z_MEM_ERROR:
+      status = APR_ENOMEM;
+      zmsg = _("out of memory");
+      break;
+
+    case Z_BUF_ERROR:
+      status = APR_ENOMEM;
+      zmsg = _("buffer error");
+      break;
+
+    case Z_VERSION_ERROR:
+      status = SVN_ERR_STREAM_UNRECOGNIZED_DATA;
+      zmsg = _("version error");
+      break;
+
+    case Z_DATA_ERROR:
+      status = SVN_ERR_STREAM_MALFORMED_DATA;
+      zmsg = _("corrupt data");
+      break;
+
+    default:
+      status = SVN_ERR_STREAM_UNRECOGNIZED_DATA;
+      zmsg = _("unknown error");
+      break;
+    }
+
+  if (message != NULL)
+    return svn_error_createf(status, NULL, "zlib (%s): %s: %s", function,
+                             zmsg, message);
+  else
+    return svn_error_createf(status, NULL, "zlib (%s): %s", function, zmsg);
+}
+
 /* If IN is a string that is >= MIN_COMPRESS_SIZE, zlib compress it and
    place the result in OUT, with an integer prepended specifying the
    original size.  If IN is < MIN_COMPRESS_SIZE, or if the compressed
@@ -156,15 +208,18 @@ zlib_encode(const char *data,
     }
   else
     {
+      int zerr;
+
       svn_stringbuf_ensure(out, svnCompressBound(len) + intlen);
       endlen = out->blocksize;
 
-      if (compress2((unsigned char *)out->data + intlen, &endlen,
-                    (const unsigned char *)data, len,
-                    compression_level) != Z_OK)
-        return svn_error_create(SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA,
-                                NULL,
-                                _("Compression of svndiff data failed"));
+      zerr = compress2((unsigned char *)out->data + intlen, &endlen,
+                       (const unsigned char *)data, len,
+                       compression_level);
+      if (zerr != Z_OK)
+        return svn_error_trace(
+                 zerr_to_svn_error(zerr, "compress2",
+                                   _("Compression of svndiff data failed")));
 
       /* Compression didn't help :(, just append the original text */
       if (endlen >= len)
@@ -472,12 +527,14 @@ zlib_decode(const unsigned char *in, apr_size_t inLen, svn_stringbuf_t *out,
   else
     {
       unsigned long zlen = len;
+      int zerr;
 
       svn_stringbuf_ensure(out, len);
-      if (uncompress((unsigned char *)out->data, &zlen, in, inLen) != Z_OK)
-        return svn_error_create(SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA,
-                                NULL,
-                                _("Decompression of svndiff data failed"));
+      zerr = uncompress((unsigned char *)out->data, &zlen, in, inLen);
+      if (zerr != Z_OK)
+        return svn_error_trace(
+                 zerr_to_svn_error(zerr, "uncompress",
+                                   _("Decompression of svndiff data failed")));
 
       /* Zlib should not produce something that has a different size than the
          original length we stored. */
