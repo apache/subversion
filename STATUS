@@ -191,9 +191,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1221793
-   JavaHL: add missing svn_wc_notify_action_t item that causes a runtime
-   Exception when that notification is sent.
-   Votes:
-     +1: markphip, hwright
