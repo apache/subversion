@@ -444,6 +444,36 @@ def hotcopy_dot(sbox):
 
 #----------------------------------------------------------------------
 
+# This test is redundant for FSFS. The hotcopy_dot and hotcopy_incremental
+# tests cover this check for FSFS already.
+@SkipUnless(svntest.main.is_fs_type_bdb)
+def hotcopy_format(sbox):
+  "'svnadmin hotcopy' checking db/format file"
+  sbox.build()
+
+  backup_dir, backup_url = sbox.add_repo_path('backup')
+  exit_code, output, errput = svntest.main.run_svnadmin("hotcopy",
+                                                        sbox.repo_dir,
+                                                        backup_dir)
+  if errput:
+    print("Error: hotcopy failed")
+    raise svntest.Failure
+
+  # verify that the db/format files are the same
+  fp = open(os.path.join(sbox.repo_dir, "db", "format"))
+  contents1 = fp.read()
+  fp.close()
+
+  fp2 = open(os.path.join(backup_dir, "db", "format"))
+  contents2 = fp2.read()
+  fp2.close()
+
+  if contents1 != contents2:
+    print("Error: db/format file contents do not match after hotcopy")
+    raise svntest.Failure
+
+#----------------------------------------------------------------------
+
 def setrevprop(sbox):
   "'setlog' and 'setrevprop', bypassing hooks'"
   sbox.build()
@@ -1594,6 +1624,7 @@ test_list = [ None,
               dump_move_dir_modify_child,
               dump_quiet,
               hotcopy_dot,
+              hotcopy_format,
               setrevprop,
               verify_windows_paths_in_repos,
               verify_incremental_fsfs,
