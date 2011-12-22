@@ -48,7 +48,7 @@ Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 def check_hotcopy_bdb(src, dst):
-  "Verify that the SRC BDB repository has been correcly copied to DST."
+  "Verify that the SRC BDB repository has been correctly copied to DST."
   ### TODO: This function should be extended to verify all hotcopied files,
   ### not just compare the output of 'svnadmin dump'. See check_hotcopy_fsfs().
   exit_code, origout, origerr = svntest.main.run_svnadmin("dump", src,
@@ -59,7 +59,7 @@ def check_hotcopy_bdb(src, dst):
     raise svntest.Failure
 
 def check_hotcopy_fsfs(src, dst):
-    "Verify that the SRC FSFS repository has been correcly copied to DST."
+    "Verify that the SRC FSFS repository has been correctly copied to DST."
     # Walk the source and compare all files to the destination
     for src_dirpath, src_dirs, src_files in os.walk(src):
       # Verify that the current directory exists in the destination
