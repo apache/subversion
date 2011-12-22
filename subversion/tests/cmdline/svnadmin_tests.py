@@ -1616,18 +1616,22 @@ def hotcopy_incremental(sbox):
 @SkipUnless(svntest.main.is_fs_type_fsfs)
 def hotcopy_incremental_packed(sbox):
   "'svnadmin hotcopy --incremental' with packing"
-  sbox.build()
+  sbox.build(create_wc=False)
 
   backup_dir, backup_url = sbox.add_repo_path('backup')
   os.mkdir(backup_dir)
   cwd = os.getcwd()
-
   # Configure two files per shard to trigger packing
   format_file = open(os.path.join(sbox.repo_dir, 'db', 'format'), 'w')
   format_file.write("4\nlayout sharded 2\n")
   format_file.close()
 
-  for i in [1, 2, 3]:
+  # Pack revisions 0 and 1.
+  svntest.actions.run_and_verify_svnadmin(
+    None, None, [], "pack", os.path.join(cwd, sbox.repo_dir))
+
+  # Commit 5 more revs, hotcopy and pack after each commit.
+  for i in [1, 2, 3, 4, 5]:
     os.chdir(backup_dir)
     svntest.actions.run_and_verify_svnadmin(
       None, None, [],
@@ -1637,7 +1641,7 @@ def hotcopy_incremental_packed(sbox):
 
     check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
 
-    if i < 3:
+    if i < 5:
       sbox.simple_mkdir("newdir-%i" % i)
       sbox.simple_commit()
       svntest.actions.run_and_verify_svnadmin(
