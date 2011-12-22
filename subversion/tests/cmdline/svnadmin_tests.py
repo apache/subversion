@@ -1612,6 +1612,38 @@ def hotcopy_incremental(sbox):
       sbox.simple_mkdir("newdir-%i" % i)
       sbox.simple_commit()
 
+@XFail()
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def hotcopy_incremental_packed(sbox):
+  "'svnadmin hotcopy --incremental' with packing"
+  sbox.build()
+
+  backup_dir, backup_url = sbox.add_repo_path('backup')
+  os.mkdir(backup_dir)
+  cwd = os.getcwd()
+
+  # Configure two files per shard to trigger packing
+  format_file = open(os.path.join(sbox.repo_dir, 'db', 'format'), 'w')
+  format_file.write("4\nlayout sharded 2\n")
+  format_file.close()
+
+  for i in [1, 2, 3]:
+    os.chdir(backup_dir)
+    svntest.actions.run_and_verify_svnadmin(
+      None, None, [],
+      "hotcopy", "--incremental", os.path.join(cwd, sbox.repo_dir), '.')
+
+    os.chdir(cwd)
+
+    check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+
+    if i < 3:
+      sbox.simple_mkdir("newdir-%i" % i)
+      sbox.simple_commit()
+      svntest.actions.run_and_verify_svnadmin(
+        None, None, [], "pack", os.path.join(cwd, sbox.repo_dir))
+
+
 ########################################################################
 # Run the tests
 
@@ -1644,6 +1676,7 @@ test_list = [ None,
               test_lslocks_and_rmlocks,
               load_ranges,
               hotcopy_incremental,
+              hotcopy_incremental_packed,
              ]
 
 if __name__ == '__main__':
