@@ -2673,6 +2673,8 @@ typedef struct notification_receiver_baton_t
   svn_boolean_t is_single_file_merge;
 
   /* Depth first ordered list of paths that needs special care while merging.
+     ### And ...? This is not just a list of paths. See the global comment
+         'THE CHILDREN_WITH_MERGEINFO ARRAY'.
      This defaults to NULL. For 'same_url' merge alone we set it to
      proper array. This is used by notification_receiver to put a
      merge notification begin lines. */
@@ -4226,8 +4228,10 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
 
 /* Helper for do_directory_merge().
 
-   For each child in CHILDREN_WITH_MERGEINFO, populate that
-   child's remaining_ranges list.  CHILDREN_WITH_MERGEINFO is expected
+   For each (svn_client__merge_path_t *) child in CHILDREN_WITH_MERGEINFO,
+   populate that child's 'remaining_ranges' list with (### ... what?),
+   and populate that child's 'implicit_mergeinfo' with its implicit
+   mergeinfo (natural history).  CHILDREN_WITH_MERGEINFO is expected
    to be sorted in depth first order and each child must be processed in
    that order.  The inheritability of all calculated ranges is TRUE.
 
@@ -4236,6 +4240,7 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
    intelligent about populating remaining_ranges list.  Otherwise, it
    will claim that each child has a single remaining range, from
    SOURCE->rev1, to SOURCE->rev2.
+   ### We also take the short-cut if doing record-only.  Why?
 
    SCRATCH_POOL is used for all temporary allocations.  Changes to
    CHILDREN_WITH_MERGEINFO are made in RESULT_POOL.
@@ -8506,7 +8511,9 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
                                            notify_b->children_with_mergeinfo,
                                            merge_b, scratch_pool, iterpool));
 
-      /* Adjust subtrees' remaining_ranges to deal with issue #3067 */
+      /* Adjust subtrees' remaining_ranges to deal with issue #3067:
+       * "subtrees that don't exist at the start or end of a merge range
+       * shouldn't break the merge". */
       SVN_ERR(fix_deleted_subtree_ranges(source,
                                          ra_session,
                                          notify_b->children_with_mergeinfo,
