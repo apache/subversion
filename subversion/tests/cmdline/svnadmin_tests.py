@@ -1606,7 +1606,7 @@ def hotcopy_incremental(sbox):
 
     os.chdir(cwd)
 
-    check_hotcopy(sbox.repo_dir, backup_dir)
+    check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
 
     if i < 3:
       sbox.simple_mkdir("newdir-%i" % i)
