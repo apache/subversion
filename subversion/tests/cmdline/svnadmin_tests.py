@@ -29,7 +29,6 @@ import os
 import re
 import shutil
 import sys
-import sqlite3
 
 # Our testing module
 import svntest
