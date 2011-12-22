@@ -6641,7 +6641,6 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
   svn_boolean_t inherited = FALSE;
   svn_boolean_t is_rollback = (source->rev1 > source->rev2);
   const char *primary_url = is_rollback ? source->url1 : source->url2;
-  const char *target_url;
   svn_boolean_t honor_mergeinfo = HONOR_MERGEINFO(merge_b);
   svn_client__merge_path_t *merge_target = NULL;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -6650,10 +6649,6 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
 
   /* Note that this is a single-file merge. */
   notify_b->is_single_file_merge = TRUE;
-
-  SVN_ERR(svn_wc__node_get_url(&target_url, merge_b->ctx->wc_ctx,
-                               target_abspath,
-                               iterpool, iterpool));
 
   range.start = source->rev1;
   range.end = source->rev2;
@@ -6664,10 +6659,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
       merge_target = svn_client__merge_path_create(target_abspath,
                                                    scratch_pool);
 
-      /* Fetch mergeinfo (temporarily reparenting ra_session1 to
-         working copy target URL). */
-      SVN_ERR(svn_ra_reparent(merge_b->ra_session1, target_url,
-                              iterpool));
+      /* Fetch mergeinfo. */
       err = get_full_mergeinfo(&target_mergeinfo,
                                &(merge_target->implicit_mergeinfo),
                                &inherited, svn_mergeinfo_inherited,
@@ -6688,8 +6680,6 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
             }
           return svn_error_trace(err);
         }
-
-      SVN_ERR(svn_ra_reparent(merge_b->ra_session1, source->url1, iterpool));
 
       /* Calculate remaining merges unless this is a record only merge.
          In that case the remaining range is the whole range described
