@@ -1612,7 +1612,6 @@ def hotcopy_incremental(sbox):
       sbox.simple_mkdir("newdir-%i" % i)
       sbox.simple_commit()
 
-@XFail()
 @SkipUnless(svntest.main.is_fs_type_fsfs)
 def hotcopy_incremental_packed(sbox):
   "'svnadmin hotcopy --incremental' with packing"

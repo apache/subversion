@@ -7862,15 +7862,14 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
   const char *dst_subdir;
   const char *packed_shard;
   const char *src_subdir_packed_shard;
-  svn_revnum_t shard_rev;
   svn_revnum_t revprop_rev;
   apr_pool_t *iterpool;
 
   /* Copy the pack file. */
   src_subdir = svn_dirent_join(src_fs->path, PATH_REVS_DIR, scratch_pool);
   dst_subdir = svn_dirent_join(dst_fs->path, PATH_REVS_DIR, scratch_pool);
-  shard_rev = rev / max_files_per_dir;
-  packed_shard = apr_psprintf(scratch_pool, "%ld.pack", shard_rev);
+  packed_shard = apr_psprintf(scratch_pool, "%ld.pack",
+                              rev / max_files_per_dir);
   src_subdir_packed_shard = svn_dirent_join(src_subdir, packed_shard,
                                             scratch_pool);
   SVN_ERR(hotcopy_io_copy_dir_recursively(src_subdir_packed_shard,
@@ -7883,22 +7882,22 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
   src_subdir = svn_dirent_join(src_fs->path, PATH_REVPROPS_DIR, scratch_pool);
   dst_subdir = svn_dirent_join(dst_fs->path, PATH_REVPROPS_DIR, scratch_pool);
   iterpool = svn_pool_create(scratch_pool);
-  for (revprop_rev = shard_rev;
-       revprop_rev < shard_rev + max_files_per_dir;
+  for (revprop_rev = rev;
+       revprop_rev < rev + max_files_per_dir;
        revprop_rev++)
     {
       svn_pool_clear(iterpool);
 
       SVN_ERR(hotcopy_copy_shard_file(src_subdir, dst_subdir,
-                                      rev, max_files_per_dir,
+                                      revprop_rev, max_files_per_dir,
                                       iterpool));
     }
   svn_pool_destroy(iterpool);
 
   /* If necessary, update the min-unpacked rev file in the hotcopy. */
-  if (*dst_min_unpacked_rev < shard_rev + max_files_per_dir)
+  if (*dst_min_unpacked_rev < rev + max_files_per_dir)
     {
-      *dst_min_unpacked_rev = shard_rev + max_files_per_dir;
+      *dst_min_unpacked_rev = rev + max_files_per_dir;
       SVN_ERR(write_revnum_file(dst_fs->path, PATH_MIN_UNPACKED_REV,
                                 *dst_min_unpacked_rev,
                                 scratch_pool));
@@ -8209,7 +8208,10 @@ hotcopy_body(void *baton, apr_pool_t *pool)
                                    PATH_MIN_UNPACKED_REV, pool));
     }
   else
-    src_min_unpacked_rev = 0;
+    {
+      src_min_unpacked_rev = 0;
+      dst_min_unpacked_rev = 0;
+    }
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
@@ -8269,6 +8271,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   /* Now, copy pairs of non-packed revisions and revprop files.
    * If necessary, update 'current' after copying all files from a shard. */
   SVN_ERR_ASSERT(rev == src_min_unpacked_rev);
+  SVN_ERR_ASSERT(src_min_unpacked_rev == dst_min_unpacked_rev);
   revprop_src_subdir = svn_dirent_join(src_fs->path, PATH_REVPROPS_DIR, pool);
   revprop_dst_subdir = svn_dirent_join(dst_fs->path, PATH_REVPROPS_DIR, pool);
   SVN_ERR(svn_io_make_dir_recursively(revprop_dst_subdir, pool));
