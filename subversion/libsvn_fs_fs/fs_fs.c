@@ -7865,7 +7865,7 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
   svn_revnum_t revprop_rev;
   apr_pool_t *iterpool;
 
-  /* Copy the pack file. */
+  /* Copy the packed shard. */
   src_subdir = svn_dirent_join(src_fs->path, PATH_REVS_DIR, scratch_pool);
   dst_subdir = svn_dirent_join(dst_fs->path, PATH_REVS_DIR, scratch_pool);
   packed_shard = apr_psprintf(scratch_pool, "%ld.pack",
