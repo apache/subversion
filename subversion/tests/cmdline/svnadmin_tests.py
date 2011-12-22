@@ -29,6 +29,7 @@ import os
 import re
 import shutil
 import sys
+import sqlite3
 
 # Our testing module
 import svntest
@@ -46,6 +47,74 @@ Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
+def check_hotcopy(src, dst):
+    "Verify that the SRC repository has been correcly copied to DST."
+    # Walk the source and compare all files to the destination
+    for src_dirpath, src_dirs, src_files in os.walk(src):
+      # Verify that the current directory exists in the destination
+      dst_dirpath = src_dirpath.replace(src, dst)
+      if not os.path.isdir(dst_dirpath):
+        raise svntest.Failure("%s does not exist in hotcopy "
+                              "destination" % dst_dirpath)
+      # Verify that all dirents in the current directory also exist in source
+      for dst_dirent in os.listdir(dst_dirpath):
+        src_dirent = os.path.join(src_dirpath, dst_dirent)
+        if not os.path.exists(src_dirent):
+          raise svntest.Failure("%s does not exist in hotcopy "
+                                "source" % src_dirent)
+      # Compare all files in this directory
+      for src_file in src_files:
+        src_path = os.path.join(src_dirpath, src_file)
+        dst_path = os.path.join(dst_dirpath, src_file)
+        if not os.path.isfile(dst_path):
+          raise svntest.Failure("%s does not exist in hotcopy "
+                                "destination" % dst_path)
+
+        # Special case for rep-cache: It will always differ in a byte-by-byte
+        # comparison, so compare db tables instead.
+        if src_file == 'rep-cache.db':
+          db1 = svntest.sqlite3.connect(src_path)
+          db2 = svntest.sqlite3.connect(dst_path)
+          rows1 = []
+          rows2 = []
+          for row in db1.execute("select * from rep_cache order by hash"):
+            rows1.append(row)
+          for row in db2.execute("select * from rep_cache order by hash"):
+            rows2.append(row)
+          if len(rows1) != len(rows2):
+            raise svntest.Failure("number of rows in rep-cache differs")
+          for i in range(len(rows1)):
+            if rows1[i] != rows2[i]:
+              raise svntest.Failure("rep-cache row %i differs: '%s' vs. '%s'"
+                                    % (row, rows1[i]))
+          continue
+
+        f1 = open(src_path, 'r')
+        f2 = open(dst_path, 'r')
+        while True:
+          offset = 0
+          BUFSIZE = 1024
+          buf1 = f1.read(BUFSIZE)
+          buf2 = f2.read(BUFSIZE)
+          if not buf1 or not buf2:
+            if not buf1 and not buf2:
+              # both at EOF
+              break
+            elif buf1:
+              raise svntest.Failure("%s differs at offset %i" % 
+                                    (dst_path, offset))
+            elif buf2:
+              raise svntest.Failure("%s differs at offset %i" % 
+                                    (dst_path, offset))
+          if len(buf1) != len(buf2):
+            raise svntest.Failure("%s differs in length" % dst_path)
+          for i in range(len(buf1)):
+            if buf1[i] != buf2[i]:
+              raise svntest.Failure("%s differs at offset %i"
+                                    % (dst_path, offset))
+            offset += 1
+        f1.close()
+        f2.close()
 
 #----------------------------------------------------------------------
 
@@ -359,14 +428,7 @@ def hotcopy_dot(sbox):
 
   os.chdir(cwd)
 
-  exit_code, origout, origerr = svntest.main.run_svnadmin("dump",
-                                                          sbox.repo_dir,
-                                                          '--quiet')
-  exit_code, backout, backerr = svntest.main.run_svnadmin("dump",
-                                                          backup_dir,
-                                                          '--quiet')
-  if origerr or backerr or origout != backout:
-    raise svntest.Failure
+  check_hotcopy(sbox.repo_dir, backup_dir)
 
 #----------------------------------------------------------------------
 
@@ -1527,14 +1589,7 @@ def hotcopy_incremental(sbox):
 
     os.chdir(cwd)
 
-    exit_code, origout, origerr = svntest.main.run_svnadmin("dump",
-                                                            sbox.repo_dir,
-                                                            '--quiet')
-    exit_code, backout, backerr = svntest.main.run_svnadmin("dump",
-                                                            backup_dir,
-                                                            '--quiet')
-    if origerr or backerr or origout != backout:
-      raise svntest.Failure
+    check_hotcopy(sbox.repo_dir, backup_dir)
 
     if i < 3:
       sbox.simple_mkdir("newdir-%i" % i)
