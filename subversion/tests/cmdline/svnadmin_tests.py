@@ -1616,7 +1616,7 @@ def hotcopy_incremental(sbox):
 @SkipUnless(svntest.main.is_fs_type_fsfs)
 def hotcopy_incremental_packed(sbox):
   "'svnadmin hotcopy --incremental' with packing"
-  sbox.build(create_wc=False)
+  sbox.build()
 
   backup_dir, backup_url = sbox.add_repo_path('backup')
   os.mkdir(backup_dir)
