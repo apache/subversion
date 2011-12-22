@@ -47,8 +47,17 @@ Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
-def check_hotcopy(src, dst):
-    "Verify that the SRC repository has been correcly copied to DST."
+def check_hotcopy_bdb(src, dst):
+  "Verify that the SRC BDB repository has been correcly copied to DST."
+  exit_code, origout, origerr = svntest.main.run_svnadmin("dump", src,
+                                                          '--quiet')
+  exit_code, backout, backerr = svntest.main.run_svnadmin("dump", dst,
+                                                          '--quiet')
+  if origerr or backerr or origout != backout:
+    raise svntest.Failure
+
+def check_hotcopy_fsfs(src, dst):
+    "Verify that the SRC FSFS repository has been correcly copied to DST."
     # Walk the source and compare all files to the destination
     for src_dirpath, src_dirs, src_files in os.walk(src):
       # Verify that the current directory exists in the destination
@@ -428,7 +437,10 @@ def hotcopy_dot(sbox):
 
   os.chdir(cwd)
 
-  check_hotcopy(sbox.repo_dir, backup_dir)
+  if svntest.main.is_fs_type_fsfs():
+    check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+  else:
+    check_hotcopy_bdb(sbox.repo_dir, backup_dir)
 
 #----------------------------------------------------------------------
 
