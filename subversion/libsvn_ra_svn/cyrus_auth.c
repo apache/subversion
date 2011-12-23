@@ -365,8 +365,9 @@ static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
                            callbacks, SASL_SUCCESS_DATA,
                            sasl_ctx);
   if (result != SASL_OK)
-    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                            sasl_errstring(result, NULL, NULL));
+    return svn_error_createf(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                             _("Could not create SASL client context: %s"),
+                             sasl_errstring(result, NULL, NULL));
 
   svn_atomic_inc(&sasl_ctx_count);
   apr_pool_cleanup_register(pool, *sasl_ctx, sasl_dispose_cb,
