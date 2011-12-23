@@ -166,6 +166,15 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r1222521
+   Turn another wc-db assertion people are reporting into a normal error.
+   Justification:
+     An informative error message helps people more than an assert (which
+     in case of TSVN can mean crashing the Windows Explorer).
+     Reported several times on users@, e.g. here:
+     http://svn.haxx.se/users/archive-2011-12/0299.shtml
+   Votes:
+     +1: stsp
 
 Veto-blocked changes:
 =====================
