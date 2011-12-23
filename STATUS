@@ -80,7 +80,7 @@ Candidate changes:
    Justification:
      Badness within 'svn', fixed within 'svn'. Needed for r1210147 group.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, rhuijben
 
  * r1210147, r1202132, r1202333, r1220740
    Fix the 'svn log --diff' code so that it correctly shows a diff of a
@@ -164,7 +164,7 @@ Candidate changes:
    This was supposed to have been fixed by r1132782, but that solution
    had problems of its own.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, rhuijben
 
  * r1222521
    Turn another wc-db assertion people are reporting into a normal error.
@@ -183,7 +183,7 @@ Candidate changes:
    Justification:
      Similar fixes already went into 1.7.1.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
 Veto-blocked changes:
 =====================
