@@ -166,7 +166,7 @@ Candidate changes:
    Votes:
      +1: cmpilato, rhuijben
 
- * r1222521
+ * r1222521, r1222693
    Turn another wc-db assertion people are reporting into a normal error.
    Justification:
      An informative error message helps people more than an assert (which
