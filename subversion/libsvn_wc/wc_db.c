@@ -7231,7 +7231,7 @@ read_children_info(void *baton,
   svn_boolean_t have_row;
   const char *repos_root_url = NULL;
   const char *repos_uuid = NULL;
-  apr_int64_t last_repos_id;
+  apr_int64_t last_repos_id = INVALID_REPOS_ID;
   apr_hash_t *nodes = rci->nodes;
   apr_hash_t *conflicts = rci->conflicts;
   apr_pool_t *result_pool = rci->result_pool;
@@ -7299,20 +7299,54 @@ read_children_info(void *baton,
             }
           else
             {
+              const char *last_repos_root_url = NULL;
+              const char *last_repos_uuid = NULL;
+
               apr_int64_t repos_id = svn_sqlite__column_int64(stmt, 1);
-              if (!repos_root_url)
+              if (!repos_root_url ||
+                  (last_repos_id != INVALID_REPOS_ID &&
+                   repos_id != last_repos_id))
                 {
+                  last_repos_root_url = repos_root_url;
+                  last_repos_uuid = repos_uuid;
                   err = fetch_repos_info(&repos_root_url, &repos_uuid,
                                          wcroot->sdb, repos_id, result_pool);
                   if (err)
                     SVN_ERR(svn_error_compose_create(err,
-                                                     svn_sqlite__reset(stmt)));
-                  last_repos_id = repos_id;
+                                                 svn_sqlite__reset(stmt)));
                 }
+
+              if (last_repos_id == INVALID_REPOS_ID)
+                last_repos_id = repos_id;
 
               /* Assume working copy is all one repos_id so that a
                  single cached value is sufficient. */
-              SVN_ERR_ASSERT(repos_id == last_repos_id);
+              if (repos_id != last_repos_id)
+                return svn_error_createf(
+                         SVN_ERR_WC_DB_ERROR, NULL,
+                         _("The node '%s' comes from unexpected repository "
+                           "(ID '%" APR_INT64_T_FMT "'%s%s, expected ID '%"
+                           APR_INT64_T_FMT"'%s%s); this could be a "
+                           "misconfigured file-external which points to a "
+                           "foreign repository"),
+                         child_relpath, repos_id,
+                         repos_root_url
+                           ? apr_psprintf(scratch_pool, ", URL '%s'",
+                                          repos_root_url)
+                           : "",
+                         repos_uuid
+                           ? apr_psprintf(scratch_pool, ", UUID '%s'",
+                                          repos_uuid)
+                           : "",
+                         last_repos_id,
+                         last_repos_root_url
+                           ? apr_psprintf(scratch_pool, ", URL '%s'",
+                                          last_repos_root_url)
+                           : "",
+                         last_repos_uuid
+                           ? apr_psprintf(scratch_pool, ", UUID '%s'",
+                                          last_repos_uuid)
+                           : "");
               child->repos_root_url = repos_root_url;
               child->repos_uuid = repos_uuid;
             }
