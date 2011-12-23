@@ -171,7 +171,9 @@ Candidate changes:
    Justification:
      An informative error message helps people more than an assert (which
      in case of TSVN can mean crashing the Windows Explorer).
-     Reported several times on users@, e.g. here:
+     Reported several times on users@, see:
+     http://svn.haxx.se/users/archive-2011-11/0527.shtml
+     http://svn.haxx.se/users/archive-2011-12/0063.shtml
      http://svn.haxx.se/users/archive-2011-12/0299.shtml
    Votes:
      +1: stsp
