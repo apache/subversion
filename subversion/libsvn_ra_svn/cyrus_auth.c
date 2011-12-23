@@ -338,14 +338,30 @@ get_password_cb(sasl_conn_t *conn, void *b, int id, sasl_secret_t **psecret)
   return SASL_FAIL;
 }
 
+/* Sometimes SASL returns SASL_FAIL as RESULT and sets errno.
+ * SASL_FAIL translates to "generic error" which is quite unhelpful.
+ * Try to append a more informative error message based on errno. */
+static const char *
+get_sasl_errno_msg(int result, apr_pool_t *result_pool)
+{
+  char buf[1024];
+
+  if (result == SASL_FAIL && errno != 0)
+    return apr_psprintf(result_pool, ": %s",
+                        svn_strerror(APR_FROM_OS_ERROR(errno),
+                                     buf, sizeof(buf)));
+  return "";
+}
+
 /* Wrap an error message from SASL with a prefix that allows users
  * to tell that the error message came from SASL. */
 static const char *
-get_sasl_error(sasl_conn_t *sasl_ctx, apr_pool_t *result_pool)
+get_sasl_error(sasl_conn_t *sasl_ctx, int result, apr_pool_t *result_pool)
 {
   return apr_psprintf(result_pool,
-                      _("SASL authentication error: %s"),
-                      sasl_errdetail(sasl_ctx));
+                      _("SASL authentication error: %s%s"),
+                      sasl_errdetail(sasl_ctx),
+                      get_sasl_errno_msg(result, result_pool));
 }
 
 /* Create a new SASL context. */
@@ -366,9 +382,9 @@ static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
                            sasl_ctx);
   if (result != SASL_OK)
     return svn_error_createf(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                             _("Could not create SASL client context: %s"),
-                             sasl_errstring(result, NULL, NULL));
-
+                             _("Could not create SASL context: %s%s"),
+                             sasl_errstring(result, NULL, NULL),
+                             get_sasl_errno_msg(result, pool));
   svn_atomic_inc(&sasl_ctx_count);
   apr_pool_cleanup_register(pool, *sasl_ctx, sasl_dispose_cb,
                             apr_pool_cleanup_null);
@@ -383,7 +399,7 @@ static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
                             SASL_AUTH_EXTERNAL, " ");
       if (result != SASL_OK)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                get_sasl_error(*sasl_ctx, pool));
+                                get_sasl_error(*sasl_ctx, result, pool));
     }
 
   /* Set security properties. */
@@ -429,7 +445,7 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
           case SASL_NOMEM:
             /* Fatal error.  Fail the authentication. */
             return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                    get_sasl_error(sasl_ctx, pool));
+                                    get_sasl_error(sasl_ctx, result, pool));
           default:
             /* For anything else, delete the mech from the list
                and try again. */
@@ -490,7 +506,7 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
 
       if (result != SASL_OK && result != SASL_CONTINUE)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                get_sasl_error(sasl_ctx, pool));
+                                get_sasl_error(sasl_ctx, result, pool));
 
       /* If the server thinks we're done, then don't send any response. */
       if (strcmp(status, "success") == 0)
@@ -574,7 +590,7 @@ static svn_error_t *sasl_read_cb(void *baton, char *buffer, apr_size_t *len)
                            &sasl_baton->read_len);
       if (result != SASL_OK)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                get_sasl_error(sasl_baton->ctx,
+                                get_sasl_error(sasl_baton->ctx, result,
                                                sasl_baton->scratch_pool));
     }
 
@@ -616,7 +632,7 @@ sasl_write_cb(void *baton, const char *buffer, apr_size_t *len)
 
       if (result != SASL_OK)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                get_sasl_error(sasl_baton->ctx,
+                                get_sasl_error(sasl_baton->ctx, result,
                                                sasl_baton->scratch_pool));
     }
 
@@ -673,7 +689,7 @@ svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
       result = sasl_getprop(sasl_ctx, SASL_SSF, (void*) &ssfp);
       if (result != SASL_OK)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                get_sasl_error(sasl_ctx, pool));
+                                get_sasl_error(sasl_ctx, result, pool));
 
       if (*ssfp > 0)
         {
@@ -692,7 +708,7 @@ svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
           result = sasl_getprop(sasl_ctx, SASL_MAXOUTBUF, &maxsize);
           if (result != SASL_OK)
             return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                    get_sasl_error(sasl_ctx, pool));
+                                    get_sasl_error(sasl_ctx, result, pool));
           sasl_baton->maxsize = *((const unsigned int *) maxsize);
 
           /* If there is any data left in the read buffer at this point,
@@ -705,7 +721,7 @@ svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
                                    &sasl_baton->read_len);
               if (result != SASL_OK)
                 return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                        get_sasl_error(sasl_ctx, pool));
+                                        get_sasl_error(sasl_ctx, result, pool));
               conn->read_end = conn->read_ptr;
             }
 
