@@ -7325,28 +7325,10 @@ read_children_info(void *baton,
                 return svn_error_createf(
                          SVN_ERR_WC_DB_ERROR, NULL,
                          _("The node '%s' comes from unexpected repository "
-                           "(ID '%" APR_INT64_T_FMT "'%s%s, expected ID '%"
-                           APR_INT64_T_FMT"'%s%s); this could be a "
-                           "misconfigured file-external which points to a "
-                           "foreign repository"),
-                         child_relpath, repos_id,
-                         repos_root_url
-                           ? apr_psprintf(scratch_pool, ", URL '%s'",
-                                          repos_root_url)
-                           : "",
-                         repos_uuid
-                           ? apr_psprintf(scratch_pool, ", UUID '%s'",
-                                          repos_uuid)
-                           : "",
-                         last_repos_id,
-                         last_repos_root_url
-                           ? apr_psprintf(scratch_pool, ", URL '%s'",
-                                          last_repos_root_url)
-                           : "",
-                         last_repos_uuid
-                           ? apr_psprintf(scratch_pool, ", UUID '%s'",
-                                          last_repos_uuid)
-                           : "");
+                           "'%s', expected '%s'; if this node is a file "
+                           "external using the correct URL in the external "
+                           "definition can fix the problem, see issue #4087"),
+                         child_relpath, repos_root_url, last_repos_root_url);
               child->repos_root_url = repos_root_url;
               child->repos_uuid = repos_uuid;
             }
