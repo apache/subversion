@@ -346,10 +346,9 @@ get_sasl_errno_msg(int result, apr_pool_t *result_pool)
 {
   char buf[1024];
 
-  if (result == SASL_FAIL && errno != 0)
+  if (result == SASL_FAIL && apr_get_os_error() != 0)
     return apr_psprintf(result_pool, ": %s",
-                        svn_strerror(APR_FROM_OS_ERROR(errno),
-                                     buf, sizeof(buf)));
+                        svn_strerror(apr_get_os_error(), buf, sizeof(buf)));
   return "";
 }
 
