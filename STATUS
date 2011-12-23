@@ -178,7 +178,7 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1222628
+ * r1222628, r1222644, r1222699
    Improve another error message coming from SASL.
    Justification:
      Similar fixes already went into 1.7.1.
