@@ -178,6 +178,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1222628
+   Improve another error message coming from SASL.
+   Justification:
+     Similar fixes already went into 1.7.1.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
