@@ -176,7 +176,7 @@ Candidate changes:
      http://svn.haxx.se/users/archive-2011-12/0063.shtml
      http://svn.haxx.se/users/archive-2011-12/0299.shtml
    Votes:
-     +1: stsp
+     +1: stsp, steveking
 
  * r1222628, r1222644, r1222699
    Improve another error message coming from SASL.
