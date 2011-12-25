@@ -726,7 +726,7 @@ svn_cstring_tokenize(const char *sep, char **str)
 
     /* let APR handle edge cases and multiple separators */
     csep = *sep;
-    if (csep == '\0' || sep[2] != '\0')
+    if (csep == '\0' || sep[1] != '\0')
       return apr_strtok(NULL, sep, str);
 
     /* skip characters in sep (will terminate at '\0') */
