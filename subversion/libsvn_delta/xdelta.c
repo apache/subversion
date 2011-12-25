@@ -230,6 +230,39 @@ match_length(const char *a, const char *b, apr_size_t max_len)
   return pos;
 }
 
+/* Return the smallest byte index at which positions left of A and B differ
+ * (A[-result] != B[-result]).  If no difference can be found in the first
+ * MAX_LEN characters, MAX_LEN will be returned.
+ */
+static apr_size_t
+reverse_match_length(const char *a, const char *b, apr_size_t max_len)
+{
+  apr_size_t pos = 0;
+
+#if SVN_UNALIGNED_ACCESS_IS_OK
+
+  /* Chunky processing is so much faster ...
+   *
+   * We can't make this work on architectures that require aligned access
+   * because A and B will probably have different alignment. So, skipping
+   * the first few chars until alignment is reached is not an option.
+   */
+  for (pos = sizeof(apr_size_t); pos <= max_len; pos += sizeof(apr_size_t))
+    if (*(const apr_size_t*)(a - pos) != *(const apr_size_t*)(b - pos))
+      break;
+
+  pos -= sizeof(apr_size_t);
+    
+#endif
+
+  while (++pos <= max_len)
+    if (a[-pos] != b[-pos])
+      break;
+    
+  return pos-1;
+}
+
+
 /* Try to find a match for the target data B in BLOCKS, and then
    extend the match as long as data in A and B at the match position
    continues to match.  We set the position in A we ended up in (in
@@ -282,6 +315,38 @@ find_match(const struct blocks *blocks,
   return MATCH_BLOCKSIZE + delta;
 }
 
+/* Utility for compute_delta() that compares the range B[START,BSIZE) with
+ * the range of similar size before A[ASIZE]. Create corresponding copy and
+ * insert operations.
+ *
+ * BUILD_BATON and POOL will be passed through from compute_delta().
+ */
+static void
+store_delta_trailer(svn_txdelta__ops_baton_t *build_baton,
+                    const char *a,
+                    apr_size_t asize,
+                    const char *b,
+                    apr_size_t bsize,
+                    apr_size_t start,
+                    apr_pool_t *pool)
+{
+  apr_size_t end_match;
+  apr_size_t max_len = asize > (bsize - start) ? bsize - start : asize;
+  if (max_len == 0)
+    return;
+
+  end_match = reverse_match_length(a + asize, b + bsize, max_len);
+  if (end_match <= 4)
+    end_match = 0;
+
+  if (bsize - start > end_match)
+    svn_txdelta__insert_op(build_baton, svn_txdelta_new,
+                           start, bsize - start - end_match, b + start, pool);
+  if (end_match)
+    svn_txdelta__insert_op(build_baton, svn_txdelta_source,
+                           asize - end_match, end_match, NULL, pool);
+}
+
 
 /* Compute a delta from A to B using xdelta.
 
@@ -319,12 +384,24 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
   apr_uint32_t rolling;
   apr_size_t lo = 0, pending_insert_start = 0;
 
+  /* Optimization: directly compare window starts. If more than 4
+   * bytes match, we can immediately create a matching windows. 
+   * Shorter sequences result in a net data increase. */
+  lo = match_length(a, b, asize > bsize ? bsize : asize);
+  if ((lo > 4) || (lo == bsize))
+    {
+      svn_txdelta__insert_op(build_baton, svn_txdelta_source,
+                             0, lo, NULL, pool);
+      pending_insert_start = lo;
+    }
+  else
+    lo = 0;
+
   /* If the size of the target is smaller than the match blocksize, just
      insert the entire target.  */
-  if (bsize < MATCH_BLOCKSIZE)
+  if ((bsize - lo < MATCH_BLOCKSIZE) || (asize < MATCH_BLOCKSIZE))
     {
-      svn_txdelta__insert_op(build_baton, svn_txdelta_new,
-                             0, bsize, b, pool);
+      store_delta_trailer(build_baton, a, asize, b, bsize, lo, pool);
       return;
     }
 
@@ -332,7 +409,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
   init_blocks_table(a, asize, &blocks, pool);
 
   /* Initialize our rolling checksum.  */
-  rolling = init_adler32(b);
+  rolling = init_adler32(b + lo);
   while (lo < bsize)
     {
       apr_size_t matchlen = 0;
@@ -377,12 +454,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
     }
 
   /* If we still have an insert pending at the end, throw it in.  */
-  if (lo - pending_insert_start > 0)
-    {
-      svn_txdelta__insert_op(build_baton, svn_txdelta_new,
-                             0, lo - pending_insert_start,
-                             b + pending_insert_start, pool);
-    }
+  store_delta_trailer(build_baton, a, asize, b, bsize, pending_insert_start, pool);
 }
 
 void
