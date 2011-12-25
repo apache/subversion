@@ -437,6 +437,19 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
             svn_txdelta__insert_op(build_baton, svn_txdelta_new,
                                    0, lo - pending_insert_start,
                                    b + pending_insert_start, pool);
+          else 
+            {
+              /* the match borders on the previous op. Maybe, we found a
+               * match that is better than / overlapping the previous one. */
+              apr_size_t len = reverse_match_length(a + apos, b + lo, apos < lo ? apos : lo);
+              if (len > 0)
+                {
+                  len = svn_txdelta__remove_copy(build_baton, len);
+                  apos -= len;
+                  matchlen += len;
+                  lo -= len;
+                }
+            }
 
           /* Reset the pending insert start to immediately after the
              match. */
