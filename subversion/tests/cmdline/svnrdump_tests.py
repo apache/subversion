@@ -225,26 +225,32 @@ def no_author_load(sbox):
   "load: copy revs with no svn:author revprops"
   run_load_test(sbox, "no-author.dump")
 
+@XFail()
 def copy_from_previous_version_and_modify_dump(sbox):
   "dump: copy from previous version and modify"
   run_dump_test(sbox, "copy-from-previous-version-and-modify.dump")
 
+@XFail()
 def copy_from_previous_version_and_modify_load(sbox):
   "load: copy from previous version and modify"
   run_load_test(sbox, "copy-from-previous-version-and-modify.dump")
 
+@XFail()
 def modified_in_place_dump(sbox):
   "dump: modified in place"
   run_dump_test(sbox, "modified-in-place.dump")
 
+@XFail()
 def modified_in_place_load(sbox):
   "load: modified in place"
   run_load_test(sbox, "modified-in-place.dump")
 
+@XFail()
 def move_and_modify_in_the_same_revision_dump(sbox):
   "dump: move parent & modify child file in same rev"
   run_dump_test(sbox, "move-and-modify.dump")
 
+@XFail()
 def move_and_modify_in_the_same_revision_load(sbox):
   "load: move parent & modify child file in same rev"
   run_load_test(sbox, "move-and-modify.dump")
@@ -289,19 +295,23 @@ def copy_parent_modify_prop_load(sbox):
   "load: copy parent and modify prop"
   run_load_test(sbox, "copy-parent-modify-prop.dump")
 
+@XFail()
 def copy_revprops_dump(sbox):
   "dump: copy revprops other than svn:*"
   run_dump_test(sbox, "revprops.dump")
 
+@XFail()
 def copy_revprops_load(sbox):
   "load: copy revprops other than svn:*"
   run_load_test(sbox, "revprops.dump")
 
+@XFail()
 def only_trunk_dump(sbox):
   "dump: subdirectory"
   run_dump_test(sbox, "trunk-only.dump", subdir="/trunk",
                 expected_dumpfile_name="trunk-only.expected.dump")
 
+@XFail()
 def only_trunk_A_with_changes_dump(sbox):
   "dump: subdirectory with changes on root"
   run_dump_test(sbox, "trunk-A-changes.dump", subdir="/trunk/A",
