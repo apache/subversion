@@ -383,10 +383,10 @@ static svn_error_t *
 load_authorities(svn_ra_serf__connection_t *conn, const char *authorities,
                  apr_pool_t *pool)
 {
-  char *files, *file, *last;
+  char *files, *file;
   files = apr_pstrdup(pool, authorities);
 
-  while ((file = apr_strtok(files, ";", &last)) != NULL)
+  while ((file = svn_cstring_tokenize(";", &files)) != NULL)
     {
       serf_ssl_certificate_t *ca_cert;
       apr_status_t status = serf_ssl_load_cert_file(&ca_cert, file, pool);

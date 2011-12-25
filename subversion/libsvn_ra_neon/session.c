@@ -590,10 +590,10 @@ static svn_error_t *get_server_settings(const char **proxy_host,
 #ifdef SVN_NEON_0_26
   if (http_auth_types)
     {
-      char *token, *last;
+      char *token;
       char *auth_types_list = apr_palloc(pool, strlen(http_auth_types) + 1);
       apr_collapse_spaces(auth_types_list, http_auth_types);
-      while ((token = apr_strtok(auth_types_list, ";", &last)) != NULL)
+      while ((token = svn_cstring_tokenize(";", &auth_types_list)) != NULL)
         {
           auth_types_list = NULL;
           if (svn_cstring_casecmp("basic", token) == 0)
@@ -985,10 +985,10 @@ svn_ra_neon__open(svn_ra_session_t *session,
 
       if (authorities != NULL)
         {
-          char *files, *file, *last;
+          char *files, *file;
           files = apr_pstrdup(pool, authorities);
 
-          while ((file = apr_strtok(files, ";", &last)) != NULL)
+          while ((file = svn_cstring_tokenize(";", &files)) != NULL)
             {
               ne_ssl_certificate *ca_cert;
               files = NULL;
