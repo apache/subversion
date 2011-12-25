@@ -44,6 +44,10 @@
  */
 #define MATCH_BLOCKSIZE 64
 
+/* "no" / "invalid" / "unused" value for positions within the detla windows
+ */
+#define NO_POSITION ((apr_uint32_t)-1)
+
 /* Feed C_IN into the adler32 checksum and remove C_OUT at the same time.
  * This function may (and will) only be called for characters that are
  * MATCH_BLOCKSIZE positions apart.
@@ -96,17 +100,17 @@ init_adler32(const char *data)
 struct block
 {
   apr_uint32_t adlersum;
-  apr_size_t pos;
+  apr_uint32_t pos;			/* NO_POSITION -> block is not used */
 };
 
 /* A hash table, using open addressing, of the blocks of the source. */
 struct blocks
 {
   /* The largest valid index of slots. */
-  apr_size_t max;
+  apr_uint32_t max;
   /* Source buffer that the positions in SLOTS refer to. */
   const char* data;
-  /* The vector of blocks.  A pos value of (apr_size_t)-1 represents an unused
+  /* The vector of blocks.  A pos value of NO_POSITION represents an unused
      slot. */
   struct block *slots;
 };
@@ -114,7 +118,7 @@ struct blocks
 
 /* Return a hash value calculated from the adler32 SUM, suitable for use with
    our hash table. */
-static apr_size_t hash_func(apr_uint32_t sum)
+static apr_uint32_t hash_func(apr_uint32_t sum)
 {
   /* Since the adl32 checksum have a bad distribution for the 11th to 16th
      bits when used for our small block size, we add some bits from the
@@ -126,12 +130,12 @@ static apr_size_t hash_func(apr_uint32_t sum)
    data into the table BLOCKS.  Ignore true duplicates, i.e. blocks with
    actually the same content. */
 static void
-add_block(struct blocks *blocks, apr_uint32_t adlersum, apr_size_t pos)
+add_block(struct blocks *blocks, apr_uint32_t adlersum, apr_uint32_t pos)
 {
-  apr_size_t h = hash_func(adlersum) & blocks->max;
+  apr_uint32_t h = hash_func(adlersum) & blocks->max;
 
   /* This will terminate, since we know that we will not fill the table. */
-  for (; blocks->slots[h].pos != (apr_size_t)-1; h = (h + 1) & blocks->max)
+  for (; blocks->slots[h].pos != NO_POSITION; h = (h + 1) & blocks->max)
     if (blocks->slots[h].adlersum == adlersum)
       if (memcmp(blocks->data + blocks->slots[h].pos, blocks->data + pos,
                  MATCH_BLOCKSIZE) == 0)
@@ -143,21 +147,21 @@ add_block(struct blocks *blocks, apr_uint32_t adlersum, apr_size_t pos)
 
 /* Find a block in BLOCKS with the checksum ADLERSUM and matching the content
    at DATA, returning its position in the source data.  If there is no such
-   block, return (apr_size_t)-1. */
-static apr_size_t
+   block, return NO_POSITION. */
+static apr_uint32_t
 find_block(const struct blocks *blocks,
            apr_uint32_t adlersum,
            const char* data)
 {
-  apr_size_t h = hash_func(adlersum) & blocks->max;
+  apr_uint32_t h = hash_func(adlersum) & blocks->max;
 
-  for (; blocks->slots[h].pos != (apr_size_t)-1; h = (h + 1) & blocks->max)
+  for (; blocks->slots[h].pos != NO_POSITION; h = (h + 1) & blocks->max)
     if (blocks->slots[h].adlersum == adlersum)
       if (memcmp(blocks->data + blocks->slots[h].pos, data,
                  MATCH_BLOCKSIZE) == 0)
         return blocks->slots[h].pos;
 
-  return (apr_size_t)-1;
+  return NO_POSITION;
 }
 
 /* Initialize the matches table from DATA of size DATALEN.  This goes
@@ -187,7 +191,7 @@ init_blocks_table(const char *data,
     {
       /* Avoid using an indeterminate value in the lookup. */
       blocks->slots[i].adlersum = 0;
-      blocks->slots[i].pos = (apr_size_t)-1;
+      blocks->slots[i].pos = NO_POSITION;
     }
 
   /* If there is an odd block at the end of the buffer, we will
@@ -252,7 +256,7 @@ find_match(const struct blocks *blocks,
   apos = find_block(blocks, rolling, b + bpos);
 
   /* See if we have a match.  */
-  if (apos == (apr_size_t)-1)
+  if (apos == NO_POSITION)
     return 0;
 
   /* Extend the match forward as far as possible */
