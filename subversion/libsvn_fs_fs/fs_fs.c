@@ -78,6 +78,20 @@
 #define SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR 1000
 #endif
 
+/* Begin deltification after a node history exceeded this this limit.
+   Useful values are 4 to 64 with 16 being a good compromise between
+   computational overhead and pository size savings.
+   Should be a power of 2.  
+   Values < 2 will result in standard skip-delta behavior. */
+#define SVN_FS_FS_MAX_LINEAR_DELTIFICATION 16
+
+/* Finding a deltification base takes operations proportional to the
+   number of changes being skipped. To prevent exploding runtime
+   during commits, limit the deltification range to this value.
+   Should be a power of 2 minus one.
+   Values < 1 disable deltification. */
+#define SVN_FS_FS_MAX_DELTIFICATION_WALK 1023
+
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */
 
@@ -5186,6 +5200,7 @@ choose_delta_base(representation_t **rep,
                   apr_pool_t *pool)
 {
   int count;
+  int walk;
   node_revision_t *base;
 
   /* If we have no predecessors, then use the empty stream as a
@@ -5202,6 +5217,23 @@ choose_delta_base(representation_t **rep,
      you decrement a binary number.) */
   count = noderev->predecessor_count;
   count = count & (count - 1);
+
+  /* We use skip delta for limiting the number of delta operations 
+     along very long node histories.  Close to HEAD however, we create
+     a linear history to minimize delta size.  */
+  walk = noderev->predecessor_count - count;
+  if (walk < SVN_FS_FS_MAX_LINEAR_DELTIFICATION)
+    count = noderev->predecessor_count - 1;
+
+  /* Finding the delta base over a very long distance can become extremely
+     expensive for very deep histories, possibly causing client timeouts etc.
+     OTOH, this is a rare operation and its gains are minimal. Lets simply
+     start deltification anew close every other 1000 changes or so.  */
+  if (walk > SVN_FS_FS_MAX_DELTIFICATION_WALK)
+    {
+      *rep = NULL;
+      return SVN_NO_ERROR;
+    }
 
   /* Walk back a number of predecessors equal to the difference
      between count and the original predecessor count.  (For example,
