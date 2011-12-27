@@ -46,6 +46,8 @@ SVN_MERGE__ALLOW_ALL_FORWARD_MERGES_FROM_SELF
 SVN_USE_WIN32_CRASHHANDLER
 SVN_DAV_SEND_VTXN_NAME
 SVN_DISABLE_PREFIX_SUFFIX_SCANNING
+SVN_FS_FS_DELTIFY_DIRECTORIES
+SVN_FS_FS_DELTIFY_PROPS
 SVN_SQLITE_MIN_VERSION_NUMBER
 SVN_SQLITE_MIN_VERSION
 
@@ -227,7 +229,27 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Default:   not defined
   Suggested: not defined
 
-4.8 SVN_SQLITE_MIN_VERSION_NUMBER
+4.8 SVN_FS_FS_DELTIFY_DIRECTORIES
+
+  Scope:     libsvn_fs_fs
+  Purpose:   Define this symbol to enable directory deltification in FSFS.
+             When activated, previous versions of Subversion will still be
+             able to read from and write to this repository.
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined
+
+4.9 SVN_FS_FS_DELTIFY_PROPS
+
+  Scope:     libsvn_fs_fs
+  Purpose:   Define this symbol to enable node property deltification in
+             FSFS.  When activated, previous versions of Subversion will
+             still be able to read from and write to this repository.
+  Range:     definedness
+  Default:   not defined
+  Suggested: not defined
+
+4.10 SVN_SQLITE_MIN_VERSION_NUMBER
 
   Scope:     libsvn_subr
   Purpose:   The minimum SQLite version to have run-time support for.
@@ -235,7 +257,7 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Default:   SQLITE_VERSION_NUMBER (i.e., the compile-time-sqlite version)
   Suggested: not defined (to use default)
 
-4.9 SVN_SQLITE_MIN_VERSION
+4.11 SVN_SQLITE_MIN_VERSION
 
   Scope:     libsvn_subr
   Purpose:   See SVN_SQLITE_MIN_VERSION_NUMBER.  The two must be overridden

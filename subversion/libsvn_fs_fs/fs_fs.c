@@ -5629,6 +5629,91 @@ write_hash_rep(svn_filesize_t *size,
   return svn_stream_printf(whb->stream, pool, "ENDREP\n");
 }
 
+/* Write out the hash HASH pertaining to the NODEREV in FS as a deltified
+   text representation to file FILE.  In the process, record the total size
+   and the md5 digest in REP.  Perform temporary allocations in POOL. */
+static svn_error_t *
+write_hash_delta_rep(representation_t *rep,
+                     apr_file_t *file,
+                     apr_hash_t *hash,
+                     svn_fs_t *fs,
+                     node_revision_t *noderev,
+                     apr_pool_t *pool)
+{
+  svn_txdelta_window_handler_t diff_wh;
+  void *diff_whb;
+  
+  svn_stream_t *file_stream;
+  svn_stream_t *stream;
+  representation_t *base_rep;
+  svn_stream_t *source;
+  const char *header;
+
+  apr_off_t rep_end = 0; 
+  apr_off_t delta_start = 0; 
+
+  struct write_hash_baton *whb;
+  fs_fs_data_t *ffd = fs->fsap_data;
+  int diff_version = ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT ? 1 : 0;
+
+  /* Get the base for this delta. */
+  SVN_ERR(choose_delta_base(&base_rep, fs, noderev, pool));
+  SVN_ERR(read_representation(&source, fs, base_rep, pool));
+
+  SVN_ERR(get_file_offset(&rep->offset, file, pool));
+
+  /* Write out the rep header. */
+  if (base_rep)
+    {
+      header = apr_psprintf(pool, REP_DELTA " %ld %" APR_OFF_T_FMT " %"
+                            SVN_FILESIZE_T_FMT "\n",
+                            base_rep->revision, base_rep->offset,
+                            base_rep->size);
+    }
+  else
+    {
+      header = REP_DELTA "\n";
+    }
+  SVN_ERR(svn_io_file_write_full(file, header, strlen(header), NULL,
+                                 pool));
+
+  SVN_ERR(get_file_offset(&delta_start, file, pool));
+  file_stream = svn_stream_from_aprfile2(file, TRUE, pool);
+  
+  /* Prepare to write the svndiff data. */
+  svn_txdelta_to_svndiff3(&diff_wh,
+                          &diff_whb,
+                          file_stream,
+                          diff_version,
+                          SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
+                          pool);
+
+  whb = apr_pcalloc(pool, sizeof(*whb));
+  whb->stream = svn_txdelta_target_push(diff_wh, diff_whb, source, pool);
+  whb->size = 0;
+  whb->checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+
+  /* serialize the hash */
+  stream = svn_stream_create(whb, pool);
+  svn_stream_set_write(stream, write_hash_handler);
+
+  SVN_ERR(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool));
+  SVN_ERR(svn_stream_close(whb->stream));
+
+  /* Store the results. */
+  SVN_ERR(svn_checksum_final(&rep->md5_checksum, whb->checksum_ctx, pool));
+
+  /* Write out our cosmetic end marker. */
+  SVN_ERR(get_file_offset(&rep_end, file, pool));
+  SVN_ERR(svn_stream_printf(file_stream, pool, "ENDREP\n"));
+
+  /* update the representation */
+  rep->expanded_size = whb->size;
+  rep->size = rep_end - delta_start;
+
+  return SVN_NO_ERROR;
+}
+
 /* Sanity check ROOT_NODEREV, a candidate for being the root node-revision
    of (not yet committed) revision REV in FS.  Use POOL for temporary
    allocations.
@@ -5769,11 +5854,17 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
           noderev->data_rep->txn_id = NULL;
           noderev->data_rep->revision = rev;
+
+#ifdef SVN_FS_FS_DELTIFY_DIRECTORIES
+          SVN_ERR(write_hash_delta_rep(noderev->data_rep, file,
+                                       str_entries, fs, noderev, pool));
+#else
           SVN_ERR(get_file_offset(&noderev->data_rep->offset, file, pool));
           SVN_ERR(write_hash_rep(&noderev->data_rep->size,
                                  &noderev->data_rep->md5_checksum, file,
                                  str_entries, pool));
           noderev->data_rep->expanded_size = noderev->data_rep->size;
+#endif
         }
     }
   else
@@ -5801,13 +5892,17 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (noderev->prop_rep && noderev->prop_rep->txn_id)
     {
       apr_hash_t *proplist;
-
       SVN_ERR(svn_fs_fs__get_proplist(&proplist, fs, noderev, pool));
+
+#ifdef SVN_FS_FS_DELTIFY_PROPS
+      SVN_ERR(write_hash_delta_rep(noderev->prop_rep, file,
+                                   proplist, fs, noderev, pool));
+#else
       SVN_ERR(get_file_offset(&noderev->prop_rep->offset, file, pool));
       SVN_ERR(write_hash_rep(&noderev->prop_rep->size,
                              &noderev->prop_rep->md5_checksum, file,
                              proplist, pool));
-
+#endif
       noderev->prop_rep->txn_id = NULL;
       noderev->prop_rep->revision = rev;
     }
