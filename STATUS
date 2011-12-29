@@ -34,7 +34,7 @@ Candidate changes:
      r1201072 and r1205188 are a new test and minor tweak respectively.
      r1205209 is the fix.
    Votes:
-     +1: pburba
+     +1: pburba, rhuijben
 
  * r1207555, r1207808
    mod_dontdothat: contrib/ -> tools/ and relicense under ALv2.
@@ -98,18 +98,6 @@ Candidate changes:
      +1: stsp (without r1220740)
      +1: julianfoad
 
- * r1154121, r1195480, r1208840, r1209631, r1209654, r1212476, r1212482,
-   r1212484
-   Update and clarify the merge help text.
-   Justification:
-     Merge usage questions are very frequently asked questions in #svn IRC and
-     on the users@ list. We should improve the documentation whenever we can
-     and point people to it.
-   Notes:
-     Merge with --accept=theirs-conflict
-   Votes:
-     +1: stsp, philip
-
  * r1215260, r1215288, r1215374, r1215375, r1215379
    Fix issue #4082 ("'svn log --with-all-revprops' over ra-dav
    intolerant of XML-unsafe property values").
@@ -137,7 +125,7 @@ Candidate changes:
      r1215375 - libsvn_ra_serf support for this issue
      r1215379 - followup to r1215375
    Votes:
-     +1: cmpilato
+     +1: cmpilato, rhuijben
 
  * r1220742, r1220750
    Fix spurious testsuite FAIL
@@ -151,7 +139,7 @@ Candidate changes:
    Justification:
      Regression when using the v2 protocol.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
  * r1221463
    Allow leading "r" in ?p= query string arguments.
@@ -165,18 +153,6 @@ Candidate changes:
    had problems of its own.
    Votes:
      +1: cmpilato, rhuijben
-
- * r1222521, r1222693
-   Turn another wc-db assertion people are reporting into a normal error.
-   Justification:
-     An informative error message helps people more than an assert (which
-     in case of TSVN can mean crashing the Windows Explorer).
-     Reported several times on users@, see:
-     http://svn.haxx.se/users/archive-2011-11/0527.shtml
-     http://svn.haxx.se/users/archive-2011-12/0063.shtml
-     http://svn.haxx.se/users/archive-2011-12/0299.shtml
-   Votes:
-     +1: stsp, steveking
 
  * r1222628, r1222644, r1222699
    Improve another error message coming from SASL.
@@ -217,3 +193,29 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1154121, r1195480, r1208840, r1209631, r1209654, r1212476, r1212482,
+   r1212484
+   Update and clarify the merge help text.
+   Justification:
+     Merge usage questions are very frequently asked questions in #svn IRC and
+     on the users@ list. We should improve the documentation whenever we can
+     and point people to it.
+   Notes:
+     Merge with --accept=theirs-conflict
+   Votes:
+     +1: stsp, philip
+     +1: rhuijben (We might need builtin pager support if we make our help
+                   texts longer and longer. But that is not for 1.7)
+
+ * r1222521, r1222693
+   Turn another wc-db assertion people are reporting into a normal error.
+   Justification:
+     An informative error message helps people more than an assert (which
+     in case of TSVN can mean crashing the Windows Explorer).
+     Reported several times on users@, see:
+     http://svn.haxx.se/users/archive-2011-11/0527.shtml
+     http://svn.haxx.se/users/archive-2011-12/0063.shtml
+     http://svn.haxx.se/users/archive-2011-12/0299.shtml
+   Votes:
+     +1: stsp, steveking, rhuijben
