@@ -185,6 +185,14 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
+ * r1225491
+   Allow converting //server/share paths to file://server/share by using
+   svn_uri_get_file_url_from_dirent().
+   Justification:
+     Fixes api to allow running tests on UNC shares.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
