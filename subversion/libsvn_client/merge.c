@@ -5198,7 +5198,8 @@ remove_first_range_from_remaining_ranges(svn_revnum_t revision,
    Set *FILENAME to the local path to a new temporary file holding its text,
    and set *PROPS to a new hash of its properties.
 
-   RA_SESSION is a session whose current root is the URL of the file itself,
+   RA_SESSION is a session open to the correct repository, which will be
+   temporarily reparented to URL which is the URL of the file itself,
    and REV is the revision to get.
 
    The new temporary file will be created as a sibling of WC_TARGET.
@@ -5213,19 +5214,27 @@ remove_first_range_from_remaining_ranges(svn_revnum_t revision,
 */
 static svn_error_t *
 single_file_merge_get_file(const char **filename,
-                           svn_ra_session_t *ra_session,
                            apr_hash_t **props,
+                           svn_ra_session_t *ra_session,
+                           const char *url,
                            svn_revnum_t rev,
                            const char *wc_target,
                            apr_pool_t *pool)
 {
   svn_stream_t *stream;
+  const char *old_sess_url;
 
   SVN_ERR(svn_stream_open_unique(&stream, filename,
                                  svn_dirent_dirname(wc_target, pool),
                                  svn_io_file_del_none, pool, pool));
+
+  SVN_ERR(svn_client__ensure_ra_session_url(&old_sess_url, ra_session, url,
+                                            pool));
   SVN_ERR(svn_ra_get_file(ra_session, "", rev,
                           stream, NULL, props, pool));
+  if (old_sess_url)
+    SVN_ERR(svn_ra_reparent(ra_session, old_sess_url, pool));
+
   return svn_stream_close(stream);
 }
 
@@ -6604,6 +6613,43 @@ filter_natural_history_from_mergeinfo(apr_array_header_t **filtered_rangelist,
   return SVN_NO_ERROR;
 }
 
+/* Return a merge source representing the sub-range from START_REV to
+   END_REV of SOURCE.  SOURCE obeys the rules described in the
+   'MERGEINFO MERGE SOURCE NORMALIZATION' comment at the top of this file.
+   The younger of START_REV and END_REV is inclusive while the older is
+   exclusive.
+
+   Allocate the result structure in POOL but leave the URLs in it as shallow
+   copies of the URLs in SOURCE.
+*/
+static merge_source_t *
+subrange_source(const merge_source_t *source,
+                svn_revnum_t start_rev,
+                svn_revnum_t end_rev,
+                apr_pool_t *pool)
+{
+  svn_boolean_t is_rollback = (source->rev1 > source->rev2);
+  svn_boolean_t same_urls = (strcmp(source->url1, source->url2) == 0);
+  merge_source_t *real_source = apr_palloc(pool, sizeof(*source));
+
+  real_source->url1 = source->url1;
+  real_source->rev1 = start_rev;
+  real_source->url2 = source->url2;
+  real_source->rev2 = end_rev;
+  if (! same_urls)
+    {
+      if (is_rollback && (end_rev != source->rev2))
+        {
+          real_source->url2 = source->url1;
+        }
+      if ((! is_rollback) && (start_rev != source->rev1))
+        {
+          real_source->url1 = source->url2;
+        }
+    }
+  return real_source;
+}
+
 /* The single-file, simplified version of do_directory_merge(), which see for
    parameter descriptions.
 
@@ -6733,8 +6779,8 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
         {
           svn_merge_range_t *r = APR_ARRAY_IDX(ranges_to_merge, i,
                                                svn_merge_range_t *);
+          merge_source_t *real_source;
           svn_boolean_t header_sent = FALSE;
-          svn_ra_session_t *ra_session1, *ra_session2;
           const char *tmpfile1, *tmpfile2;
           apr_hash_t *props1, *props2;
           svn_string_t *pval;
@@ -6745,32 +6791,17 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
 
           svn_pool_clear(iterpool);
 
-          /* Issue #3174: If we are honoring mergeinfo, then SOURCE meets the
-             conditions described in 'MERGEINFO MERGE SOURCE NORMALIZATION'.
-             This means that @SOURCE->url1@rev1 may be the copy source of
-             SOURCE->url2@rev2. If this is the case, then ->url1 != ->url2.
-             Since MERGE_B->RA_SESSION1 is always opened with ->url1, the
-             only time we can safely call single_file_merge_get_file() with
-             that RA session is for SOURCE->rev1 (or ->rev2 if this is a
-             reverse merge). */
-          ra_session1 = merge_b->ra_session1;
-          ra_session2 = merge_b->ra_session2;
-          if (honor_mergeinfo && strcmp(source->url1, source->url2) != 0)
-            {
-              if (!is_rollback && r->start != source->rev1)
-                ra_session1 = ra_session2; /* Use SOURCE->url2's RA session. */
-              else if (is_rollback && r->end != source->rev2)
-                ra_session2 = ra_session1; /* Use SOURCE->url1's RA session. */
-            }
-
           /* While we currently don't allow it, in theory we could be
              fetching two fulltexts from two different repositories here. */
-          SVN_ERR(single_file_merge_get_file(&tmpfile1, ra_session1,
-                                             &props1, r->start,
+          real_source = subrange_source(source, r->start, r->end, iterpool);
+          SVN_ERR(single_file_merge_get_file(&tmpfile1, &props1,
+                                             merge_b->ra_session1,
+                                             real_source->url1, real_source->rev1,
                                              target_abspath, iterpool));
-          SVN_ERR(single_file_merge_get_file(&tmpfile2, ra_session2,
-                                             &props2, r->end, target_abspath,
-                                             iterpool));
+          SVN_ERR(single_file_merge_get_file(&tmpfile2, &props2,
+                                             merge_b->ra_session2,
+                                             real_source->url2, real_source->rev2,
+                                             target_abspath, iterpool));
 
           /* Discover any svn:mime-type values in the proplists */
           pval = apr_hash_get(props1, SVN_PROP_MIME_TYPE,
@@ -8420,7 +8451,6 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
   svn_client__merge_path_t *target_merge_path;
   svn_boolean_t is_rollback = (source->rev1 > source->rev2);
   const char *primary_url = is_rollback ? source->url1 : source->url2;
-  svn_boolean_t same_urls = (strcmp(source->url1, source->url2) == 0);
   svn_boolean_t honor_mergeinfo = HONOR_MERGEINFO(merge_b);
 
   /* Note that this is not a single-file merge. */
@@ -8556,7 +8586,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
           while (end_rev != SVN_INVALID_REVNUM)
             {
               svn_revnum_t next_end_rev;
-              merge_source_t real_source;
+              merge_source_t *real_source;
               const char *old_sess1_url = NULL, *old_sess2_url = NULL;
               svn_merge_range_t *first_target_range
                 = (target_merge_path->remaining_ranges->nelts == 0 ? NULL
@@ -8594,51 +8624,16 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
                                      is_rollback, end_rev, scratch_pool);
               notify_b->cur_ancestor_abspath = NULL;
 
-              /* In SOURCE: URL1@REV1 is a real location; URL2@REV2 is a
-                 real location -- that much we know (thanks to the merge
-                 source normalization code).  But for revisions between
-                 them, the URLs might differ.  Here are the rules:
-
-                   * If URL1 == URL2, then all URLs between REV1 and
-                     REV2 also match URL1/URL2.
-
-                   * If URL1 != URL2, then:
-
-                       * If REV1 < REV2, only REV1 maps to
-                         URL1.  The revisions between REV1+1 and
-                         REV2 (inclusive) map to URL2.
-
-                       * If REV1 > REV2, Only REV2 maps to
-                         URL2.  The revisions between REV1 and
-                         REV2+1 (inclusive) map to URL1.
-
-                 We need to adjust our URLs accordingly, here.
-              */
-              real_source.url1 = source->url1;
-              real_source.rev1 = start_rev;
-              real_source.url2 = source->url2;
-              real_source.rev2 = end_rev;
-              if (! same_urls)
-                {
-                  if (is_rollback && (end_rev != source->rev2))
-                    {
-                      real_source.url2 = source->url1;
-                      SVN_ERR(svn_client__ensure_ra_session_url
-                              (&old_sess2_url, merge_b->ra_session2,
-                               real_source.url2, iterpool));
-                    }
-                  if ((! is_rollback) && (start_rev != source->rev1))
-                    {
-                      real_source.url1 = source->url2;
-                      SVN_ERR(svn_client__ensure_ra_session_url
-                              (&old_sess1_url, merge_b->ra_session1,
-                               real_source.url1, iterpool));
-                    }
-                }
-
+              real_source = subrange_source(source, start_rev, end_rev, iterpool);
+              SVN_ERR(svn_client__ensure_ra_session_url(
+                        &old_sess1_url, merge_b->ra_session1,
+                        real_source->url1, iterpool));
+              SVN_ERR(svn_client__ensure_ra_session_url(
+                        &old_sess2_url, merge_b->ra_session2,
+                        real_source->url2, iterpool));
               SVN_ERR(drive_merge_report_editor(
                 merge_b->target_abspath,
-                &real_source,
+                real_source,
                 notify_b->children_with_mergeinfo,
                 depth, notify_b,
                 merge_b,
