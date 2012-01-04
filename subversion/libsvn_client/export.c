@@ -402,7 +402,7 @@ copy_versioned_files(const char *from_abspath,
       const char *repos_relpath;
 
       SVN_ERR(svn_wc__node_get_origin(&is_added, NULL, &repos_relpath,
-                                      NULL, NULL,
+                                      NULL, NULL, NULL,
                                       ctx->wc_ctx, from_abspath, FALSE,
                                       pool, pool));
 

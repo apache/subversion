@@ -627,7 +627,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
 
           /* Determine from what parent we would be the deleted child */
           SVN_ERR(svn_wc__node_get_origin(NULL, &revision, &repos_relpath,
-                                          NULL, NULL, wc_ctx,
+                                          NULL, NULL, NULL, wc_ctx,
                                           svn_dirent_dirname(local_abspath,
                                                              scratch_pool),
                                           FALSE, scratch_pool, scratch_pool));
@@ -684,7 +684,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
 
           SVN_ERR(svn_wc__node_get_origin(NULL, &cf_rev,
                                       &cf_relpath, NULL,
-                                      NULL,
+                                      NULL, NULL,
                                       wc_ctx, local_abspath, FALSE,
                                       scratch_pool, scratch_pool));
 
