@@ -1187,7 +1187,7 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
 
           return svn_error_createf(
                            SVN_ERR_ILLEGAL_TARGET, NULL,
-                           _("'%s' is not under version control "
+                           _("'%s' is not known to exist in the repository "
                              "and is not part of the commit, "
                              "yet its child '%s' is part of the commit"),
                            /* Probably one or both of these is an entry, but
