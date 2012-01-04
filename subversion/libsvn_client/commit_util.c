@@ -1122,6 +1122,22 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
 
           if (is_added)
             {
+              svn_boolean_t is_copy;
+              const char *copy_root_abspath;
+
+              /* Copies are always committed recursively as long as the
+               * copy root is in the commit target list.
+               * So for nodes copied along with a parent, the copy root path
+               * is the dangling parent. See issue #4059. */
+              SVN_ERR(svn_wc__node_get_origin(&is_copy,
+                                              NULL, NULL, NULL, NULL,
+                                              &copy_root_abspath,
+                                              ctx->wc_ctx,
+                                              target_abspath,
+                                              FALSE, iterpool, iterpool));
+              if (is_copy && strcmp(copy_root_abspath, target_abspath) != 0)
+                parent_abspath = copy_root_abspath;
+
               /* Copy the parent and target into pool; iterpool
                  lasts only for this loop iteration, and we check
                  danglers after the loop is over. */

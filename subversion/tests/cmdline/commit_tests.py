@@ -2832,7 +2832,6 @@ def commit_incomplete(sbox):
 #   From: Fergus Slorach <sugref@gmail.com>
 #   Subject: svn commit --targets behaviour change in 1.7?
 @Issue(4059)
-@XFail()
 def commit_add_subadd(sbox):
   "committing add with explicit subadd targets"
 
