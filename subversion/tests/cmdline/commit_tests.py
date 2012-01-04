@@ -1145,7 +1145,7 @@ def commit_in_dir_scheduled_for_addition(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
                                         None,
-                                        "not under version control",
+                                        "not known to exist in the repository",
                                         mu_path)
 
   Q_path = os.path.join(wc_dir, 'Q')
@@ -1160,7 +1160,7 @@ def commit_in_dir_scheduled_for_addition(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
                                         None,
-                                        "not under version control",
+                                        "not known to exist in the repository",
                                         bloo_path)
 
 #----------------------------------------------------------------------
