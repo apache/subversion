@@ -1170,31 +1170,31 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
 
       svn_pool_clear(iterpool);
 
-       if (! look_up_committable(*committables, dangling_parent, iterpool))
-         {
-           const char *dangling_child = svn__apr_hash_index_val(hi);
+      if (! look_up_committable(*committables, dangling_parent, iterpool))
+        {
+          const char *dangling_child = svn__apr_hash_index_val(hi);
 
-           if (ctx->notify_func2 != NULL)
-             {
-               svn_wc_notify_t *notify;
+          if (ctx->notify_func2 != NULL)
+            {
+              svn_wc_notify_t *notify;
 
-               notify = svn_wc_create_notify(dangling_child,
-                                             svn_wc_notify_failed_no_parent,
-                                             scratch_pool);
+              notify = svn_wc_create_notify(dangling_child,
+                                            svn_wc_notify_failed_no_parent,
+                                            scratch_pool);
 
-               ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
-             }
+              ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
+            }
 
-           return svn_error_createf(
-                            SVN_ERR_ILLEGAL_TARGET, NULL,
-                            _("'%s' is not under version control "
-                              "and is not part of the commit, "
-                              "yet its child '%s' is part of the commit"),
-                            /* Probably one or both of these is an entry, but
-                               safest to local_stylize just in case. */
-                            svn_dirent_local_style(dangling_parent, iterpool),
-                            svn_dirent_local_style(dangling_child, iterpool));
-         }
+          return svn_error_createf(
+                           SVN_ERR_ILLEGAL_TARGET, NULL,
+                           _("'%s' is not under version control "
+                             "and is not part of the commit, "
+                             "yet its child '%s' is part of the commit"),
+                           /* Probably one or both of these is an entry, but
+                              safest to local_stylize just in case. */
+                           svn_dirent_local_style(dangling_parent, iterpool),
+                           svn_dirent_local_style(dangling_child, iterpool));
+        }
     }
 
   svn_pool_destroy(iterpool);
