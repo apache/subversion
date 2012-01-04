@@ -1349,6 +1349,7 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
                             const char **repos_relpath,
                             const char **repos_root_url,
                             const char **repos_uuid,
+                            const char **copy_root_abspath,
                             svn_wc__db_t *db,
                             const char *local_abspath,
                             svn_boolean_t scan_deleted,
@@ -1399,7 +1400,8 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
       if (repos_uuid)
         *repos_uuid = original_repos_uuid;
 
-      return SVN_NO_ERROR;
+      if (copy_root_abspath == NULL)
+        return SVN_NO_ERROR;
     }
 
   {
@@ -1428,13 +1430,19 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
                                          result_pool, scratch_pool));
 
         if (status == svn_wc__db_status_added)
-          return SVN_NO_ERROR; /* Local addition */
+          {
+            if (is_copy)
+              *is_copy = FALSE;
+            return SVN_NO_ERROR; /* Local addition */
+          }
 
         *repos_relpath = svn_relpath_join(
                                 original_repos_relpath,
                                 svn_dirent_skip_ancestor(op_root_abspath,
                                                          local_abspath),
                                 result_pool);
+        if (copy_root_abspath)
+          *copy_root_abspath = op_root_abspath;
       }
     else /* Deleted, excluded, not-present, server-excluded, ... */
       {
@@ -1459,6 +1467,7 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
                         const char **repos_relpath,
                         const char **repos_root_url,
                         const char **repos_uuid,
+                        const char **copy_root_abspath,
                         svn_wc_context_t *wc_ctx,
                         const char *local_abspath,
                         svn_boolean_t scan_deleted,
@@ -1467,6 +1476,7 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
 {
   return svn_error_trace(svn_wc__internal_get_origin(is_copy, revision,
                            repos_relpath, repos_root_url, repos_uuid,
+                           copy_root_abspath,
                            wc_ctx->db, local_abspath, scan_deleted,
                            result_pool, scratch_pool));
 }

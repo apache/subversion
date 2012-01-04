@@ -1138,7 +1138,7 @@ is_external_rolled_out(svn_boolean_t *is_rolled_out,
   err = svn_wc__node_get_origin(NULL, NULL,
                                 &x_repos_relpath,
                                 &x_repos_root_url,
-                                NULL,
+                                NULL, NULL,
                                 wc_ctx, xinfo->local_abspath,
                                 FALSE, /* scan_deleted */
                                 scratch_pool, scratch_pool);
