@@ -127,13 +127,6 @@ Candidate changes:
    Votes:
      +1: cmpilato, rhuijben
 
- * r1220742, r1220750
-   Fix spurious testsuite FAIL
-   Justification:
-     We don't expect users to ignore tests that FAIL.
-   Votes:
-     +1: philip, rhuijben
-
  * r1221178, r1221303
    Fix issue 4086, mod_dav_svn's handling of POST errors.
    Justification:
@@ -193,3 +186,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1220742, r1220750
+   Fix spurious testsuite FAIL
+   Justification:
+     We don't expect users to ignore tests that FAIL.
+   Votes:
+     +1: philip, rhuijben, danielsh
+
