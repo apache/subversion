@@ -1032,13 +1032,13 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
    * Since we don't know what's included in the commit until we've
    * harvested all the targets, we can't reliably check this as we
    * go.  So in `danglers', we record named targets whose parents
-   * are unversioned, then after harvesting the total commit group, we
-   * check to make sure those parents are included.
+   * do not yet exist in the repository. Then after harvesting the total
+   * commit group, we check to make sure those parents are included.
    *
-   * Each key of danglers is an unversioned parent.  The (const char *)
-   * value is one of that parent's children which is named as part of
-   * the commit; the child is included only to make a better error
-   * message.
+   * Each key of danglers is a parent which does not exist in the
+   * repository.  The (const char *) value is one of that parent's
+   * children which is named as part of the commit; the child is
+   * included only to make a better error message.
    *
    * (The reason we don't bother to check unnamed -- i.e, implicit --
    * targets is that they can only join the commit if their parents
